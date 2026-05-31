@@ -2,6 +2,8 @@
 
 > **The Zero-Allocation, 5-Vector Heterogeneous Graph Engine for the Edge.**
 
+🚀 **[Launch the Qualia-DB Interactive Web Playground](https://mediaprophet.github.io/qualiaDB/playground/)** 🚀
+
 Qualia-DB is a bare-metal, offline-first graph database built in pure `#![no_std]` Rust. It abandons traditional Triple (S,P,O) stores and sprawling heap-allocated ASTs in favor of a strictly aligned **48-Byte Super-Quin** structure, designed to process reasoning constraints in hardware cache across CPUs, GPUs, and NPUs.
 
 ## ⚙️ The 3-Core Triad Architecture
