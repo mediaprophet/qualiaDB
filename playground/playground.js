@@ -62,6 +62,19 @@ const PRESETS = {
       "routing_tier": "Spatiotemporal Ambiguous (0b11)"
     }
   ]
+}`,
+    llm_vector: `{
+  "@context": "https://mediaprophet.github.io/qualiaDB/qualia-context.jsonld",
+  "@graph": [
+    {
+      "@id": "llm:llama3:layer_12:attention_head_4:vector_8992",
+      "@type": "LatentSpaceVector",
+      "qualia:hasInterpretabilityNote": "This vector strongly activates on concepts of 'water' and 'fluid dynamics'.",
+      "qualia:annotatedBy": "did:researcher:ai_safety_team",
+      "qualia:containerSession": "container:session_abc123:prompt_hash_xyz",
+      "routing_tier": "Bilateral Micro-Commons (0b10)"
+    }
+  ]
 }`
 };
 
