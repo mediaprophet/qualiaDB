@@ -1,4 +1,12 @@
 const PRESETS = {
+    ambient: `{
+  "@context": "https://mediaprophet.github.io/qualiaDB/qualia-context.jsonld",
+  "@id": "did:wellfare:user123/telemetry/hr_0942",
+  "@type": "HeartRateObservation",
+  "subject": "did:wellfare:user123",
+  "bpm": 72,
+  "timestamp": "1717228382000"
+}`,
     bilateral: `{
   "@context": "https://mediaprophet.github.io/qualiaDB/qualia-context.jsonld",
   "@graph": [
@@ -21,6 +29,14 @@ const PRESETS = {
       "routing_tier": "Permissive Commons (0b01)"
     }
   ]
+}`,
+    spatiotemporal: `{
+  "@context": "https://mediaprophet.github.io/qualiaDB/qualia-context.jsonld",
+  "@id": "did:wellfare:user123/logs/crisis_01",
+  "@type": "AmbiguousIntakeEvent",
+  "rawText": "Fled with nothing but my thongs and wallet.",
+  "location": "H3:891ea6d82b7ffff",
+  "qualia:linguisticState": "MASK_LINGUISTIC_AMBIGUITY"
 }`
 };
 
