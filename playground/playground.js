@@ -37,6 +37,31 @@ const PRESETS = {
   "rawText": "Fled with nothing but my thongs and wallet.",
   "location": "H3:891ea6d82b7ffff",
   "qualia:linguisticState": "MASK_LINGUISTIC_AMBIGUITY"
+}`,
+    hubmap: `{
+  "@context": "https://hubmapconsortium.github.io/hubmap-ontology/ccf-context.jsonld",
+  "@graph": [
+    {
+      "@id": "http://purl.org/ccf/latest/ccf.owl#VHF_Left_Kidney",
+      "@type": "ccf:SpatialEntity",
+      "ccf:x_dimension": 63.5,
+      "ccf:y_dimension": 113.8,
+      "ccf:z_dimension": 55.2,
+      "ccf:dimension_unit": "millimeter",
+      "ccf:placement": {
+        "@type": "ccf:SpatialPlacement",
+        "ccf:x_translation": -51.0,
+        "ccf:y_translation": 125.0,
+        "ccf:z_translation": -23.0,
+        "ccf:translation_unit": "millimeter",
+        "ccf:x_rotation": 15.0,
+        "ccf:y_rotation": 0.0,
+        "ccf:z_rotation": 0.0,
+        "ccf:placement_for": "http://purl.org/ccf/latest/ccf.owl#VHF_Left_Kidney_Volume"
+      },
+      "routing_tier": "Spatiotemporal Ambiguous (0b11)"
+    }
+  ]
 }`
 };
 

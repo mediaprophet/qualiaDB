@@ -163,15 +163,19 @@
 </head>
 <body>
     <div class="header">
-        <div>
-            <h1 style="margin: 0; color: #fff; font-size: 1.5rem;">Qualia-DB</h1>
-            <span style="color: var(--text-dim); font-size: 0.9rem;">Zero-Allocation Graph Engine</span>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div>
+                <h1 style="margin: 0; color: #fff; font-size: 1.5rem;">Qualia-DB</h1>
+                <span style="color: var(--text-dim); font-size: 0.9rem;">Zero-Allocation Graph Engine</span>
+            </div>
+            <button class="primary-btn" style="padding: 6px 12px; font-size: 0.85rem;" onclick="document.getElementById('install-modal').style.display='flex'">Install</button>
         </div>
         <div>
             <button class="secondary-btn" onclick="loadPreset('ambient')">Load Ambient Trace</button>
             <button class="secondary-btn" onclick="loadPreset('bilateral')">Load N3Logic Rule</button>
             <button class="secondary-btn" onclick="loadPreset('permissive')">Load Permissive Query</button>
             <button class="secondary-btn" onclick="loadPreset('spatiotemporal')">Load Spatiotemporal</button>
+            <button class="secondary-btn" style="border-color: var(--warning); color: var(--warning);" onclick="loadPreset('hubmap')">Load HuBMAP 3D Ontology</button>
         </div>
     </div>
 
@@ -233,6 +237,21 @@
 // Execute a query to generate Compute Cost Receipt
                 </pre>
             </div>
+        </div>
+    </div>
+
+    <!-- Install Modal -->
+    <div id="install-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="card" style="width: 500px; max-width: 90%; position: relative;">
+            <button style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: #fff; font-size: 1.2rem; cursor: pointer;" onclick="document.getElementById('install-modal').style.display='none'">×</button>
+            <h2 style="color: var(--accent); margin-top: 0;">Install Qualia-DB</h2>
+            <p style="color: var(--text-dim);">Run the Sentinel VM and GPU Sieve locally natively.</p>
+            
+            <h3 style="margin-bottom: 5px; color: #fff;">1. Install CLI (Native Rust)</h3>
+            <pre style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; color: var(--success); overflow-x: auto;">cargo install qualia-cli</pre>
+            
+            <h3 style="margin-top: 20px; margin-bottom: 5px; color: #fff;">2. Start the Zero-Allocation Daemon</h3>
+            <pre style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; color: var(--warning); overflow-x: auto;">qualia-cli daemon --dev</pre>
         </div>
     </div>
 
