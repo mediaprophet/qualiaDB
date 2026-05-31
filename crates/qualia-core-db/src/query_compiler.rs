@@ -60,6 +60,55 @@ impl QueryCompiler {
             parity: 0,
         })
     }
+
+    /// Compiles a basic SPARQL `SELECT` query into an array of SentinelVM bytecode instructions.
+    /// Example input: `SELECT ?s WHERE { ?s knows Bob }`
+    pub fn compile_to_bytecode(query: &str) -> Vec<crate::logic::SentinelOpcode> {
+        let mut ops = Vec::new();
+        let query_clean = query.replace('\n', " ").replace('\t', " ");
+        
+        // Very basic zero-allocation substring parser for Edge-devices.
+        // Look for the WHERE { ... } block
+        if let Some(start) = query_clean.find("WHERE {") {
+            if let Some(end) = query_clean[start..].find("}") {
+                let block = &query_clean[start + 7..start + end];
+                let triples: Vec<&str> = block.split('.').collect();
+                
+                for triple in triples {
+                    let parts: Vec<&str> = triple.trim().split_whitespace().collect();
+                    if parts.len() == 3 {
+                        let (s, p, o) = (parts[0], parts[1], parts[2]);
+                        
+                        // Parse Subject
+                        if s.starts_with('?') {
+                            ops.push(crate::logic::SentinelOpcode::BindRegister { vector_id: 0, register_index: 0 });
+                        } else {
+                            ops.push(crate::logic::SentinelOpcode::MatchSubject(crate::q_hash(s)));
+                            ops.push(crate::logic::SentinelOpcode::HaltIfFalse);
+                        }
+                        
+                        // Parse Predicate
+                        if p.starts_with('?') {
+                            ops.push(crate::logic::SentinelOpcode::BindRegister { vector_id: 1, register_index: 1 });
+                        } else {
+                            ops.push(crate::logic::SentinelOpcode::MatchPredicate(crate::q_hash(p)));
+                            ops.push(crate::logic::SentinelOpcode::HaltIfFalse);
+                        }
+                        
+                        // Parse Object
+                        if o.starts_with('?') {
+                            ops.push(crate::logic::SentinelOpcode::BindRegister { vector_id: 2, register_index: 2 });
+                        } else {
+                            ops.push(crate::logic::SentinelOpcode::MatchObject(crate::q_hash(o)));
+                            ops.push(crate::logic::SentinelOpcode::HaltIfFalse);
+                        }
+                    }
+                }
+            }
+        }
+        
+        ops
+    }
 }
 
 #[cfg(test)]
@@ -85,5 +134,30 @@ mod tests {
         
         // Expecting Passthrough (0b00) routing and specific FTS payload (999) inside bits 0-31
         assert_eq!(compiled_quin.metadata & 0xFFFF_FFFF, 999, "Compiler failed to lock FTS logic payload");
+    }
+
+    #[test]
+    fn qualia_compile_sparql_to_bytecode() {
+        let query = "SELECT ?s WHERE { ?s knows Bob . }";
+        let ops = QueryCompiler::compile_to_bytecode(query);
+        
+        // Expected: Bind ?s (0), Match Predicate (knows), Halt, Match Object (Bob), Halt
+        use crate::logic::SentinelOpcode;
+        assert_eq!(ops.len(), 5);
+        
+        match ops[0] {
+            SentinelOpcode::BindRegister { vector_id: 0, register_index: 0 } => (),
+            _ => panic!("Expected BindRegister for ?s"),
+        }
+        
+        match ops[1] {
+            SentinelOpcode::MatchPredicate(val) => assert_eq!(val, crate::q_hash("knows")),
+            _ => panic!("Expected MatchPredicate"),
+        }
+        
+        match ops[3] {
+            SentinelOpcode::MatchObject(val) => assert_eq!(val, crate::q_hash("Bob")),
+            _ => panic!("Expected MatchObject"),
+        }
     }
 }
