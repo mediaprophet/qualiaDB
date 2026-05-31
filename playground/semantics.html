@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB Semantic Drift Viewer</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --panel-bg: rgba(25, 25, 35, 0.7);
+            --accent: #00f0ff;
+            --warning: #f1fa8c;
+            --error: #ff5555;
+            --text-main: #e0e0e0;
+            --text-dim: #888;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 80%);
+        }
+
+        .sidebar {
+            width: 350px;
+            background: var(--panel-bg);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .header h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .header a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        
+        .header a:hover {
+            color: var(--accent);
+        }
+
+        .control-group {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .control-group h3 {
+            margin: 0 0 15px 0;
+            font-size: 1rem;
+            color: var(--accent);
+        }
+
+        .word-btn {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-main);
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .word-btn:hover {
+            border-color: var(--text-dim);
+        }
+
+        .word-btn.active {
+            background: rgba(0, 240, 255, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .main-panel {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .timeline-container {
+            margin-top: auto;
+            background: rgba(0,0,0,0.4);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #333;
+            outline: none;
+            margin-top: 20px;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        .year-display {
+            text-align: center;
+            font-size: 3rem;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 0 20px var(--accent-dim);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .meaning-card {
+            background: rgba(25, 25, 35, 0.8);
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: 40px;
+            margin-top: 40px;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
+            transition: all 0.3s ease;
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUp 0.4s forwards;
+        }
+
+        @keyframes slideUp {
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .meaning-card h2 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            color: #fff;
+            text-transform: capitalize;
+        }
+
+        .definition {
+            font-size: 1.5rem;
+            color: var(--warning);
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 20px;
+        }
+
+        .meta-item span {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        
+        .meta-value {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        .context-hash {
+            background: rgba(0,0,0,0.5);
+            padding: 8px;
+            border-radius: 4px;
+            color: var(--accent);
+            font-family: monospace;
+            word-break: break-all;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+
+        .routing-badge {
+            display: inline-block;
+            background: rgba(255, 85, 85, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="header">
+            <h1>Semantic Drift</h1>
+            <a href="index.html">← Back to Engine Playground</a>
+        </div>
+
+        <div class="control-group">
+            <h3>Subject Anchor (Target Term)</h3>
+            <button class="word-btn active" onclick="setWord('awful')">awful (id: 0x9f22a...)</button>
+            <button class="word-btn" onclick="setWord('meat')">meat (id: 0x1b44c...)</button>
+            <button class="word-btn" onclick="setWord('girl')">girl (id: 0x7c88d...)</button>
+        </div>
+
+        <div class="control-group" style="flex-grow: 1;">
+            <h3>Engine Execution State</h3>
+            <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 10px;">
+                The Subject ID remains perfectly static. The engine queries for the predicate <span style="color:#fff;">skos:definition</span>, but the GPU Sieve heavily filters the response based on the active <span style="color:var(--accent);">Spatiotemporal Context Vector</span>.
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <span style="font-size: 0.8rem; color: var(--text-dim);">ACTIVE ROUTING TIER</span><br>
+                <div class="routing-badge">Spatiotemporal Ambiguous (0b11)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-panel">
+        <div id="meaning-container">
+            <!-- Dynamically populated -->
+        </div>
+
+        <div class="timeline-container">
+            <div class="year-display" id="year-label">1300 CE</div>
+            <div style="text-align: center; color: var(--text-dim); font-size: 0.9rem;">Scrub timeline to alter the execution context vector</div>
+            <input type="range" min="1000" max="2026" value="1300" class="slider" id="time-slider">
+        </div>
+    </div>
+
+    <script src="semantics.js"></script>
+</body>
+</html>
