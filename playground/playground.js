@@ -168,3 +168,23 @@ function compileToBytecode() {
         document.getElementById('latency-badge').innerText = `${latencyNs}ns`;
     }, 45); // simulated WASM delay
 }
+
+// Check if Native Daemon is installed and running
+fetch('http://127.0.0.1:4848/rpc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 })
+}).then(res => res.json()).then(data => {
+    if(data.result && data.result.status === 'ok') {
+        const installBtn = document.getElementById('install-btn-header');
+        if(installBtn) {
+            installBtn.style.background = 'rgba(74, 222, 128, 0.1)';
+            installBtn.style.color = 'var(--success)';
+            installBtn.style.border = '1px solid var(--success)';
+            installBtn.innerText = 'Daemon Active (Native)';
+            installBtn.onclick = null;
+        }
+    }
+}).catch(e => {
+    // Daemon not found, leave "Install" button exactly as is
+});
