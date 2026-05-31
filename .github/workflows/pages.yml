@@ -33,11 +33,16 @@ jobs:
         with:
           enablement: true
 
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Deploy the repository root so README.md becomes the index, and playground is at /playground/
-          path: '.'
+          path: './_site'
 
       - name: Deploy to GitHub Pages
         id: deployment
