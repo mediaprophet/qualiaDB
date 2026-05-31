@@ -126,6 +126,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Daemon { dev } => {
             let is_dev = *dev;
             println!("Starting Qualia Native Loopback Server on 127.0.0.1:4848");
+            
+            // Spawn async update checker
+            tokio::spawn(async {
+                if let Ok(client) = reqwest::Client::builder().user_agent("qualia-cli-update-checker").build() {
+                    if let Ok(res) = client.get("https://crates.io/api/v1/crates/qualia-cli").send().await {
+                        if let Ok(json) = res.json::<serde_json::Value>().await {
+                            if let Some(version) = json["crate"]["max_version"].as_str() {
+                                let current_version = env!("CARGO_PKG_VERSION");
+                                if version != current_version {
+                                    println!("\n========================================");
+                                    println!("🚀 A new version of qualia-cli (v{}) is available!", version);
+                                    println!("   You are currently running v{}", current_version);
+                                    println!("   Run `cargo install qualia-cli --force` to update.");
+                                    println!("========================================\n");
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
             if is_dev {
                 println!("WARNING: Running in DEV MODE. Trusting localhost origins.");
             } else {
