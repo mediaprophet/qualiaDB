@@ -59,6 +59,11 @@ enum WebizenAction {
         /// Path to the embedded webizen git repository
         repo: PathBuf,
     },
+    /// Publishes unclassified/public `.qualia` streams to the IPFS decentralized network.
+    PublishIpfs {
+        /// Path to the `.qualia` file
+        file: PathBuf,
+    },
 }
 
 #[derive(Deserialize)]
@@ -276,13 +281,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             });
             
-            // Spawn Gun.eco WebSocket Bridge
+            // Spawn Gun.eco WebSocket Bridge (JSON-LD Transport)
             tokio::spawn(async move {
                 println!("🌐 Gun.eco: WebSocket Graph bridge initialized.");
+                
+                // Using tokio-tungstenite to connect to Gun relay
+                // In production, you would connect to: "wss://gun-manhattan.herokuapp.com/gun"
+                let relay_url = "ws://127.0.0.1:8765/gun"; 
+                // println!("Connecting to Gun relay at {}", relay_url);
+                
                 loop {
-                    // Mock: Broadcasting `0b01` Permissive Commons over Gun.eco
+                    // Mock: Extracting 64-bit Quins from Permissive Commons and Re-hydrating to JSON-LD strings
+                    let mock_subject_str = "did:git:webizen:alice";
+                    let mock_predicate_str = "http://schema.org/knows";
+                    let mock_object_str = "did:git:webizen:bob";
+                    
+                    let json_ld_payload = serde_json::json!({
+                        "#": "msg-id-1234",
+                        "put": {
+                            "qualia_graph": {
+                                "@context": "https://json-ld.org/contexts/person.jsonld",
+                                "@id": mock_subject_str,
+                                mock_predicate_str: mock_object_str
+                            }
+                        }
+                    });
+                    
+                    // println!("🕸️ Gun.eco Tx (JSON-LD): {}", json_ld_payload);
                     tokio::time::sleep(tokio::time::Duration::from_secs(45)).await;
-                    // println!("🕸️ Gun.eco: Synchronizing global graph states...");
                 }
             });
 
@@ -406,7 +432,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 println!("⚙️ Transpiled {} raw triples into 48-byte QualiaQuins.", quins.len());
                 
-                // Write Quins to .q42 binary format and commit directly to Git
+                // Write Quins to .qualia raw binary format and commit directly to Git
                 let mut binary_payload = Vec::with_capacity(quins.len() * 48);
                 for q in quins {
                     binary_payload.extend_from_slice(&q.subject.to_le_bytes());
@@ -419,7 +445,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 let git_repo = git2::Repository::open(repo)?;
                 let oid = git_repo.blob(&binary_payload)?;
-                println!("📦 Embedded {} bytes as agnostic .q42 blob: {}", binary_payload.len(), oid);
+                println!("📦 Embedded {} bytes as agnostic .qualia blob: {}", binary_payload.len(), oid);
                 
                 let signature = git2::Signature::now("Webizen Agency", "admin@localhost")?;
                 
@@ -428,7 +454,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut tree_builder = git_repo.treebuilder(Some(&parent_commit.tree()?))?;
                 
                 // Filename based on hash
-                let filename = format!("ontology_{}.q42", context_hash);
+                let filename = format!("ontology_{}.qualia", context_hash);
                 tree_builder.insert(&filename, oid, 0o100644)?;
                 let tree_id = tree_builder.write()?;
                 let tree = git_repo.find_tree(tree_id)?;
@@ -475,6 +501,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     println!("🟡 Access Control: Probationary (Bilateral Micro-Commons Only)");
                 }
+                println!("========================================");
+            }
+            WebizenAction::PublishIpfs { file } => {
+                println!("========================================");
+                println!("🪐 IPFS InterPlanetary File System Sync");
+                println!("Reading public `.qualia` payload: {:?}", file);
+                
+                let file_data = std::fs::read(&file)?;
+                println!("📤 Uploading {} bytes to local IPFS Daemon (port 5001)...", file_data.len());
+                
+                let rt = tokio::runtime::Runtime::new()?;
+                rt.block_on(async {
+                    let client = reqwest::Client::new();
+                    // Setup multipart form
+                    let part = reqwest::multipart::Part::bytes(file_data)
+                        .file_name(file.file_name().unwrap_or_default().to_string_lossy().to_string());
+                    let form = reqwest::multipart::Form::new().part("file", part);
+                    
+                    match client.post("http://127.0.0.1:5001/api/v0/add").multipart(form).send().await {
+                        Ok(res) => {
+                            if res.status().is_success() {
+                                if let Ok(json) = res.json::<serde_json::Value>().await {
+                                    if let Some(hash) = json["Hash"].as_str() {
+                                        println!("✅ Success! Pinned to IPFS Network.");
+                                        println!("🔗 Content Identifier (CID): {}", hash);
+                                        println!("🌐 View on IPFS Gateway: https://ipfs.io/ipfs/{}", hash);
+                                    }
+                                }
+                            } else {
+                                println!("❌ IPFS Daemon returned an error: {:?}", res.status());
+                            }
+                        }
+                        Err(e) => {
+                            println!("❌ Failed to connect to local IPFS daemon. Make sure `ipfs daemon` is running on port 5001.");
+                            println!("   Error: {}", e);
+                        }
+                    }
+                });
                 println!("========================================");
             }
         }
