@@ -14,14 +14,16 @@ Qualia-DB physically isolates graph operations across three parallel hardware do
 
 ## 🧩 The 48-Byte Super-Quin
 
-Every statement in Qualia-DB is stored as a 48-Byte `QualiaQuin`:
+Every statement in Qualia-DB is stored as a 48-Byte `QualiaQuin`. 
+
+> 💡 **Fun Fact**: The choice to move to a 48-byte primitive—comprising a 42-byte information payload and 6 bytes for parity/integrity checks—is a deliberate structural decision. As fans of Douglas Adams' *Hitchhiker’s Guide to the Galaxy* know, **42** is the "Answer to the Ultimate Question of Life, the Universe, and Everything." In Qualia-DB, 42 bytes holds the ultimate answer to your graph queries! 🌌
 
 *   **Vector 1 (Subject)**: `u64`
 *   **Vector 2 (Predicate)**: `u64`
 *   **Vector 3 (Object)**: `u64` (Includes Top-4 Bit Datatype Flags for zero-allocation Integers, Floats, and Nanosecond Timestamps).
 *   **Vector 4 (Context)**: `u64` (Spatiotemporal bounds or Named Graphs).
 *   **Vector 5 (Metadata)**: `u64` (The Hardware Routing Lane).
-*   **Parity**: `6 Bytes` (ECC/Cryptographic validation).
+*   **Parity**: `6 Bytes` (ECC/Cryptographic validation + 2 bytes padding to reach 48).
 
 ### 🚀 Hardware Routing (The 5th Vector)
 Qualia-DB never parses strings for access control. The engine routes physical execution via the 5th Vector's Top 2 bits:
