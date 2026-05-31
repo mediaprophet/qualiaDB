@@ -1,0 +1,1 @@
+use crate::QualiaQuin; pub trait BoundingHull {} pub struct VectorSectorMap { pub sector_id: u64, pub active: bool, } impl VectorSectorMap { pub fn contains(&self, projection: u64) -> bool { if !self.active { return false; } (projection % 10) == self.sector_id } } pub fn extract_spatial_projection(quin: &QualiaQuin) -> u64 { quin.metadata }

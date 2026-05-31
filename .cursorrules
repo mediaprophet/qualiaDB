@@ -1,0 +1,46 @@
+# Qualia-DB Cursor AI Rules
+
+You are interacting with Qualia-DB, an offline-first bare-metal graph database engine.
+Follow these absolute architectural constraints:
+
+1. The Core Data Primitive (The 48-Byte Super-Quin)
+Qualia-DB abandons traditional Triple (S,P,O) and Quad (S,P,O,C) structures. Every piece of information is stored in a contiguous, cache-aligned 48-byte Super-Quin.
+- Vector 1 (Subject - u64)
+- Vector 2 (Predicate - u64)
+- Vector 3 (Object - u64)
+- Vector 4 (Context - u64)
+- Vector 5 (Metadata - u64)
+- Parity/Padding (6 bytes)
+
+2. Native Datatypes (Inline Tagged Pointers)
+You must utilize the top 4 bits of the Object (O) vector to assign XSD datatypes:
+- 0x0 (0000): Lexicon ID (Points to a URI/String).
+- 0x1 (0001): Inline Integer (Signed 60-bit integer).
+- 0x2 (0010): Inline Float (Truncated 60-bit float).
+- 0x3 (0011): Inline Boolean (1 for True, 0 for False).
+- 0x4 (0100): Inline Unix Timestamp (Milliseconds).
+- 0x5 (0101): Inline Qualia Epoch Timestamp (Nanoseconds since Jan 1, 2026).
+- 0x6 (0110): Inline Unix Timestamp (Microseconds).
+
+3. Hardware Routing & The 5th Vector Opcodes
+All routing and permission checks are baked into the Metadata (5th Vector).
+- Bit 63 (MSB): RDF-Star Nesting Indicator.
+- Bits 61-62 (Routing Tier): `0b00` (Passthrough), `0b01` (Permissive Commons), `0b10` (Bilateral), `0b11` (Spatiotemporal/GPU).
+- Bits 0-15 (Validation Masks): Specific micro-instructions.
+
+4. Memory & Execution Boundaries
+- No Heap Allocations: Execute over pre-allocated stack buffers.
+- SuperBlocks: 40,960-byte blocks (10 sectors, 850 Quins).
+- Volatile Scrubbing: Use `std::ptr::write_volatile` to scrub buffers on drop.
+
+5. Logic Execution (Core 1 Sentinel)
+NEVER embed external logic interpreters or generalized Prolog crates (e.g., SWI-Prolog). This violates the zero-allocation architecture.
+All logical schemas (N3Logic, SHACL) must be translated into `SentinelOpcode` Bytecode arrays by the `SentinelCompiler`. Core 1 executes these bytecodes using a strict `[u64; 16]` register stack (`SentinelVM`) to guarantee determinism and zero heap allocation.
+
+6. Deterministic Compute Metering & Permissive Commons
+NEVER query OS-level energy APIs (e.g., BatteryManager, sysfs) for economic billing. It causes severe API stalls and hardware inequity.
+Instead, utilize the zero-allocation atomics in `telemetry.rs` (`SUPERBLOCK_IO_COUNT`, `SIEVE_OPS_COUNT`, `VM_CYCLES_COUNT`). 
+When a commercial query via the Permissive Commons (`0b01`) executes, these virtual compute cycles are precisely multiplied and returned as a serialized `ComputeCostReceipt` JSON-RPC payload to external Lightning Node proxies.
+
+7. Target Fallbacks (WASM)
+If compiling for the browser (`target_arch = "wasm32"`), the Triad must be gracefully flattened into a single-threaded synchronous sequence to maintain sandbox stability. Fallback to the Origin Private File System (OPFS) for synchronous I/O, and ping the local loopback (e.g., `127.0.0.1:4848`) to proxy queries to the native engine if the host has the standalone database installed.

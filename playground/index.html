@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB Hardware UI</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --panel-bg: rgba(25, 25, 35, 0.7);
+            --accent: #00f0ff;
+            --accent-dim: rgba(0, 240, 255, 0.2);
+            --text-main: #e0e0e0;
+            --text-dim: #888;
+            --success: #4ade80;
+            --warning: #ffd700;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(255, 215, 0, 0.03) 0%, transparent 50%);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .split-pane {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 120px);
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            color: var(--accent);
+        }
+
+        textarea {
+            width: 100%;
+            flex-grow: 1;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #fff;
+            padding: 15px;
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            resize: none;
+            box-sizing: border-box;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .primary-btn {
+            background: var(--accent);
+            color: #000;
+        }
+        
+        .primary-btn:hover {
+            box-shadow: 0 0 15px var(--accent-dim);
+        }
+
+        .secondary-btn {
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .badge.green {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .bytecode-container, .json-rpc-container {
+            background: rgba(0,0,0,0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .bytecode-container { color: var(--success); }
+        .json-rpc-container { color: var(--warning); border: 1px solid rgba(255, 215, 0, 0.3); }
+
+        #quin-output {
+            background: rgba(0,0,0,0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .quin-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .quin-row:hover {
+            background: rgba(255,255,255,0.02);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1 style="margin: 0; color: #fff; font-size: 1.5rem;">Qualia-DB</h1>
+            <span style="color: var(--text-dim); font-size: 0.9rem;">Zero-Allocation Graph Engine</span>
+        </div>
+        <div>
+            <button class="secondary-btn" onclick="loadPreset('bilateral')">Load N3Logic Rule</button>
+            <button class="secondary-btn" onclick="loadPreset('permissive')">Load Permissive Query</button>
+        </div>
+    </div>
+
+    <div class="split-pane">
+        <!-- Input Pane -->
+        <div class="pane left-pane" style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="card" style="flex: 1;">
+                <div class="card-header">
+                    <h2>Graph Input</h2>
+                    <span class="badge" id="latency-badge">0ms</span>
+                </div>
+                <textarea id="jsonld-input" placeholder="Enter N3Logic, Turtle-Star, or JSON-LD...">{
+  "@context": "https://mediaprophet.github.io/qualiaDB/qualia-context.jsonld",
+  "@graph": [
+    {
+      "@id": "qualia:guardian",
+      "type": "n3:Implication",
+      "antecedent": { "?x": "a", "object": "Person" },
+      "consequent": { "?x": "a", "object": "Mortal" },
+      "routing_tier": "Bilateral Micro-Commons (0b10)"
+    }
+  ]
+}</textarea>
+                <div style="margin-top: 1rem; display: flex; gap: 10px;">
+                    <button class="primary-btn" onclick="compileToBytecode()">Compile & Execute</button>
+                    <button class="secondary-btn" onclick="document.getElementById('jsonld-input').value = ''">Clear</button>
+                </div>
+            </div>
+            
+            <div class="card" style="flex: 1;">
+                <div class="card-header">
+                    <h2>Core 1: Sentinel Bytecode VM</h2>
+                    <span class="badge green">Live Stack</span>
+                </div>
+                <pre class="bytecode-container" id="bytecode-output">
+// Awaiting Compilation...
+                </pre>
+            </div>
+        </div>
+
+        <!-- Output Pane -->
+        <div class="pane right-pane" style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="card" style="flex: 1;">
+                <div class="card-header">
+                    <h2>Physical 5-Vector Quins (S, P, O, C, M)</h2>
+                    <span class="badge green" id="quin-count">0 Quins</span>
+                </div>
+                <div id="quin-output">
+                    <div style="color: #666; text-align: center; margin-top: 2rem;">Execute a statement to view hardware layout.</div>
+                </div>
+            </div>
+
+            <div class="card" style="flex: 1;">
+                <div class="card-header">
+                    <h2 style="color: var(--warning);">Permissive Commons Billing</h2>
+                    <span class="badge" style="background: rgba(255, 215, 0, 0.1); color: #ffd700; border: 1px solid #ffd700;">Lightning RPC</span>
+                </div>
+                <pre class="json-rpc-container" id="billing-receipt">
+// Execute a query to generate Compute Cost Receipt
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="playground.js"></script>
+</body>
+</html>

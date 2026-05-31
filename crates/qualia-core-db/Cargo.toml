@@ -1,0 +1,43 @@
+[package]
+name = "qualia-core-db"
+version = "0.0.1"
+edition = "2021"
+
+[features]
+default = ["profile_target_1024"]
+
+# Enforces explicit stack boundaries restricting memory caching paths under 512MB RAM rules
+profile_minimal_512 = []
+profile_target_1024 = ["alloc_buffers"]
+profile_accelerated = ["alloc_buffers", "neon_simd_unroll"]
+
+# Feature dependencies
+alloc_buffers = []
+neon_simd_unroll = []
+
+[dependencies]
+futures-core = { version = "0.3", default-features = false }
+futures-channel = "0.3"
+zeroize = { version = "1.8.2", features = ["zeroize_derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+wgpu = "0.19"
+bytemuck = { version = "1.14", features = ["derive"] }
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21.1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+
+[dev-dependencies]
+criterion = "0.8.2"
+proptest = "1.11.0"
+tempfile = "3.10"
+
+[[bench]]
+name = "qualia_benchmark"
+harness = false

@@ -1,0 +1,18 @@
+{
+  "name": "qualia-db-wasm",
+  "version": "0.0.1",
+  "description": "Zero-Allocation Offline-First RDF-Star WebAssembly Engine",
+  "main": "qualia_core_db.js",
+  "types": "qualia_core_db.d.ts",
+  "scripts": {
+    "build": "wasm-pack build ../../crates/qualia-core-db --target bundler"
+  },
+  "keywords": [
+    "wasm",
+    "database",
+    "rdf",
+    "sparql"
+  ],
+  "author": "Qualia-DB Project",
+  "license": "CC-BY-NC-ND-4.0"
+}

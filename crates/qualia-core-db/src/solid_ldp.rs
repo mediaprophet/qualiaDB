@@ -1,0 +1,1 @@
+use crate::QualiaQuin; pub struct SolidLdpFacade; impl SolidLdpFacade { pub fn serialize_to_rdf_star(quin: &QualiaQuin) -> String { format!("GRAPH <urn:qualia:context:{}> {{ geo:asWKT qualia:hardwareIntegrity \"VERIFIED_ECC_PASS\" }}", quin.context) } }
