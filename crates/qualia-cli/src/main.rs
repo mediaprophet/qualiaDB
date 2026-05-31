@@ -33,6 +33,20 @@ enum Commands {
         #[arg(long)]
         dev: bool,
     },
+    /// Webizen Mode: Integrates did-method-git and sovereign identity
+    Webizen {
+        #[command(subcommand)]
+        action: WebizenAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum WebizenAction {
+    /// Initializes a new did:git identity and bare git repository for Quins
+    Init {
+        /// The path to initialize the webizen repository
+        path: PathBuf,
+    },
 }
 
 #[derive(Deserialize)]
@@ -247,6 +261,63 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await;
                 
             Ok(())
+        }
+        Commands::Webizen { action } => match action {
+            WebizenAction::Init { path } => {
+                println!("========================================");
+                println!("Initializing Webizen Mode at {:?}", path);
+                
+                // 1. Generate Ed25519 Keypair
+                use ed25519_dalek::SigningKey;
+                use rand_core::OsRng;
+                let mut csprng = OsRng;
+                let signing_key = SigningKey::generate(&mut csprng);
+                let public_key = signing_key.verifying_key();
+                let pub_hex = public_key.as_bytes().iter().map(|b| format!("{:02x}", b)).collect::<String>();
+                println!("🔑 Generated Sovereign Identity: did:git:{}", pub_hex);
+                
+                // 2. Initialize Embedded Git Repo
+                if let Some(parent) = path.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                let repo = git2::Repository::init(path)?;
+                
+                // 3. Write agnostic DID document as a Git Blob
+                let did_doc = format!(r#"{{
+  "id": "did:git:{}",
+  "verificationMethod": [{{
+    "id": "did:git:{}#key-1",
+    "type": "Ed25519VerificationKey2020",
+    "publicKeyHex": "{}"
+  }}]
+}}"#, pub_hex, pub_hex, pub_hex);
+
+                let blob_oid = repo.blob(did_doc.as_bytes())?;
+                println!("📦 Embedded agnostic DID Document blob: {}", blob_oid);
+                
+                // 4. Construct Tree
+                let mut tree_builder = repo.treebuilder(None)?;
+                tree_builder.insert("did.json", blob_oid, 0o100644)?;
+                let tree_oid = tree_builder.write()?;
+                let tree = repo.find_tree(tree_oid)?;
+                
+                // 5. Genesis Commit
+                let signature = git2::Signature::now("Webizen Agent", "agent@webizen.local")?;
+                let commit_oid = repo.commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    "genesis: establish did:git sovereign identity",
+                    &tree,
+                    &[]
+                )?;
+                
+                println!("🔐 Genesis Commit generated: {}", commit_oid);
+                println!("✅ Webizen Mode initialized successfully.");
+                println!("========================================");
+                
+                Ok(())
+            }
         }
     }
 }
