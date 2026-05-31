@@ -110,6 +110,7 @@ function compileToBytecode() {
         document.getElementById('billing-receipt').innerText = generateBillingReceipt();
         
         const end = performance.now();
-        document.getElementById('latency-badge').innerText = \`\${(end - start).toFixed(1)}ms\`;
+        const latencyNs = Math.floor((end - start) * 1000);
+        document.getElementById('latency-badge').innerText = `${latencyNs}ns`;
     }, 45); // simulated WASM delay
 }
