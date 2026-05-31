@@ -57,8 +57,8 @@ cargo run --bin qualia-cli -- daemon --dev
 
 ## 📖 Inspiration & References
 
-The architecture of Qualia-DB, specifically its push towards a serialization-agnostic Webizen Mode and sovereign data ownership, is deeply inspired by discussions and specifications from the W3C community. Key historical references include:
-- [W3C Credentials Community Group (Feb 2017) - Sovereign Identity](https://lists.w3.org/Archives/Public/public-credentials/2017Feb/0029.html)
+The architecture of Qualia-DB, specifically its push towards a serialization-agnostic Webizen Mode and interconnected human agency, is deeply inspired by discussions and specifications from the W3C community. Key historical references include:
+- [W3C Credentials Community Group (Feb 2017) - Human Agency and Personhood](https://lists.w3.org/Archives/Public/public-credentials/2017Feb/0029.html)
 - [W3C Schema Generator Community Group (Feb 2017) - Semantic Agnosticism](https://lists.w3.org/Archives/Public/public-schema-gen/2017Feb/0007.html)
 
 ## ⚖️ License

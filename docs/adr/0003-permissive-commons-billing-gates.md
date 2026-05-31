@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-To support decentralized data sovereignty, data owners must have the ability to enforce economic or work-based boundaries (e.g., micropayments, algorithmic proof-of-work, verifiable credential presentations) before their data is accessed. Doing this at the application layer is slow and vulnerable to bypass.
+To support decentralized human agency and stewardship, data owners must have the ability to enforce economic or work-based boundaries (e.g., micropayments, algorithmic proof-of-work, verifiable credential presentations) before their data is accessed. Doing this at the application layer is slow and vulnerable to bypass.
 
 ## Decision
 We have embedded economic and access control gates directly into the bare-metal database routing logic using the Fifth Vector (`metadata` slot) of the `QualiaQuin`.

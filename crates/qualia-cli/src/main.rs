@@ -33,7 +33,7 @@ enum Commands {
         #[arg(long)]
         dev: bool,
     },
-    /// Webizen Mode: Integrates did-method-git and sovereign identity
+    /// Webizen Mode: Integrates did-method-git and human agency
     Webizen {
         #[command(subcommand)]
         action: WebizenAction,
@@ -274,7 +274,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let signing_key = SigningKey::generate(&mut csprng);
                 let public_key = signing_key.verifying_key();
                 let pub_hex = public_key.as_bytes().iter().map(|b| format!("{:02x}", b)).collect::<String>();
-                println!("🔑 Generated Sovereign Identity: did:git:{}", pub_hex);
+                println!("🔑 Generated Webizen Agency Identity: did:git:{}", pub_hex);
                 
                 // 2. Initialize Embedded Git Repo
                 if let Some(parent) = path.parent() {
@@ -307,7 +307,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Some("HEAD"),
                     &signature,
                     &signature,
-                    "genesis: establish did:git sovereign identity",
+                    "genesis: establish did:git agency identity",
                     &tree,
                     &[]
                 )?;
