@@ -302,6 +302,37 @@ pub mod jni_bridge;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_bridge;
 
+/// A zero-allocation compile-time hashing function for Q-Turtle macros.
+/// Uses the FNV-1a algorithm to hash strings into 64-bit Quin vectors natively.
+pub const fn q_hash(s: &str) -> u64 {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        hash = hash ^ (bytes[i] as u64);
+        hash = hash.wrapping_mul(0x100000001b3);
+        i += 1;
+    }
+    hash
+}
+
+/// Advanced 2026 Q-Turtle Macro
+/// Translates terse semantic triples into physical 48-byte hardware Quins 
+/// strictly at compile time. Eliminates runtime string allocations entirely.
+#[macro_export]
+macro_rules! q_turtle {
+    ($s:expr, $p:expr, $o:expr) => {
+        $crate::QualiaQuin {
+            subject: $crate::q_hash($s),
+            predicate: $crate::q_hash($p),
+            object: $crate::q_hash($o),
+            context: 0,
+            metadata: 0b01 << 61, // Default to Permissive Commons routing
+            parity: 0,
+        }
+    };
+}
+
 // Tests for Antigravity Validation Pipeline
 #[cfg(test)]
 mod tests {
@@ -388,17 +419,9 @@ mod tests {
     fn qualia_validate_volatile_drop() {
         let mut block = Box::new(unsafe { std::mem::zeroed::<QualiaSuperBlock>() });
         block.block_sequence_id = 12345;
-        
-        // Ensure the value is set
         assert_eq!(block.block_sequence_id, 12345);
-        
-        // Drop the box, which triggers the Drop trait for QualiaSuperBlock
         drop(block);
-        
-        // Memory has been dropped, we can't easily check if it was zeroed safely without UAF,
-        // but the fact that it compiles and runs without panicking confirms the write_volatile doesn't violate memory constraints.
     }
-
 
     #[test]
     fn qualia_validate_quin() {

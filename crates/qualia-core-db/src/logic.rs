@@ -21,6 +21,8 @@ pub enum SentinelOpcode {
     MatchRegister { vector_id: u8, register_index: usize },
     /// Halts execution and returns false immediately if the prior condition failed
     HaltIfFalse,
+    /// Yields a new generated Quin (The consequent of an implication `=>`)
+    EmitQuin { subject_reg: usize, predicate: u64, object: u64, context_reg: usize },
 }
 
 /// The Zero-Allocation Virtual Machine for N3Logic and Constraints.
@@ -96,11 +98,81 @@ impl SentinelVM {
                     if !condition_flag {
                         return false;
                     }
+                },
+                SentinelOpcode::EmitQuin { .. } => {
+                    // Handled exclusively by `execute_implication`
                 }
             }
         }
         
         condition_flag
+    }
+
+    /// Evaluates an N3 Implication `=>` constraint against a target Quin.
+    /// Returns `Some(QualiaQuin)` if the antecedent passes and yields a consequence.
+    pub fn execute_implication(&mut self, quin: &QualiaQuin) -> Option<QualiaQuin> {
+        let mut condition_flag = true;
+        let mut emitted_quin = None;
+
+        for op in self.bytecode_buffer.iter().flatten() {
+            crate::telemetry::VM_CYCLES_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            
+            match op {
+                SentinelOpcode::MatchSubject(val) => condition_flag = quin.subject == *val,
+                SentinelOpcode::MatchPredicate(val) => condition_flag = quin.predicate == *val,
+                SentinelOpcode::MatchObject(val) => condition_flag = quin.object == *val,
+                SentinelOpcode::EvalMetadataMask(mask) => {
+                    let quin_mask = (quin.metadata & 0xFFFF) as u32;
+                    condition_flag = (quin_mask & mask) == *mask;
+                },
+                SentinelOpcode::BindRegister { vector_id, register_index } => {
+                    let value = match vector_id {
+                        0 => quin.subject, 1 => quin.predicate, 2 => quin.object, 3 => quin.context, _ => 0,
+                    };
+                    self.registers[*register_index] = Some(value);
+                    condition_flag = true;
+                },
+                SentinelOpcode::MatchRegister { vector_id, register_index } => {
+                    if let Some(bound_val) = self.registers[*register_index] {
+                        let value = match vector_id {
+                            0 => quin.subject, 1 => quin.predicate, 2 => quin.object, 3 => quin.context, _ => 0,
+                        };
+                        condition_flag = value == bound_val;
+                    } else {
+                        condition_flag = false;
+                    }
+                },
+                SentinelOpcode::HaltIfFalse => {
+                    if !condition_flag { return None; }
+                },
+                SentinelOpcode::EmitQuin { subject_reg, predicate, object, context_reg } => {
+                    if condition_flag {
+                        let s = self.registers[*subject_reg].unwrap_or(0);
+                        let c = self.registers[*context_reg].unwrap_or(0);
+                        
+                        // Inherit routing lane and Lamport clock from the triggering Quin
+                        let mut resulting_quin = QualiaQuin {
+                            subject: s,
+                            predicate: *predicate,
+                            object: *object,
+                            context: c,
+                            metadata: quin.metadata,
+                            parity: 0,
+                        };
+                        
+                        // Advance the Lamport Clock for Truth Maintenance natively
+                        let clock = quin.extract_lamport_clock();
+                        if clock < 0x1FFF_FFFF {
+                            resulting_quin.set_lamport_clock(clock + 1);
+                        }
+                        
+                        emitted_quin = Some(resulting_quin);
+                    }
+                }
+            }
+        }
+        
+        emitted_quin
     }
 }
 
@@ -154,5 +226,53 @@ mod tests {
         assert_eq!(vm.registers[0], Some(999), "VM failed to bind Subject to Register 0");
 
         assert_eq!(vm.execute_constraint(&invalid_quin), false, "VM erroneously passed invalid quin constraint");
+    }
+
+    #[test]
+    fn test_qualia_n3_implication() {
+        let mut vm = SentinelVM::new();
+        // Rule: { ?x predicate 42 } => { ?x predicate 100 }
+        let bytecode = vec![
+            SentinelOpcode::MatchPredicate(42),
+            SentinelOpcode::HaltIfFalse,
+            SentinelOpcode::BindRegister { vector_id: 0, register_index: 0 }, // Bind Subject
+            SentinelOpcode::BindRegister { vector_id: 3, register_index: 1 }, // Bind Context
+            SentinelOpcode::EmitQuin { subject_reg: 0, predicate: 100, object: 999, context_reg: 1 },
+        ];
+        vm.load_bytecode(&bytecode);
+
+        // The input antecedent
+        let _input_quin = crate::q_turtle!("Alice", "knows", "Bob");
+        // q_turtle! hashes "knows" to something, but we hardcoded predicate 42 in bytecode, so let's mock it
+        let trigger_quin = QualiaQuin {
+            subject: 123,
+            predicate: 42,
+            object: 456,
+            context: 789,
+            metadata: 0b01 << 61,
+            parity: 0
+        };
+
+        let result = vm.execute_implication(&trigger_quin);
+        assert!(result.is_some(), "Implication should have yielded a consequent Quin");
+        
+        let output = result.unwrap();
+        assert_eq!(output.subject, 123, "Subject was not bound properly");
+        assert_eq!(output.predicate, 100, "Consequent predicate not emitted properly");
+        assert_eq!(output.object, 999, "Consequent object not emitted properly");
+        assert_eq!(output.context, 789, "Context was not carried over");
+        assert_eq!(
+            output.identify_routing_lane(),
+            crate::PermissiveRoutingLane::EnforcePermissiveCommons,
+            "Routing lane was not inherited"
+        );
+        assert_eq!(output.extract_lamport_clock(), 1, "Lamport clock did not advance");
+        
+        // Let's verify q_turtle compile-time macro works
+        let qt = crate::q_turtle!("Alice", "knows", "Bob");
+        assert_eq!(qt.subject, crate::q_hash("Alice"));
+        assert_eq!(qt.predicate, crate::q_hash("knows"));
+        assert_eq!(qt.object, crate::q_hash("Bob"));
+        assert_eq!(qt.identify_routing_lane(), crate::PermissiveRoutingLane::EnforcePermissiveCommons);
     }
 }
