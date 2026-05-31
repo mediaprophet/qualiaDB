@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB 3D Anatomy Demo</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --panel-bg: rgba(25, 25, 35, 0.7);
+            --accent: #00f0ff;
+            --accent-dim: rgba(0, 240, 255, 0.2);
+            --text-main: #e0e0e0;
+            --text-dim: #888;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: var(--panel-bg);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .header a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .header a:hover {
+            color: var(--accent);
+        }
+
+        .control-group {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .control-group h3 {
+            margin: 0 0 15px 0;
+            font-size: 1rem;
+            color: var(--accent);
+        }
+
+        .toggle-container {
+            display: flex;
+            background: rgba(0,0,0,0.5);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            color: #ccc;
+        }
+
+        .checkbox-label input {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.05) 0%, transparent 70%);
+        }
+
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--accent);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            pointer-events: none;
+            display: none;
+            font-family: monospace;
+            z-index: 20;
+            transform: translate(-50%, -150%);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="header">
+            <h1>Qualia 3D CCF</h1>
+            <a href="index.html">← Back to Engine Playground</a>
+        </div>
+
+        <div class="control-group">
+            <h3>Reference Body (Sex)</h3>
+            <div class="toggle-container">
+                <button id="btn-male" class="toggle-btn active" onclick="setSex('male')">Male (VHM)</button>
+                <button id="btn-female" class="toggle-btn" onclick="setSex('female')">Female (VHF)</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3>Anatomical Systems</h3>
+            <label class="checkbox-label">
+                <input type="checkbox" id="sys-nervous" onchange="updateRender()" checked> Nervous System
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="sys-cardio" onchange="updateRender()" checked> Cardiovascular
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="sys-respiratory" onchange="updateRender()" checked> Respiratory
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="sys-urinary" onchange="updateRender()" checked> Urinary System
+            </label>
+        </div>
+        
+        <div style="flex-grow: 1;"></div>
+        <div style="font-size: 0.8rem; color: var(--text-dim); line-height: 1.4;">
+            Renders strictly via <b>Spatiotemporal Routing (0b11)</b> parsing HuBMAP Common Coordinate Framework JSON-LD Linked Data.
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <div id="tooltip"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="anatomy.js"></script>
+</body>
+</html>
