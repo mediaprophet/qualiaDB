@@ -40,12 +40,19 @@ enum Commands {
     },
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 enum WebizenAction {
-    /// Initializes a new did:git identity and bare git repository for Quins
+    /// Initialize a bare git repository with a generated did:git agency identity
     Init {
-        /// The path to initialize the webizen repository
+        #[arg(help = "Path to the repository to initialize")]
         path: PathBuf,
+    },
+    /// Ingests a web ontology (N3 or JSON-LD) into the local did:git repository
+    Ingest {
+        /// URL of the ontology (.n3 or .jsonld)
+        url: String,
+        /// Path to the embedded webizen git repository
+        repo: PathBuf,
     },
 }
 
@@ -103,7 +110,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             
             println!("Successfully inspected {} Quins.", count);
-            Ok(())
         }
         Commands::Dump { out_path } => {
             println!("Dumping raw SuperBlock to: {:?}", out_path);
@@ -135,7 +141,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             file.sync_all()?;
             println!("Dumped 3 mocked Quins (144 bytes) to .q42 successfully.");
-            Ok(())
         }
         Commands::Daemon { dev } => {
             let is_dev = *dev;
@@ -259,15 +264,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             warp::serve(route.with(cors))
                 .run(([127, 0, 0, 1], 4848))
                 .await;
-                
-            Ok(())
         }
         Commands::Webizen { action } => match action {
             WebizenAction::Init { path } => {
                 println!("========================================");
                 println!("Initializing Webizen Mode at {:?}", path);
                 
-                // 1. Generate Ed25519 Keypair
+                // 1. Generate Ed25519 Identity
                 use ed25519_dalek::SigningKey;
                 use rand_core::OsRng;
                 let mut csprng = OsRng;
@@ -283,27 +286,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let repo = git2::Repository::init(path)?;
                 
                 // 3. Write agnostic DID document as a Git Blob
-                let did_doc = format!(r#"{{
-  "id": "did:git:{}",
-  "verificationMethod": [{{
-    "id": "did:git:{}#key-1",
-    "type": "Ed25519VerificationKey2020",
-    "publicKeyHex": "{}"
-  }}]
-}}"#, pub_hex, pub_hex, pub_hex);
-
-                let blob_oid = repo.blob(did_doc.as_bytes())?;
-                println!("📦 Embedded agnostic DID Document blob: {}", blob_oid);
+                let did_doc = format!("{{\"id\":\"did:git:{}\"}}", pub_hex);
+                let oid = repo.blob(did_doc.as_bytes())?;
+                println!("📦 Embedded agnostic DID Document blob: {}", oid);
                 
-                // 4. Construct Tree
+                // 4. Create Genesis Commit
+                let signature = git2::Signature::now("Webizen Agency", "admin@localhost")?;
                 let mut tree_builder = repo.treebuilder(None)?;
-                tree_builder.insert("did.json", blob_oid, 0o100644)?;
-                let tree_oid = tree_builder.write()?;
-                let tree = repo.find_tree(tree_oid)?;
+                tree_builder.insert("did.json", oid, 0o100644)?;
+                let tree_id = tree_builder.write()?;
+                let tree = repo.find_tree(tree_id)?;
                 
-                // 5. Genesis Commit
-                let signature = git2::Signature::now("Webizen Agent", "agent@webizen.local")?;
-                let commit_oid = repo.commit(
+                let commit_id = repo.commit(
                     Some("HEAD"),
                     &signature,
                     &signature,
@@ -311,13 +305,123 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     &tree,
                     &[]
                 )?;
-                
-                println!("🔐 Genesis Commit generated: {}", commit_oid);
+                println!("🔐 Genesis Commit generated: {}", commit_id);
                 println!("✅ Webizen Mode initialized successfully.");
                 println!("========================================");
+            }
+            WebizenAction::Ingest { url, repo } => {
+                println!("========================================");
+                println!("🌐 Ingesting Web Ontology: {}", url);
                 
-                Ok(())
+                let body = reqwest::get(url).await?.text().await?;
+                let mut quins: Vec<qualia_core_db::QualiaQuin> = Vec::new();
+                
+                use std::hash::{Hash, Hasher};
+                fn hash_str(s: &str) -> u64 {
+                    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                    s.hash(&mut hasher);
+                    hasher.finish()
+                }
+                
+                let context_hash = hash_str(url);
+                
+                if url.ends_with(".n3") || url.ends_with(".ttl") {
+                    println!("🌿 Detected Notation3 (N3) format. Assuming Natural World / Human Agency Entity.");
+                    println!("🛡️ Routing Tier: Permissive Commons (0b01)");
+                    
+                    for line in body.lines() {
+                        let l = line.trim();
+                        if l.is_empty() || l.starts_with("#") || l.starts_with("@") { continue; }
+                        let parts: Vec<&str> = l.split_whitespace().collect();
+                        if parts.len() >= 4 && parts.last() == Some(&".") {
+                            let s = hash_str(parts[0]);
+                            let p = hash_str(parts[1]);
+                            let o = hash_str(parts[2]);
+                            quins.push(qualia_core_db::QualiaQuin {
+                                subject: s,
+                                predicate: p,
+                                object: o,
+                                context: context_hash,
+                                metadata: 0b01 << 61,
+                                parity: 0
+                            });
+                        }
+                    }
+                } else if url.ends_with(".jsonld") {
+                    println!("🏢 Detected JSON-LD format. Assuming Commercial / World of Man Entity.");
+                    println!("🛡️ Routing Tier: Bilateral Micro-Commons (0b10)");
+                    // A simple structural mock for json-ld traversal (normally recursive)
+                    let v: serde_json::Value = serde_json::from_str(&body)?;
+                    if let Some(graph) = v.get("@graph").and_then(|g| g.as_array()) {
+                        for node in graph {
+                            if let Some(id) = node.get("@id").and_then(|i| i.as_str()) {
+                                let s = hash_str(id);
+                                if let Some(obj) = node.as_object() {
+                                    for (key, val) in obj {
+                                        if key == "@id" { continue; }
+                                        let p = hash_str(key);
+                                        let o = hash_str(&val.to_string());
+                                        quins.push(qualia_core_db::QualiaQuin {
+                                            subject: s,
+                                            predicate: p,
+                                            object: o,
+                                            context: context_hash,
+                                            metadata: 0b10 << 61,
+                                            parity: 0
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    println!("❌ Unknown ontology format. Must end with .n3, .ttl, or .jsonld");
+                    return Ok(());
+                }
+                
+                println!("⚙️ Transpiled {} raw triples into 48-byte QualiaQuins.", quins.len());
+                
+                // Write Quins to .q42 binary format and commit directly to Git
+                let mut binary_payload = Vec::with_capacity(quins.len() * 48);
+                for q in quins {
+                    binary_payload.extend_from_slice(&q.subject.to_le_bytes());
+                    binary_payload.extend_from_slice(&q.predicate.to_le_bytes());
+                    binary_payload.extend_from_slice(&q.object.to_le_bytes());
+                    binary_payload.extend_from_slice(&q.context.to_le_bytes());
+                    binary_payload.extend_from_slice(&q.metadata.to_le_bytes());
+                    binary_payload.extend_from_slice(&q.parity.to_le_bytes());
+                }
+                
+                let git_repo = git2::Repository::open(repo)?;
+                let oid = git_repo.blob(&binary_payload)?;
+                println!("📦 Embedded {} bytes as agnostic .q42 blob: {}", binary_payload.len(), oid);
+                
+                let signature = git2::Signature::now("Webizen Agency", "admin@localhost")?;
+                
+                let head = git_repo.head()?;
+                let parent_commit = head.peel_to_commit()?;
+                let mut tree_builder = git_repo.treebuilder(Some(&parent_commit.tree()?))?;
+                
+                // Filename based on hash
+                let filename = format!("ontology_{}.q42", context_hash);
+                tree_builder.insert(&filename, oid, 0o100644)?;
+                let tree_id = tree_builder.write()?;
+                let tree = git_repo.find_tree(tree_id)?;
+                
+                let commit_id = git_repo.commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    &format!("ingest: transpiled {}", url),
+                    &tree,
+                    &[&parent_commit]
+                )?;
+                println!("🔐 Ingestion Commit generated: {}", commit_id);
+                println!("✅ Ontology securely committed to human agency repository.");
+                println!("========================================");
             }
         }
     }
+    
+    Ok(())
 }
