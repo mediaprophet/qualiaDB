@@ -2,47 +2,68 @@
 
 **Layer 1 Application Protocol over Qualia-DB**
 
-This specification defines the `Webizen` protocol—the Layer 1 application standard that provides Identity Management, Social Graph resolution, and Permissive Commons rules over the bare-metal Qualia-DB (Layer 0) engine.
+This specification defines the `Webizen` protocol—the Layer 1 application standard that provides Identity Management, Social Graph resolution, and the Permissive Commons rules over the bare-metal Qualia-DB (Layer 0) engine.
 
-## 1. The Webizen Address Book (Identity Layer)
+While Qualia-DB provides the physical 512MB memory boundary and the zero-allocation Sentinel logic VM, the Webizen Protocol dictates how human beings establish cryptographic agency, project personas, and legally govern their shared data.
 
-The Webizen Address Book acts as a "Solid-like" directory stored entirely within the user's local Qualia-DB.
+---
 
-### 1.1 Identity Creation Event
-When a user initializes their Webizen Extension, the system generates a root `ed25519-dalek` keypair. This is mathematically anchored into the database as the Root Identity Quin. The private key never leaves the extension's secure storage.
+## 1. Identity Nyms as N-Dimensional Inferences
 
-### 1.2 Contact Management
-Adding a "friend" or "contact" is fundamentally the act of adding their public DID (Decentralized Identifier) to the local directory. By storing a contact's DID, the local Sentinel VM is authorized to evaluate that contact's signed Quins as part of the user's trusted social graph.
+In traditional Web3 or database architectures, "Identity" is treated as a static noun—usually a flat JSON document permanently bound to a single public key.
 
-## 2. The `window.webizen` Provider API
+The Webizen Protocol rejects this static model. Identity is a **behavior**. It is an enumerated set of **Identity Nyms** (personas, pseudonyms, facets) that continually develop and resolve over time. 
 
-To interact with Web3/Social-Web applications, the Webizen browser extension injects a global `window.webizen` object into the DOM. This abstracts the complexity of WebSockets and WASM fallback layers.
+Because the underlying engine evaluates data as 48-byte Quins across a Spatiotemporal context vector, an Identity Nym is an **n-dimensional inference** derived from:
+1. **Subjective Inferences**: Claims made *by* the human author about a specific nym (e.g., self-asserted preferences, local truths, temporal moods).
+2. **Objective Inferences**: Claims made *about* the nym by external cryptographic actors in the Address Book (e.g., peer attestations, bilateral edge connections).
+3. **Input Format Dynamics**: As the data formats, temporal context (time-of-day, historical epoch), and spatial coordinates shift, the Sentinel VM dynamically re-evaluates the active Identity Nym.
 
-### 2.1 Connection Request
-```javascript
-// A decentralized app requests access to the user's graph
-const access = await window.webizen.requestAccess({
-    domain: "social-app.com",
-    scopes: ["read:public_profile", "write:status"]
-});
-```
-*Intercept:* The extension intercepts this call, preventing direct access to the daemon. It presents a UI prompt asking the user to select an Identity from their Address Book to present to the app.
+As the analysis of these inferences develops over time, the identity is never static. Resolution questions are continuously recalculated by the logic VM based on the rolling window of the temporal context.
 
-## 3. Capability Delegation & The Authorization Flow
+---
 
-Web applications cannot write to Qualia-DB directly. 
+## 2. The Address Book Directory
 
-1. **Quin Construction:** The web app constructs the 48-byte Quin (e.g., posting a status).
-2. **Delegated Signing:** The app passes the raw bytes to `window.webizen.signAndInject(quin)`.
-3. **Merkle Aggregation:** The Webizen extension cryptographically signs the Merkle Sub-Root using the user's secure Ed25519 key, injecting the authorized data into the Layer 0 graph.
+The Address Book is not a simple contact list; it is the cryptographic foundation of the local subjective reality. 
 
-## 4. The Permissive Commons Architecture
+By adding a peer's Decentralized Identifier (DID) to the local directory, the user is mathematically authorizing the Sentinel VM to include that peer's objective inferences in the evaluation of the user's social graph. If a peer is removed, their Quins are severed from the resolution matrix.
 
-*Note: This section requires significant historical input regarding the legacy Permissive Commons frameworks.*
+---
 
-The Permissive Commons defines how shared data (the Bilateral Micro-Commons) is legally and computationally governed between peers. While the Webizen Protocol provides the cryptographic means to share and verify data, the Permissive Commons dictates the **ramifications and rights** associated with that data.
+## 3. The Web-Extension Helper Bridge
 
-### Open Questions for Permissive Commons Integration:
-1. **Revocation Rights:** If a user revokes consent to a previously shared dataset, how does the Permissive Commons dictate the physical erasure of those Quins via Epoch Compaction?
-2. **Derivative Works:** How do we encode Permissive Commons licensing rules directly into the 48-byte Quin metadata to prevent unauthorized execution by the Sentinel VM?
-3. **Historical Alignment:** (Pending integration of historical Permissive Commons works).
+To seamlessly interface Webizen Identity Nyms with standard Web3 and Social-Web applications, the protocol relies on a native **Web-Extension Helper Bridge**.
+
+### 3.1 Role of the Extension
+The extension acts as the secure, user-facing proxy to the underlying Qualia-DB Daemon.
+- **Key Management**: It securely holds the root `ed25519-dalek` keypairs, isolating them from malicious web pages.
+- **Nym Injection**: It injects the `window.webizen` provider API into the browser DOM.
+- **Configuration Dashboard**: It provides the UI for users to manage their Address Book, select which specific *Identity Nym* they want to project to a specific app, and configure advanced Spatiotemporal context vectors.
+
+### 3.2 The Authorization Flow
+When a decentralized app requests to read or write data:
+1. **App Request**: The app calls `window.webizen.requestAccess({ scopes: [...] })`.
+2. **Intercept & Nym Selection**: The Helper Bridge intercepts the call. The user is prompted via the extension UI to select which Identity Nym (facet) they wish to present to the application.
+3. **Delegated Signing**: The app constructs 48-byte Quins and passes them to `window.webizen.signAndInject(quin)`.
+4. **Merkle Aggregation**: The Helper Bridge signs the data with the selected Nym's sub-key, injecting the authorized objective inference into the Layer 0 graph.
+
+---
+
+## 4. The Permissive Commons Framework
+
+*Note: This framework relies fundamentally on legacy historical models of the Permissive Commons. It is presented here as a skeletal architecture awaiting specific integration of historical works and supports.*
+
+The Permissive Commons defines how shared data (the Bilateral Micro-Commons) is legally, economically, and computationally governed between peers. While the Webizen Protocol provides the cryptographic means to share and verify data, the Permissive Commons dictates the **ramifications, rights, and supports** associated with that data.
+
+### 4.1 Computational Enforcement
+Rules defined within the Permissive Commons are not merely "Terms of Service" text documents. They are mapped directly to the `Context` and `Metadata` vectors of the 48-byte Quin.
+When the Sentinel VM attempts to unify an inference across shared data, it hits a hard Permissive Commons Gate. 
+
+### 4.2 Open Directives (Pending Integration)
+The following topics require precise definition based on historical Permissive Commons models:
+
+1. **Ramifications of Works**: What are the strict legal and computational consequences when an actor utilizes an inference from the Commons? 
+2. **Supports and Entitlements**: How are micropayments, algorithmic proof-of-work, or verifiable credential presentations mathematically gated before access is granted?
+3. **Revocation & Epoch Compaction**: If an author revokes consent to a previously shared subjective inference, how does the Permissive Commons dictate the physical erasure of those Quins via Epoch Compaction?
+4. **Derivative Works & Licensing**: How do we encode Permissive Commons licensing rules directly into the 48-byte Quin metadata to prevent unauthorized derivative logic execution by the Sentinel VM?
