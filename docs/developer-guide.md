@@ -29,3 +29,27 @@ Every statement in Qualia-DB is mapped to a strict 48-byte hardware struct:
 `[Subject (8)] [Predicate (8)] [Object (8)] [Context (8)] [Metadata (8)] [Parity (8)]`
 
 This allows exactly 1,000,000 statements to fit perfectly into a 48MB contiguous memory slab, which is precisely engineered to align with L1/L2 cache lines on modern ARM processors.
+
+## Departures from Tradition (The 5 Paradigm Shifts)
+
+When analyzing Qualia-DB against the historical computing landscape, it breaks from traditional theory in five specific ways:
+
+### 1. The Death of B-Trees: The GPU Sieve
+- **Traditional Method:** Almost all databases rely on B-Tree or Hash indexes. These require dynamic memory allocation, heavy pointer-chasing across the heap, and cause massive L1 cache misses.
+- **The Qualia-DB Leap:** We abandoned index trees entirely. We map graph topologies geometrically into Minkowski space and pass raw, 128KB contiguous memory blocks directly to the device GPU or NPU for parallel bounding-hull collision math.
+
+### 2. Strict Binary Ingress vs. The String Parsing Vulnerability
+- **Traditional Method:** Semantic engines accept JSON-LD or Turtle text, requiring them to allocate massive strings, run regex lexers, and build complex ASTs (Abstract Syntax Trees), making them vulnerable to OOM attacks.
+- **The Qualia-DB Leap:** Qualia-DB refuses to parse text. Clients *must* compress payloads into binary CBOR-LD before sending. The engine routes bytes directly into 64-bit hardware registers, skipping the heap entirely.
+
+### 3. Author-Scoped Signatures vs. The "Global Endorsement Trap"
+- **Traditional Method:** Distributed databases usually require users to sign the *Global* Merkle Root, inadvertently making them legally liable for malicious data injected by other peers in a shared local graph.
+- **The Qualia-DB Leap:** We engineered **Author-Scoped Merkle Aggregation**. You cryptographically sign *only* the specific Merkle Sub-Root containing your explicitly authored Quins.
+
+### 4. In-Place CRDT Sync vs. Event-Sourcing Bloat
+- **Traditional Method:** Offline-first Event Sourcing logs grow infinitely over time, causing massive memory bloat during peer-to-peer syncs.
+- **The Qualia-DB Leap:** Syncs are resolved in $O(N)$ time by diffing 12-byte Merkle-DAG Jump Tables. Afterward, "Epoch Compaction" actively shrinks the dataset by zeroing tombstones.
+
+### 5. Zero-Copy IPC vs. Socket Serialization
+- **Traditional Method:** When a browser UI queries a local WASM database, the data must be serialized, copied across the JS boundary, and deserialized into JSON.
+- **The Qualia-DB Leap:** The WASM Engine and the UI thread are locked into the exact same 512MB `SharedArrayBuffer`. When the engine finds an answer, the UI reads the raw memory address instantly. Zero copying. Zero latency.
