@@ -111,9 +111,13 @@ pub struct QualiaSuperBlock {
     pub quin_ledger: [QualiaQuin; QUINS_PER_BLOCK],
 }
 
+pub mod archive;
+
 /// Target lanes configuration identifiers for Qualia data pipelines
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+
+/// Standard payload mask denoting Ambient Telemetry (Passthrough routing) Path: Local sensor traces, timeline events, and internal files
 pub enum PermissiveRoutingLane {
     /// Passthrough Fast Path: Local sensor traces, timeline events, and internal files
     PassthroughStandard = 0x00,
