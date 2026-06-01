@@ -52,5 +52,21 @@ fn bench_ingestion_pipeline(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_quin_allocation, bench_query_compiler, bench_ingestion_pipeline);
+fn bench_cbor_compiler(c: &mut Criterion) {
+    use qualia_core_db::cbor_compiler::parse_cbor_ld_to_quin;
+
+    // CBOR Array of 4 integers: [1000, 2000, 3000, 4000]
+    let cbor_payload: [u8; 13] = [
+        0x84, 0x19, 0x03, 0xE8, 0x19, 0x07, 0xD0, 0x19, 0x0B, 0xB8, 0x19, 0x0F, 0xA0
+    ];
+
+    c.bench_function("qualia_cbor_ld_ingestion", |b| {
+        b.iter(|| {
+            let quin = parse_cbor_ld_to_quin(black_box(&cbor_payload)).unwrap();
+            black_box(quin);
+        })
+    });
+}
+
+criterion_group!(benches, bench_quin_allocation, bench_query_compiler, bench_ingestion_pipeline, bench_cbor_compiler);
 criterion_main!(benches);

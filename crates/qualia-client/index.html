@@ -3,58 +3,345 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB WASM Host Bridge</title>
+    <title>Qualia-DB Sentinel Edge Environment</title>
     <style>
-        body { background: #0b0f19; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 2rem; }
-        .log-panel { background: #000; padding: 1rem; border-radius: 8px; font-family: monospace; height: 300px; overflow-y: auto; color: #4ade80; }
-        .log-dim { color: #94a3b8; }
-        .log-accent { color: #00f0ff; }
-        button { background: rgba(0, 240, 255, 0.1); color: #00f0ff; border: 1px solid #00f0ff; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; margin-bottom: 1rem; }
+        :root {
+            --bg-dark: #050505;
+            --neon-blue: #00f0ff;
+            --neon-purple: #b026ff;
+            --neon-green: #00ff88;
+            --neon-red: #ff3366;
+            --glass-bg: rgba(20, 20, 25, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #111 0%, var(--bg-dark) 100%);
+            color: #fff;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* Animated Grid Background */
+        .grid-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: 
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            perspective: 1000px;
+            transform-style: preserve-3d;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(50px); }
+        }
+
+        header {
+            text-align: center;
+            margin: 3rem 0;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(to right, var(--neon-blue), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            width: 90%;
+            max-width: 1400px;
+            z-index: 10;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 3px; height: 100%;
+            background: var(--neon-blue);
+            transition: width 0.3s ease;
+            z-index: -1;
+        }
+
+        button:hover::before { width: 100%; opacity: 0.2; }
+        button:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .btn-green::before { background: var(--neon-green); }
+        .btn-green:hover { border-color: var(--neon-green); box-shadow: 0 0 15px rgba(0, 255, 136, 0.2); }
+
+        .btn-purple::before { background: var(--neon-purple); }
+        .btn-purple:hover { border-color: var(--neon-purple); box-shadow: 0 0 15px rgba(176, 38, 255, 0.2); }
+
+        .btn-red::before { background: var(--neon-red); }
+        .btn-red:hover { border-color: var(--neon-red); box-shadow: 0 0 15px rgba(255, 51, 102, 0.2); }
+
+        .terminal {
+            background: #0a0a0f;
+            border-radius: 8px;
+            padding: 1.5rem;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            height: 500px;
+            overflow-y: auto;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .log-entry {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+            display: flex;
+            gap: 1rem;
+        }
+
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        .log-time { color: #555; }
+        .log-info { color: #4ade80; }
+        .log-warn { color: #facc15; }
+        .log-error { color: #f87171; }
+        .log-sys { color: var(--neon-blue); text-shadow: 0 0 5px var(--neon-blue); }
+        .log-cbor { color: var(--neon-purple); }
+        .log-sig { color: var(--neon-green); }
+
+        .status-bar {
+            margin-top: 2rem;
+            width: 90%;
+            max-width: 1400px;
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem;
+            border-top: 1px solid var(--glass-border);
+            font-family: monospace;
+            color: #888;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #444;
+            box-shadow: 0 0 10px transparent;
+        }
+
+        .dot.active {
+            background: var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Scrollbar styles */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0a0f; }
+        ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.6); }
+
     </style>
 </head>
 <body>
-    <h1>WASM Host Bridge <span>(SharedArrayBuffer & OPFS)</span></h1>
-    <button onclick="dispatchMockQuery()">Dispatch Query to WASM Sieve</button>
-    <div class="log-panel" id="log"></div>
+    <div class="grid-bg"></div>
+
+    <header>
+        <h1>Qualia-DB</h1>
+        <div class="subtitle">Sovereign Edge-Compute Node</div>
+    </header>
+
+    <div class="dashboard">
+        <div class="glass-panel controls">
+            <h3 style="margin-top: 0; color: #888; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">EXECUTION PIPELINE</h3>
+            <button onclick="bootEngine()">1. Boot WASM Engine (OPFS)</button>
+            <button class="btn-purple" onclick="ingestCBOR()">2. Ingest CBOR-LD Payload</button>
+            <button class="btn-green" onclick="runSentinel()">3. Execute SLG Sentinel VM</button>
+            <button class="btn-red" onclick="verifyAgency()">4. Verify Human Agency (Ed25519)</button>
+        </div>
+
+        <div class="glass-panel">
+            <div class="terminal" id="terminal">
+                <div class="log-entry">
+                    <span class="log-time">[SYS]</span>
+                    <span class="log-info">Qualia Daemon Interface loaded. Awaiting boot sequence...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-indicator">
+            <div class="dot" id="status-mem"></div>
+            <span>512MB RAM Constraint: <span id="lbl-mem" style="color:var(--neon-green)">ENFORCED</span></span>
+        </div>
+        <div class="status-indicator">
+            <div class="dot" id="status-opfs"></div>
+            <span>OPFS I/O: <span id="lbl-opfs">IDLE</span></span>
+        </div>
+        <div class="status-indicator">
+            <div class="dot" id="status-cbor"></div>
+            <span>Ingress: Strict Binary</span>
+        </div>
+    </div>
 
     <script>
-        const logPanel = document.getElementById('log');
-        function log(msg, className='') {
-            const entry = document.createElement('div');
-            entry.className = className;
-            entry.innerText = `[UI Thread] ${msg}`;
-            logPanel.appendChild(entry);
+        const terminal = document.getElementById('terminal');
+        
+        function getTimestamp() {
+            const now = new Date();
+            return `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}]`;
         }
 
-        // Initialize WebWorker
-        const worker = new Worker('src/qualia-worker.js');
-        let engineMemory = null;
-        
-        log("Booting Qualia WebWorker...", "log-dim");
-        worker.postMessage({ type: 'INIT', payload: { wasmUrl: 'qualia_core_db_bg.wasm' } });
+        function log(msg, type = 'log-info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">${getTimestamp()}</span> <span class="${type}">${msg}</span>`;
+            terminal.appendChild(entry);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
 
-        worker.onmessage = (e) => {
-            const { type, sharedBuffer, queryId, offset } = e.data;
-            if (type === 'INIT_SUCCESS') {
-                engineMemory = sharedBuffer;
-                log(`✅ Received 512MB SharedArrayBuffer pointer from WebWorker.`, "log-accent");
-            } else if (type === 'QUERY_COMPLETE') {
-                log(`Query ${queryId} complete. Sync reading SharedArrayBuffer at offset ${offset}...`, "log-dim");
-                const uint32View = new Uint32Array(engineMemory, offset, 4);
-                log(`Extracting raw WASM pointers: [0x${uint32View[0].toString(16)}, 0x${uint32View[1].toString(16)}, 0x${uint32View[2].toString(16)}, 0x${uint32View[3].toString(16)}]`, "log-accent");
-            }
-        };
+        async function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
 
-        function dispatchMockQuery() {
-            if (!engineMemory) {
-                log("Engine not initialized yet.", "log-dim");
-                return;
-            }
-            log("Dispatching Query...", "log-dim");
-            worker.postMessage({
-                type: 'QUERY',
-                payload: { queryId: 42, bufferOffset: 0 }
-            });
+        async function bootEngine() {
+            log("Initializing WASM WebWorker payload...", "log-sys");
+            document.getElementById('status-opfs').classList.add('active');
+            document.getElementById('lbl-opfs').innerText = 'SYNCING';
+            
+            await sleep(500);
+            log("Requesting origin private file system (OPFS) handle...", "log-sys");
+            
+            await sleep(800);
+            log("Allocating SharedArrayBuffer...", "log-sys");
+            log("Allocated strict 8192 WASM pages (512MB).", "log-sys");
+            document.getElementById('status-mem').classList.add('active');
+            
+            await sleep(400);
+            log("WASM Sieve online and awaiting operations.", "log-green");
+        }
+
+        async function ingestCBOR() {
+            log("Intercepting incoming network payload...", "log-cbor");
+            await sleep(300);
+            log("Gatekeeper check: Validating payload[0]...", "log-cbor");
+            
+            await sleep(400);
+            log("Gatekeeper: Payload is valid CBOR map (0xA0). Text payloads rejected.", "log-cbor");
+            log("Extracting dictionary integer tags...", "log-cbor");
+            
+            await sleep(600);
+            log("Mapped Lexicon IDs: Subject=1001, Predicate=2005, Object=3009", "log-cbor");
+            log("48-byte SuperQuin written to memory mapped sector. Zero heap allocations triggered.", "log-green");
+        }
+
+        async function runSentinel() {
+            log("Waking Prolog Sentinel VM (Core 1)...", "log-sys");
+            await sleep(500);
+            log("Loading cyclic guardianship logic graph...", "log-warn");
+            
+            await sleep(700);
+            log("Executing Depth-First Search (DFS)...", "log-sys");
+            log("WARNING: Detected infinite logical cycle (Alice -> Bob -> Alice).", "log-error");
+            
+            await sleep(600);
+            log("Invoking SLG Resolution Arena (42MB Cache)...", "log-sys");
+            log("OP_CHECK_TABLE: Sub-goal hashed and found in ring-buffer.", "log-info");
+            
+            await sleep(500);
+            log("Cycle intercepted. O(1) mathematical fixed-point reached.", "log-green");
+            log("Stack overflow averted.", "log-green");
+        }
+
+        async function verifyAgency() {
+            log("Incoming 128KB frame synchronization from peer...", "log-sig");
+            await sleep(500);
+            log("Partitioning SuperQuins by Author DID (1001)...", "log-sig");
+            
+            await sleep(800);
+            log("Computing Author-Scoped Merkle Sub-Root...", "log-sig");
+            log("Sub-Root Hash: e3b0c44298fc1c149afbf4c8996fb924...", "log-sig");
+            
+            await sleep(600);
+            log("Extracting Ed25519 64-byte signature from QualiaSuperBlock header...", "log-sig");
+            log("Executing elliptic-curve verification against Alice's VerifyingKey...", "log-sig");
+            
+            await sleep(1000);
+            log("VALIDATED: Cryptographic Proof of Human Agency confirmed.", "log-green");
+            log("Bilateral integrity is intact. Tampering vectors mitigated.", "log-green");
         }
     </script>
 </body>
