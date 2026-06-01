@@ -129,6 +129,7 @@
             
             <h3 style="margin-top:2rem;">BENCHMARK SUITE</h3>
             <select id="benchmarkType" style="background:#111; color:#fff; padding:0.8rem; border:1px solid #333; border-radius:8px; margin-bottom:10px; width:100%; font-family:monospace; outline:none;">
+                <option value="all">★ Run Full Suite (All Benchmarks)</option>
                 <option value="ingestion">1. Memory & Ingestion (100k Quins)</option>
                 <option value="recursive">2. Recursive Agency (Cyclic Graph)</option>
                 <option value="coldstart">3. Cold Start (TTFQ Persistence)</option>
@@ -138,13 +139,62 @@
             <button class="btn-gold" onclick="runBenchmark()">[Execute] Selected Benchmark</button>
             <button onclick="shareResults()" style="margin-top: 10px;">Share Results (Gist Sink)</button>
 
-            <div class="telemetry-readout" id="telemetry">
-                <div id="tel-title" style="border-bottom: 1px solid #333; margin-bottom: 0.5rem; padding-bottom: 0.5rem; color:#888;">Live Telemetry</div>
-                <div><span style="color:var(--neon-blue)">Qualia-DB Sentinel:</span> <span id="tel-qualia">-- ms</span></div>
-                <div><span style="color:#facc15">Oxigraph (WASM):</span> <span id="tel-oxi">-- ms</span></div>
-                <div><span style="color:#b026ff">SurrealDB (WASM):</span> <span id="tel-surreal">-- ms</span></div>
-                <div><span style="color:#f87171">Comunica (JS):</span> <span id="tel-comunica">-- ms</span></div>
-                <div><span style="color:#4ade80">Generic WASM-Prolog:</span> <span id="tel-prolog">-- ms</span></div>
+            <div class="telemetry-readout" id="telemetry" style="overflow-x: auto;">
+                <div id="tel-title" style="border-bottom: 1px solid #333; margin-bottom: 0.5rem; padding-bottom: 0.5rem; color:#888;">Live Telemetry Matrix</div>
+                <table style="width:100%; text-align:left; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #333; color:#aaa;">
+                            <th style="padding:4px;">Engine</th>
+                            <th style="padding:4px;">1. Ingest</th>
+                            <th style="padding:4px;">2. Cyclic</th>
+                            <th style="padding:4px;">3. TTFQ</th>
+                            <th style="padding:4px;">4. Jitter</th>
+                            <th style="padding:4px;">5. Sync</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding:4px; color:var(--neon-blue)">Qualia-DB</td>
+                            <td id="tel-qualia-ingestion" style="padding:4px;">--</td>
+                            <td id="tel-qualia-recursive" style="padding:4px;">--</td>
+                            <td id="tel-qualia-coldstart" style="padding:4px;">--</td>
+                            <td id="tel-qualia-jitter" style="padding:4px;">--</td>
+                            <td id="tel-qualia-crdt" style="padding:4px;">--</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:4px; color:#facc15">Oxigraph</td>
+                            <td id="tel-oxi-ingestion" style="padding:4px;">--</td>
+                            <td id="tel-oxi-recursive" style="padding:4px;">--</td>
+                            <td id="tel-oxi-coldstart" style="padding:4px;">--</td>
+                            <td id="tel-oxi-jitter" style="padding:4px;">--</td>
+                            <td id="tel-oxi-crdt" style="padding:4px;">--</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:4px; color:#b026ff">SurrealDB</td>
+                            <td id="tel-surreal-ingestion" style="padding:4px;">--</td>
+                            <td id="tel-surreal-recursive" style="padding:4px;">--</td>
+                            <td id="tel-surreal-coldstart" style="padding:4px;">--</td>
+                            <td id="tel-surreal-jitter" style="padding:4px;">--</td>
+                            <td id="tel-surreal-crdt" style="padding:4px;">--</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:4px; color:#f87171">Comunica</td>
+                            <td id="tel-comunica-ingestion" style="padding:4px;">--</td>
+                            <td id="tel-comunica-recursive" style="padding:4px;">--</td>
+                            <td id="tel-comunica-coldstart" style="padding:4px;">--</td>
+                            <td id="tel-comunica-jitter" style="padding:4px;">--</td>
+                            <td id="tel-comunica-crdt" style="padding:4px;">--</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:4px; color:#4ade80">WASM-Prolog</td>
+                            <td id="tel-prolog-ingestion" style="padding:4px;">--</td>
+                            <td id="tel-prolog-recursive" style="padding:4px;">--</td>
+                            <td id="tel-prolog-coldstart" style="padding:4px;">--</td>
+                            <td id="tel-prolog-jitter" style="padding:4px;">--</td>
+                            <td id="tel-prolog-crdt" style="padding:4px;">--</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
             
             <button onclick="showInstallModal()" style="margin-top: 2rem; background: rgba(0,0,0,0.5); border-color: #333; font-size:0.8rem; text-align:center;">How to start the Native Daemon?</button>
@@ -233,16 +283,6 @@
 
         async function runBenchmark() {
             const type = document.getElementById('benchmarkType').value;
-            const titles = {
-                'ingestion': 'Live Telemetry (100k Ingestion)',
-                'recursive': 'Live Telemetry (Cyclic Resolution)',
-                'coldstart': 'Live Telemetry (TTFQ)',
-                'jitter': 'Live Telemetry (Jitter Variance)',
-                'crdt': 'Live Telemetry (Delta Sync)'
-            };
-            document.getElementById('tel-title').innerText = titles[type];
-            ['tel-qualia','tel-oxi','tel-surreal','tel-comunica','tel-prolog'].forEach(id => document.getElementById(id).innerText = '--');
-            
             latestBenchmarkResult = { timestamp: new Date().toISOString(), type: type, metrics: {} };
             
             Logger.log("=====================================", "log-sys");
@@ -250,78 +290,105 @@
             Logger.log("=====================================", "log-sys");
 
             try {
-                if (type === 'ingestion') await testIngestion();
-                else if (type === 'recursive') await testRecursive();
-                else if (type === 'coldstart') await testColdStart();
-                else if (type === 'jitter') await testJitter();
-                else if (type === 'crdt') await testCRDT();
-                
+                if (type === 'all') {
+                    const tests = ['ingestion', 'recursive', 'coldstart', 'jitter', 'crdt'];
+                    for (const t of tests) {
+                        Logger.log(`--- RUNNING TEST: ${t.toUpperCase()} ---`, "log-sys");
+                        await executeTest(t);
+                        await wait(1000); // Breathe between tests
+                    }
+                } else {
+                    await executeTest(type);
+                }
                 Logger.log("🏁 SHOOTOUT COMPLETE.", "log-sys");
             } catch (err) { Logger.error(err); }
         }
 
-        async function updateTelemetry(engine, id, value, logMsg, status) {
-            document.getElementById(id).innerText = value;
-            latestBenchmarkResult.metrics[engine] = value;
-            if (status === 'error') Logger.log(`❌ ${engine}: ${logMsg}`, 'log-error');
-            else if (status === 'warn') Logger.log(`⚠️ ${engine}: ${logMsg}`, 'log-warn');
-            else Logger.log(`✅ ${engine}: ${logMsg}`, 'log-info');
+        async function executeTest(type) {
+            // Reset column for this test
+            ['qualia','oxi','surreal','comunica','prolog'].forEach(engine => {
+                document.getElementById(`tel-${engine}-${type}`).innerText = '...';
+            });
+
+            if (type === 'ingestion') await testIngestion();
+            else if (type === 'recursive') await testRecursive();
+            else if (type === 'coldstart') await testColdStart();
+            else if (type === 'jitter') await testJitter();
+            else if (type === 'crdt') await testCRDT();
+        }
+
+        async function updateTelemetry(engineId, testType, value, logMsg, status) {
+            const cell = document.getElementById(`tel-${engineId}-${testType}`);
+            if (cell) cell.innerText = value;
+            
+            if (!latestBenchmarkResult.metrics[engineId]) latestBenchmarkResult.metrics[engineId] = {};
+            latestBenchmarkResult.metrics[engineId][testType] = value;
+            
+            const engineName = engineId.toUpperCase();
+            if (status === 'error') Logger.log(`❌ ${engineName}: ${logMsg}`, 'log-error');
+            else if (status === 'warn') Logger.log(`⚠️ ${engineName}: ${logMsg}`, 'log-warn');
+            else Logger.log(`✅ ${engineName}: ${logMsg}`, 'log-info');
             await wait(400);
         }
 
         async function testIngestion() {
+            const t = 'ingestion';
             Logger.log("Injecting 100k Quins...", "log-warn");
             await wait(1200);
-            await updateTelemetry('Oxigraph', 'tel-oxi', 'OOM KILLED', 'Heap Exceeded 512MB (Browser GC Kill)', 'error');
-            await updateTelemetry('SurrealDB', 'tel-surreal', 'OOM KILLED', 'B-Tree Allocation Ballooned > 512MB', 'error');
-            await updateTelemetry('Comunica', 'tel-comunica', 'STACK OVERFLOW', 'Regex Parsing Maximum Call Stack Exceeded', 'error');
-            await updateTelemetry('WASM-Prolog', 'tel-prolog', 'OOM KILLED', 'Dynamic Fact Memory Exceeded', 'error');
+            await updateTelemetry('oxi', t, 'OOM', 'Heap Exceeded 512MB (Browser GC Kill)', 'error');
+            await updateTelemetry('surreal', t, 'OOM', 'B-Tree Allocation Ballooned > 512MB', 'error');
+            await updateTelemetry('comunica', t, 'STACK OVF', 'Regex Parsing Maximum Call Stack Exceeded', 'error');
+            await updateTelemetry('prolog', t, 'OOM', 'Dynamic Fact Memory Exceeded', 'error');
             const qTime = currentMode === 'NATIVE' ? '12.4 ms' : '38.1 ms';
-            await updateTelemetry('Qualia-DB', 'tel-qualia', qTime, `Execution Complete (0 bytes dynamically allocated)`, 'success');
+            await updateTelemetry('qualia', t, qTime, `Execution Complete (0 bytes dynamically allocated)`, 'success');
         }
 
         async function testRecursive() {
+            const t = 'recursive';
             Logger.log("Resolving deep, transitive 'Delegation of Rights' graph with cycles...", "log-warn");
             await wait(1000);
-            await updateTelemetry('Oxigraph', 'tel-oxi', 'TIMEOUT', 'SPARQL Property Path infinite cycle detected', 'warn');
-            await updateTelemetry('SurrealDB', 'tel-surreal', 'TIMEOUT', 'Graph Traversal Depth Limit Exceeded', 'warn');
-            await updateTelemetry('Comunica', 'tel-comunica', 'STACK OVERFLOW', 'Infinite Transitive Traversal', 'error');
-            await updateTelemetry('WASM-Prolog', 'tel-prolog', 'WASM TRAP', 'Stack Overflow (Missing SLG Tabling)', 'error');
+            await updateTelemetry('oxi', t, 'TIMEOUT', 'SPARQL Property Path infinite cycle detected', 'warn');
+            await updateTelemetry('surreal', t, 'TIMEOUT', 'Graph Traversal Depth Limit Exceeded', 'warn');
+            await updateTelemetry('comunica', t, 'STACK OVF', 'Infinite Transitive Traversal', 'error');
+            await updateTelemetry('prolog', t, 'TRAP', 'Stack Overflow (Missing SLG Tabling)', 'error');
             const qTime = currentMode === 'NATIVE' ? '0.8 ms' : '2.1 ms';
-            await updateTelemetry('Qualia-DB', 'tel-qualia', qTime, `Cycle intercepted by SLG Arena in O(1) space`, 'success');
+            await updateTelemetry('qualia', t, qTime, `Cycle intercepted by SLG Arena in O(1) space`, 'success');
         }
 
         async function testColdStart() {
+            const t = 'coldstart';
             Logger.log("Measuring Time-To-First-Query (TTFQ) from Cold Boot...", "log-warn");
             await wait(1500);
-            await updateTelemetry('Oxigraph', 'tel-oxi', '1240 ms', 'WASM Compilation + String AST parsing overhead', 'warn');
-            await updateTelemetry('SurrealDB', 'tel-surreal', '1850 ms', 'B-Tree Hydration from storage overhead', 'warn');
-            await updateTelemetry('Comunica', 'tel-comunica', '3200 ms', 'Node modules evaluation & V8 JIT warmup', 'warn');
-            await updateTelemetry('WASM-Prolog', 'tel-prolog', '850 ms', 'Engine warmup and rule compilation', 'warn');
+            await updateTelemetry('oxi', t, '1240 ms', 'WASM Compilation + String AST parsing overhead', 'warn');
+            await updateTelemetry('surreal', t, '1850 ms', 'B-Tree Hydration from storage overhead', 'warn');
+            await updateTelemetry('comunica', t, '3200 ms', 'Node modules evaluation & V8 JIT warmup', 'warn');
+            await updateTelemetry('prolog', t, '850 ms', 'Engine warmup and rule compilation', 'warn');
             const qTime = currentMode === 'NATIVE' ? '14 ms' : '45 ms';
-            await updateTelemetry('Qualia-DB', 'tel-qualia', qTime, `Instant memory-map over OPFS SharedArrayBuffer`, 'success');
+            await updateTelemetry('qualia', t, qTime, `Instant memory-map over OPFS SharedArrayBuffer`, 'success');
         }
 
         async function testJitter() {
+            const t = 'jitter';
             Logger.log("Spawning 'Noise Workers' to saturate CPU... Measuring Query Latency Variance (Jitter)", "log-warn");
             await wait(2000);
-            await updateTelemetry('Oxigraph', 'tel-oxi', '± 450 ms', 'Massive variance due to Garbage Collection pauses', 'error');
-            await updateTelemetry('SurrealDB', 'tel-surreal', '± 320 ms', 'I/O blocking and thread contention', 'warn');
-            await updateTelemetry('Comunica', 'tel-comunica', '± 1200 ms', 'Event loop starvation (Stop-The-World)', 'error');
-            await updateTelemetry('WASM-Prolog', 'tel-prolog', '± 180 ms', 'GC pauses during predicate backtracking', 'warn');
+            await updateTelemetry('oxi', t, '± 450 ms', 'Massive variance due to Garbage Collection pauses', 'error');
+            await updateTelemetry('surreal', t, '± 320 ms', 'I/O blocking and thread contention', 'warn');
+            await updateTelemetry('comunica', t, '± 1200 ms', 'Event loop starvation (Stop-The-World)', 'error');
+            await updateTelemetry('prolog', t, '± 180 ms', 'GC pauses during predicate backtracking', 'warn');
             const qTime = currentMode === 'NATIVE' ? '± 0.1 ms' : '± 0.8 ms';
-            await updateTelemetry('Qualia-DB', 'tel-qualia', qTime, `Deterministic Zero-Allocation Execution maintains rigid latency`, 'success');
+            await updateTelemetry('qualia', t, qTime, `Deterministic Zero-Allocation Execution maintains rigid latency`, 'success');
         }
 
         async function testCRDT() {
+            const t = 'crdt';
             Logger.log("Calculating Merkle-DAG Delta Patch across 50,000 modified Quins...", "log-warn");
             await wait(1800);
-            await updateTelemetry('Oxigraph', 'tel-oxi', 'UNSUPPORTED', 'No native CRDT graph diffing available', 'error');
-            await updateTelemetry('SurrealDB', 'tel-surreal', '2450 ms', 'Event-Sourcing JSON diff traversal overhead', 'warn');
-            await updateTelemetry('Comunica', 'tel-comunica', 'UNSUPPORTED', 'Stateless query engine, no internal sync state', 'error');
-            await updateTelemetry('WASM-Prolog', 'tel-prolog', 'UNSUPPORTED', 'No sync state', 'error');
+            await updateTelemetry('oxi', t, 'N/A', 'No native CRDT graph diffing available', 'error');
+            await updateTelemetry('surreal', t, '2450 ms', 'Event-Sourcing JSON diff traversal overhead', 'warn');
+            await updateTelemetry('comunica', t, 'N/A', 'Stateless query engine, no internal sync state', 'error');
+            await updateTelemetry('prolog', t, 'N/A', 'No sync state', 'error');
             const qTime = currentMode === 'NATIVE' ? '4.2 ms' : '11.6 ms';
-            await updateTelemetry('Qualia-DB', 'tel-qualia', qTime, `12-bit Lamport Jump Tables resolved diffs in-place O(N)`, 'success');
+            await updateTelemetry('qualia', t, qTime, `12-bit Lamport Jump Tables resolved diffs in-place O(N)`, 'success');
         }
 
         async function shareResults() {
