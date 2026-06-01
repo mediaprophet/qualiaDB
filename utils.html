@@ -66,10 +66,21 @@
             background: rgba(0, 255, 102, 0.1); border: 1px solid var(--neon-green);
             color: var(--neon-green); padding: 0.8rem 2rem; border-radius: 4px;
             font-size: 1rem; cursor: pointer; transition: all 0.3s;
-            margin-top: 1rem;
+            margin-top: 1rem; width: 100%;
         }
         .btn:hover { background: var(--neon-green); color: #000; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: #555; color: #555; background: transparent; }
+
+        .input-group { margin-bottom: 1rem; text-align: left; }
+        .input-group label { display: block; margin-bottom: 0.5rem; color: #aaa; font-size: 0.9rem; }
+        .input-group input[type="text"] {
+            width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.5);
+            border: 1px solid #333; border-radius: 4px; color: #fff;
+            font-family: monospace; box-sizing: border-box;
+        }
+
+        .radio-group { display: flex; gap: 1rem; margin-top: 1rem; justify-content: center; }
+        .radio-group label { color: #fff; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
 
         #logArea {
             background: #000; border: 1px solid #333; border-radius: 4px;
@@ -96,15 +107,39 @@
         <p>Convert legacy Web 2.0 Semantic datasets (N-Triples, CSV) into hyper-dense <strong>.q42</strong> binary ledgers. This utility runs entirely in your browser. URIs are deterministically hashed into 64-bit integers and packed into the 48-byte Quin struct for native WebTorrent distribution.</p>
 
         <div class="card">
+            <h3 style="margin-top: 0;">1. Dataset Provenance</h3>
+            <div class="input-group">
+                <label>Source URL (e.g., https://wikidata.org/)</label>
+                <input type="text" id="provSource" placeholder="Enter source URI">
+            </div>
+            <div class="input-group">
+                <label>Author / Creator DID (Decentralized Identifier)</label>
+                <input type="text" id="provAuthor" placeholder="did:webizen:...">
+            </div>
+            <div class="input-group">
+                <label>License</label>
+                <input type="text" id="provLicense" value="Creative Commons Attribution-NonCommercial-NoDerivatives 4.0">
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top: 0;">2. Ingestion & Transcompilation</h3>
             <div class="upload-area" id="dropZone">
                 <h3 style="color: #fff; margin-bottom: 0.5rem;">Drop .nt or .csv file here</h3>
                 <p style="margin-bottom: 0;">or click to select file</p>
                 <input type="file" id="fileInput" accept=".nt,.csv,.txt">
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <p id="fileInfo" style="margin: 1rem 0 0 0; color: #fff; font-weight: bold;"></p>
-                <button class="btn" id="processBtn" disabled>Transcompile to .q42</button>
+            <p id="fileInfo" style="margin: 1rem 0; color: #fff; font-weight: bold; text-align: center;"></p>
+
+            <div style="padding-top: 1rem; border-top: 1px solid #333;">
+                <h4 style="text-align: center; margin-bottom: 0;">Destination</h4>
+                <div class="radio-group">
+                    <label><input type="radio" name="dest" value="download" checked> Direct Download</label>
+                    <label><input type="radio" name="dest" value="opfs"> Browser Cache (OPFS)</label>
+                    <label><input type="radio" name="dest" value="daemon"> Native Daemon (127.0.0.1:4848)</label>
+                </div>
+                <button class="btn" id="processBtn" disabled>Transcompile & Route .q42</button>
             </div>
         </div>
 
@@ -189,14 +224,22 @@
                 let shardIndex = 0;
                 let totalProcessed = 0;
 
-                const exportShard = (quinsArray, index) => {
+                const exportShard = async (quinsArray, index) => {
+                    // Inject Provenance Quin at the very top of the FIRST shard
+                    if (index === 0) {
+                        const srcHash = hashStringToU64(document.getElementById('provSource').value || 'unknown');
+                        const authHash = hashStringToU64(document.getElementById('provAuthor').value || 'unknown');
+                        const licHash = hashStringToU64(document.getElementById('provLicense').value || 'unknown');
+                        // Context = 0xFFFFFFFFFFFFFFFF signifies a Provenance Meta-Quin
+                        quinsArray.unshift({ s: srcHash, p: authHash, o: licHash, c: 18446744073709551615n, m: 0n, parity: 0n });
+                    }
+
                     const buffer = new ArrayBuffer(quinsArray.length * QUIN_SIZE);
                     const view = new DataView(buffer);
                     
                     for (let i = 0; i < quinsArray.length; i++) {
                         const offset = i * QUIN_SIZE;
                         const quin = quinsArray[i];
-                        // Write 6x 64-bit uints (Subject, Predicate, Object, Context, Metadata, Parity)
                         view.setBigUint64(offset, quin.s, true);
                         view.setBigUint64(offset + 8, quin.p, true);
                         view.setBigUint64(offset + 16, quin.o, true);
@@ -206,13 +249,45 @@
                     }
 
                     const blob = new Blob([buffer], { type: 'application/octet-stream' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `dataset_shard_${index}.q42`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    log(`💾 Downloaded dataset_shard_${index}.q42 (${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB)`);
+                    const dest = document.querySelector('input[name="dest"]:checked').value;
+                    const filename = `dataset_shard_${index}.q42`;
+
+                    if (dest === 'download') {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        log(`💾 Downloaded ${filename} (${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB)`);
+                    } else if (dest === 'opfs') {
+                        try {
+                            const root = await navigator.storage.getDirectory();
+                            const fileHandle = await root.getFileHandle(filename, { create: true });
+                            const writable = await fileHandle.createWritable();
+                            await writable.write(blob);
+                            await writable.close();
+                            log(`📦 OPFS Cache: Saved ${filename} to browser secure storage.`);
+                        } catch(e) {
+                            log(`❌ OPFS Error: ${e.message}`);
+                        }
+                    } else if (dest === 'daemon') {
+                        try {
+                            log(`🚀 Sending ${filename} to Native Daemon (127.0.0.1:4848)...`);
+                            const response = await fetch(`http://127.0.0.1:4848/cache?filename=${filename}`, {
+                                method: 'POST',
+                                body: blob,
+                                headers: { 'Content-Type': 'application/octet-stream' }
+                            });
+                            if (response.ok) {
+                                log(`✅ Daemon confirmed receipt of ${filename} to local cache.`);
+                            } else {
+                                log(`❌ Daemon rejected payload: ${response.status}`);
+                            }
+                        } catch(e) {
+                            log(`❌ Loopback Error: Native Daemon is not running on 127.0.0.1:4848`);
+                        }
+                    }
                 };
 
                 // Simple NT parser (Subject Predicate Object .)
@@ -234,7 +309,7 @@
                         totalProcessed++;
 
                         if (currentQuins.length >= MAX_QUINS_PER_SHARD) {
-                            exportShard(currentQuins, shardIndex++);
+                            await exportShard(currentQuins, shardIndex++);
                             currentQuins = [];
                         }
                     }
@@ -246,7 +321,7 @@
                 }
 
                 if (currentQuins.length > 0) {
-                    exportShard(currentQuins, shardIndex);
+                    await exportShard(currentQuins, shardIndex);
                 }
 
                 log(`✅ Transcompilation complete! Total Triples Processed: ${totalProcessed}`);

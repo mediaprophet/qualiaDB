@@ -209,7 +209,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Strict Origin Enforcement enabled: Trusting only mediaprophet.github.io");
             }
 
-            let route = warp::post()
+            let rpc_route = warp::post()
                 .and(warp::path("rpc"))
                 .and(warp::header::optional::<String>("origin"))
                 .and(warp::body::json())
@@ -298,6 +298,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .allow_headers(vec!["content-type"])
                 .allow_methods(vec!["POST"]);
 
+            let cache_route = warp::post()
+                .and(warp::path("cache"))
+                .and(warp::query::<std::collections::HashMap<String, String>>())
+                .and(warp::body::bytes())
+                .map(|qs: std::collections::HashMap<String, String>, body: warp::hyper::body::Bytes| {
+                    let filename = qs.get("filename").map(|s| s.clone()).unwrap_or_else(|| "dataset_shard.q42".to_string());
+                    let mut path = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).map(std::path::PathBuf::from).unwrap_or_else(|_| std::path::PathBuf::from("."));
+                    path.push(".qualia");
+                    path.push("cache");
+                    let _ = std::fs::create_dir_all(&path);
+                    path.push(&filename);
+                    let _ = std::fs::write(&path, body);
+                    println!("📥 Loopback Ingestion: Saved Transcompiled Shard to {:?}", path);
+                    warp::reply::json(&serde_json::json!({ "status": "ok", "saved_to": path.to_str() }))
+                });
+
+            let routes = rpc_route.or(cache_route).with(cors);
+
             // Spawn Nym Mixnet Sync Loop
             tokio::spawn(async move {
                 println!("🌐 Nym Mixnet: Sphinx Packet routing initialized.");
@@ -349,7 +367,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             });
 
-            warp::serve(route.with(cors))
+            warp::serve(routes)
                 .run(([127, 0, 0, 1], 4848))
                 .await;
         }
