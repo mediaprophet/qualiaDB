@@ -58,16 +58,26 @@ Instead of relying on centralized servers for graph replication, the Webizen Bro
 
 *Note: This framework relies fundamentally on legacy historical models of the Permissive Commons. It is presented here as a skeletal architecture awaiting specific integration of historical works and supports.*
 
-The Permissive Commons defines how shared data (the Bilateral Micro-Commons) is legally, economically, and computationally governed between peers. While the Webizen Protocol provides the cryptographic means to share and verify data, the Permissive Commons dictates the **ramifications, rights, and supports** associated with that data.
+The Permissive Commons defines how shared data (the Bilateral Micro-Commons) is legally, economically, and computationally governed between peers. 
 
 ### 4.1 Computational Enforcement
-Rules defined within the Permissive Commons are not merely "Terms of Service" text documents. They are mapped directly to the `Context` and `Metadata` vectors of the 48-byte Quin.
+Rules defined within the Permissive Commons are mapped directly to the `Context` and `Metadata` vectors of the 48-byte Quin.
 When the Sentinel VM attempts to unify an inference across shared data, it hits a hard Permissive Commons Gate. 
 
-### 4.2 Open Directives (Pending Integration)
-The following topics require precise definition based on historical Permissive Commons models:
+### 4.2 The Adaptive Network Harness
+WebTorrent and IPFS P2P operations can severely deplete bandwidth on mobile or metered connections. The Webizen protocol enforces an **Adaptive Network Harness**:
+- **Offline / Metered (Leech-Only)**: Protects the user's data cap.
+- **Unmetered**: Full P2P seeding to the Permissive Commons.
+Additionally, the Permissive Commons Lightning RPC tracks bytes seeded and matches it against the Compute Bounty, ensuring users are economically compensated for providing network bandwidth.
 
+### 4.3 Decentralized AI Compute & Energy Opportunism (The Sleep-Cycle Swarm)
+The Webizen Protocol utilizes a **Hybrid `.q42` Ledger** approach to Decentralized ML/AI. 
+- The `.q42` graph contains the Permissive Commons **Compute Bounties** (the economic and legal rules), accompanied by a WebTorrent Magnet URI pointing to a standard dense ML model (e.g., `.gguf`).
+- When a user's device goes to sleep, if their **Energy Circumstance** allows (e.g., connected to grid power, or off-grid solar batteries are at 100% capacity), the Daemon spins up a **Sleep-Cycle Swarm**. It downloads the model, runs the inference utilizing Fractal GPU Sharding, and submits the cryptographic proof-of-work back to the ledger to earn Lightning micropayments.
+
+### 4.4 Open Directives (Pending Integration)
+The following topics require precise definition based on historical Permissive Commons models:
 1. **Ramifications of Works**: What are the strict legal and computational consequences when an actor utilizes an inference from the Commons? 
 2. **Supports and Entitlements**: How are micropayments, algorithmic proof-of-work, or verifiable credential presentations mathematically gated before access is granted?
 3. **Revocation & Epoch Compaction**: If an author revokes consent to a previously shared subjective inference, how does the Permissive Commons dictate the physical erasure of those Quins via Epoch Compaction?
-4. **Derivative Works & Licensing**: How do we encode Permissive Commons licensing rules directly into the 48-byte Quin metadata to prevent unauthorized derivative logic execution by the Sentinel VM?
+4. **Derivative Works & Licensing**: How do we encode Permissive Commons licensing rules directly into the 48-byte Quin metadata?

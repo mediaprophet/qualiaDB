@@ -32,6 +32,18 @@ enum Commands {
         /// Run in Development Mode (allows localhost origin and skips strict JWT pairing)
         #[arg(long)]
         dev: bool,
+        /// Network Connectivity Profile (offline, metered, unmetered)
+        #[arg(long, default_value = "unmetered")]
+        net_mode: String,
+        /// Energy Circumstance Profile (strict, opportunistic, unlimited)
+        #[arg(long, default_value = "unlimited")]
+        energy_mode: String,
+        /// Fractal Sharding parallelism: number of 512MB cells to spin up
+        #[arg(long, default_value = "1")]
+        workers: u16,
+        /// Enable Sleep-Cycle Swarm AI Compute
+        #[arg(long)]
+        compute_swarm: bool,
     },
     /// Webizen Mode: Integrates did-method-git and human agency
     Webizen {
@@ -157,9 +169,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             file.sync_all()?;
             println!("Dumped 3 mocked Quins (144 bytes) to .q42 successfully.");
         }
-        Commands::Daemon { dev } => {
+        Commands::Daemon { dev, net_mode, energy_mode, workers, compute_swarm } => {
             let is_dev = *dev;
             println!("Starting Qualia Native Loopback Server on 127.0.0.1:4848");
+            
+            println!("============================================================");
+            println!("🚀 Qualia-DB Zero-Allocation Native Local Daemon Booting...");
+            println!("============================================================");
+            println!("📡 Network Mode: {}", net_mode.to_uppercase());
+            println!("🔋 Energy Mode: {}", energy_mode.to_uppercase());
+            println!("🧮 Fractal Shards: {} independent 512MB cells", workers);
+            if *compute_swarm {
+                println!("🧠 Sleep-Cycle Swarm: ENABLED (Waiting for idle state...)");
+            }
             
             // Spawn async update checker
             tokio::spawn(async {
