@@ -75,3 +75,114 @@ mod tests {
         assert_eq!(receipt.total_sats_owed, 1);
     }
 }
+
+/// A request from an external corporate provider (e.g., ISP, Telemetry Aggregator)
+/// proposing terms to connect to the local Qualia-DB daemon.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProviderTermsRequest {
+    pub provider_did: String,
+    pub proposed_ilp_offset: u64, // µ-cents per GB
+    pub data_usage_intent: String, // N3Logic ruleset hash
+    pub tax_jurisdiction_did: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum NegotiationStatus {
+    Accept,
+    Reject(String),
+}
+
+/// The local agent's response to the provider's terms.
+/// Handles Symmetrical Link generation and Stablecoin Escrow routing.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NegotiationResponse {
+    pub status: NegotiationStatus,
+    pub stablecoin_escrow_split: u64, // The tax portion routed to a stablecoin escrow
+    pub wallet_balance_split: u64,    // The remaining profit routed to the user's wallet
+}
+
+/// Evaluates a corporate provider's connection request against the user's
+/// intrinsic ILP connectivity cost and Rights Ontology.
+/// It automatically splits valid micropayments into a tax escrow and a personal wallet.
+pub fn negotiate_provider_terms(
+    request: ProviderTermsRequest, 
+    base_connectivity_cost: u64
+) -> NegotiationResponse {
+    // 1. ILP Economic Shift Check: Does the proposed offset meet the base intrinsic cost?
+    if request.proposed_ilp_offset < base_connectivity_cost {
+        return NegotiationResponse {
+            status: NegotiationStatus::Reject("INSUFFICIENT_OFFSET: Proposed ILP does not cover intrinsic connectivity costs.".to_string()),
+            stablecoin_escrow_split: 0,
+            wallet_balance_split: 0,
+        };
+    }
+
+    // 2. Fiduciary Supremacy Check: Ensure the data usage intent doesn't violate Knowledge Axioms.
+    if request.data_usage_intent == "STRIP_FIDUCIARY_METADATA" {
+        return NegotiationResponse {
+            status: NegotiationStatus::Reject("VIOLATION: Data usage intent violates Knowledge Axioms (Fiduciary Supremacy).".to_string()),
+            stablecoin_escrow_split: 0,
+            wallet_balance_split: 0,
+        };
+    }
+
+    // 3. Tax Rule Oracle & Escrow Routing
+    // In production, this pulls the `.q42` tax ontology for `request.tax_jurisdiction_did`.
+    // Here we mock a 10% tax rate derived from the ontology.
+    let tax_rate = 0.10;
+    let tax_escrow_amount = (request.proposed_ilp_offset as f64 * tax_rate) as u64;
+    let user_profit = request.proposed_ilp_offset - tax_escrow_amount;
+
+    NegotiationResponse {
+        status: NegotiationStatus::Accept,
+        stablecoin_escrow_split: tax_escrow_amount,
+        wallet_balance_split: user_profit,
+    }
+}
+
+#[cfg(test)]
+mod negotiation_tests {
+    use super::*;
+
+    #[test]
+    fn test_negotiation_insufficient_funds() {
+        let req = ProviderTermsRequest {
+            provider_did: "did:git:corp123".to_string(),
+            proposed_ilp_offset: 4000,
+            data_usage_intent: "standard_routing".to_string(),
+            tax_jurisdiction_did: "did:gov:us:ny".to_string(),
+        };
+        // User requires 5000 µ-cents
+        let res = negotiate_provider_terms(req, 5000);
+        assert!(matches!(res.status, NegotiationStatus::Reject(_)));
+    }
+
+    #[test]
+    fn test_negotiation_fiduciary_violation() {
+        let req = ProviderTermsRequest {
+            provider_did: "did:git:corp123".to_string(),
+            proposed_ilp_offset: 6000, // Meets cost!
+            data_usage_intent: "STRIP_FIDUCIARY_METADATA".to_string(), // Violates axiom!
+            tax_jurisdiction_did: "did:gov:us:ny".to_string(),
+        };
+        let res = negotiate_provider_terms(req, 5000);
+        assert!(matches!(res.status, NegotiationStatus::Reject(_)));
+    }
+
+    #[test]
+    fn test_negotiation_success_and_tax_escrow() {
+        let req = ProviderTermsRequest {
+            provider_did: "did:git:corp123".to_string(),
+            proposed_ilp_offset: 10000,
+            data_usage_intent: "standard_routing".to_string(),
+            tax_jurisdiction_did: "did:gov:us:ny".to_string(),
+        };
+        let res = negotiate_provider_terms(req, 5000);
+        
+        assert_eq!(res.status, NegotiationStatus::Accept);
+        // 10% of 10000 goes to stablecoin escrow = 1000
+        assert_eq!(res.stablecoin_escrow_split, 1000);
+        // 90% goes to wallet = 9000
+        assert_eq!(res.wallet_balance_split, 9000);
+    }
+}
