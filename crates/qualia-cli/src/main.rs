@@ -577,16 +577,30 @@ pub mod daemon_routing {
                 
                 // Crucial Blocking Logic: Halting the thread until cryptographic settlement
                 println!("   ⛔ HALTING THREAD: Awaiting Lightning settlement cryptoproof...");
+                let mut retries = 0;
+                let max_retries = 120; // 60-second timeout (120 * 500ms)
+                
+                let mut payment_settled = false;
                 loop {
+                    if retries >= max_retries {
+                        println!("   ❌ TIMEOUT: Invoice unpaid. Force-dropping payload to prevent task saturation.");
+                        break;
+                    }
                     // In production, we'd asynchronously poll the LDK node or LNURL endpoint
                     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                     if check_invoice_settled(&invoice) {
                         println!("   ✅ PAYMENT SETTLED: Cryptoproof verified.");
+                        payment_settled = true;
                         break;
                     }
+                    retries += 1;
                 }
                 
-                println!("   📤 Releasing Payload to commercial caller.");
+                if payment_settled {
+                    println!("   📤 Releasing Payload to commercial caller.");
+                } else {
+                    println!("   HTTP 402 Payment Required: Commercial payload access denied.");
+                }
                 println!("========================================");
             },
             _ => {

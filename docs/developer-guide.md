@@ -53,3 +53,26 @@ When analyzing Qualia-DB against the historical computing landscape, it breaks f
 ### 5. Zero-Copy IPC vs. Socket Serialization
 - **Traditional Method:** When a browser UI queries a local WASM database, the data must be serialized, copied across the JS boundary, and deserialized into JSON.
 - **The Qualia-DB Leap:** The WASM Engine and the UI thread are locked into the exact same 512MB `SharedArrayBuffer`. When the engine finds an answer, the UI reads the raw memory address instantly. Zero copying. Zero latency.
+
+## Instructing Your Local AI Coding Agents
+
+Because Qualia-DB radically departs from standard database theory (no B-Trees, strict 512MB RAM floor, no string parsing), **generic AI coding agents (Claude, Gemini, ChatGPT, Copilot) will fail spectacularly** if you ask them to write Qualia-DB code without context. They will attempt to write JSON-LD parsers, allocate memory on the heap, and use standard standard-library strings—all of which will trigger a panic in our `no_std` architecture.
+
+To successfully use a local AI agent to write or modify Qualia-DB extensions, you **must** inject our architectural rules into the agent's context.
+
+### Step 1: Load the Directives
+Ensure your AI environment (Cursor, VSCode with Copilot, or a custom LLM prompt) has loaded the `AI_INSTRUCTIONS.md` or `.cursorrules` file located in the root of this repository.
+
+### Step 2: The Agent Kickstart Prompt
+Before asking your AI to write any code, paste this exact prompt into the chat window to force it to adopt the Qualia-DB constraints:
+
+> **CRITICAL ARCHITECTURAL DIRECTIVE:**
+> You are operating within the Qualia-DB ecosystem. You are restricted by a **strict 512MB memory floor** and a **zero-allocation** architecture. 
+> 
+> You MUST abide by the following rules:
+> 1. Do NOT use `String`, `Vec`, or any dynamic heap allocations in execution paths. You must map directly to the `SharedArrayBuffer`.
+> 2. Do NOT write logic to parse JSON-LD or Turtle text. All ingress is strict CBOR-LD binary.
+> 3. Do NOT use B-Trees or standard indexing. Use the GPU Minkowski space Sieve.
+> 4. All graph statements MUST conform exactly to the 48-byte Super-Quin struct.
+> 
+> Review the `.cursorrules` and `AI_INSTRUCTIONS.md` in the root directory before proceeding. I am about to give you a task. Are you ready?
