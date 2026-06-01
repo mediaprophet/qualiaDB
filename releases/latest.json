@@ -1,7 +1,7 @@
 {
   "version": "0.1.0",
-  "notes": "Initial public release. LLM sub-agent governance layer, Sentinel-gated inference, transparent Criterion benchmarks, and cross-platform install support.",
-  "pub_date": "2026-06-01T10:00:00Z",
+  "notes": "Initial public release. LLM sub-agent governance layer, Sentinel-gated inference, semantic meme library, multimodal chat, transparent Criterion benchmarks, and cross-platform install support.",
+  "pub_date": "2026-06-02T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
@@ -18,6 +18,11 @@
     "linux-x86_64": {
       "signature": "",
       "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_amd64.AppImage"
+    },
+    "android": {
+      "signature": "",
+      "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-android-0.1.0-debug.apk",
+      "min_sdk": 26
     }
   }
 }

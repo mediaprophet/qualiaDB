@@ -117,7 +117,7 @@
         }
         .os-icon { font-size: 1.2rem; }
         /* hide all platform sections by default — JS reveals the right one */
-        .platform-win, .platform-mac, .platform-linux, .platform-unknown { display: none; }
+        .platform-win, .platform-mac, .platform-linux, .platform-android, .platform-unknown { display: none; }
     </style>
 </head>
 <body>
@@ -171,10 +171,22 @@
                 </a>
             </div>
 
-            <!-- Unknown / mobile -->
+            <!-- Android -->
+            <div class="platform-android install-btn-row" id="sectionAndroid">
+                <a class="install-btn install-btn-primary"
+                   href="https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-android-0.1.0-debug.apk"
+                   id="btnAndroid">
+                    <span class="os-icon">🤖</span> Download APK for Android
+                </a>
+                <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank">
+                    All releases →
+                </a>
+            </div>
+
+            <!-- Unknown / other mobile -->
             <div class="platform-unknown" id="sectionUnknown">
                 <p class="install-unsupported">
-                    Native install requires Windows 10+, macOS 11+, or a 64-bit Linux desktop.<br>
+                    Native install requires Windows 10+, macOS 11+, a 64-bit Linux desktop, or Android 8+.<br>
                     <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank">Browse all releases on GitHub →</a>
                 </p>
             </div>
@@ -294,18 +306,16 @@
             if (platform.includes('windows')) {
                 show('Win', '🪟', 'Windows ' + (info.bitness === '64' ? 'x64' : 'x86') + ' detected');
             } else if (platform.includes('mac')) {
-                // arm = Apple Silicon, x86 = Intel
                 const chip = arch === 'arm' ? 'Apple Silicon (arm64)' : 'Intel x64';
                 show('Mac', '🍎', 'macOS · ' + chip + ' detected');
-                // Swap primary button to Intel if that's what they have
                 if (arch !== 'arm') {
                     const arm = document.getElementById('btnMacArm');
                     const intel = document.getElementById('btnMacIntel');
-                    arm.classList.remove('install-btn-primary');
-                    arm.classList.add('install-btn-secondary');
-                    intel.classList.remove('install-btn-secondary');
-                    intel.classList.add('install-btn-primary');
+                    arm.classList.remove('install-btn-primary'); arm.classList.add('install-btn-secondary');
+                    intel.classList.remove('install-btn-secondary'); intel.classList.add('install-btn-primary');
                 }
+            } else if (platform.includes('android')) {
+                show('Android', '🤖', 'Android detected — APK download (minSdk 26 / Android 8+)');
             } else if (platform.includes('linux')) {
                 show('Linux', '🐧', 'Linux x64 detected');
             } else {
@@ -317,16 +327,16 @@
     }
 
     function fallbackDetect(ua, icon, text, show) {
-        // Fallback: plain UA string sniffing
         if (/Windows NT/i.test(ua)) {
             show('Win', '🪟', 'Windows detected');
+        } else if (/Android/i.test(ua)) {
+            show('Android', '🤖', 'Android detected — APK download (requires Android 8+)');
         } else if (/Macintosh|Mac OS X/i.test(ua)) {
-            // Can't distinguish arm64 vs x64 from UA alone — show both, arm first
             show('Mac', '🍎', 'macOS detected (choose your chip below)');
-        } else if (/Linux/i.test(ua) && !/Android/i.test(ua)) {
+        } else if (/Linux/i.test(ua)) {
             show('Linux', '🐧', 'Linux detected');
         } else {
-            show('Unknown', '📱', /Android|iPhone|iPad/i.test(ua) ? 'Mobile (desktop required)' : 'Platform unknown');
+            show('Unknown', '📱', /iPhone|iPad/i.test(ua) ? 'iOS — not yet supported' : 'Platform unknown');
         }
     }
 })();
