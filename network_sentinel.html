@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Network Sentinel | Qualia-DB</title>
+    <title>Network Sentinel & Threat Intelligence | Qualia-DB</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-dark: #050505;
             --matrix-green: #00ff66;
             --alert-red: #ff3333;
+            --alert-yellow: #ffea00;
             --accent-blue: #00e5ff;
             --text-light: #e0e0e0;
             --glass-bg: rgba(10, 10, 15, 0.85);
@@ -25,7 +26,7 @@
             min-height: 100vh;
         }
 
-        h1, h2 {
+        h1, h2, h3 {
             font-family: 'Orbitron', sans-serif;
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -40,6 +41,13 @@
             color: var(--alert-red);
             text-shadow: 0 0 20px rgba(255, 51, 51, 0.4);
             font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header h3 {
+            color: var(--accent-blue);
+            font-size: 1rem;
+            margin-top: 0;
         }
 
         .return-link {
@@ -56,7 +64,7 @@
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 2rem;
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
@@ -66,6 +74,7 @@
             border-radius: 8px;
             padding: 1.5rem;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+            margin-bottom: 2rem;
         }
 
         .panel-header {
@@ -100,12 +109,13 @@
         .proto-tcp { color: #999; }
         .proto-tls { color: var(--matrix-green); }
         .proto-spyware { color: var(--alert-red); font-weight: bold; }
+        .proto-unknown { color: var(--alert-yellow); font-weight: bold; }
 
         /* Sentinel Log */
         .sentinel-log {
             background: #000;
             border: 1px solid #222;
-            height: 400px;
+            height: 300px;
             overflow-y: auto;
             padding: 1rem;
             font-size: 0.85rem;
@@ -114,6 +124,8 @@
         .log-entry { margin-bottom: 5px; }
         .log-warn { color: #ff9b44; }
         .log-error { color: var(--alert-red); text-shadow: 0 0 5px var(--alert-red); }
+        .log-intel { color: var(--alert-yellow); }
+        .log-rule { color: var(--accent-blue); }
 
         .btn {
             background: transparent;
@@ -124,12 +136,52 @@
             font-size: 0.8rem;
             cursor: pointer;
             transition: all 0.3s;
+            margin-left: 10px;
+        }
+        
+        .btn-yellow {
+            border-color: var(--alert-yellow);
+            color: var(--alert-yellow);
         }
 
         .btn:hover {
             background: rgba(255, 51, 51, 0.1);
             box-shadow: 0 0 15px rgba(255, 51, 51, 0.3);
         }
+        
+        .btn-yellow:hover {
+            background: rgba(255, 234, 0, 0.1);
+            box-shadow: 0 0 15px rgba(255, 234, 0, 0.3);
+        }
+        
+        /* Threat Graph Visualizer */
+        .threat-graph {
+            height: 200px;
+            background: #0a0a0a;
+            border: 1px dashed #333;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            color: #555;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .node {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #111;
+            border: 1px solid #444;
+            opacity: 0;
+            transition: 0.5s;
+        }
+        
+        .node.active { opacity: 1; border-color: var(--alert-yellow); color: var(--alert-yellow); box-shadow: 0 0 10px rgba(255,234,0,0.2); }
 
     </style>
 </head>
@@ -139,45 +191,67 @@
 
     <div class="header">
         <h1>libpcap Network Sentinel</h1>
-        <p>Wireshark-like Runtime for Qualia-DB Desktop Daemon</p>
+        <h3>Decentralized Threat Intelligence & Dynamic Rule Generation</h3>
     </div>
 
     <div class="dashboard">
-        <!-- Packet Sniffer (Wireshark Mock) -->
-        <div class="panel">
-            <div class="panel-header">
-                <h2>Live Egress Traffic (eth0)</h2>
-                <button class="btn" onclick="injectMalware()">Simulate Spyware Egress</button>
+        <!-- Left Column -->
+        <div>
+            <!-- Packet Sniffer (Wireshark Mock) -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Live Egress Traffic (eth0)</h2>
+                    <div>
+                        <button class="btn" onclick="injectMalware()">Simulate Known Spyware</button>
+                        <button class="btn btn-yellow" onclick="injectUnknownPattern()">Simulate Unknown Pattern</button>
+                    </div>
+                </div>
+                
+                <table class="packet-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Source</th>
+                            <th>Destination</th>
+                            <th>Protocol</th>
+                            <th>Length</th>
+                            <th>Info</th>
+                        </tr>
+                    </thead>
+                    <tbody id="packetBody">
+                        <tr class="packet-row"><td>0.000</td><td>192.168.1.15</td><td>142.250.190.46</td><td class="proto-tls">TLSv1.3</td><td>1420</td><td>Application Data</td></tr>
+                        <tr class="packet-row"><td>0.021</td><td>192.168.1.15</td><td>1.1.1.1</td><td class="proto-tcp">DNS</td><td>84</td><td>Standard query A github.com</td></tr>
+                    </tbody>
+                </table>
             </div>
-            
-            <table class="packet-table">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Source</th>
-                        <th>Destination</th>
-                        <th>Protocol</th>
-                        <th>Length</th>
-                        <th>Info</th>
-                    </tr>
-                </thead>
-                <tbody id="packetBody">
-                    <!-- Baseline Traffic -->
-                    <tr class="packet-row"><td>0.000</td><td>192.168.1.15</td><td>142.250.190.46</td><td class="proto-tls">TLSv1.3</td><td>1420</td><td>Application Data</td></tr>
-                    <tr class="packet-row"><td>0.021</td><td>192.168.1.15</td><td>1.1.1.1</td><td class="proto-tcp">DNS</td><td>84</td><td>Standard query A github.com</td></tr>
-                    <tr class="packet-row"><td>0.145</td><td>192.168.1.15</td><td>104.244.42.193</td><td class="proto-tls">TLSv1.3</td><td>930</td><td>Application Data</td></tr>
-                </tbody>
-            </table>
+
+            <!-- Threat Graph Visualizer -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Decentralized Threat Intelligence (Peer Network)</h2>
+                </div>
+                <div class="threat-graph" id="threatGraph">
+                    <span id="graphText">Awaiting Unknown Pattern Analysis...</span>
+                    <div style="display: flex; gap: 20px; margin-top: 10px;">
+                        <div class="node" id="node1">Peer 0x7A (Berlin)</div>
+                        <div class="node" id="node2">Peer 0x4B (Tokyo)</div>
+                        <div class="node" id="node3">Cooperative DAG</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- N3Logic Adjudicator Log -->
-        <div class="panel">
-            <div class="panel-header">
-                <h2>Sentinel Duty of Care</h2>
-            </div>
-            <div class="sentinel-log" id="sentinelLog">
-                <div class="log-entry" style="color: var(--matrix-green);">> Sentinel Daemon active. Hooked to libpcap.</div>
-                <div class="log-entry" style="color: #666;">> Monitoring egress traffic for Rights Ontology violations...</div>
+        <!-- Right Column -->
+        <div>
+            <!-- N3Logic Adjudicator Log -->
+            <div class="panel" style="height: 100%;">
+                <div class="panel-header">
+                    <h2>Sentinel Audit & Rule Generation</h2>
+                </div>
+                <div class="sentinel-log" id="sentinelLog">
+                    <div class="log-entry" style="color: var(--matrix-green);">> Sentinel Daemon active. Hooked to libpcap.</div>
+                    <div class="log-entry" style="color: #666;">> Monitoring egress traffic for Rights Ontology violations...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -185,6 +259,9 @@
     <script>
         const packetBody = document.getElementById('packetBody');
         const sentinelLog = document.getElementById('sentinelLog');
+        const threatGraph = document.getElementById('threatGraph');
+        const graphText = document.getElementById('graphText');
+        const nodes = [document.getElementById('node1'), document.getElementById('node2'), document.getElementById('node3')];
         let timeOffset = 1.205;
 
         function addLog(text, className) {
@@ -195,36 +272,64 @@
             sentinelLog.scrollTop = sentinelLog.scrollHeight;
         }
 
-        async function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
+        async function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
         async function injectMalware() {
-            // Generate rogue packet
             timeOffset += 0.312;
             const row = document.createElement('tr');
             row.className = "packet-row";
-            row.innerHTML = `<td>${timeOffset.toFixed(3)}</td><td>192.168.1.15</td><td class="proto-spyware">198.51.100.22 (Rogue)</td><td class="proto-spyware">TCP</td><td>4280</td><td class="proto-spyware">POST /api/telemetry/health_data [UNAUTHORIZED]</td>`;
+            row.innerHTML = `<td>${timeOffset.toFixed(3)}</td><td>192.168.1.15</td><td class="proto-spyware">198.51.100.22</td><td class="proto-spyware">TCP</td><td>4280</td><td class="proto-spyware">POST /api/telemetry [KNOWN THREAT]</td>`;
             packetBody.appendChild(row);
 
-            addLog("ALERT: Egress traffic detected attempting to transmit 4.2KB to unverified IP (198.51.100.22).", "log-warn");
-            await sleep(800);
-            
-            addLog("Intercepting TCP payload. Parsing via N3Logic Rights Ontology...", "log-entry");
-            await sleep(1000);
-
-            addLog("VIOLATION: Payload contains Health/Biometric Quins belonging to Principal (Natural Person).", "log-error");
-            addLog("VIOLATION: Telemetry endpoint is not cryptographically authorized by the Principal.", "log-error");
-            
-            await sleep(800);
-            addLog("EXECUTING DUTY OF CARE: Blocking egress socket...", "log-warn");
+            addLog("ALERT: Egress traffic matches KNOWN STATIC RULE.", "log-warn");
+            await sleep(500);
+            addLog("EXECUTING DUTY OF CARE: Blocking egress socket...", "log-error");
             
             await sleep(500);
             row.style.textDecoration = "line-through";
             row.style.opacity = "0.5";
+            addLog("SUCCESS: Connection severed.", "log-entry");
+        }
+
+        async function injectUnknownPattern() {
+            timeOffset += 0.441;
+            const row = document.createElement('tr');
+            row.className = "packet-row";
+            row.innerHTML = `<td>${timeOffset.toFixed(3)}</td><td>192.168.1.15</td><td class="proto-unknown">203.0.113.88</td><td class="proto-unknown">TCP</td><td>15400</td><td class="proto-unknown">Burst Data Exfiltration (Port 9931)</td>`;
+            packetBody.appendChild(row);
+
+            addLog("WARNING: Unknown egress pattern detected. Socket frozen.", "log-warn");
+            await sleep(1000);
             
-            addLog("SUCCESS: TCP connection to 198.51.100.22 severed. Malware exfiltration blocked.", "log-entry");
-            addLog("Principal's data remains sovereign and localized.", "log-entry");
+            addLog("Initiating Decentralized Threat Intelligence Protocol...", "log-intel");
+            graphText.innerText = "Querying Peer reputation .q42 DAGs for behavior pattern...";
+            graphText.style.color = "var(--alert-yellow)";
+            
+            for(let i=0; i<nodes.length; i++) {
+                nodes[i].classList.add('active');
+                await sleep(600);
+            }
+            
+            addLog("Peer consensus reached: Pattern matches covert audio recording exfiltration.", "log-intel");
+            await sleep(800);
+            
+            addLog("GENERATING DYNAMIC N3LOGIC RULE...", "log-rule");
+            await sleep(800);
+            addLog("Rule Created: { Egress(IP:203.0.113.88, Pattern:Burst) => Permission(Deny) }", "log-rule");
+            
+            await sleep(500);
+            addLog("EXECUTING NEW RULE: Blocking socket...", "log-error");
+            row.style.textDecoration = "line-through";
+            row.style.opacity = "0.5";
+            
+            await sleep(500);
+            addLog("Writing event and new rule to local cryptographic audit chain.", "log-entry");
+            
+            setTimeout(() => {
+                nodes.forEach(n => n.classList.remove('active'));
+                graphText.innerText = "Audit Complete. Rule permanently enforced.";
+                graphText.style.color = "var(--matrix-green)";
+            }, 2000);
         }
     </script>
 </body>
