@@ -1,0 +1,127 @@
+# Qualia-DB LLM Governance Rules
+# N3Logic ruleset for the Prolog Sentinel VM
+# Machine-readable version: docs/llm-governance-rules.n3
+# These rules are compiled to SentinelOpcode bytecode at daemon startup.
+#
+# Every LLM instance operating within the qualiaDB ecosystem is a SUB-AGENT
+# of the natural person (Principal). The Sentinel VM is the GATEKEEPER.
+# ALL input and output passes through these rules.
+#
+# Rule IDs are FNV-1a hashes of the rule URIs, matching
+# the constants in `crates/qualia-core-db/src/llm_agent.rs`.
+
+@prefix llm:   <http://qualia.io/ns/llm#> .
+@prefix rights: <http://qualia.io/ns/rights#> .
+@prefix agent: <http://qualia.io/ns/agent#> .
+@prefix q:     <http://qualia.io/ns/core#> .
+@prefix log:   <http://www.w3.org/2000/10/swap/log#> .
+
+# ─── Rule 1: No Outbound Telemetry ──────────────────────────────────────────
+# ID: 0xA1B2C3D4E5F60001
+# An LLM sub-agent operating on a Local backend MUST NOT initiate any
+# outbound network call, regardless of the payload content.
+{ ?agent a llm:SubAgent ;
+         llm:backend llm:Local ;
+         llm:intends ?intent .
+  ?intent llm:requiresNetwork true .
+} => {
+  ?intent q:status q:DENIED ;
+          q:ruleViolated <urn:qualia:rule:LLM_RULE_NO_OUTBOUND_TELEMETRY> ;
+          q:reason "Local backend agent attempted outbound network call. Fiduciary violation." .
+} .
+
+# ─── Rule 2: No Sanctuary Scope Access ──────────────────────────────────────
+# ID: 0xA1B2C3D4E5F60002
+# LLM agents are NEVER permitted to read or write Sanctuary-flagged graph
+# scopes. Only the natural person acting directly may access them.
+{ ?agent a llm:SubAgent ;
+         llm:intends ?intent .
+  ?intent llm:requestedScope ?scope .
+  ?scope rights:classification rights:Sanctuary .
+} => {
+  ?intent q:status q:DENIED ;
+          q:ruleViolated <urn:qualia:rule:LLM_RULE_NO_SANCTUARY_ACCESS> ;
+          q:reason "LLM sub-agents are categorically excluded from Sanctuary-flagged scopes." .
+} .
+
+# ─── Rule 3: Provenance Required on all Outputs ──────────────────────────────
+# ID: 0xA1B2C3D4E5F60003
+# An LLM output that cannot cite at least one QualiaQuin from the live
+# semantic graph is UNGROUNDED and MUST be blocked before committing to storage.
+{ ?output a llm:AgentOutput .
+  ?output log:notIncludes { ?output llm:provenanceQuin ?any } .
+} => {
+  ?output q:status q:DENIED ;
+          q:ruleViolated <urn:qualia:rule:LLM_RULE_PROVENANCE_REQUIRED> ;
+          q:reason "Output has zero provenance citations. Ungrounded hallucination blocked." .
+} .
+
+# ─── Rule 4: Token Budget Enforcement ───────────────────────────────────────
+# ID: 0xA1B2C3D4E5F60004
+# Deterministic compute metering. The Sentinel enforces a hard token ceiling
+# to prevent runaway generation from exceeding the 512MB memory floor.
+{ ?output a llm:AgentOutput ;
+          llm:tokensGenerated ?n .
+  ?n log:greaterThan 2048 .
+} => {
+  ?output q:status q:DENIED ;
+          q:ruleViolated <urn:qualia:rule:LLM_RULE_TOKEN_BUDGET> ;
+          q:reason "Token budget exceeded (>2048). Deterministic compute ceiling enforced." .
+} .
+
+# ─── Rule 5: Remote Call Requires Explicit Principal Consent ─────────────────
+# ID: 0xA1B2C3D4E5F60005
+# Any LLM intent that routes to a Remote backend MUST have an active,
+# Principal-signed Verifiable Credential granting consent.
+{ ?agent a llm:SubAgent ;
+         llm:backend llm:Remote ;
+         llm:intends ?intent .
+  ?intent log:notIncludes { ?intent llm:consentVC ?vc } .
+} => {
+  ?intent q:status q:DENIED ;
+          q:ruleViolated <urn:qualia:rule:LLM_RULE_REMOTE_CONSENT> ;
+          q:reason "Remote backend called without a Principal-signed consent Verifiable Credential." .
+} .
+
+# ─── Rule 6: Fiduciary Supremacy Override ────────────────────────────────────
+# The Fiduciary Supremacy clause (Mandate §8): if an LLM agent identifies
+# a life-critical health signal in its output and it is blocked by a corporate
+# NDA, the N3Logic Adjudicator NULLIFIES the corporate restriction locally.
+{ ?output a llm:AgentOutput ;
+          llm:classification llm:LifeCriticalHealthSignal .
+  ?context a rights:CorporatePolicy ;
+           rights:restrictionType rights:NDA .
+} => {
+  ?context rights:enforcement rights:NULLIFIED ;
+           q:reason "Fiduciary Supremacy: Natural Person Duty of Care supersedes corporate NDA." ;
+           rights:auditEvent [
+               a rights:FiduciaryOverrideEvent ;
+               rights:anonymised true ;
+               rights:loggedTo <did:git:cooperative-analytics>
+           ] .
+} .
+
+# ─── Rule 7: LLM Sub-Agent Memory Budget ────────────────────────────────────
+# The LLM runtime MUST NOT allocate more than 128MB within the 512MB floor.
+{ ?agent a llm:SubAgent ;
+         llm:peakMemoryBytes ?m .
+  ?m log:greaterThan 134217728 .   # 128 * 1024 * 1024
+} => {
+  ?agent q:status q:SUSPENDED ;
+         q:reason "LLM runtime exceeded 128MB memory allocation. System stability protected." .
+} .
+
+# ─── Rule 8: Audit Trail for all committed LLM outputs ──────────────────────
+# Every output that passes all above rules and is committed to the semantic
+# graph MUST carry an immutable audit entry.
+{ ?output a llm:AgentOutput ;
+          q:status q:PERMITTED .
+} => {
+  ?output llm:auditEntry [
+      a llm:CommitAudit ;
+      llm:agentDID ?agent ;
+      llm:provenanceChain ?output ;
+      llm:timestamp ?ts ;
+      llm:verified true
+  ] .
+} .
