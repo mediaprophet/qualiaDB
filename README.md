@@ -1,48 +1,43 @@
-# Qualia-DB 
+# Qualia-DB: The Human-Centric Semantic Ecosystem
 <div align="center">
-**The Human-Centric Semantic Engine**
+**Peace Infrastructure for the Natural Person**
 
-Qualia-DB is a bare-metal, strictly-constrained, offline-first semantic graph database. Designed explicitly for personal computing environments, it operates under a ruthless **512MB RAM floor**, enforcing mechanical sympathy at every layer to guarantee human agency, battery life, and deterministic logic execution for the Wellfair architecture.
+Qualia-DB has evolved far beyond a bare-metal semantic graph database. It is a strictly constrained, mathematically verifiable **Ecosystem** designed to guarantee human agency, protect knowledge from proprietary enclosure, and dismantle infinite rent-seeking via native micro-economics.
 
-## 🚀 The Three-Core Architecture
+It operates under a rigorous **Principal-Agent Duty of Care**: the software acts exclusively as the Agent on behalf of the Natural Person (the Principal).
 
-Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favor of a specialized 3-Core Triad.
+## 🚀 The Three-Core Database Engine
 
-### Core 3: Zero-Allocation Ingestion & IO
-The boundary between the network and the disk is a strict binary fortress.
-- **CBOR-LD Gatekeeper**: Explicitly rejects JSON-LD or text-based payloads to prevent heap-saturation attacks. It ingests variables via a binary compression dictionary, constructing 64-bit Lexicon indices without allocating a single `String` or `Vec`.
-- **WASM OPFS Bridge**: In the browser, Qualia bypasses IndexedDB and dynamically allocates a strict 512MB `SharedArrayBuffer`, writing natively to the disk via the `createSyncAccessHandle` Origin Private File System API.
+Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favor of a specialized 3-Core Triad built with ruthless mechanical sympathy (512MB RAM floor):
+1. **Zero-Allocation Ingestion**: CBOR-LD gatekeeping and WASM OPFS bridging bypass heap-saturation attacks, writing natively to disk.
+2. **GPU Sieve (Geometric Pruning)**: Graph nodes are mapped into Minkowski space within continuous 128KB memory-mapped `QualiaSuperBlocks`. The GPU calculates bounding-hull collisions to retrieve data at sub-microsecond speeds.
+3. **The Prolog Sentinel (Logic Unification)**: Data filtering is not enough; human-centric databases must execute logic. Nested N3 implication rules are compiled into L1-cache bytecodes, guaranteeing $O(1)$ termination on highly cyclic social and legal graphs.
 
-### Core 2: The GPU Sieve (Geometric Pruning)
-Instead of relying on slow, pointer-chasing B-Trees, Qualia-DB maps graph nodes into continuous, 128KB memory-mapped `QualiaSuperBlocks`.
-- **The Lorentz Hyperboloid**: Relationships are mapped geometrically into Minkowski space.
-- **Vulkan / WebGPU Compute**: The CPU offloads the 128KB frame to the GPU/NPU, which executes highly parallel bounding-hull collision math to rapidly isolate the 48-byte `SuperQuins` you need.
+## ⚖️ The Rights Ontology & Semantic Adjudicator
 
-### Core 1: The Prolog Sentinel (Logic Unification)
-Data filtering is not enough; a human-centric database must execute logic. Qualitative data—social agency, bilateral medical access, property delegation—requires mathematical verification of rules. Qualia-DB intercepts the graph and executes the logic natively via the Sentinel Virtual Machine. Sentinel mathematically guarantees $O(1)$ termination on highly cyclic social and legal graphs, eliminating stack-overflow vulnerabilities.
-- **Native N3Logic Execution**: Nested N3 implication rules (`{...} => {...}`) are compiled directly into Sentinel Bytecodes. By resolving inferences strictly over flattened 64-bit hardware identifiers instead of text strings, N3 inference operates at sub-microsecond speeds entirely within the L1/L2 cache.
+Qualia-DB natively encodes a **Rights Ontology** directly into the N3Logic Sentinel VM.
+- **The Knowledge Axiom Predicate**: Rights to knowledge and fundamental shared learnings are mathematically un-propertizeable. If a semantic dispute arises, the Sentinel VM automatically dismisses any attempt to extract or enclose a Knowledge Axiom as intellectual property.
+- **Proportional Escrow (Relational Assertion)**: When a dispute involves a specific *Application* or *Invention*, the N3Logic VM analyzes the `.q42` Provenance DAGs of both parties. It mathematically calculates the exact percentage of derivation and automatically splits incoming ILP Escrow funds based on absolute truth, stripping away false claims of originality.
 
-## 🛡️ Cryptographic Human Agency Records
+## 🧬 DID:GIT & Staged Axiomatic Evolution
 
-We strictly reject the "Global Endorsement Trap". In a shared Bilateral Micro-Commons, you only sign what you author.
-- **Author-Scoped Merkle Aggregation**: The engine isolates the 48-byte Quins belonging strictly to a user's DID and calculates a Merkle Sub-Root hash.
-- **Ed25519 Signatures**: A single 64-byte signature mathematically guarantees the author's claims without forcing them to endorse third-party injected data.
-- **Zero-Allocation CRDT Sync**: 12-bit Lamport clocks resolve edge-device conflicts natively within the 128KB static buffers, triggering *Epoch Compactions* that actively shrink the dataset by zeroing out Tombstone arrays.
+Data projects in this ecosystem are not static—they possess **Temporal Self-Governance**.
+- Through the `did:git` Permissive Commons Profile, every project initializes a DOAP (Description of a Project) as its Genesis Block.
+- To evolve a project to its next stage (e.g., changing its license or logic), the proposed `git` commit must be mathematically validated by the N3Logic Sentinel VM against the *former* axioms of the previous stage. 
+- If valid, the transition is anchored globally to the Bitcoin blockchain via `gitmark`.
 
-## ⚡ Spectacle Demo
+## 💸 The ILP Economic Shift Engine
 
-We have built a glassmorphic, interactive dashboard to visually demonstrate the WASM Engine boot sequence, CBOR-LD ingestion, the SLG VM, and Ed25519 Cryptographic Agency verification.
+We explicitly reject the infinite rent-seeking paradigm of the legacy web.
+- Creators define an exact **Obligation Cost** using N3Logic Risk-Compounding algorithms (factoring base rate, risk multiplier, and temporal compounding).
+- As Interledger Protocol (ILP) Web Monetization streams flow in, the Daemon tracks the balance.
+- Once the exact mathematical threshold is met, the **Threshold Shift License (TSL)** automatically fires, irreversibly shifting the asset from *Commercial Gating* to the *Permissive Commons*.
 
-**[Launch the Sentinel Environment Demo](https://mediaprophet.github.io/qualiaDB/)** *(Requires a browser with `SharedArrayBuffer` COOP/COEP support).*
+## 📱 The Consumer Packaging
 
-## 📊 Benchmarks
-
-*Powered by `cargo bench` + `criterion` on bare metal:*
-
-- **Quin Allocation Constraint**: `~3.5 ns` per 48-byte Struct.
-- **CBOR-LD Dictionary Ingestion**: `~18.4 ns` per SuperQuin construction (Zero Heap Allocations).
-- **GeoSPARQL-Star Subset Compilation**: `~69.1 ns` directly into native hardware 64-bit opcodes.
-- **Legacy String Pipeline Ingestion (1,000 Lines)**: `~89.0 µs` (Highly optimized text path, yet still vastly slower than the 18ns CBOR binary path).
+This backend ecosystem binds directly to two critical consumer interfaces:
+1. **[WellFair](https://github.com/mediaprophet/wellfair/) (The Primary Mobile Agent)**: An independent mobile application structured around pluralistic foundational needs (Maslow, Systems of Faith). It binds to the Qualia-DB daemon to provide Sanctuary Modes, Duress Decoys, and Nym Mixnet anonymous routing.
+2. **Cooperative Workspace**: A packaged desktop toolkit embedded in the ecosystem for managing collaborative `did:git` projects, visualizing DOAP stages, and organizing team Verifiable Credentials.
 
 ## 🛠️ Build Instructions
 
@@ -56,4 +51,4 @@ wasm-pack build --target no-modules --out-dir ../qualia-client/pkg
 ```
 
 ---
-*Built with ruthless mechanical sympathy.*
+*Built to guarantee first-class digital agency.*
