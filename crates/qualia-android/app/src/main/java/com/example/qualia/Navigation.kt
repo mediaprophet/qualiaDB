@@ -1,12 +1,16 @@
 package com.example.qualia
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import com.example.qualia.chat.ChatScreen
 import com.example.qualia.chat.ChatViewModel
 import com.example.qualia.demos.DemoScreen
@@ -72,16 +76,9 @@ fun MainNavigation(
 
 @Composable
 private fun SettingsPlaceholder(modifier: Modifier = Modifier) {
-    // Full settings screen (tax suite editor, ILP addresses, model download) — next iteration
-    Surface(modifier.fillMaxSize() , color = BgDeep) {
-        androidx.compose.foundation.layout.Box(
-            contentAlignment = androidx.compose.ui.Alignment.Center,
-        ) {
+    Surface(modifier.fillMaxSize(), color = BgDeep) {
+        Box(contentAlignment = Alignment.Center) {
             Text("Settings — coming next iteration", color = TextMuted)
         }
     }
 }
-
-// fillMaxSize import helper
-private fun Modifier.fillMaxSize() =
-    this.then(androidx.compose.foundation.layout.fillMaxSize())

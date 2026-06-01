@@ -2,6 +2,7 @@ package com.example.qualia.demos
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -163,7 +164,7 @@ private fun BenchmarkDemo(accent: androidx.compose.ui.graphics.Color) {
     val bars = listOf(
         "FNV HashMap (QualiaDB)" to 1.0f,
         "BTreeMap (Oxigraph)"    to 0.74f,
-        "std HashMap (SurrealDB)"to 0.81f,
+        "std HashMap (SurrealDB)" to 0.81f,
     )
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Point lookup — 10k triples (lower is better ✓ = QualiaDB fastest)",

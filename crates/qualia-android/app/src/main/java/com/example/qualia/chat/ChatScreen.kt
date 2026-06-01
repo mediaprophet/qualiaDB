@@ -22,7 +22,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.example.qualia.memes.MemeEntry
 import com.example.qualia.memes.MemePickerSheet
 import com.example.qualia.memes.MemeViewModel
