@@ -2,7 +2,7 @@
 members = [
     "crates/qualia-core-db",
     "crates/qualia-cli"
-]
+, "crates/qualia-desktop"]
 resolver = "2"
 
 [profile.release]

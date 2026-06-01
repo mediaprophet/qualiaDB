@@ -1,0 +1,41 @@
+{
+  "build": {
+    "beforeBuildCommand": "",
+    "beforeDevCommand": "",
+    "devPath": "../../../utils.html",
+    "distDir": "../../../"
+  },
+  "package": {
+    "productName": "Qualia Desktop",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "os": {
+        "all": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "category": "DeveloperTool",
+      "copyright": "",
+      "deb": {
+        "depends": []
+      },
+    "identifier": "com.qualia.desktop",
+    "systemTray": {
+      "iconAsTemplate": true
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 800,
+        "resizable": true,
+        "title": "Qualia Desktop Agent",
+        "width": 1200,
+        "visible": false 
+      }
+    ]
+  }
+}
