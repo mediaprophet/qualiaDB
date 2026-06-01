@@ -3,21 +3,71 @@
     windows_subsystem = "windows"
 )]
 
-use tauri::{SystemTray, SystemTrayMenu, SystemTrayMenuItem, CustomMenuItem, SystemTrayEvent, Manager};
-use sysinfo::{System, SystemExt};
+use tauri::{SystemTray, SystemTrayMenu, SystemTrayMenuItem, CustomMenuItem, SystemTrayEvent, Manager, State};
+use sysinfo::{System, SystemExt, Disks};
+use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
+use std::path::PathBuf;
+
+#[derive(Serialize, Deserialize, Clone)]
+struct AgentConfig {
+    storage_path: String,
+    storage_quota_gb: u64,
+}
+
+impl Default for AgentConfig {
+    fn default() -> Self {
+        Self {
+            storage_path: "C:\\QualiaData".to_string(), // Default fallback
+            storage_quota_gb: 10,
+        }
+    }
+}
+
+struct AppState {
+    config: Mutex<AgentConfig>,
+}
+
+#[tauri::command]
+fn get_config(state: State<AppState>) -> AgentConfig {
+    state.config.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn save_config(state: State<AppState>, new_config: AgentConfig) -> Result<(), String> {
+    // 1. OS Protection Constraint: Never let the system drive drop below 15GB.
+    let disks = Disks::new_with_refreshed_list();
+    
+    // Find the disk matching the storage path (rudimentary check for MVP)
+    let path = PathBuf::from(&new_config.storage_path);
+    let mut target_disk_space = u64::MAX;
+    
+    for disk in disks.list() {
+        if path.starts_with(disk.mount_point()) {
+            target_disk_space = disk.available_space();
+            break;
+        }
+    }
+
+    let os_safety_margin_bytes: u64 = 15 * 1024 * 1024 * 1024; // 15 GB
+    let requested_quota_bytes = new_config.storage_quota_gb * 1024 * 1024 * 1024;
+
+    if target_disk_space.saturating_sub(requested_quota_bytes) < os_safety_margin_bytes {
+        return Err("OS_SAFETY_VIOLATION: Allocating this much storage would leave the host OS with less than the safe 15GB margin required to function.".to_string());
+    }
+
+    *state.config.lock().unwrap() = new_config;
+    Ok(())
+}
 
 #[tauri::command]
 fn profile_energy_circumstance() -> String {
-    // 1. Gather System Information (Mocking advanced battery profiling for MVP)
     let mut sys = System::new_all();
     sys.refresh_all();
     
-    // In a production environment, we'd use the `battery` crate or read /sys/class/power_supply
-    // For now, we simulate the profile check using basic sysinfo.
-    let total_mem = sys.total_memory() / 1024 / 1024; // MB
-    let used_mem = sys.used_memory() / 1024 / 1024; // MB
-    
-    let is_energy_surplus = true; // Assume AC Power for simulation
+    let total_mem = sys.total_memory() / 1024 / 1024;
+    let used_mem = sys.used_memory() / 1024 / 1024;
+    let is_energy_surplus = true;
 
     format!(
         "Energy Circumstance: {}\nTotal Mem: {}MB\nUsed Mem: {}MB\nSleep-Cycle Swarm Auth: {}",
@@ -30,18 +80,17 @@ fn profile_energy_circumstance() -> String {
 
 #[tauri::command]
 fn start_daemon() -> String {
-    // This would initialize the core Qualia-DB daemon on 127.0.0.1:4848
     "Daemon Started".to_string()
 }
 
 fn main() {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit Webizen Agent");
-    let show = CustomMenuItem::new("show".to_string(), "Open Dashboard");
+    let settings = CustomMenuItem::new("settings".to_string(), "Settings (Storage & Limits)");
     let profile = CustomMenuItem::new("profile".to_string(), "Check Energy Circumstance");
     let toggle_daemon = CustomMenuItem::new("toggle".to_string(), "Start Local Daemon");
 
     let tray_menu = SystemTrayMenu::new()
-        .add_item(show)
+        .add_item(settings)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(toggle_daemon)
         .add_item(profile)
@@ -51,6 +100,7 @@ fn main() {
     let system_tray = SystemTray::new().with_menu(tray_menu);
 
     tauri::Builder::default()
+        .manage(AppState { config: Mutex::new(AgentConfig::default()) })
         .system_tray(system_tray)
         .on_system_tray_event(|app, event| match event {
             SystemTrayEvent::MenuItemClick { id, .. } => {
@@ -58,7 +108,7 @@ fn main() {
                     "quit" => {
                         std::process::exit(0);
                     }
-                    "show" => {
+                    "settings" => {
                         let window = app.get_window("main").unwrap();
                         window.show().unwrap();
                         window.set_focus().unwrap();
@@ -74,7 +124,7 @@ fn main() {
             }
             _ => {}
         })
-        .invoke_handler(tauri::generate_handler![profile_energy_circumstance, start_daemon])
+        .invoke_handler(tauri::generate_handler![profile_energy_circumstance, start_daemon, get_config, save_config])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

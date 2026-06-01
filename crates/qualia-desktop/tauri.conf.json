@@ -2,8 +2,8 @@
   "build": {
     "beforeBuildCommand": "",
     "beforeDevCommand": "",
-    "devPath": "../../../utils.html",
-    "distDir": "../../../"
+    "devPath": "settings.html",
+    "distDir": "."
   },
   "package": {
     "productName": "Qualia Desktop",

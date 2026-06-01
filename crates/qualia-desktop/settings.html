@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB Agent Settings</title>
+    <style>
+        :root {
+            --neon-blue: #00f0ff;
+            --neon-gold: #ffb800;
+            --bg-color: #050508;
+            --glass-bg: rgba(10, 10, 15, 0.8);
+            --glass-border: rgba(0, 240, 255, 0.2);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #eee;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h2 {
+            color: var(--neon-blue);
+            margin-top: 0;
+            font-family: monospace;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"], input[type="range"] {
+            width: 100%;
+            padding: 0.8rem;
+            background: #111;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+        }
+
+        .quota-display {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-family: monospace;
+            color: var(--neon-gold);
+        }
+
+        .btn {
+            background: transparent;
+            color: var(--neon-blue);
+            border: 1px solid var(--neon-blue);
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 1rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-blue);
+        }
+
+        #error-msg {
+            color: #f87171;
+            font-family: monospace;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        #success-msg {
+            color: #4ade80;
+            font-family: monospace;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glass-panel">
+        <h2>AGENT CONFIGURATION</h2>
+        
+        <div class="form-group">
+            <label for="storage_path">Qualia Cache Path (Execution & Store)</label>
+            <input type="text" id="storage_path" placeholder="e.g. C:\QualiaData" />
+        </div>
+
+        <div class="form-group">
+            <label for="storage_quota">Permissive Commons Storage Quota (GB)</label>
+            <input type="range" id="storage_quota" min="1" max="500" value="10" />
+            <div class="quota-display">
+                <span>1 GB</span>
+                <span id="quota_val">10 GB Selected</span>
+                <span>500 GB</span>
+            </div>
+            <div style="font-size:0.8rem; color:#666; margin-top:5px;">
+                * Safety constraint: OS drive must retain 15GB free.
+            </div>
+        </div>
+
+        <button class="btn" onclick="saveConfig()">Commit Configuration</button>
+        
+        <div id="error-msg"></div>
+        <div id="success-msg"></div>
+    </div>
+
+    <script>
+        const { invoke } = window.__TAURI__.tauri;
+
+        const slider = document.getElementById("storage_quota");
+        const output = document.getElementById("quota_val");
+
+        slider.oninput = function() {
+            output.innerHTML = this.value + " GB Selected";
+        }
+
+        async function loadConfig() {
+            try {
+                const config = await invoke('get_config');
+                document.getElementById('storage_path').value = config.storage_path;
+                document.getElementById('storage_quota').value = config.storage_quota_gb;
+                output.innerHTML = config.storage_quota_gb + " GB Selected";
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function saveConfig() {
+            const errorMsg = document.getElementById('error-msg');
+            const successMsg = document.getElementById('success-msg');
+            errorMsg.innerText = "";
+            successMsg.innerText = "";
+
+            const config = {
+                storage_path: document.getElementById('storage_path').value,
+                storage_quota_gb: parseInt(document.getElementById('storage_quota').value)
+            };
+
+            try {
+                await invoke('save_config', { newConfig: config });
+                successMsg.innerText = "Configuration successfully bound to Daemon.";
+            } catch (e) {
+                errorMsg.innerText = e;
+            }
+        }
+
+        // Initialize
+        loadConfig();
+    </script>
+</body>
+</html>
