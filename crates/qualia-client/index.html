@@ -175,6 +175,16 @@
 
         // 1. The Daemon Bridge Detection
         function init_qualia_connection() {
+            // Flag Safari as currently unsupported for edge-compute benchmarks
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            if (isSafari) {
+                Logger.log("❌ CRITICAL: Safari (WebKit) is currently UNSUPPORTED.", "log-error");
+                Logger.log("Safari's aggressive memory eviction and COOP/COEP SharedArrayBuffer limitations prevent the 512MB continuous memory allocation required by Qualia-DB.", "log-warn");
+                Logger.log("Please use Chromium or Firefox to execute the Sentinel Edge Environment.", "log-info");
+                setMode('NONE');
+                return;
+            }
+
             Logger.log("Probing for Native Edge Daemon at ws://127.0.0.1:4242...", "log-sys");
             
             try {
