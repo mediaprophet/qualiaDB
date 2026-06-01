@@ -95,6 +95,36 @@
             color: #000;
             box-shadow: 0 0 15px var(--neon-blue);
         }
+        
+        .btn-ollama {
+            color: var(--neon-gold);
+            border: 1px solid var(--neon-gold);
+        }
+        .btn-ollama:hover {
+            background: var(--neon-gold);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-gold);
+        }
+
+        .diagnostic-card {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-ok { background: rgba(74, 222, 128, 0.2); color: #4ade80; border: 1px solid #4ade80; }
+        .status-err { background: rgba(248, 113, 113, 0.2); color: #f87171; border: 1px solid #f87171; }
 
         #error-msg {
             color: #f87171;
@@ -118,6 +148,14 @@
     <div class="glass-panel">
         <h2>AGENT CONFIGURATION</h2>
         
+        <div class="diagnostic-card" id="engine-status-card">
+            <div id="status-badge" class="status-badge status-err">Detecting Engine...</div>
+            <div id="status-desc" style="font-size: 0.9rem; color: #aaa; line-height: 1.4;">
+                Scanning system for external LLM compute engines.
+            </div>
+            <button id="btn-install-ollama" class="btn btn-ollama" style="display:none;" onclick="window.open('https://ollama.com/download', '_blank')">Download Ollama Backend</button>
+        </div>
+
         <div class="form-group">
             <label for="storage_path">Qualia Cache Path (Execution & Store)</label>
             <input type="text" id="storage_path" placeholder="e.g. C:\QualiaData" />
@@ -150,6 +188,29 @@
 
         slider.oninput = function() {
             output.innerHTML = this.value + " GB Selected";
+        }
+        
+        async function checkEngineStatus() {
+            try {
+                const isInstalled = await invoke('check_ollama_status');
+                const badge = document.getElementById('status-badge');
+                const desc = document.getElementById('status-desc');
+                const btn = document.getElementById('btn-install-ollama');
+                
+                if (isInstalled) {
+                    badge.className = "status-badge status-ok";
+                    badge.innerText = "OLLAMA DETECTED";
+                    desc.innerHTML = "Ollama is installed and running on port <b>11435</b>. Qualia-DB is actively guarding port <b>11434</b> as your Sovereign Proxy. AI workloads will be deduplicated and safely routed.";
+                    btn.style.display = "none";
+                } else {
+                    badge.className = "status-badge status-err";
+                    badge.innerText = "NO ENGINE DETECTED";
+                    desc.innerHTML = "Qualia-DB requires the Ollama engine to execute dense GPU matrix math. We act as the proxy, but Ollama does the heavy lifting. Please install it to enable AI processing.";
+                    btn.style.display = "block";
+                }
+            } catch (e) {
+                console.error("Failed to check engine status:", e);
+            }
         }
 
         async function loadConfig() {
@@ -184,6 +245,7 @@
 
         // Initialize
         loadConfig();
+        checkEngineStatus();
     </script>
 </body>
 </html>

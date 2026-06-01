@@ -79,6 +79,15 @@ fn profile_energy_circumstance() -> String {
 }
 
 #[tauri::command]
+fn check_ollama_status() -> bool {
+    // Attempt to execute `ollama -v` to see if the engine is installed in the system PATH.
+    match std::process::Command::new("ollama").arg("-v").output() {
+        Ok(output) => output.status.success(),
+        Err(_) => false,
+    }
+}
+
+#[tauri::command]
 fn start_daemon() -> String {
     "Daemon Started".to_string()
 }
@@ -124,7 +133,7 @@ fn main() {
             }
             _ => {}
         })
-        .invoke_handler(tauri::generate_handler![profile_energy_circumstance, start_daemon, get_config, save_config])
+        .invoke_handler(tauri::generate_handler![profile_energy_circumstance, start_daemon, get_config, save_config, check_ollama_status])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
