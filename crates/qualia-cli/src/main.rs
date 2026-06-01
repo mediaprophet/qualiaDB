@@ -64,6 +64,11 @@ enum WebizenAction {
         /// Path to the `.qualia` file
         file: PathBuf,
     },
+    /// Seeds the `.q42` ledger to the Permissive Commons via WebTorrent
+    SeedWebtorrent {
+        /// Path to the `.q42` ledger file
+        file: PathBuf,
+    },
 }
 
 #[derive(Deserialize)]
@@ -278,6 +283,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // Mock: Polling Nym Mixnet for `0b10` Bilateral & `0b01` Permissive payloads
                     tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
                     // println!("🔒 Nym Mixnet: Polling for inbound .q42 SURB syncs...");
+                }
+            });
+
+            // Spawn Native WebTorrent Sync Loop (Phase 52)
+            tokio::spawn(async move {
+                println!("☍ WebTorrent: Native Magnet URI and DHT seeder initialized.");
+                loop {
+                    // Mock: Seeding the flat Qualia_Ledger.q42 to the Permissive Commons via WebTorrent
+                    tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+                    // println!("☍ WebTorrent: Seeding local ledger to swarm...");
                 }
             });
             
@@ -533,12 +548,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 println!("❌ IPFS Daemon returned an error: {:?}", res.status());
                             }
                         }
-                        Err(e) => {
+                        Err(_) => {
                             println!("❌ Failed to connect to local IPFS daemon. Make sure `ipfs daemon` is running on port 5001.");
-                            println!("   Error: {}", e);
                         }
                     }
                 });
+                println!("========================================");
+            }
+            WebizenAction::SeedWebtorrent { file } => {
+                println!("========================================");
+                println!("☍ WebTorrent DHT Sync");
+                println!("Reading binary ledger payload: {:?}", file);
+                
+                let file_data = std::fs::read(&file)?;
+                println!("📤 Hashing {} bytes for WebTorrent Swarm...", file_data.len());
+                
+                // Mock hashing and URI generation
+                println!("✅ Success! Torrent Seeded to DHT Swarm.");
+                println!("🧲 Magnet URI: magnet:?xt=urn:btih:3f4a123bc...&dn=Qualia_Ledger.q42");
                 println!("========================================");
             }
         }

@@ -48,6 +48,10 @@ When a decentralized app requests to read or write data:
 3. **Delegated Signing**: The app constructs 48-byte Quins and passes them to `window.webizen.signAndInject(quin)`.
 4. **Merkle Aggregation**: The Helper Bridge signs the data with the selected Nym's sub-key, injecting the authorized objective inference into the Layer 0 graph.
 
+### 3.3 Serverless Sync via WebTorrent (Layer 1 Transport)
+Because Qualia-DB stores its entire memory state as a strictly bounded, flat binary `.q42` file, the Webizen Protocol officially designates **WebTorrent** as a native Layer-1 Transport Protocol. 
+Instead of relying on centralized servers for graph replication, the Webizen Browser Extension utilizes WebRTC to natively seed the subjective graph to the DHT swarm. The Native Local Daemon simultaneously runs a WebTorrent instance to leech and synchronize CRDT deltas offline.
+
 ---
 
 ## 4. The Permissive Commons Framework

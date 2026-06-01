@@ -169,6 +169,7 @@
                 <span style="color: var(--text-dim); font-size: 0.9rem;">Zero-Allocation Graph Engine</span>
             </div>
             <a href="../index.html" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none; border-color: #555; color: #aaa;">← Hub</a>
+            <button id="webtorrent-btn" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; border-color: #bd93f9; color: #bd93f9;" onclick="seedGraphToWebTorrent()">☍ WebTorrent Sync</button>
             <button id="install-btn-header" class="primary-btn" style="padding: 6px 12px; font-size: 0.85rem;" onclick="document.getElementById('install-modal').style.display='flex'">Install</button>
             <a href="anatomy.html" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none; color: var(--accent); border-color: var(--accent);">Launch 3D Anatomy</a>
             <a href="semantics.html" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none; color: #bd93f9; border-color: #bd93f9;">Launch Semantic Drift</a>
@@ -259,6 +260,30 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
     <script src="playground.js"></script>
+    <script>
+        // WebTorrent Stub for Phase 52
+        function seedGraphToWebTorrent() {
+            if (typeof WebTorrent === 'undefined') {
+                alert("WebTorrent failed to load.");
+                return;
+            }
+            const client = new WebTorrent();
+            const graphBlob = new Blob([document.getElementById('jsonld-input').value], { type: 'application/json' });
+            
+            client.seed(graphBlob, { name: 'Qualia_Ledger.q42' }, function (torrent) {
+                console.log('Client is seeding:', torrent.infoHash);
+                const rpcBox = document.getElementById('billing-receipt');
+                rpcBox.innerHTML = `[WebTorrent Sync Initiated]
+Magnet URI Generated:
+${torrent.magnetURI}
+
+Seeding Subjective Graph to Permissive Commons via WebRTC...
+`;
+                rpcBox.style.color = 'var(--accent)';
+            });
+        }
+    </script>
 </body>
 </html>
