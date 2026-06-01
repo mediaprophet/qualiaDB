@@ -22,7 +22,7 @@ Instead of relying on slow, pointer-chasing B-Trees, Qualia-DB maps graph nodes 
 Data filtering is not enough; a human-centric database must execute logic. Qualitative data—social agency, bilateral medical access, property delegation—requires mathematical verification of rules. Qualia-DB intercepts the graph and executes the logic natively via the Sentinel Virtual Machine. Sentinel mathematically guarantees $O(1)$ termination on highly cyclic social and legal graphs, eliminating stack-overflow vulnerabilities.
 - **Native N3Logic Execution**: Nested N3 implication rules (`{...} => {...}`) are compiled directly into Sentinel Bytecodes. By resolving inferences strictly over flattened 64-bit hardware identifiers instead of text strings, N3 inference operates at sub-microsecond speeds entirely within the L1/L2 cache.
 
-## 🛡️ Cryptographic Proof of Human Agency
+## 🛡️ Cryptographic Human Agency Records
 
 We strictly reject the "Global Endorsement Trap". In a shared Bilateral Micro-Commons, you only sign what you author.
 - **Author-Scoped Merkle Aggregation**: The engine isolates the 48-byte Quins belonging strictly to a user's DID and calculates a Merkle Sub-Root hash.

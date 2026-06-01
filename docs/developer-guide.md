@@ -17,9 +17,9 @@ Instead of relying on heavy CPU indexing (like B-Trees), Qualia-DB leverages the
 - **Strict Binary (CBOR-LD)**: Qualia-DB violently rejects text-based JSON-LD or Turtle. To prevent CPU string-parsing bottlenecks, the client must compress data into CBOR-LD *before* sending it.
 - **Zero-Copy IPC**: When running in the browser, the WASM engine is locked to a `SharedArrayBuffer`, allowing the UI thread to read query results synchronously without copying memory.
 
-## Cryptographic Proof of Human Agency
+## Cryptographic Human Agency Records
 
-Instead of "Data Sovereignty" (which implies server control), Qualia-DB enforces **Human Agency**. 
+Instead of "Data Sovereignty" (which implies server control), Qualia-DB secures **Cryptographic Human Agency Records**. 
 - The system uses `ed25519-dalek` to enforce Bilateral Micro-Commons rules.
 - **Author-Scoped Merkle Signatures**: A user never signs the entire database state. They only cryptographically endorse the specific Merkle sub-roots containing the Quins (statements) they personally authored.
 
