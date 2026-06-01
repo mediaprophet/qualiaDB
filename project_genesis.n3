@@ -1,0 +1,25 @@
+@prefix doap: <http://usefulinc.com/ns/doap#> .
+@prefix qualia: <http://qualia.local/ns/logic#> .
+@prefix didgit: <http://webcivics.github.io/did-method-git#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# DID:GIT Genesis Block (Stage 1 Axioms)
+<did:git:repo:qualia_analytics_engine> a doap:Project ;
+    doap:name "Sovereign Analytics Demographic Model" ;
+    doap:description "An N3Logic demographic mapping tool." ;
+    didgit:stage "1"^^xsd:integer ;
+    
+    # The Rights Ontology for Stage 1
+    qualia:hasRightsOntology [
+        qualia:knowledgeAxioms "Protected" ;
+        qualia:commercialGating "Strict" ;
+        qualia:obligationCost "500000"^^xsd:integer # micro-cents
+    ] ;
+
+    # The Transition Rule for Stage 2
+    qualia:evolutionPredicate [
+        qualia:targetStage "2"^^xsd:integer ;
+        qualia:requires [
+            qualia:ilpAccumulated qualia:GreaterThanOrEqual "500000"^^xsd:integer
+        ]
+    ] .
