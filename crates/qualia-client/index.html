@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB WASM Host Bridge</title>
+    <style>
+        body { background: #0b0f19; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 2rem; }
+        .log-panel { background: #000; padding: 1rem; border-radius: 8px; font-family: monospace; height: 300px; overflow-y: auto; color: #4ade80; }
+        .log-dim { color: #94a3b8; }
+        .log-accent { color: #00f0ff; }
+        button { background: rgba(0, 240, 255, 0.1); color: #00f0ff; border: 1px solid #00f0ff; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>WASM Host Bridge <span>(SharedArrayBuffer & OPFS)</span></h1>
+    <button onclick="dispatchMockQuery()">Dispatch Query to WASM Sieve</button>
+    <div class="log-panel" id="log"></div>
+
+    <script>
+        const logPanel = document.getElementById('log');
+        function log(msg, className='') {
+            const entry = document.createElement('div');
+            entry.className = className;
+            entry.innerText = `[UI Thread] ${msg}`;
+            logPanel.appendChild(entry);
+        }
+
+        // Initialize WebWorker
+        const worker = new Worker('src/qualia-worker.js');
+        let engineMemory = null;
+        
+        log("Booting Qualia WebWorker...", "log-dim");
+        worker.postMessage({ type: 'INIT', payload: { wasmUrl: 'qualia_core_db_bg.wasm' } });
+
+        worker.onmessage = (e) => {
+            const { type, sharedBuffer, queryId, offset } = e.data;
+            if (type === 'INIT_SUCCESS') {
+                engineMemory = sharedBuffer;
+                log(`✅ Received 512MB SharedArrayBuffer pointer from WebWorker.`, "log-accent");
+            } else if (type === 'QUERY_COMPLETE') {
+                log(`Query ${queryId} complete. Sync reading SharedArrayBuffer at offset ${offset}...`, "log-dim");
+                const uint32View = new Uint32Array(engineMemory, offset, 4);
+                log(`Extracting raw WASM pointers: [0x${uint32View[0].toString(16)}, 0x${uint32View[1].toString(16)}, 0x${uint32View[2].toString(16)}, 0x${uint32View[3].toString(16)}]`, "log-accent");
+            }
+        };
+
+        function dispatchMockQuery() {
+            if (!engineMemory) {
+                log("Engine not initialized yet.", "log-dim");
+                return;
+            }
+            log("Dispatching Query...", "log-dim");
+            worker.postMessage({
+                type: 'QUERY',
+                payload: { queryId: 42, bufferOffset: 0 }
+            });
+        }
+    </script>
+</body>
+</html>
