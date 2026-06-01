@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB | Webizen Utilities</title>
+    <style>
+        :root {
+            --bg-dark: #050505;
+            --neon-blue: #00f0ff;
+            --neon-purple: #b026ff;
+            --neon-green: #00ff66;
+            --glass-bg: rgba(20, 20, 25, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background: radial-gradient(circle at center, #111 0%, var(--bg-dark) 100%);
+            color: #fff; font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh; overflow-x: hidden;
+        }
+
+        header {
+            padding: 1.5rem 2rem;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(5, 5, 5, 0.8); backdrop-filter: blur(10px);
+        }
+
+        .logo { font-weight: 900; font-size: 1.5rem; color: #fff; text-decoration: none; letter-spacing: 1px; }
+        .logo span { color: var(--neon-green); }
+
+        .nav-links a {
+            color: #aaa; text-decoration: none; margin-left: 2rem; font-size: 0.9rem; transition: color 0.3s;
+        }
+        .nav-links a:hover, .nav-links a.active { color: #fff; }
+
+        .container { max-width: 800px; margin: 4rem auto; padding: 2rem; }
+
+        h1 {
+            font-size: 3rem; margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff, var(--neon-green));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        p { color: #888; line-height: 1.6; margin-bottom: 2rem; }
+
+        .card {
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-radius: 12px;
+            padding: 2rem; margin-bottom: 2rem;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(0, 255, 102, 0.3);
+            border-radius: 8px; padding: 3rem; text-align: center;
+            cursor: pointer; transition: all 0.3s;
+        }
+        
+        .upload-area:hover { border-color: var(--neon-green); background: rgba(0, 255, 102, 0.05); }
+
+        input[type="file"] { display: none; }
+
+        .btn {
+            background: rgba(0, 255, 102, 0.1); border: 1px solid var(--neon-green);
+            color: var(--neon-green); padding: 0.8rem 2rem; border-radius: 4px;
+            font-size: 1rem; cursor: pointer; transition: all 0.3s;
+            margin-top: 1rem;
+        }
+        .btn:hover { background: var(--neon-green); color: #000; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: #555; color: #555; background: transparent; }
+
+        #logArea {
+            background: #000; border: 1px solid #333; border-radius: 4px;
+            padding: 1rem; font-family: monospace; color: #0f0;
+            height: 200px; overflow-y: auto; margin-top: 2rem;
+            font-size: 0.85rem; line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="logo">Qualia-DB <span>Utilities</span></a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="benchmark.html">Benchmark</a>
+            <a href="playground/index.html">Playground</a>
+            <a href="utils.html" class="active">Utilities</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Ontological Transcompiler</h1>
+        <p>Convert legacy Web 2.0 Semantic datasets (N-Triples, CSV) into hyper-dense <strong>.q42</strong> binary ledgers. This utility runs entirely in your browser. URIs are deterministically hashed into 64-bit integers and packed into the 48-byte Quin struct for native WebTorrent distribution.</p>
+
+        <div class="card">
+            <div class="upload-area" id="dropZone">
+                <h3 style="color: #fff; margin-bottom: 0.5rem;">Drop .nt or .csv file here</h3>
+                <p style="margin-bottom: 0;">or click to select file</p>
+                <input type="file" id="fileInput" accept=".nt,.csv,.txt">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <p id="fileInfo" style="margin: 1rem 0 0 0; color: #fff; font-weight: bold;"></p>
+                <button class="btn" id="processBtn" disabled>Transcompile to .q42</button>
+            </div>
+        </div>
+
+        <div id="logArea">System ready. Awaiting dataset...</div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const processBtn = document.getElementById('processBtn');
+        const logArea = document.getElementById('logArea');
+
+        let selectedFile = null;
+
+        function log(msg) {
+            logArea.innerHTML += `<div>> ${msg}</div>`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // FNV-1a 64-bit Hash implementation for strings
+        function hashStringToU64(str) {
+            let hash = 14695981039346656037n;
+            for (let i = 0; i < str.length; i++) {
+                hash ^= BigInt(str.charCodeAt(i));
+                hash *= 1099511628211n;
+                hash = BigInt.asUintN(64, hash);
+            }
+            return hash;
+        }
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--neon-green)';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = 'rgba(0, 255, 102, 0.3)';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'rgba(0, 255, 102, 0.3)';
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            fileInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            processBtn.disabled = false;
+            log(`File loaded: ${file.name}`);
+        }
+
+        processBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            processBtn.disabled = true;
+            log(`Starting transcompilation of ${selectedFile.name}...`);
+            
+            const reader = new FileReader();
+            
+            reader.onload = async (e) => {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                log(`Parsed ${lines.length} lines. Processing N-Triples...`);
+
+                // 512MB Sharding limit (We'll use a smaller 50MB shard for browser safety demo)
+                const SHARD_LIMIT_BYTES = 50 * 1024 * 1024; 
+                const QUIN_SIZE = 48; // 6 * 8 bytes
+                const MAX_QUINS_PER_SHARD = Math.floor(SHARD_LIMIT_BYTES / QUIN_SIZE);
+                
+                let currentQuins = [];
+                let shardIndex = 0;
+                let totalProcessed = 0;
+
+                const exportShard = (quinsArray, index) => {
+                    const buffer = new ArrayBuffer(quinsArray.length * QUIN_SIZE);
+                    const view = new DataView(buffer);
+                    
+                    for (let i = 0; i < quinsArray.length; i++) {
+                        const offset = i * QUIN_SIZE;
+                        const quin = quinsArray[i];
+                        // Write 6x 64-bit uints (Subject, Predicate, Object, Context, Metadata, Parity)
+                        view.setBigUint64(offset, quin.s, true);
+                        view.setBigUint64(offset + 8, quin.p, true);
+                        view.setBigUint64(offset + 16, quin.o, true);
+                        view.setBigUint64(offset + 24, quin.c, true);
+                        view.setBigUint64(offset + 32, quin.m, true);
+                        view.setBigUint64(offset + 40, quin.parity, true);
+                    }
+
+                    const blob = new Blob([buffer], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `dataset_shard_${index}.q42`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    log(`💾 Downloaded dataset_shard_${index}.q42 (${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB)`);
+                };
+
+                // Simple NT parser (Subject Predicate Object .)
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line || line.startsWith('#')) continue;
+
+                    // Very naive split for demo purposes
+                    const parts = line.split(' ');
+                    if (parts.length >= 3) {
+                        const s_hash = hashStringToU64(parts[0]);
+                        const p_hash = hashStringToU64(parts[1]);
+                        const o_hash = hashStringToU64(parts.slice(2, -1).join(' ')); // Handle literals with spaces
+
+                        currentQuins.push({
+                            s: s_hash, p: p_hash, o: o_hash,
+                            c: 0n, m: 0n, parity: 0n // Default Permissive Commons context
+                        });
+                        totalProcessed++;
+
+                        if (currentQuins.length >= MAX_QUINS_PER_SHARD) {
+                            exportShard(currentQuins, shardIndex++);
+                            currentQuins = [];
+                        }
+                    }
+
+                    if (i % 10000 === 0 && i > 0) {
+                        log(`Processed ${i} triples...`);
+                        await new Promise(r => setTimeout(r, 0)); // Yield to UI
+                    }
+                }
+
+                if (currentQuins.length > 0) {
+                    exportShard(currentQuins, shardIndex);
+                }
+
+                log(`✅ Transcompilation complete! Total Triples Processed: ${totalProcessed}`);
+                processBtn.disabled = false;
+            };
+
+            reader.readAsText(selectedFile);
+        });
+    </script>
+</body>
+</html>
