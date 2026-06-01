@@ -39,9 +39,10 @@ We have built a glassmorphic, interactive dashboard to visually demonstrate the 
 
 *Powered by `cargo bench` + `criterion` on bare metal:*
 
-- **Quin Allocation Constraint**: `~0.1 ns` per 48-byte Struct.
-- **CBOR-LD Dictionary Ingestion**: `~12 ns` per SuperQuin construction (Zero Heap Allocations).
-- **CRDT $O(N)$ DAG Diffing**: Executed linearly over local memory with $0$ bytes of heap-allocated `Vec` resizing.
+- **Quin Allocation Constraint**: `~3.5 ns` per 48-byte Struct.
+- **CBOR-LD Dictionary Ingestion**: `~18.4 ns` per SuperQuin construction (Zero Heap Allocations).
+- **GeoSPARQL-Star Subset Compilation**: `~69.1 ns` directly into native hardware 64-bit opcodes.
+- **Legacy String Pipeline Ingestion (1,000 Lines)**: `~89.0 µs` (Highly optimized text path, yet still vastly slower than the 18ns CBOR binary path).
 
 ## 🛠️ Build Instructions
 
