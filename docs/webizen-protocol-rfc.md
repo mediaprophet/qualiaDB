@@ -75,7 +75,14 @@ The Webizen Protocol utilizes a **Hybrid `.q42` Ledger** approach to Decentraliz
 - The `.q42` graph contains the Permissive Commons **Compute Bounties** (the economic and legal rules), accompanied by a WebTorrent Magnet URI pointing to a standard dense ML model (e.g., `.gguf`).
 - When a user's device goes to sleep, if their **Energy Circumstance** allows (e.g., connected to grid power, or off-grid solar batteries are at 100% capacity), the Daemon spins up a **Sleep-Cycle Swarm**. It downloads the model, runs the inference utilizing Fractal GPU Sharding, and submits the cryptographic proof-of-work back to the ledger to earn Lightning micropayments.
 
-### 4.4 Open Directives (Pending Integration)
+### 4.4 Neurosymbolic LLM Override (Axiomatic Spatio-Temporal Intercept)
+When executing Large Language Models from the Permissive Commons, Webizens are not subjected to the black-box hallucinations or generic vector biases of connectionist AI. 
+The protocol enforces a **Neurosymbolic Intercept**:
+- The exact procedural vector matrices of the LLM are mapped into 48-byte `.q42` Quins.
+- Local Webizens define strict **Spatio-Temporal Qualia Contexts** (e.g., `time=1920`, `location=australia`).
+- As the opaque LLM executes natively on the device, the Sentinel VM actively monitors the procedural matrix. If an execution triggers a vector that violates a local Symbolic Axiom (e.g., "thongs" meaning underwear vs. footwear in Australia), the Sentinel VM mathematically clips and overrides the active tensor in real-time. This forces the LLM to instantly obey the human-defined, localized boundaries of the Permissive Commons.
+
+### 4.5 Open Directives (Pending Integration)
 The following topics require precise definition based on historical Permissive Commons models:
 1. **Ramifications of Works**: What are the strict legal and computational consequences when an actor utilizes an inference from the Commons? 
 2. **Supports and Entitlements**: How are micropayments, algorithmic proof-of-work, or verifiable credential presentations mathematically gated before access is granted?

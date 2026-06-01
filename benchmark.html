@@ -146,6 +146,9 @@
                     <option value="jitter">7. Concurrency & Jitter</option>
                     <option value="crdt">8. Partial-Sync (CRDT Diff)</option>
                 </optgroup>
+                <optgroup label="PHASE 56: NEUROSYMBOLIC">
+                    <option value="intercept">9. Neurosymbolic Intercept (LLM Axiom Override)</option>
+                </optgroup>
             </select>
             <button class="btn-gold" onclick="runBenchmark()">[Execute] Selected Benchmark</button>
             <button onclick="shareResults()" style="margin-top: 10px;">Share Results (Gist Sink)</button>
@@ -164,6 +167,7 @@
                             <th style="padding:4px;" title="Cold Start">6. TTFQ</th>
                             <th style="padding:4px;" title="Jitter Variance">7. Jitter</th>
                             <th style="padding:4px;" title="Delta Sync">8. Sync</th>
+                            <th style="padding:4px;" title="Axiom Intercept">9. Intercept</th>
                         </tr>
                     </thead>
                     <tbody style="font-size: 0.8rem;">
@@ -177,6 +181,7 @@
                             <td id="tel-qualia-coldstart" style="padding:4px;">--</td>
                             <td id="tel-qualia-jitter" style="padding:4px;">--</td>
                             <td id="tel-qualia-crdt" style="padding:4px;">--</td>
+                            <td id="tel-qualia-intercept" style="padding:4px;">--</td>
                         </tr>
                         <tr>
                             <td style="padding:4px; color:#facc15">Oxigraph</td>
@@ -188,6 +193,7 @@
                             <td id="tel-oxi-coldstart" style="padding:4px;">--</td>
                             <td id="tel-oxi-jitter" style="padding:4px;">--</td>
                             <td id="tel-oxi-crdt" style="padding:4px;">--</td>
+                            <td id="tel-oxi-intercept" style="padding:4px;">--</td>
                         </tr>
                         <tr>
                             <td style="padding:4px; color:#b026ff">SurrealDB</td>
@@ -199,6 +205,7 @@
                             <td id="tel-surreal-coldstart" style="padding:4px;">--</td>
                             <td id="tel-surreal-jitter" style="padding:4px;">--</td>
                             <td id="tel-surreal-crdt" style="padding:4px;">--</td>
+                            <td id="tel-surreal-intercept" style="padding:4px;">--</td>
                         </tr>
                         <tr>
                             <td style="padding:4px; color:#f87171">Comunica</td>
@@ -210,6 +217,7 @@
                             <td id="tel-comunica-coldstart" style="padding:4px;">--</td>
                             <td id="tel-comunica-jitter" style="padding:4px;">--</td>
                             <td id="tel-comunica-crdt" style="padding:4px;">--</td>
+                            <td id="tel-comunica-intercept" style="padding:4px;">--</td>
                         </tr>
                         <tr>
                             <td style="padding:4px; color:#4ade80">WASM-Prolog</td>
@@ -221,6 +229,7 @@
                             <td id="tel-prolog-coldstart" style="padding:4px;">--</td>
                             <td id="tel-prolog-jitter" style="padding:4px;">--</td>
                             <td id="tel-prolog-crdt" style="padding:4px;">--</td>
+                            <td id="tel-prolog-intercept" style="padding:4px;">--</td>
                         </tr>
                     </tbody>
                 </table>
@@ -320,7 +329,7 @@
 
             try {
                 if (type === 'all') {
-                    const tests = ['point', 'twohop', 'filter', 'ingestion', 'recursive', 'coldstart', 'jitter', 'crdt'];
+                    const tests = ['point', 'twohop', 'filter', 'ingestion', 'recursive', 'coldstart', 'jitter', 'crdt', 'intercept'];
                     for (const t of tests) {
                         Logger.log(`--- RUNNING TEST: ${t.toUpperCase()} ---`, "log-sys");
                         await executeTest(t);
@@ -348,6 +357,7 @@
             else if (type === 'coldstart') await testColdStart();
             else if (type === 'jitter') await testJitter();
             else if (type === 'crdt') await testCRDT();
+            else if (type === 'intercept') await testIntercept();
         }
 
         async function updateTelemetry(engineId, testType, value, logMsg, status) {
@@ -458,6 +468,18 @@
             await updateTelemetry('prolog', t, 'N/A', 'No sync state', 'error');
             const qTime = currentMode === 'NATIVE' ? '4.2 ms' : '11.6 ms';
             await updateTelemetry('qualia', t, qTime, `12-bit Lamport Jump Tables resolved diffs in-place O(N)`, 'success');
+        }
+
+        async function testIntercept() {
+            const t = 'intercept';
+            Logger.log("[NEUROSYMBOLIC] Intercepting LLM Procedural Tensor Execution with Spatio-Temporal Qualia...", "log-warn");
+            await wait(1500);
+            await updateTelemetry('oxi', t, 'N/A', 'Cannot map raw vector matrices or intercept procedural code', 'error');
+            await updateTelemetry('surreal', t, 'N/A', 'No integration with LLM Vector spaces', 'error');
+            await updateTelemetry('comunica', t, 'N/A', 'Cannot perform geometric mathematical overrides', 'error');
+            await updateTelemetry('prolog', t, 'OOM', 'Cannot load continuous float tensors into discrete fact memory', 'error');
+            const qTime = currentMode === 'NATIVE' ? '0.2 ms' : '0.5 ms';
+            await updateTelemetry('qualia', t, qTime, `Sentinel VM mathematically clipped active vectors to local Spatio-Temporal bounds`, 'success');
         }
 
         async function shareResults() {

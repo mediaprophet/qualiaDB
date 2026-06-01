@@ -44,3 +44,9 @@ When a commercial query via the Permissive Commons (`0b01`) executes, these virt
 
 7. Target Fallbacks (WASM)
 If compiling for the browser (`target_arch = "wasm32"`), the Triad must be gracefully flattened into a single-threaded synchronous sequence to maintain sandbox stability. Fallback to the Origin Private File System (OPFS) for synchronous I/O, and ping the local loopback (e.g., `127.0.0.1:4848`) to proxy queries to the native engine if the host has the standalone database installed.
+
+8. Neurosymbolic Axiomatic LLM Overrides
+Do not attempt to write Python-based LLM shims. Qualia-DB controls LLMs procedurally through the Spatio-Temporal Intercept Protocol:
+- Extract explicit vector coordinate layouts (tensors) from binary files (like `.gguf`) and map them directly into the 48-byte `QualiaQuin`.
+- Bind vectors to localized constraints using the `Context` (Vector 4) field.
+- The Sentinel VM acts as a mathematically strict interceptor during LLM execution, overriding and clipping vectors that violate local Symbolic axioms.
