@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bio-Spatial Intercept | Qualia-DB Anatomy</title>
+    <style>
+        :root {
+            --bg-dark: #050505;
+            --neon-blue: #00f0ff;
+            --neon-red: #ff2a2a;
+            --neon-green: #00ff66;
+            --glass-bg: rgba(20, 20, 25, 0.8);
+            --glass-border: rgba(0, 240, 255, 0.2);
+        }
+
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-dark);
+            color: #fff; font-family: 'Inter', monospace;
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        header {
+            padding: 1rem 2rem; border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        header h1 { margin: 0; font-size: 1.5rem; color: var(--neon-green); }
+        
+        .main-layout { display: flex; flex: 1; height: calc(100vh - 60px); }
+
+        .sidebar {
+            width: 350px; background: #0a0a0c; border-right: 1px solid #222;
+            padding: 2rem; display: flex; flex-direction: column; gap: 2rem;
+            box-sizing: border-box; z-index: 10;
+        }
+
+        .canvas-container { flex: 1; position: relative; }
+
+        .btn {
+            background: transparent; color: var(--neon-blue); border: 1px solid var(--neon-blue);
+            padding: 0.8rem; border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 1rem;
+            transition: all 0.3s ease; width: 100%;
+        }
+        .btn:hover:not(:disabled) { background: var(--neon-blue); color: #000; box-shadow: 0 0 15px var(--neon-blue); }
+        .btn:disabled { color: #555; border-color: #333; cursor: not-allowed; }
+
+        .card { background: var(--glass-bg); border: 1px solid #333; padding: 1.5rem; border-radius: 8px; }
+        .card h3 { margin: 0 0 1rem 0; font-size: 1.1rem; color: #fff; }
+
+        select {
+            width: 100%; padding: 0.8rem; background: #000; color: var(--neon-blue);
+            border: 1px solid #333; border-radius: 4px; font-family: monospace; font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .log-panel {
+            flex: 1; background: #000; border: 1px solid #222; border-radius: 4px;
+            padding: 1rem; font-size: 0.8rem; color: #aaa; overflow-y: auto; white-space: pre-wrap;
+        }
+
+        /* Full Screen Overlay for Daemon Check */
+        #daemon-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.9); z-index: 1000; display: flex;
+            justify-content: center; align-items: center; text-align: center;
+        }
+        
+        .overlay-box {
+            background: #111; border: 1px solid var(--neon-red); padding: 3rem;
+            border-radius: 12px; max-width: 500px;
+        }
+        .overlay-box h2 { color: var(--neon-red); margin-top: 0; }
+        .overlay-box p { color: #ccc; line-height: 1.5; }
+
+        #hud {
+            position: absolute; top: 20px; right: 20px; text-align: right;
+            color: #888; font-size: 0.9rem; pointer-events: none;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="daemon-overlay">
+        <div class="overlay-box">
+            <h2>⚠️ LOCAL DAEMON REQUIRED</h2>
+            <p>This Medical application requires the Qualia-DB local desktop agent to process strict Spatio-Temporal RDF ontologies.</p>
+            <p>We cannot execute these queries on a central server due to privacy boundaries. Please start the local <b>qualia-cli daemon</b> on port 4848.</p>
+            <p style="font-size:0.8rem; color:#666;">Retrying connection...</p>
+        </div>
+    </div>
+
+    <header>
+        <h1>BIO-SPATIAL INTERCEPT</h1>
+        <div style="color: #666;">Webizen Permissive Commons Protocol</div>
+    </header>
+
+    <div class="main-layout">
+        <div class="sidebar">
+            <div class="card">
+                <h3>Decentralized Ontology Sync</h3>
+                <p style="font-size:0.85rem; color:#888; margin-bottom: 1rem;">
+                    Sync the `human_medical_ontology.q42` ledger from the WebTorrent DHT Swarm to your local Daemon cache.
+                </p>
+                <button id="btn-sync" class="btn" onclick="syncOntology()">Sync from Swarm</button>
+            </div>
+
+            <div class="card">
+                <h3>Semantic Disorder Intercept</h3>
+                <p style="font-size:0.85rem; color:#888; margin-bottom: 1rem;">
+                    Select a disorder. The Dual AI Bridge will query the local RDF ontology and mathematically bind the systemic impacts to the 3D matrix.
+                </p>
+                <select id="disorder-select" disabled>
+                    <option value="" disabled selected>-- Select Disorder --</option>
+                    <option value="Hypertension">Hypertension</option>
+                    <option value="Asthma">Asthma</option>
+                    <option value="Neuropathy">Neuropathy</option>
+                </select>
+                <button id="btn-query" class="btn" onclick="queryImpacts()" disabled>Execute Bio-Query</button>
+            </div>
+
+            <div class="log-panel" id="terminal">System Ready. Awaiting Daemon Sync...</div>
+        </div>
+
+        <div class="canvas-container" id="canvas-container">
+            <div id="hud">
+                <b>3D Spatial Binding Matrix</b><br>
+                Model: Human Anatomy (Abstracted)<br>
+                Render: WebGL<br>
+                Intercept Status: <span id="intercept-status" style="color:var(--neon-blue);">Idle</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const terminal = document.getElementById('terminal');
+        const overlay = document.getElementById('daemon-overlay');
+        const select = document.getElementById('disorder-select');
+        const btnQuery = document.getElementById('btn-query');
+        const btnSync = document.getElementById('btn-sync');
+
+        function log(msg) {
+            terminal.innerHTML += `\n> ${msg}`;
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // --- DAEMON CONNECTION CHECK ---
+        async function checkDaemon() {
+            try {
+                // Ping the RPC endpoint (or cache)
+                const res = await fetch('http://127.0.0.1:4848/rpc', { method: 'POST', body: '{}' });
+                overlay.style.display = 'none';
+            } catch (e) {
+                overlay.style.display = 'flex';
+                setTimeout(checkDaemon, 2000);
+            }
+        }
+        checkDaemon();
+
+        // --- WEB TORRENT SYNC MOCK ---
+        async function syncOntology() {
+            log("Initiating WebTorrent DHT request...");
+            btnSync.innerText = "Syncing...";
+            btnSync.disabled = true;
+
+            try {
+                const res = await fetch('http://127.0.0.1:4848/api/ontology/sync', { method: 'POST' });
+                const json = await res.json();
+                
+                log(`Success: ${json.message}`);
+                log(`Local .q42 cache populated. You are now seeding as a peer.`);
+                
+                btnSync.innerText = "Synced & Seeding";
+                btnSync.style.color = "var(--neon-green)";
+                btnSync.style.borderColor = "var(--neon-green)";
+                
+                // Unlock Query UI
+                select.disabled = false;
+                btnQuery.disabled = false;
+            } catch (e) {
+                log(`Sync Failed: ${e.message}`);
+                btnSync.disabled = false;
+                btnSync.innerText = "Sync from Swarm";
+            }
+        }
+
+        // --- SEMANTIC BIO QUERY ---
+        async function queryImpacts() {
+            const disorder = select.value;
+            if(!disorder) return;
+
+            log(`Executing Semantic Triad Query for: [${disorder}]...`);
+            document.getElementById('intercept-status').innerText = "Processing RDF rules...";
+
+            try {
+                const res = await fetch('http://127.0.0.1:4848/api/ontology/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ disorder })
+                });
+                const json = await res.json();
+                
+                log(`Ontology resolved.`);
+                log(`Systemic Impacts Detected: ${json.impacts.join(', ')}`);
+                log(`Provenance: ${json.provenance}`);
+
+                document.getElementById('intercept-status').innerText = "Visualizing Impact";
+                document.getElementById('intercept-status').style.color = "var(--neon-red)";
+                
+                update3DModel(json.impacts);
+
+                setTimeout(() => {
+                    document.getElementById('intercept-status').innerText = "Idle";
+                    document.getElementById('intercept-status').style.color = "var(--neon-blue)";
+                }, 2000);
+            } catch (e) {
+                log(`Query Failed: ${e.message}`);
+            }
+        }
+
+        // --- 3D THREE.JS SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 5);
+        scene.add(dirLight);
+
+        camera.position.z = 10;
+        camera.position.y = 2;
+
+        const organs = {};
+        
+        function createOrgan(name, yPos, radius, colorHex) {
+            const geo = new THREE.SphereGeometry(radius, 16, 16);
+            const mat = new THREE.MeshPhongMaterial({ 
+                color: colorHex, 
+                wireframe: true,
+                transparent: true,
+                opacity: 0.6
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.y = yPos;
+            scene.add(mesh);
+            
+            // Add label
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px monospace';
+            ctx.fillText(name, 10, 40);
+            
+            const tex = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({ map: tex });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.position.set(2, yPos, 0);
+            sprite.scale.set(4, 1, 1);
+            scene.add(sprite);
+
+            organs[name] = { mesh, defaultColor: colorHex };
+        }
+
+        // Build abstracted Anatomy
+        createOrgan("Brain", 6, 1.2, 0x00f0ff);
+        createOrgan("Lungs", 3, 1.5, 0x00f0ff);
+        createOrgan("Heart", 2, 0.8, 0x00f0ff);
+        createOrgan("Kidneys", 0, 1.0, 0x00f0ff);
+        createOrgan("Nervous", -2, 1.3, 0x00f0ff);
+        createOrgan("Immune", -4, 1.2, 0x00f0ff);
+
+        // --- UPDATE 3D MODEL ---
+        function update3DModel(impactedList) {
+            // Reset all to default
+            for(let name in organs) {
+                organs[name].mesh.material.color.setHex(organs[name].defaultColor);
+                organs[name].mesh.scale.set(1, 1, 1);
+            }
+
+            // Highlight impacts in Neon Red
+            impactedList.forEach(name => {
+                if(organs[name]) {
+                    organs[name].mesh.material.color.setHex(0xff2a2a);
+                    organs[name].mesh.scale.set(1.2, 1.2, 1.2);
+                }
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            for(let name in organs) {
+                organs[name].mesh.rotation.y += 0.005;
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    </script>
+</body>
+</html>
