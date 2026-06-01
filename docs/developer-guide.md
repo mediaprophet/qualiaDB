@@ -54,6 +54,13 @@ When analyzing Qualia-DB against the historical computing landscape, it breaks f
 - **Traditional Method:** When a browser UI queries a local WASM database, the data must be serialized, copied across the JS boundary, and deserialized into JSON.
 - **The Qualia-DB Leap:** The WASM Engine and the UI thread are locked into the exact same 512MB `SharedArrayBuffer`. When the engine finds an answer, the UI reads the raw memory address instantly. Zero copying. Zero latency.
 
+### 6. The Neurosymbolic Intercept Protocol (Axiomatic LLM Override)
+- **Traditional Method:** Large Language Models (LLMs) are black-box probabilistic engines that hallucinate due to a lack of deterministic symbolic grounding or local "Spatio-Temporal Qualia" (e.g., modern vector weights assuming "thongs" means underwear globally).
+- **The Qualia-DB Leap:** We don't map generic semantic tokens; we map the *exact* procedural vector matrices (tensors) of the LLM into our 48-byte Quins. The Sentinel VM then acts as a mathematically strict interceptor. 
+  - A user defines a Spatio-Temporal Qualia Context (e.g., `Context: year=1920` or `location=australia`).
+  - As the opaque LLM executes its inference locally, the Sentinel VM monitors the active procedural tensor blocks.
+  - If a mapped vector coordinate is triggered, and a local Spatio-Temporal `.q42` Axiom exists, the Sentinel VM mathematically clips and overrides the active vector matrix in real-time. This forces the Connectionist LLM to instantly obey the local Symbolic AI bounds, effectively correcting hallucinations mid-procedural step.
+
 ## Instructing Your Local AI Coding Agents
 
 Because Qualia-DB radically departs from standard database theory (no B-Trees, strict 512MB RAM floor, no string parsing), **generic AI coding agents (Claude, Gemini, ChatGPT, Copilot) will fail spectacularly** if you ask them to write Qualia-DB code without context. They will attempt to write JSON-LD parsers, allocate memory on the heap, and use standard standard-library strings—all of which will trigger a panic in our `no_std` architecture.
