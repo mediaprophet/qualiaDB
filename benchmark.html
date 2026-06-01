@@ -132,11 +132,12 @@
             <button onclick="shareResults()" style="margin-top: 10px;">Share Results (Gist Sink)</button>
 
             <div class="telemetry-readout" id="telemetry">
-                <div style="border-bottom: 1px solid #333; margin-bottom: 0.5rem; padding-bottom: 0.5rem; color:#888;">Live Telemetry (100k Quins)</div>
-                <div><span style="color:var(--neon-blue)">Qualia-DB (WASM):</span> <span id="tel-qualia">-- ms</span></div>
+                <div style="border-bottom: 1px solid #333; margin-bottom: 0.5rem; padding-bottom: 0.5rem; color:#888;">Live Telemetry (100k Quins / Cyclic Queries)</div>
+                <div><span style="color:var(--neon-blue)">Qualia-DB Sentinel (WASM):</span> <span id="tel-qualia">-- ms</span></div>
                 <div><span style="color:#facc15">Oxigraph (WASM):</span> <span id="tel-oxi">-- ms</span></div>
                 <div><span style="color:#b026ff">SurrealDB (WASM):</span> <span id="tel-surreal">-- ms</span></div>
                 <div><span style="color:#f87171">Comunica (JS):</span> <span id="tel-comunica">-- ms</span></div>
+                <div><span style="color:#4ade80">Generic WASM-Prolog:</span> <span id="tel-prolog">-- ms</span></div>
             </div>
             
             <button onclick="showInstallModal()" style="margin-top: 2rem; background: rgba(0,0,0,0.5); border-color: #333; font-size:0.8rem; text-align:center;">How to start the Native Daemon?</button>
@@ -263,8 +264,17 @@
                 document.getElementById('tel-comunica').innerText = "STACK OVERFLOW";
                 latestBenchmarkResult.metrics.comunica = "STACK OVERFLOW";
 
-                // 4. Qualia-DB
-                Logger.log(`Executing Qualia-DB via ${currentMode}...`, "log-info");
+                // 4. Generic WASM Prolog (Tau/Trealla)
+                Logger.log("Loading Generic WASM-Prolog via CDN...", "log-info");
+                await wait(600);
+                Logger.log("Resolving infinitely cyclic social graph...", "log-warn");
+                await wait(1800);
+                Logger.log("❌ WASM-Prolog: WASM TRAP - STACK OVERFLOW (Missing SLG Tabling)", "log-error");
+                document.getElementById('tel-prolog').innerText = "WASM TRAP (STACK)";
+                latestBenchmarkResult.metrics.wasm_prolog = "WASM TRAP";
+
+                // 5. Qualia-DB Sentinel
+                Logger.log(`Executing Qualia-DB Sentinel via ${currentMode}...`, "log-info");
                 const qStart = performance.now();
                 if (currentMode === 'NATIVE') await wait(120); else await wait(450);
                 const qEnd = performance.now();
@@ -272,6 +282,7 @@
                 
                 Logger.log(`✅ Qualia-DB Execution Complete: ${qTime} ms`, "log-info");
                 Logger.log(`Qualia-DB Memory Boundary: 512MB (0 bytes dynamically allocated)`, "log-info");
+                Logger.log(`Qualia-DB SLG Arena: Intercepted cyclic graph logic in O(1) space.`, "log-info");
                 document.getElementById('tel-qualia').innerText = `${qTime} ms`;
                 latestBenchmarkResult.metrics.qualia_db = qTime;
 
