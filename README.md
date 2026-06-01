@@ -16,6 +16,7 @@ Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in 
 ## ⚖️ The Rights Ontology & Semantic Adjudicator
 
 Qualia-DB natively encodes a **Rights Ontology** directly into the N3Logic Sentinel VM.
+- **Linguistic Plurality & Multi-Modal Semantics**: We reject the assumption that knowledge is exclusively bound to written Unicode strings. By utilizing binary CBOR-LD indexing, the ecosystem inherently supports "mother tongues", "languages of prayer", and non-written formats (verbal, ceremonial, heraldry, symbolic SVGs). A Semantic Quin maps a concept natively, regardless of the cultural format.
 - **The Knowledge Axiom Predicate**: Rights to knowledge and fundamental shared learnings are mathematically un-propertizeable. If a semantic dispute arises, the Sentinel VM automatically dismisses any attempt to extract or enclose a Knowledge Axiom as intellectual property.
 - **Proportional Escrow (Relational Assertion)**: When a dispute involves a specific *Application* or *Invention*, the N3Logic VM analyzes the `.q42` Provenance DAGs of both parties. It mathematically calculates the exact percentage of derivation and automatically splits incoming ILP Escrow funds based on absolute truth, stripping away false claims of originality.
 

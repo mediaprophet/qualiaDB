@@ -24,6 +24,12 @@
         
         qualia:foundationalModels [
             qualia:supportedModels "Maslows_Hierarchy", "Systems_of_Faith", "Pluralistic_Welfare_Models"
+        ] ;
+        
+        qualia:linguisticPlurality [
+            qualia:motherTongues "Supported" ;
+            qualia:languagesOfPrayer "Supported" ;
+            qualia:nonWrittenFormats "Audio_Phonetic", "Ceremonial_Heraldry", "Symbolic_Visual"
         ]
     ] ;
 
