@@ -6,9 +6,11 @@ Qualia-DB has evolved far beyond a bare-metal semantic graph database. It is a s
 
 It operates under a rigorous **Principal-Agent Duty of Care**: the software acts exclusively as the Agent on behalf of the Natural Person (the Principal).
 
-## 🚀 The Three-Core Database Engine
+## 🚀 The Three-Core Database Engine & The Orchestration Sieve
 
-Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favor of a specialized 3-Core Triad built with ruthless mechanical sympathy (512MB RAM floor):
+Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favor of a specialized 3-Core Triad built with ruthless mechanical sympathy (512MB RAM floor). 
+However, raw multi-modal data (audio, camera feeds) would immediately crash this floor. To prevent this, the ecosystem forces an **Orchestration Sieve**: the Primary Agent must coordinate deterministic tools (OpenCV, Audio DSP) to strip noise, extract contours, and build optimized files *before* handing them to the local LLM or the database.
+
 1. **Zero-Allocation Ingestion**: CBOR-LD gatekeeping and WASM OPFS bridging bypass heap-saturation attacks, writing natively to disk.
 2. **GPU Sieve (Geometric Pruning)**: Graph nodes are mapped into Minkowski space within continuous 128KB memory-mapped `QualiaSuperBlocks`. The GPU calculates bounding-hull collisions to retrieve data at sub-microsecond speeds.
 3. **The Prolog Sentinel (Logic Unification)**: Data filtering is not enough; human-centric databases must execute logic. Nested N3 implication rules are compiled into L1-cache bytecodes, guaranteeing $O(1)$ termination on highly cyclic social and legal graphs.
