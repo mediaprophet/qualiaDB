@@ -1,6 +1,16 @@
-//! JSON-RPC Subsystem
-//! Responsible for serializing engine telemetry into standardized payloads 
-//! for the Bitcoin Lightning Node proxy to settle queries on the Permissive Commons.
+//! JSON-RPC + Tax Router Subsystem
+//!
+//! Responsibilities:
+//!   1. Serialise engine telemetry into billing receipts (ILP / Lightning)
+//!   2. Evaluate incoming provider terms against the ILP Threshold Shift License
+//!   3. Split every accepted payment through the 12% Tax Router:
+//!         12% → divided across the TaxRecipientSuite (ILP micropayments)
+//!         88% → Principal's wallet
+//!
+//! The Tax Router is transport-agnostic — it produces a TaxDispatchPlan which
+//! the ILP layer (or future Lightning/Nym bridge) executes as discrete micropayments.
+//! Each recipient address is an ILP Payment Pointer ("$...") or a stablecoin
+//! wallet address ("did:..."). Nym mixnet routing is used for remote recipients.
 
 use serde::{Deserialize, Serialize};
 use crate::telemetry::get_telemetry_snapshot;
@@ -76,6 +86,148 @@ mod tests {
     }
 }
 
+// ─── Tax Router ─────────────────────────────────────────────────────────────
+
+/// The fixed statutory tax rate applied to all incoming payments.
+/// 12% is split across the TaxRecipientSuite before the remainder
+/// reaches the Principal's wallet.
+pub const TAX_RATE_PERCENT: u64 = 12;
+
+/// A single named recipient in the tax disbursement suite.
+/// `ilp_address` is an ILP Payment Pointer ("$provider.example/account")
+/// or a stablecoin address ("did:wallet:...").
+/// `share_percent` must sum to 100 across all recipients in a suite.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TaxRecipient {
+    /// Human-readable label, e.g. "Federal Revenue Service"
+    pub label: String,
+    /// ILP Payment Pointer or stablecoin address
+    pub ilp_address: String,
+    /// Percentage share of the total tax pool (0–100, all must sum to 100)
+    pub share_percent: u64,
+    /// Whether this payment should be routed via Nym mixnet for privacy
+    pub use_nym: bool,
+}
+
+/// A configured set of tax recipients for a jurisdiction.
+/// Example: Federal 60%, State 30%, Municipal 10%.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaxRecipientSuite {
+    pub jurisdiction_did: String,
+    pub recipients: Vec<TaxRecipient>,
+}
+
+impl TaxRecipientSuite {
+    /// Validates that all share_percent values sum to exactly 100.
+    pub fn validate(&self) -> Result<(), String> {
+        let total: u64 = self.recipients.iter().map(|r| r.share_percent).sum();
+        if total != 100 {
+            Err(format!("TaxRecipientSuite shares sum to {total}, must be 100"))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Returns a default cooperative suite using ILP payment pointers.
+    /// These point at the Cooperative Commons escrow accounts.
+    /// Replace with jurisdiction-specific addresses from the Tax Oracle.
+    pub fn default_cooperative() -> Self {
+        Self {
+            jurisdiction_did: "did:gov:cooperative:commons".to_string(),
+            recipients: vec![
+                TaxRecipient {
+                    label: "Cooperative Infrastructure Fund".to_string(),
+                    ilp_address: "$ilp.qualia.coop/infrastructure".to_string(),
+                    share_percent: 40,
+                    use_nym: false,
+                },
+                TaxRecipient {
+                    label: "Digital Rights Legal Defence".to_string(),
+                    ilp_address: "$ilp.qualia.coop/legal-defence".to_string(),
+                    share_percent: 30,
+                    use_nym: false,
+                },
+                TaxRecipient {
+                    label: "Open Source Sustainability Pool".to_string(),
+                    ilp_address: "$ilp.qualia.coop/oss-sustainability".to_string(),
+                    share_percent: 20,
+                    use_nym: false,
+                },
+                TaxRecipient {
+                    label: "Disaster Recovery Reserve".to_string(),
+                    ilp_address: "$ilp.qualia.coop/disaster-reserve".to_string(),
+                    share_percent: 10,
+                    use_nym: true,
+                },
+            ],
+        }
+    }
+}
+
+/// A single resolved micropayment instruction in a dispatch plan.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MicropaymentInstruction {
+    pub recipient_label: String,
+    pub ilp_address: String,
+    pub amount_micro_cents: u64,
+    pub use_nym: bool,
+}
+
+/// The complete dispatch plan produced by the Tax Router.
+/// The ILP layer executes each instruction as a discrete micropayment stream.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaxDispatchPlan {
+    /// Total gross amount received (µ-cents)
+    pub gross_amount_micro_cents: u64,
+    /// The 12% tax pool (µ-cents)
+    pub tax_pool_micro_cents: u64,
+    /// The 88% principal remainder (µ-cents)
+    pub principal_remainder_micro_cents: u64,
+    /// Individual micropayment instructions for each recipient
+    pub instructions: Vec<MicropaymentInstruction>,
+}
+
+/// Routes a gross payment through the 12% Tax Router.
+/// Produces a TaxDispatchPlan ready for ILP execution.
+pub fn route_tax_payment(
+    gross_amount_micro_cents: u64,
+    suite: &TaxRecipientSuite,
+) -> Result<TaxDispatchPlan, String> {
+    suite.validate()?;
+
+    let tax_pool = (gross_amount_micro_cents * TAX_RATE_PERCENT) / 100;
+    let principal_remainder = gross_amount_micro_cents - tax_pool;
+
+    let mut instructions = Vec::with_capacity(suite.recipients.len());
+    let mut allocated: u64 = 0;
+
+    for (i, recipient) in suite.recipients.iter().enumerate() {
+        let amount = if i == suite.recipients.len() - 1 {
+            // Last recipient gets the remainder to avoid rounding loss
+            tax_pool - allocated
+        } else {
+            (tax_pool * recipient.share_percent) / 100
+        };
+        allocated += amount;
+
+        instructions.push(MicropaymentInstruction {
+            recipient_label: recipient.label.clone(),
+            ilp_address: recipient.ilp_address.clone(),
+            amount_micro_cents: amount,
+            use_nym: recipient.use_nym,
+        });
+    }
+
+    Ok(TaxDispatchPlan {
+        gross_amount_micro_cents,
+        tax_pool_micro_cents: tax_pool,
+        principal_remainder_micro_cents: principal_remainder,
+        instructions,
+    })
+}
+
+// ─── Provider Terms Negotiation ──────────────────────────────────────────────
+
 /// A request from an external corporate provider (e.g., ISP, Telemetry Aggregator)
 /// proposing terms to connect to the local Qualia-DB daemon.
 #[derive(Debug, Serialize, Deserialize)]
@@ -93,50 +245,64 @@ pub enum NegotiationStatus {
 }
 
 /// The local agent's response to the provider's terms.
-/// Handles Symmetrical Link generation and Stablecoin Escrow routing.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NegotiationResponse {
     pub status: NegotiationStatus,
-    pub stablecoin_escrow_split: u64, // The tax portion routed to a stablecoin escrow
-    pub wallet_balance_split: u64,    // The remaining profit routed to the user's wallet
+    /// Full dispatch plan: 12% split across suite, 88% to Principal
+    pub tax_dispatch_plan: Option<TaxDispatchPlan>,
+    /// Convenience field: total µ-cents routed to tax suite
+    pub tax_pool_micro_cents: u64,
+    /// Convenience field: µ-cents retained by Principal
+    pub principal_remainder_micro_cents: u64,
 }
 
 /// Evaluates a corporate provider's connection request against the user's
-/// intrinsic ILP connectivity cost and Rights Ontology.
-/// It automatically splits valid micropayments into a tax escrow and a personal wallet.
+/// intrinsic ILP connectivity cost and Rights Ontology, then routes the
+/// accepted payment through the 12% Tax Router.
 pub fn negotiate_provider_terms(
-    request: ProviderTermsRequest, 
-    base_connectivity_cost: u64
+    request: ProviderTermsRequest,
+    base_connectivity_cost: u64,
+    tax_suite: Option<TaxRecipientSuite>,
 ) -> NegotiationResponse {
-    // 1. ILP Economic Shift Check: Does the proposed offset meet the base intrinsic cost?
+    // 1. ILP Threshold Shift Check
     if request.proposed_ilp_offset < base_connectivity_cost {
         return NegotiationResponse {
-            status: NegotiationStatus::Reject("INSUFFICIENT_OFFSET: Proposed ILP does not cover intrinsic connectivity costs.".to_string()),
-            stablecoin_escrow_split: 0,
-            wallet_balance_split: 0,
+            status: NegotiationStatus::Reject(
+                "INSUFFICIENT_OFFSET: Proposed ILP does not cover intrinsic connectivity costs.".to_string()
+            ),
+            tax_dispatch_plan: None,
+            tax_pool_micro_cents: 0,
+            principal_remainder_micro_cents: 0,
         };
     }
 
-    // 2. Fiduciary Supremacy Check: Ensure the data usage intent doesn't violate Knowledge Axioms.
+    // 2. Fiduciary Supremacy Check
     if request.data_usage_intent == "STRIP_FIDUCIARY_METADATA" {
         return NegotiationResponse {
-            status: NegotiationStatus::Reject("VIOLATION: Data usage intent violates Knowledge Axioms (Fiduciary Supremacy).".to_string()),
-            stablecoin_escrow_split: 0,
-            wallet_balance_split: 0,
+            status: NegotiationStatus::Reject(
+                "VIOLATION: Data usage intent violates Knowledge Axioms (Fiduciary Supremacy).".to_string()
+            ),
+            tax_dispatch_plan: None,
+            tax_pool_micro_cents: 0,
+            principal_remainder_micro_cents: 0,
         };
     }
 
-    // 3. Tax Rule Oracle & Escrow Routing
-    // In production, this pulls the `.q42` tax ontology for `request.tax_jurisdiction_did`.
-    // Here we mock a 10% tax rate derived from the ontology.
-    let tax_rate = 0.10;
-    let tax_escrow_amount = (request.proposed_ilp_offset as f64 * tax_rate) as u64;
-    let user_profit = request.proposed_ilp_offset - tax_escrow_amount;
+    // 3. Route through 12% Tax Router
+    let suite = tax_suite.unwrap_or_else(TaxRecipientSuite::default_cooperative);
+    let plan = route_tax_payment(request.proposed_ilp_offset, &suite)
+        .unwrap_or_else(|_| TaxDispatchPlan {
+            gross_amount_micro_cents: request.proposed_ilp_offset,
+            tax_pool_micro_cents: 0,
+            principal_remainder_micro_cents: request.proposed_ilp_offset,
+            instructions: vec![],
+        });
 
     NegotiationResponse {
         status: NegotiationStatus::Accept,
-        stablecoin_escrow_split: tax_escrow_amount,
-        wallet_balance_split: user_profit,
+        tax_pool_micro_cents: plan.tax_pool_micro_cents,
+        principal_remainder_micro_cents: plan.principal_remainder_micro_cents,
+        tax_dispatch_plan: Some(plan),
     }
 }
 
@@ -144,45 +310,102 @@ pub fn negotiate_provider_terms(
 mod negotiation_tests {
     use super::*;
 
+    fn default_req(offset: u64) -> ProviderTermsRequest {
+        ProviderTermsRequest {
+            provider_did: "did:git:corp123".to_string(),
+            proposed_ilp_offset: offset,
+            data_usage_intent: "standard_routing".to_string(),
+            tax_jurisdiction_did: "did:gov:cooperative:commons".to_string(),
+        }
+    }
+
     #[test]
     fn test_negotiation_insufficient_funds() {
-        let req = ProviderTermsRequest {
-            provider_did: "did:git:corp123".to_string(),
-            proposed_ilp_offset: 4000,
-            data_usage_intent: "standard_routing".to_string(),
-            tax_jurisdiction_did: "did:gov:us:ny".to_string(),
-        };
-        // User requires 5000 µ-cents
-        let res = negotiate_provider_terms(req, 5000);
+        let res = negotiate_provider_terms(default_req(4000), 5000, None);
         assert!(matches!(res.status, NegotiationStatus::Reject(_)));
+        assert_eq!(res.tax_pool_micro_cents, 0);
     }
 
     #[test]
     fn test_negotiation_fiduciary_violation() {
-        let req = ProviderTermsRequest {
-            provider_did: "did:git:corp123".to_string(),
-            proposed_ilp_offset: 6000, // Meets cost!
-            data_usage_intent: "STRIP_FIDUCIARY_METADATA".to_string(), // Violates axiom!
-            tax_jurisdiction_did: "did:gov:us:ny".to_string(),
-        };
-        let res = negotiate_provider_terms(req, 5000);
+        let mut req = default_req(6000);
+        req.data_usage_intent = "STRIP_FIDUCIARY_METADATA".to_string();
+        let res = negotiate_provider_terms(req, 5000, None);
         assert!(matches!(res.status, NegotiationStatus::Reject(_)));
     }
 
     #[test]
-    fn test_negotiation_success_and_tax_escrow() {
-        let req = ProviderTermsRequest {
-            provider_did: "did:git:corp123".to_string(),
-            proposed_ilp_offset: 10000,
-            data_usage_intent: "standard_routing".to_string(),
-            tax_jurisdiction_did: "did:gov:us:ny".to_string(),
-        };
-        let res = negotiate_provider_terms(req, 5000);
-        
+    fn test_12_percent_tax_split() {
+        // 10000 µ-cents gross → 12% = 1200 tax pool → 8800 to Principal
+        let res = negotiate_provider_terms(default_req(10_000), 5000, None);
         assert_eq!(res.status, NegotiationStatus::Accept);
-        // 10% of 10000 goes to stablecoin escrow = 1000
-        assert_eq!(res.stablecoin_escrow_split, 1000);
-        // 90% goes to wallet = 9000
-        assert_eq!(res.wallet_balance_split, 9000);
+        assert_eq!(res.tax_pool_micro_cents, 1_200);
+        assert_eq!(res.principal_remainder_micro_cents, 8_800);
+
+        let plan = res.tax_dispatch_plan.unwrap();
+        // 4 recipients in default suite, shares sum to 100
+        assert_eq!(plan.instructions.len(), 4);
+        let disbursed: u64 = plan.instructions.iter().map(|i| i.amount_micro_cents).sum();
+        assert_eq!(disbursed, 1_200, "All tax µ-cents must be fully disbursed");
+    }
+
+    #[test]
+    fn test_custom_suite_two_recipients() {
+        let suite = TaxRecipientSuite {
+            jurisdiction_did: "did:gov:au:ato".to_string(),
+            recipients: vec![
+                TaxRecipient {
+                    label: "ATO Federal".to_string(),
+                    ilp_address: "$ilp.ato.gov.au/federal".to_string(),
+                    share_percent: 70,
+                    use_nym: false,
+                },
+                TaxRecipient {
+                    label: "State Revenue NSW".to_string(),
+                    ilp_address: "$ilp.revenue.nsw.gov.au/gst".to_string(),
+                    share_percent: 30,
+                    use_nym: false,
+                },
+            ],
+        };
+        assert!(suite.validate().is_ok());
+
+        // 100_000 µ-cents → 12% = 12_000 tax pool
+        // Federal: 70% of 12_000 = 8_400; State: 30% of 12_000 = 3_600
+        let plan = route_tax_payment(100_000, &suite).unwrap();
+        assert_eq!(plan.tax_pool_micro_cents, 12_000);
+        assert_eq!(plan.principal_remainder_micro_cents, 88_000);
+        assert_eq!(plan.instructions[0].amount_micro_cents, 8_400);
+        assert_eq!(plan.instructions[1].amount_micro_cents, 3_600);
+    }
+
+    #[test]
+    fn test_suite_validation_rejects_wrong_sum() {
+        let bad_suite = TaxRecipientSuite {
+            jurisdiction_did: "did:gov:test".to_string(),
+            recipients: vec![
+                TaxRecipient { label: "A".into(), ilp_address: "$a".into(), share_percent: 60, use_nym: false },
+                TaxRecipient { label: "B".into(), ilp_address: "$b".into(), share_percent: 30, use_nym: false },
+                // Missing 10% — deliberately wrong
+            ],
+        };
+        assert!(bad_suite.validate().is_err());
+    }
+
+    #[test]
+    fn test_no_rounding_loss() {
+        // 7 recipients with awkward shares — last one absorbs rounding dust
+        let suite = TaxRecipientSuite {
+            jurisdiction_did: "did:gov:test:rounding".to_string(),
+            recipients: (0..7).map(|i| TaxRecipient {
+                label: format!("Recipient {i}"),
+                ilp_address: format!("$ilp.test/{i}"),
+                share_percent: if i < 6 { 14 } else { 16 }, // 6*14 + 16 = 100
+                use_nym: false,
+            }).collect(),
+        };
+        let plan = route_tax_payment(10_007, &suite).unwrap();
+        let disbursed: u64 = plan.instructions.iter().map(|i| i.amount_micro_cents).sum();
+        assert_eq!(disbursed, plan.tax_pool_micro_cents, "Zero rounding loss");
     }
 }
