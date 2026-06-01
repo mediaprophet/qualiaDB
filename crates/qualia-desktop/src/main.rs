@@ -13,6 +13,7 @@ use std::path::PathBuf;
 struct AgentConfig {
     storage_path: String,
     storage_quota_gb: u64,
+    base_connectivity_cost_ilp: u64, // ILP µ-cents per GB
 }
 
 impl Default for AgentConfig {
@@ -20,6 +21,7 @@ impl Default for AgentConfig {
         Self {
             storage_path: "C:\\QualiaData".to_string(), // Default fallback
             storage_quota_gb: 10,
+            base_connectivity_cost_ilp: 5000, // Default 5000 µ-cents (~$0.05) per GB
         }
     }
 }
