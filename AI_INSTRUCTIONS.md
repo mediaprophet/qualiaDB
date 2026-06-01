@@ -55,7 +55,6 @@ When a commercial query via the Permissive Commons (`0b01`) executes, these virt
 If compiling for the browser (`target_arch = "wasm32"`), the Triad must be gracefully flattened into a single-threaded synchronous sequence to maintain sandbox stability. Fallback to the Origin Private File System (OPFS) for synchronous I/O, and ping the local loopback (e.g., `127.0.0.1:4848`) to proxy queries to the native engine if the host has the standalone database installed.
 
 ## 8. Neurosymbolic Axiomatic LLM Overrides
-Do not attempt to write Python-based LLM shims (e.g., TensorFlow/PyTorch bridges). Qualia-DB controls LLMs procedurally through the **Spatio-Temporal Intercept Protocol**:
-* Extract explicit vector coordinate layouts (tensors) from binary files (like `.gguf`) and map them directly into the 48-byte `QualiaQuin`.
-* Bind the vectors to localized constraints using the `Context` (Vector 4) field (e.g., `time=1920, location=australia`).
-* During execution, the Sentinel VM acts as a mathematically strict interceptor. If an active LLM matrix triggers a local Spatio-Temporal axiom, the VM mathematically overrides/clips the tensor natively, forcing the generic Connectionist AI to obey local Symbolic constraints.
+When tasked with integrating Large Language Models (LLMs), do not immediately assume a standard Python wrapper. You must first **ASK the user** which Neurosymbolic Mode they wish to employ:
+* **Mode 1 (Strict Native Intercept)**: Extract explicit vector coordinate layouts (tensors) from binary files (like `.gguf`) and map them directly into the 48-byte `QualiaQuin`. The Sentinel VM acts as a mathematically strict interceptor during native execution, clipping vectors that violate local Spatio-Temporal constraints.
+* **Mode 2 (Bridged Shim)**: Utilize external ML architectures (e.g., Python, TensorFlow, PyTorch) via an explicit API bridge. The external model handles the dense compute, but all queries and responses are strictly routed and mathematically gated through the Qualia-DB `.q42` Axiom ruleset before resolution.
