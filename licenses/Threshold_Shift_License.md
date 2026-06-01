@@ -29,6 +29,12 @@ In State B:
 - You **may** freely copy, modify, distribute, and execute the asset.
 - **Conditional Network Protection (Share-Alike)**: Any derivative works or distributions of this asset *must* actively participate in the decentralized peer network (e.g., seeding via WebTorrent DHT). You may not enclose the asset in a proprietary, centralized database without continuing to seed it to the public commons.
 
+## 4. Semantic Escrow & Dispute Adjudication
+If a provenance dispute arises regarding the originality or derivation of this Asset, all ILP payment streams are routed into a cryptographic **Escrow State**. The dispute is resolved exclusively by the local N3Logic Sentinel VM using the `.q42` DAG ledgers, bound by the following predicates:
+1. **The Knowledge Axiom Rule**: Rights to knowledge and fundamental shared learnings are un-propertizeable. Any claim attempting to extract or enclose a Knowledge Axiom as property is mathematically and legally dismissed.
+2. **Relational Assertion**: If the disputed Asset is an Application/Invention, the VM calculates the exact percentage of derivation. The ILP Escrow is proportionally split based on the mathematical relational contribution of the parties, overriding any false claims of absolute originality.
+3. **Unwitting Concurrent Creation**: If DAG timestamps and cryptographic network logs prove absolute isolation prior to publication, the VM validates the parallel creation without penalty.
+
 ---
 
 **By executing or querying this asset, the consuming Agent legally binds to the N3Logic state transition protocols governed by the local Daemon.**
