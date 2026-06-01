@@ -293,6 +293,7 @@ pub mod tee_ffi;
 pub mod wal;
 pub mod crdt;
 pub mod sync;
+pub mod cbor_compiler;
 pub mod query_compiler;
 pub mod fuzz_testing;
 pub mod ingestion;
