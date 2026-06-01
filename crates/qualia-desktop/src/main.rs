@@ -18,12 +18,30 @@ struct AgentConfig {
 
 impl Default for AgentConfig {
     fn default() -> Self {
+        // Cross-platform default: AppData/Roaming on Windows,
+        // ~/Library/Application Support on macOS, ~/.local/share on Linux.
+        let storage_path = dirs_default_path();
         Self {
-            storage_path: "C:\\QualiaData".to_string(), // Default fallback
+            storage_path,
             storage_quota_gb: 10,
             base_connectivity_cost_ilp: 5000, // Default 5000 µ-cents (~$0.05) per GB
         }
     }
+}
+
+/// Resolves the OS-appropriate default data directory for the qualia daemon.
+fn dirs_default_path() -> String {
+    #[cfg(target_os = "windows")]
+    { std::env::var("APPDATA").map(|d| format!("{}\\QualiaData", d))
+        .unwrap_or_else(|_| "C:\\QualiaData".to_string()) }
+
+    #[cfg(target_os = "macos")]
+    { std::env::var("HOME").map(|h| format!("{}/Library/Application Support/QualiaData", h))
+        .unwrap_or_else(|_| "/tmp/QualiaData".to_string()) }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    { std::env::var("HOME").map(|h| format!("{}/.local/share/QualiaData", h))
+        .unwrap_or_else(|_| "/tmp/QualiaData".to_string()) }
 }
 
 struct AppState {

@@ -68,6 +68,56 @@
         .card h2 { font-size: 1.8rem; margin: 0 0 1rem 0; color: #fff; }
         .card p { color: #aaa; margin: 0; line-height: 1.5; }
 
+        /* ── Install Banner ── */
+        .install-banner {
+            width: 100%; margin-bottom: 3rem;
+            background: rgba(0,240,255,0.04);
+            border: 1px solid rgba(0,240,255,0.18);
+            border-radius: 20px; padding: 2.5rem 2rem;
+            display: flex; flex-direction: column; align-items: center; gap: 1.2rem;
+            position: relative; overflow: hidden;
+        }
+        .install-banner::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(0,240,255,0.06) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .install-banner .platform-label {
+            font-size: 0.78rem; letter-spacing: 2px; color: #555; text-transform: uppercase;
+        }
+        .install-banner h2 {
+            font-size: 1.6rem; font-weight: 700; margin: 0; color: #fff;
+        }
+        .install-banner .platform-detected {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: rgba(255,255,255,0.04); border: 1px solid #222;
+            border-radius: 30px; padding: 0.35rem 1rem; font-size: 0.82rem; color: #888;
+        }
+        .install-btn-row { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+        .install-btn {
+            display: inline-flex; align-items: center; gap: 0.6rem;
+            padding: 0.85rem 2rem; border-radius: 10px; font-size: 0.95rem; font-weight: 700;
+            cursor: pointer; text-decoration: none; transition: all 0.25s;
+            border: none; font-family: 'Inter', system-ui, sans-serif;
+        }
+        .install-btn-primary {
+            background: linear-gradient(135deg, #00f0ff, #0077ff);
+            color: #000; box-shadow: 0 0 30px rgba(0,240,255,0.25);
+        }
+        .install-btn-primary:hover { transform: translateY(-3px); box-shadow: 0 6px 40px rgba(0,240,255,0.4); }
+        .install-btn-secondary {
+            background: transparent; color: #aaa;
+            border: 1px solid #333;
+        }
+        .install-btn-secondary:hover { border-color: #555; color: #fff; background: rgba(255,255,255,0.04); }
+        .install-note { font-size: 0.78rem; color: #444; }
+        .install-note a { color: #555; }
+        .install-unsupported {
+            color: #555; font-size: 0.88rem; font-style: italic;
+        }
+        .os-icon { font-size: 1.2rem; }
+        /* hide all platform sections by default — JS reveals the right one */
+        .platform-win, .platform-mac, .platform-linux, .platform-unknown { display: none; }
     </style>
 </head>
 <body>
@@ -75,7 +125,68 @@
     <div class="container">
         <h1>Qualia-DB</h1>
         <div class="tagline">The 512MB Zero-Allocation Semantic Engine. Built for Personal Devices. Secured by Cryptographic Human Agency Records.</div>
-        
+
+        <!-- ── Platform-aware Install Banner ── -->
+        <div class="install-banner" id="installBanner">
+            <div class="platform-label">Native Desktop Daemon</div>
+            <h2>Install Qualia-DB Locally</h2>
+            <div class="platform-detected" id="platformDetected">
+                <span id="platformIcon">⏳</span>
+                <span id="platformText">Detecting platform…</span>
+            </div>
+
+            <!-- Windows -->
+            <div class="platform-win install-btn-row" id="sectionWin">
+                <a class="install-btn install-btn-primary" href="https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_x64-setup.exe" id="btnWin">
+                    <span class="os-icon">🪟</span> Download for Windows (x64)
+                </a>
+                <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank">
+                    All releases →
+                </a>
+            </div>
+
+            <!-- macOS -->
+            <div class="platform-mac install-btn-row" id="sectionMac">
+                <a class="install-btn install-btn-primary" href="https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_aarch64.dmg" id="btnMacArm">
+                    <span class="os-icon">🍎</span> Download for macOS (Apple Silicon)
+                </a>
+                <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_x64.dmg" id="btnMacIntel">
+                    macOS Intel (x64)
+                </a>
+                <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank">
+                    All releases →
+                </a>
+            </div>
+
+            <!-- Linux -->
+            <div class="platform-linux install-btn-row" id="sectionLinux">
+                <a class="install-btn install-btn-primary" href="https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_amd64.AppImage" id="btnLinux">
+                    <span class="os-icon">🐧</span> Download for Linux (AppImage x64)
+                </a>
+                <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_amd64.deb">
+                    .deb package
+                </a>
+                <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank">
+                    All releases →
+                </a>
+            </div>
+
+            <!-- Unknown / mobile -->
+            <div class="platform-unknown" id="sectionUnknown">
+                <p class="install-unsupported">
+                    Native install requires Windows 10+, macOS 11+, or a 64-bit Linux desktop.<br>
+                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank">Browse all releases on GitHub →</a>
+                </p>
+            </div>
+
+            <div class="install-note">
+                Open-source · Tauri runtime · builds from source:
+                <a href="https://github.com/mediaprophet/qualiaDB" target="_blank">github.com/mediaprophet/qualiaDB</a>
+                &nbsp;·&nbsp;
+                <a href="https://github.com/mediaprophet/qualiaDB/blob/main/crates/qualia-desktop/README.md" target="_blank">Install docs</a>
+            </div>
+        </div>
+
         <div class="nav-grid">
             <a href="benchmark.html" class="card">
                 <h2>Dual-Mode Benchmark</h2>
@@ -158,5 +269,67 @@
             </a>
         </div>
     </div>
+
+<script>
+(function detectPlatform() {
+    const ua = navigator.userAgent;
+    const icon = document.getElementById('platformIcon');
+    const text = document.getElementById('platformText');
+
+    // Prefer the modern API (Chromium 90+) which also distinguishes ARM
+    const uad = navigator.userAgentData;
+
+    function show(section, iconStr, label) {
+        document.getElementById('section' + section).style.display = 'flex';
+        icon.textContent = iconStr;
+        text.textContent = label;
+    }
+
+    // Async path: userAgentData gives us architecture too
+    if (uad && uad.getHighEntropyValues) {
+        uad.getHighEntropyValues(['platform', 'architecture', 'bitness']).then(info => {
+            const platform = (info.platform || '').toLowerCase();
+            const arch     = (info.architecture || '').toLowerCase();
+
+            if (platform.includes('windows')) {
+                show('Win', '🪟', 'Windows ' + (info.bitness === '64' ? 'x64' : 'x86') + ' detected');
+            } else if (platform.includes('mac')) {
+                // arm = Apple Silicon, x86 = Intel
+                const chip = arch === 'arm' ? 'Apple Silicon (arm64)' : 'Intel x64';
+                show('Mac', '🍎', 'macOS · ' + chip + ' detected');
+                // Swap primary button to Intel if that's what they have
+                if (arch !== 'arm') {
+                    const arm = document.getElementById('btnMacArm');
+                    const intel = document.getElementById('btnMacIntel');
+                    arm.classList.remove('install-btn-primary');
+                    arm.classList.add('install-btn-secondary');
+                    intel.classList.remove('install-btn-secondary');
+                    intel.classList.add('install-btn-primary');
+                }
+            } else if (platform.includes('linux')) {
+                show('Linux', '🐧', 'Linux x64 detected');
+            } else {
+                show('Unknown', '📱', platform || 'Unsupported platform');
+            }
+        }).catch(() => fallbackDetect(ua, icon, text, show));
+    } else {
+        fallbackDetect(ua, icon, text, show);
+    }
+
+    function fallbackDetect(ua, icon, text, show) {
+        // Fallback: plain UA string sniffing
+        if (/Windows NT/i.test(ua)) {
+            show('Win', '🪟', 'Windows detected');
+        } else if (/Macintosh|Mac OS X/i.test(ua)) {
+            // Can't distinguish arm64 vs x64 from UA alone — show both, arm first
+            show('Mac', '🍎', 'macOS detected (choose your chip below)');
+        } else if (/Linux/i.test(ua) && !/Android/i.test(ua)) {
+            show('Linux', '🐧', 'Linux detected');
+        } else {
+            show('Unknown', '📱', /Android|iPhone|iPad/i.test(ua) ? 'Mobile (desktop required)' : 'Platform unknown');
+        }
+    }
+})();
+</script>
 </body>
 </html>
