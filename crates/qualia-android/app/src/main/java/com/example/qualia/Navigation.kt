@@ -14,27 +14,47 @@ import androidx.compose.ui.unit.dp
 import com.example.qualia.chat.ChatScreen
 import com.example.qualia.chat.ChatViewModel
 import com.example.qualia.demos.DemoScreen
+import com.example.qualia.llm.LlmScreen
+import com.example.qualia.llm.LlmViewModel
 import com.example.qualia.memes.MemeScreen
 import com.example.qualia.memes.MemeViewModel
+import com.example.qualia.ontology.OntologyScreen
+import com.example.qualia.ontology.OntologyViewModel
+import com.example.qualia.pdf.PdfScreen
+import com.example.qualia.pdf.PdfViewModel
 import com.example.qualia.theme.*
 
 // ── Nav destinations ──────────────────────────────────────────────────────────
 
 sealed class NavDest(val route: String, val label: String, val icon: ImageVector) {
-    object Chat     : NavDest("chat",     "Chat",     Icons.Default.Chat)
-    object Memes    : NavDest("memes",    "Memes",    Icons.Default.EmojiEmotions)
-    object Demos    : NavDest("demos",    "Demos",    Icons.Default.PlayArrow)
-    object Settings : NavDest("settings", "Settings", Icons.Default.Settings)
+    object Chat     : NavDest("chat",     "Chat",    Icons.Default.Chat)
+    object Memes    : NavDest("memes",    "Memes",   Icons.Default.EmojiEmotions)
+    object PDF      : NavDest("pdf",      "PDF",     Icons.Default.PictureAsPdf)
+    object Ontology : NavDest("ontology", "Onto",    Icons.Default.Hub)
+    object LLM      : NavDest("llm",      "LLM",     Icons.Default.Psychology)
+    object Demos    : NavDest("demos",    "Demos",   Icons.Default.PlayArrow)
+    object Settings : NavDest("settings", "Settings",Icons.Default.Settings)
 }
 
-private val navItems = listOf(NavDest.Chat, NavDest.Memes, NavDest.Demos, NavDest.Settings)
+private val navItems = listOf(
+    NavDest.Chat,
+    NavDest.Memes,
+    NavDest.PDF,
+    NavDest.Ontology,
+    NavDest.LLM,
+    NavDest.Demos,
+    NavDest.Settings,
+)
 
-// ── Main navigation host ──────────────────────────────────────────────────────
+// ── Navigation host ───────────────────────────────────────────────────────────
 
 @Composable
 fun MainNavigation(
-    chatViewModel: ChatViewModel,
-    memeViewModel: MemeViewModel,
+    chatViewModel:     ChatViewModel,
+    memeViewModel:     MemeViewModel,
+    pdfViewModel:      PdfViewModel,
+    ontologyViewModel: OntologyViewModel,
+    llmViewModel:      LlmViewModel,
 ) {
     var current by remember { mutableStateOf<NavDest>(NavDest.Chat) }
 
@@ -48,13 +68,18 @@ fun MainNavigation(
                         selected = selected,
                         onClick  = { current = dest },
                         icon     = {
-                            Icon(dest.icon, contentDescription = dest.label,
-                                tint = if (selected) NeonBlue else TextMuted)
+                            Icon(
+                                dest.icon,
+                                contentDescription = dest.label,
+                                tint = if (selected) NeonBlue else TextMuted,
+                            )
                         },
                         label    = {
-                            Text(dest.label,
+                            Text(
+                                dest.label,
                                 color = if (selected) NeonBlue else TextMuted,
-                                style = MaterialTheme.typography.labelSmall)
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                         },
                         colors   = NavigationBarItemDefaults.colors(
                             indicatorColor = NeonBlue.copy(alpha = 0.15f),
@@ -64,11 +89,15 @@ fun MainNavigation(
             }
         },
     ) { innerPadding ->
+        val contentMod = Modifier.padding(innerPadding)
         when (current) {
-            NavDest.Chat  -> ChatScreen(chatViewModel, memeViewModel)
-            NavDest.Memes -> MemeScreen(memeViewModel)
-            NavDest.Demos -> DemoScreen()
-            NavDest.Settings -> SettingsPlaceholder(Modifier.padding(innerPadding))
+            NavDest.Chat     -> ChatScreen(chatViewModel, memeViewModel)
+            NavDest.Memes    -> MemeScreen(memeViewModel)
+            NavDest.PDF      -> PdfScreen(pdfViewModel)
+            NavDest.Ontology -> OntologyScreen(ontologyViewModel)
+            NavDest.LLM      -> LlmScreen(llmViewModel)
+            NavDest.Demos    -> DemoScreen()
+            NavDest.Settings -> SettingsPlaceholder(contentMod)
             else -> {}
         }
     }
@@ -78,7 +107,7 @@ fun MainNavigation(
 private fun SettingsPlaceholder(modifier: Modifier = Modifier) {
     Surface(modifier.fillMaxSize(), color = BgDeep) {
         Box(contentAlignment = Alignment.Center) {
-            Text("Settings — coming next iteration", color = TextMuted)
+            Text("Settings — tax suite, ILP addresses, update prefs", color = TextMuted)
         }
     }
 }
