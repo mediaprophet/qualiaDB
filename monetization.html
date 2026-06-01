@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ILP Monetization & Obligation Engine | Qualia-DB</title>
+    <style>
+        :root {
+            --bg-dark: #050505;
+            --neon-gold: #ffd700;
+            --neon-green: #4ade80;
+            --neon-purple: #b026ff;
+            --glass-bg: rgba(20, 20, 25, 0.8);
+            --glass-border: rgba(255, 215, 0, 0.2);
+        }
+
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-dark);
+            color: #fff; font-family: 'Inter', monospace;
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        header {
+            padding: 1rem 2rem; border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        header h1 { margin: 0; font-size: 1.5rem; color: var(--neon-gold); }
+        
+        .main-layout { display: flex; flex: 1; height: calc(100vh - 60px); padding: 2rem; gap: 2rem; box-sizing: border-box;}
+
+        .card { 
+            background: var(--glass-bg); border: 1px solid #333; 
+            padding: 1.5rem; border-radius: 8px; flex: 1; display: flex; flex-direction: column;
+        }
+        .card h3 { margin: 0 0 1rem 0; font-size: 1.1rem; color: var(--neon-gold); border-bottom: 1px dashed #444; padding-bottom: 0.5rem; }
+
+        .btn {
+            background: transparent; color: var(--neon-gold); border: 1px solid var(--neon-gold);
+            padding: 0.8rem; border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 1rem;
+            transition: all 0.3s ease; width: 100%; margin-top: 1rem;
+        }
+        .btn:hover { background: var(--neon-gold); color: #000; box-shadow: 0 0 15px var(--neon-gold); }
+
+        .log-panel {
+            flex: 1; background: #000; border: 1px solid var(--glass-border); border-radius: 4px;
+            padding: 1rem; font-size: 0.85rem; color: #aaa; overflow-y: auto; white-space: pre-wrap;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8); margin-top: 1rem;
+        }
+
+        .metric-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #ccc;}
+        .metric-val { font-weight: bold; color: #fff; }
+
+        .progress-container {
+            width: 100%; height: 24px; background: #111; border: 1px solid #333;
+            border-radius: 12px; overflow: hidden; margin-top: 1.5rem; position: relative;
+        }
+        
+        .progress-bar {
+            height: 100%; background: linear-gradient(90deg, #b026ff, #ffd700);
+            width: 0%; transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 0.8rem; font-weight: bold; color: #fff; text-shadow: 1px 1px 2px #000;
+        }
+
+        .license-badge {
+            display: inline-block; padding: 0.4rem 0.8rem; border-radius: 4px; font-weight: bold; font-size: 0.9rem;
+            margin-top: 1rem; border: 1px solid #444; background: #111; color: #888;
+        }
+        
+        .license-commercial { color: var(--neon-purple); border-color: var(--neon-purple); }
+        .license-commons { color: var(--neon-green); border-color: var(--neon-green); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>ILP ECONOMIC SHIFT ENGINE</h1>
+        <div style="color: #666;"><a href="index.html" style="color:var(--neon-gold); text-decoration:none;">[ ← Back to Matrix ]</a></div>
+    </header>
+
+    <div class="main-layout">
+        <!-- LEFT PANE: N3Logic Risk Math -->
+        <div class="card">
+            <h3>N3Logic Risk-Compounded Algorithm</h3>
+            <p style="color: #888; font-size: 0.85rem;">Calculating the total Obligation Cost based on physical, temporal, and social risk models.</p>
+            
+            <div class="metric-row">
+                <span>Base Fair Value Rate (Labor/Compute):</span>
+                <span class="metric-val">100,000 µ-cents</span>
+            </div>
+            <div class="metric-row">
+                <span>Social Risk Multiplier (Unsupported/Objections):</span>
+                <span class="metric-val" style="color:var(--neon-purple);">x 4.5</span>
+            </div>
+            <div class="metric-row">
+                <span>Temporal Compound (Years Isolation):</span>
+                <span class="metric-val" style="color:var(--neon-purple);">x 1.2</span>
+            </div>
+            
+            <hr style="border: 0; border-bottom: 1px dashed #333; margin: 1rem 0;">
+            
+            <div class="metric-row" style="font-size: 1.1rem;">
+                <span style="color:var(--neon-gold);">Target Obligation Cost:</span>
+                <span class="metric-val" style="color:var(--neon-gold);" id="target-cost">540,000 µ-cents</span>
+            </div>
+
+            <div class="license-badge license-commercial" id="license-badge">
+                State A: Commercial Obligation (Gated)
+            </div>
+        </div>
+
+        <!-- RIGHT PANE: ILP Stream & Threshold Shift -->
+        <div class="card">
+            <h3>Web Monetization Stream</h3>
+            <p style="color: #888; font-size: 0.85rem;">Simulating an Interledger Protocol (ILP) micro-payment stream. When the threshold is met, the Threshold Shift License (TSL) instantly reclassifies the asset into the Permissive Commons.</p>
+            
+            <button class="btn" onclick="simulateIlpStream()">Inject 50,000 µ-cents via ILP</button>
+
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar" style="width: 64%;"></div>
+                <div class="progress-text" id="progress-text">350,000 / 540,000 (64.8%)</div>
+            </div>
+
+            <div class="log-panel" id="ilp-log">Awaiting ILP Stream...</div>
+        </div>
+    </div>
+
+    <script>
+        const logPanel = document.getElementById('ilp-log');
+        let currentAccumulated = 350000;
+
+        function logILP(msg) {
+            logPanel.innerHTML += `\n> ${msg}`;
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        async function simulateIlpStream() {
+            logILP(`Receiving ILP payment packet...`);
+
+            try {
+                const res = await fetch('http://127.0.0.1:4848/api/ilp/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dataset_id: "human_medical_ontology.q42", amount: 50000 })
+                });
+                const json = await res.json();
+                
+                logILP(`[VERIFIED] +${json.payment_received} µ-cents credited.`);
+                logILP(`Total Accumulated: ${json.accumulated} µ-cents.`);
+                
+                // Update UI
+                currentAccumulated = json.accumulated;
+                const percentage = Math.min((json.accumulated / json.total_obligation) * 100, 100).toFixed(1);
+                
+                document.getElementById('progress-bar').style.width = `${percentage}%`;
+                document.getElementById('progress-text').innerText = `${json.accumulated.toLocaleString()} / ${json.total_obligation.toLocaleString()} (${percentage}%)`;
+
+                if (json.accumulated >= json.total_obligation) {
+                    logILP(`🔓 [OBLIGATION MET] N3Logic Sentinel triggering State Transition.`);
+                    logILP(`🔓 License shifted to Permissive Commons.`);
+                    
+                    const badge = document.getElementById('license-badge');
+                    badge.className = "license-badge license-commons";
+                    badge.innerText = "State B: Permissive Commons (Liberated)";
+                } else {
+                    logILP(`🔒 Threshold pending. Commercial gating remains active.`);
+                }
+
+            } catch (e) {
+                logILP(`Network Error: Ensure Qualia-DB Daemon is running.`);
+            }
+        }
+    </script>
+</body>
+</html>

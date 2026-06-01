@@ -434,7 +434,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let social_routes = webid_negotiate.or(federated_analytics);
 
-            let routes = rpc_route.or(cache_route).or(ai_routes).or(bio_routes).or(social_routes).with(cors);
+            // Phase 64: ILP Monetization & Threshold Shift License
+            let ilp_monetization = warp::post()
+                .and(warp::path!("api" / "ilp" / "stream"))
+                .and(warp::body::json())
+                .map(|body: serde_json::Value| {
+                    let dataset_id = body["dataset_id"].as_str().unwrap_or("unknown");
+                    let payment_microsats = body["amount"].as_u64().unwrap_or(0);
+                    
+                    println!("========================================");
+                    println!("💸 [ILP Monetization] Received Web Monetization Stream: {} micro-cents for {}", payment_microsats, dataset_id);
+                    
+                    // N3Logic Risk-Compounded Obligation Algorithm
+                    // (Simulated values for demonstration)
+                    let base_rate = 100_000.0; // Fair value estimate
+                    let risk_multiplier = 4.5; // High risk (unsupported, objected to)
+                    let temporal_compound = 1.2; // Years spent
+                    
+                    let total_obligation = base_rate * risk_multiplier * temporal_compound;
+                    let current_accumulated = 350_000.0 + (payment_microsats as f64); // Mock accumulated
+                    
+                    println!("   -> Calculating N3Logic Obligation Threshold...");
+                    println!("   -> Target Obligation: {} micro-cents", total_obligation);
+                    println!("   -> Current Income: {} micro-cents", current_accumulated);
+                    
+                    let mut license_state = "State A: Commercial Obligation (Pre-Threshold)";
+                    if current_accumulated >= total_obligation {
+                        license_state = "State B: Permissive Commons (Post-Threshold)";
+                        println!("   🔓 [THRESHOLD MET] Executing License Shift to Permissive Commons.");
+                    } else {
+                        println!("   🔒 [THRESHOLD PENDING] Dataset remains gated under Commercial Obligation.");
+                    }
+
+                    warp::reply::json(&serde_json::json!({ 
+                        "dataset": dataset_id,
+                        "payment_received": payment_microsats,
+                        "accumulated": current_accumulated,
+                        "total_obligation": total_obligation,
+                        "license_state": license_state
+                    }))
+                });
+
+            let economic_routes = ilp_monetization;
+
+            let routes = rpc_route.or(cache_route).or(ai_routes).or(bio_routes).or(social_routes).or(economic_routes).with(cors);
 
             // Spawn Nym Mixnet Sync Loop
             tokio::spawn(async move {
