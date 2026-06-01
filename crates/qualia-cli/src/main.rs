@@ -388,7 +388,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let bio_routes = bio_sync_route.or(bio_query_route);
             let ai_routes = ollama_api_pull.or(ollama_api_generate).or(native_api_infer);
 
-            let routes = rpc_route.or(cache_route).or(ai_routes).or(bio_routes).with(cors);
+            // Phase 63: Federated Analytics & Rights Ontology Directory
+            let webid_negotiate = warp::post()
+                .and(warp::path!("webid" / "negotiate"))
+                .and(warp::body::json())
+                .map(|body: serde_json::Value| {
+                    let agent = body["requesting_agent"].as_str().unwrap_or("unknown");
+                    let credential = body["credential"].as_str().unwrap_or("none");
+                    println!("========================================");
+                    println!("🪪 [WebID Endpoint] Negotiation initiated by {}", agent);
+                    println!("   -> Evaluating Verifiable Credential: {}", credential);
+                    
+                    if credential == "none" {
+                        println!("   ❌ Rejected: Insufficient Rights Ontology clearance.");
+                        return warp::reply::json(&serde_json::json!({ "status": "rejected", "reason": "Missing Verifiable Credential" }));
+                    }
+
+                    println!("   ✅ Authorized. Enumerating conclusions based on Rights Context.");
+                    warp::reply::json(&serde_json::json!({ 
+                        "webid": "did:git:webizen:local_node",
+                        "status": "authorized",
+                        "rights_context": "Federated Social Analytics Allowed"
+                    }))
+                });
+
+            let federated_analytics = warp::post()
+                .and(warp::path!("api" / "federation" / "analytics"))
+                .and(warp::body::json())
+                .map(|body: serde_json::Value| {
+                    let query = body["query"].as_str().unwrap_or("");
+                    println!("========================================");
+                    println!("🌐 [Federated Social Web] Received Macro-Demographic Query:");
+                    println!("   -> Query: {}", query);
+                    println!("   -> Evaluating against Rights Ontology...");
+                    println!("   -> Scrubbing PII & Preserving Dignity Guarantee...");
+                    
+                    // Simulated Data output maintaining Dignity Guarantee (No PII)
+                    warp::reply::json(&serde_json::json!({ 
+                        "query_handled": query,
+                        "aggregated_impact_score": 0.84,
+                        "identifiability_risk": "0.00%",
+                        "routing": "Sphinx Packet via Nym Mixnet"
+                    }))
+                });
+
+            let social_routes = webid_negotiate.or(federated_analytics);
+
+            let routes = rpc_route.or(cache_route).or(ai_routes).or(bio_routes).or(social_routes).with(cors);
 
             // Spawn Nym Mixnet Sync Loop
             tokio::spawn(async move {

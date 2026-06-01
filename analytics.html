@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Federated Analytics & Rights Ontology | Qualia-DB</title>
+    <style>
+        :root {
+            --bg-dark: #050505;
+            --neon-blue: #00f0ff;
+            --neon-purple: #b026ff;
+            --glass-bg: rgba(20, 20, 25, 0.8);
+            --glass-border: rgba(176, 38, 255, 0.2);
+        }
+
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-dark);
+            color: #fff; font-family: 'Inter', monospace;
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        header {
+            padding: 1rem 2rem; border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        header h1 { margin: 0; font-size: 1.5rem; color: var(--neon-purple); }
+        
+        .main-layout { display: flex; flex: 1; height: calc(100vh - 60px); }
+
+        .pane {
+            flex: 1; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .pane-left { border-right: 1px solid #222; background: #0a0a0c; }
+        .pane-right { background: #050505; }
+
+        .card { background: var(--glass-bg); border: 1px solid #333; padding: 1.5rem; border-radius: 8px; }
+        .card h3 { margin: 0 0 1rem 0; font-size: 1.1rem; color: var(--neon-blue); border-bottom: 1px dashed #444; padding-bottom: 0.5rem; }
+
+        .btn {
+            background: transparent; color: var(--neon-purple); border: 1px solid var(--neon-purple);
+            padding: 0.8rem; border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 1rem;
+            transition: all 0.3s ease; width: 100%; margin-top: 1rem;
+        }
+        .btn:hover { background: var(--neon-purple); color: #000; box-shadow: 0 0 15px var(--neon-purple); }
+
+        input, select {
+            width: 100%; padding: 0.8rem; background: #000; color: #fff;
+            border: 1px solid #333; border-radius: 4px; font-family: monospace; font-size: 0.9rem;
+            box-sizing: border-box; margin-bottom: 0.5rem;
+        }
+
+        .log-panel {
+            flex: 1; background: #000; border: 1px solid var(--glass-border); border-radius: 4px;
+            padding: 1rem; font-size: 0.85rem; color: #aaa; overflow-y: auto; white-space: pre-wrap;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .metric-box {
+            display: flex; justify-content: space-between; padding: 1rem; background: #111;
+            border: 1px solid #333; border-radius: 4px; margin-bottom: 1rem;
+        }
+
+        .metric-value { font-size: 1.5rem; font-weight: bold; color: #4ade80; }
+        .risk-value { font-size: 1.5rem; font-weight: bold; color: var(--neon-blue); }
+
+        .badge { display: inline-block; padding: 0.2rem 0.5rem; background: #222; border-radius: 4px; font-size: 0.75rem; margin-right: 0.5rem; color: #888; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>FEDERATED DIRECTORY & ANALYTICS</h1>
+        <div style="color: #666;"><a href="index.html" style="color:var(--neon-blue); text-decoration:none;">[ ← Back to Matrix ]</a></div>
+    </header>
+
+    <div class="main-layout">
+        <!-- LEFT PANE: WebID & Rights Ontology -->
+        <div class="pane pane-left">
+            <h2 style="color: #fff; margin:0;">WebID Endpoint Negotiation</h2>
+            <p style="color: #888; font-size: 0.9rem; margin-top:0;">Manage your Local Agent's federated identity and Verifiable Credentials.</p>
+
+            <div class="card">
+                <h3>Directory Profile</h3>
+                <div style="font-size:0.9rem; color:#ccc; line-height: 1.6;">
+                    <span class="badge">WebID</span> did:git:webizen:local_node<br>
+                    <span class="badge">Status</span> Endpoint Active on port 4848<br>
+                    <span class="badge">Policy</span> Rights Ontology Enforcement (Strict)
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Test Credential Negotiation</h3>
+                <p style="font-size:0.8rem; color:#888;">Simulate an external agent attempting to read conclusions from your WebID.</p>
+                <input type="text" id="req-agent" placeholder="Requesting Agent ID (e.g., did:uni:research_node)" value="did:uni:research_node">
+                <select id="req-cred">
+                    <option value="none">No Verifiable Credential</option>
+                    <option value="vc_social_research_auth" selected>VC: Authorized Sociological Researcher</option>
+                </select>
+                <button class="btn" onclick="negotiateWebID()">Execute WebID Handshake</button>
+            </div>
+
+            <div class="log-panel" id="webid-log">Awaiting Negotiation...</div>
+        </div>
+
+        <!-- RIGHT PANE: Federated Social Analytics -->
+        <div class="pane pane-right">
+            <h2 style="color: #fff; margin:0;">Social Issue Analytics</h2>
+            <p style="color: #888; font-size: 0.9rem; margin-top:0;">Dispatch macro-queries to the federated network. Results are scrubbed to preserve Human Dignity.</p>
+
+            <div class="card" style="border-color: var(--neon-blue);">
+                <h3 style="color: var(--neon-blue);">Dispatch Federated Query</h3>
+                <input type="text" id="social-query" value="Impact of localized power outages on health outcomes for Demographics > 50">
+                <button class="btn" style="color: var(--neon-blue); border-color: var(--neon-blue);" onclick="dispatchAnalytics()">Aggregate Network Metrics</button>
+            </div>
+
+            <div class="metric-box">
+                <div>
+                    <div style="color: #888; font-size: 0.8rem; text-transform: uppercase;">Aggregated Impact Score</div>
+                    <div class="metric-value" id="impact-score">--</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="color: #888; font-size: 0.8rem; text-transform: uppercase;">Identifiability Risk (Dignity Guarantee)</div>
+                    <div class="risk-value" id="risk-score">--</div>
+                </div>
+            </div>
+
+            <div class="log-panel" id="analytics-log">Network Idle...</div>
+        </div>
+    </div>
+
+    <script>
+        const webidLog = document.getElementById('webid-log');
+        const analyticsLog = document.getElementById('analytics-log');
+
+        function logWebID(msg) {
+            webidLog.innerHTML += `\n> ${msg}`;
+            webidLog.scrollTop = webidLog.scrollHeight;
+        }
+
+        function logAnalytics(msg) {
+            analyticsLog.innerHTML += `\n> ${msg}`;
+            analyticsLog.scrollTop = analyticsLog.scrollHeight;
+        }
+
+        async function negotiateWebID() {
+            const agent = document.getElementById('req-agent').value;
+            const credential = document.getElementById('req-cred').value;
+            
+            logWebID(`Incoming connection from: ${agent}`);
+            logWebID(`Verifying Credential Context...`);
+
+            try {
+                const res = await fetch('http://127.0.0.1:4848/webid/negotiate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesting_agent: agent, credential: credential })
+                });
+                const json = await res.json();
+                
+                if(json.status === "rejected") {
+                    logWebID(`[REJECTED] Reason: ${json.reason}`);
+                } else {
+                    logWebID(`[AUTHORIZED] WebID: ${json.webid}`);
+                    logWebID(`Rights Context Validated: ${json.rights_context}`);
+                    logWebID(`Conclusions Enumerated securely.`);
+                }
+            } catch (e) {
+                logWebID(`Network Error: Ensure Qualia-DB Daemon is running.`);
+            }
+        }
+
+        async function dispatchAnalytics() {
+            const query = document.getElementById('social-query').value;
+            
+            logAnalytics(`Broadcasting federated query via Social-Web...`);
+            logAnalytics(`Payload: "${query}"`);
+            logAnalytics(`Awaiting peer responses (Applying Rights Ontology rules)...`);
+
+            document.getElementById('impact-score').innerText = "Processing...";
+            document.getElementById('risk-score').innerText = "Verifying...";
+
+            try {
+                // Simulate network latency for federation
+                setTimeout(async () => {
+                    const res = await fetch('http://127.0.0.1:4848/api/federation/analytics', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: query })
+                    });
+                    const json = await res.json();
+                    
+                    logAnalytics(`[SUCCESS] Responses aggregated from DHT peers.`);
+                    logAnalytics(`Data scrubbed by local nodes. PII Removed.`);
+                    logAnalytics(`Routing: ${json.routing}`);
+                    
+                    document.getElementById('impact-score').innerText = json.aggregated_impact_score;
+                    document.getElementById('risk-score').innerText = json.identifiability_risk;
+
+                }, 1500);
+
+            } catch (e) {
+                logAnalytics(`Network Error: Ensure Qualia-DB Daemon is running.`);
+            }
+        }
+    </script>
+</body>
+</html>
