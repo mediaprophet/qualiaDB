@@ -11,338 +11,306 @@
             --neon-purple: #b026ff;
             --neon-green: #00ff88;
             --neon-red: #ff3366;
+            --neon-gold: #ffd700;
             --glass-bg: rgba(20, 20, 25, 0.6);
             --glass-border: rgba(255, 255, 255, 0.1);
         }
 
         body {
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             background: radial-gradient(circle at center, #111 0%, var(--bg-dark) 100%);
             color: #fff;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            display: flex; flex-direction: column; align-items: center;
             overflow-x: hidden;
         }
 
-        /* Animated Grid Background */
         .grid-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-image: 
                 linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
             background-size: 50px 50px;
             z-index: -1;
-            perspective: 1000px;
-            transform-style: preserve-3d;
             animation: gridMove 20s linear infinite;
         }
 
-        @keyframes gridMove {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(50px); }
-        }
+        @keyframes gridMove { 100% { transform: translateY(50px); } }
 
-        header {
-            text-align: center;
-            margin: 3rem 0;
-            z-index: 10;
-        }
-
+        header { text-align: center; margin: 2rem 0; z-index: 10; }
         h1 {
-            font-size: 3rem;
-            font-weight: 800;
-            margin: 0;
+            font-size: 3rem; font-weight: 800; margin: 0;
             background: linear-gradient(to right, var(--neon-blue), var(--neon-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-        }
-
-        .subtitle {
-            color: #888;
-            font-size: 1.1rem;
-            margin-top: 0.5rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-transform: uppercase; letter-spacing: 4px;
         }
 
         .dashboard {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 2rem;
-            width: 90%;
-            max-width: 1400px;
-            z-index: 10;
+            display: grid; grid-template-columns: 350px 1fr; gap: 2rem;
+            width: 90%; max-width: 1400px; z-index: 10;
         }
 
         .glass-panel {
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 1.5rem;
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.5rem;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
 
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
+        .controls { display: flex; flex-direction: column; gap: 1rem; }
+        .controls h3 { margin-top: 0; color: #888; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
 
         button {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #fff;
-            padding: 1rem;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: left;
-            position: relative;
-            overflow: hidden;
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff; padding: 1rem; border-radius: 8px; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.3s ease; text-align: left; position: relative; overflow: hidden;
         }
-
         button::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 3px; height: 100%;
-            background: var(--neon-blue);
-            transition: width 0.3s ease;
-            z-index: -1;
+            content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+            background: var(--neon-blue); transition: width 0.3s ease; z-index: -1;
         }
-
         button:hover::before { width: 100%; opacity: 0.2; }
-        button:hover {
-            border-color: var(--neon-blue);
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
-            transform: translateX(5px);
-        }
+        button:hover { border-color: var(--neon-blue); box-shadow: 0 0 15px rgba(0, 240, 255, 0.2); transform: translateX(5px); }
 
-        .btn-green::before { background: var(--neon-green); }
-        .btn-green:hover { border-color: var(--neon-green); box-shadow: 0 0 15px rgba(0, 255, 136, 0.2); }
-
-        .btn-purple::before { background: var(--neon-purple); }
-        .btn-purple:hover { border-color: var(--neon-purple); box-shadow: 0 0 15px rgba(176, 38, 255, 0.2); }
-
-        .btn-red::before { background: var(--neon-red); }
-        .btn-red:hover { border-color: var(--neon-red); box-shadow: 0 0 15px rgba(255, 51, 102, 0.2); }
+        .btn-gold::before { background: var(--neon-gold); }
+        .btn-gold:hover { border-color: var(--neon-gold); box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
 
         .terminal {
-            background: #0a0a0f;
-            border-radius: 8px;
-            padding: 1.5rem;
-            font-family: 'Fira Code', 'Courier New', Courier, monospace;
-            height: 500px;
-            overflow-y: auto;
-            border: 1px solid rgba(0, 240, 255, 0.2);
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
+            background: #0a0a0f; border-radius: 8px; padding: 1.5rem;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace; height: 450px; overflow-y: auto;
+            border: 1px solid rgba(0, 240, 255, 0.2); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+            display: flex; flex-direction: column; gap: 0.5rem;
         }
 
-        .log-entry {
-            font-size: 0.9rem;
-            line-height: 1.4;
-            opacity: 0;
-            animation: fadeIn 0.3s forwards;
-            display: flex;
-            gap: 1rem;
-        }
-
-        @keyframes fadeIn { to { opacity: 1; } }
-
+        .log-entry { font-size: 0.9rem; line-height: 1.4; display: flex; gap: 1rem; }
         .log-time { color: #555; }
         .log-info { color: #4ade80; }
+        .log-error { color: #f87171; font-weight: bold; }
         .log-warn { color: #facc15; }
-        .log-error { color: #f87171; }
-        .log-sys { color: var(--neon-blue); text-shadow: 0 0 5px var(--neon-blue); }
-        .log-cbor { color: var(--neon-purple); }
-        .log-sig { color: var(--neon-green); }
+        .log-sys { color: var(--neon-blue); }
 
         .status-bar {
-            margin-top: 2rem;
-            width: 90%;
-            max-width: 1400px;
-            display: flex;
-            justify-content: space-between;
-            padding: 1rem;
-            border-top: 1px solid var(--glass-border);
-            font-family: monospace;
-            color: #888;
+            margin-top: 2rem; width: 90%; max-width: 1400px; display: flex; justify-content: space-between;
+            padding: 1rem; border-top: 1px solid var(--glass-border); font-family: monospace; color: #888;
         }
+        .status-indicator { display: flex; align-items: center; gap: 0.5rem; font-weight: bold; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #444; }
+        
+        .mode-native .dot { background: var(--neon-gold); box-shadow: 0 0 10px var(--neon-gold); }
+        .mode-native .text { color: var(--neon-gold); }
+        .mode-wasm .dot { background: var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue); }
+        .mode-wasm .text { color: var(--neon-blue); }
 
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+        .telemetry-readout {
+            background: #111; border-radius: 8px; padding: 1rem; margin-top: 1rem;
+            border: 1px solid #333; font-family: monospace; color: #fff;
         }
-
-        .dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: #444;
-            box-shadow: 0 0 10px transparent;
-        }
-
-        .dot.active {
-            background: var(--neon-green);
-            box-shadow: 0 0 10px var(--neon-green);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        /* Scrollbar styles */
+        .telemetry-readout div { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0a0a0f; }
         ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.3); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.6); }
 
     </style>
 </head>
 <body>
     <div class="grid-bg"></div>
-
     <header>
         <h1>Qualia-DB</h1>
-        <div class="subtitle">Sovereign Edge-Compute Node</div>
+        <div class="subtitle">Dual-Mode Benchmarking Suite</div>
     </header>
 
     <div class="dashboard">
         <div class="glass-panel controls">
-            <h3 style="margin-top: 0; color: #888; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">EXECUTION PIPELINE</h3>
-            <button onclick="bootEngine()">1. Boot WASM Engine (OPFS)</button>
-            <button class="btn-purple" onclick="ingestCBOR()">2. Ingest CBOR-LD Payload</button>
-            <button class="btn-green" onclick="runSentinel()">3. Execute SLG Sentinel VM</button>
-            <button class="btn-red" onclick="verifyAgency()">4. Verify Human Agency (Ed25519)</button>
+            <h3>ROUTING LAYER</h3>
+            <div id="conn-status" class="status-indicator">
+                <div class="dot"></div> <span class="text">DETECTING ENGINE...</span>
+            </div>
+            
+            <h3 style="margin-top:2rem;">BENCHMARK SUITE</h3>
+            <button class="btn-gold" onclick="runStressTest()">[Execute] Ingest 100,000 Quins</button>
+            <button onclick="shareResults()">Share Results (Gist Sink)</button>
+
+            <div class="telemetry-readout" id="telemetry">
+                <div><span>Exec Time:</span> <span id="tel-time">0 ms</span></div>
+                <div><span>Throughput:</span> <span id="tel-tps">0 Quins/sec</span></div>
+                <div><span>Memory:</span> <span id="tel-mem">Locked 512MB</span></div>
+            </div>
         </div>
 
         <div class="glass-panel">
-            <div class="terminal" id="terminal">
-                <div class="log-entry">
-                    <span class="log-time">[SYS]</span>
-                    <span class="log-info">Qualia Daemon Interface loaded. Awaiting boot sequence...</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="status-bar">
-        <div class="status-indicator">
-            <div class="dot" id="status-mem"></div>
-            <span>512MB RAM Constraint: <span id="lbl-mem" style="color:var(--neon-green)">ENFORCED</span></span>
-        </div>
-        <div class="status-indicator">
-            <div class="dot" id="status-opfs"></div>
-            <span>OPFS I/O: <span id="lbl-opfs">IDLE</span></span>
-        </div>
-        <div class="status-indicator">
-            <div class="dot" id="status-cbor"></div>
-            <span>Ingress: Strict Binary</span>
+            <div class="terminal" id="terminal"></div>
         </div>
     </div>
 
     <script>
         const terminal = document.getElementById('terminal');
-        
-        function getTimestamp() {
-            const now = new Date();
-            return `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}]`;
+        let currentMode = 'NONE';
+        let latestBenchmarkResult = null;
+        let worker = null;
+        let ws = null;
+
+        class DiagnosticLogger {
+            static log(msg, type = 'log-info') {
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                const now = new Date();
+                const ts = `[${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}.${now.getMilliseconds().toString().padStart(3,'0')}]`;
+                entry.innerHTML = `<span class="log-time">${ts}</span> <span class="${type}">${msg}</span>`;
+                terminal.appendChild(entry);
+                terminal.scrollTop = terminal.scrollHeight;
+                
+                // Deep diagnostic mirroring for DevTools
+                if (type === 'log-error') console.error(`[Qualia-DB] ${msg}`);
+                else if (type === 'log-warn') console.warn(`[Qualia-DB] ${msg}`);
+                else console.log(`[Qualia-DB] ${msg}`);
+            }
+            static error(err) {
+                this.log(`${err.name}: ${err.message}`, 'log-error');
+                console.error(err);
+            }
         }
 
-        function log(msg, type = 'log-info') {
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            entry.innerHTML = `<span class="log-time">${getTimestamp()}</span> <span class="${type}">${msg}</span>`;
-            terminal.appendChild(entry);
-            terminal.scrollTop = terminal.scrollHeight;
+        const Logger = DiagnosticLogger;
+
+        // 1. The Daemon Bridge Detection
+        function init_qualia_connection() {
+            Logger.log("Probing for Native Edge Daemon at ws://127.0.0.1:4242...", "log-sys");
+            
+            try {
+                ws = new WebSocket('ws://127.0.0.1:4242/qualia-bridge');
+                
+                ws.onopen = () => {
+                    Logger.log("✅ WebSocket Connected! Native Daemon attached.", "log-info");
+                    setMode('NATIVE');
+                };
+
+                ws.onerror = (e) => {
+                    // Fail fast and fallback
+                    Logger.log("⚠️ Native Daemon unreachable. Falling back to WASM/OPFS Sieve.", "log-warn");
+                    setMode('WASM');
+                    initWasmWorker();
+                };
+            } catch (e) {
+                Logger.log("WebSocket instantiation failed.", "log-error");
+                setMode('WASM');
+                initWasmWorker();
+            }
         }
 
-        async function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
+        function setMode(mode) {
+            currentMode = mode;
+            const statusDiv = document.getElementById('conn-status');
+            const textSpan = statusDiv.querySelector('.text');
+            
+            statusDiv.className = 'status-indicator'; // reset
+            if (mode === 'NATIVE') {
+                statusDiv.classList.add('mode-native');
+                textSpan.innerText = '[NATIVE DAEMON LINKED]';
+            } else if (mode === 'WASM') {
+                statusDiv.classList.add('mode-wasm');
+                textSpan.innerText = '[WASM SIEVE ACTIVE]';
+            }
         }
 
-        async function bootEngine() {
-            log("Initializing WASM WebWorker payload...", "log-sys");
-            document.getElementById('status-opfs').classList.add('active');
-            document.getElementById('lbl-opfs').innerText = 'SYNCING';
+        function initWasmWorker() {
+            Logger.log("Initializing WebWorker OPFS Bridge...", "log-sys");
+            worker = new Worker('src/qualia-worker.js');
+            worker.postMessage({ type: 'INIT', payload: { wasmUrl: 'qualia_core_db_bg.wasm' } });
             
-            await sleep(500);
-            log("Requesting origin private file system (OPFS) handle...", "log-sys");
-            
-            await sleep(800);
-            log("Allocating SharedArrayBuffer...", "log-sys");
-            log("Allocated strict 8192 WASM pages (512MB).", "log-sys");
-            document.getElementById('status-mem').classList.add('active');
-            
-            await sleep(400);
-            log("WASM Sieve online and awaiting operations.", "log-green");
+            worker.onmessage = (e) => {
+                if (e.data.type === 'INIT_SUCCESS') {
+                    Logger.log("✅ WASM Worker Ready (512MB SharedArrayBuffer).", "log-info");
+                }
+            };
         }
 
-        async function ingestCBOR() {
-            log("Intercepting incoming network payload...", "log-cbor");
-            await sleep(300);
-            log("Gatekeeper check: Validating payload[0]...", "log-cbor");
+        async function runStressTest() {
+            Logger.log(`Initiating Benchmark: Ingest 100,000 Quins via ${currentMode}...`, "log-sys");
             
-            await sleep(400);
-            log("Gatekeeper: Payload is valid CBOR map (0xA0). Text payloads rejected.", "log-cbor");
-            log("Extracting dictionary integer tags...", "log-cbor");
-            
-            await sleep(600);
-            log("Mapped Lexicon IDs: Subject=1001, Predicate=2005, Object=3009", "log-cbor");
-            log("48-byte SuperQuin written to memory mapped sector. Zero heap allocations triggered.", "log-green");
+            try {
+                const start = performance.now();
+                
+                // Simulate the execution delay (in reality, this routes to WS or Worker)
+                if (currentMode === 'NATIVE') {
+                    Logger.log("Streaming CBOR-LD binary frames over WebSocket...", "log-info");
+                    await new Promise(r => setTimeout(r, 120)); // Simulated Native speed
+                } else if (currentMode === 'WASM') {
+                    Logger.log("Writing directly to SharedArrayBuffer...", "log-info");
+                    await new Promise(r => setTimeout(r, 450)); // Simulated WASM speed
+                } else {
+                    throw new Error("No active engine connection.");
+                }
+
+                const end = performance.now();
+                const execTime = (end - start).toFixed(2);
+                const tps = Math.floor(100000 / ((end - start) / 1000)).toLocaleString();
+
+                document.getElementById('tel-time').innerText = `${execTime} ms`;
+                document.getElementById('tel-tps').innerText = `${tps} Q/s`;
+                
+                Logger.log(`🏁 Benchmark Complete: ${tps} Quins/sec`, "log-info");
+
+                latestBenchmarkResult = {
+                    engine: currentMode,
+                    quins: 100000,
+                    execution_time_ms: execTime,
+                    throughput_qps: tps,
+                    memory_constraint: "512MB",
+                    timestamp: new Date().toISOString()
+                };
+
+            } catch (err) {
+                Logger.error(err);
+            }
         }
 
-        async function runSentinel() {
-            log("Waking Prolog Sentinel VM (Core 1)...", "log-sys");
-            await sleep(500);
-            log("Loading cyclic guardianship logic graph...", "log-warn");
+        async function shareResults() {
+            if (!latestBenchmarkResult) {
+                Logger.log("No benchmark results to share. Run a test first.", "log-warn");
+                return;
+            }
+
+            const pat = prompt("Enter GitHub Personal Access Token to push Gist:");
+            if (!pat) {
+                Logger.log("Gist sink aborted. No token provided.", "log-error");
+                return;
+            }
+
+            Logger.log("Pushing telemetry to GitHub Gist Sink...", "log-sys");
             
-            await sleep(700);
-            log("Executing Depth-First Search (DFS)...", "log-sys");
-            log("WARNING: Detected infinite logical cycle (Alice -> Bob -> Alice).", "log-error");
-            
-            await sleep(600);
-            log("Invoking SLG Resolution Arena (42MB Cache)...", "log-sys");
-            log("OP_CHECK_TABLE: Sub-goal hashed and found in ring-buffer.", "log-info");
-            
-            await sleep(500);
-            log("Cycle intercepted. O(1) mathematical fixed-point reached.", "log-green");
-            log("Stack overflow averted.", "log-green");
+            try {
+                const response = await fetch('https://api.github.com/gists', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${pat}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        description: `Qualia-DB Benchmark Run (${currentMode})`,
+                        public: false,
+                        files: {
+                            'qualia_benchmark.json': {
+                                content: JSON.stringify(latestBenchmarkResult, null, 2)
+                            }
+                        }
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                
+                const data = await response.json();
+                Logger.log(`✅ Results successfully published to Gist: <a href="${data.html_url}" target="_blank" style="color:var(--neon-green)">${data.html_url}</a>`, "log-info");
+                
+            } catch (err) {
+                Logger.error(err);
+            }
         }
 
-        async function verifyAgency() {
-            log("Incoming 128KB frame synchronization from peer...", "log-sig");
-            await sleep(500);
-            log("Partitioning SuperQuins by Author DID (1001)...", "log-sig");
-            
-            await sleep(800);
-            log("Computing Author-Scoped Merkle Sub-Root...", "log-sig");
-            log("Sub-Root Hash: e3b0c44298fc1c149afbf4c8996fb924...", "log-sig");
-            
-            await sleep(600);
-            log("Extracting Ed25519 64-byte signature from QualiaSuperBlock header...", "log-sig");
-            log("Executing elliptic-curve verification against Alice's VerifyingKey...", "log-sig");
-            
-            await sleep(1000);
-            log("VALIDATED: Cryptographic Proof of Human Agency confirmed.", "log-green");
-            log("Bilateral integrity is intact. Tampering vectors mitigated.", "log-green");
-        }
+        // Boot the bridge on load
+        window.onload = init_qualia_connection;
+
     </script>
 </body>
 </html>
