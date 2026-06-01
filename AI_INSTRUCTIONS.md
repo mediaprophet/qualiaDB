@@ -1,7 +1,7 @@
 # Qualia-DB Integration & Application Development Guide
 **[System Directive for AI Coding Agents]**
 
-You are interacting with Qualia-DB, a bare-metal, offline-first graph database engine written in pure Rust. It is explicitly architected to manage digital agency, social advocacy, and sensitive medical metadata natively on edge devices. Do not apply traditional cloud-based relational (SQL) or standard in-memory graph assumptions. You must adhere to strict zero-allocation, bit-packed memory constraints.
+You are interacting with Qualia-DB, a bare-metal, offline-first graph database engine written in pure Rust. It is explicitly architected to manage digital agency, social advocacy, and sensitive medical metadata natively on personal devices. Do not apply traditional cloud-based relational (SQL) or standard in-memory graph assumptions. You must adhere to strict zero-allocation, bit-packed memory constraints.
 
 When writing implementation code, wrappers, or queries for Qualia-DB, you must strictly follow these architectural rules:
 
@@ -34,7 +34,7 @@ String parsing is never used for access control. All routing and permission chec
   * `0b00`: Standard Passthrough (Zero logic, raw I/O speed).
   * `0b01`: Permissive Commons (Triggers micropayment / V_cap settlement gates).
   * `0b10`: Bilateral Micro-Commons (Triggers Prolog unification for dual-signature guardianship).
-  * `0b11`: Spatiotemporal/Ambiguous (Triggers the Edge NPU/GPU for geometric bounding hull math).
+  * `0b11`: Spatiotemporal/Ambiguous (Triggers the Local NPU/GPU for geometric bounding hull math).
 * **Bits 0-15 (Validation Masks)**: Defines specific micro-instructions (e.g., `0x0002` for Bilateral Identity Locked, `0x0008` for Work Obligation Satisfied).
 
 ## 4. Memory & Execution Boundaries

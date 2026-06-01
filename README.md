@@ -1,7 +1,8 @@
 # Qualia-DB 
-**The Sovereign Edge-Compute Semantic Engine**
+<div align="center">
+**The Human-Centric Semantic Engine**
 
-Qualia-DB is a bare-metal, strictly-constrained, offline-first semantic graph database. Designed explicitly for edge devices, it operates under a ruthless **512MB RAM floor**, enforcing mechanical sympathy at every layer to guarantee data sovereignty, battery life, and deterministic logic execution for the Wellfair architecture.
+Qualia-DB is a bare-metal, strictly-constrained, offline-first semantic graph database. Designed explicitly for personal computing environments, it operates under a ruthless **512MB RAM floor**, enforcing mechanical sympathy at every layer to guarantee human agency, battery life, and deterministic logic execution for the Wellfair architecture.
 
 ## 🚀 The Three-Core Architecture
 
@@ -18,9 +19,7 @@ Instead of relying on slow, pointer-chasing B-Trees, Qualia-DB maps graph nodes 
 - **Vulkan / WebGPU Compute**: The CPU offloads the 128KB frame to the GPU/NPU, which executes highly parallel bounding-hull collision math to rapidly isolate the 48-byte `SuperQuins` you need.
 
 ### Core 1: The Prolog Sentinel (Logic Unification)
-Data filtering is not enough; a sovereign database must execute logic.
-- **42MB SLG Resolution Arena**: The logic VM reserves exactly 42MB of RAM for a static, zero-allocation ring-buffer.
-- **Infinite Loop Prevention**: By memoizing proven sub-goals in the SLG Arena, the Sentinel mathematically guarantees $O(1)$ termination on highly cyclic social and legal graphs, eliminating stack-overflow vulnerabilities.
+Data filtering is not enough; a human-centric database must execute logic. Qualitative data—social agency, bilateral medical access, property delegation—requires mathematical verification of rules. Qualia-DB intercepts the graph and executes the logic natively via the Sentinel Virtual Machine. Sentinel mathematically guarantees $O(1)$ termination on highly cyclic social and legal graphs, eliminating stack-overflow vulnerabilities.
 - **Native N3Logic Execution**: Nested N3 implication rules (`{...} => {...}`) are compiled directly into Sentinel Bytecodes. By resolving inferences strictly over flattened 64-bit hardware identifiers instead of text strings, N3 inference operates at sub-microsecond speeds entirely within the L1/L2 cache.
 
 ## 🛡️ Cryptographic Proof of Human Agency
@@ -34,7 +33,7 @@ We strictly reject the "Global Endorsement Trap". In a shared Bilateral Micro-Co
 
 We have built a glassmorphic, interactive dashboard to visually demonstrate the WASM Engine boot sequence, CBOR-LD ingestion, the SLG VM, and Ed25519 Cryptographic Agency verification.
 
-**[Launch the Sentinel Edge Environment Demo](https://mediaprophet.github.io/qualiaDB/)** *(Requires a browser with `SharedArrayBuffer` COOP/COEP support).*
+**[Launch the Sentinel Environment Demo](https://mediaprophet.github.io/qualiaDB/)** *(Requires a browser with `SharedArrayBuffer` COOP/COEP support).*
 
 ## 📊 Benchmarks
 

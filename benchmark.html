@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB Sentinel Edge Environment</title>
+    <title>Qualia-DB Sentinel Environment</title>
     <style>
         :root {
             --bg-dark: #050505;
@@ -237,7 +237,7 @@
     <div id="installModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center;">
         <div class="glass-panel" style="width: 500px; position:relative;">
             <button onclick="document.getElementById('installModal').style.display='none'" style="position:absolute; top:10px; right:10px; width:40px; text-align:center;">X</button>
-            <h2 style="margin-top:0; color:var(--neon-blue)">Native Edge Daemon</h2>
+            <h2 style="margin-top:0; color:var(--neon-blue)">Native Local Daemon</h2>
             <p style="color:#aaa; line-height:1.5;">To bypass the browser's WASM Sandbox and execute bare-metal Rust queries natively over the local loopback WebSocket, clone the repository and boot the daemon:</p>
             <div style="background:#000; padding:1rem; border-radius:8px; font-family:monospace; color:#00ff88; margin-top:1rem; border:1px solid #333;">
                 git clone https://github.com/mediaprophet/qualiaDB.git<br><br>
@@ -283,7 +283,7 @@
                 setMode('NONE');
                 return;
             }
-            Logger.log("Probing for Native Edge Daemon at ws://127.0.0.1:4242...", "log-sys");
+            Logger.log("Probing for Native Local Daemon at ws://127.0.0.1:4242...", "log-sys");
             try {
                 ws = new WebSocket('ws://127.0.0.1:4242/qualia-bridge');
                 ws.onopen = () => { Logger.log("✅ WebSocket Connected! Native Daemon attached.", "log-info"); setMode('NATIVE'); };
