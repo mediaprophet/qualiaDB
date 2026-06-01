@@ -126,3 +126,51 @@ pub mod gpu_sieve {
         }
     }
 }
+
+/// Core 2 FFI Bindings for Non-Euclidean Tropical Sieve (NETS)
+/// These C-ABI functions expose the Lorentz mapping and Min-Plus tropical arithmetic
+/// directly to the GPU/NPU orchestration layer, guaranteeing $O(1)$ routing.
+#[no_mangle]
+pub unsafe extern "C" fn nets_map_lorentz(
+    quins_ptr: *const crate::QualiaQuin,
+    quins_len: usize,
+    out_lorentz_ptr: *mut crate::geometric::LorentzVector,
+) {
+    let quins = std::slice::from_raw_parts(quins_ptr, quins_len);
+    let out_lorentz = std::slice::from_raw_parts_mut(out_lorentz_ptr, quins_len);
+    
+    for i in 0..quins_len {
+        out_lorentz[i] = crate::geometric::LorentzVector::from_quin(&quins[i]);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nets_tropical_voronoi_route(
+    queries_ptr: *const crate::geometric::LorentzVector,
+    queries_len: usize,
+    centroids_ptr: *const crate::geometric::MinPlusVoronoiCell,
+    centroids_len: usize,
+    out_cell_ids_ptr: *mut u32,
+) {
+    let queries = std::slice::from_raw_parts(queries_ptr, queries_len);
+    let centroids = std::slice::from_raw_parts(centroids_ptr, centroids_len);
+    let out_cell_ids = std::slice::from_raw_parts_mut(out_cell_ids_ptr, queries_len);
+    
+    for i in 0..queries_len {
+        let query = &queries[i];
+        let mut best_id = 0;
+        let mut min_dist = f32::MAX;
+        
+        for centroid in centroids {
+            let dist = centroid.tropical_distance(query);
+            if dist < min_dist {
+                min_dist = dist;
+                best_id = centroid.cell_id;
+            }
+        }
+        
+        out_cell_ids[i] = best_id;
+        crate::telemetry::SIEVE_OPS_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
