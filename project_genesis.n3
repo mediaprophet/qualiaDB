@@ -5,7 +5,7 @@
 
 # DID:GIT Genesis Block (Stage 1 Axioms)
 <did:git:repo:qualia_analytics_engine> a doap:Project ;
-    doap:name "Sovereign Analytics Demographic Model" ;
+    doap:name "Primary Analytics Demographic Model" ;
     doap:description "An N3Logic demographic mapping tool." ;
     didgit:stage "1"^^xsd:integer ;
     

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cooperative Workspace | Qualia-DB</title>
+    <!-- Simulating the CooperativeProjects Bootstrap Admin Template -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #2c3e50;
+            --topbar-bg: #fff;
+            --main-bg: #f4f7f6;
+            --text-main: #333;
+            --accent: #ff9b44; /* Standard CooperativeProjects Accent */
+        }
+        body { background-color: var(--main-bg); color: var(--text-main); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+        
+        .sidebar { height: 100vh; background-color: var(--sidebar-bg); color: #fff; padding-top: 1rem; position: fixed; width: 250px; }
+        .sidebar .brand { font-size: 1.5rem; font-weight: bold; color: var(--accent); text-align: center; margin-bottom: 2rem; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar ul li { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s; }
+        .sidebar ul li:hover, .sidebar ul li.active { background-color: rgba(255,255,255,0.1); border-left: 4px solid var(--accent); }
+        
+        .main-content { margin-left: 250px; padding: 2rem; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .header-bar h2 { margin: 0; font-weight: 300; }
+        
+        .stat-card { background: #fff; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+        .stat-card h5 { color: #888; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 1rem; }
+        .stat-card .val { font-size: 1.8rem; font-weight: 600; color: #333; }
+        
+        .table-card { background: #fff; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .table-card h4 { margin-bottom: 1.5rem; }
+        
+        .badge-stage { background-color: #e9ecef; color: #495057; }
+        .badge-active { background-color: #d4edda; color: #155724; }
+        
+        .return-link { color: #666; text-decoration: none; font-size: 0.9rem; }
+        .return-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="brand">Cooperative Hub</div>
+        <ul>
+            <li class="active">Dashboard</li>
+            <li>did:git Projects</li>
+            <li>DOAP Axioms</li>
+            <li>ILP Escrow Management</li>
+            <li>Collaborators (Verifiable Credentials)</li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header-bar">
+            <h2>Workspace Dashboard</h2>
+            <a href="index.html" class="return-link">← Return to Matrix</a>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <h5>Active did:git Projects</h5>
+                    <div class="val">12</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <h5>Total ILP Escrow (µ-cents)</h5>
+                    <div class="val text-success">8,450,200</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <h5>Pending DOAP Evolutions</h5>
+                    <div class="val text-warning">2</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="table-card">
+                    <h4>Collaborative Projects Index</h4>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Project Name (DOAP)</th>
+                                <th>did:git URI</th>
+                                <th>Current Stage</th>
+                                <th>ILP Obligation Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Primary Analytics Demographic Model</strong></td>
+                                <td><span class="text-muted">did:git:repo:qualia_analytics_engine</span></td>
+                                <td><span class="badge badge-active px-2 py-1">Stage 2 (Commons)</span></td>
+                                <td><span class="text-success">Extinguished (500,000 / 500,000)</span></td>
+                                <td><a href="evolution.html" class="btn btn-sm btn-outline-secondary">View N3Logic Axioms</a></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Bio-Spatial Quantum Map</strong></td>
+                                <td><span class="text-muted">did:git:repo:bio_spatial</span></td>
+                                <td><span class="badge badge-stage px-2 py-1">Stage 1 (Commercial)</span></td>
+                                <td><span class="text-warning">Pending (120,000 / 900,000)</span></td>
+                                <td><a href="evolution.html" class="btn btn-sm btn-outline-secondary">Propose Stage 2</a></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
