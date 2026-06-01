@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Sentinel | Qualia-DB</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #050505;
+            --matrix-green: #00ff66;
+            --alert-red: #ff3333;
+            --accent-blue: #00e5ff;
+            --text-light: #e0e0e0;
+            --glass-bg: rgba(10, 10, 15, 0.85);
+            --glass-border: #333;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Share Tech Mono', monospace;
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        h1, h2 {
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: var(--alert-red);
+            text-shadow: 0 0 20px rgba(255, 51, 51, 0.4);
+            font-size: 2.2rem;
+        }
+
+        .return-link {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .panel-header h2 { margin: 0; font-size: 1.1rem; color: var(--accent-blue); }
+
+        /* Wireshark Table */
+        .packet-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .packet-table th, .packet-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #222;
+        }
+
+        .packet-table th { color: #888; font-family: 'Orbitron', sans-serif; }
+
+        .packet-row { transition: background 0.2s; }
+        .packet-row:hover { background: rgba(255,255,255,0.05); }
+
+        .proto-tcp { color: #999; }
+        .proto-tls { color: var(--matrix-green); }
+        .proto-spyware { color: var(--alert-red); font-weight: bold; }
+
+        /* Sentinel Log */
+        .sentinel-log {
+            background: #000;
+            border: 1px solid #222;
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            font-size: 0.85rem;
+        }
+        
+        .log-entry { margin-bottom: 5px; }
+        .log-warn { color: #ff9b44; }
+        .log-error { color: var(--alert-red); text-shadow: 0 0 5px var(--alert-red); }
+
+        .btn {
+            background: transparent;
+            border: 1px solid var(--alert-red);
+            color: var(--alert-red);
+            padding: 8px 16px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: rgba(255, 51, 51, 0.1);
+            box-shadow: 0 0 15px rgba(255, 51, 51, 0.3);
+        }
+
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="return-link">← RETURN TO MATRIX</a>
+
+    <div class="header">
+        <h1>libpcap Network Sentinel</h1>
+        <p>Wireshark-like Runtime for Qualia-DB Desktop Daemon</p>
+    </div>
+
+    <div class="dashboard">
+        <!-- Packet Sniffer (Wireshark Mock) -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Live Egress Traffic (eth0)</h2>
+                <button class="btn" onclick="injectMalware()">Simulate Spyware Egress</button>
+            </div>
+            
+            <table class="packet-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Source</th>
+                        <th>Destination</th>
+                        <th>Protocol</th>
+                        <th>Length</th>
+                        <th>Info</th>
+                    </tr>
+                </thead>
+                <tbody id="packetBody">
+                    <!-- Baseline Traffic -->
+                    <tr class="packet-row"><td>0.000</td><td>192.168.1.15</td><td>142.250.190.46</td><td class="proto-tls">TLSv1.3</td><td>1420</td><td>Application Data</td></tr>
+                    <tr class="packet-row"><td>0.021</td><td>192.168.1.15</td><td>1.1.1.1</td><td class="proto-tcp">DNS</td><td>84</td><td>Standard query A github.com</td></tr>
+                    <tr class="packet-row"><td>0.145</td><td>192.168.1.15</td><td>104.244.42.193</td><td class="proto-tls">TLSv1.3</td><td>930</td><td>Application Data</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- N3Logic Adjudicator Log -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Sentinel Duty of Care</h2>
+            </div>
+            <div class="sentinel-log" id="sentinelLog">
+                <div class="log-entry" style="color: var(--matrix-green);">> Sentinel Daemon active. Hooked to libpcap.</div>
+                <div class="log-entry" style="color: #666;">> Monitoring egress traffic for Rights Ontology violations...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const packetBody = document.getElementById('packetBody');
+        const sentinelLog = document.getElementById('sentinelLog');
+        let timeOffset = 1.205;
+
+        function addLog(text, className) {
+            const div = document.createElement('div');
+            div.className = `log-entry ${className}`;
+            div.innerText = `> ${text}`;
+            sentinelLog.appendChild(div);
+            sentinelLog.scrollTop = sentinelLog.scrollHeight;
+        }
+
+        async function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function injectMalware() {
+            // Generate rogue packet
+            timeOffset += 0.312;
+            const row = document.createElement('tr');
+            row.className = "packet-row";
+            row.innerHTML = `<td>${timeOffset.toFixed(3)}</td><td>192.168.1.15</td><td class="proto-spyware">198.51.100.22 (Rogue)</td><td class="proto-spyware">TCP</td><td>4280</td><td class="proto-spyware">POST /api/telemetry/health_data [UNAUTHORIZED]</td>`;
+            packetBody.appendChild(row);
+
+            addLog("ALERT: Egress traffic detected attempting to transmit 4.2KB to unverified IP (198.51.100.22).", "log-warn");
+            await sleep(800);
+            
+            addLog("Intercepting TCP payload. Parsing via N3Logic Rights Ontology...", "log-entry");
+            await sleep(1000);
+
+            addLog("VIOLATION: Payload contains Health/Biometric Quins belonging to Principal (Natural Person).", "log-error");
+            addLog("VIOLATION: Telemetry endpoint is not cryptographically authorized by the Principal.", "log-error");
+            
+            await sleep(800);
+            addLog("EXECUTING DUTY OF CARE: Blocking egress socket...", "log-warn");
+            
+            await sleep(500);
+            row.style.textDecoration = "line-through";
+            row.style.opacity = "0.5";
+            
+            addLog("SUCCESS: TCP connection to 198.51.100.22 severed. Malware exfiltration blocked.", "log-entry");
+            addLog("Principal's data remains sovereign and localized.", "log-entry");
+        }
+    </script>
+</body>
+</html>
