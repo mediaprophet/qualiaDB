@@ -239,6 +239,34 @@
         <div id="suite-msg" style="font-family:monospace; font-size:0.85rem; text-align:center; margin-top:0.8rem;"></div>
     </div>
 
+    <!-- ── Dispatch Test Panel ── -->
+    <div class="glass-panel" style="margin-top: 2rem;">
+        <h2>TEST DISPATCH</h2>
+        <div style="font-size:0.82rem; color:#555; margin-bottom:1.2rem; line-height:1.6;">
+            Simulate a payment through the tax router. The daemon resolves each ILP payment
+            pointer and attempts to send. Results are shown as <span style="color:#4ade80">Sent</span> /
+            <span style="color:#ffb800">Queued</span> / <span style="color:#f87171">Failed</span>.
+        </div>
+        <div style="display:flex; gap:0.8rem; align-items:flex-end; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="font-size:0.78rem; color:#555; display:block; margin-bottom:4px;">
+                    Gross amount (µ-cents)
+                </label>
+                <input type="number" id="dispatch-amount" value="10000" min="1"
+                    style="width:100%; background:#0a0a10; border:1px solid #222; color:#fff;
+                           padding:0.6rem 0.8rem; border-radius:6px; font-family:monospace;
+                           font-size:0.9rem; box-sizing:border-box;" />
+            </div>
+            <div style="font-size:0.78rem; color:#444; font-family:monospace; padding-bottom:0.65rem;">
+                = <span id="dispatch-preview-inline" style="color:var(--neon-gold)">1,200 µ¢</span> tax pool
+            </div>
+        </div>
+        <button class="btn" id="dispatch-btn" onclick="testDispatch()" style="margin-top:0;">
+            ▶ Execute Dispatch
+        </button>
+        <div id="dispatch-receipts" style="margin-top:1rem;"></div>
+    </div>
+
     <script>
         const { invoke } = window.__TAURI__.tauri;
 
@@ -305,9 +333,8 @@
         }
 
         // ── Tax Recipient Suite ──────────────────────────────────────────────
-        // Persisted in localStorage; in a future Tauri command this will be
-        // written into the .q42 config graph directly.
-        const SUITE_KEY = 'qualia_tax_suite';
+        // Persisted via Tauri → tax_suite.json in the Qualia data directory.
+        // Falls back to DEFAULT_SUITE on first run.
 
         const DEFAULT_SUITE = [
             { label: "Cooperative Infrastructure Fund", ilp_address: "$ilp.qualia.coop/infrastructure",     share_percent: 40, use_nym: false },
@@ -324,15 +351,19 @@
             document.getElementById('suite-msg').textContent = '';
         }
 
-        function loadSuite() {
+        async function loadSuite() {
             try {
-                const stored = localStorage.getItem(SUITE_KEY);
-                recipients = stored ? JSON.parse(stored) : DEFAULT_SUITE.map(r => ({ ...r }));
-            } catch { recipients = DEFAULT_SUITE.map(r => ({ ...r })); }
+                // Load from Tauri daemon (persisted to tax_suite.json)
+                const suite = await invoke('get_tax_suite');
+                recipients = suite.recipients || [];
+            } catch (e) {
+                // Daemon not running (dev mode / browser preview) — use defaults
+                recipients = DEFAULT_SUITE.map(r => ({ ...r }));
+            }
             renderSuite();
         }
 
-        function saveSuite() {
+        async function saveSuite() {
             const msg = document.getElementById('suite-msg');
             const total = recipients.reduce((s, r) => s + (parseInt(r.share_percent) || 0), 0);
             if (total !== 100) {
@@ -347,9 +378,20 @@
                     return;
                 }
             }
-            localStorage.setItem(SUITE_KEY, JSON.stringify(recipients));
-            msg.style.color = '#4ade80';
-            msg.textContent = '✓ Tax suite committed. Active on next payment cycle.';
+            try {
+                // Validate + persist via Tauri command → writes tax_suite.json
+                await invoke('save_tax_suite', {
+                    suite: {
+                        jurisdiction_did: 'did:gov:cooperative:commons',
+                        recipients
+                    }
+                });
+                msg.style.color = '#4ade80';
+                msg.textContent = '✓ Tax suite committed to daemon. Active on next payment cycle.';
+            } catch (e) {
+                msg.style.color = '#f87171';
+                msg.textContent = `❌ ${e}`;
+            }
             updateDispatchPreview();
         }
 
@@ -461,6 +503,82 @@
                 .replace(/&/g, '&amp;')
                 .replace(/"/g, '&quot;')
                 .replace(/</g, '&lt;');
+        }
+
+        // ── Dispatch Test ─────────────────────────────────────────────────────
+        document.getElementById('dispatch-amount').addEventListener('input', function() {
+            const gross = parseInt(this.value) || 0;
+            const pool  = Math.floor(gross * 12 / 100);
+            document.getElementById('dispatch-preview-inline').textContent =
+                pool.toLocaleString() + ' µ¢';
+        });
+
+        async function testDispatch() {
+            const btn = document.getElementById('dispatch-btn');
+            const out = document.getElementById('dispatch-receipts');
+            const gross = parseInt(document.getElementById('dispatch-amount').value) || 0;
+            if (!gross) return;
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Dispatching...';
+            out.innerHTML = '';
+
+            try {
+                const result = await invoke('dispatch_tax_payment', {
+                    grossAmountMicroCents: gross
+                });
+
+                const statusColor = s =>
+                    s === 'Sent'   ? '#4ade80' :
+                    s === 'Queued' ? '#ffb800' : '#f87171';
+
+                let html = `
+                    <div style="font-family:monospace; font-size:0.75rem; color:#444; margin-bottom:0.6rem;">
+                        Gross: ${result.gross_amount_micro_cents.toLocaleString()} µ¢ &nbsp;·&nbsp;
+                        Tax pool: <span style="color:var(--neon-gold)">${result.tax_pool_micro_cents.toLocaleString()} µ¢</span> &nbsp;·&nbsp;
+                        Principal: <span style="color:var(--neon-blue)">${result.principal_remainder_micro_cents.toLocaleString()} µ¢</span>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:0.78rem; font-family:monospace;">
+                        <thead>
+                            <tr style="color:#333; border-bottom:1px solid #1a1a2a;">
+                                <th style="text-align:left; padding:0.4rem 0.5rem;">Recipient</th>
+                                <th style="text-align:right; padding:0.4rem 0.5rem;">µ¢</th>
+                                <th style="text-align:center; padding:0.4rem 0.5rem;">Status</th>
+                                <th style="text-align:left; padding:0.4rem 0.5rem;">Address</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                for (const r of result.receipts) {
+                    const statusStr = typeof r.status === 'string' ? r.status
+                        : r.status.Sent !== undefined ? 'Sent'
+                        : r.status.Queued !== undefined ? 'Queued'
+                        : `Failed: ${r.status.Failed || ''}`;
+                    const color = statusColor(statusStr.split(':')[0]);
+                    html += `
+                        <tr style="border-bottom:1px solid #0d0d18;">
+                            <td style="padding:0.4rem 0.5rem; color:#aaa;">${escHtml(r.recipient_label)}</td>
+                            <td style="padding:0.4rem 0.5rem; color:var(--neon-gold); text-align:right;">${r.amount_micro_cents.toLocaleString()}</td>
+                            <td style="padding:0.4rem 0.5rem; text-align:center; color:${color};">${statusStr}${r.via_nym ? ' 🔒' : ''}</td>
+                            <td style="padding:0.4rem 0.5rem; color:#444; font-size:0.72rem;">${escHtml(r.ilp_address)}</td>
+                        </tr>`;
+                }
+                html += `</tbody></table>`;
+
+                const summary = [
+                    result.total_sent   > 0 ? `<span style="color:#4ade80">✓ ${result.total_sent.toLocaleString()} µ¢ sent</span>` : '',
+                    result.total_queued > 0 ? `<span style="color:#ffb800">⟳ ${result.total_queued.toLocaleString()} µ¢ queued</span>` : '',
+                    result.total_failed > 0 ? `<span style="color:#f87171">✕ ${result.total_failed.toLocaleString()} µ¢ failed</span>` : '',
+                ].filter(Boolean).join(' &nbsp; ');
+                html += `<div style="margin-top:0.8rem; font-family:monospace; font-size:0.8rem;">${summary}</div>`;
+
+                out.innerHTML = html;
+            } catch (e) {
+                out.innerHTML = `<div style="color:#f87171; font-family:monospace; font-size:0.85rem;">✕ ${escHtml(String(e))}</div>`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = '▶ Execute Dispatch';
         }
 
         // Initialize

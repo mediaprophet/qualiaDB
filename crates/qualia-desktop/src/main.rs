@@ -8,6 +8,8 @@ use sysinfo::{System, SystemExt, Disks};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::path::PathBuf;
+use qualia_core_db::rpc::{TaxRecipient, TaxRecipientSuite, route_tax_payment};
+use qualia_core_db::ilp_dispatcher::{IlpDispatcher, HttpIlpTransport, DispatchResult};
 
 #[derive(Serialize, Deserialize, Clone)]
 struct AgentConfig {
@@ -45,7 +47,22 @@ fn dirs_default_path() -> String {
 }
 
 struct AppState {
-    config: Mutex<AgentConfig>,
+    config:    Mutex<AgentConfig>,
+    tax_suite: Mutex<TaxRecipientSuite>,
+}
+
+/// Path to the persisted tax suite JSON file.
+fn suite_file_path(data_dir: &str) -> PathBuf {
+    PathBuf::from(data_dir).join("tax_suite.json")
+}
+
+/// Load suite from disk, or return default if missing/corrupt.
+fn load_suite_from_disk(data_dir: &str) -> TaxRecipientSuite {
+    let path = suite_file_path(data_dir);
+    std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(TaxRecipientSuite::default_cooperative)
 }
 
 #[tauri::command]
@@ -112,6 +129,48 @@ fn start_daemon() -> String {
     "Daemon Started".to_string()
 }
 
+/// Return the currently active TaxRecipientSuite.
+#[tauri::command]
+fn get_tax_suite(state: State<AppState>) -> TaxRecipientSuite {
+    state.tax_suite.lock().unwrap().clone()
+}
+
+/// Validate and persist a new TaxRecipientSuite.
+#[tauri::command]
+fn save_tax_suite(
+    state: State<AppState>,
+    suite: TaxRecipientSuite,
+) -> Result<(), String> {
+    suite.validate()?;
+
+    // Persist to disk
+    let data_dir = state.config.lock().unwrap().storage_path.clone();
+    let path = suite_file_path(&data_dir);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let json = serde_json::to_string_pretty(&suite).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+
+    *state.tax_suite.lock().unwrap() = suite;
+    Ok(())
+}
+
+/// Dispatch a payment through the 12% Tax Router.
+/// Returns a DispatchResult with per-recipient receipts (Sent / Queued / Failed).
+#[tauri::command]
+fn dispatch_tax_payment(
+    state: State<AppState>,
+    gross_amount_micro_cents: u64,
+) -> Result<DispatchResult, String> {
+    let suite = state.tax_suite.lock().unwrap().clone();
+    let plan = route_tax_payment(gross_amount_micro_cents, &suite)?;
+    let dispatcher = IlpDispatcher::new(HttpIlpTransport {
+        connector_url: "http://localhost:7770".to_string(),
+    });
+    Ok(dispatcher.dispatch(&plan))
+}
+
 fn main() {
     let quit         = CustomMenuItem::new("quit".to_string(), "Quit Webizen Agent");
     let settings     = CustomMenuItem::new("settings".to_string(), "Settings (Storage & Limits)");
@@ -131,8 +190,14 @@ fn main() {
 
     let system_tray = SystemTray::new().with_menu(tray_menu);
 
+    let default_config = AgentConfig::default();
+    let initial_suite = load_suite_from_disk(&default_config.storage_path);
+
     tauri::Builder::default()
-        .manage(AppState { config: Mutex::new(AgentConfig::default()) })
+        .manage(AppState {
+            config:    Mutex::new(default_config),
+            tax_suite: Mutex::new(initial_suite),
+        })
         .system_tray(system_tray)
         // ── Auto-update check on launch ──────────────────────────────────────
         .setup(|app| {
@@ -192,7 +257,8 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             profile_energy_circumstance, start_daemon,
-            get_config, save_config, check_ollama_status
+            get_config, save_config, check_ollama_status,
+            get_tax_suite, save_tax_suite, dispatch_tax_payment
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

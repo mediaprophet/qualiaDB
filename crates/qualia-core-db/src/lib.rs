@@ -303,6 +303,8 @@ pub mod lexicon;
 pub mod storage;
 pub mod telemetry;
 pub mod rpc;
+pub mod ilp_dispatcher;
+
 pub mod llm_agent;
 
 #[cfg(target_os = "android")]
