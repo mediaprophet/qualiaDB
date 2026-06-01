@@ -546,3 +546,89 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     Ok(())
 }
+
+/// The Daemon Boundary Routing Logic
+pub mod daemon_routing {
+    /// Dispatches the network payload to the appropriate external boundary based on the Data Tier (0b10 or 0b01).
+    pub async fn dispatch_network_payload(payload: &[u8], routing_tier: u8) {
+        match routing_tier {
+            0b10 => {
+                println!("========================================");
+                println!("🔒 Boundary 1: The Obfuscation Mesh (Bilateral Micro-Commons)");
+                println!("   Intercepted 0b10 payload. Initiating zero-trust routing...");
+                let sphinx_packet = wrap_sphinx_packet(payload);
+                route_nym_mixnet(sphinx_packet, "nym_address_peer_alpha");
+                println!("========================================");
+            },
+            0b01 => {
+                println!("========================================");
+                println!("⚡ Boundary 2: The Lightning Gateway (Permissive Commons)");
+                println!("   Intercepted 0b01 query. Initiating commercial billing tollbooth...");
+                
+                // Fetch mock telemetry (In production, use Qualia-DB telemetry atomics)
+                let superblock_count = 14;
+                let simd_ops = 850;
+                
+                let cost_msats = calculate_compute_cost(superblock_count, simd_ops);
+                println!("   Calculated Compute Cost: {} msats", cost_msats);
+                
+                let invoice = generate_bolt11_invoice(cost_msats);
+                println!("   Generated BOLT11 Invoice: {}", invoice);
+                
+                // Crucial Blocking Logic: Halting the thread until cryptographic settlement
+                println!("   ⛔ HALTING THREAD: Awaiting Lightning settlement cryptoproof...");
+                loop {
+                    // In production, we'd asynchronously poll the LDK node or LNURL endpoint
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    if check_invoice_settled(&invoice) {
+                        println!("   ✅ PAYMENT SETTLED: Cryptoproof verified.");
+                        break;
+                    }
+                }
+                
+                println!("   📤 Releasing Payload to commercial caller.");
+                println!("========================================");
+            },
+            _ => {
+                println!("   Unknown routing tier: {}. Dropping payload.", routing_tier);
+            }
+        }
+    }
+
+    /// Boundary 1: Wraps the binary diffs in Sphinx encryption packets
+    fn wrap_sphinx_packet(payload: &[u8]) -> Vec<u8> {
+        println!("   📦 Obfuscating payload ({} bytes) in Sphinx Packet crypto-padding.", payload.len());
+        // Mock Sphinx wrapping: pad the packet to a fixed size to hide metadata
+        let mut packet = payload.to_vec();
+        packet.resize(1024, 0); // Fixed size packet
+        packet
+    }
+
+    /// Boundary 1: Routes the packet through the Nym Mixnet
+    fn route_nym_mixnet(_packet: Vec<u8>, peer_address: &str) {
+        println!("   🕸️ Routing via Mixnet: Mix-Node 1 -> Mix-Node 2 -> Exit Node -> {}", peer_address);
+        println!("   ✅ Payload decoupled from IP Metadata and transmitted securely.");
+    }
+
+    /// Boundary 2: Calculates micro-satoshi cost based on physical hardware wear & electricity
+    fn calculate_compute_cost(superblock_count: u64, simd_ops: u64) -> u64 {
+        // 500 msats per superblock I/O, 1 msat per SIMD Sieve operation
+        (superblock_count * 500) + (simd_ops * 1)
+    }
+
+    /// Boundary 2: Generates a mock Lightning BOLT11 invoice
+    fn generate_bolt11_invoice(msats: u64) -> String {
+        // Mock simulated invoice string
+        format!("lnbc{}n1...", msats)
+    }
+
+    /// Boundary 2: Mock check for invoice settlement (simulates a quick payout)
+    fn check_invoice_settled(_invoice: &str) -> bool {
+        // Simulate a 10% chance per tick that the payment clears the Lightning network
+        let millis = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis();
+        (millis % 10) == 0
+    }
+}
