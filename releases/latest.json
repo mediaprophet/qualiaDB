@@ -1,28 +1,33 @@
 {
-  "version": "0.1.0",
-  "notes": "Initial public release. LLM sub-agent governance layer, Sentinel-gated inference, semantic meme library, multimodal chat, transparent Criterion benchmarks, and cross-platform install support.",
+  "version": "0.0.1-dev",
+  "notes": "First developer preview. Semantic meme library, multimodal chat (on-device LLM), PDF→N-Quad scanner, ontology converter (N-Triples/Turtle/JSON-LD/CSV), interactive demos. Desktop builds coming soon.",
   "pub_date": "2026-06-02T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
-      "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_x64-setup.exe"
+      "url": "https://github.com/mediaprophet/qualiaDB/releases",
+      "status": "coming-soon"
     },
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_aarch64.dmg"
+      "url": "https://github.com/mediaprophet/qualiaDB/releases",
+      "status": "coming-soon"
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_x64.dmg"
+      "url": "https://github.com/mediaprophet/qualiaDB/releases",
+      "status": "coming-soon"
     },
     "linux-x86_64": {
       "signature": "",
-      "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_amd64.AppImage"
+      "url": "https://github.com/mediaprophet/qualiaDB/releases",
+      "status": "coming-soon"
     },
     "android": {
       "signature": "",
-      "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-android-0.1.0-debug.apk",
-      "min_sdk": 26
+      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-android-0.0.1-dev.apk",
+      "min_sdk": 26,
+      "status": "available"
     }
   }
 }
