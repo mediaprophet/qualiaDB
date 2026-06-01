@@ -1,0 +1,23 @@
+{
+  "version": "0.1.0",
+  "notes": "Initial public release. LLM sub-agent governance layer, Sentinel-gated inference, transparent Criterion benchmarks, and cross-platform install support.",
+  "pub_date": "2026-06-01T10:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "",
+      "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_x64-setup.exe"
+    },
+    "darwin-aarch64": {
+      "signature": "",
+      "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_aarch64.dmg"
+    },
+    "darwin-x86_64": {
+      "signature": "",
+      "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_x64.dmg"
+    },
+    "linux-x86_64": {
+      "signature": "",
+      "url": "https://github.com/mediaprophet/qualiaDB/releases/latest/download/qualia-desktop_amd64.AppImage"
+    }
+  }
+}

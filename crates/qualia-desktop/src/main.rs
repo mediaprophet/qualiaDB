@@ -113,16 +113,19 @@ fn start_daemon() -> String {
 }
 
 fn main() {
-    let quit = CustomMenuItem::new("quit".to_string(), "Quit Webizen Agent");
-    let settings = CustomMenuItem::new("settings".to_string(), "Settings (Storage & Limits)");
-    let profile = CustomMenuItem::new("profile".to_string(), "Check Energy Circumstance");
-    let toggle_daemon = CustomMenuItem::new("toggle".to_string(), "Start Local Daemon");
+    let quit         = CustomMenuItem::new("quit".to_string(), "Quit Webizen Agent");
+    let settings     = CustomMenuItem::new("settings".to_string(), "Settings (Storage & Limits)");
+    let profile      = CustomMenuItem::new("profile".to_string(), "Check Energy Circumstance");
+    let toggle_daemon= CustomMenuItem::new("toggle".to_string(), "Start Local Daemon");
+    let check_update = CustomMenuItem::new("update".to_string(), "Check for Updates");
 
     let tray_menu = SystemTrayMenu::new()
         .add_item(settings)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(toggle_daemon)
         .add_item(profile)
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(check_update)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(quit);
 
@@ -131,6 +134,26 @@ fn main() {
     tauri::Builder::default()
         .manage(AppState { config: Mutex::new(AgentConfig::default()) })
         .system_tray(system_tray)
+        // ── Auto-update check on launch ──────────────────────────────────────
+        .setup(|app| {
+            let handle = app.handle();
+            tauri::async_runtime::spawn(async move {
+                match tauri::updater::builder(handle.clone()).check().await {
+                    Ok(update) => {
+                        if update.is_update_available() {
+                            // Show native OS dialog — Tauri handles the download/install prompt
+                            update.download_and_install().await
+                                .unwrap_or_else(|e| eprintln!("Update install failed: {e}"));
+                        }
+                    }
+                    Err(e) => {
+                        // Non-fatal: no network, CDN unreachable, etc.
+                        eprintln!("Update check skipped: {e}");
+                    }
+                }
+            });
+            Ok(())
+        })
         .on_system_tray_event(|app, event| match event {
             SystemTrayEvent::MenuItemClick { id, .. } => {
                 match id.as_str() {
@@ -148,12 +171,29 @@ fn main() {
                     "toggle" => {
                         println!("Toggling Daemon State...");
                     }
+                    // Manual update check from tray menu
+                    "update" => {
+                        let handle = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            match tauri::updater::builder(handle).check().await {
+                                Ok(update) if update.is_update_available() => {
+                                    update.download_and_install().await
+                                        .unwrap_or_else(|e| eprintln!("Update failed: {e}"));
+                                }
+                                Ok(_) => eprintln!("Already on the latest version."),
+                                Err(e) => eprintln!("Update check failed: {e}"),
+                            }
+                        });
+                    }
                     _ => {}
                 }
             }
             _ => {}
         })
-        .invoke_handler(tauri::generate_handler![profile_energy_circumstance, start_daemon, get_config, save_config, check_ollama_status])
+        .invoke_handler(tauri::generate_handler![
+            profile_energy_circumstance, start_daemon,
+            get_config, save_config, check_ollama_status
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -12,18 +12,29 @@
   "tauri": {
     "allowlist": {
       "all": false,
-      "os": {
-        "all": true
-      }
+      "os": { "all": true },
+      "protocol": { "asset": true, "assetScope": ["**"] }
+    },
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "pubkey": "PLACEHOLDER_REPLACE_WITH_TAURI_SIGN_PUBLIC_KEY",
+      "endpoints": [
+        "https://mediaprophet.github.io/qualiaDB/releases/latest.json"
+      ]
     },
     "bundle": {
       "active": true,
       "category": "DeveloperTool",
       "copyright": "",
-      "deb": {
-        "depends": []
+      "deb": { "depends": [] },
+      "macOS": {
+        "minimumSystemVersion": "11.0"
       },
-    "identifier": "com.qualia.desktop",
+      "identifier": "com.qualia.desktop",
+      "icon": [],
+      "resources": []
+    },
     "systemTray": {
       "iconAsTemplate": true
     },
@@ -34,7 +45,7 @@
         "resizable": true,
         "title": "Qualia Desktop Agent",
         "width": 1200,
-        "visible": false 
+        "visible": false
       }
     ]
   }
