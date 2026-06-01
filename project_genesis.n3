@@ -13,7 +13,18 @@
     qualia:hasRightsOntology [
         qualia:knowledgeAxioms "Protected" ;
         qualia:commercialGating "Strict" ;
-        qualia:obligationCost "500000"^^xsd:integer # micro-cents
+        qualia:obligationCost "500000"^^xsd:integer ; # micro-cents
+        
+        # Legal and Philosophical Axioms
+        qualia:legalFramework [
+            qualia:principal "Natural Person" ;
+            qualia:agent "Digital Software Client (WellFair)" ;
+            qualia:relationship "Principal-Agent Duty of Care"
+        ] ;
+        
+        qualia:foundationalModels [
+            qualia:supportedModels "Maslows_Hierarchy", "Systems_of_Faith", "Pluralistic_Welfare_Models"
+        ]
     ] ;
 
     # The Transition Rule for Stage 2
