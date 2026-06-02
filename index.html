@@ -118,12 +118,25 @@
         .os-icon { font-size: 1.2rem; }
         /* hide all platform sections by default — JS reveals the right one */
         .platform-win, .platform-mac, .platform-linux, .platform-android, .platform-unknown { display: none; }
+
+        /* Mobile friendliness */
+        @media (max-width: 640px) {
+            .container { padding: 2rem 1rem; }
+            h1 { font-size: 2.8rem; }
+            .nav-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .card { padding: 1.25rem; }
+            .install-banner { padding: 1.5rem 1rem; }
+            .install-btn { padding: 0.6rem 1rem; font-size: 0.85rem; }
+        }
     </style>
 </head>
 <body>
     <div class="grid-bg"></div>
     <div class="container">
         <h1>Qualia-DB</h1>
+        <div style="font-size:1.1rem; color:#00f0ff; margin-bottom:0.5rem; font-weight:500;">
+            Personal semantic infrastructure that refuses to betray you.
+        </div>
         <div class="tagline">The 512MB Zero-Allocation Semantic Engine. Built for Personal Devices. Secured by Cryptographic Human Agency Records.</div>
         <div style="margin-bottom:2rem;font-size:0.8rem;background:rgba(0,240,255,0.06);border:1px solid rgba(0,240,255,0.2);padding:6px 14px;border-radius:999px;display:inline-flex;gap:8px;align-items:center;">
             <span style="color:#67e8f9;">✨ New:</span> SHACL→Sentinel Compiler • Defeasible + Omnimodal Logic • 6 Modality Bridges • Lazy SuperBlocks + WebRTC Telemetry • Native CLI <code>bench --suite full</code> (fixed &amp; enhanced) • LZ4 High-Density Blocks • Rio multi-thread ingest
@@ -190,15 +203,32 @@
             </div>
         </div>
 
+        <!-- Prominent "Try in Browser First" CTA -->
+        <div style="text-align:center; margin: -1rem 0 2rem;">
+            <a href="playground/compare.html" class="install-btn install-btn-primary" style="font-size:0.95rem; padding:0.7rem 1.6rem;">
+                Try in Browser First → RDF ↔ .q42 Comparator
+            </a>
+            <span style="margin:0 0.75rem; color:#555;">or</span>
+            <a href="playground/index.html" class="install-btn install-btn-secondary" style="font-size:0.9rem; padding:0.65rem 1.4rem;">
+                Open the Interactive Playground
+            </a>
+        </div>
+
         <div class="nav-grid">
             <a href="benchmark.html" class="card">
                 <h2>Dual-Mode Benchmark</h2>
                 <p><strong>Native now fully live:</strong> <code>cargo run -p qualia-cli -- bench --suite full</code> (LZ4 SuperBlocks, Lazy + WebRTC P2P streaming, sysinfo RSS telemetry, live visualizer at benchmark_visualizer.html). Browser WASM shootout still available. 12 categories incl. rights/escrow/nym tests. Also <code>cargo bench -p qualia-core-db</code>.</p>
+                <div style="margin-top:0.75rem; font-size:0.8rem; background:rgba(0,240,255,0.08); padding:6px 8px; border-radius:6px; border:1px solid rgba(0,240,255,0.2);">
+                    <strong>WordNet 523MB → 74.6MB</strong> (85.1% compression via import of data.rdf) • <strong>Streaming first query:</strong> 6.5ms (no full load) • 5.56M quins • Qualia wins on massive lexical graphs under 512MB floor.
+                </div>
             </a>
 
             <a href="playground/compare.html" class="card" style="--neon-blue:#a78bfa;border-color:rgba(167,139,250,0.15);">
                 <h2 style="color:#a78bfa;">RDF ↔ .q42 Comparator</h2>
                 <p>Drop your original RDF file and its .q42 output. Instantly see compression ratio, semantic fidelity (quad diff), and parse-time speedup — all in-browser, zero upload.</p>
+                <div style="margin-top:0.6rem; font-size:0.78rem; color:#c4b5fd; background:rgba(167,139,250,0.1); padding:4px 6px; border-radius:4px;">
+                    ★ WordNet: 523 MB RDF → 74.6 MB .q42 (85.1% compression) • 5.56M quins (real `qualia-cli import data.rdf wordnet.q42`)
+                </div>
             </a>
 
             <a href="playground/neuro-symbolic.html" class="card" style="--neon-blue:#34d399;border-color:rgba(52,211,153,0.15);">

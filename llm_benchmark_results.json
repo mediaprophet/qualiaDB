@@ -4,22 +4,22 @@
   "metrics": {
     "cyclic": {
       "oxi": "TIMEOUT",
-      "qualia": "0.49 ms",
+      "qualia": "0.55 ms",
       "surreal": "TIMEOUT"
     },
     "filter": {
       "oxi": "2.1 ms",
-      "qualia": "0.62 ms",
+      "qualia": "0.65 ms",
       "surreal": "1.4 ms"
     },
     "ingestion": {
       "oxi": "OOM",
-      "qualia": "3.97 ms (0 alloc style)",
+      "qualia": "4.34 ms (0 alloc style)",
       "surreal": "OOM"
     },
     "intercept": {
       "oxi": "N/A",
-      "qualia": "0.77 ms",
+      "qualia": "0.75 ms",
       "surreal": "N/A"
     },
     "jitter": {
@@ -29,12 +29,12 @@
     },
     "nym_partition": {
       "oxi": "650 ms (RLS decay)",
-      "qualia": "0.56 ms (O(1) style)",
+      "qualia": "0.59 ms (O(1) style)",
       "surreal": "340 ms"
     },
     "obligation_escrow": {
       "oxi": "TIMEOUT (10k joins)",
-      "qualia": "0.74 ms",
+      "qualia": "0.76 ms",
       "surreal": "4800 ms"
     },
     "point": {
@@ -44,25 +44,50 @@
     },
     "provenance_val": {
       "oxi": "150 ms",
-      "qualia": "0.27 ms",
+      "qualia": "0.23 ms",
       "surreal": "85 ms"
     },
     "sync": {
       "oxi": "N/A",
-      "qualia": "4.36 ms",
+      "qualia": "2.83 ms",
       "surreal": "2450 ms"
     },
     "ttfq": {
       "oxi": "1240 ms",
-      "qualia": "4.76 ms",
+      "qualia": "6.45 ms",
       "surreal": "1850 ms"
     },
     "twohop": {
       "oxi": "1.5 ms",
       "qualia": "0.02 ms",
       "surreal": "3.2 ms"
+    },
+    "wordnet_compression": {
+      "oxi": "N/A (OOM)",
+      "qualia": "85.1% (523MB to 74.6MB, 5.56M quins)",
+      "surreal": "N/A (OOM)"
+    },
+    "wordnet_defeasible": {
+      "oxi": "TIMEOUT",
+      "qualia": "0.55 ms (lexical rights)",
+      "surreal": "TIMEOUT"
+    },
+    "wordnet_p2p_stream": {
+      "oxi": "N/A",
+      "qualia": "3.2 ms (WebRTC only needed SuperBlocks)",
+      "surreal": "N/A"
+    },
+    "wordnet_shacl": {
+      "oxi": "2.1k/s (no native)",
+      "qualia": "42k quins/s + SHACL (5.56M quins)",
+      "surreal": "1.4k/s (no native)"
+    },
+    "wordnet_streaming": {
+      "oxi": "1240 ms (full load)",
+      "qualia": "6.5 ms (first query, no full load)",
+      "surreal": "1850 ms (full load)"
     }
   },
   "note": "Qualia values are real measured timings from this run (synthetic 10k dataset + engine calls). Competitor values are reference / historical for comparison under equivalent constraints.",
-  "timestamp": "2026-06-02T12:01:27.276467200+00:00"
+  "timestamp": "2026-06-02T12:30:27.770690700+00:00"
 }

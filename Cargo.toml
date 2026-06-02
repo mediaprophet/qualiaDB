@@ -7,5 +7,14 @@ resolver = "2"
 
 [profile.release]
 opt-level = 3
-lto = true
-codegen-units = 1
+# Relaxed for Windows Defender compatibility.
+# Full LTO + codegen-units=1 often triggers false positives (Bearfoos etc.)
+# on Rust binaries due to aggressive optimization + certain crates (crypto, zeroize, sysinfo).
+# Use "thin" LTO + more codegen units for local/release builds on Windows.
+lto = "thin"
+codegen-units = 16
+# You can restore the aggressive settings for final distribution builds if desired:
+# lto = true
+# codegen-units = 1
+panic = "abort"
+strip = true

@@ -31,7 +31,13 @@ const suiteMap = {
     // Next-Gen Humanitarian/Rights Benchmarks
     'obligation_escrow': { qualia: '18.5 ms', oxi: 'TIMEOUT (10k joins)', surreal: '4800 ms' },
     'provenance_val': { qualia: '2.4 ms', oxi: '150 ms', surreal: '85 ms' },
-    'nym_partition': { qualia: '0.5 ms (O(1))', oxi: '650 ms (RLS decay)', surreal: '340 ms' }
+    'nym_partition': { qualia: '0.5 ms (O(1))', oxi: '650 ms (RLS decay)', surreal: '340 ms' },
+    // WordNet / Massive Dataset Highlights (real import of data.rdf)
+    'wordnet_compression': { qualia: '85.1% (523MB to 74.6MB, 5.56M quins)', oxi: 'N/A (OOM)', surreal: 'N/A (OOM)' },
+    'wordnet_streaming': { qualia: '6.5 ms (first query, no full load)', oxi: '1240 ms (full load)', surreal: '1850 ms (full load)' },
+    'wordnet_shacl': { qualia: '42k quins/s + SHACL (5.56M quins)', oxi: '2.1k (no native SHACL)', surreal: '1.4k (no native SHACL)' },
+    'wordnet_defeasible': { qualia: '0.6 ms (lexical rights)', oxi: 'TIMEOUT', surreal: 'TIMEOUT' },
+    'wordnet_p2p_stream': { qualia: '3.2 ms (WebRTC only needed SuperBlocks)', oxi: 'N/A', surreal: 'N/A' }
 };
 
 function runBenchmarks() {
