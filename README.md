@@ -52,11 +52,19 @@ Qualia-DB natively ships with two critical consumer interfaces tightly bound to 
 
 ## 🧪 LLM Benchmarking Suite
 
-Qualia-DB features a headless benchmarking suite explicitly designed for AI Agents (Claude, Grok, ChatGPT) to evaluate the engine's performance under strict edge constraints (512MB RAM floor). 
+Qualia-DB features a headless benchmarking suite explicitly designed for AI Agents (Claude, Grok, ChatGPT) to evaluate the engine's performance under strict human-centric constraints (512MB RAM floor). For the natural person, their device isn't "the edge"—it is the **heart** of the network. 
 To execute the Dual-Mode Shootout against competitors (Oxigraph, SurrealDB) natively in your sandbox:
 ```bash
 node scripts/llm_bench_runner.js
 ```
+
+## 🌐 W3C Solid Interoperability Bridge
+
+Qualia-DB operates entirely natively on `.q42` CBOR-LD binary graphs to bypass the string-parsing bloat of traditional Semantic Web DBs. However, to guarantee global backward compatibility, it features a native **Solid Exporter**. 
+
+This exporter acts as a one-way bridge: it compiles the highly constrained 48-byte `Super-Quins` back into standard W3C Turtle (`.ttl`) format and generates LDP Basic Containers, allowing you to instantly back up your encrypted vault to any standard W3C Solid Pod (like Inrupt or CSS).
+
+> **To-Do / Roadmap (WAC ACLs):** W3C Solid uses static Web Access Control (`.acl` files) to govern data sharing. Qualia-DB uses the dynamic N3Logic Sentinel VM (evaluating things like "Is the principal's biometric stress level currently safe enough to authorize this?"). Currently, the exporter conservatively defaults complex dynamic N3 rules to **Private (`acl:Control`)** during export to prevent data leakage. Future iterations will aim to compile bounded N3 rulesets into static ACL groups.
 
 ## 🛠️ Build Instructions
 

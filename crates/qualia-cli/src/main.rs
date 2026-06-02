@@ -50,6 +50,15 @@ enum Commands {
         #[command(subcommand)]
         action: WebizenAction,
     },
+    /// Exports a .q42 Graph into a W3C Solid LDP Basic Container
+    ExportSolid {
+        /// The path to the .q42 binary distribution file
+        #[arg(long)]
+        input: PathBuf,
+        /// The output directory for the Solid Container
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -616,6 +625,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             warp::serve(routes)
                 .run(([127, 0, 0, 1], 4848))
                 .await;
+        }
+        Commands::ExportSolid { input, output } => {
+            println!("============================================================");
+            println!("🌐 W3C Solid Exporter Bridge");
+            println!("============================================================");
+            
+            let in_path = input.to_string_lossy().to_string();
+            let out_path = output.to_string_lossy().to_string();
+            
+            match qualia_core_db::solid_ldp::SolidExporter::export_to_solid_pod(&in_path, &out_path) {
+                Ok(_) => {
+                    println!("✅ Export Complete! Your data is now fully portable to any Solid Pod.");
+                }
+                Err(e) => {
+                    eprintln!("❌ Export Failed: {}", e);
+                }
+            }
         }
         Commands::Webizen { action } => match action {
             WebizenAction::Init { path } => {

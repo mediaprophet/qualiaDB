@@ -215,6 +215,14 @@ async fn ingest_ontology(file_name: String) -> Result<ingestion::IngestionResult
     Ok(result)
 }
 
+/// W3C Solid Exporter Command
+/// Translates a raw binary Qualia graph (.q42) into a W3C Solid LDP Basic Container.
+#[tauri::command]
+async fn export_to_solid(input_q42_path: String, output_dir_path: String) -> Result<String, String> {
+    qualia_core_db::solid_ldp::SolidExporter::export_to_solid_pod(&input_q42_path, &output_dir_path)
+        .map(|_| format!("Successfully exported to {}", output_dir_path))
+        .map_err(|e| e.to_string())
+}
 #[tauri::command]
 async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
     llm_offload::discover_local_models().await
@@ -269,7 +277,8 @@ fn main() {
             get_config, save_config, check_ollama_status,
             get_tax_suite, save_tax_suite, dispatch_tax_payment,
             accept_vault_handshake, receive_vault_job, ingest_pdf,
-            ingest_ontology, discover_models, run_agent_inference
+            ingest_ontology, discover_models, run_agent_inference,
+            export_to_solid
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
