@@ -1,0 +1,40 @@
+name: QualiaDB LLM Benchmarks
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Cargo dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-cargo-
+
+    - name: Run Native LLM Benchmarks
+      run: cargo run --release -p qualia-cli -- bench --suite full
+
+    - name: Upload JSON Telemetry Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: llm-benchmark-results
+        path: llm_benchmark_results.json
+        retention-days: 30
