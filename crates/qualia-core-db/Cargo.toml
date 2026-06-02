@@ -34,6 +34,7 @@ crossbeam-channel = "0.5"
 rio_xml = "0.8"
 rio_turtle = "0.8"
 rio_api = "0.8"
+lz4_flex = "0.11"
 
 [lib]
 crate-type = ["rlib", "cdylib"]

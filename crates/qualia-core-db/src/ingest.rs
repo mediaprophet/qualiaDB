@@ -81,13 +81,37 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
     let writer_handle = thread::spawn(move || {
         let mut out_file = File::create(out_path_copy).expect("Failed to create output .q42 file");
         let mut written_count = 0;
+        let mut block_id: u64 = 0;
+        let mut buffer = Vec::with_capacity(393_216);
         
         for quin in rx_bin {
-            // Write the raw 48-byte struct directly to disk
             let bytes = bytemuck::bytes_of(&quin);
-            out_file.write_all(bytes).expect("Failed to write quin bytes");
+            buffer.extend_from_slice(bytes);
             written_count += 1;
+            
+            if buffer.len() >= 393_216 {
+                let compressed = lz4_flex::compress_prepend_size(&buffer);
+                // Write Header: block_id (8), compressed_len (4), uncompressed_len (4)
+                out_file.write_all(&block_id.to_le_bytes()).unwrap();
+                out_file.write_all(&(compressed.len() as u32).to_le_bytes()).unwrap();
+                out_file.write_all(&(buffer.len() as u32).to_le_bytes()).unwrap();
+                // Write payload
+                out_file.write_all(&compressed).unwrap();
+                
+                buffer.clear();
+                block_id += 1;
+            }
         }
+        
+        // Flush remaining
+        if !buffer.is_empty() {
+            let compressed = lz4_flex::compress_prepend_size(&buffer);
+            out_file.write_all(&block_id.to_le_bytes()).unwrap();
+            out_file.write_all(&(compressed.len() as u32).to_le_bytes()).unwrap();
+            out_file.write_all(&(buffer.len() as u32).to_le_bytes()).unwrap();
+            out_file.write_all(&compressed).unwrap();
+        }
+        
         written_count
     });
 
