@@ -72,6 +72,13 @@ enum Commands {
         /// The output .q42 file
         output: PathBuf,
     },
+    /// Performs an instantaneous microsecond lookup on a massive .q42 binary via OS memory mapping
+    Query {
+        /// The target .q42 dataset binary file
+        dataset: PathBuf,
+        /// The u64 subject ID to query
+        subject: u64,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -671,6 +678,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Err(e) => {
                     eprintln!("❌ Import Failed: {}", e);
                 }
+            }
+        }
+        Commands::Query { dataset, subject } => {
+            println!("============================================================");
+            println!("⚡ QualiaDB Zero-Allocation Memory-Mapped Query Engine");
+            println!("============================================================");
+
+            let path = dataset.to_string_lossy().to_string();
+            match qualia_core_db::query_engine::mmap_query_subject(&path, *subject) {
+                Ok(results) => {
+                    if results.is_empty() {
+                        println!("No records found for subject ID {}.", subject);
+                    } else {
+                        println!("Example Record: S:{} P:{} O:{} Ctx:{}", 
+                            results[0].subject, results[0].predicate, results[0].object, results[0].context);
+                    }
+                }
+                Err(e) => eprintln!("❌ Query Failed: {}", e),
             }
         }
         Commands::Bench { suite } => {

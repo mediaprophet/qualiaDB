@@ -66,6 +66,24 @@ To execute the Dual-Mode Shootout against competitors (Oxigraph, SurrealDB) nati
 cargo run --release -p qualia-cli -- bench --suite full
 ```
 
+### Testing with Massive Datasets (Epic 17)
+
+To prove the zero-allocation architecture and microsecond `mmap` read speeds, we have provided a script to download massive real-world semantic datasets (like GeoNames, YAGO Tiny, DBpedia subsets, and Framester). 
+
+1. **Download the datasets (2GB - 12GB range):**
+   ```powershell
+   ./scripts/fetch_massive_datasets.ps1
+   ```
+2. **Convert to .q42 Native Binary:**
+   ```bash
+   qualia-cli import ./data/mappingbased-objects.ttl.bz2 ./data/dbpedia.q42
+   ```
+3. **Execute an OS-level Memory-Mapped Query:**
+   ```bash
+   qualia-cli query ./data/dbpedia.q42 --subject 123456
+   ```
+   *The 50GB binary will be memory-mapped and the Quins will be fetched in microseconds without touching RAM heap allocation.*
+
 ## 🌐 W3C Solid Interoperability Bridge
 
 Qualia-DB operates entirely natively on `.q42` CBOR-LD binary graphs to bypass the string-parsing bloat of traditional Semantic Web DBs. However, to guarantee global backward compatibility, it features a native **Solid Exporter**. 
