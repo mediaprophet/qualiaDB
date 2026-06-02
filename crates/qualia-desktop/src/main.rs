@@ -3,8 +3,8 @@
     windows_subsystem = "windows"
 )]
 
-use tauri::{SystemTray, SystemTrayMenu, SystemTrayMenuItem, CustomMenuItem, SystemTrayEvent, Manager, State};
-use sysinfo::{System, SystemExt, Disks};
+use tauri::{Manager, State};
+use sysinfo::{System, Disks};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::path::PathBuf;
@@ -172,24 +172,6 @@ fn dispatch_tax_payment(
 }
 
 fn main() {
-    let quit         = CustomMenuItem::new("quit".to_string(), "Quit Webizen Agent");
-    let settings     = CustomMenuItem::new("settings".to_string(), "Settings (Storage & Limits)");
-    let profile      = CustomMenuItem::new("profile".to_string(), "Check Energy Circumstance");
-    let toggle_daemon= CustomMenuItem::new("toggle".to_string(), "Start Local Daemon");
-    let check_update = CustomMenuItem::new("update".to_string(), "Check for Updates");
-
-    let tray_menu = SystemTrayMenu::new()
-        .add_item(settings)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(toggle_daemon)
-        .add_item(profile)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(check_update)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(quit);
-
-    let system_tray = SystemTray::new().with_menu(tray_menu);
-
     let default_config = AgentConfig::default();
     let initial_suite = load_suite_from_disk(&default_config.storage_path);
 
@@ -198,7 +180,6 @@ fn main() {
             config:    Mutex::new(default_config),
             tax_suite: Mutex::new(initial_suite),
         })
-        .system_tray(system_tray)
         // ── Auto-update check on launch ──────────────────────────────────────
         .setup(|app| {
             let handle = app.handle();
@@ -218,42 +199,6 @@ fn main() {
                 }
             });
             Ok(())
-        })
-        .on_system_tray_event(|app, event| match event {
-            SystemTrayEvent::MenuItemClick { id, .. } => {
-                match id.as_str() {
-                    "quit" => {
-                        std::process::exit(0);
-                    }
-                    "settings" => {
-                        let window = app.get_window("main").unwrap();
-                        window.show().unwrap();
-                        window.set_focus().unwrap();
-                    }
-                    "profile" => {
-                        println!("{}", profile_energy_circumstance());
-                    }
-                    "toggle" => {
-                        println!("Toggling Daemon State...");
-                    }
-                    // Manual update check from tray menu
-                    "update" => {
-                        let handle = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            match tauri::updater::builder(handle).check().await {
-                                Ok(update) if update.is_update_available() => {
-                                    update.download_and_install().await
-                                        .unwrap_or_else(|e| eprintln!("Update failed: {e}"));
-                                }
-                                Ok(_) => eprintln!("Already on the latest version."),
-                                Err(e) => eprintln!("Update check failed: {e}"),
-                            }
-                        });
-                    }
-                    _ => {}
-                }
-            }
-            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             profile_energy_circumstance, start_daemon,
