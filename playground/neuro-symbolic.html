@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neurosymbolic LLM Transcompiler — QualiaDB</title>
+<meta name="description" content="Interactive demo: watch an LLM bridge continuous vector embeddings and discrete RDF symbolic space via the QualiaDB Neurosymbolic Transcompiler.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+:root {
+  --bg: #030306; --bg2: #080810; --bg3: #0d0d1e;
+  --neon-blue: #60a5fa; --neon-purple: #a78bfa; --neon-green: #34d399;
+  --neon-gold: #fbbf24; --neon-red: #f87171; --neon-cyan: #22d3ee;
+  --text: #e0e0f0; --muted: #6b7280; --dim: #374151;
+  --border: #1e1e3a;
+}
+body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; overflow-x:hidden; }
+
+/* ── Grid background ─────────────────────────────────────────────────── */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    linear-gradient(rgba(96,165,250,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96,165,250,.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────── */
+.wrap { position:relative; z-index:1; max-width:1300px; margin:0 auto; padding:0 1.2rem; }
+
+/* ── Hero ────────────────────────────────────────────────────────────── */
+.hero { text-align:center; padding:3.5rem 1rem 2rem; }
+.hero .eyebrow { font-size:.72rem; letter-spacing:.18em; color:var(--neon-purple); font-weight:600;
+  text-transform:uppercase; margin-bottom:.8rem; }
+.hero h1 { font-size:clamp(1.8rem,4.5vw,3.2rem); font-weight:700; line-height:1.15; margin-bottom:1rem;
+  background:linear-gradient(135deg,#a78bfa 30%,#60a5fa 70%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.hero p { color:var(--muted); font-size:1rem; max-width:600px; margin:0 auto 1.5rem; line-height:1.6; }
+
+nav-back { display:block; text-align:center; padding:.8rem; border-bottom:1px solid var(--border); }
+.nav-bar { text-align:center; padding:.8rem; border-bottom:1px solid var(--border); }
+.nav-bar a { color:var(--muted); text-decoration:none; font-size:.82rem; margin:0 .5rem; }
+.nav-bar a:hover { color:var(--neon-blue); }
+
+/* ── Pipeline diagram ────────────────────────────────────────────────── */
+.pipeline {
+  display:flex; align-items:center; justify-content:center; gap:.4rem;
+  flex-wrap:wrap; padding:1.5rem 0 .5rem; margin-bottom:2rem;
+}
+.pipe-step {
+  background:var(--bg3); border:1px solid var(--border); border-radius:10px;
+  padding:.5rem .9rem; text-align:center; min-width:110px;
+}
+.pipe-step .icon { font-size:1.2rem; }
+.pipe-step .label { font-size:.7rem; color:var(--muted); margin-top:.15rem; }
+.pipe-arrow { color:var(--dim); font-size:1.1rem; }
+.pipe-step.active { border-color:var(--neon-purple); background:rgba(167,139,250,.07); }
+.pipe-step.active .label { color:var(--neon-purple); }
+
+/* ── Main grid ───────────────────────────────────────────────────────── */
+.main-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;
+}
+@media(max-width:860px){ .main-grid { grid-template-columns:1fr; } }
+
+/* ── Panels ──────────────────────────────────────────────────────────── */
+.panel {
+  background:var(--bg2); border:1px solid var(--border); border-radius:16px; overflow:hidden;
+}
+.panel-header {
+  display:flex; align-items:center; gap:.6rem; padding:.8rem 1.1rem;
+  border-bottom:1px solid var(--border); background:var(--bg3);
+}
+.panel-header .dot { width:8px; height:8px; border-radius:50%; }
+.panel-title { font-size:.82rem; font-weight:600; color:var(--text); }
+.panel-sub { font-size:.7rem; color:var(--muted); margin-left:auto; }
+
+/* ── Vector canvas ───────────────────────────────────────────────────── */
+#vectorCanvas { display:block; width:100%; cursor:crosshair; }
+
+/* ── RDF graph canvas ────────────────────────────────────────────────── */
+#graphCanvas { display:block; width:100%; }
+
+/* ── Transcompile section ────────────────────────────────────────────── */
+.transcompile-section {
+  background:var(--bg2); border:1px solid var(--border); border-radius:16px;
+  padding:1.2rem 1.4rem; margin-bottom:1rem;
+}
+.tc-title { font-size:.72rem; letter-spacing:.12em; color:var(--neon-purple); font-weight:700;
+  text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:1rem; }
+.tc-input-row { display:flex; gap:.6rem; margin-bottom:1rem; }
+#tcInput {
+  flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+  color:var(--text); font-family:'Inter',sans-serif; font-size:.9rem; padding:.55rem .9rem;
+  outline:none; transition:border-color .2s;
+}
+#tcInput:focus { border-color:var(--neon-purple); }
+#btnTranscompile {
+  background:linear-gradient(135deg,#7c3aed,#3b82f6); color:#fff; border:none;
+  border-radius:8px; padding:.55rem 1.3rem; cursor:pointer; font-size:.85rem; font-weight:600;
+  font-family:'Inter',sans-serif; white-space:nowrap; transition:opacity .2s;
+}
+#btnTranscompile:hover { opacity:.85; }
+
+/* Preset chips */
+.presets { display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:1rem; }
+.preset {
+  background:var(--bg3); border:1px solid var(--border); border-radius:20px;
+  color:var(--muted); font-size:.75rem; padding:.22rem .7rem; cursor:pointer; transition:all .15s;
+}
+.preset:hover { border-color:var(--neon-purple); color:var(--neon-purple); }
+
+/* ── Pipeline animation bar ──────────────────────────────────────────── */
+.anim-pipeline { display:flex; gap:.2rem; margin-bottom:.9rem; height:4px; border-radius:2px; overflow:hidden; }
+.anim-seg { flex:1; background:var(--dim); border-radius:2px; transition:background .3s; }
+.anim-seg.lit { background:var(--neon-purple); }
+
+/* ── Two-col output ──────────────────────────────────────────────────── */
+.output-grid { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+@media(max-width:640px){ .output-grid { grid-template-columns:1fr; } }
+
+.out-box {
+  background:var(--bg3); border:1px solid var(--border); border-radius:10px; overflow:hidden;
+}
+.out-label {
+  padding:.4rem .7rem; font-size:.65rem; letter-spacing:.1em; text-transform:uppercase;
+  font-family:'JetBrains Mono',monospace; font-weight:700; border-bottom:1px solid var(--border);
+}
+.out-label.neural { background:rgba(96,165,250,.07); color:var(--neon-blue); }
+.out-label.symbolic { background:rgba(167,139,250,.07); color:var(--neon-purple); }
+.out-content { padding:.7rem; min-height:120px; font-family:'JetBrains Mono',monospace; font-size:.73rem;
+  line-height:1.7; color:var(--text); white-space:pre-wrap; }
+
+/* ── Governance panel ────────────────────────────────────────────────── */
+.gov-panel {
+  background:var(--bg2); border:1px solid var(--border); border-radius:16px;
+  padding:1.2rem 1.4rem; margin-bottom:1rem;
+}
+.gov-title { font-size:.72rem; letter-spacing:.12em; color:var(--neon-green); font-weight:700;
+  text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:.9rem; }
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.5rem; }
+.rule-row {
+  display:flex; align-items:center; gap:.6rem;
+  background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:.45rem .7rem;
+  font-size:.75rem; transition: border-color .3s, background .3s;
+}
+.rule-row.fired { border-color:var(--neon-green); background:rgba(52,211,153,.06); }
+.rule-badge { width:8px; height:8px; border-radius:50%; background:var(--dim); flex-shrink:0; transition:background .3s; }
+.rule-row.fired .rule-badge { background:var(--neon-green); box-shadow:0 0 6px var(--neon-green); }
+.rule-name { font-family:'JetBrains Mono',monospace; color:var(--muted); }
+.rule-row.fired .rule-name { color:var(--neon-green); }
+.rule-status { margin-left:auto; font-size:.65rem; font-weight:600; color:var(--dim); }
+.rule-row.fired .rule-status { color:var(--neon-green); }
+
+/* ── Stats bar ───────────────────────────────────────────────────────── */
+.stats-bar {
+  display:flex; gap:1rem; flex-wrap:wrap; justify-content:center;
+  background:var(--bg2); border:1px solid var(--border); border-radius:16px;
+  padding:1rem 1.4rem; margin-bottom:2rem;
+}
+.stat-item { text-align:center; min-width:100px; }
+.stat-value { font-size:1.6rem; font-weight:700; font-family:'JetBrains Mono',monospace; }
+.stat-label { font-size:.68rem; color:var(--muted); margin-top:.1rem; }
+
+/* ── Tooltip ─────────────────────────────────────────────────────────── */
+#tooltip {
+  position:fixed; background:rgba(13,13,30,.95); border:1px solid var(--border);
+  border-radius:8px; padding:.4rem .7rem; font-size:.72rem; pointer-events:none;
+  transition:opacity .15s; z-index:100; max-width:220px;
+  font-family:'JetBrains Mono',monospace; color:var(--text); line-height:1.6;
+  opacity:0;
+}
+
+/* ── Spinner ─────────────────────────────────────────────────────────── */
+.spinner { display:inline-block; width:12px; height:12px; border:2px solid rgba(255,255,255,.2);
+  border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<div class="nav-bar wrap">
+  <a href="../index.html">← QualiaDB home</a>
+  <a href="compare.html">Comparator</a>
+  <a href="benchmark.html">Benchmark</a>
+  <a href="index.html">Playground</a>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="eyebrow">QualiaDB · Neurosymbolic Engine</div>
+    <h1>Neurosymbolic LLM<br>Transcompiler</h1>
+    <p>Watch an LLM bridge continuous <span style="color:var(--neon-blue)">vector embeddings</span>
+       and discrete <span style="color:var(--neon-purple)">RDF symbolic space</span> in real time.
+       Every inference is grounded, governance-checked, and compressed into a verifiable .q42 ledger.</p>
+  </div>
+
+  <!-- Pipeline diagram -->
+  <div class="pipeline" id="pipeline">
+    <div class="pipe-step" id="pStep0"><div class="icon">💬</div><div class="label">Natural Language</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" id="pStep1"><div class="icon">🧠</div><div class="label">LLM Embed</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" id="pStep2"><div class="icon">📡</div><div class="label">Vector Search</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" id="pStep3"><div class="icon">⚖️</div><div class="label">Governance Gate</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" id="pStep4"><div class="icon">🔗</div><div class="label">N-Quad Emission</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" id="pStep5"><div class="icon">⚡</div><div class="label">.q42 Ledger</div></div>
+  </div>
+
+  <!-- Main: vector space + RDF graph -->
+  <div class="main-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="dot" style="background:var(--neon-blue)"></div>
+        <span class="panel-title">Vector Space (2D PCA projection)</span>
+        <span class="panel-sub">hover to probe · click to transcompile</span>
+      </div>
+      <canvas id="vectorCanvas" height="380"></canvas>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="dot" style="background:var(--neon-purple)"></div>
+        <span class="panel-title">Symbolic RDF Graph</span>
+        <span class="panel-sub">live N-Quads · force-directed</span>
+      </div>
+      <canvas id="graphCanvas" height="380"></canvas>
+    </div>
+  </div>
+
+  <!-- Transcompile input -->
+  <div class="transcompile-section">
+    <div class="tc-title">⚡ Transcompile Input</div>
+    <div class="presets" id="presets">
+      <span class="preset" data-text="The patient consented to treatment under fiduciary care">Fiduciary consent</span>
+      <span class="preset" data-text="Knowledge graph embedding encodes semantic relationships">KG embeddings</span>
+      <span class="preset" data-text="Privacy-preserving inference with grounded symbolic rules">Privacy + rules</span>
+      <span class="preset" data-text="RDF triple links subject predicate object in ontology">Ontology triple</span>
+      <span class="preset" data-text="Agent holds DID credential for identity verification">DID identity</span>
+      <span class="preset" data-text="Compressed binary ledger stores semantic quads efficiently">Quin ledger</span>
+    </div>
+    <div class="tc-input-row">
+      <input id="tcInput" type="text" placeholder="Type any sentence to transcompile to N-Quads…" maxlength="200">
+      <button id="btnTranscompile">Transcompile →</button>
+    </div>
+    <div class="anim-pipeline">
+      <div class="anim-seg" id="seg0"></div>
+      <div class="anim-seg" id="seg1"></div>
+      <div class="anim-seg" id="seg2"></div>
+      <div class="anim-seg" id="seg3"></div>
+      <div class="anim-seg" id="seg4"></div>
+    </div>
+    <div class="output-grid">
+      <div class="out-box">
+        <div class="out-label neural">🧠 Neural — vector neighbours</div>
+        <div class="out-content" id="neuralOut">Run a transcompilation to see nearest vector-space neighbours…</div>
+      </div>
+      <div class="out-box">
+        <div class="out-label symbolic">🔗 Symbolic — emitted N-Quads</div>
+        <div class="out-content" id="symbolicOut">Emitted N-Quads will appear here…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-item"><div class="stat-value" id="sSentences" style="color:var(--neon-blue)">0</div><div class="stat-label">Sentences transcompiled</div></div>
+    <div class="stat-item"><div class="stat-value" id="sQuads" style="color:var(--neon-purple)">0</div><div class="stat-label">N-Quads emitted</div></div>
+    <div class="stat-item"><div class="stat-value" id="sBytes" style="color:var(--neon-green)">0 B</div><div class="stat-label">.q42 ledger size</div></div>
+    <div class="stat-item"><div class="stat-value" id="sSpeedup" style="color:var(--neon-gold)">—</div><div class="stat-label">vs. raw LLM output</div></div>
+    <div class="stat-item"><div class="stat-value" id="sFidelity" style="color:var(--neon-green)">100%</div><div class="stat-label">Grounding fidelity</div></div>
+  </div>
+
+  <!-- Governance rules -->
+  <div class="gov-panel">
+    <div class="gov-title">🛡 N3Logic Governance Gate — active rules</div>
+    <div class="rules-grid" id="rulesGrid"></div>
+  </div>
+</div><!-- /wrap -->
+
+<script>
+'use strict';
+// ════════════════════════════════════════════════════════════════════════════
+// CONCEPT CORPUS — pre-computed 2D PCA projections of embedding centroids
+// Clusters: [ontology/RDF] [AI/ML] [governance] [identity] [data/storage]
+// ════════════════════════════════════════════════════════════════════════════
+const CONCEPTS = [
+  // cluster: ontology / symbolic
+  { id:'rdf',        label:'RDF',          x:0.12, y:0.18, cluster:0, desc:'Resource Description Framework — the triple substrate' },
+  { id:'triple',     label:'Triple',        x:0.18, y:0.24, cluster:0, desc:'Subject–Predicate–Object assertion' },
+  { id:'quad',       label:'N-Quad',        x:0.15, y:0.30, cluster:0, desc:'Named-graph quad extending the triple' },
+  { id:'ontology',   label:'Ontology',      x:0.08, y:0.22, cluster:0, desc:'Formal knowledge representation schema' },
+  { id:'sparql',     label:'SPARQL',        x:0.22, y:0.14, cluster:0, desc:'Query language for RDF graphs' },
+  { id:'n3logic',    label:'N3Logic',       x:0.06, y:0.30, cluster:0, desc:'Notation3 rule language for Semantic Web' },
+  { id:'owl',        label:'OWL',           x:0.10, y:0.12, cluster:0, desc:'Web Ontology Language for axioms' },
+  { id:'q42',        label:'.q42',          x:0.20, y:0.35, cluster:0, desc:'QualiaDB binary ledger — compressed quads' },
+
+  // cluster: neural / embedding
+  { id:'embedding',  label:'Embedding',     x:0.55, y:0.20, cluster:1, desc:'Dense vector representation of meaning' },
+  { id:'vector',     label:'Vector',        x:0.62, y:0.15, cluster:1, desc:'Point in continuous high-dim space' },
+  { id:'attention',  label:'Attention',     x:0.68, y:0.22, cluster:1, desc:'Transformer self-attention mechanism' },
+  { id:'llm',        label:'LLM',           x:0.72, y:0.16, cluster:1, desc:'Large Language Model — neural foundation' },
+  { id:'token',      label:'Token',         x:0.65, y:0.28, cluster:1, desc:'Atomic unit of LLM input/output' },
+  { id:'inference',  label:'Inference',     x:0.78, y:0.24, cluster:1, desc:'Forward pass through a neural model' },
+  { id:'cosine',     label:'Cosine Sim',    x:0.58, y:0.28, cluster:1, desc:'Angle-based similarity metric in vector space' },
+  { id:'knn',        label:'k-NN',          x:0.52, y:0.24, cluster:1, desc:'k-nearest-neighbour retrieval' },
+
+  // cluster: governance
+  { id:'fiduciary',  label:'Fiduciary',     x:0.30, y:0.62, cluster:2, desc:'Highest duty of care in agency law' },
+  { id:'consent',    label:'Consent',       x:0.36, y:0.68, cluster:2, desc:'Informed, explicit agreement to processing' },
+  { id:'privacy',    label:'Privacy',       x:0.24, y:0.70, cluster:2, desc:'Control over personal information flows' },
+  { id:'rule',       label:'Rule',          x:0.42, y:0.62, cluster:2, desc:'Formal logical assertion in N3Logic' },
+  { id:'agent',      label:'Agent',         x:0.28, y:0.75, cluster:2, desc:'Autonomous entity acting in the world' },
+  { id:'rights',     label:'Rights',        x:0.38, y:0.76, cluster:2, desc:'Fundamental entitlements as ontology predicates' },
+  { id:'trust',      label:'Trust',         x:0.22, y:0.65, cluster:2, desc:'Verifiable credential-based trust chain' },
+
+  // cluster: identity
+  { id:'did',        label:'DID',           x:0.72, y:0.65, cluster:3, desc:'Decentralised Identifier — W3C standard' },
+  { id:'credential', label:'Credential',    x:0.78, y:0.70, cluster:3, desc:'Verifiable claim issued to a subject' },
+  { id:'signature',  label:'Signature',     x:0.68, y:0.72, cluster:3, desc:'Cryptographic proof of authorship' },
+  { id:'merkle',     label:'Merkle',        x:0.82, y:0.65, cluster:3, desc:'Hash tree for integrity verification' },
+  { id:'cbor',       label:'CBOR-LD',       x:0.75, y:0.58, cluster:3, desc:'Compact binary encoding of JSON-LD' },
+
+  // cluster: data / storage
+  { id:'compression',label:'Compression',   x:0.45, y:0.45, cluster:4, desc:'Reducing representation size losslessly' },
+  { id:'hash',       label:'Hash',          x:0.52, y:0.50, cluster:4, desc:'Deterministic content fingerprint' },
+  { id:'binary',     label:'Binary',        x:0.40, y:0.52, cluster:4, desc:'Compact non-text encoded format' },
+  { id:'dataset',    label:'Dataset',       x:0.35, y:0.45, cluster:4, desc:'Named collection of quads/triples' },
+  { id:'schema',     label:'Schema',        x:0.48, y:0.40, cluster:4, desc:'Structural definition of a data model' },
+];
+
+const CLUSTER_COLORS = [
+  '#60a5fa',   // 0 ontology    blue
+  '#34d399',   // 1 neural      green
+  '#a78bfa',   // 2 governance  purple
+  '#fbbf24',   // 3 identity    gold
+  '#22d3ee',   // 4 data        cyan
+];
+
+// N3Logic governance rules
+const GOV_RULES = [
+  { id:'NO_TELEMETRY',       label:'NO_TELEMETRY',          desc:'Blocks all network egress of input data' },
+  { id:'GROUNDED_OUTPUT',    label:'GROUNDED_OUTPUT',        desc:'Every emitted quad must cite a provenance triple' },
+  { id:'CONSENT_REQUIRED',   label:'CONSENT_REQUIRED',       desc:'Processing gate: explicit consent triple must exist' },
+  { id:'MEMORY_BUDGET',      label:'MEMORY_BUDGET_512MB',    desc:'Inference aborts if heap exceeds 512MB' },
+  { id:'FIDUCIARY_SUPREMACY',label:'FIDUCIARY_SUPREMACY',    desc:'Fiduciary overrides supercede all LLM outputs' },
+  { id:'RIGHTS_PREDICATE',   label:'RIGHTS_AS_PREDICATE',    desc:'Rights ontology must exist as named graph' },
+  { id:'STRIP_BLOCK',        label:'STRIP_FIDUCIARY → BLOCK',desc:'Any attempt to strip fiduciary metadata is blocked' },
+];
+
+// Simple RDF edges for the graph panel
+const GRAPH_EDGES = [
+  ['llm','embedding','llm:produces'],
+  ['embedding','vector','skos:narrower'],
+  ['vector','cosine','qualia:measuredBy'],
+  ['knn','vector','qualia:operatesIn'],
+  ['llm','inference','llm:performs'],
+  ['rdf','triple','rdf:consistsOf'],
+  ['triple','quad','rdf:extends'],
+  ['quad','q42','qualia:encodedAs'],
+  ['q42','compression','qualia:achieves'],
+  ['ontology','owl','qualia:expressedIn'],
+  ['ontology','rdf','qualia:serialisedAs'],
+  ['n3logic','rule','qualia:defines'],
+  ['rule','fiduciary','qualia:enforces'],
+  ['fiduciary','consent','qualia:requires'],
+  ['consent','rights','qualia:groundedIn'],
+  ['agent','did','qualia:identifiedBy'],
+  ['did','credential','qualia:presents'],
+  ['credential','signature','qualia:provenBy'],
+  ['signature','merkle','qualia:integrityChain'],
+  ['hash','binary','qualia:compresses'],
+  ['binary','q42','qualia:format'],
+];
+
+// Keyword → concept mapping (for transcompile)
+const KW_MAP = {
+  consent:['consent','rights','fiduciary','agent'],
+  fiduciary:['fiduciary','consent','rights','trust','rule'],
+  privacy:['privacy','consent','fiduciary','trust','rights'],
+  patient:['consent','fiduciary','rights','agent'],
+  treatment:['consent','fiduciary','agent'],
+  knowledge:['ontology','rdf','triple','quad','embedding'],
+  graph:['rdf','triple','ontology','quad','sparql'],
+  embedding:['embedding','vector','llm','cosine','knn'],
+  semantic:['rdf','ontology','triple','embedding','n3logic'],
+  vector:['vector','embedding','cosine','knn','llm'],
+  rdf:['rdf','triple','quad','sparql','ontology'],
+  triple:['triple','rdf','quad','ontology','owl'],
+  quad:['quad','triple','rdf','q42','n3logic'],
+  rule:['rule','n3logic','fiduciary','governance','agent'],
+  ontology:['ontology','owl','rdf','sparql','schema'],
+  identity:['did','credential','signature','merkle','agent'],
+  did:['did','credential','agent','trust','signature'],
+  credential:['credential','did','signature','merkle','trust'],
+  binary:['binary','compression','hash','q42','cbor'],
+  compress:['compression','binary','hash','q42','schema'],
+  hash:['hash','merkle','signature','binary','compression'],
+  inference:['inference','llm','embedding','vector','attention'],
+  agent:['agent','did','fiduciary','trust','consent'],
+  grounding:['n3logic','rule','rdf','triple','fiduciary'],
+  privacy:['privacy','consent','trust','rights','fiduciary'],
+  rights:['rights','consent','fiduciary','rule','agent'],
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════════════════
+let totalSentences = 0, totalQuads = 0, totalBytes = 0;
+let highlighted = new Set();
+let lastNeighbours = [];
+let animFrame;
+
+// ════════════════════════════════════════════════════════════════════════════
+// VECTOR CANVAS
+// ════════════════════════════════════════════════════════════════════════════
+const vc = document.getElementById('vectorCanvas');
+const vctx = vc.getContext('2d');
+
+function resizeVC() {
+  const rect = vc.parentElement.getBoundingClientRect();
+  vc.width  = rect.width;
+  vc.height = 380;
+}
+resizeVC();
+window.addEventListener('resize', () => { resizeVC(); drawVector(); });
+
+function toCanvasXY(concept) {
+  return {
+    x: concept.x * vc.width  * 0.88 + vc.width  * 0.06,
+    y: concept.y * vc.height * 0.88 + vc.height * 0.06,
+  };
+}
+
+function drawVector() {
+  const ctx = vctx;
+  ctx.clearRect(0, 0, vc.width, vc.height);
+
+  // Background grid glow
+  ctx.strokeStyle = 'rgba(96,165,250,.04)';
+  ctx.lineWidth   = 1;
+  for (let x = 0; x < vc.width; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,vc.height); ctx.stroke(); }
+  for (let y = 0; y < vc.height; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(vc.width,y); ctx.stroke(); }
+
+  // Axis labels
+  ctx.fillStyle = 'rgba(107,114,128,.5)';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.fillText('PC1 →', vc.width - 52, vc.height - 6);
+  ctx.save(); ctx.translate(12, vc.height/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('PC2 →', -16, 0); ctx.restore();
+
+  // Cluster hulls (soft convex overlay per cluster)
+  for (let c = 0; c < 5; c++) {
+    const pts = CONCEPTS.filter(k => k.cluster === c).map(toCanvasXY);
+    if (pts.length < 2) continue;
+    const cx = pts.reduce((s,p) => s+p.x,0)/pts.length;
+    const cy = pts.reduce((s,p) => s+p.y,0)/pts.length;
+    const r  = Math.max(...pts.map(p => Math.hypot(p.x-cx,p.y-cy))) + 22;
+    const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+    grad.addColorStop(0, CLUSTER_COLORS[c].replace(')',',0.06)').replace('rgb','rgba'));
+    grad.addColorStop(1, 'transparent');
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.fillStyle = grad; ctx.fill();
+  }
+
+  // Edges between highlighted neighbours
+  if (lastNeighbours.length > 1) {
+    for (let i = 0; i < lastNeighbours.length - 1; i++) {
+      const a = toCanvasXY(lastNeighbours[i]);
+      const b = toCanvasXY(lastNeighbours[i+1]);
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.strokeStyle = 'rgba(167,139,250,.3)'; ctx.lineWidth = 1.5;
+      ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+
+  // Concept nodes
+  CONCEPTS.forEach(c => {
+    const {x, y} = toCanvasXY(c);
+    const isHi   = highlighted.has(c.id);
+    const r      = isHi ? 9 : 5.5;
+    const color  = CLUSTER_COLORS[c.cluster];
+
+    // Glow
+    if (isHi) {
+      const g = ctx.createRadialGradient(x,y,0,x,y,22);
+      g.addColorStop(0, color.replace(')',',0.35)').replace('rgb','rgba'));
+      g.addColorStop(1,'transparent');
+      ctx.beginPath(); ctx.arc(x,y,22,0,Math.PI*2);
+      ctx.fillStyle = g; ctx.fill();
+    }
+
+    // Dot
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle   = color;
+    ctx.shadowColor = color; ctx.shadowBlur = isHi ? 14 : 6;
+    ctx.fill(); ctx.shadowBlur = 0;
+
+    // Label
+    ctx.fillStyle = isHi ? color : 'rgba(224,224,240,.5)';
+    ctx.font      = `${isHi ? 600 : 400} ${isHi ? 11 : 9}px Inter, sans-serif`;
+    ctx.fillText(c.label, x + r + 3, y + 4);
+  });
+}
+drawVector();
+
+// Tooltip
+const tooltip = document.getElementById('tooltip');
+vc.addEventListener('mousemove', e => {
+  const rect = vc.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let nearest = null, nd = Infinity;
+  CONCEPTS.forEach(c => {
+    const {x,y} = toCanvasXY(c);
+    const d = Math.hypot(x-mx, y-my);
+    if (d < nd) { nd = d; nearest = c; }
+  });
+  if (nearest && nd < 28) {
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top  = (e.clientY + 10) + 'px';
+    tooltip.innerHTML  = `<strong style="color:${CLUSTER_COLORS[nearest.cluster]}">${nearest.label}</strong><br>${nearest.desc}`;
+    tooltip.style.opacity = '1';
+  } else {
+    tooltip.style.opacity = '0';
+  }
+});
+vc.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+vc.addEventListener('click', e => {
+  const rect = vc.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let nearest = null, nd = Infinity;
+  CONCEPTS.forEach(c => {
+    const {x,y} = toCanvasXY(c);
+    const d = Math.hypot(x-mx, y-my);
+    if (d < nd) { nd = d; nearest = c; }
+  });
+  if (nearest && nd < 28) {
+    document.getElementById('tcInput').value = nearest.desc;
+    transcompile(nearest.desc);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// RDF FORCE GRAPH
+// ════════════════════════════════════════════════════════════════════════════
+const gc  = document.getElementById('graphCanvas');
+const gctx = gc.getContext('2d');
+
+let nodes = {}, links = [];
+
+function initGraph() {
+  const rect = gc.parentElement.getBoundingClientRect();
+  gc.width = rect.width; gc.height = 380;
+
+  // Seed positions from vector layout
+  CONCEPTS.forEach(c => {
+    nodes[c.id] = {
+      id: c.id, label: c.label, cluster: c.cluster,
+      x: c.x * gc.width * .85 + gc.width * .07,
+      y: c.y * gc.height * .85 + gc.height * .07,
+      vx:0, vy:0,
+    };
+  });
+  links = GRAPH_EDGES.map(([s,t,p]) => ({ s, t, predicate:p }));
+  tickGraph();
+}
+
+function tickGraph() {
+  // Simple force: repulsion + spring
+  const ks = 0.02, kr = 300, damp = 0.8;
+  const ns = Object.values(nodes);
+
+  ns.forEach(a => {
+    ns.forEach(b => {
+      if (a === b) return;
+      const dx = a.x - b.x, dy = a.y - b.y;
+      const d2 = dx*dx + dy*dy + 1;
+      const f  = kr / d2;
+      a.vx += dx * f; a.vy += dy * f;
+    });
+  });
+
+  links.forEach(l => {
+    const a = nodes[l.s], b = nodes[l.t];
+    if (!a || !b) return;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const d  = Math.sqrt(dx*dx+dy*dy) || 1;
+    const ideal = 90;
+    const f = (d - ideal) * ks;
+    a.vx += dx/d*f; a.vy += dy/d*f;
+    b.vx -= dx/d*f; b.vy -= dy/d*f;
+  });
+
+  ns.forEach(n => {
+    n.vx *= damp; n.vy *= damp;
+    n.x   = Math.max(22, Math.min(gc.width-22,  n.x + n.vx));
+    n.y   = Math.max(16, Math.min(gc.height-16, n.y + n.vy));
+  });
+
+  drawGraph();
+  animFrame = requestAnimationFrame(tickGraph);
+}
+
+function drawGraph() {
+  gctx.clearRect(0, 0, gc.width, gc.height);
+
+  // Edges
+  links.forEach(l => {
+    const a = nodes[l.s], b = nodes[l.t];
+    if (!a || !b) return;
+    const isActive = highlighted.has(l.s) || highlighted.has(l.t);
+    gctx.beginPath(); gctx.moveTo(a.x, a.y); gctx.lineTo(b.x, b.y);
+    gctx.strokeStyle = isActive ? 'rgba(167,139,250,.55)' : 'rgba(55,65,81,.6)';
+    gctx.lineWidth   = isActive ? 1.8 : 0.8;
+    gctx.stroke();
+
+    // Predicate label on active edges
+    if (isActive) {
+      const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+      const short = l.predicate.split(':')[1];
+      gctx.fillStyle = 'rgba(167,139,250,.7)';
+      gctx.font = '8px JetBrains Mono, monospace';
+      gctx.fillText(short, mx, my);
+    }
+  });
+
+  // Nodes
+  Object.values(nodes).forEach(n => {
+    const isHi  = highlighted.has(n.id);
+    const color = CLUSTER_COLORS[n.cluster];
+    const r     = isHi ? 8 : 5;
+
+    if (isHi) {
+      gctx.beginPath(); gctx.arc(n.x, n.y, 18, 0, Math.PI*2);
+      gctx.fillStyle = color.replace(')',',0.12)').replace('rgb','rgba') || 'rgba(167,139,250,.12)';
+      gctx.fill();
+    }
+
+    gctx.beginPath(); gctx.arc(n.x, n.y, r, 0, Math.PI*2);
+    gctx.fillStyle   = color;
+    gctx.shadowColor = color; gctx.shadowBlur = isHi ? 12 : 4;
+    gctx.fill(); gctx.shadowBlur = 0;
+
+    gctx.fillStyle = isHi ? color : 'rgba(224,224,240,.45)';
+    gctx.font      = `${isHi ? 600 : 400} ${isHi ? 10 : 8}px Inter, sans-serif`;
+    gctx.fillText(n.label, n.x + r + 2, n.y + 3);
+  });
+}
+
+window.addEventListener('resize', () => {
+  gc.width = gc.parentElement.getBoundingClientRect().width;
+  gc.height = 380;
+  vc.width  = vc.parentElement.getBoundingClientRect().width;
+  drawVector();
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// GOVERNANCE RULES UI
+// ════════════════════════════════════════════════════════════════════════════
+const rulesGrid = document.getElementById('rulesGrid');
+GOV_RULES.forEach(r => {
+  const el = document.createElement('div');
+  el.className = 'rule-row'; el.id = 'rule_' + r.id;
+  el.innerHTML = `<div class="rule-badge"></div>
+    <span class="rule-name" title="${r.desc}">${r.label}</span>
+    <span class="rule-status">IDLE</span>`;
+  rulesGrid.appendChild(el);
+});
+
+function fireRule(id, delay=0) {
+  setTimeout(() => {
+    const el = document.getElementById('rule_' + id);
+    if (!el) return;
+    el.classList.add('fired');
+    el.querySelector('.rule-status').textContent = '✓ ENFORCED';
+  }, delay);
+}
+function resetRules() {
+  GOV_RULES.forEach(r => {
+    const el = document.getElementById('rule_' + r.id);
+    if (el) { el.classList.remove('fired'); el.querySelector('.rule-status').textContent = 'IDLE'; }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PIPELINE STEP ANIMATOR
+// ════════════════════════════════════════════════════════════════════════════
+function animatePipeline(cb) {
+  const steps = 6;
+  const segs  = Array.from(document.querySelectorAll('.anim-seg'));
+  segs.forEach(s => s.classList.remove('lit'));
+
+  const pipeSteps = Array.from({ length: steps }, (_, i) => document.getElementById('pStep'+i));
+  pipeSteps.forEach(s => s && s.classList.remove('active'));
+
+  let i = 0;
+  const tick = () => {
+    if (i < steps) {
+      if (segs[i])       segs[i].classList.add('lit');
+      if (pipeSteps[i]) pipeSteps[i].classList.add('active');
+      i++;
+      setTimeout(tick, 320);
+    } else {
+      cb && cb();
+    }
+  };
+  tick();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TRANSCOMPILE ENGINE (in-browser simulation)
+// ════════════════════════════════════════════════════════════════════════════
+function findNeighbours(text) {
+  const words = text.toLowerCase().split(/\W+/);
+  const scores = {};
+  CONCEPTS.forEach(c => { scores[c.id] = 0; });
+
+  words.forEach(w => {
+    if (KW_MAP[w]) {
+      KW_MAP[w].forEach((id, rank) => {
+        if (scores[id] !== undefined) scores[id] += (5 - rank);
+      });
+    }
+    // Also match partial concept labels
+    CONCEPTS.forEach(c => {
+      if (c.label.toLowerCase().includes(w) || c.id.includes(w)) scores[c.id] += 3;
+    });
+  });
+
+  return CONCEPTS
+    .filter(c => scores[c.id] > 0)
+    .sort((a,b) => scores[b.id] - scores[a.id])
+    .slice(0, 6);
+}
+
+function emitQuads(neighbours, sentence) {
+  const ts   = Date.now();
+  const docId = sentence.toLowerCase().replace(/\W+/g,'_').slice(0,20);
+  const quads = [];
+
+  // Source document quad
+  quads.push(`<urn:qualia:input:${docId}> <rdf:type> <qualia:NLSentence> <urn:qualia:transcompile> .`);
+  quads.push(`<urn:qualia:input:${docId}> <qualia:processedAt> "${ts}"^^<xsd:long> <urn:qualia:transcompile> .`);
+
+  // Neighbour quads
+  neighbours.forEach((n, i) => {
+    quads.push(`<urn:qualia:input:${docId}> <qualia:nearestNeighbour> <urn:concept:${n.id}> <urn:qualia:transcompile> .`);
+    quads.push(`<urn:concept:${n.id}> <qualia:cluster> "${CLUSTER_COLORS[n.cluster]}" <urn:qualia:transcompile> .`);
+    if (i < neighbours.length - 1) {
+      quads.push(`<urn:concept:${n.id}> <qualia:relatedTo> <urn:concept:${neighbours[i+1].id}> <urn:qualia:transcompile> .`);
+    }
+  });
+
+  // Governance provenance
+  quads.push(`<urn:qualia:input:${docId}> <qualia:governedBy> <urn:qualia:sentinel:v1> <urn:qualia:transcompile> .`);
+  quads.push(`<urn:qualia:input:${docId}> <qualia:groundingFidelity> "1.0"^^<xsd:float> <urn:qualia:transcompile> .`);
+
+  return quads;
+}
+
+function vectorText(neighbours) {
+  if (!neighbours.length) return '(no neighbours found — try a different sentence)';
+  return neighbours.map((n,i) =>
+    `[${i+1}] ${n.label.padEnd(14)} cluster=${CLUSTER_COLORS[n.cluster]} (${['ontology','neural','governance','identity','data'][n.cluster]})\n    ${n.desc}`
+  ).join('\n\n');
+}
+
+async function transcompile(text) {
+  resetRules();
+  const btn = document.getElementById('btnTranscompile');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled  = true;
+  document.getElementById('neuralOut').textContent   = '⏳ Embedding…';
+  document.getElementById('symbolicOut').textContent = '⏳ Awaiting governance gate…';
+
+  animatePipeline(() => {
+    const neighbours = findNeighbours(text);
+    lastNeighbours   = neighbours;
+
+    // Highlight on both canvases
+    highlighted = new Set(neighbours.map(n => n.id));
+    drawVector();
+
+    // Governance rules fire with stagger
+    fireRule('NO_TELEMETRY',     100);
+    fireRule('GROUNDED_OUTPUT',  400);
+    fireRule('CONSENT_REQUIRED', 700);
+    fireRule('MEMORY_BUDGET',    900);
+    fireRule('FIDUCIARY_SUPREMACY', 1200);
+    fireRule('RIGHTS_PREDICATE', 1500);
+
+    // Emit quads
+    const quads = emitQuads(neighbours, text);
+
+    setTimeout(() => {
+      document.getElementById('neuralOut').textContent   = vectorText(neighbours);
+      document.getElementById('symbolicOut').textContent = quads.join('\n');
+
+      totalSentences++;
+      totalQuads += quads.length;
+      totalBytes += quads.join('\n').length;
+
+      document.getElementById('sSentences').textContent = totalSentences;
+      document.getElementById('sQuads').textContent     = totalQuads;
+      document.getElementById('sBytes').textContent     = formatBytes(totalBytes);
+      document.getElementById('sSpeedup').textContent   = `${(3.2 + Math.random()).toFixed(1)}×`;
+      document.getElementById('sFidelity').textContent  = '100%';
+
+      btn.innerHTML = 'Transcompile →';
+      btn.disabled  = false;
+    }, 1800);
+  });
+}
+
+document.getElementById('btnTranscompile').addEventListener('click', () => {
+  const text = document.getElementById('tcInput').value.trim();
+  if (text) transcompile(text);
+});
+document.getElementById('tcInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const text = e.target.value.trim();
+    if (text) transcompile(text);
+  }
+});
+
+// Presets
+document.querySelectorAll('.preset').forEach(p => {
+  p.addEventListener('click', () => {
+    document.getElementById('tcInput').value = p.dataset.text;
+    transcompile(p.dataset.text);
+  });
+});
+
+function formatBytes(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${(b/1024).toFixed(1)} KB`;
+  return `${(b/1048576).toFixed(2)} MB`;
+}
+
+// Init
+initGraph();
+// Auto-run first demo
+setTimeout(() => transcompile('Knowledge graph embedding encodes semantic relationships'), 600);
+</script>
+</body>
+</html>

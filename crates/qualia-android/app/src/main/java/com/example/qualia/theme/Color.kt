@@ -3,9 +3,10 @@ package com.example.qualia.theme
 import androidx.compose.ui.graphics.Color
 
 // ── Qualia Neon Palette ──────────────────────────────────────────────────────
-val NeonBlue     = Color(0xFF00F0FF)
+val NeonBlue     = Color(0xFF60A5FA)
+val NeonCyan     = Color(0xFF22D3EE)
 val NeonGold     = Color(0xFFFFB800)
-val NeonGreen    = Color(0xFF4ADE80)
+val NeonGreen    = Color(0xFF34D399)
 val NeonRed      = Color(0xFFF87171)
 val NeonPurple   = Color(0xFFA78BFA)
 
