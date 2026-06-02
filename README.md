@@ -89,5 +89,13 @@ cd crates/qualia-desktop
 cargo build --release
 ```
 
+## 📝 Licensing & Commercial Inquiries
+
+Qualia-DB is currently released under the **Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License**.
+
+For any commercial licensing inquiries, custom enterprise integration, or consulting regarding Intentional Computing, please reach out to the creator directly:
+- **Timothy Charles Holborn**
+- [LinkedIn Profile](https://www.linkedin.com/in/ubiquitous/)
+
 ---
 *Built to guarantee first-class digital agency.*
