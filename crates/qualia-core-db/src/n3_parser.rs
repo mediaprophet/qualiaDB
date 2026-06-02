@@ -20,7 +20,16 @@ pub struct Formula {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum RuleType {
+    Strict,
+    Defeasible,
+    Defeater,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Rule {
+    pub id: Option<String>,
+    pub rule_type: RuleType,
     pub premise: Formula,
     pub conclusion: Formula,
 }
@@ -55,8 +64,8 @@ impl<R: BufRead> N3Parser<R> {
                 continue;
             }
 
-            // Heuristic for Rule: contains => and braces
-            if line.contains("=>") {
+            // Heuristic for Rule: contains => or ~> or ^> and braces
+            if line.contains("=>") || line.contains("~>") || line.contains("^>") {
                 if let Some(rule) = Self::parse_rule(line) {
                     callback(N3Event::LogicRule(rule))?;
                 }
@@ -72,7 +81,28 @@ impl<R: BufRead> N3Parser<R> {
     }
 
     fn parse_rule(line: &str) -> Option<Rule> {
-        let parts: Vec<&str> = line.split("=>").collect();
+        let mut clean_line = line.trim();
+        let mut id = None;
+
+        // Extract optional [rule_id]
+        if clean_line.starts_with('[') {
+            if let Some(end_idx) = clean_line.find(']') {
+                id = Some(clean_line[1..end_idx].to_string());
+                clean_line = clean_line[end_idx + 1..].trim();
+            }
+        }
+
+        let (separator, rule_type) = if clean_line.contains("=>") {
+            ("=>", RuleType::Strict)
+        } else if clean_line.contains("~>") {
+            ("~>", RuleType::Defeasible)
+        } else if clean_line.contains("^>") {
+            ("^>", RuleType::Defeater)
+        } else {
+            return None;
+        };
+
+        let parts: Vec<&str> = clean_line.split(separator).collect();
         if parts.len() != 2 {
             return None;
         }
@@ -83,7 +113,7 @@ impl<R: BufRead> N3Parser<R> {
         let premise = Formula { triples: Self::parse_formula_triples(premise_str) };
         let conclusion = Formula { triples: Self::parse_formula_triples(conclusion_str) };
 
-        Some(Rule { premise, conclusion })
+        Some(Rule { id, rule_type, premise, conclusion })
     }
 
     fn parse_formula_triples(content: &str) -> Vec<Triple> {

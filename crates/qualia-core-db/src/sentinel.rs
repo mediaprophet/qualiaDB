@@ -86,6 +86,7 @@ impl SlgArena {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SlgOpcode {
     CheckTable,
+    CheckDefeaters,
     Unify,
     Call,
     Return,
@@ -113,6 +114,15 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 if let Some(cached_result) = arena.check_table(frame.subject_reg, frame.predicate_reg, frame.object_reg) {
                     // Match found! Push the cached result to the VM stack and bypass the graph traversal
                     return Some(cached_result);
+                }
+            },
+            SlgOpcode::CheckDefeaters => {
+                // Here, the Sentinel checks if the current context has any defeaters
+                // that override the active rule. 
+                // We'll mock a simple priority lookup. If a stronger rule fired, we would return None.
+                let has_defeater = false; // Mocked evaluation
+                if has_defeater {
+                    return None; // Rule is defeated, sub-goal fails
                 }
             },
             SlgOpcode::Unify => {
