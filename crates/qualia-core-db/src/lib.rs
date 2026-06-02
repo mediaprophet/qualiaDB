@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 pub mod query_engine;
+pub mod n3_parser;
 pub mod ingest;
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.

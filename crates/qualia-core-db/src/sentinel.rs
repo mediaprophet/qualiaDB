@@ -17,12 +17,16 @@ const SLG_ARENA_SIZE: usize = 42 * 1024 * 1024;
 const QUIN_SIZE: usize = 48;
 const MAX_SLOTS: usize = SLG_ARENA_SIZE / QUIN_SIZE; // 917,504 slots
 
+use crate::n3_parser::Rule;
+
 /// The 42MB Static Tabling Arena for SLG Resolution
 /// Implemented as a Zero-Allocation Static Ring-Buffer Arena
 pub struct SlgArena {
     // We will use a safe Vec wrapper here since it is allocated strictly once and never grown.
     buffer: alloc::vec::Vec<QualiaQuin>,
     head_pointer: usize,
+    // Native Rule Registry to hold N3 Logical Implications
+    rule_registry: alloc::vec::Vec<Rule>,
 }
 
 #[cfg(feature = "alloc_buffers")]
@@ -42,7 +46,14 @@ impl SlgArena {
         Self {
             buffer,
             head_pointer: 0,
+            rule_registry: alloc::vec::Vec::new(),
         }
+    }
+
+    /// Registers a logical implication rule into the Sentinel VM
+    pub fn register_rule(&mut self, rule: Rule) {
+        println!("🧠 Sentinel registered new N3 Rule: {:?}", rule);
+        self.rule_registry.push(rule);
     }
 
     /// Checks the SLG Arena for a previously proven sub-goal.
