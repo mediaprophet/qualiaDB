@@ -261,5 +261,67 @@
     </div>
 
     <script src="semantics.js"></script>
+
+    <!-- SHACL + Modality Demo (new for v0.0.3) -->
+    <div style="position:fixed; bottom:10px; right:10px; width:380px; background:var(--panel-bg); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:12px; font-size:0.82rem; z-index:20; backdrop-filter:blur(6px);">
+        <div style="font-weight:600; color:#67e8f9; margin-bottom:6px;">🛠️ SHACL → Sentinel + Modality Lab (demo)</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
+            <input id="shacl-class" placeholder="Target Class (e.g. Person)" value="Person" style="flex:1; background:#111; border:1px solid #333; color:#ddd; padding:3px 6px; border-radius:4px; font-size:0.75rem;">
+            <input id="shacl-prop" placeholder="Property" value="age" style="flex:1; background:#111; border:1px solid #333; color:#ddd; padding:3px 6px; border-radius:4px; font-size:0.75rem;">
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+            <select id="shacl-constraint" style="flex:1; background:#111; border:1px solid #333; color:#ddd; padding:3px; border-radius:4px; font-size:0.75rem;">
+                <option value="minInclusive">minInclusive</option>
+                <option value="minCount">minCount</option>
+                <option value="datatype">datatype</option>
+            </select>
+            <input id="shacl-val" value="0" style="width:70px; background:#111; border:1px solid #333; color:#ddd; padding:3px 6px; border-radius:4px; font-size:0.75rem;">
+            <button onclick="compileShaclDemo()" style="background:#00f0ff; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.75rem; cursor:pointer;">Compile</button>
+        </div>
+        <div style="font-size:0.7rem; color:#888; margin-bottom:4px;">Modality:</div>
+        <select id="modality" onchange="updateModalityDemo()" style="width:100%; background:#111; border:1px solid #333; color:#ddd; padding:3px; border-radius:4px; font-size:0.75rem; margin-bottom:6px;">
+            <option value="spatio_temporal">spatio_temporal (Minkowski + time)</option>
+            <option value="probabilistic">probabilistic</option>
+            <option value="diffusion">diffusion</option>
+            <option value="dl">dl (Description Logic)</option>
+            <option value="asp">asp (Answer Set)</option>
+            <option value="linear">linear</option>
+        </select>
+        <button onclick="executeFrameDemo()" style="background:#b026ff; color:#fff; border:none; padding:3px 10px; border-radius:4px; font-size:0.75rem; cursor:pointer;">Execute Sentinel Frame</button>
+        <div id="shacl-output" style="margin-top:6px; font-family:monospace; font-size:0.7rem; background:#0a0a0f; padding:4px; border-radius:4px; min-height:42px; white-space:pre-wrap; color:#a5f3fc;"></div>
+    </div>
+
+    <script>
+    // Inline SHACL / Modality demo (mirrors Rust shacl_compiler + sentinel opcodes + modalities)
+    const OPCODE_MAP = {
+        'minInclusive': 'CheckThreshold',
+        'minCount': 'CheckSubsumption',
+        'datatype': 'Unify'
+    };
+    function compileShaclDemo() {
+        const cls = document.getElementById('shacl-class').value || 'Thing';
+        const prop = document.getElementById('shacl-prop').value || 'value';
+        const cons = document.getElementById('shacl-constraint').value;
+        const val = document.getElementById('shacl-val').value;
+        const op = OPCODE_MAP[cons] || 'CheckSubsumption';
+        const out = document.getElementById('shacl-output');
+        out.innerHTML = `Compiled SHACL ${cls}::${prop} ${cons}(${val})\n→ [SlgOpcode::${op}, SlgOpcode::Halt]\n(Real: uses shacl_compiler + SentinelCompiler in native)`;
+        out.style.border = '1px solid #67e8f9';
+    }
+    function updateModalityDemo() {
+        const mod = document.getElementById('modality').value;
+        const out = document.getElementById('shacl-output');
+        out.innerHTML = `Modality active: ${mod}\nAffects CheckThreshold / BranchWorld / ConsumeFact etc. (see modalities/ in Rust)`;
+    }
+    function executeFrameDemo() {
+        const mod = document.getElementById('modality').value;
+        const out = document.getElementById('shacl-output');
+        const now = Date.now() % 1000;
+        out.innerHTML = `Executing VmFrame with ${mod}...\nCheckDefeaters → ${now % 3 === 0 ? 'defeated' : 'pass'}\nResult: Proven Quin (context=${now})`;
+        // Bonus: if native telemetry server is running this could WS, but demo only
+    }
+    // auto hint
+    setTimeout(() => { const o=document.getElementById('shacl-output'); if(o && !o.innerHTML) o.innerHTML = 'Try Compile or pick a modality →'; }, 800);
+    </script>
 </body>
 </html>
