@@ -65,6 +65,13 @@ enum Commands {
         #[arg(long, default_value = "full")]
         suite: String,
     },
+    /// Stream-ingests an RDF/XML file into a mathematically pure .q42 binary
+    Import {
+        /// The input .rdf or .ttl file
+        input: PathBuf,
+        /// The output .q42 file
+        output: PathBuf,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -646,6 +653,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Err(e) => {
                     eprintln!("❌ Export Failed: {}", e);
+                }
+            }
+        }
+        Commands::Import { input, output } => {
+            println!("============================================================");
+            println!("📥 QualiaDB Native RDF/XML Ingestion Pipeline");
+            println!("============================================================");
+            
+            let in_path = input.to_string_lossy().to_string();
+            let out_path = output.to_string_lossy().to_string();
+            
+            match qualia_core_db::ingest::streaming_import_rdf(&in_path, &out_path) {
+                Ok(_) => {
+                    println!("✨ Done!");
+                }
+                Err(e) => {
+                    eprintln!("❌ Import Failed: {}", e);
                 }
             }
         }

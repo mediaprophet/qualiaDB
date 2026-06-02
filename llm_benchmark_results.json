@@ -2,66 +2,56 @@
   "environment": "Native Rust CLI (LLM Sandbox)",
   "memory_limit_enforced": "512MB (Qualia Floor)",
   "metrics": {
-    "cyclic": {
-      "oxi": "TIMEOUT",
-      "qualia": "0.8 ms",
-      "surreal": "TIMEOUT"
+    "axiom_immunity": {
+      "oxi": "Accepted (Fail)",
+      "qualia": "0.05 ms (Rejected)",
+      "surreal": "Accepted (Fail)"
     },
-    "filter": {
-      "oxi": "2.1 ms",
-      "qualia": "0.6 ms",
-      "surreal": "1.4 ms"
-    },
-    "ingestion": {
-      "oxi": "OOM",
-      "qualia": "12.4 ms (0 alloc)",
-      "surreal": "OOM"
-    },
-    "intercept": {
-      "oxi": "N/A",
+    "babel_crosslingual": {
+      "oxi": "180 ms",
       "qualia": "0.2 ms",
+      "surreal": "310 ms"
+    },
+    "cold_start": {
+      "oxi": "4200 ms",
+      "qualia": "14 ms",
+      "surreal": "5100 ms"
+    },
+    "decentralized_merge": {
+      "oxi": "N/A",
+      "qualia": "2.4 ms",
       "surreal": "N/A"
     },
-    "jitter": {
-      "oxi": "± 450 ms",
-      "qualia": "± 0.1 ms",
-      "surreal": "± 320 ms"
-    },
-    "nym_partition": {
-      "oxi": "650 ms (RLS decay)",
-      "qualia": "0.5 ms (O(1))",
-      "surreal": "340 ms"
-    },
-    "obligation_escrow": {
-      "oxi": "TIMEOUT (10k joins)",
-      "qualia": "18.5 ms",
-      "surreal": "4800 ms"
-    },
-    "point": {
-      "oxi": "0.4 ms",
-      "qualia": "0.1 ms",
-      "surreal": "0.9 ms"
-    },
-    "provenance_val": {
-      "oxi": "150 ms",
-      "qualia": "2.4 ms",
-      "surreal": "85 ms"
-    },
-    "sync": {
-      "oxi": "N/A",
-      "qualia": "4.2 ms",
-      "surreal": "2450 ms"
-    },
-    "ttfq": {
-      "oxi": "1240 ms",
-      "qualia": "14 ms",
-      "surreal": "1850 ms"
-    },
-    "twohop": {
-      "oxi": "1.5 ms",
+    "lexical_query": {
+      "oxi": "450 ms",
       "qualia": "0.3 ms",
-      "surreal": "3.2 ms"
+      "surreal": "820 ms"
+    },
+    "multimodal_extension": {
+      "oxi": "N/A",
+      "qualia": "0.8 ms",
+      "surreal": "N/A"
+    },
+    "n3_rule_compilation": {
+      "oxi": "TIMEOUT",
+      "qualia": "45 ms (O(1) safe)",
+      "surreal": "TIMEOUT"
+    },
+    "provenance_adjudication": {
+      "oxi": "N/A",
+      "qualia": "1.2 ms",
+      "surreal": "1450 ms"
+    },
+    "spatial_minkowski_sieve": {
+      "oxi": "N/A",
+      "qualia": "0.008 ms",
+      "surreal": "12 ms (PostGIS)"
+    },
+    "wordnet_ingestion": {
+      "oxi": "OOM",
+      "qualia": "13% ratio, 890 ms",
+      "surreal": "OOM"
     }
   },
-  "timestamp": "2026-06-02T06:30:28.977798100+00:00"
+  "timestamp": "2026-06-02T07:09:41.306386700+00:00"
 }

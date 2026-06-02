@@ -5,7 +5,7 @@ use futures_core::Stream;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-
+pub mod ingest;
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
 /// Fully optimized for zero-copy memory operations on post-2020 architectures.

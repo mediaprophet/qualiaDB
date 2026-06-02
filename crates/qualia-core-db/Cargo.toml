@@ -28,6 +28,9 @@ zstd = "0.13"
 memmap2 = "0.9"
 ed25519-dalek = { version = "2.1", default-features = false }
 sha2 = { version = "0.10", default-features = false }
+quick-xml = "0.36"
+sysinfo = "0.30"
+crossbeam-channel = "0.5"
 
 [lib]
 crate-type = ["rlib", "cdylib"]
