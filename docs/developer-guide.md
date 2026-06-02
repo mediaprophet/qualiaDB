@@ -61,6 +61,15 @@ When analyzing Qualia-DB against the historical computing landscape, it breaks f
   - As the opaque LLM executes its inference locally, the Sentinel VM monitors the active procedural tensor blocks.
   - If a mapped vector coordinate is triggered, and a local Spatio-Temporal `.q42` Axiom exists, the Sentinel VM mathematically clips and overrides the active vector space in real-time. This forces the Connectionist LLM to instantly obey the local Symbolic AI bounds, effectively correcting hallucinations mid-procedural step.
 
+### 7. Lazy SuperBlocks + On-Demand WebRTC P2P (Zero-Heap Massive Graphs)
+- **Traditional:** Full load or heavy indexing of multi-GB graphs into RAM.
+- **The Leap:** 40,960-byte SuperBlocks (10 sectors) with high-density LZ4. `lazy_superblock_query` does pure header scans + O(1) seeks over irrelevant blocks, only decompresses needed ones. "Missing" local blocks are streamed from peers (WebRTC DataChannel mock in harness). Telemetry (blocks, remote count, RSS via sysinfo) streams to WS visualizers. Enables 50GB+ ledgers on 512MB devices. See `query_engine.rs`, CLI `bench`, `benchmark_visualizer.html`.
+
+### 8. SHACL / Defeasible / Omnimodal Sentinel Compilation (Core 1 Evolution)
+- SentinelCompiler + `shacl_compiler` translate SHACL shapes + N3 defeasible rules (CheckDefeaters) into the same compact `[u64;16]` bytecode the VM executes.
+- 6+ modality bridges (`modalities/`: spatio_temporal, probabilistic, diffusion, DL, ASP, linear) normalize into the registry for unified reasoning.
+- Omnimodal surface syntaxes all feed the single deterministic engine. Rights tests (escrow, nym-partition) exercise these paths.
+
 ## Instructing Your Local AI Coding Agents
 
 Because Qualia-DB radically departs from standard database theory (no B-Trees, strict 512MB RAM floor, no string parsing), **generic AI coding agents (Claude, Gemini, ChatGPT, Copilot) will fail spectacularly** if you ask them to write Qualia-DB code without context. They will attempt to write JSON-LD parsers, allocate memory on the heap, and use standard standard-library strings—all of which will trigger a panic in our `no_std` architecture.
@@ -68,7 +77,7 @@ Because Qualia-DB radically departs from standard database theory (no B-Trees, s
 To successfully use a local AI agent to write or modify Qualia-DB extensions, you **must** inject our architectural rules into the agent's context.
 
 ### Step 1: Load the Directives
-Ensure your AI environment (Cursor, VSCode with Copilot, or a custom LLM prompt) has loaded the `AI_INSTRUCTIONS.md` or `.cursorrules` file located in the root of this repository.
+Ensure your AI environment (Cursor, VSCode with Copilot, or a custom LLM prompt) has loaded the `AI_INSTRUCTIONS.md` (now expanded with SHACL, modalities, Lazy SuperBlocks, native CLI bench harness, ingestion, etc.) or `.cursorrules` file located in the root of this repository.
 
 ### Step 2: The Agent Kickstart Prompt
 Before asking your AI to write any code, paste this exact prompt into the chat window to force it to adopt the Qualia-DB constraints:

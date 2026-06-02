@@ -26,7 +26,12 @@
     </style>
 </head>
 <body>
-    <h1>QualiaDB Telemetry</h1>
+    <h1>QualiaDB Telemetry <span style="font-size:0.5em;color:#64748b">(Block-Level / WebRTC P2P Visualizer)</span></h1>
+    <p style="max-width:800px;color:#94a3b8;margin-bottom:1rem;">
+        Pairs with the <strong>native</strong> harness: <code>cargo run --release -p qualia-cli -- bench --suite full</code> (or benchmark alias).<br>
+        The CLI spawns a WS telemetry server (default :9090) + runs real <code>lazy_superblock_query</code> (LZ4 SuperBlocks, header-only seeks, local vs simulated remote/WebRTC blocks, sysinfo RSS).<br>
+        This page provides a live block heatmap + stats (connect via WS or paste JSON from <code>llm_benchmark_results.json</code> + telemetry payloads for demo).
+    </p>
     <div class="dashboard">
         <div class="card">
             <h3>Peak RSS (RAM)</h3>
@@ -71,8 +76,37 @@
                 });
             }
         };
-        ws.onopen = () => console.log('Connected to QualiaDB Sentinel.');
-        ws.onerror = (e) => console.log('WebSocket Error:', e);
+        ws.onopen = () => console.log('Connected to QualiaDB Sentinel Telemetry (from native qualia-cli bench).');
+        ws.onerror = (e) => console.log('WebSocket Error (start the native bench first):', e, '— run: cargo run --release -p qualia-cli -- bench --suite full');
+
+        // Fallback demo button (simulates a payload a real native bench run would stream)
+        function simulateNativeTelemetry() {
+            const demo = {
+                type: 'telemetry',
+                rss_mb: 47.2,
+                blocks_loaded: 128,
+                hot_blocks: [
+                    {id: 7, source:'local'}, {id: 42, source:'remote'}, {id: 43, source:'local'},
+                    {id: 100, source:'remote'}, {id: 101, source:'remote'}
+                ]
+            };
+            document.getElementById('rss').innerText = demo.rss_mb + ' MB';
+            document.getElementById('loaded-blocks').innerText = demo.blocks_loaded;
+            demo.hot_blocks.forEach(block => {
+                const el = document.getElementById('block-' + (block.id % 500));
+                if (el) {
+                    el.className = 'block ' + (block.source === 'local' ? 'hot-local' : 'hot-remote');
+                    setTimeout(() => { if (el) el.className = 'block'; }, 1400);
+                }
+            });
+        }
+        // Expose + add a helper button dynamically
+        window.simulateNativeTelemetry = simulateNativeTelemetry;
+        const btn = document.createElement('button');
+        btn.textContent = 'Simulate Native Lazy SuperBlock + WebRTC Telemetry (from qualia-cli bench)';
+        btn.style.cssText = 'margin-top:1rem;padding:8px 12px;border:1px solid #334155;background:#0f172a;color:#e0f2fe;border-radius:6px;cursor:pointer';
+        btn.onclick = simulateNativeTelemetry;
+        document.body.appendChild(btn);
     </script>
 </body>
 </html>

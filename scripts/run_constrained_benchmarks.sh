@@ -1,6 +1,9 @@
 #!/bin/bash
 # Qualia-DB Constrained Cross-Benchmark Harness
-# Executes comparative benchmarking against Oxigraph, SurrealDB 3.x, and Comunica 
+# Executes comparative benchmarking against Oxigraph, SurrealDB 3.x, and Comunica.
+# NOTE: For the authoritative LLM/agent results + native engine (Lazy SuperBlocks, WebRTC telemetry, LZ4),
+# prefer: cargo run --release -p qualia-cli -- bench --suite full
+# (This shell script is for manual cgroup-constrained full-stack runs on Linux.)
 # strictly constrained to a 512MB RAM Cgroup environment.
 
 set -e

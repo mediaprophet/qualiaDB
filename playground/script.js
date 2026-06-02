@@ -4,6 +4,7 @@ const inputEl = document.getElementById('query-input');
 const outputEl = document.getElementById('query-output');
 
 // JSON-LD Presets
+// Playground updated for SHACL→Sentinel, Defeasible/Omnimodal, Lazy SuperBlock telemetry (see native `qualia-cli bench --suite full`).
 const presets = {
     ambient: `{
   "@context": "https://wellfair.org/contexts/health.jsonld",

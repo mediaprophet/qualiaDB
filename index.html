@@ -125,6 +125,9 @@
     <div class="container">
         <h1>Qualia-DB</h1>
         <div class="tagline">The 512MB Zero-Allocation Semantic Engine. Built for Personal Devices. Secured by Cryptographic Human Agency Records.</div>
+        <div style="margin-bottom:2rem;font-size:0.8rem;background:rgba(0,240,255,0.06);border:1px solid rgba(0,240,255,0.2);padding:6px 14px;border-radius:999px;display:inline-flex;gap:8px;align-items:center;">
+            <span style="color:#67e8f9;">✨ New:</span> SHACL→Sentinel Compiler • Defeasible + Omnimodal Logic • 6 Modality Bridges • Lazy SuperBlocks + WebRTC Telemetry • Native CLI <code>bench --suite full</code> (fixed &amp; enhanced) • LZ4 High-Density Blocks • Rio multi-thread ingest
+        </div>
 
         <!-- ── Platform-aware Install Banner ── -->
         <div class="install-banner" id="installBanner">
@@ -138,7 +141,7 @@
             <!-- Windows -->
             <div class="platform-win install-btn-row" id="sectionWin">
                 <a class="install-btn" href="releases/qualia-desktop_x64-setup.exe" id="btnWin">
-                    <span class="os-icon">🪟</span> Download Native Windows Client (v0.0.2)
+                    <span class="os-icon">🪟</span> Download Native Windows Client (v0.0.3-dev)
                 </a>
                 <span style="color:#555;font-size:0.8rem;align-self:center">x64 · local-first semantic graph</span>
             </div>
@@ -148,7 +151,7 @@
                 <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank" id="btnMacArm">
                     <span class="os-icon">🍎</span> macOS build coming soon — view releases
                 </a>
-                <span style="color:#555;font-size:0.8rem;align-self:center">v0.0.2 · .dmg not yet published</span>
+                <span style="color:#555;font-size:0.8rem;align-self:center">v0.0.3-dev · .dmg not yet published</span>
             </div>
 
             <!-- Linux -->
@@ -156,15 +159,15 @@
                 <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank" id="btnLinux">
                     <span class="os-icon">🐧</span> Linux build coming soon — view releases
                 </a>
-                <span style="color:#555;font-size:0.8rem;align-self:center">v0.0.2 · AppImage not yet published</span>
+                <span style="color:#555;font-size:0.8rem;align-self:center">v0.0.3-dev · AppImage not yet published</span>
             </div>
 
             <!-- Android -->
             <div class="platform-android install-btn-row" id="sectionAndroid">
                 <a class="install-btn install-btn-primary"
-                   href="https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-android-0.0.2.apk"
+                   href="https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-android-0.0.3-dev.apk"
                    id="btnAndroid">
-                    <span class="os-icon">🤖</span> Download APK for Android (v0.0.2)
+                    <span class="os-icon">🤖</span> Download APK for Android (v0.0.3-dev)
                 </a>
                 <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank">
                     All releases →
@@ -190,7 +193,7 @@
         <div class="nav-grid">
             <a href="benchmark.html" class="card">
                 <h2>Dual-Mode Benchmark</h2>
-                <p>Run the Live Browser Shootout. Watch Qualia-DB execute side-by-side against Oxigraph, SurrealDB, and Comunica in a strict 512MB constraints environment.</p>
+                <p><strong>Native now fully live:</strong> <code>cargo run -p qualia-cli -- bench --suite full</code> (LZ4 SuperBlocks, Lazy + WebRTC P2P streaming, sysinfo RSS telemetry, live visualizer at benchmark_visualizer.html). Browser WASM shootout still available. 12 categories incl. rights/escrow/nym tests. Also <code>cargo bench -p qualia-core-db</code>.</p>
             </a>
 
             <a href="playground/compare.html" class="card" style="--neon-blue:#a78bfa;border-color:rgba(167,139,250,0.15);">
@@ -216,7 +219,7 @@
             
             <a href="docs/developer-guide.md" class="card gold">
                 <h2>Developer Guide</h2>
-                <p>Dive deep into the architecture. Read about the 3-Core Triad, CBOR-LD strict binary ingestion, and Author-Scoped Merkle Cryptography.</p>
+                <p>Dive deep: 3-Core Triad, CBOR-LD + LZ4 SuperBlocks, Lazy + WebRTC P2P queries, SHACL/Defeasible/Omnimodal SentinelCompiler + 6 modalities, Author-Scoped Merkle, Fractal Swarm. Plus native `qualia-cli bench --suite full` harness.</p>
             </a>
             
             <a href="utils.html" class="card" style="--neon-blue: #00ff66; border-color: rgba(0, 255, 102, 0.1);">

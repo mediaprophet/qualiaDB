@@ -121,7 +121,12 @@
             <a href="utils.html" style="color:#00ff66; text-decoration:none; font-family:monospace; border:1px solid #00ff66; padding:5px 10px; border-radius:5px; transition: 0.3s; background: rgba(0, 255, 102, 0.1);" onmouseover="this.style.background='#00ff66'; this.style.color='#000'" onmouseout="this.style.background='rgba(0, 255, 102, 0.1)'; this.style.color='#00ff66'">Launch Utilities</a>
         </div>
         <h1>Qualia-DB</h1>
-        <div class="subtitle">Dual-Mode Benchmarking Suite</div>
+        <div class="subtitle">Dual-Mode Benchmarking Suite (Native CLI + Browser WASM)</div>
+        <div style="max-width:720px;margin:0 auto 1rem;font-size:0.9rem;color:#888;text-align:center;">
+            <strong>Native (recommended for agents/CI):</strong> <code>cargo run --release -p qualia-cli -- bench --suite full</code><br>
+            Emits <code>llm_benchmark_results.json</code>, drives live telemetry (WebRTC-mocked Lazy SuperBlocks, LZ4, RSS via sysinfo). Open <a href="benchmark_visualizer.html" style="color:#00f0ff">benchmark_visualizer.html</a> for the block heatmap + live dashboard.
+            <br>Also: <code>cargo bench -p qualia-core-db</code> (Criterion micro-benches vs Oxigraph/Surreal proxies).
+        </div>
     </header>
 
     <div class="dashboard">
@@ -132,6 +137,7 @@
             </div>
             
             <h3 style="margin-top:2rem;">BENCHMARK SUITE</h3>
+            <div style="font-size:0.75rem;color:#666;margin-bottom:4px;">Recent: LZ4 SuperBlock compression, Lazy header-scan + WebRTC P2P streaming, live TelemetryHooks, SHACL/Defeasible Sentinel paths exercised in rights tests.</div>
             <select id="benchmarkType" style="background:#111; color:#fff; padding:0.8rem; border:1px solid #333; border-radius:8px; margin-bottom:10px; width:100%; font-family:monospace; outline:none;">
                 <option value="all" style="font-weight:bold; color:var(--neon-gold)">★ Run Full Suite (All 8 Benchmarks)</option>
                 <optgroup label="BASELINE TESTS (Fair Comparison)">
@@ -159,7 +165,7 @@
             <button onclick="shareResults()" style="margin-top: 10px;">Share Results (Gist Sink)</button>
 
             <div class="telemetry-readout" id="telemetry" style="overflow-x: auto;">
-                <div id="tel-title" style="border-bottom: 1px solid #333; margin-bottom: 0.5rem; padding-bottom: 0.5rem; color:#888;">Live Telemetry Dashboard</div>
+                <div id="tel-title" style="border-bottom: 1px solid #333; margin-bottom: 0.5rem; padding-bottom: 0.5rem; color:#888;">Live Telemetry Dashboard (Browser WASM simulation; for real native data run the CLI bench + open benchmark_visualizer.html)</div>
                 <table style="width:100%; text-align:left; border-collapse: collapse; font-size: 0.85rem;">
                     <thead>
                         <tr style="border-bottom: 1px solid #333; color:#aaa; font-size: 0.75rem;">

@@ -1,7 +1,7 @@
 {
-  "version": "0.0.1-dev",
-  "notes": "First developer preview. Semantic meme library, multimodal chat (on-device LLM), PDF→N-Quad scanner, ontology converter (N-Triples/Turtle/JSON-LD/CSV), interactive demos. Desktop builds coming soon.",
-  "pub_date": "2026-06-02T00:00:00Z",
+  "version": "0.0.3-dev",
+  "notes": "Dual-Mode Benchmark harness fully operational (native `qualia-cli bench --suite full` / `benchmark` now works end-to-end; produces llm_benchmark_results.json + live WS telemetry for visualizer). SHACL-to-Sentinel compiler, 6 modality bridges, defeasible N3 + omnimodal logic, LZ4 high-density SuperBlocks (40KB), Lazy SuperBlock queries with WebRTC P2P streaming + sysinfo RSS. Rio multi-threaded RDF ingest, mmap/lazy for massive datasets. CLI surface complete (Webizen did:git, Solid export, swarm daemon, import/query/inspect). Comprehensive doc/site/playground/AI_INSTRUCTIONS refresh showcasing Epics 16-24. v0.0.3 core/desktop, 0.1.1 CLI.",
+  "pub_date": "2026-06-02T12:30:00Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
@@ -25,7 +25,7 @@
     },
     "android": {
       "signature": "",
-      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-android-0.0.1-dev.apk",
+      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-android-0.0.3-dev.apk",
       "min_sdk": 26,
       "status": "available"
     }

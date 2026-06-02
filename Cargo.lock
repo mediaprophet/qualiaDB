@@ -3549,7 +3549,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "clap",
@@ -3570,7 +3570,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-core-db"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "bytemuck",
  "criterion",
@@ -3603,7 +3603,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-desktop"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "qualia-core-db",
  "serde",

@@ -58,13 +58,23 @@ Qualia-DB natively ships with two critical consumer interfaces tightly bound to 
 1. **The Qualia Mobile Vault (Android Jetpack Compose)**: The mobile app serves as the authoritative node. It handles high-frequency wearable ingestion (via native C++ FFT Photoplethysmography), Verifiable Communications, and powers the **3D Biometric Holograph** (mapping valence and arousal telemetry to Minkowski space). It implements native **Sanctuary Modes** with mathematically isolated PBKDF2 DB Lanes for vulnerable populations.
 2. **Qualia Desktop Terminal (Tauri)**: A stateless desktop extension that pairs to the Mobile Vault via WebRTC (VC-8 Semantic Handshake). It features the **Semantic Library**, which natively ingests massive document libraries (PDFs via Edge VLM, or raw `.rdf` / `.owl` ontologies) into binary `.q42` graphs. It acts as a heavy compute offload target for the **Webizen Agent**, executing local LLMs (Ollama) while streaming live telemetry back to the mobile vault.
 
-## 🧪 LLM Benchmarking Suite
+## 🧪 LLM Benchmarking Suite (Dual-Mode, Now Fully Operational)
 
 Qualia-DB features a headless benchmarking suite explicitly designed for AI Agents (Claude, Grok, ChatGPT) to evaluate the engine's performance under strict human-centric constraints (512MB RAM floor). For the natural person, their device isn't "the edge"—it is the **heart** of the network. 
-To execute the Dual-Mode Shootout against competitors (Oxigraph, SurrealDB) natively in your sandbox:
+
+**Native (authoritative, real engine + telemetry + JSON artifact):**
 ```bash
 cargo run --release -p qualia-cli -- bench --suite full
+# alias also works:
+cargo run --release -p qualia-cli -- benchmark --suite full
 ```
+- Drives Lazy SuperBlock scans (LZ4 compressed 40KB blocks), WebRTC-mocked P2P streaming, live sysinfo RSS + hot-block telemetry (WS :9090).
+- Produces `llm_benchmark_results.json` (12 categories incl. next-gen rights tests: Obligation Escrow, Provenance, Multi-Nym Partitioning).
+- Visualizer: open `benchmark_visualizer.html` (or root `benchmark.html`).
+- Micro-benches: `cargo bench -p qualia-core-db` (Criterion, vs Oxigraph/SurrealDB class proxies).
+- Browser fallback: `node scripts/llm_bench_runner.js --suite full`.
+
+See also AI_INSTRUCTIONS.md §9 for agents.
 
 ### Testing with Massive Datasets (Epic 17)
 

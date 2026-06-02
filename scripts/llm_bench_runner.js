@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 
 /**
- * QualiaDB Headless LLM Benchmark Runner
+ * QualiaDB Headless LLM Benchmark Runner (WASM/JS fallback)
  * 
  * This script allows LLM agents operating in terminal sandboxes to execute
  * the QualiaDB benchmarks without requiring a DOM or browser context.
  * 
- * Usage:
+ * PREFERRED (Native Rust, real engine + telemetry, canonical JSON):
+ *   cargo run --release -p qualia-cli -- bench --suite full
+ *   cargo run --release -p qualia-cli -- benchmark --suite full
+ *
+ * Fallback:
  *   node scripts/llm_bench_runner.js --suite full
  *   node scripts/llm_bench_runner.js --suite nym_partition
  */

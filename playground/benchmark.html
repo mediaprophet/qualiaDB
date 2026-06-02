@@ -21,6 +21,7 @@
         h1 { font-size: 2.2rem; font-weight: 600; letter-spacing: 2px; margin-bottom: 0.2rem;
              background: linear-gradient(90deg, var(--accent), var(--purple));
              -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .dual-note { font-size:0.78rem;color:#888;margin:-0.3rem 0 0.8rem 0;max-width:820px;line-height:1.35; }
         .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
                  padding: 1.5rem; margin-bottom: 1.5rem; backdrop-filter: blur(10px); }
         .panel h2 { margin-top: 0; font-size: 0.95rem; font-weight: 600; color: var(--accent);
@@ -89,6 +90,10 @@
 <div class="container">
     <a href="../index.html" style="font-size:0.82rem; color:#444; text-decoration:none;">← Back to Homepage</a>
     <h1 style="margin-top:1rem;">TRANSPARENT BENCHMARK HARNESS</h1>
+    <div class="dual-note">
+        Browser/WASM edition (honest: real Oxigraph WASM from CDN, full source visible). <strong>Native dual-mode (full engine, Lazy SuperBlocks + LZ4 + WebRTC telemetry, canonical LLM JSON):</strong><br>
+        <code style="background:#111;padding:1px 3px;border-radius:3px;">cargo run --release -p qualia-cli -- bench --suite full</code> (or <code>benchmark</code> alias). Pairs with <a href="../benchmark_visualizer.html" style="color:#67e8f9">../benchmark_visualizer.html</a> and the root <code>benchmark.html</code>.
+    </div>
     <p style="color:#555; margin-top:0; font-size:0.82rem; letter-spacing:1px;">
         live in-browser · real performance.now() · full source visible · oxigraph wasm attempted
     </p>

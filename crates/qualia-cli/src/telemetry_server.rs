@@ -18,7 +18,7 @@ pub struct HotBlock {
     pub source: String, // "local" or "remote"
 }
 
-pub async fn start_telemetry_server(mut rx: broadcast::Receiver<TelemetryPayload>) {
+pub async fn start_telemetry_server(rx: broadcast::Receiver<TelemetryPayload>) {
     let listener = TcpListener::bind("127.0.0.1:9090").await.expect("Failed to bind telemetry port");
     println!("📡 Telemetry WebSocket server running on ws://127.0.0.1:9090");
 
