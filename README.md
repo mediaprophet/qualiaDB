@@ -15,6 +15,14 @@ However, raw multi-modal data (audio, camera feeds) would immediately crash this
 2. **GPU Sieve (Geometric Pruning)**: Graph nodes are mapped into Minkowski space within continuous 128KB memory-mapped `QualiaSuperBlocks`. The GPU calculates bounding-hull collisions to retrieve data at sub-microsecond speeds.
 3. **The Prolog Sentinel (Logic Unification)**: Data filtering is not enough; human-centric databases must execute logic. Nested N3 implication rules are compiled into L1-cache bytecodes, guaranteeing $O(1)$ termination on highly cyclic social and legal graphs.
 
+### Fractal Sharding & Swarm AI Compute
+While Qualia-DB rigorously enforces the 512MB floor to guarantee universal access, it is capable of extreme horizontal scale on high-end hardware. Rather than bloating a single instance into a massive JVM heap, it employs **Fractal Sharding**.
+If installed on a powerhouse rig (e.g., 64GB RAM, 12GB+ GPU), the daemon detects the hardware surplus and dynamically spins up dozens of parallel, mathematically isolated 512MB worker cells:
+```bash
+qualia-cli daemon --workers 100 --compute-swarm
+```
+This Swarm Orchestration enables massive parallel execution, deep neural-network offloading, and background **Sleep-Cycle AI Compute** without ever compromising the pristine mechanical sympathy of the core architecture.
+
 ## ⚖️ The Rights Ontology & Semantic Adjudicator
 
 Qualia-DB natively encodes a **Rights Ontology** directly into the N3Logic Sentinel VM.
@@ -55,7 +63,7 @@ Qualia-DB natively ships with two critical consumer interfaces tightly bound to 
 Qualia-DB features a headless benchmarking suite explicitly designed for AI Agents (Claude, Grok, ChatGPT) to evaluate the engine's performance under strict human-centric constraints (512MB RAM floor). For the natural person, their device isn't "the edge"—it is the **heart** of the network. 
 To execute the Dual-Mode Shootout against competitors (Oxigraph, SurrealDB) natively in your sandbox:
 ```bash
-node scripts/llm_bench_runner.js
+cargo run --release -p qualia-cli -- bench --suite full
 ```
 
 ## 🌐 W3C Solid Interoperability Bridge
