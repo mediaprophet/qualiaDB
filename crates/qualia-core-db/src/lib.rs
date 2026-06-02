@@ -312,6 +312,7 @@ pub mod storage;
 pub mod telemetry;
 pub mod rpc;
 pub mod ilp_dispatcher;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod nym_adapter;
 
 pub mod llm_agent;

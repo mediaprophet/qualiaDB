@@ -1,12 +1,12 @@
 {
-  "version": "0.0.3-dev",
-  "notes": "Dual-Mode Benchmark harness fully operational (native `qualia-cli bench --suite full` / `benchmark` now works end-to-end; produces llm_benchmark_results.json + live WS telemetry for visualizer). SHACL-to-Sentinel compiler, 6 modality bridges, defeasible N3 + omnimodal logic, LZ4 high-density SuperBlocks (40KB), Lazy SuperBlock queries with WebRTC P2P streaming + sysinfo RSS. Rio multi-threaded RDF ingest, mmap/lazy for massive datasets. CLI surface complete (Webizen did:git, Solid export, swarm daemon, import/query/inspect). Comprehensive doc/site/playground/AI_INSTRUCTIONS refresh showcasing Epics 16-24. v0.0.3 core/desktop, 0.1.1 CLI.",
-  "pub_date": "2026-06-02T12:30:00Z",
+  "version": "0.0.3",
+  "notes": "v0.0.3 final. Real measurements now wired into native `qualia-cli bench --suite full` (no more fully static JSON for Qualia timings). Playground has inline SHACL compiler + 6-modality interactive demos. Full docs refresh. See RELEASE_NOTES_v0.0.3.md. Includes qualia-cli-0.0.3.exe , qualia-desktop_x64-setup.exe (and .msi), qualia-android-0.0.3.apk .",
+  "pub_date": "2026-06-02T12:00:00Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
-      "url": "https://github.com/mediaprophet/qualiaDB/releases",
-      "status": "coming-soon"
+      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-desktop_x64-setup.exe",
+      "status": "available"
     },
     "darwin-aarch64": {
       "signature": "",
@@ -25,7 +25,7 @@
     },
     "android": {
       "signature": "",
-      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-android-0.0.3-dev.apk",
+      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-android-0.0.3.apk",
       "min_sdk": 26,
       "status": "available"
     }

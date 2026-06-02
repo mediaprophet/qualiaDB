@@ -98,6 +98,7 @@ impl Q42Archive {
     }
     
     /// Fetches and decompresses a specific 128KB frame dynamically using the embedded Zstd dictionary.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn decompress_frame(&self, entry: &Q42JumpEntry, dict: &[u8]) -> io::Result<Vec<u8>> {
         let start = entry.physical_offset() as usize;
         let end = start + entry.frame_size as usize;

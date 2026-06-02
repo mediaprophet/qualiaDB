@@ -1,6 +1,6 @@
 {
   "name": "qualia-db-wasm",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Zero-Allocation Offline-First RDF-Star WebAssembly Engine",
   "main": "qualia_core_db.js",
   "types": "qualia_core_db.d.ts",
