@@ -2,6 +2,7 @@
 name = "qualia-core-db"
 version = "0.0.2"
 edition = "2021"
+authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
 [features]
 default = ["profile_target_1024"]

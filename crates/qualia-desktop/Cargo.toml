@@ -2,6 +2,7 @@
 name = "qualia-desktop"
 version = "0.0.2"
 edition = "2021"
+authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
 [build-dependencies]
 tauri-build = { version = "1.5", features = [] }
