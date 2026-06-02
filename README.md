@@ -44,11 +44,19 @@ We explicitly reject the infinite rent-seeking paradigm of the legacy web.
 - As Interledger Protocol (ILP) Web Monetization streams flow in, the Daemon tracks the balance.
 - Once the exact mathematical threshold is met, the **Threshold Shift License (TSL)** automatically fires, irreversibly shifting the asset from *Commercial Gating* to the *Permissive Commons*.
 
-## 📱 The Consumer Packaging
+## 📱 The Consumer Packaging (Qualia Native Vault)
 
-This backend ecosystem binds directly to two critical consumer interfaces:
-1. **[WellFair](https://github.com/mediaprophet/wellfair/) (The Primary Mobile Agent)**: An independent mobile application structured around pluralistic foundational needs (Maslow, Systems of Faith). It binds to the Qualia-DB daemon to provide Sanctuary Modes, Duress Decoys, and Nym Mixnet anonymous routing.
-2. **Cooperative Workspace**: A packaged desktop toolkit embedded in the ecosystem for managing collaborative `did:git` projects, visualizing DOAP stages, and organizing team Verifiable Credentials.
+Qualia-DB natively ships with two critical consumer interfaces tightly bound to the zero-copy SLG Arena:
+1. **The Qualia Mobile Vault (Android Jetpack Compose)**: The mobile app serves as the authoritative node. It handles high-frequency wearable ingestion (via native C++ FFT Photoplethysmography), Verifiable Communications, and powers the **3D Biometric Holograph** (mapping valence and arousal telemetry to Minkowski space). It implements native **Sanctuary Modes** with mathematically isolated PBKDF2 DB Lanes for vulnerable populations.
+2. **Qualia Desktop Terminal (Tauri)**: A stateless desktop extension that pairs to the Mobile Vault via WebRTC (VC-8 Semantic Handshake). It features the **Semantic Library**, which natively ingests massive document libraries (PDFs via Edge VLM, or raw `.rdf` / `.owl` ontologies) into binary `.q42` graphs. It acts as a heavy compute offload target for the **Webizen Agent**, executing local LLMs (Ollama) while streaming live telemetry back to the mobile vault.
+
+## 🧪 LLM Benchmarking Suite
+
+Qualia-DB features a headless benchmarking suite explicitly designed for AI Agents (Claude, Grok, ChatGPT) to evaluate the engine's performance under strict edge constraints (512MB RAM floor). 
+To execute the Dual-Mode Shootout against competitors (Oxigraph, SurrealDB) natively in your sandbox:
+```bash
+node scripts/llm_bench_runner.js
+```
 
 ## 🛠️ Build Instructions
 
@@ -59,6 +67,10 @@ cargo build --release
 # Compile WebWorker WASM Bridge
 cd crates/qualia-core-db
 wasm-pack build --target no-modules --out-dir ../qualia-client/pkg
+
+# Compile Desktop Terminal (Tauri)
+cd crates/qualia-desktop
+cargo build --release
 ```
 
 ---

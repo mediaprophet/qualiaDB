@@ -191,6 +191,37 @@ impl SentinelCompiler {
             SentinelOpcode::HaltIfFalse,
         ]
     }
+
+    /// Compiles a medical N3 constraint for Differential Diagnostics.
+    /// Example: IF Subject has symptom SNOMED:Fever => Yield Diagnosis Potential
+    pub fn compile_diagnostic_constraint() -> Vec<SentinelOpcode> {
+        vec![
+            SentinelOpcode::MatchPredicate(100), // e.g. "has_symptom"
+            SentinelOpcode::MatchObject(200), // e.g. "Fever"
+            SentinelOpcode::HaltIfFalse,
+            SentinelOpcode::BindRegister { vector_id: 0, register_index: 0 },
+            SentinelOpcode::BindRegister { vector_id: 3, register_index: 1 },
+            // Emits a Diagnosis Quin
+            SentinelOpcode::EmitQuin { subject_reg: 0, predicate: 300, object: 400, context_reg: 1 }, 
+        ]
+    }
+}
+
+/// The Informatics Subsystem (Differential Diagnostics)
+/// Executes N3Logic bytecode constraints over a subset of Quins (e.g., from a .q42 file)
+/// to derive deterministic inferences natively on the edge, replacing the legacy WebAssembly/Prolog engine.
+pub fn execute_differential_diagnostics(qualia_graph: &[QualiaQuin]) -> Vec<QualiaQuin> {
+    let mut inferences = Vec::new();
+    let mut vm = SentinelVM::new();
+    let diagnostic_rules = SentinelCompiler::compile_diagnostic_constraint();
+    vm.load_bytecode(&diagnostic_rules);
+
+    for quin in qualia_graph {
+        if let Some(inferred_quin) = vm.execute_implication(quin) {
+            inferences.push(inferred_quin);
+        }
+    }
+    inferences
 }
 
 #[cfg(test)]

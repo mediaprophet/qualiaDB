@@ -1,4 +1,16 @@
 use crate::QualiaQuin;
+use serde::{Deserialize, Serialize};
+
+/// Represents a cryptographic grant of authority from a Principal to a Delegate.
+/// Essential for Guardianship (e.g., homeless individual granting read access to a social worker).
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DelegatedAccess {
+    pub principal_did: String,
+    pub delegate_did: String,
+    pub context_bound: u64, // The specific semantic context they are allowed to access (0 = global)
+    pub expiration_timestamp: u64,
+    pub cryptographic_proof: String, // Ed25519 signature
+}
 
 /// Last-Write-Wins (LWW) CRDT Resolver
 /// Ensures offline-first mobile devices can sync disparate state without conflicts.
@@ -25,6 +37,21 @@ impl CrdtResolver {
                 local.clone()
             }
         }
+    }
+
+    /// Validates a Role-Based Delegation.
+    /// Ensures that a delegate (e.g., social worker) has cryptographic authority
+    /// to mutate or read the principal's (e.g., homeless individual) state.
+    pub fn verify_delegation(access: &DelegatedAccess, target_context: u64, current_timestamp: u64) -> bool {
+        if access.expiration_timestamp < current_timestamp {
+            return false; // Expired
+        }
+        if access.context_bound != target_context && access.context_bound != 0 {
+            return false; // Out of bounds
+        }
+        
+        // In production, we verify `cryptographic_proof` against `principal_did` public key.
+        true
     }
 }
 

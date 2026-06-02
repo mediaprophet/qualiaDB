@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
+import com.example.qualia.ingestion.EdgeExtractor
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
@@ -140,11 +141,12 @@ class PdfScanner(private val context: Context) {
         val bmp    = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 
         page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-
-        // TODO(ocr): Pass bmp to Tesseract / LLM vision when available.
-        // For now: return null to signal OCR is needed.
+        
+        // Pass the high-res bitmap to the Local VLM pipeline
+        val extractedText = EdgeExtractor.extractFromBitmap(bmp, "Extract all text and structure into CBOR-LD")
+        
         bmp.recycle()
-        return null
+        return extractedText
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────

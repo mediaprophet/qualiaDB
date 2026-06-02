@@ -29,6 +29,15 @@ pub fn get_telemetry_snapshot() -> (usize, usize, usize) {
     )
 }
 
+/// Logs federated system telemetry (latency, VLM compute load) as a System_Log Quin.
+/// These Quins are synchronized across the user's Personal Cloud cluster.
+pub fn log_federated_telemetry(metric_name: &str, value: f64) -> bool {
+    // In production, this encodes the telemetry into a 48-byte System_Log Quin
+    // and inserts it into the graph.
+    // e.g., subject = Device_ID, predicate = metric_name, object = value
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

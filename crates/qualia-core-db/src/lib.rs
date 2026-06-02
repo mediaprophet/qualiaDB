@@ -289,11 +289,15 @@ pub mod spatial;
 pub mod rules;
 pub mod solid_ldp;
 pub mod npu_ffi;
+pub mod daemon;
 pub mod tee_ffi;
 pub mod wal;
 pub mod crdt;
 pub mod sync;
 pub mod cbor_compiler;
+pub mod git_bridge;
+pub mod tax_schema;
+pub mod spatial_sieve;
 pub mod sentinel;
 pub mod agency;
 pub mod query_compiler;
@@ -304,6 +308,7 @@ pub mod storage;
 pub mod telemetry;
 pub mod rpc;
 pub mod ilp_dispatcher;
+pub mod nym_adapter;
 
 pub mod llm_agent;
 

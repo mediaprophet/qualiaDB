@@ -82,6 +82,23 @@ dependencies {
     // WorkManager (background meme indexing)
     implementation("androidx.work:work-runtime-ktx:2.10.1")
 
+    // Vico Charting (for PFM reporting)
+    implementation("com.patrykandpatrick.vico:compose:1.15.0")
+    implementation("com.patrykandpatrick.vico:compose-m3:1.15.0")
+    implementation("com.patrykandpatrick.vico:core:1.15.0")
+
+    // CameraX for ingestion
+    val camerax_version = "1.3.1"
+    implementation("androidx.camera:camera-camera2:${camerax_version}")
+    implementation("androidx.camera:camera-lifecycle:${camerax_version}")
+    implementation("androidx.camera:camera-view:${camerax_version}")
+
+    // ZXing for Barcode scanning (Wellfair integration)
+    implementation("com.google.zxing:core:3.5.3")
+
+    // ONNX Runtime for local VLM/LLM inference
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1")
+
     // Tooling
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

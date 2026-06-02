@@ -12,8 +12,9 @@ import com.example.qualia.llm.LlmViewModel
 import com.example.qualia.memes.MemeViewModel
 import com.example.qualia.ontology.OntologyViewModel
 import com.example.qualia.pdf.PdfViewModel
-import com.example.qualia.theme.QualiaTheme
+import com.example.qualia.ui.theme.QualiaTheme
 import com.example.qualia.update.UpdateChecker
+import com.example.qualia.llm.ModelTier
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -45,6 +46,13 @@ class MainActivity : ComponentActivity() {
                     "Update available: v${update.version} — tap to download",
                     Toast.LENGTH_LONG,
                 ).show()
+            }
+            
+            // Automatically queue VLM (Phi-3) download for Edge extraction capabilities
+            llmViewModel.selectTier(ModelTier.PHI3_MINI)
+            llmViewModel.checkDownloaded(this@MainActivity)
+            if (!ModelTier.PHI3_MINI.isDownloaded(this@MainActivity)) {
+                llmViewModel.download(this@MainActivity)
             }
         }
 

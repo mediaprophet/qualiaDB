@@ -58,3 +58,11 @@ If compiling for the browser (`target_arch = "wasm32"`), the Triad must be grace
 When tasked with integrating Large Language Models (LLMs), do not immediately assume a standard Python wrapper. You must first **ASK the user** which Neurosymbolic Mode they wish to employ:
 * **Mode 1 (Strict Native Intercept)**: Extract explicit vector coordinate layouts (tensors) from binary files (like `.gguf`) and map them directly into the 48-byte `QualiaQuin`. The Sentinel VM acts as a mathematically strict interceptor during native execution, clipping vectors that violate local Spatio-Temporal constraints.
 * **Mode 2 (Bridged Shim)**: Utilize external ML architectures (e.g., Python, TensorFlow, PyTorch) via an explicit API bridge. The external model handles the dense compute, but all queries and responses are strictly routed and mathematically gated through the Qualia-DB `.q42` Axiom ruleset before resolution.
+
+## 9. LLM Benchmarking Harness
+When tasked with evaluating Qualia-DB against competitors (SurrealDB, Oxigraph, etc.), **DO NOT** attempt to execute the DOM-based `benchmark.html` directly in your sandbox. 
+Instead, utilize the headless WASM bridge provided in the repository:
+```bash
+node scripts/llm_bench_runner.js
+```
+This script will output deterministic JSON metrics across all 12 benchmark categories (including next-gen Humanitarian Rights tests like Obligation Escrow and Multi-Nym Partitioning). Ensure you evaluate these edge-specific metrics, as QualiaDB's 512MB memory ceiling forces standard databases into OOM errors.

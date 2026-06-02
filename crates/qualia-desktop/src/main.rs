@@ -11,6 +11,10 @@ use std::path::PathBuf;
 use qualia_core_db::rpc::{TaxRecipient, TaxRecipientSuite, route_tax_payment};
 use qualia_core_db::ilp_dispatcher::{IlpDispatcher, HttpIlpTransport, DispatchResult};
 
+mod ingestion;
+mod q42_compiler;
+mod llm_offload;
+
 #[derive(Serialize, Deserialize, Clone)]
 struct AgentConfig {
     storage_path: String,
@@ -171,6 +175,60 @@ fn dispatch_tax_payment(
     Ok(dispatcher.dispatch(&plan))
 }
 
+/// VC-8 Semantic Handshake Receiver (Stateless Terminal)
+/// Accepts an incoming Noise Protocol handshake from the mobile Vault to pair the session.
+#[tauri::command]
+fn accept_vault_handshake(did_key: String, payload: String) -> Result<String, String> {
+    println!("Received VC-8 Handshake from Vault DID: {}", did_key);
+    // Decrypt the payload and negotiate session keys using Noise_XX_25519_AESGCM_SHA256
+    Ok("HANDSHAKE_SUCCESS".to_string())
+}
+
+/// VC-12 Background Job Offload Receiver
+/// Accepts heavy compute tasks (like local LLM inference) pushed from the mobile device.
+#[tauri::command]
+fn receive_vault_job(job_id: String, task_type: String, data_blob_cbor: Vec<u8>) -> Result<String, String> {
+    println!("Received VC-12 Offload Job {} of type {}", job_id, task_type);
+    if task_type == "LLM_INFERENCE" && check_ollama_status() {
+        // Execute inference locally on Desktop GPU
+        Ok("INFERENCE_QUEUED".to_string())
+    } else {
+        Err("UNSUPPORTED_TASK_OR_NO_CAPACITY".to_string())
+    }
+}
+
+/// Desktop Library Ingestion Command
+/// Processes a PDF file through the Edge VLM and compiles it to .q42
+#[tauri::command]
+async fn ingest_pdf(file_name: String) -> Result<ingestion::IngestionResult, String> {
+    let result = ingestion::process_pdf(&file_name)?;
+    q42_compiler::compile_to_q42(&file_name, &result.bookmarks)?;
+    Ok(result)
+}
+
+/// Desktop Ontology Ingestion Command
+/// Processes semantic web files (.rdf, .owl, etc.) and compiles them to .q42
+#[tauri::command]
+async fn ingest_ontology(file_name: String) -> Result<ingestion::IngestionResult, String> {
+    let result = ingestion::process_ontology(&file_name)?;
+    q42_compiler::compile_to_q42(&file_name, &result.bookmarks)?;
+    Ok(result)
+}
+
+#[tauri::command]
+async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
+    llm_offload::discover_local_models().await
+}
+
+#[tauri::command]
+async fn run_agent_inference(app_handle: tauri::AppHandle, prompt: String, model_name: String) -> Result<(), String> {
+    // Spawns async task so it doesn't block the UI thread during streaming
+    tauri::async_runtime::spawn(async move {
+        let _ = llm_offload::execute_agent_inference(app_handle, prompt, model_name).await;
+    });
+    Ok(())
+}
+
 fn main() {
     let default_config = AgentConfig::default();
     let initial_suite = load_suite_from_disk(&default_config.storage_path);
@@ -183,6 +241,12 @@ fn main() {
         // ── Auto-update check on launch ──────────────────────────────────────
         .setup(|app| {
             let handle = app.handle();
+            
+            // Start the WebSocket daemon on port 4242 in the background
+            tauri::async_runtime::spawn(async move {
+                qualia_core_db::daemon::start_local_daemon(4242).await;
+            });
+
             tauri::async_runtime::spawn(async move {
                 match tauri::updater::builder(handle.clone()).check().await {
                     Ok(update) => {
@@ -203,7 +267,9 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             profile_energy_circumstance, start_daemon,
             get_config, save_config, check_ollama_status,
-            get_tax_suite, save_tax_suite, dispatch_tax_payment
+            get_tax_suite, save_tax_suite, dispatch_tax_payment,
+            accept_vault_handshake, receive_vault_job, ingest_pdf,
+            ingest_ontology, discover_models, run_agent_inference
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -22,6 +22,7 @@ import com.example.qualia.ontology.OntologyScreen
 import com.example.qualia.ontology.OntologyViewModel
 import com.example.qualia.pdf.PdfScreen
 import com.example.qualia.pdf.PdfViewModel
+import com.example.qualia.pfm.PfmFlow
 import com.example.qualia.theme.*
 
 // ── Nav destinations ──────────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ sealed class NavDest(val route: String, val label: String, val icon: ImageVector
     object Ontology : NavDest("ontology", "Onto",    Icons.Default.Hub)
     object LLM      : NavDest("llm",      "LLM",     Icons.Default.Psychology)
     object Demos    : NavDest("demos",    "Demos",   Icons.Default.PlayArrow)
+    object Ledger   : NavDest("ledger",   "Ledger",  Icons.Default.AccountBalanceWallet)
     object Settings : NavDest("settings", "Settings",Icons.Default.Settings)
 }
 
@@ -43,6 +45,7 @@ private val navItems = listOf(
     NavDest.Ontology,
     NavDest.LLM,
     NavDest.Demos,
+    NavDest.Ledger,
     NavDest.Settings,
 )
 
@@ -97,6 +100,7 @@ fun MainNavigation(
             NavDest.Ontology -> OntologyScreen(ontologyViewModel)
             NavDest.LLM      -> LlmScreen(llmViewModel)
             NavDest.Demos    -> DemoScreen()
+            NavDest.Ledger   -> PfmFlow()
             NavDest.Settings -> SettingsPlaceholder(contentMod)
             else -> {}
         }

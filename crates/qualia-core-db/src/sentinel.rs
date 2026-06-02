@@ -1,4 +1,5 @@
 use crate::QualiaQuin;
+use crate::tax_schema::TaxRuleSchema;
 
 /// A fast, non-cryptographic bitwise hash to lookup sub-goals in the SLG Arena
 /// without wasting CPU cycles on cryptographic overhead.
@@ -77,6 +78,7 @@ pub enum SlgOpcode {
     Unify,
     Call,
     Return,
+    ApplyTaxSchema,
     Halt,
 }
 
@@ -130,6 +132,15 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                     metadata: 1,
                     parity: 0,
                 });
+            },
+            SlgOpcode::ApplyTaxSchema => {
+                // In a full implementation, we'd pull the active Jurisdiction Profile
+                // and amount from the VM frame. For now, we mock the evaluation.
+                let schema = TaxRuleSchema::new_au_gst();
+                let liability = schema.evaluate("Income", 100.0);
+                
+                // We'd store this calculated liability back into the frame
+                // frame.tax_register = liability;
             },
             SlgOpcode::Halt => {
                 break;
