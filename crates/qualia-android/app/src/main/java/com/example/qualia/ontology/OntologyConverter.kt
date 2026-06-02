@@ -21,9 +21,33 @@ enum class OntologyFormat(val label: String, val extensions: List<String>) {
 data class ConversionResult(
     val quadCount:   Int,
     val outputPath:  String,
+    val outputSizeBytes: Long = 0L,
+    val inputSizeBytes:  Long = 0L,
     val format:      String,
     val durationMs:  Long,
     val warnings:    List<String> = emptyList(),
+)
+
+@Serializable
+data class CompareResult(
+    // File sizes
+    val originalBytes: Long,
+    val q42Bytes:      Long,
+    val compressionRatio: Float,          // originalBytes / q42Bytes
+    val savedPercent:     Float,          // 1 - (q42/orig)
+
+    // Semantic counts
+    val originalQuadCount: Int,
+    val q42QuadCount:      Int,
+    val matchedQuads:      Int,
+    val missingFromQ42:    List<String>,  // in original but not .q42
+    val extraInQ42:        List<String>,  // in .q42 but not original
+    val fidelityPercent:   Float,         // matchedQuads / originalQuadCount * 100
+
+    // Performance
+    val originalParseMs: Long,
+    val q42ParseMs:      Long,
+    val speedupFactor:   Float,           // originalParseMs / q42ParseMs
 )
 
 // ── Converter ─────────────────────────────────────────────────────────────────
@@ -56,8 +80,8 @@ class OntologyConverter(private val context: Context) {
     ): ConversionResult = withContext(Dispatchers.IO) {
 
         val t0    = System.currentTimeMillis()
-        val input = context.contentResolver.openInputStream(inputUri)!!
-            .bufferedReader().readText()
+        val inputBytes = context.contentResolver.openInputStream(inputUri)!!.readBytes()
+        val input = inputBytes.toString(Charsets.UTF_8)
 
         onProgress(0.1f)
 
@@ -75,12 +99,88 @@ class OntologyConverter(private val context: Context) {
         onProgress(1.0f)
 
         ConversionResult(
-            quadCount  = quads.size,
-            outputPath = outFile.absolutePath,
-            format     = outputFormat.name,
-            durationMs = System.currentTimeMillis() - t0,
+            quadCount      = quads.size,
+            outputPath     = outFile.absolutePath,
+            outputSizeBytes = outFile.length(),
+            inputSizeBytes  = inputBytes.size.toLong(),
+            format         = outputFormat.name,
+            durationMs     = System.currentTimeMillis() - t0,
         )
     }
+
+    /**
+     * Compare an original RDF file with its converted .q42/.nq output.
+     *
+     * Pass [originalUri] (the source RDF file) and [q42Path] (the output file
+     * written by [convert]). Returns a full [CompareResult] with:
+     * - File size comparison and compression ratio
+     * - Quad counts from both files
+     * - Round-trip fidelity: which quads are present in both / missing / extra
+     * - Parse time benchmark for both files
+     */
+    suspend fun compare(
+        originalUri:  Uri,
+        originalFormat: OntologyFormat,
+        q42Path:      String,
+    ): CompareResult = withContext(Dispatchers.IO) {
+
+        // ── Original file ─────────────────────────────────────────────────────
+        val origBytes     = context.contentResolver.openInputStream(originalUri)!!.readBytes()
+        val origSizeBytes = origBytes.size.toLong()
+
+        val t0Orig   = System.nanoTime()
+        val origText = origBytes.toString(Charsets.UTF_8)
+        val origQuads: Set<String> = when (originalFormat) {
+            OntologyFormat.N_TRIPLES -> parseNTriples(origText)
+            OntologyFormat.TURTLE    -> parseTurtle(origText)
+            OntologyFormat.JSON_LD   -> parseJsonLd(origText)
+            OntologyFormat.CSV       -> parseCsv(origText, CsvColumnMapping.auto(origText))
+        }.map { normalise(it) }.toHashSet()
+        val origParseMs = (System.nanoTime() - t0Orig) / 1_000_000L
+
+        // ── .q42 / .nq output file ────────────────────────────────────────────
+        val q42File       = File(q42Path)
+        val q42SizeBytes  = q42File.length()
+
+        val t0Q42   = System.nanoTime()
+        val q42Quads: Set<String> = q42File.readLines()
+            .filter { it.isNotBlank() }
+            .map { normalise(it) }
+            .toHashSet()
+        val q42ParseMs = (System.nanoTime() - t0Q42) / 1_000_000L
+
+        // ── Diff ──────────────────────────────────────────────────────────────
+        val missing   = (origQuads - q42Quads).take(20).toList()   // cap at 20 for UI
+        val extra     = (q42Quads  - origQuads).take(20).toList()
+        val matched   = origQuads.intersect(q42Quads).size
+        val fidelity  = if (origQuads.isEmpty()) 100f
+                        else matched.toFloat() / origQuads.size * 100f
+
+        // ── Ratios ────────────────────────────────────────────────────────────
+        val ratio   = if (q42SizeBytes > 0) origSizeBytes.toFloat() / q42SizeBytes else Float.MAX_VALUE
+        val saved   = if (origSizeBytes > 0) 1f - (q42SizeBytes.toFloat() / origSizeBytes) else 0f
+        val speedup = if (q42ParseMs > 0) origParseMs.toFloat() / q42ParseMs else Float.MAX_VALUE
+
+        CompareResult(
+            originalBytes    = origSizeBytes,
+            q42Bytes         = q42SizeBytes,
+            compressionRatio = ratio,
+            savedPercent     = saved,
+            originalQuadCount = origQuads.size,
+            q42QuadCount      = q42Quads.size,
+            matchedQuads      = matched,
+            missingFromQ42    = missing,
+            extraInQ42        = extra,
+            fidelityPercent   = fidelity,
+            originalParseMs   = origParseMs,
+            q42ParseMs        = q42ParseMs,
+            speedupFactor     = speedup,
+        )
+    }
+
+    /** Normalise a quad line for comparison: trim whitespace, collapse spaces. */
+    private fun normalise(line: String): String =
+        line.trim().replace(Regex("\\s+"), " ")
 
     // ── Parsers ───────────────────────────────────────────────────────────────
 

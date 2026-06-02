@@ -36,7 +36,20 @@ class OntologyViewModel : ViewModel() {
     private val _state = MutableStateFlow<OntologyUiState>(OntologyUiState.Idle)
     val state: StateFlow<OntologyUiState> = _state
 
-    fun convert(context: android.content.Context, uri: Uri, format: OntologyFormat, outputFormat: OutputFormat) {
+    private val _compareResult = MutableStateFlow<CompareResult?>(null)
+    val compareResult: StateFlow<CompareResult?> = _compareResult
+
+    private val _comparing = MutableStateFlow(false)
+    val comparing: StateFlow<Boolean> = _comparing
+
+    // Keep hold of the last input URI + format for comparison
+    private var lastInputUri: android.net.Uri? = null
+    private var lastFormat: OntologyFormat = OntologyFormat.N_TRIPLES
+
+    fun convert(context: android.content.Context, uri: android.net.Uri, format: OntologyFormat, outputFormat: OutputFormat) {
+        lastInputUri = uri
+        lastFormat   = format
+        _compareResult.value = null
         viewModelScope.launch {
             _state.value = OntologyUiState.Converting(0f)
             val converter = OntologyConverter(context)
@@ -51,7 +64,26 @@ class OntologyViewModel : ViewModel() {
         }
     }
 
-    fun reset() { _state.value = OntologyUiState.Idle }
+    fun triggerCompare(context: android.content.Context) {
+        val uri    = lastInputUri ?: return
+        val result = (_state.value as? OntologyUiState.Done)?.result ?: return
+        viewModelScope.launch {
+            _comparing.value = true
+            _compareResult.value = null
+            runCatching {
+                _compareResult.value = OntologyConverter(context)
+                    .compare(uri, lastFormat, result.outputPath)
+            }.onFailure {
+                /* silently skip — comparison is non-critical */
+            }
+            _comparing.value = false
+        }
+    }
+
+    fun reset() {
+        _state.value         = OntologyUiState.Idle
+        _compareResult.value = null
+    }
 }
 
 sealed class OntologyUiState {
@@ -67,6 +99,8 @@ sealed class OntologyUiState {
 fun OntologyScreen(viewModel: OntologyViewModel) {
     val context  = LocalContext.current
     val state    by viewModel.state.collectAsState()
+    val cmpResult by viewModel.compareResult.collectAsState()
+    val comparing  by viewModel.comparing.collectAsState()
     var pickedUri   by remember { mutableStateOf<Uri?>(null) }
     var pickedName  by remember { mutableStateOf("") }
     var selectedFmt by remember { mutableStateOf(OntologyFormat.N_TRIPLES) }
@@ -174,7 +208,18 @@ fun OntologyScreen(viewModel: OntologyViewModel) {
         // State display
         when (val s = state) {
             is OntologyUiState.Converting -> ConvertingIndicator(s.progress)
-            is OntologyUiState.Done       -> ConversionResultCard(s.result)
+            is OntologyUiState.Done       -> {
+                ConversionResultCard(s.result, onCompare = { viewModel.triggerCompare(context) })
+                if (comparing) {
+                    LinearProgressIndicator(
+                        modifier   = Modifier.fillMaxWidth().height(3.dp),
+                        color      = NeonPurple,
+                        trackColor = BorderDim,
+                    )
+                    Text("Running comparison…", color = NeonPurple, fontSize = 12.sp)
+                }
+                cmpResult?.let { ComparePanel(it) }
+            }
             is OntologyUiState.Error      -> ErrorCard(s.message)
             else -> {}
         }
@@ -200,7 +245,7 @@ private fun ConvertingIndicator(progress: Float) {
 }
 
 @Composable
-private fun ConversionResultCard(result: ConversionResult) {
+private fun ConversionResultCard(result: ConversionResult, onCompare: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = NeonGreen.copy(0.08f)),
         shape  = RoundedCornerShape(10.dp),
@@ -216,26 +261,179 @@ private fun ConversionResultCard(result: ConversionResult) {
             ResultRow("Quads written",  result.quadCount.toString())
             ResultRow("Output format",  result.format)
             ResultRow("Duration",       "${result.durationMs} ms")
+            ResultRow("Output size",    formatBytes(result.outputSizeBytes))
+            if (result.inputSizeBytes > 0L) {
+                val ratio = if (result.outputSizeBytes > 0) result.inputSizeBytes.toFloat() / result.outputSizeBytes else 0f
+                ResultRow("vs. original",  "${formatBytes(result.inputSizeBytes)} → ${"%.1f".format(ratio)}× smaller")
+            }
             ResultRow("File",           result.outputPath.substringAfterLast("/"))
 
             if (result.warnings.isNotEmpty()) {
-                result.warnings.forEach { w ->
-                    Text("⚠ $w", color = NeonGold, fontSize = 11.sp)
-                }
+                result.warnings.forEach { w -> Text("⚠ $w", color = NeonGold, fontSize = 11.sp) }
             }
 
-            OutlinedButton(
-                onClick  = { /* TODO: Android ShareSheet */ },
-                colors   = ButtonDefaults.outlinedButtonColors(contentColor = NeonBlue),
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                shape    = RoundedCornerShape(8.dp),
-            ) {
-                Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Share / Export")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick  = { /* TODO: ShareSheet */ },
+                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = NeonBlue),
+                    modifier = Modifier.weight(1f),
+                    shape    = RoundedCornerShape(8.dp),
+                ) {
+                    Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Export")
+                }
+                Button(
+                    onClick  = onCompare,
+                    colors   = ButtonDefaults.buttonColors(containerColor = NeonPurple, contentColor = BgDeep),
+                    modifier = Modifier.weight(1f),
+                    shape    = RoundedCornerShape(8.dp),
+                ) {
+                    Icon(Icons.Default.CompareArrows, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Compare", fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
+}
+
+// ── Compare Panel ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun ComparePanel(r: CompareResult) {
+    var showDiff by remember { mutableStateOf(false) }
+
+    Card(
+        colors   = CardDefaults.cardColors(containerColor = NeonPurple.copy(0.06f)),
+        shape    = RoundedCornerShape(12.dp),
+        border   = BorderStroke(1.dp, NeonPurple.copy(0.4f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            // Header
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.CompareArrows, null, tint = NeonPurple, modifier = Modifier.size(20.dp))
+                Text("Comparison Report", color = NeonPurple, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+
+            // ── Size section ──────────────────────────────────────────────────
+            SectionLabel("FILE SIZE")
+            SizeBar("Original RDF", r.originalBytes, r.originalBytes, NeonRed)
+            SizeBar(".q42 output",  r.q42Bytes,      r.originalBytes, NeonBlue)
+            StatRow(
+                "Compression",
+                "${"%.1f".format(r.compressionRatio)}× smaller  ·  ${"%.0f".format(r.savedPercent * 100)}% saved",
+                NeonGreen,
+            )
+
+            HorizontalDivider(color = BorderDim)
+
+            // ── Fidelity section ──────────────────────────────────────────────
+            SectionLabel("SEMANTIC FIDELITY")
+            StatRow("Original quads",  r.originalQuadCount.toString(), TextPrimary)
+            StatRow(".q42 quads",       r.q42QuadCount.toString(),      TextPrimary)
+            StatRow("Matched",          "${r.matchedQuads} (${"%.1f".format(r.fidelityPercent)}%)",
+                if (r.fidelityPercent >= 99f) NeonGreen else NeonGold)
+            if (r.missingFromQ42.isNotEmpty())
+                StatRow("Missing from .q42", r.missingFromQ42.size.toString(), NeonRed)
+            if (r.extraInQ42.isNotEmpty())
+                StatRow("Extra in .q42", r.extraInQ42.size.toString(), NeonGold)
+
+            HorizontalDivider(color = BorderDim)
+
+            // ── Performance section ───────────────────────────────────────────
+            SectionLabel("PARSE TIME")
+            SizeBar("Original RDF", r.originalParseMs, r.originalParseMs.coerceAtLeast(1L), NeonRed)
+            SizeBar(".q42",         r.q42ParseMs,       r.originalParseMs.coerceAtLeast(1L), NeonBlue)
+            StatRow(
+                "Load speedup",
+                if (r.speedupFactor > 100f) ">100×" else "${"%.1f".format(r.speedupFactor)}×",
+                NeonGreen,
+            )
+
+            // ── Diff section (expandable) ─────────────────────────────────────
+            if (r.missingFromQ42.isNotEmpty() || r.extraInQ42.isNotEmpty()) {
+                HorizontalDivider(color = BorderDim)
+                TextButton(
+                    onClick = { showDiff = !showDiff },
+                    contentPadding = PaddingValues(0.dp),
+                ) {
+                    Text(
+                        if (showDiff) "▲ Hide diff" else "▼ Show quad diff (${r.missingFromQ42.size + r.extraInQ42.size} entries)",
+                        color = NeonPurple, fontSize = 12.sp,
+                    )
+                }
+                if (showDiff) {
+                    Column(
+                        Modifier
+                            .background(BgDeep, RoundedCornerShape(6.dp))
+                            .border(1.dp, BorderDim, RoundedCornerShape(6.dp))
+                            .padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        r.missingFromQ42.forEach { q ->
+                            Text("− ${q.take(90)}", color = NeonRed, fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace)
+                        }
+                        r.extraInQ42.forEach { q ->
+                            Text("+ ${q.take(90)}", color = NeonGold, fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(text, color = TextDim, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+        fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+}
+
+@Composable
+private fun StatRow(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = TextMuted, fontSize = 12.sp)
+        Text(value, color = color, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+            fontFamily = FontFamily.Monospace)
+    }
+}
+
+@Composable
+private fun SizeBar(
+    label: String,
+    value: Long,
+    max:   Long,
+    color: androidx.compose.ui.graphics.Color,
+) {
+    val ratio = if (max > 0) value.toFloat() / max else 0f
+    val animRatio by animateFloatAsState(ratio, tween(600, easing = FastOutSlowInEasing), label = label)
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, color = TextMuted, fontSize = 12.sp)
+            Text(if (label.contains("ms") || value < 2000) "${value} ms" else formatBytes(value),
+                color = color, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+        }
+        LinearProgressIndicator(
+            progress   = { animRatio },
+            modifier   = Modifier.fillMaxWidth().height(5.dp),
+            color      = color,
+            trackColor = BorderDim,
+        )
+    }
+}
+
+private fun formatBytes(bytes: Long): String = when {
+    bytes < 1024L           -> "$bytes B"
+    bytes < 1024L * 1024    -> "${"%.1f".format(bytes / 1024f)} KB"
+    else                    -> "${"%.2f".format(bytes / (1024f * 1024))} MB"
 }
 
 @Composable

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RDF ↔ .q42 Comparator — QualiaDB Playground</title>
+<meta name="description" content="Drag and drop your original RDF file and its .q42 output to compare size, semantic fidelity, and parse performance side-by-side.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  /* ── Page-specific overrides ─────────────────────────────────────── */
+  body { background: #050508; color: #e0e0f0; font-family: 'Inter', sans-serif; margin: 0; }
+
+  .hero { text-align:center; padding: 3rem 1rem 1.5rem; }
+  .hero h1 { font-size: clamp(1.6rem,4vw,2.8rem); font-weight:700;
+    background: linear-gradient(135deg,#a78bfa,#60a5fa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:0 0 .5rem; }
+  .hero p { color:#888; font-size:.95rem; max-width:560px; margin: 0 auto; }
+
+  /* Drop zones */
+  .drop-row { display:flex; gap:1rem; margin: 1.5rem auto; max-width:860px; padding: 0 1rem; }
+  .drop-zone {
+    flex:1; border: 2px dashed #333; border-radius:14px; padding: 2rem 1rem;
+    text-align:center; cursor:pointer; transition: border-color .2s, background .2s;
+    background: #0d0d1a; position:relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: #7c3aed; background: #1a0d2e; }
+  .drop-zone.loaded { border-color: #10b981; border-style: solid; }
+  .drop-zone .dz-icon { font-size:2.2rem; margin-bottom:.5rem; }
+  .drop-zone .dz-label { font-size:.8rem; color:#555; margin-top:.5rem; }
+  .drop-zone .dz-name { font-size:.85rem; color:#a78bfa; margin-top:.4rem; font-family:'JetBrains Mono',monospace; }
+  .drop-zone .dz-size { font-size:.75rem; color:#10b981; }
+  input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+
+  /* Format selector */
+  .fmt-row { display:flex; gap:.5rem; justify-content:center; margin:.5rem 0 1.5rem; flex-wrap:wrap; }
+  .fmt-btn {
+    padding:.3rem .9rem; border-radius:20px; border:1px solid #333; background:transparent;
+    color:#888; font-size:.78rem; cursor:pointer; transition: all .15s;
+  }
+  .fmt-btn.active { border-color:#7c3aed; background:#1a0d2e; color:#a78bfa; font-weight:600; }
+
+  /* Compare button */
+  #btnCompare {
+    display:block; margin: 0 auto 2rem; padding:.75rem 2.5rem;
+    background:linear-gradient(135deg,#7c3aed,#3b82f6); color:#fff; font-size:1rem; font-weight:700;
+    border:none; border-radius:10px; cursor:pointer; transition: opacity .2s, transform .1s;
+    font-family:'Inter',sans-serif; letter-spacing:.02em;
+  }
+  #btnCompare:disabled { opacity:.35; cursor:not-allowed; }
+  #btnCompare:not(:disabled):hover { opacity:.9; transform:translateY(-1px); }
+
+  /* Results */
+  #results { max-width:860px; margin:0 auto 4rem; padding: 0 1rem; display:none; }
+  .section-card {
+    background:#0d0d1a; border:1px solid #1e1e3a; border-radius:14px;
+    padding:1.2rem 1.4rem; margin-bottom:1rem;
+  }
+  .section-title {
+    font-size:.7rem; font-weight:700; letter-spacing:.12em; color:#555;
+    font-family:'JetBrains Mono',monospace; margin-bottom:1rem; text-transform:uppercase;
+  }
+
+  /* Stat rows */
+  .stat-row { display:flex; justify-content:space-between; align-items:center;
+    padding:.3rem 0; border-bottom:1px solid #111; }
+  .stat-row:last-child { border-bottom:none; }
+  .stat-label { font-size:.85rem; color:#888; }
+  .stat-value { font-size:.85rem; font-family:'JetBrains Mono',monospace; font-weight:600; }
+  .green  { color:#10b981; }  .red { color:#f87171; } .gold { color:#fbbf24; }
+  .blue   { color:#60a5fa; }  .purple { color:#a78bfa; }
+
+  /* Bar charts */
+  .bar-wrap { margin:.4rem 0 .8rem; }
+  .bar-label-row { display:flex; justify-content:space-between; font-size:.78rem; margin-bottom:.2rem; }
+  .bar-track { background:#111; border-radius:4px; height:6px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:4px; transition:width .6s cubic-bezier(.4,0,.2,1); }
+
+  /* Fidelity badge */
+  .fidelity-big {
+    font-size:3rem; font-weight:700; text-align:center; padding:1rem 0 .5rem;
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  /* Diff section */
+  #diffToggle { background:none; border:none; color:#a78bfa; font-size:.82rem; cursor:pointer;
+    padding:.3rem 0; text-decoration:underline; font-family:'Inter',sans-serif; }
+  #diffBox { display:none; background:#030308; border:1px solid #1e1e3a; border-radius:8px;
+    padding:.8rem; margin-top:.6rem; max-height:240px; overflow-y:auto; }
+  .diff-line { font-family:'JetBrains Mono',monospace; font-size:.72rem; padding:.1rem 0;
+    word-break:break-all; }
+  .diff-minus { color:#f87171; } .diff-plus { color:#fbbf24; }
+
+  /* Spinner */
+  .spinner { display:inline-block; width:16px; height:16px; border:2px solid #fff4;
+    border-top-color:#a78bfa; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<nav style="text-align:center;padding:1rem;border-bottom:1px solid #111;">
+  <a href="../index.html" style="color:#888;text-decoration:none;font-size:.85rem;">← qualiaDB home</a>
+  &nbsp;·&nbsp;
+  <a href="benchmark.html" style="color:#888;text-decoration:none;font-size:.85rem;">Benchmark</a>
+  &nbsp;·&nbsp;
+  <a href="index.html" style="color:#888;text-decoration:none;font-size:.85rem;">Playground</a>
+</nav>
+
+<div class="hero">
+  <h1>RDF ↔ .q42 Comparator</h1>
+  <p>Drop your original RDF file and its converted .q42 output. The comparator measures
+     compression ratio, semantic fidelity (quad-level diff), and parse-time speedup — all in-browser.</p>
+</div>
+
+<!-- Drop zones -->
+<div class="drop-row">
+  <div class="drop-zone" id="dzOriginal">
+    <input type="file" id="fileOriginal" accept=".nt,.ttl,.n3,.jsonld,.json,.csv,.nq">
+    <div class="dz-icon">📄</div>
+    <div style="font-weight:600;color:#ccc;">Original RDF file</div>
+    <div class="dz-label">.nt · .ttl · .n3 · .jsonld · .csv · .nq</div>
+    <div class="dz-name" id="origName"></div>
+    <div class="dz-size" id="origSize"></div>
+  </div>
+
+  <div style="display:flex;align-items:center;font-size:1.4rem;color:#444;flex-shrink:0;">↔</div>
+
+  <div class="drop-zone" id="dzQ42">
+    <input type="file" id="fileQ42" accept=".q42,.nq">
+    <div class="dz-icon">⚡</div>
+    <div style="font-weight:600;color:#ccc;">.q42 / .nq output</div>
+    <div class="dz-label">.q42 or .nq (exported from Ontology Converter)</div>
+    <div class="dz-name" id="q42Name"></div>
+    <div class="dz-size" id="q42Size"></div>
+  </div>
+</div>
+
+<!-- Format selector for the original file -->
+<div class="fmt-row" id="fmtRow">
+  <span style="color:#555;font-size:.82rem;align-self:center;">Original format:</span>
+  <button class="fmt-btn active" data-fmt="ntriples">N-Triples</button>
+  <button class="fmt-btn" data-fmt="turtle">Turtle</button>
+  <button class="fmt-btn" data-fmt="jsonld">JSON-LD</button>
+  <button class="fmt-btn" data-fmt="csv">CSV</button>
+  <button class="fmt-btn" data-fmt="nquads">N-Quads</button>
+</div>
+
+<button id="btnCompare" disabled>Compare files</button>
+
+<!-- Results -->
+<div id="results">
+
+  <!-- Size -->
+  <div class="section-card">
+    <div class="section-title">📦 File Size</div>
+    <div class="bar-wrap">
+      <div class="bar-label-row">
+        <span style="color:#f87171">Original RDF</span>
+        <span id="origSizeLabel" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#f87171"></span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barOrig" style="background:#ef4444;width:100%"></div></div>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-label-row">
+        <span style="color:#60a5fa">.q42 output</span>
+        <span id="q42SizeLabel" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#60a5fa"></span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barQ42" style="background:#3b82f6;width:0%"></div></div>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Compression ratio</span>
+      <span class="stat-value green" id="compressionRatio">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Space saved</span>
+      <span class="stat-value green" id="spaceSaved">—</span>
+    </div>
+  </div>
+
+  <!-- Fidelity -->
+  <div class="section-card">
+    <div class="section-title">🧬 Semantic Fidelity</div>
+    <div class="fidelity-big" id="fidelityBig">—</div>
+    <div class="stat-row">
+      <span class="stat-label">Original quads</span>
+      <span class="stat-value" id="origQuads">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">.q42 quads</span>
+      <span class="stat-value" id="q42Quads">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Matched</span>
+      <span class="stat-value green" id="matchedQuads">—</span>
+    </div>
+    <div class="stat-row" id="rowMissing" style="display:none">
+      <span class="stat-label">Missing from .q42</span>
+      <span class="stat-value red" id="missingCount">—</span>
+    </div>
+    <div class="stat-row" id="rowExtra" style="display:none">
+      <span class="stat-label">Extra in .q42</span>
+      <span class="stat-value gold" id="extraCount">—</span>
+    </div>
+  </div>
+
+  <!-- Parse performance -->
+  <div class="section-card">
+    <div class="section-title">⚡ Parse Performance</div>
+    <div class="bar-wrap">
+      <div class="bar-label-row">
+        <span style="color:#f87171">Original RDF parse</span>
+        <span id="origParseLabel" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#f87171"></span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barOrigParse" style="background:#ef4444;width:100%"></div></div>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-label-row">
+        <span style="color:#60a5fa">.q42 parse</span>
+        <span id="q42ParseLabel" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#60a5fa"></span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barQ42Parse" style="background:#3b82f6;width:0%"></div></div>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Load speedup</span>
+      <span class="stat-value green" id="speedup">—</span>
+    </div>
+    <p style="font-size:.72rem;color:#444;margin:.6rem 0 0">
+      ⓘ Parse time measured in-browser with <code>performance.now()</code>. JavaScript line-splitting
+      approximates the on-device WASM/JNI engine; actual speedup on hardware will be higher.
+    </p>
+  </div>
+
+  <!-- Diff -->
+  <div class="section-card" id="diffCard" style="display:none">
+    <div class="section-title">🔍 Quad Diff</div>
+    <button id="diffToggle">▼ Show diff</button>
+    <div id="diffBox"></div>
+    <p style="font-size:.72rem;color:#444;margin:.5rem 0 0">
+      − lines: quads in original but absent from .q42 &nbsp;·&nbsp;
+      + lines: quads in .q42 not present in original (capped at 20 each)
+    </p>
+  </div>
+
+  <!-- Export -->
+  <div style="text-align:center;margin-top:1.5rem">
+    <button id="btnExport"
+      style="background:#1a0d2e;border:1px solid #7c3aed;color:#a78bfa;padding:.55rem 1.5rem;
+             border-radius:8px;cursor:pointer;font-size:.85rem;font-family:'Inter',sans-serif;">
+      ⬇ Export comparison JSON
+    </button>
+  </div>
+</div><!-- /results -->
+
+<script>
+'use strict';
+// ── State ───────────────────────────────────────────────────────────────────
+let origFile = null, q42File = null, selectedFmt = 'ntriples';
+let lastReport = null;
+
+// ── Drop zone wiring ────────────────────────────────────────────────────────
+function setupDrop(dzId, inputId, nameId, sizeId, onLoad) {
+  const dz    = document.getElementById(dzId);
+  const input = document.getElementById(inputId);
+  const nameEl = document.getElementById(nameId);
+  const sizeEl = document.getElementById(sizeId);
+
+  const load = file => {
+    nameEl.textContent = file.name;
+    sizeEl.textContent = formatBytes(file.size);
+    dz.classList.add('loaded');
+    onLoad(file);
+    checkReady();
+  };
+
+  input.addEventListener('change', e => { if (e.target.files[0]) load(e.target.files[0]); });
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', ()  => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0]; if (f) load(f);
+  });
+}
+
+setupDrop('dzOriginal', 'fileOriginal', 'origName', 'origSize', f => { origFile = f; });
+setupDrop('dzQ42',      'fileQ42',      'q42Name',  'q42Size',  f => { q42File  = f; });
+
+function checkReady() {
+  document.getElementById('btnCompare').disabled = !(origFile && q42File);
+}
+
+// ── Format buttons ──────────────────────────────────────────────────────────
+document.querySelectorAll('.fmt-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedFmt = btn.dataset.fmt;
+  });
+});
+
+// ── Core comparison ─────────────────────────────────────────────────────────
+
+/** Parse RDF text to a Set of normalised quad strings. */
+function parseToQuads(text, fmt) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const quads = new Set();
+
+  if (fmt === 'ntriples' || fmt === 'nquads') {
+    for (const l of lines) {
+      if (!l.startsWith('#')) quads.add(l.replace(/\s+/g, ' '));
+    }
+  } else if (fmt === 'turtle') {
+    const prefixes = {};
+    for (const l of lines) {
+      const pm = l.match(/@?prefix\s+(\w*):\s*<([^>]+)>/i);
+      if (pm) { prefixes[pm[1]] = pm[2]; continue; }
+      if (l.startsWith('#')) continue;
+      let expanded = l.replace(/(\w+):(\w+)/g, (_, p, local) =>
+        prefixes[p] ? `<${prefixes[p]}${local}>` : `${p}:${local}`
+      );
+      quads.add(expanded.replace(/\s+/g, ' '));
+    }
+  } else if (fmt === 'jsonld') {
+    const idMatches   = [...text.matchAll(/"@id"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
+    const typeMatches = [...text.matchAll(/"@type"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
+    for (let i = 0; i < Math.min(idMatches.length, typeMatches.length); i++) {
+      quads.add(`<${idMatches[i]}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <${typeMatches[i]}> <urn:qualia:default> .`);
+    }
+  } else if (fmt === 'csv') {
+    const rows = lines;
+    if (rows.length < 2) return quads;
+    const headers = rows[0].split(',').map(h => h.trim().replace(/^"|"$/g,'').toLowerCase());
+    const si = headers.findIndex(h => ['subject','s','entity','id','uri'].includes(h));
+    const pi = headers.findIndex(h => ['predicate','p','property','relation','type'].includes(h));
+    const oi = headers.findIndex(h => ['object','o','value','target','label'].includes(h));
+    for (let r = 1; r < rows.length; r++) {
+      const cols = rows[r].split(',').map(c => c.trim().replace(/^"|"$/g,''));
+      const s = cols[si > -1 ? si : 0] || ''; const p = cols[pi > -1 ? pi : 1] || ''; const o = cols[oi > -1 ? oi : 2] || '';
+      const sf = s.startsWith('http') ? `<${s}>` : `"${s}"`;
+      const pf = p.startsWith('http') ? `<${p}>` : `<urn:qualia:${p}>`;
+      const of_ = o.startsWith('http') ? `<${o}>` : `"${o}"`;
+      quads.add(`${sf} ${pf} ${of_} <urn:qualia:default> .`);
+    }
+  }
+  return quads;
+}
+
+async function readText(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsText(file);
+  });
+}
+
+// ── Compare ─────────────────────────────────────────────────────────────────
+document.getElementById('btnCompare').addEventListener('click', async () => {
+  const btn = document.getElementById('btnCompare');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Comparing…';
+
+  const [origText, q42Text] = await Promise.all([readText(origFile), readText(q42File)]);
+
+  // Size
+  const origBytes = origFile.size;
+  const q42Bytes  = q42File.size;
+  const ratio     = origBytes / (q42Bytes || 1);
+  const saved     = 1 - (q42Bytes / (origBytes || 1));
+
+  // Parse + timing
+  const t0Orig  = performance.now();
+  const origSet = parseToQuads(origText, selectedFmt);
+  const tOrig   = performance.now() - t0Orig;
+
+  const t0Q42   = performance.now();
+  const q42Set  = parseToQuads(q42Text, 'nquads');   // .q42 is always N-Quads line format
+  const tQ42    = performance.now() - t0Q42;
+
+  // Diff
+  const missing = [...origSet].filter(q => !q42Set.has(q)).slice(0, 20);
+  const extra   = [...q42Set].filter(q => !origSet.has(q)).slice(0, 20);
+  const matched = [...origSet].filter(q => q42Set.has(q)).length;
+  const fidelity = origSet.size > 0 ? (matched / origSet.size * 100) : 100;
+  const speedup  = tQ42 > 0 ? tOrig / tQ42 : Infinity;
+
+  lastReport = { origBytes, q42Bytes, ratio, saved, origQuads: origSet.size,
+    q42Quads: q42Set.size, matched, missing, extra, fidelity,
+    origParseMs: tOrig, q42ParseMs: tQ42, speedup };
+
+  renderResults(lastReport);
+  btn.disabled = false;
+  btn.innerHTML = '↻ Re-compare';
+});
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function renderResults(r) {
+  document.getElementById('results').style.display = 'block';
+
+  // Size
+  document.getElementById('origSizeLabel').textContent = formatBytes(r.origBytes);
+  document.getElementById('q42SizeLabel').textContent  = formatBytes(r.q42Bytes);
+  document.getElementById('barQ42').style.width        = `${Math.min(100, r.q42Bytes / r.origBytes * 100).toFixed(1)}%`;
+  document.getElementById('compressionRatio').textContent = `${r.ratio.toFixed(1)}×`;
+  document.getElementById('spaceSaved').textContent       = `${(r.saved * 100).toFixed(0)}%`;
+
+  // Fidelity
+  const fc = document.getElementById('fidelityBig');
+  fc.textContent = `${r.fidelity.toFixed(1)}%`;
+  fc.style.color = r.fidelity >= 99 ? '#10b981' : r.fidelity >= 90 ? '#fbbf24' : '#f87171';
+
+  document.getElementById('origQuads').textContent   = r.origQuads.toLocaleString();
+  document.getElementById('q42Quads').textContent    = r.q42Quads.toLocaleString();
+  document.getElementById('matchedQuads').textContent = r.matched.toLocaleString();
+
+  const rowM = document.getElementById('rowMissing');
+  const rowE = document.getElementById('rowExtra');
+  if (r.missing.length) { rowM.style.display='flex'; document.getElementById('missingCount').textContent = r.missing.length + (r.missing.length===20?'+':''); }
+  if (r.extra.length)   { rowE.style.display='flex'; document.getElementById('extraCount').textContent   = r.extra.length   + (r.extra.length  ===20?'+':''); }
+
+  // Parse perf
+  document.getElementById('origParseLabel').textContent = `${r.origParseMs.toFixed(1)} ms`;
+  document.getElementById('q42ParseLabel').textContent  = `${r.q42ParseMs.toFixed(2)} ms`;
+  const maxMs = Math.max(r.origParseMs, 0.01);
+  document.getElementById('barQ42Parse').style.width = `${Math.min(100, r.q42ParseMs / maxMs * 100).toFixed(1)}%`;
+  document.getElementById('speedup').textContent = r.speedup > 200 ? '>200×' : `${r.speedup.toFixed(1)}×`;
+
+  // Diff
+  if (r.missing.length || r.extra.length) {
+    document.getElementById('diffCard').style.display = 'block';
+    const box = document.getElementById('diffBox');
+    box.innerHTML = [
+      ...r.missing.map(q => `<div class="diff-line diff-minus">− ${escHtml(q.slice(0,120))}</div>`),
+      ...r.extra.map(q   => `<div class="diff-line diff-plus">+ ${escHtml(q.slice(0,120))}</div>`),
+    ].join('');
+    document.getElementById('diffToggle').addEventListener('click', () => {
+      const open = box.style.display === 'block';
+      box.style.display = open ? 'none' : 'block';
+      document.getElementById('diffToggle').textContent = open ? '▼ Show diff' : '▲ Hide diff';
+    });
+  }
+
+  document.getElementById('results').scrollIntoView({ behavior:'smooth' });
+}
+
+// ── Export ───────────────────────────────────────────────────────────────────
+document.getElementById('btnExport').addEventListener('click', () => {
+  if (!lastReport) return;
+  const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type:'application/json' });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: `qualia-compare-${Date.now()}.json`,
+  });
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function formatBytes(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1024*1024) return `${(b/1024).toFixed(1)} KB`;
+  return `${(b/(1024*1024)).toFixed(2)} MB`;
+}
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
