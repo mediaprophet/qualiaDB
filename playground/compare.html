@@ -117,10 +117,10 @@
 <!-- Drop zones -->
 <div class="drop-row">
   <div class="drop-zone" id="dzOriginal">
-    <input type="file" id="fileOriginal" accept=".nt,.ttl,.n3,.jsonld,.json,.csv,.nq">
+    <input type="file" id="fileOriginal" accept=".nt,.ttl,.n3,.jsonld,.json,.csv,.nq,.rdf,.owl">
     <div class="dz-icon">📄</div>
     <div style="font-weight:600;color:#ccc;">Original RDF file</div>
-    <div class="dz-label">.nt · .ttl · .n3 · .jsonld · .csv · .nq</div>
+    <div class="dz-label">.nt · .ttl · .n3 · .jsonld · .csv · .nq · .rdf · .owl</div>
     <div class="dz-name" id="origName"></div>
     <div class="dz-size" id="origSize"></div>
   </div>
@@ -145,6 +145,8 @@
   <button class="fmt-btn" data-fmt="jsonld">JSON-LD</button>
   <button class="fmt-btn" data-fmt="csv">CSV</button>
   <button class="fmt-btn" data-fmt="nquads">N-Quads</button>
+  <button class="fmt-btn" data-fmt="rdfxml">RDF/XML</button>
+  <button class="fmt-btn" data-fmt="owl">OWL</button>
 </div>
 
 <button id="btnCompare" disabled>Compare files</button>
@@ -341,6 +343,22 @@ function parseToQuads(text, fmt) {
       const pf = p.startsWith('http') ? `<${p}>` : `<urn:qualia:${p}>`;
       const of_ = o.startsWith('http') ? `<${o}>` : `"${o}"`;
       quads.add(`${sf} ${pf} ${of_} <urn:qualia:default> .`);
+    }
+  } else if (fmt === 'rdfxml' || fmt === 'owl') {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, 'text/xml');
+    const elements = doc.querySelectorAll('*');
+    for (const el of elements) {
+      if (el.children.length === 0) continue; // Skip leaf nodes in this simple pass
+      const about = el.getAttribute('rdf:about') || el.getAttribute('rdf:ID');
+      if (!about) continue;
+      const subj = about.startsWith('http') ? `<${about}>` : `<urn:qualia:${about}>`;
+      for (const child of el.children) {
+        const pred = `<urn:qualia:${child.tagName}>`;
+        const res = child.getAttribute('rdf:resource');
+        const obj = res ? `<${res}>` : `"${child.textContent.trim()}"`;
+        quads.add(`${subj} ${pred} ${obj} <urn:qualia:default> .`);
+      }
     }
   }
   return quads;
