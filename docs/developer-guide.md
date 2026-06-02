@@ -59,7 +59,7 @@ When analyzing Qualia-DB against the historical computing landscape, it breaks f
 - **The Qualia-DB Leap:** We don't map generic semantic tokens; we map the *exact* procedural vector matrices (tensors) of the LLM into our 48-byte Quins. The Sentinel VM then acts as a mathematically strict interceptor. 
   - A user defines a Spatio-Temporal Qualia Context (e.g., `Context: year=1920` or `location=australia`).
   - As the opaque LLM executes its inference locally, the Sentinel VM monitors the active procedural tensor blocks.
-  - If a mapped vector coordinate is triggered, and a local Spatio-Temporal `.q42` Axiom exists, the Sentinel VM mathematically clips and overrides the active vector matrix in real-time. This forces the Connectionist LLM to instantly obey the local Symbolic AI bounds, effectively correcting hallucinations mid-procedural step.
+  - If a mapped vector coordinate is triggered, and a local Spatio-Temporal `.q42` Axiom exists, the Sentinel VM mathematically clips and overrides the active vector space in real-time. This forces the Connectionist LLM to instantly obey the local Symbolic AI bounds, effectively correcting hallucinations mid-procedural step.
 
 ## Instructing Your Local AI Coding Agents
 

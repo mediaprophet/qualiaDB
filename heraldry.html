@@ -8,7 +8,7 @@
     <style>
         :root {
             --bg-dark: #0a0a0f;
-            --matrix-green: #00ff66;
+            --neon-green: #00ff66;
             --accent-blue: #00e5ff;
             --text-light: #e0e0e0;
             --glass-bg: rgba(10, 10, 15, 0.7);
@@ -37,7 +37,7 @@
         }
 
         .header h1 {
-            color: var(--matrix-green);
+            color: var(--neon-green);
             text-shadow: 0 0 20px rgba(0, 255, 102, 0.4);
             font-size: 2.5rem;
         }
@@ -112,8 +112,8 @@
             left: 0;
             width: 100%;
             height: 4px;
-            background: var(--matrix-green);
-            box-shadow: 0 0 20px var(--matrix-green);
+            background: var(--neon-green);
+            box-shadow: 0 0 20px var(--neon-green);
             opacity: 0;
             z-index: 3;
             animation: scan 2s ease-in-out infinite alternate;
@@ -127,8 +127,8 @@
 
         .btn {
             background: transparent;
-            border: 1px solid var(--matrix-green);
-            color: var(--matrix-green);
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
             padding: 10px 20px;
             font-family: 'Orbitron', sans-serif;
             font-size: 0.9rem;
@@ -165,7 +165,7 @@
             border: 1px solid #333;
         }
 
-        .log-success { color: var(--matrix-green); }
+        .log-success { color: var(--neon-green); }
         .log-warn { color: #ff9b44; }
         .log-info { color: var(--accent-blue); }
 
@@ -199,14 +199,14 @@
             position: absolute;
             top: -50px; left: 150px;
             width: 2px; height: 200px;
-            background: var(--matrix-green);
+            background: var(--neon-green);
         }
 
     </style>
 </head>
 <body>
 
-    <a href="index.html" class="return-link">← RETURN TO MATRIX</a>
+    <a href="index.html" class="return-link">← RETURN TO HOMEPAGE</a>
 
     <div class="header">
         <h1>Spatio-Temporal Semantic Engine</h1>
@@ -310,7 +310,7 @@
             await sleep(1000);
             
             hullText.innerText = "Calculating Minkowski Intersection...";
-            hullText.style.color = "var(--matrix-green)";
+            hullText.style.color = "var(--neon-green)";
             
             log("Mapping parameters to Lorentz Hyperboloid geometry...", "log-info");
             hyperboloid.style.opacity = '1';

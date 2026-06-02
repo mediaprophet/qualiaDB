@@ -27,7 +27,7 @@ As the analysis of these inferences develops over time, the identity is never st
 
 The Address Book is not a simple contact list; it is the cryptographic foundation of the local subjective reality. 
 
-By adding a peer's Decentralized Identifier (DID) to the local directory, the user is mathematically authorizing the Sentinel VM to include that peer's objective inferences in the evaluation of the user's social graph. If a peer is removed, their Quins are severed from the resolution matrix.
+By adding a peer's Decentralized Identifier (DID) to the local directory, the user is mathematically authorizing the Sentinel VM to include that peer's objective inferences in the evaluation of the user's social graph. If a peer is removed, their Quins are severed from the resolution graph.
 
 ---
 
@@ -50,7 +50,7 @@ When a decentralized app requests to read or write data:
 
 ### 3.3 Serverless Sync via WebTorrent (Layer 1 Transport)
 Because Qualia-DB stores its entire memory state as a strictly bounded, flat binary `.q42` file, the Webizen Protocol officially designates **WebTorrent** as a native Layer-1 Transport Protocol. 
-Instead of relying on centralized servers for graph replication, the Webizen Browser Extension utilizes WebRTC to natively seed the subjective graph to the DHT swarm. The Native Local Daemon simultaneously runs a WebTorrent instance to leech and synchronize CRDT deltas offline.
+Instead of relying on centralized servers for graph replication, the Webizen Browser Extension utilizes WebRTC to natively seed the subjective graph to the DHT community. The Native Local Daemon simultaneously runs a WebTorrent instance to leech and synchronize CRDT deltas offline.
 
 ---
 
@@ -70,17 +70,17 @@ WebTorrent and IPFS P2P operations can severely deplete bandwidth on mobile or m
 - **Unmetered**: Full P2P seeding to the Permissive Commons.
 Additionally, the Permissive Commons Lightning RPC tracks bytes seeded and matches it against the Compute Bounty, ensuring users are economically compensated for providing network bandwidth.
 
-### 4.3 Decentralized AI Compute & Energy Opportunism (The Sleep-Cycle Swarm)
+### 4.3 Decentralized AI Compute & Energy Opportunism (The Sleep-Cycle Assembly)
 The Webizen Protocol utilizes a **Hybrid `.q42` Ledger** approach to Decentralized ML/AI. 
 - The `.q42` graph contains the Permissive Commons **Compute Bounties** (the economic and legal rules), accompanied by a WebTorrent Magnet URI pointing to a standard dense ML model (e.g., `.gguf`).
-- When a user's device goes to sleep, if their **Energy Circumstance** allows (e.g., connected to grid power, or off-grid solar batteries are at 100% capacity), the Daemon spins up a **Sleep-Cycle Swarm**. It downloads the model, runs the inference utilizing Fractal GPU Sharding, and submits the cryptographic proof-of-work back to the ledger to earn Lightning micropayments.
+- When a user's device goes to sleep, if their **Energy Circumstance** allows (e.g., connected to grid power, or off-grid solar batteries are at 100% capacity), the Daemon spins up a **Sleep-Cycle Assembly**. It downloads the model, runs the inference utilizing Fractal GPU Sharding, and submits the cryptographic proof-of-work back to the ledger to earn Lightning micropayments.
 
 ### 4.4 Neurosymbolic LLM Override (Axiomatic Spatio-Temporal Intercept)
 When executing Large Language Models from the Permissive Commons, Webizens are not subjected to the black-box hallucinations or generic vector biases of connectionist AI. 
 The protocol enforces a **Neurosymbolic Intercept**:
 - The exact procedural vector matrices of the LLM are mapped into 48-byte `.q42` Quins.
 - Local Webizens define strict **Spatio-Temporal Qualia Contexts** (e.g., `time=1920`, `location=australia`).
-- As the opaque LLM executes natively on the device, the Sentinel VM actively monitors the procedural matrix. If an execution triggers a vector that violates a local Symbolic Axiom (e.g., "thongs" meaning underwear vs. footwear in Australia), the Sentinel VM mathematically clips and overrides the active tensor in real-time. This forces the LLM to instantly obey the human-defined, localized boundaries of the Permissive Commons.
+- As the opaque LLM executes natively on the device, the Sentinel VM actively monitors the procedural path. If an execution triggers a vector that violates a local Symbolic Axiom (e.g., "thongs" meaning underwear vs. footwear in Australia), the Sentinel VM mathematically clips and overrides the active tensor in real-time. This forces the LLM to instantly obey the human-defined, localized boundaries of the Permissive Commons.
 
 ### 4.5 Open Directives (Pending Integration)
 The following topics require precise definition based on historical Permissive Commons models:

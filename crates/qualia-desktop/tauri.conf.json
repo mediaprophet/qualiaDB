@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "Qualia Desktop",
-    "version": "0.1.0"
+    "version": "0.0.1-dev"
   },
   "tauri": {
     "allowlist": {
@@ -34,9 +34,6 @@
       "identifier": "com.qualia.desktop",
       "icon": [],
       "resources": []
-    },
-    "systemTray": {
-      "iconAsTemplate": true
     },
     "windows": [
       {

@@ -8,7 +8,7 @@
     <style>
         :root {
             --bg-dark: #050505;
-            --matrix-green: #00ff66;
+            --neon-green: #00ff66;
             --alert-red: #ff3333;
             --alert-yellow: #ffea00;
             --accent-blue: #00e5ff;
@@ -107,7 +107,7 @@
         .packet-row:hover { background: rgba(255,255,255,0.05); }
 
         .proto-tcp { color: #999; }
-        .proto-tls { color: var(--matrix-green); }
+        .proto-tls { color: var(--neon-green); }
         .proto-spyware { color: var(--alert-red); font-weight: bold; }
         .proto-unknown { color: var(--alert-yellow); font-weight: bold; }
 
@@ -187,7 +187,7 @@
 </head>
 <body>
 
-    <a href="index.html" class="return-link">← RETURN TO MATRIX</a>
+    <a href="index.html" class="return-link">← RETURN TO HOMEPAGE</a>
 
     <div class="header">
         <h1>libpcap Network Sentinel</h1>
@@ -249,7 +249,7 @@
                     <h2>Sentinel Audit & Rule Generation</h2>
                 </div>
                 <div class="sentinel-log" id="sentinelLog">
-                    <div class="log-entry" style="color: var(--matrix-green);">> Sentinel Daemon active. Hooked to libpcap.</div>
+                    <div class="log-entry" style="color: var(--neon-green);">> Sentinel Daemon active. Hooked to libpcap.</div>
                     <div class="log-entry" style="color: #666;">> Monitoring egress traffic for Rights Ontology violations...</div>
                 </div>
             </div>
@@ -328,7 +328,7 @@
             setTimeout(() => {
                 nodes.forEach(n => n.classList.remove('active'));
                 graphText.innerText = "Audit Complete. Rule permanently enforced.";
-                graphText.style.color = "var(--matrix-green)";
+                graphText.style.color = "var(--neon-green)";
             }, 2000);
         }
     </script>

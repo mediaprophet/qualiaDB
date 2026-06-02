@@ -101,9 +101,9 @@
             <div class="card">
                 <h3>Decentralized Ontology Sync</h3>
                 <p style="font-size:0.85rem; color:#888; margin-bottom: 1rem;">
-                    Sync the `human_medical_ontology.q42` ledger from the WebTorrent DHT Swarm to your local Daemon cache.
+                    Sync the `human_medical_ontology.q42` ledger from the WebTorrent DHT Community to your local Daemon cache.
                 </p>
-                <button id="btn-sync" class="btn" onclick="syncOntology()">Sync from Swarm</button>
+                <button id="btn-sync" class="btn" onclick="syncOntology()">Sync from Community</button>
             </div>
 
             <div class="card">
@@ -125,7 +125,7 @@
 
         <div class="canvas-container" id="canvas-container">
             <div id="hud">
-                <b>3D Spatial Binding Matrix</b><br>
+                <b>3D Spatial Binding Architecture</b><br>
                 Model: Human Anatomy (Abstracted)<br>
                 Render: WebGL<br>
                 Intercept Status: <span id="intercept-status" style="color:var(--neon-blue);">Idle</span>
@@ -181,7 +181,7 @@
             } catch (e) {
                 log(`Sync Failed: ${e.message}`);
                 btnSync.disabled = false;
-                btnSync.innerText = "Sync from Swarm";
+                btnSync.innerText = "Sync from Community";
             }
         }
 
