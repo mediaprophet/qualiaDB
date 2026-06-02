@@ -148,6 +148,25 @@ git push origin v0.0.4
 Then download the platform-specific artifacts from the GitHub Release page and place them in `releases/` if desired for local distribution.
 
 Local cross-compilation of the full Tauri desktop apps from Windows is not straightforward (Tauri bundlers are platform-specific); use the CI for macOS/Linux desktop releases. For the pure-Rust `qualia-cli` you can add targets with `rustup target add ...` and build with `--target`, but some native dependencies (ring, etc.) require a matching cross-compiler toolchain on the host.
+
+### Cross-compiling the CLI locally (advanced)
+On Windows, to build `qualia-cli` for Linux we have prepared a helper using the LLVM tools already on this machine (in `scripts/cross-linux/`):
+
+Run:
+```powershell
+cd scripts/cross-linux
+.\build-linux.ps1
+```
+
+The binary will be in `target/x86_64-unknown-linux-gnu/release/qualia-cli`.
+
+See `scripts/cross-linux/README.md` for how it works (renames clang to the name the build system expects for the linux-gnu target).
+
+For aarch64 similar (would need the aarch64 linux clang in the dir).
+
+For macOS targets from Windows, you will need a full osx cross setup + macOS SDK; it's usually easier to build natively on a Mac or let the CI do it.
+
+For full desktop apps, build on the target OS (or use the GitHub runner via tags).
 ```
 
 ### The `qualia-cli` Swiss Army Knife (v0.1.1)
