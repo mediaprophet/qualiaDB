@@ -17,3 +17,6 @@ ed25519-dalek = { version = "2.1", features = ["rand_core"] }
 rand_core = { version = "0.6", features = ["std"] }
 tokio-tungstenite = { version = "0.20", features = ["rustls-tls-native-roots"] }
 chrono = "0.4.44"
+tungstenite = "0.29.0"
+sysinfo = "0.39.3"
+futures-util = "0.3.32"

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QualiaDB - Block-Level Telemetry Visualizer</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; padding: 20px; }
+        h1 { color: #38bdf8; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .stat-value { font-size: 2em; font-weight: bold; color: #10b981; }
+        
+        #heatmap {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(20px, 1fr));
+            gap: 4px;
+            margin-top: 20px;
+        }
+        .block {
+            width: 20px; height: 20px; border-radius: 4px;
+            background: #334155; transition: background 0.3s;
+        }
+        .block.hot-local { background: #ef4444; } /* Red for local disk */
+        .block.hot-remote { background: #3b82f6; } /* Blue for WebRTC P2P */
+    </style>
+</head>
+<body>
+    <h1>QualiaDB Telemetry</h1>
+    <div class="dashboard">
+        <div class="card">
+            <h3>Peak RSS (RAM)</h3>
+            <div class="stat-value" id="rss">0 MB</div>
+        </div>
+        <div class="card">
+            <h3>Total Blocks Loaded</h3>
+            <div class="stat-value" id="loaded-blocks">0</div>
+        </div>
+    </div>
+    
+    <h3>Working-Set Heatmap (SuperBlocks)</h3>
+    <div id="heatmap"></div>
+
+    <script>
+        const heatmap = document.getElementById('heatmap');
+        // Render 500 block placeholders
+        for (let i = 0; i < 500; i++) {
+            const b = document.createElement('div');
+            b.className = 'block';
+            b.id = 'block-' + i;
+            heatmap.appendChild(b);
+        }
+
+        // Connect to CLI Telemetry WebSocket
+        const ws = new WebSocket('ws://127.0.0.1:9090');
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'telemetry') {
+                document.getElementById('rss').innerText = data.rss_mb + ' MB';
+                document.getElementById('loaded-blocks').innerText = data.blocks_loaded;
+                
+                // Update Heatmap
+                data.hot_blocks.forEach(block => {
+                    const el = document.getElementById('block-' + (block.id % 500));
+                    if (el) {
+                        el.className = 'block ' + (block.source === 'local' ? 'hot-local' : 'hot-remote');
+                        // Fade back to cold after a delay
+                        setTimeout(() => { el.className = 'block'; }, 1000);
+                    }
+                });
+            }
+        };
+        ws.onopen = () => console.log('Connected to QualiaDB Sentinel.');
+        ws.onerror = (e) => console.log('WebSocket Error:', e);
+    </script>
+</body>
+</html>
