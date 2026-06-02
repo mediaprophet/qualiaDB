@@ -30,7 +30,7 @@ jobs:
         
       - name: Build Qualia Desktop (Tauri)
         run: |
-          cargo install tauri-cli --version "^2.0.0" || true
+          cargo install tauri-cli --version "^1.5" || true
           cargo tauri build
           
       - name: Upload Release Artifacts
@@ -63,7 +63,7 @@ jobs:
           targets: aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, x86_64-linux-android
           
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0.0" || true
+        run: cargo install tauri-cli --version "^1.5" || true
         
       - name: Build Android APK (Tauri)
         run: |

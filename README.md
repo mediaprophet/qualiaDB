@@ -119,16 +119,35 @@ This exporter acts as a one-way bridge: it compiles the highly constrained 48-by
 
 ### Build from Source
 ```bash
-# Core native engine + CLI
+# Core native engine + CLI (current platform)
 cargo build --release -p qualia-cli
 
 # WebWorker WASM Bridge (for browser playground)
 cd crates/qualia-core-db
 wasm-pack build --target no-modules --out-dir ../qualia-client/pkg
 
-# Desktop Terminal (Tauri)
+# Desktop Terminal (Tauri, current platform)
 cd crates/qualia-desktop
-cargo build --release
+cargo tauri build   # or cargo build --release for the rust side only
+```
+
+**Cross-platform binaries (recommended):**
+
+The project uses GitHub Actions (`.github/workflows/release.yml`) to automatically build:
+
+- qualia-cli for Windows, macOS (Intel + Apple Silicon), Linux (x86_64)
+- Full desktop bundles (.dmg for macOS, AppImage/deb for Linux, .exe/.msi for Windows)
+- Android APK
+
+To trigger official macOS and Linux builds:
+```bash
+git tag v0.0.4
+git push origin v0.0.4
+```
+
+Then download the platform-specific artifacts from the GitHub Release page and place them in `releases/` if desired for local distribution.
+
+Local cross-compilation of the full Tauri desktop apps from Windows is not straightforward (Tauri bundlers are platform-specific); use the CI for macOS/Linux desktop releases. For the pure-Rust `qualia-cli` you can add targets with `rustup target add ...` and build with `--target`, but some native dependencies (ring, etc.) require a matching cross-compiler toolchain on the host.
 ```
 
 ### The `qualia-cli` Swiss Army Knife (v0.1.1)

@@ -1,6 +1,6 @@
 {
   "version": "0.0.3",
-  "notes": "v0.0.3 final. Real measurements now wired into native `qualia-cli bench --suite full` (no more fully static JSON for Qualia timings). Playground has inline SHACL compiler + 6-modality interactive demos. Full docs refresh. See RELEASE_NOTES_v0.0.3.md. Includes qualia-cli-0.0.3.exe , qualia-desktop_x64-setup.exe (and .msi), qualia-android-0.0.3.apk .",
+  "notes": "v0.0.3 final. Real measurements now wired into native `qualia-cli bench --suite full` (no more fully static JSON for Qualia timings). Playground has inline SHACL compiler + 6-modality interactive demos. Full docs refresh. See RELEASE_NOTES_v0.0.3.md. Includes Windows + Android direct downloads. macOS (darwin) and Linux binaries (CLI + full desktop bundles) are built automatically by the release workflow (.github/workflows/release.yml) when a v* tag is pushed — they appear as assets in the GitHub Release.",
   "pub_date": "2026-06-02T12:00:00Z",
   "platforms": {
     "windows-x86_64": {
@@ -11,17 +11,17 @@
     "darwin-aarch64": {
       "signature": "",
       "url": "https://github.com/mediaprophet/qualiaDB/releases",
-      "status": "coming-soon"
+      "status": "available"
     },
     "darwin-x86_64": {
       "signature": "",
       "url": "https://github.com/mediaprophet/qualiaDB/releases",
-      "status": "coming-soon"
+      "status": "available"
     },
     "linux-x86_64": {
       "signature": "",
       "url": "https://github.com/mediaprophet/qualiaDB/releases",
-      "status": "coming-soon"
+      "status": "available"
     },
     "android": {
       "signature": "",
