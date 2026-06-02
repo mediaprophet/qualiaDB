@@ -40,6 +40,8 @@ pub struct Rule {
 pub enum N3Event {
     StaticTriple(Triple),
     LogicRule(Rule),
+    AspBlock(String),
+    DiffuseBlock(String),
 }
 
 /// A highly constrained, native MVP N3 parser.
@@ -59,8 +61,52 @@ impl<R: BufRead> N3Parser<R> {
         F: FnMut(N3Event) -> Result<(), Error>,
     {
         let mut buffer = String::new();
+        let mut in_asp_block = false;
+        let mut asp_content = String::new();
+        let mut in_diffuse_block = false;
+        let mut diffuse_content = String::new();
+
         while self.reader.read_line(&mut buffer)? > 0 {
             let line = buffer.trim();
+            
+            if in_asp_block {
+                if line == "}" {
+                    in_asp_block = false;
+                    callback(N3Event::AspBlock(asp_content.clone()))?;
+                    asp_content.clear();
+                } else {
+                    asp_content.push_str(line);
+                    asp_content.push('\n');
+                }
+                buffer.clear();
+                continue;
+            }
+            
+            if in_diffuse_block {
+                if line == "}" {
+                    in_diffuse_block = false;
+                    callback(N3Event::DiffuseBlock(diffuse_content.clone()))?;
+                    diffuse_content.clear();
+                } else {
+                    diffuse_content.push_str(line);
+                    diffuse_content.push('\n');
+                }
+                buffer.clear();
+                continue;
+            }
+
+            if line.starts_with("#asp {") {
+                in_asp_block = true;
+                buffer.clear();
+                continue;
+            }
+            
+            if line.starts_with("qualia:diffuse {") {
+                in_diffuse_block = true;
+                buffer.clear();
+                continue;
+            }
+
             if line.is_empty() || line.starts_with('#') || line.starts_with("@prefix") {
                 buffer.clear();
                 continue;

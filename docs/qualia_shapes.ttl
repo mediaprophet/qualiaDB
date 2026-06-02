@@ -1,0 +1,46 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix qualia: <https://qualia.id/ns/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------------------------------------------------------
+# QualiaDB SHACL Ontology for Core Data Integrity & Rights
+# ---------------------------------------------------------
+
+# 1. Obligation Shape
+qualia:ObligationShape a sh:NodeShape ;
+    sh:targetClass qualia:Obligation ;
+    sh:property [
+        sh:path qualia:amount ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0 ;
+        sh:message "Obligation amount must be non-negative to prevent illegal escrow drainage." ;
+    ] ;
+    sh:property [
+        sh:path qualia:provenance ;
+        sh:minCount 1 ;
+        sh:node qualia:ProvenanceShape ;
+        sh:message "Obligation must have at least one cryptographic provenance link." ;
+    ] .
+
+# 2. Provenance Shape
+qualia:ProvenanceShape a sh:NodeShape ;
+    sh:targetClass qualia:ProvenanceCommit ;
+    sh:property [
+        sh:path qualia:antecedent ;
+        sh:minCount 1 ;
+        sh:message "Every commit must cryptographically link to a previous antecedent (no orphans)." ;
+    ] ;
+    sh:property [
+        sh:path qualia:authorNym ;
+        sh:nodeKind sh:IRI ;
+        sh:message "A valid author Nym IRI must be present for attribution." ;
+    ] .
+
+# 3. Cooperative Workspace Shape
+qualia:CooperativeWorkspaceShape a sh:NodeShape ;
+    sh:targetClass qualia:Workspace ;
+    sh:property [
+        sh:path qualia:hasMember ;
+        sh:minCount 1 ;
+        sh:message "A cooperative workspace must have at least one member." ;
+    ] .

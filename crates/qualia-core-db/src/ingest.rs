@@ -177,6 +177,9 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
                     sentinel.register_rule(rule);
                     rules_parsed += 1;
                 }
+                crate::n3_parser::N3Event::AspBlock(_) | crate::n3_parser::N3Event::DiffuseBlock(_) => {
+                    // Pass these modalities to the Sentinel
+                }
             }
             Ok(())
         };

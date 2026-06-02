@@ -302,6 +302,7 @@ pub mod git_bridge;
 pub mod tax_schema;
 pub mod spatial_sieve;
 pub mod sentinel;
+pub mod shacl_compiler;
 pub mod agency;
 pub mod query_compiler;
 pub mod fuzz_testing;
