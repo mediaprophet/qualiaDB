@@ -1,6 +1,8 @@
 # Qualia-DB: The Human-Centric Semantic Ecosystem
 <div align="center">
-**Peace Infrastructure for the Natural Person**
+**Peace infrastructure for the natural person — running on your hardware, connected to the world on your terms.**
+
+See: [*The Untransferable Code*](https://www.youtube.com/watch?v=HJJs-Ve-Dhg) — the philosophical foundation of this work.
 
 Qualia-DB has evolved far beyond a bare-metal semantic graph database. It is a strictly constrained, mathematically verifiable **Ecosystem** designed to guarantee human agency, protect knowledge from proprietary enclosure, and dismantle infinite rent-seeking via native micro-economics.
 
