@@ -31,6 +31,7 @@ data class DemoCard(
 private val demos = listOf(
     DemoCard("⚡", "Benchmark",         "FNV HashMap vs BTreeMap\n20-30% faster lookups",     NeonBlue),
     DemoCard("🛡️", "Sentinel VM",      "N3Logic rule evaluation\nLive Prolog-style engine",   NeonPurple),
+    DemoCard("🧠", "Neurosymbolic",     "LLM embedding space ↔\nRDF symbolic ontology",        NeonCyan),
     DemoCard("💸", "Tax Router",        "12% ILP micropayment split\nCustom recipient suite",   NeonGold),
     DemoCard("🤖", "LLM Governance",   "Rule chain for inference\nFiduciary override enforced", NeonGreen),
     DemoCard("📡", "ILP Threshold",    "Connectivity cost calculator\nThreshold Shift Licence", NeonBlue),
@@ -145,6 +146,7 @@ private fun DemoDetailDialog(demo: DemoCard, onDismiss: () -> Unit) {
         text = {
             when (demo.title) {
                 "Benchmark"       -> BenchmarkDemo(demo.accentColor)
+                "Neurosymbolic"   -> NeurosymbolicScreen()
                 "Tax Router"      -> TaxRouterDemo(demo.accentColor)
                 "Sentinel VM"     -> SentinelDemo(demo.accentColor)
                 "ILP Threshold"   -> IlpThresholdDemo(demo.accentColor)

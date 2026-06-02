@@ -1,10 +1,13 @@
 package com.example.qualia.demos
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,12 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qualia.theme.*
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.*
 
 // ── Concept model ─────────────────────────────────────────────────────────────
@@ -70,12 +76,12 @@ private val CONCEPTS = listOf(
 )
 
 private val GOV_RULES = listOf(
-    "NO_TELEMETRY"       to "Blocks all input data egress",
-    "GROUNDED_OUTPUT"    to "All quads must cite provenance",
-    "CONSENT_REQUIRED"   to "Processing requires consent triple",
-    "MEMORY_BUDGET_512MB"to "Inference aborts above 512 MB",
-    "FIDUCIARY_SUPREMACY"to "Fiduciary overrides LLM outputs",
-    "RIGHTS_AS_PREDICATE"to "Rights ontology in named graph",
+    "NO_TELEMETRY"        to "Blocks all input data egress",
+    "GROUNDED_OUTPUT"     to "All quads must cite provenance",
+    "CONSENT_REQUIRED"    to "Processing requires consent triple",
+    "MEMORY_BUDGET_512MB" to "Inference aborts above 512 MB",
+    "FIDUCIARY_SUPREMACY" to "Fiduciary overrides LLM outputs",
+    "RIGHTS_AS_PREDICATE" to "Rights ontology in named graph",
 )
 
 private val PRESETS = listOf(
@@ -191,11 +197,7 @@ fun NeurosymbolicScreen() {
                     selected = false,
                     onClick  = {
                         inputText = preset
-                        scope.let {
-                            kotlinx.coroutines.GlobalScope.let { gs ->
-                                gs.kotlinx.coroutines.launch { runTranscompile(preset) }
-                            }
-                        }
+                        scope.launch { runTranscompile(preset) }
                     },
                     label    = { Text(preset.take(24) + "…", fontSize = 10.sp) },
                     colors   = FilterChipDefaults.filterChipColors(
@@ -226,11 +228,7 @@ fun NeurosymbolicScreen() {
 
         Button(
             onClick  = {
-                scope.let {
-                    kotlinx.coroutines.GlobalScope.let { gs ->
-                        gs.kotlinx.coroutines.launch { runTranscompile(inputText) }
-                    }
-                }
+                scope.launch { runTranscompile(inputText) }
             },
             enabled  = !running && inputText.isNotBlank(),
             colors   = ButtonDefaults.buttonColors(
