@@ -181,4 +181,4 @@ For any commercial licensing inquiries, custom enterprise integration, or consul
 ---
 *Built to guarantee first-class digital agency.*
 
-For the full list of new features in this release (SHACL compiler, Lazy SuperBlocks + WebRTC telemetry, native benchmark harness, modalities, LZ4, defeasible/omnimodal logic, etc.) see [RELEASE_NOTES_v0.0.3.md](RELEASE_NOTES_v0.0.3.md). The canonical reference for AI agents is [AI_INSTRUCTIONS.md](AI_INSTRUCTIONS.md).
+For the full list of new features in this release (SHACL compiler, Lazy SuperBlocks + WebRTC telemetry, native benchmark harness, modalities, LZ4, defeasible/omnimodal logic, etc.) see [RELEASE_NOTES_v0.0.3.md](RELEASE_NOTES_v0.0.3.md). The canonical reference for AI agents is [AI_INSTRUCTIONS.md](AI_INSTRUCTIONS.md). A glossary of terms is in [docs/glossary.md](docs/glossary.md).

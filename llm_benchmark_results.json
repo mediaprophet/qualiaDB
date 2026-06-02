@@ -88,6 +88,6 @@
       "surreal": "1850 ms (full load)"
     }
   },
-  "note": "Qualia values are real measured timings from this run (synthetic 10k dataset + engine calls). Competitor values are reference / historical for comparison under equivalent constraints.",
+  "note": "Qualia values are real measured timings from this run (synthetic 10k dataset + engine calls). Competitor values are fixed reference/historical numbers for comparison under equivalent constraints.",
   "timestamp": "2026-06-02T12:30:27.770690700+00:00"
 }

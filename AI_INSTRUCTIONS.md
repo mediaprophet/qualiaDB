@@ -138,6 +138,8 @@ qualia-cli query <ds.q42> <subject>
 The daemon also exposes the full JSON-RPC surface (including neurosymbolic LLM intercept hooks).
 
 ## 14. Other Runtime Notes
+
+See also the new [docs/glossary.md](docs/glossary.md) for definitions of Super-Quin, Sentinel, Modalities, Lazy SuperBlock, did:git, Permissive Commons, etc.
 - **Fractal Sharding / Swarm**: `qualia-cli daemon --workers N --compute-swarm` spins isolated 512MB cells on big iron for parallel LLM offload / deep inference without violating per-cell floors.
 - **Desktop Sentinel (libpcap)**: network_sentinel.html + qualia-desktop shows active telemetry blocking + P2P reputation DAGs.
 - **Wellfair / Mobile / Desktop**: See crates/qualia-android, qualia-desktop (Tauri), and the wellfair/ Python+web monorepo for the consumer "Native Vault" (holograph, verifiable comms, Sanctuary Lanes, etc.).
