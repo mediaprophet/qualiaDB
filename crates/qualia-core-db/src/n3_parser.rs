@@ -24,12 +24,14 @@ pub enum RuleType {
     Strict,
     Defeasible,
     Defeater,
+    Linear,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Rule {
     pub id: Option<String>,
     pub rule_type: RuleType,
+    pub weight: Option<f32>,
     pub premise: Formula,
     pub conclusion: Formula,
 }
@@ -64,8 +66,8 @@ impl<R: BufRead> N3Parser<R> {
                 continue;
             }
 
-            // Heuristic for Rule: contains => or ~> or ^> and braces
-            if line.contains("=>") || line.contains("~>") || line.contains("^>") {
+            // Heuristic for Rule: contains => or ~> or ^> or -o and braces
+            if line.contains("=>") || line.contains("~>") || line.contains("^>") || line.contains("-o") {
                 if let Some(rule) = Self::parse_rule(line) {
                     callback(N3Event::LogicRule(rule))?;
                 }
@@ -83,11 +85,22 @@ impl<R: BufRead> N3Parser<R> {
     fn parse_rule(line: &str) -> Option<Rule> {
         let mut clean_line = line.trim();
         let mut id = None;
+        let mut weight = None;
 
         // Extract optional [rule_id]
         if clean_line.starts_with('[') {
             if let Some(end_idx) = clean_line.find(']') {
                 id = Some(clean_line[1..end_idx].to_string());
+                clean_line = clean_line[end_idx + 1..].trim();
+            }
+        }
+
+        // Extract optional (weight) e.g. (0.8)
+        if clean_line.starts_with('(') {
+            if let Some(end_idx) = clean_line.find(')') {
+                if let Ok(w) = clean_line[1..end_idx].parse::<f32>() {
+                    weight = Some(w);
+                }
                 clean_line = clean_line[end_idx + 1..].trim();
             }
         }
@@ -98,6 +111,8 @@ impl<R: BufRead> N3Parser<R> {
             ("~>", RuleType::Defeasible)
         } else if clean_line.contains("^>") {
             ("^>", RuleType::Defeater)
+        } else if clean_line.contains("-o") {
+            ("-o", RuleType::Linear)
         } else {
             return None;
         };
@@ -113,7 +128,7 @@ impl<R: BufRead> N3Parser<R> {
         let premise = Formula { triples: Self::parse_formula_triples(premise_str) };
         let conclusion = Formula { triples: Self::parse_formula_triples(conclusion_str) };
 
-        Some(Rule { id, rule_type, premise, conclusion })
+        Some(Rule { id, rule_type, weight, premise, conclusion })
     }
 
     fn parse_formula_triples(content: &str) -> Vec<Triple> {

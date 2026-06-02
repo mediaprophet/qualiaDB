@@ -1,4 +1,5 @@
 use crate::QualiaQuin;
+use crate::modalities::{dl, asp, probabilistic, linear};
 use crate::tax_schema::TaxRuleSchema;
 
 /// A fast, non-cryptographic bitwise hash to lookup sub-goals in the SLG Arena
@@ -87,6 +88,10 @@ impl SlgArena {
 pub enum SlgOpcode {
     CheckTable,
     CheckDefeaters,
+    CheckSubsumption,
+    BranchWorld,
+    CheckThreshold,
+    ConsumeFact,
     Unify,
     Call,
     Return,
@@ -124,6 +129,25 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 if has_defeater {
                     return None; // Rule is defeated, sub-goal fails
                 }
+            },
+            SlgOpcode::CheckSubsumption => {
+                let is_subsumed = dl::check_subsumption("sub", "super");
+                if !is_subsumed {
+                    return None;
+                }
+            },
+            SlgOpcode::BranchWorld => {
+                let _worlds = asp::generate_stable_models("current_rule");
+                // Fork execution frames...
+            },
+            SlgOpcode::CheckThreshold => {
+                let meets_threshold = probabilistic::evaluate_threshold(0.5, 0.8);
+                if !meets_threshold {
+                    return None;
+                }
+            },
+            SlgOpcode::ConsumeFact => {
+                linear::consume_resource("fact_123");
             },
             SlgOpcode::Unify => {
                 // Mock Unification: Binding logic variables

@@ -8,6 +8,7 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 pub mod query_engine;
 pub mod n3_parser;
 pub mod ingest;
+pub mod modalities;
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
 /// Fully optimized for zero-copy memory operations on post-2020 architectures.
