@@ -839,6 +839,87 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 start.elapsed().as_secs_f64() * 1000.0
             }
 
+            fn latency_stats_with_samples<F: FnMut() -> T, T>(warmup_samples: usize, measured_samples: usize, mut f: F) -> serde_json::Value {
+                for _ in 0..warmup_samples {
+                    black_box(f());
+                }
+
+                let mut samples_us = Vec::with_capacity(measured_samples);
+                for _ in 0..measured_samples {
+                    let start = std::time::Instant::now();
+                    black_box(f());
+                    samples_us.push(start.elapsed().as_secs_f64() * 1_000_000.0);
+                }
+
+                samples_us.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                let percentile = |pct: f64| -> f64 {
+                    let idx = ((samples_us.len() - 1) as f64 * pct).round() as usize;
+                    samples_us[idx]
+                };
+                let mean = samples_us.iter().sum::<f64>() / samples_us.len() as f64;
+
+                serde_json::json!({
+                    "unit": "microseconds",
+                    "samples": samples_us.len(),
+                    "warmup_samples": warmup_samples,
+                    "min": samples_us[0],
+                    "p50": percentile(0.50),
+                    "p95": percentile(0.95),
+                    "p99": percentile(0.99),
+                    "max": samples_us[samples_us.len() - 1],
+                    "mean": mean
+                })
+            }
+
+            fn latency_stats<F: FnMut() -> T, T>(f: F) -> serde_json::Value {
+                latency_stats_with_samples(20, 200, f)
+            }
+
+            fn timer_calibration() -> serde_json::Value {
+                let mut empty_samples_ns = Vec::with_capacity(1_000);
+                for _ in 0..1_000 {
+                    let start = std::time::Instant::now();
+                    black_box(());
+                    empty_samples_ns.push(start.elapsed().as_secs_f64() * 1_000_000_000.0);
+                }
+
+                let mut granularity_samples_ns = Vec::with_capacity(1_000);
+                for _ in 0..1_000 {
+                    let start = std::time::Instant::now();
+                    let mut end = std::time::Instant::now();
+                    while end == start {
+                        end = std::time::Instant::now();
+                    }
+                    granularity_samples_ns.push(end.duration_since(start).as_secs_f64() * 1_000_000_000.0);
+                }
+
+                fn summarize(mut samples: Vec<f64>) -> serde_json::Value {
+                    samples.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                    let percentile = |pct: f64| -> f64 {
+                        let idx = ((samples.len() - 1) as f64 * pct).round() as usize;
+                        samples[idx]
+                    };
+                    let mean = samples.iter().sum::<f64>() / samples.len() as f64;
+
+                    serde_json::json!({
+                        "unit": "nanoseconds",
+                        "samples": samples.len(),
+                        "min": samples[0],
+                        "p50": percentile(0.50),
+                        "p95": percentile(0.95),
+                        "p99": percentile(0.99),
+                        "max": samples[samples.len() - 1],
+                        "mean": mean
+                    })
+                }
+
+                serde_json::json!({
+                    "empty_benchmark_overhead": summarize(empty_samples_ns),
+                    "observed_timer_granularity": summarize(granularity_samples_ns),
+                    "interpretation": "Sub-microsecond operation timings should be read against this calibration; values near the observed timer granularity are useful mainly as flat-scaling signals, not precise latency claims."
+                })
+            }
+
             #[inline(never)]
             fn black_box<T>(val: T) -> T {
                 // Simple volatile-like barrier for harness (no criterion dep)
@@ -979,6 +1060,99 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 black_box(parts.len())
             });
 
+            let qualia_latency_stats = serde_json::json!({
+                "point": latency_stats(|| {
+                    black_box(synth_map.get(&target).map(|v| v.len()).unwrap_or(0))
+                }),
+                "twohop": latency_stats(|| {
+                    let hop1 = synth_map.get(&start).map(|v| v.as_slice()).unwrap_or(&[]);
+                    let mut count = 0usize;
+                    for &(_, o) in hop1 {
+                        if let Some(h2) = synth_map.get(&o) {
+                            count += h2.len();
+                        }
+                    }
+                    black_box(count)
+                }),
+                "filter": latency_stats(|| {
+                    let mut cnt = 0usize;
+                    for v in synth_map.values() {
+                        for &(p, _) in v {
+                            if p == target_p { cnt += 1; }
+                        }
+                    }
+                    black_box(cnt)
+                }),
+                "ingestion_10k_quins": latency_stats(|| {
+                    let mut quins: Vec<qualia_core_db::QualiaQuin> = Vec::with_capacity(10_000);
+                    for i in 0..10_000 {
+                        quins.push(qualia_core_db::QualiaQuin {
+                            subject: fnv1a(i as u64),
+                            predicate: fnv1a((i % 5) as u64),
+                            object: fnv1a((i * 13) as u64),
+                            context: 0,
+                            metadata: 0,
+                            parity: 0,
+                        });
+                    }
+                    black_box(quins.len())
+                }),
+                "sample_subject_count": subjects.len()
+            });
+
+            let mut rss_sys = sysinfo::System::new_all();
+            let rss_before_scaling_mb = telemetry_server::get_peak_rss(&mut rss_sys);
+            let mut peak_rss_during_scaling_mb = rss_before_scaling_mb;
+            let mut scaling = serde_json::Map::new();
+
+            for size in [10_000usize, 100_000usize, 1_000_000usize] {
+                let (scale_map, _scale_subjects) = build_synth(size);
+                let rss_after_materialize_mb = telemetry_server::get_peak_rss(&mut rss_sys);
+                if rss_after_materialize_mb > peak_rss_during_scaling_mb {
+                    peak_rss_during_scaling_mb = rss_after_materialize_mb;
+                }
+                let scale_target = fnv1a((size / 2) as u64);
+                let scale_predicate = fnv1a(0);
+                let scale_start = fnv1a(0);
+
+                let point_stats = latency_stats_with_samples(5, 50, || {
+                    black_box(scale_map.get(&scale_target).map(|v| v.len()).unwrap_or(0))
+                });
+                let twohop_stats = latency_stats_with_samples(5, 50, || {
+                    let hop1 = scale_map.get(&scale_start).map(|v| v.as_slice()).unwrap_or(&[]);
+                    let mut count = 0usize;
+                    for &(_, o) in hop1 {
+                        if let Some(h2) = scale_map.get(&o) {
+                            count += h2.len();
+                        }
+                    }
+                    black_box(count)
+                });
+                let filter_stats = latency_stats_with_samples(5, 50, || {
+                    let mut cnt = 0usize;
+                    for v in scale_map.values() {
+                        for &(p, _) in v {
+                            if p == scale_predicate { cnt += 1; }
+                        }
+                    }
+                    black_box(cnt)
+                });
+
+                scaling.insert(size.to_string(), serde_json::json!({
+                    "subjects": size,
+                    "materialized_entries": scale_map.len(),
+                    "rss_after_materialize_mb": rss_after_materialize_mb,
+                    "point": point_stats,
+                    "twohop": twohop_stats,
+                    "filter": filter_stats
+                }));
+                black_box(scale_map.len());
+            }
+
+            let rss_after_scaling_mb = telemetry_server::get_peak_rss(&mut rss_sys);
+            let qualia_scaling_stats = serde_json::Value::Object(scaling);
+            let timer_calibration = timer_calibration();
+
             let timestamp = chrono::Utc::now().to_rfc3339();
 
             // Format qualia values (real measured). Keep competitor references as before for the "shootout" narrative.
@@ -986,7 +1160,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "environment": "Native Rust CLI (LLM Sandbox)",
                 "memory_limit_enforced": "512MB (Qualia Floor)",
                 "timestamp": timestamp,
-                "note": "Qualia values are real measured timings from this run (synthetic 10k dataset + engine calls). Competitor values are reference / historical for comparison under equivalent constraints.",
+                "methodology": {
+                    "dataset": "Synthetic deterministic 10k subject graph unless wordnet.q42 or wordnet_compressed.q42 exists for lazy streaming metrics.",
+                    "qualia_measurement": "Qualia metrics are measured live in this process using Instant timers, std::hint::black_box barriers, and deterministic FNV-indexed synthetic data.",
+                    "latency_stats": "qualia_latency_stats reports 20 warmup iterations plus 200 measured samples per micro-benchmark, in microseconds.",
+                    "scaling_stats": "qualia_scaling_stats reports bounded synthetic scaling at 10k, 100k, and 1M subjects with 5 warmups plus 50 measured samples per operation.",
+                    "timer_calibration": "timer_calibration reports empty benchmark overhead and observed Instant granularity so sub-microsecond results can be interpreted against measurement noise.",
+                    "operation_classes": "point is an indexed hash lookup, twohop is two indexed adjacency lookups, and filter is a predicate scan across materialized synthetic adjacency values.",
+                    "single_run_metrics": "metrics.qualia preserves the legacy single-run millisecond strings for CLI/dashboard compatibility; sub-0.005ms timings may round to 0.00 ms there.",
+                    "wordnet_metrics": "WordNet compression and SHACL figures are reported as synthetic/reference highlights when a real WordNet .q42 file is not present."
+                },
+                "comparison_scope": {
+                    "qualia": "Measured live in this run.",
+                    "oxi": "Reference/historical value, not executed by this command.",
+                    "surreal": "Reference/historical value, not executed by this command.",
+                    "apples_to_apples": false
+                },
+                "note": "Qualia values are real measured timings from this run (synthetic 10k dataset + engine calls). Competitor values are reference / historical, so this is not a same-machine side-by-side database comparison.",
+                "resource_snapshot": {
+                    "rss_before_scaling_mb": rss_before_scaling_mb,
+                    "rss_after_scaling_mb": rss_after_scaling_mb,
+                    "peak_rss_during_scaling_mb": peak_rss_during_scaling_mb,
+                    "rss_note": "Current process RSS sampled via sysinfo before scaling, after each synthetic graph is materialized, and after the scaling section; this is an observed process RSS sample, not an allocator-level heap profile."
+                },
+                "operation_interpretation": {
+                    "point": "Flat scaling is expected: this benchmark measures an indexed lookup, not a disk-backed database query.",
+                    "twohop": "Flat scaling is expected: this benchmark measures two bounded indexed adjacency lookups, not a breadth-first graph traversal.",
+                    "filter": "Filter latency is expected to grow with dataset size because this benchmark scans predicate values across the synthetic graph.",
+                    "time_to_first_query": "The lazy SuperBlock metric is the architecture-oriented result: it times first answer without full dataset materialization when a .q42 dataset is available."
+                },
+                "qualia_latency_stats": qualia_latency_stats,
+                "qualia_scaling_stats": qualia_scaling_stats,
+                "timer_calibration": timer_calibration,
                 "metrics": {
                     "point": { "qualia": format!("{:.2} ms", qualia_point), "oxi": "0.4 ms", "surreal": "0.9 ms" },
                     "twohop": { "qualia": format!("{:.2} ms", qualia_twohop), "oxi": "1.5 ms", "surreal": "3.2 ms" },
