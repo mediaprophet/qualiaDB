@@ -13,7 +13,7 @@ pub mod modalities;
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
 /// Fully optimized for zero-copy memory operations on post-2020 architectures.
 #[repr(C, align(16))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Zeroize, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Zeroize, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct QualiaQuin {
     /// Subject identifier code reference index
     pub subject: u64,
@@ -316,6 +316,9 @@ pub mod ilp_dispatcher;
 pub mod nym_adapter;
 
 pub mod llm_agent;
+pub mod mini_parser;
+pub mod sentinel_bytecode;
+pub mod identifier;
 
 #[cfg(target_os = "android")]
 pub mod jni_bridge;

@@ -7,11 +7,16 @@ pub mod gpu_sieve {
     use wgpu::util::DeviceExt;
     use crate::QualiaQuin;
 
+    /// 64-bit filter mask split into two u32 words — matches the lo/hi layout in sieve.wgsl.
     #[repr(C)]
     #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-    pub struct FilterMask {
-        pub target_mask: u32,
+    pub struct FilterMask64 {
+        pub lo: u32,
+        pub hi: u32,
     }
+
+    /// ceil(850 / 32) = 27 u32 words cover all 850 Quins per block (108 bytes total).
+    const BITMASK_WORDS: usize = 27;
 
     pub struct SieveOrchestrator {
         device: wgpu::Device,
@@ -22,7 +27,10 @@ pub mod gpu_sieve {
     impl SieveOrchestrator {
         pub async fn new() -> Option<Self> {
             let instance = wgpu::Instance::default();
-            let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions::default()).await?;
+            let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
+                ..Default::default()
+            }).await?;
             let (device, queue) = adapter.request_device(&wgpu::DeviceDescriptor::default(), None).await.ok()?;
 
             let shader_src = include_str!("shaders/sieve.wgsl");
@@ -45,27 +53,32 @@ pub mod gpu_sieve {
             })
         }
 
-        /// Executes the PEXT filter across the GPU and returns an array of matched indices (1 or 0)
-        pub async fn execute_sieve(&self, quins: &[QualiaQuin], mask: u32) -> Option<Vec<u32>> {
-            let filter = FilterMask { target_mask: mask };
-            
-            // 1. Storage Buffer for Quins
+        /// Dispatches the GPU sieve over `quins`, returns matching Quin indices decoded from
+        /// a 27-u32 bitmask (108 bytes readback vs. N×4 bytes for the old per-flag approach).
+        /// The 64-bit `mask` is split lo/hi so the shader needs no shader-int64 capability.
+        pub async fn execute_sieve(&self, quins: &[QualiaQuin], mask: u64) -> Option<Vec<u32>> {
+            let filter = FilterMask64 {
+                lo: mask as u32,
+                hi: (mask >> 32) as u32,
+            };
+
+            // 1. Storage buffer: flat Quin array (12 × u32 per Quin = 48 bytes, bytemuck-safe)
             let quin_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Quin Buffer"),
                 contents: bytemuck::cast_slice(quins),
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-            // 2. Storage Buffer for Results
-            let result_size = (quins.len() * std::mem::size_of::<u32>()) as wgpu::BufferAddress;
+            // 2. Output bitmask: 27 u32s = 108 bytes (covers 850 Quins, zero-initialised by spec)
+            let result_size = (BITMASK_WORDS * std::mem::size_of::<u32>()) as wgpu::BufferAddress;
             let result_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Result Buffer"),
+                label: Some("Bitmask Buffer"),
                 size: result_size,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
                 mapped_at_creation: false,
             });
 
-            // 3. Uniform Buffer for the Filter Mask
+            // 3. Uniform: 64-bit mask as lo/hi u32 pair
             let filter_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Filter Buffer"),
                 contents: bytemuck::cast_slice(&[filter]),
@@ -116,10 +129,22 @@ pub mod gpu_sieve {
             
             if receiver.await.is_ok() {
                 let data = buffer_slice.get_mapped_range();
-                let result: Vec<u32> = bytemuck::cast_slice(&data).to_vec();
+                let bitmask: &[u32] = bytemuck::cast_slice(&data);
+
+                // Trailing-zero bit-scan: extract each set bit as a Quin index
+                let mut matching_indices: Vec<u32> = Vec::with_capacity(128);
+                for (bucket_idx, &bucket_val) in bitmask.iter().enumerate() {
+                    let mut val = bucket_val;
+                    while val != 0 {
+                        let bit_shift = val.trailing_zeros();
+                        matching_indices.push(bucket_idx as u32 * 32 + bit_shift);
+                        val &= val - 1; // clear lowest set bit
+                    }
+                }
+
                 drop(data);
                 staging_buffer.unmap();
-                return Some(result);
+                return Some(matching_indices);
             }
 
             None

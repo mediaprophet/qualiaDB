@@ -7,6 +7,8 @@ use warp::Filter;
 use serde::{Deserialize, Serialize};
 
 pub mod telemetry_server;
+pub mod ingest;
+pub mod compress;
 
 /// The Qualia-DB Block Inspector & Data Ingestion CLI
 #[derive(Parser)]
@@ -87,12 +89,38 @@ enum Commands {
         /// The output .q42 file
         output: PathBuf,
     },
+    /// Ingest N-Triples into a .q42 SuperBlock file + .q42.lex reverse-lexicon side-car.
+    /// Suitable for building browser-deployable datasets (e.g. WordNet for the GH Pages demo).
+    Ingest {
+        /// Input N-Triples file (.nt or .nt.gz pre-decompressed)
+        #[arg(long)]
+        input: PathBuf,
+        /// Output base path — writes <path>.q42 and <path>.q42.lex
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// Performs an instantaneous microsecond lookup on a massive .q42 binary via OS memory mapping
     Query {
         /// The target .q42 dataset binary file
         dataset: PathBuf,
         /// The u64 subject ID to query
         subject: u64,
+    },
+    /// Compress a .q42 SuperBlock file or .lex side-car into an LZ4 block stream
+    /// for browser delivery.  For .q42 input, SuperBlock headers are stripped so
+    /// the decompressed output is pure 48-byte Quin records — no header skipping
+    /// needed in the browser.  For any other input the raw bytes are compressed.
+    ///
+    /// Output naming convention:
+    ///   wordnet.q42      → wordnet.c.q42      (compressed raw Quins)
+    ///   wordnet.q42.lex  → wordnet.q42.lex.lz4 (compressed lex side-car)
+    Compress {
+        /// Input file (.q42 SuperBlock or .lex side-car)
+        #[arg(long)]
+        input: PathBuf,
+        /// Output path for the LZ4 block stream
+        #[arg(long)]
+        output: PathBuf,
     },
 }
 
@@ -294,6 +322,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
+        Commands::Ingest { input, output } => {
+            let ext = input.extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+            let is_rdf = matches!(ext.as_str(), "rdf" | "xml" | "owl");
+
+            // Ensure the output path ends in ".q42" so that lex_path()
+            // correctly derives "<base>.q42.lex" from it.
+            let q42_output = if output.extension().and_then(|e| e.to_str()) == Some("q42") {
+                output.clone()
+            } else {
+                output.with_extension("q42")
+            };
+
+            println!("============================================================");
+            if is_rdf {
+                println!("QualiaDB RDF/XML → .q42 Ingestor");
+            } else {
+                println!("QualiaDB N-Triples → .q42 Ingestor");
+            }
+            println!("  input  : {}", input.display());
+            println!("  output : {}", q42_output.display());
+            println!("         + {}.lex  (lexicon)", q42_output.display());
+            println!("         + {}.bidx (block index)", q42_output.display());
+            println!("============================================================");
+
+            let result = if is_rdf {
+                ingest::ingest_rdf_xml(input, &q42_output)
+            } else {
+                ingest::ingest_ntriples(input, &q42_output)
+            };
+
+            match result {
+                Ok(stats) => {
+                    println!("Done.");
+                    println!("  Triples ingested : {}", stats.triples_ingested);
+                    println!("  SuperBlocks      : {}", stats.blocks_written);
+                    println!("  Lexicon entries  : {}", stats.lex_entries);
+                    println!("  BIDX             : {} block ranges", stats.blocks_written);
+                    if stats.lines_skipped > 0 {
+                        println!("  Lines skipped    : {}", stats.lines_skipped);
+                    }
+                }
+                Err(e) => eprintln!("Ingest failed: {}", e),
+            }
+        }
         Commands::Import { input, output } => {
             println!("============================================================");
             println!("📥 QualiaDB Native RDF/XML Ingestion Pipeline");
@@ -327,6 +402,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 Err(e) => eprintln!("❌ Query Failed: {}", e),
+            }
+        }
+        Commands::Compress { input, output } => {
+            let ext = input.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+            let is_q42 = ext == "q42";
+
+            println!("============================================================");
+            println!("QualiaDB LZ4 Block-Stream Compressor");
+            println!("  input  : {}", input.display());
+            println!("  output : {}", output.display());
+            println!("  mode   : {}", if is_q42 { "SuperBlock → raw Quins" } else { "raw bytes" });
+            println!("============================================================");
+
+            let result = if is_q42 {
+                compress::compress_q42(input, output)
+            } else {
+                compress::compress_raw(input, output)
+            };
+
+            match result {
+                Ok(stats) => {
+                    println!("Done.");
+                    println!("  Input  : {:.1} MB", stats.input_bytes as f64 / 1_048_576.0);
+                    println!("  Output : {:.1} MB", stats.output_bytes as f64 / 1_048_576.0);
+                    println!("  Blocks : {}", stats.blocks);
+                    println!("  Ratio  : {:.2}x", stats.ratio);
+                }
+                Err(e) => eprintln!("Compression failed: {}", e),
             }
         }
         Commands::Benchmark { action } => {
@@ -527,6 +630,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let target = fnv1a(42);
             let start = fnv1a(0);
 
+            // test.q42 was moved from the repo root to crates/qualia-core-db/tests/
+            // Check both locations so bench works whether run from the project root or CI.
+            let test_q42: &str = if std::path::Path::new("test.q42").exists() {
+                "test.q42"
+            } else if std::path::Path::new("crates/qualia-core-db/tests/test.q42").exists() {
+                "crates/qualia-core-db/tests/test.q42"
+            } else {
+                ""
+            };
+
             // 1. Point
             let qualia_point = time_ms(|| {
                 black_box(synth_map.get(&target))
@@ -574,7 +687,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // 5. Cyclic / Defeasible simulation via sentinel-adjacent (use lazy + small logic)
             // Use existing test file for a "real" engine call if available
-            let cyclic_file = if std::path::Path::new("test.q42").exists() { "test.q42" } else { "defeasible.q42" };
+            let cyclic_file = if !test_q42.is_empty() { test_q42 } else { "defeasible.q42" };
             let qualia_cyclic = time_ms(|| {
                 let _ = qualia_core_db::query_engine::lazy_superblock_query(cyclic_file, 5);
                 // simulate defeater check cost
@@ -587,7 +700,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else if std::path::Path::new("wordnet_compressed.q42").exists() {
                 "wordnet_compressed.q42"
             } else {
-                "test.q42"
+                test_q42
             };
             let qualia_ttfq = time_ms(|| {
                 let _ = qualia_core_db::query_engine::lazy_superblock_query(large_file, 1);
@@ -640,14 +753,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let qualia_provenance = time_ms(|| {
                 // provenance validation sim + small lazy
-                let _ = qualia_core_db::query_engine::lazy_superblock_query("test.q42", 2);
+                let _ = qualia_core_db::query_engine::lazy_superblock_query(test_q42, 2);
                 let mut score = 0u64;
                 for i in 0..300 { score = score.wrapping_add(fnv1a(i) >> 3); }
                 black_box(score)
             });
 
             let qualia_nym = time_ms(|| {
-                let _ = qualia_core_db::query_engine::lazy_superblock_query("test.q42", 3);
+                let _ = qualia_core_db::query_engine::lazy_superblock_query(test_q42, 3);
                 // nym partition O(1) style hash
                 let mut parts: std::collections::HashMap<u64, usize> = std::collections::HashMap::new();
                 for i in 0..1000 {
@@ -812,12 +925,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
 
             let json_str = serde_json::to_string_pretty(&results)?;
-            std::fs::write("llm_benchmark_results.json", &json_str)?;
+            // Write to docs/ if present (GitHub Pages source), otherwise fall back to root.
+            let out_path = if std::path::Path::new("docs").is_dir() {
+                "docs/llm_benchmark_results.json"
+            } else {
+                "llm_benchmark_results.json"
+            };
+            std::fs::write(out_path, &json_str)?;
 
             println!("--- JSON OUTPUT EXPORT ---");
             println!("{}", json_str);
             println!("--------------------------\n");
-            println!("Results saved to 'llm_benchmark_results.json' for further LLM parsing. (Qualia side measured live.)");
+            println!("Results saved to '{}' for further LLM parsing. (Qualia side measured live.)", out_path);
         }
         Commands::Webizen { action } => match action {
             WebizenAction::Init { path } => {

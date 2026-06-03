@@ -29,12 +29,40 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: ${{ runner.os }}-cargo-
 
+    - name: Run RAM Footprint Validator (512 MB ceiling gate)
+      run: cargo bench --package qualia-core-db --bench ram_usage
+
     - name: Run Native LLM Benchmarks
       run: cargo run --release -p qualia-cli -- bench --suite full
 
-    - name: Upload JSON Telemetry Artifact
+    - name: Upload Qualia JSON Telemetry Artifact
       uses: actions/upload-artifact@v4
       with:
         name: llm-benchmark-results
         path: llm_benchmark_results.json
+        retention-days: 30
+
+    # ── Comparative benchmark: Oxigraph (live, isolated, 512 MB ceiling) ─────
+    - name: Install Python benchmark dependencies
+      run: pip install --quiet -r benchmarks/requirements.txt
+
+    - name: Run Oxigraph comparative benchmark (10k triples)
+      run: |
+        python benchmarks/harness.py \
+          --engine oxigraph \
+          --n 10000 \
+          --output docs/comparative_benchmark_results.json
+
+    - name: Run Oxigraph comparative benchmark (100k triples — ceiling stress)
+      run: |
+        python benchmarks/harness.py \
+          --engine oxigraph \
+          --n 100000 \
+          --output docs/comparative_benchmark_results.json
+
+    - name: Upload Comparative Benchmark Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: comparative-benchmark-results
+        path: docs/comparative_benchmark_results.json
         retention-days: 30

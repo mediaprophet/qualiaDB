@@ -1,0 +1,45 @@
+# cargo-release workspace configuration
+#
+# Install once: cargo install cargo-release
+#
+# Dry-run first (always):
+#   cargo release patch --workspace --dry-run
+#
+# Execute a patch bump and tag:
+#   cargo release patch --workspace --execute
+#
+# For a feature bump:
+#   cargo release minor --workspace --execute
+
+# ── Safety defaults ────────────────────────────────────────────────────────────
+# Let the GitHub Actions release.yml handle git push and crates.io publish.
+# Only run `cargo release --execute` to bump versions and create a local tag;
+# CI picks up the tag and builds cross-platform artifacts.
+push    = false
+publish = false
+tag     = true
+
+# ── Tag format ─────────────────────────────────────────────────────────────────
+# Tags land as `v0.1.2` (workspace-wide, matching qualia-core-db version).
+tag-name    = "v{{version}}"
+tag-message = "Qualia-DB {{version}}"
+
+# ── Pre-release gate ───────────────────────────────────────────────────────────
+# The RAM footprint validator must PASS before any tag is created.
+# Exit code 1 from ram_usage bench aborts the release.
+[[pre-release-hook]]
+cmd = ["cargo", "bench", "--package", "qualia-core-db", "--bench", "ram_usage"]
+
+# ── Commit message ─────────────────────────────────────────────────────────────
+pre-release-commit-message = "chore(release): bump to {{version}}"
+
+# ── Per-package overrides ──────────────────────────────────────────────────────
+# qualia-core-db is the canonical version source for the whole workspace.
+
+[[packages]]
+name    = "qualia-core-db"
+publish = false   # not on crates.io yet
+
+[[packages]]
+name    = "qualia-cli"
+publish = false   # CLI ships as a binary release, not a library crate

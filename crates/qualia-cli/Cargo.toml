@@ -20,3 +20,7 @@ chrono = "0.4.44"
 tungstenite = "0.29.0"
 sysinfo = "0.39.3"
 futures-util = "0.3.32"
+bytemuck = { version = "1.14", features = ["derive"] }
+rio_xml = "0.8"
+rio_api = "0.8"
+lz4_flex = "0.11"
