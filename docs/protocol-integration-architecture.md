@@ -5,165 +5,177 @@ layout: null
 # Protocol Integration Architecture
 **Cooperative Projects + Wellfair + Qualia Engine**
 
-**Version:** 0.1 (June 2026)  
-**Status:** Draft for review and iteration
+**Version:** 0.2 (June 2026)  
+**Status:** Draft — significantly expanded
 
 ---
 
-## 1. Executive Summary
+## 1. Purpose of This Document
 
-This document defines how decentralized protocols (GUN, WebTorrent, WebRTC, Git + git-mark) are integrated with the Qualia engine to power Cooperative Projects, while being deeply embedded into the **Wellfair** personal vault.
+This architecture document provides a clear, comprehensive blueprint for integrating decentralized protocols (GUN, WebTorrent, WebRTC, Git + git-mark) with the Qualia engine to support Cooperative Projects, while deeply embedding everything into the **Wellfair** personal vault.
 
-Wellfair serves a **dual purpose**:
-- As a sovereign personal data vault (health, life events, consent, privacy).
-- As a "fair dealings" layer that manages a person's project activities without violating personal boundaries, appointments, or wellbeing.
+Wellfair has a dual role:
+- As the individual’s personal data vault for health, life events, consent, and privacy.
+- As the layer that enables **fair dealings** in project activities — ensuring people are treated justly in collaborative work without their personal lives, appointments, health needs, or boundaries being overridden.
 
-The Qualia engine (Rust core, Sentinel logic, provenance DAGs, Q42 model) acts as the unifying trust and logic layer across all protocols and applications.
+The Qualia engine (Rust core, Sentinel logic, provenance, Q42 model) serves as the trust, logic, and provenance layer that makes these integrations reliable and consent-respecting.
+
+This document is written to be directly usable by AI coding agents (such as Claude) when implementing features in the Wellfair mobile app and related systems.
 
 ---
 
 ## 2. Core Principles
 
-1. **Provenance First** — Every significant action, contract, claim, share allocation, and protocol session must carry verifiable provenance.
-2. **Consent & Agency as First-Class** — No data flow, scheduling, or obligation can override explicit consent or personal boundaries.
-3. **Offline-First & Edge-Native** — Systems must function meaningfully without constant connectivity.
-4. **Personal vs Project Boundary Protection** — Project demands must not automatically override personal life events, appointments, health needs, or rest.
-5. **Human Dignity & Fairness** — Economic and collaboration models must treat unpaid contributors fairly and protect vulnerable participants.
+- **Agency and Personhood First** — Every person remains the center of agency. AI agents, tools, infrastructure, and project structures exist to serve the person, not the other way around.
+- **Relational and Social** — Human life and collaboration are fundamentally relational and social. Systems must reflect real relationships, mutual obligations, consent, and fairness between people rather than isolated individual "sovereignty".
+- **Consent as Foundational** — No data flow, scheduling decision, obligation, or protocol session should occur without explicit, revocable, purpose-bound consent.
+- **Protection of Personal Boundaries** — Project demands must not automatically override personal appointments, family responsibilities, health needs, or rest. The system must actively help protect these boundaries.
+- **Provenance and Accountability** — Significant actions, especially those that affect others or cross personal/project boundaries, must carry clear, verifiable provenance.
+- **Fairness in Dealings** — Economic models, obligation tracking, and contribution recognition must treat all contributors (especially unpaid ones) with dignity and fairness.
+- **Offline-First and Practical Resilience** — Core functionality should continue to work when connectivity is poor or absent.
 
 ---
 
-## 3. Key Protocols & Their Roles
+## 3. Key Protocols and Their Roles
 
-| Protocol       | Primary Strength                     | Integration Role in This System                                                                 | Qualia Engine Contribution                          |
-|----------------|--------------------------------------|--------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| **GUN**        | Decentralized graph sync, offline-first | Real-time / eventual sync of share state, claims, obligations, and live project data            | Sentinel logic for conflict resolution & consent   |
-| **WebTorrent** | P2P file & media distribution        | Distribution of ontology files, Q42 datasets, claim bundles, large project artifacts            | Provenance tracking of distributed objects         |
-| **WebRTC**     | Real-time video, voice, data channels| Contract negotiation calls, claim verification sessions, live collaboration                     | Session provenance + consent enforcement           |
-| **Git + git-mark** | Versioned, signed history       | Contract versioning, claim history, audit trails, signed provenance of changes                  | Deep provenance DAG linking commits to ontology entities |
-| **Qualia Engine** | Core logic, provenance, consent   | Unifying layer that all protocols feed into or are governed by                                  | Sentinel VM, Q42 model, provenance, N3Logic/SHACL  |
+| Protocol          | Main Strength                              | Role in This System                                                                 | How Qualia Adds Value                              |
+|-------------------|--------------------------------------------|-------------------------------------------------------------------------------------|----------------------------------------------------|
+| **GUN**           | Decentralized graph sync, offline-first   | Real-time or eventual consistency for share state, active claims, obligations, and live project data | Sentinel logic for conflict resolution and consent enforcement |
+| **WebTorrent**    | Peer-to-peer file and media distribution  | Distributing ontology files, Q42 datasets, claim packages, and larger project artifacts | Provenance tracking of distributed objects        |
+| **WebRTC**        | Real-time video, voice, and data channels | Contract negotiation, claim verification calls, live collaboration sessions        | Session-level provenance + consent gating         |
+| **Git + git-mark**| Versioned history and signed objects      | Contract versioning, claim history, audit trails, and strong provenance of changes | Deep provenance linking commits to ontology entities |
+| **Qualia Engine** | Core logic, provenance, consent engine    | The unifying layer that all other protocols ultimately report to or are governed by | Sentinel VM, Q42 model, provenance DAGs, N3Logic/SHACL rules |
 
 ---
 
 ## 4. Qualia Engine as the Unifying Layer
 
-The Qualia engine provides:
-- **Q42 Graph Model** — Canonical representation of entities, relations, obligations, shares, and claims.
-- **Sentinel VM** — Defeasible logic, SHACL validation, consent enforcement, and dynamic rule evaluation.
-- **Provenance DAGs** — Cryptographically strong history of every meaningful change and event.
-- **Edge-Native Design** — Low memory footprint suitable for mobile and constrained devices.
+The Qualia engine provides the semantic and logical foundation:
 
-All protocol activity should ultimately produce or reference Q42 entities with proper provenance.
+- **Q42 Graph Model** — The canonical way to represent entities, relations, obligations, Dynamic Equity / Stewardship Shares, contracts, and claims.
+- **Sentinel VM** — Executes defeasible logic, SHACL shapes, consent rules, and dynamic policy evaluation.
+- **Provenance DAGs** — Cryptographically grounded history of actions and state changes.
+- **Edge and Mobile Suitability** — Designed for low-memory, offline-capable environments.
+
+All protocol activity should ultimately create or reference Q42 entities with proper provenance.
+
+See:
+- `ontology/cooperative-projects.ttl` (main ontology)
+- `ontology/example-project-qualia-wellfair.ttl` (concrete example)
 
 ---
 
-## 5. Wellfair Mobile Vault Requirements (Guidance for AI Agents)
+## 5. Wellfair Mobile Vault — Requirements and Guidance for AI Agents
 
-Wellfair must support **two tightly integrated layers** while strongly protecting personal boundaries.
+Wellfair must support the person across both personal life and project activities while actively protecting boundaries between them.
 
-### 5.1 Personal Layer (Core Vault)
-- Store and manage personal health data, life events, appointments, tasks, and preferences.
-- Strong privacy modes (Sanctuary Mode, duress support, volatile memory where appropriate).
-- Consent management for any data sharing with projects or other agents.
-- Life-event awareness (family obligations, health appointments, rest periods, etc.).
+### 5.1 Personal Layer
+- Store and manage health data, life events, appointments, tasks, preferences, and consent records.
+- Support strong privacy features (including Sanctuary Mode and duress considerations).
+- Maintain awareness of personal calendar, family responsibilities, health needs, and rest periods.
 
-### 5.2 Project / "Fair Dealings" Layer
-- Manage contracts, verifiable claims, Dynamic Equity / Stewardship Shares, obligations, and payments.
-- Allow the user to participate in multiple Cooperative Projects fairly.
-- Track personal contributions (time, AI agents, infrastructure, etc.) with proper provenance.
-- Support optional tokenization and cash-out flows (governed by project policy).
+### 5.2 Project / Fair Dealings Layer
+- Handle contracts, verifiable claims, Dynamic Equity / Stewardship Shares, obligations, payments, and contribution tracking.
+- Allow the person to participate in multiple projects fairly and transparently.
+- Support optional tokenization and cash-out flows when permitted by project governance.
 
-### 5.3 Boundary & Life-Event Awareness (Critical)
-Wellfair must actively protect the user from project demands overriding personal life:
-- Do **not** auto-schedule or pressure work during known personal appointments, family events, health needs, or rest periods without explicit consent.
-- Surface conflicts clearly and require explicit opt-in before allowing project obligations to impact personal calendar.
-- Support "Do Not Disturb / Personal Priority" modes that projects must respect.
-- Record any override attempts with provenance for accountability.
+### 5.3 Protecting Personal Boundaries (Critical Requirement)
 
-### 5.4 Consent & Privacy Controls
-- All cross-project or external data flows must go through explicit, revocable consent relations (aligned with `qp:hasConsentRelation`).
-- Fine-grained control over what is shared (aggregated vs detailed, time-limited, purpose-bound).
-- Integration with Nym or similar privacy networks where appropriate for anonymous participation.
+Wellfair must actively help the person maintain boundaries between personal life and project demands:
 
-### 5.5 Protocol Integration Points (Mobile Wellfair)
-- **WebRTC**: Support secure video/voice calls for contract negotiation and claim verification. Sessions should generate provenance events in Q42.
-- **GUN**: Use for real-time or eventual sync of share state, active obligations, and claim updates when online.
-- **WebTorrent**: Allow downloading/uploading of project assets, ontology snapshots, or claim bundles via P2P when beneficial for resilience or large files.
-- **Git / git-mark**: Support viewing and creating signed git-based contract versions or provenance trails (especially useful for audit and legal contexts).
+- Do **not** auto-schedule, pressure, or default to project work during known personal appointments, family events, health needs, or protected rest time.
+- Clearly surface conflicts and require explicit consent before allowing project obligations to impact personal time.
+- Provide "Personal Priority" or "Do Not Disturb for Life Events" modes that projects must respect.
+- Record any attempts to override personal boundaries with provenance so the person can review them.
+
+This is a core part of "fair dealings" — treating the whole person with dignity, not just their productive capacity.
+
+### 5.4 Consent and Data Flow Controls
+- All data leaving the personal vault toward projects or other agents must pass through explicit, revocable consent relations (see `qp:hasConsentRelation` in the ontology).
+- Support fine-grained, purpose-bound, and time-limited sharing.
+- Allow the person to see and revoke consents easily.
+
+### 5.5 Protocol Integration Requirements (for Mobile Wellfair)
+
+When implementing protocol support in the Wellfair mobile app, an AI agent should:
+
+- **WebRTC**: Enable secure video and voice calls for contract negotiation and claim verification. Every session should generate provenance events that can be stored in Q42 format.
+- **GUN**: Use for real-time or eventual synchronization of share state, active obligations, and claim updates when the device is online.
+- **WebTorrent**: Support P2P download/upload of project assets, ontology snapshots, or claim bundles (especially useful for larger files or resilience).
+- **Git / git-mark**: Allow viewing and creating signed, versioned contract documents or provenance trails (particularly valuable for auditability and legal contexts).
 
 All protocol usage must be consent-gated and produce proper provenance records.
 
+### 5.6 Concrete Rules for AI Agents Implementing Wellfair Mobile
+
+1. Always keep the natural person (Principal) as the center of agency.
+2. Treat AI agents, infrastructure, and contributions as tools of the person.
+3. Default to protecting personal time and boundaries — require explicit consent for any override.
+4. Align major entities with the `qp:` ontology classes and properties.
+5. Generate Q42-compatible provenance for significant actions.
+6. Make consent visible, revocable, and purpose-bound.
+7. Clearly separate Personal Life view from Project Activities view while allowing controlled, consent-based interaction between them.
+8. Log and surface boundary conflicts with provenance.
+9. Prefer offline-first design for core functions (viewing obligations, shares, claims, and personal calendar).
+10. Support the relational and social nature of collaboration — reflect real relationships and mutual obligations rather than purely transactional models.
+
+**Priority areas for early implementation in Wellfair mobile:**
+- WebRTC session handling with provenance output
+- Basic GUN sync for share and claim state
+- Consent UI flows for project data sharing and scheduling
+- Personal calendar + project obligation conflict detection and consent gating
+- Display of Dynamic Equity / Stewardship Shares and obligations pulled from the shared graph
+
 ---
 
-## 6. Ontology Alignment Summary
+## 6. Cross-References to Existing Work
 
-Key ontology concepts that protocols must respect or produce:
-- `qp:Contract` & `qp:VerifiableClaim`
-- `qp:Slice` / Dynamic Equity / Stewardship Share + `qp:TokenizedShare`
-- `qp:EffortObligation` and fulfillment status
-- `qp:hasConsentRelation` and data flow rules
-- `qp:ProjectGovernance` (including `allowsCashOut` and conditions)
-- Provenance linking all of the above
-
-Protocol events (WebRTC session started, GUN sync completed, WebTorrent swarm joined, git commit created) should be representable as provenance-tracked activities in the Q42 model.
+- Main ontology: `ontology/cooperative-projects.ttl`
+- Detailed example project: `ontology/example-project-qualia-wellfair.ttl`
+- Contracts & Claims UI: `docs/contracts.html`
+- Economics and visualizations: `docs/economics.html`
+- Project Assets / Library: `docs/project-assets.html`
+- Strategic Canvases: `docs/canvases.html`
+- Protocol Integration Architecture (this document): `docs/protocol-integration-architecture.md`
 
 ---
 
 ## 7. Phased Implementation Roadmap
 
-**Phase 1 – Foundations (Current)**
-- Ontology for contracts, claims, shares, consent, and provenance (done)
-- UI for Contracts & Claims, Economics, Project Assets (largely done)
-- Basic provenance model in Qualia engine
+**Phase 1 – Foundations (largely complete)**
+- Ontology for contracts, claims, shares, consent, obligations, and provenance
+- Core UI pages (Contracts, Economics, Project Assets, etc.)
+- Basic provenance concepts in Qualia engine
 
-**Phase 2 – Protocol Wiring (Next)**
-- Model protocol sessions/events in ontology (WebRTC, GUN, WebTorrent, git)
-- Implement provenance capture for WebRTC sessions and git commits
-- Add basic GUN sync capability in Wellfair mobile (read/write share & claim state)
+**Phase 2 – Protocol Wiring (Current Focus)**
+- Model protocol events in the ontology (WebRTC sessions, GUN sync, WebTorrent distribution, git commits)
+- Implement provenance capture for WebRTC and git activity
+- Add GUN sync capability in Wellfair mobile for share/claim state
+- Strengthen consent and boundary enforcement between personal and project layers
 
-**Phase 3 – Full Integration & Boundary Protection**
-- Consent-aware scheduling / boundary enforcement between personal calendar and project obligations
+**Phase 3 – Deeper Integration**
 - WebTorrent distribution of assets and claim packages
-- Tokenization and optional cash-out flows with governance checks
-- Full Sentinel logic enforcement across protocols
+- Optional tokenization and governed cash-out flows
+- Full Sentinel logic enforcement across protocol events
+- Richer relational and social modeling of collaboration
 
-**Phase 4 – Advanced & Resilience**
-- Hybrid connectivity (GUN + WebRTC + WebTorrent fallback)
-- Advanced git-mark style signed provenance for legal-grade audit trails
+**Phase 4 – Advanced Capabilities**
+- Hybrid connectivity and fallback strategies
+- Stronger git-mark style signed provenance for high-assurance audit trails
 - Cross-project obligation propagation with consent
+- Advanced personal boundary intelligence (learning and suggesting protections)
 
 ---
 
-## 8. Specific Guidance for AI Agents Working on Wellfair Mobile
+## 8. Open Questions
 
-When implementing features in the Wellfair mobile app, an AI agent should:
-
-1. **Always anchor agency to the natural person (Principal)** — AI agents, infrastructure costs, and contributions are tools of the person, not independent actors.
-2. **Respect personal boundaries by default** — Never auto-schedule or pressure project work over known personal appointments, health needs, family events, or rest without explicit, recorded consent.
-3. **Use the ontology** — All major entities (contracts, claims, shares, obligations, consent) should align with `qp:` classes and properties.
-4. **Generate provenance** — Every significant action should produce Q42-compatible provenance records.
-5. **Consent-gate all external flows** — Any data leaving the personal vault (to projects, other people, or protocols) must go through explicit consent relations.
-6. **Support dual view** — The app should clearly distinguish between "Personal Life" and "Project Activities" while allowing controlled, consent-based interaction between them.
-7. **Prefer offline-first** — Core functionality (viewing obligations, shares, claims, personal calendar) must work without network connectivity.
-8. **Log boundary conflicts** — If a project tries to override personal time, record it with provenance for accountability and user review.
-
-**Priority areas for initial wiring in Wellfair mobile:**
-- WebRTC session handling with provenance output
-- Basic GUN sync for share/claim state
-- Consent UI for project data sharing and scheduling
-- Personal calendar + project obligation conflict detection (with strong consent gates)
-- Reading and displaying Dynamic Equity / Stewardship Shares and obligations from the shared graph
-
----
-
-## 9. Open Questions & Future Work
-
-- Exact library choices for GUN and WebRTC on mobile (React Native / Flutter / native modules).
-- How deeply to integrate git signing on mobile vs server-side assisted flows.
-- Standardized way to represent WebRTC sessions and GUN sync events in Q42 provenance.
-- Governance rules for when cash-out of tokenized shares is permitted across different project types.
+- Preferred mobile libraries for GUN and WebRTC (React Native, Flutter, or native modules).
+- Standardized way to represent WebRTC sessions and GUN sync events as Q42 provenance.
+- Governance rules for cash-out across different project types and risk profiles.
+- How deeply to surface relational and social context (e.g., showing how one person’s shares or obligations relate to others in the project).
 
 ---
 
 **End of Document**
 
-*This architecture is intended to be living. Update as implementation reveals new requirements or better patterns.*
+This is a living architecture. Update as implementation and real-world use reveal new needs.
