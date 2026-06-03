@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban • Cooperative Projects</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .kanban-column { min-height: 500px; }
+        .task-card { transition: all 0.2s; }
+        .task-card:hover { transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/90 backdrop-blur-2xl">
+        <div class="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <a href="cooperative.html" class="flex items-center gap-x-3">
+                    <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                        <i class="fa-solid fa-users text-white text-xl"></i>
+                    </div>
+                    <span class="font-display text-2xl font-semibold tracking-tighter">Cooperative Projects</span>
+                </a>
+            </div>
+            <div>
+                <a href="project-detail.html" class="px-4 py-2 text-sm hover:bg-white/5 rounded-2xl">Back to Project</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="font-display text-3xl font-semibold">Kanban Board</h1>
+                <p class="text-white/60">QualiaDB + Wellfair Integration</p>
+            </div>
+            <button class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-sm font-semibold flex items-center gap-x-2">
+                <i class="fa-solid fa-plus"></i> <span>New Task</span>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <!-- Todo -->
+            <div class="glass-strong rounded-3xl p-4">
+                <div class="flex items-center justify-between mb-4 px-1">
+                    <div class="font-semibold flex items-center gap-x-2">
+                        <span>To Do</span> <span class="text-xs px-2 py-0.5 bg-white/10 rounded">8</span>
+                    </div>
+                </div>
+                <div class="space-y-3 kanban-column">
+                    <div class="task-card glass p-4 rounded-2xl border border-white/10">
+                        <div class="text-sm font-medium">Implement core query engine</div>
+                        <div class="text-xs text-white/50 mt-2">Credential: Legal/Technical</div>
+                        <div class="flex justify-between items-center mt-3 text-xs">
+                            <span class="text-emerald-400">$1,200 available</span>
+                            <span class="text-white/40">45h</span>
+                        </div>
+                    </div>
+                    <div class="task-card glass p-4 rounded-2xl border border-white/10">
+                        <div class="text-sm font-medium">Model AI agent cost attribution</div>
+                        <div class="flex justify-between items-center mt-3 text-xs">
+                            <span class="text-emerald-400">$650 available</span>
+                            <span class="text-white/40">12h</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- In Progress -->
+            <div class="glass-strong rounded-3xl p-4">
+                <div class="flex items-center justify-between mb-4 px-1">
+                    <div class="font-semibold flex items-center gap-x-2">
+                        <span>In Progress</span> <span class="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">3</span>
+                    </div>
+                </div>
+                <div class="space-y-3 kanban-column">
+                    <div class="task-card glass p-4 rounded-2xl border border-white/10">
+                        <div class="text-sm font-medium">Deep review of QualiaDB architecture</div>
+                        <div class="text-xs text-white/50 mt-1">Assigned to you</div>
+                        <div class="mt-3 text-xs flex justify-between">
+                            <span class="text-emerald-400">In progress</span>
+                            <span class="text-white/40">18h</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review -->
+            <div class="glass-strong rounded-3xl p-4">
+                <div class="flex items-center justify-between mb-4 px-1">
+                    <div class="font-semibold flex items-center gap-x-2">
+                        <span>In Review</span> <span class="text-xs px-2 py-0.5 bg-sky-500/20 text-sky-400 rounded">2</span>
+                    </div>
+                </div>
+                <div class="space-y-3 kanban-column">
+                    <div class="task-card glass p-4 rounded-2xl border border-white/10">
+                        <div class="text-sm font-medium">Define interproject obligation propagation</div>
+                        <div class="text-xs text-white/50 mt-1">Submitted for review</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Done -->
+            <div class="glass-strong rounded-3xl p-4">
+                <div class="flex items-center justify-between mb-4 px-1">
+                    <div class="font-semibold flex items-center gap-x-2">
+                        <span>Done</span> <span class="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded">12</span>
+                    </div>
+                </div>
+                <div class="space-y-3 kanban-column text-sm text-white/60">
+                    <div>Review of Wellfair vault features</div>
+                    <div>Initial ontology draft</div>
+                    <div>Agent anchoring model</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>
