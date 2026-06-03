@@ -6,7 +6,7 @@ layout: null
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cooperative Commons • QualiaDB</title>
+    <title>Cooperative Projects • QualiaDB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -45,7 +45,7 @@ layout: null
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
         }
 
-        .commons-badge {
+        .project-badge {
             background: linear-gradient(90deg, #10b981, #059669);
             color: white;
             font-size: 0.65rem;
@@ -64,7 +64,7 @@ layout: null
                     <i class="fa-solid fa-users text-white text-xl"></i>
                 </div>
                 <div>
-                    <span class="font-display text-2xl font-semibold tracking-tighter">Cooperative Commons</span>
+                    <span class="font-display text-2xl font-semibold tracking-tighter">Cooperative Projects</span>
                 </div>
             </div>
             
@@ -84,17 +84,21 @@ layout: null
             <div>
                 <div class="inline-flex items-center gap-x-2 px-3 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-xs mb-3">
                     <i class="fa-solid fa-globe"></i>
-                    <span class="font-medium">Decentralized Commons • Independent Contributors</span>
+                    <span class="font-medium">Decentralized • Independent Contributors</span>
                 </div>
-                <h1 class="font-display text-5xl font-semibold tracking-[-2px]">Cooperative Commons</h1>
-                <p class="text-xl text-white/70 mt-2 max-w-2xl">A fair system for independent people to collaborate on projects with transparent obligation costs, effort recognition, and multiple fulfillment paths.</p>
+                <h1 class="font-display text-5xl font-semibold tracking-[-2px]">Cooperative Projects</h1>
+                <p class="text-xl text-white/70 mt-2 max-w-2xl">Find projects to contribute to, start your own, or join ongoing work — with fair obligation tracking and multiple ways to fulfill effort.</p>
             </div>
             
-            <div>
-                <button onclick="document.getElementById('propose-modal').showModal()" 
+            <div class="flex gap-x-3">
+                <button onclick="document.getElementById('browse-modal').showModal()" 
+                        class="px-6 py-3 border border-white/20 hover:bg-white/5 rounded-3xl font-semibold flex items-center gap-x-2">
+                    <span>Browse Projects</span>
+                </button>
+                <button onclick="document.getElementById('start-modal').showModal()" 
                         class="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-105 transition-all rounded-3xl font-semibold flex items-center gap-x-2 text-white">
                     <i class="fa-solid fa-plus"></i>
-                    <span>Propose New Project</span>
+                    <span>Start a Project</span>
                 </button>
             </div>
         </div>
@@ -102,7 +106,7 @@ layout: null
         <!-- Key Stats -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div class="glass-strong rounded-3xl p-5">
-                <div class="text-xs text-white/50">ACTIVE COMMONS PROJECTS</div>
+                <div class="text-xs text-white/50">ACTIVE PROJECTS</div>
                 <div class="text-4xl font-semibold mt-1">47</div>
                 <div class="text-emerald-400 text-sm mt-1">+8 this month</div>
             </div>
@@ -135,7 +139,7 @@ layout: null
             <div class="glass-strong rounded-3xl p-6 project-card border border-white/10">
                 <div class="flex justify-between items-start">
                     <div>
-                        <div class="commons-badge text-xs px-2.5 py-0.5 mb-2 inline-block">COMMONS</div>
+                        <div class="project-badge text-xs px-2.5 py-0.5 mb-2 inline-block">CORE</div>
                         <div class="font-semibold text-lg">Qualia Semantic Engine v2</div>
                         <div class="text-xs text-white/50">Core • QualiaDB</div>
                     </div>
@@ -170,7 +174,7 @@ layout: null
             <div class="glass-strong rounded-3xl p-6 project-card border border-white/10">
                 <div class="flex justify-between items-start">
                     <div>
-                        <div class="commons-badge text-xs px-2.5 py-0.5 mb-2 inline-block">COMMONS</div>
+                        <div class="project-badge text-xs px-2.5 py-0.5 mb-2 inline-block">CIVICS</div>
                         <div class="font-semibold text-lg">Decentralized Civics Node</div>
                         <div class="text-xs text-white/50">Civics Infrastructure</div>
                     </div>
@@ -246,7 +250,7 @@ layout: null
                 </div>
                 <div>
                     <div class="font-semibold mb-2 flex items-center gap-x-2"><i class="fa-solid fa-link text-emerald-400"></i> <span>2. Multiple Fulfillment Paths</span></div>
-                    <div class="text-white/70 text-xs">Obligations can be met via targeted micropayments to contributors, open donations, or sponsorship (brands/organisations pay down obligation for public acknowledgement).</div>
+                    <div class="text-white/70 text-xs">Obligations can be met via targeted micropayments to contributors, open donations, or sponsorship (brands pay down obligation for acknowledgement).</div>
                 </div>
                 <div>
                     <div class="font-semibold mb-2 flex items-center gap-x-2"><i class="fa-solid fa-receipt text-sky-400"></i> <span>3. Tax & Economic Clarity</span></div>
@@ -255,9 +259,9 @@ layout: null
             </div>
         </div>
 
-        <!-- My Contributions (placeholder) -->
+        <!-- My Contributions -->
         <div class="mt-10">
-            <div class="font-semibold text-xl mb-4">Your Contributions Across Commons</div>
+            <div class="font-semibold text-xl mb-4">Your Contributions Across Projects</div>
             <div class="glass rounded-3xl p-6 text-center text-white/50">
                 <p class="text-sm">Connect your did:key or personal vault to see your contributions, obligation credits, and fulfillment status across projects.</p>
                 <button class="mt-4 px-5 py-2 text-sm border border-white/20 hover:bg-white/5 rounded-2xl">Connect Identity</button>
@@ -266,39 +270,39 @@ layout: null
 
     </div>
 
-    <!-- Propose Modal -->
-    <dialog id="propose-modal" class="glass-strong rounded-3xl p-0 w-full max-w-lg backdrop:bg-black/70">
+    <!-- Start a Project Modal -->
+    <dialog id="start-modal" class="glass-strong rounded-3xl p-0 w-full max-w-lg backdrop:bg-black/70">
         <div class="p-8">
-            <div class="font-semibold text-xl mb-1">Propose New Commons Project</div>
-            <div class="text-sm text-white/60 mb-6">Define phases, estimate effort, and set initial obligation terms.</div>
+            <div class="font-semibold text-xl mb-1">Start a New Project</div>
+            <div class="text-sm text-white/60 mb-6">Define phases and initial effort estimate. Others can discover and contribute.</div>
             
             <div class="space-y-4 text-sm">
                 <div>
                     <label class="text-xs text-white/50 block mb-1">Project Name</label>
-                    <input type="text" class="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-2.5" placeholder="My Awesome Commons Project">
+                    <input type="text" class="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-2.5" placeholder="My New Cooperative Project">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="text-xs text-white/50 block mb-1">Estimated Total Effort</label>
-                        <input type="text" class="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-2.5" value="12,000 hrs">
+                        <input type="text" class="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-2.5" value="8,000 hrs">
                     </div>
                     <div>
                         <label class="text-xs text-white/50 block mb-1">Number of Phases</label>
-                        <input type="number" class="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-2.5" value="4">
+                        <input type="number" class="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-2.5" value="3">
                     </div>
                 </div>
             </div>
 
             <div class="mt-6 flex justify-end gap-x-3">
-                <button onclick="document.getElementById('propose-modal').close()" class="px-5 py-2.5 rounded-2xl hover:bg-white/5">Cancel</button>
-                <button onclick="simulatePropose(); document.getElementById('propose-modal').close()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-semibold text-white">Create Project Draft</button>
+                <button onclick="document.getElementById('start-modal').close()" class="px-5 py-2.5 rounded-2xl hover:bg-white/5">Cancel</button>
+                <button onclick="simulateStartProject(); document.getElementById('start-modal').close()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-semibold text-white">Create Project</button>
             </div>
         </div>
     </dialog>
 
     <script>
-        function simulatePropose() {
-            alert('Project draft created. In production this would create a new Q42 graph with phased terms and initial obligation calculation.');
+        function simulateStartProject() {
+            alert('Project created. In production this would create a new Q42 graph with phased terms and initial obligation calculation.');
         }
     </script>
 </body>
