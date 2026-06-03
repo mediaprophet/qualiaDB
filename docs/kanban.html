@@ -8,24 +8,35 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body { font-family: 'Inter', system_ui, sans-serif; }
-        .kanban-column { min-height: 500px; }
+        .kanban-column { min-height: 520px; }
         .task-card { transition: all 0.2s; }
-        .task-card:hover { transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .task-card:hover { transform: translateY(-1px); }
     </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
-    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/90 backdrop-blur-2xl">
-        <div class="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-x-3">
+    <!-- Unified Navigation -->
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/95 backdrop-blur-2xl">
+        <div class="max-w-screen-2xl mx-auto px-8 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-x-8">
                 <a href="cooperative.html" class="flex items-center gap-x-3">
-                    <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                        <i class="fa-solid fa-users text-white text-xl"></i>
+                    <div class="w-8 h-8 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                        <i class="fa-solid fa-users text-white text-lg"></i>
                     </div>
-                    <span class="font-display text-2xl font-semibold tracking-tighter">Cooperative Projects</span>
+                    <span class="font-display text-xl font-semibold tracking-tighter">Cooperative Projects</span>
                 </a>
+                <div class="hidden md:flex items-center gap-x-6 text-sm">
+                    <a href="cooperative.html" class="hover:text-white/80">Hub</a>
+                    <a href="project-detail.html" class="hover:text-white/80">Project</a>
+                    <a href="kanban.html" class="text-emerald-400">Kanban</a>
+                    <a href="roadmap.html" class="hover:text-white/80">Roadmap</a>
+                    <a href="issues.html" class="hover:text-white/80">Issues</a>
+                    <a href="budgets.html" class="hover:text-white/80">Budgets</a>
+                </div>
             </div>
-            <div>
-                <a href="project-detail.html" class="px-4 py-2 text-sm hover:bg-white/5 rounded-2xl">Back to Project</a>
+            <div class="flex items-center gap-x-3 text-sm">
+                <a href="contribute.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Contribute</a>
+                <a href="economics.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Economics</a>
+                <a href="canvases.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Canvases</a>
             </div>
         </div>
     </nav>
@@ -42,8 +53,7 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            
-            <!-- Todo -->
+            <!-- To Do -->
             <div class="glass-strong rounded-3xl p-4">
                 <div class="flex items-center justify-between mb-4 px-1">
                     <div class="font-semibold flex items-center gap-x-2">
@@ -57,13 +67,6 @@
                         <div class="flex justify-between items-center mt-3 text-xs">
                             <span class="text-emerald-400">$1,200 available</span>
                             <span class="text-white/40">45h</span>
-                        </div>
-                    </div>
-                    <div class="task-card glass p-4 rounded-2xl border border-white/10">
-                        <div class="text-sm font-medium">Model AI agent cost attribution</div>
-                        <div class="flex justify-between items-center mt-3 text-xs">
-                            <span class="text-emerald-400">$650 available</span>
-                            <span class="text-white/40">12h</span>
                         </div>
                     </div>
                 </div>
@@ -88,7 +91,7 @@
                 </div>
             </div>
 
-            <!-- Review -->
+            <!-- In Review -->
             <div class="glass-strong rounded-3xl p-4">
                 <div class="flex items-center justify-between mb-4 px-1">
                     <div class="font-semibold flex items-center gap-x-2">
@@ -116,7 +119,6 @@
                     <div>Agent anchoring model</div>
                 </div>
             </div>
-
         </div>
     </div>
 </body>
