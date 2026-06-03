@@ -42,6 +42,24 @@
             font-size: 2.5rem;
         }
 
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10,10,15,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,255,102,0.15);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+        }
+        .nav a { color: #aaa; text-decoration: none; margin: 0 12px; font-size: 0.9rem; }
+        .nav a:hover { color: var(--neon-green); }
+        .nav .active { color: var(--neon-green); font-weight: 600; }
+
         .return-link {
             position: absolute;
             top: 20px;
@@ -60,7 +78,7 @@
             grid-template-columns: 1fr 1fr;
             gap: 2rem;
             max-width: 1400px;
-            margin: 0 auto;
+            margin: 80px auto 0;
         }
 
         .panel {
@@ -83,7 +101,6 @@
             padding-bottom: 0.5rem;
         }
 
-        /* Heraldry Image Container */
         .image-container {
             width: 100%;
             height: 350px;
@@ -105,7 +122,6 @@
             z-index: 2;
         }
 
-        /* Scanning effect */
         .scanner-line {
             position: absolute;
             top: 0;
@@ -152,7 +168,6 @@
             background: transparent;
         }
 
-        /* Terminal Output */
         .terminal {
             background: #000;
             border-radius: 6px;
@@ -194,21 +209,25 @@
             transition: opacity 1s;
         }
 
-        .hyperboloid::after {
-            content: '';
-            position: absolute;
-            top: -50px; left: 150px;
-            width: 2px; height: 200px;
-            background: var(--neon-green);
-        }
-
     </style>
 </head>
 <body>
 
-    <a href="index.html" class="return-link">← RETURN TO HOMEPAGE</a>
+    <!-- Top Navigation -->
+    <nav class="nav">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <a href="index.html" style="font-family:Orbitron; font-weight:700; color:#fff; text-decoration:none;">QUALIADB</a>
+        </div>
+        <div>
+            <a href="index.html">Home</a>
+            <a href="library.html">Library</a>
+            <a href="heraldry.html" class="active">Heraldry</a>
+            <a href="benchmark.html">Benchmarks</a>
+            <a href="https://github.com/mediaprophet/qualiaDB">GitHub</a>
+        </div>
+    </nav>
 
-    <div class="header">
+    <div class="header" style="margin-top:60px;">
         <h1>Spatio-Temporal Semantic Engine</h1>
         <p>Demonstrating Offline Image Analysis & Minkowski Geometry Resolution</p>
     </div>
