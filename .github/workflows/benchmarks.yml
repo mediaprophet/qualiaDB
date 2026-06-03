@@ -60,6 +60,62 @@ jobs:
           --n 100000 \
           --output docs/comparative_benchmark_results.json
 
+    # ── Comparative benchmark: SurrealDB ─────────────────────────────────────
+    - name: Install SurrealDB
+      run: |
+        curl -sSf https://install.surrealdb.com | sh
+        echo "$HOME/.surrealdb" >> $GITHUB_PATH
+
+    - name: Run SurrealDB comparative benchmark (10k triples)
+      run: |
+        python benchmarks/harness.py \
+          --engine surrealdb \
+          --n 10000 \
+          --output docs/comparative_benchmark_results.json
+
+    - name: Run SurrealDB comparative benchmark (100k triples — ceiling stress)
+      run: |
+        python benchmarks/harness.py \
+          --engine surrealdb \
+          --n 100000 \
+          --output docs/comparative_benchmark_results.json
+
+    # ── Comparative benchmark: Comunica (SPARQL JS engine) ───────────────────
+    - name: Install Comunica Node.js dependencies
+      run: cd benchmarks/comunica && npm install --prefer-offline
+
+    - name: Run Comunica comparative benchmark (10k triples)
+      run: |
+        python benchmarks/harness.py \
+          --engine comunica \
+          --n 10000 \
+          --output docs/comparative_benchmark_results.json
+
+    - name: Run Comunica comparative benchmark (100k triples — ceiling stress)
+      run: |
+        python benchmarks/harness.py \
+          --engine comunica \
+          --n 100000 \
+          --output docs/comparative_benchmark_results.json
+
+    # ── Comparative benchmark: WASM-Prolog (tau-prolog backtracking) ─────────
+    - name: Install WASM-Prolog Node.js dependencies
+      run: cd benchmarks/wasm_prolog && npm install --prefer-offline
+
+    - name: Run WASM-Prolog comparative benchmark (10k triples)
+      run: |
+        python benchmarks/harness.py \
+          --engine wasm_prolog \
+          --n 10000 \
+          --output docs/comparative_benchmark_results.json
+
+    - name: Run WASM-Prolog comparative benchmark (100k triples — ceiling stress)
+      run: |
+        python benchmarks/harness.py \
+          --engine wasm_prolog \
+          --n 100000 \
+          --output docs/comparative_benchmark_results.json
+
     - name: Upload Comparative Benchmark Results
       uses: actions/upload-artifact@v4
       with:

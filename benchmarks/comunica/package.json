@@ -1,0 +1,11 @@
+{
+  "name": "comunica-bench",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Comunica SPARQL engine benchmark for Qualia-DB comparison",
+  "dependencies": {
+    "@comunica/query-sparql": "^3.0.0",
+    "n3": "^1.17.0"
+  }
+}

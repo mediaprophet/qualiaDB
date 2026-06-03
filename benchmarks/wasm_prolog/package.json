@@ -1,0 +1,9 @@
+{
+  "name": "wasm-prolog-bench",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tau-Prolog (WASM-Prolog) benchmark for Qualia-DB comparison",
+  "dependencies": {
+    "tau-prolog": "^0.3.2"
+  }
+}
