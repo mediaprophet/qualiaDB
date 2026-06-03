@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library • DocuQuin | QualiaDB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; }
+        .glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.15); }
+        .glass-strong { background: rgba(255,255,255,0.12); backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.2); }
+        .q42-badge { background: linear-gradient(90deg, #f59e0b, #d97706); color: white; font-size: 0.75rem; padding: 2px 10px; border-radius: 9999px; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <!-- Nav -->
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/80 backdrop-blur-xl">
+        <div class="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                    <i class="fa-solid fa-books text-white text-xl"></i>
+                </div>
+                <div>
+                    <span class="font-display text-2xl font-semibold tracking-tighter">Library</span>
+                    <span class="text-xs px-2 py-0.5 rounded bg-white/10 text-white/60 ml-2">DocuQuin</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-x-4 text-sm">
+                <a href="index.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl transition-colors">Home</a>
+                <a href="heraldry.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl transition-colors">Heraldry</a>
+                <a href="benchmark.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl transition-colors">Benchmarks</a>
+                <a href="https://github.com/mediaprophet/qualiaDB" class="px-4 py-2 hover:bg-white/5 rounded-2xl transition-colors">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-10 pb-16">
+        <div class="flex items-end justify-between mb-8">
+            <div>
+                <h1 class="font-display text-5xl font-semibold tracking-tighter">Knowledge Library</h1>
+                <p class="text-xl text-white/70 mt-2">Central hub for DocuQuin ingestion • All sources normalized to Q42</p>
+            </div>
+            <div>
+                <button onclick="document.getElementById('ingest-modal').showModal()" 
+                        class="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:brightness-110 transition-all rounded-3xl font-semibold flex items-center gap-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Ingest New Source</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="glass rounded-3xl p-5">
+                <div class="text-xs text-white/50">TOTAL SOURCES</div>
+                <div class="text-4xl font-semibold mt-1">3</div>
+                <div class="text-emerald-400 text-sm">+2 today</div>
+            </div>
+            <div class="glass rounded-3xl p-5">
+                <div class="text-xs text-white/50">NORMALIZED TO Q42</div>
+                <div class="text-4xl font-semibold mt-1 text-emerald-400">2</div>
+                <div class="text-xs text-white/50 mt-1">Ready for merging</div>
+            </div>
+            <div class="glass rounded-3xl p-5">
+                <div class="text-xs text-white/50">SPATIOTEMPORAL TAGS</div>
+                <div class="text-4xl font-semibold mt-1">14</div>
+            </div>
+            <div class="glass rounded-3xl p-5">
+                <div class="text-xs text-white/50">.q42 DATASETS</div>
+                <div class="text-4xl font-semibold mt-1">2</div>
+            </div>
+        </div>
+
+        <!-- Sources Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <!-- Oxford Guide -->
+            <div class="glass-strong rounded-3xl p-6 hover:border-amber-500/50 border border-white/10 transition-all">
+                <div class="flex justify-between">
+                    <div>
+                        <div class="font-semibold">An Outline of Heraldry in England and Scotland</div>
+                        <div class="text-sm text-white/60">Robert Innes-Smith • 6th Edition</div>
+                    </div>
+                    <div class="q42-badge text-xs self-start">Q42 Ready</div>
+                </div>
+                <div class="mt-4 text-xs space-y-1 text-white/70">
+                    <div><i class="fa-solid fa-globe w-4"></i> England & Scotland • 12th–19th c.</div>
+                    <div><i class="fa-solid fa-book w-4"></i> Peerage, Blazon, Origins</div>
+                </div>
+                <div class="mt-5 flex gap-x-2">
+                    <button onclick="window.location.href='docuquin-heraldry-pipeline.html'" class="flex-1 py-2 text-sm bg-white/10 hover:bg-white/20 rounded-2xl transition-colors">Open in DocuQuin</button>
+                    <button class="px-4 py-2 text-sm border border-white/20 hover:bg-white/5 rounded-2xl transition-colors">View RDF</button>
+                </div>
+            </div>
+
+            <!-- Puttock Dictionary -->
+            <div class="glass-strong rounded-3xl p-6 hover:border-amber-500/50 border border-white/10 transition-all">
+                <div class="flex justify-between">
+                    <div>
+                        <div class="font-semibold">A Dictionary of Heraldry and Related Subjects</div>
+                        <div class="text-sm text-white/60">Col. A.G. Puttock • 1985</div>
+                    </div>
+                    <div class="q42-badge text-xs self-start">Q42 Ready</div>
+                </div>
+                <div class="mt-4 text-xs space-y-1 text-white/70">
+                    <div><i class="fa-solid fa-globe w-4"></i> English Heraldry • Glossary</div>
+                    <div><i class="fa-solid fa-book w-4"></i> 274 pages • Comprehensive terms</div>
+                </div>
+                <div class="mt-5 flex gap-x-2">
+                    <button onclick="window.location.href='docuquin-heraldry-pipeline.html'" class="flex-1 py-2 text-sm bg-white/10 hover:bg-white/20 rounded-2xl transition-colors">Open in DocuQuin</button>
+                    <button class="px-4 py-2 text-sm border border-white/20 hover:bg-white/5 rounded-2xl transition-colors">View RDF</button>
+                </div>
+            </div>
+
+            <!-- Placeholder for future -->
+            <div class="glass rounded-3xl p-6 border border-dashed border-white/20 flex flex-col justify-center items-center text-center">
+                <i class="fa-solid fa-plus text-2xl text-white/40 mb-3"></i>
+                <div class="text-white/60">Add your next source</div>
+                <div class="text-xs text-white/40 mt-1">PDFs, images, memes, medical records...</div>
+            </div>
+
+        </div>
+
+        <div class="mt-10 text-center">
+            <a href="docuquin-heraldry-pipeline.html" class="inline-flex items-center gap-x-2 text-amber-400 hover:text-amber-300">
+                <span>Launch full DocuQuin Pipeline</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Ingest Modal -->
+    <dialog id="ingest-modal" class="glass-strong rounded-3xl p-0 w-full max-w-lg backdrop:bg-black/70">
+        <div class="p-8">
+            <div class="font-semibold text-xl mb-1">Ingest New Source</div>
+            <div class="text-sm text-white/60 mb-6">Upload PDF, image, or document. It will be processed through DocuQuin.</div>
+            
+            <div class="border-2 border-dashed border-white/20 rounded-3xl p-10 text-center">
+                <i class="fa-solid fa-cloud-upload-alt text-4xl text-white/40 mb-4"></i>
+                <div>Drop files here or click to browse</div>
+                <input type="file" class="hidden" id="file-upload">
+            </div>
+
+            <div class="mt-6 flex justify-end gap-x-3">
+                <button onclick="document.getElementById('ingest-modal').close()" class="px-5 py-2.5 rounded-2xl hover:bg-white/5">Cancel</button>
+                <button onclick="simulateIngest(); document.getElementById('ingest-modal').close()" 
+                        class="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 rounded-2xl font-semibold text-white">Start DocuQuin Ingestion</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        function simulateIngest() {
+            alert('In production: File uploaded → DocuQuin pipeline launched with model selector + Q42 normalization.');
+            // In real version this would trigger the full pipeline
+        }
+        // Tailwind already loaded
+    </script>
+</body>
+</html>
