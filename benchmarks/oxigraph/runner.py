@@ -5,6 +5,8 @@ Measures ingestion, point lookup, two-hop traversal, and predicate filter
 using pyoxigraph (in-memory store) against the standard synthetic N-Triples
 dataset.  Enforces the 512 MB RAM ceiling so OOM is a reportable result.
 
+Uses the standardized DEFAULT_WARMUP / DEFAULT_SAMPLES from common.py.
+
 Install: pip install pyoxigraph psutil
 """
 import os
@@ -13,10 +15,7 @@ import time
 
 # Allow running as a standalone script from the repo root
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from common import latency_stats_ms, peak_rss_mb, apply_512mb_limit, generate_ntriples
-
-WARMUP  = 10
-SAMPLES = 50
+from common import latency_stats_ms, peak_rss_mb, apply_512mb_limit, generate_ntriples, DEFAULT_WARMUP, DEFAULT_SAMPLES
 
 # SPARQL queries — same logical operations as the Qualia CLI bench
 # Subject 0 is the anchor; predicate 0 is the high-frequency lane (n/5 triples).
@@ -42,19 +41,20 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
 
     Returns:
         dict with ingestion_ms, point/twohop/filter latency stats, and peak RSS.
+        Latency stats now use the project-wide DEFAULT_WARMUP/DEFAULT_SAMPLES.
     """
     result: dict = {"engine": "oxigraph", "n_triples": n}
 
     try:
         import pyoxigraph
     except ImportError:
-        result["error"] = "pyoxigraph not installed — run: pip install pyoxigraph"
+        result["error"] = "pyoxigraph not installed — run: pip install pyoxigraph psutil"
         return result
 
     if enforce_memory_limit:
         apply_512mb_limit()
 
-    # ── Ingestion ─────────────────────────────────────────────────────────────
+    # ── Ingestion ─────────────────────────────────────────────────────────────────────
     nt_bytes = generate_ntriples(n)
     rss_before = peak_rss_mb()
     t0 = time.perf_counter()
@@ -76,33 +76,33 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
         result["error"] = str(exc)
         return result
 
-    # ── Point lookup ──────────────────────────────────────────────────────────
+    # ── Point lookup ─────────────────────────────────────────────────────────────────────
     try:
         result["point"] = latency_stats_ms(
             lambda: list(store.query(_POINT_QUERY)),
-            warmup=WARMUP, samples=SAMPLES,
+            warmup=DEFAULT_WARMUP, samples=DEFAULT_SAMPLES,
         )
     except MemoryError:
         result["point"] = "OOM"
     except Exception as exc:
         result["point"] = f"ERROR: {exc}"
 
-    # ── Two-hop traversal ─────────────────────────────────────────────────────
+    # ── Two-hop traversal ─────────────────────────────────────────────────────────────────────
     try:
         result["twohop"] = latency_stats_ms(
             lambda: list(store.query(_TWOHOP_QUERY)),
-            warmup=WARMUP, samples=SAMPLES,
+            warmup=DEFAULT_WARMUP, samples=DEFAULT_SAMPLES,
         )
     except MemoryError:
         result["twohop"] = "OOM"
     except Exception as exc:
         result["twohop"] = f"ERROR: {exc}"
 
-    # ── Predicate filter scan ─────────────────────────────────────────────────
+    # ── Predicate filter scan ─────────────────────────────────────────────────────────────────
     try:
         result["filter"] = latency_stats_ms(
             lambda: list(store.query(_FILTER_QUERY)),
-            warmup=WARMUP, samples=SAMPLES,
+            warmup=DEFAULT_WARMUP, samples=DEFAULT_SAMPLES,
         )
     except MemoryError:
         result["filter"] = "OOM"
