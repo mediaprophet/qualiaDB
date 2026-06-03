@@ -6,17 +6,37 @@
     <title>Economics • Cooperative Projects</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; }
+        .glass { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        .glass-strong { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.18); }
+    </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
-    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/90 backdrop-blur-2xl">
-        <div class="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-x-3">
+    <!-- Unified Navigation -->
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/95 backdrop-blur-2xl">
+        <div class="max-w-screen-2xl mx-auto px-8 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-x-8">
                 <a href="cooperative.html" class="flex items-center gap-x-3">
-                    <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                        <i class="fa-solid fa-users text-white text-xl"></i>
+                    <div class="w-8 h-8 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                        <i class="fa-solid fa-users text-white text-lg"></i>
                     </div>
-                    <span class="font-display text-2xl font-semibold tracking-tighter">Cooperative Projects</span>
+                    <span class="font-display text-xl font-semibold tracking-tighter">Cooperative Projects</span>
                 </a>
+                <div class="hidden md:flex items-center gap-x-6 text-sm">
+                    <a href="cooperative.html" class="hover:text-white/80">Hub</a>
+                    <a href="project-detail.html" class="hover:text-white/80">Project</a>
+                    <a href="kanban.html" class="hover:text-white/80">Kanban</a>
+                    <a href="roadmap.html" class="hover:text-white/80">Roadmap</a>
+                    <a href="issues.html" class="hover:text-white/80">Issues</a>
+                    <a href="budgets.html" class="hover:text-white/80">Budgets</a>
+                </div>
+            </div>
+            <div class="flex items-center gap-x-3 text-sm">
+                <a href="contribute.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Contribute</a>
+                <a href="economics.html" class="px-4 py-1.5 text-emerald-400">Economics</a>
+                <a href="canvases.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Canvases</a>
             </div>
         </div>
     </nav>
@@ -49,25 +69,25 @@
                 <p>1. Effort is calculated across all contributors (paid + unpaid).</p>
                 <p>2. Converted into an Obligation Cost using the current multiplier (social + outcome triggers).</p>
                 <p>3. Fulfillment paths: targeted micropayments, open donations, sponsorship, or grants.</p>
-                <p>4. Once obligation is met, assets can transition toward more permissive commons terms (per project governance).</p>
+                <p>4. Once obligation is met, assets can transition toward more permissive commons terms.</p>
             </div>
         </div>
 
-        <!-- Slicing Pie Dynamic Equity -->
+        <!-- Slicing Pie Section -->
         <div class="glass-strong rounded-3xl p-8">
             <div class="font-semibold mb-3 flex items-center gap-x-2">
                 <span>Dynamic Equity — Slicing Pie Model</span>
                 <span class="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">Experimental</span>
             </div>
             <div class="text-sm text-white/80">
-                Contributions (time, money, infrastructure, AI agents) create <strong>slices</strong> at fair market value. Unpaid or high-risk contributions receive risk multipliers. Slices form a Grunt Fund that can be bought out or converted when obligations are met. Governance rights can optionally be weighted by slice ownership.
+                Contributions create <strong>slices</strong> at fair market value. Unpaid or high-risk contributions receive risk multipliers. Slices form a Grunt Fund that can be bought out or converted when obligations are met. Governance rights can optionally be weighted by slice ownership.
             </div>
             <div class="mt-4 text-xs text-white/60">
                 Example: Unpaid time slices can convert to commons licensing rights or revenue participation once the project’s obligation cost is fully met.
             </div>
         </div>
 
-        <div class="mt-6 text-xs text-white/50">All figures are illustrative and tied to the project’s Compensation Policy and ontology-defined rules (including Slicing Pie slices). Real data would be queryable from the underlying Q42 graph.</div>
+        <div class="mt-6 text-xs text-white/50">All figures are illustrative and tied to the project’s Compensation Policy and ontology-defined rules. Real data would be queryable from the underlying Q42 graph.</div>
     </div>
 </body>
 </html>
