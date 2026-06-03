@@ -30,6 +30,8 @@
                 <a href="roadmap.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl">Roadmap</a>
                 <a href="issues.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl">Issues</a>
                 <a href="budgets.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl">Budgets</a>
+                <a href="contribute.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl">Contribute / Sponsor</a>
+                <a href="economics.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl">Economics</a>
                 <button onclick="document.getElementById('contribute-modal').showModal()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-semibold text-sm">Contribute</button>
             </div>
         </div>
@@ -57,14 +59,13 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-x-4 mb-6">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-8">
             <a href="kanban.html" class="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 rounded-2xl flex items-center gap-x-2"><i class="fa-solid fa-columns"></i> <span>Kanban</span></a>
             <a href="roadmap.html" class="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 rounded-2xl flex items-center gap-x-2"><i class="fa-solid fa-road"></i> <span>Roadmap</span></a>
             <a href="issues.html" class="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 rounded-2xl flex items-center gap-x-2"><i class="fa-solid fa-exclamation-circle"></i> <span>Issues</span></a>
             <a href="budgets.html" class="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 rounded-2xl flex items-center gap-x-2"><i class="fa-solid fa-wallet"></i> <span>Budgets</span></a>
-            <button onclick="document.getElementById('contribute-modal').showModal()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-sm font-semibold flex items-center gap-x-2">
-                <i class="fa-solid fa-handshake"></i> <span>Contribute</span>
-            </button>
+            <a href="contribute.html" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 rounded-2xl flex items-center gap-x-2 text-white"><i class="fa-solid fa-handshake"></i> <span>Contribute / Sponsor</span></a>
+            <a href="economics.html" class="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 rounded-2xl flex items-center gap-x-2"><i class="fa-solid fa-chart-line"></i> <span>Economics</span></a>
         </div>
 
         <!-- Tasks -->
@@ -73,17 +74,8 @@
             <div class="space-y-4">
                 <div class="glass-strong rounded-3xl p-5 flex flex-col lg:flex-row lg:items-center gap-4">
                     <div class="flex-1">
-                        <div class="font-medium">Build Qualia-Solid Bridge for Wellfair interoperability</div>
+                        <div class="font-medium">Build Qualia-Solid Bridge</div>
                         <div class="text-xs text-white/50 mt-1">Phase 2 • 45 hrs • $2,250 • Credential required</div>
-                    </div>
-                    <div>
-                        <button onclick="document.getElementById('contribute-modal').showModal()" class="px-5 py-2 bg-white text-zinc-900 rounded-2xl text-sm font-semibold">Claim & Contribute</button>
-                    </div>
-                </div>
-                <div class="glass-strong rounded-3xl p-5 flex flex-col lg:flex-row lg:items-center gap-4">
-                    <div class="flex-1">
-                        <div class="font-medium">Model AI agent usage & cost attribution</div>
-                        <div class="text-xs text-white/50 mt-1">Phase 3 • 12 hrs • $480</div>
                     </div>
                     <div>
                         <button onclick="document.getElementById('contribute-modal').showModal()" class="px-5 py-2 bg-white text-zinc-900 rounded-2xl text-sm font-semibold">Claim & Contribute</button>
@@ -99,7 +91,7 @@
             </div>
             <div class="glass-strong rounded-3xl p-6">
                 <div class="font-semibold mb-3">Relations & Dependencies</div>
-                <div class="text-sm text-white/70">Depends on QualiaDB & Wellfair. Consent for aggregated data flow across projects.</div>
+                <div class="text-sm text-white/70">Depends on QualiaDB & Wellfair. Consent for aggregated data flow.</div>
             </div>
         </div>
     </div>
@@ -126,7 +118,7 @@
     <script>
         function selectContributionType(type) {
             document.getElementById('contribute-modal').close();
-            alert(type === 'task' ? 'Task claim flow opened.' : 'Investment form opened.');
+            alert(type === 'task' ? 'Task claim flow opened (credential check if required).' : 'Investment form opened.');
         }
     </script>
 </body>
