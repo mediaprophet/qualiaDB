@@ -5,6 +5,9 @@ Qualia-DB comparative benchmark harness.
 Runs engines one at a time to avoid cross-engine overhead bias.
 Each runner enforces the 512 MB RAM ceiling; OOM is a valid result.
 
+All results are normalized to a common schema (v1) for easy aggregation
+and visualization.
+
 Usage:
     python benchmarks/harness.py --engine oxigraph
     python benchmarks/harness.py --engine oxigraph --n 100000
@@ -19,6 +22,11 @@ import sys
 
 # Ensure the benchmarks/ directory is on the path regardless of cwd
 sys.path.insert(0, os.path.dirname(__file__))
+
+from common import DEFAULT_WARMUP, DEFAULT_SAMPLES
+
+SCHEMA_VERSION = 1
+DATASET = "synthetic-ntriples-v1"
 
 ENGINES = ["oxigraph", "surrealdb", "comunica", "wasm_prolog"]
 
@@ -46,6 +54,34 @@ ENGINE_META = {
 }
 
 
+METHODOLOGY = (
+    "Each engine is run in complete isolation (one at a time) to avoid cross-engine "
+    "overhead bias. The 512 MB RAM ceiling is enforced via Linux RLIMIT_AS for Python "
+    "processes and --max-old-space-size for Node.js; SurrealDB server RSS is tracked via psutil. "
+    "OOM or non-zero exit during ingestion or query execution is recorded as a valid result. "
+    "Ingestion methodology varies by engine nature (Oxigraph bulk in-process, Surreal batched HTTP, "
+    "JS engines parse in V8) — this reflects realistic end-to-end cost under the target constraint. "
+    f"All latency measurements use {DEFAULT_WARMUP} warmup + {DEFAULT_SAMPLES} samples with p50/p95/p99. "
+    "Synthetic dataset is deterministic (generate_ntriples)."
+)
+
+
+def normalize_result(engine: str, raw: dict) -> dict:
+    """Ensure every result has the standard top-level keys and metadata."""
+    result = dict(raw)  # copy
+    result.setdefault("engine", engine)
+    result.setdefault("schema_version", SCHEMA_VERSION)
+    result.setdefault("dataset", DATASET)
+    result.setdefault("n_triples", 10_000)
+    result.setdefault("timestamp", datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"))
+    result["meta"] = ENGINE_META.get(engine, {})
+    # Ensure latency dicts exist even on error paths
+    for key in ("point", "twohop", "filter"):
+        if key not in result:
+            result[key] = None
+    return result
+
+
 def run_engine(engine: str, n: int, enforce_memory_limit: bool) -> dict:
     if engine == "oxigraph":
         from oxigraph.runner import benchmark_set
@@ -58,10 +94,8 @@ def run_engine(engine: str, n: int, enforce_memory_limit: bool) -> dict:
     else:
         return {"engine": engine, "error": f"unknown engine: {engine}"}
 
-    result = benchmark_set(n=n, enforce_memory_limit=enforce_memory_limit)
-    result.setdefault("engine", engine)
-    result["meta"] = ENGINE_META.get(engine, {})
-    result["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+    raw = benchmark_set(n=n, enforce_memory_limit=enforce_memory_limit)
+    result = normalize_result(engine, raw)
     return result
 
 
@@ -77,12 +111,10 @@ def merge_into_output(output_path: str, engine: str, result: dict) -> None:
     if "engines" not in existing:
         existing["engines"] = {}
     existing["engines"][engine] = result
-    existing["last_updated"] = result["timestamp"]
-    existing["methodology"] = (
-        "Each engine is run in isolation (one at a time) to avoid cross-engine "
-        "overhead bias.  The 512 MB RAM ceiling is enforced via Linux RLIMIT_AS; "
-        "OOM during ingestion or query execution is a valid benchmark result."
-    )
+    existing["last_updated"] = result.get("timestamp")
+    existing["schema_version"] = SCHEMA_VERSION
+    existing["dataset"] = DATASET
+    existing["methodology"] = METHODOLOGY
 
     with open(output_path, "w") as f:
         json.dump(existing, f, indent=2)
