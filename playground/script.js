@@ -94,6 +94,54 @@ function updateVisualizer(tier) {
 }
 
 let isNativeMode = false;
+window.QUALIA_NATIVE_ACTIVE = false;
+
+const QUALIA_DAEMON_BASE = 'http://127.0.0.1:4242';
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 500) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+function nativeHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = localStorage.getItem('qualia_dev_token');
+    if (token) {
+        headers['X-Qualia-Token'] = token;
+    }
+    return headers;
+}
+
+async function probeNativeDaemon(timeoutMs = 500) {
+    try {
+        const resp = await fetchWithTimeout(`${QUALIA_DAEMON_BASE}/health`, { method: 'GET' }, timeoutMs);
+        window.QUALIA_NATIVE_ACTIVE = resp.ok;
+        isNativeMode = resp.ok;
+        return resp.ok;
+    } catch (_err) {
+        window.QUALIA_NATIVE_ACTIVE = false;
+        isNativeMode = false;
+        return false;
+    }
+}
+
+async function retryNativeLaunch() {
+    for (let attempt = 0; attempt < 5; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (await probeNativeDaemon(500)) {
+            document.querySelector('.status-indicator').innerHTML = 'Native Hardware Connected';
+            triggerCompilation();
+            return true;
+        }
+    }
+    document.querySelector('.status-indicator').innerHTML = 'WASM Fallback Active';
+    return false;
+}
 
 async function triggerCompilation() {
     const query = inputEl.value;
@@ -104,31 +152,35 @@ async function triggerCompilation() {
 
     if (isNativeMode) {
         try {
-            const resp = await fetch('http://127.0.0.1:4848/rpc', {
+            const resp = await fetch(`${QUALIA_DAEMON_BASE}/query`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: nativeHeaders(),
                 body: JSON.stringify({
-                    jsonrpc: "2.0",
-                    method: "compile_and_execute",
-                    params: { query: query, token: "dev-mode-skip" },
-                    id: 1
+                    query,
+                    format: query.trim().startsWith('{') ? 'json-ld' : 'sparql-star'
                 })
             });
             const data = await resp.json();
             
-            if (data.error) {
-                outputEl.innerHTML = `<span class="error">Native Error: ${data.error}</span>`;
+            if (resp.status === 501) {
+                outputEl.innerHTML = `<span class="error">Native compiler limit: ${data.message}<br>Use the browser fallback controls for structural compilation.</span>`;
+                return;
+            } else if (!resp.ok || data.status === 'error') {
+                outputEl.innerHTML = `<span class="error">Native Error: ${data.message || resp.statusText}</span>`;
+                return;
             } else {
-                outputEl.innerHTML = syntaxHighlight(data.result);
-                if(data.result.routing_tier !== undefined) {
-                    updateVisualizer(data.result.routing_tier);
+                outputEl.innerHTML = syntaxHighlight(data);
+                if(data.routing_tier !== undefined) {
+                    updateVisualizer(data.routing_tier);
                 }
-                document.querySelector('.status-indicator').innerHTML = 'Native Mode Active';
+                document.querySelector('.status-indicator').innerHTML = 'Native Hardware Connected';
+                window.QUALIA_NATIVE_ACTIVE = true;
+                return;
             }
-            return;
         } catch (e) {
-            console.error("Native link failed, falling back to WASM", e);
+            console.warn("Native link failed, falling back to WASM", e);
             isNativeMode = false;
+            window.QUALIA_NATIVE_ACTIVE = false;
         }
     }
 
@@ -153,24 +205,10 @@ async function triggerCompilation() {
 
 // Initialize Loopback or WASM
 async function bootstrap() {
-    try {
-        const resp = await fetch('http://127.0.0.1:4848/rpc', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                jsonrpc: "2.0",
-                method: "ping",
-                params: { query: null, token: null },
-                id: 1
-            })
-        });
-        
-        if(resp.ok) {
-            isNativeMode = true;
-            console.log("Qualia Native Loopback initialized.");
-            document.querySelector('.status-indicator').innerHTML = 'Native Loopback Initialized';
-        }
-    } catch(e) {
+    if (await probeNativeDaemon(500)) {
+        console.log("Qualia Native Loopback initialized.");
+        document.querySelector('.status-indicator').innerHTML = 'Native Hardware Connected';
+    } else {
         console.warn("Native Loopback not found. Falling back to WASM engine.");
         try {
             await init();
@@ -180,6 +218,14 @@ async function bootstrap() {
             outputEl.innerHTML = `<span class="error">Failed to load WASM module: ${e}</span>`;
             return;
         }
+    }
+
+    const launchLink = document.querySelector('a[href="qualia://start"]');
+    if (launchLink) {
+        launchLink.addEventListener('click', () => {
+            document.querySelector('.status-indicator').innerHTML = 'Launching Local Engine...';
+            retryNativeLaunch();
+        });
     }
     
     inputEl.addEventListener('input', triggerCompilation);

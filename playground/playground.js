@@ -169,22 +169,58 @@ function compileToBytecode() {
     }, 45); // simulated WASM delay
 }
 
-// Check if Native Daemon is installed and running
-fetch('http://127.0.0.1:4848/rpc', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 })
-}).then(res => res.json()).then(data => {
-    if(data.result && data.result.status === 'ok') {
-        const installBtn = document.getElementById('install-btn-header');
-        if(installBtn) {
-            installBtn.style.background = 'rgba(74, 222, 128, 0.1)';
-            installBtn.style.color = 'var(--success)';
-            installBtn.style.border = '1px solid var(--success)';
-            installBtn.innerText = 'Daemon Active (Native)';
-            installBtn.onclick = null;
+window.QUALIA_NATIVE_ACTIVE = false;
+
+function probeNativeDaemon(timeoutMs = 500) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    return fetch('http://127.0.0.1:4242/health', {
+        method: 'GET',
+        signal: controller.signal
+    }).then(res => {
+        window.QUALIA_NATIVE_ACTIVE = res.ok;
+        return res.ok;
+    }).catch(() => {
+        window.QUALIA_NATIVE_ACTIVE = false;
+        return false;
+    }).finally(() => clearTimeout(timeout));
+}
+
+function markNativeButtonActive() {
+    const installBtn = document.getElementById('install-btn-header');
+    if(installBtn) {
+        installBtn.style.background = 'rgba(74, 222, 128, 0.1)';
+        installBtn.style.color = 'var(--success)';
+        installBtn.style.border = '1px solid var(--success)';
+        installBtn.innerText = 'Daemon Active (Native)';
+        installBtn.onclick = null;
+        installBtn.removeAttribute('href');
+    }
+}
+
+async function retryNativeLaunch() {
+    for (let attempt = 0; attempt < 5; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (await probeNativeDaemon()) {
+            markNativeButtonActive();
+            return;
         }
     }
-}).catch(e => {
-    // Daemon not found, leave "Install" button exactly as is
+}
+
+// Check if Native Daemon is installed and running
+probeNativeDaemon().then(active => {
+    if(active) {
+        markNativeButtonActive();
+    } else {
+        const installBtn = document.getElementById('install-btn-header');
+        if(installBtn) {
+            installBtn.innerText = 'Launch Local Engine';
+            installBtn.onclick = () => {
+                window.location.href = 'qualia://start';
+                retryNativeLaunch();
+            };
+        }
+    }
 });
