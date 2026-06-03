@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvases • Cooperative Projects</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .canvas-block { transition: all 0.2s; }
+        .canvas-block:hover { transform: translateY(-1px); }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/90 backdrop-blur-2xl">
+        <div class="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <a href="cooperative.html" class="flex items-center gap-x-3">
+                    <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                        <i class="fa-solid fa-users text-white text-xl"></i>
+                    </div>
+                    <span class="font-display text-2xl font-semibold tracking-tighter">Cooperative Projects</span>
+                </a>
+            </div>
+            <div>
+                <a href="project-detail.html" class="px-4 py-2 text-sm hover:bg-white/5 rounded-2xl">Back to Project</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-8 pb-16">
+        <div class="max-w-4xl">
+            <h1 class="font-display text-4xl font-semibold tracking-tight">Strategic Canvases</h1>
+            <p class="text-xl text-white/70 mt-2">Business Model Canvas and Mission Model Canvas for the QualiaDB + Wellfair Integration project.</p>
+        </div>
+
+        <!-- Business Model Canvas -->
+        <div class="mt-12">
+            <div class="flex items-center gap-x-3 mb-4">
+                <div class="px-4 py-1 bg-white/10 rounded-2xl text-sm">Business Model Canvas</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
+                <!-- Row 1 -->
+                <div class="glass-strong rounded-3xl p-5 md:col-span-2">
+                    <div class="font-semibold mb-2 text-emerald-400">Key Partners</div>
+                    <div class="text-white/80">QualiaDB core team • Wellfair contributors • Solid community • Nym / privacy infrastructure providers</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-1">
+                    <div class="font-semibold mb-2 text-emerald-400">Key Activities</div>
+                    <div class="text-white/80">Graph engine development • Ontology & logic rules • Privacy tooling • Cross-project integration</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-1">
+                    <div class="font-semibold mb-2 text-emerald-400">Key Resources</div>
+                    <div class="text-white/80">Qualia Sentinel VM • Wellfair vault • Human contributors (Principal + others) • AI agent access • Starlink infrastructure</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-1">
+                    <div class="font-semibold mb-2 text-emerald-400">Value Propositions</div>
+                    <div class="text-white/80">Sovereign personal data vaults • Fair obligation economics • Privacy-first collaboration • Verifiable provenance</div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="glass-strong rounded-3xl p-5 md:col-span-2">
+                    <div class="font-semibold mb-2 text-emerald-400">Customer Relationships</div>
+                    <div class="text-white/80">Direct contributor relationships • Consent-based data sharing • Long-term stewardship for vulnerable users</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-1">
+                    <div class="font-semibold mb-2 text-emerald-400">Channels</div>
+                    <div class="text-white/80">GitHub • Solid ecosystem • Privacy communities • Direct contributor networks</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-2">
+                    <div class="font-semibold mb-2 text-emerald-400">Customer Segments</div>
+                    <div class="text-white/80">Independent developers & researchers • Vulnerable individuals needing privacy/safety tools • Mission-driven organizations • Privacy-conscious users</div>
+                </div>
+
+                <!-- Bottom -->
+                <div class="glass-strong rounded-3xl p-5 md:col-span-3">
+                    <div class="font-semibold mb-2 text-emerald-400">Cost Structure</div>
+                    <div class="text-white/80">AI agent subscriptions • Infrastructure (Starlink) • Unpaid contributor time (obligation model) • Development & security tooling</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-2">
+                    <div class="font-semibold mb-2 text-emerald-400">Revenue Streams / Fulfillment</div>
+                    <div class="text-white/80">Targeted micropayments • Sponsorship & grants • Obligation fulfillment by supporters • Future commons licensing (post-obligation)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mission Model Canvas -->
+        <div class="mt-14">
+            <div class="flex items-center gap-x-3 mb-4">
+                <div class="px-4 py-1 bg-amber-500/20 text-amber-400 rounded-2xl text-sm">Mission Model Canvas</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
+                <div class="glass-strong rounded-3xl p-5 md:col-span-2">
+                    <div class="font-semibold mb-2 text-amber-400">Mission / Impact</div>
+                    <div class="text-white/80">Enable sovereign, privacy-first personal data infrastructure that protects human dignity and agency, especially for vulnerable people.</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-1">
+                    <div class="font-semibold mb-2 text-amber-400">Beneficiaries</div>
+                    <div class="text-white/80">Independent contributors • People in crisis or vulnerable situations • Privacy-conscious developers • Mission-driven organizations</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-1">
+                    <div class="font-semibold mb-2 text-amber-400">Buy-in & Support</div>
+                    <div class="text-white/80">Solid community • Privacy advocates • Ethical tech funders • Individual contributors who believe in fair obligation economics</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-1">
+                    <div class="font-semibold mb-2 text-amber-400">Deployment</div>
+                    <div class="text-white/80">Open source via GitHub • Local-first deployment • Integration with Solid & Wellfair ecosystems</div>
+                </div>
+
+                <div class="glass-strong rounded-3xl p-5 md:col-span-2">
+                    <div class="font-semibold mb-2 text-amber-400">Key Activities</div>
+                    <div class="text-white/80">Building Qualia engine & Sentinel logic • Wellfair privacy & safety features • Ontology & economic modeling • Cross-project integration</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-1">
+                    <div class="font-semibold mb-2 text-amber-400">Key Resources</div>
+                    <div class="text-white/80">Human contributors (Principal + others) • Qualia logic engine • Wellfair vault • AI tooling • Infrastructure</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-1">
+                    <div class="font-semibold mb-2 text-amber-400">Partners</div>
+                    <div class="text-white/80">Solid ecosystem • Nym privacy network • Ethical open source contributors • Mission-aligned sponsors</div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5 md:col-span-1">
+                    <div class="font-semibold mb-2 text-amber-400">Mission Budget / Cost</div>
+                    <div class="text-white/80">AI subscriptions • Infrastructure • Unpaid contributor time (modeled via obligation costs) • Security & development tooling</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-10 text-xs text-white/50 max-w-3xl">
+            These canvases are illustrative and grounded in the project’s ontology (obligations, contributions, credentials, relations, consent, and compensation model). They can evolve as the project and governance terms develop.
+        </div>
+    </div>
+</body>
+</html>
