@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Detail • Cooperative Projects</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; }
+        .glass { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        .glass-strong { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.18); }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <!-- Top Navigation -->
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/90 backdrop-blur-2xl">
+        <div class="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <a href="cooperative.html" class="flex items-center gap-x-3">
+                    <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                        <i class="fa-solid fa-users text-white text-xl"></i>
+                    </div>
+                    <span class="font-display text-2xl font-semibold tracking-tighter">Cooperative Projects</span>
+                </a>
+            </div>
+            <div class="flex items-center gap-x-4 text-sm">
+                <a href="cooperative.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl">Back to Hub</a>
+                <button class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-semibold text-sm">Contribute to this Project</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-8 pb-16">
+        
+        <!-- Project Header -->
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-y-4 mb-8">
+            <div>
+                <div class="flex items-center gap-x-3">
+                    <span class="px-3 py-1 text-xs rounded-2xl bg-emerald-500/20 text-emerald-400">ACTIVE • PHASE 2/4</span>
+                    <span class="px-3 py-1 text-xs rounded-2xl bg-amber-500/20 text-amber-400">CREDENTIALS REQUIRED</span>
+                </div>
+                <h1 class="font-display text-4xl font-semibold tracking-[-1.5px] mt-2">QualiaDB + Wellfair Integration & Hardening</h1>
+                <p class="text-white/70 mt-2 max-w-3xl">Integration of the Qualia graph engine with the Wellfair personal vault, including AI agent tooling, economic flows, privacy features, and real cost modeling for independent contributors.</p>
+            </div>
+            
+            <div class="flex gap-x-3">
+                <div class="glass-strong px-5 py-3 rounded-3xl text-center">
+                    <div class="text-xs text-white/50">OBLIGATION MET</div>
+                    <div class="text-2xl font-semibold text-emerald-400">68%</div>
+                </div>
+                <div class="glass-strong px-5 py-3 rounded-3xl text-center">
+                    <div class="text-xs text-white/50">AVAILABLE FUNDING</div>
+                    <div class="text-2xl font-semibold">$3,700</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="glass-strong rounded-3xl p-4">
+                <div class="text-xs text-white/50">DEPENDENCIES</div>
+                <div class="mt-1 text-sm">QualiaDB • Wellfair • Cooperative Projects</div>
+            </div>
+            <div class="glass-strong rounded-3xl p-4">
+                <div class="text-xs text-white/50">CREDENTIALS REQUIRED</div>
+                <div class="mt-1 text-sm">Legal/Technical qualification for integration tasks</div>
+            </div>
+            <div class="glass-strong rounded-3xl p-4">
+                <div class="text-xs text-white/50">AI AGENT COSTS (Principal)</div>
+                <div class="mt-1 text-sm">$420/mo (Grok, Claude, Gemini, OpenAI)</div>
+            </div>
+            <div class="glass-strong rounded-3xl p-4">
+                <div class="text-xs text-white/50">INFRASTRUCTURE</div>
+                <div class="mt-1 text-sm">Starlink Roam • Private living costs (aggregated)</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-white/10 mb-6">
+            <div class="px-6 py-3 border-b-2 border-emerald-500 font-medium">Tasks & Funding</div>
+            <div class="px-6 py-3 text-white/60 hover:text-white cursor-pointer">Credentials & Access</div>
+            <div class="px-6 py-3 text-white/60 hover:text-white cursor-pointer">Relations & Dependencies</div>
+            <div class="px-6 py-3 text-white/60 hover:text-white cursor-pointer">Contributions</div>
+        </div>
+
+        <!-- Tasks Section -->
+        <div class="mb-10">
+            <div class="flex items-center justify-between mb-4">
+                <div class="font-semibold text-xl">Active Tasks</div>
+                <button class="text-sm px-4 py-2 border border-white/20 rounded-2xl hover:bg-white/5">Claim Task</button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Task Row -->
+                <div class="glass-strong rounded-3xl p-5 flex flex-col lg:flex-row lg:items-center gap-4">
+                    <div class="flex-1">
+                        <div class="font-medium">Build Qualia-Solid Bridge for Wellfair interoperability</div>
+                        <div class="text-xs text-white/50 mt-1">Phase 2 • Estimated 45 hrs • $2,250</div>
+                    </div>
+                    <div class="flex items-center gap-x-4 text-sm">
+                        <div class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-2xl text-xs">Credential Required</div>
+                        <div class="text-emerald-400">$1,200 available</div>
+                        <button class="px-5 py-2 bg-white text-zinc-900 rounded-2xl text-sm font-semibold">View Details</button>
+                    </div>
+                </div>
+
+                <div class="glass-strong rounded-3xl p-5 flex flex-col lg:flex-row lg:items-center gap-4">
+                    <div class="flex-1">
+                        <div class="font-medium">Model AI agent usage & cost attribution</div>
+                        <div class="text-xs text-white/50 mt-1">Phase 3 • Estimated 12 hrs • $480</div>
+                    </div>
+                    <div class="flex items-center gap-x-4 text-sm">
+                        <div class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-2xl text-xs">Open</div>
+                        <div class="text-emerald-400">$650 available</div>
+                        <button class="px-5 py-2 bg-white text-zinc-900 rounded-2xl text-sm font-semibold">Claim Task</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Credentials Section -->
+        <div class="mb-10">
+            <div class="font-semibold text-xl mb-4">Required Credentials</div>
+            <div class="glass-strong rounded-3xl p-6">
+                <div class="flex items-start gap-x-4">
+                    <i class="fa-solid fa-id-card text-2xl text-amber-400 mt-1"></i>
+                    <div>
+                        <div class="font-medium">Legal and Technical Qualification</div>
+                        <div class="text-sm text-white/70 mt-1">Required for integration and governance tasks. Demonstrated legal/technical qualification (lawyer, qualified software architect, or equivalent professional standing) needed for system integration involving data governance and cross-project obligations.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relations -->
+        <div>
+            <div class="font-semibold text-xl mb-4">Relations & Dependencies</div>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="glass-strong rounded-3xl p-5">
+                    <div class="text-xs text-white/50">DEPENDS ON</div>
+                    <div class="mt-2 space-y-1 text-sm">
+                        <div>→ QualiaDB (core engine)</div>
+                        <div>→ Wellfair (personal vault)</div>
+                    </div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5">
+                    <div class="text-xs text-white/50">CONTRIBUTES TO</div>
+                    <div class="mt-2 space-y-1 text-sm">
+                        <div>→ Cooperative Projects ontology & UI</div>
+                        <div>→ Cross-project obligation modeling</div>
+                    </div>
+                </div>
+                <div class="glass-strong rounded-3xl p-5">
+                    <div class="text-xs text-white/50">CONSENT & DATA FLOW</div>
+                    <div class="mt-2 text-sm text-white/70">Principal has consented to aggregated cost and contribution data flowing between Qualia, Wellfair, and Cooperative Projects.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
