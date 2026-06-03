@@ -8,11 +8,13 @@ Each runner enforces the 512 MB RAM ceiling; OOM is a valid result.
 All results are normalized to a common schema (v1) for easy aggregation
 and visualization.
 
+Qualia native daemon (port 4242) is auto-included when --all is used
+and the daemon is healthy. Use --no-qualia to disable.
+
 Usage:
-    python benchmarks/harness.py --engine oxigraph
-    python benchmarks/harness.py --engine oxigraph --n 100000
-    python benchmarks/harness.py --engine oxigraph --output docs/comparative_benchmark_results.json
     python benchmarks/harness.py --all --output docs/comparative_benchmark_results.json
+    python benchmarks/harness.py --engine qualia
+    python benchmarks/harness.py --all --no-qualia
 """
 import argparse
 import datetime
@@ -20,7 +22,6 @@ import json
 import os
 import sys
 
-# Ensure the benchmarks/ directory is on the path regardless of cwd
 sys.path.insert(0, os.path.dirname(__file__))
 
 from common import DEFAULT_WARMUP, DEFAULT_SAMPLES
@@ -28,54 +29,64 @@ from common import DEFAULT_WARMUP, DEFAULT_SAMPLES
 SCHEMA_VERSION = 1
 DATASET = "synthetic-ntriples-v1"
 
-ENGINES = ["oxigraph", "surrealdb", "comunica", "wasm_prolog"]
+BASE_ENGINES = ["oxigraph", "surrealdb", "comunica", "wasm_prolog"]
 
 ENGINE_META = {
     "oxigraph": {
-        "label":   "Oxigraph",
-        "focus":   "Memory bloat & native Rust SPARQL speed",
+        "label": "Oxigraph",
+        "focus": "Memory bloat & native Rust SPARQL speed",
         "install": "pip install pyoxigraph psutil",
     },
     "surrealdb": {
-        "label":   "SurrealDB",
-        "focus":   "Relational-vs-graph overhead (SQL-like document/graph parsing)",
+        "label": "SurrealDB",
+        "focus": "Relational-vs-graph overhead (SQL-like document/graph parsing)",
         "install": "surreal CLI binary required",
     },
     "comunica": {
-        "label":   "Comunica",
-        "focus":   "WASM/JS execution penalty (high-level runtime overhead)",
+        "label": "Comunica",
+        "focus": "WASM/JS execution penalty (high-level runtime overhead)",
         "install": "Node.js + npm install @comunica/query-sparql n3",
     },
     "wasm_prolog": {
-        "label":   "WASM-Prolog",
-        "focus":   "Logical inference throughput (backtracking vs. O(1) FNV lookup)",
+        "label": "WASM-Prolog",
+        "focus": "Logical inference throughput (backtracking vs. O(1) FNV lookup)",
         "install": "Node.js + npm install tau-prolog",
+    },
+    "qualia": {
+        "label": "Qualia (native daemon)",
+        "focus": "Zero-allocation 5-vector graph + Sentinel VM on your hardware",
+        "install": "cargo run --release -p qualia-cli -- daemon --port 4242",
     },
 }
 
 
 METHODOLOGY = (
-    "Each engine is run in complete isolation (one at a time) to avoid cross-engine "
-    "overhead bias. The 512 MB RAM ceiling is enforced via Linux RLIMIT_AS for Python "
-    "processes and --max-old-space-size for Node.js; SurrealDB server RSS is tracked via psutil. "
-    "OOM or non-zero exit during ingestion or query execution is recorded as a valid result. "
-    "Ingestion methodology varies by engine nature (Oxigraph bulk in-process, Surreal batched HTTP, "
-    "JS engines parse in V8) — this reflects realistic end-to-end cost under the target constraint. "
-    f"All latency measurements use {DEFAULT_WARMUP} warmup + {DEFAULT_SAMPLES} samples with p50/p95/p99. "
-    "Synthetic dataset is deterministic (generate_ntriples)."
+    f"Each engine is run in complete isolation. 512 MB ceiling enforced. "
+    f"Latency: {DEFAULT_WARMUP} warmup + {DEFAULT_SAMPLES} samples (p50/p95/p99). "
+    "Ingestion paths differ by engine (Oxigraph bulk, Surreal HTTP, JS parse, Qualia native). "
+    "Qualia row (when present) measured via local daemon on port 4242. "
+    "Full Qualia ingestion + Lazy SuperBlock metrics come from qualia-cli bench --suite full."
 )
 
 
+def _qualia_daemon_healthy() -> bool:
+    try:
+        import urllib.request
+        req = urllib.request.Request("http://127.0.0.1:4242/health", method="GET")
+        with urllib.request.urlopen(req, timeout=1.0) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+
 def normalize_result(engine: str, raw: dict) -> dict:
-    """Ensure every result has the standard top-level keys and metadata."""
-    result = dict(raw)  # copy
+    result = dict(raw)
     result.setdefault("engine", engine)
     result.setdefault("schema_version", SCHEMA_VERSION)
     result.setdefault("dataset", DATASET)
     result.setdefault("n_triples", 10_000)
     result.setdefault("timestamp", datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"))
     result["meta"] = ENGINE_META.get(engine, {})
-    # Ensure latency dicts exist even on error paths
     for key in ("point", "twohop", "filter"):
         if key not in result:
             result[key] = None
@@ -91,12 +102,13 @@ def run_engine(engine: str, n: int, enforce_memory_limit: bool) -> dict:
         from comunica.runner import benchmark_set
     elif engine == "wasm_prolog":
         from wasm_prolog.runner import benchmark_set
+    elif engine == "qualia":
+        from qualia.runner import benchmark_set
     else:
         return {"engine": engine, "error": f"unknown engine: {engine}"}
 
     raw = benchmark_set(n=n, enforce_memory_limit=enforce_memory_limit)
-    result = normalize_result(engine, raw)
-    return result
+    return normalize_result(engine, raw)
 
 
 def merge_into_output(output_path: str, engine: str, result: dict) -> None:
@@ -122,26 +134,49 @@ def merge_into_output(output_path: str, engine: str, result: dict) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Qualia-DB comparative benchmark harness")
+    parser = argparse.ArgumentParser(
+        description="Qualia-DB comparative benchmark harness",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  python benchmarks/harness.py --all --output docs/comparative_benchmark_results.json
+  python benchmarks/harness.py --all --no-qualia
+  python benchmarks/harness.py --engine qualia
+"""
+    )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--engine", choices=ENGINES, help="Single engine to benchmark")
-    group.add_argument("--all", action="store_true", help="Run all implemented engines sequentially")
-    parser.add_argument("--n", type=int, default=10_000,
-                        help="Synthetic dataset size in triples (default: 10000)")
-    parser.add_argument("--output", default=None,
-                        help="Merge JSON results into this file (e.g. docs/comparative_benchmark_results.json)")
-    parser.add_argument("--no-memory-limit", action="store_true",
-                        help="Disable the 512 MB ceiling (for debugging)")
+    group.add_argument("--engine", choices=BASE_ENGINES + ["qualia"], help="Single engine to benchmark")
+    group.add_argument("--all", action="store_true", help="Run all engines (Qualia auto-included if daemon healthy)")
+
+    parser.add_argument("--n", type=int, default=10_000, help="Synthetic dataset size in triples")
+    parser.add_argument("--output", default=None, help="Write results to this JSON file")
+    parser.add_argument("--no-memory-limit", action="store_true", help="Disable 512 MB ceiling (debug only)")
+    parser.add_argument("--no-qualia", action="store_true", help="Do not include Qualia even if daemon is running")
+    parser.add_argument("--qualia", action="store_true", help="Force include Qualia (even if not auto-detected)")
+
     args = parser.parse_args()
 
     enforce = not args.no_memory_limit
-    targets = ENGINES if args.all else [args.engine]
+
+    if args.engine:
+        targets = [args.engine]
+    else:
+        targets = list(BASE_ENGINES)
+
+        include_qualia = False
+        if args.qualia:
+            include_qualia = True
+        elif not args.no_qualia:
+            # Auto-detect
+            include_qualia = _qualia_daemon_healthy()
+
+        if include_qualia:
+            targets.append("qualia")
+            print("[harness] Qualia daemon detected on port 4242 — including native reference", flush=True)
 
     for engine in targets:
-        print(f"\n[harness] -- {ENGINE_META[engine]['label']} (n={args.n:,}) --", flush=True)
+        meta = ENGINE_META.get(engine, {})
+        print(f"\n[harness] -- {meta.get('label', engine)} (n={args.n:,}) --", flush=True)
         result = run_engine(engine, args.n, enforce)
-
-        # Pretty-print the result
         print(json.dumps(result, indent=2), flush=True)
 
         if args.output:
