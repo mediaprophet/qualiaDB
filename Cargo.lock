@@ -3551,14 +3551,18 @@ dependencies = [
 name = "qualia-cli"
 version = "0.1.1"
 dependencies = [
+ "bytemuck",
  "chrono",
  "clap",
  "ed25519-dalek",
  "futures-util",
  "git2",
+ "lz4_flex",
  "qualia-core-db",
  "rand_core 0.6.4",
  "reqwest",
+ "rio_api",
+ "rio_xml",
  "serde",
  "serde_json",
  "sysinfo 0.39.3",

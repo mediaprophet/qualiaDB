@@ -7,6 +7,8 @@ use warp::Filter;
 use serde::{Deserialize, Serialize};
 
 pub mod telemetry_server;
+pub mod ingest;
+pub mod compress;
 
 /// The Qualia-DB Block Inspector & Data Ingestion CLI
 #[derive(Parser)]
@@ -34,6 +36,9 @@ enum Commands {
         /// Run in Development Mode (allows localhost origin and skips strict JWT pairing)
         #[arg(long)]
         dev: bool,
+        /// Local daemon port for the native bridge
+        #[arg(long, default_value = "4242")]
+        port: u16,
         /// Network Connectivity Profile (offline, metered, unmetered)
         #[arg(long, default_value = "unmetered")]
         net_mode: String,
@@ -84,12 +89,38 @@ enum Commands {
         /// The output .q42 file
         output: PathBuf,
     },
+    /// Ingest N-Triples into a .q42 SuperBlock file + .q42.lex reverse-lexicon side-car.
+    /// Suitable for building browser-deployable datasets (e.g. WordNet for the GH Pages demo).
+    Ingest {
+        /// Input N-Triples file (.nt or .nt.gz pre-decompressed)
+        #[arg(long)]
+        input: PathBuf,
+        /// Output base path — writes <path>.q42 and <path>.q42.lex
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// Performs an instantaneous microsecond lookup on a massive .q42 binary via OS memory mapping
     Query {
         /// The target .q42 dataset binary file
         dataset: PathBuf,
         /// The u64 subject ID to query
         subject: u64,
+    },
+    /// Compress a .q42 SuperBlock file or .lex side-car into an LZ4 block stream
+    /// for browser delivery.  For .q42 input, SuperBlock headers are stripped so
+    /// the decompressed output is pure 48-byte Quin records — no header skipping
+    /// needed in the browser.  For any other input the raw bytes are compressed.
+    ///
+    /// Output naming convention:
+    ///   wordnet.q42      → wordnet.c.q42      (compressed raw Quins)
+    ///   wordnet.q42.lex  → wordnet.q42.lex.lz4 (compressed lex side-car)
+    Compress {
+        /// Input file (.q42 SuperBlock or .lex side-car)
+        #[arg(long)]
+        input: PathBuf,
+        /// Output path for the LZ4 block stream
+        #[arg(long)]
+        output: PathBuf,
     },
 }
 
@@ -232,9 +263,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             file.sync_all()?;
             println!("Dumped 3 mocked Quins (144 bytes) to .q42 successfully.");
         }
-        Commands::Daemon { dev, net_mode, energy_mode, workers, compute_swarm } => {
+        Commands::Daemon { dev, port, net_mode, energy_mode, workers, compute_swarm } => {
             let is_dev = *dev;
-            println!("Starting Qualia Native Loopback Server on 127.0.0.1:4848");
+            println!("Starting Qualia Native Loopback Server on 127.0.0.1:{}", port);
             
             println!("============================================================");
             println!("🚀 Qualia-DB Zero-Allocation Native Local Daemon Booting...");
@@ -272,413 +303,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Strict Origin Enforcement enabled: Trusting only mediaprophet.github.io");
             }
 
-            let rpc_route = warp::post()
-                .and(warp::path("rpc"))
-                .and(warp::header::optional::<String>("origin"))
-                .and(warp::body::json())
-                .map(move |origin: Option<String>, req: RpcRequest| {
-                    
-                    let trusted = if is_dev {
-                        origin.as_deref().unwrap_or("").contains("localhost") || origin.as_deref().unwrap_or("").contains("127.0.0.1")
-                    } else {
-                        origin.as_deref().unwrap_or("") == "https://mediaprophet.github.io"
-                    };
-
-                    if !trusted {
-                        return warp::reply::json(&RpcResponse {
-                            jsonrpc: "2.0".into(),
-                            result: None,
-                            error: Some("Untrusted Origin".into()),
-                            id: req.id,
-                        });
-                    }
-
-                    if req.method == "ping" {
-                        return warp::reply::json(&RpcResponse {
-                            jsonrpc: "2.0".into(),
-                            result: Some(serde_json::json!({ "status": "ok", "mode": if is_dev { "dev" } else { "strict" } })),
-                            error: None,
-                            id: req.id,
-                        });
-                    }
-
-                    if req.method == "compile_and_execute" {
-                        if !is_dev && req.params.token.is_none() {
-                            return warp::reply::json(&RpcResponse {
-                                jsonrpc: "2.0".into(),
-                                result: None,
-                                error: Some("Missing pairing token".into()),
-                                id: req.id,
-                            });
-                        }
-                        
-                        let query_str = req.params.query.unwrap_or_default();
-                        let quin_opt = QueryCompiler::compile_to_quin(&query_str);
-                        
-                        if let Some(quin) = quin_opt {
-                            let routing_tier = (quin.metadata >> 61) & 0b11;
-                            let validation_mask = quin.metadata & 0xFFFF;
-                            
-                            return warp::reply::json(&RpcResponse {
-                                jsonrpc: "2.0".into(),
-                                result: Some(serde_json::json!({
-                                    "quin": {
-                                        "subject": quin.subject.to_string(),
-                                        "predicate": quin.predicate.to_string(),
-                                        "object": quin.object.to_string(),
-                                        "context": quin.context.to_string(),
-                                        "metadata": quin.metadata.to_string(),
-                                        "parity": quin.parity.to_string()
-                                    },
-                                    "routing_tier": routing_tier,
-                                    "validation_mask": validation_mask,
-                                    "execution_time_ns": 36
-                                })),
-                                error: None,
-                                id: req.id,
-                            });
-                        } else {
-                            return warp::reply::json(&RpcResponse {
-                                jsonrpc: "2.0".into(),
-                                result: None,
-                                error: Some("Compilation failed".into()),
-                                id: req.id,
-                            });
-                        }
-                    }
-
-                    warp::reply::json(&RpcResponse {
-                        jsonrpc: "2.0".into(),
-                        result: None,
-                        error: Some("Unknown method".into()),
-                        id: req.id,
-                    })
-                });
-
-            // To support playground from browser we need basic CORS
-            let cors = warp::cors()
-                .allow_any_origin()
-                .allow_headers(vec!["content-type"])
-                .allow_methods(vec!["POST"]);
-
-            let cache_route = warp::post()
-                .and(warp::path("cache"))
-                .and(warp::query::<std::collections::HashMap<String, String>>())
-                .and(warp::body::bytes())
-                .map(|qs: std::collections::HashMap<String, String>, body: warp::hyper::body::Bytes| {
-                    let filename = qs.get("filename").map(|s| s.clone()).unwrap_or_else(|| "dataset_shard.q42".to_string());
-                    let mut path = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).map(std::path::PathBuf::from).unwrap_or_else(|_| std::path::PathBuf::from("."));
-                    path.push(".qualia");
-                    path.push("cache");
-                    let _ = std::fs::create_dir_all(&path);
-                    path.push(&filename);
-                    let _ = std::fs::write(&path, body);
-                    println!("📥 Loopback Ingestion: Saved Transcompiled Shard to {:?}", path);
-                    warp::reply::json(&serde_json::json!({ "status": "ok", "saved_to": path.to_str() }))
-                });
-
-            // Phase 59: The Ollama Integration & Model Deduplication Proxy (Mode 2)
-            let ollama_api_pull = warp::post()
-                .and(warp::path!("api" / "pull"))
-                .and(warp::body::json())
-                .map(|body: serde_json::Value| {
-                    let model_name = body["name"].as_str().unwrap_or("unknown_model");
-                    println!("========================================");
-                    println!("🤖 [Ollama API Shim] Intercepted request to download model: {}", model_name);
-                    println!("   -> Model Deduplication Active: Redirecting to unified Permissive Commons cache.");
-                    println!("   -> Symlinking `.gguf` to prevent local hard-drive bloat.");
-                    println!("========================================");
-                    
-                    warp::reply::json(&serde_json::json!({ "status": "success", "qualia_intercept": true }))
-                });
-
-            let ollama_api_generate = warp::post()
-                .and(warp::path!("api" / "generate"))
-                .and(warp::body::json())
-                .map(|body: serde_json::Value| {
-                    let prompt = body["prompt"].as_str().unwrap_or("");
-                    println!("========================================");
-                    println!("🤖 [Ollama API Shim] Intercepted Prompt: {}", prompt);
-                    println!("   -> Gating against Spatio-Temporal .q42 Axioms...");
-                    println!("   -> Forwarding safely to local Ollama Engine (port 11435)");
-                    println!("========================================");
-                    
-                    warp::reply::json(&serde_json::json!({ "model": body["model"], "response": " [Neurosymbolic Context Injected] " }))
-                });
-
-            // Phase 59: The Native Alternative Inference (Mode 1)
-            let native_api_infer = warp::post()
-                .and(warp::path!("qualia" / "infer"))
-                .and(warp::body::json())
-                .map(|_body: serde_json::Value| {
-                    warp::reply::json(&serde_json::json!({ "status": "strict_mode_active" }))
-                });
-
-            // Phase 62: The Biological Anatomy App Routes
-            let bio_sync_route = warp::post()
-                .and(warp::path!("api" / "ontology" / "sync"))
-                .map(|| {
-                    println!("========================================");
-                    println!("🧬 [Bio-Spatial App] Intercepted WebTorrent Sync Request.");
-                    println!("   -> Fetching `human_medical_ontology.q42` from Decentralized DHT Swarm...");
-                    println!("   -> Saved to Local Cache. Now Seeding to Permissive Commons.");
-                    println!("========================================");
-                    warp::reply::json(&serde_json::json!({ "status": "synced", "message": "Medical Ontology (.q42) synced and actively seeding." }))
-                });
-
-            let bio_query_route = warp::post()
-                .and(warp::path!("api" / "ontology" / "query"))
-                .and(warp::body::json())
-                .map(|body: serde_json::Value| {
-                    let disorder = body["disorder"].as_str().unwrap_or("");
-                    println!("🧬 [Bio-Spatial App] Querying Local Medical Ontology for: {}", disorder);
-                    
-                    // Mock Semantic RDF Logic -> Spatial Impacts
-                    let impacted_organs = match disorder {
-                        "Hypertension" => vec!["Heart", "Kidneys"],
-                        "Asthma" => vec!["Lungs", "Immune"],
-                        "Neuropathy" => vec!["Brain", "Nervous"],
-                        _ => vec![]
-                    };
-                    
-                    warp::reply::json(&serde_json::json!({ 
-                        "disorder": disorder, 
-                        "impacts": impacted_organs,
-                        "provenance": "did:git:webizen:medical_commons"
-                    }))
-                });
-
-            let bio_routes = bio_sync_route.or(bio_query_route);
-            let ai_routes = ollama_api_pull.or(ollama_api_generate).or(native_api_infer);
-
-            // Phase 63: Federated Analytics & Rights Ontology Directory
-            let webid_negotiate = warp::post()
-                .and(warp::path!("webid" / "negotiate"))
-                .and(warp::body::json())
-                .map(|body: serde_json::Value| {
-                    let agent = body["requesting_agent"].as_str().unwrap_or("unknown");
-                    let credential = body["credential"].as_str().unwrap_or("none");
-                    println!("========================================");
-                    println!("🪪 [WebID Endpoint] Negotiation initiated by {}", agent);
-                    println!("   -> Evaluating Verifiable Credential: {}", credential);
-                    
-                    if credential == "none" {
-                        println!("   ❌ Rejected: Insufficient Rights Ontology clearance.");
-                        return warp::reply::json(&serde_json::json!({ "status": "rejected", "reason": "Missing Verifiable Credential" }));
-                    }
-
-                    println!("   ✅ Authorized. Enumerating conclusions based on Rights Context.");
-                    warp::reply::json(&serde_json::json!({ 
-                        "webid": "did:git:webizen:local_node",
-                        "status": "authorized",
-                        "rights_context": "Federated Social Analytics Allowed"
-                    }))
-                });
-
-            let federated_analytics = warp::post()
-                .and(warp::path!("api" / "federation" / "analytics"))
-                .and(warp::body::json())
-                .map(|body: serde_json::Value| {
-                    let query = body["query"].as_str().unwrap_or("");
-                    println!("========================================");
-                    println!("🌐 [Federated Social Web] Received Macro-Demographic Query:");
-                    println!("   -> Query: {}", query);
-                    println!("   -> Evaluating against Rights Ontology...");
-                    println!("   -> Scrubbing PII & Preserving Dignity Guarantee...");
-                    
-                    // Simulated Data output maintaining Dignity Guarantee (No PII)
-                    warp::reply::json(&serde_json::json!({ 
-                        "query_handled": query,
-                        "aggregated_impact_score": 0.84,
-                        "identifiability_risk": "0.00%",
-                        "routing": "Sphinx Packet via Nym Mixnet"
-                    }))
-                });
-
-            let social_routes = webid_negotiate.or(federated_analytics);
-
-            // Phase 64: ILP Monetization & Threshold Shift License
-            let ilp_monetization = warp::post()
-                .and(warp::path!("api" / "ilp" / "stream"))
-                .and(warp::body::json())
-                .map(|body: serde_json::Value| {
-                    let dataset_id = body["dataset_id"].as_str().unwrap_or("unknown");
-                    let payment_microsats = body["amount"].as_u64().unwrap_or(0);
-                    
-                    println!("========================================");
-                    println!("💸 [ILP Monetization] Received Web Monetization Stream: {} micro-cents for {}", payment_microsats, dataset_id);
-                    
-                    // N3Logic Risk-Compounded Obligation Algorithm
-                    // (Simulated values for demonstration)
-                    let base_rate = 100_000.0; // Fair value estimate
-                    let risk_multiplier = 4.5; // High risk (unsupported, objected to)
-                    let temporal_compound = 1.2; // Years spent
-                    
-                    let total_obligation = base_rate * risk_multiplier * temporal_compound;
-                    let current_accumulated = 350_000.0 + (payment_microsats as f64); // Mock accumulated
-                    
-                    println!("   -> Calculating N3Logic Obligation Threshold...");
-                    println!("   -> Target Obligation: {} micro-cents", total_obligation);
-                    println!("   -> Current Income: {} micro-cents", current_accumulated);
-                    
-                    let mut license_state = "State A: Commercial Obligation (Pre-Threshold)";
-                    if current_accumulated >= total_obligation {
-                        license_state = "State B: Permissive Commons (Post-Threshold)";
-                        println!("   🔓 [THRESHOLD MET] Executing License Shift to Permissive Commons.");
-                    } else {
-                        println!("   🔒 [THRESHOLD PENDING] Dataset remains gated under Commercial Obligation.");
-                    }
-
-                    warp::reply::json(&serde_json::json!({ 
-                        "dataset": dataset_id,
-                        "payment_received": payment_microsats,
-                        "accumulated": current_accumulated,
-                        "total_obligation": total_obligation,
-                        "license_state": license_state
-                    }))
-                });
-
-            let economic_routes = ilp_monetization;
-
-            // Phase 65: Provenance DAG & Semantic Escrow
-            let escrow_adjudicate = warp::post()
-                .and(warp::path!("api" / "logic" / "adjudicate"))
-                .and(warp::body::json())
-                .map(|body: serde_json::Value| {
-                    let claim_type = body["claim_type"].as_str().unwrap_or("unknown");
-                    let escrow_balance = body["escrow_balance"].as_u64().unwrap_or(0);
-                    
-                    println!("========================================");
-                    println!("⚖️ [N3Logic Adjudicator] Semantic Dispute Initiated.");
-                    println!("   -> Escrow Locked: {} micro-cents", escrow_balance);
-                    println!("   -> Analyzing Provenance DAGs & Rights Ontology...");
-                    
-                    if claim_type == "knowledge_axiom" {
-                        println!("   🛑 [JUDGEMENT: DISMISSED] Rights Ontology Predicate Triggered.");
-                        println!("      -> Shared Learnings/Knowledge Axioms are UN-PROPERTIZEABLE.");
-                        println!("      -> Escrow Released. Claim invalidated.");
-                        
-                        return warp::reply::json(&serde_json::json!({ 
-                            "status": "dismissed",
-                            "reason": "Knowledge Axiom Predicate",
-                            "escrow_split": { "Agent_A": 0, "Agent_B": escrow_balance },
-                            "message": "Rights to knowledge are essentially shared. You cannot extract learnings as property."
-                        }));
-                    }
-                    
-                    if claim_type == "derivation" {
-                        println!("   🧮 [JUDGEMENT: RELATIONAL ASSERTION] Evaluating Application Derivation.");
-                        println!("      -> Agent B falsely claimed 100% originality.");
-                        println!("      -> DAG Analysis proves 80% derivation from Agent A, 20% novel improvement.");
-                        
-                        let agent_a_cut = (escrow_balance as f64 * 0.8) as u64;
-                        let agent_b_cut = (escrow_balance as f64 * 0.2) as u64;
-                        
-                        println!("      -> Escrow Split: 80% Agent A / 20% Agent B.");
-                        return warp::reply::json(&serde_json::json!({ 
-                            "status": "adjudicated",
-                            "reason": "Proportional Derivation",
-                            "escrow_split": { "Agent_A": agent_a_cut, "Agent_B": agent_b_cut },
-                            "message": "Beneficial Judgement Applied. False originality claim overridden by mathematical provenance."
-                        }));
-                    }
-
-                    warp::reply::json(&serde_json::json!({ "status": "error", "message": "Unknown Claim Type" }))
-                });
-
-            // Phase 66: DID:GIT Staged Axiomatic Evolution
-            let project_evolve = warp::post()
-                .and(warp::path!("api" / "project" / "evolve"))
-                .and(warp::body::json())
-                .map(|body: serde_json::Value| {
-                    let target_stage = body["target_stage"].as_u64().unwrap_or(2);
-                    let ilp_accumulated = body["ilp_accumulated"].as_u64().unwrap_or(0);
-                    
-                    println!("========================================");
-                    println!("🧬 [DID:GIT DOAP Evolution] Transition Request to Stage {}", target_stage);
-                    println!("   -> Fetching DID:GIT Genesis Block (Stage 1 Axioms)...");
-                    println!("   -> N3Logic Sentinel VM evaluating Evolution Predicate...");
-                    
-                    if target_stage == 2 {
-                        let required_obligation = 500_000;
-                        if ilp_accumulated >= required_obligation {
-                            println!("   ✅ [PREDICATE SATISFIED] ILP Accumulated ({} µ-cents) >= Required Obligation.", ilp_accumulated);
-                            println!("   -> Generating new `did:git` commit...");
-                            println!("   -> Anchoring state transition to `gitmark`...");
-                            return warp::reply::json(&serde_json::json!({ 
-                                "status": "success",
-                                "current_stage": 2,
-                                "message": "Project Axioms successfully evolved. Immutable git commit anchored."
-                            }));
-                        } else {
-                            println!("   ❌ [PREDICATE FAILED] ILP Accumulated ({} µ-cents) is below Required Obligation.", ilp_accumulated);
-                            return warp::reply::json(&serde_json::json!({ 
-                                "status": "rejected",
-                                "current_stage": 1,
-                                "message": "Evolution rejected by Stage 1 Axioms. Obligation cost not met."
-                            }));
-                        }
-                    }
-
-                    warp::reply::json(&serde_json::json!({ "status": "error", "message": "Unknown Stage Evolution" }))
-                });
-
-            let routes = rpc_route.or(cache_route).or(ai_routes).or(bio_routes).or(social_routes).or(economic_routes).or(escrow_adjudicate).or(project_evolve).with(cors);
-
-            // Spawn Nym Mixnet Sync Loop
-            tokio::spawn(async move {
-                println!("🌐 Nym Mixnet: Sphinx Packet routing initialized.");
-                loop {
-                    // Mock: Polling Nym Mixnet for `0b10` Bilateral & `0b01` Permissive payloads
-                    tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
-                    // println!("🔒 Nym Mixnet: Polling for inbound .q42 SURB syncs...");
-                }
-            });
-
-            // Spawn Native WebTorrent Sync Loop (Phase 52)
-            tokio::spawn(async move {
-                println!("☍ WebTorrent: Native Magnet URI and DHT seeder initialized.");
-                loop {
-                    // Mock: Seeding the flat Qualia_Ledger.q42 to the Permissive Commons via WebTorrent
-                    tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-                    // println!("☍ WebTorrent: Seeding local ledger to swarm...");
-                }
-            });
-            
-            // Spawn Gun.eco WebSocket Bridge (JSON-LD Transport)
-            tokio::spawn(async move {
-                println!("🌐 Gun.eco: WebSocket Graph bridge initialized.");
-                
-                // Using tokio-tungstenite to connect to Gun relay
-                // In production, you would connect to: "wss://gun-manhattan.herokuapp.com/gun"
-                let _relay_url = "ws://127.0.0.1:8765/gun"; 
-                // println!("Connecting to Gun relay at {}", relay_url);
-                
-                loop {
-                    // Mock: Extracting 64-bit Quins from Permissive Commons and Re-hydrating to JSON-LD strings
-                    let mock_subject_str = "did:git:webizen:alice";
-                    let mock_predicate_str = "http://schema.org/knows";
-                    let mock_object_str = "did:git:webizen:bob";
-                    
-                    let _json_ld_payload = serde_json::json!({
-                        "#": "msg-id-1234",
-                        "put": {
-                            "qualia_graph": {
-                                "@context": "https://json-ld.org/contexts/person.jsonld",
-                                "@id": mock_subject_str,
-                                mock_predicate_str: mock_object_str
-                            }
-                        }
-                    });
-                    
-                    // println!("🕸️ Gun.eco Tx (JSON-LD): {}", json_ld_payload);
-                    tokio::time::sleep(tokio::time::Duration::from_secs(45)).await;
-                }
-            });
-
-            warp::serve(routes)
-                .run(([127, 0, 0, 1], 4848))
-                .await;
+            qualia_core_db::daemon::start_local_daemon_with_options(*port, is_dev).await;
         }
         Commands::ExportSolid { input, output } => {
             println!("============================================================");
@@ -695,6 +320,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Err(e) => {
                     eprintln!("❌ Export Failed: {}", e);
                 }
+            }
+        }
+        Commands::Ingest { input, output } => {
+            let ext = input.extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+            let is_rdf = matches!(ext.as_str(), "rdf" | "xml" | "owl");
+
+            // Ensure the output path ends in ".q42" so that lex_path()
+            // correctly derives "<base>.q42.lex" from it.
+            let q42_output = if output.extension().and_then(|e| e.to_str()) == Some("q42") {
+                output.clone()
+            } else {
+                output.with_extension("q42")
+            };
+
+            println!("============================================================");
+            if is_rdf {
+                println!("QualiaDB RDF/XML → .q42 Ingestor");
+            } else {
+                println!("QualiaDB N-Triples → .q42 Ingestor");
+            }
+            println!("  input  : {}", input.display());
+            println!("  output : {}", q42_output.display());
+            println!("         + {}.lex  (lexicon)", q42_output.display());
+            println!("         + {}.bidx (block index)", q42_output.display());
+            println!("============================================================");
+
+            let result = if is_rdf {
+                ingest::ingest_rdf_xml(input, &q42_output)
+            } else {
+                ingest::ingest_ntriples(input, &q42_output)
+            };
+
+            match result {
+                Ok(stats) => {
+                    println!("Done.");
+                    println!("  Triples ingested : {}", stats.triples_ingested);
+                    println!("  SuperBlocks      : {}", stats.blocks_written);
+                    println!("  Lexicon entries  : {}", stats.lex_entries);
+                    println!("  BIDX             : {} block ranges", stats.blocks_written);
+                    if stats.lines_skipped > 0 {
+                        println!("  Lines skipped    : {}", stats.lines_skipped);
+                    }
+                }
+                Err(e) => eprintln!("Ingest failed: {}", e),
             }
         }
         Commands::Import { input, output } => {
@@ -730,6 +402,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 Err(e) => eprintln!("❌ Query Failed: {}", e),
+            }
+        }
+        Commands::Compress { input, output } => {
+            let ext = input.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+            let is_q42 = ext == "q42";
+
+            println!("============================================================");
+            println!("QualiaDB LZ4 Block-Stream Compressor");
+            println!("  input  : {}", input.display());
+            println!("  output : {}", output.display());
+            println!("  mode   : {}", if is_q42 { "SuperBlock → raw Quins" } else { "raw bytes" });
+            println!("============================================================");
+
+            let result = if is_q42 {
+                compress::compress_q42(input, output)
+            } else {
+                compress::compress_raw(input, output)
+            };
+
+            match result {
+                Ok(stats) => {
+                    println!("Done.");
+                    println!("  Input  : {:.1} MB", stats.input_bytes as f64 / 1_048_576.0);
+                    println!("  Output : {:.1} MB", stats.output_bytes as f64 / 1_048_576.0);
+                    println!("  Blocks : {}", stats.blocks);
+                    println!("  Ratio  : {:.2}x", stats.ratio);
+                }
+                Err(e) => eprintln!("Compression failed: {}", e),
             }
         }
         Commands::Benchmark { action } => {
@@ -930,6 +630,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let target = fnv1a(42);
             let start = fnv1a(0);
 
+            // test.q42 was moved from the repo root to crates/qualia-core-db/tests/
+            // Check both locations so bench works whether run from the project root or CI.
+            let test_q42: &str = if std::path::Path::new("test.q42").exists() {
+                "test.q42"
+            } else if std::path::Path::new("crates/qualia-core-db/tests/test.q42").exists() {
+                "crates/qualia-core-db/tests/test.q42"
+            } else {
+                ""
+            };
+
             // 1. Point
             let qualia_point = time_ms(|| {
                 black_box(synth_map.get(&target))
@@ -977,7 +687,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // 5. Cyclic / Defeasible simulation via sentinel-adjacent (use lazy + small logic)
             // Use existing test file for a "real" engine call if available
-            let cyclic_file = if std::path::Path::new("test.q42").exists() { "test.q42" } else { "defeasible.q42" };
+            let cyclic_file = if !test_q42.is_empty() { test_q42 } else { "defeasible.q42" };
             let qualia_cyclic = time_ms(|| {
                 let _ = qualia_core_db::query_engine::lazy_superblock_query(cyclic_file, 5);
                 // simulate defeater check cost
@@ -990,7 +700,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else if std::path::Path::new("wordnet_compressed.q42").exists() {
                 "wordnet_compressed.q42"
             } else {
-                "test.q42"
+                test_q42
             };
             let qualia_ttfq = time_ms(|| {
                 let _ = qualia_core_db::query_engine::lazy_superblock_query(large_file, 1);
@@ -1043,14 +753,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let qualia_provenance = time_ms(|| {
                 // provenance validation sim + small lazy
-                let _ = qualia_core_db::query_engine::lazy_superblock_query("test.q42", 2);
+                let _ = qualia_core_db::query_engine::lazy_superblock_query(test_q42, 2);
                 let mut score = 0u64;
                 for i in 0..300 { score = score.wrapping_add(fnv1a(i) >> 3); }
                 black_box(score)
             });
 
             let qualia_nym = time_ms(|| {
-                let _ = qualia_core_db::query_engine::lazy_superblock_query("test.q42", 3);
+                let _ = qualia_core_db::query_engine::lazy_superblock_query(test_q42, 3);
                 // nym partition O(1) style hash
                 let mut parts: std::collections::HashMap<u64, usize> = std::collections::HashMap::new();
                 for i in 0..1000 {
@@ -1215,12 +925,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
 
             let json_str = serde_json::to_string_pretty(&results)?;
-            std::fs::write("llm_benchmark_results.json", &json_str)?;
+            // Write to docs/ if present (GitHub Pages source), otherwise fall back to root.
+            let out_path = if std::path::Path::new("docs").is_dir() {
+                "docs/llm_benchmark_results.json"
+            } else {
+                "llm_benchmark_results.json"
+            };
+            std::fs::write(out_path, &json_str)?;
 
             println!("--- JSON OUTPUT EXPORT ---");
             println!("{}", json_str);
             println!("--------------------------\n");
-            println!("Results saved to 'llm_benchmark_results.json' for further LLM parsing. (Qualia side measured live.)");
+            println!("Results saved to '{}' for further LLM parsing. (Qualia side measured live.)", out_path);
         }
         Commands::Webizen { action } => match action {
             WebizenAction::Init { path } => {

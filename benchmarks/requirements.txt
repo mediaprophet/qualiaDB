@@ -1,0 +1,2 @@
+pyoxigraph>=0.3.22
+psutil>=5.9

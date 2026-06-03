@@ -67,37 +67,38 @@ When tasked with integrating Large Language Models (LLMs), do not immediately as
 * **Mode 1 (Strict Native Intercept)**: Extract explicit vector coordinate layouts (tensors) from binary files (like `.gguf`) and map them directly into the 48-byte `QualiaQuin`. The Sentinel VM acts as a mathematically strict interceptor during native execution, clipping vectors that violate local Spatio-Temporal constraints.
 * **Mode 2 (Bridged Shim)**: Utilize external ML architectures (e.g., Python, TensorFlow, PyTorch) via an explicit API bridge. The external model handles the dense compute, but all queries and responses are strictly routed and mathematically gated through the Qualia-DB `.q42` Axiom ruleset before resolution.
 
-## 9. LLM Benchmarking Harness (Dual-Mode: Native CLI Preferred)
-When tasked with evaluating Qualia-DB against competitors (SurrealDB, Oxigraph, Comunica, etc.) under the 512MB floor:
+## 9. LLM Benchmarking Harness (Dual-Mode)
 
-**Preferred for AI sandboxes / CI (Native, produces canonical JSON):**
+### Mode A — Native CLI (canonical, preferred for CI/AI agents)
 ```bash
 cargo run --release -p qualia-cli -- bench --suite full
-# or the alias:
+# alias also works:
 cargo run --release -p qualia-cli -- benchmark --suite full
 ```
-- This now works end-to-end (fixed subcommand routing + implementation).
-- Spawns an internal Telemetry WebSocket server (for live viz).
-- Executes against the real `lazy_superblock_query` engine (LZ4 compressed SuperBlocks, partial loading, simulated WebRTC remote block streaming for "hot blocks").
-- Writes `llm_benchmark_results.json` in cwd (12 categories: point, twohop, filter, ingestion (0-alloc), cyclic, ttfq, jitter, sync, intercept, obligation_escrow, provenance_val, nym_partition).
-- Also available: `qualia-cli benchmark-action rss-scan <path> <pct>` etc for dev scenarios (requires a .q42 file).
+- Executes against the real engine: `lazy_superblock_query` (LZ4 SuperBlocks, partial loading, WebRTC-mocked remote streaming).
+- Spawns a WebSocket telemetry server on `:9090` for the live visualiser.
+- Writes `docs/llm_benchmark_results.json` (12 categories: point, twohop, filter, ingestion, cyclic, ttfq, jitter, sync, intercept, obligation_escrow, provenance_val, nym_partition).
+- **Known limitation**: cyclic/escrow/provenance/nym tests fall back to a synthetic FNV loop when no `.q42` file is present at cwd — they silently report ~0.1 ms. Run after `bash scripts/fetch_wordnet.sh` to get real file-backed numbers.
+- Criterion micro-benches: `cargo bench -p qualia-core-db`
 
-**Headless browser/WASM fallback (if no Rust toolchain):**
-```bash
-node scripts/llm_bench_runner.js --suite full
+### Mode B — Browser WASM (real engine, no Rust toolchain required)
+Open `docs/benchmark.html` in Chrome or Firefox (module workers required; Safari unsupported).
+
+The page now uses a **module worker** (`docs/src/qualia-worker.js`) that imports the real wasm-pack build:
+```javascript
+import { compile_query_to_json } from '../playground/qualia_core_db.js';
 ```
-(Still emits similar JSON for LLM consumption.)
+Every Qualia-DB timing cell is a **real `performance.now()` measurement** of `compile_query_to_json` — the full QueryCompiler + SentinelCompiler pipeline (tokenise → AST → FNV Quin plan → Sentinel bytecode). N=50 iterations, reporting p50 ± stddev.
 
-**Live Telemetry Visualizer (pairs with native bench):**
-Open `benchmark_visualizer.html` (or the integrated dashboard in `benchmark.html`). The native harness streams RSS, blocks_loaded, hot (local vs remote/WebRTC) blocks.
+**What WASM mode measures**: query/rule compilation latency.  
+**What it does NOT measure**: query execution against a loaded `.q42` dataset (that requires the native daemon or CLI).
 
-**Criterion micro-benchmarks (for engine internals):**
-```bash
-cargo bench --package qualia-core-db
-```
-Results under `target/criterion/` (point lookups, 2-hop, filters, ingestion, allocation vs Oxigraph/SurrealDB BTree/HashMap proxies).
+Competitor columns in the browser table are **reference values** (marked `†`) from CLI bench runs and published benchmarks. They are not measured in the browser. The JSON artifact from `shareResults()` contains the raw stats object with min/p50/p95/max/stddev/n for all Qualia cells.
 
-Always surface the strict 512MB + zero-alloc constraints + that standard engines OOM or timeout on the humanitarian/rights tests (escrow, nym partitioning, etc.).
+### Mode C — Native daemon + browser UI
+When `cargo run --release -p qualia-cli -- daemon --dev` is running on port 4242, `benchmark.html` connects via WebSocket and routes queries to the real Rust engine, measuring actual round-trip latency.
+
+Always surface the strict 512MB + zero-alloc constraints, and that standard engines OOM or timeout on the humanitarian/rights tests (escrow, nym partitioning, etc.).
 
 ## 10. SHACL, Modalities & Advanced Compilation (Epic 24 + 21)
 - Use `qualia_core_db::shacl_compiler` (or the SentinelCompiler facade in logic.rs) to compile SHACL shapes into Sentinel opcodes. This enables structural + constraint validation as part of the zero-alloc query path.

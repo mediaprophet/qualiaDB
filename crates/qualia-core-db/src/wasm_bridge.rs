@@ -38,6 +38,93 @@ pub fn compile_query_to_json(query: &str) -> String {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Sentinel VM query execution — pre-fetch synchronous model
+// ---------------------------------------------------------------------------
+//
+// The JS orchestrator (vfs.js) pre-fetches SuperBlock bytes via HTTP Range
+// requests or OPFS and copies them into a Uint8Array before calling here.
+// This avoids SharedArrayBuffer / Atomics.wait() which require COOP/COEP
+// headers that GitHub Pages cannot serve.
+
+/// Execute a single N-Triples pattern query against a pre-loaded SuperBlock.
+///
+/// # Arguments
+/// * `query`    — N-Triples pattern, e.g. `?s <http://…/writtenRep> "dog"@en`
+/// * `db_bytes` — raw bytes of one or more 40,960-byte SuperBlocks.  The JS
+///               caller passes a `Uint8Array` view; wasm-bindgen copies it in.
+/// * `max_results` — upper bound on the Quins returned (default: 256).
+///
+/// # Returns
+/// A JSON string:
+/// ```json
+/// {
+///   "matches": [{"s":"u64str","p":"u64str","o":"u64str","c":"u64str","m":"u64str"}, …],
+///   "vm_cycles": 1234,
+///   "direct_jump_ops": 0,
+///   "lexicon_lookup_ops": 6
+/// }
+/// ```
+/// All u64 field values are serialised as **decimal strings** so the JS side
+/// can parse them losslessly with `BigInt(v)` without IEEE-754 truncation.
+///
+/// On error a `{"error":"..."}` object is returned instead.
+#[wasm_bindgen]
+pub fn execute_ntriples_query(query: &str, db_bytes: &[u8], max_results: u32) -> String {
+    use crate::mini_parser::compile_ntriples_to_bytecode;
+    use crate::sentinel_bytecode::execute_program_with_stats;
+    use crate::QualiaQuin;
+
+    const QUIN_SIZE: usize = 48;
+
+    if db_bytes.len() % QUIN_SIZE != 0 {
+        return format!(
+            r#"{{"error":"db_bytes length {} is not a multiple of 48"}}"#,
+            db_bytes.len()
+        );
+    }
+
+    // Build a properly-aligned Vec<QualiaQuin> from the raw bytes using
+    // unaligned reads (the Uint8Array from JS may start at any byte offset).
+    let quin_count = db_bytes.len() / QUIN_SIZE;
+    let mut db: Vec<QualiaQuin> = Vec::with_capacity(quin_count);
+    for chunk in db_bytes.chunks_exact(QUIN_SIZE) {
+        // Safety: `chunk` is exactly 48 bytes; read_unaligned handles any alignment.
+        let q = unsafe { core::ptr::read_unaligned(chunk.as_ptr() as *const QualiaQuin) };
+        db.push(q);
+    }
+
+    let mut prog = [0u8; 1024];
+    if let Err(e) = compile_ntriples_to_bytecode(query.as_bytes(), &mut prog) {
+        return format!(r#"{{"error":"parse error: {:?}"}}"#, e);
+    }
+
+    let max = (max_results as usize).min(4096);
+    let mut out = vec![QualiaQuin::default(); max];
+
+    match execute_program_with_stats(&prog, &db, &mut out) {
+        Ok(stats) => {
+            let matches: Vec<String> = out[..stats.match_count]
+                .iter()
+                .map(|q| {
+                    format!(
+                        r#"{{"s":"{}","p":"{}","o":"{}","c":"{}","m":"{}"}}"#,
+                        q.subject, q.predicate, q.object, q.context, q.metadata
+                    )
+                })
+                .collect();
+            format!(
+                r#"{{"matches":[{}],"vm_cycles":{},"direct_jump_ops":{},"lexicon_lookup_ops":{}}}"#,
+                matches.join(","),
+                stats.vm_cycles,
+                stats.direct_jump_ops,
+                stats.lexicon_lookup_ops,
+            )
+        }
+        Err(e) => format!(r#"{{"error":"{:?}"}}"#, e),
+    }
+}
+
 use js_sys::WebAssembly;
 
 // WASM bindings for the Qualia-DB engine SharedArrayBuffer integration

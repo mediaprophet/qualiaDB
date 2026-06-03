@@ -1,0 +1,18 @@
+theme: jekyll-theme-slate
+title: Qualia-DB
+description: The Zero-Allocation, 5-Vector Heterogeneous Graph Engine for Personal Devices.
+
+# Pass binary dataset and WASM artefacts through unchanged.
+include:
+  - "*.q42"
+  - "*.lex"
+  - "*.wasm"
+
+# Exclude large WordNet data artefacts from Jekyll processing (served as raw files).
+exclude:
+  - "playground/wordnet.q42"
+  - "playground/wordnet.c.q42"
+  - "playground/wordnet.q42.lex"
+  - "playground/wordnet.q42.lex.lz4"
+  - "playground/wordnet.q42.bidx"
+  - "llm_benchmark_results.json"
