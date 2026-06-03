@@ -1,6 +1,8 @@
 """
 Shared utilities for the Qualia-DB comparative benchmark harness.
 All runners implement benchmark_set(n) -> dict and use these helpers.
+
+Standardized defaults balance statistical quality with practicality for slower engines.
 """
 import os
 import sys
@@ -8,8 +10,22 @@ import time
 import statistics
 
 
-def latency_stats_ms(fn, warmup: int = 10, samples: int = 50) -> dict:
-    """Run fn() warmup+samples times, return full statistics in milliseconds."""
+# Standardized defaults (used by all runners unless explicitly overridden)
+DEFAULT_WARMUP = 10
+DEFAULT_SAMPLES = 30          # Good p99 stability; slow engines (Prolog) may use fewer in their runner
+
+
+def latency_stats_ms(fn, warmup: int = None, samples: int = None) -> dict:
+    """Run fn() warmup + samples times and return rich latency statistics (ms).
+
+    Falls back to DEFAULT_WARMUP / DEFAULT_SAMPLES when args are None.
+    Always includes the actual sample counts used in the returned dict.
+    """
+    if warmup is None:
+        warmup = DEFAULT_WARMUP
+    if samples is None:
+        samples = DEFAULT_SAMPLES
+
     for _ in range(warmup):
         fn()
     times = []
@@ -20,15 +36,15 @@ def latency_stats_ms(fn, warmup: int = 10, samples: int = 50) -> dict:
     times.sort()
     n = len(times)
     return {
-        "min":     round(times[0], 4),
-        "max":     round(times[-1], 4),
-        "mean":    round(statistics.mean(times), 4),
-        "p50":     round(times[n // 2], 4),
-        "p95":     round(times[int(n * 0.95)], 4),
-        "p99":     round(times[int(n * 0.99)], 4),
-        "samples": samples,
+        "min":            round(times[0], 4),
+        "max":            round(times[-1], 4),
+        "mean":           round(statistics.mean(times), 4),
+        "p50":            round(times[n // 2], 4),
+        "p95":            round(times[int(n * 0.95)], 4),
+        "p99":            round(times[int(n * 0.99)], 4),
+        "samples":        samples,
         "warmup_samples": warmup,
-        "unit":    "milliseconds",
+        "unit":           "milliseconds",
     }
 
 
