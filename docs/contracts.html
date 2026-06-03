@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contracts & Claims • Cooperative Projects</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; }
+        .glass { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        .glass-strong { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.18); }
+        .status-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 9999px; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <!-- Unified Navigation -->
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/95 backdrop-blur-2xl">
+        <div class="max-w-screen-2xl mx-auto px-8 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-x-8">
+                <a href="cooperative.html" class="flex items-center gap-x-3">
+                    <div class="w-8 h-8 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                        <i class="fa-solid fa-users text-white text-lg"></i>
+                    </div>
+                    <span class="font-display text-xl font-semibold tracking-tighter">Cooperative Projects</span>
+                </a>
+                <div class="hidden md:flex items-center gap-x-6 text-sm">
+                    <a href="cooperative.html" class="hover:text-white/80">Hub</a>
+                    <a href="project-detail.html" class="hover:text-white/80">Project</a>
+                    <a href="kanban.html" class="hover:text-white/80">Kanban</a>
+                    <a href="economics.html" class="hover:text-white/80">Economics</a>
+                </div>
+            </div>
+            <div class="flex items-center gap-x-3 text-sm">
+                <a href="contracts.html" class="px-4 py-1.5 text-emerald-400">Contracts & Claims</a>
+                <a href="project-assets.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Assets</a>
+                <button onclick="document.getElementById('new-contract-modal').showModal()" 
+                        class="px-5 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-sm font-semibold flex items-center gap-x-2">
+                    <i class="fa-solid fa-plus"></i> <span>New Contract</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-8 pb-16">
+        <div class="flex items-end justify-between mb-8">
+            <div>
+                <h1 class="font-display text-4xl font-semibold tracking-tighter">Contracts & Verifiable Claims</h1>
+                <p class="text-xl text-white/70 mt-2">Ontology-grounded agreements minted into independently verifiable claims.</p>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+            <div class="glass-strong rounded-3xl p-5">
+                <div class="text-xs text-white/50">ACTIVE CONTRACTS</div>
+                <div class="text-3xl font-semibold mt-1">3</div>
+            </div>
+            <div class="glass-strong rounded-3xl p-5">
+                <div class="text-xs text-white/50">VERIFIED CLAIMS</div>
+                <div class="text-3xl font-semibold mt-1 text-emerald-400">2</div>
+            </div>
+            <div class="glass-strong rounded-3xl p-5">
+                <div class="text-xs text-white/50">TOTAL SHARE VALUE</div>
+                <div class="text-3xl font-semibold mt-1">$7,850</div>
+            </div>
+            <div class="glass-strong rounded-3xl p-5">
+                <div class="text-xs text-white/50">PENDING CASH-OUT</div>
+                <div class="text-3xl font-semibold mt-1">1</div>
+            </div>
+        </div>
+
+        <!-- Active Contracts -->
+        <div class="mb-10">
+            <div class="flex items-center justify-between mb-4">
+                <div class="font-semibold text-xl">Active Contracts</div>
+                <button onclick="document.getElementById('new-contract-modal').showModal()" 
+                        class="text-sm px-4 py-2 border border-white/20 hover:bg-white/5 rounded-2xl flex items-center gap-x-2">
+                    <i class="fa-solid fa-plus"></i> <span>New Contract</span>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Contract Card 1 -->
+                <div class="glass-strong rounded-3xl p-6">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-y-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-x-3">
+                                <div class="font-semibold text-lg">Qualia-Wellfair Integration Agreement v1</div>
+                                <span class="status-badge bg-emerald-500/20 text-emerald-400">ACTIVE</span>
+                            </div>
+                            <div class="text-sm text-white/60 mt-1">Between Principal (you) and Project Stewards • Created 3 days ago</div>
+
+                            <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-x-6 text-sm">
+                                <div>
+                                    <div class="text-xs text-white/50">EMBEDDED OBLIGATION</div>
+                                    <div class="font-medium">Build Qualia-Solid Bridge (45h)</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-white/50">SHARE ALLOCATION</div>
+                                    <div class="font-medium">$2,600 (1.5× multiplier)</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-white/50">CREDENTIALS REQUIRED</div>
+                                    <div class="font-medium">Legal & Technical</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-white/50">CONSENT</div>
+                                    <div class="font-medium">Aggregated data sharing enabled</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-y-2 lg:items-end">
+                            <button onclick="viewClaim()" class="px-5 py-2 bg-white text-zinc-900 rounded-2xl text-sm font-semibold flex items-center justify-center gap-x-2">
+                                <i class="fa-solid fa-file-contract"></i> <span>View Minted Claim</span>
+                            </button>
+                            <button onclick="cashOut()" class="px-5 py-2 border border-white/30 hover:bg-white/5 rounded-2xl text-sm flex items-center justify-center gap-x-2">
+                                <span>Cash Out Share</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contract Card 2 (placeholder) -->
+                <div class="glass-strong rounded-3xl p-6 opacity-75">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold">Agent Tooling & Attribution Agreement</div>
+                            <div class="text-sm text-white/60 mt-1">Phase 3 • Pending verification</div>
+                        </div>
+                        <span class="status-badge bg-amber-500/20 text-amber-400">PENDING</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verifiable Claims -->
+        <div>
+            <div class="font-semibold text-xl mb-4">Minted Verifiable Claims</div>
+            <div class="glass-strong rounded-3xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium">Integration Claim #QF-001</div>
+                        <div class="text-xs text-white/60 mt-1">Signed • Verifiable • Stored in Wellfair</div>
+                    </div>
+                    <div class="flex items-center gap-x-3">
+                        <span class="status-badge bg-emerald-500/20 text-emerald-400">VERIFIED</span>
+                        <button onclick="verifyClaim()" class="text-sm px-4 py-1.5 border border-white/30 hover:bg-white/5 rounded-2xl">Verify</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Contract Modal -->
+    <dialog id="new-contract-modal" class="glass-strong rounded-3xl p-0 w-full max-w-lg backdrop:bg-black/70">
+        <div class="p-8">
+            <div class="font-semibold text-xl mb-1">Create New Contract</div>
+            <div class="text-sm text-white/60 mb-6">Define obligations, share allocation, and terms. Will be minted into a verifiable claim.</div>
+
+            <div class="space-y-4 text-sm">
+                <div>
+                    <label class="text-xs text-white/50 block mb-1">Contract Title</label>
+                    <input type="text" class="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-2.5" value="Phase 3 Agent Tooling Agreement">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-white/50 block mb-1">Embedded Obligation</label>
+                        <select class="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-2.5">
+                            <option>Model AI agent cost attribution</option>
+                            <option>Implement query engine</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-white/50 block mb-1">Share Allocation</label>
+                        <input type="text" class="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-2.5" value="$1,100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-x-3">
+                <button onclick="document.getElementById('new-contract-modal').close()" class="px-5 py-2.5 rounded-2xl hover:bg-white/5">Cancel</button>
+                <button onclick="createContract(); document.getElementById('new-contract-modal').close()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-semibold text-white">Create & Mint Claim</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        function viewClaim() {
+            alert('Opening verifiable claim details. In production this would show the signed claim, embedded ontology terms, and verification status.');
+        }
+        function cashOut() {
+            alert('Cash-out flow opened. This would check governance rules (allowsCashOut + cashOutCondition) before allowing token transfer or external conversion.');
+        }
+        function verifyClaim() {
+            alert('Claim verification triggered. This would validate the cryptographic signature and ontology consistency.');
+        }
+        function createContract() {
+            alert('New contract created and minted into a verifiable claim. In a real system this would generate a signed claim embedding the chosen obligations, shares, credentials, and consent.');
+        }
+    </script>
+</body>
+</html>
