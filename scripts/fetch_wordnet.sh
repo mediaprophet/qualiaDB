@@ -20,14 +20,16 @@ set -euo pipefail
 # Configuration — pin the exact release for reproducibility
 # ---------------------------------------------------------------------------
 
-OEWN_VERSION="2024-edition"
+OEWN_VERSION="2025-edition"
 OEWN_REPO="https://github.com/globalwordnet/english-wordnet"
-OEWN_RELEASE_URL="${OEWN_REPO}/releases/download/${OEWN_VERSION}/english-wordnet-2024.nt.gz"
-OEWN_SHA256="UNVERIFIED"   # Replace with sha256sum output after first download
+# 2025 edition ships Turtle (.ttl.gz); the .nt.gz format was dropped after 2023.
+# qualia-cli ingest treats .ttl as RDF (rio_turtle parser) — see ingest.rs is_rdf check.
+OEWN_RELEASE_URL="${OEWN_REPO}/releases/download/${OEWN_VERSION}/english-wordnet-2025.ttl.gz"
+OEWN_SHA256="UNVERIFIED"
 
 WORK_DIR="$(pwd)/.wordnet_build"
-RAW_GZ="${WORK_DIR}/english-wordnet-2024.nt.gz"
-RAW_NT="${WORK_DIR}/english-wordnet-2024.nt"
+RAW_GZ="${WORK_DIR}/english-wordnet-2025.ttl.gz"
+RAW_NT="${WORK_DIR}/english-wordnet-2025.ttl"
 OUTPUT_BASE="${WORK_DIR}/wordnet"
 Q42_OUT="${OUTPUT_BASE}.q42"
 LEX_OUT="${OUTPUT_BASE}.q42.lex"

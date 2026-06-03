@@ -327,7 +327,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .and_then(|e| e.to_str())
                 .unwrap_or("")
                 .to_lowercase();
-            let is_rdf = matches!(ext.as_str(), "rdf" | "xml" | "owl");
+            let is_rdf = matches!(ext.as_str(), "rdf" | "xml" | "owl" | "ttl" | "turtle");
 
             // Ensure the output path ends in ".q42" so that lex_path()
             // correctly derives "<base>.q42.lex" from it.
