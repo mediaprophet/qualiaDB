@@ -27,7 +27,8 @@
             </div>
             <div class="flex items-center gap-x-4 text-sm">
                 <a href="cooperative.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl">Back to Hub</a>
-                <button class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-semibold text-sm">Contribute to this Project</button>
+                <a href="kanban.html" class="px-4 py-2 hover:bg-white/5 rounded-2xl">Kanban</a>
+                <button onclick="document.getElementById('contribute-modal').showModal()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-semibold text-sm">Contribute</button>
             </div>
         </div>
     </nav>
@@ -77,23 +78,22 @@
             </div>
         </div>
 
-        <!-- Tabs -->
-        <div class="flex border-b border-white/10 mb-6">
-            <div class="px-6 py-3 border-b-2 border-emerald-500 font-medium">Tasks & Funding</div>
-            <div class="px-6 py-3 text-white/60 hover:text-white cursor-pointer">Credentials & Access</div>
-            <div class="px-6 py-3 text-white/60 hover:text-white cursor-pointer">Relations & Dependencies</div>
-            <div class="px-6 py-3 text-white/60 hover:text-white cursor-pointer">Contributions</div>
+        <div class="flex items-center gap-x-4 mb-6">
+            <a href="kanban.html" class="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 rounded-2xl flex items-center gap-x-2">
+                <i class="fa-solid fa-columns"></i> <span>Kanban Board</span>
+            </a>
+            <button onclick="document.getElementById('contribute-modal').showModal()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-sm font-semibold flex items-center gap-x-2">
+                <i class="fa-solid fa-handshake"></i> <span>Start Contribution</span>
+            </button>
         </div>
 
         <!-- Tasks Section -->
         <div class="mb-10">
             <div class="flex items-center justify-between mb-4">
                 <div class="font-semibold text-xl">Active Tasks</div>
-                <button class="text-sm px-4 py-2 border border-white/20 rounded-2xl hover:bg-white/5">Claim Task</button>
             </div>
 
             <div class="space-y-4">
-                <!-- Task Row -->
                 <div class="glass-strong rounded-3xl p-5 flex flex-col lg:flex-row lg:items-center gap-4">
                     <div class="flex-1">
                         <div class="font-medium">Build Qualia-Solid Bridge for Wellfair interoperability</div>
@@ -102,7 +102,7 @@
                     <div class="flex items-center gap-x-4 text-sm">
                         <div class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-2xl text-xs">Credential Required</div>
                         <div class="text-emerald-400">$1,200 available</div>
-                        <button class="px-5 py-2 bg-white text-zinc-900 rounded-2xl text-sm font-semibold">View Details</button>
+                        <button onclick="document.getElementById('contribute-modal').showModal()" class="px-5 py-2 bg-white text-zinc-900 rounded-2xl text-sm font-semibold">Claim & Contribute</button>
                     </div>
                 </div>
 
@@ -114,51 +114,60 @@
                     <div class="flex items-center gap-x-4 text-sm">
                         <div class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-2xl text-xs">Open</div>
                         <div class="text-emerald-400">$650 available</div>
-                        <button class="px-5 py-2 bg-white text-zinc-900 rounded-2xl text-sm font-semibold">Claim Task</button>
+                        <button onclick="document.getElementById('contribute-modal').showModal()" class="px-5 py-2 bg-white text-zinc-900 rounded-2xl text-sm font-semibold">Claim & Contribute</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Credentials Section -->
-        <div class="mb-10">
-            <div class="font-semibold text-xl mb-4">Required Credentials</div>
+        <!-- Credentials & Relations -->
+        <div class="grid md:grid-cols-2 gap-6">
             <div class="glass-strong rounded-3xl p-6">
-                <div class="flex items-start gap-x-4">
-                    <i class="fa-solid fa-id-card text-2xl text-amber-400 mt-1"></i>
-                    <div>
-                        <div class="font-medium">Legal and Technical Qualification</div>
-                        <div class="text-sm text-white/70 mt-1">Required for integration and governance tasks. Demonstrated legal/technical qualification (lawyer, qualified software architect, or equivalent professional standing) needed for system integration involving data governance and cross-project obligations.</div>
-                    </div>
-                </div>
+                <div class="font-semibold mb-3">Required Credentials</div>
+                <div class="text-sm">Legal and Technical Qualification for integration tasks involving data governance.</div>
             </div>
-        </div>
-
-        <!-- Relations -->
-        <div>
-            <div class="font-semibold text-xl mb-4">Relations & Dependencies</div>
-            <div class="grid md:grid-cols-3 gap-4">
-                <div class="glass-strong rounded-3xl p-5">
-                    <div class="text-xs text-white/50">DEPENDS ON</div>
-                    <div class="mt-2 space-y-1 text-sm">
-                        <div>→ QualiaDB (core engine)</div>
-                        <div>→ Wellfair (personal vault)</div>
-                    </div>
-                </div>
-                <div class="glass-strong rounded-3xl p-5">
-                    <div class="text-xs text-white/50">CONTRIBUTES TO</div>
-                    <div class="mt-2 space-y-1 text-sm">
-                        <div>→ Cooperative Projects ontology & UI</div>
-                        <div>→ Cross-project obligation modeling</div>
-                    </div>
-                </div>
-                <div class="glass-strong rounded-3xl p-5">
-                    <div class="text-xs text-white/50">CONSENT & DATA FLOW</div>
-                    <div class="mt-2 text-sm text-white/70">Principal has consented to aggregated cost and contribution data flowing between Qualia, Wellfair, and Cooperative Projects.</div>
-                </div>
+            <div class="glass-strong rounded-3xl p-6">
+                <div class="font-semibold mb-3">Relations & Dependencies</div>
+                <div class="text-sm text-white/70">Depends on QualiaDB and Wellfair. Consent granted for aggregated data flow across projects.</div>
             </div>
         </div>
 
     </div>
+
+    <!-- Contribution Flow Modal -->
+    <dialog id="contribute-modal" class="glass-strong rounded-3xl p-0 w-full max-w-lg backdrop:bg-black/70">
+        <div class="p-8">
+            <div class="font-semibold text-xl mb-1">Start Contribution</div>
+            <div class="text-sm text-white/60 mb-6">Choose how you want to contribute.</div>
+
+            <div class="space-y-3">
+                <div onclick="selectContributionType('task')" class="p-4 border border-white/10 hover:border-emerald-500/50 rounded-2xl cursor-pointer">
+                    <div class="font-medium">Claim a Task</div>
+                    <div class="text-xs text-white/60">Work on a funded or investment-based task.</div>
+                </div>
+                <div onclick="selectContributionType('investment')" class="p-4 border border-white/10 hover:border-emerald-500/50 rounded-2xl cursor-pointer">
+                    <div class="font-medium">Make an Investment</div>
+                    <div class="text-xs text-white/60">Contribute AI agents, infrastructure, time, or other resources.</div>
+                </div>
+                <div onclick="selectContributionType('review')" class="p-4 border border-white/10 hover:border-emerald-500/50 rounded-2xl cursor-pointer">
+                    <div class="font-medium">Provide Review / Expertise</div>
+                    <div class="text-xs text-white/60">Offer credentialed review or specialized input.</div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="document.getElementById('contribute-modal').close()" class="px-5 py-2 text-sm rounded-2xl hover:bg-white/5">Cancel</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        function selectContributionType(type) {
+            document.getElementById('contribute-modal').close();
+            if (type === 'task') alert('Task claim flow (with credential check if needed).');
+            else if (type === 'investment') alert('Investment form for AI agents, infrastructure, unpaid time, etc.');
+            else alert('Expert review contribution flow.');
+        }
+    </script>
 </body>
 </html>
