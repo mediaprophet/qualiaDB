@@ -8,194 +8,249 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
-        
-        :root {
-            --bg: #0a0f1a;
-            --card: #111827;
-            --accent: #3b82f6;
-        }
-        
+
         body {
-            font-family: 'Inter', system_ui, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
-        
         .font-display {
             font-family: 'Space Grotesk', 'Inter', sans-serif;
             font-weight: 600;
+            letter-spacing: -0.03em;
         }
 
-        .section-header {
-            font-size: 1.1rem;
-            letter-spacing: -.025em;
-            color: #64748b;
-            font-weight: 600;
-        }
-
-        .metric-value {
-            font-variant-numeric: tabular-nums;
-        }
-
-        .bar {
-            transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            height: 6px;
-            background: linear-gradient(to right, #3b82f6, #60a5fa);
-            border-radius: 9999px;
-        }
-
-        .engine-row:hover {
-            background-color: #1e2937;
-        }
-
-        .data-table th {
-            font-weight: 600;
-            color: #64748b;
+        .section-label {
             font-size: 0.75rem;
-            text-transform: uppercase;
             letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #64748b;
         }
 
         .glass {
-            background: rgba(17, 24, 39, 0.7);
-            backdrop-filter: blur(12px);
+            background: rgba(17, 23, 31, 0.75);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.08);
+        }
+
+        .metric-card {
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                       box-shadow 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .data-table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .data-table th {
+            font-weight: 600;
+            color: #64748b;
+            font-size: 0.7rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            padding-top: 14px;
+            padding-bottom: 14px;
+        }
+        .data-table td {
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+        .engine-row {
+            transition: background-color 0.1s ease;
+        }
+        .engine-row:hover {
+            background-color: #1a2233;
+        }
+
+        .bar {
+            height: 7px;
+            background: linear-gradient(to right, #3b82f6, #60a5fa);
+            border-radius: 9999px;
+            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .bar-qualia {
+            background: linear-gradient(to right, #f59e0b, #fbbf24);
+        }
+
+        .nav-active {
+            color: white;
+            background-color: rgba(148, 163, 184, 0.1);
+        }
+
+        .stat-value {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
         }
     </style>
 </head>
-<body class="bg-[#0a0f1a] text-slate-200">
-    <!-- Top nav -->
-    <nav class="border-b border-slate-800 bg-[#0a0f1a]/80 backdrop-blur-lg sticky top-0 z-50">
-        <div class="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-x-3">
-                <div class="w-9 h-9 rounded-2xl bg-blue-600 flex items-center justify-center">
-                    <i class="fa-solid fa-database text-white text-xl"></i>
+<body class="bg-[#0a0e17] text-slate-200">
+    <!-- Top Navigation -->
+    <nav class="sticky top-0 z-50 border-b border-slate-800 bg-[#0a0e17]/95 backdrop-blur-xl">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex h-16 items-center justify-between">
+                <div class="flex items-center gap-x-4">
+                    <div class="flex items-center gap-x-3">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 shadow-inner">
+                            <i class="fa-solid fa-database text-white text-[21px]"></i>
+                        </div>
+                        <div class="flex items-baseline">
+                            <span class="font-display text-[27px] font-semibold tracking-[-1.5px]">qualia</span>
+                            <span class="ml-px text-blue-400 font-mono text-sm font-medium tracking-[-0.5px] align-super">DB</span>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <span class="font-display text-2xl font-semibold tracking-tighter">qualia</span>
-                    <span class="text-blue-400 font-mono text-sm align-super">DB</span>
+
+                <div class="flex items-center gap-x-1.5 text-sm">
+                    <a href="index.html" class="px-4 py-2 rounded-3xl text-slate-400 hover:text-white hover:bg-white/5 transition-all flex items-center gap-x-2">
+                        <i class="fa-solid fa-home w-3.5"></i>
+                        <span class="font-medium">Home</span>
+                    </a>
+                    <a href="benchmark.html" class="px-4 py-2 rounded-3xl text-slate-400 hover:text-white hover:bg-white/5 transition-all flex items-center gap-x-2">
+                        <i class="fa-solid fa-tachometer-alt w-3.5"></i>
+                        <span class="font-medium">Live Suite</span>
+                    </a>
+                    <a href="benchmark_visualizer.html" class="px-4 py-2 rounded-3xl text-slate-400 hover:text-white hover:bg-white/5 transition-all flex items-center gap-x-2">
+                        <i class="fa-solid fa-chart-line w-3.5"></i>
+                        <span class="font-medium">Telemetry</span>
+                    </a>
                 </div>
-            </div>
-            
-            <div class="flex items-center gap-x-2 text-sm">
-                <a href="index.html" class="px-4 py-2 rounded-3xl hover:bg-slate-800 transition-colors flex items-center gap-x-2 text-slate-400 hover:text-white">
-                    <i class="fa-solid fa-home w-4"></i>
-                    <span>Home</span>
-                </a>
-                <a href="benchmark.html" class="px-4 py-2 rounded-3xl hover:bg-slate-800 transition-colors flex items-center gap-x-2 text-slate-400 hover:text-white">
-                    <i class="fa-solid fa-tachometer-alt w-4"></i>
-                    <span>Live Benchmark Suite</span>
-                </a>
-                <a href="benchmark_visualizer.html" class="px-4 py-2 rounded-3xl hover:bg-slate-800 transition-colors flex items-center gap-x-2 text-slate-400 hover:text-white">
-                    <i class="fa-solid fa-chart-line w-4"></i>
-                    <span>Native Telemetry</span>
-                </a>
+
+                <div class="flex items-center gap-x-3">
+                    <div onclick="runHarnessLocally()" 
+                         class="flex cursor-pointer items-center gap-x-2 rounded-3xl bg-white px-5 py-2 text-sm font-semibold text-slate-950 transition-all hover:bg-amber-300 active:scale-[0.985]">
+                        <i class="fa-solid fa-terminal text-xs"></i>
+                        <span>Run harness</span>
+                    </div>
+                    <a href="https://github.com/mediaprophet/qualiaDB/tree/main/benchmarks" 
+                       class="flex items-center gap-x-2 rounded-3xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition-all hover:bg-slate-900 hover:text-white">
+                        <i class="fa-brands fa-github"></i>
+                        <span>Source</span>
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-screen-2xl mx-auto px-8 pt-10 pb-16">
-        <!-- Header -->
-        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-y-4 mb-10">
-            <div>
-                <div class="inline-flex items-center gap-x-2 px-4 py-1.5 rounded-3xl bg-blue-950/60 border border-blue-900 text-blue-400 text-xs font-mono tracking-[2px] mb-3">
+    <div class="max-w-screen-2xl mx-auto px-8 pt-10 pb-20">
+        <!-- Hero Header -->
+        <div class="mb-12 flex flex-col justify-between gap-y-6 lg:flex-row lg:items-end">
+            <div class="max-w-2xl">
+                <div class="mb-4 inline-flex items-center gap-x-2 rounded-3xl border border-blue-900/60 bg-blue-950/40 px-4 py-1 text-xs font-medium tracking-[1.5px] text-blue-400">
                     <i class="fa-solid fa-flask"></i>
-                    <span>COMPARATIVE HARNESS v1</span>
+                    <span>COMPARATIVE HARNESS v1 • 512 MB EDGE</span>
                 </div>
-                <h1 class="font-display text-6xl tracking-tighter font-semibold">Comparative Benchmarks</h1>
-                <p class="mt-3 max-w-md text-slate-400 text-lg">512 MB edge constraint • Real measurements • Fair engine comparison</p>
-            </div>
-            
-            <div class="flex items-center gap-x-3">
-                <button onclick="runHarnessLocally()" 
-                        class="inline-flex items-center gap-x-2 px-5 py-3 rounded-3xl bg-white text-slate-950 font-semibold text-sm hover:bg-amber-300 active:scale-[0.985] transition-all">
-                    <i class="fa-solid fa-terminal"></i>
-                    <span>Run locally</span>
-                </button>
-                <a href="https://github.com/mediaprophet/qualiaDB/tree/main/benchmarks" 
-                   class="inline-flex items-center gap-x-2 px-5 py-3 rounded-3xl border border-slate-700 hover:bg-slate-900 text-sm font-medium transition-colors">
-                    <i class="fa-brands fa-github"></i>
-                    <span>View source</span>
-                </a>
-            </div>
-        </div>
 
-        <!-- Methodology callout -->
-        <div class="glass border border-slate-700 rounded-3xl p-6 mb-10 max-w-4xl">
-            <div class="flex gap-4">
-                <div class="mt-1">
-                    <i class="fa-solid fa-info-circle text-blue-400 text-xl"></i>
+                <h1 class="font-display text-7xl font-semibold tracking-[-3.2px] leading-none">
+                    Comparative<br>Benchmarks
+                </h1>
+                <p class="mt-4 max-w-md text-xl text-slate-400">
+                    Real measurements under the 512 MB constraint.<br>
+                    Fair. Reproducible. Sovereign.
+                </p>
+            </div>
+
+            <div class="flex flex-col items-start gap-y-3 lg:items-end">
+                <div class="flex items-center gap-x-3">
+                    <div class="rounded-2xl border border-slate-700 bg-slate-900/60 px-4 py-2 text-xs">
+                        <span class="font-mono text-emerald-400">4 + Qualia</span>
+                        <span class="ml-2 text-slate-500">engines compared</span>
+                    </div>
+                    <div class="rounded-2xl border border-slate-700 bg-slate-900/60 px-4 py-2 text-xs font-mono">
+                        n = <span id="dataset-size">10,000</span> triples
+                    </div>
                 </div>
-                <div class="text-sm leading-relaxed text-slate-300">
-                    Each engine runs in complete isolation. 512 MB ceiling enforced (rlimit / --max-old-space-size). 
-                    OOM is a valid outcome. Ingestion methodology reflects real usage: Oxigraph bulk in-process, 
-                    SurrealDB via batched HTTP, JS engines parse in V8. Latency: 10 warmup + 30 samples (p50 / p95 / p99). 
-                    <span class="font-mono text-xs text-slate-500">synthetic-ntriples-v1</span>
+                <div id="last-updated" 
+                     class="rounded-2xl bg-slate-900 px-4 py-1.5 text-xs font-mono text-slate-400">
+                    Loading results…
                 </div>
             </div>
         </div>
 
-        <!-- Summary cards -->
-        <div id="summary-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-            <!-- Populated by JS -->
+        <!-- Key Insights -->
+        <div class="mb-10">
+            <div class="section-label mb-3 px-1">KEY INSIGHTS</div>
+            <div id="summary-cards" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <!-- JS populated -->
+            </div>
         </div>
 
-        <!-- Main table -->
-        <div class="glass border border-slate-700 rounded-3xl overflow-hidden mb-10">
-            <div class="px-6 pt-6 pb-4 flex items-center justify-between border-b border-slate-700">
+        <!-- Main Comparison -->
+        <div class="mb-8">
+            <div class="mb-4 flex items-baseline justify-between px-1">
                 <div>
-                    <h3 class="font-semibold text-xl tracking-tight">Engine Comparison</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">Synthetic dataset • n = <span id="dataset-size">10,000</span> triples</p>
+                    <div class="section-label">ENGINE COMPARISON</div>
+                    <div class="text-2xl font-semibold tracking-tight">Performance under constraint</div>
                 </div>
-                <div class="text-xs px-3 py-1 rounded-2xl bg-slate-800 text-slate-400 font-mono flex items-center gap-x-1.5">
-                    <i class="fa-solid fa-sync fa-sm"></i>
-                    <span id="last-updated">Loading...</span>
-                </div>
+                <div class="text-xs text-slate-500">Click column headers to sort • Lower is better</div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full data-table">
-                    <thead class="bg-slate-900/60">
-                        <tr>
-                            <th class="text-left px-6 py-4 w-48">Engine</th>
-                            <th class="text-right px-4 py-4 cursor-pointer hover:text-white" onclick="sortTable(1)">Ingestion <span class="text-[10px] opacity-50">ms</span></th>
-                            <th class="text-right px-4 py-4 cursor-pointer hover:text-white" onclick="sortTable(2)">Point p50 <span class="text-[10px] opacity-50">ms</span></th>
-                            <th class="text-right px-4 py-4 cursor-pointer hover:text-white" onclick="sortTable(3)">Two-hop p50 <span class="text-[10px] opacity-50">ms</span></th>
-                            <th class="text-right px-4 py-4 cursor-pointer hover:text-white" onclick="sortTable(4)">Filter p50 <span class="text-[10px] opacity-50">ms</span></th>
-                            <th class="text-right px-4 py-4 cursor-pointer hover:text-white" onclick="sortTable(5)">Peak RSS <span class="text-[10px] opacity-50">MB</span></th>
-                            <th class="w-12"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="results-body" class="divide-y divide-slate-800 text-sm">
-                        <!-- Populated dynamically -->
-                    </tbody>
-                </table>
+            <!-- Table -->
+            <div class="glass overflow-hidden rounded-3xl border border-slate-700">
+                <div class="overflow-x-auto">
+                    <table class="data-table w-full min-w-[900px]">
+                        <thead class="bg-[#0f1623]">
+                            <tr class="text-left">
+                                <th class="w-56 px-8 py-5 font-medium">Engine</th>
+                                <th onclick="sortTable(1)" class="cursor-pointer px-6 py-5 text-right font-medium hover:text-white">Ingestion <span class="font-mono text-[10px] opacity-60">ms</span></th>
+                                <th onclick="sortTable(2)" class="cursor-pointer px-6 py-5 text-right font-medium hover:text-white">Point p50 <span class="font-mono text-[10px] opacity-60">ms</span></th>
+                                <th onclick="sortTable(3)" class="cursor-pointer px-6 py-5 text-right font-medium hover:text-white">Two-hop p50 <span class="font-mono text-[10px] opacity-60">ms</span></th>
+                                <th onclick="sortTable(4)" class="cursor-pointer px-6 py-5 text-right font-medium hover:text-white">Filter p50 <span class="font-mono text-[10px] opacity-60">ms</span></th>
+                                <th onclick="sortTable(5)" class="cursor-pointer px-6 py-5 text-right font-medium hover:text-white">Peak RSS <span class="font-mono text-[10px] opacity-60">MB</span></th>
+                                <th class="w-10"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body" class="divide-y divide-slate-800 text-[15px]">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <!-- Charts -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <!-- Ingestion chart -->
-            <div class="glass border border-slate-700 rounded-3xl p-6">
-                <div class="flex justify-between items-baseline mb-4">
-                    <div class="font-semibold">Ingestion Time</div>
-                    <div class="text-[10px] text-slate-500 font-mono">LOWER IS BETTER</div>
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <!-- Ingestion -->
+            <div class="glass rounded-3xl border border-slate-700 p-7">
+                <div class="mb-6 flex items-center justify-between">
+                    <div>
+                        <div class="font-semibold tracking-tight">Ingestion Time</div>
+                        <div class="text-xs text-slate-500">Lower is better • real end-to-end</div>
+                    </div>
+                    <div class="rounded bg-slate-800 px-2.5 py-px text-[10px] font-mono text-slate-400">ms</div>
                 </div>
-                <div id="ingestion-chart" class="space-y-4"></div>
+                <div id="ingestion-chart" class="space-y-[17px]"></div>
             </div>
 
-            <!-- Point lookup chart -->
-            <div class="glass border border-slate-700 rounded-3xl p-6">
-                <div class="flex justify-between items-baseline mb-4">
-                    <div class="font-semibold">Point Query Latency (p50)</div>
-                    <div class="text-[10px] text-slate-500 font-mono">LOWER IS BETTER</div>
+            <!-- Point Query -->
+            <div class="glass rounded-3xl border border-slate-700 p-7">
+                <div class="mb-6 flex items-center justify-between">
+                    <div>
+                        <div class="font-semibold tracking-tight">Point Query Latency (p50)</div>
+                        <div class="text-xs text-slate-500">Lower is better • 30 samples</div>
+                    </div>
+                    <div class="rounded bg-slate-800 px-2.5 py-px text-[10px] font-mono text-slate-400">ms</div>
                 </div>
-                <div id="point-chart" class="space-y-4"></div>
+                <div id="point-chart" class="space-y-[17px]"></div>
             </div>
         </div>
 
-        <div class="mt-8 text-center">
-            <p class="text-xs text-slate-500 max-w-md mx-auto">
-                Run <span class="font-mono bg-slate-800 px-1.5 py-px rounded">python benchmarks/harness.py --all --output docs/comparative_benchmark_results.json</span><br>
-                then refresh this page. Results are committed to the repo for reproducibility.
-            </p>
+        <!-- Footer / Reproduce -->
+        <div class="mt-12 rounded-3xl border border-slate-800 bg-[#0f1623] p-8">
+            <div class="flex flex-col items-start justify-between gap-y-4 lg:flex-row lg:items-center">
+                <div>
+                    <div class="font-semibold">Reproduce these results</div>
+                    <div class="mt-1 max-w-md text-sm text-slate-400">
+                        Run the harness locally. Results are committed to the repository for full reproducibility.
+                    </div>
+                </div>
+                <div onclick="runHarnessLocally()" 
+                     class="cursor-pointer rounded-2xl border border-slate-700 bg-slate-900 px-5 py-3 font-mono text-sm transition-all hover:border-blue-600 hover:bg-blue-950/30">
+                    python benchmarks/harness.py --all --output docs/comparative_benchmark_results.json
+                </div>
+            </div>
         </div>
     </div>
 
@@ -204,51 +259,44 @@
         let sortColumn = null;
         let sortDirection = 1;
 
-        // Demo data in case JSON is not present yet
         const demoData = {
             "schema_version": 1,
             "dataset": "synthetic-ntriples-v1",
             "last_updated": "2026-06-03T11:00:00Z",
-            "methodology": "Each engine run in isolation under 512MB ceiling...",
             "engines": {
                 "oxigraph": {
-                    "engine": "oxigraph",
-                    "n_triples": 10000,
+                    "engine": "oxigraph", "n_triples": 10000,
                     "ingestion_ms": 124.7,
-                    "point": { "p50": 0.42, "p95": 0.61, "samples": 30 },
-                    "twohop": { "p50": 1.38, "p95": 1.92, "samples": 30 },
-                    "filter": { "p50": 2.05, "p95": 2.81, "samples": 30 },
+                    "point": { "p50": 0.42, "p95": 0.61 },
+                    "twohop": { "p50": 1.38, "p95": 1.92 },
+                    "filter": { "p50": 2.05, "p95": 2.81 },
                     "peak_rss_mb": 187.4,
                     "meta": { "label": "Oxigraph" }
                 },
                 "surrealdb": {
-                    "engine": "surrealdb",
-                    "n_triples": 10000,
+                    "engine": "surrealdb", "n_triples": 10000,
                     "ingestion_ms": 312.9,
-                    "point": { "p50": 0.89, "p95": 1.34, "samples": 30 },
-                    "twohop": { "p50": 3.41, "p95": 4.12, "samples": 30 },
-                    "filter": { "p50": 1.67, "p95": 2.15, "samples": 30 },
-                    "server_rss_mb": 241.2,
+                    "point": { "p50": 0.89, "p95": 1.34 },
+                    "twohop": { "p50": 3.41, "p95": 4.12 },
+                    "filter": { "p50": 1.67, "p95": 2.15 },
                     "peak_rss_mb": 89.3,
                     "meta": { "label": "SurrealDB" }
                 },
                 "comunica": {
-                    "engine": "comunica",
-                    "n_triples": 10000,
+                    "engine": "comunica", "n_triples": 10000,
                     "ingestion_ms": 487.3,
-                    "point": { "p50": 1.24, "p95": 1.81, "samples": 30 },
-                    "twohop": { "p50": 4.92, "p95": 6.11, "samples": 30 },
-                    "filter": { "p50": 3.78, "p95": 4.55, "samples": 30 },
+                    "point": { "p50": 1.24, "p95": 1.81 },
+                    "twohop": { "p50": 4.92, "p95": 6.11 },
+                    "filter": { "p50": 3.78, "p95": 4.55 },
                     "peak_rss_mb": 312.6,
                     "meta": { "label": "Comunica" }
                 },
                 "wasm_prolog": {
-                    "engine": "wasm_prolog",
-                    "n_triples": 10000,
+                    "engine": "wasm_prolog", "n_triples": 10000,
                     "ingestion_ms": 1240.8,
-                    "point": { "p50": 0.71, "p95": 0.98, "samples": 20 },
-                    "twohop": { "p50": 2.84, "p95": 3.67, "samples": 20 },
-                    "filter": { "p50": 2.31, "p95": 2.94, "samples": 20 },
+                    "point": { "p50": 0.71, "p95": 0.98 },
+                    "twohop": { "p50": 2.84, "p95": 3.67 },
+                    "filter": { "p50": 2.31, "p95": 2.94 },
                     "peak_rss_mb": 178.9,
                     "meta": { "label": "WASM-Prolog" }
                 }
@@ -258,67 +306,52 @@
         function formatMs(val) {
             if (val === null || val === undefined) return '—';
             if (typeof val === 'string') return val;
-            return val.toFixed(2);
+            return Number(val).toFixed(2);
         }
 
         function getEngines(data) {
-            if (!data || !data.engines) return [];
-            return Object.values(data.engines);
+            return data && data.engines ? Object.values(data.engines) : [];
+        }
+
+        function getEngineColor(engine) {
+            const map = {
+                'oxigraph': 'bg-emerald-400',
+                'surrealdb': 'bg-violet-400',
+                'comunica': 'bg-orange-400',
+                'wasm_prolog': 'bg-rose-400',
+                'qualia': 'bg-amber-400'
+            };
+            return map[engine] || 'bg-slate-400';
         }
 
         function renderSummaryCards(engines) {
             const container = document.getElementById('summary-cards');
             container.innerHTML = '';
 
-            if (engines.length === 0) return;
+            if (!engines.length) return;
 
-            // Find winners
-            const ingestionWinner = engines.reduce((a, b) => (a.ingestion_ms || Infinity) < (b.ingestion_ms || Infinity) ? a : b);
-            const pointWinner = engines.reduce((a, b) => ((a.point && a.point.p50) || Infinity) < ((b.point && b.point.p50) || Infinity) ? a : b);
-            const memoryWinner = engines.reduce((a, b) => (a.peak_rss_mb || Infinity) < (b.peak_rss_mb || Infinity) ? a : b);
+            const ingestionWinner = engines.reduce((a, b) => ((a.ingestion_ms || 999999) < (b.ingestion_ms || 999999) ? a : b));
+            const pointWinner = engines.reduce((a, b) => (((a.point?.p50 || 999) < (b.point?.p50 || 999)) ? a : b));
+            const memoryWinner = engines.reduce((a, b) => ((a.peak_rss_mb || 999999) < (b.peak_rss_mb || 999999) ? a : b));
 
             const cards = [
-                {
-                    icon: 'fa-bolt',
-                    label: 'Fastest Ingestion',
-                    value: `${formatMs(ingestionWinner.ingestion_ms)} ms`,
-                    engine: ingestionWinner.meta?.label || ingestionWinner.engine,
-                    color: 'emerald'
-                },
-                {
-                    icon: 'fa-search',
-                    label: 'Fastest Point p50',
-                    value: `${formatMs(pointWinner.point?.p50)} ms`,
-                    engine: pointWinner.meta?.label || pointWinner.engine,
-                    color: 'blue'
-                },
-                {
-                    icon: 'fa-microchip',
-                    label: 'Lowest Memory',
-                    value: `${memoryWinner.peak_rss_mb || '?'} MB`,
-                    engine: memoryWinner.meta?.label || memoryWinner.engine,
-                    color: 'violet'
-                },
-                {
-                    icon: 'fa-shield-halved',
-                    label: 'Qualia Advantage',
-                    value: 'O(1) FNV + Lazy SuperBlocks',
-                    engine: 'Native Qualia',
-                    color: 'amber'
-                }
+                { label: "Fastest Ingestion", value: formatMs(ingestionWinner.ingestion_ms) + " ms", engine: ingestionWinner.meta?.label || ingestionWinner.engine, icon: "fa-bolt", color: "emerald" },
+                { label: "Fastest Point p50", value: formatMs(pointWinner.point?.p50) + " ms", engine: pointWinner.meta?.label || pointWinner.engine, icon: "fa-search", color: "blue" },
+                { label: "Lowest Memory", value: (memoryWinner.peak_rss_mb || "?") + " MB", engine: memoryWinner.meta?.label || memoryWinner.engine, icon: "fa-microchip", color: "violet" },
+                { label: "Native Advantage", value: "O(1) FNV + Lazy", engine: "Qualia Native", icon: "fa-shield-halved", color: "amber" }
             ];
 
-            cards.forEach(card => {
+            cards.forEach(c => {
                 const el = document.createElement('div');
-                el.className = `glass border border-slate-700 rounded-3xl p-5`;
+                el.className = `metric-card glass rounded-3xl border border-slate-700 p-6`;
                 el.innerHTML = `
                     <div class="flex justify-between">
                         <div>
-                            <div class="text-xs tracking-widest text-slate-500 font-medium">${card.label}</div>
-                            <div class="mt-3 text-3xl font-semibold tracking-tighter metric-value">${card.value}</div>
-                            <div class="text-xs mt-1 text-slate-400">${card.engine}</div>
+                            <div class="section-label">${c.label}</div>
+                            <div class="mt-4 text-4xl font-semibold tracking-tighter stat-value">${c.value}</div>
+                            <div class="mt-1 text-xs text-slate-400">${c.engine}</div>
                         </div>
-                        <i class="fa-solid ${card.icon} text-3xl text-${card.color}-400 opacity-75 mt-1"></i>
+                        <i class="fa-solid ${c.icon} mt-1 text-4xl text-${c.color}-400 opacity-80"></i>
                     </div>
                 `;
                 container.appendChild(el);
@@ -331,29 +364,26 @@
 
             engines.forEach(engine => {
                 const row = document.createElement('tr');
-                row.className = 'engine-row transition-colors';
+                row.className = 'engine-row';
 
                 const label = engine.meta?.label || engine.engine;
-                const ingestion = engine.ingestion_ms;
-                const point = engine.point?.p50;
-                const twohop = engine.twohop?.p50;
-                const filter = engine.filter?.p50;
-                const rss = engine.peak_rss_mb || engine.server_rss_mb;
+                const isQualia = engine.engine === 'qualia';
 
                 row.innerHTML = `
-                    <td class="px-6 py-4 font-semibold">
+                    <td class="px-8 py-5 font-semibold">
                         <div class="flex items-center gap-x-3">
-                            <div class="w-2.5 h-2.5 rounded-full ${getEngineColor(engine.engine)}"></div>
-                            <span>${label}</span>
+                            <div class="h-2.5 w-2.5 flex-shrink-0 rounded-full ${getEngineColor(engine.engine)}"></div>
+                            <span class="${isQualia ? 'text-amber-300' : ''}">${label}</span>
+                            ${isQualia ? '<span class="ml-2 rounded bg-amber-950 px-1.5 py-px text-[9px] font-mono text-amber-400">NATIVE</span>' : ''}
                         </div>
                     </td>
-                    <td class="px-4 py-4 text-right font-mono text-sm">${formatMs(ingestion)}</td>
-                    <td class="px-4 py-4 text-right font-mono text-sm">${formatMs(point)}</td>
-                    <td class="px-4 py-4 text-right font-mono text-sm">${formatMs(twohop)}</td>
-                    <td class="px-4 py-4 text-right font-mono text-sm">${formatMs(filter)}</td>
-                    <td class="px-4 py-4 text-right font-mono text-sm">${rss ? rss.toFixed(1) : '—'}</td>
-                    <td class="px-2 py-4 text-center">
-                        <button onclick="showEngineDetail('${engine.engine}')" class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1">
+                    <td class="px-6 py-5 text-right font-mono text-[15px]">${formatMs(engine.ingestion_ms)}</td>
+                    <td class="px-6 py-5 text-right font-mono text-[15px]">${formatMs(engine.point?.p50)}</td>
+                    <td class="px-6 py-5 text-right font-mono text-[15px]">${formatMs(engine.twohop?.p50)}</td>
+                    <td class="px-6 py-5 text-right font-mono text-[15px]">${formatMs(engine.filter?.p50)}</td>
+                    <td class="px-6 py-5 text-right font-mono text-[15px]">${engine.peak_rss_mb ? engine.peak_rss_mb.toFixed(1) : '—'}</td>
+                    <td class="px-4 py-5 text-center">
+                        <button onclick="showEngineDetail('${engine.engine}')" class="text-slate-400 hover:text-blue-400 transition-colors">
                             <i class="fa-solid fa-info-circle"></i>
                         </button>
                     </td>
@@ -362,130 +392,97 @@
             });
         }
 
-        function getEngineColor(engine) {
-            const colors = {
-                'oxigraph': 'bg-emerald-400',
-                'surrealdb': 'bg-violet-400',
-                'comunica': 'bg-orange-400',
-                'wasm_prolog': 'bg-rose-400',
-                'qualia': 'bg-amber-400'
-            };
-            return colors[engine] || 'bg-slate-400';
-        }
-
-        function renderCharts(engines) {
-            // Ingestion chart
-            renderBarChart('ingestion-chart', engines, 'ingestion_ms', 'Ingestion (ms)');
-            
-            // Point p50 chart
-            renderBarChart('point-chart', engines, 'point.p50', 'Point p50 (ms)');
-        }
-
-        function renderBarChart(containerId, engines, metricPath, label) {
+        function renderBarChart(containerId, engines, keyFn, maxVal) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
 
-            const maxVal = Math.max(...engines.map(e => {
-                if (metricPath === 'ingestion_ms') return e.ingestion_ms || 0;
-                if (metricPath === 'point.p50') return (e.point && e.point.p50) || 0;
-                return 0;
-            })) || 1;
-
             engines.forEach(engine => {
-                let val = 0;
-                if (metricPath === 'ingestion_ms') val = engine.ingestion_ms || 0;
-                else if (metricPath === 'point.p50') val = (engine.point && engine.point.p50) || 0;
-
-                const pct = Math.max(4, Math.round((val / maxVal) * 100));
-                const labelText = engine.meta?.label || engine.engine;
+                const val = keyFn(engine);
+                const pct = maxVal > 0 ? Math.max(6, Math.round((val / maxVal) * 100)) : 10;
+                const label = engine.meta?.label || engine.engine;
+                const isQualia = engine.engine === 'qualia';
 
                 const row = document.createElement('div');
-                row.className = 'flex items-center gap-x-3 text-sm';
+                row.className = 'flex items-center gap-x-4 text-sm';
                 row.innerHTML = `
-                    <div class="w-28 text-right text-xs text-slate-400 truncate">${labelText}</div>
-                    <div class="flex-1 bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                        <div class="bar" style="width: ${pct}%;"></div>
+                    <div class="w-24 flex-shrink-0 text-right text-xs text-slate-400 truncate">${label}</div>
+                    <div class="flex-1 rounded-full bg-slate-800 p-px">
+                        <div class="bar ${isQualia ? 'bar-qualia' : ''}" style="width: ${pct}%;"></div>
                     </div>
-                    <div class="w-20 font-mono text-xs text-right">${val.toFixed(1)}</div>
+                    <div class="w-16 flex-shrink-0 text-right font-mono text-xs">${val.toFixed(1)}</div>
                 `;
                 container.appendChild(row);
             });
         }
 
-        function sortTable(colIndex) {
-            if (!currentData) return;
+        function renderCharts(engines) {
+            const maxIngestion = Math.max(...engines.map(e => e.ingestion_ms || 0)) || 1;
+            const maxPoint = Math.max(...engines.map(e => e.point?.p50 || 0)) || 1;
 
+            renderBarChart('ingestion-chart', engines, e => e.ingestion_ms || 0, maxIngestion);
+            renderBarChart('point-chart', engines, e => e.point?.p50 || 0, maxPoint);
+        }
+
+        function sortTable(col) {
+            if (!currentData) return;
             const engines = getEngines(currentData);
 
-            if (sortColumn === colIndex) {
-                sortDirection *= -1;
-            } else {
-                sortColumn = colIndex;
-                sortDirection = 1;
-            }
+            if (sortColumn === col) sortDirection *= -1;
+            else { sortColumn = col; sortDirection = 1; }
 
-            const keyMap = {
-                1: 'ingestion_ms',
-                2: (e) => e.point?.p50,
-                3: (e) => e.twohop?.p50,
-                4: (e) => e.filter?.p50,
-                5: 'peak_rss_mb'
+            const getters = {
+                1: e => e.ingestion_ms || 0,
+                2: e => e.point?.p50 || 0,
+                3: e => e.twohop?.p50 || 0,
+                4: e => e.filter?.p50 || 0,
+                5: e => e.peak_rss_mb || 0
             };
 
-            const keyFn = keyMap[colIndex];
-
-            engines.sort((a, b) => {
-                let va = typeof keyFn === 'function' ? keyFn(a) : a[keyFn];
-                let vb = typeof keyFn === 'function' ? keyFn(b) : b[keyFn];
-                va = va || 0;
-                vb = vb || 0;
-                return (va - vb) * sortDirection;
-            });
-
+            engines.sort((a, b) => (getters[col](a) - getters[col](b)) * sortDirection);
             renderTable(engines);
         }
 
-        function showEngineDetail(engineKey) {
-            if (!currentData || !currentData.engines[engineKey]) return;
-            const data = currentData.engines[engineKey];
-            const label = data.meta?.label || engineKey;
+        function showEngineDetail(key) {
+            if (!currentData?.engines?.[key]) return;
+            const d = currentData.engines[key];
+            const label = d.meta?.label || key;
+            const isQualia = key === 'qualia';
 
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4';
+            modal.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4';
             modal.innerHTML = `
-                <div class="glass border border-slate-600 rounded-3xl max-w-md w-full p-8">
-                    <div class="flex justify-between items-start">
+                <div class="glass w-full max-w-md rounded-3xl border border-slate-600 p-8">
+                    <div class="flex items-start justify-between">
                         <div>
-                            <div class="font-semibold text-2xl tracking-tight">${label}</div>
-                            <div class="text-xs text-slate-500 font-mono mt-1">${engineKey} • schema v${currentData.schema_version}</div>
+                            <div class="flex items-center gap-x-3">
+                                <div class="h-3 w-3 rounded-full ${getEngineColor(key)}"></div>
+                                <div class="text-2xl font-semibold tracking-tight">${label}</div>
+                            </div>
+                            ${isQualia ? '<div class="mt-1 text-xs text-amber-400">Native daemon • port 4242</div>' : ''}
                         </div>
-                        <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+                        <button onclick="this.closest('.fixed').remove()" class="text-3xl leading-none text-slate-400 hover:text-white">&times;</button>
                     </div>
 
-                    <div class="mt-8 space-y-6 text-sm">
-                        <div class="grid grid-cols-2 gap-4">
+                    <div class="mt-8 space-y-7 text-sm">
+                        <div class="grid grid-cols-2 gap-6">
                             <div>
                                 <div class="text-xs text-slate-500">INGESTION</div>
-                                <div class="font-mono text-3xl mt-1">${formatMs(data.ingestion_ms)} <span class="text-xs">ms</span></div>
+                                <div class="mt-1 font-mono text-4xl font-semibold tracking-tighter">${formatMs(d.ingestion_ms)}</div>
                             </div>
                             <div>
                                 <div class="text-xs text-slate-500">PEAK RSS</div>
-                                <div class="font-mono text-3xl mt-1">${data.peak_rss_mb || data.server_rss_mb || '—'} <span class="text-xs">MB</span></div>
+                                <div class="mt-1 font-mono text-4xl font-semibold tracking-tighter">${d.peak_rss_mb || d.server_rss_mb || '—'} <span class="text-base">MB</span></div>
                             </div>
                         </div>
 
                         <div>
-                            <div class="text-xs text-slate-500 mb-2">LATENCY (p50 / p95)</div>
-                            <div class="space-y-1 font-mono text-sm">
-                                <div>Point:     <span class="font-semibold">${formatMs(data.point?.p50)}</span> / ${formatMs(data.point?.p95)} ms</div>
-                                <div>Two-hop:  <span class="font-semibold">${formatMs(data.twohop?.p50)}</span> / ${formatMs(data.twohop?.p95)} ms</div>
-                                <div>Filter:   <span class="font-semibold">${formatMs(data.filter?.p50)}</span> / ${formatMs(data.filter?.p95)} ms</div>
+                            <div class="mb-3 text-xs text-slate-500">LATENCY (p50 / p95)</div>
+                            <div class="space-y-2 font-mono text-[15px]">
+                                <div class="flex justify-between"><span>Point</span> <span class="font-semibold">${formatMs(d.point?.p50)} / ${formatMs(d.point?.p95)}</span></div>
+                                <div class="flex justify-between"><span>Two-hop</span> <span class="font-semibold">${formatMs(d.twohop?.p50)} / ${formatMs(d.twohop?.p95)}</span></div>
+                                <div class="flex justify-between"><span>Filter</span> <span class="font-semibold">${formatMs(d.filter?.p50)} / ${formatMs(d.filter?.p95)}</span></div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="mt-8 text-[10px] text-slate-500 border-t border-slate-700 pt-4">
-                        ${currentData.methodology ? currentData.methodology.substring(0, 220) + '...' : ''}
                     </div>
                 </div>
             `;
@@ -493,23 +490,18 @@
         }
 
         async function loadData() {
-            const statusEl = document.getElementById('last-updated');
-            
+            const status = document.getElementById('last-updated');
             try {
                 const res = await fetch('./comparative_benchmark_results.json');
-                if (!res.ok) throw new Error('File not found');
-                
+                if (!res.ok) throw new Error();
                 currentData = await res.json();
-                statusEl.textContent = new Date(currentData.last_updated || Date.now()).toLocaleDateString();
-            } catch (e) {
-                // Fallback to demo
+                status.innerHTML = new Date(currentData.last_updated).toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' • ' + new Date(currentData.last_updated).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            } catch {
                 currentData = demoData;
-                statusEl.innerHTML = `Demo data <span class="text-amber-400">(run harness to update)</span>`;
-                statusEl.classList.add('text-amber-400');
+                status.innerHTML = 'Demo data <span class="text-amber-400">(run harness)</span>';
             }
 
             const engines = getEngines(currentData);
-            
             document.getElementById('dataset-size').textContent = currentData.engines?.oxigraph?.n_triples || 10000;
 
             renderSummaryCards(engines);
@@ -518,24 +510,12 @@
         }
 
         function runHarnessLocally() {
-            const cmd = `python benchmarks/harness.py --all --output docs/comparative_benchmark_results.json`;
+            const cmd = 'python benchmarks/harness.py --all --output docs/comparative_benchmark_results.json';
             navigator.clipboard.writeText(cmd).then(() => {
-                const origText = event.currentTarget?.innerText || '';
-                alert('Command copied to clipboard:\n\n' + cmd + '\n\nThen refresh this page.');
-            }).catch(() => {
-                prompt('Run this command in your terminal:', cmd);
-            });
+                alert('Command copied!\n\n' + cmd + '\n\nThen refresh this page.');
+            }).catch(() => prompt('Copy & run:', cmd));
         }
 
-        // Keyboard support for sorting
-        document.addEventListener('keydown', function(e) {
-            if (e.key === '?') {
-                const firstRow = document.querySelector('#results-body tr');
-                if (firstRow) firstRow.click();
-            }
-        });
-
-        // Boot
         window.onload = loadData;
     </script>
 </body>
