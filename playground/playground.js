@@ -151,76 +151,247 @@ function generateBillingReceipt() {
     return JSON.stringify(receipt, null, 2);
 }
 
-function compileToBytecode() {
-    const start = performance.now();
-    
-    // Simulate compilation
+// ---------------------------------------------------------------------------
+// Connection state
+// ---------------------------------------------------------------------------
+
+let isNativeConnected = false;
+window.QUALIA_NATIVE_ACTIVE = false;
+
+const DAEMON_BASE = 'http://127.0.0.1:4242';
+
+// ---------------------------------------------------------------------------
+// Badge / wake-button toggle
+// ---------------------------------------------------------------------------
+
+function updateConnectionBadge() {
+    const badge  = document.getElementById('conn-badge');
+    const wakeBtn = document.getElementById('wake-btn');
+    if (!badge) return;
+
+    if (isNativeConnected) {
+        badge.className = 'badge green';
+        badge.textContent = 'Native Hardware Connected (Zero-Allocation Core)';
+        if (wakeBtn) wakeBtn.style.display = 'none';
+
+        // Also update the install button if present
+        const installBtn = document.getElementById('install-btn-header');
+        if (installBtn) {
+            installBtn.style.background = 'rgba(74, 222, 128, 0.1)';
+            installBtn.style.color = 'var(--success)';
+            installBtn.style.border = '1px solid var(--success)';
+            installBtn.textContent = 'Daemon Active';
+        }
+    } else {
+        badge.className = 'badge amber';
+        badge.textContent = 'WASM Fallback Mode (Network Streaming)';
+        if (wakeBtn) wakeBtn.style.display = '';
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Daemon probe (single shot, returns bool, swallows TypeError silently)
+// ---------------------------------------------------------------------------
+
+async function probeNativeDaemon(timeoutMs = 500) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const resp = await fetch(`${DAEMON_BASE}/health`, {
+            method: 'GET',
+            signal: controller.signal
+        });
+        isNativeConnected = resp.ok;
+        window.QUALIA_NATIVE_ACTIVE = resp.ok;
+        return resp.ok;
+    } catch (_err) {
+        // TypeError: Failed to fetch (daemon offline) — swallow silently
+        isNativeConnected = false;
+        window.QUALIA_NATIVE_ACTIVE = false;
+        return false;
+    } finally {
+        clearTimeout(timer);
+        updateConnectionBadge();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Background polling — every 3 s
+// ---------------------------------------------------------------------------
+
+function pollNativeDaemon() {
+    setInterval(async () => {
+        const prev = isNativeConnected;
+        await probeNativeDaemon(500);
+        // updateConnectionBadge already called inside probeNativeDaemon;
+        // only log state transitions to avoid console noise
+        if (prev !== isNativeConnected) {
+            console.log(
+                isNativeConnected
+                    ? '[Qualia] Native daemon connected.'
+                    : '[Qualia] Native daemon offline — falling back to WASM.'
+            );
+        }
+    }, 3000);
+}
+
+// ---------------------------------------------------------------------------
+// Wake-button handler (custom protocol + retry)
+// ---------------------------------------------------------------------------
+
+function handleWakeClick(evt) {
+    evt.preventDefault();
+    window.location.href = 'qualia://start';
+    const badge = document.getElementById('conn-badge');
+    if (badge) {
+        badge.className = 'badge amber';
+        badge.textContent = 'Launching Local Engine…';
+    }
+    // Retry probe up to 5× with 2 s gap
+    (async () => {
+        for (let i = 0; i < 5; i++) {
+            await new Promise(r => setTimeout(r, 2000));
+            if (await probeNativeDaemon(500)) return;
+        }
+    })();
+}
+
+// ---------------------------------------------------------------------------
+// Native query execution
+// ---------------------------------------------------------------------------
+
+async function executeNativeQuery(query, startTime) {
+    const byteOut  = document.getElementById('bytecode-output');
+    const quinOut  = document.getElementById('quin-output');
+    const billOut  = document.getElementById('billing-receipt');
+    const countBadge = document.getElementById('quin-count');
+
+    byteOut.innerText = '[Sentinel VM] Routing query to native daemon…';
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+
+    try {
+        const resp = await fetch(`${DAEMON_BASE}/query`, {
+            method: 'POST',
+            signal: controller.signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                query,
+                format: query.trim().startsWith('{') ? 'json-ld' : 'sparql-star'
+            })
+        });
+        clearTimeout(timer);
+
+        const data = await resp.json();
+        const elapsedNs = Math.floor((performance.now() - startTime) * 1000);
+
+        if (!resp.ok || data.status === 'error') {
+            byteOut.innerText = `[Native Error]\n${data.message || resp.statusText}`;
+            billOut.innerText = JSON.stringify({ path: 'native', error: data.code }, null, 2);
+            return;
+        }
+
+        // Bytecode panel — show compile status + routing metadata
+        byteOut.innerText = [
+            `[Sentinel VM] status: ${data.status}`,
+            `[Sentinel VM] format: ${data.format}`,
+            data.message ? `[Sentinel VM] ${data.message}` : null,
+            data.routing_tier !== undefined
+                ? `[Router]      tier: 0b${data.routing_tier.toString(2).padStart(2,'0')}  mask: 0x${(data.validation_mask||0).toString(16).padStart(4,'0')}`
+                : null
+        ].filter(Boolean).join('\n');
+
+        // Quin result matrix
+        if (data.quin) {
+            const q = data.quin;
+            const hex = v => BigInt(v).toString(16).padStart(16, '0');
+            quinOut.innerHTML = `
+                <div class="quin-row">
+                    <div><span style="color:#888">S:</span> 0x${hex(q.subject)}</div>
+                    <div><span style="color:#888">P:</span> 0x${hex(q.predicate)}</div>
+                    <div><span style="color:#888">O:</span> 0x${hex(q.object)}</div>
+                    <div><span style="color:#888">C:</span> 0x${hex(q.context)}</div>
+                    <div><span style="color:#888">M:</span> 0x${hex(q.metadata)}</div>
+                </div>`;
+            countBadge.innerText = '1 Quin (Native)';
+        }
+
+        // Billing panel
+        billOut.innerText = JSON.stringify({
+            path: 'native',
+            routing_tier: data.routing_tier,
+            validation_mask: data.validation_mask,
+            format: data.format,
+            latency_ns: elapsedNs
+        }, null, 2);
+
+        document.getElementById('latency-badge').innerText = `${elapsedNs}ns`;
+
+    } catch (err) {
+        clearTimeout(timer);
+        // Daemon went away mid-request — flip to fallback
+        isNativeConnected = false;
+        window.QUALIA_NATIVE_ACTIVE = false;
+        updateConnectionBadge();
+        runFallbackSimulation(query, startTime);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// WASM / static fallback — logs HTTP Range requests to telemetry panel
+// ---------------------------------------------------------------------------
+
+function runFallbackSimulation(query, startTime) {
     setTimeout(() => {
         document.getElementById('bytecode-output').innerText = generateBytecode();
         document.getElementById('quin-output').innerHTML = generateQuins();
-        document.getElementById('quin-count').innerText = "2 Quins";
-        
-        // Generate billing receipt
-        document.getElementById('billing-receipt').innerText = generateBillingReceipt();
-        
-        const end = performance.now();
-        const latencyNs = Math.floor((end - start) * 1000);
-        document.getElementById('latency-badge').innerText = `${latencyNs}ns`;
-    }, 45); // simulated WASM delay
-}
+        document.getElementById('quin-count').innerText = '2 Quins (WASM)';
 
-window.QUALIA_NATIVE_ACTIVE = false;
-
-function probeNativeDaemon(timeoutMs = 500) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-    return fetch('http://127.0.0.1:4242/health', {
-        method: 'GET',
-        signal: controller.signal
-    }).then(res => {
-        window.QUALIA_NATIVE_ACTIVE = res.ok;
-        return res.ok;
-    }).catch(() => {
-        window.QUALIA_NATIVE_ACTIVE = false;
-        return false;
-    }).finally(() => clearTimeout(timeout));
-}
-
-function markNativeButtonActive() {
-    const installBtn = document.getElementById('install-btn-header');
-    if(installBtn) {
-        installBtn.style.background = 'rgba(74, 222, 128, 0.1)';
-        installBtn.style.color = 'var(--success)';
-        installBtn.style.border = '1px solid var(--success)';
-        installBtn.innerText = 'Daemon Active (Native)';
-        installBtn.onclick = null;
-        installBtn.removeAttribute('href');
-    }
-}
-
-async function retryNativeLaunch() {
-    for (let attempt = 0; attempt < 5; attempt++) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        if (await probeNativeDaemon()) {
-            markNativeButtonActive();
-            return;
+        // Phase 1 byte-range inspector: show the Range requests that would be
+        // issued to stream the graph without a full download
+        const blockSize = 40960;
+        const numBlocks = 3;
+        let rangeLog = '[Byte-Range Inspector] WASM fallback — streaming via HTTP ranges:\n';
+        rangeLog += 'GET /Qualia_Ledger.q42\n';
+        for (let i = 0; i < numBlocks; i++) {
+            const lo = i * blockSize;
+            const hi = lo + blockSize - 1;
+            rangeLog += `  Range: bytes=${lo}-${hi}  (Block sector ${i}, ${blockSize} B)\n`;
         }
-    }
+        rangeLog += '\n[WASM] Local compile complete.\n\n';
+        rangeLog += generateBillingReceipt();
+
+        document.getElementById('billing-receipt').innerText = rangeLog;
+
+        const elapsedNs = Math.floor((performance.now() - startTime) * 1000);
+        document.getElementById('latency-badge').innerText = `${elapsedNs}ns`;
+    }, 45);
 }
 
-// Check if Native Daemon is installed and running
-probeNativeDaemon().then(active => {
-    if(active) {
-        markNativeButtonActive();
+// ---------------------------------------------------------------------------
+// Main execute button handler
+// ---------------------------------------------------------------------------
+
+async function compileToBytecode() {
+    const query = (document.getElementById('jsonld-input').value || '').trim();
+    if (!query) return;
+
+    const start = performance.now();
+
+    if (isNativeConnected) {
+        await executeNativeQuery(query, start);
     } else {
-        const installBtn = document.getElementById('install-btn-header');
-        if(installBtn) {
-            installBtn.innerText = 'Launch Local Engine';
-            installBtn.onclick = () => {
-                window.location.href = 'qualia://start';
-                retryNativeLaunch();
-            };
-        }
+        runFallbackSimulation(query, start);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Boot: probe once immediately, then start 3 s polling loop
+// ---------------------------------------------------------------------------
+
+probeNativeDaemon(500).then(() => {
+    updateConnectionBadge();
 });
+
+pollNativeDaemon();

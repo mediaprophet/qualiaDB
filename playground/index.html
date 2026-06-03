@@ -130,6 +130,28 @@
             border-color: var(--success);
         }
 
+        .badge.amber {
+            background: rgba(255, 215, 0, 0.1);
+            color: var(--warning);
+            border-color: var(--warning);
+        }
+
+        #wake-btn {
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            background: transparent;
+            color: var(--warning);
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        #wake-btn:hover {
+            background: rgba(255, 215, 0, 0.08);
+        }
+
         .bytecode-container, .json-rpc-container {
             background: rgba(0,0,0,0.5);
             padding: 1rem;
@@ -171,6 +193,10 @@
             <div>
                 <h1 style="margin: 0; color: #fff; font-size: 1.5rem;">Qualia-DB</h1>
                 <span style="color: var(--text-dim); font-size: 0.9rem;">Zero-Allocation Graph Engine</span>
+            </div>
+            <div id="native-status-bar" style="display: flex; align-items: center; gap: 8px;">
+                <span id="conn-badge" class="badge amber">WASM Fallback Mode (Network Streaming)</span>
+                <a id="wake-btn" href="qualia://start" onclick="handleWakeClick(event)">Wake Local Engine</a>
             </div>
             <a href="../index.html" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none; border-color: #555; color: #aaa;">← Hub</a>
             <button id="webtorrent-btn" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; border-color: #bd93f9; color: #bd93f9;" onclick="seedGraphToWebTorrent()">☍ WebTorrent Sync</button>
