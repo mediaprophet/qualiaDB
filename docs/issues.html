@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues • Cooperative Projects</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/90 backdrop-blur-2xl">
+        <div class="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <a href="cooperative.html" class="flex items-center gap-x-3">
+                    <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                        <i class="fa-solid fa-users text-white text-xl"></i>
+                    </div>
+                    <span class="font-display text-2xl font-semibold tracking-tighter">Cooperative Projects</span>
+                </a>
+            </div>
+            <div>
+                <a href="project-detail.html" class="px-4 py-2 text-sm hover:bg-white/5 rounded-2xl">Back to Project</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="font-display text-3xl font-semibold">Issues</h1>
+            <button class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-sm font-semibold">New Issue</button>
+        </div>
+
+        <div class="glass-strong rounded-3xl overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-white/5">
+                    <tr>
+                        <th class="text-left px-6 py-3">Issue</th>
+                        <th class="px-6 py-3">Status</th>
+                        <th class="px-6 py-3">Related Task</th>
+                        <th class="px-6 py-3">Priority</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/10">
+                    <tr>
+                        <td class="px-6 py-4">Define obligation propagation across Qualia ↔ Wellfair</td>
+                        <td class="px-6 py-4"><span class="px-3 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded">Open</span></td>
+                        <td class="px-6 py-4 text-white/60">Phase 2 integration</td>
+                        <td class="px-6 py-4"><span class="text-amber-400">High</span></td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4">Credential verification flow for regulated tasks</td>
+                        <td class="px-6 py-4"><span class="px-3 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded">Open</span></td>
+                        <td class="px-6 py-4 text-white/60">Multiple tasks</td>
+                        <td class="px-6 py-4"><span class="text-red-400">Critical</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
