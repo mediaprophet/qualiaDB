@@ -6,6 +6,15 @@
     <title>Roadmap • Cooperative Projects</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .phase-card { transition: all 0.2s; }
+        .hierarchy-badge {
+            font-size: 0.65rem;
+            padding: 1px 7px;
+            border-radius: 9999px;
+        }
+    </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
     <!-- Unified Navigation -->
@@ -36,15 +45,39 @@
     </nav>
 
     <div class="max-w-screen-2xl mx-auto px-8 pt-8">
-        <h1 class="font-display text-3xl font-semibold mb-2">Project Roadmap</h1>
-        <p class="text-white/60 mb-8">QualiaDB + Wellfair Integration & Hardening</p>
+        <!-- Header with Hierarchy -->
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-y-4 mb-8">
+            <div>
+                <div class="flex items-center gap-x-3">
+                    <h1 class="font-display text-3xl font-semibold">Project Roadmap</h1>
+                    <div class="px-3 py-1 text-xs rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center gap-x-1">
+                        <i class="fa-solid fa-sitemap"></i>
+                        <span>National Civics Infrastructure</span>
+                    </div>
+                </div>
+                <p class="text-white/60 mt-1">Timeline across parent project and subprojects • Filter to focus your view</p>
+            </div>
 
-        <div class="space-y-8">
+            <!-- Filter -->
+            <div class="flex items-center gap-x-2 text-sm">
+                <span class="text-white/60">Show:</span>
+                <select id="roadmap-filter" onchange="filterRoadmap()" 
+                        class="bg-zinc-900 border border-white/20 rounded-2xl px-3 py-1.5 text-sm">
+                    <option value="all">Everything</option>
+                    <option value="parent">Parent Project Only</option>
+                    <option value="sydney">Sydney Pilot Subproject</option>
+                    <option value="training">Training Module</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="space-y-6" id="roadmap-content">
             <!-- Phase 1 -->
-            <div class="glass-strong rounded-3xl p-6">
+            <div class="glass-strong rounded-3xl p-6" data-hierarchy="parent">
                 <div class="flex items-center gap-x-4">
                     <div class="px-4 py-1 bg-emerald-500/20 text-emerald-400 rounded-2xl text-sm">Phase 1 — Completed</div>
                     <div class="font-semibold">Research & Architecture</div>
+                    <span class="hierarchy-badge bg-emerald-500/20 text-emerald-400">Parent</span>
                 </div>
                 <div class="mt-4 grid md:grid-cols-3 gap-4 text-sm">
                     <div>• Deep review of QualiaDB</div>
@@ -54,10 +87,11 @@
             </div>
 
             <!-- Phase 2 -->
-            <div class="glass-strong rounded-3xl p-6 border border-emerald-500/30">
+            <div class="glass-strong rounded-3xl p-6 border border-emerald-500/30" data-hierarchy="parent">
                 <div class="flex items-center gap-x-4">
                     <div class="px-4 py-1 bg-emerald-500/20 text-emerald-400 rounded-2xl text-sm">Phase 2 — Current</div>
                     <div class="font-semibold">Core Integration</div>
+                    <span class="hierarchy-badge bg-emerald-500/20 text-emerald-400">Parent</span>
                 </div>
                 <div class="mt-4 grid md:grid-cols-2 gap-4 text-sm">
                     <div>• Qualia-Solid Bridge development (credential required)</div>
@@ -66,11 +100,40 @@
                 </div>
             </div>
 
+            <!-- Sydney Pilot Subproject Phase -->
+            <div class="glass-strong rounded-3xl p-6" data-hierarchy="sydney">
+                <div class="flex items-center gap-x-4">
+                    <div class="px-4 py-1 bg-sky-500/20 text-sky-400 rounded-2xl text-sm">Sydney Pilot — Phase 1</div>
+                    <div class="font-semibold">Local MP Office Onboarding</div>
+                    <span class="hierarchy-badge bg-sky-500/20 text-sky-400">Sydney Pilot</span>
+                </div>
+                <div class="mt-4 text-sm text-white/70">
+                    • Local credential verification flow<br>
+                    • Office-specific consent templates<br>
+                    • Integration with parent reporting (optional)
+                </div>
+            </div>
+
+            <!-- Training Module Subproject Phase -->
+            <div class="glass-strong rounded-3xl p-6" data-hierarchy="training">
+                <div class="flex items-center gap-x-4">
+                    <div class="px-4 py-1 bg-purple-500/20 text-purple-400 rounded-2xl text-sm">Training Module — Phase 1</div>
+                    <div class="font-semibold">Curriculum & Agent Training</div>
+                    <span class="hierarchy-badge bg-purple-500/20 text-purple-400">Training Module</span>
+                </div>
+                <div class="mt-4 text-sm text-white/70">
+                    • Peace Corps curriculum structure<br>
+                    • Agent anchoring patterns<br>
+                    • Local obligation tracking (private)
+                </div>
+            </div>
+
             <!-- Phase 3 -->
-            <div class="glass-strong rounded-3xl p-6">
+            <div class="glass-strong rounded-3xl p-6" data-hierarchy="parent">
                 <div class="flex items-center gap-x-4">
                     <div class="px-4 py-1 bg-white/10 text-white/60 rounded-2xl text-sm">Phase 3 — Upcoming</div>
                     <div class="font-semibold">AI Agent Tooling & Anchoring</div>
+                    <span class="hierarchy-badge bg-emerald-500/20 text-emerald-400">Parent</span>
                 </div>
                 <div class="mt-4 grid md:grid-cols-2 gap-4 text-sm text-white/70">
                     <div>• Agent anchoring under Principal</div>
@@ -80,16 +143,39 @@
             </div>
 
             <!-- Phase 4 -->
-            <div class="glass-strong rounded-3xl p-6">
+            <div class="glass-strong rounded-3xl p-6" data-hierarchy="parent">
                 <div class="flex items-center gap-x-4">
                     <div class="px-4 py-1 bg-white/10 text-white/60 rounded-2xl text-sm">Phase 4 — Planned</div>
                     <div class="font-semibold">Privacy & Safety Hardening</div>
+                    <span class="hierarchy-badge bg-emerald-500/20 text-emerald-400">Parent</span>
                 </div>
                 <div class="mt-4 text-sm text-white/70">
                     Sanctuary Mode integration • Duress flows • Consent enforcement via SHACL/Sentinel
                 </div>
             </div>
         </div>
+
+        <div class="mt-8 text-xs text-white/50">
+            Subprojects can have their own phases while still being visually connected to the parent roadmap. Use the filter to focus on specific workstreams.
+        </div>
     </div>
+
+    <script>
+        function filterRoadmap() {
+            const filter = document.getElementById('roadmap-filter').value;
+            const phases = document.querySelectorAll('#roadmap-content > div');
+
+            phases.forEach(phase => {
+                const h = phase.dataset.hierarchy;
+                if (filter === 'all') {
+                    phase.style.display = '';
+                } else if (filter === h) {
+                    phase.style.display = '';
+                } else {
+                    phase.style.display = 'none';
+                }
+            });
+        }
+    </script>
 </body>
 </html>
