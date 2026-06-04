@@ -287,9 +287,9 @@ Integrating social web functionality and "git-like" version control into the Coo
 Because Qualia-DB is a bare-metal, offline-first engine, standard cloud-based social graphs and centralized Git repositories do not apply. Here is how to architect these features natively:
 
 1. The Social Graph via Identity Nyms & The Address Book
-Traditional social profiles are replaced by "Identity Nyms", which are n-dimensional inferences evaluated dynamically by the Sentinel VM.
+Traditional social profiles are replaced by "Identity Nyms", which are n-dimensional inferences evaluated dynamically by the Webizen VM.
 
-For the Cooperative app, adding a collaborator or forming a network relies entirely on the local Address Book Directory. By adding a peer's Decentralized Identifier (DID) to this directory, the user mathematically authorizes the Sentinel VM to include that peer's objective inferences (such as project updates or task completions) in their local evaluation of the social graph.
+For the Cooperative app, adding a collaborator or forming a network relies entirely on the local Address Book Directory. By adding a peer's Decentralized Identifier (DID) to this directory, the user mathematically authorizes the Webizen VM to include that peer's objective inferences (such as project updates or task completions) in their local evaluation of the social graph.
 
 2. "Git-Like" Collaboration via CRDTs & WebTorrent
 You do not need to build a traditional Git client. Qualia-DB handles offline-first versioning natively.

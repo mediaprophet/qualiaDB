@@ -10,13 +10,19 @@ pub static SUPERBLOCK_IO_COUNT: AtomicUsize = AtomicUsize::new(0);
 /// Increments when the GPU/NPU evaluates a bitmask across 850 Quins
 pub static SIEVE_OPS_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-/// Increments for every opcode evaluated inside the Sentinel VM
+// "Energy of Logic" tracking metrics
+pub static ATOMIC_FLOPS_COUNT: AtomicUsize = AtomicUsize::new(0);
+pub static ATOMIC_INTEGRATION_STEPS: AtomicUsize = AtomicUsize::new(0);
+
+/// Core operational telemetry aggregate dump structed inside the Webizen VM
 pub static VM_CYCLES_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 /// Resets all global deterministic metrics for a new query lifecycle.
 pub fn reset_telemetry() {
     SUPERBLOCK_IO_COUNT.store(0, Ordering::SeqCst);
     SIEVE_OPS_COUNT.store(0, Ordering::SeqCst);
+    ATOMIC_FLOPS_COUNT.store(0, Ordering::SeqCst);
+    ATOMIC_INTEGRATION_STEPS.store(0, Ordering::SeqCst);
     VM_CYCLES_COUNT.store(0, Ordering::SeqCst);
 }
 

@@ -123,7 +123,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_evaluateTaxLiability(
         .expect("Couldn't get java string!")
         .into();
     
-    // In production, this spins up the Sentinel VM with the SlgOpcode::ApplyTaxSchema
+    // In production, this spins up the Webizen VM with the SlgOpcode::ApplyTaxSchema
     // For now, we return a mock evaluation result based on the TaxRuleSchema
     let mock_json_result = r#"{"liability": 10.0, "currency": "AUD"}"#;
     

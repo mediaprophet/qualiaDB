@@ -153,7 +153,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
         }
     } else if path_lower.ends_with(".n3") {
         let mut parser = crate::n3_parser::N3Parser::new(buf_reader);
-        let mut sentinel = crate::sentinel::SlgArena::new();
+        let mut webizen = crate::webizen::SlgArena::new();
         let mut rules_parsed = 0;
         
         let on_n3_event = |event: crate::n3_parser::N3Event| -> Result<(), std::io::Error> {
@@ -174,11 +174,11 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
                     }
                 }
                 crate::n3_parser::N3Event::LogicRule(rule) => {
-                    sentinel.register_rule(rule);
+                    webizen.register_rule(rule);
                     rules_parsed += 1;
                 }
                 crate::n3_parser::N3Event::AspBlock(_) | crate::n3_parser::N3Event::DiffuseBlock(_) => {
-                    // Pass these modalities to the Sentinel
+                    // Pass these modalities to the Webizen
                 }
             }
             Ok(())
@@ -187,7 +187,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
         if let Err(e) = parser.parse_all(on_n3_event) {
             eprintln!("N3 Logic Parsing Error: {}", e);
         }
-        println!("Registered {} N3 Logic Rules into the Sentinel VM.", rules_parsed);
+        println!("Registered {} N3 Logic Rules into the Webizen VM.", rules_parsed);
     } else {
         eprintln!("Unsupported file extension. Expected .rdf, .xml, .ttl, .nt, or .n3");
     }

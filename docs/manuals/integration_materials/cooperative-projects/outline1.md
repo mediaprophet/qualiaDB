@@ -49,7 +49,7 @@ Jurisdiction Profiles (Identity Nyms): Provisions shall be made within the Andro
 
 The Helper Bridge Flow: Upon the registration of a business expenditure, an Android intent or Web-Extension bridge shall be utilized to solicit the selection of an active Identity Nym, thereby determining which jurisdictional framework is cryptographically projected onto the transaction.
 
-Tax Rule Schemas: A Sentinel Virtual Machine-compatible ruleset shall be engineered to apply external, modular "Tax Rule Schemas" (encompassing regional deductions, depreciation parameters, etc.). These schemas shall filter data in accordance with the active Jurisdiction Profile to automatically generate estimations of tax liabilities within the application environment.
+Tax Rule Schemas: A Webizen Virtual Machine-compatible ruleset shall be engineered to apply external, modular "Tax Rule Schemas" (encompassing regional deductions, depreciation parameters, etc.). These schemas shall filter data in accordance with the active Jurisdiction Profile to automatically generate estimations of tax liabilities within the application environment.
 
 Phase V: Formalization of Cooperative Agreements and Project Parameters
 
@@ -61,7 +61,7 @@ Project Configuration Vectors: Android user interfaces must be developed to allo
 
 Cryptographic Ratification: The acceptance of Core Agreements and operational requirements by participating Decentralized Identifiers (DIDs) shall be executed via Author-Scoped Merkle Signatures. This mechanism immutably binds the participant to the project's foundational governance matrix.
 
-State Evaluation: The local Sentinel Virtual Machine shall evaluate these agreements dynamically, ensuring that subsequent project tracking and attribution algorithms strictly adhere to the parameters ratified by the cooperative participants.
+State Evaluation: The local Webizen Virtual Machine shall evaluate these agreements dynamically, ensuring that subsequent project tracking and attribution algorithms strictly adhere to the parameters ratified by the cooperative participants.
 
 Phase VI: Cooperative Project Tracking and the Obligation Matrix
 

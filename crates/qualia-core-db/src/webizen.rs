@@ -51,9 +51,9 @@ impl SlgArena {
         }
     }
 
-    /// Registers a logical implication rule into the Sentinel VM
+    /// Registers a logical implication rule into the Webizen VM
     pub fn register_rule(&mut self, rule: Rule) {
-        println!("🧠 Sentinel registered new N3 Rule: {:?}", rule);
+        println!("🧠 Webizen registered new N3 Rule: {:?}", rule);
         self.rule_registry.push(rule);
     }
 
@@ -97,6 +97,11 @@ pub enum SlgOpcode {
     Return,
     ApplyTaxSchema,
     Halt,
+    // Native Hard Science Extensions
+    NativeThermodynamics,
+    NativeOdeSolver,
+    NativeQuantumDft,
+    NativeBioinformatics,
 }
 
 /// The Execution Frame tracking variable bindings without touching the heap
@@ -106,7 +111,7 @@ pub struct VmFrame {
     pub object_reg: u64,
 }
 
-/// The Bytecode Evaluator for the Prolog Sentinel
+/// The Bytecode Evaluator for the Prolog Webizen
 pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mut VmFrame) -> Option<QualiaQuin> {
     let mut instruction_pointer = 0;
 
@@ -122,7 +127,7 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 }
             },
             SlgOpcode::CheckDefeaters => {
-                // Here, the Sentinel checks if the current context has any defeaters
+                // Here, the Webizen checks if the current context has any defeaters
                 // that override the active rule. 
                 // We'll mock a simple priority lookup. If a stronger rule fired, we would return None.
                 let has_defeater = false; // Mocked evaluation
@@ -189,6 +194,29 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
             },
             SlgOpcode::Halt => {
                 break;
+            },
+            SlgOpcode::NativeThermodynamics => {
+                // Mock execution of a thermodynamic state MCMC sampler
+                let mut sampler = crate::thermodynamics::ThermodynamicSampler::new(298.0, 100);
+                sampler.metropolis_step(50.0, 0.5);
+                println!("🧪 Webizen executed NativeThermodynamics step. Current Energy: {}", sampler.current_state.total_energy);
+            },
+            SlgOpcode::NativeOdeSolver => {
+                // Mock execution of continuous dynamics via RK4
+                let initial = crate::ode_solver::PhysicalState { time: 0.0, values: alloc::vec![1.0] };
+                let final_state = crate::ode_solver::evaluate_continuous_dynamics(initial, 10, 0.1);
+                println!("📈 Webizen executed NativeOdeSolver. Final state: {:?}", final_state.values);
+            },
+            SlgOpcode::NativeQuantumDft => {
+                // Mock execution of Kohn-Sham density functional approximation
+                let mut dft = crate::quantum_dft::ElectronDensity::new(10);
+                let energy = dft.calculate_ground_state_energy(&[]);
+                println!("⚛️ Webizen executed NativeQuantumDft. Ground State Energy: {} eV", energy);
+            },
+            SlgOpcode::NativeBioinformatics => {
+                // Execute hardware-accelerated SIMD alignment
+                let score = crate::bioinformatics::align_sequences(b"ATCG", b"ATCC");
+                println!("🧬 Webizen executed NativeBioinformatics. Sequence alignment score: {}", score.score);
             }
         }
         
@@ -196,4 +224,142 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
     }
     
     None
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AgreementState {
+    Proposed = 0x00,
+    PartiallySigned = 0x01,
+    Ratified = 0x02,
+}
+
+#[derive(Debug, Clone)]
+pub struct AgreementDomain {
+    pub name: alloc::string::String,
+    pub domain_id: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct AgreementConstraint {
+    pub required_signatures: u8,
+}
+
+pub struct AgreementDID {
+    pub agreement_id: u64,
+    pub principal: u64,
+    pub agents: [u64; 8],
+    pub num_agents: u8,
+    pub domain_id: u64,
+    pub threshold: u8,
+    pub current_state: AgreementState,
+}
+
+impl AgreementDID {
+    /// Compiles a ratified agreement into hardware-aligned Super-Quins.
+    pub fn compile_to_super_quins(&self) -> [QualiaQuin; 16] {
+        let mut buffer = [QualiaQuin { subject: 0, predicate: 0, object: 0, context: 0, metadata: 0, parity: 0 }; 16];
+        if self.current_state != AgreementState::Ratified {
+            return buffer;
+        }
+
+        let mut idx = 0;
+        let has_guardian = crate::q_hash("q42:hasGuardian");
+        let has_domain_scope = crate::q_hash("q42:hasDomainScope");
+        let requires_consensus = crate::q_hash("q42:requiresConsensus");
+
+        for i in 0..self.num_agents as usize {
+            if idx < 16 {
+                buffer[idx] = QualiaQuin {
+                    subject: self.principal,
+                    predicate: has_guardian,
+                    object: self.agents[i],
+                    context: self.agreement_id,
+                    // Embed routing lane (Bilateral Micro-Commons) and the State
+                    metadata: 0x4000_0000_0000_0002 | ((self.current_state as u64) << 48),
+                    parity: 0,
+                };
+                idx += 1;
+            }
+        }
+
+        for i in 0..self.num_agents as usize {
+            if idx < 16 {
+                buffer[idx] = QualiaQuin {
+                    subject: self.agreement_id,
+                    predicate: has_domain_scope,
+                    object: self.domain_id,
+                    context: self.agents[i],
+                    metadata: 0x4000_0000_0000_0002,
+                    parity: 0,
+                };
+                idx += 1;
+            }
+        }
+
+        if idx < 16 {
+            buffer[idx] = QualiaQuin {
+                subject: self.agreement_id,
+                predicate: requires_consensus,
+                object: self.threshold as u64,
+                context: self.domain_id,
+                metadata: 0x4000_0000_0000_0002,
+                parity: 0,
+            };
+        }
+
+        buffer
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::crdt::{SuspendedTransactionQueue, SuspendedTransaction};
+
+    #[test]
+    fn test_multi_agent_ratification_flow() {
+        let mut agreement = AgreementDID {
+            agreement_id: 100,
+            principal: 200,
+            agents: [300, 400, 0, 0, 0, 0, 0, 0],
+            num_agents: 2,
+            domain_id: 500,
+            threshold: 2,
+            current_state: AgreementState::Proposed,
+        };
+
+        // Before Ratification: should compile to empty quins
+        let proposed_quins = agreement.compile_to_super_quins();
+        assert_eq!(proposed_quins[0].subject, 0);
+
+        // Signatures Gathered!
+        agreement.current_state = AgreementState::Ratified;
+        let ratified_quins = agreement.compile_to_super_quins();
+        
+        // Assert Bilateral Routing Lane
+        assert_eq!(ratified_quins[0].metadata & 0x4000_0000_0000_0002, 0x4000_0000_0000_0002);
+        assert_eq!(ratified_quins[0].subject, 200); // principal
+        assert_eq!(ratified_quins[0].object, 300); // agent 1
+
+        // Test CRDT Queue Suspension and Wakeup
+        let mut crdt_queue = SuspendedTransactionQueue::new();
+        
+        let mut mock_vm = crate::logic::WebizenVM::new();
+        mock_vm.registers[0] = Some(999); // Mock execution state
+        
+        let suspended_tx = mock_vm.flatten_to_suspended(100, 2, crate::QualiaQuin::default());
+        assert!(crdt_queue.push(suspended_tx).is_ok());
+        
+        // First signature token arrives via WebRTC
+        let token_1 = crate::QualiaQuin { subject: 300, predicate: crate::q_hash("q42:issuesConsentToken"), object: 100, context: 100, metadata: 0, parity: 0 };
+        assert!(crdt_queue.apply_consensus_token(&token_1).is_none()); // Threshold not met
+        
+        // Second signature token arrives via WebRTC
+        let token_2 = crate::QualiaQuin { subject: 400, predicate: crate::q_hash("q42:issuesConsentToken"), object: 100, context: 100, metadata: 0, parity: 0 };
+        let resumed_tx = crdt_queue.apply_consensus_token(&token_2);
+        
+        assert!(resumed_tx.is_some(), "WebRTC event failed to wake up suspended execution!");
+        assert_eq!(resumed_tx.unwrap().registers[0], Some(999), "Execution state was corrupted during CRDT suspension");
+    }
 }

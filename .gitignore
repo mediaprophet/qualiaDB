@@ -14,3 +14,10 @@ __pycache__/
 
 # WordNet build artefacts (large downloaded data, not source)
 scripts/.wordnet_build/
+
+# Massive LLM Weights & Models
+*.gguf
+gemma-4-E4B-it-GGUF/
+
+# Local Libraries
+Local_Libraries/

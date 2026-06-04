@@ -39,7 +39,7 @@ pub fn compile_query_to_json(query: &str) -> String {
 }
 
 // ---------------------------------------------------------------------------
-// Sentinel VM query execution — pre-fetch synchronous model
+// Webizen VM query execution — pre-fetch synchronous model
 // ---------------------------------------------------------------------------
 //
 // The JS orchestrator (vfs.js) pre-fetches SuperBlock bytes via HTTP Range
@@ -72,7 +72,7 @@ pub fn compile_query_to_json(query: &str) -> String {
 #[wasm_bindgen]
 pub fn execute_ntriples_query(query: &str, db_bytes: &[u8], max_results: u32) -> String {
     use crate::mini_parser::compile_ntriples_to_bytecode;
-    use crate::sentinel_bytecode::execute_program_with_stats;
+    use crate::webizen_bytecode::execute_program_with_stats;
     use crate::QualiaQuin;
 
     const QUIN_SIZE: usize = 48;

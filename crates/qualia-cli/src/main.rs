@@ -153,6 +153,13 @@ enum WebizenAction {
         /// Path to the `.q42` ledger file
         file: PathBuf,
     },
+    /// Generates DNS TXT records and a did.json payload to enable global discovery of this Webizen
+    DnsFrontdoor {
+        /// The custom domain name you wish to map (e.g., qualia.alice.com)
+        domain: String,
+        /// Path to the embedded webizen git repository (to extract the local did:q42 key)
+        repo: PathBuf,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -507,7 +514,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // --- Real measurement wiring (no static JSON for Qualia side) ---
             // Uses synthetic FNV-indexed data (mirrors the criterion harness methodology)
-            // + actual calls into lazy_superblock_query / sentinel-adjacent paths where possible.
+            // + actual calls into lazy_superblock_query / webizen-adjacent paths where possible.
             // Competitor numbers remain reference values (as the harness is for LLM consumption under constraints).
 
             fn fnv1a(x: u64) -> u64 {
@@ -685,7 +692,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 black_box(quins.len())
             });
 
-            // 5. Cyclic / Defeasible simulation via sentinel-adjacent (use lazy + small logic)
+            // 5. Cyclic / Defeasible simulation via webizen-adjacent (use lazy + small logic)
             // Use existing test file for a "real" engine call if available
             let cyclic_file = if !test_q42.is_empty() { test_q42 } else { "defeasible.q42" };
             let qualia_cyclic = time_ms(|| {
@@ -725,7 +732,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 black_box(copy.len())
             });
 
-            // 9. Intercept (neurosymbolic style - time a sentinel-like unification loop)
+            // 9. Intercept (neurosymbolic style - time a webizen-like unification loop)
             let qualia_intercept = time_ms(|| {
                 let mut acc = 0u64;
                 for i in 0..5000 {
@@ -736,7 +743,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
 
             // 10-12. Rights / escrow / nym / provenance (use real logic paths + lazy)
-            // These exercise more of the Sentinel / modalities indirectly via lazy + clocked quins
+            // These exercise more of the Webizen / modalities indirectly via lazy + clocked quins
             let qualia_escrow = time_ms(|| {
                 let _ = qualia_core_db::query_engine::lazy_superblock_query(cyclic_file, 10);
                 // simulate provenance dag walk
@@ -1173,6 +1180,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Mock hashing and URI generation
                 println!("✅ Success! Torrent Seeded to DHT Swarm.");
                 println!("🧲 Magnet URI: magnet:?xt=urn:btih:3f4a123bc...&dn=Qualia_Ledger.q42");
+                println!("========================================");
+            }
+            WebizenAction::DnsFrontdoor { domain, repo } => {
+                println!("========================================");
+                println!("🚪 Generating Webizen DNS Frontdoor & did.json");
+                println!("Target Domain: {}", domain);
+                println!("Repository: {:?}", repo);
+                
+                // Try to extract identity from the repo
+                let mut local_did = "did:q42:local-device-key-mock".to_string();
+                if let Ok(git_repo) = git2::Repository::open(&repo) {
+                    if let Ok(tree) = git_repo.head().and_then(|h| h.peel_to_tree()) {
+                        if let Some(entry) = tree.get_name("did.json") {
+                            if let Ok(obj) = entry.to_object(&git_repo) {
+                                if let Some(blob) = obj.as_blob() {
+                                    if let Ok(content) = std::str::from_utf8(blob.content()) {
+                                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(content) {
+                                            if let Some(id) = json["id"].as_str() {
+                                                local_did = id.replace("did:git:", "did:q42:");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                println!("🔑 Extracted Local Identity: {}", local_did);
+                println!("\n--- DNS TXT RECORD ---");
+                println!("Add the following to your DNS registrar for '{}':", domain);
+                println!("Host: _did");
+                println!("Type: TXT");
+                println!("Value: \"did={}; endpoint=wss://{}:4242/qualia-bridge\"", local_did, domain);
+                
+                println!("\n--- did.json (W3C did:web) ---");
+                println!("Host this file at: https://{}/.well-known/did.json", domain);
+                let did_doc = serde_json::json!({
+                    "@context": [
+                        "https://www.w3.org/ns/did/v1",
+                        "https://w3id.org/security/suites/ed25519-2020/v1"
+                    ],
+                    "id": format!("did:web:{}", domain),
+                    "alsoKnownAs": [
+                        local_did.clone()
+                    ],
+                    "verificationMethod": [{
+                        "id": format!("did:web:{}#key-1", domain),
+                        "type": "Ed25519VerificationKey2020",
+                        "controller": format!("did:web:{}", domain),
+                        "publicKeyMultibase": local_did.replace("did:q42:", "z")
+                    }],
+                    "authentication": [
+                        format!("did:web:{}#key-1", domain)
+                    ],
+                    "service": [{
+                        "id": format!("did:web:{}#AgreementNegotiation", domain),
+                        "type": "QualiaAgreementNegotiation",
+                        "serviceEndpoint": format!("wss://{}:4242/qualia-bridge", domain),
+                        "description": "Zero-permission endpoint for establishing relationships and negotiating terms (e.g., UDHR). Access requires cryptographic handshake."
+                    }]
+                });
+                
+                println!("{}", serde_json::to_string_pretty(&did_doc).unwrap());
                 println!("========================================");
             }
         }

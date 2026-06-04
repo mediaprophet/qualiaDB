@@ -93,6 +93,26 @@ impl QualiaQuin {
     }
 }
 
+pub const MODALITY_FLAG_LLM_TENSOR: u8 = 0b1001;
+pub const MODALITY_FLAG_DENSE_PHYSICS: u8 = 0b1000;
+
+pub trait QuinPointerExt {
+    fn extract_modality_flag(&self) -> u8;
+    fn extract_byte_offset(&self) -> u64;
+}
+
+impl QuinPointerExt for QualiaQuin {
+    #[inline(always)]
+    fn extract_modality_flag(&self) -> u8 {
+        (self.object >> 60) as u8
+    }
+
+    #[inline(always)]
+    fn extract_byte_offset(&self) -> u64 {
+        self.object & 0x0FFF_FFFF_FFFF_FFFF
+    }
+}
+
 pub const QUINS_PER_BLOCK: usize = 850;
 pub const BLOCK_MULTIPLIER_SIZE: usize = 40960; // Exact alignment across 10 sectors
 
@@ -106,10 +126,12 @@ pub struct QualiaSuperBlock {
     pub active_quin_count: u64,
     /// Validation value checksum bit flags
     pub validation_checksum: u32,
-    /// Hard-coded sector configuration properties context
+    /// Hard-coded sector configuration properties context (and FEA bounds)
     pub hardware_profile_flags: u32,
+    /// Identifier for attached 3D voxel/tetrahedra FEA structural mesh layer
+    pub fea_mesh_index_id: u64,
     /// Fixed trailing block buffer space to force page-header normalization 
-    pub layout_padding: [u8; 128], // Standardizes header to exactly 160 bytes
+    pub layout_padding: [u8; 120], // Adjusted padding to maintain exactly 160 bytes header
     /// Contiguous un-padded sequential database array zones
     pub quin_ledger: [QualiaQuin; QUINS_PER_BLOCK],
 }
@@ -301,7 +323,7 @@ pub mod cbor_compiler;
 pub mod git_bridge;
 pub mod tax_schema;
 pub mod spatial_sieve;
-pub mod sentinel;
+pub mod webizen;
 pub mod shacl_compiler;
 pub mod agency;
 pub mod query_compiler;
@@ -317,14 +339,24 @@ pub mod nym_adapter;
 
 pub mod llm_agent;
 pub mod mini_parser;
-pub mod sentinel_bytecode;
+pub mod webizen_bytecode;
 pub mod identifier;
+pub mod bioinformatics;
+pub mod ode_solver;
+pub mod quantum_dft;
+pub mod thermodynamics;
+pub mod daemon_swarm;
+pub mod gguf_bridge;
+pub mod gguf_sharder;
 
 #[cfg(target_os = "android")]
 pub mod jni_bridge;
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_bridge;
+
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_edge;
 
 /// A zero-allocation compile-time hashing function for Q-Turtle macros.
 /// Uses the FNV-1a algorithm to hash strings into 64-bit Quin vectors natively.
@@ -381,35 +413,35 @@ mod tests {
 
     #[test]
     fn qualia_logic_val() {
-        use crate::logic::{SentinelVM, SentinelOpcode, SentinelCompiler};
+        use crate::logic::{WebizenVM, WebizenOpcode, WebizenCompiler};
         let q = QualiaQuin { subject: 0, predicate: 100, object: 18, context: 0, metadata: 0, parity: 0 };
         
-        let mut vm = SentinelVM::new();
+        let mut vm = WebizenVM::new();
         // Use the Compiler mock to generate bytecode for the constraint: 
         // Must have predicate 100 and object 18.
-        let bytecode = SentinelCompiler::compile_mock_constraint();
+        let bytecode = WebizenCompiler::compile_mock_constraint();
         vm.load_bytecode(&bytecode);
         
         let result = vm.execute_constraint(&q);
-        assert_eq!(result, true, "Sentinel VM failed to validate constraint byte-code");
+        assert_eq!(result, true, "Webizen VM failed to validate constraint byte-code");
     }
 
     #[test]
-    fn qualia_sentinel_guardianship() {
-        use crate::logic::{SentinelVM, SentinelOpcode};
+    fn qualia_webizen_guardianship() {
+        use crate::logic::{WebizenVM, WebizenOpcode};
         
         // 0b11 << 61 signals SpatiotemporalAmbiguous for bounding logic
         let q = QualiaQuin { subject: 0, predicate: 0, object: 0, context: 0, metadata: 0b11 << 61 | 500, parity: 0 };
         
-        let mut vm = SentinelVM::new();
+        let mut vm = WebizenVM::new();
         let bytecode = vec![
-            SentinelOpcode::EvalMetadataMask(499), // Try to match exactly 499 on the lower 16 bits
-            SentinelOpcode::HaltIfFalse,
+            WebizenOpcode::EvalMetadataMask(499), // Try to match exactly 499 on the lower 16 bits
+            WebizenOpcode::HaltIfFalse,
         ];
         vm.load_bytecode(&bytecode);
         
         let result = vm.execute_constraint(&q);
-        assert_eq!(result, false, "Sentinel VM failed to deny mismatched EvalMetadataMask");
+        assert_eq!(result, false, "Webizen VM failed to deny mismatched EvalMetadataMask");
     }
 
     #[test]

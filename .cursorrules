@@ -33,9 +33,9 @@ All routing and permission checks are baked into the Metadata (5th Vector).
 - SuperBlocks: 40,960-byte blocks (10 sectors, 850 Quins).
 - Volatile Scrubbing: Use `std::ptr::write_volatile` to scrub buffers on drop.
 
-5. Logic Execution (Core 1 Sentinel)
+5. Logic Execution (Core 1 Webizen)
 NEVER embed external logic interpreters or generalized Prolog crates (e.g., SWI-Prolog). This violates the zero-allocation architecture.
-All logical schemas (N3Logic, SHACL) must be translated into `SentinelOpcode` Bytecode arrays by the `SentinelCompiler`. Core 1 executes these bytecodes using a strict `[u64; 16]` register stack (`SentinelVM`) to guarantee determinism and zero heap allocation.
+All logical schemas (N3Logic, SHACL) must be translated into `WebizenOpcode` Bytecode arrays by the `WebizenCompiler`. Core 1 executes these bytecodes using a strict `[u64; 16]` register stack (`WebizenVM`) to guarantee determinism and zero heap allocation.
 
 6. Deterministic Compute Metering & Permissive Commons
 NEVER query OS-level energy APIs (e.g., BatteryManager, sysfs) for economic billing. It causes severe API stalls and hardware inequity.
@@ -47,5 +47,5 @@ If compiling for the browser (`target_arch = "wasm32"`), the Triad must be grace
 
 8. Neurosymbolic Axiomatic LLM Overrides
 When integrating LLMs, do not immediately write a Python shim. First ASK the user for the mode:
-- Mode 1 (Strict Native Intercept): Map exact tensor vectors (from `.gguf`) to 48-byte Quins. The Sentinel VM mathematically intercepts and clips vectors natively.
+- Mode 1 (Strict Native Intercept): Map exact tensor vectors (from `.gguf`) to 48-byte Quins. The Webizen VM mathematically intercepts and clips vectors natively.
 - Mode 2 (Bridged Shim): Use external Python/TensorFlow architectures, but mathematically gate all I/O through the Spatio-Temporal `.q42` constraints via an API bridge.

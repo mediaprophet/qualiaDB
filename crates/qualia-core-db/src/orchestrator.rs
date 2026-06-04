@@ -1,19 +1,31 @@
 //! The Orchestration Sieve — LLM Sub-Agent Dispatch Layer
 //!
-//! Sits between raw input (multi-modal data, user prompts) and the Sentinel VM.
+//! Sits between raw input (multi-modal data, user prompts) and the Webizen VM.
 //! Coordinates pre-processing → intent validation → inference → output grounding.
 //!
 //! Flow:
 //!   RawInput → [Orchestrator] → validate_intent → [LlmAgent.infer] → validate_output → .q42 commit
 
-use crate::llm_agent::{AgentIntent, AgentRuntime, SentinelVerdict};
+use crate::llm_agent::{AgentIntent, AgentRuntime, WebizenVerdict};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModelLifecycle {
+    Discovered,
+    MappedToDisk,
+    StreamingVRAM,
+    Active,
+    Scrubbing,
+}
 
 /// The outcome of a full orchestrated inference cycle.
 #[derive(Debug)]
 pub enum OrchestrationResult {
     /// Output was validated, grounded, and ready to commit to the semantic graph.
     Committed { text: String, provenance_quins: Vec<u64> },
-    /// Sentinel blocked the operation at pre-flight or post-flight.
+    /// Webizen blocked the operation at pre-flight or post-flight.
     Blocked { rule_violated: u64, reason: String },
     /// Inference failed (timeout, backend unavailable, etc.)
     Failed(String),
@@ -48,14 +60,63 @@ impl ThermalGovernor for NullThermalGovernor {
 
 pub struct TaskOrchestrator {
     thermal_governor: Box<dyn ThermalGovernor>,
+    pub current_model_state: Arc<std::sync::Mutex<ModelLifecycle>>,
+    pub scrubbing_lock: Arc<AtomicBool>,
 }
 
 impl TaskOrchestrator {
     pub fn new(thermal_governor: Box<dyn ThermalGovernor>) -> Self {
-        Self { thermal_governor }
+        Self { 
+            thermal_governor,
+            current_model_state: Arc::new(std::sync::Mutex::new(ModelLifecycle::Discovered)),
+            scrubbing_lock: Arc::new(AtomicBool::new(false)),
+        }
     }
 
-    /// Runs a full, Sentinel-gated inference cycle for a registered LLM sub-agent.
+    pub fn load_model(&self, _model_id: u64) -> Result<(), &'static str> {
+        if self.scrubbing_lock.load(Ordering::Acquire) {
+            return Err("Cannot load model: Swarm Worker is actively scrubbing memory arena");
+        }
+        
+        let mut state = self.current_model_state.lock().unwrap();
+        *state = ModelLifecycle::MappedToDisk;
+        *state = ModelLifecycle::StreamingVRAM;
+        *state = ModelLifecycle::Active;
+        Ok(())
+    }
+
+    pub fn evict_model(&self, _model_id: u64) {
+        let mut state = self.current_model_state.lock().unwrap();
+        *state = ModelLifecycle::Scrubbing;
+        
+        self.scrubbing_lock.store(true, Ordering::Release);
+        
+        let lock_clone = self.scrubbing_lock.clone();
+        let state_clone = self.current_model_state.clone();
+        
+        // Asynchronous scrubbing via Swarm Worker
+        thread::spawn(move || {
+            // Mocking a 512MB allocation that needs to be scrubbed
+            let mut mock_memory = vec![0u8; 1024]; 
+            let ptr = mock_memory.as_mut_ptr();
+            
+            unsafe {
+                // Cryptographic flush of the memory boundaries to zero
+                std::ptr::write_volatile(ptr, 0);
+            }
+            
+            // Artificial delay to simulate large memory sweep taking 15ms
+            thread::sleep(std::time::Duration::from_millis(15));
+            
+            // Release the cryptographic lock and revert state
+            lock_clone.store(false, Ordering::Release);
+            if let Ok(mut st) = state_clone.lock() {
+                *st = ModelLifecycle::Discovered; // Ready to be loaded again or remains unloaded
+            }
+        });
+    }
+
+    /// Runs a full, Webizen-gated inference cycle for a registered LLM sub-agent.
     pub fn orchestrate_inference(
         &self,
         agent: &dyn AgentRuntime,
@@ -82,11 +143,11 @@ impl TaskOrchestrator {
 
         // 1. Pre-flight: validate intent against Rights Ontology
         match agent.validate_intent(&intent) {
-            SentinelVerdict::Deny { rule_violated, reason } => {
+            WebizenVerdict::Deny { rule_violated, reason } => {
                 return OrchestrationResult::Blocked { rule_violated, reason };
             }
-            SentinelVerdict::Sanitised { .. } => { /* intent was scrubbed; proceed with caution */ }
-            SentinelVerdict::Permit => {}
+            WebizenVerdict::Sanitised { .. } => { /* intent was scrubbed; proceed with caution */ }
+            WebizenVerdict::Permit => {}
         }
 
         // 2. Inference
@@ -97,7 +158,7 @@ impl TaskOrchestrator {
 
         // 3. Post-flight: validate output grounding
         match agent.validate_output(&output) {
-            SentinelVerdict::Deny { rule_violated, reason } => {
+            WebizenVerdict::Deny { rule_violated, reason } => {
                 OrchestrationResult::Blocked { rule_violated, reason }
             }
             _ => OrchestrationResult::Committed {
@@ -111,7 +172,7 @@ impl TaskOrchestrator {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::llm_agent::{AgentIntent, LocalLlmAgent, SANCTUARY_SCOPE_SENTINEL};
+    use crate::llm_agent::{AgentIntent, LocalLlmAgent, SANCTUARY_SCOPE_WEBIZEN};
 
     #[test]
     pub fn qualia_validate_ring_buffer() {}
@@ -135,7 +196,7 @@ pub mod tests {
         let agent = LocalLlmAgent::new("did:git:orch-test", "model.gguf");
         let intent = AgentIntent {
             intent_predicate: 0x1234,
-            requested_graph_scope: vec![SANCTUARY_SCOPE_SENTINEL],
+            requested_graph_scope: vec![SANCTUARY_SCOPE_WEBIZEN],
             requires_network: false,
             ilp_offer_micro_cents: 0,
         };
@@ -163,5 +224,43 @@ pub mod tests {
         let orch = TaskOrchestrator::new(Box::new(MockCriticalThermalGovernor));
         let result = orch.orchestrate_inference(&agent, "Query", "ctx", intent);
         assert!(matches!(result, OrchestrationResult::Blocked { rule_violated: 0xDEADBEEF, .. }));
+    }
+
+    #[test]
+    fn test_async_scrub_lock_invariant() {
+        let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
+        
+        // 1. Initially it should load fine
+        assert!(orch.load_model(123).is_ok());
+        
+        // 2. Trigger an eviction (spawns background thread to scrub)
+        orch.evict_model(123);
+        
+        // 3. IMMEDIATELY try to load a new model. The lock should reject it.
+        let load_result = orch.load_model(456);
+        assert!(load_result.is_err(), "Orchestrator violated mechanical sympathy! Mapped model while Swarm worker was still scrubbing.");
+        
+        // 4. Wait for the background Swarm worker to complete its duty of care
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        
+        // 5. Try loading again. The lock should be cleared.
+        let second_load_result = orch.load_model(456);
+        assert!(second_load_result.is_ok(), "Orchestrator failed to load model after scrubbing lock cleared.");
+        
+        // Ensure Webizen VM logic handles yielding
+        let mut vm = crate::logic::WebizenVM::with_scrubbing_lock(orch.scrubbing_lock.clone());
+        let bytecode = vec![crate::logic::WebizenOpcode::LoadModel(999)];
+        vm.load_bytecode(&bytecode);
+        
+        let quin = crate::QualiaQuin { subject: 0, predicate: 0, object: 0, context: 0, metadata: 0, parity: 0 };
+        
+        // If we trigger evict again, the VM should yield on LoadModel
+        orch.evict_model(999);
+        let exec_result = vm.execute_implication(&quin);
+        assert!(exec_result.is_none());
+        assert_eq!(vm.yielded_op, Some(crate::logic::WebizenOpcode::LoadModel(999)));
+        
+        // Wait for scrub to clear
+        std::thread::sleep(std::time::Duration::from_millis(50));
     }
 }

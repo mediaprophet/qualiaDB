@@ -1,10 +1,10 @@
 # Qualia-DB LLM Governance Rules
-# N3Logic ruleset for the Prolog Sentinel VM
+# N3Logic ruleset for the Prolog Webizen VM
 # Machine-readable version: docs/llm-governance-rules.n3
-# These rules are compiled to SentinelOpcode bytecode at daemon startup.
+# These rules are compiled to WebizenOpcode bytecode at daemon startup.
 #
 # Every LLM instance operating within the qualiaDB ecosystem is a SUB-AGENT
-# of the natural person (Principal). The Sentinel VM is the GATEKEEPER.
+# of the natural person (Principal). The Webizen VM is the GATEKEEPER.
 # ALL input and output passes through these rules.
 #
 # Rule IDs are FNV-1a hashes of the rule URIs, matching
@@ -58,7 +58,7 @@
 
 # ─── Rule 4: Token Budget Enforcement ───────────────────────────────────────
 # ID: 0xA1B2C3D4E5F60004
-# Deterministic compute metering. The Sentinel enforces a hard token ceiling
+# Deterministic compute metering. The Webizen enforces a hard token ceiling
 # to prevent runaway generation from exceeding the 512MB memory floor.
 { ?output a llm:AgentOutput ;
           llm:tokensGenerated ?n .

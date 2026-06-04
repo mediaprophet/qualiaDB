@@ -30,7 +30,7 @@ data class DemoCard(
 
 private val demos = listOf(
     DemoCard("⚡", "Benchmark",         "FNV HashMap vs BTreeMap\n20-30% faster lookups",     NeonBlue),
-    DemoCard("🛡️", "Sentinel VM",      "N3Logic rule evaluation\nLive Prolog-style engine",   NeonPurple),
+    DemoCard("🛡️", "Webizen VM",      "N3Logic rule evaluation\nLive Prolog-style engine",   NeonPurple),
     DemoCard("🧠", "Neurosymbolic",     "LLM embedding space ↔\nRDF symbolic ontology",        NeonCyan),
     DemoCard("💸", "Tax Router",        "12% ILP micropayment split\nCustom recipient suite",   NeonGold),
     DemoCard("🤖", "LLM Governance",   "Rule chain for inference\nFiduciary override enforced", NeonGreen),
@@ -148,7 +148,7 @@ private fun DemoDetailDialog(demo: DemoCard, onDismiss: () -> Unit) {
                 "Benchmark"       -> BenchmarkDemo(demo.accentColor)
                 "Neurosymbolic"   -> NeurosymbolicScreen()
                 "Tax Router"      -> TaxRouterDemo(demo.accentColor)
-                "Sentinel VM"     -> SentinelDemo(demo.accentColor)
+                "Webizen VM"     -> WebizenDemo(demo.accentColor)
                 "ILP Threshold"   -> IlpThresholdDemo(demo.accentColor)
                 else -> Text(demo.subtitle, color = TextMuted)
             }
@@ -213,7 +213,7 @@ private fun TaxRouterDemo(accent: androidx.compose.ui.graphics.Color) {
 }
 
 @Composable
-private fun SentinelDemo(accent: androidx.compose.ui.graphics.Color) {
+private fun WebizenDemo(accent: androidx.compose.ui.graphics.Color) {
     val rules = listOf(
         "NO_TELEMETRY"         to "✓ Enforced",
         "GROUNDED_OUTPUT"      to "✓ Enforced",
@@ -223,7 +223,7 @@ private fun SentinelDemo(accent: androidx.compose.ui.graphics.Color) {
         "STRIP_FIDUCIARY_METADATA" to "✗ Blocked",
     )
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("N3Logic Sentinel VM — active rules:", color = TextMuted, fontSize = 12.sp)
+        Text("N3Logic Webizen VM — active rules:", color = TextMuted, fontSize = 12.sp)
         rules.forEach { (rule, status) ->
             val ok = status.startsWith("✓")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

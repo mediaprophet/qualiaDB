@@ -29,7 +29,7 @@ This document serves as a practical specification for AI coding agents implement
 - **Agency and Personhood First** — The natural person remains the center of agency. Tools, AI agents, and project structures serve the person.
 - **Relational and Social** — Collaboration and data sharing are fundamentally relational and social. Systems must reflect real-world relationships, mutual obligations, and contextual consent rather than isolated individual models.
 - **Fine-Grained Contextual Consent** — Sharing decisions are driven by specific relationship contexts, purposes, data categories, and time bounds, enforced by logic.
-- **Logic Engine as Core Decision Maker** — Qualia Sentinel evaluates contextual rules dynamically rather than relying solely on static permissions.
+- **Logic Engine as Core Decision Maker** — Qualia Webizen evaluates contextual rules dynamically rather than relying solely on static permissions.
 - **CBOR-LD as Runtime Format** — Efficient binary Linked Data serialization for mobile storage, sync, and protocol communication.
 - **Provenance and Accountability** — All significant actions carry verifiable provenance.
 - **Protection of Personal Boundaries** — Project obligations must not automatically override personal life without explicit consent.
@@ -41,11 +41,11 @@ This document serves as a practical specification for AI coding agents implement
 
 | Protocol          | Primary Strength                        | Role in System                                                                 | Serialization & Logic Notes                                      |
 |-------------------|-----------------------------------------|--------------------------------------------------------------------------------|------------------------------------------------------------------|
-| **GUN**           | Decentralized graph sync, offline-first | Real-time/eventual sync of share state, claims, obligations, live data        | CBOR-LD payloads + Sentinel logic for conflict resolution       |
+| **GUN**           | Decentralized graph sync, offline-first | Real-time/eventual sync of share state, claims, obligations, live data        | CBOR-LD payloads + Webizen logic for conflict resolution       |
 | **WebTorrent**    | P2P file/media distribution             | Distribution of ontology files, Q42 datasets, claim bundles, large artifacts  | CBOR-LD metadata + provenance tracking                          |
 | **WebRTC**        | Real-time video/voice/data              | Contract negotiation, claim verification, live collaboration                  | CBOR-LD session metadata + provenance; consent-gated channels   |
 | **Git + git-mark**| Versioned signed history                | Contract versioning, claim history, strong audit trails                       | Git objects + CBOR-LD provenance overlays                       |
-| **Qualia Engine** | Logic, provenance, semantics            | Unifying trust and decision layer across all protocols                        | Sentinel VM evaluates rules; Q42 model; CBOR-LD native at edge  |
+| **Qualia Engine** | Logic, provenance, semantics            | Unifying trust and decision layer across all protocols                        | Webizen VM evaluates rules; Q42 model; CBOR-LD native at edge  |
 
 ---
 
@@ -66,7 +66,7 @@ CBOR-LD provides compact, semantically rich binary encoding that aligns with Qua
 
 The Qualia engine supplies:
 - **Q42 Graph Model** — Canonical representation of entities, relations, obligations, Dynamic Equity / Stewardship Shares, contracts, claims, and relationship contexts.
-- **Sentinel VM** — Executes fine-grained contextual consent rules, SHACL validation, and dynamic policy evaluation.
+- **Webizen VM** — Executes fine-grained contextual consent rules, SHACL validation, and dynamic policy evaluation.
 - **Provenance DAGs** — Tamper-evident history of all meaningful actions and state changes.
 - **Edge-Native Design** — Suitable for mobile and constrained environments, with CBOR-LD as the efficient serialization.
 
@@ -98,7 +98,7 @@ Wellfair must implement **fine-grained, context-aware sharing rules** driven by 
 
 - Different data visibility depending on whether the other party is family, a project teammate, a treating physician, legal counsel, etc.
 - Consent is scoped to relationship context + purpose + data category + optional time window.
-- Logic engine (Sentinel) evaluates rules dynamically rather than using static ACLs.
+- Logic engine (Webizen) evaluates rules dynamically rather than using static ACLs.
 - All decisions and data flows produce provenance records (in Q42 / CBOR-LD).
 
 **Example behaviors:**
@@ -127,7 +127,7 @@ All protocol usage must be consent-gated via fine-grained contextual rules and p
 
 1. Keep the natural person as the center of agency.
 2. Model relationships using `qp:RelationshipContext` and `qp:ContextualConsent`.
-3. Use the logic engine (Sentinel) to evaluate sharing and scheduling decisions.
+3. Use the logic engine (Webizen) to evaluate sharing and scheduling decisions.
 4. Serialize runtime data in CBOR-LD.
 5. Generate Q42 provenance for significant actions.
 6. Default to protecting personal boundaries; require explicit consent for overrides.
@@ -165,7 +165,7 @@ All protocol usage must be consent-gated via fine-grained contextual rules and p
 
 **Phase 2** – CBOR-LD + Logic-Driven Consent (Current)
 - Adopt CBOR-LD as primary runtime serialization
-- Implement fine-grained contextual consent with Sentinel logic
+- Implement fine-grained contextual consent with Webizen logic
 - Wire GUN + WebRTC with CBOR-LD payloads and provenance
 - Strengthen personal boundary protection in Wellfair mobile
 

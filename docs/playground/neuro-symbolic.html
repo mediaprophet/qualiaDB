@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neurosymbolic LLM Transcompiler — QualiaDB</title>
-<meta name="description" content="Interactive demo: watch an LLM bridge continuous vector embeddings and discrete RDF symbolic space via the QualiaDB Neurosymbolic Transcompiler. Now integrates SHACL/Defeasible Sentinel gates + modality bridges. For full native (Lazy SuperBlocks, telemetry) run: cargo run -p qualia-cli -- bench --suite full">
+<meta name="description" content="Interactive demo: watch an LLM bridge continuous vector embeddings and discrete RDF symbolic space via the QualiaDB Neurosymbolic Transcompiler. Now integrates SHACL/Defeasible Webizen gates + modality bridges. For full native (Lazy SuperBlocks, telemetry) run: cargo run -p qualia-cli -- bench --suite full">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -756,7 +756,7 @@ function emitQuads(neighbours, sentence) {
   });
 
   // Governance provenance
-  quads.push(`<urn:qualia:input:${docId}> <qualia:governedBy> <urn:qualia:sentinel:v1> <urn:qualia:transcompile> .`);
+  quads.push(`<urn:qualia:input:${docId}> <qualia:governedBy> <urn:qualia:webizen:v1> <urn:qualia:transcompile> .`);
   quads.push(`<urn:qualia:input:${docId}> <qualia:groundingFidelity> "1.0"^^<xsd:float> <urn:qualia:transcompile> .`);
 
   return quads;

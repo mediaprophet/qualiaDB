@@ -291,13 +291,13 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool) {
                 // the full pipeline compiles and the HTTP contract is exercised.
                 let current_database_state: &[crate::QualiaQuin] = &[];
 
-                let (match_count, vm_cycles) = match crate::sentinel_bytecode::execute_program(
+                let (match_count, vm_cycles) = match crate::webizen_bytecode::execute_program(
                     &program,
                     current_database_state,
                     &mut out_buffer,
                 ) {
                     Ok(pair) => pair,
-                    Err(crate::sentinel_bytecode::VmError::OutputBufferFull) => {
+                    Err(crate::webizen_bytecode::VmError::OutputBufferFull) => {
                         return make_response(
                             StatusCode::PAYLOAD_TOO_LARGE,
                             "application/json",
@@ -312,7 +312,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool) {
                             .to_string(),
                         );
                     }
-                    Err(crate::sentinel_bytecode::VmError::InvalidProgram) => {
+                    Err(crate::webizen_bytecode::VmError::InvalidProgram) => {
                         return make_response(
                             StatusCode::INTERNAL_SERVER_ERROR,
                             "application/json",

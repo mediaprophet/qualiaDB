@@ -216,6 +216,21 @@ fn system_time_ms() -> u64 {
         .unwrap_or(0)
 }
 
+/// Converts the accumulated ATOMIC_FLOPS_COUNT into an ILP MicropaymentInstruction.
+/// Standard ratio: 10,000 FLOPs = 1 Satoshi
+pub fn generate_energy_of_logic_invoice(recipient_ilp: &str) -> MicropaymentInstruction {
+    let flops = crate::telemetry::ATOMIC_FLOPS_COUNT.swap(0, std::sync::atomic::Ordering::Relaxed);
+    let satoshis = (flops / 10_000) as u64;
+    let micro_cents = satoshis * 1000; // Mock conversion
+    
+    MicropaymentInstruction {
+        recipient_label: "Energy of Logic Node".to_string(),
+        ilp_address: recipient_ilp.to_string(),
+        amount_micro_cents: micro_cents,
+        use_nym: false,
+    }
+}
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]

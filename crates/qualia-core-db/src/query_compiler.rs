@@ -61,9 +61,9 @@ impl QueryCompiler {
         })
     }
 
-    /// Compiles a basic SPARQL `SELECT` query into an array of SentinelVM bytecode instructions.
+    /// Compiles a basic SPARQL `SELECT` query into an array of WebizenVM bytecode instructions.
     /// Example input: `SELECT ?s WHERE { ?s knows Bob }`
-    pub fn compile_to_bytecode(query: &str) -> Vec<crate::logic::SentinelOpcode> {
+    pub fn compile_to_bytecode(query: &str) -> Vec<crate::logic::WebizenOpcode> {
         let mut ops = Vec::new();
         let query_clean = query.replace('\n', " ").replace('\t', " ");
         
@@ -81,26 +81,26 @@ impl QueryCompiler {
                         
                         // Parse Subject
                         if s.starts_with('?') {
-                            ops.push(crate::logic::SentinelOpcode::BindRegister { vector_id: 0, register_index: 0 });
+                            ops.push(crate::logic::WebizenOpcode::BindRegister { vector_id: 0, register_index: 0 });
                         } else {
-                            ops.push(crate::logic::SentinelOpcode::MatchSubject(crate::q_hash(s)));
-                            ops.push(crate::logic::SentinelOpcode::HaltIfFalse);
+                            ops.push(crate::logic::WebizenOpcode::MatchSubject(crate::q_hash(s)));
+                            ops.push(crate::logic::WebizenOpcode::HaltIfFalse);
                         }
                         
                         // Parse Predicate
                         if p.starts_with('?') {
-                            ops.push(crate::logic::SentinelOpcode::BindRegister { vector_id: 1, register_index: 1 });
+                            ops.push(crate::logic::WebizenOpcode::BindRegister { vector_id: 1, register_index: 1 });
                         } else {
-                            ops.push(crate::logic::SentinelOpcode::MatchPredicate(crate::q_hash(p)));
-                            ops.push(crate::logic::SentinelOpcode::HaltIfFalse);
+                            ops.push(crate::logic::WebizenOpcode::MatchPredicate(crate::q_hash(p)));
+                            ops.push(crate::logic::WebizenOpcode::HaltIfFalse);
                         }
                         
                         // Parse Object
                         if o.starts_with('?') {
-                            ops.push(crate::logic::SentinelOpcode::BindRegister { vector_id: 2, register_index: 2 });
+                            ops.push(crate::logic::WebizenOpcode::BindRegister { vector_id: 2, register_index: 2 });
                         } else {
-                            ops.push(crate::logic::SentinelOpcode::MatchObject(crate::q_hash(o)));
-                            ops.push(crate::logic::SentinelOpcode::HaltIfFalse);
+                            ops.push(crate::logic::WebizenOpcode::MatchObject(crate::q_hash(o)));
+                            ops.push(crate::logic::WebizenOpcode::HaltIfFalse);
                         }
                     }
                 }
@@ -142,21 +142,21 @@ mod tests {
         let ops = QueryCompiler::compile_to_bytecode(query);
         
         // Expected: Bind ?s (0), Match Predicate (knows), Halt, Match Object (Bob), Halt
-        use crate::logic::SentinelOpcode;
+        use crate::logic::WebizenOpcode;
         assert_eq!(ops.len(), 5);
         
         match ops[0] {
-            SentinelOpcode::BindRegister { vector_id: 0, register_index: 0 } => (),
+            WebizenOpcode::BindRegister { vector_id: 0, register_index: 0 } => (),
             _ => panic!("Expected BindRegister for ?s"),
         }
         
         match ops[1] {
-            SentinelOpcode::MatchPredicate(val) => assert_eq!(val, crate::q_hash("knows")),
+            WebizenOpcode::MatchPredicate(val) => assert_eq!(val, crate::q_hash("knows")),
             _ => panic!("Expected MatchPredicate"),
         }
         
         match ops[3] {
-            SentinelOpcode::MatchObject(val) => assert_eq!(val, crate::q_hash("Bob")),
+            WebizenOpcode::MatchObject(val) => assert_eq!(val, crate::q_hash("Bob")),
             _ => panic!("Expected MatchObject"),
         }
     }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Network Sentinel & Threat Intelligence | Qualia-DB</title>
+    <title>Network Webizen & Threat Intelligence | Qualia-DB</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -111,8 +111,8 @@
         .proto-spyware { color: var(--alert-red); font-weight: bold; }
         .proto-unknown { color: var(--alert-yellow); font-weight: bold; }
 
-        /* Sentinel Log */
-        .sentinel-log {
+        /* Webizen Log */
+        .webizen-log {
             background: #000;
             border: 1px solid #222;
             height: 300px;
@@ -190,7 +190,7 @@
     <a href="index.html" class="return-link">← RETURN TO HOMEPAGE</a>
 
     <div class="header">
-        <h1>libpcap Network Sentinel</h1>
+        <h1>libpcap Network Webizen</h1>
         <h3>Decentralized Threat Intelligence & Dynamic Rule Generation</h3>
     </div>
 
@@ -246,10 +246,10 @@
             <!-- N3Logic Adjudicator Log -->
             <div class="panel" style="height: 100%;">
                 <div class="panel-header">
-                    <h2>Sentinel Audit & Rule Generation</h2>
+                    <h2>Webizen Audit & Rule Generation</h2>
                 </div>
-                <div class="sentinel-log" id="sentinelLog">
-                    <div class="log-entry" style="color: var(--neon-green);">> Sentinel Daemon active. Hooked to libpcap.</div>
+                <div class="webizen-log" id="webizenLog">
+                    <div class="log-entry" style="color: var(--neon-green);">> Webizen Daemon active. Hooked to libpcap.</div>
                     <div class="log-entry" style="color: #666;">> Monitoring egress traffic for Rights Ontology violations...</div>
                 </div>
             </div>
@@ -258,7 +258,7 @@
 
     <script>
         const packetBody = document.getElementById('packetBody');
-        const sentinelLog = document.getElementById('sentinelLog');
+        const webizenLog = document.getElementById('webizenLog');
         const threatGraph = document.getElementById('threatGraph');
         const graphText = document.getElementById('graphText');
         const nodes = [document.getElementById('node1'), document.getElementById('node2'), document.getElementById('node3')];
@@ -268,8 +268,8 @@
             const div = document.createElement('div');
             div.className = `log-entry ${className}`;
             div.innerText = `> ${text}`;
-            sentinelLog.appendChild(div);
-            sentinelLog.scrollTop = sentinelLog.scrollHeight;
+            webizenLog.appendChild(div);
+            webizenLog.scrollTop = webizenLog.scrollHeight;
         }
 
         async function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }

@@ -28,7 +28,7 @@ object CredentialManager {
 
     /**
      * Mixes claims from multiple Verifiable Credentials to generate a derivative 
-     * Verifiable Presentation (VP) for the Sentinel VM or external verifiers.
+     * Verifiable Presentation (VP) for the Webizen VM or external verifiers.
      * 
      * E.g., combining a Tax Office ABN with a Social Security concession claim.
      */

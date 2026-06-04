@@ -52,7 +52,7 @@ The authority's `.q42` DAG must contain the following structural triples:
 When a provider attempts to negotiate terms with a natural person's local daemon:
 1. The daemon checks the local physical coordinate or declared DOAP of the user.
 2. It fetches the latest cryptographically signed `.q42` ontology from the corresponding Taxation Authority (`did:gov`).
-3. The N3Logic Adjudicator (Sentinel VM) evaluates the ILP offset against the `applicableRate` predicates.
+3. The N3Logic Adjudicator (Webizen VM) evaluates the ILP offset against the `applicableRate` predicates.
 4. The API mathematically splits the incoming ILP transaction into two streams:
    - **Stream A (Profit)**: Routed to the user's personal wallet.
    - **Stream B (Tax Obligation)**: Routed directly to the `tax:escrowWallet`.

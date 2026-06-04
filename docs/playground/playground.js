@@ -93,7 +93,7 @@ function hashString(str) {
 }
 
 function generateBytecode() {
-    return `[SentinelCompiler] Compiling N3Logic AST...
+    return `[WebizenCompiler] Compiling N3Logic AST...
 -> OP_MATCH_SUBJECT(0x${hashString("?x")})
 -> OP_MATCH_PREDICATE(0x${hashString("a")})
 -> OP_MATCH_OBJECT(0x${hashString("Person")})
@@ -385,7 +385,7 @@ async function executeNativeQuery(query, startTime) {
     const billOut    = document.getElementById('billing-receipt');
     const countBadge = document.getElementById('quin-count');
 
-    byteOut.innerText = '[Sentinel VM] Routing query to native daemon…';
+    byteOut.innerText = '[Webizen VM] Routing query to native daemon…';
 
     const { format, accept } = detectQueryFormat(query);
 
@@ -431,8 +431,8 @@ async function executeNativeQuery(query, startTime) {
             const lines = text.trim().split('\n').filter(Boolean);
 
             byteOut.innerText = [
-                `[Sentinel VM] N-Triples result — ${lines.length} triple(s)`,
-                `[Sentinel VM] compute_cost: ${computeCost}`,
+                `[Webizen VM] N-Triples result — ${lines.length} triple(s)`,
+                `[Webizen VM] compute_cost: ${computeCost}`,
                 '',
                 ...lines.slice(0, 20) // show first 20 lines in bytecode panel
             ].join('\n');
@@ -458,9 +458,9 @@ async function executeNativeQuery(query, startTime) {
             const matchCount = data.match_count ?? graph.length;
 
             byteOut.innerText = [
-                `[Sentinel VM] JSON-LD result — ${matchCount} Quin(s)`,
-                `[Sentinel VM] compute_cost: ${computeCost}`,
-                `[Sentinel VM] @context: ${JSON.stringify(data['@context'] ?? {})}`
+                `[Webizen VM] JSON-LD result — ${matchCount} Quin(s)`,
+                `[Webizen VM] compute_cost: ${computeCost}`,
+                `[Webizen VM] @context: ${JSON.stringify(data['@context'] ?? {})}`
             ].join('\n');
 
             if (graph.length > 0) {

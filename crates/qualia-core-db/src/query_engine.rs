@@ -49,7 +49,7 @@ pub fn lazy_superblock_query(file_path: &str, target_percent: u8) -> Result<Tele
         let compressed_len = u32::from_le_bytes(header[8..12].try_into().unwrap()) as usize;
         let uncompressed_len = u32::from_le_bytes(header[12..16].try_into().unwrap()) as usize;
         
-        // Simulating the Sentinel deciding if this block is relevant
+        // Simulating the Webizen deciding if this block is relevant
         // E.g., querying 10% of the graph
         let is_relevant = (block_index % 100) < target_percent as u64;
         

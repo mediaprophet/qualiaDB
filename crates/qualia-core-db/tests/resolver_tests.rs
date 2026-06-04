@@ -1,6 +1,6 @@
 use qualia_core_db::{
     resolver::{resolve_hash, format_ntriples_to},
-    sentinel_bytecode::execute_program,
+    webizen_bytecode::execute_program,
     mini_parser::compile_ntriples_to_bytecode,
     QualiaQuin, q_hash,
 };

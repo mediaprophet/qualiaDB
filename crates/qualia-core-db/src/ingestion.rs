@@ -28,7 +28,7 @@ impl<'a> IngestionPipeline<'a> {
         
         let mut metadata: u64 = 0;
         
-        // 1. N3Logic Detection -> Route to Core 1 (Prolog Sentinel)
+        // 1. N3Logic Detection -> Route to Core 1 (Prolog Webizen)
         if trimmed.contains("=>") || trimmed.contains("@forAll") || trimmed.contains("@forSome") {
             // N3Logic Implication / Quantification requires deep inference
             // Routing Tier: 0b10 (Bits 61-62)
@@ -86,7 +86,7 @@ mod tests {
         let n3_rule = "{ ?x a :Man } => { ?x a :Mortal } .";
         let quin = IngestionPipeline::parse_line(n3_rule).unwrap();
         
-        // Expected route: 0b10 (Core 1 Prolog Sentinel)
+        // Expected route: 0b10 (Core 1 Prolog Webizen)
         let expected_routing = 0b10 << 61;
         assert_eq!(quin.metadata & (0b11 << 61), expected_routing, "N3Logic implication failed to route to Core 1");
     }

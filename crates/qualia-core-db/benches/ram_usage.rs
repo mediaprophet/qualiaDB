@@ -59,7 +59,7 @@ fn main() {
         rss_after_alloc.saturating_sub(rss_base) / (1024 * 1024));
 
     // ── Scan: read every Quin record, accumulate checksum ────────────────────
-    // This mirrors the hot path in sentinel_bytecode::execute_program —
+    // This mirrors the hot path in webizen_bytecode::execute_program —
     // sequential 48-byte reads, integer equality on S/P/O fields.
     let mut checksum: u64 = 0;
     for chunk in shard.chunks_exact(QUIN_SIZE) {

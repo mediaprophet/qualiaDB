@@ -12,8 +12,8 @@ const wasmReady = init();
 
 // ── Queries exercised per test type ──────────────────────────────────────────
 // Each is a string or (i: number) => string.
-// compile_query_to_json exercises the full QueryCompiler + SentinelCompiler
-// pipeline: tokenisation → AST → FNV-hashed Quin plan → Sentinel bytecode.
+// compile_query_to_json exercises the full QueryCompiler + WebizenCompiler
+// pipeline: tokenisation → AST → FNV-hashed Quin plan → Webizen bytecode.
 
 const QUERIES = {
     point:     (i) => `SELECT * WHERE { <http://example.org/e${i % 1000}> ?p ?o }`,

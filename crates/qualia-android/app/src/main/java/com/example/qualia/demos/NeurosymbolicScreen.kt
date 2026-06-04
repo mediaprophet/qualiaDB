@@ -473,7 +473,7 @@ private fun emitQuads(neighbours: List<Concept>, sentence: String): List<String>
             if (i < neighbours.size - 1)
                 add("<urn:concept:${n.id}> <qualia:relatedTo> <urn:concept:${neighbours[i+1].id}> <urn:qualia:transcompile> .")
         }
-        add("<urn:qualia:input:$docId> <qualia:governedBy> <urn:qualia:sentinel:v1> <urn:qualia:transcompile> .")
+        add("<urn:qualia:input:$docId> <qualia:governedBy> <urn:qualia:webizen:v1> <urn:qualia:transcompile> .")
         add("<urn:qualia:input:$docId> <qualia:groundingFidelity> \"1.0\"^^<xsd:float> <urn:qualia:transcompile> .")
     }
 }

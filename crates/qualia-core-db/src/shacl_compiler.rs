@@ -1,6 +1,6 @@
-use crate::sentinel::SlgOpcode;
+use crate::webizen::SlgOpcode;
 
-/// Translates a mock parsed SHACL Shape into deterministic Sentinel bytecodes.
+/// Translates a mock parsed SHACL Shape into deterministic Webizen bytecodes.
 /// In a production system, this parses `qualia_shapes.ttl` and generates
 /// executable validation routines that run BEFORE ingestion mapping.
 pub struct ShaclCompiler;
@@ -29,6 +29,19 @@ impl ShaclCompiler {
             "datatype" => {
                 // Emulates a type-cast check (e.g., xsd:decimal)
                 bytecodes.push(SlgOpcode::Unify); // Mock Type check bind
+            }
+            // Qualia Native Hard Science Extensions
+            "qualia:thermoMetropolisStep" => {
+                bytecodes.push(SlgOpcode::NativeThermodynamics);
+            }
+            "qualia:solveOdeDynamics" => {
+                bytecodes.push(SlgOpcode::NativeOdeSolver);
+            }
+            "qualia:dftGroundState" => {
+                bytecodes.push(SlgOpcode::NativeQuantumDft);
+            }
+            "qualia:bioSequenceAlignment" => {
+                bytecodes.push(SlgOpcode::NativeBioinformatics);
             }
             _ => {
                 println!("⚠️ Unsupported SHACL constraint: {}", constraint_type);

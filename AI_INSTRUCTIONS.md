@@ -3,7 +3,7 @@
 
 You are interacting with Qualia-DB, a bare-metal, offline-first graph database engine written in pure Rust. It is explicitly architected to manage digital agency, social advocacy, and sensitive medical metadata natively on personal devices. Do not apply traditional cloud-based relational (SQL) or standard in-memory graph assumptions. You must adhere to strict zero-allocation, bit-packed memory constraints.
 
-**Recent Major Capabilities (Epics 16-24):** Native multi-threaded + Rio RDF ingestion to LZ4-compressed SuperBlocks, mmap + lazy SuperBlock queries with WebRTC P2P hot-block streaming + live telemetry, full Dual-Mode (CLI native + WASM) benchmarking harness with `qualia-cli bench --suite full`, SHACL-to-Sentinel compiler, multi-modality reasoning bridges (spatio-temporal, probabilistic, DL, ASP, diffusion, linear), defeasible N3 logic + CheckDefeaters in the Sentinel VM, omnimodal logic parsing, and enhanced CLI (Webizen did:git, Solid export, daemon swarm compute, import/query/inspect).
+**Recent Major Capabilities (Epics 16-24):** Native multi-threaded + Rio RDF ingestion to LZ4-compressed SuperBlocks, mmap + lazy SuperBlock queries with WebRTC P2P hot-block streaming + live telemetry, full Dual-Mode (CLI native + WASM) benchmarking harness with `qualia-cli bench --suite full`, SHACL-to-Webizen compiler, multi-modality reasoning bridges (spatio-temporal, probabilistic, DL, ASP, diffusion, linear), defeasible N3 logic + CheckDefeaters in the Webizen VM, omnimodal logic parsing, and enhanced CLI (Webizen did:git, Solid export, daemon swarm compute, import/query/inspect).
 
 When writing implementation code, wrappers, or queries for Qualia-DB, you must strictly follow these architectural rules:
 
@@ -39,20 +39,22 @@ String parsing is never used for access control. All routing and permission chec
   * `0b11`: Spatiotemporal/Ambiguous (Triggers the Local NPU/GPU for geometric bounding hull math).
 * **Bits 0-15 (Validation Masks)**: Defines specific micro-instructions (e.g., `0x0002` for Bilateral Identity Locked, `0x0008` for Work Obligation Satisfied).
 
-## 4. Memory & Execution Boundaries
-* **No Heap Allocations**: All data streaming must use the `QuinIncrementalScanner`, executing over pre-allocated stack buffers to respect the strict 512MB RAM floor.
+## 4. Memory & Execution Boundaries (The Zero-Allocation Protocol)
+* **No Heap Allocations**: All data streaming must use the `QuinIncrementalScanner`, executing over pre-allocated stack buffers to respect the strict 512MB RAM floor. Verify boundaries using `dhat-rs` to ensure heap usage remains at zero bytes during query execution.
 * **SuperBlocks**: Data is mapped into 40,960-byte blocks (exactly 10 sectors, holding 850 Quins + 160-byte header). Do not read/write outside these block alignments.
 * **Volatile Scrubbing**: When a buffer is dropped, you must ensure `std::ptr::write_volatile` is called to protect against memory-harvesting attacks.
+* **The Allocation Firewall**: If integrating with traditional Web2 protocols (e.g., via `qualia-solid-bridge` for W3C Solid compatibility), you must sandbox the `tokio` multi-threaded runtime entirely. String-heavy HTTP parsing must be translated into purely hashed 64-bit Quins *before* crossing the Webizen FFI memory boundary.
 
-## 5. Logic Execution (Core 1 Sentinel)
+## 5. Logic Execution (Core 1 Webizen)
 **NEVER** embed external logic interpreters or generalized Prolog crates (e.g., SWI-Prolog). This violates the zero-allocation architecture.
-All logical schemas (N3Logic, SHACL, defeasible rules) must be translated into `SentinelOpcode` Bytecode arrays by the `SentinelCompiler`. Core 1 executes these bytecodes using a strict `[u64; 16]` register stack (`SentinelVM`) to guarantee determinism and zero heap allocation.
+All logical schemas (N3Logic, SHACL, defeasible rules) must be translated into `WebizenOpcode` Bytecode arrays by the `WebizenCompiler`. Core 1 executes these bytecodes using a strict `[u64; 16]` register stack (`WebizenVM`) to guarantee determinism and zero heap allocation.
 
-The Sentinel now supports:
+The Webizen now supports:
 - **Defeasible Logic**: `CheckDefeaters` opcodes for N3 implication with exceptions (see logic.rs + epic-20).
-- **SHACL Compilation**: `shacl_compiler::compile_shacl_to_sentinel` (and SentinelCompiler::compile_*) turns SHACL shapes + constraints into executable bytecodes for structural validation at query time (epic-24).
-- **Omnimodal Parsing**: Multiple surface syntaxes (N3, SHACL, defeasible fragments, modal variants) normalize into the same Sentinel bytecode registry.
-- Modality-aware rules via the `modalities/` crate (see below).
+- **SHACL Compilation**: `shacl_compiler::compile_shacl_to_webizen` turns SHACL shapes + constraints into executable bytecodes for structural validation.
+- **Native "Hard Science" SHACL Extensions**: Custom properties (e.g., `"qualia:thermoMetropolisStep"`, `"qualia:dftGroundState"`) map directly to native mathematical opcodes (`NativeThermodynamics`, `NativeQuantumDft`, `NativeOdeSolver`, `NativeBioinformatics`). These opcodes trigger continuous dynamics and MCMC solvers entirely off-heap.
+- **Omnimodal Parsing**: Multiple surface syntaxes (N3, SHACL, defeasible fragments, modal variants) normalize into the same Webizen bytecode registry.
+- Modality-aware rules via the `modalities/` crate.
 
 ## 6. Deterministic Compute Metering & Permissive Commons
 **NEVER** query OS-level energy APIs (e.g., `BatteryManager`, `sysfs`) for economic billing. It causes severe API stalls and hardware inequity.
@@ -64,7 +66,7 @@ If compiling for the browser (`target_arch = "wasm32"`), the Triad must be grace
 
 ## 8. Neurosymbolic Axiomatic LLM Overrides
 When tasked with integrating Large Language Models (LLMs), do not immediately assume a standard Python wrapper. You must first **ASK the user** which Neurosymbolic Mode they wish to employ:
-* **Mode 1 (Strict Native Intercept)**: Extract explicit vector coordinate layouts (tensors) from binary files (like `.gguf`) and map them directly into the 48-byte `QualiaQuin`. The Sentinel VM acts as a mathematically strict interceptor during native execution, clipping vectors that violate local Spatio-Temporal constraints.
+* **Mode 1 (Strict Native Intercept)**: Extract explicit vector coordinate layouts (tensors) from binary files (like `.gguf`) and map them directly into the 48-byte `QualiaQuin`. The Webizen VM acts as a mathematically strict interceptor during native execution, clipping vectors that violate local Spatio-Temporal constraints.
 * **Mode 2 (Bridged Shim)**: Utilize external ML architectures (e.g., Python, TensorFlow, PyTorch) via an explicit API bridge. The external model handles the dense compute, but all queries and responses are strictly routed and mathematically gated through the Qualia-DB `.q42` Axiom ruleset before resolution.
 
 ## 9. LLM Benchmarking Harness (Dual-Mode)
@@ -88,7 +90,7 @@ The page now uses a **module worker** (`docs/src/qualia-worker.js`) that imports
 ```javascript
 import { compile_query_to_json } from '../playground/qualia_core_db.js';
 ```
-Every Qualia-DB timing cell is a **real `performance.now()` measurement** of `compile_query_to_json` — the full QueryCompiler + SentinelCompiler pipeline (tokenise → AST → FNV Quin plan → Sentinel bytecode). N=50 iterations, reporting p50 ± stddev.
+Every Qualia-DB timing cell is a **real `performance.now()` measurement** of `compile_query_to_json` — the full QueryCompiler + WebizenCompiler pipeline (tokenise → AST → FNV Quin plan → Webizen bytecode). N=50 iterations, reporting p50 ± stddev.
 
 **What WASM mode measures**: query/rule compilation latency.  
 **What it does NOT measure**: query execution against a loaded `.q42` dataset (that requires the native daemon or CLI).
@@ -101,13 +103,13 @@ When `cargo run --release -p qualia-cli -- daemon --dev` is running on port 4242
 Always surface the strict 512MB + zero-alloc constraints, and that standard engines OOM or timeout on the humanitarian/rights tests (escrow, nym partitioning, etc.).
 
 ## 10. SHACL, Modalities & Advanced Compilation (Epic 24 + 21)
-- Use `qualia_core_db::shacl_compiler` (or the SentinelCompiler facade in logic.rs) to compile SHACL shapes into Sentinel opcodes. This enables structural + constraint validation as part of the zero-alloc query path.
+- Use `qualia_core_db::shacl_compiler` (or the WebizenCompiler facade in logic.rs) to compile SHACL shapes into Webizen opcodes. This enables structural + constraint validation as part of the zero-alloc query path.
 - The `modalities/` module provides specialized reasoning bridges:
   - `spatio_temporal.rs`: Minkowski / geometric + time bounds (ties into GPU sieve + 5th vector).
   - `probabilistic.rs`, `diffusion.rs`: Soft/uncertain reasoning.
-  - `dl.rs` (Description Logic), `asp.rs` (Answer Set), `linear.rs`: Other formalisms normalized to Sentinel bytecode.
-- When ingesting or querying, route through the appropriate modality tokenizer in `lexicon.rs` and Sentinel registry.
-- Omnimodal support means a single `.q42` ledger + Sentinel VM can execute mixed logic programs.
+  - `dl.rs` (Description Logic), `asp.rs` (Answer Set), `linear.rs`: Other formalisms normalized to Webizen bytecode.
+- When ingesting or querying, route through the appropriate modality tokenizer in `lexicon.rs` and Webizen registry.
+- Omnimodal support means a single `.q42` ledger + Webizen VM can execute mixed logic programs.
 
 ## 11. Lazy SuperBlocks, Compression, P2P & Telemetry (Epic 22-23)
 - SuperBlocks are 40,960 bytes (exactly 10 disk sectors), LZ4 compressed (high-density), holding ~850 Quins + header.
@@ -140,8 +142,8 @@ The daemon also exposes the full JSON-RPC surface (including neurosymbolic LLM i
 
 ## 14. Other Runtime Notes
 
-See also the new [docs/glossary.md](docs/glossary.md) for definitions of Super-Quin, Sentinel, Modalities, Lazy SuperBlock, did:git, Permissive Commons, etc.
+See also the new [docs/glossary.md](docs/glossary.md) for definitions of Super-Quin, Webizen, Modalities, Lazy SuperBlock, did:git, Permissive Commons, etc.
 - **Fractal Sharding / Swarm**: `qualia-cli daemon --workers N --compute-swarm` spins isolated 512MB cells on big iron for parallel LLM offload / deep inference without violating per-cell floors.
-- **Desktop Sentinel (libpcap)**: network_sentinel.html + qualia-desktop shows active telemetry blocking + P2P reputation DAGs.
+- **Desktop Webizen (libpcap)**: network_webizen.html + qualia-desktop shows active telemetry blocking + P2P reputation DAGs.
 - **Wellfair / Mobile / Desktop**: See crates/qualia-android, qualia-desktop (Tauri), and the wellfair/ Python+web monorepo for the consumer "Native Vault" (holograph, verifiable comms, Sanctuary Lanes, etc.).
 - When contributing or scripting, run `cargo check -p qualia-core-db -p qualia-cli` and the native bench to keep the harness green.

@@ -1,4 +1,4 @@
-/// Defines modular tax and jurisdictional rulesets to be loaded into the Sentinel VM.
+/// Defines modular tax and jurisdictional rulesets to be loaded into the Webizen VM.
 /// These rules are applied to the immutable Quins to compute dynamic, mutable 
 /// tax liabilities without polluting the underlying graph.
 

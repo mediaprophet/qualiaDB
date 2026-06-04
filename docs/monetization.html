@@ -162,7 +162,7 @@
                 document.getElementById('progress-text').innerText = `${json.accumulated.toLocaleString()} / ${json.total_obligation.toLocaleString()} (${percentage}%)`;
 
                 if (json.accumulated >= json.total_obligation) {
-                    logILP(`🔓 [OBLIGATION MET] N3Logic Sentinel triggering State Transition.`);
+                    logILP(`🔓 [OBLIGATION MET] N3Logic Webizen triggering State Transition.`);
                     logILP(`🔓 License shifted to Permissive Commons.`);
                     
                     const badge = document.getElementById('license-badge');

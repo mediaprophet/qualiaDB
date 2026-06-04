@@ -8,7 +8,7 @@
 //! constructed at any point in the hot path.
 //!
 //! # MSB flag convention
-//! Any `u64` returned by this module has bit 63 set to `1`.  The Sentinel VM
+//! Any `u64` returned by this module has bit 63 set to `1`.  The Webizen VM
 //! uses that bit to distinguish absolute hardware/disk pointers (MSB = 1) from
 //! local dictionary hashes produced by `q_hash` (MSB = 0).
 
@@ -32,7 +32,7 @@ pub enum IdentifierError {
 /// # Contract
 /// * Input must start with `b"did:q42:"`.
 /// * The payload after the prefix must be non-empty.
-/// * The returned `u64` always has **bit 63 set** — signalling to the Sentinel
+/// * The returned `u64` always has **bit 63 set** — signalling to the Webizen
 ///   VM that this value is a hardware/disk coordinate, not a dictionary hash.
 ///
 /// # Example

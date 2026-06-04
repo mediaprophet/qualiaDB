@@ -2,7 +2,7 @@
 //!
 //! Accepts a single N-Triples pattern line such as
 //!   `<http://example.org/Alice> <schema:knows> ?who .`
-//! and compiles it into a flat bytecode program that `sentinel_bytecode::execute_program`
+//! and compiles it into a flat bytecode program that `webizen_bytecode::execute_program`
 //! can run directly against a `&[QualiaQuin]` slice without any heap allocation.
 //!
 //! # Bytecode encoding
@@ -130,7 +130,7 @@ pub fn hash_token(token: &str) -> u64 {
             return pointer;
         }
         // Malformed did:q42 URI — fall through to standard hash so the query
-        // can still execute; the Sentinel VM will simply find no match.
+        // can still execute; the Webizen VM will simply find no match.
     }
 
     crate::q_hash(inner)

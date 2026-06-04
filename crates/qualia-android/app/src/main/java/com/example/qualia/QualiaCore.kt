@@ -33,7 +33,7 @@ object QualiaCore {
     external fun generateGitExport(projectId: String): String
     
     /**
-     * Evaluates tax liabilities using the Sentinel VM based on the active Identity Nym (Verifiable Presentation).
+     * Evaluates tax liabilities using the Webizen VM based on the active Identity Nym (Verifiable Presentation).
      */
     external fun evaluateTaxLiability(identityNym: String): String
     

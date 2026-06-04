@@ -1,4 +1,4 @@
-use qualia_core_db::sentinel_bytecode::{execute_program, VmError};
+use qualia_core_db::webizen_bytecode::{execute_program, VmError};
 use qualia_core_db::QualiaQuin;
 
 fn make_quin(subject: u64, predicate: u64, object: u64) -> QualiaQuin {

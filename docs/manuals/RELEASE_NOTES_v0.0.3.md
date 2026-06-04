@@ -5,8 +5,8 @@
 - Comprehensive documentation, site, playground, AI_INSTRUCTIONS.md, and benchmark pages refreshed to showcase Epics 16–24 capabilities.
 
 ## New / Enhanced Capabilities
-- **SHACL-to-Sentinel Compiler** (`shacl_compiler.rs`, integrated in SentinelCompiler): Compile shapes/constraints directly to deterministic Sentinel bytecodes for zero-alloc structural validation.
-- **Modality Bridges** (`crates/qualia-core-db/src/modalities/`): spatio_temporal, probabilistic, diffusion, dl (Description Logic), asp, linear — normalized into the Sentinel registry + lexicon tokenization.
+- **SHACL-to-Webizen Compiler** (`shacl_compiler.rs`, integrated in WebizenCompiler): Compile shapes/constraints directly to deterministic Webizen bytecodes for zero-alloc structural validation.
+- **Modality Bridges** (`crates/qualia-core-db/src/modalities/`): spatio_temporal, probabilistic, diffusion, dl (Description Logic), asp, linear — normalized into the Webizen registry + lexicon tokenization.
 - **Defeasible Logic & Omnimodal** (epic-20/21): CheckDefeaters, multi-surface syntax (N3 + SHACL + defeasible) feeding one VM. Omnimodal parsing + registry.
 - **Lazy SuperBlocks + WebRTC Telemetry** (epic-23): Header-only scans, O(1) seeks, partial decompress, local vs remote (P2P) hot blocks. Full TelemetryHook + live dashboard support.
 - **High-Density LZ4 SuperBlock Compression** (epic-22): 40KB blocks (850 Quins) with strong compression for massive datasets under 512MB floor.

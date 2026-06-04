@@ -6,7 +6,7 @@ Qualia-DB is a bare-metal semantic graph database designed specifically for cons
 
 Qualia-DB splits its workload across three highly specialized, isolated cores:
 
-### Core 1: The Sentinel (Logic VM)
+### Core 1: The Webizen (Logic VM)
 A Warren Abstract Machine (WAM) variant written in `#![no_std]` Rust.
 - **SLG Tabling**: Uses a 42MB static ring-buffer (`SlgArena`) to memoize cyclic graph traversals. This prevents infinite stack overflows when querying complex recursive social networks.
 
@@ -56,17 +56,17 @@ When analyzing Qualia-DB against the historical computing landscape, it breaks f
 
 ### 6. The Neurosymbolic Intercept Protocol (Axiomatic LLM Override)
 - **Traditional Method:** Large Language Models (LLMs) are black-box probabilistic engines that hallucinate due to a lack of deterministic symbolic grounding or local "Spatio-Temporal Qualia" (e.g., modern vector weights assuming "thongs" means underwear globally).
-- **The Qualia-DB Leap:** We don't map generic semantic tokens; we map the *exact* procedural vector matrices (tensors) of the LLM into our 48-byte Quins. The Sentinel VM then acts as a mathematically strict interceptor. 
+- **The Qualia-DB Leap:** We don't map generic semantic tokens; we map the *exact* procedural vector matrices (tensors) of the LLM into our 48-byte Quins. The Webizen VM then acts as a mathematically strict interceptor. 
   - A user defines a Spatio-Temporal Qualia Context (e.g., `Context: year=1920` or `location=australia`).
-  - As the opaque LLM executes its inference locally, the Sentinel VM monitors the active procedural tensor blocks.
-  - If a mapped vector coordinate is triggered, and a local Spatio-Temporal `.q42` Axiom exists, the Sentinel VM mathematically clips and overrides the active vector space in real-time. This forces the Connectionist LLM to instantly obey the local Symbolic AI bounds, effectively correcting hallucinations mid-procedural step.
+  - As the opaque LLM executes its inference locally, the Webizen VM monitors the active procedural tensor blocks.
+  - If a mapped vector coordinate is triggered, and a local Spatio-Temporal `.q42` Axiom exists, the Webizen VM mathematically clips and overrides the active vector space in real-time. This forces the Connectionist LLM to instantly obey the local Symbolic AI bounds, effectively correcting hallucinations mid-procedural step.
 
 ### 7. Lazy SuperBlocks + On-Demand WebRTC P2P (Zero-Heap Massive Graphs)
 - **Traditional:** Full load or heavy indexing of multi-GB graphs into RAM.
 - **The Leap:** 40,960-byte SuperBlocks (10 sectors) with high-density LZ4. `lazy_superblock_query` does pure header scans + O(1) seeks over irrelevant blocks, only decompresses needed ones. "Missing" local blocks are streamed from peers (WebRTC DataChannel mock in harness). Telemetry (blocks, remote count, RSS via sysinfo) streams to WS visualizers. Enables 50GB+ ledgers on 512MB devices. See `query_engine.rs`, CLI `bench`, `benchmark_visualizer.html`.
 
-### 8. SHACL / Defeasible / Omnimodal Sentinel Compilation (Core 1 Evolution)
-- SentinelCompiler + `shacl_compiler` translate SHACL shapes + N3 defeasible rules (CheckDefeaters) into the same compact `[u64;16]` bytecode the VM executes.
+### 8. SHACL / Defeasible / Omnimodal Webizen Compilation (Core 1 Evolution)
+- WebizenCompiler + `shacl_compiler` translate SHACL shapes + N3 defeasible rules (CheckDefeaters) into the same compact `[u64;16]` bytecode the VM executes.
 - 6+ modality bridges (`modalities/`: spatio_temporal, probabilistic, diffusion, DL, ASP, linear) normalize into the registry for unified reasoning.
 - Omnimodal surface syntaxes all feed the single deterministic engine. Rights tests (escrow, nym-partition) exercise these paths.
 

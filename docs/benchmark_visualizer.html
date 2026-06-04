@@ -76,7 +76,7 @@
                 });
             }
         };
-        ws.onopen = () => console.log('Connected to QualiaDB Sentinel Telemetry (from native qualia-cli bench).');
+        ws.onopen = () => console.log('Connected to QualiaDB Webizen Telemetry (from native qualia-cli bench).');
         ws.onerror = (e) => console.log('WebSocket Error (start the native bench first):', e, '— run: cargo run --release -p qualia-cli -- bench --suite full');
 
         // Fallback demo button (simulates a payload a real native bench run would stream)

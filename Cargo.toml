@@ -1,8 +1,10 @@
 [workspace]
 members = [
     "crates/qualia-core-db",
-    "crates/qualia-cli"
-, "crates/qualia-desktop"]
+    "crates/qualia-cli",
+    "crates/qualia-desktop",
+    "crates/qualia-solid-bridge"
+]
 resolver = "2"
 
 [profile.release]

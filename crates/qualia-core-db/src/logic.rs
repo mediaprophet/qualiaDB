@@ -1,12 +1,12 @@
-//! Core 1 Sentinel Bytecode VM
+//! Core 1 Webizen Bytecode VM
 //! A `#![no_std]` compatible virtual machine that executes a fixed-size 
 //! instruction set across the 48-byte Quins without triggering heap allocations.
 
 use crate::QualiaQuin;
 
 /// The micro-instruction set (ISA) for the Core 1 Logic Engine.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SentinelOpcode {
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WebizenOpcode {
     /// Compares the Quin's Subject to a hardcoded 60-bit ID
     MatchSubject(u64),
     /// Compares the Quin's Predicate to a hardcoded 60-bit ID
@@ -23,52 +23,103 @@ pub enum SentinelOpcode {
     HaltIfFalse,
     /// Yields a new generated Quin (The consequent of an implication `=>`)
     EmitQuin { subject_reg: usize, predicate: u64, object: u64, context_reg: usize },
+    /// Continuous Constraint: Evaluates <
+    LessThan { vector_id: u8, value: f32 },
+    /// Continuous Constraint: Evaluates >
+    GreaterThan { vector_id: u8, value: f32 },
+    /// Continuous Constraint: Evaluates <=
+    LessOrEqual { vector_id: u8, value: f32 },
+    /// Continuous Constraint: Evaluates >=
+    GreaterOrEqual { vector_id: u8, value: f32 },
+    /// Temporal Logic: Always constraint (LTL)
+    Always(u64),
+    /// Temporal Logic: Eventually constraint (LTL)
+    Eventually(u64),
+    /// Temporal Logic: Next constraint (LTL)
+    Next(u64),
+    /// Yields a mathematically calculated Quin consequence
+    EmitCalculatedQuin { subject_reg: usize, predicate: u64, object_calc_op: u8, context_reg: usize },
+    /// Evaluates the 5th Metadata Vector confidence weight. If below threshold, tags consequence as Defeasible.
+    YieldConfidence(f32),
+    /// Triggers native mapping of a GGUF model pointer into the OS page cache
+    LoadModel(u64),
+    /// Cryptographically flushes a 512MB model mapping using Volatile Scrubbing
+    EvictModel(u64),
 }
 
 /// The Zero-Allocation Virtual Machine for N3Logic and Constraints.
-pub struct SentinelVM {
+pub struct WebizenVM {
     /// The local L1-cached execution stack for bound variables
     pub registers: [Option<u64>; 16],
     /// The maximum number of instructions allowed in a single rule block
-    pub bytecode_buffer: [Option<SentinelOpcode>; 64],
+    pub bytecode_buffer: [Option<WebizenOpcode>; 64],
+    /// Shared reference to the orchestrator's cryptographic memory flush lock
+    pub scrubbing_lock: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    /// State tracking for suspended opcodes that yielded due to a hardware lock
+    pub yielded_op: Option<WebizenOpcode>,
 }
 
-impl SentinelVM {
+impl WebizenVM {
     pub fn new() -> Self {
         Self {
             registers: [None; 16],
             bytecode_buffer: [None; 64],
+            scrubbing_lock: None,
+            yielded_op: None,
         }
     }
 
-    pub fn load_bytecode(&mut self, instructions: &[SentinelOpcode]) {
+    pub fn with_scrubbing_lock(lock: std::sync::Arc<std::sync::atomic::AtomicBool>) -> Self {
+        let mut vm = Self::new();
+        vm.scrubbing_lock = Some(lock);
+        vm
+    }
+
+    pub fn load_bytecode(&mut self, instructions: &[WebizenOpcode]) {
         for (i, &op) in instructions.iter().enumerate().take(64) {
             self.bytecode_buffer[i] = Some(op);
+        }
+    }
+
+    /// Serializes the current VM execution frame into a strictly-sized zero-allocation buffer 
+    /// for offline suspension in the CRDT queue while awaiting M:N Guardianship signatures.
+    pub fn flatten_to_suspended(&self, agreement_id: u64, threshold: u8, current_quin: crate::QualiaQuin) -> crate::crdt::SuspendedTransaction {
+        crate::crdt::SuspendedTransaction {
+            agreement_id,
+            threshold,
+            collected_signatures: 0,
+            registers: self.registers,
+            bytecode_buffer: self.bytecode_buffer,
+            yielded_op: self.yielded_op,
+            suspended_quin: current_quin,
         }
     }
 
     /// Evaluates a loaded constraint block against a target Quin.
     pub fn execute_constraint(&mut self, quin: &QualiaQuin) -> bool {
         let mut condition_flag = true;
+        
+        // Extract 5th Metadata Vector for Stochastic/Fuzzy logic weight (bottom 16 bits as probability 0.0 - 1.0)
+        let _stochastic_weight = (quin.metadata & 0xFFFF) as f32 / 65535.0;
 
         for op in self.bytecode_buffer.iter().flatten() {
             crate::telemetry::VM_CYCLES_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             
             match op {
-                SentinelOpcode::MatchSubject(val) => {
+                WebizenOpcode::MatchSubject(val) => {
                     condition_flag = quin.subject == *val;
                 },
-                SentinelOpcode::MatchPredicate(val) => {
+                WebizenOpcode::MatchPredicate(val) => {
                     condition_flag = quin.predicate == *val;
                 },
-                SentinelOpcode::MatchObject(val) => {
+                WebizenOpcode::MatchObject(val) => {
                     condition_flag = quin.object == *val;
                 },
-                SentinelOpcode::EvalMetadataMask(mask) => {
+                WebizenOpcode::EvalMetadataMask(mask) => {
                     let quin_mask = (quin.metadata & 0xFFFF) as u32;
                     condition_flag = (quin_mask & mask) == *mask;
                 },
-                SentinelOpcode::BindRegister { vector_id, register_index } => {
+                WebizenOpcode::BindRegister { vector_id, register_index } => {
                     let value = match vector_id {
                         0 => quin.subject,
                         1 => quin.predicate,
@@ -79,7 +130,7 @@ impl SentinelVM {
                     self.registers[*register_index] = Some(value);
                     condition_flag = true;
                 },
-                SentinelOpcode::MatchRegister { vector_id, register_index } => {
+                WebizenOpcode::MatchRegister { vector_id, register_index } => {
                     if let Some(bound_val) = self.registers[*register_index] {
                         let value = match vector_id {
                             0 => quin.subject,
@@ -94,12 +145,51 @@ impl SentinelVM {
                         condition_flag = false;
                     }
                 },
-                SentinelOpcode::HaltIfFalse => {
+                WebizenOpcode::HaltIfFalse => {
                     if !condition_flag {
                         return false;
                     }
                 },
-                SentinelOpcode::EmitQuin { .. } => {
+                WebizenOpcode::LessThan { vector_id, value } => {
+                    condition_flag = Self::extract_float(quin, *vector_id).map_or(false, |v| v < *value);
+                },
+                WebizenOpcode::GreaterThan { vector_id, value } => {
+                    condition_flag = Self::extract_float(quin, *vector_id).map_or(false, |v| v > *value);
+                },
+                WebizenOpcode::LessOrEqual { vector_id, value } => {
+                    condition_flag = Self::extract_float(quin, *vector_id).map_or(false, |v| v <= *value);
+                },
+                WebizenOpcode::GreaterOrEqual { vector_id, value } => {
+                    condition_flag = Self::extract_float(quin, *vector_id).map_or(false, |v| v >= *value);
+                },
+                WebizenOpcode::Always(stress_threshold) => {
+                    crate::telemetry::ATOMIC_INTEGRATION_STEPS.fetch_add(50, std::sync::atomic::Ordering::Relaxed);
+                    condition_flag = Self::extract_float(quin, 2).map_or(false, |stress| stress < *stress_threshold as f32);
+                },
+                WebizenOpcode::Eventually(stress_threshold) => {
+                    crate::telemetry::ATOMIC_INTEGRATION_STEPS.fetch_add(50, std::sync::atomic::Ordering::Relaxed);
+                    condition_flag = Self::extract_float(quin, 2).map_or(false, |stress| stress >= *stress_threshold as f32);
+                },
+                WebizenOpcode::Next(stress_threshold) => {
+                    crate::telemetry::ATOMIC_INTEGRATION_STEPS.fetch_add(50, std::sync::atomic::Ordering::Relaxed);
+                    condition_flag = Self::extract_float(quin, 2).map_or(false, |stress| stress == *stress_threshold as f32);
+                },
+                WebizenOpcode::YieldConfidence(threshold) => {
+                    let stochastic_weight = (quin.metadata & 0xFFFF) as f32 / 65535.0;
+                    if stochastic_weight < *threshold {
+                        condition_flag = false; // For raw constraints, it fails the assertion
+                    }
+                },
+                WebizenOpcode::LoadModel(model_id) => {
+                    if let Some(ref lock) = self.scrubbing_lock {
+                        if lock.load(std::sync::atomic::Ordering::Acquire) {
+                            self.yielded_op = Some(WebizenOpcode::LoadModel(*model_id));
+                            return false; // Suspend execution
+                        }
+                    }
+                },
+                WebizenOpcode::EvictModel(_) => {},
+                WebizenOpcode::EmitQuin { .. } | WebizenOpcode::EmitCalculatedQuin { .. } => {
                     // Handled exclusively by `execute_implication`
                 }
             }
@@ -113,26 +203,27 @@ impl SentinelVM {
     pub fn execute_implication(&mut self, quin: &QualiaQuin) -> Option<QualiaQuin> {
         let mut condition_flag = true;
         let mut emitted_quin = None;
+        let mut defeasible_tag = false;
 
         for op in self.bytecode_buffer.iter().flatten() {
             crate::telemetry::VM_CYCLES_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             
             match op {
-                SentinelOpcode::MatchSubject(val) => condition_flag = quin.subject == *val,
-                SentinelOpcode::MatchPredicate(val) => condition_flag = quin.predicate == *val,
-                SentinelOpcode::MatchObject(val) => condition_flag = quin.object == *val,
-                SentinelOpcode::EvalMetadataMask(mask) => {
+                WebizenOpcode::MatchSubject(val) => condition_flag = quin.subject == *val,
+                WebizenOpcode::MatchPredicate(val) => condition_flag = quin.predicate == *val,
+                WebizenOpcode::MatchObject(val) => condition_flag = quin.object == *val,
+                WebizenOpcode::EvalMetadataMask(mask) => {
                     let quin_mask = (quin.metadata & 0xFFFF) as u32;
                     condition_flag = (quin_mask & mask) == *mask;
                 },
-                SentinelOpcode::BindRegister { vector_id, register_index } => {
+                WebizenOpcode::BindRegister { vector_id, register_index } => {
                     let value = match vector_id {
                         0 => quin.subject, 1 => quin.predicate, 2 => quin.object, 3 => quin.context, _ => 0,
                     };
                     self.registers[*register_index] = Some(value);
                     condition_flag = true;
                 },
-                SentinelOpcode::MatchRegister { vector_id, register_index } => {
+                WebizenOpcode::MatchRegister { vector_id, register_index } => {
                     if let Some(bound_val) = self.registers[*register_index] {
                         let value = match vector_id {
                             0 => quin.subject, 1 => quin.predicate, 2 => quin.object, 3 => quin.context, _ => 0,
@@ -142,15 +233,14 @@ impl SentinelVM {
                         condition_flag = false;
                     }
                 },
-                SentinelOpcode::HaltIfFalse => {
+                WebizenOpcode::HaltIfFalse => {
                     if !condition_flag { return None; }
                 },
-                SentinelOpcode::EmitQuin { subject_reg, predicate, object, context_reg } => {
+                WebizenOpcode::EmitQuin { subject_reg, predicate, object, context_reg } => {
                     if condition_flag {
                         let s = self.registers[*subject_reg].unwrap_or(0);
                         let c = self.registers[*context_reg].unwrap_or(0);
                         
-                        // Inherit routing lane and Lamport clock from the triggering Quin
                         let mut resulting_quin = QualiaQuin {
                             subject: s,
                             predicate: *predicate,
@@ -160,49 +250,164 @@ impl SentinelVM {
                             parity: 0,
                         };
                         
-                        // Advance the Lamport Clock for Truth Maintenance natively
                         let clock = quin.extract_lamport_clock();
                         if clock < 0x1FFF_FFFF {
                             resulting_quin.set_lamport_clock(clock + 1);
                         }
-                        
+                        if defeasible_tag {
+                            resulting_quin.metadata |= 1 << 60;
+                        }
                         emitted_quin = Some(resulting_quin);
                     }
-                }
+                },
+                WebizenOpcode::LessThan { vector_id, value } => {
+                    condition_flag = Self::extract_float(quin, *vector_id).map_or(false, |v| v < *value);
+                },
+                WebizenOpcode::GreaterThan { vector_id, value } => {
+                    condition_flag = Self::extract_float(quin, *vector_id).map_or(false, |v| v > *value);
+                },
+                WebizenOpcode::LessOrEqual { vector_id, value } => {
+                    condition_flag = Self::extract_float(quin, *vector_id).map_or(false, |v| v <= *value);
+                },
+                WebizenOpcode::GreaterOrEqual { vector_id, value } => {
+                    condition_flag = Self::extract_float(quin, *vector_id).map_or(false, |v| v >= *value);
+                },
+                WebizenOpcode::Always(stress_threshold) => {
+                    crate::telemetry::ATOMIC_INTEGRATION_STEPS.fetch_add(50, std::sync::atomic::Ordering::Relaxed);
+                    condition_flag = Self::extract_float(quin, 2).map_or(false, |stress| stress < *stress_threshold as f32);
+                },
+                WebizenOpcode::Eventually(stress_threshold) => {
+                    crate::telemetry::ATOMIC_INTEGRATION_STEPS.fetch_add(50, std::sync::atomic::Ordering::Relaxed);
+                    condition_flag = Self::extract_float(quin, 2).map_or(false, |stress| stress >= *stress_threshold as f32);
+                },
+                WebizenOpcode::Next(stress_threshold) => {
+                    crate::telemetry::ATOMIC_INTEGRATION_STEPS.fetch_add(50, std::sync::atomic::Ordering::Relaxed);
+                    condition_flag = Self::extract_float(quin, 2).map_or(false, |stress| stress == *stress_threshold as f32);
+                },
+                WebizenOpcode::EmitCalculatedQuin { subject_reg, predicate, object_calc_op, context_reg } => {
+                    if condition_flag {
+                        let s = self.registers[*subject_reg].unwrap_or(0);
+                        let c = self.registers[*context_reg].unwrap_or(0);
+                        
+                        // Example calculated transformation (e.g. op 1 = mass * accel placeholder)
+                        let calc_val = match object_calc_op {
+                            1 => 42.0_f32, // Mocked math transformation
+                            _ => 0.0_f32,
+                        };
+                        
+                        let mut resulting_quin = QualiaQuin {
+                            subject: s,
+                            predicate: *predicate,
+                            // Tag the object as float (0x1 << 60) and pack f32
+                            object: (0x1 << 60) | (calc_val.to_bits() as u64),
+                            context: c,
+                            metadata: quin.metadata,
+                            parity: 0,
+                        };
+                        
+                        let clock = quin.extract_lamport_clock();
+                        if clock < 0x1FFF_FFFF {
+                            resulting_quin.set_lamport_clock(clock + 1);
+                        }
+                        if defeasible_tag {
+                            resulting_quin.metadata |= 1 << 60;
+                        }
+                        emitted_quin = Some(resulting_quin);
+                    }
+                },
+                WebizenOpcode::YieldConfidence(threshold) => {
+                    let stochastic_weight = (quin.metadata & 0xFFFF) as f32 / 65535.0;
+                    if stochastic_weight < *threshold {
+                        defeasible_tag = true;
+                    }
+                },
+                WebizenOpcode::LoadModel(model_id) => {
+                    if let Some(ref lock) = self.scrubbing_lock {
+                        if lock.load(std::sync::atomic::Ordering::Acquire) {
+                            self.yielded_op = Some(WebizenOpcode::LoadModel(*model_id));
+                            return None; // Suspend execution yielding no consequence yet
+                        }
+                    }
+                },
+                WebizenOpcode::EvictModel(_) => {},
             }
         }
         
         emitted_quin
     }
+
+    /// Extracts a tagged floating point value from a given 64-bit Quin vector.
+    /// Uses the top 4 bits as a type tag (0x1 = float).
+    #[inline(always)]
+    fn extract_float(quin: &QualiaQuin, vector_id: u8) -> Option<f32> {
+        let val = match vector_id {
+            0 => quin.subject,
+            1 => quin.predicate,
+            2 => quin.object,
+            3 => quin.context,
+            _ => return None,
+        };
+        
+        let tag = val >> 60;
+        if tag == 0x1 {
+            Some(f32::from_bits((val & 0xFFFFFFFF) as u32))
+        } else {
+            None
+        }
+    }
+
+    /// Prunes neural hallucinations: If a Defeasible claim is contradicted by a hard physical fact, it is removed.
+    pub fn prune_defeasible_claims(qualia_graph: &mut Vec<QualiaQuin>) {
+        // A claim is defeasible if bit 60 is set.
+        let mut deterministic_subjects = std::collections::HashSet::new();
+        
+        // Pass 1: Gather hard facts (metadata bit 60 is NOT set)
+        for quin in qualia_graph.iter() {
+            if (quin.metadata & (1 << 60)) == 0 {
+                // Subject has a deterministic fact
+                deterministic_subjects.insert(quin.subject);
+            }
+        }
+        
+        // Pass 2: Remove defeasible claims contradicted by hard facts
+        qualia_graph.retain(|quin| {
+            let is_defeasible = (quin.metadata & (1 << 60)) != 0;
+            if is_defeasible && deterministic_subjects.contains(&quin.subject) {
+                return false; // Prune neural hallucination due to hard fact conflict
+            }
+            true
+        });
+    }
+
 }
 
 /// The Translation Layer. Parses N3Logic/SHACL into bytecode arrays.
-pub struct SentinelCompiler;
+pub struct WebizenCompiler;
 
-impl SentinelCompiler {
-    /// Mocks the translation of a SHACL constraint into Sentinel Bytecode.
+impl WebizenCompiler {
+    /// Mocks the translation of a SHACL constraint into Webizen Bytecode.
     /// Example: `[Shape] sh:property [ sh:path ex:age ; sh:minInclusive 18 ]`
-    pub fn compile_mock_constraint() -> Vec<SentinelOpcode> {
+    pub fn compile_mock_constraint() -> Vec<WebizenOpcode> {
         vec![
-            SentinelOpcode::MatchPredicate(100), // Predicate 100 = 'age'
-            SentinelOpcode::HaltIfFalse,
+            WebizenOpcode::MatchPredicate(100), // Predicate 100 = 'age'
+            WebizenOpcode::HaltIfFalse,
             // (A true engine would have a GreaterThan opcode here, using MatchObject for now)
-            SentinelOpcode::MatchObject(18),     
-            SentinelOpcode::HaltIfFalse,
+            WebizenOpcode::MatchObject(18),     
+            WebizenOpcode::HaltIfFalse,
         ]
     }
 
     /// Compiles a medical N3 constraint for Differential Diagnostics.
     /// Example: IF Subject has symptom SNOMED:Fever => Yield Diagnosis Potential
-    pub fn compile_diagnostic_constraint() -> Vec<SentinelOpcode> {
+    pub fn compile_diagnostic_constraint() -> Vec<WebizenOpcode> {
         vec![
-            SentinelOpcode::MatchPredicate(100), // e.g. "has_symptom"
-            SentinelOpcode::MatchObject(200), // e.g. "Fever"
-            SentinelOpcode::HaltIfFalse,
-            SentinelOpcode::BindRegister { vector_id: 0, register_index: 0 },
-            SentinelOpcode::BindRegister { vector_id: 3, register_index: 1 },
+            WebizenOpcode::MatchPredicate(100), // e.g. "has_symptom"
+            WebizenOpcode::MatchObject(200), // e.g. "Fever"
+            WebizenOpcode::HaltIfFalse,
+            WebizenOpcode::BindRegister { vector_id: 0, register_index: 0 },
+            WebizenOpcode::BindRegister { vector_id: 3, register_index: 1 },
             // Emits a Diagnosis Quin
-            SentinelOpcode::EmitQuin { subject_reg: 0, predicate: 300, object: 400, context_reg: 1 }, 
+            WebizenOpcode::EmitQuin { subject_reg: 0, predicate: 300, object: 400, context_reg: 1 }, 
         ]
     }
 }
@@ -212,8 +417,8 @@ impl SentinelCompiler {
 /// to derive deterministic inferences natively on the edge, replacing the legacy WebAssembly/Prolog engine.
 pub fn execute_differential_diagnostics(qualia_graph: &[QualiaQuin]) -> Vec<QualiaQuin> {
     let mut inferences = Vec::new();
-    let mut vm = SentinelVM::new();
-    let diagnostic_rules = SentinelCompiler::compile_diagnostic_constraint();
+    let mut vm = WebizenVM::new();
+    let diagnostic_rules = WebizenCompiler::compile_diagnostic_constraint();
     vm.load_bytecode(&diagnostic_rules);
 
     for quin in qualia_graph {
@@ -229,13 +434,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_sentinel_vm_execution() {
-        let mut vm = SentinelVM::new();
+    fn test_webizen_vm_execution() {
+        let mut vm = WebizenVM::new();
         let bytecode = vec![
-            SentinelOpcode::MatchPredicate(42),
-            SentinelOpcode::HaltIfFalse,
-            SentinelOpcode::BindRegister { vector_id: 0, register_index: 0 },
-            SentinelOpcode::HaltIfFalse,
+            WebizenOpcode::MatchPredicate(42),
+            WebizenOpcode::HaltIfFalse,
+            WebizenOpcode::BindRegister { vector_id: 0, register_index: 0 },
+            WebizenOpcode::HaltIfFalse,
         ];
         vm.load_bytecode(&bytecode);
 
@@ -261,14 +466,14 @@ mod tests {
 
     #[test]
     fn test_qualia_n3_implication() {
-        let mut vm = SentinelVM::new();
+        let mut vm = WebizenVM::new();
         // Rule: { ?x predicate 42 } => { ?x predicate 100 }
         let bytecode = vec![
-            SentinelOpcode::MatchPredicate(42),
-            SentinelOpcode::HaltIfFalse,
-            SentinelOpcode::BindRegister { vector_id: 0, register_index: 0 }, // Bind Subject
-            SentinelOpcode::BindRegister { vector_id: 3, register_index: 1 }, // Bind Context
-            SentinelOpcode::EmitQuin { subject_reg: 0, predicate: 100, object: 999, context_reg: 1 },
+            WebizenOpcode::MatchPredicate(42),
+            WebizenOpcode::HaltIfFalse,
+            WebizenOpcode::BindRegister { vector_id: 0, register_index: 0 }, // Bind Subject
+            WebizenOpcode::BindRegister { vector_id: 3, register_index: 1 }, // Bind Context
+            WebizenOpcode::EmitQuin { subject_reg: 0, predicate: 100, object: 999, context_reg: 1 },
         ];
         vm.load_bytecode(&bytecode);
 
@@ -305,5 +510,32 @@ mod tests {
         assert_eq!(qt.predicate, crate::q_hash("knows"));
         assert_eq!(qt.object, crate::q_hash("Bob"));
         assert_eq!(qt.identify_routing_lane(), crate::PermissiveRoutingLane::EnforcePermissiveCommons);
+    }
+
+    #[test]
+    fn test_webizen_float_logic() {
+        let mut vm = WebizenVM::new();
+        // Pack 3.14 as a float tag (0x1 << 60)
+        let float_val = 3.14_f32;
+        let tagged_object = (0x1 << 60) | (float_val.to_bits() as u64);
+
+        let q = QualiaQuin {
+            subject: 0,
+            predicate: 0,
+            object: tagged_object,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+
+        let bytecode = vec![
+            WebizenOpcode::LessThan { vector_id: 2, value: 4.0 }, // 3.14 < 4.0
+            WebizenOpcode::HaltIfFalse,
+            WebizenOpcode::GreaterThan { vector_id: 2, value: 3.0 }, // 3.14 > 3.0
+            WebizenOpcode::HaltIfFalse,
+        ];
+        
+        vm.load_bytecode(&bytecode);
+        assert_eq!(vm.execute_constraint(&q), true, "VM failed to execute continuous float bounds");
     }
 }

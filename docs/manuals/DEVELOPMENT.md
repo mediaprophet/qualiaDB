@@ -88,6 +88,9 @@ qualia-cli webizen ingest https://example.org/ontology.n3 ./my-agency
 # Export to W3C Solid LDP (for backup / interop)
 qualia-cli export-solid --input ./data/out.q42 --output ./solid-pod/
 
+# Generate DNS Frontdoor records (HCAI Discovery)
+qualia-cli webizen dns-frontdoor qualia.org ./my-agency
+
 # Detailed dev benchmarks (require a .q42)
 qualia-cli benchmark-action rss-scan ./data/out.q42 10
 ```
@@ -115,6 +118,14 @@ cargo bench -p qualia-core-db
 ```
 
 Runs comparison benchmarks against Oxigraph/SurrealDB-class proxies.
+
+### Profiling with `dhat-rs`
+
+To ensure zero-allocation guarantees are met, the Solid Bridge module can be profiled with `dhat-rs` enabled:
+```bash
+cargo run --features dhat-heap -p qualia-solid-bridge
+```
+This will dump a `dhat-heap.json` file which can be viewed in the [DHAT Viewer](https://nnethercote.github.io/dh_view/dh_view.html) to strictly enforce the Allocation Firewall.
 
 ### Browser fallback
 
@@ -174,7 +185,7 @@ The desktop app and browser playground both poll this endpoint; the UI connectio
 
 ## Releases & Versioning
 
-- Current: Core/Desktop **0.0.3-dev**, CLI **0.1.1**
+- Current: Core/Desktop/CLI **0.0.4**
 - Pre-built binaries: Windows installer, Android APK, and desktop bundles are in `releases/` (GitHub Releases for signed artefacts).
-- Release notes: [RELEASE_NOTES_v0.0.3.md](RELEASE_NOTES_v0.0.3.md)
+- Release notes: [RELEASE_NOTES_v0.0.4.md](RELEASE_NOTES_v0.0.4.md) (coming soon)
 - Release config: `release.toml` (cargo-release)

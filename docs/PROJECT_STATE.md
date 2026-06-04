@@ -14,7 +14,7 @@ Key themes:
 - **Relational & Social** modeling (not isolated "self-sovereign" individuals)
 - **Explicit, opt-in** inheritance and propagation
 - **CBOR-LD** as the primary runtime serialization format
-- **Sentinel logic** (N3Logic + SHACL) as the enforcement layer
+- **Webizen logic** (N3Logic + SHACL) as the enforcement layer
 - Strong protection of personal boundaries and consent
 
 ---
@@ -61,7 +61,7 @@ Key themes:
 
 ## 4. Agent Framework & Planning Environment – Implemented
 
-**Status: Ontology modeling complete and pushed. Ready for CBOR-LD generation, Sentinel enforcement, and UI.**
+**Status: Ontology modeling complete and pushed. Ready for CBOR-LD generation, Webizen enforcement, and UI.**
 
 ### Key Additions in `ontology/cooperative-projects.ttl`
 - `qp:SoftwareAgent` with strong Principal anchoring (`qp:authorizedByPrincipal`)
@@ -103,7 +103,7 @@ Key themes:
 - Everything is **Principal-centered**
 - Inheritance and propagation are **explicit and reversible**
 - Personal boundaries and consent are protected by default
-- Logic (Sentinel) enforces boundaries
+- Logic (Webizen) enforces boundaries
 - CBOR-LD is the runtime format
 
 ---
@@ -113,6 +113,6 @@ Key themes:
 1. Generate CBOR-LD runtime artifacts
 2. Implement Agent UI panels and Planning Environment viewer
 3. Build proposal/review/approval workflows
-4. Expand Sentinel N3Logic rules
+4. Expand Webizen N3Logic rules
 
 *Updated: June 2026 – Agent Framework Milestone Achieved*

@@ -4,7 +4,7 @@
 
 This specification defines the `Webizen` protocol—the Layer 1 application standard that provides Identity Management, Social Graph resolution, and the Permissive Commons rules over the bare-metal Qualia-DB (Layer 0) engine.
 
-While Qualia-DB provides the physical 512MB memory boundary and the zero-allocation Sentinel logic VM, the Webizen Protocol dictates how human beings establish cryptographic agency, project personas, and legally govern their shared data.
+While Qualia-DB provides the physical 512MB memory boundary and the zero-allocation Webizen logic VM, the Webizen Protocol dictates how human beings establish cryptographic agency, project personas, and legally govern their shared data.
 
 ---
 
@@ -17,7 +17,7 @@ The Webizen Protocol rejects this static model. Identity is a **behavior**. It i
 Because the underlying engine evaluates data as 48-byte Quins across a Spatiotemporal context vector, an Identity Nym is an **n-dimensional inference** derived from:
 1. **Subjective Inferences**: Claims made *by* the human author about a specific nym (e.g., self-asserted preferences, local truths, temporal moods).
 2. **Objective Inferences**: Claims made *about* the nym by external cryptographic actors in the Address Book (e.g., peer attestations, bilateral edge connections).
-3. **Input Format Dynamics**: As the data formats, temporal context (time-of-day, historical epoch), and spatial coordinates shift, the Sentinel VM dynamically re-evaluates the active Identity Nym.
+3. **Input Format Dynamics**: As the data formats, temporal context (time-of-day, historical epoch), and spatial coordinates shift, the Webizen VM dynamically re-evaluates the active Identity Nym.
 
 As the analysis of these inferences develops over time, the identity is never static. Resolution questions are continuously recalculated by the logic VM based on the rolling window of the temporal context.
 
@@ -27,7 +27,7 @@ As the analysis of these inferences develops over time, the identity is never st
 
 The Address Book is not a simple contact list; it is the cryptographic foundation of the local subjective reality. 
 
-By adding a peer's Decentralized Identifier (DID) to the local directory, the user is mathematically authorizing the Sentinel VM to include that peer's objective inferences in the evaluation of the user's social graph. If a peer is removed, their Quins are severed from the resolution graph.
+By adding a peer's Decentralized Identifier (DID) to the local directory, the user is mathematically authorizing the Webizen VM to include that peer's objective inferences in the evaluation of the user's social graph. If a peer is removed, their Quins are severed from the resolution graph.
 
 ---
 
@@ -62,7 +62,7 @@ The Permissive Commons defines how shared data (the Bilateral Micro-Commons) is 
 
 ### 4.1 Computational Enforcement
 Rules defined within the Permissive Commons are mapped directly to the `Context` and `Metadata` vectors of the 48-byte Quin.
-When the Sentinel VM attempts to unify an inference across shared data, it hits a hard Permissive Commons Gate. 
+When the Webizen VM attempts to unify an inference across shared data, it hits a hard Permissive Commons Gate. 
 
 ### 4.2 The Adaptive Network Harness
 WebTorrent and IPFS P2P operations can severely deplete bandwidth on mobile or metered connections. The Webizen protocol enforces an **Adaptive Network Harness**:
@@ -80,7 +80,7 @@ When executing Large Language Models from the Permissive Commons, Webizens are n
 The protocol enforces a **Neurosymbolic Intercept**:
 - The exact procedural vector matrices of the LLM are mapped into 48-byte `.q42` Quins.
 - Local Webizens define strict **Spatio-Temporal Qualia Contexts** (e.g., `time=1920`, `location=australia`).
-- As the opaque LLM executes natively on the device, the Sentinel VM actively monitors the procedural path. If an execution triggers a vector that violates a local Symbolic Axiom (e.g., "thongs" meaning underwear vs. footwear in Australia), the Sentinel VM mathematically clips and overrides the active tensor in real-time. This forces the LLM to instantly obey the human-defined, localized boundaries of the Permissive Commons.
+- As the opaque LLM executes natively on the device, the Webizen VM actively monitors the procedural path. If an execution triggers a vector that violates a local Symbolic Axiom (e.g., "thongs" meaning underwear vs. footwear in Australia), the Webizen VM mathematically clips and overrides the active tensor in real-time. This forces the LLM to instantly obey the human-defined, localized boundaries of the Permissive Commons.
 
 ### 4.5 Open Directives (Pending Integration)
 The following topics require precise definition based on historical Permissive Commons models:

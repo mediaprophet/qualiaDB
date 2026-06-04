@@ -80,3 +80,54 @@ mod tests {
         assert_eq!(winner_tie.object, 100, "CRDT failed deterministic tie-breaker");
     }
 }
+
+/// A zero-allocation suspended transaction context.
+/// Holds the flattened Webizen VM execution frame while waiting for network consensus.
+#[derive(Clone, Copy)]
+pub struct SuspendedTransaction {
+    pub agreement_id: u64,
+    pub threshold: u8,
+    pub collected_signatures: u8,
+    pub registers: [Option<u64>; 16],
+    pub bytecode_buffer: [Option<crate::logic::WebizenOpcode>; 64],
+    pub yielded_op: Option<crate::logic::WebizenOpcode>,
+    pub suspended_quin: QualiaQuin,
+}
+
+/// A fixed-size pending queue for Webizen VM transactions waiting on M:N Guardianship signatures.
+pub struct SuspendedTransactionQueue {
+    pub queue: [Option<SuspendedTransaction>; 32],
+}
+
+impl SuspendedTransactionQueue {
+    pub const fn new() -> Self {
+        // Explicitly initialize the fixed array without vectors
+        Self { queue: [None; 32] }
+    }
+
+    /// Pushes a flattened execution frame to the pending queue.
+    pub fn push(&mut self, transaction: SuspendedTransaction) -> Result<(), &'static str> {
+        for slot in self.queue.iter_mut() {
+            if slot.is_none() {
+                *slot = Some(transaction);
+                return Ok(());
+            }
+        }
+        Err("SuspendedTransactionQueue is full!")
+    }
+
+    /// Asynchronously wakes up a suspended transaction if the signature threshold is met by an incoming WebRTC token.
+    pub fn apply_consensus_token(&mut self, token_quin: &QualiaQuin) -> Option<SuspendedTransaction> {
+        for slot in self.queue.iter_mut() {
+            if let Some(tx) = slot {
+                if tx.agreement_id == token_quin.context {
+                    tx.collected_signatures += 1;
+                    if tx.collected_signatures >= tx.threshold {
+                        return slot.take(); // Pop from queue and return for immediate Webizen resumption
+                    }
+                }
+            }
+        }
+        None
+    }
+}

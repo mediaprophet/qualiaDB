@@ -15,7 +15,7 @@ use qualia_core_db::{
     QualiaQuin,
     identifier::parse_did_q42,
     mini_parser::compile_ntriples_to_bytecode,
-    sentinel_bytecode::{execute_program, execute_program_simd, execute_program_with_stats},
+    webizen_bytecode::{execute_program, execute_program_simd, execute_program_with_stats},
 };
 use std::time::Instant;
 

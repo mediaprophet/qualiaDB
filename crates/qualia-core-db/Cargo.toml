@@ -1,6 +1,6 @@
 [package]
 name = "qualia-core-db"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
@@ -11,7 +11,7 @@ default = ["profile_target_1024"]
 profile_minimal_512 = []
 profile_target_1024 = ["alloc_buffers"]
 profile_accelerated = ["alloc_buffers", "neon_simd_unroll"]
-# Enables the WASM SIMD vectorized execution branch in sentinel_bytecode.
+# Enables the WASM SIMD vectorized execution branch in webizen_bytecode.
 # Only has effect on wasm32 targets compiled with SIMD support (-C target-feature=+simd128).
 wasm_simd = []
 
