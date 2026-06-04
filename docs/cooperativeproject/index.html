@@ -1,0 +1,139 @@
+---
+layout: null
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cooperative Projects | Qualia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        :root {
+            --glass-bg: rgba(17, 23, 31, 0.72);
+        }
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+        }
+        .nav-active {
+            color: #f59e0b;
+            border-bottom: 2px solid #f59e0b;
+        }
+    </style>
+</head>
+<body class="bg-[#0a0e17] text-slate-200">
+    <!-- Navigation -->
+    <nav class="glass sticky top-0 z-50 border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-9 h-9 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center">
+                        <span class="text-[#0a0e17] font-bold text-xl">Q</span>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-xl tracking-tight">Qualia</span>
+                        <span class="text-amber-400 text-sm font-medium ml-1">Cooperative</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-x-8 text-sm">
+                    <a href="../index.html" class="hover:text-white transition-colors">Home</a>
+                    <a href="index.html" class="nav-active font-medium">Projects</a>
+                    <a href="../benchmark.html" class="hover:text-white transition-colors">Benchmarks</a>
+                    <a href="../library.html" class="hover:text-white transition-colors">Library</a>
+                </div>
+
+                <div class="flex items-center gap-x-3">
+                    <div class="px-3 py-1.5 bg-white/5 rounded-full text-xs flex items-center gap-x-2">
+                        <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                        <span class="text-emerald-400 text-xs">Connected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-6 py-12">
+        <!-- Hero -->
+        <div class="max-w-3xl">
+            <div class="inline-flex items-center gap-x-2 px-4 py-1.5 rounded-full bg-white/5 text-sm mb-6">
+                <i class="fa-solid fa-users text-amber-400"></i>
+                <span class="font-medium">Decentralized Collaboration</span>
+            </div>
+            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Cooperative Projects</h1>
+            <p class="text-xl text-slate-400 max-w-2xl">
+                A platform for humans and agents to collaborate on meaningful work with fair contribution tracking, obligation management, and dynamic equity.
+            </p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
+            <div class="glass rounded-3xl p-6">
+                <div class="text-3xl font-semibold">47</div>
+                <div class="text-sm text-slate-400 mt-1">Active Projects</div>
+            </div>
+            <div class="glass rounded-3xl p-6">
+                <div class="text-3xl font-semibold">312</div>
+                <div class="text-sm text-slate-400 mt-1">Contributors</div>
+            </div>
+            <div class="glass rounded-3xl p-6">
+                <div class="text-3xl font-semibold">1.2k</div>
+                <div class="text-sm text-slate-400 mt-1">Tasks Completed</div>
+            </div>
+            <div class="glass rounded-3xl p-6">
+                <div class="text-3xl font-semibold">89</div>
+                <div class="text-sm text-slate-400 mt-1">Subprojects</div>
+            </div>
+        </div>
+
+        <!-- Project Cards -->
+        <div class="mt-12">
+            <div class="flex justify-between items-end mb-6">
+                <h2 class="text-2xl font-semibold tracking-tight">Active Initiatives</h2>
+                <a href="#" class="text-sm flex items-center gap-x-2 text-amber-400 hover:text-amber-300">
+                    Start a new project <i class="fa-solid fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Project Card 1 -->
+                <div class="glass rounded-3xl p-6 hover:border-white/20 transition-all group">
+                    <div class="flex justify-between">
+                        <div>
+                            <div class="font-semibold text-lg group-hover:text-amber-400 transition-colors">National Decentralized Civics Infrastructure</div>
+                            <div class="text-xs text-emerald-400 mt-1 flex items-center gap-x-1.5">
+                                <i class="fa-solid fa-link"></i>
+                                <span>Parent of 3 subprojects</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-emerald-400 text-sm font-medium">Active</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm text-slate-400 line-clamp-2">
+                        Building decentralized infrastructure for MP offices and civic coordination across Australia.
+                    </div>
+                    <div class="mt-6 flex items-center justify-between text-xs">
+                        <div class="flex -space-x-2">
+                            <div class="w-6 h-6 bg-slate-700 rounded-full border border-slate-600"></div>
+                            <div class="w-6 h-6 bg-slate-700 rounded-full border border-slate-600"></div>
+                            <div class="w-6 h-6 bg-slate-700 rounded-full border border-slate-600"></div>
+                        </div>
+                        <a href="project-detail.html" class="text-amber-400 hover:text-amber-300 text-xs font-medium flex items-center gap-x-1">
+                            View <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- More cards can be added here -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>
