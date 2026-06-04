@@ -78,6 +78,14 @@ pub struct AgentIntent {
     pub ilp_offer_micro_cents: u64,
 }
 
+impl AgentIntent {
+    /// Determines whether this intent is critical enough to proceed during a thermal event.
+    pub fn is_critical(&self) -> bool {
+        // Mock constant for a critical operation (e.g. q_hash("llm:EmergencyIntake"))
+        self.intent_predicate == 0xC12171CA1
+    }
+}
+
 // ─── SentinelVerdict ─────────────────────────────────────────────────────────
 /// The Sentinel VM's ruling on an AgentIntent or AgentOutput.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
