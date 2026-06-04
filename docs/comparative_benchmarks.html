@@ -148,12 +148,16 @@
                 </div>
 
                 <div class="flex items-center gap-x-3">
-                    <button onclick="runHarnessLocally()" 
+                    <div id="daemon-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                        <div class="w-2 h-2 rounded-full bg-slate-500" id="daemon-dot"></div>
+                        <span id="daemon-text">Checking...</span>
+                    </div>
+                    <button onclick="runHarnessLocally()"
                             class="flex items-center gap-x-2 rounded-3xl bg-white px-6 py-2 text-sm font-semibold text-slate-950 transition-all active:scale-[0.985] hover:bg-amber-300">
                         <i class="fa-solid fa-terminal text-xs"></i>
                         <span>Run harness</span>
                     </button>
-                    <a href="https://github.com/mediaprophet/qualiaDB/tree/main/benchmarks" 
+                    <a href="https://github.com/mediaprophet/qualiaDB/tree/main/benchmarks"
                        class="flex items-center gap-x-2 rounded-3xl border border-slate-700 px-5 py-2 text-sm font-medium text-slate-300 transition-all hover:bg-slate-900 hover:text-white">
                         <i class="fa-brands fa-github"></i>
                         <span>Source</span>
@@ -504,15 +508,30 @@
         }
 
         function runHarnessLocally() {
-            const cmd = 'python benchmarks/harness.py --all --output docs/comparative_benchmark_results.json';
+            const cmd = 'cargo run --release -p qualia-cli -- bench --suite full';
             navigator.clipboard.writeText(cmd).then(() => {
-                alert('Command copied to clipboard.\n\nRun it, then refresh this page.');
+                alert('Command copied to clipboard:\n\n' + cmd + '\n\nRun it, then reload this page.');
             }).catch(() => {
                 prompt('Copy and run this command:', cmd);
             });
         }
 
-        window.onload = loadData;
+        async function checkDaemon() {
+            try {
+                const res = await fetch('http://localhost:4242/health', { signal: AbortSignal.timeout(2000) });
+                if (res.ok) {
+                    const d = await res.json();
+                    document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
+                    document.getElementById('daemon-badge').className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                }
+            } catch(e) {
+                document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
+                document.getElementById('daemon-text').textContent = 'Daemon Offline';
+            }
+        }
+
+        window.onload = () => { loadData(); checkDaemon(); };
     </script>
 </body>
 </html>

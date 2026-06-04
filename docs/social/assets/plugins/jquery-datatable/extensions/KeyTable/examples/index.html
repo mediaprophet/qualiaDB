@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="shortcut icon" type="image/ico" href="http://www.datatables.net/favicon.ico">
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=2.0">
+    <link rel="stylesheet" type="text/css" href="../../../examples/resources/syntax/shCore.css">
+    <link rel="stylesheet" type="text/css" href="../../../examples/resources/demo.css">
+    <script type="text/javascript" language="javascript" src="../../../media/js/jquery.js"></script>
+    <script type="text/javascript" language="javascript" src="../../../examples/resources/syntax/shCore.js"></script>
+    <script type="text/javascript" language="javascript" src="../../../examples/resources/demo.js"></script>
+    <title>Webizen Qualia App</title>
+  </head>
+  <body class="dt-example">
+    <div class="container">
+      <section>
+        <h1>KeyTable example <span>KeyTable examples</span></h1>
+        <div class="info">
+          <p>KeyTable provides enhanced accessibility and navigation options for DataTables enhanced tables, by allowing Excel like cell navigation on any table. Events (focus, blur, action etc) can be assigned to individual cells, columns, rows or all cells to allow advanced interaction options.. Key features include:
+          </p>
+          <ul class="markdown">
+            <li>Easy to use spreadsheet like interaction</li>
+            <li>Fully integrated with DataTables</li>
+            <li>Wide range of supported events</li>
+            <li>Works without DataTables if you just want a plain table</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+    <section>
+      <div class="footer">
+        <div class="gradient"></div>
+        <div class="liner">
+          <div class="toc">
+            <div class="toc-group">
+              <h3><a href="./index.html">Examples</a></h3>
+              <ul class="toc">
+                <li><a href="./simple.html">Basic initialisation</a></li>
+                <li><a href="./events.html">Events</a></li>
+                <li><a href="./scrolling.html">Scrolling table</a></li>
+                <li><a href="./html.html">Plain HTML table</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="epilogue">
+            <p>Please refer to the <a href="http://www.datatables.net">DataTables documentation</a> for full information about its API properties and methods.
+              <br> Additionally, there are a wide range of <a href="http://www.datatables.net/extras">extras</a> and
+              <a href="http://www.datatables.net/plug-ins">plug-ins</a> which extend the capabilities of DataTables.
+            </p>
+            <p class="copyright">DataTables designed and created by <a href="http://www.sprymedia.co.uk">SpryMedia Ltd</a> &#169; 2007-2014
+              <br> DataTables is licensed under the <a href="http://www.datatables.net/mit">MIT license</a>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  
+    
+  
+    
+    <div id="qualia-webrtc-overlay" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 350px; background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 9999; overflow: hidden; border: 1px solid #eaeaea;">
+        <div style="background: #2b303b; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.QualiaDB.toggleWebRTC()">
+            <h5 style="margin: 0; color: white; font-size: 14px;"><i class="pg-icon m-r-5">video</i> Secure WebRTC Call</h5>
+            <span style="font-size: 12px; color: #48b0f7;">Live Translation Active</span>
+        </div>
+        <div style="height: 200px; background: #000; position: relative;">
+            <video id="webrtc-remote-video" style="width: 100%; height: 100%; object-fit: cover;" autoplay playsinline muted></video>
+            <video id="webrtc-local-video" style="width: 80px; height: 100px; position: absolute; bottom: 10px; right: 10px; border: 2px solid white; border-radius: 8px; object-fit: cover; background: #333;" autoplay playsinline muted></video>
+        </div>
+        <div style="padding: 15px; background: #fafafa; border-top: 1px solid #eee;">
+            <div id="qualia-transcript-box" style="height: 80px; overflow-y: auto; font-size: 13px; color: #555; margin-bottom: 10px; padding: 5px; background: #fff; border: 1px solid #f0f0f0; border-radius: 4px;">
+                <em style="color: #999;">Waiting for speech...</em>
+            </div>
+            <div style="display: flex; justify-content: space-around;">
+                <button class="btn btn-default btn-cons"><i class="pg-icon">mic</i></button>
+                <button class="btn btn-default btn-cons"><i class="pg-icon">video</i></button>
+                <button class="btn btn-danger btn-cons" onclick="window.QualiaDB.toggleWebRTC()"><i class="pg-icon">phone</i></button>
+            </div>
+        </div>
+    </div>
+
+    
+  
+    <!-- WebRTC Overlay UI -->
+    <div id="qualia-webrtc-overlay" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 350px; background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 9999; overflow: hidden; border: 1px solid #eaeaea;">
+        <div style="background: #2b303b; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.QualiaDB.toggleWebRTC()">
+            <h5 style="margin: 0; color: white; font-size: 14px;"><i class="pg-icon m-r-5">video</i> Secure WebRTC Call</h5>
+            <span id="webrtc-status-indicator" style="font-size: 12px; color: #48b0f7;">Initializing...</span>
+        </div>
+        <div style="height: 200px; background: #000; position: relative;">
+            <video id="webrtc-remote-video" style="width: 100%; height: 100%; object-fit: cover;" autoplay playsinline muted></video>
+            <video id="webrtc-local-video" style="width: 80px; height: 100px; position: absolute; bottom: 10px; right: 10px; border: 2px solid white; border-radius: 8px; object-fit: cover; background: #333;" autoplay playsinline muted></video>
+        </div>
+        <div style="padding: 15px; background: #fafafa; border-top: 1px solid #eee;">
+            <div id="qualia-transcript-box" style="height: 120px; overflow-y: auto; font-size: 13px; color: #555; margin-bottom: 10px; padding: 5px; background: #fff; border: 1px solid #f0f0f0; border-radius: 4px;">
+                <em style="color: #999;">Waiting for connection...</em>
+            </div>
+            <div style="display: flex; justify-content: space-around;">
+                <button class="btn btn-default btn-cons"><i class="pg-icon">mic</i></button>
+                <button class="btn btn-default btn-cons"><i class="pg-icon">video</i></button>
+                <button class="btn btn-danger btn-cons" onclick="window.QualiaDB.toggleWebRTC()"><i class="pg-icon">phone</i></button>
+            </div>
+        </div>
+    </div>
+
+    
+  
+    <!-- WebRTC Overlay UI -->
+    <div id="qualia-webrtc-overlay" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 350px; background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 9999; overflow: hidden; border: 1px solid #eaeaea;">
+        <div style="background: #2b303b; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.QualiaDB.toggleWebRTC()">
+            <h5 style="margin: 0; color: white; font-size: 14px;"><i class="pg-icon m-r-5">video</i> Secure WebRTC Call</h5>
+            <span id="webrtc-status-indicator" style="font-size: 12px; color: #48b0f7;">Initializing...</span>
+        </div>
+        <div style="height: 200px; background: #000; position: relative;">
+            <video id="webrtc-remote-video" style="width: 100%; height: 100%; object-fit: cover;" autoplay playsinline muted></video>
+            <video id="webrtc-local-video" style="width: 80px; height: 100px; position: absolute; bottom: 10px; right: 10px; border: 2px solid white; border-radius: 8px; object-fit: cover; background: #333;" autoplay playsinline muted></video>
+        </div>
+        <div style="padding: 15px; background: #fafafa; border-top: 1px solid #eee;">
+            <div id="qualia-transcript-box" style="height: 120px; overflow-y: auto; font-size: 13px; color: #555; margin-bottom: 10px; padding: 5px; background: #fff; border: 1px solid #f0f0f0; border-radius: 4px;">
+                <em style="color: #999;">Waiting for connection...</em>
+            </div>
+            <div style="display: flex; justify-content: space-around;">
+                <button class="btn btn-default btn-cons"><i class="pg-icon">mic</i></button>
+                <button class="btn btn-default btn-cons"><i class="pg-icon">video</i></button>
+                <button class="btn btn-danger btn-cons" onclick="window.QualiaDB.toggleWebRTC()"><i class="pg-icon">phone</i></button>
+            </div>
+        </div>
+    </div>
+
+    
+  
+    <!-- WebRTC Overlay UI -->
+    <div id="qualia-webrtc-overlay" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 350px; background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 9999; overflow: hidden; border: 1px solid #eaeaea;">
+        <div style="background: #2b303b; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.QualiaDB.toggleWebRTC()">
+            <h5 style="margin: 0; color: white; font-size: 14px;"><i class="pg-icon m-r-5">video</i> Secure WebRTC Call</h5>
+            <span id="webrtc-status-indicator" style="font-size: 12px; color: #48b0f7;">Initializing...</span>
+        </div>
+        <div style="height: 200px; background: #000; position: relative;">
+            <video id="webrtc-remote-video" style="width: 100%; height: 100%; object-fit: cover;" autoplay playsinline muted></video>
+            <video id="webrtc-local-video" style="width: 80px; height: 100px; position: absolute; bottom: 10px; right: 10px; border: 2px solid white; border-radius: 8px; object-fit: cover; background: #333;" autoplay playsinline muted></video>
+        </div>
+        <div style="padding: 15px; background: #fafafa; border-top: 1px solid #eee;">
+            <div id="qualia-transcript-box" style="height: 120px; overflow-y: auto; font-size: 13px; color: #555; margin-bottom: 10px; padding: 5px; background: #fff; border: 1px solid #f0f0f0; border-radius: 4px;">
+                <em style="color: #999;">Waiting for connection...</em>
+            </div>
+            <div style="display: flex; justify-content: space-around;">
+                <button class="btn btn-default btn-cons"><i class="pg-icon">mic</i></button>
+                <button class="btn btn-default btn-cons"><i class="pg-icon">video</i></button>
+                <button class="btn btn-danger btn-cons" onclick="window.QualiaDB.toggleWebRTC()"><i class="pg-icon">phone</i></button>
+            </div>
+        </div>
+    </div>
+
+    
+  
+    <!-- WebRTC Overlay UI -->
+    <div id="qualia-webrtc-overlay" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 350px; background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 9999; overflow: hidden; border: 1px solid #eaeaea;">
+        <div style="background: #2b303b; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.QualiaDB.toggleWebRTC()">
+            <h5 style="margin: 0; color: white; font-size: 14px;"><i class="pg-icon m-r-5">video</i> Secure WebRTC Call</h5>
+            <span id="webrtc-status-indicator" style="font-size: 12px; color: #48b0f7;">Initializing...</span>
+        </div>
+        <div style="height: 200px; background: #000; position: relative;">
+            <video id="webrtc-remote-video" style="width: 100%; height: 100%; object-fit: cover;" autoplay playsinline muted></video>
+            <video id="webrtc-local-video" style="width: 80px; height: 100px; position: absolute; bottom: 10px; right: 10px; border: 2px solid white; border-radius: 8px; object-fit: cover; background: #333;" autoplay playsinline muted></video>
+        </div>
+        <div style="padding: 15px; background: #fafafa; border-top: 1px solid #eee;">
+            <div id="qualia-transcript-box" style="height: 120px; overflow-y: auto; font-size: 13px; color: #555; margin-bottom: 10px; padding: 5px; background: #fff; border: 1px solid #f0f0f0; border-radius: 4px;">
+                <em style="color: #999;">Waiting for connection...</em>
+            </div>
+            <div style="display: flex; justify-content: space-around;">
+                <button class="btn btn-default btn-cons"><i class="pg-icon">mic</i></button>
+                <button class="btn btn-default btn-cons"><i class="pg-icon">video</i></button>
+                <button class="btn btn-danger btn-cons" onclick="window.QualiaDB.toggleWebRTC()"><i class="pg-icon">phone</i></button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="assets/js/qualia-integration.js"></script>
+  </body>
+</html>

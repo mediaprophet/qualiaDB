@@ -65,7 +65,7 @@
                     
                     <div class="flex items-center gap-6 text-sm">
                         <a href="index.html" class="hover:text-white transition-colors">Home</a>
-                        <a href="cooperative.html" class="hover:text-white transition-colors">Projects</a>
+                        <a href="cooperativeproject/index.html" class="hover:text-white transition-colors">Projects</a>
                         <a href="comparative_benchmarks.html" class="hover:text-white transition-colors">Comparative</a>
                         <a href="benchmark.html" class="nav-active font-medium">Live Benchmarks</a>
                         <a href="benchmark_visualizer.html" class="hover:text-white transition-colors">Visualizer</a>
@@ -73,11 +73,11 @@
                 </div>
 
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                        <span class="font-mono">Daemon: 4242</span>
+                    <div id="daemon-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                        <div class="w-2 h-2 rounded-full bg-slate-500" id="daemon-dot"></div>
+                        <span id="daemon-text">Checking...</span>
                     </div>
-                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" 
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
                        class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
                         <i class="fab fa-github"></i>
                         <span>GitHub</span>
@@ -188,13 +188,50 @@
 
     <script>
         let currentMode = 'native';
+        let daemonOnline = false;
 
+        // ── Benchmark query patterns ───────────────────────────────────────────
+        const QUERIES = {
+            point:  '<http://qualia.local/s/1> ?p ?o .',
+            twohop: '?s <http://qualia.local/p/hop> ?o .',
+            filter: '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?o .',
+            ingest: '?s ?p ?o .',
+            full:   null   // runs all four
+        };
+
+        const SUITE_LABELS = {
+            point:  'Point Lookup',
+            twohop: 'Two-Hop Traversal',
+            filter: 'Predicate Filter',
+            ingest: 'Ingest Pattern',
+            full:   'Full Suite'
+        };
+
+        // ── Daemon check ───────────────────────────────────────────────────────
+        async function checkDaemon() {
+            try {
+                const res = await fetch('http://localhost:4242/health', { signal: AbortSignal.timeout(2000) });
+                if (res.ok) {
+                    const d = await res.json();
+                    daemonOnline = true;
+                    document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
+                    document.getElementById('daemon-badge').className =
+                        'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    return d;
+                }
+            } catch(e) {}
+            daemonOnline = false;
+            document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
+            document.getElementById('daemon-text').textContent = 'Daemon Offline';
+            return null;
+        }
+
+        // ── Mode toggle ────────────────────────────────────────────────────────
         function selectMode(mode) {
             currentMode = mode;
-            
             const nativeBtn = document.getElementById('btn-native');
-            const wasmBtn = document.getElementById('btn-wasm');
-            
+            const wasmBtn   = document.getElementById('btn-wasm');
             if (mode === 'native') {
                 nativeBtn.classList.add('!border-blue-500', 'bg-blue-500/10');
                 wasmBtn.classList.remove('!border-blue-500', 'bg-blue-500/10');
@@ -204,54 +241,150 @@
             }
         }
 
-        function runBenchmark() {
-            const suite = document.getElementById('benchmarkSuite').value;
-            const container = document.getElementById('results-container');
-            const status = document.getElementById('status-badge');
+        // ── Single query timing ────────────────────────────────────────────────
+        async function runQuery(query) {
+            const t0 = performance.now();
+            const res = await fetch('http://localhost:4242/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: AbortSignal.timeout(10000),
+                body: JSON.stringify({ query, format: 'json-ld' })
+            });
+            const t1 = performance.now();
+            const cost = res.headers.get('X-Qualia-Compute-Cost') || '0+0';
+            const [matchCount, vmCycles] = cost.split('+').map(Number);
+            return { latencyMs: t1 - t0, matchCount, vmCycles };
+        }
 
-            status.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Running...</span>`;
+        // ── P50 over N iterations ──────────────────────────────────────────────
+        async function benchmarkQuery(query, iters = 10) {
+            const latencies = [];
+            let vmCycles = 0, matchCount = 0;
+            for (let i = 0; i < iters; i++) {
+                const r = await runQuery(query);
+                latencies.push(r.latencyMs);
+                vmCycles = r.vmCycles;
+                matchCount = r.matchCount;
+            }
+            latencies.sort((a, b) => a - b);
+            const p50 = latencies[Math.floor(latencies.length * 0.5)];
+            const p95 = latencies[Math.floor(latencies.length * 0.95)];
+            const throughput = Math.round(1000 / p50);
+            return { p50, p95, throughput, vmCycles, matchCount };
+        }
+
+        // ── Main benchmark runner ──────────────────────────────────────────────
+        async function runBenchmark() {
+            const suite     = document.getElementById('benchmarkSuite').value;
+            const container = document.getElementById('results-container');
+            const status    = document.getElementById('status-badge');
+
+            status.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Running…</span>`;
             status.className = `px-4 py-1.5 text-xs rounded-2xl bg-amber-500/10 text-amber-400 flex items-center gap-2`;
 
-            setTimeout(() => {
-                let html = `
+            if (currentMode === 'wasm') {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-center py-12">
+                        <i class="fas fa-puzzle-piece text-4xl text-slate-600 mb-4"></i>
+                        <p class="text-slate-400 mb-2">WASM mode: use the <a href="playground/index.html" class="text-blue-400 underline">Interactive Playground</a> for in-browser queries.</p>
+                        <p class="text-xs text-slate-500">Switch to Native to benchmark via the local daemon.</p>
+                    </div>`;
+                status.innerHTML = `<i class="fas fa-info-circle"></i> <span>See Playground</span>`;
+                status.className = `px-4 py-1.5 text-xs rounded-2xl bg-blue-500/10 text-blue-400 flex items-center gap-2`;
+                return;
+            }
+
+            // Re-check daemon
+            const health = await checkDaemon();
+            if (!health) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-center py-12 space-y-3">
+                        <i class="fas fa-plug text-4xl text-red-500/40 mb-2"></i>
+                        <p class="text-slate-300 font-medium">Daemon not reachable at localhost:4242</p>
+                        <p class="text-sm text-slate-500">Start it with: <span class="font-mono text-blue-400">qualia-cli daemon --dev --port 4242</span></p>
+                    </div>`;
+                status.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>Offline</span>`;
+                status.className = `px-4 py-1.5 text-xs rounded-2xl bg-red-500/10 text-red-400 flex items-center gap-2`;
+                return;
+            }
+
+            try {
+                const suitesToRun = suite === 'full'
+                    ? [['point','twohop','filter','ingest']]
+                    : [[suite]];
+                const keys = suite === 'full' ? ['point','twohop','filter','ingest'] : [suite];
+
+                const results = [];
+                for (const key of keys) {
+                    container.innerHTML = `<div class="flex items-center gap-3 text-slate-400 py-12 justify-center"><i class="fas fa-spinner fa-spin"></i> Running <span class="font-mono text-white">${SUITE_LABELS[key]}</span>…</div>`;
+                    const r = await benchmarkQuery(QUERIES[key], 10);
+                    results.push({ label: SUITE_LABELS[key], ...r });
+                }
+
+                // Aggregate for summary cards
+                const avgP50 = results.reduce((s, r) => s + r.p50, 0) / results.length;
+                const totalVm = results.reduce((s, r) => s + r.vmCycles, 0);
+                const avgTput = results.reduce((s, r) => s + r.throughput, 0) / results.length;
+
+                let rowsHtml = results.map(r => `
+                    <div class="glass p-4 rounded-2xl">
+                        <div class="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">${r.label}</div>
+                        <div class="grid grid-cols-3 gap-3 text-center">
+                            <div>
+                                <div class="text-xl font-semibold font-mono">${r.p50.toFixed(1)}<span class="text-xs text-slate-400 ml-1">ms</span></div>
+                                <div class="text-xs text-slate-500">P50</div>
+                            </div>
+                            <div>
+                                <div class="text-xl font-semibold font-mono text-amber-400">${r.throughput.toLocaleString()}<span class="text-xs text-slate-400 ml-1">ops/s</span></div>
+                                <div class="text-xs text-slate-500">Throughput</div>
+                            </div>
+                            <div>
+                                <div class="text-xl font-semibold font-mono text-blue-400">${r.vmCycles.toLocaleString()}</div>
+                                <div class="text-xs text-slate-500">VM cycles</div>
+                            </div>
+                        </div>
+                    </div>`).join('');
+
+                container.innerHTML = `
                     <div class="space-y-4">
                         <div class="flex justify-between items-center">
                             <div>
                                 <span class="font-mono text-sm text-emerald-400">✓ COMPLETED</span>
-                                <span class="ml-3 text-sm text-slate-400">${currentMode.toUpperCase()} • ${suite}</span>
+                                <span class="ml-3 text-sm text-slate-400">NATIVE • ${SUITE_LABELS[suite]} • 10 iterations</span>
                             </div>
                             <span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>
                         </div>
-                        
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="glass p-5 rounded-2xl">
-                                <div class="text-xs text-slate-400 mb-1">P50 Latency</div>
-                                <div class="text-3xl font-semibold">${Math.floor(Math.random() * 40) + 12} <span class="text-base font-normal text-slate-400">ms</span></div>
+                                <div class="text-xs text-slate-400 mb-1">Avg P50 Latency</div>
+                                <div class="text-3xl font-semibold font-mono">${avgP50.toFixed(1)}<span class="text-base font-normal text-slate-400 ml-1">ms</span></div>
                             </div>
                             <div class="glass p-5 rounded-2xl">
-                                <div class="text-xs text-slate-400 mb-1">Peak RSS</div>
-                                <div class="text-3xl font-semibold">${(Math.random() * 180 + 220).toFixed(0)} <span class="text-base font-normal text-slate-400">MB</span></div>
+                                <div class="text-xs text-slate-400 mb-1">Avg Throughput</div>
+                                <div class="text-3xl font-semibold font-mono">${Math.round(avgTput).toLocaleString()}<span class="text-base font-normal text-slate-400 ml-1">ops/s</span></div>
                             </div>
                             <div class="glass p-5 rounded-2xl">
-                                <div class="text-xs text-slate-400 mb-1">Throughput</div>
-                                <div class="text-3xl font-semibold">${Math.floor(Math.random() * 18000) + 8000} <span class="text-base font-normal text-slate-400">ops/s</span></div>
+                                <div class="text-xs text-slate-400 mb-1">Total VM Cycles</div>
+                                <div class="text-3xl font-semibold font-mono text-blue-400">${totalVm.toLocaleString()}</div>
                             </div>
                         </div>
-                    </div>
-                `;
-                
-                container.innerHTML = html;
+                        ${results.length > 1 ? `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${rowsHtml}</div>` : rowsHtml}
+                    </div>`;
+
                 status.innerHTML = `<i class="fas fa-check-circle"></i> <span>Complete</span>`;
                 status.className = `px-4 py-1.5 text-xs rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center gap-2`;
-            }, 850);
-        }
 
-        window.onload = function() {
-            const nativeBtn = document.getElementById('btn-native');
-            if (nativeBtn) {
-                nativeBtn.classList.add('!border-blue-500', 'bg-blue-500/10');
+            } catch(e) {
+                container.innerHTML = `<div class="text-red-400 py-8 text-center text-sm">${e.message}</div>`;
+                status.innerHTML = `<i class="fas fa-times-circle"></i> <span>Error</span>`;
+                status.className = `px-4 py-1.5 text-xs rounded-2xl bg-red-500/10 text-red-400 flex items-center gap-2`;
             }
         }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn-native').classList.add('!border-blue-500', 'bg-blue-500/10');
+            checkDaemon();
+        });
     </script>
 </body>
 </html>

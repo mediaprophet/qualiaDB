@@ -13,28 +13,34 @@
     </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
-    <!-- Unified Navigation -->
-    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/95 backdrop-blur-2xl">
-        <div class="max-w-screen-2xl mx-auto px-8 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-x-8">
-                <a href="cooperative.html" class="flex items-center gap-x-3">
-                    <div class="w-8 h-8 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                        <i class="fa-solid fa-users text-white text-lg"></i>
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div class="hidden md:flex items-center gap-6 text-sm">
+                        <a href="index.html" class="hover:text-white transition-colors">Home</a>
+                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="analytics.html" class="hover:text-white transition-colors">Analytics</a>
+                        <a href="library.html" class="hover:text-white transition-colors">Library</a>
+                        <a href="cooperativeproject/index.html" class="hover:text-white transition-colors">Projects</a>
                     </div>
-                    <span class="font-display text-xl font-semibold tracking-tighter">Cooperative Projects</span>
-                </a>
-                <div class="hidden md:flex items-center gap-x-6 text-sm">
-                    <a href="cooperative.html" class="hover:text-white/80">Hub</a>
-                    <a href="project-detail.html" class="hover:text-white/80">Project</a>
-                    <a href="kanban.html" class="hover:text-white/80">Kanban</a>
-                    <a href="roadmap.html" class="hover:text-white/80">Roadmap</a>
-                    <a href="benchmark.html" class="hover:text-white/80">Benchmark</a>
                 </div>
-            </div>
-            <div class="flex items-center gap-x-3 text-sm">
-                <a href="contribute.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Contribute</a>
-                <a href="economics.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Economics</a>
-                <a href="canvases.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Canvases</a>
+                <div class="flex items-center gap-4">
+                    <div id="daemon-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                        <div class="w-2 h-2 rounded-full bg-slate-500" id="daemon-dot"></div>
+                        <span id="daemon-text">Checking...</span>
+                    </div>
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>GitHub</span>
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
@@ -129,10 +135,24 @@
             if (!selectedFile) return;
             processBtn.disabled = true;
             alert('Transcompilation started (demo). Full implementation would process the file into .q42 shards.');
-            setTimeout(() => {
-                processBtn.disabled = false;
-            }, 1200);
+            setTimeout(() => { processBtn.disabled = false; }, 1200);
         });
+
+        async function checkDaemon() {
+            try {
+                const res = await fetch('http://localhost:4242/health', { signal: AbortSignal.timeout(2000) });
+                if (res.ok) {
+                    const d = await res.json();
+                    document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
+                    document.getElementById('daemon-badge').className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                }
+            } catch(e) {
+                document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
+                document.getElementById('daemon-text').textContent = 'Daemon Offline';
+            }
+        }
+        checkDaemon();
     </script>
 </body>
 </html>

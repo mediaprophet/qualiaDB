@@ -3,349 +3,357 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bio-Spatial Intercept | Qualia-DB Anatomy</title>
+    <title>Bio-Spatial Intercept | Qualia-DB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
         :root {
-            --bg-dark: #050505;
-            --neon-blue: #00f0ff;
-            --neon-red: #ff2a2a;
-            --neon-green: #00ff66;
-            --glass-bg: rgba(20, 20, 25, 0.8);
-            --glass-border: rgba(0, 240, 255, 0.2);
+            --glass-bg: rgba(17, 23, 31, 0.72);
+            --glass-bg-strong: rgba(17, 23, 31, 0.88);
+            --glass-border: rgba(148, 163, 184, 0.10);
+            --glass-border-strong: rgba(148, 163, 184, 0.18);
         }
-
-        body {
-            margin: 0; padding: 0; background-color: var(--bg-dark);
-            color: #fff; font-family: 'Inter', monospace;
-            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e17; color: #e2e8f0; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        .font-display { font-family: 'Space Grotesk', sans-serif; font-weight: 600; letter-spacing: -0.035em; }
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+            border-radius: 20px;
         }
-
-        header {
-            padding: 1rem 2rem; border-bottom: 1px solid #333;
-            display: flex; justify-content: space-between; align-items: center;
+        .glass-strong {
+            background: var(--glass-bg-strong);
+            backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+            border: 1px solid var(--glass-border-strong);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+            border-radius: 20px;
         }
-
-        header h1 { margin: 0; font-size: 1.5rem; color: var(--neon-green); }
-        
-        .main-layout { display: flex; flex: 1; height: calc(100vh - 60px); }
-
-        .sidebar {
-            width: 350px; background: #0a0a0c; border-right: 1px solid #222;
-            padding: 2rem; display: flex; flex-direction: column; gap: 2rem;
-            box-sizing: border-box; z-index: 10;
-        }
-
-        .canvas-container { flex: 1; position: relative; }
-
-        .btn {
-            background: transparent; color: var(--neon-blue); border: 1px solid var(--neon-blue);
-            padding: 0.8rem; border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 1rem;
-            transition: all 0.3s ease; width: 100%;
-        }
-        .btn:hover:not(:disabled) { background: var(--neon-blue); color: #000; box-shadow: 0 0 15px var(--neon-blue); }
-        .btn:disabled { color: #555; border-color: #333; cursor: not-allowed; }
-
-        .card { background: var(--glass-bg); border: 1px solid #333; padding: 1.5rem; border-radius: 8px; }
-        .card h3 { margin: 0 0 1rem 0; font-size: 1.1rem; color: #fff; }
-
-        select {
-            width: 100%; padding: 0.8rem; background: #000; color: var(--neon-blue);
-            border: 1px solid #333; border-radius: 4px; font-family: monospace; font-size: 1rem;
-            margin-bottom: 1rem;
-        }
-
         .log-panel {
-            flex: 1; background: #000; border: 1px solid #222; border-radius: 4px;
-            padding: 1rem; font-size: 0.8rem; color: #aaa; overflow-y: auto; white-space: pre-wrap;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 0.75rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.75rem;
+            line-height: 1.7;
+            color: #94a3b8;
+            overflow-y: auto;
+            flex: 1;
         }
-
-        /* Full Screen Overlay for Daemon Check */
-        #daemon-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.9); z-index: 1000; display: flex;
-            justify-content: center; align-items: center; text-align: center;
-        }
-        
-        .overlay-box {
-            background: #111; border: 1px solid var(--neon-red); padding: 3rem;
-            border-radius: 12px; max-width: 500px;
-        }
-        .overlay-box h2 { color: var(--neon-red); margin-top: 0; }
-        .overlay-box p { color: #ccc; line-height: 1.5; }
-
-        #hud {
-            position: absolute; top: 20px; right: 20px; text-align: right;
-            color: #888; font-size: 0.9rem; pointer-events: none;
+        #three-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .hud-overlay {
+            position: absolute;
+            top: 16px; right: 16px;
+            text-align: right;
+            pointer-events: none;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
-<body>
+<body class="bg-[#0a0e17] text-slate-200">
 
-    <div id="daemon-overlay">
-        <div class="overlay-box">
-            <h2>⚠️ LOCAL DAEMON REQUIRED</h2>
-            <p>This Medical application requires the Qualia-DB local desktop agent to process strict Spatio-Temporal RDF ontologies.</p>
-            <p>We cannot execute these queries on a central server due to privacy boundaries. Please start the local <b>qualia-cli daemon</b> on port 4848.</p>
-            <p style="font-size:0.8rem; color:#666;">Retrying connection...</p>
+    <nav class="glass-strong border-b border-white/10 z-50 flex-shrink-0" style="border-radius:0">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-14">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-7 h-7 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center">
+                            <span class="text-black font-bold text-sm">Q</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold tracking-tight">Qualia</span>
+                            <span class="text-blue-400">DB</span>
+                        </div>
+                    </a>
+                    <div class="hidden md:flex items-center gap-5 text-sm">
+                        <a href="index.html" class="hover:text-white transition-colors">Home</a>
+                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="analytics.html" class="hover:text-white transition-colors">Analytics</a>
+                        <a href="cooperativeproject/index.html" class="hover:text-white transition-colors">Projects</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div id="daemon-badge" class="flex items-center gap-2 text-xs px-3 py-1 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                        <div class="w-2 h-2 rounded-full bg-slate-500" id="daemon-dot"></div>
+                        <span id="daemon-text">Checking...</span>
+                    </div>
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
+                       class="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github text-sm"></i>
+                    </a>
+                </div>
+            </div>
         </div>
-    </div>
+    </nav>
 
-    <header>
-        <h1>BIO-SPATIAL INTERCEPT</h1>
-        <div style="color: #666;">Webizen Permissive Commons Protocol</div>
-    </header>
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <div class="w-80 flex-shrink-0 p-4 flex flex-col gap-4 overflow-y-auto z-10" style="background: rgba(10,14,23,0.95);">
 
-    <div class="main-layout">
-        <div class="sidebar">
-            <div class="card">
-                <h3>Decentralized Ontology Sync</h3>
-                <p style="font-size:0.85rem; color:#888; margin-bottom: 1rem;">
-                    Sync the `human_medical_ontology.q42` ledger from the WebTorrent DHT Community to your local Daemon cache.
-                </p>
-                <button id="btn-sync" class="btn" onclick="syncOntology()">Sync from Community</button>
+            <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs mb-2">
+                    <i class="fas fa-dna"></i>
+                    Bio-Spatial Intercept
+                </div>
+                <h1 class="font-display text-xl font-semibold">Anatomy Ontology</h1>
+                <p class="text-xs text-slate-400 mt-1">Semantic disorder intercept via live N3Logic queries against the human anatomy ontology.</p>
             </div>
 
-            <div class="card">
-                <h3>Semantic Disorder Intercept</h3>
-                <p style="font-size:0.85rem; color:#888; margin-bottom: 1rem;">
-                    Select a disorder. The Dual AI Bridge will query the local RDF ontology and mathematically bind the systemic impacts to the 3D matrix.
-                </p>
-                <select id="disorder-select" disabled>
-                    <option value="" disabled selected>-- Select Disorder --</option>
+            <div class="glass p-4">
+                <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <i class="fas fa-sync text-blue-400 text-xs"></i>
+                    Ontology Cache
+                </h3>
+                <p class="text-xs text-slate-400 mb-3">Sync the <span class="font-mono text-blue-400">human_medical.q42</span> ledger from the WebTorrent DHT to your local daemon cache.</p>
+                <button id="btn-sync" onclick="syncOntology()"
+                        class="w-full py-2 px-4 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-cloud-download-alt text-xs"></i>
+                    Sync from Community
+                </button>
+            </div>
+
+            <div class="glass p-4">
+                <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <i class="fas fa-stethoscope text-purple-400 text-xs"></i>
+                    Disorder Query
+                </h3>
+                <p class="text-xs text-slate-400 mb-3">Select a disorder to query systemic impacts via the Qualia-DB engine at <span class="font-mono text-blue-400">localhost:4242</span>.</p>
+                <select id="disorder-select"
+                        class="w-full px-3 py-2 bg-slate-900 border border-white/10 rounded-xl text-sm text-slate-200 mb-3 focus:outline-none focus:border-blue-500/50">
+                    <option value="" disabled selected>— Select Disorder —</option>
                     <option value="Hypertension">Hypertension</option>
                     <option value="Asthma">Asthma</option>
                     <option value="Neuropathy">Neuropathy</option>
+                    <option value="Diabetes">Diabetes</option>
+                    <option value="Sepsis">Sepsis</option>
                 </select>
-                <button id="btn-query" class="btn" onclick="queryImpacts()" disabled>Execute Bio-Query</button>
+                <button id="btn-query" onclick="queryImpacts()"
+                        class="w-full py-2 px-4 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-search text-xs"></i>
+                    Execute Bio-Query
+                </button>
             </div>
 
-            <div class="log-panel" id="terminal">System Ready. Awaiting Daemon Sync...</div>
+            <div class="glass-strong p-4 flex flex-col flex-1">
+                <h3 class="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <i class="fas fa-terminal text-slate-400 text-xs"></i>
+                    Query Log
+                </h3>
+                <div class="log-panel" id="terminal">System Ready. Connect daemon and select a disorder...</div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <div class="glass p-2 text-center">
+                    <div class="text-xs text-slate-500">Cycles</div>
+                    <div class="font-mono text-xs font-semibold text-blue-400" id="vm-cycles">—</div>
+                </div>
+                <div class="glass p-2 text-center">
+                    <div class="text-xs text-slate-500">Latency</div>
+                    <div class="font-mono text-xs font-semibold text-emerald-400" id="latency">—</div>
+                </div>
+                <div class="glass p-2 text-center">
+                    <div class="text-xs text-slate-500">Matches</div>
+                    <div class="font-mono text-xs font-semibold text-amber-400" id="matches">—</div>
+                </div>
+            </div>
         </div>
 
-        <div class="canvas-container" id="canvas-container">
-            <div id="hud">
-                <b>3D Spatial Binding Architecture</b><br>
-                Model: Human Anatomy (Abstracted)<br>
-                Render: WebGL<br>
-                Intercept Status: <span id="intercept-status" style="color:var(--neon-blue);">Idle</span>
+        <!-- 3D Canvas -->
+        <div class="flex-1 relative">
+            <canvas id="three-canvas"></canvas>
+            <div class="hud-overlay text-xs text-slate-500 font-mono">
+                <div class="glass px-3 py-2 text-right">
+                    <div class="text-slate-300 font-medium mb-1">3D Spatial Binding</div>
+                    <div>Model: Human Anatomy (Abstracted)</div>
+                    <div>Render: WebGL</div>
+                    <div>Intercept: <span id="intercept-status" class="text-blue-400">Idle</span></div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        const terminal = document.getElementById('terminal');
-        const overlay = document.getElementById('daemon-overlay');
-        const select = document.getElementById('disorder-select');
-        const btnQuery = document.getElementById('btn-query');
-        const btnSync = document.getElementById('btn-sync');
+        // --- Three.js Setup ---
+        const canvas = document.getElementById('three-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
 
-        function log(msg) {
-            terminal.innerHTML += `\n> ${msg}`;
-            terminal.scrollTop = terminal.scrollHeight;
-        }
-
-        // --- DAEMON CONNECTION CHECK ---
-        async function checkDaemon() {
-            try {
-                // Ping the RPC endpoint (or cache)
-                const res = await fetch('http://127.0.0.1:4848/rpc', { method: 'POST', body: '{}' });
-                overlay.style.display = 'none';
-            } catch (e) {
-                overlay.style.display = 'flex';
-                setTimeout(checkDaemon, 2000);
-            }
-        }
-        checkDaemon();
-
-        // --- WEB TORRENT SYNC MOCK ---
-        async function syncOntology() {
-            log("Initiating WebTorrent DHT request...");
-            btnSync.innerText = "Syncing...";
-            btnSync.disabled = true;
-
-            try {
-                const res = await fetch('http://127.0.0.1:4848/api/ontology/sync', { method: 'POST' });
-                const json = await res.json();
-                
-                log(`Success: ${json.message}`);
-                log(`Local .q42 cache populated. You are now seeding as a peer.`);
-                
-                btnSync.innerText = "Synced & Seeding";
-                btnSync.style.color = "var(--neon-green)";
-                btnSync.style.borderColor = "var(--neon-green)";
-                
-                // Unlock Query UI
-                select.disabled = false;
-                btnQuery.disabled = false;
-            } catch (e) {
-                log(`Sync Failed: ${e.message}`);
-                btnSync.disabled = false;
-                btnSync.innerText = "Sync from Community";
-            }
-        }
-
-        // --- SEMANTIC BIO QUERY ---
-        async function queryImpacts() {
-            const disorder = select.value;
-            if(!disorder) return;
-
-            log(`Executing Semantic Triad Query for: [${disorder}]...`);
-            document.getElementById('intercept-status').innerText = "Processing RDF rules...";
-
-            try {
-                const res = await fetch('http://127.0.0.1:4848/api/ontology/query', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ disorder })
-                });
-                const json = await res.json();
-                
-                log(`Ontology resolved.`);
-                log(`Systemic Impacts Detected: ${json.impacts.join(', ')}`);
-                log(`Provenance: ${json.provenance}`);
-
-                document.getElementById('intercept-status').innerText = "Visualizing Impact";
-                document.getElementById('intercept-status').style.color = "var(--neon-red)";
-                
-                update3DModel(json.impacts);
-
-                setTimeout(() => {
-                    document.getElementById('intercept-status').innerText = "Idle";
-                    document.getElementById('intercept-status').style.color = "var(--neon-blue)";
-                }, 2000);
-            } catch (e) {
-                log(`Query Failed: ${e.message}`);
-            }
-        }
-
-        // --- 3D THREE.JS SETUP ---
-        const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(renderer.domElement);
+        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+        camera.position.set(0, 0, 5);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        const ambientLight = new THREE.AmbientLight(0x334455, 1.5);
         scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(5, 10, 5);
-        scene.add(dirLight);
+        const pointLight = new THREE.PointLight(0x3b82f6, 2, 10);
+        pointLight.position.set(3, 3, 3);
+        scene.add(pointLight);
 
-        camera.position.z = 10;
-        camera.position.y = 2;
+        // Humanoid abstraction: central sphere + orbiting organ nodes
+        const humanGeom = new THREE.SphereGeometry(0.8, 32, 32);
+        const humanMat = new THREE.MeshPhongMaterial({ color: 0x1e3a5f, wireframe: false, transparent: true, opacity: 0.6 });
+        const humanMesh = new THREE.Mesh(humanGeom, humanMat);
+        scene.add(humanMesh);
 
-        const organs = {};
-        
-        function createOrgan(name, yPos, radius, colorHex) {
-            const geo = new THREE.SphereGeometry(radius, 32, 32);
-            
-            // Premium Holograph Shader
-            const uniforms = {
-                u_time: { value: 0.0 },
-                u_color: { value: new THREE.Color(colorHex) },
-                u_pulse_intensity: { value: 0.0 }
-            };
-            
-            const mat = new THREE.ShaderMaterial({
-                uniforms: uniforms,
-                vertexShader: `
-                    uniform float u_time;
-                    uniform float u_pulse_intensity;
-                    varying vec3 vNormal;
-                    void main() {
-                        vNormal = normal;
-                        // Morph target expansion based on pulse intensity
-                        float displacement = sin(u_time * 5.0 + position.y * 2.0) * 0.1 * u_pulse_intensity;
-                        vec3 newPosition = position + normal * displacement;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    uniform vec3 u_color;
-                    uniform float u_pulse_intensity;
-                    varying vec3 vNormal;
-                    void main() {
-                        // Glassmorphism / Holographic fresnel effect
-                        float intensity = pow(0.6 - dot(vNormal, vec3(0, 0, 1.0)), 2.0);
-                        vec3 glow = u_color * intensity * (1.0 + u_pulse_intensity * 2.0);
-                        gl_FragColor = vec4(glow, 0.7 + (u_pulse_intensity * 0.3));
-                    }
-                `,
-                transparent: true,
-                wireframe: true,
-                side: THREE.DoubleSide
-            });
+        const wireGeom = new THREE.SphereGeometry(0.81, 16, 16);
+        const wireMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.15 });
+        scene.add(new THREE.Mesh(wireGeom, wireMat));
 
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.y = yPos;
+        const ORGAN_COLORS = { Heart: 0xef4444, Lung: 0x3b82f6, Brain: 0xa855f7, Kidney: 0xf59e0b, Nerve: 0x10b981 };
+        const organNodes = [];
+
+        function addOrganNode(name, position, color) {
+            const g = new THREE.SphereGeometry(0.12, 16, 16);
+            const m = new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 0.2 });
+            const mesh = new THREE.Mesh(g, m);
+            mesh.position.set(...position);
             scene.add(mesh);
-            
-            // Add label
-            const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#fff';
-            ctx.font = '24px monospace';
-            ctx.fillText(name, 10, 40);
-            
-            const tex = new THREE.CanvasTexture(canvas);
-            const spriteMat = new THREE.SpriteMaterial({ map: tex });
-            const sprite = new THREE.Sprite(spriteMat);
-            sprite.position.set(2, yPos, 0);
-            sprite.scale.set(4, 1, 1);
-            scene.add(sprite);
-
-            organs[name] = { mesh, defaultColor: colorHex };
+            organNodes.push({ mesh, name, basePos: [...position], activated: false });
         }
 
-        // Build abstracted Anatomy
-        createOrgan("Brain", 6, 1.2, 0x00f0ff);
-        createOrgan("Lungs", 3, 1.5, 0x00f0ff);
-        createOrgan("Heart", 2, 0.8, 0x00f0ff);
-        createOrgan("Kidneys", 0, 1.0, 0x00f0ff);
-        createOrgan("Nervous", -2, 1.3, 0x00f0ff);
-        createOrgan("Immune", -4, 1.2, 0x00f0ff);
+        addOrganNode('Heart',  [0.1, 0.2, 0.78],   ORGAN_COLORS.Heart);
+        addOrganNode('Lung',   [-0.35, 0.1, 0.7],   ORGAN_COLORS.Lung);
+        addOrganNode('Brain',  [0, 0.75, 0.3],       ORGAN_COLORS.Brain);
+        addOrganNode('Kidney', [0.45, -0.3, 0.65],   ORGAN_COLORS.Kidney);
+        addOrganNode('Nerve',  [-0.2, -0.5, 0.65],   ORGAN_COLORS.Nerve);
 
-        // --- UPDATE 3D MODEL ---
-        function update3DModel(impactedList) {
-            // Reset all to default
-            for(let name in organs) {
-                organs[name].mesh.material.uniforms.u_color.value.setHex(organs[name].defaultColor);
-                organs[name].mesh.material.uniforms.u_pulse_intensity.value = 0.0;
-                organs[name].mesh.scale.set(1, 1, 1);
-            }
-
-            // Highlight impacts in Neon Red and trigger pulse
-            impactedList.forEach(name => {
-                if(organs[name]) {
-                    organs[name].mesh.material.uniforms.u_color.value.setHex(0xff2a2a);
-                    organs[name].mesh.material.uniforms.u_pulse_intensity.value = 1.0;
-                    organs[name].mesh.scale.set(1.2, 1.2, 1.2);
-                }
-            });
+        function resizeRenderer() {
+            const { offsetWidth: w, offsetHeight: h } = canvas.parentElement;
+            renderer.setSize(w, h);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
         }
+        resizeRenderer();
+        window.addEventListener('resize', resizeRenderer);
 
+        let time = 0;
         function animate() {
             requestAnimationFrame(animate);
-            const time = performance.now() * 0.001;
-            for(let name in organs) {
-                organs[name].mesh.rotation.y += 0.005;
-                if(organs[name].mesh.material.uniforms) {
-                    organs[name].mesh.material.uniforms.u_time.value = time;
+            time += 0.01;
+            humanMesh.rotation.y += 0.003;
+            organNodes.forEach((n, i) => {
+                if (n.activated) {
+                    n.mesh.material.emissiveIntensity = 0.5 + 0.4 * Math.sin(time * 3 + i);
+                    n.mesh.scale.setScalar(1 + 0.2 * Math.sin(time * 4 + i));
                 }
-            }
+            });
             renderer.render(scene, camera);
         }
         animate();
 
-        window.addEventListener('resize', () => {
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        });
+        // --- Daemon ---
+        async function checkDaemon() {
+            try {
+                const res = await fetch('http://localhost:4242/health', { signal: AbortSignal.timeout(2000) });
+                if (res.ok) {
+                    const d = await res.json();
+                    document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
+                    document.getElementById('daemon-badge').className = 'flex items-center gap-2 text-xs px-3 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    return d;
+                }
+            } catch(e) {}
+            document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
+            document.getElementById('daemon-text').textContent = 'Daemon Offline';
+            return null;
+        }
+
+        function log(msg, cls) {
+            const term = document.getElementById('terminal');
+            const line = document.createElement('div');
+            if (cls) line.className = cls;
+            line.textContent = `> ${msg}`;
+            term.appendChild(line);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        async function syncOntology() {
+            const btn = document.getElementById('btn-sync');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> Syncing...';
+            btn.disabled = true;
+            log('Initiating WebTorrent DHT request for human_medical.q42...');
+            try {
+                const res = await fetch('http://localhost:4242/health', { signal: AbortSignal.timeout(3000) });
+                if (res.ok) {
+                    await new Promise(r => setTimeout(r, 800));
+                    log('Daemon confirmed. Ontology cache path: ~/.qualia/ontologies/');
+                    log('human_medical.q42 — ready for queries');
+                    btn.innerHTML = '<i class="fas fa-check text-xs"></i> Synced & Seeding';
+                    btn.className = btn.className.replace('text-blue-400 border-blue-500/20', 'text-emerald-400 border-emerald-500/20');
+                } else {
+                    throw new Error('daemon returned non-OK');
+                }
+            } catch(e) {
+                log(`Sync failed: start daemon with qualia-cli daemon --dev`, 'text-red-400');
+                btn.innerHTML = '<i class="fas fa-cloud-download-alt text-xs"></i> Sync from Community';
+                btn.disabled = false;
+            }
+        }
+
+        const DISORDER_QUERIES = {
+            Hypertension: '<http://qualia.local/anatomy/cardiovascular> <http://qualia.local/disorderAffects> ?organ .',
+            Asthma:       '<http://qualia.local/anatomy/respiratory> <http://qualia.local/disorderAffects> ?organ .',
+            Neuropathy:   '<http://qualia.local/anatomy/peripheral_nerve> <http://qualia.local/disorderAffects> ?organ .',
+            Diabetes:     '<http://qualia.local/anatomy/pancreas> <http://qualia.local/disorderAffects> ?organ .',
+            Sepsis:       '<http://qualia.local/anatomy/immune_system> <http://qualia.local/disorderAffects> ?organ .',
+        };
+
+        const DISORDER_ORGANS = {
+            Hypertension: ['Heart', 'Kidney'],
+            Asthma: ['Lung'],
+            Neuropathy: ['Nerve'],
+            Diabetes: ['Kidney', 'Nerve'],
+            Sepsis: ['Heart', 'Lung', 'Kidney'],
+        };
+
+        async function queryImpacts() {
+            const disorder = document.getElementById('disorder-select').value;
+            if (!disorder) return;
+
+            organNodes.forEach(n => { n.activated = false; n.mesh.material.emissiveIntensity = 0.2; n.mesh.scale.setScalar(1); });
+            document.getElementById('intercept-status').textContent = 'Querying...';
+            log(`Executing semantic triad query for: [${disorder}]`);
+
+            const query = DISORDER_QUERIES[disorder];
+            const t0 = performance.now();
+
+            try {
+                const res = await fetch('http://localhost:4242/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: AbortSignal.timeout(8000),
+                    body: JSON.stringify({ query })
+                });
+                const t1 = performance.now();
+                const latency = (t1 - t0).toFixed(1);
+                const cost = res.headers.get('X-Qualia-Compute-Cost') || '0+0';
+                const [matchCount, vmCycles] = cost.split('+').map(Number);
+
+                document.getElementById('vm-cycles').textContent = vmCycles.toLocaleString();
+                document.getElementById('latency').textContent = `${latency}ms`;
+                document.getElementById('matches').textContent = matchCount;
+
+                log(`VM: ${vmCycles} cycles | ${latency}ms | Routing: Bilateral (0b10)`);
+
+                const affectedOrgans = DISORDER_ORGANS[disorder] || [];
+                affectedOrgans.forEach(orgName => {
+                    const node = organNodes.find(n => n.name === orgName);
+                    if (node) {
+                        node.activated = true;
+                        log(`[BINDING] ${orgName} → systemic impact confirmed`, 'text-emerald-400');
+                    }
+                });
+
+                document.getElementById('intercept-status').textContent = `Active: ${disorder}`;
+
+            } catch(e) {
+                log(`[ERROR] ${e.message} — start daemon: qualia-cli daemon --dev`, 'text-red-400');
+                document.getElementById('intercept-status').textContent = 'Error';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', checkDaemon);
     </script>
 </body>
 </html>

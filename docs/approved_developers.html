@@ -3,293 +3,327 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB | Symmetrical Linkage (Developer Auth)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Symmetrical Linkage — Developer Auth | Qualia-DB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
         :root {
-            --bg-dark: #0a0a0e;
-            --panel-bg: rgba(20, 20, 25, 0.7);
-            --border-glow: rgba(0, 255, 170, 0.3);
-            --text-main: #e0e0e0;
-            --text-muted: #888;
-            --accent: #00ffaa;
-            --accent-reject: #ff3366;
-            --accent-blue: #33aaff;
-            --glass-border: rgba(255, 255, 255, 0.05);
+            --glass-bg: rgba(17, 23, 31, 0.72);
+            --glass-bg-strong: rgba(17, 23, 31, 0.88);
+            --glass-border: rgba(148, 163, 184, 0.10);
+            --glass-border-strong: rgba(148, 163, 184, 0.18);
         }
-
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        h1 {
-            font-weight: 300;
-            letter-spacing: 2px;
-            text-align: center;
-            margin-bottom: 5px;
-        }
-
-        .subtitle {
-            color: var(--accent);
-            font-size: 0.9em;
-            letter-spacing: 1px;
-            margin-bottom: 40px;
-        }
-
-        .workspace {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
-            width: 100%;
-            max-width: 1400px;
-        }
-
-        .panel {
-            background: var(--panel-bg);
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e17; color: #e2e8f0; }
+        .font-display { font-family: 'Space Grotesk', sans-serif; font-weight: 600; letter-spacing: -0.035em; }
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            display: flex;
-            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+            border-radius: 24px;
         }
-
-        .panel-header {
-            font-weight: 600;
-            color: var(--accent-blue);
-            margin-bottom: 15px;
-            border-bottom: 1px solid var(--glass-border);
-            padding-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .glass-strong {
+            background: var(--glass-bg-strong);
+            backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+            border: 1px solid var(--glass-border-strong);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+            border-radius: 24px;
         }
-
-        .principal-header { color: #bb88ff; }
-        .developer-header { color: #33aaff; }
-        .adjudicator-header { color: var(--accent); }
-
         .commit-log {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #222;
-            border-radius: 6px;
-            padding: 10px;
-            height: 250px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 0.75rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.75rem;
+            line-height: 1.7;
+            color: #94a3b8;
             overflow-y: auto;
-            font-family: monospace;
-            font-size: 0.85em;
-            margin-bottom: 15px;
+            height: 200px;
         }
-
-        .log-entry { margin-bottom: 8px; border-left: 2px solid var(--accent); padding-left: 8px; }
-        .log-entry.human { border-color: #bb88ff; }
-        .log-entry.dev { border-color: #33aaff; }
-        .log-entry.error { border-color: var(--accent-reject); color: var(--accent-reject); }
-
-        button {
-            background: transparent;
-            border: 1px solid var(--accent);
-            color: var(--accent);
-            padding: 10px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9em;
-            transition: all 0.3s;
-            margin-top: 10px;
-        }
-
-        button:hover { background: rgba(0, 255, 170, 0.1); box-shadow: 0 0 10px var(--border-glow); }
-        button.human-btn { border-color: #bb88ff; color: #bb88ff; }
-        button.human-btn:hover { background: rgba(187, 136, 255, 0.1); box-shadow: 0 0 10px rgba(187, 136, 255, 0.3); }
-        button.dev-btn { border-color: #33aaff; color: #33aaff; }
-        button.dev-btn:hover { background: rgba(51, 170, 255, 0.1); box-shadow: 0 0 10px rgba(51, 170, 255, 0.3); }
-        button.danger-btn { border-color: var(--accent-reject); color: var(--accent-reject); }
-        button.danger-btn:hover { background: rgba(255, 51, 102, 0.1); box-shadow: 0 0 10px rgba(255, 51, 102, 0.3); }
-        
-        button:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
-
-        .hash { color: var(--text-muted); font-size: 0.8em; }
-        
-        .status-indicator {
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 600;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid #333;
-            margin-top: 20px;
-            transition: all 0.5s;
-        }
-
-        .status-granted { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 15px rgba(0,255,170,0.2); }
-        .status-denied { border-color: var(--accent-reject); color: var(--accent-reject); box-shadow: 0 0 15px rgba(255,51,102,0.2); }
-
-        .dag-visualization {
-            height: 150px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: relative;
-            margin-top: 20px;
-            padding: 0 20px;
-        }
-        
-        .node {
-            width: 50px; height: 50px; border-radius: 50%;
-            background: #222; border: 2px solid #555;
-            display: flex; align-items: center; justify-content: center;
-            z-index: 2; font-size: 0.8em; font-weight: bold;
-        }
-        
-        .node.a { border-color: #bb88ff; box-shadow: 0 0 10px rgba(187,136,255,0.4); }
-        .node.b { border-color: #33aaff; box-shadow: 0 0 10px rgba(51,170,255,0.4); }
-
-        .link-line {
-            position: absolute;
-            height: 2px;
-            background: #444;
-            top: 50%;
-            left: 70px;
-            right: 70px;
-            z-index: 1;
-            transition: background 0.5s, height 0.5s;
-        }
-
-        .link-line.half-a { background: linear-gradient(90deg, #bb88ff 50%, #444 50%); }
-        .link-line.half-b { background: linear-gradient(90deg, #444 50%, #33aaff 50%); }
-        .link-line.symmetrical { background: var(--accent); height: 4px; box-shadow: 0 0 10px var(--accent); }
-
-        .controls { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
-        
-        /* Nav */
-        .back-nav {
-            position: absolute; top: 20px; left: 20px;
-            color: var(--accent); text-decoration: none; font-size: 0.9em;
-            border: 1px solid var(--accent); padding: 5px 10px; border-radius: 4px;
-        }
-        .back-nav:hover { background: rgba(0,255,170,0.1); }
+        .log-human { border-left: 2px solid #a855f7; padding-left: 8px; margin-bottom: 6px; }
+        .log-dev   { border-left: 2px solid #3b82f6; padding-left: 8px; margin-bottom: 6px; }
+        .log-adj   { border-left: 2px solid #10b981; padding-left: 8px; margin-bottom: 6px; }
+        .log-error { border-left: 2px solid #ef4444; padding-left: 8px; margin-bottom: 6px; color: #ef4444; }
+        .link-svg { width: 100%; height: 60px; }
     </style>
 </head>
-<body>
-    <a href="index.html" class="back-nav">&larr; Back to Homepage</a>
+<body class="bg-[#0a0e17] text-slate-200">
 
-    <h1>SYMMETRICAL LINKAGE</h1>
-    <div class="subtitle">Decentralized Authorization via did:git Commit Symmetries</div>
+    <nav class="glass-strong border-b border-white/10 sticky top-0 z-50" style="border-radius:0">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold tracking-tight text-xl">Qualia</span>
+                            <span class="text-blue-400 text-xl">DB</span>
+                        </div>
+                    </a>
+                    <div class="hidden md:flex items-center gap-6 text-sm">
+                        <a href="index.html" class="hover:text-white transition-colors">Home</a>
+                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="analytics.html" class="hover:text-white transition-colors">Analytics</a>
+                        <a href="library.html" class="hover:text-white transition-colors">Library</a>
+                        <a href="cooperativeproject/index.html" class="hover:text-white transition-colors">Projects</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="daemon-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                        <div class="w-2 h-2 rounded-full bg-slate-500" id="daemon-dot"></div>
+                        <span id="daemon-text">Checking...</span>
+                    </div>
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-    <div class="workspace">
-        
-        <!-- Principal Repo -->
-        <div class="panel">
-            <div class="panel-header principal-header">
-                Resource A (Project Maintainer)
-                <span class="hash">did:git:repoA</span>
+    <div class="max-w-screen-2xl mx-auto px-8 py-10">
+        <div class="mb-8">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm mb-4">
+                <i class="fas fa-key"></i>
+                <span>did:git Symmetrical Linkage • Decentralized Developer Authorization</span>
             </div>
-            <div class="commit-log" id="log-a">
-                <div class="log-entry human">INIT: Repository Genesis</div>
+            <h1 class="font-display text-4xl font-semibold mb-2">Developer Auth</h1>
+            <p class="text-slate-400 max-w-2xl">Mutual authorization via cryptographic DAG commit symmetries. Access is only valid when <em>both</em> parties have signed — verified live through the Qualia-DB N3Logic engine.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Resource A: Maintainer -->
+            <div class="glass p-6 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-purple-400 flex items-center gap-2">
+                            <i class="fas fa-shield-alt"></i> Resource A
+                        </h2>
+                        <div class="text-xs text-slate-500 font-mono">did:git:repoA — Project Maintainer</div>
+                    </div>
+                    <div class="w-2 h-2 rounded-full bg-slate-600" id="dot-a"></div>
+                </div>
+
+                <div class="commit-log flex-1" id="log-a">
+                    <div class="log-human">INIT: Repository Genesis</div>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                    <button id="btn-grant" onclick="grantAccess()"
+                            class="w-full py-2.5 px-4 rounded-2xl border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-sm font-medium transition-all flex items-center justify-center gap-2">
+                        <i class="fas fa-pen-nib text-xs"></i>
+                        Sign Grant Commit → Resource B
+                    </button>
+                    <button id="btn-revoke-a" onclick="revokeAccessA()" disabled
+                            class="w-full py-2 px-4 rounded-2xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/10 text-red-400 text-sm font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <i class="fas fa-times text-xs"></i>
+                        Revoke Grant
+                    </button>
+                </div>
             </div>
-            <div class="controls">
-                <button class="human-btn" id="btn-grant" onclick="grantAccess()">Sign Grant Commit -> Resource B</button>
-                <button class="danger-btn" id="btn-revoke-a" onclick="revokeAccessA()" disabled>Revoke Grant</button>
+
+            <!-- Adjudicator -->
+            <div class="glass-strong p-6 flex flex-col">
+                <div class="text-center mb-4">
+                    <h2 class="text-base font-semibold text-emerald-400 flex items-center justify-center gap-2">
+                        <i class="fas fa-microchip"></i> Qualia-DB Adjudicator
+                    </h2>
+                    <div class="text-xs text-slate-500">N3Logic Edge Node • localhost:4242</div>
+                </div>
+
+                <!-- DAG Visualization -->
+                <div class="relative flex items-center justify-center gap-4 py-6">
+                    <div class="w-14 h-14 rounded-full border-2 border-purple-500/60 bg-purple-500/10 flex items-center justify-center font-bold text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]">A</div>
+                    <div class="flex-1 relative h-4 flex items-center">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="h-0.5 w-full bg-slate-700 rounded-full" id="link-bg"></div>
+                        </div>
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="h-1 rounded-full transition-all duration-700" id="link-fill" style="width:0%"></div>
+                        </div>
+                    </div>
+                    <div class="w-14 h-14 rounded-full border-2 border-blue-500/60 bg-blue-500/10 flex items-center justify-center font-bold text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]">B</div>
+                </div>
+
+                <div id="auth-status" class="p-4 rounded-2xl border border-red-500/20 bg-red-500/10 text-center mb-4">
+                    <div class="font-semibold text-red-400 text-sm">UNAUTHORIZED</div>
+                    <div class="text-xs text-slate-500 mt-1">No symmetrical cryptographic link detected.</div>
+                </div>
+
+                <div class="commit-log flex-1" id="log-adj">
+                    <div class="log-adj">Waiting for DAG updates...</div>
+                </div>
+
+                <div class="mt-3 grid grid-cols-3 gap-2">
+                    <div class="glass p-2 text-center" style="border-radius:12px">
+                        <div class="text-xs text-slate-500">VM Cycles</div>
+                        <div class="font-mono text-xs font-semibold text-blue-400" id="vm-cycles">—</div>
+                    </div>
+                    <div class="glass p-2 text-center" style="border-radius:12px">
+                        <div class="text-xs text-slate-500">Latency</div>
+                        <div class="font-mono text-xs font-semibold text-emerald-400" id="latency">—</div>
+                    </div>
+                    <div class="glass p-2 text-center" style="border-radius:12px">
+                        <div class="text-xs text-slate-500">Status</div>
+                        <div class="font-mono text-xs font-semibold text-amber-400" id="sym-status">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resource B: Developer -->
+            <div class="glass p-6 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-blue-400 flex items-center gap-2">
+                            <i class="fas fa-code"></i> Resource B
+                        </h2>
+                        <div class="text-xs text-slate-500 font-mono">did:git:repoB — Agent / Developer</div>
+                    </div>
+                    <div class="w-2 h-2 rounded-full bg-slate-600" id="dot-b"></div>
+                </div>
+
+                <div class="commit-log flex-1" id="log-b">
+                    <div class="log-dev">INIT: Developer Identity Genesis</div>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                    <button id="btn-accept" onclick="acceptAccess()"
+                            class="w-full py-2.5 px-4 rounded-2xl border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-sm font-medium transition-all flex items-center justify-center gap-2">
+                        <i class="fas fa-pen-nib text-xs"></i>
+                        Sign Accept Commit → Resource A
+                    </button>
+                    <button id="btn-revoke-b" onclick="revokeAccessB()" disabled
+                            class="w-full py-2 px-4 rounded-2xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/10 text-red-400 text-sm font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <i class="fas fa-times text-xs"></i>
+                        Revoke Acceptance
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Adjudicator / Visualization -->
-        <div class="panel">
-            <div class="panel-header adjudicator-header">
-                Qualia-DB (N3Logic Adjudicator)
-                <span>Edge Node</span>
-            </div>
-            
-            <div class="dag-visualization">
-                <div class="node a">A</div>
-                <div class="link-line" id="link-state"></div>
-                <div class="node b">B</div>
-            </div>
-
-            <div class="status-indicator status-denied" id="auth-status">
-                STATUS: UNAUTHORIZED<br>
-                <span style="font-size:0.8em; color:#888; font-weight:normal;">No symmetrical cryptographic link detected.</span>
-            </div>
-
-            <div class="commit-log" id="log-adj" style="margin-top: 20px; height: 100px;">
-                <div class="log-entry">Waiting for DAG updates...</div>
-            </div>
-        </div>
-
-        <!-- Developer Repo -->
-        <div class="panel">
-            <div class="panel-header developer-header">
-                Resource B (Agent / Developer)
-                <span class="hash">did:git:repoB</span>
-            </div>
-            <div class="commit-log" id="log-b">
-                <div class="log-entry dev">INIT: Developer Identity Genesis</div>
-            </div>
-            <div class="controls">
-                <button class="dev-btn" id="btn-accept" onclick="acceptAccess()">Sign Accept Commit -> Resource A</button>
-                <button class="danger-btn" id="btn-revoke-b" onclick="revokeAccessB()" disabled>Revoke Acceptance</button>
+        <!-- How it works -->
+        <div class="glass mt-6 p-6">
+            <h2 class="text-base font-semibold mb-3 flex items-center gap-2">
+                <i class="fas fa-info-circle text-slate-400"></i>
+                How Symmetrical Linkage Works
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-slate-400">
+                <div class="flex gap-3">
+                    <div class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">1</div>
+                    <p>The maintainer signs a grant commit in their <span class="font-mono text-white">did:git</span> repository, referencing the developer's DID.</p>
+                </div>
+                <div class="flex gap-3">
+                    <div class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">2</div>
+                    <p>The developer signs an acceptance commit in their own <span class="font-mono text-white">did:git</span> repository, creating the second half of the link.</p>
+                </div>
+                <div class="flex gap-3">
+                    <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">3</div>
+                    <p>The Qualia-DB N3Logic engine evaluates both DAGs via <span class="font-mono text-white">localhost:4242/query</span>. Access is granted only when the link is <em>symmetrical</em>.</p>
+                </div>
             </div>
         </div>
-
     </div>
 
     <script>
-        let stateA = false; // Principal grants
-        let stateB = false; // Developer accepts
+        let stateA = false;
+        let stateB = false;
 
-        function logEvent(target, msg, type) {
-            const log = document.getElementById(target);
+        function logEvent(targetId, msg, cls) {
+            const log = document.getElementById(targetId);
             const entry = document.createElement('div');
-            entry.className = `log-entry ${type}`;
+            entry.className = cls;
             const ts = new Date().toISOString().substring(11, 19);
             const hash = CryptoJS.SHA256(msg + Date.now()).toString().substring(0, 8);
-            entry.innerHTML = `[${ts}] ${msg} <br><span class="hash">${hash}</span>`;
+            entry.innerHTML = `[${ts}] ${msg} <span class="text-slate-600">#${hash}</span>`;
             log.appendChild(entry);
             log.scrollTop = log.scrollHeight;
         }
 
-        function evaluateSymmetry() {
-            const link = document.getElementById('link-state');
+        async function checkDaemon() {
+            try {
+                const res = await fetch('http://localhost:4242/health', { signal: AbortSignal.timeout(2000) });
+                if (res.ok) {
+                    const d = await res.json();
+                    document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
+                    document.getElementById('daemon-badge').className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    return d;
+                }
+            } catch(e) {}
+            document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
+            document.getElementById('daemon-text').textContent = 'Daemon Offline';
+            return null;
+        }
+
+        async function evaluateSymmetry() {
+            const link = document.getElementById('link-fill');
             const status = document.getElementById('auth-status');
-            
-            link.className = 'link-line'; // reset
+
+            // Build query based on current state
+            const query = stateA && stateB
+                ? '<http://qualia.local/did/repoA> <http://qualia.local/grantedTo> <http://qualia.local/did/repoB> .'
+                : '?s <http://qualia.local/grantedTo> ?o .';
+
+            const t0 = performance.now();
+            try {
+                const res = await fetch('http://localhost:4242/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: AbortSignal.timeout(5000),
+                    body: JSON.stringify({ query })
+                });
+                const t1 = performance.now();
+                const cost = res.headers.get('X-Qualia-Compute-Cost') || '0+0';
+                const [, vmCycles] = cost.split('+').map(Number);
+                document.getElementById('vm-cycles').textContent = vmCycles.toLocaleString();
+                document.getElementById('latency').textContent = `${(t1 - t0).toFixed(1)}ms`;
+            } catch(e) {
+                logEvent('log-adj', `Daemon offline — run: qualia-cli daemon --dev`, 'log-error');
+            }
 
             if (stateA && stateB) {
-                link.classList.add('symmetrical');
-                status.className = 'status-indicator status-granted';
-                status.innerHTML = 'STATUS: AUTHORIZED<br><span style="font-size:0.8em; font-weight:normal; color:#ddd;">Symmetrical Link Verified. Developer can push code.</span>';
-                logEvent('log-adj', 'Symmetry Achieved. Auth Token Generated locally.', '');
+                link.style.cssText = 'width:100%; background: linear-gradient(90deg, #a855f7, #10b981, #3b82f6); box-shadow: 0 0 12px rgba(16,185,129,0.4);';
+                status.className = 'p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-center mb-4';
+                status.innerHTML = '<div class="font-semibold text-emerald-400 text-sm">AUTHORIZED</div><div class="text-xs text-slate-400 mt-1">Symmetrical link verified. Developer can push code.</div>';
+                document.getElementById('sym-status').textContent = 'FULL';
+                document.getElementById('dot-a').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                document.getElementById('dot-b').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                logEvent('log-adj', 'Symmetry achieved. Auth token generated locally.', 'log-adj');
             } else if (stateA) {
-                link.classList.add('half-a');
-                status.className = 'status-indicator status-denied';
-                status.innerHTML = 'STATUS: PENDING<br><span style="font-size:0.8em; font-weight:normal; color:#888;">Maintainer granted, waiting on Developer acceptance.</span>';
-                logEvent('log-adj', 'Partial Link Detected (A -> B). Evaluating as FALSE.', 'error');
+                link.style.cssText = 'width:50%; background: #a855f7;';
+                status.className = 'p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-center mb-4';
+                status.innerHTML = '<div class="font-semibold text-amber-400 text-sm">PENDING</div><div class="text-xs text-slate-400 mt-1">Maintainer granted — awaiting Developer acceptance.</div>';
+                document.getElementById('sym-status').textContent = '½';
+                document.getElementById('dot-a').className = 'w-2 h-2 rounded-full bg-amber-400';
+                logEvent('log-adj', 'Partial link (A→B). Evaluating as FALSE.', 'log-error');
             } else if (stateB) {
-                link.classList.add('half-b');
-                status.className = 'status-indicator status-denied';
-                status.innerHTML = 'STATUS: DENIED<br><span style="font-size:0.8em; font-weight:normal; color:#888;">Developer accepted, but Maintainer has not granted.</span>';
-                logEvent('log-adj', 'Partial Link Detected (B -> A). Evaluating as FALSE.', 'error');
+                link.style.cssText = 'width:50%; margin-left:50%; background: #3b82f6;';
+                status.className = 'p-4 rounded-2xl border border-red-500/20 bg-red-500/10 text-center mb-4';
+                status.innerHTML = '<div class="font-semibold text-red-400 text-sm">DENIED</div><div class="text-xs text-slate-400 mt-1">Developer accepted but Maintainer has not granted.</div>';
+                document.getElementById('sym-status').textContent = '½';
+                document.getElementById('dot-b').className = 'w-2 h-2 rounded-full bg-amber-400';
+                logEvent('log-adj', 'Partial link (B→A). Evaluating as FALSE.', 'log-error');
             } else {
-                status.className = 'status-indicator status-denied';
-                status.innerHTML = 'STATUS: UNAUTHORIZED<br><span style="font-size:0.8em; font-weight:normal; color:#888;">No symmetrical cryptographic link detected.</span>';
-                logEvent('log-adj', 'DAGs evaluated. Zero-link state.', 'error');
+                link.style.cssText = 'width:0%';
+                status.className = 'p-4 rounded-2xl border border-red-500/20 bg-red-500/10 text-center mb-4';
+                status.innerHTML = '<div class="font-semibold text-red-400 text-sm">UNAUTHORIZED</div><div class="text-xs text-slate-500 mt-1">No symmetrical cryptographic link detected.</div>';
+                document.getElementById('sym-status').textContent = 'NONE';
+                document.getElementById('dot-a').className = 'w-2 h-2 rounded-full bg-slate-600';
+                document.getElementById('dot-b').className = 'w-2 h-2 rounded-full bg-slate-600';
+                logEvent('log-adj', 'DAGs evaluated. Zero-link state.', 'log-error');
             }
         }
 
         function grantAccess() {
             stateA = true;
-            logEvent('log-a', 'Signed `Commit: Grant WriteAccess to did:git:repoB`', 'human');
+            logEvent('log-a', 'Signed: Grant WriteAccess to did:git:repoB', 'log-human');
             document.getElementById('btn-grant').disabled = true;
             document.getElementById('btn-revoke-a').disabled = false;
             evaluateSymmetry();
@@ -297,7 +331,7 @@
 
         function revokeAccessA() {
             stateA = false;
-            logEvent('log-a', 'Signed `Commit: Revoke WriteAccess from did:git:repoB`', 'human');
+            logEvent('log-a', 'Signed: Revoke WriteAccess from did:git:repoB', 'log-human');
             document.getElementById('btn-grant').disabled = false;
             document.getElementById('btn-revoke-a').disabled = true;
             evaluateSymmetry();
@@ -305,7 +339,7 @@
 
         function acceptAccess() {
             stateB = true;
-            logEvent('log-b', 'Signed `Commit: Accept WriteAccess for did:git:repoA`', 'dev');
+            logEvent('log-b', 'Signed: Accept WriteAccess for did:git:repoA', 'log-dev');
             document.getElementById('btn-accept').disabled = true;
             document.getElementById('btn-revoke-b').disabled = false;
             evaluateSymmetry();
@@ -313,11 +347,13 @@
 
         function revokeAccessB() {
             stateB = false;
-            logEvent('log-b', 'Signed `Commit: Drop WriteAccess for did:git:repoA`', 'dev');
+            logEvent('log-b', 'Signed: Drop WriteAccess for did:git:repoA', 'log-dev');
             document.getElementById('btn-accept').disabled = false;
             document.getElementById('btn-revoke-b').disabled = true;
             evaluateSymmetry();
         }
+
+        window.addEventListener('DOMContentLoaded', checkDaemon);
     </script>
 </body>
 </html>

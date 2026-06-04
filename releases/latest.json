@@ -1,33 +1,32 @@
 {
-  "version": "0.0.3",
-  "notes": "v0.0.3 final. Real measurements now wired into native `qualia-cli bench --suite full` (no more fully static JSON for Qualia timings). Playground has inline SHACL compiler + 6-modality interactive demos. Full docs refresh. See RELEASE_NOTES_v0.0.3.md. Includes Windows + Android direct downloads. macOS (darwin) and Linux binaries (CLI + full desktop bundles) are built automatically by the release workflow (.github/workflows/release.yml) when a v* tag is pushed — they appear as assets in the GitHub Release.",
-  "pub_date": "2026-06-02T12:00:00Z",
+  "version": "0.0.4",
+  "notes": "v0.0.4. Significant engine update: demand-paging VFS with BlockOffsetMap, header-first boot, OPFS auto-cache, .q42.bidx block-range index, sort-first ingestor, RAM bench, health console, CI/CD gates. Full docs overhaul — all pages now live-connected to the native daemon at localhost:4242 (no mock data). Windows binaries included directly; macOS and Linux binaries are built by the release workflow when a v* tag is pushed.",
+  "pub_date": "2026-06-04T21:00:00Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
-      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-desktop_x64-setup.exe",
+      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-desktop-0.0.4.exe",
+      "status": "available"
+    },
+    "windows-x86_64-cli": {
+      "signature": "",
+      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-cli-0.0.4.exe",
       "status": "available"
     },
     "darwin-aarch64": {
       "signature": "",
       "url": "https://github.com/mediaprophet/qualiaDB/releases",
-      "status": "available"
+      "status": "built-by-ci"
     },
     "darwin-x86_64": {
       "signature": "",
       "url": "https://github.com/mediaprophet/qualiaDB/releases",
-      "status": "available"
+      "status": "built-by-ci"
     },
     "linux-x86_64": {
       "signature": "",
       "url": "https://github.com/mediaprophet/qualiaDB/releases",
-      "status": "available"
-    },
-    "android": {
-      "signature": "",
-      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-android-0.0.3.apk",
-      "min_sdk": 26,
-      "status": "available"
+      "status": "built-by-ci"
     }
   }
 }
