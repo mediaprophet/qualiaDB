@@ -3,380 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB | The 512MB Human-Centric Reality</title>
+    <title>Qualia-DB | Human-Centric Semantic Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        :root {
-            --bg-dark: #050505;
-            --neon-blue: #00f0ff;
-            --neon-purple: #b026ff;
-            --neon-gold: #ffd700;
-            --glass-bg: rgba(20, 20, 25, 0.6);
-            --glass-border: rgba(255, 255, 255, 0.1);
-        }
-
-        body {
-            margin: 0; padding: 0;
-            background: radial-gradient(circle at center, #111 0%, var(--bg-dark) 100%);
-            color: #fff; font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            min-height: 100vh; overflow-x: hidden;
-        }
-
-        .grid-bg {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-image: linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px; z-index: -1; animation: gridMove 30s linear infinite;
-        }
-        @keyframes gridMove { 100% { transform: translateY(50px); } }
-
-        .container {
-            max-width: 1200px; margin: 0 auto; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; text-align: center;
-        }
-
-        h1 {
-            font-size: 4rem; font-weight: 900; margin: 0 0 1rem 0; letter-spacing: 2px;
-            background: linear-gradient(135deg, #fff, var(--neon-blue));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-
-        .tagline { font-size: 1.5rem; color: #888; margin-bottom: 4rem; max-width: 800px; line-height: 1.4; }
-
-        .nav-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; width: 100%;
-        }
-
-        .card {
-            background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border);
-            border-radius: 16px; padding: 2.5rem; text-decoration: none; color: inherit;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; align-items: flex-start; text-align: left;
-            position: relative; overflow: hidden;
-        }
-
-        .card::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: var(--neon-blue); transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease;
-        }
-
-        .card:hover { transform: translateY(-10px); box-shadow: 0 15px 35px rgba(0, 240, 255, 0.1); border-color: rgba(0, 240, 255, 0.3); }
-        .card:hover::before { transform: scaleX(1); }
-        
-        .card.purple::before { background: var(--neon-purple); }
-        .card.purple:hover { box-shadow: 0 15px 35px rgba(176, 38, 255, 0.1); border-color: rgba(176, 38, 255, 0.3); }
-
-        .card.gold::before { background: var(--neon-gold); }
-        .card.gold:hover { box-shadow: 0 15px 35px rgba(255, 215, 0, 0.1); border-color: rgba(255, 215, 0, 0.3); }
-
-        .card h2 { font-size: 1.8rem; margin: 0 0 1rem 0; color: #fff; }
-        .card p { color: #aaa; margin: 0; line-height: 1.5; }
-
-        /* ── Install Banner ── */
-        .install-banner {
-            width: 100%; margin-bottom: 3rem;
-            background: rgba(0,240,255,0.04);
-            border: 1px solid rgba(0,240,255,0.18);
-            border-radius: 20px; padding: 2.5rem 2rem;
-            display: flex; flex-direction: column; align-items: center; gap: 1.2rem;
-            position: relative; overflow: hidden;
-        }
-        .install-banner::before {
-            content: ''; position: absolute; inset: 0;
-            background: radial-gradient(ellipse at 50% 0%, rgba(0,240,255,0.06) 0%, transparent 70%);
-            pointer-events: none;
-        }
-        .install-banner .platform-label {
-            font-size: 0.78rem; letter-spacing: 2px; color: #555; text-transform: uppercase;
-        }
-        .install-banner h2 {
-            font-size: 1.6rem; font-weight: 700; margin: 0; color: #fff;
-        }
-        .install-banner .platform-detected {
-            display: inline-flex; align-items: center; gap: 0.5rem;
-            background: rgba(255,255,255,0.04); border: 1px solid #222;
-            border-radius: 30px; padding: 0.35rem 1rem; font-size: 0.82rem; color: #888;
-        }
-        .install-btn-row { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
-        .install-btn {
-            display: inline-flex; align-items: center; gap: 0.6rem;
-            padding: 0.85rem 2rem; border-radius: 10px; font-size: 0.95rem; font-weight: 700;
-            cursor: pointer; text-decoration: none; transition: all 0.25s;
-            border: none; font-family: 'Inter', system-ui, sans-serif;
-        }
-        .install-btn-primary {
-            background: linear-gradient(135deg, #00f0ff, #0077ff);
-            color: #000; box-shadow: 0 0 30px rgba(0,240,255,0.25);
-        }
-        .install-btn-primary:hover { transform: translateY(-3px); box-shadow: 0 6px 40px rgba(0,240,255,0.4); }
-        .install-btn-secondary {
-            background: transparent; color: #aaa;
-            border: 1px solid #333;
-        }
-        .install-btn-secondary:hover { border-color: #555; color: #fff; background: rgba(255,255,255,0.04); }
-        .install-note { font-size: 0.78rem; color: #444; }
-        .install-note a { color: #555; }
-        .install-unsupported {
-            color: #555; font-size: 0.88rem; font-style: italic;
-        }
-        .os-icon { font-size: 1.2rem; }
-        /* hide all platform sections by default — JS reveals the right one */
-        .platform-win, .platform-mac, .platform-linux, .platform-android, .platform-unknown { display: none; }
-
-        /* Mobile friendliness */
-        @media (max-width: 640px) {
-            .container { padding: 2rem 1rem; }
-            h1 { font-size: 2.8rem; }
-            .nav-grid { grid-template-columns: 1fr; gap: 1rem; }
-            .card { padding: 1.25rem; }
-            .install-banner { padding: 1.5rem 1rem; }
-            .install-btn { padding: 0.6rem 1rem; font-size: 0.85rem; }
-        }
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        .feature-card { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s; }
+        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); }
     </style>
 </head>
-<body>
-    <div class="grid-bg"></div>
-    <div class="container">
-        <h1>Qualia-DB</h1>
-        <div style="font-size:1.1rem; color:#00f0ff; margin-bottom:0.5rem; font-weight:500;">
-            Personal semantic infrastructure that refuses to betray you.
-        </div>
-        <div class="tagline">The 512MB Zero-Allocation Semantic Engine. Built for Personal Devices. Secured by Cryptographic Human Agency Records.</div>
-        <div style="margin-bottom:2rem;font-size:0.8rem;background:rgba(0,240,255,0.06);border:1px solid rgba(0,240,255,0.2);padding:6px 14px;border-radius:999px;display:inline-flex;gap:8px;align-items:center;">
-            <span style="color:#67e8f9;">✨ New:</span> SHACL→Sentinel Compiler • Defeasible + Omnimodal Logic • 6 Modality Bridges • Lazy SuperBlocks + WebRTC Telemetry • Native CLI <code>bench --suite full</code> (fixed &amp; enhanced) • LZ4 High-Density Blocks • Rio multi-thread ingest
-        </div>
-
-        <!-- ── Platform-aware Install Banner ── -->
-        <div class="install-banner" id="installBanner">
-            <div class="platform-label">Native Desktop Daemon</div>
-            <h2>Install Qualia-DB Locally</h2>
-            <div class="platform-detected" id="platformDetected">
-                <span id="platformIcon">⏳</span>
-                <span id="platformText">Detecting platform…</span>
-            </div>
-
-            <!-- Windows -->
-            <div class="platform-win install-btn-row" id="sectionWin">
-                <a class="install-btn" href="https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-desktop_x64-setup.exe" id="btnWin">
-                    <span class="os-icon">🪟</span> Download Native Windows Client (v0.0.3-dev)
+<body class="bg-zinc-950 text-zinc-200">
+    <!-- Unified Navigation -->
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/95 backdrop-blur-2xl">
+        <div class="max-w-screen-2xl mx-auto px-8 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-x-8">
+                <a href="cooperative.html" class="flex items-center gap-x-3">
+                    <div class="w-8 h-8 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                        <i class="fa-solid fa-users text-white text-lg"></i>
+                    </div>
+                    <span class="font-display text-xl font-semibold tracking-tighter">Cooperative Projects</span>
                 </a>
-                <span style="color:#555;font-size:0.8rem;align-self:center">x64 · local-first semantic graph</span>
-            </div>
-
-            <!-- macOS -->
-            <div class="platform-mac install-btn-row" id="sectionMac">
-                <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank" id="btnMacArm">
-                    <span class="os-icon">🍎</span> macOS binaries (CLI + universal .app/.dmg) built via GitHub Actions
-                </a>
-                <span style="color:#555;font-size:0.8rem;align-self:center">v0.0.3-dev · push v* tag to trigger build</span>
-            </div>
-
-            <!-- Linux -->
-            <div class="platform-linux install-btn-row" id="sectionLinux">
-                <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank" id="btnLinux">
-                    <span class="os-icon">🐧</span> Linux binaries (CLI + AppImage/deb) built via GitHub Actions
-                </a>
-                <span style="color:#555;font-size:0.8rem;align-self:center">v0.0.3-dev · push v* tag to trigger build</span>
-            </div>
-
-            <!-- Android -->
-            <div class="platform-android install-btn-row" id="sectionAndroid">
-                <a class="install-btn install-btn-primary"
-                   href="https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-android-0.0.3-dev.apk"
-                   id="btnAndroid">
-                    <span class="os-icon">🤖</span> Download APK for Android (v0.0.3-dev)
-                </a>
-                <a class="install-btn install-btn-secondary" href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank">
-                    All releases →
-                </a>
-            </div>
-
-            <!-- Unknown / other mobile -->
-            <div class="platform-unknown" id="sectionUnknown">
-                <p class="install-unsupported">
-                    Native install requires Windows 10+, macOS 11+, a 64-bit Linux desktop, or Android 8+.<br>
-                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank">Browse all releases on GitHub →</a>
-                </p>
-            </div>
-
-            <div class="install-note">
-                Open-source · Tauri runtime · builds from source:
-                <a href="https://github.com/mediaprophet/qualiaDB" target="_blank">github.com/mediaprophet/qualiaDB</a>
-                &nbsp;·&nbsp;
-                <a href="https://github.com/mediaprophet/qualiaDB/blob/main/crates/qualia-desktop/README.md" target="_blank">Install docs</a>
-            </div>
-        </div>
-
-        <!-- Prominent "Try in Browser First" CTA -->
-        <div style="text-align:center; margin: -1rem 0 2rem;">
-            <a href="playground/compare.html" class="install-btn install-btn-primary" style="font-size:0.95rem; padding:0.7rem 1.6rem;">
-                Try in Browser First → RDF ↔ .q42 Comparator
-            </a>
-            <span style="margin:0 0.75rem; color:#555;">or</span>
-            <a href="playground/index.html" class="install-btn install-btn-secondary" style="font-size:0.9rem; padding:0.65rem 1.4rem;">
-                Open the Interactive Playground
-            </a>
-        </div>
-
-        <div class="nav-grid">
-            <a href="benchmark.html" class="card">
-                <h2>Dual-Mode Benchmark</h2>
-                <p><strong>Native now fully live:</strong> <code>cargo run -p qualia-cli -- bench --suite full</code> (LZ4 SuperBlocks, Lazy + WebRTC P2P streaming, sysinfo RSS telemetry, live visualizer at benchmark_visualizer.html). Browser WASM shootout still available. 12 categories incl. rights/escrow/nym tests. Also <code>cargo bench -p qualia-core-db</code>.</p>
-                <div style="margin-top:0.75rem; font-size:0.8rem; background:rgba(0,240,255,0.08); padding:6px 8px; border-radius:6px; border:1px solid rgba(0,240,255,0.2);">
-                    <strong>WordNet 523MB → 74.6MB</strong> (85.1% compression via import of data.rdf) • <strong>Streaming first query:</strong> 6.5ms (no full load) • 5.56M quins • Qualia wins on massive lexical graphs under 512MB floor.
+                <div class="hidden md:flex items-center gap-x-6 text-sm">
+                    <a href="cooperative.html" class="hover:text-white/80">Hub</a>
+                    <a href="project-detail.html" class="hover:text-white/80">Project</a>
+                    <a href="kanban.html" class="hover:text-white/80">Kanban</a>
+                    <a href="roadmap.html" class="hover:text-white/80">Roadmap</a>
+                    <a href="benchmark.html" class="hover:text-white/80">Benchmark</a>
                 </div>
-            </a>
+            </div>
+            <div class="flex items-center gap-x-3 text-sm">
+                <a href="contribute.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Contribute</a>
+                <a href="economics.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Economics</a>
+                <a href="canvases.html" class="px-4 py-1.5 hover:bg-white/5 rounded-2xl">Canvases</a>
+            </div>
+        </div>
+    </nav>
 
-            <a href="playground/compare.html" class="card" style="--neon-blue:#a78bfa;border-color:rgba(167,139,250,0.15);">
-                <h2 style="color:#a78bfa;">RDF ↔ .q42 Comparator</h2>
-                <p>Drop your original RDF file and its .q42 output. Instantly see compression ratio, semantic fidelity (quad diff), and parse-time speedup — all in-browser, zero upload.</p>
-                <div style="margin-top:0.6rem; font-size:0.78rem; color:#c4b5fd; background:rgba(167,139,250,0.1); padding:4px 6px; border-radius:4px;">
-                    ★ WordNet: 523 MB RDF → 74.6 MB .q42 (85.1% compression) • 5.56M quins (real `qualia-cli import data.rdf wordnet.q42`)
+    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
+        <!-- Hero -->
+        <div class="text-center mb-12">
+            <div class="inline-flex items-center gap-x-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Human Agency First • 512MB Edge Native</span>
+            </div>
+            <h1 class="font-display text-6xl font-semibold tracking-[-2.5px] mb-4">Qualia-DB</h1>
+            <p class="text-2xl text-white/70 max-w-2xl mx-auto">Personal semantic infrastructure that refuses to betray you.</p>
+            <p class="mt-4 text-white/60 max-w-xl mx-auto">The zero-allocation semantic graph engine. Built for personal devices. Secured by cryptographic human agency records.</p>
+        </div>
+
+        <!-- Install Banner -->
+        <div class="glass-strong rounded-3xl p-8 mb-12 max-w-4xl mx-auto">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div>
+                    <div class="font-semibold text-xl mb-1">Get the Native Experience</div>
+                    <div class="text-white/70">Full performance with local daemon. Works offline and with agents.</div>
                 </div>
+                <div class="flex flex-wrap gap-3">
+                    <a href="https://github.com/mediaprophet/qualiaDB/releases" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-semibold text-sm flex items-center gap-x-2">
+                        <i class="fa-brands fa-github"></i>
+                        <span>Download Releases</span>
+                    </a>
+                    <a href="benchmark.html" class="px-6 py-3 border border-white/20 hover:bg-white/5 rounded-2xl font-semibold text-sm flex items-center gap-x-2">
+                        <span>Try Benchmark</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <a href="benchmark.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                <div class="font-semibold text-xl mb-2">Dual-Mode Benchmark</div>
+                <p class="text-white/70 text-sm">Native + WASM performance comparison across 12+ real-world tests including rights, escrow, and neurosymbolic workloads.</p>
             </a>
 
-            <a href="playground/neuro-symbolic.html" class="card" style="--neon-blue:#34d399;border-color:rgba(52,211,153,0.15);">
-                <h2 style="color:#34d399;">Neurosymbolic Transcompiler</h2>
-                <p>Watch the LLM bridge continuous vector embeddings and discrete RDF symbolic space. Live pipeline: embed → vector-search → governance gate → N-Quad emission → .q42 ledger.</p>
+            <a href="playground/compare.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                <div class="font-semibold text-xl mb-2">RDF ↔ .q42 Comparator</div>
+                <p class="text-white/70 text-sm">Instantly see compression ratio, semantic fidelity, and parse-time speedup. Zero upload required.</p>
             </a>
 
-            <a href="playground/index.html" class="card purple">
-                <h2>Interactive Playground</h2>
-                <p>Enter the data-modeling sandbox. Experiment with the Prolog Sentinel VM and visualize N3 logic graphs directly in the browser.</p>
+            <a href="playground/index.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                <div class="font-semibold text-xl mb-2">Interactive Playground</div>
+                <p class="text-white/70 text-sm">Experiment with the Prolog Sentinel VM and visualize N3 logic graphs directly in the browser.</p>
             </a>
 
-            <!-- Phase 7/8: Wellfair Native Vault & Verifiable Comms -->
-            <a href="https://github.com/mediaprophet/qualiaDB" class="card" style="--neon-blue:#00d2ff;border-color:rgba(0,210,255,0.15);">
-                <h2 style="color:#00d2ff;">Native Mobile Vault & Comms</h2>
-                <p>QualiaDB now natively integrates the monolithic WellFair architectures. It acts as an authoritative vault featuring Deniable Encryption (Sanctuary Lanes) and VC-7/15 Verifiable Communications (Hypermedia WebRTC, P2P Job Offloading, and Maslow VPs).</p>
-            </a>
-            
-            <a href="manuals/developer-guide.md" class="card gold">
-                <h2>Developer Guide</h2>
-                <p>Dive deep: 3-Core Triad, CBOR-LD + LZ4 SuperBlocks, Lazy + WebRTC P2P queries, SHACL/Defeasible/Omnimodal SentinelCompiler + 6 modalities, Author-Scoped Merkle, Fractal Swarm. Plus native `qualia-cli bench --suite full` harness.</p>
-            </a>
-            
-            <a href="utils.html" class="card" style="--neon-blue: #00ff66; border-color: rgba(0, 255, 102, 0.1);">
-                <h2 style="color: #00ff66;">Webizen Utilities</h2>
-                <p>Transcompile legacy ontological datasets (N-Triples, CSV) directly in your browser into native .q42 binary ledgers for WebTorrent seeding.</p>
+            <a href="cooperative.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                <div class="font-semibold text-xl mb-2">Cooperative Projects</div>
+                <p class="text-white/70 text-sm">Fair, relational project management with obligation tracking, Dynamic Equity, and support for both humans and software agents.</p>
             </a>
 
-            <!-- Phase 61: CGAL Computational Geometry Binding -->
-            <a href="spatial.html" class="card" style="--neon-blue: #ff266e; border-color: rgba(255, 38, 110, 0.1);">
-                <h2 style="color: #ff266e;">Spatial Mathematics & CGAL</h2>
-                <p>Qualia-DB isn't just a text ledger. Watch it natively encode complex 3D Point Clouds, Delaunay Triangulations, and CGAL-level Vector Spaces into exact 48-byte mathematical Quins.</p>
+            <a href="https://github.com/mediaprophet/qualiaDB" class="feature-card glass-strong rounded-3xl p-6 block">
+                <div class="font-semibold text-xl mb-2">Native Mobile Vault</div>
+                <p class="text-white/70 text-sm">Wellfair personal vault with deniable encryption, verifiable communications, and Maslow-based wellbeing modeling.</p>
             </a>
 
-            <!-- Phase 62: The Biological Anatomy App -->
-            <a href="anatomy.html" class="card" style="--neon-blue: #00ff66; border-color: rgba(0, 255, 102, 0.1);">
-                <h2 style="color: #00ff66;">Bio-Spatial App</h2>
-                <p>A native Consumer App demonstrating the convergence of Semantic RDF logic and 3D Vector Math. Requires the local Desktop Daemon to function.</p>
+            <a href="manuals/developer-guide.md" class="feature-card glass-strong rounded-3xl p-6 block">
+                <div class="font-semibold text-xl mb-2">Developer Guide</div>
+                <p class="text-white/70 text-sm">Deep dive into the 3-Core Triad, CBOR-LD, Lazy SuperBlocks, Sentinel Compiler, and fractal swarm architecture.</p>
             </a>
+        </div>
 
-            <!-- Phase 63: Federated Analytics & Rights Ontology -->
-            <a href="analytics.html" class="card purple">
-                <h2>Federated Analytics & N3Logic WebID</h2>
-                <p>Historical Social-Web and WebID architectures lacked native N3Logic. Qualia-DB introduces a Sentinel VM that enables true logic-based Content Negotiation, advancing WebID from static profiles to dynamic Rights Ontology endpoints.</p>
-            </a>
-
-            <!-- Phase 64: ILP Monetization & Threshold Shift License -->
-            <a href="monetization.html" class="card gold">
-                <h2>ILP Economic Shift Engine</h2>
-                <p>Break the infinite rent-seeking model. Define exact Obligation Costs using N3Logic Risk-Compounding algorithms, and watch ILP Web Monetization streams automatically trigger the Threshold Shift License.</p>
-            </a>
-
-            <!-- Phase 65: Provenance DAG & Escrow Judgements -->
-            <a href="escrow.html" class="card" style="--neon-blue: #ff2a2a; border-color: rgba(255, 42, 42, 0.1);">
-                <h2 style="color: #ff2a2a;">Semantic Escrow Judgements</h2>
-                <p>Resolve intellectual property disputes mathematically. The N3Logic Sentinel VM evaluates `.q42` Provenance DAGs to detect plagiarism, protect Knowledge Axioms, and issue proportional ILP Escrow splits.</p>
-            </a>
-
-            <!-- Phase 66: DID:GIT Staged Axiomatic Evolution -->
-            <a href="evolution.html" class="card" style="--neon-blue: #00ff66; border-color: rgba(0, 255, 102, 0.1);">
-                <h2 style="color: #00ff66;">DID:GIT Axiomatic Evolution</h2>
-                <p>Projects aren't static; they evolve temporally. Using `did:git` DOAP commits, the N3Logic Sentinel VM forces proposed project rules to be legally validated against the immutable axioms of the prior stage.</p>
-            </a>
-
-            <!-- Phase 67: Cooperative Projects Desktop Toolkit -->
-            <a href="cooperative.html" class="card" style="--neon-blue: #ff9b44; border-color: rgba(255, 155, 68, 0.1);">
-                <h2 style="color: #ff9b44;">Cooperative Workspace</h2>
-                <p>A packaged desktop toolkit for managing collaborative DID:GIT projects. Visualize DOAP stages, manage team Verifiable Credentials, and track ILP Obligation costs in a unified dashboard.</p>
-            </a>
-
-            <!-- Phase 70: Spatio-Temporal Heraldry Demonstrator -->
-            <a href="heraldry.html" class="card" style="--neon-blue: #00e5ff; border-color: rgba(0, 229, 255, 0.1);">
-                <h2 style="color: #00e5ff;">Spatio-Temporal Heraldry</h2>
-                <p>An interactive visualizer demonstrating Linguistic Plurality. See how an offline Agent bridges ceremonial visual arrays into queryable Minkowski geometry using the Sentinel VM.</p>
-            </a>
-
-            <!-- Phase 72: Desktop Network Sentinel -->
-            <a href="network_sentinel.html" class="card" style="--neon-blue: #ff3333; border-color: rgba(255, 51, 51, 0.1);">
-                <h2 style="color: #ff3333;">Network Sentinel (libpcap)</h2>
-                <p>A Wireshark-like runtime for the Desktop Daemon. Simulates how the local edge-node actively intercepts outbound telemetry and blocks unauthorized spyware from exfiltrating data.</p>
-            </a>
-
-            <!-- Phase 76: Approved Developer Credentials -->
-            <a href="approved_developers.html" class="card" style="--neon-blue: #33aaff; border-color: rgba(51, 170, 255, 0.1);">
-                <h2 style="color: #33aaff;">Developer Auth Symmetries</h2>
-                <p>Interactive demonstrator for Decentralized Authorization. Explores how `did:git` symmetrical cryptographic links between Principal and Agent build a Web of Trust, bypassing centralized credential servers.</p>
-            </a>
+        <div class="mt-12 text-center text-white/50 text-sm">
+            Built for sovereignty. Designed for the edge. Powered by human agency.
         </div>
     </div>
-
-<script>
-(function detectPlatform() {
-    const ua = navigator.userAgent;
-    const icon = document.getElementById('platformIcon');
-    const text = document.getElementById('platformText');
-
-    // Prefer the modern API (Chromium 90+) which also distinguishes ARM
-    const uad = navigator.userAgentData;
-
-    function show(section, iconStr, label) {
-        document.getElementById('section' + section).style.display = 'flex';
-        icon.textContent = iconStr;
-        text.textContent = label;
-    }
-
-    // Async path: userAgentData gives us architecture too
-    if (uad && uad.getHighEntropyValues) {
-        uad.getHighEntropyValues(['platform', 'architecture', 'bitness']).then(info => {
-            const platform = (info.platform || '').toLowerCase();
-            const arch     = (info.architecture || '').toLowerCase();
-
-            if (platform.includes('windows')) {
-                show('Win', '🪟', 'Windows ' + (info.bitness === '64' ? 'x64' : 'x86') + ' detected');
-            } else if (platform.includes('mac')) {
-                const chip = arch === 'arm' ? 'Apple Silicon (arm64)' : 'Intel x64';
-                show('Mac', '🍎', 'macOS · ' + chip + ' detected');
-                if (arch !== 'arm') {
-                    const arm = document.getElementById('btnMacArm');
-                    const intel = document.getElementById('btnMacIntel');
-                    arm.classList.remove('install-btn-primary'); arm.classList.add('install-btn-secondary');
-                    intel.classList.remove('install-btn-secondary'); intel.classList.add('install-btn-primary');
-                }
-            } else if (platform.includes('android')) {
-                show('Android', '🤖', 'Android detected — APK download (minSdk 26 / Android 8+)');
-            } else if (platform.includes('linux')) {
-                show('Linux', '🐧', 'Linux x64 detected');
-            } else {
-                show('Unknown', '📱', platform || 'Unsupported platform');
-            }
-        }).catch(() => fallbackDetect(ua, icon, text, show));
-    } else {
-        fallbackDetect(ua, icon, text, show);
-    }
-
-    function fallbackDetect(ua, icon, text, show) {
-        if (/Windows NT/i.test(ua)) {
-            show('Win', '🪟', 'Windows detected');
-        } else if (/Android/i.test(ua)) {
-            show('Android', '🤖', 'Android detected — APK download (requires Android 8+)');
-        } else if (/Macintosh|Mac OS X/i.test(ua)) {
-            show('Mac', '🍎', 'macOS detected (choose your chip below)');
-        } else if (/Linux/i.test(ua)) {
-            show('Linux', '🐧', 'Linux detected');
-        } else {
-            show('Unknown', '📱', /iPhone|iPad/i.test(ua) ? 'iOS — not yet supported' : 'Platform unknown');
-        }
-    }
-})();
-</script>
 </body>
 </html>
