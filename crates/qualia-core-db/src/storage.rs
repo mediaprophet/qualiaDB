@@ -99,3 +99,67 @@ mod tests {
         assert_eq!(metadata.len(), BLOCK_MULTIPLIER_SIZE as u64, "File size is not page aligned to 40,960 bytes");
     }
 }
+
+// -----------------------------------------------------------------------------
+// Phase 5: Virtual File System (VFS) Abstraction
+// -----------------------------------------------------------------------------
+// Provides a unified storage interface for `.q42.bidx` offline index sync.
+// - Uses standard `std::fs` on native/Tauri targets.
+// - Uses Origin Private File System (OPFS) on `wasm32-unknown-unknown` targets.
+
+use std::future::Future;
+use std::pin::Pin;
+
+pub trait VirtualFileSystem {
+    /// Reads a chunk of data from the local storage hierarchy
+    fn read_chunk(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>> + Send>>;
+    
+    /// Writes a chunk of data to the local storage hierarchy
+    fn write_chunk(&self, path: &str, data: &[u8]) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>>;
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub struct NativeVfs;
+
+#[cfg(not(target_arch = "wasm32"))]
+impl VirtualFileSystem for NativeVfs {
+    fn read_chunk(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>> + Send>> {
+        let path = path.to_string();
+        Box::pin(async move {
+            std::fs::read(&path).map_err(|e| e.to_string())
+        })
+    }
+
+    fn write_chunk(&self, path: &str, data: &[u8]) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>> {
+        let path = path.to_string();
+        let data = data.to_vec();
+        Box::pin(async move {
+            std::fs::write(&path, data).map_err(|e| e.to_string())
+        })
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub struct OpfsVfs;
+
+#[cfg(target_arch = "wasm32")]
+impl VirtualFileSystem for OpfsVfs {
+    fn read_chunk(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>> + Send>> {
+        // Scaffolding for WASM OPFS read via web-sys FileSystemSyncAccessHandle
+        let path = path.to_string();
+        Box::pin(async move {
+            // TODO: Implement actual web-sys OPFS bindings for navigator.storage().getDirectory()
+            Ok(vec![])
+        })
+    }
+
+    fn write_chunk(&self, path: &str, data: &[u8]) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>> {
+        // Scaffolding for WASM OPFS write
+        let path = path.to_string();
+        let _data = data.to_vec();
+        Box::pin(async move {
+            // TODO: Implement actual web-sys OPFS bindings
+            Ok(())
+        })
+    }
+}

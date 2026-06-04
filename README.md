@@ -36,6 +36,16 @@ Qualia-DB is three things at once:
 
 ---
 
+## v0.0.5 Highlights
+
+- **Multi-Seed Credential Architecture**: Standalone external account imports for Bitcoin (BTC), eCash (XEC), Nym (Nyx), Ethereum (EVM), and Monero (XMR).
+- **Semantic Typology Routing**: Direct integration with LLaVA/Minkowski engines utilizing Typology Lenses (Meme Engine, Heraldry Engine) to dynamically shape the RDF payloads upon ingestion.
+- **Hardware Orchestration Dashboard**: Explicit real-time WASM boundary visualization exposing atomic background memory backpressure (`nym-telemetry`) and out-of-core disk paging thresholds (`stark-telemetry`).
+
+Full release notes: [docs/manuals/RELEASE_NOTES_v0.0.5.md](docs/manuals/RELEASE_NOTES_v0.0.5.md)
+
+---
+
 ## v0.0.4 Highlights
 
 - **Webizen Rebrand**: The legacy "Sentinel VM" architecture is now fully rebranded to "Webizen" across the codebase to accurately reflect sovereign agency.
@@ -46,8 +56,6 @@ Qualia-DB is three things at once:
 
 Full release notes: [docs/manuals/RELEASE_NOTES_v0.0.4.md](docs/manuals/RELEASE_NOTES_v0.0.4.md)
 
----
-
 ## Documentation
 
 | Document | Purpose |
@@ -55,6 +63,7 @@ Full release notes: [docs/manuals/RELEASE_NOTES_v0.0.4.md](docs/manuals/RELEASE_
 | [Architecture](docs/manuals/ARCHITECTURE.md) | 3-Core Triad, Webizen VM, Rights Ontology, ILP engine, DID:GIT, Fractal Sharding |
 | [Development Guide](docs/manuals/DEVELOPMENT.md) | Build from source, CLI reference, benchmarks, cross-compilation |
 | [Developer Guide](docs/manuals/developer-guide.md) | API reference and integration patterns |
+| [Developing Qualia Apps](docs/manuals/developing-apps.md) | Building UI pipelines, Tauri integrations, and hardware orchestration |
 | [ADRs](docs/manuals/adr/) | Architectural Decision Records (48-byte Quins, zero-alloc compiler, governance) |
 | [Glossary](docs/manuals/glossary.md) | Terms and concepts |
 | [AI Instructions](AI_INSTRUCTIONS.md) | Guidance for AI agents working on this codebase |

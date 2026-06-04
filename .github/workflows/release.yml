@@ -10,12 +10,17 @@ jobs:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false   # let other platforms finish even if one fails
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-14]
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -30,7 +35,6 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      # Tauri v1 on Linux requires WebKit2GTK 4.0 (not 4.1 which is for Tauri v2)
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -46,19 +50,27 @@ jobs:
       - name: Build qualia-cli
         run: cargo build --release -p qualia-cli
 
-      - name: Build qualia-desktop
-        run: cargo build --release -p qualia-desktop
+      - name: Install Frontend Dependencies
+        working-directory: ./crates/qualia-client
+        run: npm install
 
-      # softprops will silently skip files that don't exist on a given platform
-      # (e.g. .exe won't exist on Linux/macOS, bare binary won't exist on Windows)
-      - name: Upload release artefacts
+      - name: Build Tauri App (Installers)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: ./crates/qualia-desktop
+          releaseId: ${{ github.ref_name }}
+          tagName: ${{ github.ref_name }}
+          releaseName: 'QualiaDB ${{ github.ref_name }}'
+          releaseBody: 'See the assets to download this version and install.'
+
+      - name: Upload CLI artefact
         uses: softprops/action-gh-release@v2
         with:
           fail_on_unmatched_files: false
           files: |
             target/release/qualia-cli
             target/release/qualia-cli.exe
-            target/release/qualia-desktop
-            target/release/qualia-desktop.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

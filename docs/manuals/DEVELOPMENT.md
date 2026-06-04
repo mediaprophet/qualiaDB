@@ -38,8 +38,9 @@ GitHub Actions (`.github/workflows/release.yml`) automatically builds on tag pus
 
 To trigger official macOS and Linux builds:
 ```bash
-git tag v0.0.4
-git push origin v0.0.4
+git commit -m "Bump to 0.0.5"
+git tag v0.0.5
+git push origin v0.0.5
 ```
 
 Local cross-compilation of full Tauri desktop apps from Windows is not straightforward (Tauri bundlers are platform-specific). Use CI for macOS/Linux desktop releases.
@@ -185,7 +186,7 @@ The desktop app and browser playground both poll this endpoint; the UI connectio
 
 ## Releases & Versioning
 
-- Current: Core/Desktop/CLI **0.0.4**
-- Pre-built binaries: Windows installer, Android APK, and desktop bundles are in `releases/` (GitHub Releases for signed artefacts).
-- Release notes: [RELEASE_NOTES_v0.0.4.md](RELEASE_NOTES_v0.0.4.md) (coming soon)
+- Current: Core/Desktop/CLI **0.0.5**
+- Next planned: 0.0.6 (WebRTC multi-peer, full sparse queries)
+- Release notes: [RELEASE_NOTES_v0.0.5.md](RELEASE_NOTES_v0.0.5.md) (coming soon)
 - Release config: `release.toml` (cargo-release)

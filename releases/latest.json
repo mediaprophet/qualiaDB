@@ -1,11 +1,16 @@
 {
-  "version": "0.0.4",
-  "notes": "v0.0.4. Significant engine update: demand-paging VFS with BlockOffsetMap, header-first boot, OPFS auto-cache, .q42.bidx block-range index, sort-first ingestor, RAM bench, health console, CI/CD gates. Full docs overhaul — all pages now live-connected to the native daemon at localhost:4242 (no mock data). Windows binaries included directly; macOS and Linux binaries are built by the release workflow when a v* tag is pushed.",
-  "pub_date": "2026-06-04T21:00:00Z",
+  "version": "0.0.5",
+  "notes": "v0.0.5. React/Vite UI overhaul: first-run setup wizard, config & identity persistence, download progress with cancel, multi-chain wallet with transaction history & token import, expanded LLM/ontology catalogues, installer upgrade support.",
+  "pub_date": "2026-06-05T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "",
-      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-desktop-0.0.4.exe",
+      "signature": "PLACEHOLDER",
+      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-desktop-0.0.5-setup.exe",
+      "status": "available"
+    },
+    "windows-x86_64-msi": {
+      "signature": "PLACEHOLDER",
+      "url": "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/releases/qualia-desktop-0.0.5.msi",
       "status": "available"
     },
     "windows-x86_64-cli": {

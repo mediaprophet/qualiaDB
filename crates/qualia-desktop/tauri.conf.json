@@ -1,13 +1,11 @@
 {
   "build": {
-    "beforeBuildCommand": "",
-    "beforeDevCommand": "",
-    "devPath": "../qualia-client",
-    "distDir": "../qualia-client"
+    "devPath": "http://localhost:5173",
+    "distDir": "../qualia-client/dist"
   },
   "package": {
     "productName": "Qualia Desktop",
-    "version": "0.0.3"
+    "version": "0.0.5"
   },
   "tauri": {
     "systemTray": {
@@ -44,7 +42,13 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "resources": []
+      "resources": [],
+      "windows": {
+        "allowDowngrades": true,
+        "nsis": {
+          "installMode": "currentUser"
+        }
+      }
     },
     "windows": [
       {
