@@ -1,19 +1,16 @@
-# Enhanced Evaluation Rules with Project Approaches & Technical Debt
+# Cooperative Evaluation Rules - Peer Review, Praise, Approach Classification
 
 @prefix qp: <https://qualia.org/ontology/cooperative-projects#> .
 @prefix wf: <https://wellfair.org/ns#> .
 @prefix math: <http://www.w3.org/2000/10/swap/math#> .
 
-# Classify Approach
-{ ?proj qp:hasApproach ?approach } => { ?proj wf:approachType ?approach } .
+# Classify Approach Type
+{ ?proj qp:approachType ?type . } => { ?proj wf:classifiedApproach true . } .
 
-# Technical Debt Impact on Reputation & Multiplier
-{ ?proj qp:technicalDebtLevel ?debt .
-  ?debt > 0.6 } => { ?proj qp:expectedMultiplier ?adj .
-    ?proj qp:expectedMultiplier 0.7 math:product ?adj . } .
+# Technical Debt Impact on Multiplier
+{ ?proj qp:technicalDebtLevel ?debt . ?proj qp:expectedMultiplier ?base . } => { (?base (?debt 0.3 math:product) math:subtract) ?adjusted . ?proj qp:expectedMultiplier ?adjusted . } .
 
 # Reward Multiplier Calculation
-{ ?idea qp:riskFactor ?risk ;
-  qp:expectedMultiplier ?base .
-} => { ?idea qp:finalMultiplier ?final .
-  (?base (?risk 0.4 math:product)) math:sum ?final . } .
+{ ?idea qp:approachType qp:RiskyApproach . } => { ?idea qp:expectedMultiplier 12.0 . } .
+
+{ ?idea qp:approachType qp:OptimalApproach . } => { ?idea qp:expectedMultiplier 1.8 . } .
