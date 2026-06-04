@@ -62,6 +62,12 @@ jobs:
           source: ./docs
           destination: ./_site
 
+      - name: Build Rust documentation
+        run: cargo doc --no-deps
+
+      - name: Copy Rust docs to site
+        run: cp -r target/doc ./_site/rustdoc
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
