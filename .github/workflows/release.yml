@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-14]
+        os: [ubuntu-22.04, windows-latest, macos-14]
 
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Install Linux system dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -54,13 +54,16 @@ jobs:
         working-directory: ./crates/qualia-client
         run: npm install
 
+      - name: Build Frontend
+        working-directory: ./crates/qualia-client
+        run: npm run build
+
       - name: Build Tauri App (Installers)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: ./crates/qualia-desktop
-          releaseId: ${{ github.ref_name }}
           tagName: ${{ github.ref_name }}
           releaseName: 'QualiaDB ${{ github.ref_name }}'
           releaseBody: 'See the assets to download this version and install.'
