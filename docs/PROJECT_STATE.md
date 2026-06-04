@@ -59,29 +59,22 @@ Key themes:
 
 ---
 
-## 4. Agent Framework Direction (Latest Focus)
+## 4. Agent Framework & Planning Environment – Implemented
 
-### Core Requirements
-- Software agents should be able to perform defined tasks within projects
-- Agents must be **anchored under a human Principal**
-- Agents **cannot bear legal responsibility** (decision-making and accountability resolve to humans)
-- Distinction needed between:
-  - Software agents
-  - Legal representatives of companies (different rights/obligations)
+**Status: Ontology modeling complete and pushed. Ready for CBOR-LD generation, Sentinel enforcement, and UI.**
 
-### Needed Capabilities
-- Structured **Planning Environment** that includes:
-  - Features, design, specs, functionality
-  - Philosophy and values
-  - Business / Product / Marketing plans
-  - Team plans (human + agent roles)
-- Agents should be able to operate within scoped authority (time-bound, purpose-bound, project-bound)
-- All agent actions must carry clear **provenance** back to the authorizing human
+### Key Additions in `ontology/cooperative-projects.ttl`
+- `qp:SoftwareAgent` with strong Principal anchoring (`qp:authorizedByPrincipal`)
+- Rich `qp:AgentScope` with capabilities, bounds, and re-approval triggers
+- Expressive `qp:PlanningEnvironment` with modular `PlanItem` types
+- Full provenance (`qp:agentProvenance`)
+- Opt-in agent contributions
 
-### Open Questions
-- Scope of agent capabilities (can they create tasks, update plans, negotiate?)
-- How should software agents be identified and authorized? (did:key + scoped credentials?)
-- Should the Planning Environment be a top-level concept or part of every project?
+### Principles Upheld
+- Human Principals retain full responsibility
+- Explicit opt-in scoping and inheritance
+- CBOR-LD native
+- Strong consent boundaries
 
 ---
 
@@ -95,7 +88,7 @@ Key themes:
 
 ## 6. Key Files
 
-- `ontology/cooperative-projects.ttl` — Main ontology + logic
+- `ontology/cooperative-projects.ttl` — Main ontology + Agent Framework
 - `docs/project-detail.html`
 - `docs/cooperative.html`
 - `docs/kanban.html`
@@ -110,18 +103,16 @@ Key themes:
 - Everything is **Principal-centered**
 - Inheritance and propagation are **explicit and reversible**
 - Personal boundaries and consent are protected by default
-- Logic (Sentinel) enforces boundaries rather than UI-level checks
-- CBOR-LD is the runtime format; Turtle/JSON-LD for ontology and documentation
+- Logic (Sentinel) enforces boundaries
+- CBOR-LD is the runtime format
 
 ---
 
-## 8. Recommended Next Steps
+## 8. Next Steps
 
-1. Finalize Agent Framework ontology (`qp:SoftwareAgent`, capabilities, planning structures)
-2. Design the **Planning Environment** concept
-3. Continue UI refinement (especially agent-aware views)
-4. Icon finalization and asset cleanup
+1. Generate CBOR-LD runtime artifacts
+2. Implement Agent UI panels and Planning Environment viewer
+3. Build proposal/review/approval workflows
+4. Expand Sentinel N3Logic rules
 
----
-
-*This document is intended to be updated as the project evolves.*
+*Updated: June 2026 – Agent Framework Milestone Achieved*

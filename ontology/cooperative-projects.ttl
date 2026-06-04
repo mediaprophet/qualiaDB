@@ -1,0 +1,152 @@
+@prefix qp: <https://qualia.org/ontology/cooperative-projects#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+### Base Ontology + Agent Framework & Planning Environment
+
+qp:Project a owl:Class .
+# ... (existing base would go here - placeholder for full)
+
+### === QUALIA AGENT FRAMEWORK v1.0 – AWESOME & PRINCIPLED ===
+
+qp:Agent a owl:Class ;
+    rdfs:comment "Abstract base for entities capable of action." .
+
+qp:SoftwareAgent a owl:Class ;
+    rdfs:subClassOf qp:Agent ;
+    rdfs:comment """Software/AI agent performing scoped, auditable work.
+    Legally and morally anchored exclusively to human Principal(s).
+    Enables powerful, trustworthy collaboration.""" .
+
+qp:AgentScope a owl:Class ;
+    rdfs:comment "Explicit, composable, enforceable permission boundary." .
+
+qp:AgentCapability a owl:Class ;
+    rdfs:subClassOf qp:ActionType ;
+    rdfs:comment "Extensible capability vocabulary for agents." .
+
+# Expressive capability set
+qp:ReadPlanningEnvironment a qp:AgentCapability .
+qp:ProposePlanningUpdate a qp:AgentCapability .
+qp:CreateAndAssignTask a qp:AgentCapability .
+qp:UpdateTaskStatus a qp:AgentCapability .
+qp:MonitorProgress a qp:AgentCapability .
+qp:GeneratePhilosophyAlignedOptions a qp:AgentCapability .
+qp:AlignContentWithValues a qp:AgentCapability .
+qp:NegotiateWithinDefinedBounds a qp:AgentCapability .
+qp:SynthesizeReport a qp:AgentCapability .
+qp:FacilitateCoordination a qp:AgentCapability .
+
+### Agent Core Properties
+
+qp:authorizedByPrincipal a owl:ObjectProperty ;
+    rdfs:domain qp:SoftwareAgent ;
+    rdfs:range qp:Person ;
+    owl:minCardinality "1"^^xsd:nonNegativeInteger ;
+    rdfs:comment "Human Principal(s) who retain full responsibility. Supports multi-Principal shared agents." .
+
+qp:hasAgentScope a owl:ObjectProperty ;
+    rdfs:domain qp:SoftwareAgent ;
+    rdfs:range qp:AgentScope ;
+    owl:cardinality "1"^^xsd:nonNegativeInteger .
+
+qp:operatesWithin a owl:ObjectProperty ;
+    rdfs:domain qp:SoftwareAgent ;
+    rdfs:range qp:Project ;
+    rdfs:comment "Primary project (subproject support via hierarchy + explicit scoping)." .
+
+qp:delegationChain a owl:ObjectProperty ;
+    rdfs:domain qp:SoftwareAgent ;
+    rdfs:range qp:SoftwareAgent .
+
+qp:agentCredential a owl:DatatypeProperty ;
+    rdfs:domain qp:SoftwareAgent ;
+    rdfs:range xsd:string .
+
+qp:agentProvenance a owl:ObjectProperty ;
+    rdfs:domain [ owl:unionOf ( qp:Action qp:PlanItem qp:Task qp:Proposal qp:Update qp:Report ) ] ;
+    rdfs:range qp:SoftwareAgent ;
+    rdfs:comment "Immutable audit trail on every agent touchpoint." .
+
+### AgentScope Properties (Rich & Safe)
+
+qp:allowedCapabilities a owl:ObjectProperty ;
+    rdfs:domain qp:AgentScope ;
+    rdfs:range qp:AgentCapability .
+
+qp:prohibitedActions a owl:ObjectProperty ;
+    rdfs:domain qp:AgentScope ;
+    rdfs:range qp:ActionType .
+
+qp:validUntil a owl:DatatypeProperty ;
+    rdfs:domain qp:AgentScope ;
+    rdfs:range xsd:dateTime .
+
+qp:purposeBound a owl:DatatypeProperty ;
+    rdfs:domain qp:AgentScope ;
+    rdfs:range xsd:string .
+
+qp:maxResourceBound a owl:DatatypeProperty ;
+    rdfs:domain qp:AgentScope ;
+    rdfs:range xsd:decimal .
+
+qp:requiresReapprovalLevel a owl:DatatypeProperty ;
+    rdfs:domain qp:AgentScope ;
+    rdfs:range xsd:string .
+
+### === AWESOME PLANNING ENVIRONMENT ===
+
+qp:PlanningEnvironment a owl:Class ;
+    rdfs:comment """Living, versioned collaborative workspace for philosophy, strategy,
+    specifications, roadmaps, and team dynamics. Built for human + agent co-creation.""" .
+
+qp:hasPlanningEnvironment a owl:ObjectProperty ;
+    rdfs:domain qp:Project ;
+    rdfs:range qp:PlanningEnvironment ;
+    rdfs:comment "Attached to projects/subprojects. Inheritance opt-in via governance rules." .
+
+qp:PlanItem a owl:Class ;
+    rdfs:comment "Abstract base for planning artifacts." .
+
+qp:PhilosophyStatement a owl:Class ;
+    rdfs:subClassOf qp:PlanItem .
+
+qp:FeatureSpec a owl:Class ;
+    rdfs:subClassOf qp:PlanItem .
+
+qp:BusinessModel a owl:Class ;
+    rdfs:subClassOf qp:PlanItem .
+
+qp:ProductVision a owl:Class ;
+    rdfs:subClassOf qp:PlanItem .
+
+qp:TeamStructure a owl:Class ;
+    rdfs:subClassOf qp:PlanItem .
+
+qp:Roadmap a owl:Class ;
+    rdfs:subClassOf qp:PlanItem .
+
+qp:containsPlanItem a owl:ObjectProperty ;
+    rdfs:domain qp:PlanningEnvironment ;
+    rdfs:range qp:PlanItem .
+
+qp:allowsAgentContribution a owl:DatatypeProperty ;
+    rdfs:domain qp:PlanningEnvironment ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Explicit opt-in for agent proposals and enrichment." .
+
+qp:currentVersion a owl:ObjectProperty ;
+    rdfs:domain qp:PlanningEnvironment ;
+    rdfs:range qp:VersionSnapshot .
+
+qp:VersionSnapshot a owl:Class ;
+    rdfs:comment "CBOR-LD immutable snapshot with full provenance chain." .
+
+qp:requiresHumanApproval a owl:DatatypeProperty ;
+    rdfs:domain qp:PlanItem ;
+    rdfs:range xsd:boolean .
+
+### Sentinel Logic Examples (as comments for now)
+# Principal responsibility anchor
+# { ?agent a qp:SoftwareAgent . ?item qp:agentProvenance ?agent . } => { ?agent qp:authorizedByPrincipal ?human . } .
