@@ -42,20 +42,16 @@ pub enum DevRequest<'a> {
 #[derive(Serialize)]
 #[serde(untagged)]
 pub enum DevResponse<'a> {
-    Ok { status: &'static str, data: serde_json::Value },
+    Ping { status: &'static str, version: &'static str },
+    QueryGraph { status: &'static str, results: usize },
+    InjectTestQuin { status: &'static str, injected_quin: bool, routed_to: &'static str },
+    EvaluateDeontic { status: &'static str, result: bool },
     Error { error: &'static str, message: &'a str },
-}
-
-/// Fiduciary verify check
-pub fn verify_token(token: &str) -> bool {
-    if let Ok(env_token) = std::env::var("QUALIA_DEV_TOKEN") {
-        return env_token == token;
-    }
-    false
 }
 
 #[cfg(windows)]
 pub async fn start_dev_protocol_listener() {
+    let expected_token = std::env::var("QUALIA_DEV_TOKEN").unwrap_or_default();
     println!("[Dev Protocol] Listening on Named Pipe: {}", DEV_PIPE_NAME);
     loop {
         let mut server = match ServerOptions::new().create(DEV_PIPE_NAME) {
@@ -67,9 +63,10 @@ pub async fn start_dev_protocol_listener() {
             }
         };
 
+        let token_clone = expected_token.clone();
         if server.connect().await.is_ok() {
             tokio::spawn(async move {
-                handle_connection(server).await;
+                handle_connection(server, token_clone).await;
             });
         }
     }
@@ -77,6 +74,7 @@ pub async fn start_dev_protocol_listener() {
 
 #[cfg(not(windows))]
 pub async fn start_dev_protocol_listener() {
+    let expected_token = std::env::var("QUALIA_DEV_TOKEN").unwrap_or_default();
     let socket_path = "/tmp/qualia-dev.sock";
     let _ = std::fs::remove_file(socket_path);
     let listener = match tokio::net::UnixListener::bind(socket_path) {
@@ -89,24 +87,25 @@ pub async fn start_dev_protocol_listener() {
     println!("[Dev Protocol] Listening on Unix Socket: {}", socket_path);
     loop {
         if let Ok((stream, _)) = listener.accept().await {
+            let token_clone = expected_token.clone();
             tokio::spawn(async move {
-                handle_connection(stream).await;
+                handle_connection(stream, token_clone).await;
             });
         }
     }
 }
 
 #[cfg(windows)]
-async fn handle_connection(mut stream: tokio::net::windows::named_pipe::NamedPipeServer) {
-    process_stream(&mut stream).await;
+async fn handle_connection(mut stream: tokio::net::windows::named_pipe::NamedPipeServer, expected_token: String) {
+    process_stream(&mut stream, &expected_token).await;
 }
 
 #[cfg(not(windows))]
-async fn handle_connection(mut stream: tokio::net::UnixStream) {
-    process_stream(&mut stream).await;
+async fn handle_connection(mut stream: tokio::net::UnixStream, expected_token: String) {
+    process_stream(&mut stream, &expected_token).await;
 }
 
-async fn process_stream<S>(stream: &mut S) 
+async fn process_stream<S>(stream: &mut S, expected_token: &str) 
 where 
     S: AsyncReadExt + AsyncWriteExt + Unpin 
 {
@@ -116,7 +115,7 @@ where
     match stream.read(&mut buffer).await {
         Ok(n) if n > 0 => {
             let slice = &buffer[..n];
-            let response = process_frame(slice);
+            let response = process_frame(slice, expected_token);
             // Zero-allocation serialization
             let mut out_buf = [0u8; MAX_FRAME_SIZE];
             let mut cursor = std::io::Cursor::new(&mut out_buf[..]);
@@ -133,7 +132,7 @@ where
     }
 }
 
-fn process_frame<'a>(frame: &'a [u8]) -> DevResponse<'a> {
+fn process_frame<'a>(frame: &'a [u8], expected_token: &str) -> DevResponse<'a> {
     let req: DevRequest = match serde_json::from_slice(frame) {
         Ok(r) => r,
         Err(_) => return DevResponse::Error { error: "ParseError", message: "Failed to parse JSON" },
@@ -146,13 +145,13 @@ fn process_frame<'a>(frame: &'a [u8]) -> DevResponse<'a> {
         DevRequest::EvaluateDeontic { token, .. } => token,
     };
 
-    if !verify_token(token) {
+    if token != &expected_token {
         return DevResponse::Error { error: "Unauthorized", message: "Invalid QUALIA_DEV_TOKEN" };
     }
 
     match req {
         DevRequest::Ping { .. } => {
-            DevResponse::Ok { status: "ok", data: serde_json::json!({ "version": env!("CARGO_PKG_VERSION") }) }
+            DevResponse::Ping { status: "ok", version: env!("CARGO_PKG_VERSION") }
         }
         DevRequest::QueryGraph { query, sanctuary_override, .. } => {
             // MVP hard-coded response to simulate safe execution
@@ -178,7 +177,7 @@ fn process_frame<'a>(frame: &'a [u8]) -> DevResponse<'a> {
                 valid_results += 1;
             }
 
-            DevResponse::Ok { status: "ok", data: serde_json::json!({ "results": valid_results }) }
+            DevResponse::QueryGraph { status: "ok", results: valid_results }
         }
         DevRequest::InjectTestQuin { mut quin, .. } => {
             // Paraconsistent Routing: isolate dev data
@@ -186,10 +185,10 @@ fn process_frame<'a>(frame: &'a [u8]) -> DevResponse<'a> {
             // Deontic Auditing: mark as SENSITIVITY_RESTRICTED lane
             quin.set_sensitivity_byte(QualiaQuin::SENSITIVITY_RESTRICTED);
             
-            DevResponse::Ok { status: "ok", data: serde_json::json!({ "injected_quin": true, "routed_to": "q42:isolated" }) }
+            DevResponse::InjectTestQuin { status: "ok", injected_quin: true, routed_to: "q42:isolated" }
         }
         DevRequest::EvaluateDeontic { .. } => {
-            DevResponse::Ok { status: "ok", data: serde_json::json!({ "result": true }) }
+            DevResponse::EvaluateDeontic { status: "ok", result: true }
         }
     }
 }
@@ -212,9 +211,8 @@ mod allocation_tests {
         buffer[..payload.len()].copy_from_slice(payload.as_bytes());
         
         let stats_before = dhat::HeapStats::get();
-        std::env::set_var("QUALIA_DEV_TOKEN", "secret");
         
-        let _ = process_frame(&buffer[..payload.len()]);
+        let _ = process_frame(&buffer[..payload.len()], "secret");
         
         let stats_after = dhat::HeapStats::get();
         

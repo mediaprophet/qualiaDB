@@ -26,7 +26,7 @@ pub enum OrchestrationResult {
     /// Output was validated, grounded, and ready to commit to the semantic graph.
     Committed { text: String, provenance_quins: Vec<u64> },
     /// Webizen blocked the operation at pre-flight or post-flight.
-    Blocked { rule_violated: u64, reason: String },
+    Blocked { rule_violated: u64, reason: &'static str },
     /// Inference failed (timeout, backend unavailable, etc.)
     Failed(String),
 }
@@ -131,7 +131,7 @@ impl TaskOrchestrator {
                 if !intent.is_critical() {
                     return OrchestrationResult::Blocked {
                         rule_violated: 0xDEADBEEF, // Mock constant for Thermal Block
-                        reason: "Device critical thermal state. Non-essential inference paused.".into(),
+                        reason: "Device critical thermal state. Non-essential inference paused.",
                     };
                 }
             }
@@ -143,7 +143,22 @@ impl TaskOrchestrator {
 
         // 1. Pre-flight: validate intent against Rights Ontology
         match agent.validate_intent(&intent) {
-            WebizenVerdict::Deny { rule_violated, reason } => {
+            WebizenVerdict::Deny { rule_violated, reason, conduct_record } => {
+                // If the verdict contains a conduct violation Quin, propagate it to the immutable ledger
+                if let Some(quin) = conduct_record {
+                    if let Ok(mut wal) = crate::wal::WriteAheadLog::open(".qualia_conduct.wal") {
+                        let _ = wal.append_mutation(&quin);
+                        
+                        // Cryptographic signing pipeline (using a static key for demonstration of wiring)
+                        let secret = [42u8; 32];
+                        let signing_key = ed25519_dalek::SigningKey::from_bytes(&secret);
+                        let frame = [quin];
+                        let sub_root = crate::agency::compute_scoped_merkle_root(&frame, intent.principal_did_hash);
+                        let _signature = crate::agency::sign_agency_root(&signing_key, &sub_root);
+                        
+                        // In production, the signature and quin would be passed to SuperBlockWriter
+                    }
+                }
                 return OrchestrationResult::Blocked { rule_violated, reason };
             }
             WebizenVerdict::Sanitised { .. } => { /* intent was scrubbed; proceed with caution */ }
@@ -158,7 +173,12 @@ impl TaskOrchestrator {
 
         // 3. Post-flight: validate output grounding
         match agent.validate_output(&output) {
-            WebizenVerdict::Deny { rule_violated, reason } => {
+            WebizenVerdict::Deny { rule_violated, reason, conduct_record } => {
+                if let Some(quin) = conduct_record {
+                    if let Ok(mut wal) = crate::wal::WriteAheadLog::open(".qualia_conduct.wal") {
+                        let _ = wal.append_mutation(&quin);
+                    }
+                }
                 OrchestrationResult::Blocked { rule_violated, reason }
             }
             _ => OrchestrationResult::Committed {
@@ -185,6 +205,7 @@ pub mod tests {
             requested_graph_scope: vec![0xABCD],
             requires_network: false,
             ilp_offer_micro_cents: 0,
+            principal_did_hash: 0,
         };
         let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
         let result = orch.orchestrate_inference(&agent, "Summarise my health graph.", "some_graph_bytes", intent);
@@ -199,6 +220,7 @@ pub mod tests {
             requested_graph_scope: vec![SANCTUARY_SCOPE_WEBIZEN],
             requires_network: false,
             ilp_offer_micro_cents: 0,
+            principal_did_hash: 0,
         };
         let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
         let result = orch.orchestrate_inference(&agent, "Show me sanctuary data.", "ctx", intent);
@@ -220,6 +242,7 @@ pub mod tests {
             requested_graph_scope: vec![],
             requires_network: false,
             ilp_offer_micro_cents: 0,
+            principal_did_hash: 0,
         };
         let orch = TaskOrchestrator::new(Box::new(MockCriticalThermalGovernor));
         let result = orch.orchestrate_inference(&agent, "Query", "ctx", intent);

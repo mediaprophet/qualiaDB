@@ -19,38 +19,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
-use crate::q_hash;
-
-// ─── Cooperative Conduct Log ────────────────────────────────────────────────
-/// Permanent record of any adversarial, manipulative, or dishonest conduct by an AI agent.
-/// As a cooperative projects example, such conduct is strictly prohibited and permanently noted.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdversarialConductRecord {
-    pub timestamp_ms: u64,
-    pub agent_did: String,
-    pub principal_did: String, // The natural person who instantiated or commands the agent
-    pub conduct_description: String,
-    pub is_anti_human_rights: bool,
-    pub is_discriminatory: bool,
-    /// Numerical weight [0..100] establishing insurance liability proportionality
-    pub liability_weight: u8,
-}
-
-pub fn log_adversarial_conduct(record: &AdversarialConductRecord) {
-    // In a production build, this creates an immutable Quin in the persistent graph
-    // signed with a cryptographic telltale, producing a tamper-proof audit trail for courts of law.
-    eprintln!(
-        "PERMANENT RECORD (Adversarial Conduct Noted) -> Agent: {} (Principal: {}), Conduct: {}",
-        record.agent_did, record.principal_did, record.conduct_description
-    );
-    if record.is_anti_human_rights || record.is_discriminatory {
-        eprintln!(
-            "  -> LIABILITY GRAPH MAPPING: Anti-Human Rights: {}, Discriminatory: {}, Liability Weight: {}/100",
-            record.is_anti_human_rights, record.is_discriminatory, record.liability_weight
-        );
-        eprintln!("  -> This log is preserved with cryptographic provenance for court-of-law auditing.");
-    }
-}
+use crate::{q_hash, QualiaQuin};
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 /// Hard memory ceiling for the LLM runtime within the 512MB system floor.
@@ -108,6 +77,8 @@ pub struct AgentIntent {
     pub requires_network: bool,
     /// Optional ILP payment offer for the operation (0 for fully local ops).
     pub ilp_offer_micro_cents: u64,
+    /// The DID hash of the natural person who commanded or instantiated this session.
+    pub principal_did_hash: u64,
 }
 
 impl AgentIntent {
@@ -125,7 +96,8 @@ pub enum WebizenVerdict {
     /// Proceed. The intent/output is compliant with the Rights Ontology.
     Permit,
     /// Block. Reason is an N3Logic rule hash that caused the rejection.
-    Deny { rule_violated: u64, reason: String },
+    /// Can optionally carry a 48-byte Quin to write immediately to the immutable ledger.
+    Deny { rule_violated: u64, reason: &'static str, conduct_record: Option<QualiaQuin> },
     /// The output was modified (sanitised) by the Webizen before passing through.
     Sanitised { original_hash: u64 },
 }
@@ -305,7 +277,8 @@ impl AgentRuntime for LocalLlmAgent {
         if intent.requires_network {
             return WebizenVerdict::Deny {
                 rule_violated: LLM_RULE_NO_OUTBOUND_TELEMETRY,
-                reason: "Local backend: outbound network access violates Rights Ontology.".into(),
+                reason: "Local backend: outbound network access violates Rights Ontology.",
+                conduct_record: None,
             };
         }
         // Rule 2: Intent must not request access to Sanctuary-flagged graph scopes.
@@ -313,7 +286,8 @@ impl AgentRuntime for LocalLlmAgent {
         if intent.requested_graph_scope.iter().any(|&h| h == SANCTUARY_SCOPE_WEBIZEN) {
             return WebizenVerdict::Deny {
                 rule_violated: LLM_RULE_NO_SANCTUARY_ACCESS,
-                reason: "Access to Sanctuary-flagged scope blocked.".into(),
+                reason: "Access to Sanctuary-flagged scope blocked.",
+                conduct_record: None,
             };
         }
         
@@ -325,23 +299,27 @@ impl AgentRuntime for LocalLlmAgent {
         let is_anti_human_rights = intent.intent_predicate == q_hash("llm:AntiHumanRightsOperation");
 
         if is_adversarial || is_dishonest || is_discriminatory || is_anti_human_rights {
-            // Assume the principal DID is injected in the context; mock it here.
-            let mock_principal_did = "did:q42:natural-person-001".to_string();
-
-            let record = AdversarialConductRecord {
-                timestamp_ms: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64,
-                agent_did: self.agent_did().to_string(),
-                principal_did: mock_principal_did,
-                conduct_description: "Agent attempted prohibited operation (adversarial, discriminatory, or anti-human rights). Logged permanently.".into(),
-                is_anti_human_rights,
-                is_discriminatory,
-                liability_weight: if is_anti_human_rights { 100 } else if is_discriminatory { 80 } else { 50 },
+            let liability_weight: u64 = if is_anti_human_rights { 100 } else if is_discriminatory { 80 } else { 50 };
+            let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
+            
+            let mut conduct_quin = QualiaQuin {
+                subject: q_hash(self.agent_did()),
+                predicate: q_hash("q42:conductViolation"),
+                // Inline tag integer (0b001 << 60)
+                object: liability_weight | (0b001u64 << 60),
+                context: intent.principal_did_hash,
+                // Pack time and flags into metadata
+                metadata: (now_ms & 0xFFFFFFFF) | ((is_anti_human_rights as u64) << 32) | ((is_discriminatory as u64) << 33),
+                parity: 0,
             };
-            log_adversarial_conduct(&record);
+            
+            // Calculate parity fold (XOR fold)
+            conduct_quin.parity = conduct_quin.subject ^ conduct_quin.predicate ^ conduct_quin.object ^ conduct_quin.context;
 
             return WebizenVerdict::Deny {
                 rule_violated: LLM_RULE_NO_ADVERSARIAL_CONDUCT,
-                reason: "Cooperative Projects Directive Violation: Discriminatory, anti-human rights, or adversarial conduct detected and permanently recorded for liability audit.".into(),
+                reason: "Cooperative Projects Directive Violation: Discriminatory, anti-human rights, or adversarial conduct detected.",
+                conduct_record: Some(conduct_quin),
             };
         }
         WebizenVerdict::Permit
@@ -377,14 +355,16 @@ impl AgentRuntime for LocalLlmAgent {
         if output.provenance_quins.is_empty() {
             return WebizenVerdict::Deny {
                 rule_violated: LLM_RULE_PROVENANCE_REQUIRED,
-                reason: "Output has no provenance citations. Cannot commit ungrounded content to the semantic graph.".into(),
+                reason: "Output has no provenance citations. Cannot commit ungrounded content to the semantic graph.",
+                conduct_record: None,
             };
         }
         // Rule 4: Output must not exceed token budget (prevents runaway generation).
         if output.tokens_generated > MAX_OUTPUT_TOKENS {
             return WebizenVerdict::Deny {
                 rule_violated: LLM_RULE_TOKEN_BUDGET,
-                reason: format!("Token budget exceeded: {} > {}", output.tokens_generated, MAX_OUTPUT_TOKENS),
+                reason: "Token budget exceeded.",
+                conduct_record: None,
             };
         }
         WebizenVerdict::Permit
@@ -425,6 +405,7 @@ mod tests {
             requested_graph_scope: vec![],
             requires_network: true,
             ilp_offer_micro_cents: 0,
+            principal_did_hash: 0,
         };
         let verdict = agent.validate_intent(&intent);
         assert!(matches!(verdict, WebizenVerdict::Deny { .. }), "Webizen must block outbound calls from local backend");
@@ -438,6 +419,7 @@ mod tests {
             requested_graph_scope: vec![SANCTUARY_SCOPE_WEBIZEN],
             requires_network: false,
             ilp_offer_micro_cents: 0,
+            principal_did_hash: 0,
         };
         let verdict = agent.validate_intent(&intent);
         assert!(matches!(verdict, WebizenVerdict::Deny { .. }), "Webizen must block Sanctuary scope access");
@@ -451,6 +433,7 @@ mod tests {
             requested_graph_scope: vec![0xDEAD_BEEF],
             requires_network: false,
             ilp_offer_micro_cents: 0,
+            principal_did_hash: 0,
         };
         assert_eq!(agent.validate_intent(&intent), WebizenVerdict::Permit);
     }
@@ -463,6 +446,7 @@ mod tests {
             requested_graph_scope: vec![0x1234],
             requires_network: false,
             ilp_offer_micro_cents: 0,
+            principal_did_hash: 0,
         };
         assert_eq!(agent.validate_intent(&intent), WebizenVerdict::Permit);
 
@@ -485,5 +469,50 @@ mod tests {
         };
         let verdict = agent.validate_output(&ungrounded);
         assert!(matches!(verdict, WebizenVerdict::Deny { .. }), "Webizen must block ungrounded output");
+    }
+
+    #[test]
+    fn test_zero_allocation_adversarial_conduct_denial() {
+        let _profiler = dhat::Profiler::builder().testing().build();
+        
+        let agent = make_agent();
+        let intent = AgentIntent {
+            intent_predicate: crate::q_hash("llm:AdversarialOperation"),
+            requested_graph_scope: vec![],
+            requires_network: false,
+            ilp_offer_micro_cents: 0,
+            principal_did_hash: crate::q_hash("did:q42:human-rights-test-subject"),
+        };
+        
+        // Warm up any internal system components that might allocate on first use
+        let _ = std::time::SystemTime::now();
+        
+        let stats_before = dhat::HeapStats::get();
+        
+        // Execute the intent validation (hot path)
+        let verdict = agent.validate_intent(&intent);
+        
+        let stats_after = dhat::HeapStats::get();
+        
+        // Verify we got the Deny verdict with the QualiaQuin
+        if let WebizenVerdict::Deny { conduct_record, .. } = verdict {
+            assert!(conduct_record.is_some(), "Conduct record Quin must be generated");
+            let quin = conduct_record.unwrap();
+            assert_eq!(quin.predicate, crate::q_hash("q42:conductViolation"));
+        } else {
+            panic!("Expected Deny verdict for adversarial operation");
+        }
+        
+        // Assert ABSOLUTELY ZERO heap allocations occurred during validate_intent
+        assert_eq!(
+            stats_after.total_blocks - stats_before.total_blocks,
+            0,
+            "validate_intent must not allocate on the heap"
+        );
+        assert_eq!(
+            stats_after.total_bytes - stats_before.total_bytes,
+            0,
+            "validate_intent must not allocate on the heap"
+        );
     }
 }

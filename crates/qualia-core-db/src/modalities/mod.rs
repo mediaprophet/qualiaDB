@@ -5,3 +5,6 @@ pub mod diffusion;
 pub mod linear;
 pub mod spatio_temporal;
 pub mod epistemic;
+pub mod temporal_ltl;
+pub mod paraconsistent;
+pub mod dialectical;

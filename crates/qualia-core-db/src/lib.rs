@@ -16,6 +16,7 @@ pub mod modalities;
 /// Fully optimized for zero-copy memory operations on post-2020 architectures.
 #[repr(C, align(16))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Zeroize, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct QualiaQuin {
     /// Subject identifier code reference index
     pub subject: u64,

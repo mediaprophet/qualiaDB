@@ -244,13 +244,14 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 }
             },
             SlgOpcode::CheckSubsumption => {
-                let is_subsumed = dl::check_subsumption("sub", "super");
+                let is_subsumed = dl::check_subsumption_quin(frame.subject_reg, frame.object_reg, &[]);
                 if !is_subsumed {
                     return None;
                 }
             },
             SlgOpcode::BranchWorld => {
-                let _worlds = asp::generate_stable_models("current_rule");
+                let mut out_worlds = [0; asp::MAX_STABLE_MODELS];
+                let _count = asp::enumerate_stable_models(frame_quin_or_default(frame), &[], &mut out_worlds);
                 // Fork execution frames...
             },
             SlgOpcode::CheckThreshold => {
@@ -260,7 +261,8 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 }
             },
             SlgOpcode::ConsumeFact => {
-                linear::consume_resource("fact_123");
+                let mut mock_q = crate::QualiaQuin::default();
+                linear::consume_quin(&mut mock_q);
             },
             SlgOpcode::Unify => {
                 // Mock Unification: Binding logic variables
