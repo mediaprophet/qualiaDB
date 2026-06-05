@@ -34,8 +34,19 @@ predicate  [63]      Modality MSB sentinel (e.g. DEFEATER_BIT in deontic)
            [8..62]   Property-path / property IRI hash (q_hash, shifted left 8)
            [0..7]    u8 opcode (0x10+ for all new modalities)
 
-object     [63]      Type tag: 0x0 = IRI hash, 0x1 = f32 (bits 0-31), 0x2 = u32, …
-           [0..62]   Value / target entity hash or tagged scalar
+object     [63]      MSB=1 → did:q42 topological pointer (resolver.rs, identifier.rs)
+           [60..62]  Inline type tag when MSB=0 (authoritative: resolver.rs):
+                       0b000 = IRI/blank-node (FNV-1a hash in bits 0-59)
+                       0b001 = xsd:integer    (value in bits 0-59)
+                       0b010 = xsd:decimal    (value × 10⁶ in bits 0-59)
+                       0b011 = xsd:boolean    (0 or 1 in bit 0)
+                       0b100–111 = reserved
+           [0..59]   Payload (IRI hash, integer value, or decimal value)
+           ⚠ WARNING: logic.rs::extract_float uses 0b001<<60 as an f32 tag
+             with the f32 bits in [0..31]. This CONFLICTS with resolver.rs.
+             See §4-D for the known inconsistency.
+           NOTE: lexicon.rs::generate_60bit_token masks hashes to 60 bits
+             (0x0FFF_FFFF_FFFF_FFFF) so bits 60-63 are free for type tags.
 
 context    [56..63]  Sensitivity class (SENSITIVITY_PUBLIC=0, RESTRICTED=1, CLASSIFIED=2)
            [0..55]   Contract / graph / world DID hash
@@ -59,6 +70,109 @@ parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context (ECC stub)
 | **WebizenVM (logic.rs)** | `logic.rs` | ✅ but LTL opcodes wrong | See §4-B |
 | **SHACL → SlgOpcode compiler** | `shacl_compiler.rs` | ✅ full vocabulary | See §3 for extension points |
 | **SLG Arena** | `webizen.rs` | ✅ 42MB ring buffer | 917,504 Quin slots |
+
+## 2-B. Other Real Implementations (do NOT stub-replace without reading first)
+
+These modules are more complete than the HANDOVER.md Tier-2 list suggests.
+Read them before touching anything adjacent.
+
+### `n3_parser.rs` — Streaming N3 Rule Parser
+
+Four rule types already parsed natively:
+
+| N3 Arrow | `RuleType` | Semantics |
+|----------|-----------|-----------|
+| `=>`     | `Strict`      | Classical modus ponens — forward chaining |
+| `~>`     | `Defeasible`  | Can be overridden by a Defeater rule |
+| `^>`     | `Defeater`    | Overtly defeats a matching Defeasible rule |
+| `-o`     | `Linear`      | Linear logic: premise is *consumed* on firing |
+
+**The `Defeater` (^>) rule type maps directly to `DEFEATER_BIT` in `deontic_logic.rs`.**  
+There is currently no compiler from `Rule { rule_type: Defeater }` → deontic Quin.
+That is Task G (see §3).
+
+Also parses: `#asp {}` blocks → `N3Event::AspBlock`, `qualia:diffuse {}` → `N3Event::DiffuseBlock`.  
+Rule weight: optional float prefix `(0.8) { premise } ~> { conclusion }`.  
+Limitation: only single-triple formulas in premise/conclusion (multi-triple bodies truncated).
+
+### `resolver.rs` — Zero-Allocation Hash → URI Resolver
+
+**This is the authoritative source for `object` field type tags** (bits 60-62 when MSB=0):
+
+```
+INLINE_TAG_INTEGER = 0b001 << 60   → xsd:integer, payload in bits [0..59]
+INLINE_TAG_DECIMAL = 0b010 << 60   → xsd:decimal, value × 10⁶ in bits [0..59]
+INLINE_TAG_BOOLEAN = 0b011 << 60   → xsd:boolean, bit 0 = true/false
+```
+
+`format_ntriples_to(quin, writer)` writes directly to any `impl io::Write`.
+Lexicon priority: lexicon lookup always wins over bit-flag detection, so an FNV-1a
+hash that naturally has bit 63 set is still resolved as an IRI if it's in the dictionary.
+
+### `lexicon.rs` — Multi-Modal Tokeniser
+
+`generate_60bit_token` masks hashes to **60 bits** (`& 0x0FFF_FFFF_FFFF_FFFF`), explicitly
+reserving bits 60-63 for type tags. All new modality object values must respect this mask.
+Supports `SemanticModality::{Text, AudioHash, CeremonialVisual, PhoneticSchema}` — this is
+the multi-cultural tokenisation layer (oral tradition, visual heraldry, non-western phonetics).
+
+### `identifier.rs` — `did:q42` Topological Pointer Parser
+
+`parse_did_q42(b"did:q42:...")` → `u64` with **bit 63 always set**.  
+FNV-1a over the payload, then `| (1u64 << 63)`. Used by `mini_parser.rs` `hash_token()` to
+route `did:q42:` URIs through the direct hardware-pointer path (MSB dispatch in bytecode VM).
+
+### `crdt.rs` — LWW CRDT + Delegated Access + Suspended Transaction Queue
+
+Three components that directly support deontic multi-party contracts:
+
+1. **`CrdtResolver::resolve_lww`** — Lamport clock tie-breaking. Concurrent mutations
+   resolved by `object` magnitude. Pure, zero-alloc over `&QualiaQuin`.
+
+2. **`CrdtResolver::verify_delegation`** — Already does temporal expiry + context-bound
+   check on `DelegatedAccess` grants. Nearly identical logic to deontic expiry — but uses
+   `String` fields (alloc). Should be replaced with hash-based version in a future task.
+
+3. **`SuspendedTransactionQueue`** — Fixed 32-slot array. Holds flattened WebizenVM frames
+   waiting for M:N signatures. `apply_consensus_token(quin)` wakes suspended execution when
+   `collected_signatures >= threshold`. This is the mechanism for multi-party deontic contract
+   ratification (e.g., Guardianship consent flow needing 2-of-3 parties).
+
+### `agency.rs` — Ed25519 Author-Scoped Merkle Root
+
+`compute_scoped_merkle_root(frame, author_did_hash)` — SHA256 over Quins where
+`quin.context == author_did`. Zero-alloc iteration via `bytemuck::cast_ref` (the Quin's
+`bytemuck::Pod` impl enables this).
+
+`derive_lane_key(pin, salt)` — currently SHA256-based (not PBKDF2). Comment says production
+needs 310,000 iterations. This is a known gap — important for Sanctuary Mode security.
+
+### `webizen.rs::AgreementDID::compile_to_super_quins`
+
+Produces 16 Quins in `EnforceBilateralMicroCommons` routing lane (metadata bit pattern
+`0x4000_0000_0000_0002`) from a ratified `AgreementDID`. Uses predicates:
+- `q42:hasGuardian` — party → agent relationship
+- `q42:hasDomainScope` — agreement → domain
+- `q42:requiresConsensus` — M-of-N threshold
+
+**This is NOT deontic encoding** — it encodes the agreement *structure*, not the norms.
+The bridge from `AgreementDID` Quins → deontic norm Quins is also part of Task G.
+
+### `webizen.rs::execute_vm_frame` — Fully Wired Native Dispatch
+
+All `SlgOpcode::Native*` variants are actually wired to real implementations:
+bioinformatics (SW alignment, protein, k-mer, FASTA, Tanimoto), clinical engine
+(Framingham, CHA₂DS₂-VASc, SCORE2, drug interactions, contraindications, FHIR/LOINC),
+organic chemistry (SMILES, InChI, MW, LogP, TPSA, Lipinski, Veber, Ghose, Egan, pKa, Morgan
+fingerprint, Arrhenius, Gibbs, Henderson-Hasselbalch, atom economy, E-factor), physics
+(thermodynamics MCMC, RK4 ODE, DFT ground state, PINN binding affinity), and economics
+(Monte Carlo VaR). Do not assume these are stubs — they call real code.
+
+### `orchestrator.rs` — ModelLifecycle + ThermalGovernor
+
+State machine: `Discovered → MappedToDisk → StreamingVRAM → Active → Scrubbing`.
+`ThermalGovernor` trait with `Cool/Warm/Critical` states — controls 3-core triad parallelism
+budget. `NullThermalGovernor` always returns `Cool` (real governor not yet wired).
 
 ---
 
@@ -283,6 +397,54 @@ NativeEpistemicEval(u8),   // min_certainty parameter
 
 ---
 
+### Task G — N3 → Deontic Quin Bridge
+**File:** `crates/qualia-core-db/src/deontic_logic.rs` (add to existing file)  
+**Depends on:** Nothing new — `n3_parser.rs` and `deontic_logic.rs` already exist.
+
+The N3 parser emits `Rule { rule_type: RuleType::Defeater, premise, conclusion }` for `^>`
+rules, and `RuleType::Defeasible` for `~>`. These map *directly* onto `DEFEATER_BIT` and
+primary deontic norm Quins, but the compiler that does the conversion doesn't exist.
+
+**Add to `deontic_logic.rs`:**
+```rust
+use crate::n3_parser::{Rule, RuleType, Term};
+
+/// Compile an N3 rule into a norm Quin (or a defeater Quin if rule_type is Defeater).
+///
+/// Mapping:
+///   premise.triples[0].subject  → party_did_hash  (who is bound)
+///   premise.triples[0].predicate → property_path_hash  (what action/property)
+///   premise.triples[0].object   → action_object_hash  (target entity)
+///   rule.rule_type              → opcode + is_defeater flag
+///   conclusion.triples[0].subject → contract context hash
+///
+/// Returns None if the rule does not have the expected triple structure.
+pub fn compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u32)
+    -> Option<QualiaQuin>
+```
+
+**Opcode selection:**
+```
+RuleType::Strict      + predicate contains "obligate/must/shall" → OP_OBLIGATE, is_defeater=false
+RuleType::Defeasible  + predicate contains "permit/may/can"      → OP_PERMIT,   is_defeater=false
+RuleType::Defeasible  + predicate contains "forbid/not/prohibit" → OP_FORBID,   is_defeater=false
+RuleType::Defeater    (any ^> rule)                              → OP_PERMIT,   is_defeater=true
+RuleType::Linear      + predicate contains "obligate"            → OP_OBLIGATE, is_defeater=false
+```
+
+Since N3 term IRIs are `Term::Uri(String)` (heap strings from the parser layer), hash them
+inside this function with `q_hash(uri)`. This is the only permitted use of heap strings
+here — they come from the parser's output, not from the evaluator.
+
+**Tests to write:**
+1. `^>` defeater rule → is_defeater=true Quin with DEFEATER_BIT set
+2. `~>` defeasible permit rule → OP_PERMIT norm Quin
+3. `=>` strict obligation → OP_OBLIGATE norm Quin
+4. Malformed rule (no triples) → None
+5. Round-trip: N3 string → N3Parser → compile_n3_rule_to_norm → evaluate_deontic_contract
+
+---
+
 ### Task F — Dialectical Logic (Thesis-Antithesis-Synthesis)
 **File:** `crates/qualia-core-db/src/modalities/dialectical.rs`  
 **Depends on:** Task D-1 (ASP stable models)
@@ -321,6 +483,36 @@ pub fn partition_defeasible(
 These opcodes currently compare a float threshold on a single Quin's object field. They are
 NOT LTL operators. Do not rely on them for temporal reasoning. Use Task B's `evaluate_ltl_trace`
 instead. The existing opcodes are left in place only to avoid breaking existing tests.
+
+### 4-D Object field type-tag conflict between `logic.rs` and `resolver.rs`
+
+`resolver.rs` (authoritative) defines `0b001 << 60` as `xsd:integer`, with the integer
+value in bits 0-59.
+
+`logic.rs::extract_float` treats `0b001 << 60` (= `0x1 << 60`) as an f32 tag, with the
+f32 bit-pattern in bits 0-31.
+
+**These are the same bit pattern used for different purposes.** A Quin written by the
+inference system using `logic.rs` float encoding will be misread by `resolver.rs` as an
+integer, and vice versa.
+
+**Do not "fix" this unilaterally** — it requires alignment across both systems and
+the ingest layer. For now: if your new module emits object values as scalars, use the
+`resolver.rs` convention (bits 0-59 = payload, bits 60-62 = type tag). Document in the
+function's doc comment which convention you're following.
+
+### 4-E `derive_lane_key` in `agency.rs` uses SHA256 instead of PBKDF2
+
+`derive_lane_key(pin, salt)` is a single SHA256 round. The comment says production
+needs `PBKDF2-HMAC-SHA256` with 310,000 iterations. Until fixed, Sanctuary Mode PINs
+are trivially brutable offline. Do not ship this for real user data.
+
+### 4-F `DelegatedAccess` in `crdt.rs` uses `String` (alloc violation)
+
+`principal_did`, `delegate_did`, and `cryptographic_proof` are `String` fields. For
+hot-path Bilateral validation, these should be replaced with `[u8; 32]` hashes (for DIDs)
+and `[u8; 64]` (for Ed25519 signatures). Existing call sites are not in hot paths so this
+is low urgency, but any new code that creates `DelegatedAccess` in a loop is wrong.
 
 ### 4-C `execute_differential_diagnostics` in `logic.rs` returns `Vec`
 Violates zero-heap mandate. Caller should pass `out: &mut [QualiaQuin]`.
@@ -391,6 +583,36 @@ At the end of your session:
 ---
 
 ## 7. Session Notes
+
+### 2026-06-05 — Claude Sonnet 4.6 (Session 2 — full audit)
+
+**Completed:**
+- Full read of: `n3_parser.rs`, `resolver.rs`, `lexicon.rs`, `identifier.rs`,
+  `crdt.rs`, `agency.rs`, `webizen.rs` (full), `orchestrator.rs`, `rules.rs`
+- Corrected `object` field bit-layout table (was wrong, now matches `resolver.rs` canonical)
+- Added §2-B inventory of all non-obvious real implementations
+- Documented N3 `RuleType::Defeater` (^>) ↔ `DEFEATER_BIT` linkage (Task G)
+- Added §4-D (type tag conflict), §4-E (SHA256 PIN → needs PBKDF2), §4-F (DelegatedAccess alloc)
+- Added Task G: N3 → Deontic Quin bridge compiler
+
+**Key findings for future agents:**
+
+1. `resolver.rs` is the canonical object type-tag authority. `logic.rs::extract_float`
+   uses the same bit pattern differently — see §4-D.
+
+2. `n3_parser.rs::RuleType::Defeater` (^>) is the surface syntax for what `deontic_logic.rs`
+   calls `DEFEATER_BIT`. Task G closes this gap.
+
+3. `execute_vm_frame` in `webizen.rs` is FULLY wired — every `SlgOpcode::Native*` calls
+   real implementations. Do not assume these are stubs.
+
+4. `SuspendedTransactionQueue` + `apply_consensus_token` is the M:N signature mechanism
+   for multi-party deontic contract ratification. The flow is already tested.
+
+5. `lexicon.rs::generate_60bit_token` masks to 60 bits. All new object field values must
+   also mask to 60 bits to keep bits 60-63 free for type tags.
+
+---
 
 ### 2026-06-05 — Claude Sonnet 4.6 (Session 1)
 
