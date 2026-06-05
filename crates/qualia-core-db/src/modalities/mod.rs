@@ -4,3 +4,4 @@ pub mod probabilistic;
 pub mod diffusion;
 pub mod linear;
 pub mod spatio_temporal;
+pub mod epistemic;
