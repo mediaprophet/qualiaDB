@@ -1,85 +1,44 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Database, Download, Network, DatabaseZap, Box, ShieldCheck, Activity, Cpu, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Database, Download, Network, DatabaseZap, Box, ShieldCheck, Activity, Cpu, X, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
+
+const ONTOLOGIES_MANIFEST_URL =
+  'https://raw.githubusercontent.com/mediaprophet/qualiaDB/refs/heads/main/manifests/ontologies.json';
 
 type DLStatus = 'idle' | 'downloading' | 'processing' | 'complete' | 'cancelled' | 'error';
 interface DLState { status: DLStatus; progress: number; speedKbps: number; downloadedBytes: number; totalBytes: number; error?: string; }
 
-const ONTOLOGIES = [
-  {
-    id: 'schemaorg', name: 'Schema.org', version: '26.0', type: 'JSON-LD', size: '~1.7 MB',
-    description: 'Structured data vocabulary for the open web — persons, places, events, products.',
-    url: 'https://schema.org/version/latest/schemaorg-current-https.jsonld',
-    filename: 'schemaorg-current.jsonld',
-  },
-  {
-    id: 'skos', name: 'SKOS Core', version: 'W3C 2009', type: 'RDF/XML', size: '~80 KB',
-    description: 'Simple Knowledge Organization System — thesauri, taxonomies, classification schemes.',
-    url: 'https://www.w3.org/2004/02/skos/core.rdf',
-    filename: 'skos-core.rdf',
-  },
-  {
-    id: 'foaf', name: 'FOAF — Friend of a Friend', version: '0.99', type: 'RDF/XML', size: '~60 KB',
-    description: 'Social network and personal profile vocabulary.',
-    url: 'http://xmlns.com/foaf/spec/index.rdf',
-    filename: 'foaf.rdf',
-  },
-  {
-    id: 'dc-terms', name: 'Dublin Core Terms', version: '2020-01-20', type: 'Turtle', size: '~40 KB',
-    description: 'Metadata terms for describing digital resources — creator, date, format, rights.',
-    url: 'https://www.dublincore.org/specifications/dublin-core/dcmi-terms/dublin_core_terms.ttl',
-    filename: 'dublin_core_terms.ttl',
-  },
-  {
-    id: 'prov-o', name: 'PROV-O Provenance', version: 'W3C 2013', type: 'Turtle', size: '~60 KB',
-    description: 'W3C provenance ontology — tracks origin, history, and derivation of data.',
-    url: 'https://www.w3.org/ns/prov-o.ttl',
-    filename: 'prov-o.ttl',
-  },
-  {
-    id: 'geonames', name: 'GeoNames Ontology', version: '3.3', type: 'RDF/XML', size: '~200 KB',
-    description: 'Geographic features, country codes, administrative divisions, coordinates.',
-    url: 'https://www.geonames.org/ontology/ontology_v3.3.rdf',
-    filename: 'geonames.rdf',
-  },
-  {
-    id: 'dbpedia-ont', name: 'DBpedia Ontology', version: '2023.11', type: 'N-Triples', size: '~5.4 MB',
-    description: 'Classes and properties extracted from Wikipedia infoboxes — 760+ classes.',
-    url: 'https://databus.dbpedia.org/dbpedia/ontology/dbo-snapshots/2023.11.01/ontology--DEV_type=parsed_sorted.nt',
-    filename: 'dbpedia-ontology.nt',
-  },
-  {
-    id: 'wordnet-rdf', name: 'English WordNet 2024', version: '2024', type: 'Turtle', size: '~28 MB',
-    description: 'Lexical database for English — synsets, hypernyms, hyponyms, meronyms, 170k entries.',
-    url: 'https://github.com/globalwordnet/english-wordnet/releases/download/2024-edition/english-wordnet-2024.ttl.gz',
-    filename: 'english-wordnet-2024.ttl.gz',
-  },
-  {
-    id: 'chebi', name: 'ChEBI Chemical Entities', version: '231', type: 'OWL', size: '~36 MB',
-    description: 'Chemical Entities of Biological Interest — structures, roles, classifications.',
-    url: 'https://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi.owl',
-    filename: 'chebi.owl',
-  },
-  {
-    id: 'wikidata-props', name: 'Wikidata Properties Dump', version: '2024', type: 'JSON', size: '~400 MB',
-    description: 'All Wikidata property definitions, labels, and descriptions. Large download.',
-    url: 'https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz',
-    filename: 'wikidata-props.json.gz',
-  },
-  {
-    id: 'open-cyc', name: 'OpenCyc 4.0', version: '4.0', type: 'OWL', size: '~128 MB',
-    description: 'Large-scale upper ontology with common-sense knowledge — 239k concepts, 2M assertions.',
-    url: 'https://github.com/asanchez75/opencyc/raw/master/opencyc-latest.owl',
-    filename: 'opencyc.owl',
-  },
+interface OntologyEntry {
+  id: string;
+  name: string;
+  version: string;
+  type: string;
+  size: string;
+  description: string;
+  url: string;
+  filename: string;
+}
+
+const FALLBACK_ONTOLOGIES: OntologyEntry[] = [
+  { id: 'schemaorg',    name: 'Schema.org',               version: '26.0',        type: 'JSON-LD',   size: '~1.7 MB',  description: 'Structured data vocabulary for the open web — persons, places, events, products.',           url: 'https://schema.org/version/latest/schemaorg-current-https.jsonld',                                                                       filename: 'schemaorg-current.jsonld' },
+  { id: 'skos',         name: 'SKOS Core',                 version: 'W3C 2009',    type: 'RDF/XML',   size: '~80 KB',   description: 'Simple Knowledge Organization System — thesauri, taxonomies, classification schemes.',       url: 'https://www.w3.org/2004/02/skos/core.rdf',                                                                                               filename: 'skos-core.rdf' },
+  { id: 'foaf',         name: 'FOAF — Friend of a Friend', version: '0.99',        type: 'RDF/XML',   size: '~60 KB',   description: 'Social network and personal profile vocabulary.',                                            url: 'http://xmlns.com/foaf/spec/index.rdf',                                                                                                   filename: 'foaf.rdf' },
+  { id: 'dc-terms',     name: 'Dublin Core Terms',         version: '2020-01-20',  type: 'Turtle',    size: '~40 KB',   description: 'Metadata terms for describing digital resources — creator, date, format, rights.',          url: 'https://www.dublincore.org/specifications/dublin-core/dcmi-terms/dublin_core_terms.ttl',                                                  filename: 'dublin_core_terms.ttl' },
+  { id: 'prov-o',       name: 'PROV-O Provenance',         version: 'W3C 2013',    type: 'Turtle',    size: '~60 KB',   description: 'W3C provenance ontology — tracks origin, history, and derivation of data.',                url: 'https://www.w3.org/ns/prov-o.ttl',                                                                                                       filename: 'prov-o.ttl' },
+  { id: 'geonames',     name: 'GeoNames Ontology',         version: '3.3',         type: 'RDF/XML',   size: '~200 KB',  description: 'Geographic features, country codes, administrative divisions, coordinates.',               url: 'https://www.geonames.org/ontology/ontology_v3.3.rdf',                                                                                    filename: 'geonames.rdf' },
+  { id: 'dbpedia-ont',  name: 'DBpedia Ontology',          version: '2023.11',     type: 'N-Triples', size: '~5.4 MB',  description: 'Classes and properties extracted from Wikipedia infoboxes — 760+ classes.',               url: 'https://databus.dbpedia.org/dbpedia/ontology/dbo-snapshots/2023.11.01/ontology--DEV_type=parsed_sorted.nt',                              filename: 'dbpedia-ontology.nt' },
+  { id: 'wordnet-rdf',  name: 'English WordNet 2024',      version: '2024',        type: 'Turtle',    size: '~28 MB',   description: 'Lexical database for English — synsets, hypernyms, hyponyms, meronyms, 170k entries.',     url: 'https://github.com/globalwordnet/english-wordnet/releases/download/2024-edition/english-wordnet-2024.ttl.gz',                            filename: 'english-wordnet-2024.ttl.gz' },
+  { id: 'chebi',        name: 'ChEBI Chemical Entities',   version: '231',         type: 'OWL',       size: '~36 MB',   description: 'Chemical Entities of Biological Interest — structures, roles, classifications.',           url: 'https://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi.owl',                                                                          filename: 'chebi.owl' },
+  { id: 'wikidata-props',name:'Wikidata Properties Dump',  version: '2024',        type: 'JSON',      size: '~400 MB',  description: 'All Wikidata property definitions, labels, and descriptions. Large download.',             url: 'https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz',                                                                   filename: 'wikidata-props.json.gz' },
+  { id: 'open-cyc',     name: 'OpenCyc 4.0',               version: '4.0',         type: 'OWL',       size: '~128 MB',  description: 'Large-scale upper ontology with common-sense knowledge — 239k concepts, 2M assertions.',  url: 'https://github.com/asanchez75/opencyc/raw/master/opencyc-latest.owl',                                                                    filename: 'opencyc.owl' },
 ];
 
 const INITIAL_NODES = [
-  { id: '0x7F41A1', label: 'Subject', x: 100, y: 150 },
-  { id: '0x8B22C4', label: 'Predicate (skos:exactMatch)', x: 260, y: 90 },
-  { id: '0x9C33D5', label: 'Object (Dense Tensor)', x: 420, y: 150 },
-  { id: '0xA144E6', label: 'Inferred Entity', x: 260, y: 230 },
+  { id: '0x7F41A1', label: 'Subject',                     x: 100, y: 150 },
+  { id: '0x8B22C4', label: 'Predicate (skos:exactMatch)', x: 260, y: 90  },
+  { id: '0x9C33D5', label: 'Object (Dense Tensor)',        x: 420, y: 150 },
+  { id: '0xA144E6', label: 'Inferred Entity',              x: 260, y: 230 },
 ];
 const INITIAL_EDGES = [
   { source: 0, target: 1, type: 'explicit' },
@@ -143,6 +102,37 @@ export default function OntologyHub() {
   const [defeasibleClaims, setDefeasibleClaims] = useState(892);
   const [downloads, setDownloads] = useState<Record<string, DLState>>({});
   const [indexed, setIndexed] = useState<Set<string>>(new Set());
+  const [ontologies, setOntologies] = useState<OntologyEntry[]>(FALLBACK_ONTOLOGIES);
+  const [manifestSource, setManifestSource] = useState<'remote' | 'fallback'>('fallback');
+
+  useEffect(() => {
+    // Restore in-progress downloads that survived page navigation
+    invoke<any[]>('get_active_downloads').then(active => {
+      if (!active.length) return;
+      const restored: Record<string, DLState> = {};
+      for (const p of active) {
+        restored[p.id] = {
+          status: p.status as DLStatus,
+          progress: p.progress,
+          downloadedBytes: p.downloaded_bytes,
+          totalBytes: p.total_bytes,
+          speedKbps: p.speed_kbps,
+        };
+      }
+      setDownloads(prev => ({ ...restored, ...prev }));
+    }).catch(console.error);
+
+    // Fetch remote manifest, fall back to bundled list on error
+    invoke<string>('fetch_remote_manifest', { url: ONTOLOGIES_MANIFEST_URL })
+      .then(json => {
+        const data = JSON.parse(json);
+        if (Array.isArray(data.ontologies) && data.ontologies.length > 0) {
+          setOntologies(data.ontologies);
+          setManifestSource('remote');
+        }
+      })
+      .catch(() => { /* stay with FALLBACK_ONTOLOGIES */ });
+  }, []);
 
   useEffect(() => {
     const unlisten = listen<any>('download-progress', ({ payload }) => {
@@ -160,7 +150,7 @@ export default function OntologyHub() {
     return () => { unlisten.then(f => f()); };
   }, []);
 
-  const handleDownload = useCallback(async (ont: typeof ONTOLOGIES[0]) => {
+  const handleDownload = useCallback(async (ont: OntologyEntry) => {
     setDownloads(prev => ({ ...prev, [ont.id]: { status: 'downloading', progress: 0, downloadedBytes: 0, totalBytes: 0, speedKbps: 0 } }));
     try {
       await invoke('download_and_vectorize', { url: ont.url, filename: ont.filename, itemId: ont.id });
@@ -243,11 +233,20 @@ export default function OntologyHub() {
         {/* Right panel: ontology list + node inspector */}
         <div className="flex-[1] flex flex-col gap-4 overflow-y-auto min-h-0">
           <div className="glass-panel flex-none">
-            <h2 className="text-sm font-bold border-b border-white/10 pb-2 mb-3 flex items-center gap-2 text-white font-mono">
-              <Box className="text-[#b026ff] w-4 h-4" /> Global Ontologies
-            </h2>
+            <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+              <h2 className="text-sm font-bold flex items-center gap-2 text-white font-mono">
+                <Box className="text-[#b026ff] w-4 h-4" /> Global Ontologies
+              </h2>
+              {manifestSource === 'remote' ? (
+                <span className="text-[9px] text-[#00ff88] font-mono bg-[#00ff88]/10 border border-[#00ff88]/20 px-2 py-0.5 rounded">Remote</span>
+              ) : (
+                <span className="text-[9px] text-gray-500 font-mono bg-white/5 border border-white/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <RefreshCw className="w-2 h-2" /> Bundled
+                </span>
+              )}
+            </div>
             <div className="flex flex-col gap-2">
-              {ONTOLOGIES.map(ont => {
+              {ontologies.map(ont => {
                 const dl = downloads[ont.id];
                 const isIndexed = indexed.has(ont.id);
                 const isActive = dl?.status === 'downloading' || dl?.status === 'processing';

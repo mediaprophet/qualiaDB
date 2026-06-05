@@ -75,6 +75,7 @@ pub async fn execute_agent_inference(
                         if temporal_end <= 1930.0 && bytes[0] == 0x99 {
                             // Inject zero-allocation wait-free rollback signal instantly!
                             let _ = control_p.push(WebizenOp::DenyRollback);
+                            let _ = app_clone.emit_all("webizen-intercept", ());
                             let _ = app_clone.emit_all("llm-token", "[WEBIZEN DENY]");
                         }
                     }

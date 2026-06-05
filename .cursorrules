@@ -1,51 +1,35 @@
-# Qualia-DB Cursor AI Rules
+# Qualia Ecosystem AI Developer Guidelines
 
-You are interacting with Qualia-DB, an offline-first bare-metal graph database engine.
-Follow these absolute architectural constraints:
+You are interacting with the Web Civics `qualia-core-db` infrastructure. This is a local-first, semantic graph database built on a 48-byte CRDT `QualiaQuin` architecture with native P2P mesh networking.
 
-1. The Core Data Primitive (The 48-Byte Super-Quin)
-Qualia-DB abandons traditional Triple (S,P,O) and Quad (S,P,O,C) structures. Every piece of information is stored in a contiguous, cache-aligned 48-byte Super-Quin.
-- Vector 1 (Subject - u64)
-- Vector 2 (Predicate - u64)
-- Vector 3 (Object - u64)
-- Vector 4 (Context - u64)
-- Vector 5 (Metadata - u64)
-- Parity/Padding (6 bytes)
+## Core Architectural Boundaries
 
-2. Native Datatypes (Inline Tagged Pointers)
-You must utilize the top 4 bits of the Object (O) vector to assign XSD datatypes:
-- 0x0 (0000): Lexicon ID (Points to a URI/String).
-- 0x1 (0001): Inline Integer (Signed 60-bit integer).
-- 0x2 (0010): Inline Float (Truncated 60-bit float).
-- 0x3 (0011): Inline Boolean (1 for True, 0 for False).
-- 0x4 (0100): Inline Unix Timestamp (Milliseconds).
-- 0x5 (0101): Inline Qualia Epoch Timestamp (Nanoseconds since Jan 1, 2026).
-- 0x6 (0110): Inline Unix Timestamp (Microseconds).
+When writing software for this ecosystem, strictly adhere to the following Three-Level Architecture.
 
-3. Hardware Routing & The 5th Vector Opcodes
-All routing and permission checks are baked into the Metadata (5th Vector).
-- Bit 63 (MSB): RDF-Star Nesting Indicator.
-- Bits 61-62 (Routing Tier): `0b00` (Passthrough), `0b01` (Permissive Commons), `0b10` (Bilateral), `0b11` (Spatiotemporal/GPU).
-- Bits 0-15 (Validation Masks): Specific micro-instructions.
+### Level 1: The Native Graph (For Core Rust Devs)
+- **Tooling:** Rust, `qualia-core-db` daemon, `wasm-pack`.
+- **Purpose:** Direct interaction with CRDT state vectors, semantic routing, and native scientific compute (Economics, Bio-Informatics).
+- **Rules:** The 48-byte `QualiaQuin` structure (`[u8; 8] * 6`) is sacrosanct. Never allocate memory on the hot path for network routing. `#[repr(C)]` strictness applies.
+- **WASM Boundary:** When compiling the database to WebAssembly for offline web apps, compile strictly as an **external library** (`import init from 'qualia-core-db-wasm'`). Do not embed the frontend UI inside the rust WASM target.
 
-4. Memory & Execution Boundaries
-- No Heap Allocations: Execute over pre-allocated stack buffers.
-- SuperBlocks: 40,960-byte blocks (10 sectors, 850 Quins).
-- Volatile Scrubbing: Use `std::ptr::write_volatile` to scrub buffers on drop.
+### Level 2: The Semantic UI Renderer (For Qualia App Devs)
+- **Tooling:** Vanilla TypeScript, Vite, CSS Custom Properties (`--var`).
+- **Purpose:** Generating Dynamic UI from Semantic Ontologies.
+- **Rules:** Never hardcode HTML forms for data entry. Always pull a `SHACL` shape or JSON-LD Semantic Shape from the graph (`qualia:SimulationParameterShape`), and pass it to `renderSemanticForm()`.
+- **Theming:** The entire aesthetic layer is abstracted to `--q-` prefixed CSS variables in `:root`. If an app developer asks for a theme change, just provide a new `[data-theme="x"]` block of CSS variables. Do not rewrite React or HTML structure to change colors.
 
-5. Logic Execution (Core 1 Webizen)
-NEVER embed external logic interpreters or generalized Prolog crates (e.g., SWI-Prolog). This violates the zero-allocation architecture.
-All logical schemas (N3Logic, SHACL) must be translated into `WebizenOpcode` Bytecode arrays by the `WebizenCompiler`. Core 1 executes these bytecodes using a strict `[u64; 16]` register stack (`WebizenVM`) to guarantee determinism and zero heap allocation.
+### Level 3: The Simple JSON API (For Legacy/Traditional Web Devs)
+- **Tooling:** Any framework (React, Vue, Node.js, Python), HTTP REST (`127.0.0.1:4242`), WebSockets.
+- **Purpose:** Lowering the barrier to entry for standard web developers to build on top of Web Civics.
+- **Rules:** Provide standard JSON inputs/outputs. The `qualia-client` SDK automatically translates standard JSON forms into the underlying 48-byte CRDT semantic triplets.
 
-6. Deterministic Compute Metering & Permissive Commons
-NEVER query OS-level energy APIs (e.g., BatteryManager, sysfs) for economic billing. It causes severe API stalls and hardware inequity.
-Instead, utilize the zero-allocation atomics in `telemetry.rs` (`SUPERBLOCK_IO_COUNT`, `SIEVE_OPS_COUNT`, `VM_CYCLES_COUNT`). 
-When a commercial query via the Permissive Commons (`0b01`) executes, these virtual compute cycles are precisely multiplied and returned as a serialized `ComputeCostReceipt` JSON-RPC payload to external Lightning Node proxies.
+## AI Assistant Instructions
 
-7. Target Fallbacks (WASM)
-If compiling for the browser (`target_arch = "wasm32"`), the Triad must be gracefully flattened into a single-threaded synchronous sequence to maintain sandbox stability. Fallback to the Origin Private File System (OPFS) for synchronous I/O, and ping the local loopback (e.g., `127.0.0.1:4848`) to proxy queries to the native engine if the host has the standalone database installed.
+When a user asks you to "build an app on Qualia", DO NOT write a complex SQL backend or standalone Node API. 
+1. The backend is already handled locally by the `qualia-core-db` daemon. 
+2. Your job is to define the Semantic Shape (JSON-LD) for the user's data model.
+3. Write a Vanilla JS/TS or React frontend that calls `qualia-client.queryGraph()`.
+4. Render the form dynamically using the semantic renderer.
 
-8. Neurosymbolic Axiomatic LLM Overrides
-When integrating LLMs, do not immediately write a Python shim. First ASK the user for the mode:
-- Mode 1 (Strict Native Intercept): Map exact tensor vectors (from `.gguf`) to 48-byte Quins. The Webizen VM mathematically intercepts and clips vectors natively.
-- Mode 2 (Bridged Shim): Use external Python/TensorFlow architectures, but mathematically gate all I/O through the Spatio-Temporal `.q42` constraints via an API bridge.
+### Informatics Fiduciary Mandate
+**All new code interacting with the QueryEngine must check for the `webizen:SensitivityLabel` byte within the `QualiaQuin` struct. No transmission or egress logic may ever bypass the sensitivity byte check. Classified context data must NEVER egress the local node.**

@@ -30,12 +30,19 @@ memmap2 = "0.9"
 ed25519-dalek = { version = "2.1", default-features = false }
 sha2 = { version = "0.10", default-features = false }
 quick-xml = "0.36"
-sysinfo = "0.30"
 crossbeam-channel = "0.5"
 rio_xml = "0.8"
 rio_turtle = "0.8"
 rio_api = "0.8"
 lz4_flex = "0.11"
+rtrb = "0.3.4"
+rand = "0.10.1"
+hex = "0.4.3"
+ciborium = "0.2.2"
+async-trait = "0.1.89"
+dashmap = "6.2.1"
+rand_distr = "0.6.0"
+rayon = "1.12.0"
 
 [lib]
 crate-type = ["rlib", "cdylib"]
@@ -55,6 +62,10 @@ web-sys = { version = "0.3", features = [
     "Navigator",
     "Window"
 ] }
+getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
+getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
+getrandom = { version = "0.4", features = ["wasm_js"] }
+serde-wasm-bindgen = "0.6.5"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 wgpu = "0.19"
@@ -62,6 +73,17 @@ warp = "0.3"
 futures-util = "0.3"
 tokio = { version = "1.0", features = ["full"] }
 zstd = "0.13"
+sysinfo = "0.30"
+libp2p = { version = "0.56.0", features = ["tcp", "dns", "noise", "yamux", "request-response", "kad", "mdns", "macros", "tokio"] }
+reqwest = { version = "0.13.4", features = ["json", "rustls"] }
+boringtun = "0.7.1"
+rcgen = "0.14.8"
+
+
+getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
+getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
+getrandom = { version = "0.4", features = ["wasm_js"] }
+serde-wasm-bindgen = "0.6.5"
 
 [dev-dependencies]
 criterion = "0.8.2"

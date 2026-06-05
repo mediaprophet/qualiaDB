@@ -7,7 +7,9 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 
 pub mod query_engine;
 pub mod n3_parser;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ingest;
+pub mod wasm_bridge;
 pub mod modalities;
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
@@ -61,6 +63,23 @@ impl QualiaQuin {
             0x03 => PermissiveRoutingLane::SpatiotemporalAmbiguous,
             _    => PermissiveRoutingLane::PassthroughStandard,
         }
+    }
+
+    pub const SENSITIVITY_PUBLIC: u8 = 0x00;
+    pub const SENSITIVITY_RESTRICTED: u8 = 0x01;
+    pub const SENSITIVITY_CLASSIFIED: u8 = 0x02;
+
+    #[inline(always)]
+    pub fn get_sensitivity_byte(&self) -> u8 {
+        (self.context >> 56) as u8
+    }
+
+    #[inline(always)]
+    pub fn set_sensitivity_byte(&mut self, sensitivity: u8) {
+        // Clear top 8 bits
+        self.context &= 0x00FF_FFFF_FFFF_FFFF;
+        // Set new sensitivity
+        self.context |= (sensitivity as u64) << 56;
     }
 
     /// Extracts the Lamport Logical Clock embedded in bits 32-60 of the metadata.
@@ -312,12 +331,16 @@ pub mod orchestrator;
 pub mod resolver;
 pub mod spatial;
 pub mod rules;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod solid_ldp;
 pub mod npu_ffi;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod daemon;
 pub mod tee_ffi;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod wal;
 pub mod crdt;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod sync;
 pub mod cbor_compiler;
 pub mod git_bridge;
@@ -332,7 +355,9 @@ pub mod ingestion;
 pub mod lexicon;
 pub mod storage;
 pub mod telemetry;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod rpc;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod nym_adapter;
@@ -342,18 +367,22 @@ pub mod mini_parser;
 pub mod webizen_bytecode;
 pub mod identifier;
 pub mod bioinformatics;
+pub mod clinical_engine;
+pub mod organic_chemistry;
 pub mod ode_solver;
 pub mod quantum_dft;
 pub mod thermodynamics;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod daemon_swarm;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod gguf_bridge;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod gguf_sharder;
 
 #[cfg(target_os = "android")]
 pub mod jni_bridge;
 
 #[cfg(target_arch = "wasm32")]
-pub mod wasm_bridge;
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_edge;
@@ -534,3 +563,18 @@ mod tests {
         assert_eq!(q4.extract_clean_metadata_value(), 999);
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod key_vault;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod p2p;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod webizen_sync;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod web_civics;
+
+pub mod economics;
+pub mod deontic_logic;

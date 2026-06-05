@@ -1,0 +1,117 @@
+{
+  "version": "1",
+  "updated": "2026-06-05",
+  "note": "Hosted at https://raw.githubusercontent.com/mediaprophet/qualiaDB/refs/heads/main/manifests/ontologies.json — edit this file to add/update ontologies without recompiling the app.",
+  "ontologies": [
+    {
+      "id": "schemaorg",
+      "name": "Schema.org",
+      "version": "26.0",
+      "type": "JSON-LD",
+      "size": "~1.7 MB",
+      "description": "Structured data vocabulary for the open web — persons, places, events, products.",
+      "url": "https://schema.org/version/latest/schemaorg-current-https.jsonld",
+      "filename": "schemaorg-current.jsonld"
+    },
+    {
+      "id": "skos",
+      "name": "SKOS Core",
+      "version": "W3C 2009",
+      "type": "RDF/XML",
+      "size": "~80 KB",
+      "description": "Simple Knowledge Organization System — thesauri, taxonomies, classification schemes.",
+      "url": "https://www.w3.org/2004/02/skos/core.rdf",
+      "filename": "skos-core.rdf"
+    },
+    {
+      "id": "foaf",
+      "name": "FOAF — Friend of a Friend",
+      "version": "0.99",
+      "type": "RDF/XML",
+      "size": "~60 KB",
+      "description": "Social network and personal profile vocabulary.",
+      "url": "http://xmlns.com/foaf/spec/index.rdf",
+      "filename": "foaf.rdf"
+    },
+    {
+      "id": "dc-terms",
+      "name": "Dublin Core Terms",
+      "version": "2020-01-20",
+      "type": "Turtle",
+      "size": "~40 KB",
+      "description": "Metadata terms for describing digital resources — creator, date, format, rights.",
+      "url": "https://www.dublincore.org/specifications/dublin-core/dcmi-terms/dublin_core_terms.ttl",
+      "filename": "dublin_core_terms.ttl"
+    },
+    {
+      "id": "prov-o",
+      "name": "PROV-O Provenance",
+      "version": "W3C 2013",
+      "type": "Turtle",
+      "size": "~60 KB",
+      "description": "W3C provenance ontology — tracks origin, history, and derivation of data.",
+      "url": "https://www.w3.org/ns/prov-o.ttl",
+      "filename": "prov-o.ttl"
+    },
+    {
+      "id": "geonames",
+      "name": "GeoNames Ontology",
+      "version": "3.3",
+      "type": "RDF/XML",
+      "size": "~200 KB",
+      "description": "Geographic features, country codes, administrative divisions, coordinates.",
+      "url": "https://www.geonames.org/ontology/ontology_v3.3.rdf",
+      "filename": "geonames.rdf"
+    },
+    {
+      "id": "dbpedia-ont",
+      "name": "DBpedia Ontology",
+      "version": "2023.11",
+      "type": "N-Triples",
+      "size": "~5.4 MB",
+      "description": "Classes and properties extracted from Wikipedia infoboxes — 760+ classes.",
+      "url": "https://databus.dbpedia.org/dbpedia/ontology/dbo-snapshots/2023.11.01/ontology--DEV_type=parsed_sorted.nt",
+      "filename": "dbpedia-ontology.nt"
+    },
+    {
+      "id": "wordnet-rdf",
+      "name": "English WordNet 2024",
+      "version": "2024",
+      "type": "Turtle",
+      "size": "~28 MB",
+      "description": "Lexical database for English — synsets, hypernyms, hyponyms, meronyms, 170k entries.",
+      "url": "https://github.com/globalwordnet/english-wordnet/releases/download/2024-edition/english-wordnet-2024.ttl.gz",
+      "filename": "english-wordnet-2024.ttl.gz"
+    },
+    {
+      "id": "chebi",
+      "name": "ChEBI Chemical Entities",
+      "version": "231",
+      "type": "OWL",
+      "size": "~36 MB",
+      "description": "Chemical Entities of Biological Interest — structures, roles, classifications.",
+      "url": "https://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi.owl",
+      "filename": "chebi.owl"
+    },
+    {
+      "id": "wikidata-props",
+      "name": "Wikidata Properties Dump",
+      "version": "2024",
+      "type": "JSON",
+      "size": "~400 MB",
+      "description": "All Wikidata property definitions, labels, and descriptions. Large download.",
+      "url": "https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz",
+      "filename": "wikidata-props.json.gz"
+    },
+    {
+      "id": "open-cyc",
+      "name": "OpenCyc 4.0",
+      "version": "4.0",
+      "type": "OWL",
+      "size": "~128 MB",
+      "description": "Large-scale upper ontology with common-sense knowledge — 239k concepts, 2M assertions.",
+      "url": "https://github.com/asanchez75/opencyc/raw/master/opencyc-latest.owl",
+      "filename": "opencyc.owl"
+    }
+  ]
+}

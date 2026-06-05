@@ -1,0 +1,139 @@
+{
+  "version": "2",
+  "updated": "2026-06-05",
+  "note": "Hosted at https://raw.githubusercontent.com/mediaprophet/qualiaDB/refs/heads/main/manifests/models.json — edit this file to add/update models without recompiling the app.",
+  "models": [
+    {
+      "id": "llama32-1b-q4",
+      "name": "Llama 3.2 1B Instruct",
+      "tag": "Tiny",
+      "params": "1B",
+      "format": "Q4_K_M",
+      "size": "0.7 GB",
+      "total_bytes": 770695168,
+      "vram": "2 GB",
+      "filename": "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+    },
+    {
+      "id": "gemma3-4b-q4",
+      "name": "Gemma 3 4B IT",
+      "tag": "Google",
+      "params": "4B",
+      "format": "Q4_K_M",
+      "size": "2.5 GB",
+      "total_bytes": 2684354560,
+      "vram": "4 GB",
+      "filename": "gemma-3-4b-it-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf"
+    },
+    {
+      "id": "phi4-mini-q4",
+      "name": "Phi-4 Mini Instruct",
+      "tag": "Reasoning",
+      "params": "3.8B",
+      "format": "Q4_K_M",
+      "size": "2.3 GB",
+      "total_bytes": 2469606195,
+      "vram": "3 GB",
+      "filename": "Phi-4-mini-instruct-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/Phi-4-mini-instruct-GGUF/resolve/main/Phi-4-mini-instruct-Q4_K_M.gguf"
+    },
+    {
+      "id": "llama32-3b-q4",
+      "name": "Llama 3.2 3B Instruct",
+      "tag": "General",
+      "params": "3B",
+      "format": "Q4_K_M",
+      "size": "2.0 GB",
+      "total_bytes": 2013265920,
+      "vram": "3 GB",
+      "filename": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+    },
+    {
+      "id": "llama31-8b-q4",
+      "name": "Llama 3.1 8B Instruct",
+      "tag": "General",
+      "params": "8B",
+      "format": "Q4_K_M",
+      "size": "4.9 GB",
+      "total_bytes": 5268299776,
+      "vram": "8 GB",
+      "filename": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+    },
+    {
+      "id": "deepseek-r1-8b",
+      "name": "DeepSeek R1 Distill 8B",
+      "tag": "Reasoning",
+      "params": "8B",
+      "format": "Q4_K_M",
+      "size": "4.9 GB",
+      "total_bytes": 5250512896,
+      "vram": "8 GB",
+      "filename": "DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Llama-8B-GGUF/resolve/main/DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf"
+    },
+    {
+      "id": "qwen25-7b-q4",
+      "name": "Qwen 2.5 7B Instruct",
+      "tag": "Multilingual",
+      "params": "7B",
+      "format": "Q4_K_M",
+      "size": "4.4 GB",
+      "total_bytes": 4726123520,
+      "vram": "8 GB",
+      "filename": "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/main/Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+    },
+    {
+      "id": "gemma3-12b-q4",
+      "name": "Gemma 3 12B IT",
+      "tag": "Google",
+      "params": "12B",
+      "format": "Q4_K_M",
+      "size": "7.2 GB",
+      "total_bytes": 7730941952,
+      "vram": "12 GB",
+      "filename": "gemma-3-12b-it-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/gemma-3-12b-it-GGUF/resolve/main/gemma-3-12b-it-Q4_K_M.gguf"
+    },
+    {
+      "id": "qwen25-14b-q4",
+      "name": "Qwen 2.5 14B Instruct",
+      "tag": "Multilingual",
+      "params": "14B",
+      "format": "Q4_K_M",
+      "size": "8.5 GB",
+      "total_bytes": 9127026688,
+      "vram": "14 GB",
+      "filename": "Qwen2.5-14B-Instruct-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/Qwen2.5-14B-Instruct-GGUF/resolve/main/Qwen2.5-14B-Instruct-Q4_K_M.gguf"
+    },
+    {
+      "id": "mistral-small-24b-q4",
+      "name": "Mistral Small 3.1 24B",
+      "tag": "Extended",
+      "params": "24B",
+      "format": "Q4_K_M",
+      "size": "14.3 GB",
+      "total_bytes": 15361286144,
+      "vram": "18 GB",
+      "filename": "Mistral-Small-3.1-24B-Instruct-2503-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/Mistral-Small-3.1-24B-Instruct-2503-GGUF/resolve/main/Mistral-Small-3.1-24B-Instruct-2503-Q4_K_M.gguf"
+    },
+    {
+      "id": "llama33-70b-q4",
+      "name": "Llama 3.3 70B Instruct",
+      "tag": "Large",
+      "params": "70B",
+      "format": "Q4_K_M",
+      "size": "42 GB",
+      "total_bytes": 45097156608,
+      "vram": "48 GB",
+      "filename": "Llama-3.3-70B-Instruct-Q4_K_M.gguf",
+      "url": "https://huggingface.co/bartowski/Llama-3.3-70B-Instruct-GGUF/resolve/main/Llama-3.3-70B-Instruct-Q4_K_M.gguf"
+    }
+  ]
+}

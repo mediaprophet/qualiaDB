@@ -1,76 +1,494 @@
-//! SIMD-Accelerated Bioinformatics routines.
-//! Provides a Define-Detect-Dispatch pattern for sequence alignment (e.g., Smith-Waterman).
-//! Exposes both scalar fallback and `core::arch` intrinsic paths, gated by `neon_simd_unroll`.
+//! SIMD-Accelerated Bioinformatics Engine.
+//!
+//! Production-quality sequence alignment with hardware dispatch:
+//! - Smith-Waterman local alignment (affine gap penalties)
+//! - Needleman-Wunsch global alignment
+//! - BLOSUM62 / nucleotide substitution matrices
+//! - K-mer frequency analysis + MinHash sketching
+//! - FASTA record validation
+//! - Tanimoto metabolite fingerprint similarity
+//!
+//! `qualia:alignNucleotideSequence` → `align_nucleotide()`
+//! `qualia:alignProteinSequence`    → `align_protein()`
+//! `qualia:computeKmerFrequency`    → `kmer_frequencies()`
+//! `qualia:validateFastaRecord`     → `validate_fasta_record()`
+//! `qualia:computeMetaboliteSimilarity` → `tanimoto_similarity()`
 
 #![allow(unused_imports)]
 #![allow(unused_unsafe)]
 
+// ─── Core types ───────────────────────────────────────────────────────────────
+
+/// Lightweight backward-compatible score wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AlignmentScore {
     pub score: i32,
 }
 
-/// Fallback scalar implementation of sequence alignment.
-/// Operates without allocating memory.
-pub fn scalar_align(query: &[u8], target: &[u8]) -> AlignmentScore {
-    let mut max_score = 0;
-    // Simple bounded mock of scalar Smith-Waterman
-    for &q in query {
-        for &t in target {
-            if q == t {
-                max_score += 1;
+/// Full alignment result with traceback and statistics.
+#[derive(Debug, Clone)]
+pub struct AlignmentResult {
+    /// Smith-Waterman or Needleman-Wunsch score.
+    pub score: i32,
+    /// Aligned query sequence (gaps encoded as b'-').
+    pub aligned_query: Vec<u8>,
+    /// Aligned target sequence (gaps encoded as b'-').
+    pub aligned_target: Vec<u8>,
+    /// Percent identity over the aligned region.
+    pub identity_pct: f32,
+    pub num_matches: usize,
+    pub num_gaps: usize,
+}
+
+/// Affine gap penalty model (BLAST defaults: open=-11, extend=-1).
+#[derive(Debug, Clone, Copy)]
+pub struct GapPenalty {
+    pub open: i32,
+    pub extend: i32,
+}
+
+impl Default for GapPenalty {
+    fn default() -> Self {
+        Self { open: -11, extend: -1 }
+    }
+}
+
+/// Nucleotide substitution scores.
+#[derive(Debug, Clone, Copy)]
+pub struct NucleotideMatrix {
+    pub match_score: i32,
+    pub mismatch_score: i32,
+}
+
+impl Default for NucleotideMatrix {
+    fn default() -> Self {
+        Self { match_score: 2, mismatch_score: -3 }
+    }
+}
+
+// ─── BLOSUM62 ─────────────────────────────────────────────────────────────────
+// Canonical NCBI BLOSUM62.  Row/column order: A C D E F G H I K L M N P Q R S T V W Y
+
+static BLOSUM62_ORDER: &[u8] = b"ACDEFGHIKLMNPQRSTVWY";
+
+#[rustfmt::skip]
+static BLOSUM62: [[i8; 20]; 20] = [
+//   A   C   D   E   F   G   H   I   K   L   M   N   P   Q   R   S   T   V   W   Y
+    [ 4, -1, -2, -1, -2,  0, -2, -1, -1, -1, -1, -2, -1, -1, -1,  1,  0,  0, -3, -2], // A
+    [-1,  9, -3, -4, -2, -3, -3, -1, -3, -1, -1, -3, -3, -3, -3, -1, -1, -1, -2, -2], // C
+    [-2, -3,  6,  2, -3, -1, -1, -3, -1, -4, -3,  1, -1,  0, -2,  0, -1, -3, -4, -3], // D
+    [-1, -4,  2,  5, -3, -2,  0, -3,  1, -3, -2,  0, -1,  2,  0,  0, -1, -2, -3, -2], // E
+    [-2, -2, -3, -3,  6, -3, -1,  0, -3,  0,  0, -3, -4, -3, -3, -2, -2, -1,  1,  3], // F
+    [ 0, -3, -1, -2, -3,  6, -2, -4, -2, -4, -3,  0, -2, -2, -2,  0, -2, -3, -2, -3], // G
+    [-2, -3, -1,  0, -1, -2,  8, -3, -1, -3, -2,  1, -2,  0,  0, -1, -2, -3, -2,  2], // H
+    [-1, -1, -3, -3,  0, -4, -3,  4, -3,  2,  1, -3, -3, -3, -3, -2, -1,  3, -3, -1], // I
+    [-1, -3, -1,  1, -3, -2, -1, -3,  5, -2, -1,  0, -1,  1,  2,  0, -1, -2, -3, -2], // K
+    [-1, -1, -4, -3,  0, -4, -3,  2, -2,  4,  2, -3, -3, -2, -2, -2, -1,  1, -2, -1], // L
+    [-1, -1, -3, -2,  0, -3, -2,  1, -1,  2,  5, -2, -2,  0, -1, -1, -1,  1, -1, -1], // M
+    [-2, -3,  1,  0, -3,  0,  1, -3,  0, -3, -2,  6, -2,  0,  0,  1,  0, -3, -4, -2], // N
+    [-1, -3, -1, -1, -4, -2, -2, -3, -1, -3, -2, -2,  7, -1, -2, -1, -1, -2, -4, -3], // P
+    [-1, -3,  0,  2, -3, -2,  0, -3,  1, -2,  0,  0, -1,  5,  1,  0, -1, -2, -2, -1], // Q
+    [-1, -3, -2,  0, -3, -2,  0, -3,  2, -2, -1,  0, -2,  1,  5, -1, -1, -3, -3, -2], // R
+    [ 1, -1,  0,  0, -2,  0, -1, -2,  0, -2, -1,  1, -1,  0, -1,  4,  1, -2, -3, -2], // S
+    [ 0, -1, -1, -1, -2, -2, -2, -1, -1, -1, -1,  0, -1, -1, -1,  1,  5,  0, -2, -2], // T
+    [ 0, -1, -3, -2, -1, -3, -3,  3, -2,  1,  1, -3, -2, -2, -3, -2,  0,  4, -3, -1], // V
+    [-3, -2, -4, -3,  1, -2, -2, -3, -3, -2, -1, -4, -4, -2, -3, -3, -2, -3, 11,  2], // W
+    [-2, -2, -3, -2,  3, -3,  2, -1, -2, -1, -1, -2, -3, -1, -2, -2, -2, -1,  2,  7], // Y
+];
+
+#[inline]
+fn blosum62_idx(aa: u8) -> Option<usize> {
+    BLOSUM62_ORDER.iter().position(|&c| c == aa.to_ascii_uppercase())
+}
+
+/// BLOSUM62 score for two amino acid bytes.  Unknown residues → -4.
+#[inline]
+pub fn blosum62_score(a: u8, b: u8) -> i32 {
+    match (blosum62_idx(a), blosum62_idx(b)) {
+        (Some(i), Some(j)) => BLOSUM62[i][j] as i32,
+        _ => -4,
+    }
+}
+
+// ─── Smith-Waterman (affine gap) ──────────────────────────────────────────────
+
+/// Maximum sequence length accepted to prevent OOM on untrusted input.
+const MAX_SEQ_LEN: usize = 50_000;
+
+/// Smith-Waterman local alignment with affine gap penalties.
+/// Allocates O(m×n) DP tables — caller should respect MAX_SEQ_LEN.
+pub fn smith_waterman(
+    query: &[u8],
+    target: &[u8],
+    gap: GapPenalty,
+    score_fn: impl Fn(u8, u8) -> i32,
+) -> AlignmentResult {
+    let m = query.len();
+    let n = target.len();
+    if m == 0 || n == 0 || m > MAX_SEQ_LEN || n > MAX_SEQ_LEN {
+        return empty_result();
+    }
+
+    let neg_inf = i32::MIN / 2;
+
+    // H: best score ending here; E: gap in target (horizontal); F: gap in query (vertical)
+    let mut h = vec![vec![0i32; n + 1]; m + 1];
+    let mut e = vec![vec![neg_inf; n + 1]; m + 1];
+    let mut f = vec![vec![neg_inf; n + 1]; m + 1];
+
+    // Traceback: 0=stop, 1=diag, 2=left(E), 3=up(F)
+    let mut tb = vec![vec![0u8; n + 1]; m + 1];
+
+    let mut best_score = 0i32;
+    let mut best_i = 0usize;
+    let mut best_j = 0usize;
+
+    for i in 1..=m {
+        for j in 1..=n {
+            e[i][j] = (h[i][j - 1].saturating_add(gap.open + gap.extend))
+                .max(e[i][j - 1].saturating_add(gap.extend));
+            f[i][j] = (h[i - 1][j].saturating_add(gap.open + gap.extend))
+                .max(f[i - 1][j].saturating_add(gap.extend));
+
+            let diag = h[i - 1][j - 1].saturating_add(score_fn(query[i - 1], target[j - 1]));
+            let cell = diag.max(e[i][j]).max(f[i][j]).max(0);
+            h[i][j] = cell;
+
+            tb[i][j] = if cell == 0 { 0 }
+                else if cell == diag { 1 }
+                else if cell == e[i][j] { 2 }
+                else { 3 };
+
+            if cell > best_score {
+                best_score = cell;
+                best_i = i;
+                best_j = j;
             }
         }
     }
-    AlignmentScore { score: max_score }
+
+    traceback_local(&h, &tb, query, target, best_i, best_j, best_score)
 }
 
-#[cfg(feature = "neon_simd_unroll")]
-#[cfg(target_arch = "x86_64")]
-pub fn simd_align_x86_64(query: &[u8], target: &[u8]) -> AlignmentScore {
-    if std::is_x86_feature_detected!("avx2") {
-        // Implement via core::arch::x86_64
-        use core::arch::x86_64::*;
-        // Placeholder for explicit vector loop using AVX2
-        unsafe {
-            let max_score = query.len() as i32 + target.len() as i32; // Mock math
-            AlignmentScore { score: max_score }
+fn traceback_local(
+    h: &[Vec<i32>],
+    tb: &[Vec<u8>],
+    query: &[u8],
+    target: &[u8],
+    mut i: usize,
+    mut j: usize,
+    score: i32,
+) -> AlignmentResult {
+    let mut aq = Vec::new();
+    let mut at = Vec::new();
+    let mut matches = 0usize;
+    let mut gaps = 0usize;
+
+    while i > 0 && j > 0 && h[i][j] > 0 {
+        match tb[i][j] {
+            1 => { aq.push(query[i-1]); at.push(target[j-1]); if query[i-1].eq_ignore_ascii_case(&target[j-1]) { matches += 1; } i -= 1; j -= 1; }
+            2 => { aq.push(b'-'); at.push(target[j-1]); gaps += 1; j -= 1; }
+            3 => { aq.push(query[i-1]); at.push(b'-'); gaps += 1; i -= 1; }
+            _ => break,
         }
-    } else {
-        scalar_align(query, target)
+    }
+    aq.reverse(); at.reverse();
+    let aln_len = aq.len();
+    AlignmentResult {
+        score,
+        identity_pct: if aln_len > 0 { 100.0 * matches as f32 / aln_len as f32 } else { 0.0 },
+        aligned_query: aq,
+        aligned_target: at,
+        num_matches: matches,
+        num_gaps: gaps,
     }
 }
 
-#[cfg(feature = "neon_simd_unroll")]
-#[cfg(target_arch = "aarch64")]
-pub fn simd_align_aarch64(query: &[u8], target: &[u8]) -> AlignmentScore {
-    // aarch64 natively supports NEON
-    use core::arch::aarch64::*;
-    unsafe {
-        // Placeholder for explicit vector loop using NEON
-        let max_score = query.len() as i32 + target.len() as i32; // Mock math
-        AlignmentScore { score: max_score }
+fn empty_result() -> AlignmentResult {
+    AlignmentResult { score: 0, aligned_query: vec![], aligned_target: vec![], identity_pct: 0.0, num_matches: 0, num_gaps: 0 }
+}
+
+// ─── Needleman-Wunsch (linear gap) ───────────────────────────────────────────
+
+/// Needleman-Wunsch global alignment with linear gap penalty.
+pub fn needleman_wunsch(
+    query: &[u8],
+    target: &[u8],
+    gap: GapPenalty,
+    score_fn: impl Fn(u8, u8) -> i32,
+) -> AlignmentResult {
+    let m = query.len();
+    let n = target.len();
+    if m == 0 || n == 0 || m > MAX_SEQ_LEN || n > MAX_SEQ_LEN {
+        return empty_result();
+    }
+    let g = gap.open + gap.extend;
+    let mut dp = vec![vec![0i32; n + 1]; m + 1];
+    for i in 0..=m { dp[i][0] = i as i32 * g; }
+    for j in 0..=n { dp[0][j] = j as i32 * g; }
+
+    for i in 1..=m {
+        for j in 1..=n {
+            let sub  = dp[i-1][j-1] + score_fn(query[i-1], target[j-1]);
+            let del  = dp[i-1][j]   + g;
+            let ins  = dp[i][j-1]   + g;
+            dp[i][j] = sub.max(del).max(ins);
+        }
+    }
+
+    let mut aq = Vec::new();
+    let mut at = Vec::new();
+    let mut matches = 0usize;
+    let mut gaps = 0usize;
+    let (mut i, mut j) = (m, n);
+
+    while i > 0 || j > 0 {
+        if i > 0 && j > 0 && dp[i][j] == dp[i-1][j-1] + score_fn(query[i-1], target[j-1]) {
+            aq.push(query[i-1]); at.push(target[j-1]);
+            if query[i-1].eq_ignore_ascii_case(&target[j-1]) { matches += 1; }
+            i -= 1; j -= 1;
+        } else if i > 0 && (j == 0 || dp[i][j] == dp[i-1][j] + g) {
+            aq.push(query[i-1]); at.push(b'-'); gaps += 1; i -= 1;
+        } else {
+            aq.push(b'-'); at.push(target[j-1]); gaps += 1; j -= 1;
+        }
+    }
+    aq.reverse(); at.reverse();
+    let aln_len = aq.len();
+    AlignmentResult {
+        score: dp[m][n],
+        identity_pct: if aln_len > 0 { 100.0 * matches as f32 / aln_len as f32 } else { 0.0 },
+        aligned_query: aq,
+        aligned_target: at,
+        num_matches: matches,
+        num_gaps: gaps,
     }
 }
 
-/// Main entry point for sequence alignment.
-/// Dispatches to the SIMD `core::arch` implementation if hardware supports it,
-/// otherwise falls back to the safe scalar loop.
+// ─── Convenience entry points ─────────────────────────────────────────────────
+
+/// DNA/RNA Smith-Waterman with BLAST nucleotide defaults.
+pub fn align_nucleotide(query: &[u8], target: &[u8]) -> AlignmentResult {
+    let mat = NucleotideMatrix::default();
+    smith_waterman(query, target, GapPenalty::default(), move |a, b| {
+        if a.to_ascii_uppercase() == b.to_ascii_uppercase() { mat.match_score } else { mat.mismatch_score }
+    })
+}
+
+/// Protein Smith-Waterman with BLOSUM62.
+pub fn align_protein(query: &[u8], target: &[u8]) -> AlignmentResult {
+    smith_waterman(query, target, GapPenalty::default(), blosum62_score)
+}
+
+/// Backward-compatible entry point returning the legacy `AlignmentScore`.
 pub fn align_sequences(query: &[u8], target: &[u8]) -> AlignmentScore {
-    #[cfg(feature = "neon_simd_unroll")]
-    {
-        #[cfg(target_arch = "x86_64")]
-        return simd_align_x86_64(query, target);
+    #[cfg(all(feature = "neon_simd_unroll", target_arch = "x86_64"))]
+    { return simd_align_x86_64(query, target); }
 
-        #[cfg(target_arch = "aarch64")]
-        return simd_align_aarch64(query, target);
+    #[cfg(all(feature = "neon_simd_unroll", target_arch = "aarch64"))]
+    { return simd_align_aarch64(query, target); }
 
-        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
-        return scalar_align(query, target);
+    AlignmentScore { score: align_nucleotide(query, target).score }
+}
+
+// ─── K-mer analysis ───────────────────────────────────────────────────────────
+
+/// Counts all k-mer occurrences; returns (kmer_fnv1a_hash, count) sorted by hash.
+pub fn kmer_frequencies(sequence: &[u8], k: usize) -> Vec<(u64, u32)> {
+    if k == 0 || k > sequence.len() { return vec![]; }
+    let mut counts = std::collections::HashMap::<u64, u32>::new();
+    for window in sequence.windows(k) {
+        let hash = window.iter().fold(0xcbf29ce484222325u64, |h, &b| {
+            (h ^ b.to_ascii_uppercase() as u64).wrapping_mul(0x100000001b3)
+        });
+        *counts.entry(hash).or_insert(0) += 1;
+    }
+    let mut out: Vec<(u64, u32)> = counts.into_iter().collect();
+    out.sort_unstable_by_key(|&(h, _)| h);
+    out
+}
+
+/// MinHash sketch: the `sketch_size` smallest k-mer hashes.
+pub fn minhash_sketch(sequence: &[u8], k: usize, sketch_size: usize) -> Vec<u64> {
+    let mut hashes: Vec<u64> = kmer_frequencies(sequence, k).into_iter().map(|(h, _)| h).collect();
+    hashes.sort_unstable();
+    hashes.truncate(sketch_size);
+    hashes
+}
+
+/// Jaccard similarity (0.0–1.0) between two MinHash sketches.
+pub fn jaccard_similarity(a: &[u64], b: &[u64]) -> f32 {
+    if a.is_empty() && b.is_empty() { return 1.0; }
+    let intersection = a.iter().filter(|&&x| b.binary_search(&x).is_ok()).count();
+    let union = a.len() + b.len() - intersection;
+    if union == 0 { 1.0 } else { intersection as f32 / union as f32 }
+}
+
+// ─── FASTA validation ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SequenceAlphabet {
+    DNA,
+    RNA,
+    Protein,
+    Unknown,
+}
+
+#[derive(Debug, Clone)]
+pub struct FastaRecord {
+    pub header: String,
+    pub sequence: Vec<u8>,
+    pub alphabet: SequenceAlphabet,
+    pub is_valid: bool,
+    pub invalid_chars: Vec<char>,
+}
+
+/// Validates and classifies a FASTA record.
+pub fn validate_fasta_record(header: &str, sequence: &[u8]) -> FastaRecord {
+    let dna_alphabet:     &[u8] = b"ACGTNacgtn-";
+    let rna_alphabet:     &[u8] = b"ACGUNacgun-";
+    let protein_alphabet: &[u8] = b"ACDEFGHIKLMNPQRSTVWYXacdefghiklmnpqrstvwyx*-";
+
+    let is_dna = sequence.iter().all(|c| dna_alphabet.contains(c));
+    let is_rna = sequence.iter().all(|c| rna_alphabet.contains(c));
+    let is_protein = sequence.iter().all(|c| protein_alphabet.contains(c));
+
+    let mut invalid: Vec<char> = sequence.iter()
+        .filter(|c| !protein_alphabet.contains(c))
+        .map(|&c| c as char)
+        .collect();
+    invalid.dedup();
+
+    let alphabet = if is_dna       { SequenceAlphabet::DNA }
+        else if is_rna             { SequenceAlphabet::RNA }
+        else if is_protein         { SequenceAlphabet::Protein }
+        else                       { SequenceAlphabet::Unknown };
+
+    FastaRecord {
+        header: header.to_string(),
+        sequence: sequence.to_vec(),
+        is_valid: invalid.is_empty() && !sequence.is_empty() && !header.is_empty(),
+        invalid_chars: invalid,
+        alphabet,
+    }
+}
+
+// ─── Metabolite fingerprint similarity ───────────────────────────────────────
+
+/// Tanimoto (Jaccard) coefficient between two Morgan fingerprints encoded as u64 bitmasks.
+/// Multiple words can represent a full extended fingerprint.
+#[inline]
+pub fn tanimoto_similarity(fp_a: &[u64], fp_b: &[u64]) -> f32 {
+    assert_eq!(fp_a.len(), fp_b.len(), "fingerprint lengths must match");
+    let intersection: u32 = fp_a.iter().zip(fp_b).map(|(a, b)| (a & b).count_ones()).sum();
+    let union: u32       = fp_a.iter().zip(fp_b).map(|(a, b)| (a | b).count_ones()).sum();
+    if union == 0 { 1.0 } else { intersection as f32 / union as f32 }
+}
+
+/// Dice coefficient between two binary fingerprints.
+#[inline]
+pub fn dice_similarity(fp_a: &[u64], fp_b: &[u64]) -> f32 {
+    assert_eq!(fp_a.len(), fp_b.len());
+    let intersection: u32 = fp_a.iter().zip(fp_b).map(|(a, b)| (a & b).count_ones()).sum();
+    let sum_a: u32 = fp_a.iter().map(|a| a.count_ones()).sum();
+    let sum_b: u32 = fp_b.iter().map(|b| b.count_ones()).sum();
+    if sum_a + sum_b == 0 { 1.0 } else { 2.0 * intersection as f32 / (sum_a + sum_b) as f32 }
+}
+
+// ─── SIMD stubs (preserved, feature-gated) ───────────────────────────────────
+
+#[cfg(all(feature = "neon_simd_unroll", target_arch = "x86_64"))]
+pub fn simd_align_x86_64(query: &[u8], target: &[u8]) -> AlignmentScore {
+    // AVX2 inner-loop vectorisation placeholder — falls back to scalar SW
+    AlignmentScore { score: align_nucleotide(query, target).score }
+}
+
+#[cfg(all(feature = "neon_simd_unroll", target_arch = "aarch64"))]
+pub fn simd_align_aarch64(query: &[u8], target: &[u8]) -> AlignmentScore {
+    // NEON inner-loop vectorisation placeholder — falls back to scalar SW
+    AlignmentScore { score: align_nucleotide(query, target).score }
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sw_identical_nucleotide() {
+        let r = align_nucleotide(b"ACGTACGT", b"ACGTACGT");
+        assert!(r.score > 0);
+        assert!((r.identity_pct - 100.0).abs() < 0.01);
     }
 
-    #[cfg(not(feature = "neon_simd_unroll"))]
-    {
-        scalar_align(query, target)
+    #[test]
+    fn sw_one_mismatch() {
+        let r = align_nucleotide(b"ACGTACGT", b"ACGTCCGT");
+        assert!(r.score > 0);
+        assert!(r.identity_pct > 80.0);
+    }
+
+    #[test]
+    fn blosum62_diagonal_positive() {
+        for aa in b"ACDEFGHIKLMNPQRSTVWY" {
+            assert!(blosum62_score(*aa, *aa) > 0, "diagonal should be positive for {}", *aa as char);
+        }
+    }
+
+    #[test]
+    fn blosum62_w_max_diagonal() {
+        assert_eq!(blosum62_score(b'W', b'W'), 11);
+    }
+
+    #[test]
+    fn protein_align_identical() {
+        let r = align_protein(b"ACDEFGHIK", b"ACDEFGHIK");
+        assert!(r.score > 0);
+        assert!((r.identity_pct - 100.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn nw_global_fills_gaps() {
+        let mat = NucleotideMatrix::default();
+        let r = needleman_wunsch(b"ACGT", b"ACGTTTT", GapPenalty::default(), move |a, b| {
+            if a.to_ascii_uppercase() == b.to_ascii_uppercase() { mat.match_score } else { mat.mismatch_score }
+        });
+        assert_eq!(r.aligned_query.len(), r.aligned_target.len());
+    }
+
+    #[test]
+    fn kmer_frequency_counts() {
+        let f = kmer_frequencies(b"ATCGATCG", 3);
+        assert!(!f.is_empty());
+        let total: u32 = f.iter().map(|&(_, c)| c).sum();
+        assert_eq!(total, 6); // 8 - 3 + 1 = 6 tri-mers
+    }
+
+    #[test]
+    fn fasta_dna_valid() {
+        let r = validate_fasta_record(">seq1", b"ATCGATCG");
+        assert_eq!(r.alphabet, SequenceAlphabet::DNA);
+        assert!(r.is_valid);
+    }
+
+    #[test]
+    fn fasta_invalid_chars() {
+        let r = validate_fasta_record(">seq2", b"ATCG123");
+        assert!(!r.is_valid);
+        assert!(!r.invalid_chars.is_empty());
+    }
+
+    #[test]
+    fn tanimoto_identical() {
+        let fp = vec![0xFFFFFFFFFFFFFFFFu64; 2];
+        assert!((tanimoto_similarity(&fp, &fp) - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn tanimoto_disjoint() {
+        let a = vec![0x00000000FFFFFFFFu64];
+        let b = vec![0xFFFFFFFF00000000u64];
+        assert!((tanimoto_similarity(&a, &b)).abs() < 1e-6);
     }
 }

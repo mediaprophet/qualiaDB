@@ -29,6 +29,9 @@ export default function CredentialManager() {
         }
       })
       .catch(console.error);
+    invoke<ImportedAccount[]>('load_imported_accounts')
+      .then(accounts => { if (Array.isArray(accounts)) setImportedAccounts(accounts); })
+      .catch(console.error);
   }, []);
 
   const handleGenerateSeed = async () => {
@@ -47,12 +50,14 @@ export default function CredentialManager() {
   const handleImportAccount = async () => {
     if (!importSeed || !importLabel) return;
     try {
-      const address: string = await invoke('import_external_seed', { 
-        network: importNetwork, 
-        seed: importSeed, 
-        label: importLabel 
+      const address: string = await invoke('import_external_seed', {
+        network: importNetwork,
+        seed: importSeed,
+        label: importLabel,
       });
-      setImportedAccounts([...importedAccounts, { network: importNetwork, label: importLabel, address }]);
+      const updated = [...importedAccounts, { network: importNetwork, label: importLabel, address }];
+      setImportedAccounts(updated);
+      await invoke('save_imported_accounts', { accounts: updated }).catch(console.error);
       setShowImportModal(false);
       setImportSeed('');
       setImportLabel('');

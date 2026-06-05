@@ -310,7 +310,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Strict Origin Enforcement enabled: Trusting only mediaprophet.github.io");
             }
 
-            qualia_core_db::daemon::start_local_daemon_with_options(*port, is_dev).await;
+            let storage_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());
+            let vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&storage_dir).expect("Failed to load KeyVault");
+            let vault_arc = std::sync::Arc::new(std::sync::Mutex::new(vault));
+            qualia_core_db::daemon::start_local_daemon_with_options(*port, is_dev, vault_arc).await;
         }
         Commands::ExportSolid { input, output } => {
             println!("============================================================");
