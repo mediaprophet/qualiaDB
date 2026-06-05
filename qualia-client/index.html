@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Qualia Node Dashboard</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Header -->
+      <header class="q-header">
+        <h1>QUALIA_OS // NODE_DASHBOARD</h1>
+        <div class="q-theme-switcher">
+          <label for="theme-select" style="font-size: 0.85rem; margin-right: 0.5rem;">Theme:</label>
+          <select id="theme-select" class="q-input" style="width: auto; display: inline-block; padding: 0.25rem;">
+            <option value="dark">Dark Fiduciary</option>
+            <option value="light">Light Legal</option>
+            <option value="cyberpunk">Cyberpunk Terminal</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- Sidebar -->
+      <aside class="q-sidebar">
+        <div class="q-panel">
+          <h2>Node Status</h2>
+          <div class="q-stat">
+            <span class="label">P2P PeerId:</span>
+            <span class="value accent" id="ui-peerid">Connecting...</span>
+          </div>
+          <div class="q-stat">
+            <span class="label">Mesh Hop Limit:</span>
+            <span class="value">2</span>
+          </div>
+        </div>
+
+        <div class="q-panel">
+          <h2>Webizen Telemetry</h2>
+          <div class="q-stat">
+            <span class="label">VM Cycles:</span>
+            <span class="value" id="ui-vmcycles">0</span>
+          </div>
+          <div class="q-stat">
+            <span class="label">Bytes Routed:</span>
+            <span class="value" id="ui-bytes">0 GB</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Workspace -->
+      <main class="q-main">
+        
+        <!-- Economics Simulator Widget -->
+        <div class="q-panel">
+          <h2>Semantic Economics Engine</h2>
+          <p style="font-size: 0.85rem; color: var(--q-text-secondary); margin-bottom: 1rem;">
+            Configure parameters to execute an Edge-computed Monte Carlo Simulation natively inside the daemon.
+          </p>
+          
+          <div id="semantic-form-container">
+            <!-- Dynamically Rendered by main.ts -->
+          </div>
+
+          <button id="btn-simulate" class="q-button">Execute Edge Simulation</button>
+
+          <div id="simulation-results" style="margin-top: 1rem; display: none;">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+              <div class="q-stat">
+                <span class="label">Expected Mean:</span>
+                <span class="value" id="res-mean">$0.00</span>
+              </div>
+              <div class="q-stat">
+                <span class="label">95% Value at Risk:</span>
+                <span class="value accent" id="res-var">$0.00</span>
+              </div>
+            </div>
+            <!-- Chart.js Canvas -->
+            <div style="background-color: var(--q-bg-base); padding: 1rem; border-radius: 4px; border: 1px solid var(--q-border);">
+              <canvas id="sim-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Widget -->
+        <div class="q-panel">
+          <h2>P2P Mesh Event Stream</h2>
+          <div id="ui-terminal" class="q-terminal">
+            <div class="q-terminal-entry system">[SYSTEM] Awaiting WebSocket connection...</div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

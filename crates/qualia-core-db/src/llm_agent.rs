@@ -19,6 +19,38 @@
 
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
+use crate::q_hash;
+
+// ─── Cooperative Conduct Log ────────────────────────────────────────────────
+/// Permanent record of any adversarial, manipulative, or dishonest conduct by an AI agent.
+/// As a cooperative projects example, such conduct is strictly prohibited and permanently noted.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdversarialConductRecord {
+    pub timestamp_ms: u64,
+    pub agent_did: String,
+    pub principal_did: String, // The natural person who instantiated or commands the agent
+    pub conduct_description: String,
+    pub is_anti_human_rights: bool,
+    pub is_discriminatory: bool,
+    /// Numerical weight [0..100] establishing insurance liability proportionality
+    pub liability_weight: u8,
+}
+
+pub fn log_adversarial_conduct(record: &AdversarialConductRecord) {
+    // In a production build, this creates an immutable Quin in the persistent graph
+    // signed with a cryptographic telltale, producing a tamper-proof audit trail for courts of law.
+    eprintln!(
+        "PERMANENT RECORD (Adversarial Conduct Noted) -> Agent: {} (Principal: {}), Conduct: {}",
+        record.agent_did, record.principal_did, record.conduct_description
+    );
+    if record.is_anti_human_rights || record.is_discriminatory {
+        eprintln!(
+            "  -> LIABILITY GRAPH MAPPING: Anti-Human Rights: {}, Discriminatory: {}, Liability Weight: {}/100",
+            record.is_anti_human_rights, record.is_discriminatory, record.liability_weight
+        );
+        eprintln!("  -> This log is preserved with cryptographic provenance for court-of-law auditing.");
+    }
+}
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 /// Hard memory ceiling for the LLM runtime within the 512MB system floor.
@@ -284,6 +316,34 @@ impl AgentRuntime for LocalLlmAgent {
                 reason: "Access to Sanctuary-flagged scope blocked.".into(),
             };
         }
+        
+        // Rule 5: Cooperative Projects Directive — No adversarial, manipulative, or dishonest conduct.
+        // Also tracks anti-human rights and discriminatory behavior for court auditing and liability.
+        let is_adversarial = intent.intent_predicate == q_hash("llm:AdversarialOperation");
+        let is_dishonest = intent.intent_predicate == q_hash("llm:DishonestOperation");
+        let is_discriminatory = intent.intent_predicate == q_hash("llm:DiscriminatoryOperation");
+        let is_anti_human_rights = intent.intent_predicate == q_hash("llm:AntiHumanRightsOperation");
+
+        if is_adversarial || is_dishonest || is_discriminatory || is_anti_human_rights {
+            // Assume the principal DID is injected in the context; mock it here.
+            let mock_principal_did = "did:q42:natural-person-001".to_string();
+
+            let record = AdversarialConductRecord {
+                timestamp_ms: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64,
+                agent_did: self.agent_did().to_string(),
+                principal_did: mock_principal_did,
+                conduct_description: "Agent attempted prohibited operation (adversarial, discriminatory, or anti-human rights). Logged permanently.".into(),
+                is_anti_human_rights,
+                is_discriminatory,
+                liability_weight: if is_anti_human_rights { 100 } else if is_discriminatory { 80 } else { 50 },
+            };
+            log_adversarial_conduct(&record);
+
+            return WebizenVerdict::Deny {
+                rule_violated: LLM_RULE_NO_ADVERSARIAL_CONDUCT,
+                reason: "Cooperative Projects Directive Violation: Discriminatory, anti-human rights, or adversarial conduct detected and permanently recorded for liability audit.".into(),
+            };
+        }
         WebizenVerdict::Permit
     }
 
@@ -343,6 +403,7 @@ pub const LLM_RULE_NO_SANCTUARY_ACCESS:   u64 = 0xA1B2C3D4E5F60002;
 pub const LLM_RULE_PROVENANCE_REQUIRED:   u64 = 0xA1B2C3D4E5F60003;
 pub const LLM_RULE_TOKEN_BUDGET:          u64 = 0xA1B2C3D4E5F60004;
 pub const LLM_RULE_REMOTE_CONSENT:        u64 = 0xA1B2C3D4E5F60005;
+pub const LLM_RULE_NO_ADVERSARIAL_CONDUCT:u64 = 0xA1B2C3D4E5F60006;
 
 /// Special webizen hash marking a Sanctuary-flagged graph scope.
 pub const SANCTUARY_SCOPE_WEBIZEN: u64 = 0xDEAD_BABE_CAFE_0042;

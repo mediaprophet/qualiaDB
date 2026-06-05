@@ -136,6 +136,15 @@ pub enum ShaclConstraint {
     ComputeAtomEconomy,
     ComputeEFactor,
     ComputeGreenMetrics,
+
+    // ── Qualia native: deontic and epistemic ─────────────────────────────────
+    DeonticObligate,
+    DeonticPermit,
+    DeonticForbid,
+    DeonticNotExpired { now_unix: u32 },
+    EpistemicKnowledge { min_certainty: u8 },
+    EpistemicBelief { min_certainty: u8 },
+    CommonKnowledge,
 }
 
 // ─── CompiledShape ────────────────────────────────────────────────────────────
@@ -361,6 +370,15 @@ impl ShaclCompiler {
             ShaclConstraint::ComputeAtomEconomy                 => ops.push(SlgOpcode::NativeAtomEconomy),
             ShaclConstraint::ComputeEFactor                     => ops.push(SlgOpcode::NativeEFactor),
             ShaclConstraint::ComputeGreenMetrics                => ops.push(SlgOpcode::NativeGreenMetrics),
+
+            // Deontic and Epistemic
+            ShaclConstraint::DeonticObligate
+            | ShaclConstraint::DeonticPermit
+            | ShaclConstraint::DeonticForbid
+            | ShaclConstraint::DeonticNotExpired { .. } => ops.push(SlgOpcode::NativeDeonticEval),
+            ShaclConstraint::EpistemicKnowledge { min_certainty } => ops.push(SlgOpcode::NativeEpistemicEval(*min_certainty)),
+            ShaclConstraint::EpistemicBelief { min_certainty } => ops.push(SlgOpcode::NativeEpistemicEval(*min_certainty)),
+            ShaclConstraint::CommonKnowledge => ops.push(SlgOpcode::NativeEpistemicEval(0)),
         }
     }
 
@@ -429,6 +447,13 @@ impl ShaclCompiler {
             "qualia:computeAtomEconomy"          => ShaclConstraint::ComputeAtomEconomy,
             "qualia:computeEFactor"              => ShaclConstraint::ComputeEFactor,
             "qualia:computeGreenMetrics"         => ShaclConstraint::ComputeGreenMetrics,
+            "qualia:deonticObligate"             => ShaclConstraint::DeonticObligate,
+            "qualia:deonticPermit"               => ShaclConstraint::DeonticPermit,
+            "qualia:deonticForbid"               => ShaclConstraint::DeonticForbid,
+            "qualia:deonticNotExpired"           => ShaclConstraint::DeonticNotExpired { now_unix: value as u32 },
+            "qualia:epistemicKnowledge"          => ShaclConstraint::EpistemicKnowledge { min_certainty: value as u8 },
+            "qualia:epistemicBelief"             => ShaclConstraint::EpistemicBelief { min_certainty: value as u8 },
+            "qualia:commonKnowledge"             => ShaclConstraint::CommonKnowledge,
             other => {
                 eprintln!("[ShaclCompiler] unknown constraint: {other}");
                 ShaclConstraint::DataType(other.to_string())

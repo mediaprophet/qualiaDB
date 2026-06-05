@@ -378,6 +378,8 @@ pub mod daemon_swarm;
 pub mod gguf_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gguf_sharder;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod dev_protocol;
 
 #[cfg(target_os = "android")]
 pub mod jni_bridge;

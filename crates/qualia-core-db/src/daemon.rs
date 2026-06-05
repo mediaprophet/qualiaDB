@@ -125,6 +125,12 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         vault,
     };
 
+    if dev {
+        tokio::spawn(async move {
+            crate::dev_protocol::start_dev_protocol_listener().await;
+        });
+    }
+
     // -----------------------------------------------------------------------
     // WebSocket bridge
     // -----------------------------------------------------------------------

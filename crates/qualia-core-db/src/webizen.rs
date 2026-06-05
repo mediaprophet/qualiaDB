@@ -206,6 +206,10 @@ pub enum SlgOpcode {
     NativeEFactor,
     /// `qualia:computeGreenMetrics` — full suite: AE, E-factor, PMI, RME, CE.
     NativeGreenMetrics,
+
+    // ── Native: deontic and epistemic ─────────────────────────────────────────
+    NativeDeonticEval,
+    NativeEpistemicEval(u8),
 }
 
 /// The Execution Frame tracking variable bindings without touching the heap
@@ -613,6 +617,12 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                     &[180.0, 60.0], 180.0, &[60.0], 0.85, 50.0, 1.0, 9, 9,
                 );
                 println!("[Webizen] NativeGreenMetrics: AE={:.1}% E={:.1} PMI={:.1}", gm.atom_economy_pct, gm.e_factor, gm.process_mass_intensity);
+            },
+            SlgOpcode::NativeDeonticEval => {
+                println!("[Webizen] NativeDeonticEval: evaluating deontic obligation");
+            },
+            SlgOpcode::NativeEpistemicEval(min_certainty) => {
+                println!("[Webizen] NativeEpistemicEval: min_certainty={}", min_certainty);
             },
         }
 

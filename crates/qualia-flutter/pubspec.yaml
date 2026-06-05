@@ -1,0 +1,24 @@
+name: qualia_flutter
+description: "A new Flutter project for QualiaDB desktop application."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  flutter_rust_bridge: ^2.0.0
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  ffigen: ^10.0.0
+  build_runner: ^2.4.8
+
+flutter:
+  uses-material-design: true

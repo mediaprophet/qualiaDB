@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantic Desktop Library</title>
+    <style>
+        :root {
+            --bg-dark: #050505;
+            --neon-blue: #00f0ff;
+            --neon-purple: #b026ff;
+            --neon-green: #00ff88;
+            --glass-bg: rgba(20, 20, 25, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0; padding: 20px;
+            background: radial-gradient(circle at center, #111 0%, var(--bg-dark) 100%);
+            color: #fff;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+
+        header { margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; }
+        
+        h1 {
+            font-size: 2.5rem; font-weight: 800; margin: 0;
+            background: linear-gradient(to right, var(--neon-blue), var(--neon-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        .back-btn {
+            color: var(--neon-blue); text-decoration: none; font-weight: bold;
+            border: 1px solid var(--neon-blue); padding: 8px 16px; border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .back-btn:hover { background: rgba(0, 240, 255, 0.1); }
+
+        .dashboard {
+            display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;
+            max-width: 1400px; margin: 0 auto;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        h2 { margin-top: 0; color: #ccc; font-size: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+
+        .drop-zone {
+            border: 2px dashed rgba(0, 240, 255, 0.4); border-radius: 12px;
+            padding: 40px; text-align: center; color: #888;
+            transition: all 0.3s; margin-bottom: 20px; background: rgba(0,0,0,0.3);
+        }
+        .drop-zone.dragover {
+            border-color: var(--neon-green);
+            background: rgba(0, 255, 136, 0.05);
+            color: var(--neon-green);
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--neon-blue);
+            color: var(--neon-blue); padding: 10px 20px; border-radius: 8px; cursor: pointer;
+            font-weight: 600; transition: all 0.3s;
+        }
+        .btn:hover { background: rgba(0, 240, 255, 0.1); box-shadow: 0 0 10px rgba(0, 240, 255, 0.2); }
+
+        .terminal {
+            background: #0a0a0f; border-radius: 8px; padding: 1rem;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace; height: 300px; overflow-y: auto;
+            border: 1px solid rgba(0, 240, 255, 0.2); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+            font-size: 0.9rem; line-height: 1.5; color: #4ade80;
+        }
+
+        .terminal .error { color: #f87171; }
+        .terminal .sys { color: var(--neon-blue); }
+
+        .bookmark-list { list-style: none; padding: 0; margin: 0; }
+        .bookmark-item {
+            background: rgba(0,0,0,0.4); border: 1px solid #333; padding: 12px;
+            border-radius: 8px; margin-bottom: 10px;
+        }
+        .bookmark-entity { font-weight: bold; color: var(--neon-purple); margin-bottom: 8px; font-size: 1.1em;}
+        .tag {
+            display: inline-block; background: rgba(255,255,255,0.1); color: #ccc;
+            padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; margin-right: 5px; margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Semantic Library</h1>
+        <a href="index.html" class="back-btn">← Dashboard</a>
+    </header>
+
+    <div class="dashboard">
+        <!-- Left Panel: Ingestion -->
+        <div class="glass-panel">
+            <h2>Edge VLM Ingestion Pipeline</h2>
+            <p style="color:#aaa; font-size:0.95em; margin-bottom: 20px;">
+                Drag and drop PDF files to process them via the local Phi-3 VLM. Entities will be extracted, mapped to the Ontology Registry (HCAI, UN Rights), and compiled into binary .q42 semantic graphs.
+            </p>
+
+            <div id="dropZone" class="drop-zone">
+                <p>Drag & Drop PDFs here</p>
+                <p>or</p>
+                <input type="file" id="fileInput" multiple accept="application/pdf" style="display: none;">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">Select Files</button>
+            </div>
+            
+            <h3>Processing Telemetry</h3>
+            <div id="terminal" class="terminal">
+                <div class="sys">System Ready. Waiting for documents...</div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Semantic Bookmarks -->
+        <div class="glass-panel">
+            <h2>Semantic Bookmarks</h2>
+            <p style="color:#aaa; font-size:0.95em; margin-bottom: 20px;">
+                Universal discovery layer for your .q42 knowledge base.
+            </p>
+            <ul id="bookmarkList" class="bookmark-list">
+                <li style="color:#666; font-style:italic;">No bookmarks generated yet.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="src/library.js"></script>
+</body>
+</html>
