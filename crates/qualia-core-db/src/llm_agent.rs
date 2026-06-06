@@ -240,14 +240,20 @@ impl LocalLlmAgent {
                     .map(|m| GgufTokenizer::from_gguf(m))
                     .unwrap_or_default();
 
+                // Parse tensor-info section → real embedding lookup.
+                let tensor_idx = engine.gguf_mmap.as_ref()
+                    .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
+
                 let mut ctx = tok.encode(&prompt_owned);
                 if ctx.is_empty() { ctx.push(tok.bos_token_id); }
                 let eos  = tok.eos_token_id;
                 let vlen = tok.vocab_len().max(1);
 
-                // Single weight tensor at offset 0; shape is the default 4096×4096.
-                // Full multi-layer tensor lookup deferred until tensor-info parser is wired.
-                let wt = QTensor::new(vec![4096, 4096], 0, true);
+                // Use the real embedding dimension if the tensor was found; fall back to 4096.
+                let emb_dim = tensor_idx.as_ref()
+                    .map(|idx| idx.emb_dim())
+                    .filter(|&d| d > 0)
+                    .unwrap_or(4096);
 
                 let mut out_ids: Vec<u32> = Vec::new();
 
@@ -257,11 +263,24 @@ impl LocalLlmAgent {
 
                     let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
 
-                    // Deterministic pseudo-embedding from the current token ID.
-                    // Real embedding lookup requires the full tensor-info parser (deferred).
-                    let emb: Vec<f32> = (0..4096usize).map(|i| {
-                        (cur as f32 * (i as f32 + 1.0) * 0.001_f32).sin() * (1.0_f32 / 64.0)
-                    }).collect();
+                    // Real embedding lookup from `token_embd.weight` (F32 / F16 / Q8_0).
+                    // Falls back to a deterministic pseudo-embedding when the tensor-info
+                    // section is absent or the type is not yet supported (Q4_K, etc.).
+                    let emb: Vec<f32> = tensor_idx.as_ref()
+                        .and_then(|idx| {
+                            engine.gguf_mmap.as_deref()
+                                .map(|m| idx.get_token_embedding(m, cur))
+                        })
+                        .filter(|v| !v.is_empty())
+                        .unwrap_or_else(|| {
+                            (0..emb_dim).map(|i| {
+                                (cur as f32 * (i as f32 + 1.0) * 0.001_f32).sin()
+                                    * (1.0_f32 / (emb_dim as f32).sqrt())
+                            }).collect()
+                        });
+
+                    // Weight tensor sized to match the real embedding dimension.
+                    let wt = QTensor::new(vec![emb.len(), emb.len()], 0, true);
 
                     // GPU dispatch (DirectML → Accelerate → wgpu/WGSL by platform priority).
                     let logits = engine.dispatch_fused_transformer_block(&wt, &emb);
