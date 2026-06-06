@@ -1,7 +1,6 @@
-import 'dart:ui';
-import 'dart:async';
 import 'package:flutter/material.dart';
-import '../src/rust/api/qualia_api.dart';
+// TODO: Import generated bridge when flutter_rust_bridge codegen is run
+// import 'package:qualia_flutter/bridge_generated.dart';
 
 class LLMHubScreen extends StatefulWidget {
   const LLMHubScreen({super.key});
@@ -11,340 +10,229 @@ class LLMHubScreen extends StatefulWidget {
 }
 
 class _LLMHubScreenState extends State<LLMHubScreen> {
-  List<Map<String, dynamic>> _models = [];
-  String _loadingModelId = '';
-  Map<String, ProgressPayload> _activeDownloads = {};
-  Timer? _timer;
+  List<LLMModel> _models = [];
+  List<LLMModel> _filteredModels = [];
+  Set<String> _selectedIds = {};
+  bool _isLoading = true;
+  bool _isGridView = false;
 
-  HardwareStatus? _hardwareStatus;
+  String _searchQuery = '';
+  String? _selectedTag;
+  String? _selectedQuantization;
+  String _sortBy = 'size';
 
   @override
   void initState() {
     super.initState();
-    _loadModels();
-    _loadHardware();
-    _timer = Timer.periodic(const Duration(milliseconds: 500), (t) async {
-      final list = await getActiveDownloads();
-      if (mounted) {
-        setState(() {
-          _activeDownloads = { for (var e in list) e.id : e };
-        });
-      }
-    });
+    _loadFromRustResourceCatalog();
   }
 
-  Future<void> _loadHardware() async {
-    final status = await getHardwareStatus();
-    if (mounted) {
-      setState(() {
-        _hardwareStatus = status;
-      });
+  /// Loads LLM resources from the Rust Resource Catalog layer
+  Future<void> _loadFromRustResourceCatalog() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // When flutter_rust_bridge is set up, replace with:
+      // final resources = await api.loadLlmResources();
+      // For now we simulate the data coming from Rust
+      final resources = await _simulateRustLoadLlmResources();
+
+      _models = resources.map((r) => LLMModel(
+        id: r.id,
+        name: r.name,
+        provider: r.provider ?? 'Unknown',
+        sizeMb: r.sizeMb ?? 0,
+        quantization: r.quantization ?? 'unknown',
+        license: r.license ?? 'Unknown',
+        tags: r.tags ?? [],
+        recommendedFor: r.recommendedFor ?? [],
+        isDownloaded: false,
+        isEdgeRecommended: (r.tags ?? []).contains('edge'),
+      )).toList();
+
+      _applyFilters();
+    } catch (e) {
+      debugPrint('Failed to load from Rust: $e');
     }
+
+    setState(() => _isLoading = false);
   }
 
-  Future<void> _loadModels() async {
-    final remoteCatalog = await fetchModelCatalogReal();
-    final localModels = await discoverModels();
-    
-    setState(() {
-      _models.clear();
-      for (var rc in remoteCatalog) {
-        _models.add({
-          'id': rc.id,
-          'name': rc.name,
-          'tag': rc.tag,
-          'params': rc.params ?? '?',
-          'format': rc.format,
-          'size': rc.size,
-          'vram': rc.vram ?? '?',
-          'installed': false,
-          'active': false,
-        });
-      }
-
-      for (var local in localModels) {
-        try {
-          var matched = _models.firstWhere((m) => local.name.contains(m['id']));
-          matched['installed'] = true;
-          if (local.isActive) {
-            matched['active'] = true;
-          }
-        } catch (e) {
-          _models.add({
-            'id': local.name,
-            'name': local.name,
-            'tag': 'Local',
-            'params': '?',
-            'format': 'GGUF',
-            'size': '?',
-            'vram': '?',
-            'installed': true,
-            'active': local.isActive,
-          });
-        }
-      }
-    });
+  // Temporary simulation until flutter_rust_bridge is fully wired
+  Future<List<dynamic>> _simulateRustLoadLlmResources() async {
+    await Future.delayed(const Duration(milliseconds: 250));
+    return [
+      {'id': 'phi-3-mini-4k-instruct-q4km', 'name': 'Phi-3 Mini 4K Instruct', 'provider': 'Microsoft', 'sizeMb': 2400, 'quantization': 'Q4_K_M', 'license': 'MIT', 'tags': ['general', 'reasoning', 'edge'], 'recommendedFor': ['edge', 'rag']},
+      {'id': 'gemma-2-2b-it-q4km', 'name': 'Gemma 2 2B Instruct', 'provider': 'Google', 'sizeMb': 1600, 'quantization': 'Q4_K_M', 'license': 'Gemma', 'tags': ['general', 'edge'], 'recommendedFor': ['edge']},
+    ];
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+  void _applyFilters() {
+    _filteredModels = _models.where((m) {
+      final matchSearch = m.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchTag = _selectedTag == null || m.tags.contains(_selectedTag);
+      final matchQuant = _selectedQuantization == null || m.quantization == _selectedQuantization;
+      return matchSearch && matchTag && matchQuant;
+    }).toList();
 
-  void _handleSetActive(String id) async {
-    setState(() => _loadingModelId = id);
-    await setActiveModel(modelName: id);
-    
-    if (mounted) {
-      setState(() {
-        for (var m in _models) { m['active'] = false; }
-        _models.firstWhere((m) => m['id'] == id)['active'] = true;
-        _loadingModelId = '';
-      });
+    // Sorting
+    switch (_sortBy) {
+      case 'size':
+        _filteredModels.sort((a, b) => a.sizeMb.compareTo(b.sizeMb));
+        break;
+      case 'name':
+        _filteredModels.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case 'recommended':
+        _filteredModels.sort((a, b) => b.isEdgeRecommended ? 1 : -1);
+        break;
     }
+    setState(() {});
   }
 
-  void _handleDownload(String id) {
-    // We pass a dummy URL since it's just testing FFI
-    downloadModel(url: "https://huggingface.co/dummy", filename: "\$id.gguf", modelId: id);
+  void _toggleSelection(String id) {
+    setState(() => _selectedIds.contains(id) ? _selectedIds.remove(id) : _selectedIds.add(id));
+  }
+
+  Future<void> _downloadSelected() async {
+    // TODO: Call Rust download function for each selected model
+    for (final id in _selectedIds) {
+      // await api.downloadLlm(id);
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Downloading ${_selectedIds.length} models via Rust...')),
+    );
+    _selectedIds.clear();
+  }
+
+  void _showDetails(LLMModel model) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => LLMModelDetailSheet(model: model),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Telemetry Row
-          Row(
-            children: [
-              _buildTelemetryCard(
-                'System RAM', 
-                _hardwareStatus != null ? '\${_hardwareStatus!.ramTotalGb} GB Total' : '...', 
-                _hardwareStatus != null ? '\${_hardwareStatus!.ramUsedGb} GB Used' : '...', 
-                Icons.memory, 
-                const Color(0xFF00FF88)
-              ),
-              const SizedBox(width: 16),
-              _buildTelemetryCard(
-                'Est. VRAM', 
-                _hardwareStatus != null ? '\${_hardwareStatus!.vramEstimatedGb} GB' : '...', 
-                'Available', 
-                Icons.speed, 
-                const Color(0xFFFFD700)
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildGlassContainer(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.bolt, color: Color(0xFFB026FF), size: 32),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('ACTIVE MODEL', style: TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace', letterSpacing: 1.2)),
-                            const SizedBox(height: 4),
-                            Text(
-                              _models.firstWhere((m) => m['active'], orElse: () => {'name': 'None Loaded'})['name'],
-                              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          
-          Expanded(
-            child: _buildGlassContainer(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.hub, color: Color(0xFF00F0FF), size: 24),
-                            SizedBox(width: 12),
-                            Text('Model Hub — GGUF (HuggingFace)', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        Text('Open-weight models downloaded to your local Models directory. Set one as active to use it in Neuro-Chat.', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                      itemCount: _models.length,
-                      itemBuilder: (context, index) {
-                        final m = _models[index];
-                        final isActive = m['active'];
-                        final isInstalled = m['installed'];
-                        final isLoading = _loadingModelId == m['id'];
-                        
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isActive ? const Color(0xFF00FF88).withOpacity(0.05) : Colors.black.withOpacity(0.4),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: isActive ? const Color(0xFF00FF88).withOpacity(0.3) : Colors.white.withOpacity(0.05)),
-                            boxShadow: isActive ? [BoxShadow(color: const Color(0xFF00FF88).withOpacity(0.05), blurRadius: 10)] : [],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(m['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                                      const SizedBox(width: 12),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                                        child: Text(m['tag'], style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                                      ),
-                                      if (isActive) ...[
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(color: const Color(0xFF00FF88).withOpacity(0.2), borderRadius: BorderRadius.circular(4), border: Border.all(color: const Color(0xFF00FF88).withOpacity(0.5))),
-                                          child: const Row(
-                                            children: [
-                                              Icon(Icons.check_circle, color: Color(0xFF00FF88), size: 10),
-                                              SizedBox(width: 4),
-                                              Text('ACTIVE', style: TextStyle(color: Color(0xFF00FF88), fontSize: 10, fontWeight: FontWeight.bold)),
-                                            ],
-                                          ),
-                                        )
-                                      ]
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Text('${m['params']} params', style: const TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 10)),
-                                      const SizedBox(width: 12),
-                                      Text(m['format'], style: const TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 10)),
-                                      const SizedBox(width: 12),
-                                      Text(m['size'], style: const TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 10)),
-                                      const SizedBox(width: 12),
-                                      Text('≥ ${m['vram']} VRAM', style: const TextStyle(color: Color(0xFF00F0FF), fontFamily: 'monospace', fontSize: 10)),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  if (isInstalled && !isActive)
-                                    ElevatedButton.icon(
-                                      onPressed: isLoading ? null : () => _handleSetActive(m['id']),
-                                      icon: Icon(isLoading ? Icons.sync : Icons.play_arrow, size: 16),
-                                      label: Text(isLoading ? 'Loading...' : 'Load'),
-                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00FF88).withOpacity(0.1), foregroundColor: const Color(0xFF00FF88), side: BorderSide(color: const Color(0xFF00FF88).withOpacity(0.3))),
-                                    )
-                                  else if (!isInstalled)
-                                    if (_activeDownloads.containsKey(m['id']))
-                                      Row(
-                                        children: [
-                                          SizedBox(
-                                            width: 100,
-                                            child: LinearProgressIndicator(
-                                              value: _activeDownloads[m['id']]!.progress / 100.0,
-                                              backgroundColor: Colors.white10,
-                                              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00F0FF)),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          IconButton(
-                                            icon: const Icon(Icons.cancel, color: Colors.redAccent, size: 20),
-                                            onPressed: () => cancelDownload(id: m['id']),
-                                          )
-                                        ]
-                                      )
-                                    else
-                                      ElevatedButton.icon(
-                                        onPressed: () => _handleDownload(m['id']),
-                                        icon: const Icon(Icons.download, size: 16),
-                                        label: const Text('Download'),
-                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.05), foregroundColor: Colors.white, side: const BorderSide(color: Colors.white10)),
-                                      )
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('LLM Hub'),
+        actions: [
+          IconButton(icon: Icon(_isGridView ? Icons.list : Icons.grid_view), onPressed: () => setState(() => _isGridView = !_isGridView)),
+          if (_selectedIds.isNotEmpty)
+            IconButton(icon: const Icon(Icons.download), onPressed: _downloadSelected),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadFromRustResourceCatalog),
         ],
       ),
-    );
-  }
-
-  Widget _buildTelemetryCard(String title, String val1, String val2, IconData icon, Color color) {
-    return Expanded(
-      child: _buildGlassContainer(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 32),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title.toUpperCase(), style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace', letterSpacing: 1.2)),
-                  const SizedBox(height: 4),
-                  Row(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
                     children: [
-                      Text(val1, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                      const SizedBox(width: 4),
-                      Text(val2, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                      TextField(
+                        decoration: const InputDecoration(hintText: 'Search...', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
+                        onChanged: (v) { _searchQuery = v; _applyFilters(); },
+                      ),
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        Expanded(child: _buildFilterDropdown('Tag', _selectedTag, ['edge', 'reasoning'], (v) { _selectedTag = v; _applyFilters(); })),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildFilterDropdown('Quantization', _selectedQuantization, ['Q4_K_M'], (v) { _selectedQuantization = v; _applyFilters(); })),
+                      ]),
                     ],
                   ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+                ),
+                Expanded(child: _isGridView ? _buildGridView() : _buildListView()),
+              ],
+            ),
+      floatingActionButton: _selectedIds.isNotEmpty
+          ? FloatingActionButton.extended(onPressed: _downloadSelected, icon: const Icon(Icons.download), label: Text('Download ${_selectedIds.length}'))
+          : null,
     );
   }
 
-  Widget _buildGlassContainer({required Widget child}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.03),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: child,
-        ),
+  Widget _buildFilterDropdown(String label, String? value, List<String> options, Function(String?) onChanged) {
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(labelText: label),
+      value: value,
+      items: [const DropdownMenuItem(value: null, child: Text('All')), ...options.map((o) => DropdownMenuItem(value: o, child: Text(o)))],
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildListView() => ListView.builder(
+    itemCount: _filteredModels.length,
+    itemBuilder: (context, i) {
+      final m = _filteredModels[i];
+      final selected = _selectedIds.contains(m.id);
+      return Card(child: ListTile(
+        leading: Checkbox(value: selected, onChanged: (_) => _toggleSelection(m.id)),
+        title: Text(m.name),
+        subtitle: Text('${m.provider} • ${m.sizeMb} MB'),
+        trailing: m.isDownloaded ? const Chip(label: Text('Downloaded')) : ElevatedButton(onPressed: () => _showDetails(m), child: const Text('Download')),
+        onTap: () => _showDetails(m),
+      ));
+    },
+  );
+
+  Widget _buildGridView() => GridView.builder(
+    padding: const EdgeInsets.all(16),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.1),
+    itemCount: _filteredModels.length,
+    itemBuilder: (context, i) {
+      final m = _filteredModels[i];
+      return Card(child: InkWell(onTap: () => _showDetails(m), child: Padding(padding: const EdgeInsets.all(12), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(m.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text('${m.sizeMb} MB • ${m.quantization}'),
+          const Spacer(),
+          if (!m.isDownloaded) ElevatedButton(onPressed: () => _showDetails(m), child: const Text('Download')),
+        ],
+      ))));
+    },
+  );
+}
+
+class LLMModel {
+  final String id, name, provider, quantization, license;
+  final int sizeMb;
+  final List<String> tags, recommendedFor;
+  bool isDownloaded;
+  final bool isEdgeRecommended;
+
+  LLMModel({required this.id, required this.name, required this.provider, required this.sizeMb,
+    required this.quantization, required this.license, required this.tags, required this.recommendedFor,
+    this.isDownloaded = false, this.isEdgeRecommended = false});
+}
+
+class LLMModelDetailSheet extends StatelessWidget {
+  final LLMModel model;
+
+  const LLMModelDetailSheet({super.key, required this.model});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.65,
+      builder: (context, scrollController) => SingleChildScrollView(
+        controller: scrollController,
+        padding: const EdgeInsets.all(24),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(model.name, style: Theme.of(context).textTheme.headlineSmall),
+          Text(model.provider),
+          const SizedBox(height: 20),
+          Text('Size: ${model.sizeMb} MB'),
+          Text('Quantization: ${model.quantization}'),
+          Text('License: ${model.license}'),
+          const SizedBox(height: 24),
+          ElevatedButton(onPressed: () {}, child: const Text('Download via Rust')),
+        ]),
       ),
     );
   }

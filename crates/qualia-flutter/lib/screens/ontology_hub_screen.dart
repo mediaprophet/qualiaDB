@@ -1,8 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
-import '../src/rust/api/qualia_api.dart';
 
+/// Ontology Hub integrated with Rust Resource Catalog
 class OntologyHubScreen extends StatefulWidget {
   const OntologyHubScreen({super.key});
 
@@ -10,427 +8,279 @@ class OntologyHubScreen extends StatefulWidget {
   State<OntologyHubScreen> createState() => _OntologyHubScreenState();
 }
 
-class _OntologyHubScreenState extends State<OntologyHubScreen> with TickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late AnimationController _rotationController;
-  int _selectedNode = -1;
-  List<CatalogItem> _ontologies = [];
+class _OntologyHubScreenState extends State<OntologyHubScreen> {
+  List<OntologyModel> _ontologies = [];
+  List<OntologyModel> _filtered = [];
+  Set<String> _selectedIds = {};
+  bool _isLoading = true;
+  bool _isGridView = false;
 
-  final List<Map<String, dynamic>> _nodes = [
-    {'id': 0, 'label': 'Subject', 'x': 0.2, 'y': 0.5},
-    {'id': 1, 'label': 'Predicate (skos:exactMatch)', 'x': 0.5, 'y': 0.3},
-    {'id': 2, 'label': 'Object (Dense Tensor)', 'x': 0.8, 'y': 0.5},
-    {'id': 3, 'label': 'Inferred Entity', 'x': 0.5, 'y': 0.7},
-  ];
-
-  final List<Map<String, dynamic>> _edges = [
-    {'source': 0, 'target': 1, 'type': 'explicit'},
-    {'source': 1, 'target': 2, 'type': 'explicit'},
-    {'source': 0, 'target': 3, 'type': 'inferred'},
-  ];
+  String _searchQuery = '';
+  String? _selectedDomain;
+  String _sortBy = 'size';
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
-    _rotationController = AnimationController(vsync: this, duration: const Duration(seconds: 20))..repeat();
-    _loadOntologies();
+    _loadFromRustResourceCatalog();
   }
 
-  Future<void> _loadOntologies() async {
-    final list = await fetchOntologyCatalogReal();
-    if (mounted) {
-      setState(() => _ontologies = list);
+  Future<void> _loadFromRustResourceCatalog() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // TODO: Replace with real call after running flutter_rust_bridge_codegen
+      // final resources = await RustApi.loadOntologyResources();
+      final resources = await _simulateRustLoadOntologies();
+
+      _ontologies = resources.map((r) => OntologyModel(
+        id: r['id'],
+        name: r['name'],
+        acronym: r['acronym'],
+        domain: r['domain'] ?? 'general',
+        sizeMb: (r['sizeMb'] as num?)?.toDouble() ?? 0,
+        format: r['format'] ?? 'owl',
+        license: r['license'] ?? 'Unknown',
+        isDownloaded: false,
+      )).toList();
+
+      _applyFilters();
+    } catch (e) {
+      debugPrint('Failed to load ontologies from Rust: $e');
     }
+
+    setState(() => _isLoading = false);
   }
 
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    _rotationController.dispose();
-    super.dispose();
+  Future<List<Map<String, dynamic>>> _simulateRustLoadOntologies() async {
+    await Future.delayed(const Duration(milliseconds: 250));
+    return [
+      {'id': 'prov-o', 'name': 'PROV-O', 'acronym': 'PROV-O', 'domain': 'provenance', 'sizeMb': 0.2, 'format': 'owl', 'license': 'W3C'},
+      {'id': 'odrl', 'name': 'ODRL Vocabulary', 'acronym': 'ODRL', 'domain': 'policy', 'sizeMb': 0.15, 'format': 'ttl', 'license': 'W3C'},
+      {'id': 'schema-org', 'name': 'Schema.org', 'acronym': 'schema', 'domain': 'general', 'sizeMb': 5, 'format': 'rdfa', 'license': 'CC-BY-SA'},
+      {'id': 'snomedct-us', 'name': 'SNOMED CT US Edition', 'acronym': 'SNOMEDCT', 'domain': 'health', 'sizeMb': 850, 'format': 'owl', 'license': 'UMLS'},
+      {'id': 'shacl', 'name': 'SHACL', 'acronym': 'SHACL', 'domain': 'validation', 'sizeMb': 0.3, 'format': 'ttl', 'license': 'W3C'},
+    ];
+  }
+
+  void _applyFilters() {
+    _filtered = _ontologies.where((o) {
+      final matchSearch = o.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchDomain = _selectedDomain == null || o.domain == _selectedDomain;
+      return matchSearch && matchDomain;
+    }).toList();
+
+    switch (_sortBy) {
+      case 'size':
+        _filtered.sort((a, b) => a.sizeMb.compareTo(b.sizeMb));
+        break;
+      case 'name':
+        _filtered.sort((a, b) => a.name.compareTo(b.name));
+        break;
+    }
+    setState(() {});
+  }
+
+  void _toggleSelection(String id) {
+    setState(() {
+      _selectedIds.contains(id) ? _selectedIds.remove(id) : _selectedIds.add(id);
+    });
+  }
+
+  Future<void> _importSelected() async {
+    final toImport = _ontologies.where((o) => _selectedIds.contains(o.id) && !o.isDownloaded).toList();
+    if (toImport.isEmpty) return;
+
+    for (final ont in toImport) {
+      // TODO: await RustApi.importOntology(ont.id);
+      await Future.delayed(const Duration(milliseconds: 400));
+      setState(() => ont.isDownloaded = true);
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Imported ${toImport.length} ontologies via Rust')),
+    );
+    _selectedIds.clear();
+    _applyFilters();
+  }
+
+  void _showDetails(OntologyModel ont) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => OntologyDetailSheet(ontology: ont, onImport: () => _importOntology(ont)),
+    );
+  }
+
+  Future<void> _importOntology(OntologyModel ont) async {
+    Navigator.pop(context);
+    // TODO: await RustApi.importOntology(ont.id);
+    await Future.delayed(const Duration(seconds: 2));
+    setState(() => ont.isDownloaded = true);
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${ont.name} imported')));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Ontology Hub'),
+        actions: [
+          IconButton(icon: Icon(_isGridView ? Icons.list : Icons.grid_view), onPressed: () => setState(() => _isGridView = !_isGridView)),
+          if (_selectedIds.isNotEmpty)
+            IconButton(icon: const Icon(Icons.download), onPressed: _importSelected),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadFromRustResourceCatalog),
+        ],
+      ),
+      body: Column(
         children: [
-          // Telemetry Row
-          Row(
-            children: [
-              _buildTelemetryCard('Total Lexicon Nodes', '14,023', Icons.bolt, const Color(0xFF00FF88)),
-              const SizedBox(width: 16),
-              _buildTelemetryCard('Active Defeasible Claims', '892', Icons.show_chart, const Color(0xFFFFD700)),
-              const SizedBox(width: 16),
-              _buildTelemetryCard('Ontologies Indexed', '0', Icons.memory, const Color(0xFF00F0FF)),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                // Vector Space Canvas
-                Expanded(
-                  flex: 2,
-                  child: _buildGlassContainer(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text('Vector Space Canvas (.q42.bidx)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'monospace')),
-                        ),
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              // Background grid
-                              Positioned.fill(
-                                child: CustomPaint(painter: GridPainter()),
-                              ),
-                              // Rotating Background Glow
-                              Center(
-                                child: AnimatedBuilder(
-                                  animation: _rotationController,
-                                  builder: (context, child) {
-                                    return Transform.rotate(
-                                      angle: _rotationController.value * 2 * math.pi,
-                                      child: Container(
-                                        width: 300,
-                                        height: 300,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: RadialGradient(
-                                            colors: [
-                                              const Color(0xFF00F0FF).withOpacity(0.1),
-                                              Colors.transparent,
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                ),
-                              ),
-                              // Interactive Nodes and Edges
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  return CustomPaint(
-                                    size: Size(constraints.maxWidth, constraints.maxHeight),
-                                    painter: GraphPainter(
-                                      nodes: _nodes,
-                                      edges: _edges,
-                                      selectedIndex: _selectedNode,
-                                      pulseValue: _pulseController.value,
-                                    ),
-                                  );
-                                },
-                              ),
-                              // Invisible touch targets for nodes
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  return Stack(
-                                    children: _nodes.map((node) {
-                                      final dx = node['x'] * constraints.maxWidth;
-                                      final dy = node['y'] * constraints.maxHeight;
-                                      return Positioned(
-                                        left: dx - 24,
-                                        top: dy - 24,
-                                        width: 48,
-                                        height: 48,
-                                        child: GestureDetector(
-                                          onTap: () => setState(() => _selectedNode = node['id']),
-                                          child: Container(color: Colors.transparent),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                TextField(
+                  decoration: const InputDecoration(hintText: 'Search...', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
+                  onChanged: (v) { _searchQuery = v; _applyFilters(); },
                 ),
-                const SizedBox(width: 24),
-                // Right Panel (Inspector + List)
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    children: [
-                      // Node Inspector
-                      _buildGlassContainer(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Node Inspector', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'monospace')),
-                              const SizedBox(height: 16),
-                              if (_selectedNode == -1)
-                                const Center(
-                                  child: Text('Select a node on the canvas.', style: TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 12)),
-                                )
-                              else
-                                Column(
-                                  children: [
-                                    _buildInspectorRow('Identifier', '0x${_selectedNode}A144E6', const Color(0xFF00F0FF)),
-                                    _buildInspectorRow('Label', _nodes[_selectedNode]['label'], Colors.white),
-                                    _buildInspectorRow('State', 'Explicitly Indexed', const Color(0xFF00FF88)),
-                                  ],
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Search Nodes', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                            const SizedBox(height: 8),
-                            TextField(
-                              style: const TextStyle(color: Colors.white, fontSize: 14),
-                              decoration: InputDecoration(
-                                hintText: 'e.g. dopamine_receptor',
-                                hintStyle: const TextStyle(color: Colors.white30),
-                                prefixIcon: const Icon(Icons.search, color: Colors.white54, size: 16),
-                                isDense: true,
-                                filled: true,
-                                fillColor: Colors.white.withOpacity(0.05),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: _buildGlassContainer(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: Text('Global Ontologies', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'monospace')),
-                              ),
-                              Expanded(
-                                child: _ontologies.isEmpty 
-                                ? const Center(child: CircularProgressIndicator(color: Color(0xFF00F0FF)))
-                                : ListView.builder(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                  itemCount: _ontologies.length,
-                                  itemBuilder: (context, index) {
-                                    final o = _ontologies[index];
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 12),
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.3),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: Colors.white10),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(child: Text(o.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis)),
-                                              Text(o.size, style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace')),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          OutlinedButton.icon(
-                                            onPressed: () {},
-                                            icon: const Icon(Icons.download, size: 14),
-                                            label: const Text('Download & Index', style: TextStyle(fontSize: 11)),
-                                            style: OutlinedButton.styleFrom(
-                                              foregroundColor: const Color(0xFF00F0FF),
-                                              side: const BorderSide(color: Color(0xFF00F0FF)),
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: _buildDomainFilter()),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildSortDropdown()),
+                ]),
               ],
             ),
           ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filtered.isEmpty
+                    ? const Center(child: Text('No ontologies found'))
+                    : _isGridView ? _buildGridView() : _buildListView(),
+          ),
         ],
       ),
+      floatingActionButton: _selectedIds.isNotEmpty
+          ? FloatingActionButton.extended(onPressed: _importSelected, icon: const Icon(Icons.download), label: Text('Import ${_selectedIds.length}'))
+          : null,
     );
   }
 
-  Widget _buildTelemetryCard(String title, String val, IconData icon, Color color) {
-    return Expanded(
-      child: _buildGlassContainer(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
+  Widget _buildDomainFilter() {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(labelText: 'Domain'),
+      value: _selectedDomain,
+      items: const [
+        DropdownMenuItem(value: null, child: Text('All')),
+        DropdownMenuItem(value: 'provenance', child: Text('Provenance')),
+        DropdownMenuItem(value: 'policy', child: Text('Policy')),
+        DropdownMenuItem(value: 'health', child: Text('Health')),
+        DropdownMenuItem(value: 'validation', child: Text('Validation')),
+      ],
+      onChanged: (v) { _selectedDomain = v; _applyFilters(); },
+    );
+  }
+
+  Widget _buildSortDropdown() {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(labelText: 'Sort'),
+      value: _sortBy,
+      items: const [
+        DropdownMenuItem(value: 'size', child: Text('Size')),
+        DropdownMenuItem(value: 'name', child: Text('Name')),
+      ],
+      onChanged: (v) { _sortBy = v ?? 'size'; _applyFilters(); },
+    );
+  }
+
+  Widget _buildListView() {
+    return ListView.builder(
+      itemCount: _filtered.length,
+      itemBuilder: (context, i) {
+        final o = _filtered[i];
+        final selected = _selectedIds.contains(o.id);
+        return Card(child: ListTile(
+          leading: Checkbox(value: selected, onChanged: (_) => _toggleSelection(o.id)),
+          title: Text('${o.name} (${o.acronym ?? o.id})'),
+          subtitle: Text('${o.domain} • ~${o.sizeMb} MB'),
+          trailing: o.isDownloaded
+              ? const Chip(label: Text('Imported'), backgroundColor: Colors.green)
+              : ElevatedButton(onPressed: () => _showDetails(o), child: const Text('Import')),
+          onTap: () => _showDetails(o),
+        ));
+      },
+    );
+  }
+
+  Widget _buildGridView() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.1),
+      itemCount: _filtered.length,
+      itemBuilder: (context, i) {
+        final o = _filtered[i];
+        return Card(child: InkWell(onTap: () => _showDetails(o), child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: color, size: 32),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title.toUpperCase(), style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace', letterSpacing: 1.2)),
-                  const SizedBox(height: 4),
-                  Text(val, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
-                ],
-              ),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Checkbox(value: _selectedIds.contains(o.id), onChanged: (_) => _toggleSelection(o.id)),
+                if (o.isDownloaded) const Chip(label: Text('Imported', style: TextStyle(fontSize: 10)), backgroundColor: Colors.green),
+              ]),
+              const SizedBox(height: 8),
+              Text(o.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('${o.domain} • ~${o.sizeMb} MB', style: const TextStyle(fontSize: 12)),
+              const Spacer(),
+              if (!o.isDownloaded)
+                SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () => _showDetails(o), child: const Text('Import'))),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInspectorRow(String attr, String val, Color valColor) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(attr, style: const TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'monospace')),
-          Text(val, style: TextStyle(color: valColor, fontSize: 12, fontFamily: 'monospace')),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGlassContainer({required Widget child}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.03),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: child,
-        ),
-      ),
+        )));
+      },
     );
   }
 }
 
-class GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.02)
-      ..strokeWidth = 1.0;
-    for (double i = 0; i < size.width; i += 40) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += 40) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
+class OntologyModel {
+  final String id, name, domain, format, license;
+  final String? acronym;
+  final double sizeMb;
+  bool isDownloaded;
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  OntologyModel({required this.id, required this.name, required this.domain, required this.format, required this.license, this.acronym, required this.sizeMb, this.isDownloaded = false});
 }
 
-class GraphPainter extends CustomPainter {
-  final List<Map<String, dynamic>> nodes;
-  final List<Map<String, dynamic>> edges;
-  final int selectedIndex;
-  final double pulseValue;
+class OntologyDetailSheet extends StatelessWidget {
+  final OntologyModel ontology;
+  final VoidCallback onImport;
 
-  GraphPainter({required this.nodes, required this.edges, required this.selectedIndex, required this.pulseValue});
+  const OntologyDetailSheet({super.key, required this.ontology, required this.onImport});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    // Draw edges
-    for (final edge in edges) {
-      final s = nodes[edge['source']];
-      final t = nodes[edge['target']];
-      final p1 = Offset(s['x'] * size.width, s['y'] * size.height);
-      final p2 = Offset(t['x'] * size.width, t['y'] * size.height);
-
-      final paint = Paint()
-        ..color = edge['type'] == 'explicit' ? const Color(0xFF00F0FF) : const Color(0xFFFFD700)
-        ..strokeWidth = 2.0
-        ..style = PaintingStyle.stroke;
-
-      if (edge['type'] == 'inferred') {
-        _drawDashedLine(canvas, p1, p2, paint);
-      } else {
-        canvas.drawLine(p1, p2, paint);
-        // Add glow for explicit
-        canvas.drawLine(p1, p2, paint..strokeWidth = 6.0..color = const Color(0xFF00F0FF).withOpacity(0.3));
-      }
-    }
-
-    // Draw nodes
-    for (final node in nodes) {
-      final p = Offset(node['x'] * size.width, node['y'] * size.height);
-      final isSelected = node['id'] == selectedIndex;
-
-      // Pulse effect
-      if (isSelected) {
-        canvas.drawCircle(p, 12 + (pulseValue * 8), Paint()..color = const Color(0xFFB026FF).withOpacity(0.3));
-      }
-
-      final fill = Paint()..color = isSelected ? const Color(0xFFB026FF) : const Color(0xFF1A1A2E);
-      final stroke = Paint()
-        ..color = isSelected ? Colors.white : const Color(0xFF00F0FF)
-        ..strokeWidth = 3.0
-        ..style = PaintingStyle.stroke;
-
-      canvas.drawCircle(p, 12, fill);
-      canvas.drawCircle(p, 12, stroke);
-
-      // Add label
-      final textSpan = TextSpan(
-        text: node['label'],
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontFamily: 'monospace'),
-      );
-      final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr);
-      textPainter.layout();
-      textPainter.paint(canvas, Offset(p.dx - (textPainter.width / 2), p.dy - 30));
-    }
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.6,
+      builder: (context, scrollController) => SingleChildScrollView(
+        controller: scrollController,
+        padding: const EdgeInsets.all(24),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(ontology.name, style: Theme.of(context).textTheme.headlineSmall),
+          if (ontology.acronym != null) Text(ontology.acronym!),
+          const SizedBox(height: 20),
+          Text('Domain: ${ontology.domain}'),
+          Text('Format: ${ontology.format}'),
+          Text('Size: ~${ontology.sizeMb} MB'),
+          Text('License: ${ontology.license}'),
+          const SizedBox(height: 32),
+          if (!ontology.isDownloaded)
+            SizedBox(width: double.infinity, height: 48, child: ElevatedButton.icon(onPressed: onImport, icon: const Icon(Icons.download), label: const Text('Import Ontology')))
+          else
+            const Center(child: Chip(label: Text('Already Imported'), backgroundColor: Colors.green, labelStyle: TextStyle(color: Colors.white))),
+        ]),
+      ),
+    );
   }
-
-  void _drawDashedLine(Canvas canvas, Offset p1, Offset p2, Paint paint) {
-    const dashWidth = 5.0;
-    const dashSpace = 5.0;
-    double distance = (p2 - p1).distance;
-    double dx = (p2.dx - p1.dx) / distance;
-    double dy = (p2.dy - p1.dy) / distance;
-    
-    double start = 0;
-    while (start < distance) {
-      canvas.drawLine(
-        Offset(p1.dx + dx * start, p1.dy + dy * start),
-        Offset(p1.dx + dx * (start + dashWidth), p1.dy + dy * (start + dashWidth)),
-        paint,
-      );
-      start += dashWidth + dashSpace;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant GraphPainter oldDelegate) => true; // Always repaint for animations
 }

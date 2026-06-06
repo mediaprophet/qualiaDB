@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub mod telemetry_server;
 pub mod ingest;
 pub mod compress;
+pub mod resources;
 mod parsers;
 
 /// The Qualia-DB Block Inspector & Data Ingestion CLI
@@ -145,6 +146,46 @@ enum Commands {
         /// Output path for the LZ4 block stream
         #[arg(long)]
         output: PathBuf,
+    },
+    /// Browse, inspect, download, and import LLMs, ontologies, and SPARQL endpoints
+    /// from the local resource catalog (resources/catalog.yaml).
+    ///
+    /// Subcommands:
+    ///   list [llms|ontologies|sparql]   — list catalog entries
+    ///   show <id>                       — show details for a resource
+    ///   download <llm-id>               — stream GGUF → WAL pointer map + CapabilityProfile
+    ///   import-ontology <ont-id>        — download + ingest ontology into .q42 + WAL provenance
+    Resources {
+        /// Subcommand: list | show | download | import-ontology
+        subcommand: String,
+        /// Resource ID or list filter (optional)
+        arg: Option<String>,
+    },
+    /// Manage Capability Profiles: compile a JSON-LD source into a .chk binary,
+    /// list known profile IDs, or inspect an existing .chk file.
+    Profile {
+        #[command(subcommand)]
+        action: ProfileAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum ProfileAction {
+    /// Compile a JSON-LD capability profile source into a binary .chk file.
+    /// Usage: qualia-cli profile compile health.jsonld [--out health.chk]
+    Compile {
+        /// JSON-LD profile source file
+        input: PathBuf,
+        /// Output path (defaults to <input>.chk)
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// List all known profile ID hashes and their semantic descriptions.
+    List,
+    /// Inspect a compiled .chk profile binary: show ID, payload size, and JSON-LD source.
+    Inspect {
+        /// Path to the .chk file
+        file: PathBuf,
     },
 }
 
@@ -524,6 +565,83 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("  Ratio  : {:.2}x", stats.ratio);
                 }
                 Err(e) => eprintln!("Compression failed: {}", e),
+            }
+        }
+        Commands::Resources { subcommand, arg } => {
+            resources::handle(subcommand, arg.as_deref()).await;
+        }
+        Commands::Profile { action } => {
+            match action {
+                ProfileAction::Compile { input, out } => {
+                    let out_path = out.clone().unwrap_or_else(|| input.with_extension("chk"));
+                    println!("============================================================");
+                    println!("⚡ Qualia Capability Profile Compiler");
+                    println!("  input  : {}", input.display());
+                    println!("  output : {}", out_path.display());
+                    println!("============================================================");
+                    match std::fs::read_to_string(input) {
+                        Err(e) => eprintln!("❌ Failed to read profile source: {}", e),
+                        Ok(jsonld_src) => {
+                            let stem = input.file_stem().unwrap_or_default().to_string_lossy();
+                            let profile_id = qualia_core_db::q_hash(&format!("profile:{}", stem));
+                            let mut chk_bytes: Vec<u8> = Vec::new();
+                            chk_bytes.extend_from_slice(b"QCHK");
+                            chk_bytes.extend_from_slice(&profile_id.to_le_bytes());
+                            chk_bytes.extend_from_slice(&(jsonld_src.len() as u32).to_le_bytes());
+                            chk_bytes.extend_from_slice(jsonld_src.as_bytes());
+                            match std::fs::write(&out_path, &chk_bytes) {
+                                Ok(_) => {
+                                    println!("✅ Compiled profile 0x{:016X} ({} bytes)", profile_id, chk_bytes.len());
+                                    println!("   Stem  : {}", stem);
+                                    println!("   Output: {}", out_path.display());
+                                    println!("   Next  : qualia-cli ingest --input data.nt --output out --profile {}", out_path.display());
+                                }
+                                Err(e) => eprintln!("❌ Write failed: {}", e),
+                            }
+                        }
+                    }
+                }
+                ProfileAction::List => {
+                    println!("============================================================");
+                    println!("📋 Registered Capability Profiles");
+                    println!("============================================================");
+                    println!("  (Profiles are registered when ingested via ExternalSorter)");
+                    println!("  Known profile ID namespaces:");
+                    let known = [
+                        ("profile:general",  "General purpose — no engine restrictions"),
+                        ("profile:health",   "Health/Clinical — NativeClinicalRisk, NativeBioAlignment"),
+                        ("profile:chemistry","Organic Chemistry — NativeChemicalSynthesis, NativeLipinski"),
+                        ("profile:research", "Research — all scientific opcodes, no financial engines"),
+                        ("profile:legal",    "Legal/Deontic — OP_OBLIGATE, OP_FORBID, OP_PERMIT"),
+                        ("profile:financial","Financial — ILP dispatchers, tax schema, audit trail"),
+                    ];
+                    for (name, desc) in &known {
+                        println!("  0x{:016X}  {}  — {}", qualia_core_db::q_hash(name), name, desc);
+                    }
+                }
+                ProfileAction::Inspect { file } => {
+                    println!("============================================================");
+                    println!("🔎 Profile Inspector: {}", file.display());
+                    println!("============================================================");
+                    match std::fs::read(file) {
+                        Err(e) => eprintln!("❌ Cannot read file: {}", e),
+                        Ok(bytes) => {
+                            if bytes.len() < 16 || &bytes[0..4] != b"QCHK" {
+                                eprintln!("❌ Not a valid .chk file (missing QCHK magic)");
+                            } else {
+                                let profile_id = u64::from_le_bytes(bytes[4..12].try_into().unwrap());
+                                let payload_len = u32::from_le_bytes(bytes[12..16].try_into().unwrap()) as usize;
+                                let payload = &bytes[16..16 + payload_len.min(bytes.len().saturating_sub(16))];
+                                println!("  Profile ID : 0x{:016X}", profile_id);
+                                println!("  Payload    : {} bytes (JSON-LD source)", payload_len);
+                                println!("  Total .chk : {} bytes", bytes.len());
+                                println!();
+                                println!("--- JSON-LD Source ---");
+                                println!("{}", String::from_utf8_lossy(payload));
+                            }
+                        }
+                    }
+                }
             }
         }
         Commands::Benchmark { action } => {

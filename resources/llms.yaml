@@ -1,0 +1,110 @@
+llms:
+  - id: "phi-3-mini-4k-instruct-q4km"
+    name: "Phi-3 Mini 4K Instruct (Q4_K_M GGUF)"
+    provider: "Microsoft / Unsloth"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 2400
+    download:
+      type: "huggingface"
+      repo: "unsloth/Phi-3-mini-4k-instruct-GGUF"
+      file: "Phi-3-mini-4k-instruct.Q4_K_M.gguf"
+    license: "MIT"
+    recommended_for:
+      - edge
+      - low_ram
+      - rag
+    ram_estimate_mb: 2800
+    tags: [general, reasoning, instruction, edge]
+    last_verified: "2026-06-05"
+    notes: "Strong small model suitable for local QualiaDB + RAG use."
+
+  - id: "gemma-2-2b-it-q4km"
+    name: "Gemma 2 2B Instruct (Q4_K_M GGUF)"
+    provider: "Google / Unsloth"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 1600
+    download:
+      type: "huggingface"
+      repo: "unsloth/gemma-2-2b-it-GGUF"
+      file: "gemma-2-2b-it.Q4_K_M.gguf"
+    license: "Gemma Terms"
+    recommended_for:
+      - edge
+      - very_low_ram
+    ram_estimate_mb: 1900
+    tags: [general, multilingual, edge]
+    last_verified: "2026-06-05"
+
+  - id: "qwen2.5-1.5b-instruct-q4km"
+    name: "Qwen2.5 1.5B Instruct (Q4_K_M GGUF)"
+    provider: "Alibaba / Unsloth"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 1100
+    download:
+      type: "huggingface"
+      repo: "unsloth/Qwen2.5-1.5B-Instruct-GGUF"
+      file: "Qwen2.5-1.5B-Instruct.Q4_K_M.gguf"
+    license: "Apache-2.0"
+    recommended_for:
+      - edge
+      - coding
+    ram_estimate_mb: 1400
+    tags: [coding, reasoning, edge]
+    last_verified: "2026-06-05"
+
+  - id: "llama-3.2-3b-instruct-q4km"
+    name: "Llama 3.2 3B Instruct (Q4_K_M GGUF)"
+    provider: "Meta / TheBloke"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 2200
+    download:
+      type: "huggingface"
+      repo: "TheBloke/Llama-3.2-3B-Instruct-GGUF"
+      file: "llama-3.2-3b-instruct.Q4_K_M.gguf"
+    license: "Llama 3.2 Community License"
+    recommended_for:
+      - edge
+      - general
+    ram_estimate_mb: 2600
+    tags: [general, instruction]
+    last_verified: "2026-06-05"
+
+  - id: "phi-3-medium-4k-instruct-q4km"
+    name: "Phi-3 Medium 4K Instruct (Q4_K_M GGUF)"
+    provider: "Microsoft / Unsloth"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 4800
+    download:
+      type: "huggingface"
+      repo: "unsloth/Phi-3-medium-4k-instruct-GGUF"
+      file: "Phi-3-medium-4k-instruct.Q4_K_M.gguf"
+    license: "MIT"
+    recommended_for:
+      - balanced
+    ram_estimate_mb: 5500
+    tags: [general, reasoning]
+    last_verified: "2026-06-05"
+
+  # Additional practical edge model
+  - id: "mistral-7b-instruct-v0.3-q4km"
+    name: "Mistral 7B Instruct v0.3 (Q4_K_M GGUF)"
+    provider: "Mistral AI / TheBloke"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 4100
+    download:
+      type: "huggingface"
+      repo: "TheBloke/Mistral-7B-Instruct-v0.3-GGUF"
+      file: "mistral-7b-instruct-v0.3.Q4_K_M.gguf"
+    license: "Apache-2.0"
+    recommended_for:
+      - balanced
+      - reasoning
+    ram_estimate_mb: 4800
+    tags: [general, reasoning, instruction]
+    last_verified: "2026-06-05"

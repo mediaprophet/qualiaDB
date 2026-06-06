@@ -410,6 +410,7 @@ pub mod daemon_swarm;
 pub mod gguf_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gguf_sharder;
+pub mod resource_catalog;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;
 
