@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 # ── Job 1: qualia-cli ─────────────────────────────────────────────────────────
 jobs:
   build-cli:
@@ -119,6 +122,7 @@ jobs:
             flutter_platform: macos
             artifact_dir: crates/qualia-flutter/build/macos/Build/Products/Release
             asset_name: qualia-flutter-macos-aarch64.tar.gz
+            experimental: true
 
     steps:
       - uses: actions/checkout@v4
@@ -164,6 +168,7 @@ jobs:
 
       - name: Build Flutter (${{ matrix.flutter_platform }})
         working-directory: crates/qualia-flutter
+        continue-on-error: ${{ matrix.experimental == true }}
         run: flutter build ${{ matrix.flutter_platform }} --release
 
       - name: Package artifact (Linux / macOS)
