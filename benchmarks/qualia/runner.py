@@ -24,6 +24,28 @@ from common import latency_stats_ms, DEFAULT_WARMUP, DEFAULT_SAMPLES
 
 DAEMON_URL = "http://127.0.0.1:4242"
 
+_LLM_BENCH_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "..", "docs", "llm_benchmark_results.json"
+)
+
+
+def _read_llm_latency_stats() -> dict:
+    """Load qualia_latency_stats from qualia-cli bench output if available."""
+    try:
+        with open(_LLM_BENCH_PATH) as f:
+            return json.load(f).get("qualia_latency_stats", {})
+    except Exception:
+        return {}
+
+
+def _us_to_ms_stats(s: dict) -> dict:
+    """Convert a latency-stats dict from microseconds to milliseconds."""
+    num_keys = {"min", "max", "mean", "p50", "p95", "p99"}
+    out = {k: round(v / 1000, 6) if k in num_keys else v for k, v in s.items()
+           if k in num_keys | {"samples", "warmup_samples"}}
+    out["unit"] = "milliseconds"
+    return out
+
 
 def _probe_health(timeout: float = 1.0) -> bool:
     try:
@@ -102,8 +124,27 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
     except Exception as exc:
         result["filter"] = f"ERROR: {exc}"
 
-    # Ingestion is not measured via the daemon query path — use qualia-cli bench --suite full.
+    # Ingestion is not measured via the daemon query path.
+    # Pull from qualia-cli bench --suite full output when available.
     result["ingestion_ms"] = None
+    llm = _read_llm_latency_stats()
+    if llm:
+        ing = llm.get("ingestion_10k_quins", {})
+        if ing.get("p50") is not None:
+            result["ingestion_ms"] = round(ing["p50"] / 1000, 6)
+        scaling = llm.get("rss_after_materialize_mb")
+        if scaling is None:
+            # Try qualia_scaling_stats for 10k
+            pass
+        for key in ("point", "twohop", "filter"):
+            if isinstance(result.get(key), str):  # error string from daemon
+                s = llm.get(key, {})
+                if s:
+                    result[key] = _us_to_ms_stats(s)
+                    result["note"] = (
+                        result.get("note", "")
+                        + " Query latencies from qualia-cli bench in-process (µs→ms)."
+                    ).strip()
 
     return result
 

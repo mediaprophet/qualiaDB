@@ -41,14 +41,16 @@
         "warmup_samples": 10,
         "unit": "milliseconds"
       },
-      "ingestion_ms": null,
+      "ingestion_ms": 0.034943,
+      "peak_rss_mb": 11.46,
+      "note": "Query latencies via daemon HTTP loopback (30 samples). Ingestion + RSS from qualia-cli bench in-process (µs→ms).",
       "schema_version": 1,
       "dataset": "synthetic-ntriples-v1",
       "timestamp": "2026-06-06T13:00:56.598636Z",
       "meta": {
         "label": "Qualia (native daemon)",
         "focus": "Zero-allocation 5-vector graph + Sentinel VM on your hardware",
-        "install": "cargo run --release -p qualia-cli -- daemon --port 4242"
+        "install": "cargo run --release -p qualia-cli -- daemon --dev --port 4242"
       }
     },
     "oxigraph": {

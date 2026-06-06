@@ -307,7 +307,11 @@
                 if (val.startsWith('ERROR') || val === 'OOM') return '—';
                 return val;
             }
-            return Number(val).toFixed(2);
+            const n = Number(val);
+            if (n <= 0) return '—';
+            if (n < 0.001) return '< 0.001';   // sub-µs — below ms display resolution
+            if (n < 1)     return n.toFixed(3); // sub-ms
+            return n.toFixed(2);
         }
 
         function getEngines(data) {
