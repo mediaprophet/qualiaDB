@@ -9,8 +9,28 @@ pub mod query_engine;
 pub mod n3_parser;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest;
+pub mod llm_agent;
+pub mod solid_ldp;
 pub mod wasm_bridge;
 pub mod modalities;
+
+/// The Global Capability Registry exposes which features are compiled into the
+/// current qualia-core-db binary. This allows the CLI to dynamically self-document
+/// and progressively expose features like SHACL extensions or specific logic modalities.
+pub const CAPABILITY_REGISTRY: &[&str] = &[
+    "SHACL",
+    "Memory",
+    "Database",
+    "Migration",
+    "DeonticLogic",
+    "EpistemicLogic",
+    "ParaconsistentLogic",
+    "DialecticalLogic",
+    "TemporalLTL",
+    "Bioinformatics",
+    "OrganicChemistry",
+    "Economics",
+];
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
 /// Fully optimized for zero-copy memory operations on post-2020 architectures.
@@ -345,7 +365,6 @@ pub mod resolver;
 pub mod spatial;
 pub mod rules;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod solid_ldp;
 pub mod npu_ffi;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon;
@@ -375,7 +394,6 @@ pub mod ilp_dispatcher;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod nym_adapter;
 
-pub mod llm_agent;
 pub mod mini_parser;
 pub mod webizen_bytecode;
 pub mod identifier;

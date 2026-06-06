@@ -1,0 +1,18 @@
+# Cognitive AI Chunk format test file
+chunk1:
+  type: event
+  action: validate_shacl
+  confidence: 0.95
+  timestamp: 1672531200
+  agent: webizen_core_2
+
+chunk2:
+  type: concept
+  name: DeonticObligate
+  domain: logic_modalities
+
+chunk3:
+  type: relationship
+  source: chunk1
+  target: chunk2
+  relation: depends_on
