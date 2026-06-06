@@ -136,6 +136,9 @@
                                     <span class="font-medium">WASM</span>
                                 </button>
                             </div>
+                            <div class="mt-2 text-right">
+                                <span id="wasm-badge" class="text-xs text-slate-500 font-mono">WASM Loading…</span>
+                            </div>
                         </div>
 
                         <!-- Suite Selection -->
@@ -186,6 +189,21 @@
 
         </div>
     </div>
+
+    <!-- Load Qualia WASM and expose execute_ntriples_query globally -->
+    <script type="module">
+        import init, { execute_ntriples_query } from './playground/qualia_core_db.js';
+        try {
+            await init('./playground/qualia_core_db_bg.wasm');
+            window._qualiaExec = execute_ntriples_query;
+            const el = document.getElementById('wasm-badge');
+            if (el) { el.textContent = 'WASM Ready'; el.className = el.className.replace('text-slate-500', 'text-emerald-400'); }
+        } catch(e) {
+            console.warn('Qualia WASM load failed:', e.message);
+            const el = document.getElementById('wasm-badge');
+            if (el) { el.textContent = 'WASM Failed'; el.className = el.className.replace('text-slate-500', 'text-red-400'); }
+        }
+    </script>
 
     <script>
         let currentMode = 'native';
@@ -284,14 +302,97 @@
             status.className = `px-4 py-1.5 text-xs rounded-2xl bg-amber-500/10 text-amber-400 flex items-center gap-2`;
 
             if (currentMode === 'wasm') {
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-center py-12">
-                        <i class="fas fa-puzzle-piece text-4xl text-slate-600 mb-4"></i>
-                        <p class="text-slate-400 mb-2">WASM mode: use the <a href="playground/index.html" class="text-blue-400 underline">Interactive Playground</a> for in-browser queries.</p>
-                        <p class="text-xs text-slate-500">Switch to Native to benchmark via the local daemon.</p>
-                    </div>`;
-                status.innerHTML = `<i class="fas fa-info-circle"></i> <span>See Playground</span>`;
-                status.className = `px-4 py-1.5 text-xs rounded-2xl bg-blue-500/10 text-blue-400 flex items-center gap-2`;
+                if (!window._qualiaExec) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-center py-12 space-y-3">
+                            <i class="fas fa-exclamation-triangle text-4xl text-amber-500/40 mb-2"></i>
+                            <p class="text-slate-300 font-medium">Qualia WASM not loaded</p>
+                            <p class="text-sm text-slate-500">Check the browser console for load errors.</p>
+                        </div>`;
+                    status.innerHTML = `<i class="fas fa-times-circle"></i> <span>WASM Failed</span>`;
+                    status.className = `px-4 py-1.5 text-xs rounded-2xl bg-red-500/10 text-red-400 flex items-center gap-2`;
+                    return;
+                }
+                // Run WASM benchmarks: execute_ntriples_query(pattern, emptyDb, maxResults)
+                const EMPTY_DB = new Uint8Array(0);
+                const ITERS = 50;
+                try {
+                    const suite = document.getElementById('benchmarkSuite').value;
+                    const keys = suite === 'full' ? ['point','twohop','filter','ingest'] : [suite];
+                    const results = [];
+                    for (const key of keys) {
+                        container.innerHTML = `<div class="flex items-center gap-3 text-slate-400 py-12 justify-center"><i class="fas fa-spinner fa-spin"></i> Running <span class="font-mono text-white">${SUITE_LABELS[key]}</span>…</div>`;
+                        await new Promise(r => setTimeout(r, 0)); // yield to paint
+                        const pattern = QUERIES[key];
+                        const latencies = [];
+                        let vmCycles = 0, directJumps = 0;
+                        for (let i = 0; i < ITERS; i++) {
+                            const t0 = performance.now();
+                            const raw = window._qualiaExec(pattern, EMPTY_DB, 8);
+                            latencies.push(performance.now() - t0);
+                            if (i === ITERS - 1) {
+                                try { const j = JSON.parse(raw); vmCycles = j.vm_cycles || 0; directJumps = j.direct_jump_ops || 0; } catch(_) {}
+                            }
+                        }
+                        latencies.sort((a, b) => a - b);
+                        const p50 = latencies[Math.floor(latencies.length * 0.5)];
+                        const p95 = latencies[Math.floor(latencies.length * 0.95)];
+                        const throughput = Math.round(1000 / p50);
+                        results.push({ label: SUITE_LABELS[key], p50, p95, throughput, vmCycles, directJumps });
+                    }
+                    const avgP50  = results.reduce((s, r) => s + r.p50, 0) / results.length;
+                    const totalVm = results.reduce((s, r) => s + r.vmCycles, 0);
+                    const avgTput = results.reduce((s, r) => s + r.throughput, 0) / results.length;
+                    let rowsHtml = results.map(r => `
+                        <div class="glass p-4 rounded-2xl">
+                            <div class="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">${r.label}</div>
+                            <div class="grid grid-cols-3 gap-3 text-center">
+                                <div>
+                                    <div class="text-xl font-semibold font-mono">${r.p50.toFixed(3)}<span class="text-xs text-slate-400 ml-1">ms</span></div>
+                                    <div class="text-xs text-slate-500">P50</div>
+                                </div>
+                                <div>
+                                    <div class="text-xl font-semibold font-mono text-amber-400">${r.throughput.toLocaleString()}<span class="text-xs text-slate-400 ml-1">ops/s</span></div>
+                                    <div class="text-xs text-slate-500">Throughput</div>
+                                </div>
+                                <div>
+                                    <div class="text-xl font-semibold font-mono text-blue-400">${r.vmCycles.toLocaleString()}</div>
+                                    <div class="text-xs text-slate-500">VM cycles</div>
+                                </div>
+                            </div>
+                        </div>`).join('');
+                    container.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="font-mono text-sm text-emerald-400">✓ COMPLETED</span>
+                                    <span class="ml-3 text-sm text-slate-400">WASM • ${SUITE_LABELS[suite]} • ${ITERS} iterations (empty DB — pipeline cost)</span>
+                                </div>
+                                <span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="glass p-5 rounded-2xl">
+                                    <div class="text-xs text-slate-400 mb-1">Avg P50 Latency</div>
+                                    <div class="text-3xl font-semibold font-mono">${avgP50.toFixed(3)}<span class="text-base font-normal text-slate-400 ml-1">ms</span></div>
+                                </div>
+                                <div class="glass p-5 rounded-2xl">
+                                    <div class="text-xs text-slate-400 mb-1">Avg Throughput</div>
+                                    <div class="text-3xl font-semibold font-mono">${Math.round(avgTput).toLocaleString()}<span class="text-base font-normal text-slate-400 ml-1">ops/s</span></div>
+                                </div>
+                                <div class="glass p-5 rounded-2xl">
+                                    <div class="text-xs text-slate-400 mb-1">Total VM Cycles</div>
+                                    <div class="text-3xl font-semibold font-mono text-blue-400">${totalVm.toLocaleString()}</div>
+                                </div>
+                            </div>
+                            ${results.length > 1 ? `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${rowsHtml}</div>` : rowsHtml}
+                        </div>`;
+                    status.innerHTML = `<i class="fas fa-check-circle"></i> <span>Complete</span>`;
+                    status.className = `px-4 py-1.5 text-xs rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center gap-2`;
+                } catch(e) {
+                    container.innerHTML = `<div class="text-red-400 py-8 text-center text-sm">${e.message}</div>`;
+                    status.innerHTML = `<i class="fas fa-times-circle"></i> <span>Error</span>`;
+                    status.className = `px-4 py-1.5 text-xs rounded-2xl bg-red-500/10 text-red-400 flex items-center gap-2`;
+                }
                 return;
             }
 
