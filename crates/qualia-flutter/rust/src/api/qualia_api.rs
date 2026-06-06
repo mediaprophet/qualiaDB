@@ -176,3 +176,52 @@ pub async fn download_model(_url: String, _filename: String, _model_id: String) 
 
 pub fn get_physics_state() -> SpatialPhysicsState { SpatialPhysicsState{temperature:0.0, pressure:0.0, time_dilation:0.0} }
 pub fn upsert_cmld_definition(_term: String, _context_did: String) -> String { "".into() }
+
+/// Run local LLM inference through the full Webizen-gated orchestration pipeline.
+///
+/// This is the primary entry point for the Flutter chat UI. It:
+///   1. Validates the intent against the Rights Ontology (pre-flight)
+///   2. Calls `LocalLlmAgent::infer()` → Phase 8 bifurcated SPSC GPU loop
+///   3. Validates provenance citations on the output (post-flight)
+///
+/// `model_path` should be the absolute path to a `.gguf` file on-device
+/// (e.g. the path selected in LLMHubScreen after download).
+/// Pass an empty string to get a descriptive placeholder response.
+pub fn run_inference(prompt: String, model_path: String) -> String {
+    use qualia_core_db::{
+        llm_agent::{AgentBackend, AgentIntent, LocalLlmAgent},
+        orchestrator::{NullThermalGovernor, OrchestrationResult, TaskOrchestrator},
+        q_hash,
+    };
+
+    if model_path.is_empty() {
+        return "[No model loaded — select a GGUF model in LLM Hub first]".to_string();
+    }
+
+    let agent = LocalLlmAgent {
+        agent_did: "did:qualia:flutter-chat-agent".to_string(),
+        backend: AgentBackend::Local {
+            model_path: model_path.clone(),
+            context_window: 4096,
+            quantization: "Q4_K_M".to_string(),
+        },
+        memory_used_bytes: std::sync::atomic::AtomicU64::new(0),
+    };
+
+    let intent = AgentIntent {
+        intent_predicate: q_hash("llm:ReadGraph"),
+        requested_graph_scope: vec![q_hash("user:chat_context")],
+        requires_network: false,
+        ilp_offer_micro_cents: 0,
+        principal_did_hash: q_hash("did:qualia:flutter-user"),
+        mcp_intent_frame_hash: q_hash("purpose:General"),
+        active_profile: None,
+    };
+
+    let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
+    match orch.orchestrate_inference(&agent, &prompt, "flutter_chat_context", intent) {
+        OrchestrationResult::Committed { text, .. } => text,
+        OrchestrationResult::Blocked { reason, .. } => format!("[Webizen blocked: {}]", reason),
+        OrchestrationResult::Failed(e)               => format!("[Inference error: {}]", e),
+    }
+}

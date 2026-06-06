@@ -148,6 +148,21 @@ Future<String> upsertCmldDefinition(
     RustApi.instance.api.crateApiQualiaApiUpsertCmldDefinition(
         term: term, contextDid: contextDid);
 
+/// Run local LLM inference through the full Webizen-gated orchestration pipeline.
+///
+/// This is the primary entry point for the Flutter chat UI. It:
+///   1. Validates the intent against the Rights Ontology (pre-flight)
+///   2. Calls `LocalLlmAgent::infer()` → Phase 8 bifurcated SPSC GPU loop
+///   3. Validates provenance citations on the output (post-flight)
+///
+/// `model_path` should be the absolute path to a `.gguf` file on-device
+/// (e.g. the path selected in LLMHubScreen after download).
+/// Pass an empty string to get a descriptive placeholder response.
+Future<String> runInference(
+        {required String prompt, required String modelPath}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiRunInference(prompt: prompt, modelPath: modelPath);
+
 class AgentConfig {
   final String storagePath;
   final BigInt storageQuotaGb;
