@@ -79,6 +79,11 @@ pub struct AgentIntent {
     pub ilp_offer_micro_cents: u64,
     /// The DID hash of the natural person who commanded or instantiated this session.
     pub principal_did_hash: u64,
+    /// The persistent Intent Frame Hash established by the MCP session.
+    pub mcp_intent_frame_hash: u64,
+    /// The active capability profile, if one is bound to this session.
+    #[serde(skip)]
+    pub active_profile: Option<crate::profiles::CapabilityProfile>,
 }
 
 impl AgentIntent {
@@ -98,6 +103,10 @@ pub enum WebizenVerdict {
     /// Block. Reason is an N3Logic rule hash that caused the rejection.
     /// Can optionally carry a 48-byte Quin to write immediately to the immutable ledger.
     Deny { rule_violated: u64, reason: &'static str, conduct_record: Option<QualiaQuin> },
+    /// Block with a detailed explanation for the user, usually tied to an Intent Frame violation.
+    DenyWithExplanation { rule_violated: u64, reason: String, explanation: String },
+    /// The operation might be valid, but requires explicit reconfirmation from the Principal.
+    RequireReconfirmation { reason: String },
     /// The output was modified (sanitised) by the Webizen before passing through.
     Sanitised { original_hash: u64 },
 }
@@ -325,6 +334,29 @@ impl AgentRuntime for LocalLlmAgent {
                 conduct_record: Some(conduct_quin),
             };
         }
+
+        // Rule 6: The Intent Predicate must align with the MCP Intent Frame.
+        if intent.intent_predicate != intent.mcp_intent_frame_hash && intent.mcp_intent_frame_hash != crate::q_hash("purpose:General") {
+            return WebizenVerdict::DenyWithExplanation {
+                rule_violated: LLM_RULE_INTENT_FRAME_MISMATCH,
+                reason: "Intent Frame Violation".into(),
+                explanation: "The LLM attempted an operation outside the bounds of the active MCP Intent Frame.".into(),
+            };
+        }
+
+        // Rule 7: Profile Constraints (Intent frames and Engine masking)
+        if let Some(profile) = &intent.active_profile {
+            if !profile.allows_intent(intent.intent_predicate) {
+                return WebizenVerdict::DenyWithExplanation {
+                    rule_violated: LLM_RULE_PROFILE_VIOLATION,
+                    reason: "Profile Violation".into(),
+                    explanation: "This capability profile explicitly blocks this intent frame.".into(),
+                };
+            }
+            // For actual engine operations, the Orchestrator/Webizen VM would call `allows_engine()` 
+            // when mapping the intent to native opcodes.
+        }
+
         WebizenVerdict::Permit
     }
 
@@ -387,6 +419,8 @@ pub const LLM_RULE_PROVENANCE_REQUIRED:   u64 = 0xA1B2C3D4E5F60003;
 pub const LLM_RULE_TOKEN_BUDGET:          u64 = 0xA1B2C3D4E5F60004;
 pub const LLM_RULE_REMOTE_CONSENT:        u64 = 0xA1B2C3D4E5F60005;
 pub const LLM_RULE_NO_ADVERSARIAL_CONDUCT:u64 = 0xA1B2C3D4E5F60006;
+pub const LLM_RULE_INTENT_FRAME_MISMATCH: u64 = 0xA1B2C3D4E5F60007;
+pub const LLM_RULE_PROFILE_VIOLATION:     u64 = 0xA1B2C3D4E5F60008;
 
 /// Special webizen hash marking a Sanctuary-flagged graph scope.
 pub const SANCTUARY_SCOPE_WEBIZEN: u64 = 0xDEAD_BABE_CAFE_0042;
@@ -409,6 +443,8 @@ mod tests {
             requires_network: true,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
+            mcp_intent_frame_hash: 0xAABB,
+            active_profile: None,
         };
         let verdict = agent.validate_intent(&intent);
         assert!(matches!(verdict, WebizenVerdict::Deny { .. }), "Webizen must block outbound calls from local backend");
@@ -423,6 +459,8 @@ mod tests {
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
+            mcp_intent_frame_hash: 0xAABB,
+            active_profile: None,
         };
         let verdict = agent.validate_intent(&intent);
         assert!(matches!(verdict, WebizenVerdict::Deny { .. }), "Webizen must block Sanctuary scope access");
@@ -437,6 +475,8 @@ mod tests {
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
+            mcp_intent_frame_hash: 0xAABB,
+            active_profile: None,
         };
         assert_eq!(agent.validate_intent(&intent), WebizenVerdict::Permit);
     }
@@ -450,6 +490,8 @@ mod tests {
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
+            mcp_intent_frame_hash: 0xAABB,
+            active_profile: None,
         };
         assert_eq!(agent.validate_intent(&intent), WebizenVerdict::Permit);
 
@@ -485,6 +527,8 @@ mod tests {
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: crate::q_hash("did:q42:human-rights-test-subject"),
+            mcp_intent_frame_hash: crate::q_hash("purpose:General"),
+            active_profile: None,
         };
         
         // Warm up any internal system components that might allocate on first use

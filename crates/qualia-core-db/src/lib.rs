@@ -10,6 +10,7 @@ pub mod n3_parser;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest;
 pub mod llm_agent;
+pub mod profiles;
 pub mod solid_ldp;
 pub mod wasm_bridge;
 pub mod modalities;

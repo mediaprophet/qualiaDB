@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Reference • Qualia-DB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        :root {
+            --glass-bg: rgba(17, 23, 31, 0.72);
+            --glass-bg-strong: rgba(17, 23, 31, 0.88);
+            --glass-border: rgba(148, 163, 184, 0.10);
+            --glass-border-strong: rgba(148, 163, 184, 0.18);
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #0a0e17;
+            color: #e2e8f0;
+        }
+
+        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; }
+        .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+            border-radius: 24px;
+        }
+        .glass-strong {
+            background: var(--glass-bg-strong);
+            backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+            border: 1px solid var(--glass-border-strong);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        .module-card {
+            transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+                        box-shadow 0.18s ease,
+                        border-color 0.18s ease;
+        }
+        .module-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .pill {
+            font-size: 0.7rem;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .new-badge {
+            background: linear-gradient(90deg, #10b981, #06b6d4);
+            color: white;
+            font-size: 0.6rem;
+            padding: 1px 6px;
+            border-radius: 9999px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            vertical-align: middle;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeInUp 0.45s ease both; }
+        .fade-in-2 { animation: fadeInUp 0.45s 0.08s ease both; }
+        .fade-in-3 { animation: fadeInUp 0.45s 0.16s ease both; }
+    </style>
+</head>
+<body>
+
+    <!-- Nav -->
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div class="hidden md:flex items-center gap-6 text-sm">
+                        <a href="index.html" class="hover:text-white transition-colors">Home</a>
+                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="analytics.html" class="hover:text-white transition-colors">Analytics</a>
+                        <a href="library.html" class="hover:text-white transition-colors">Library</a>
+                        <a href="cooperativeproject/index.html" class="hover:text-white transition-colors">Projects</a>
+                        <a href="playground/index.html" class="hover:text-white transition-colors">Playground</a>
+                        <a href="api.html" class="text-white font-medium border-b border-blue-400 pb-px">API Docs</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="rustdoc/qualia_core_db/index.html" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 rounded-2xl transition-colors font-medium">
+                        <i class="fas fa-book-open text-xs"></i>
+                        <span>Open Rustdoc</span>
+                    </a>
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 py-12">
+
+        <!-- Hero -->
+        <div class="mb-12 fade-in">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-sm mb-5">
+                <i class="fas fa-cube text-xs"></i>
+                <span class="font-mono">qualia-core-db</span>
+                <span class="text-blue-500/60">•</span>
+                <span>v0.0.6-dev</span>
+            </div>
+            <h1 class="font-display text-5xl tracking-[-2px] mb-3">API Reference</h1>
+            <p class="text-xl text-slate-400 max-w-2xl mb-6">
+                Complete Rust crate documentation — generated from source with <span class="font-mono text-slate-300">cargo doc</span>.
+                Browse by module group below or open the full reference directly.
+            </p>
+            <div class="flex flex-wrap gap-3">
+                <a href="rustdoc/qualia_core_db/index.html" target="_blank"
+                   class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-2xl font-semibold text-sm transition-colors">
+                    <i class="fas fa-book-open"></i>
+                    <span>Open Full Rustdoc</span>
+                    <i class="fas fa-arrow-right text-xs opacity-70"></i>
+                </a>
+                <a href="rustdoc/qualia_core_db/all.html" target="_blank"
+                   class="inline-flex items-center gap-2 px-6 py-3 glass rounded-2xl font-medium text-sm hover:bg-white/5 transition-colors">
+                    <i class="fas fa-list text-xs"></i>
+                    <span>All Items</span>
+                </a>
+                <a href="rustdoc/qualia_cli/index.html" target="_blank"
+                   class="inline-flex items-center gap-2 px-6 py-3 glass rounded-2xl font-medium text-sm hover:bg-white/5 transition-colors">
+                    <i class="fas fa-terminal text-xs"></i>
+                    <span>CLI Crate</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- New in 0.0.6 banner -->
+        <div class="glass-strong rounded-3xl p-6 mb-10 border border-emerald-500/20 fade-in-2">
+            <div class="flex items-start gap-4">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-sparkles text-emerald-400"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="font-semibold text-emerald-300">New in v0.0.6-dev</span>
+                        <span class="pill bg-emerald-500/15 text-emerald-400">0.0.6-dev</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2 text-sm">
+                        <a href="rustdoc/qualia_core_db/profiles/index.html" target="_blank"
+                           class="pill bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 transition-colors cursor-pointer">profiles</a>
+                        <a href="rustdoc/qualia_core_db/shacl_compiler/index.html" target="_blank"
+                           class="pill bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 transition-colors cursor-pointer">shacl_compiler</a>
+                        <a href="rustdoc/qualia_core_db/bioinformatics/index.html" target="_blank"
+                           class="pill bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 transition-colors cursor-pointer">bioinformatics</a>
+                        <a href="rustdoc/qualia_core_db/clinical_engine/index.html" target="_blank"
+                           class="pill bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 transition-colors cursor-pointer">clinical_engine</a>
+                        <a href="rustdoc/qualia_core_db/organic_chemistry/index.html" target="_blank"
+                           class="pill bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 transition-colors cursor-pointer">organic_chemistry</a>
+                        <a href="rustdoc/qualia_core_db/gguf_bridge/index.html" target="_blank"
+                           class="pill bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors cursor-pointer">gguf_bridge</a>
+                        <a href="rustdoc/qualia_core_db/gguf_sharder/index.html" target="_blank"
+                           class="pill bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors cursor-pointer">gguf_sharder</a>
+                        <a href="rustdoc/qualia_core_db/llm_agent/index.html" target="_blank"
+                           class="pill bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors cursor-pointer">llm_agent</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Module grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-10 fade-in-3">
+
+            <!-- Core Storage -->
+            <a href="rustdoc/qualia_core_db/storage/index.html" target="_blank"
+               class="module-card glass rounded-3xl p-6 block border border-blue-500/10 hover:border-blue-500/30">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center">
+                        <i class="fas fa-database text-blue-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold">Core Storage</div>
+                        <div class="text-xs text-slate-500">Zero-allocation engine</div>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">
+                    Five-vector quins, SuperBlocks, WAL, lazy demand-paging, BIDX block-range index, and the VFS abstraction.
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">storage</span>
+                    <span class="pill bg-slate-800 text-slate-400">wal</span>
+                    <span class="pill bg-slate-800 text-slate-400">indexing</span>
+                    <span class="pill bg-slate-800 text-slate-400">archive</span>
+                    <span class="pill bg-slate-800 text-slate-400">lexicon</span>
+                    <span class="pill bg-slate-800 text-slate-400">ingest</span>
+                </div>
+            </a>
+
+            <!-- Query Engine -->
+            <a href="rustdoc/qualia_core_db/query_engine/index.html" target="_blank"
+               class="module-card glass rounded-3xl p-6 block border border-purple-500/10 hover:border-purple-500/30">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-xl bg-purple-500/15 flex items-center justify-center">
+                        <i class="fas fa-magnifying-glass text-purple-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold">Query & Logic</div>
+                        <div class="text-xs text-slate-500">SPARQL · N3 · Deontic</div>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">
+                    Query compiler, resolver, N3Logic parser, Prolog-style rules engine, deontic modal operators, and ILP logic.
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">query_engine</span>
+                    <span class="pill bg-slate-800 text-slate-400">query_compiler</span>
+                    <span class="pill bg-slate-800 text-slate-400">resolver</span>
+                    <span class="pill bg-slate-800 text-slate-400">n3_parser</span>
+                    <span class="pill bg-slate-800 text-slate-400">logic</span>
+                    <span class="pill bg-slate-800 text-slate-400">deontic_logic</span>
+                </div>
+            </a>
+
+            <!-- Webizen VM -->
+            <a href="rustdoc/qualia_core_db/webizen/index.html" target="_blank"
+               class="module-card glass rounded-3xl p-6 block border border-cyan-500/10 hover:border-cyan-500/30">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-xl bg-cyan-500/15 flex items-center justify-center">
+                        <i class="fas fa-robot text-cyan-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold">Webizen VM</div>
+                        <div class="text-xs text-slate-500">Bytecode · Sync · Native ops</div>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">
+                    The Webizen bytecode virtual machine with 200+ native opcodes covering thermodynamics, quantum DFT, ODE solving, and geometry.
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">webizen</span>
+                    <span class="pill bg-slate-800 text-slate-400">webizen_bytecode</span>
+                    <span class="pill bg-slate-800 text-slate-400">webizen_sync</span>
+                    <span class="pill bg-slate-800 text-slate-400">modalities</span>
+                </div>
+            </a>
+
+            <!-- Network & P2P -->
+            <a href="rustdoc/qualia_core_db/p2p/index.html" target="_blank"
+               class="module-card glass rounded-3xl p-6 block border border-emerald-500/10 hover:border-emerald-500/30">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                        <i class="fas fa-network-wired text-emerald-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold">Network & P2P</div>
+                        <div class="text-xs text-slate-500">libp2p · Solid · WebID</div>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">
+                    Federated identity, Solid LDP pod server, WebID profile negotiation, Nym anonymous transport, and daemon swarm coordination.
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">p2p</span>
+                    <span class="pill bg-slate-800 text-slate-400">daemon</span>
+                    <span class="pill bg-slate-800 text-slate-400">daemon_swarm</span>
+                    <span class="pill bg-slate-800 text-slate-400">solid_ldp</span>
+                    <span class="pill bg-slate-800 text-slate-400">nym_adapter</span>
+                    <span class="pill bg-slate-800 text-slate-400">web_civics</span>
+                </div>
+            </a>
+
+            <!-- AI / ML -->
+            <a href="rustdoc/qualia_core_db/llm_agent/index.html" target="_blank"
+               class="module-card glass rounded-3xl p-6 block border border-amber-500/10 hover:border-amber-500/30">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center">
+                        <i class="fas fa-brain text-amber-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold">AI / ML</div>
+                        <div class="text-xs text-slate-500">GGUF · NPU · TEE</div>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">
+                    LLM agent runtime, GGUF model loading and sharding, NPU FFI for hardware acceleration, and TEE secure enclave integration.
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">llm_agent</span>
+                    <span class="pill bg-slate-800 text-slate-400">gguf_bridge</span>
+                    <span class="pill bg-slate-800 text-slate-400">gguf_sharder</span>
+                    <span class="pill bg-slate-800 text-slate-400">npu_ffi</span>
+                    <span class="pill bg-slate-800 text-slate-400">tee_ffi</span>
+                </div>
+            </a>
+
+            <!-- Science -->
+            <a href="rustdoc/qualia_core_db/bioinformatics/index.html" target="_blank"
+               class="module-card glass rounded-3xl p-6 block border border-rose-500/10 hover:border-rose-500/30">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-xl bg-rose-500/15 flex items-center justify-center">
+                        <i class="fas fa-flask text-rose-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold">Scientific Primitives</div>
+                        <div class="text-xs text-slate-500 flex items-center gap-1.5">
+                            Bio · Chemistry · Physics
+                            <span class="new-badge">new</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">
+                    SHACL-validated scientific engines: bioinformatics (BLAST, MSA), clinical engine (ICD/RxNorm), organic chemistry (SMILES/SMARTS, Lipinski).
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">bioinformatics</span>
+                    <span class="pill bg-slate-800 text-slate-400">clinical_engine</span>
+                    <span class="pill bg-slate-800 text-slate-400">organic_chemistry</span>
+                    <span class="pill bg-slate-800 text-slate-400">thermodynamics</span>
+                    <span class="pill bg-slate-800 text-slate-400">quantum_dft</span>
+                    <span class="pill bg-slate-800 text-slate-400">ode_solver</span>
+                </div>
+            </a>
+
+            <!-- Economics & Rights -->
+            <a href="rustdoc/qualia_core_db/economics/index.html" target="_blank"
+               class="module-card glass rounded-3xl p-6 block border border-yellow-500/10 hover:border-yellow-500/30">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-xl bg-yellow-500/15 flex items-center justify-center">
+                        <i class="fas fa-coins text-yellow-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold">Economics & Rights</div>
+                        <div class="text-xs text-slate-500">ILP · Agency · Tax</div>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">
+                    Interledger Protocol micro-payments, dynamic equity allocation, agency records, obligation tracking, and tax schema primitives.
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">economics</span>
+                    <span class="pill bg-slate-800 text-slate-400">ilp_dispatcher</span>
+                    <span class="pill bg-slate-800 text-slate-400">agency</span>
+                    <span class="pill bg-slate-800 text-slate-400">tax_schema</span>
+                    <span class="pill bg-slate-800 text-slate-400">crdt</span>
+                </div>
+            </a>
+
+            <!-- Infrastructure -->
+            <a href="rustdoc/qualia_core_db/mcp_server/index.html" target="_blank"
+               class="module-card glass rounded-3xl p-6 block border border-slate-500/20 hover:border-slate-400/40">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-xl bg-slate-500/15 flex items-center justify-center">
+                        <i class="fas fa-server text-slate-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold">Infrastructure</div>
+                        <div class="text-xs text-slate-500">MCP · Orchestrator · WASM</div>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">
+                    MCP server for AI agent tool integration, orchestrator runtime, SHACL compiler, CBOR-LD encoder, WASM bridge, and telemetry.
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">mcp_server</span>
+                    <span class="pill bg-slate-800 text-slate-400">orchestrator</span>
+                    <span class="pill bg-slate-800 text-slate-400">shacl_compiler</span>
+                    <span class="pill bg-slate-800 text-slate-400">cbor_compiler</span>
+                    <span class="pill bg-slate-800 text-slate-400">wasm_bridge</span>
+                    <span class="pill bg-slate-800 text-slate-400">telemetry</span>
+                </div>
+            </a>
+
+            <!-- Profiles -->
+            <a href="rustdoc/qualia_core_db/profiles/index.html" target="_blank"
+               class="module-card glass rounded-3xl p-6 block border border-violet-500/10 hover:border-violet-500/30">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-xl bg-violet-500/15 flex items-center justify-center">
+                        <i class="fas fa-id-card text-violet-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold">Profiles & Identity</div>
+                        <div class="text-xs text-slate-500 flex items-center gap-1.5">
+                            Multi-identity · Credentials
+                            <span class="new-badge">new</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">
+                    Multi-profile identity management, verifiable credential anchoring, key vault integration, and git-bridge provenance linking.
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">profiles</span>
+                    <span class="pill bg-slate-800 text-slate-400">key_vault</span>
+                    <span class="pill bg-slate-800 text-slate-400">identifier</span>
+                    <span class="pill bg-slate-800 text-slate-400">git_bridge</span>
+                    <span class="pill bg-slate-800 text-slate-400">rpc</span>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Other crates -->
+        <div class="glass-strong rounded-3xl p-6 mb-10">
+            <div class="text-xs uppercase tracking-widest text-slate-500 mb-4">Other Crates in this Workspace</div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <a href="rustdoc/qualia_cli/index.html" target="_blank"
+                   class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-cli</div>
+                    <div class="text-xs text-slate-500">Command-line interface</div>
+                </a>
+                <a href="rustdoc/qualia_client_core/index.html" target="_blank"
+                   class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-client-core</div>
+                    <div class="text-xs text-slate-500">Client library core</div>
+                </a>
+                <a href="rustdoc/qualia_desktop/index.html" target="_blank"
+                   class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-desktop</div>
+                    <div class="text-xs text-slate-500">Tauri desktop app</div>
+                </a>
+                <a href="rustdoc/qualia_flutter_rust/index.html" target="_blank"
+                   class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-flutter-rust</div>
+                    <div class="text-xs text-slate-500">Flutter bridge</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick links -->
+        <div class="glass-strong rounded-3xl p-6">
+            <div class="text-xs uppercase tracking-widest text-slate-500 mb-4">Key Types & Constants</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                <a href="rustdoc/qualia_core_db/struct.QualiaQuin.html" target="_blank"
+                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-blue-300">
+                    <span class="text-slate-500 text-xs">struct</span> QualiaQuin
+                </a>
+                <a href="rustdoc/qualia_core_db/struct.QualiaSuperBlock.html" target="_blank"
+                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-blue-300">
+                    <span class="text-slate-500 text-xs">struct</span> QualiaSuperBlock
+                </a>
+                <a href="rustdoc/qualia_core_db/constant.CAPABILITY_REGISTRY.html" target="_blank"
+                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-amber-300">
+                    <span class="text-slate-500 text-xs">const</span> CAPABILITY_REGISTRY
+                </a>
+                <a href="rustdoc/qualia_core_db/enum.PermissiveRoutingLane.html" target="_blank"
+                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-purple-300">
+                    <span class="text-slate-500 text-xs">enum</span> PermissiveRoutingLane
+                </a>
+                <a href="rustdoc/qualia_core_db/constant.QUINS_PER_BLOCK.html" target="_blank"
+                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-amber-300">
+                    <span class="text-slate-500 text-xs">const</span> QUINS_PER_BLOCK
+                </a>
+                <a href="rustdoc/qualia_core_db/fn.q_hash.html" target="_blank"
+                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-emerald-300">
+                    <span class="text-slate-500 text-xs">fn</span> q_hash
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-10 text-center text-slate-600 text-sm">
+            Docs generated from <span class="font-mono">cargo doc --no-deps</span> on branch
+            <span class="font-mono text-slate-500">0.0.6-dev</span> · deployed via GitHub Actions
+        </div>
+
+    </div>
+
+</body>
+</html>

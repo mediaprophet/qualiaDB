@@ -1,5 +1,5 @@
 // crates/qualia-core-db/src/mcp_server.rs
-#![no_std]
+
 // We still need access to standard library for I/O and String during init phase
 extern crate std;
 
@@ -22,6 +22,16 @@ pub enum McpSystemError {
     SanctuaryGateTriggered,
     ToolNotFound,
     ParseError,
+    IntentFrameViolation,
+}
+
+#[derive(Debug, Clone)]
+pub struct McpIntentFrame {
+    pub purpose_hash: u64,
+    pub active_deontic_constraints: Vec<u64>,
+    pub active_profile_id: Option<u64>,
+    pub session_nonce: u64,
+    pub sanctuary_override: Option<String>,
 }
 
 /// Zero-deserialization view over an incoming tools/call byte buffer
@@ -59,13 +69,13 @@ fn extract_raw_json_string<'a>(payload: &'a [u8], key: &[u8]) -> Option<&'a [u8]
 /// Dispatches incoming tool actions without triggering dynamic heap allocations
 pub unsafe fn enforce_fiduciary_tool_dispatch(
     payload: RawToolPayload,
-    override_token: Option<&[u8]>,
+    intent_frame: &McpIntentFrame,
 ) -> Result<usize, McpSystemError> {
     
     // Enforce the zero-allocation lookup using primitive byte matching
     match payload.tool_name {
         b"query_graph" => {
-            if override_token.is_none() {
+            if intent_frame.sanctuary_override.is_none() {
                 // Instantly generate and sign an immutable conduct violation Quin
                 let violation_quin = QualiaQuin::new_conduct_violation(
                     b"EgressViolation: Missing Cryptographic Sanctuary Override"
@@ -76,24 +86,24 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
             }
             
             // Route execution frame straight to the Core 1 Prolog Sentinel VM loop
-            execute_bare_metal_graph_traversal(payload.arguments_raw)
+            execute_bare_metal_graph_traversal(payload.arguments_raw, intent_frame)
         },
         
         b"inject_test_quin" => {
             // Enforce paraconsistent isolation logic by routing the inputs 
             // directly into the isolated sub-graph lane: q_hash("q42:isolated")
-            execute_paraconsistent_injection(payload.arguments_raw)
+            execute_paraconsistent_injection(payload.arguments_raw, intent_frame)
         },
         
         _ => Err(McpSystemError::ToolNotFound)
     }
 }
 
-unsafe fn execute_bare_metal_graph_traversal(_args: &[u8]) -> Result<usize, McpSystemError> {
+unsafe fn execute_bare_metal_graph_traversal(_args: &[u8], _intent: &McpIntentFrame) -> Result<usize, McpSystemError> {
     Ok(1)
 }
 
-unsafe fn execute_paraconsistent_injection(_args: &[u8]) -> Result<usize, McpSystemError> {
+unsafe fn execute_paraconsistent_injection(_args: &[u8], _intent: &McpIntentFrame) -> Result<usize, McpSystemError> {
     Ok(1)
 }
 
@@ -122,8 +132,18 @@ pub unsafe fn parse_and_evaluate_mcp_stream(stream_chunk: &[u8]) -> Result<usize
     // In our logic, if it's MISSING (as a string) or literally not present, we treat as None.
     let valid_override = match sanctuary_override {
         Some(b"MISSING") => None,
-        Some(other) => Some(other),
+        Some(other) => Some(String::from_utf8_lossy(other).into_owned()),
         None => None,
+    };
+
+    // Construct a persistent Intent Frame for this stream.
+    // In a real session, this would be negotiated during handshake.
+    let intent_frame = McpIntentFrame {
+        purpose_hash: crate::q_hash("purpose:General"),
+        active_deontic_constraints: Vec::new(),
+        active_profile_id: None,
+        session_nonce: 0,
+        sanctuary_override: valid_override,
     };
 
     let payload = RawToolPayload {
@@ -131,7 +151,7 @@ pub unsafe fn parse_and_evaluate_mcp_stream(stream_chunk: &[u8]) -> Result<usize
         arguments_raw: stream_chunk,
     };
 
-    enforce_fiduciary_tool_dispatch(payload, valid_override)
+    enforce_fiduciary_tool_dispatch(payload, &intent_frame)
 }
 
 // -----------------------------------------------------------------------------
@@ -196,5 +216,25 @@ pub async fn start_mcp_listener() {
                 break;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sanctuary_override_binding() {
+        // Test parsing an MCP intent frame with a sanctuary scope override.
+        let bytes = br#"{"name": "query_graph", "arguments": {"sanctuary_override": "did:q42:patient_records"}}"#;
+        
+        let (opcode, intent_frame) = process_tools_call(b"query_graph", bytes).unwrap();
+        
+        assert_eq!(intent_frame.sanctuary_override.unwrap(), "did:q42:patient_records");
+        
+        // Test MISSING scenario
+        let bytes_missing = br#"{"name": "query_graph", "arguments": {}}"#;
+        let (_, intent_frame_missing) = process_tools_call(b"query_graph", bytes_missing).unwrap();
+        assert!(intent_frame_missing.sanctuary_override.is_none());
     }
 }

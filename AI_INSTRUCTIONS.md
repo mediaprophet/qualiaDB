@@ -66,10 +66,30 @@ When a commercial query via the Permissive Commons (`0b01`) executes, these virt
 ## 7. Target Fallbacks (WASM)
 If compiling for the browser (`target_arch = "wasm32"`), the Triad must be gracefully flattened into a single-threaded synchronous sequence to maintain sandbox stability. Fallback to the Origin Private File System (OPFS) for synchronous I/O, and ping the local loopback (e.g., `127.0.0.1:4848`) to proxy queries to the native engine if the host has the standalone database installed.
 
-## 8. Neurosymbolic Axiomatic LLM Overrides
-When tasked with integrating Large Language Models (LLMs), do not immediately assume a standard Python wrapper. You must first **ASK the user** which Neurosymbolic Mode they wish to employ:
-* **Mode 1 (Strict Native Intercept)**: Extract explicit vector coordinate layouts (tensors) from binary files (like `.gguf`) and map them directly into the 48-byte `QualiaQuin`. The Webizen VM acts as a mathematically strict interceptor during native execution, clipping vectors that violate local Spatio-Temporal constraints.
-* **Mode 2 (Bridged Shim)**: Utilize external ML architectures (e.g., Python, TensorFlow, PyTorch) via an explicit API bridge. The external model handles the dense compute, but all queries and responses are strictly routed and mathematically gated through the Qualia-DB `.q42` Axiom ruleset before resolution.
+## 8. LLM Engine — Native In-Process GGUF Stack
+
+**The LLM engine is NOT Ollama, NOT a llama.cpp HTTP server, NOT a Python wrapper, and NOT any external process.** There is one implemented architecture. Do not offer the user a choice of modes or ask which external tool they want to use.
+
+### Implemented architecture
+
+| Layer | Implementation |
+|-------|---------------|
+| Model format | Quantized GGUF (Q4_K_M, Q8_0) — e.g. Phi-3-mini, Llama-3-8B |
+| Model loading | `gguf_sharder.rs` parses the GGUF header; tensor byte offsets are encoded into `QualiaQuin` object fields (upper 4 bits = modality flag `0b1001`, lower 60 bits = byte offset) |
+| Memory mapping | `gguf_bridge.rs` maps weights into the OS page cache via `memmap2` — zero heap allocation for model files |
+| Inference | `wgpu` compute shaders — WGSL (`shaders/fused_tensor_contraction.wgsl`), dispatched to DirectML / Vulkan / Metal / WebGPU |
+| Runtime | `llm_agent.rs` — `LocalLlmAgent` runs Phase 8 bifurcated compute (two wait-free SPSC `rtrb` ring buffers: LLM Engine thread + Webizen Sentinel thread) |
+| Governance gate | `orchestrator.rs` — `orchestrate_inference()` enforces mandatory pre-flight and post-flight Webizen validation. Cannot be bypassed. |
+
+### Three `AgentBackend` modes (`llm_agent.rs`)
+- **`Local`** — GGUF on-disk, wgpu inference, no outbound traffic, 128 MB RAM cap. This is the primary mode.
+- **`Remote`** — API call routed via Nym mixnet, ILP micropayment metered, requires a signed Verifiable Credential from the Principal.
+- **`Hybrid`** — Local-first; falls back to Remote only with explicit Principal consent.
+
+Do not add Ollama, llama.cpp HTTP, Python/TensorFlow/PyTorch, or any external model server. If a new inference backend is needed, model it on `LocalLlmAgent` in `llm_agent.rs` and wire it into the `AgentBackend` enum.
+
+### The daemon on port 4242 is the graph engine, not an LLM server
+`localhost:4242` is the Qualia semantic graph daemon (`/health`, `/query`). LLM inference runs in-process alongside it. Do not POST prompts to port 4242.
 
 ## 9. LLM Benchmarking Harness (Dual-Mode)
 

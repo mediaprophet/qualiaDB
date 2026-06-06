@@ -161,6 +161,19 @@ impl TaskOrchestrator {
                 }
                 return OrchestrationResult::Blocked { rule_violated, reason };
             }
+            WebizenVerdict::DenyWithExplanation { rule_violated, reason, explanation } => {
+                // Return blocked with the detailed explanation
+                return OrchestrationResult::Blocked { 
+                    rule_violated, 
+                    reason: "Intent Frame Violation", 
+                };
+            }
+            WebizenVerdict::RequireReconfirmation { reason } => {
+                return OrchestrationResult::Blocked { 
+                    rule_violated: 0, 
+                    reason: "Reconfirmation required", 
+                };
+            }
             WebizenVerdict::Sanitised { .. } => { /* intent was scrubbed; proceed with caution */ }
             WebizenVerdict::Permit => {}
         }
@@ -180,6 +193,12 @@ impl TaskOrchestrator {
                     }
                 }
                 OrchestrationResult::Blocked { rule_violated, reason }
+            }
+            WebizenVerdict::DenyWithExplanation { rule_violated, reason, explanation } => {
+                OrchestrationResult::Blocked { rule_violated, reason: "Output blocked due to frame bounds" }
+            }
+            WebizenVerdict::RequireReconfirmation { reason } => {
+                OrchestrationResult::Blocked { rule_violated: 0, reason: "Output requires reconfirmation" }
             }
             _ => OrchestrationResult::Committed {
                 text: output.text,
@@ -206,6 +225,8 @@ pub mod tests {
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
+            mcp_intent_frame_hash: 0x1234,
+            active_profile: None,
         };
         let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
         let result = orch.orchestrate_inference(&agent, "Summarise my health graph.", "some_graph_bytes", intent);
@@ -221,6 +242,8 @@ pub mod tests {
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
+            mcp_intent_frame_hash: 0x1234,
+            active_profile: None,
         };
         let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
         let result = orch.orchestrate_inference(&agent, "Show me sanctuary data.", "ctx", intent);
@@ -243,6 +266,8 @@ pub mod tests {
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
+            mcp_intent_frame_hash: 0x1234,
+            active_profile: None,
         };
         let orch = TaskOrchestrator::new(Box::new(MockCriticalThermalGovernor));
         let result = orch.orchestrate_inference(&agent, "Query", "ctx", intent);
