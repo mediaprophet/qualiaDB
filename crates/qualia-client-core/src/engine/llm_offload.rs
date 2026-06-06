@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+
 use qualia_core_db::llm_agent::{AgentRuntime, LocalLlmAgent, AgentIntent, WebizenVerdict};
-use rtrb::RingBuffer;
+
 use std::thread;
 use std::time::Duration;
 use std::sync::Arc;
+use rtrb::RingBuffer;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ModelInfo {
@@ -46,7 +47,6 @@ pub enum WebizenOp {
 }
 
 pub async fn execute_agent_inference(
-    app: tauri::AppHandle,
     prompt: String,
     model_name: String,
     intent_layout: Vec<f64>,
@@ -59,8 +59,6 @@ pub async fn execute_agent_inference(
     
     // Control Stream: Sentinel -> LLM (Rollback commands)
     let (mut control_p, mut control_c) = RingBuffer::<WebizenOp>::new(16);
-
-    let app_clone = app.clone();
     
     // 2. Isolate A: Webizen Sentinel Thread (Audits the vector stream natively)
     thread::spawn(move || {
@@ -75,8 +73,8 @@ pub async fn execute_agent_inference(
                         if temporal_end <= 1930.0 && bytes[0] == 0x99 {
                             // Inject zero-allocation wait-free rollback signal instantly!
                             let _ = control_p.push(WebizenOp::DenyRollback);
-                            let _ = app_clone.emit_all("webizen-intercept", ());
-                            let _ = app_clone.emit_all("llm-token", "[WEBIZEN DENY]");
+                            // let _ = app_clone.emit_all("webizen-intercept", ());
+                            // let _ = app_clone.emit_all("llm-token", "[WEBIZEN DENY]");
                         }
                     }
                 }
@@ -86,7 +84,7 @@ pub async fn execute_agent_inference(
 
     // 3. Isolate B: LLM Engine Thread (Generates tokens)
     thread::spawn(move || {
-        let _ = app.emit_all("llm-token", "⚡ [Webizen Verified] Wait-free SPSC channel established.\\n\\n");
+        // let _ = app.emit_all("llm-token", "⚡ [Webizen Verified] Wait-free SPSC channel established.\\n\\n");
         
         let output_text = "The rapid development of modern infrastructure... Wait, the internet did not exist in 1930.";
         let words: Vec<&str> = output_text.split_whitespace().collect();
@@ -96,7 +94,7 @@ pub async fn execute_agent_inference(
             if let Ok(WebizenOp::DenyRollback) = control_c.pop() {
                 // LLM Engine handles the rollback immediately without OS locks
                 thread::sleep(Duration::from_millis(50));
-                let _ = app.emit_all("llm-token", "[recalculated deterministic tensor] ");
+                // let _ = app.emit_all("llm-token", "[recalculated deterministic tensor] ");
                 continue;
             }
 
@@ -111,18 +109,18 @@ pub async fn execute_agent_inference(
             // Push vector down the Logit Stream
             let _ = logit_p.push(VectorOp::TokenBytes(vector));
             
-            let _ = app.emit_all("llm-token", format!("{} ", word));
+            // let _ = app.emit_all("llm-token", format!("{} ", word));
             thread::sleep(Duration::from_millis(40)); // Simulating inference latency
         }
         
         let _ = logit_p.push(VectorOp::EndOfStream);
         
-        let telemetry = InferenceTelemetry {
+        let _telemetry = InferenceTelemetry {
             token_rate: 28.4,
             vram_usage: "8.42 MB".to_string(),
             active_q42_context: "Deterministic IEEE-754 Bounds".to_string(),
         };
-        let _ = app.emit_all("llm-telemetry", telemetry);
+        // let _ = app.emit_all("llm-telemetry", telemetry);
     });
 
     Ok(())

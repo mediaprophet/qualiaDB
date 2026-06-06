@@ -127,7 +127,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
 
     if dev {
         tokio::spawn(async move {
-            crate::dev_protocol::start_dev_protocol_listener().await;
+            crate::mcp_server::start_mcp_listener().await;
         });
     }
 
@@ -601,9 +601,8 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         let behaviour = crate::p2p::swarm::build_behaviour(local_peer_id);
         
         let routing_table = std::sync::Arc::new(crate::p2p::routing::CivicsRoutingTable::new());
-        // For testing/mocking, assume we trust a specific group:
-        let trusted_group_hash = [8u8, 7, 6, 5, 4, 3, 2, 1];
-        // routing_table.add_trusted_group(trusted_group_hash, public_key); // Hydrated from DB in prod
+        let local_db_slice: &[crate::QualiaQuin] = &[]; // Mock of memory mapped DB slice
+        routing_table.hydrate_from_db(local_db_slice);
         
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
@@ -714,7 +713,10 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                                     crate::p2p::protocol::QualiaResponse::SyncAck { success, blocks_sent, .. } => {
                                         println!("[Qualia Daemon] Received Sync Ack from {}: success={}, blocks={}", peer, success, blocks_sent);
                                         if success && blocks_sent > 0 {
-                                            let bytes_transferred = (blocks_sent * 40_000) as usize; // Mock 40KB blocks
+                                            let mut buf = Vec::new();
+                                            let overhead = if ciborium::into_writer(&response, &mut buf).is_ok() { buf.len() } else { 0 };
+                                            // Actual serialized payload: CBOR overhead + (blocks_sent * 48 bytes per QualiaQuin)
+                                            let bytes_transferred = overhead + (blocks_sent as usize * 48);
                                             let peer_str = peer.to_string();
                                             bandwidth_meter_swarm.entry(peer_str)
                                                 .and_modify(|ledger| ledger.unbilled_bytes += bytes_transferred)

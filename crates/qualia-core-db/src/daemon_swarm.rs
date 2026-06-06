@@ -36,8 +36,27 @@ pub mod swarm {
             
             #[cfg(target_arch = "x86_64")]
             if std::is_x86_feature_detected!("avx2") {
-                // Mock AVX2 path
-                crate::telemetry::SIEVE_OPS_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                unsafe {
+                    use core::arch::x86_64::*;
+                    for i in 0..size {
+                        for k in 0..size {
+                            let a_ik = _mm256_broadcast_ss(&matrix_a[i * size + k]);
+                            let mut j = 0;
+                            while j + 8 <= size {
+                                let b_kj = _mm256_loadu_ps(matrix_b.as_ptr().add(k * size + j));
+                                let mut r_ij = _mm256_loadu_ps(result.as_ptr().add(i * size + j));
+                                r_ij = _mm256_fmadd_ps(a_ik, b_kj, r_ij);
+                                _mm256_storeu_ps(result.as_mut_ptr().add(i * size + j), r_ij);
+                                j += 8;
+                            }
+                            while j < size {
+                                result[i * size + j] += matrix_a[i * size + k] * matrix_b[k * size + j];
+                                j += 1;
+                            }
+                        }
+                    }
+                }
+                crate::telemetry::SIEVE_OPS_COUNT.fetch_add((size * size * size) as usize, std::sync::atomic::Ordering::Relaxed);
                 return;
             }
 
@@ -52,19 +71,24 @@ pub mod swarm {
         }
 
         pub fn execute_quantum_chemistry(&self, smiles: &str) -> Option<crate::QualiaQuin> {
-            // Parses SMILES via C-FFI native bridge
-            if let Some(quin) = crate::npu_ffi::nets_parse_smiles(smiles) {
-                // Mock execution of Lennard-Jones potentials returning toxicity probability
-                crate::telemetry::ATOMIC_FLOPS_COUNT.fetch_add(50000, std::sync::atomic::Ordering::Relaxed);
-                
-                // Pack mock probability (e.g., 0.15 toxicity)
-                let toxicity = 0.15_f32;
-                let mut out_quin = quin;
-                out_quin.predicate = crate::q_hash("has_toxicity_probability");
-                out_quin.object = (0x1 << 60) | (toxicity.to_bits() as u64);
-                return Some(out_quin);
+            let mol = crate::organic_chemistry::parse_smiles(smiles);
+            let mut dft = crate::quantum_dft::ElectronDensity::new(mol.atoms.len().max(1));
+            
+            let mut quins = Vec::new();
+            for _ in 0..mol.atoms.len() {
+                let mut q = crate::QualiaQuin::default();
+                q.predicate = crate::q_hash("HAS_ELECTRON");
+                quins.push(q);
             }
-            None
+            
+            let energy = dft.calculate_ground_state_energy(&quins);
+            crate::telemetry::ATOMIC_FLOPS_COUNT.fetch_add(50000, std::sync::atomic::Ordering::Relaxed);
+            
+            let mut out_quin = crate::QualiaQuin::default();
+            out_quin.subject = crate::q_hash(smiles);
+            out_quin.predicate = crate::q_hash("has_ground_state_energy");
+            out_quin.object = (0x1 << 60) | ((energy as f32).to_bits() as u64);
+            Some(out_quin)
         }
     }
 

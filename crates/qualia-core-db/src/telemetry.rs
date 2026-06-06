@@ -35,13 +35,51 @@ pub fn get_telemetry_snapshot() -> (usize, usize, usize) {
     )
 }
 
+/// Zero-allocation Prometheus Exporter
+/// Writes telemetry metrics directly to a byte buffer without string formatting overhead.
+pub fn export_prometheus_metrics<W: std::io::Write>(mut writer: W) -> std::io::Result<()> {
+    let io = SUPERBLOCK_IO_COUNT.load(Ordering::Relaxed);
+    let sieve = SIEVE_OPS_COUNT.load(Ordering::Relaxed);
+    let vm = VM_CYCLES_COUNT.load(Ordering::Relaxed);
+    let flops = ATOMIC_FLOPS_COUNT.load(Ordering::Relaxed);
+    let steps = ATOMIC_INTEGRATION_STEPS.load(Ordering::Relaxed);
+    
+    // Write out Prometheus metrics in text format directly (zero heap allocation)
+    write!(writer, "# HELP qualia_superblock_io_total Total NVMe SuperBlock flushes\n")?;
+    write!(writer, "# TYPE qualia_superblock_io_total counter\n")?;
+    write!(writer, "qualia_superblock_io_total {}\n", io)?;
+
+    write!(writer, "# HELP qualia_sieve_ops_total GPU/NPU mask operations\n")?;
+    write!(writer, "# TYPE qualia_sieve_ops_total counter\n")?;
+    write!(writer, "qualia_sieve_ops_total {}\n", sieve)?;
+
+    write!(writer, "# HELP qualia_vm_cycles_total Webizen VM opcodes evaluated\n")?;
+    write!(writer, "# TYPE qualia_vm_cycles_total counter\n")?;
+    write!(writer, "qualia_vm_cycles_total {}\n", vm)?;
+
+    write!(writer, "# HELP qualia_atomic_flops_total Atomic integration float ops\n")?;
+    write!(writer, "# TYPE qualia_atomic_flops_total counter\n")?;
+    write!(writer, "qualia_atomic_flops_total {}\n", flops)?;
+
+    write!(writer, "# HELP qualia_atomic_steps_total Total integration steps\n")?;
+    write!(writer, "# TYPE qualia_atomic_steps_total counter\n")?;
+    write!(writer, "qualia_atomic_steps_total {}\n", steps)?;
+
+    Ok(())
+}
+
 /// Logs federated system telemetry (latency, VLM compute load) as a System_Log Quin.
-/// These Quins are synchronized across the user's Personal Cloud cluster.
-pub fn log_federated_telemetry(metric_name: &str, value: f64) -> bool {
-    // In production, this encodes the telemetry into a 48-byte System_Log Quin
-    // and inserts it into the graph.
-    // e.g., subject = Device_ID, predicate = metric_name, object = value
-    true
+/// Converts the semantic metric into a 48-byte struct instead of heap strings.
+pub fn log_federated_telemetry(metric_hash: u64, value: f64) -> crate::QualiaQuin {
+    crate::QualiaQuin {
+        subject: crate::q_hash("did:q42:local-node"),
+        predicate: metric_hash,
+        // Mock inline decimal representation for telemetry value
+        object: (0b010u64 << 60) | unsafe { core::mem::transmute::<f64, u64>(value) & 0x0FFF_FFFF_FFFF_FFFF },
+        context: 0,
+        metadata: 0,
+        parity: 0,
+    }
 }
 
 #[cfg(test)]

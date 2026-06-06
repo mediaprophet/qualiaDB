@@ -24,3 +24,5 @@ bytemuck = { version = "1.14", features = ["derive"] }
 rio_xml = "0.8"
 rio_api = "0.8"
 lz4_flex = "0.11"
+sha1 = "0.11.0"
+minicbor = "2.2.2"

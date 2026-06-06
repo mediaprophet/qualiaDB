@@ -121,8 +121,22 @@ pub fn get_current_system_context() -> SystemContext {
 }
 
 /// Calculates bandwidth liability in USD based on gb routed and context.
-pub fn calculate_bandwidth_liability(bytes: usize, _context: &SystemContext) -> f64 {
+pub fn calculate_bandwidth_liability(bytes: usize, context: &SystemContext) -> f64 {
     let gb_routed = bytes as f64 / 1_073_741_824.0;
-    let base_rate = 0.05; // .05 per GB
+    let mut base_rate = 0.05; // .05 per GB
+
+    // Dynamically adjust based on system context
+    base_rate += context.network_congestion_index * 0.05;
+    
+    // Low battery -> demands higher compensation
+    if context.current_battery_level < 0.2 {
+        base_rate += 0.05;
+    }
+    
+    // High temperature -> throttling penalty
+    if context.cpu_temperature > 70.0 {
+        base_rate += 0.02;
+    }
+
     gb_routed * base_rate
 }

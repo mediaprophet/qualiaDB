@@ -1,4 +1,4 @@
-use crate::ingestion::SemanticBookmark;
+use crate::engine::ingestion::SemanticBookmark;
 
 /// Compiles the semantically annotated graph into QualiaDB's binary .q42 format.
 pub fn compile_to_q42(file_name: &str, _bookmarks: &[SemanticBookmark]) -> Result<(), String> {

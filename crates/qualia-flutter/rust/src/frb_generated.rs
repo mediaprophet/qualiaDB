@@ -5,6 +5,22 @@
     non_camel_case_types,
     unused,
     non_snake_case,
+    clippy::style,
+    clippy::complexity,
+    clippy::perf,
+    clippy::pedantic,
+    clippy::suspicious,
+    clippy::all,
+    clippy::restriction,
+    clippy::nursery,
+    rust_2018_idioms,
+    dependency_on_unit_never_type_fallback
+)]
+
+#![allow(
+    non_camel_case_types,
+    unused,
+    non_snake_case,
     clippy::needless_return,
     clippy::redundant_closure_call,
     clippy::redundant_closure,

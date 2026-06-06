@@ -89,3 +89,24 @@ fn test_scalar_match_logic() {
     assert_eq!(out[0].subject, alice);
     assert_eq!(out[0].object, bob);
 }
+
+#[test]
+fn test_mcp_tool_call_allocation_firewall() {
+    // 1. Initialize the DHAT profiler to watch the memory space
+    let _profiler = dhat::Profiler::builder().testing().build();
+    
+    // 2. Mock a highly complex, deeply nested parameters byte stream
+    let simulated_payload = b"{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"query_graph\",\"arguments\":{\"query\":\"MATCH (s)-[p]->(o) WHERE s=did:q42:human\",\"sanctuary_override\":\"MISSING\"}}}";
+    
+    // 3. Process the frame through the mcp endpoint execution line
+    let result = unsafe { 
+        qualia_core_db::mcp_server::parse_and_evaluate_mcp_stream(simulated_payload) 
+    };
+    
+    // 4. Assert that the fiduciary engine successfully caught the violation
+    assert!(result.is_err());
+    
+    // 5. Invariant Assertion: Ensure no global allocations occurred inside tools/call processing
+    let stats = dhat::HeapStats::get();
+    assert_eq!(stats.curr_blocks, 0, "Fiduciary Failure: Dynamic heap memory allocated within the tool execution path.");
+}

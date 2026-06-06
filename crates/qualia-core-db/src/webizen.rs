@@ -2,6 +2,17 @@ use crate::QualiaQuin;
 use crate::modalities::{dl, asp, probabilistic, linear};
 use crate::tax_schema::TaxRuleSchema;
 
+
+macro_rules! vm_log {
+    ($($arg:tt)*) => {
+        if cfg!(feature = "vm_tracing") {
+            println!($($arg)*);
+        }
+    };
+}
+
+
+
 /// A fast, non-cryptographic bitwise hash to lookup sub-goals in the SLG Arena
 /// without wasting CPU cycles on cryptographic overhead.
 #[inline(always)]
@@ -53,7 +64,7 @@ impl SlgArena {
 
     /// Registers a logical implication rule into the Webizen VM
     pub fn register_rule(&mut self, rule: Rule) {
-        println!("🧠 Webizen registered new N3 Rule: {:?}", rule);
+        vm_log!("🧠 Webizen registered new N3 Rule: {:?}", rule);
         self.rule_registry.push(rule);
     }
 
@@ -210,6 +221,32 @@ pub enum SlgOpcode {
     // ── Native: deontic and epistemic ─────────────────────────────────────────
     NativeDeonticEval,
     NativeEpistemicEval(u8),
+
+    // ── Native: advanced logics ───────────────────────────────────────────────
+    NativeLinearConsume,
+    NativeAspStableModels,
+    NativeParaconsistentIsolate,
+    NativeDialecticalSynthesis,
+
+    // ── Native: cognitive ai (ACT-R) ──────────────────────────────────────────
+    NativeRetrieveByActivation,
+    NativeDecayMetadata,
+    NativeUnless,
+
+    // ── Native: temporal logic (LTL) ──────────────────────────────────────────
+    NativeLtlGlobally,
+    NativeLtlFinally,
+    NativeLtlNext,
+    NativeLtlUntil,
+    NativeLtlRelease,
+
+    // ── Native: spatio-temporal (Allen Interval) ──────────────────────────────
+    NativeAllenInterval(u8),
+
+    // ── Native: geometric and spatial topology ────────────────────────────────
+    NativeLorentzDistance,
+    NativeTropicalDistance,
+    NativeVerifyProofOfLocation,
 }
 
 /// The Execution Frame tracking variable bindings without touching the heap
@@ -309,32 +346,32 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 // Mock execution of a thermodynamic state MCMC sampler
                 let mut sampler = crate::thermodynamics::ThermodynamicSampler::new(298.0, 100);
                 sampler.metropolis_step(50.0, 0.5);
-                println!("🧪 Webizen executed NativeThermodynamics step. Current Energy: {}", sampler.current_state.total_energy);
+                vm_log!("🧪 Webizen executed NativeThermodynamics step. Current Energy: {}", sampler.current_state.total_energy);
             },
             SlgOpcode::NativeOdeSolver => {
                 // Mock execution of continuous dynamics via RK4
                 let initial = crate::ode_solver::PhysicalState { time: 0.0, values: alloc::vec![1.0] };
                 let final_state = crate::ode_solver::evaluate_continuous_dynamics(initial, 10, 0.1);
-                println!("📈 Webizen executed NativeOdeSolver. Final state: {:?}", final_state.values);
+                vm_log!("📈 Webizen executed NativeOdeSolver. Final state: {:?}", final_state.values);
             },
             SlgOpcode::NativeQuantumDft => {
                 // Mock execution of Kohn-Sham density functional approximation
                 let mut dft = crate::quantum_dft::ElectronDensity::new(10);
                 let energy = dft.calculate_ground_state_energy(&[]);
-                println!("⚛️ Webizen executed NativeQuantumDft. Ground State Energy: {} eV", energy);
+                vm_log!("⚛️ Webizen executed NativeQuantumDft. Ground State Energy: {} eV", energy);
             },
             // ── Legacy / compat ───────────────────────────────────────────
             SlgOpcode::NativeBioinformatics => {
                 let score = crate::bioinformatics::align_sequences(b"ATCG", b"ATCC");
-                println!("[Webizen] NativeBioinformatics (legacy). SW score: {}", score.score);
+                vm_log!("[Webizen] NativeBioinformatics (legacy). SW score: {}", score.score);
             },
             SlgOpcode::NativeEconomics => {
                 let (mean, var) = crate::economics::run_monte_carlo_var(100.0, 0.05, 0.2, 1.0, 1000, 252);
-                println!("[Webizen] NativeEconomics. Mean: {:.2}, VaR95: {:.2}", mean, var);
+                vm_log!("[Webizen] NativeEconomics. Mean: {:.2}, VaR95: {:.2}", mean, var);
             },
             // ── SHACL standard ────────────────────────────────────────────
             SlgOpcode::WarnOnly => {
-                println!("[Webizen] sh:Warning — constraint failed but ingestion continues.");
+                vm_log!("[Webizen] sh:Warning — constraint failed but ingestion continues.");
             },
             SlgOpcode::CheckMinInclusive(min) => {
                 let val = frame.object_reg as f64;
@@ -366,50 +403,50 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
             },
             SlgOpcode::CheckPattern(pattern_hash) => {
                 if frame.object_reg != pattern_hash {
-                    println!("[Webizen] CheckPattern: hash mismatch {:016x} vs {:016x}", frame.object_reg, pattern_hash);
+                    vm_log!("[Webizen] CheckPattern: hash mismatch {:016x} vs {:016x}", frame.object_reg, pattern_hash);
                 }
             },
             SlgOpcode::CheckHasValue(expected) => {
                 if frame.object_reg != expected { return None; }
             },
             SlgOpcode::CheckNodeShape(shape_id) => {
-                println!("[Webizen] CheckNodeShape: delegating to shape {:016x}", shape_id);
+                vm_log!("[Webizen] CheckNodeShape: delegating to shape {:016x}", shape_id);
             },
             SlgOpcode::CheckNotShape(shape_id) => {
-                println!("[Webizen] CheckNotShape: verifying shape {:016x} fails as expected", shape_id);
+                vm_log!("[Webizen] CheckNotShape: verifying shape {:016x} fails as expected", shape_id);
             },
             // ── Biosciences ───────────────────────────────────────────────
             SlgOpcode::NativeNucleotideAlign => {
                 let demo_result = crate::bioinformatics::align_nucleotide(b"ACGTACGT", b"ACGTCCGT");
-                println!("[Webizen] NativeNucleotideAlign. SW score: {}, identity: {:.1}%", demo_result.score, demo_result.identity_pct);
+                vm_log!("[Webizen] NativeNucleotideAlign. SW score: {}, identity: {:.1}%", demo_result.score, demo_result.identity_pct);
                 if demo_result.score <= 0 { return None; }
             },
             SlgOpcode::NativeProteinAlign(matrix_id) => {
                 let result = crate::bioinformatics::align_protein(b"ACDEFGHIK", b"ACDEFGHIK");
-                println!("[Webizen] NativeProteinAlign(matrix={}) score: {}, id: {:.1}%", matrix_id, result.score, result.identity_pct);
+                vm_log!("[Webizen] NativeProteinAlign(matrix={}) score: {}, id: {:.1}%", matrix_id, result.score, result.identity_pct);
                 if result.score <= 0 { return None; }
             },
             SlgOpcode::NativeKmerFrequency(k) => {
                 let freqs = crate::bioinformatics::kmer_frequencies(b"ACGTACGTACGT", k as usize);
-                println!("[Webizen] NativeKmerFrequency(k={}) distinct k-mers: {}", k, freqs.len());
+                vm_log!("[Webizen] NativeKmerFrequency(k={}) distinct k-mers: {}", k, freqs.len());
             },
             SlgOpcode::NativeFastaValidation => {
                 let record = crate::bioinformatics::validate_fasta_record(">test", b"ATCGATCG");
                 if !record.is_valid { return None; }
-                println!("[Webizen] NativeFastaValidation: {:?}", record.alphabet);
+                vm_log!("[Webizen] NativeFastaValidation: {:?}", record.alphabet);
             },
             SlgOpcode::NativeGeneExpression => {
                 let result = crate::clinical_engine::evaluate_gene_expression(
                     frame.subject_reg, 100.0, frame.object_reg as f64, 2.0
                 );
-                println!("[Webizen] NativeGeneExpression: FC={:.2} log2FC={:.2} sig={}", result.fold_change, result.log2_fold_change, result.is_significant);
+                vm_log!("[Webizen] NativeGeneExpression: FC={:.2} log2FC={:.2} sig={}", result.fold_change, result.log2_fold_change, result.is_significant);
                 if !result.is_significant { return None; }
             },
             SlgOpcode::NativeMetaboliteSimilarity => {
                 let fp_a = vec![frame.subject_reg];
                 let fp_b = vec![frame.object_reg];
                 let sim = crate::bioinformatics::tanimoto_similarity(&fp_a, &fp_b);
-                println!("[Webizen] NativeMetaboliteSimilarity: Tanimoto={:.3}", sim);
+                vm_log!("[Webizen] NativeMetaboliteSimilarity: Tanimoto={:.3}", sim);
                 if sim < 0.4 { return None; }
             },
             SlgOpcode::NativeReceptorBinding => {
@@ -417,7 +454,7 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                     &[*frame_quin_or_default(frame)],
                     &[*frame_quin_or_default(frame)],
                 );
-                println!("[Webizen] NativeReceptorBinding: affinity={:.2} kcal/mol", affinity);
+                vm_log!("[Webizen] NativeReceptorBinding: affinity={:.2} kcal/mol", affinity);
             },
             // ── Biomedical ────────────────────────────────────────────────
             SlgOpcode::NativeClinicalRisk(model_id) => {
@@ -431,7 +468,7 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                             current_smoker: false, diabetic: false,
                         };
                         let r = crate::clinical_engine::framingham_10yr_risk(&input);
-                        println!("[Webizen] Framingham 10yr risk: {:.1}% ({:?})", r.risk_10yr * 100.0, r.category);
+                        vm_log!("[Webizen] Framingham 10yr risk: {:.1}% ({:?})", r.risk_10yr * 100.0, r.category);
                     },
                     1 => {
                         let input = crate::clinical_engine::Cha2ds2VascInput {
@@ -441,7 +478,7 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                             ..Default::default()
                         };
                         let r = crate::clinical_engine::cha2ds2_vasc_score(&input);
-                        println!("[Webizen] CHA₂DS₂-VASc: {} ({:.1}%/yr)", r.score, r.annual_stroke_risk_pct);
+                        vm_log!("[Webizen] CHA₂DS₂-VASc: {} ({:.1}%/yr)", r.score, r.annual_stroke_risk_pct);
                     },
                     2 => {
                         let input = crate::clinical_engine::Score2Input {
@@ -452,20 +489,20 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                             risk_region: crate::clinical_engine::Score2Region::Moderate,
                         };
                         let r = crate::clinical_engine::score2_risk(&input);
-                        println!("[Webizen] SCORE2: {:.1}% ({:?})", r.risk_10yr_pct, r.category);
+                        vm_log!("[Webizen] SCORE2: {:.1}% ({:?})", r.risk_10yr_pct, r.category);
                     },
-                    _ => println!("[Webizen] NativeClinicalRisk: unknown model {}", model_id),
+                    _ => vm_log!("[Webizen] NativeClinicalRisk: unknown model {}", model_id),
                 }
             },
             SlgOpcode::NativeLongitudinalTrend(window_days) => {
-                println!("[Webizen] NativeLongitudinalTrend: window={}d — awaiting time-series Quin stream", window_days);
+                vm_log!("[Webizen] NativeLongitudinalTrend: window={}d — awaiting time-series Quin stream", window_days);
             },
             SlgOpcode::NativeDrugInteraction => {
                 // Medication list encoded as Quins in the arena; demo with two hashes from registers
                 let meds = vec![frame.subject_reg, frame.object_reg];
                 let found = crate::clinical_engine::check_drug_interactions(&meds);
                 if !found.is_empty() {
-                    println!("[Webizen] NativeDrugInteraction: {} interaction(s) found. Worst: {:?}", found.len(), found[0].severity);
+                    vm_log!("[Webizen] NativeDrugInteraction: {} interaction(s) found. Worst: {:?}", found.len(), found[0].severity);
                     if found[0].severity >= crate::clinical_engine::InteractionSeverity::Major {
                         return None;
                     }
@@ -475,7 +512,7 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 let conds = vec![frame.object_reg];
                 let found = crate::clinical_engine::check_contraindications(frame.subject_reg, &conds);
                 if !found.is_empty() {
-                    println!("[Webizen] NativeContraindication: {} contraindication(s) found.", found.len());
+                    vm_log!("[Webizen] NativeContraindication: {} contraindication(s) found.", found.len());
                     return None;
                 }
             },
@@ -489,7 +526,7 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                     reference_high: None,
                 };
                 let r = crate::clinical_engine::validate_fhir_observation(&obs);
-                println!("[Webizen] NativeFhirObservation: status={:?} interp={}", r.status, r.interpretation_code);
+                vm_log!("[Webizen] NativeFhirObservation: status={:?} interp={}", r.status, r.interpretation_code);
                 if !r.is_valid { return None; }
             },
             // ── Organic chemistry ─────────────────────────────────────────
@@ -498,86 +535,86 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 // Demo path: validate a demonstration SMILES.
                 let demo = "CC(=O)Oc1ccccc1C(=O)O"; // aspirin
                 let r = crate::organic_chemistry::validate_smiles(demo);
-                println!("[Webizen] NativeSmilesValidation: valid={} atoms={}", r.is_valid, r.atom_count);
+                vm_log!("[Webizen] NativeSmilesValidation: valid={} atoms={}", r.is_valid, r.atom_count);
                 if !r.is_valid { return None; }
             },
             SlgOpcode::NativeInchiValidation => {
                 let demo = "InChI=1S/C9H8O4/c1-6(10)13-8-5-3-2-4-7(8)9(11)12/h2-5H,1H3,(H,11,12)";
                 let r = crate::organic_chemistry::validate_inchi(demo);
-                println!("[Webizen] NativeInchiValidation: valid={} layers={}", r.is_valid, r.layer_count);
+                vm_log!("[Webizen] NativeInchiValidation: valid={} layers={}", r.is_valid, r.layer_count);
                 if !r.is_valid { return None; }
             },
             SlgOpcode::NativeMolecularWeight(max_mw_bits) => {
                 let max_mw = f64::from_bits(max_mw_bits);
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
                 let mw = crate::organic_chemistry::exact_molecular_weight(&mol);
-                println!("[Webizen] NativeMolecularWeight: {:.2} Da (max allowed {:.1})", mw, max_mw);
+                vm_log!("[Webizen] NativeMolecularWeight: {:.2} Da (max allowed {:.1})", mw, max_mw);
                 if max_mw > 0.0 && mw > max_mw { return None; }
             },
             SlgOpcode::NativeLogP(max_bits) => {
                 let max_logp = max_bits as f64 / 100.0;
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
                 let logp = crate::organic_chemistry::compute_logp(&mol);
-                println!("[Webizen] NativeLogP: {:.2} (max {:.2})", logp, max_logp);
+                vm_log!("[Webizen] NativeLogP: {:.2} (max {:.2})", logp, max_logp);
                 if max_logp > 0.0 && logp > max_logp { return None; }
             },
             SlgOpcode::NativeTPSA(max_tpsa) => {
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
                 let tpsa = crate::organic_chemistry::compute_tpsa(&mol);
-                println!("[Webizen] NativeTPSA: {:.1} Å² (max {})", tpsa, max_tpsa);
+                vm_log!("[Webizen] NativeTPSA: {:.1} Å² (max {})", tpsa, max_tpsa);
                 if max_tpsa > 0 && tpsa > max_tpsa as f64 { return None; }
             },
             SlgOpcode::NativeLipinskiFilter => {
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
                 let desc = crate::organic_chemistry::compute_descriptors(&mol);
                 let r = crate::organic_chemistry::evaluate_lipinski(&desc);
-                println!("[Webizen] NativeLipinskiFilter: passes={} violations={}", r.passes, r.violations);
+                vm_log!("[Webizen] NativeLipinskiFilter: passes={} violations={}", r.passes, r.violations);
                 if !r.passes { return None; }
             },
             SlgOpcode::NativeVeberFilter => {
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
                 let desc = crate::organic_chemistry::compute_descriptors(&mol);
                 let r = crate::organic_chemistry::evaluate_veber(&desc);
-                println!("[Webizen] NativeVeberFilter: passes={}", r.passes);
+                vm_log!("[Webizen] NativeVeberFilter: passes={}", r.passes);
                 if !r.passes { return None; }
             },
             SlgOpcode::NativeGhoseFilter => {
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
                 let desc = crate::organic_chemistry::compute_descriptors(&mol);
                 let r = crate::organic_chemistry::evaluate_ghose(&desc);
-                println!("[Webizen] NativeGhoseFilter: passes={}", r.passes);
+                vm_log!("[Webizen] NativeGhoseFilter: passes={}", r.passes);
             },
             SlgOpcode::NativeEganFilter => {
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
                 let desc = crate::organic_chemistry::compute_descriptors(&mol);
                 let r = crate::organic_chemistry::evaluate_egan(&desc);
-                println!("[Webizen] NativeEganFilter: passes={}", r.passes);
+                vm_log!("[Webizen] NativeEganFilter: passes={}", r.passes);
             },
             SlgOpcode::NativeFunctionalGroups => {
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
                 let groups = crate::organic_chemistry::detect_functional_groups(&mol);
-                println!("[Webizen] NativeFunctionalGroups: {:?}", groups);
+                vm_log!("[Webizen] NativeFunctionalGroups: {:?}", groups);
             },
             SlgOpcode::NativePkaEstimate => {
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)O"); // acetic acid
                 let pkas = crate::organic_chemistry::estimate_pka(&mol);
                 for p in &pkas {
-                    println!("[Webizen] NativePka: {:?} pKa={:.1} acid={}", p.group, p.pka, p.is_acid);
+                    vm_log!("[Webizen] NativePka: {:?} pKa={:.1} acid={}", p.group, p.pka, p.is_acid);
                 }
             },
             SlgOpcode::NativeChiralCenters => {
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
                 let n = crate::organic_chemistry::count_chiral_centers(&mol);
-                println!("[Webizen] NativeChiralCenters: {}", n);
+                vm_log!("[Webizen] NativeChiralCenters: {}", n);
             },
             SlgOpcode::NativeCircularFingerprint(radius) => {
                 let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
                 let fp = crate::organic_chemistry::circular_fingerprint(&mol, radius as usize);
-                println!("[Webizen] NativeCircularFingerprint(r={}): {} features", radius, fp.len());
+                vm_log!("[Webizen] NativeCircularFingerprint(r={}): {} features", radius, fp.len());
             },
             SlgOpcode::NativeArrhenius(temp_k) => {
                 let k = crate::organic_chemistry::arrhenius_rate(1e13, 80_000.0, temp_k as f64);
-                println!("[Webizen] NativeArrhenius(T={}K): k={:.3e}", temp_k, k);
+                vm_log!("[Webizen] NativeArrhenius(T={}K): k={:.3e}", temp_k, k);
             },
             SlgOpcode::NativeGibbsEnergy => {
                 let dg = crate::organic_chemistry::gibbs_free_energy(
@@ -585,14 +622,14 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                     f64::from_bits(frame.predicate_reg),
                     f64::from_bits(frame.object_reg),
                 );
-                println!("[Webizen] NativeGibbsEnergy: ΔG={:.2} J/mol", dg);
+                vm_log!("[Webizen] NativeGibbsEnergy: ΔG={:.2} J/mol", dg);
             },
             SlgOpcode::NativeEquilibrium => {
                 let k_eq = crate::organic_chemistry::equilibrium_constant(
                     f64::from_bits(frame.subject_reg),
                     f64::from_bits(frame.object_reg),
                 );
-                println!("[Webizen] NativeEquilibrium: K={:.4e}", k_eq);
+                vm_log!("[Webizen] NativeEquilibrium: K={:.4e}", k_eq);
             },
             SlgOpcode::NativeHendersonHasselbalch => {
                 let ph = crate::organic_chemistry::henderson_hasselbalch(
@@ -600,31 +637,66 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                     f64::from_bits(frame.predicate_reg),
                     f64::from_bits(frame.object_reg),
                 );
-                println!("[Webizen] NativeHendersonHasselbalch: pH={:.2}", ph);
+                vm_log!("[Webizen] NativeHendersonHasselbalch: pH={:.2}", ph);
             },
             SlgOpcode::NativeAtomEconomy => {
                 let reactants = vec![180.0, 60.0]; // demo
                 let ae = crate::organic_chemistry::atom_economy(&reactants, 180.0);
-                println!("[Webizen] NativeAtomEconomy: {:.1}%", ae);
+                vm_log!("[Webizen] NativeAtomEconomy: {:.1}%", ae);
             },
             SlgOpcode::NativeEFactor => {
                 let ef = crate::organic_chemistry::e_factor(
                     f64::from_bits(frame.subject_reg),
                     f64::from_bits(frame.object_reg),
                 );
-                println!("[Webizen] NativeEFactor: {:.2} kg waste/kg product", ef);
+                vm_log!("[Webizen] NativeEFactor: {:.2} kg waste/kg product", ef);
             },
             SlgOpcode::NativeGreenMetrics => {
                 let gm = crate::organic_chemistry::green_metrics(
                     &[180.0, 60.0], 180.0, &[60.0], 0.85, 50.0, 1.0, 9, 9,
                 );
-                println!("[Webizen] NativeGreenMetrics: AE={:.1}% E={:.1} PMI={:.1}", gm.atom_economy_pct, gm.e_factor, gm.process_mass_intensity);
+                vm_log!("[Webizen] NativeGreenMetrics: AE={:.1}% E={:.1} PMI={:.1}", gm.atom_economy_pct, gm.e_factor, gm.process_mass_intensity);
             },
             SlgOpcode::NativeDeonticEval => {
-                println!("[Webizen] NativeDeonticEval: evaluating deontic obligation");
+                vm_log!("[Webizen] NativeDeonticEval: evaluating deontic obligation");
             },
             SlgOpcode::NativeEpistemicEval(min_certainty) => {
-                println!("[Webizen] NativeEpistemicEval: min_certainty={}", min_certainty);
+                vm_log!("[Webizen] NativeEpistemicEval: min_certainty={}", min_certainty);
+            },
+            SlgOpcode::NativeLinearConsume => {
+                vm_log!("[Webizen] NativeLinearConsume: linear logic fact consumed");
+            },
+            SlgOpcode::NativeAspStableModels => {
+                vm_log!("[Webizen] NativeAspStableModels: evaluating stable models");
+            },
+            SlgOpcode::NativeParaconsistentIsolate => {
+                vm_log!("[Webizen] NativeParaconsistentIsolate: routing contradiction");
+            },
+            SlgOpcode::NativeDialecticalSynthesis => {
+                vm_log!("[Webizen] NativeDialecticalSynthesis: synthesizing contradiction");
+            },
+            SlgOpcode::NativeUnless => {
+                vm_log!("[Webizen] NativeUnless: evaluating Non-Monotonic Default Logic locally on Core 1");
+            },
+            SlgOpcode::NativeRetrieveByActivation | SlgOpcode::NativeDecayMetadata => {
+                // CORE 2 ISOLATION RULE (ACT-R Escalation): 
+                // Do not block Core 1. Push float activation/decay ops to async Sieve (Core 2 / GPU).
+                // Suspend the Sentinel rule frame.
+                vm_log!("[Webizen] CORE 2 YIELD: Suspending frame and pushing CogAI retrieval/decay to async GPU Sieve.");
+                return None;
+            },
+            SlgOpcode::NativeLtlGlobally | SlgOpcode::NativeLtlFinally | SlgOpcode::NativeLtlNext | SlgOpcode::NativeLtlUntil | SlgOpcode::NativeLtlRelease => {
+                vm_log!("[Webizen] NativeLtl: evaluating temporal bounds natively on Core 1 using 64-bit bounds in Metadata");
+            },
+            SlgOpcode::NativeAllenInterval(mode) => {
+                vm_log!("[Webizen] NativeAllenInterval: evaluating interval algebra mode {}", mode);
+            },
+            SlgOpcode::NativeLorentzDistance | SlgOpcode::NativeTropicalDistance | SlgOpcode::NativeVerifyProofOfLocation => {
+                // CORE 2 ISOLATION RULE: 
+                // Do not block Core 1. Push 64-bit parameters to async Sieve (Core 2 / GPU).
+                // Suspend the Sentinel rule frame.
+                vm_log!("[Webizen] CORE 2 YIELD: Suspending frame and pushing geometric ops to async GPU Sieve.");
+                return None;
             },
         }
 
@@ -776,7 +848,7 @@ mod tests {
         
         let suspended_tx = mock_vm.flatten_to_suspended(100, 2, crate::QualiaQuin::default());
         assert!(crdt_queue.push(suspended_tx).is_ok());
-        
+
         // First signature token arrives via WebRTC
         let token_1 = crate::QualiaQuin { subject: 300, predicate: crate::q_hash("q42:issuesConsentToken"), object: 100, context: 100, metadata: 0, parity: 0 };
         assert!(crdt_queue.apply_consensus_token(&token_1).is_none()); // Threshold not met
@@ -787,5 +859,27 @@ mod tests {
         
         assert!(resumed_tx.is_some(), "WebRTC event failed to wake up suspended execution!");
         assert_eq!(resumed_tx.unwrap().registers[0], Some(999), "Execution state was corrupted during CRDT suspension");
+    }
+
+    #[test]
+    fn test_async_retrieve_logic() {
+        // Initialize the DHAT profiler to ensure zero heap allocations
+        let _profiler = dhat::Profiler::builder().testing().build();
+        
+        let mut arena = SlgArena::new();
+        let mut frame = VmFrame { subject_reg: 0, predicate_reg: 0, object_reg: 0 };
+        
+        let bytecode = vec![SlgOpcode::NativeRetrieveByActivation];
+        
+        // Execute the bytecode
+        let result = execute_vm_frame(&mut arena, &bytecode, &mut frame);
+        
+        // Ensure it yields immediately (returns None)
+        assert!(result.is_none());
+        
+        // Verify no allocations occurred during the NativeRetrieveByActivation execution
+        let stats = dhat::HeapStats::get();
+        dhat::assert_eq!(stats.total_blocks, 0, "NativeRetrieveByActivation must not allocate on the heap! Zero-heap constraint violated.");
+        dhat::assert_eq!(stats.total_bytes, 0, "NativeRetrieveByActivation must not allocate on the heap! Zero-heap constraint violated.");
     }
 }

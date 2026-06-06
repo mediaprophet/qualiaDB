@@ -17,6 +17,8 @@
 //!
 //! ## String API (backward compatible)
 //! ```no_run
+//! use qualia_core_db::shacl_compiler::ShaclCompiler;
+//! let compiler = ShaclCompiler::new();
 //! let opcodes = compiler.compile_shape("fhir:Observation", "health:restingHeartRate", "minInclusive", 20.0);
 //! ```
 
@@ -138,6 +140,7 @@ pub enum ShaclConstraint {
     ComputeGreenMetrics,
 
     // ── Qualia native: deontic and epistemic ─────────────────────────────────
+    // ── Qualia native: deontic and epistemic ─────────────────────────────────
     DeonticObligate,
     DeonticPermit,
     DeonticForbid,
@@ -145,6 +148,38 @@ pub enum ShaclConstraint {
     EpistemicKnowledge { min_certainty: u8 },
     EpistemicBelief { min_certainty: u8 },
     CommonKnowledge,
+
+    // ── Qualia native: advanced logics ───────────────────────────────────────
+    LinearConsume,
+    AspStableModels,
+    ParaconsistentIsolate,
+    DialecticalSynthesis,
+
+    // ── Qualia native: cognitive ai (ACT-R) ──────────────────────────────────
+    RetrieveByActivation,
+    DecayMetadata,
+    Unless,
+
+    // ── Qualia native: temporal logic (LTL) ──────────────────────────────────
+    LtlGlobally,
+    LtlFinally,
+    LtlNext,
+    LtlUntil,
+    LtlRelease,
+
+    // ── Qualia native: spatio-temporal (Allen Interval) ──────────────────────
+    AllenBefore,
+    AllenMeets,
+    AllenOverlaps,
+    AllenStarts,
+    AllenDuring,
+    AllenFinishes,
+    AllenEquals,
+
+    // ── Qualia native: geometric and spatial topology ────────────────────────
+    LorentzDistanceMax,
+    TropicalDistanceMax,
+    VerifyProofOfLocation,
 }
 
 // ─── CompiledShape ────────────────────────────────────────────────────────────
@@ -379,6 +414,38 @@ impl ShaclCompiler {
             ShaclConstraint::EpistemicKnowledge { min_certainty } => ops.push(SlgOpcode::NativeEpistemicEval(*min_certainty)),
             ShaclConstraint::EpistemicBelief { min_certainty } => ops.push(SlgOpcode::NativeEpistemicEval(*min_certainty)),
             ShaclConstraint::CommonKnowledge => ops.push(SlgOpcode::NativeEpistemicEval(0)),
+
+            // Advanced Logics
+            ShaclConstraint::LinearConsume => ops.push(SlgOpcode::NativeLinearConsume),
+            ShaclConstraint::AspStableModels => ops.push(SlgOpcode::NativeAspStableModels),
+            ShaclConstraint::ParaconsistentIsolate => ops.push(SlgOpcode::NativeParaconsistentIsolate),
+            ShaclConstraint::DialecticalSynthesis => ops.push(SlgOpcode::NativeDialecticalSynthesis),
+
+            // Cognitive AI (ACT-R)
+            ShaclConstraint::RetrieveByActivation => ops.push(SlgOpcode::NativeRetrieveByActivation),
+            ShaclConstraint::DecayMetadata => ops.push(SlgOpcode::NativeDecayMetadata),
+            ShaclConstraint::Unless => ops.push(SlgOpcode::NativeUnless),
+
+            // Temporal Logic (LTL)
+            ShaclConstraint::LtlGlobally => ops.push(SlgOpcode::NativeLtlGlobally),
+            ShaclConstraint::LtlFinally => ops.push(SlgOpcode::NativeLtlFinally),
+            ShaclConstraint::LtlNext => ops.push(SlgOpcode::NativeLtlNext),
+            ShaclConstraint::LtlUntil => ops.push(SlgOpcode::NativeLtlUntil),
+            ShaclConstraint::LtlRelease => ops.push(SlgOpcode::NativeLtlRelease),
+
+            // Spatio-Temporal (Allen Interval)
+            ShaclConstraint::AllenBefore => ops.push(SlgOpcode::NativeAllenInterval(0)),
+            ShaclConstraint::AllenMeets => ops.push(SlgOpcode::NativeAllenInterval(1)),
+            ShaclConstraint::AllenOverlaps => ops.push(SlgOpcode::NativeAllenInterval(2)),
+            ShaclConstraint::AllenStarts => ops.push(SlgOpcode::NativeAllenInterval(3)),
+            ShaclConstraint::AllenDuring => ops.push(SlgOpcode::NativeAllenInterval(4)),
+            ShaclConstraint::AllenFinishes => ops.push(SlgOpcode::NativeAllenInterval(5)),
+            ShaclConstraint::AllenEquals => ops.push(SlgOpcode::NativeAllenInterval(6)),
+
+            // Geometric & Spatial Topology
+            ShaclConstraint::LorentzDistanceMax => ops.push(SlgOpcode::NativeLorentzDistance),
+            ShaclConstraint::TropicalDistanceMax => ops.push(SlgOpcode::NativeTropicalDistance),
+            ShaclConstraint::VerifyProofOfLocation => ops.push(SlgOpcode::NativeVerifyProofOfLocation),
         }
     }
 
@@ -454,6 +521,28 @@ impl ShaclCompiler {
             "qualia:epistemicKnowledge"          => ShaclConstraint::EpistemicKnowledge { min_certainty: value as u8 },
             "qualia:epistemicBelief"             => ShaclConstraint::EpistemicBelief { min_certainty: value as u8 },
             "qualia:commonKnowledge"             => ShaclConstraint::CommonKnowledge,
+            "qualia:linearConsume"               => ShaclConstraint::LinearConsume,
+            "qualia:evaluateStableModels"        => ShaclConstraint::AspStableModels,
+            "qualia:paraconsistentIsolate"       => ShaclConstraint::ParaconsistentIsolate,
+            "qualia:dialecticalSynthesis"        => ShaclConstraint::DialecticalSynthesis,
+            "qualia:retrieveByActivation"        => ShaclConstraint::RetrieveByActivation,
+            "qualia:decayMetadata"               => ShaclConstraint::DecayMetadata,
+            "qualia:unless"                      => ShaclConstraint::Unless,
+            "qualia:ltlGlobally"                 => ShaclConstraint::LtlGlobally,
+            "qualia:ltlFinally"                  => ShaclConstraint::LtlFinally,
+            "qualia:ltlNext"                     => ShaclConstraint::LtlNext,
+            "qualia:ltlUntil"                    => ShaclConstraint::LtlUntil,
+            "qualia:ltlRelease"                  => ShaclConstraint::LtlRelease,
+            "qualia:allenBefore"                 => ShaclConstraint::AllenBefore,
+            "qualia:allenMeets"                  => ShaclConstraint::AllenMeets,
+            "qualia:allenOverlaps"               => ShaclConstraint::AllenOverlaps,
+            "qualia:allenStarts"                 => ShaclConstraint::AllenStarts,
+            "qualia:allenDuring"                 => ShaclConstraint::AllenDuring,
+            "qualia:allenFinishes"               => ShaclConstraint::AllenFinishes,
+            "qualia:allenEquals"                 => ShaclConstraint::AllenEquals,
+            "qualia:lorentzDistanceMax"          => ShaclConstraint::LorentzDistanceMax,
+            "qualia:tropicalDistanceMax"         => ShaclConstraint::TropicalDistanceMax,
+            "qualia:verifyProofOfLocation"       => ShaclConstraint::VerifyProofOfLocation,
             other => {
                 eprintln!("[ShaclCompiler] unknown constraint: {other}");
                 ShaclConstraint::DataType(other.to_string())
@@ -531,5 +620,18 @@ mod tests {
         });
         let quin = compiler().compile_json_node(&json).unwrap();
         assert_eq!(quin.get_sensitivity_byte(), crate::QualiaQuin::SENSITIVITY_RESTRICTED);
+    }
+
+    #[test]
+    fn test_cognitive_ai_opcodes_compile() {
+        let mut comp = compiler();
+        let s1 = comp.compile("cog:Memory", "cog:activate", ShaclConstraint::RetrieveByActivation, ShaclSeverity::Violation);
+        assert!(s1.opcodes.contains(&SlgOpcode::NativeRetrieveByActivation));
+
+        let s2 = comp.compile("cog:Memory", "cog:decay", ShaclConstraint::DecayMetadata, ShaclSeverity::Violation);
+        assert!(s2.opcodes.contains(&SlgOpcode::NativeDecayMetadata));
+
+        let s3 = comp.compile("cog:Rule", "cog:unless", ShaclConstraint::Unless, ShaclSeverity::Violation);
+        assert!(s3.opcodes.contains(&SlgOpcode::NativeUnless));
     }
 }

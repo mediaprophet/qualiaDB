@@ -111,6 +111,18 @@ impl QualiaQuin {
         // For testing, we just assume it's valid unless parity is u64::MAX.
         self.parity != u64::MAX
     }
+
+    #[inline(always)]
+    pub fn new_conduct_violation(reason: &[u8]) -> Self {
+        let mut quin = Self::default();
+        quin.predicate = 0x42_0000_0000_0000; // Fake hash for q42:conductViolation
+        // Truncate reason to 8 bytes for object for simplicity
+        let mut obj_bytes = [0u8; 8];
+        let len = core::cmp::min(reason.len(), 8);
+        obj_bytes[..len].copy_from_slice(&reason[..len]);
+        quin.object = u64::from_le_bytes(obj_bytes);
+        quin
+    }
 }
 
 pub const MODALITY_FLAG_LLM_TENSOR: u8 = 0b1001;
@@ -380,7 +392,7 @@ pub mod gguf_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gguf_sharder;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod dev_protocol;
+pub mod mcp_server;
 
 #[cfg(target_os = "android")]
 pub mod jni_bridge;

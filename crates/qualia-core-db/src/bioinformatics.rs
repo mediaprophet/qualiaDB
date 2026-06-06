@@ -395,17 +395,76 @@ pub fn dice_similarity(fp_a: &[u64], fp_b: &[u64]) -> f32 {
     if sum_a + sum_b == 0 { 1.0 } else { 2.0 * intersection as f32 / (sum_a + sum_b) as f32 }
 }
 
-// ─── SIMD stubs (preserved, feature-gated) ───────────────────────────────────
+// ─── SIMD fast-paths (feature-gated) ───────────────────────────────────
 
 #[cfg(all(feature = "neon_simd_unroll", target_arch = "x86_64"))]
 pub fn simd_align_x86_64(query: &[u8], target: &[u8]) -> AlignmentScore {
-    // AVX2 inner-loop vectorisation placeholder — falls back to scalar SW
+    #[cfg(target_feature = "avx2")]
+    unsafe {
+        use std::arch::x86_64::*;
+        let min_len = query.len().min(target.len());
+        let mut score = 0i32;
+        let mut i = 0;
+        
+        // Exact match fast-path using AVX2 (256-bit / 32-byte chunks)
+        while i + 32 <= min_len {
+            let q_vec = _mm256_loadu_si256(query.as_ptr().add(i) as *const __m256i);
+            let t_vec = _mm256_loadu_si256(target.as_ptr().add(i) as *const __m256i);
+            let cmp = _mm256_cmpeq_epi8(q_vec, t_vec);
+            let mask = _mm256_movemask_epi8(cmp);
+            let matches = mask.count_ones() as i32;
+            let mismatches = 32 - matches;
+            
+            score += matches * 2; // match score
+            score -= mismatches * 3; // mismatch score
+            i += 32;
+        }
+        
+        if i < min_len {
+            score += align_nucleotide(&query[i..], &target[i..]).score;
+        }
+        return AlignmentScore { score };
+    }
+    
+    #[cfg(not(target_feature = "avx2"))]
     AlignmentScore { score: align_nucleotide(query, target).score }
 }
 
 #[cfg(all(feature = "neon_simd_unroll", target_arch = "aarch64"))]
 pub fn simd_align_aarch64(query: &[u8], target: &[u8]) -> AlignmentScore {
-    // NEON inner-loop vectorisation placeholder — falls back to scalar SW
+    #[cfg(target_feature = "neon")]
+    unsafe {
+        use std::arch::aarch64::*;
+        let min_len = query.len().min(target.len());
+        let mut score = 0i32;
+        let mut i = 0;
+        
+        // Exact match fast-path using NEON (128-bit / 16-byte chunks)
+        while i + 16 <= min_len {
+            let q_vec = vld1q_u8(query.as_ptr().add(i));
+            let t_vec = vld1q_u8(target.as_ptr().add(i));
+            let cmp = vceqq_u8(q_vec, t_vec);
+            
+            let mut v = [0u8; 16];
+            vst1q_u8(v.as_mut_ptr(), cmp);
+            let mut matches = 0;
+            for &b in &v {
+                if b == 0xFF { matches += 1; }
+            }
+            let mismatches = 16 - matches;
+            
+            score += matches * 2;
+            score -= mismatches * 3;
+            i += 16;
+        }
+        
+        if i < min_len {
+            score += align_nucleotide(&query[i..], &target[i..]).score;
+        }
+        return AlignmentScore { score };
+    }
+    
+    #[cfg(not(target_feature = "neon"))]
     AlignmentScore { score: align_nucleotide(query, target).score }
 }
 

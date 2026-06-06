@@ -3,8 +3,8 @@ members = [
     "crates/qualia-core-db",
     "crates/qualia-cli",
     "crates/qualia-desktop",
-    "crates/qualia-solid-bridge",
-    
+    "crates/qualia-solid-bridge", "crates/qualia-client-core",
+    "crates/qualia-flutter/rust"
 ]
 resolver = "2"
 

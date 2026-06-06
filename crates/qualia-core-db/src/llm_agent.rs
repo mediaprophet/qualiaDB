@@ -186,7 +186,7 @@ impl LocalLlmAgent {
     /// Phase 8: Bifurcated Compute - SPSC Wait-Free Intercept
     /// Uses `rtrb` (Real-Time Ring Buffer) to establish a true zero-allocation,
     /// wait-free communication bridge between the LLM Engine and the Webizen Sentinel.
-    fn infer_local_model(&self, prompt: &str, graph_context: &str) -> (String, Vec<u64>) {
+    fn infer_local_model(&self, prompt: &str, graph_context: &str) -> (String, Vec<u64>, u32) {
         use rtrb::RingBuffer;
         use std::thread;
         use std::time::Duration;
@@ -214,6 +214,7 @@ impl LocalLlmAgent {
             let mut final_text = String::new();
             let output_text = "The rapid development of modern infrastructure... Wait, the internet did not exist in 1930.";
             let words: Vec<&str> = output_text.split_whitespace().collect();
+            let mut tokens_generated = 0;
             
             for word in words {
                 // Check Control Stream for wait-free intercepts from the Sentinel
@@ -221,6 +222,7 @@ impl LocalLlmAgent {
                     // LLM Engine handles the rollback immediately without OS locks
                     thread::sleep(Duration::from_millis(10));
                     final_text.push_str("[recalculated deterministic tensor] ");
+                    tokens_generated += 3; // approximation for recalculation
                     continue;
                 }
 
@@ -237,11 +239,12 @@ impl LocalLlmAgent {
                 
                 final_text.push_str(word);
                 final_text.push_str(" ");
+                tokens_generated += 1;
                 thread::sleep(Duration::from_millis(5)); // Simulating inference latency
             }
             
             let _ = logit_p.push(VectorOp::EndOfStream);
-            final_text
+            (final_text, tokens_generated)
         });
 
         // 3. Isolate A: Webizen Sentinel Thread (Audits the vector stream natively on main thread)
@@ -262,9 +265,9 @@ impl LocalLlmAgent {
             }
         }
 
-        let output_text = llm_handle.join().unwrap_or_default();
+        let (output_text, tokens) = llm_handle.join().unwrap_or((String::new(), 0));
         let prov_hash = graph_context.bytes().take(8).fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
-        (output_text, vec![prov_hash])
+        (output_text, vec![prov_hash], tokens)
     }
 }
 
@@ -336,7 +339,7 @@ impl AgentRuntime for LocalLlmAgent {
 
         // Timeout guard (production: run in a separate thread with channel)
         let deadline = Duration::from_millis(INFERENCE_TIMEOUT_MS);
-        let (text, provenance) = self.infer_local_model(prompt, graph_context);
+        let (text, provenance, tokens) = self.infer_local_model(prompt, graph_context);
         if t0.elapsed() > deadline {
             return Err(AgentError::Timeout);
         }
@@ -344,7 +347,7 @@ impl AgentRuntime for LocalLlmAgent {
         Ok(AgentOutput {
             text,
             provenance_quins: provenance,
-            tokens_generated: 64, // stub
+            tokens_generated: tokens,
             inference_duration_ms: t0.elapsed().as_millis() as u64,
             peak_memory_bytes: current,
         })

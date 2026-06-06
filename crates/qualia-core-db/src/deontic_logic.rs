@@ -30,7 +30,7 @@
 //! │ metadata │ [61..62] = PermissiveRoutingLane bits                           │
 //! │          │ [32..60] = Lamport logical clock                                │
 //! │          │ [0..31]  = expiry as truncated Unix-32 timestamp                │
-//! │ parity   │ XOR fold of subject ⊕ predicate ⊕ object ⊕ context (ECC stub)  │
+//! │ parity   │ XOR fold of subject ⊕ predicate ⊕ object ⊕ context (ECC check)  │
 //! └──────────┴──────────────────────────────────────────────────────────────────┘
 //! ```
 //!
@@ -294,11 +294,15 @@ pub fn evaluate_deontic_contract(
 
     for &q in quins {
         if q.predicate & DEFEATER_BIT != 0 {
-            if defeater_count < MAX_DEFEATER_SLOTS {
-                defeater_buf[defeater_count] = defeater_fingerprint(&q);
-                defeater_count += 1;
+            // ECC Parity XOR fold check
+            let expected_parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+            if q.parity == expected_parity {
+                if defeater_count < MAX_DEFEATER_SLOTS {
+                    defeater_buf[defeater_count] = defeater_fingerprint(&q);
+                    defeater_count += 1;
+                }
+                // Excess defeaters are dropped; contracts this dense are rejected upstream.
             }
-            // Excess defeaters are dropped; contracts this dense are rejected upstream.
         }
     }
 
@@ -310,6 +314,21 @@ pub fn evaluate_deontic_contract(
     for &q in quins {
         // Defeater nodes are not norms; skip them in the second pass.
         if q.predicate & DEFEATER_BIT != 0 {
+            continue;
+        }
+
+        let expected_parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+        if q.parity != expected_parity {
+            if verdict_count >= out.len() {
+                return Err(DeonticError::OutputBufferFull);
+            }
+            out[verdict_count] = DeonticVerdict {
+                norm: q,
+                status: DeonticStatus::Malformed,
+                opcode: extract_deontic_opcode(q.predicate),
+                _pad: [0u8; 6],
+            };
+            verdict_count += 1;
             continue;
         }
 
