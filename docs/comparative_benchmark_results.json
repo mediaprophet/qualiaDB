@@ -1,57 +1,167 @@
 {
   "schema_version": 1,
   "dataset": "synthetic-ntriples-v1",
-  "last_updated": "2026-06-05T11:00:00Z",
+  "last_updated": "2026-06-06T08:46:49.105554Z",
   "engines": {
     "qualia": {
       "engine": "qualia",
       "n_triples": 10000,
-      "ingestion_ms": 38.2,
-      "point": { "p50": 0.07, "p95": 0.11 },
-      "twohop": { "p50": 0.19, "p95": 0.29 },
-      "filter": { "p50": 0.14, "p95": 0.21 },
-      "peak_rss_mb": 28.6,
-      "meta": { "label": "Qualia Native" }
+      "qualia_daemon_available": true,
+      "note": "Measured via local Qualia daemon (port 4242)",
+      "point": "ERROR: HTTP Error 401: Unauthorized",
+      "twohop": "ERROR: HTTP Error 401: Unauthorized",
+      "filter": "ERROR: HTTP Error 401: Unauthorized",
+      "ingestion_ms": null,
+      "schema_version": 1,
+      "dataset": "synthetic-ntriples-v1",
+      "timestamp": "2026-06-06T08:46:49.105554Z",
+      "meta": {
+        "label": "Qualia (native daemon)",
+        "focus": "Zero-allocation 5-vector graph + Sentinel VM on your hardware",
+        "install": "cargo run --release -p qualia-cli -- daemon --port 4242"
+      }
     },
     "oxigraph": {
       "engine": "oxigraph",
       "n_triples": 10000,
-      "ingestion_ms": 124.7,
-      "point": { "p50": 0.42, "p95": 0.68 },
-      "twohop": { "p50": 1.38, "p95": 2.14 },
-      "filter": { "p50": 2.05, "p95": 3.22 },
-      "peak_rss_mb": 187.4,
-      "meta": { "label": "Oxigraph" }
+      "ingestion_ms": "ERROR",
+      "error": "'pyoxigraph.Store' object has no attribute 'bulk_loader'",
+      "schema_version": 1,
+      "dataset": "synthetic-ntriples-v1",
+      "timestamp": "2026-06-06T08:43:26.910775Z",
+      "meta": {
+        "label": "Oxigraph",
+        "focus": "Memory bloat & native Rust SPARQL speed",
+        "install": "pip install pyoxigraph psutil"
+      },
+      "point": null,
+      "twohop": null,
+      "filter": null
     },
     "surrealdb": {
       "engine": "surrealdb",
       "n_triples": 10000,
-      "ingestion_ms": 312.9,
-      "point": { "p50": 0.89, "p95": 1.47 },
-      "twohop": { "p50": 3.41, "p95": 5.28 },
-      "filter": { "p50": 1.67, "p95": 2.73 },
-      "peak_rss_mb": 89.3,
-      "meta": { "label": "SurrealDB" }
+      "ingestion_ms": 401.355,
+      "rss_before_load_mb": 27.6,
+      "rss_after_load_mb": 27.84,
+      "point": {
+        "min": 17.9136,
+        "max": 20.6092,
+        "mean": 19.0074,
+        "p50": 18.9751,
+        "p95": 20.4119,
+        "p99": 20.6092,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "twohop": {
+        "min": 18.2168,
+        "max": 20.9109,
+        "mean": 19.2671,
+        "p50": 19.3265,
+        "p95": 20.598,
+        "p99": 20.9109,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "filter": {
+        "min": 17.8259,
+        "max": 21.07,
+        "mean": 18.8552,
+        "p50": 18.8944,
+        "p95": 19.6226,
+        "p99": 21.07,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "server_rss_mb": 154.27,
+      "peak_rss_mb": 28.51,
+      "schema_version": 1,
+      "dataset": "synthetic-ntriples-v1",
+      "timestamp": "2026-06-06T08:43:32.755301Z",
+      "meta": {
+        "label": "SurrealDB",
+        "focus": "Relational-vs-graph overhead (SQL-like document/graph parsing)",
+        "install": "surreal CLI binary required"
+      }
     },
     "comunica": {
       "engine": "comunica",
       "n_triples": 10000,
-      "ingestion_ms": 487.3,
-      "point": { "p50": 1.24, "p95": 2.01 },
-      "twohop": { "p50": 4.92, "p95": 7.84 },
-      "filter": { "p50": 3.78, "p95": 5.91 },
-      "peak_rss_mb": 312.6,
-      "meta": { "label": "Comunica" }
+      "ingestion_ms": 104.66,
+      "quad_count": 10000,
+      "point": {
+        "min": 0.839,
+        "max": 2.8172,
+        "mean": 0.9957,
+        "p50": 0.9425,
+        "p95": 1.2041,
+        "p99": 2.8172,
+        "samples": 50,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "twohop": {
+        "min": 7.1961,
+        "max": 17.7541,
+        "mean": 8.6022,
+        "p50": 8.0822,
+        "p95": 13.4027,
+        "p99": 17.7541,
+        "samples": 50,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "filter": {
+        "min": 2.1503,
+        "max": 5.3394,
+        "mean": 3.15,
+        "p50": 3.2104,
+        "p95": 4.6656,
+        "p99": 5.3394,
+        "samples": 50,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "peak_rss_mb": 15.19,
+      "_sample_policy": {
+        "warmup": 10,
+        "samples": 30
+      },
+      "schema_version": 1,
+      "dataset": "synthetic-ntriples-v1",
+      "timestamp": "2026-06-06T08:44:01.735288Z",
+      "meta": {
+        "label": "Comunica",
+        "focus": "WASM/JS execution penalty (high-level runtime overhead)",
+        "install": "Node.js + npm install @comunica/query-sparql n3"
+      }
     },
     "wasm_prolog": {
       "engine": "wasm_prolog",
       "n_triples": 10000,
-      "ingestion_ms": 1240.8,
-      "point": { "p50": 0.71, "p95": 1.12 },
-      "twohop": { "p50": 2.84, "p95": 4.41 },
-      "filter": { "p50": 2.31, "p95": 3.67 },
-      "peak_rss_mb": 178.9,
-      "meta": { "label": "WASM-Prolog" }
+      "ingestion_ms": 5.13,
+      "peak_rss_mb": 15.12,
+      "_sample_policy": {
+        "warmup": 10,
+        "samples": 30,
+        "note": "Prolog uses fewer samples by design"
+      },
+      "schema_version": 1,
+      "dataset": "synthetic-ntriples-v1",
+      "timestamp": "2026-06-06T08:44:02.373994Z",
+      "meta": {
+        "label": "WASM-Prolog",
+        "focus": "Logical inference throughput (backtracking vs. O(1) FNV lookup)",
+        "install": "Node.js + npm install tau-prolog"
+      },
+      "point": null,
+      "twohop": null,
+      "filter": null
     }
-  }
+  },
+  "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). Ingestion paths differ by engine (Oxigraph bulk, Surreal HTTP, JS parse, Qualia native). Qualia row (when present) measured via local daemon on port 4242. Full Qualia ingestion + Lazy SuperBlock metrics come from qualia-cli bench --suite full."
 }
