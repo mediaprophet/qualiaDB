@@ -1,0 +1,31 @@
+resources:
+  catalog_path: "../resources/catalog.yaml"
+
+  preferences:
+    llm:
+      preferred_quantization: "Q4_K_M"
+      max_size_mb: 5000
+      allowed_licenses:
+        - "MIT"
+        - "Apache-2.0"
+        - "CC-BY-4.0"
+        - "Llama 3.2 Community License"
+    ontology:
+      prefer_small_first: true
+      auto_validate_shacl: true
+      allowed_licenses:
+        - "W3C"
+        - "CC-BY"
+        - "Apache-2.0"
+    sparql:
+      default_timeout_seconds: 30
+      allow_federation: true
+
+  download:
+    destination: "./data/downloads/"
+    verify_checksums: true
+    record_provenance: true
+
+  update:
+    mode: "manual"   # manual | periodic (future)
+    allow_external_refresh: false

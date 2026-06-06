@@ -1,0 +1,74 @@
+ontologies:
+  - id: "prov-o"
+    name: "PROV-O: The PROV Ontology"
+    acronym: "PROV-O"
+    source: "W3C"
+    format: "owl"
+    size_estimate_mb: 0.2
+    download:
+      type: "direct"
+      url: "http://www.w3.org/ns/prov.owl"
+    license: "W3C"
+    domain: "provenance"
+    tags: [core, w3c, provenance]
+    last_verified: "2026-06-06"
+    notes: "Core ontology for provenance. Highly recommended for QualiaDB."
+
+  - id: "odrl"
+    name: "ODRL Vocabulary & Expression"
+    acronym: "ODRL"
+    source: "W3C"
+    format: "ttl"
+    size_estimate_mb: 0.15
+    download:
+      type: "direct"
+      url: "https://www.w3.org/ns/odrl/2/ODRL.ttl"
+    license: "W3C"
+    domain: "policy"
+    tags: [core, w3c, consent, policy]
+    last_verified: "2026-06-06"
+
+  - id: "schema-org"
+    name: "Schema.org"
+    acronym: "schema"
+    source: "schema.org"
+    format: "rdfa"
+    size_estimate_mb: 5
+    download:
+      type: "github"
+      repo: "schemaorg/schemaorg"
+      path: "data/releases/27.0/schemaorg-all-https.rdf"
+    license: "CC-BY-SA"
+    domain: "general"
+    tags: [web, structured-data]
+    last_verified: "2026-06-05"
+
+  - id: "snomedct-us"
+    name: "SNOMED CT US Edition"
+    acronym: "SNOMEDCT"
+    source: "BioPortal"
+    format: "owl"
+    size_estimate_mb: 850
+    download:
+      type: "bioportal"
+      acronym: "SNOMEDCT"
+    license: "UMLS"
+    domain: "health"
+    tags: [medical, clinical, large]
+    import_strategy: "modular"
+    last_verified: "2026-06-04"
+    notes: "Large clinical terminology. Consider creating subsets for edge deployment."
+
+  - id: "foaf"
+    name: "Friend of a Friend (FOAF)"
+    acronym: "FOAF"
+    source: "xmlns.com"
+    format: "rdf"
+    size_estimate_mb: 0.1
+    download:
+      type: "direct"
+      url: "http://xmlns.com/foaf/spec/index.rdf"
+    license: "CC-BY"
+    domain: "social"
+    tags: [core, social]
+    last_verified: "2026-06-05"
