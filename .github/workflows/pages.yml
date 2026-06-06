@@ -77,7 +77,7 @@ jobs:
           destination: ./_site
 
       - name: Build Rust documentation
-        run: cargo doc --no-deps
+        run: cargo doc --no-deps -p qualia-core-db -p qualia-cli -p qualia-client-core
 
       - name: Copy Rust docs to site
         run: cp -r target/doc ./_site/rustdoc
