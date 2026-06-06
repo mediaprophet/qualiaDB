@@ -1,4 +1,48 @@
 # QualiaDB — Handover Document
+
+---
+
+## Session 2026-06-06 — v0.0.6 release (App Vault, WASM, CI rebuild)
+
+**Branch:** `main` | **Tag:** `v0.0.6` | **Last commit:** `8579f22`
+
+### Completed this session
+- **App Vault** (Flutter): renamed from AppStore, FRB-wired (`list_installed_apps`,
+  `launch_installed_app`, `generate_app_credential`), system browser launch via
+  `url_launcher`, directory picker for install via `file_picker`, `dev_port` in manifest
+- **FRB**: fixed `flutter_rust_bridge.yaml` (was pointing at deleted `api.rs`),
+  regenerated all bindings including new `resource_catalog.dart`
+- **WASM**: rebuilt `qualia_core_db_bg.wasm` (465KB, 29 exports, was stale 46KB),
+  `pages.yml` now rebuilds WASM on every deploy
+- **CI**: `release.yml` rewritten (Flutter + WASM + CLI, Tauri removed),
+  `permissions: contents: write` added (was causing 403 on all uploads)
+- **Docs**: `app-vault-developer-guide.md`, `BUILD_ERRORS_V0-0-6.md`, README warning
+- **Cleanup**: cooperative/wellfair/social → `app-development/` (gitignored),
+  migration scripts → `scratch/` (gitignored), node.zip deleted, 1601 social files
+  removed from tracking, broken Unicode-named directory deleted
+
+### Immediate next tasks
+1. **Flutter Linux/macOS platforms**: `flutter create --platforms=linux,macos .`
+   in `crates/qualia-flutter/` then commit. Blocks those release jobs.
+2. **DirectML SDK**: see `docs/BUILD_ERRORS_V0-0-6.md` §Error 3
+3. **benchmark.html**: wire to actual `qualia_core_db.js` WASM, not JS simulation
+4. **WellFair app**: `app-development/wellfair/app.json` exists, needs `index.html`
+   + daemon query JS (port 5173, CORS-allowed in dev mode)
+5. **Node.js 24**: add `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` to `release.yml`
+
+### Key files changed
+`crates/qualia-flutter/lib/main.dart`, `lib/screens/app_vault_screen.dart`,
+`lib/screens/wallet_screen.dart`, `lib/src/rust/api/qualia_api.dart`,
+`lib/src/rust/api/resource_catalog.dart` (new), `rust/src/api/qualia_api.rs`,
+`rust/src/api/resource_catalog.rs`, `flutter_rust_bridge.yaml`, `pubspec.yaml`,
+`pubspec.lock`, `frb_generated.{dart,rs}`, `crates/qualia-client-core/src/api.rs`,
+`crates/qualia-client-core/src/app_registry.rs`, `.github/workflows/release.yml`,
+`.github/workflows/pages.yml`, `.gitignore`, `README.md`,
+`docs/playground/qualia_core_db{.js,_bg.wasm}` (rebuilt)
+
+---
+
+## Session 2026-06-05 — Full codebase audit
 _Full codebase audit completed: 2026-06-05._
 _Covers qualia-core-db (55 modules), qualia-desktop, and qualia-client._
 
