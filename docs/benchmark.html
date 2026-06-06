@@ -348,11 +348,11 @@
                             <div class="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">${r.label}</div>
                             <div class="grid grid-cols-3 gap-3 text-center">
                                 <div>
-                                    <div class="text-xl font-semibold font-mono">${r.p50.toFixed(3)}<span class="text-xs text-slate-400 ml-1">ms</span></div>
+                                    <div class="text-xl font-semibold font-mono">${Math.round(r.p50 * 1e6).toLocaleString()}<span class="text-xs text-slate-400 ml-1">ns</span></div>
                                     <div class="text-xs text-slate-500">P50</div>
                                 </div>
                                 <div>
-                                    <div class="text-xl font-semibold font-mono text-amber-400">${r.throughput.toLocaleString()}<span class="text-xs text-slate-400 ml-1">ops/s</span></div>
+                                    <div class="text-xl font-semibold font-mono text-amber-400">${isFinite(r.throughput) ? r.throughput.toLocaleString() : '> 1B'}<span class="text-xs text-slate-400 ml-1">ops/s</span></div>
                                     <div class="text-xs text-slate-500">Throughput</div>
                                 </div>
                                 <div>
@@ -373,11 +373,11 @@
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div class="glass p-5 rounded-2xl">
                                     <div class="text-xs text-slate-400 mb-1">Avg P50 Latency</div>
-                                    <div class="text-3xl font-semibold font-mono">${avgP50.toFixed(3)}<span class="text-base font-normal text-slate-400 ml-1">ms</span></div>
+                                    <div class="text-3xl font-semibold font-mono">${Math.round(avgP50 * 1e6).toLocaleString()}<span class="text-base font-normal text-slate-400 ml-1">ns</span></div>
                                 </div>
                                 <div class="glass p-5 rounded-2xl">
                                     <div class="text-xs text-slate-400 mb-1">Avg Throughput</div>
-                                    <div class="text-3xl font-semibold font-mono">${Math.round(avgTput).toLocaleString()}<span class="text-base font-normal text-slate-400 ml-1">ops/s</span></div>
+                                    <div class="text-3xl font-semibold font-mono">${isFinite(Math.round(avgTput)) ? Math.round(avgTput).toLocaleString() : '> 1B'}<span class="text-base font-normal text-slate-400 ml-1">ops/s</span></div>
                                 </div>
                                 <div class="glass p-5 rounded-2xl">
                                     <div class="text-xs text-slate-400 mb-1">Total VM Cycles</div>
@@ -433,11 +433,11 @@
                         <div class="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">${r.label}</div>
                         <div class="grid grid-cols-3 gap-3 text-center">
                             <div>
-                                <div class="text-xl font-semibold font-mono">${r.p50.toFixed(1)}<span class="text-xs text-slate-400 ml-1">ms</span></div>
+                                <div class="text-xl font-semibold font-mono">${Math.round(r.p50 * 1e6).toLocaleString()}<span class="text-xs text-slate-400 ml-1">ns</span></div>
                                 <div class="text-xs text-slate-500">P50</div>
                             </div>
                             <div>
-                                <div class="text-xl font-semibold font-mono text-amber-400">${r.throughput.toLocaleString()}<span class="text-xs text-slate-400 ml-1">ops/s</span></div>
+                                <div class="text-xl font-semibold font-mono text-amber-400">${isFinite(r.throughput) ? r.throughput.toLocaleString() : '> 1B'}<span class="text-xs text-slate-400 ml-1">ops/s</span></div>
                                 <div class="text-xs text-slate-500">Throughput</div>
                             </div>
                             <div>
@@ -459,11 +459,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="glass p-5 rounded-2xl">
                                 <div class="text-xs text-slate-400 mb-1">Avg P50 Latency</div>
-                                <div class="text-3xl font-semibold font-mono">${avgP50.toFixed(1)}<span class="text-base font-normal text-slate-400 ml-1">ms</span></div>
+                                <div class="text-3xl font-semibold font-mono">${Math.round(avgP50 * 1e6).toLocaleString()}<span class="text-base font-normal text-slate-400 ml-1">ns</span></div>
                             </div>
                             <div class="glass p-5 rounded-2xl">
                                 <div class="text-xs text-slate-400 mb-1">Avg Throughput</div>
-                                <div class="text-3xl font-semibold font-mono">${Math.round(avgTput).toLocaleString()}<span class="text-base font-normal text-slate-400 ml-1">ops/s</span></div>
+                                <div class="text-3xl font-semibold font-mono">${isFinite(Math.round(avgTput)) ? Math.round(avgTput).toLocaleString() : '> 1B'}<span class="text-base font-normal text-slate-400 ml-1">ops/s</span></div>
                             </div>
                             <div class="glass p-5 rounded-2xl">
                                 <div class="text-xs text-slate-400 mb-1">Total VM Cycles</div>
