@@ -492,7 +492,7 @@ pub fn compile_query_to_json(query: &str) -> String {
             serde_json::to_string(&ProgramOut { source: "mini_parser", compiled_len: len, instructions })
                 .unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string())
         }
-        Err(e) => format!(r#"{{"error":"compilation failed: {}"}}"#, e),
+        Err(e) => format!(r#"{{"error":"compilation failed: {:?}"}}"#, e),
     }
 }
 
