@@ -29,6 +29,15 @@ _LLM_BENCH_PATH = os.path.join(
 )
 
 
+def _read_llm_bench() -> dict:
+    """Load the full qualia-cli bench JSON if available."""
+    try:
+        with open(_LLM_BENCH_PATH) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
 def _read_llm_latency_stats() -> dict:
     """Load qualia_latency_stats from qualia-cli bench output if available."""
     try:
@@ -132,10 +141,10 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
         ing = llm.get("ingestion_10k_quins", {})
         if ing.get("p50") is not None:
             result["ingestion_ms"] = round(ing["p50"] / 1000, 6)
-        scaling = llm.get("rss_after_materialize_mb")
-        if scaling is None:
-            # Try qualia_scaling_stats for 10k
-            pass
+        full_bench = _read_llm_bench()
+        rss = (full_bench.get("qualia_scaling_stats") or {}).get("10000", {}).get("rss_after_materialize_mb")
+        if rss is not None:
+            result["peak_rss_mb"] = round(rss, 2)
         for key in ("point", "twohop", "filter"):
             if isinstance(result.get(key), str):  # error string from daemon
                 s = llm.get(key, {})

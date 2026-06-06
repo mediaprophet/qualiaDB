@@ -48,8 +48,9 @@
       "meta": {
         "label": "Qualia (native daemon)",
         "focus": "Zero-allocation 5-vector graph + Sentinel VM on your hardware",
-        "install": "cargo run --release -p qualia-cli -- daemon --port 4242"
-      }
+        "install": "cargo run --release -p qualia-cli -- daemon --dev --port 4242"
+      },
+      "peak_rss_mb": 11.46
     },
     "oxigraph": {
       "engine": "oxigraph",
