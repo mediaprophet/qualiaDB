@@ -139,6 +139,19 @@ pub enum ShaclConstraint {
     ComputeEFactor,
     ComputeGreenMetrics,
 
+    // ── Qualia native: Phase 5 Scientific ────────────────────────────────────
+    ComputeCrcl,
+    ComputeEgfr,
+    EvaluatePkModel,
+    ComputeSofaScore,
+    TranslateDnaToProtein,
+    ComputeIsoelectricPoint,
+    PredictPeptideCleavage,
+    PredictBbbPermeation,
+    EvaluateLigandEfficiency,
+    EvaluateLipophilicLigandEfficiency,
+    ComputeIsotopeDistribution,
+
     // ── Qualia native: deontic and epistemic ─────────────────────────────────
     // ── Qualia native: deontic and epistemic ─────────────────────────────────
     DeonticObligate,
@@ -406,6 +419,19 @@ impl ShaclCompiler {
             ShaclConstraint::ComputeEFactor                     => ops.push(SlgOpcode::NativeEFactor),
             ShaclConstraint::ComputeGreenMetrics                => ops.push(SlgOpcode::NativeGreenMetrics),
 
+            // Phase 5 Scientific
+            ShaclConstraint::ComputeCrcl => ops.push(SlgOpcode::NativeComputeCrcl),
+            ShaclConstraint::ComputeEgfr => ops.push(SlgOpcode::NativeComputeEgfr),
+            ShaclConstraint::EvaluatePkModel => ops.push(SlgOpcode::NativeEvaluatePkModel),
+            ShaclConstraint::ComputeSofaScore => ops.push(SlgOpcode::NativeComputeSofaScore),
+            ShaclConstraint::TranslateDnaToProtein => ops.push(SlgOpcode::NativeTranslateDna),
+            ShaclConstraint::ComputeIsoelectricPoint => ops.push(SlgOpcode::NativeIsoelectricPoint),
+            ShaclConstraint::PredictPeptideCleavage => ops.push(SlgOpcode::NativePeptideCleavage),
+            ShaclConstraint::PredictBbbPermeation => ops.push(SlgOpcode::NativeBbbPermeation),
+            ShaclConstraint::EvaluateLigandEfficiency => ops.push(SlgOpcode::NativeLigandEfficiency),
+            ShaclConstraint::EvaluateLipophilicLigandEfficiency => ops.push(SlgOpcode::NativeLLE),
+            ShaclConstraint::ComputeIsotopeDistribution => ops.push(SlgOpcode::NativeIsotopeDistribution),
+
             // Deontic and Epistemic
             ShaclConstraint::DeonticObligate
             | ShaclConstraint::DeonticPermit
@@ -514,6 +540,20 @@ impl ShaclCompiler {
             "qualia:computeAtomEconomy"          => ShaclConstraint::ComputeAtomEconomy,
             "qualia:computeEFactor"              => ShaclConstraint::ComputeEFactor,
             "qualia:computeGreenMetrics"         => ShaclConstraint::ComputeGreenMetrics,
+
+            // Phase 5 Scientific
+            "qualia:computeCrcl"                 => ShaclConstraint::ComputeCrcl,
+            "qualia:computeEgfr"                 => ShaclConstraint::ComputeEgfr,
+            "qualia:evaluatePkModel"             => ShaclConstraint::EvaluatePkModel,
+            "qualia:computeSofaScore"            => ShaclConstraint::ComputeSofaScore,
+            "qualia:translateDnaToProtein"       => ShaclConstraint::TranslateDnaToProtein,
+            "qualia:computeIsoelectricPoint"     => ShaclConstraint::ComputeIsoelectricPoint,
+            "qualia:predictPeptideCleavage"      => ShaclConstraint::PredictPeptideCleavage,
+            "qualia:predictBbbPermeation"        => ShaclConstraint::PredictBbbPermeation,
+            "qualia:evaluateLigandEfficiency"    => ShaclConstraint::EvaluateLigandEfficiency,
+            "qualia:evaluateLLE"                 => ShaclConstraint::EvaluateLipophilicLigandEfficiency,
+            "qualia:computeIsotopeDistribution"  => ShaclConstraint::ComputeIsotopeDistribution,
+
             "qualia:deonticObligate"             => ShaclConstraint::DeonticObligate,
             "qualia:deonticPermit"               => ShaclConstraint::DeonticPermit,
             "qualia:deonticForbid"               => ShaclConstraint::DeonticForbid,

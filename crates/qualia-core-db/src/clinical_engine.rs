@@ -483,6 +483,138 @@ pub fn evaluate_gene_expression(gene_id: u64, baseline: f64, treatment: f64, fc_
     GeneExpressionResult { gene_id, fold_change, log2_fold_change: log2_fc, is_significant, direction }
 }
 
+// ─── Renal Function Estimation ───────────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub struct RenalInput {
+    pub age: u8,
+    pub sex_male: bool,
+    pub weight_kg: f64,
+    /// Serum creatinine in mg/dL
+    pub serum_creatinine: f64,
+}
+
+/// Computes Creatinine Clearance (CrCl) via Cockcroft-Gault equation.
+pub fn cockcroft_gault_crcl(input: &RenalInput) -> f64 {
+    let mut crcl = ((140.0 - input.age as f64) * input.weight_kg) / (72.0 * input.serum_creatinine);
+    if !input.sex_male {
+        crcl *= 0.85;
+    }
+    crcl
+}
+
+/// Computes eGFR using the 2021 CKD-EPI equation (creatinine, without race).
+pub fn ckd_epi_egfr(input: &RenalInput) -> f64 {
+    let k = if input.sex_male { 0.9 } else { 0.7 };
+    let a = if input.sex_male { -0.302 } else { -0.241 };
+    
+    let scr_k = input.serum_creatinine / k;
+    let min_val = scr_k.min(1.0);
+    let max_val = scr_k.max(1.0);
+    
+    let mut egfr = 142.0 * min_val.powf(a) * max_val.powf(-1.200) * 0.9938_f64.powf(input.age as f64);
+    if !input.sex_male {
+        egfr *= 1.012;
+    }
+    egfr
+}
+
+// ─── Pharmacokinetics (PK) ───────────────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub struct PkOneCompartmentInput {
+    pub dose_mg: f64,
+    /// Volume of distribution (L)
+    pub volume_distribution_l: f64,
+    /// Clearance (L/hr)
+    pub clearance_l_hr: f64,
+    /// Time since dose (hours)
+    pub time_hr: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct PkResult {
+    /// Concentration at time t (mg/L)
+    pub concentration: f64,
+    /// Half-life (hours)
+    pub half_life_hr: f64,
+}
+
+/// Predicts drug concentration using a 1-compartment IV bolus model.
+pub fn one_compartment_pk_model(input: &PkOneCompartmentInput) -> PkResult {
+    let k_el = input.clearance_l_hr / input.volume_distribution_l;
+    let c0 = input.dose_mg / input.volume_distribution_l;
+    let concentration = c0 * (-k_el * input.time_hr).exp();
+    let half_life_hr = 0.693147 / k_el;
+    
+    PkResult { concentration, half_life_hr }
+}
+
+// ─── SOFA Score (Sequential Organ Failure Assessment) ────────────────────────
+
+#[derive(Debug, Clone, Default)]
+pub struct SofaInput {
+    pub pao2_fio2_ratio: f64, // mmHg
+    pub platelets_10_9_l: f64,
+    pub bilirubin_mg_dl: f64,
+    pub map_mmhg: f64,        // Mean arterial pressure
+    pub dopamine_dose: f64,   // ug/kg/min
+    pub epinephrine_dose: f64,// ug/kg/min
+    pub norepinephrine_dose: f64, // ug/kg/min
+    pub glasgow_coma_scale: u8,
+    pub creatinine_mg_dl: f64,
+    pub urine_output_ml_d: f64,
+}
+
+/// Evaluates acute sepsis morbidity via the SOFA score (0-24).
+pub fn sofa_score(input: &SofaInput) -> u8 {
+    let mut score = 0;
+    
+    // Respiration
+    if input.pao2_fio2_ratio > 0.0 {
+        if input.pao2_fio2_ratio < 100.0 { score += 4; }
+        else if input.pao2_fio2_ratio < 200.0 { score += 3; }
+        else if input.pao2_fio2_ratio < 300.0 { score += 2; }
+        else if input.pao2_fio2_ratio < 400.0 { score += 1; }
+    }
+
+    // Coagulation (Platelets)
+    if input.platelets_10_9_l > 0.0 {
+        if input.platelets_10_9_l < 20.0 { score += 4; }
+        else if input.platelets_10_9_l < 50.0 { score += 3; }
+        else if input.platelets_10_9_l < 100.0 { score += 2; }
+        else if input.platelets_10_9_l < 150.0 { score += 1; }
+    }
+
+    // Liver (Bilirubin)
+    if input.bilirubin_mg_dl >= 12.0 { score += 4; }
+    else if input.bilirubin_mg_dl >= 6.0 { score += 3; }
+    else if input.bilirubin_mg_dl >= 2.0 { score += 2; }
+    else if input.bilirubin_mg_dl >= 1.2 { score += 1; }
+
+    // Cardiovascular
+    if input.dopamine_dose > 15.0 || input.epinephrine_dose > 0.1 || input.norepinephrine_dose > 0.1 { score += 4; }
+    else if input.dopamine_dose > 5.0 || (input.epinephrine_dose > 0.0 && input.epinephrine_dose <= 0.1) || (input.norepinephrine_dose > 0.0 && input.norepinephrine_dose <= 0.1) { score += 3; }
+    else if input.dopamine_dose > 0.0 { score += 2; }
+    else if input.map_mmhg > 0.0 && input.map_mmhg < 70.0 { score += 1; }
+
+    // Central Nervous System (GCS)
+    if input.glasgow_coma_scale > 0 {
+        if input.glasgow_coma_scale < 6 { score += 4; }
+        else if input.glasgow_coma_scale <= 9 { score += 3; }
+        else if input.glasgow_coma_scale <= 12 { score += 2; }
+        else if input.glasgow_coma_scale <= 14 { score += 1; }
+    }
+
+    // Renal
+    if input.creatinine_mg_dl >= 5.0 || (input.urine_output_ml_d < 200.0 && input.urine_output_ml_d > 0.0) { score += 4; }
+    else if input.creatinine_mg_dl >= 3.5 || (input.urine_output_ml_d < 500.0 && input.urine_output_ml_d > 0.0) { score += 3; }
+    else if input.creatinine_mg_dl >= 2.0 { score += 2; }
+    else if input.creatinine_mg_dl >= 1.2 { score += 1; }
+
+    score
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -587,5 +719,45 @@ mod tests {
         assert!(r.is_significant);
         assert_eq!(r.direction, ExpressionDirection::Upregulated);
         assert!((r.log2_fold_change - 1.807).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_cockcroft_gault() {
+        let input = RenalInput { age: 60, sex_male: true, weight_kg: 80.0, serum_creatinine: 1.2 };
+        let crcl = cockcroft_gault_crcl(&input);
+        assert!((crcl - 74.07).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_ckd_epi() {
+        let input = RenalInput { age: 60, sex_male: false, weight_kg: 70.0, serum_creatinine: 1.2 };
+        let egfr = ckd_epi_egfr(&input);
+        assert!((egfr - 51.5).abs() < 1.0);
+    }
+
+    #[test]
+    fn test_one_compartment_pk() {
+        let input = PkOneCompartmentInput { dose_mg: 1000.0, volume_distribution_l: 50.0, clearance_l_hr: 5.0, time_hr: 10.0 };
+        let pk = one_compartment_pk_model(&input);
+        assert!((pk.concentration - 7.35).abs() < 0.1);
+        assert!((pk.half_life_hr - 6.93).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_sofa_score() {
+        let input = SofaInput {
+            pao2_fio2_ratio: 250.0, // 2 points
+            platelets_10_9_l: 80.0, // 2 points
+            bilirubin_mg_dl: 3.0,   // 2 points
+            map_mmhg: 65.0,         // 1 point
+            dopamine_dose: 0.0,
+            epinephrine_dose: 0.0,
+            norepinephrine_dose: 0.0,
+            glasgow_coma_scale: 13, // 1 point
+            creatinine_mg_dl: 2.5,  // 2 points
+            urine_output_ml_d: 0.0,
+        };
+        let score = sofa_score(&input);
+        assert_eq!(score, 10);
     }
 }

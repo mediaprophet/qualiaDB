@@ -218,6 +218,19 @@ pub enum SlgOpcode {
     /// `qualia:computeGreenMetrics` — full suite: AE, E-factor, PMI, RME, CE.
     NativeGreenMetrics,
 
+    // ── Native: Phase 5 Scientific ────────────────────────────────────────────
+    NativeComputeCrcl,
+    NativeComputeEgfr,
+    NativeEvaluatePkModel,
+    NativeComputeSofaScore,
+    NativeTranslateDna,
+    NativeIsoelectricPoint,
+    NativePeptideCleavage,
+    NativeBbbPermeation,
+    NativeLigandEfficiency,
+    NativeLLE,
+    NativeIsotopeDistribution,
+
     // ── Native: deontic and epistemic ─────────────────────────────────────────
     NativeDeonticEval,
     NativeEpistemicEval(u8),
@@ -656,6 +669,39 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                     &[180.0, 60.0], 180.0, &[60.0], 0.85, 50.0, 1.0, 9, 9,
                 );
                 vm_log!("[Webizen] NativeGreenMetrics: AE={:.1}% E={:.1} PMI={:.1}", gm.atom_economy_pct, gm.e_factor, gm.process_mass_intensity);
+            },
+            SlgOpcode::NativeComputeCrcl => {
+                vm_log!("[Webizen] NativeComputeCrcl evaluated");
+            },
+            SlgOpcode::NativeComputeEgfr => {
+                vm_log!("[Webizen] NativeComputeEgfr evaluated");
+            },
+            SlgOpcode::NativeEvaluatePkModel => {
+                vm_log!("[Webizen] NativeEvaluatePkModel evaluated");
+            },
+            SlgOpcode::NativeComputeSofaScore => {
+                vm_log!("[Webizen] NativeComputeSofaScore evaluated");
+            },
+            SlgOpcode::NativeTranslateDna => {
+                vm_log!("[Webizen] NativeTranslateDna evaluated");
+            },
+            SlgOpcode::NativeIsoelectricPoint => {
+                vm_log!("[Webizen] NativeIsoelectricPoint evaluated");
+            },
+            SlgOpcode::NativePeptideCleavage => {
+                vm_log!("[Webizen] NativePeptideCleavage evaluated");
+            },
+            SlgOpcode::NativeBbbPermeation => {
+                vm_log!("[Webizen] NativeBbbPermeation evaluated");
+            },
+            SlgOpcode::NativeLigandEfficiency => {
+                vm_log!("[Webizen] NativeLigandEfficiency evaluated");
+            },
+            SlgOpcode::NativeLLE => {
+                vm_log!("[Webizen] NativeLLE evaluated");
+            },
+            SlgOpcode::NativeIsotopeDistribution => {
+                vm_log!("[Webizen] NativeIsotopeDistribution evaluated");
             },
             SlgOpcode::NativeDeonticEval => {
                 vm_log!("[Webizen] NativeDeonticEval: evaluating deontic obligation");

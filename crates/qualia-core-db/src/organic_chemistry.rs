@@ -1079,6 +1079,81 @@ pub fn e_factor(waste_kg: f64, product_kg: f64) -> f64 {
     if product_kg <= 0.0 { f64::INFINITY } else { waste_kg / product_kg }
 }
 
+// ─── ADMET & Lead Optimization Metrics ───────────────────────────────────────
+
+#[derive(Debug, Clone, Copy)]
+pub struct BbbPermeationResult {
+    pub clark_score: u8,        // MPO score 0-4
+    pub is_cns_penetrant: bool, // MPO >= 3 is typically considered penetrant
+}
+
+/// Evaluates Blood-Brain Barrier (BBB) permeation probability using Clark's
+/// rules (Molecular Weight, LogP, PSA, HBD).
+pub fn predict_bbb_permeation(mw: f64, log_p: f64, psa: f64, hbd: u32) -> BbbPermeationResult {
+    let mut clark_score = 0;
+    if mw <= 400.0 { clark_score += 1; }
+    if log_p >= 2.0 && log_p <= 5.0 { clark_score += 1; }
+    if psa <= 90.0 { clark_score += 1; }
+    if hbd <= 3 { clark_score += 1; }
+
+    BbbPermeationResult {
+        clark_score,
+        is_cns_penetrant: clark_score >= 3,
+    }
+}
+
+/// Computes Ligand Efficiency (LE): pIC50 / Heavy Atom Count (HAC).
+/// Standard target is LE >= 0.3.
+pub fn ligand_efficiency(pic50: f64, hac: u32) -> f64 {
+    if hac == 0 { 0.0 } else { (pic50 * 1.37) / (hac as f64) }
+}
+
+/// Computes Lipophilic Ligand Efficiency (LLE): pIC50 - LogP.
+/// Standard target is LLE >= 5.0.
+pub fn lipophilic_ligand_efficiency(pic50: f64, log_p: f64) -> f64 {
+    pic50 - log_p
+}
+
+// ─── Mass Spectrometry Simulation ────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy)]
+pub struct IsotopeDistribution {
+    pub m_peak: f64,    // 100% (normalized)
+    pub m1_peak: f64,   // M+1 relative intensity
+    pub m2_peak: f64,   // M+2 relative intensity
+}
+
+/// Computes the theoretical M, M+1, M+2 isotopic distribution based on the number
+/// of Carbon, Nitrogen, Oxygen, Sulfur, Chlorine, and Bromine atoms.
+pub fn isotope_mass_distribution(
+    c: u32, n: u32, o: u32, s: u32, cl: u32, br: u32
+) -> IsotopeDistribution {
+    // Relative abundance approximations (natural)
+    let c13 = 0.0107;
+    let n15 = 0.0036;
+    let o18 = 0.0020;
+    let s33 = 0.0076;
+    let s34 = 0.0429;
+    let cl37 = 0.3197;
+    let br81 = 0.9728; // Br is ~50.69% 79Br, ~49.31% 81Br (ratio ~ 0.97)
+
+    // M+1 contributions
+    let m1 = (c as f64) * c13 + (n as f64) * n15 + (s as f64) * s33;
+
+    // M+2 contributions
+    let m2 = ((c as f64) * c13).powi(2) / 2.0
+           + (o as f64) * o18 
+           + (s as f64) * s34
+           + (cl as f64) * cl37
+           + (br as f64) * br81;
+
+    IsotopeDistribution {
+        m_peak: 100.0,
+        m1_peak: m1 * 100.0,
+        m2_peak: m2 * 100.0,
+    }
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -1144,6 +1219,31 @@ mod tests {
         let mol = ethanol();
         let tpsa = compute_tpsa(&mol);
         assert!(tpsa > 10.0 && tpsa < 40.0, "ethanol TPSA ~ 20 Å², got {:.1}", tpsa);
+    }
+
+    #[test]
+    fn test_bbb_permeation() {
+        // Example: Diazepam (MW 284.7, LogP ~2.8, PSA ~32.6, HBD 0)
+        let r = predict_bbb_permeation(284.7, 2.8, 32.6, 0);
+        assert_eq!(r.clark_score, 4);
+        assert!(r.is_cns_penetrant);
+    }
+
+    #[test]
+    fn test_ligand_efficiency() {
+        let le = ligand_efficiency(8.0, 25);
+        assert!((le - 0.4384).abs() < 0.01);
+        let lle = lipophilic_ligand_efficiency(8.0, 3.0);
+        assert!((lle - 5.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_isotope_distribution() {
+        // Bromobenzene: C6 H5 Br1
+        let r = isotope_mass_distribution(6, 0, 0, 0, 0, 1);
+        assert!((r.m_peak - 100.0).abs() < 0.1);
+        assert!((r.m1_peak - 6.42).abs() < 0.1);
+        assert!((r.m2_peak - 97.28).abs() < 0.1);
     }
 
     #[test]

@@ -468,6 +468,135 @@ pub fn simd_align_aarch64(query: &[u8], target: &[u8]) -> AlignmentScore {
     AlignmentScore { score: align_nucleotide(query, target).score }
 }
 
+// ─── DNA to Protein Translation ──────────────────────────────────────────────
+
+/// Translates a DNA sequence into an amino acid sequence using the standard genetic code.
+/// Writes directly into the caller-provided `out` buffer to avoid allocation.
+/// Returns the number of amino acids written.
+pub fn translate_dna_to_protein(dna: &[u8], out: &mut [u8]) -> usize {
+    let mut written = 0;
+    for i in (0..dna.len()).step_by(3) {
+        if i + 2 >= dna.len() { break; }
+        if written >= out.len() { break; }
+        
+        let codon = (dna[i].to_ascii_uppercase(), dna[i+1].to_ascii_uppercase(), dna[i+2].to_ascii_uppercase());
+        let aa = match codon {
+            (b'G', b'C', _) => b'A', // Alanine
+            (b'T', b'G', b'C') | (b'T', b'G', b'T') => b'C', // Cysteine
+            (b'G', b'A', b'C') | (b'G', b'A', b'T') => b'D', // Aspartic Acid
+            (b'G', b'A', b'A') | (b'G', b'A', b'G') => b'E', // Glutamic Acid
+            (b'T', b'T', b'C') | (b'T', b'T', b'T') => b'F', // Phenylalanine
+            (b'G', b'G', _) => b'G', // Glycine
+            (b'C', b'A', b'C') | (b'C', b'A', b'T') => b'H', // Histidine
+            (b'A', b'T', b'C') | (b'A', b'T', b'T') | (b'A', b'T', b'A') => b'I', // Isoleucine
+            (b'A', b'A', b'A') | (b'A', b'A', b'G') => b'K', // Lysine
+            (b'C', b'T', _) | (b'T', b'T', b'A') | (b'T', b'T', b'G') => b'L', // Leucine
+            (b'A', b'T', b'G') => b'M', // Methionine (Start)
+            (b'A', b'A', b'C') | (b'A', b'A', b'T') => b'N', // Asparagine
+            (b'C', b'C', _) => b'P', // Proline
+            (b'C', b'A', b'A') | (b'C', b'A', b'G') => b'Q', // Glutamine
+            (b'C', b'G', _) | (b'A', b'G', b'A') | (b'A', b'G', b'G') => b'R', // Arginine
+            (b'T', b'C', _) | (b'A', b'G', b'C') | (b'A', b'G', b'T') => b'S', // Serine
+            (b'A', b'C', _) => b'T', // Threonine
+            (b'G', b'T', _) => b'V', // Valine
+            (b'T', b'G', b'G') => b'W', // Tryptophan
+            (b'T', b'A', b'C') | (b'T', b'A', b'T') => b'Y', // Tyrosine
+            (b'T', b'A', b'A') | (b'T', b'A', b'G') | (b'T', b'G', b'A') => b'*', // Stop
+            _ => b'X', // Unknown
+        };
+        out[written] = aa;
+        written += 1;
+    }
+    written
+}
+
+// ─── Protein Isoelectric Point ───────────────────────────────────────────────
+
+/// Estimates the Isoelectric Point (pI) of a protein sequence using
+/// the Henderson-Hasselbalch equation and basic pKa values.
+pub fn calculate_isoelectric_point(protein: &[u8]) -> f64 {
+    let mut c_term = 1; // Alpha-COOH
+    let mut n_term = 1; // Alpha-NH2
+    let mut d = 0; // Aspartic acid (D)
+    let mut e = 0; // Glutamic acid (E)
+    let mut c = 0; // Cysteine (C)
+    let mut y = 0; // Tyrosine (Y)
+    let mut h = 0; // Histidine (H)
+    let mut k = 0; // Lysine (K)
+    let mut r = 0; // Arginine (R)
+
+    for &aa in protein {
+        match aa.to_ascii_uppercase() {
+            b'D' => d += 1,
+            b'E' => e += 1,
+            b'C' => c += 1,
+            b'Y' => y += 1,
+            b'H' => h += 1,
+            b'K' => k += 1,
+            b'R' => r += 1,
+            _ => {}
+        }
+    }
+
+    // pKa values (Bjellqvist etc. simplified)
+    let pka_c_term = 3.65;
+    let pka_d = 3.90;
+    let pka_e = 4.07;
+    let pka_c = 8.18;
+    let pka_y = 10.46;
+    
+    let pka_n_term = 8.20;
+    let pka_h = 6.04;
+    let pka_k = 10.53;
+    let pka_r = 12.48;
+
+    let net_charge = |ph: f64| -> f64 {
+        let neg = (c_term as f64) / (1.0 + 10.0_f64.powf(pka_c_term - ph))
+            + (d as f64) / (1.0 + 10.0_f64.powf(pka_d - ph))
+            + (e as f64) / (1.0 + 10.0_f64.powf(pka_e - ph))
+            + (c as f64) / (1.0 + 10.0_f64.powf(pka_c - ph))
+            + (y as f64) / (1.0 + 10.0_f64.powf(pka_y - ph));
+        
+        let pos = (n_term as f64) / (1.0 + 10.0_f64.powf(ph - pka_n_term))
+            + (h as f64) / (1.0 + 10.0_f64.powf(ph - pka_h))
+            + (k as f64) / (1.0 + 10.0_f64.powf(ph - pka_k))
+            + (r as f64) / (1.0 + 10.0_f64.powf(ph - pka_r));
+            
+        pos - neg
+    };
+
+    // Bisection method to find pH where net_charge == 0
+    let mut low = 0.0;
+    let mut high = 14.0;
+    for _ in 0..50 {
+        let mid = (low + high) / 2.0;
+        let charge = net_charge(mid);
+        if charge > 0.0 { low = mid; } else { high = mid; }
+    }
+    (low + high) / 2.0
+}
+
+// ─── Peptide Cleavage Prediction ─────────────────────────────────────────────
+
+/// Predicts cleavage sites for Trypsin (cleaves after K or R, unless followed by P).
+/// Writes the indices of cleavage into the caller-provided `out_indices` buffer.
+/// Returns the number of cleavage sites found.
+pub fn predict_peptide_cleavage(protein: &[u8], out_indices: &mut [usize]) -> usize {
+    let mut count = 0;
+    for i in 0..protein.len() {
+        if count >= out_indices.len() { break; }
+        let aa = protein[i].to_ascii_uppercase();
+        if aa == b'K' || aa == b'R' {
+            if i + 1 < protein.len() && protein[i + 1].to_ascii_uppercase() == b'P' {
+                continue; // Trypsin generally doesn't cleave if followed by Proline
+            }
+            out_indices[count] = i;
+            count += 1;
+        }
+    }
+    count
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -529,6 +658,36 @@ mod tests {
         let r = validate_fasta_record(">seq1", b"ATCGATCG");
         assert_eq!(r.alphabet, SequenceAlphabet::DNA);
         assert!(r.is_valid);
+    }
+
+    #[test]
+    fn invalid_fasta_alphabets() {
+        let rec = validate_fasta_record(">test", b"ATCGXZATCG");
+        assert!(!rec.is_valid);
+    }
+
+    #[test]
+    fn test_translate_dna() {
+        let dna = b"ATGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG";
+        let mut out = [0u8; 100];
+        let n = translate_dna_to_protein(dna, &mut out);
+        assert_eq!(&out[..n], b"MAIVMGR*KGAR*");
+    }
+
+    #[test]
+    fn test_isoelectric_point() {
+        let protein = b"MGRKGAR"; // basic protein, expect high pI
+        let pi = calculate_isoelectric_point(protein);
+        assert!(pi > 10.0, "pI was {}", pi);
+    }
+
+    #[test]
+    fn test_peptide_cleavage() {
+        let protein = b"MGRKGAR"; // R at 2, K at 3, R at 6
+        let mut out = [0usize; 10];
+        let n = predict_peptide_cleavage(protein, &mut out);
+        assert_eq!(n, 3);
+        assert_eq!(&out[..n], &[2, 3, 6]);
     }
 
     #[test]
