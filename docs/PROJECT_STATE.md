@@ -1,7 +1,7 @@
 # Cooperative Projects + Qualia Ecosystem — Project State
 
-**Date:** June 2026  
-**Branch:** `0.0.6-dev` (commit `0e4997a`)  
+**Date:** 2026-06-06  
+**Branch:** `0.0.6-dev` / `main` (commit `c5bc564`)  
 **Purpose:** Context export for new chat sessions
 
 ---
@@ -31,7 +31,9 @@ Key themes:
 | Phase 4 | Wallet: BIP32/BIP44, ILP audit trail | ⚠️ Partially deferred |
 | Phase 5 | P2P: librqbit, LLaVA, CRDT sync, GPU sieve | ⚠️ Partially deferred |
 | **Phase 6** | **MCP fiduciary mediation, capability profiles, resource catalog** | ✅ **Complete** |
-| Phase 7 | WASM profile loading, ZK-STARK, Nym, TEE, CI/CD signing | 🔲 Next |
+| **Phase 8** | **GPU inference layer + autoregressive decode + Flutter chat UI** | ✅ **Complete** |
+| Phase 9 | Real embedding lookup (tensor-info parser), `modelPath` state in Flutter nav | 🔲 Next |
+| Phase 7 | WASM profile loading, ZK-STARK, Nym, TEE, CI/CD signing | 🔲 Queued |
 
 ---
 
@@ -121,9 +123,11 @@ Key themes:
 
 ### Desktop (Flutter — `crates/qualia-flutter/`)
 
-- **LLM Hub** — grid/list view, bulk actions, download state persists navigation, detail panel
-- **Ontology Hub** — browse, import, namespace view
-- **FRB bridge** (`rust/src/api.rs`) — `download_llm`, `import_ontology` delegate to `qualia-cli` subprocess
+- **Chat screen** — `runInference(prompt, modelPath)` wired via FRB to the full `TaskOrchestrator` governance pipeline (validate intent → Phase 8 GPU loop → validate output). Loading indicator, "no model loaded" banner when `modelPath` is empty. _Pending: `modelPath` state flow from LLM Hub selection into Chat._
+- **LLM Hub** — grid/list view, bulk actions, download state, detail panel. Loads `LLMResource` entries from `resources/llms.yaml` via `loadLlmResources()`.
+- **Ontology Hub** — browse, import, namespace view via `loadOntologyResources()` / `importOntology()`.
+- **App Vault** — install/launch sandboxed web apps via Semantic App Token; FRB-wired (`listInstalledApps`, `launchInstalledApp`, `generateAppCredential`, `verifyAndInstallApp`).
+- **FRB bridge** — 40+ exported functions across `qualia_api.rs` and `resource_catalog.rs`. See [flutter-api-reference.md](manuals/flutter-api-reference.md).
 
 ### Web (docs/)
 
@@ -159,17 +163,19 @@ Key themes:
 
 ---
 
-## 7. Known Gaps (Phase 7 scope)
+## 7. Known Gaps
 
 | Gap | File | Notes |
 |-----|------|-------|
+| **Real token embedding lookup** | `llm_agent.rs`, `gguf_sharder.rs` | Decode loop uses pseudo-embeddings (sin-based). Needs `GgufTensorIndex` parsing the GGUF tensor-info section after the KV section to find `token_embd.weight` offset + shape. |
+| **`modelPath` state in Flutter nav** | `main.dart` | `ChatScreen` always gets `modelPath=''` because `_screens` is a static list. Needs parent state or provider so LLM Hub selection flows through. |
+| **DirectML.dll in release artifact** | `release.yml` | `vendor/directml/bin/x64-win/DirectML.dll` is not copied into the Windows CLI/Flutter zip. Must be added to release job. |
 | `derive_lane_key` uses SHA256, not PBKDF2 | `agency.rs` | Production Sanctuary Mode needs ≥310,000 PBKDF2 iterations |
 | Three incompatible `.q42` write formats | `storage.rs`, `ingest.rs`, `archive.rs` | `SuperBlockWriter` should become canonical |
 | `prune_defeasible_claims` uses `Vec`/`HashSet` | `logic.rs` | Violates zero-heap mandate |
 | `logic.rs::extract_float` conflicts with `resolver.rs` type tags | `logic.rs` | `0b001<<60` used for different purposes |
 | WASM OPFS bindings | `wasm_bridge.rs` | Scaffolded, two TODOs remaining |
 | `sanctuary_purge` not implemented | `mcp_server.rs` | Required for full sanctuary lifecycle |
-| `.chk` ingestion pipeline via `ExternalSorter` | `ingest.rs` | Not yet wired end-to-end |
 | `NullThermalGovernor` always returns `Cool` | `orchestrator.rs` | Real thermal governor not yet wired |
 | WASM profile loading | `wasm_bridge.rs` | QCHK profiles not yet loadable in browser |
 

@@ -45,13 +45,16 @@ Qualia-DB is four things at once:
 
 ## v0.0.6-dev Highlights (current branch)
 
+- **In-process LLM inference**: `GgufTokenizer` parses the GGUF v2/v3 KV section (vocabulary, BOS/EOS IDs); greedy longest-match encode; SentencePiece-aware decode. `infer_local_model()` runs a real autoregressive decode loop — GPU dispatch via DirectML 1.15 (Windows) / Accelerate AMX (macOS) / wgpu/Vulkan (Linux) — with Phase 8 SPSC Webizen Sentinel mid-generation rollback. No Ollama, no Python.
+- **Flutter Chat UI wired**: `runInference(prompt, modelPath)` exported via flutter_rust_bridge. The Chat screen calls the full `TaskOrchestrator` governance pipeline (intent validation → Phase 8 GPU loop → provenance grounding) and shows a live loading indicator.
+- **GPU compute layer**: DirectML 1.15 SDK (`vendor/directml/`), `directml_bridge.rs` (real D3D12 + Q4_K GEMM), `metal_bridge.rs` (Accelerate `cblas_sgemm`, runs on Apple AMX), `gguf_bridge.rs` (`load_gguf` memory-maps weights via `memmap2`; `dispatch_fused_transformer_block` tries DirectML → Accelerate → wgpu in order).
 - **Full Modality Stack**: Epistemic logic (OP_KNOWS/BELIEVES/COMMON_KNOWLEDGE), LTL trace evaluation (G/F/X/U/R), Paraconsistent routing (contradiction isolation without system halt), Dialectical synthesis (thesis-antithesis-synthesis over ASP stable models).
 - **N3 → Deontic Bridge**: N3 rule parser now compiles directly to norm Quins. `^>` (Defeater) rules set `DEFEATER_BIT`. Round-trip tested.
 - **MCP Fiduciary Mediation**: `McpIntentFrame` + `enforce_fiduciary_tool_dispatch` + sanctuary gate with WAL conduct logging.
 - **LLM Agent Rules**: `AgentIntent` + `WebizenVerdict` + seven fiduciary rules including adversarial conduct tracking (DID-associated, cryptographically auditable).
 - **Capability Profiles**: QCHK binary format, six named profiles, profile-bound `ingest`, `profile compile/list/inspect` CLI.
 - **Resource Catalog**: Full download pipeline (YAML → reqwest → GGufSharder → WAL). `resources` CLI subcommand live. LLM, Ontology, and SPARQL endpoint registries.
-- **195/195 tests passing** at commit `0e4997a`.
+- **271/271 tests passing** (browser suite + unit suite).
 
 Full changelog: [CHANGELOG.md](CHANGELOG.md)
 
@@ -173,6 +176,7 @@ Full architecture documentation: [ARCHITECTURE.md](ARCHITECTURE.md)
 | [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) | Phase completion status |
 | [docs/RESOURCE_CATALOG.md](docs/RESOURCE_CATALOG.md) | Resource catalog format, QCHK spec, CLI workflow |
 | [docs/manuals/DEVELOPMENT.md](docs/manuals/DEVELOPMENT.md) | Build from source, CLI reference, benchmarks, cross-compilation |
+| [docs/manuals/flutter-api-reference.md](docs/manuals/flutter-api-reference.md) | Flutter FRB API reference — all exported functions, data types, inference usage |
 | [ADRs](docs/manuals/adr/) | Architectural Decision Records |
 | [App Vault Developer Guide](docs/manuals/app-vault-developer-guide.md) | Build web apps for the App Vault — manifest spec, daemon API, auth, CORS |
 | [AI Instructions](AGENTS.md) | Guidance for AI agents working on this codebase |

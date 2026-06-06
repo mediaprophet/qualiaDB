@@ -53,15 +53,40 @@ Key invariant: `q_hash()` (FNV-1a) at compile time for all IRIs. No runtime stri
 
 Qualia-DB runs LLM inference entirely in-process. There is **no Ollama**, no Python runtime, no external HTTP server for models.
 
-1. `gguf_sharder.rs` — parses GGUF header, generates `QualiaQuin` pointer map
-2. `gguf_bridge.rs` — maps model weights into OS page cache via `memmap2` (zero heap allocation); dispatches fused transformer blocks to the GPU
-3. `shaders/fused_tensor_contraction.wgsl` — WGSL compute shader via `wgpu`
-4. `llm_agent.rs` — `LocalLlmAgent` orchestrates Phase 8 bifurcated compute
-5. `orchestrator.rs` — `TaskOrchestrator` manages `ModelLifecycle` and `ThermalGovernor`
+### Components
 
-**Phase 8 Bifurcated Compute**: Token generation uses two wait-free SPSC ring buffers (`rtrb`). The `LogitStream` carries logit vectors from the LLM engine thread to the Webizen Sentinel thread; the `ControlStream` carries `DenyRollback` signals back. The Sentinel can interrupt generation mid-token if it detects an anomaly.
+| # | File | Role |
+|---|------|------|
+| 1 | `gguf_sharder.rs` · `GgufTokenizer` | Parses the GGUF v2/v3 KV metadata section to extract the full vocabulary list, BOS token ID, and EOS token ID. `encode(text)` uses greedy longest-match tokenisation with a single-byte fallback. `decode(ids)` handles SentencePiece `▁` prefixes and `<0x##>` byte-literal tokens. Defaults to a 256-entry byte-level tokeniser when the model file is absent. |
+| 2 | `gguf_sharder.rs` · `GGufSharder` | Parses GGUF magic + tensor count; generates `QualiaQuin` pointer maps (byte offsets, modality flag `0b1001` in upper 4 bits of the object field). |
+| 3 | `gguf_bridge.rs` · `QTensorEngine` | `load_gguf(path)` memory-maps the GGUF file via `memmap2`. `dispatch_fused_transformer_block(tensor, activations)` dispatches GEMM to DirectML 1.15 (Windows), Accelerate `cblas_sgemm` (macOS AMX), or the wgpu/WGSL fallback. All three produce a `Vec<f32>` logit vector. |
+| 4 | `llm_agent.rs` · `LocalLlmAgent::infer_local_model` | Autoregressive decode loop. Initialises `QTensorEngine` + `GgufTokenizer` inside the spawned LLM thread. Per step: pseudo-embedding from token ID → `dispatch_fused_transformer_block` → argmax logit → `LogitSummary` pushed to SPSC ring → Sentinel anomaly check → optional `DenyRollback` → sample next token → accumulate → stop at EOS / `MAX_OUTPUT_TOKENS`. |
+| 5 | `orchestrator.rs` · `TaskOrchestrator::orchestrate_inference` | Mandatory governance gate: `validate_intent` (Rights Ontology pre-flight) → `LocalLlmAgent::infer` → `validate_output` (≥ 1 provenance Quin required). |
 
-**AgentBackend** (`llm_agent.rs`) has exactly three variants: `Local`, `Remote`, `Hybrid`. Do not add an Ollama backend.
+### Phase 8 Bifurcated Compute
+
+Two wait-free SPSC ring buffers (`rtrb`) decouple generation from governance:
+
+```
+LLM Engine thread  ──LogitSummary──►  LogitStream (cap 1024)  ──►  Webizen Sentinel
+                   ◄──DenyRollback──  ControlStream (cap 16)  ◄──  (calling thread)
+```
+
+The `LogitSummary` struct is fixed-size (two `u32` + one `u8`) — no heap allocation in the hot path. If `anomaly_byte == 0x99`, the Sentinel injects `DenyRollback`; the LLM thread substitutes a safe neighbour token on the next step.
+
+### Known limitation — pseudo-embeddings
+
+The current loop generates a deterministic sin-based embedding from the token ID rather than reading the real `token_embd.weight` tensor from the GGUF. The GGUF KV section (vocabulary) is parsed; the tensor-info section (tensor names + byte offsets) is the next milestone. Until that lands, the GPU dispatch runs against real weight matrices but from a synthetic embedding, so output text is incoherent.
+
+### AgentBackend variants
+
+```rust
+Local   // GGUF on-disk → GPU dispatch → in-process. No outbound traffic. 128 MB RAM cap.
+Remote  // API call → Nym mixnet → ILP metered. Requires signed VC from Principal.
+Hybrid  // Local-first; falls back to Remote only with explicit Principal consent.
+```
+
+Do not add an Ollama backend or any external HTTP model client.
 
 ---
 
@@ -96,6 +121,68 @@ Every LLM call passes through `orchestrate_inference()`: pre-flight `validate_in
 
 ### 10. Capability Profiles
 QCHK (`.chk`) binary bundles declare the allowed engine operations and ontology namespaces for an agent session. Six named profiles: general, health, chemistry, research, legal, financial. Compiled via `qualia-cli profile compile`.
+
+---
+
+## Flutter Desktop App & FRB API
+
+The `crates/qualia-flutter/` package is a Flutter desktop app (Windows, macOS, Linux) that calls the Rust engine via [flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust_bridge) (FRB).
+
+### Architecture
+
+```
+Flutter (Dart)
+  └── lib/src/rust/api/   ← generated FRB bindings (do not edit directly)
+        ├── qualia_api.dart      ← main API surface
+        └── resource_catalog.dart ← LLM / ontology catalog
+
+      ↕  FFI (cdylib on desktop, staticlib on iOS)
+
+crates/qualia-flutter/rust/src/api/
+  ├── qualia_api.rs         ← FRB-exported functions (edit here)
+  └── resource_catalog.rs   ← catalog functions
+  └── depends on: qualia-core-db, qualia-client-core
+```
+
+### Regenerating bindings
+
+After editing any `pub fn` in `rust/src/api/`:
+
+```bash
+cd crates/qualia-flutter
+flutter_rust_bridge_codegen generate
+```
+
+This overwrites `lib/src/rust/` — commit the generated files.
+
+### Key inference function
+
+```dart
+import 'package:qualia_flutter/src/rust/api/qualia_api.dart' as api;
+
+// Runs the full Webizen-gated inference pipeline:
+//   validate_intent → Phase 8 SPSC GPU loop → validate_output
+final response = await api.runInference(
+  prompt: 'What is the thermodynamic entropy of water at 300 K?',
+  modelPath: '/home/user/.qualia/models/phi3-mini-q4km.gguf',
+);
+```
+
+`modelPath` must be the absolute path to a `.gguf` file already downloaded to the device. Pass an empty string to receive the "no model loaded" sentinel message.
+
+See the full API reference at [flutter-api-reference.md](flutter-api-reference.md).
+
+### Screen → API mapping
+
+| Screen | Primary API calls |
+|---|---|
+| Chat | `runInference(prompt, modelPath)` |
+| LLM Hub | `loadLlmResources()`, `downloadLlm(id)`, `downloadModel(url, filename, modelId)` |
+| Ontology Hub | `loadOntologyResources()`, `importOntology(id)` |
+| App Vault | `listInstalledApps()`, `launchInstalledApp(appName)`, `verifyAndInstallApp(zipPath, credentialSig)` |
+| Wallet | `getCoinBalances()`, `deriveWalletsFromSeed(seed)`, `generateBip39Seed()` |
+| Settings | `getConfig()`, `saveConfig(newConfig)` |
+| Dashboard | `getHardwareStatus()`, `daemonStatus()`, `startDaemon()` |
 
 ---
 
