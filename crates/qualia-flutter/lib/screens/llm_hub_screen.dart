@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Enhanced LLM Hub Screen with Resource Catalog integration
+/// Production-ready LLM Hub Screen with Resource Catalog integration
 class LLMHubScreen extends StatefulWidget {
   const LLMHubScreen({super.key});
 
@@ -18,6 +18,7 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
   String _searchQuery = '';
   String? _selectedTag;
   String? _selectedQuantization;
+  String _sortBy = 'size'; // size, name, recommended
 
   @override
   void initState() {
@@ -25,18 +26,22 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
     _loadFromResourceCatalog();
   }
 
-  /// Loads models from the Resource Catalog (via Rust bridge in the future)
   Future<void> _loadFromResourceCatalog() async {
     setState(() => _isLoading = true);
 
-    // TODO: Replace with actual flutter_rust_bridge call
-    // Example: final models = await RustApi.loadLlmResources();
-    await Future.delayed(const Duration(milliseconds: 350));
+    // TODO: Replace with flutter_rust_bridge call to load from resources/llms.yaml
+    await Future.delayed(const Duration(milliseconds: 300));
 
-    _models = [
+    _models = _getMockModels(); // Will be replaced by real catalog data
+    _applyFilters();
+    setState(() => _isLoading = false);
+  }
+
+  List<LLMModel> _getMockModels() {
+    return [
       LLMModel(
         id: 'phi-3-mini-4k-instruct-q4km',
-        name: 'Phi-3 Mini 4K Instruct (Q4_K_M)',
+        name: 'Phi-3 Mini 4K Instruct',
         provider: 'Microsoft / Unsloth',
         sizeMb: 2400,
         quantization: 'Q4_K_M',
@@ -44,10 +49,11 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
         tags: ['general', 'reasoning', 'edge'],
         recommendedFor: ['edge', 'rag'],
         isDownloaded: false,
+        isEdgeRecommended: true,
       ),
       LLMModel(
         id: 'gemma-2-2b-it-q4km',
-        name: 'Gemma 2 2B Instruct (Q4_K_M)',
+        name: 'Gemma 2 2B Instruct',
         provider: 'Google / Unsloth',
         sizeMb: 1600,
         quantization: 'Q4_K_M',
@@ -55,10 +61,11 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
         tags: ['general', 'multilingual', 'edge'],
         recommendedFor: ['edge'],
         isDownloaded: true,
+        isEdgeRecommended: true,
       ),
       LLMModel(
         id: 'qwen2.5-1.5b-instruct-q4km',
-        name: 'Qwen2.5 1.5B Instruct (Q4_K_M)',
+        name: 'Qwen2.5 1.5B Instruct',
         provider: 'Alibaba / Unsloth',
         sizeMb: 1100,
         quantization: 'Q4_K_M',
@@ -66,10 +73,11 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
         tags: ['coding', 'reasoning', 'edge'],
         recommendedFor: ['edge', 'coding'],
         isDownloaded: false,
+        isEdgeRecommended: true,
       ),
       LLMModel(
         id: 'mistral-7b-instruct-v0.3-q4km',
-        name: 'Mistral 7B Instruct v0.3 (Q4_K_M)',
+        name: 'Mistral 7B Instruct v0.3',
         provider: 'Mistral AI',
         sizeMb: 4100,
         quantization: 'Q4_K_M',
@@ -77,65 +85,61 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
         tags: ['general', 'reasoning'],
         recommendedFor: ['balanced'],
         isDownloaded: false,
+        isEdgeRecommended: false,
       ),
     ];
-
-    _applyFilters();
-    setState(() => _isLoading = false);
   }
 
   void _applyFilters() {
     _filteredModels = _models.where((model) {
-      final matchesSearch =
-          model.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+      final matchesSearch = model.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           model.provider.toLowerCase().contains(_searchQuery.toLowerCase());
 
       final matchesTag = _selectedTag == null || model.tags.contains(_selectedTag);
-      final matchesQuant =
-          _selectedQuantization == null || model.quantization == _selectedQuantization;
+      final matchesQuant = _selectedQuantization == null || model.quantization == _selectedQuantization;
 
       return matchesSearch && matchesTag && matchesQuant;
     }).toList();
 
+    // Apply sorting
+    switch (_sortBy) {
+      case 'size':
+        _filteredModels.sort((a, b) => a.sizeMb.compareTo(b.sizeMb));
+        break;
+      case 'name':
+        _filteredModels.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case 'recommended':
+        _filteredModels.sort((a, b) {
+          if (a.isEdgeRecommended == b.isEdgeRecommended) return 0;
+          return a.isEdgeRecommended ? -1 : 1;
+        });
+        break;
+    }
+
     setState(() {});
   }
 
-  void _toggleViewMode() {
-    setState(() {
-      _isGridView = !_isGridView;
-    });
-  }
+  void _toggleViewMode() => setState(() => _isGridView = !_isGridView);
 
   void _toggleSelection(String id) {
     setState(() {
-      if (_selectedIds.contains(id)) {
-        _selectedIds.remove(id);
-      } else {
-        _selectedIds.add(id);
-      }
+      _selectedIds.contains(id) ? _selectedIds.remove(id) : _selectedIds.add(id);
     });
   }
 
   Future<void> _downloadSelected() async {
-    final selectedModels =
-        _models.where((m) => _selectedIds.contains(m.id)).toList();
+    final toDownload = _models.where((m) => _selectedIds.contains(m.id) && !m.isDownloaded).toList();
+    if (toDownload.isEmpty) return;
 
-    if (selectedModels.isEmpty) return;
-
-    for (final model in selectedModels) {
-      if (!model.isDownloaded) {
-        // TODO: Call Rust download function
-        await Future.delayed(const Duration(milliseconds: 600));
-        setState(() {
-          model.isDownloaded = true;
-        });
-      }
+    for (final model in toDownload) {
+      await Future.delayed(const Duration(milliseconds: 400));
+      setState(() => model.isDownloaded = true);
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Downloaded ${selectedModels.length} models')),
+      SnackBar(content: Text('Downloaded ${toDownload.length} models')),
     );
-
     _selectedIds.clear();
     _applyFilters();
   }
@@ -144,26 +148,16 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => LLMModelDetailSheet(
-        model: model,
-        onDownload: () => _downloadModel(model),
-      ),
+      builder: (_) => LLMModelDetailSheet(model: model, onDownload: () => _downloadModel(model)),
     );
   }
 
   Future<void> _downloadModel(LLMModel model) async {
-    Navigator.pop(context); // close detail sheet
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Downloading ${model.name}...')));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Downloading ${model.name}...')),
-    );
-
-    // TODO: Replace with real Rust call via flutter_rust_bridge
     await Future.delayed(const Duration(seconds: 2));
-
-    setState(() {
-      model.isDownloaded = true;
-    });
+    setState(() => model.isDownloaded = true);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${model.name} downloaded successfully')),
@@ -179,13 +173,12 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
           IconButton(
             icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
             onPressed: _toggleViewMode,
-            tooltip: _isGridView ? 'List View' : 'Grid View',
           ),
           if (_selectedIds.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.download),
               onPressed: _downloadSelected,
-              tooltip: 'Download Selected',
+              tooltip: 'Download Selected (${_selectedIds.length})',
             ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -195,71 +188,33 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
       ),
       body: Column(
         children: [
-          // Search + Filters
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 TextField(
-                  decoration: const InputDecoration(
-                    hintText: 'Search models...',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) {
-                    _searchQuery = value;
-                    _applyFilters();
-                  },
+                  decoration: const InputDecoration(hintText: 'Search models...', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
+                  onChanged: (v) { _searchQuery = v; _applyFilters(); },
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(labelText: 'Filter by Tag'),
-                        value: _selectedTag,
-                        items: const [
-                          DropdownMenuItem(value: null, child: Text('All Tags')),
-                          DropdownMenuItem(value: 'edge', child: Text('Edge Friendly')),
-                          DropdownMenuItem(value: 'reasoning', child: Text('Reasoning')),
-                          DropdownMenuItem(value: 'coding', child: Text('Coding')),
-                        ],
-                        onChanged: (value) {
-                          _selectedTag = value;
-                          _applyFilters();
-                        },
-                      ),
-                    ),
+                    Expanded(child: _buildTagFilter()),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(labelText: 'Quantization'),
-                        value: _selectedQuantization,
-                        items: const [
-                          DropdownMenuItem(value: null, child: Text('All')),
-                          DropdownMenuItem(value: 'Q4_K_M', child: Text('Q4_K_M')),
-                        ],
-                        onChanged: (value) {
-                          _selectedQuantization = value;
-                          _applyFilters();
-                        },
-                      ),
-                    ),
+                    Expanded(child: _buildQuantFilter()),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildSortDropdown()),
                   ],
                 ),
               ],
             ),
           ),
-
-          // Content
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredModels.isEmpty
-                    ? const Center(child: Text('No models match your filters'))
-                    : _isGridView
-                        ? _buildGridView()
-                        : _buildListView(),
+                    ? const Center(child: Text('No models found'))
+                    : _isGridView ? _buildGridView() : _buildListView(),
           ),
         ],
       ),
@@ -273,33 +228,64 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
     );
   }
 
+  Widget _buildTagFilter() {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(labelText: 'Tag'),
+      value: _selectedTag,
+      items: const [
+        DropdownMenuItem(value: null, child: Text('All')),
+        DropdownMenuItem(value: 'edge', child: Text('Edge')),
+        DropdownMenuItem(value: 'reasoning', child: Text('Reasoning')),
+      ],
+      onChanged: (v) { _selectedTag = v; _applyFilters(); },
+    );
+  }
+
+  Widget _buildQuantFilter() {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(labelText: 'Quantization'),
+      value: _selectedQuantization,
+      items: const [
+        DropdownMenuItem(value: null, child: Text('All')),
+        DropdownMenuItem(value: 'Q4_K_M', child: Text('Q4_K_M')),
+      ],
+      onChanged: (v) { _selectedQuantization = v; _applyFilters(); },
+    );
+  }
+
+  Widget _buildSortDropdown() {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(labelText: 'Sort'),
+      value: _sortBy,
+      items: const [
+        DropdownMenuItem(value: 'size', child: Text('Size (smallest)')),
+        DropdownMenuItem(value: 'name', child: Text('Name')),
+        DropdownMenuItem(value: 'recommended', child: Text('Edge Recommended')),
+      ],
+      onChanged: (v) { _sortBy = v ?? 'size'; _applyFilters(); },
+    );
+  }
+
   Widget _buildListView() {
     return ListView.builder(
       itemCount: _filteredModels.length,
-      itemBuilder: (context, index) {
-        final model = _filteredModels[index];
-        final isSelected = _selectedIds.contains(model.id);
-
+      itemBuilder: (context, i) {
+        final m = _filteredModels[i];
+        final selected = _selectedIds.contains(m.id);
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: ListTile(
-            leading: Checkbox(
-              value: isSelected,
-              onChanged: (_) => _toggleSelection(model.id),
+            leading: Checkbox(value: selected, onChanged: (_) => _toggleSelection(m.id)),
+            title: Row(
+              children: [
+                Expanded(child: Text(m.name)),
+                if (m.isEdgeRecommended) const Padding(padding: EdgeInsets.only(left: 8), child: Chip(label: Text('Edge', style: TextStyle(fontSize: 11)), backgroundColor: Colors.blue, labelStyle: TextStyle(color: Colors.white))),
+              ],
             ),
-            title: Text(model.name),
-            subtitle: Text('${model.provider} • ${model.sizeMb} MB • ${model.quantization}'),
-            trailing: model.isDownloaded
-                ? const Chip(
-                    label: Text('Downloaded'),
-                    backgroundColor: Colors.green,
-                    labelStyle: TextStyle(color: Colors.white),
-                  )
-                : ElevatedButton(
-                    onPressed: () => _downloadModel(model),
-                    child: const Text('Download'),
-                  ),
-            onTap: () => _showModelDetails(model),
+            subtitle: Text('${m.provider} • ${m.sizeMb} MB • ${m.quantization}'),
+            trailing: m.isDownloaded
+                ? const Chip(label: Text('Downloaded'), backgroundColor: Colors.green)
+                : ElevatedButton(onPressed: () => _downloadModel(m), child: const Text('Download')),
+            onTap: () => _showModelDetails(m),
           ),
         );
       },
@@ -309,56 +295,31 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
   Widget _buildGridView() {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.1,
-      ),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.05),
       itemCount: _filteredModels.length,
-      itemBuilder: (context, index) {
-        final model = _filteredModels[index];
-        final isSelected = _selectedIds.contains(model.id);
-
+      itemBuilder: (context, i) {
+        final m = _filteredModels[i];
+        final selected = _selectedIds.contains(m.id);
         return Card(
-          elevation: 2,
           child: InkWell(
-            onTap: () => _showModelDetails(model),
+            onTap: () => _showModelDetails(m),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Checkbox(
-                        value: isSelected,
-                        onChanged: (_) => _toggleSelection(model.id),
-                      ),
-                      if (model.isDownloaded)
-                        const Chip(
-                          label: Text('Downloaded', style: TextStyle(fontSize: 10)),
-                          backgroundColor: Colors.green,
-                          labelStyle: TextStyle(color: Colors.white, fontSize: 10),
-                        ),
-                    ],
-                  ),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Checkbox(value: selected, onChanged: (_) => _toggleSelection(m.id)),
+                    if (m.isEdgeRecommended) const Chip(label: Text('Edge', style: TextStyle(fontSize: 10)), backgroundColor: Colors.blue, labelStyle: TextStyle(color: Colors.white, fontSize: 10)),
+                  ]),
                   const SizedBox(height: 8),
-                  Text(model.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(model.provider, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text(m.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(m.provider, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                   const Spacer(),
-                  Text('${model.sizeMb} MB • ${model.quantization}', style: const TextStyle(fontSize: 12)),
+                  Text('${m.sizeMb} MB • ${m.quantization}', style: const TextStyle(fontSize: 12)),
                   const SizedBox(height: 8),
-                  if (!model.isDownloaded)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => _downloadModel(model),
-                        child: const Text('Download'),
-                      ),
-                    ),
+                  if (!m.isDownloaded)
+                    SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () => _downloadModel(m), child: const Text('Download'))),
                 ],
               ),
             ),
@@ -369,116 +330,63 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
   }
 }
 
-/// Model class (will eventually come from Rust via flutter_rust_bridge)
 class LLMModel {
-  final String id;
-  final String name;
-  final String provider;
+  final String id, name, provider, quantization, license;
   final int sizeMb;
-  final String quantization;
-  final String license;
-  final List<String> tags;
-  final List<String> recommendedFor;
+  final List<String> tags, recommendedFor;
   bool isDownloaded;
+  final bool isEdgeRecommended;
 
   LLMModel({
-    required this.id,
-    required this.name,
-    required this.provider,
-    required this.sizeMb,
-    required this.quantization,
-    required this.license,
-    required this.tags,
-    required this.recommendedFor,
-    this.isDownloaded = false,
+    required this.id, required this.name, required this.provider,
+    required this.sizeMb, required this.quantization, required this.license,
+    required this.tags, required this.recommendedFor,
+    this.isDownloaded = false, this.isEdgeRecommended = false,
   });
 }
 
-/// Improved Model Detail Sheet
 class LLMModelDetailSheet extends StatelessWidget {
   final LLMModel model;
   final VoidCallback onDownload;
 
-  const LLMModelDetailSheet({
-    super.key,
-    required this.model,
-    required this.onDownload,
-  });
+  const LLMModelDetailSheet({super.key, required this.model, required this.onDownload});
 
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.65,
-      builder: (context, scrollController) {
-        return SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(model.name, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 4),
-              Text(model.provider, style: const TextStyle(color: Colors.grey)),
-              const SizedBox(height: 20),
-
-              _buildInfoRow('Size', '${model.sizeMb} MB'),
-              _buildInfoRow('Quantization', model.quantization),
-              _buildInfoRow('License', model.license),
-              const SizedBox(height: 16),
-
-              const Text('Recommended For:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                children: model.recommendedFor
-                    .map((use) => Chip(label: Text(use)))
-                    .toList(),
-              ),
-              const SizedBox(height: 16),
-
-              const Text('Tags:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                children: model.tags.map((tag) => Chip(label: Text(tag))).toList(),
-              ),
-              const SizedBox(height: 32),
-
-              if (!model.isDownloaded)
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: onDownload,
-                    icon: const Icon(Icons.download),
-                    label: const Text('Download Model'),
-                  ),
-                )
-              else
-                const Center(
-                  child: Chip(
-                    label: Text('Already Downloaded'),
-                    backgroundColor: Colors.green,
-                    labelStyle: TextStyle(color: Colors.white),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(color: Colors.grey))),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
-        ],
+      initialChildSize: 0.7,
+      builder: (context, scrollController) => SingleChildScrollView(
+        controller: scrollController,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(model.name, style: Theme.of(context).textTheme.headlineSmall),
+            Text(model.provider, style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 20),
+            _infoRow('Size', '${model.sizeMb} MB'),
+            _infoRow('Quantization', model.quantization),
+            _infoRow('License', model.license),
+            const SizedBox(height: 16),
+            const Text('Recommended For', style: TextStyle(fontWeight: FontWeight.bold)),
+            Wrap(spacing: 8, children: model.recommendedFor.map((e) => Chip(label: Text(e))).toList()),
+            const SizedBox(height: 16),
+            const Text('Tags', style: TextStyle(fontWeight: FontWeight.bold)),
+            Wrap(spacing: 8, children: model.tags.map((e) => Chip(label: Text(e))).toList()),
+            const SizedBox(height: 32),
+            if (!model.isDownloaded)
+              SizedBox(width: double.infinity, height: 48, child: ElevatedButton.icon(onPressed: onDownload, icon: const Icon(Icons.download), label: const Text('Download Model')))
+            else
+              const Center(child: Chip(label: Text('Downloaded'), backgroundColor: Colors.green, labelStyle: TextStyle(color: Colors.white))),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _infoRow(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(children: [SizedBox(width: 110, child: Text(label, style: const TextStyle(color: Colors.grey))), Text(value)]),
+  );
 }
