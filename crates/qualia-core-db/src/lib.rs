@@ -348,6 +348,8 @@ pub mod thermodynamics;
 pub mod daemon_swarm;
 pub mod gguf_bridge;
 pub mod gguf_sharder;
+pub mod profiles;
+pub mod resource_catalog;
 
 #[cfg(target_os = "android")]
 pub mod jni_bridge;

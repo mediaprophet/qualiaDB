@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub mod telemetry_server;
 pub mod ingest;
 pub mod compress;
+pub mod resources;
 
 /// The Qualia-DB Block Inspector & Data Ingestion CLI
 #[derive(Parser)]
@@ -121,6 +122,20 @@ enum Commands {
         /// Output path for the LZ4 block stream
         #[arg(long)]
         output: PathBuf,
+    },
+    /// Browse, inspect, download, and import LLMs, ontologies, and SPARQL endpoints
+    /// from the local resource catalog (resources/catalog.yaml).
+    ///
+    /// Subcommands:
+    ///   list [llms|ontologies|sparql]   — list catalog entries
+    ///   show <id>                       — show full details
+    ///   download <llm-id>               — download GGUF + register in WAL + CapabilityProfile
+    ///   import-ontology <ont-id>        — download + ingest ontology into .q42 + WAL
+    Resources {
+        /// Subcommand: list | show | download | import-ontology
+        subcommand: String,
+        /// Resource ID or filter (optional)
+        arg: Option<String>,
     },
 }
 
@@ -438,6 +453,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Err(e) => eprintln!("Compression failed: {}", e),
             }
+        }
+        Commands::Resources { subcommand, arg } => {
+            resources::handle(subcommand, arg.as_deref()).await;
         }
         Commands::Benchmark { action } => {
             let (tx, rx) = tokio::sync::broadcast::channel(16);
