@@ -19,5 +19,22 @@ scripts/.wordnet_build/
 *.gguf
 gemma-4-E4B-it-GGUF/
 
+# wasm-pack output (copied to docs/playground/ manually or by pages.yml)
+crates/qualia-core-db/pkg/
+
+# Vendored Node.js binary (local tooling only, not needed in repo)
+node_dist/
+node.zip
+
 # Local Libraries
 Local_Libraries/
+Local_LIbraries/
+
+# App development sandbox (wellfair, cooperative-projects — not part of the core release)
+app-development/
+
+# Signing keystore — never commit private keys
+keystore.bin
+
+# One-off migration scripts, old release binaries, debug artefacts
+scratch/

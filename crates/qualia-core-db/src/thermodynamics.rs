@@ -1,7 +1,6 @@
 //! Thermodynamics & Statistical Ensembles
 //! Implements pure Rust Markov Chain Monte Carlo (MCMC) sampling for macroscopic properties.
 
-use crate::QualiaQuin;
 
 /// State of a thermodynamic ensemble
 #[derive(Clone)]

@@ -5,7 +5,7 @@ use std::time::Instant;
 use crate::QualiaQuin;
 
 /// Memory-maps a large `.q42` file and performs a lightning-fast scan for a subject ID
-pub fn mmap_query_subject(file_path: &str, subject_id: u64) -> Result<Vec<QualiaQuin>, Box<dyn std::error::Error>> {
+pub fn mmap_query_subject(_file_path: &str, subject_id: u64) -> Result<Vec<QualiaQuin>, Box<dyn std::error::Error>> {
     println!("Legacy mmap_query_subject called for subject_id {}", subject_id);
     Ok(vec![])
 }
@@ -45,7 +45,7 @@ pub fn lazy_superblock_query(file_path: &str, target_percent: u8) -> Result<Tele
         offset += 16;
         
         // Parse Header
-        let block_id = u64::from_le_bytes(header[0..8].try_into().unwrap());
+        let _block_id = u64::from_le_bytes(header[0..8].try_into().unwrap());
         let compressed_len = u32::from_le_bytes(header[8..12].try_into().unwrap()) as usize;
         let uncompressed_len = u32::from_le_bytes(header[12..16].try_into().unwrap()) as usize;
         

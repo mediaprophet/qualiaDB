@@ -1,18 +1,18 @@
 {
-  "name": "qualia-db-wasm",
-  "version": "0.0.3",
-  "description": "Zero-Allocation Offline-First RDF-Star WebAssembly Engine",
+  "name": "qualia-core-db",
+  "type": "module",
+  "collaborators": [
+    "Timothy Charles Holborn <timothy.holborn@gmail.com>"
+  ],
+  "version": "0.0.5",
+  "files": [
+    "qualia_core_db_bg.wasm",
+    "qualia_core_db.js",
+    "qualia_core_db.d.ts"
+  ],
   "main": "qualia_core_db.js",
   "types": "qualia_core_db.d.ts",
-  "scripts": {
-    "build": "wasm-pack build ../../crates/qualia-core-db --target bundler"
-  },
-  "keywords": [
-    "wasm",
-    "database",
-    "rdf",
-    "sparql"
-  ],
-  "author": "Qualia-DB Project",
-  "license": "CC-BY-NC-ND-4.0"
+  "sideEffects": [
+    "./snippets/*"
+  ]
 }

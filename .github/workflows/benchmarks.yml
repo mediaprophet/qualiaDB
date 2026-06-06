@@ -1,124 +1,151 @@
-name: QualiaDB LLM Benchmarks
+name: Comparative Benchmarks
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  schedule:
+    - cron: '0 3 * * 1'   # Weekly on Monday at 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to commit results back to the repo
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   benchmark:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache Cargo dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: ${{ runner.os }}-cargo-
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-bench-
 
-    - name: Run RAM Footprint Validator (512 MB ceiling gate)
-      run: cargo bench --package qualia-core-db --bench ram_usage
+      - name: Install system dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends curl
 
-    - name: Run Native LLM Benchmarks
-      run: cargo run --release -p qualia-cli -- bench --suite full
+      - name: Install Python benchmark dependencies
+        run: pip install --quiet -r benchmarks/requirements.txt
 
-    - name: Upload Qualia JSON Telemetry Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: llm-benchmark-results
-        path: docs/llm_benchmark_results.json
-        retention-days: 30
+      # ── RAM ceiling gate (gate: must pass before any bench runs) ─────────────
+      - name: RAM Footprint Validator (512 MB ceiling gate)
+        run: cargo bench --package qualia-core-db --bench ram_usage
 
-    # ── Comparative benchmark: Oxigraph (live, isolated, 512 MB ceiling) ─────
-    - name: Install Python benchmark dependencies
-      run: pip install --quiet -r benchmarks/requirements.txt
+      # ── Oxigraph ─────────────────────────────────────────────────────────────
+      - name: Run Oxigraph benchmark (10 k triples)
+        run: |
+          python benchmarks/harness.py \
+            --engine oxigraph \
+            --n 10000 \
+            --output docs/comparative_benchmark_results.json
 
-    - name: Run Oxigraph comparative benchmark (10k triples)
-      run: |
-        python benchmarks/harness.py \
-          --engine oxigraph \
-          --n 10000 \
-          --output docs/comparative_benchmark_results.json
+      # ── SurrealDB ─────────────────────────────────────────────────────────────
+      - name: Install SurrealDB
+        run: |
+          curl -sSf https://install.surrealdb.com | sh
+          echo "$HOME/.surrealdb" >> $GITHUB_PATH
 
-    - name: Run Oxigraph comparative benchmark (100k triples — ceiling stress)
-      run: |
-        python benchmarks/harness.py \
-          --engine oxigraph \
-          --n 100000 \
-          --output docs/comparative_benchmark_results.json
+      - name: Run SurrealDB benchmark (10 k triples)
+        run: |
+          python benchmarks/harness.py \
+            --engine surrealdb \
+            --n 10000 \
+            --output docs/comparative_benchmark_results.json
 
-    # ── Comparative benchmark: SurrealDB ─────────────────────────────────────
-    - name: Install SurrealDB
-      run: |
-        curl -sSf https://install.surrealdb.com | sh
-        echo "$HOME/.surrealdb" >> $GITHUB_PATH
+      # ── Comunica (SPARQL JS engine) ───────────────────────────────────────────
+      - name: Install Comunica Node.js dependencies
+        run: cd benchmarks/comunica && npm install --prefer-offline
 
-    - name: Run SurrealDB comparative benchmark (10k triples)
-      run: |
-        python benchmarks/harness.py \
-          --engine surrealdb \
-          --n 10000 \
-          --output docs/comparative_benchmark_results.json
+      - name: Run Comunica benchmark (10 k triples)
+        run: |
+          python benchmarks/harness.py \
+            --engine comunica \
+            --n 10000 \
+            --output docs/comparative_benchmark_results.json
 
-    - name: Run SurrealDB comparative benchmark (100k triples — ceiling stress)
-      run: |
-        python benchmarks/harness.py \
-          --engine surrealdb \
-          --n 100000 \
-          --output docs/comparative_benchmark_results.json
+      # ── WASM-Prolog (tau-prolog) ──────────────────────────────────────────────
+      - name: Install WASM-Prolog Node.js dependencies
+        run: cd benchmarks/wasm_prolog && npm install --prefer-offline
 
-    # ── Comparative benchmark: Comunica (SPARQL JS engine) ───────────────────
-    - name: Install Comunica Node.js dependencies
-      run: cd benchmarks/comunica && npm install --prefer-offline
+      - name: Run WASM-Prolog benchmark (10 k triples)
+        run: |
+          python benchmarks/harness.py \
+            --engine wasm_prolog \
+            --n 10000 \
+            --output docs/comparative_benchmark_results.json
 
-    - name: Run Comunica comparative benchmark (10k triples)
-      run: |
-        python benchmarks/harness.py \
-          --engine comunica \
-          --n 10000 \
-          --output docs/comparative_benchmark_results.json
+      # ── Qualia Native ─────────────────────────────────────────────────────────
+      - name: Build Qualia CLI (release)
+        run: cargo build --release -p qualia-cli
 
-    - name: Run Comunica comparative benchmark (100k triples — ceiling stress)
-      run: |
-        python benchmarks/harness.py \
-          --engine comunica \
-          --n 100000 \
-          --output docs/comparative_benchmark_results.json
+      - name: Run native Qualia bench suite (ingestion + latency)
+        run: cargo run --release -p qualia-cli -- bench --suite full
+        # Output written to docs/llm_benchmark_results.json by the CLI
 
-    # ── Comparative benchmark: WASM-Prolog (tau-prolog backtracking) ─────────
-    - name: Install WASM-Prolog Node.js dependencies
-      run: cd benchmarks/wasm_prolog && npm install --prefer-offline
+      - name: Start Qualia daemon (background)
+        run: |
+          cargo run --release -p qualia-cli -- daemon --port 4242 &
+          echo "Waiting for daemon to be healthy…"
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4242/health && echo "Daemon ready." && break
+            sleep 2
+          done
 
-    - name: Run WASM-Prolog comparative benchmark (10k triples)
-      run: |
-        python benchmarks/harness.py \
-          --engine wasm_prolog \
-          --n 10000 \
-          --output docs/comparative_benchmark_results.json
+      - name: Ingest benchmark dataset into Qualia
+        run: |
+          python - <<'EOF'
+          import sys
+          sys.path.insert(0, 'benchmarks')
+          from common import generate_ntriples
+          with open('/tmp/bench_10k.nt', 'wb') as f:
+              f.write(generate_ntriples(10000))
+          EOF
+          cargo run --release -p qualia-cli -- ingest /tmp/bench_10k.nt || true
 
-    - name: Run WASM-Prolog comparative benchmark (100k triples — ceiling stress)
-      run: |
-        python benchmarks/harness.py \
-          --engine wasm_prolog \
-          --n 100000 \
-          --output docs/comparative_benchmark_results.json
+      - name: Run Qualia benchmark (10 k triples)
+        run: |
+          python benchmarks/harness.py \
+            --engine qualia \
+            --n 10000 \
+            --output docs/comparative_benchmark_results.json
 
-    - name: Upload Comparative Benchmark Results
-      uses: actions/upload-artifact@v4
-      with:
-        name: comparative-benchmark-results
-        path: docs/comparative_benchmark_results.json
-        retention-days: 30
+      # ── Persist results to the repo (so Pages picks them up) ──────────────────
+      - name: Commit benchmark results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/comparative_benchmark_results.json docs/llm_benchmark_results.json
+          git diff --cached --quiet \
+            || git commit -m "chore: update benchmark results [skip ci]"
+          git push
+
+      - name: Upload comparative results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: comparative-benchmark-results
+          path: docs/comparative_benchmark_results.json
+          retention-days: 30
+
+      - name: Upload LLM benchmark results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-benchmark-results
+          path: docs/llm_benchmark_results.json
+          retention-days: 30

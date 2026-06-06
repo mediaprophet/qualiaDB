@@ -14,6 +14,7 @@ The daemon must be started with:
     cargo run --release -p qualia-cli -- daemon --port 4242
 """
 import json
+import os
 import sys
 import time
 import urllib.request
@@ -97,10 +98,8 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
     except Exception as exc:
         result["filter"] = f"ERROR: {exc}"
 
-    # Ingestion is intentionally not measured here.
-    # Full ingestion + Lazy SuperBlock + Sentinel metrics come from:
-    #   qualia-cli bench --suite full
-    result["ingestion_ms"] = "N/A (use native qualia-cli bench --suite full)"
+    # Ingestion is not measured via the daemon query path — use qualia-cli bench --suite full.
+    result["ingestion_ms"] = None
 
     return result
 

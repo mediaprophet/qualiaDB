@@ -69,6 +69,15 @@ impl WriteAheadLog {
     }
 }
 
+/// Appends a mutation to the global Write-Ahead Log.
+/// For the MVP/MCP, we write to a default location or stderr.
+pub fn append_mutation(quin: &QualiaQuin) -> io::Result<()> {
+    // In a real implementation this would use a globally managed WAL lock.
+    // For now we open it locally or just pass.
+    let mut wal = WriteAheadLog::open("qualia_global.wal")?;
+    wal.append_mutation(quin)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

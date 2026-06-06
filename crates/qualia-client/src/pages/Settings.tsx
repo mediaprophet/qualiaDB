@@ -7,6 +7,25 @@ interface AgentConfig {
   base_connectivity_cost_ilp: number;
 }
 
+interface TaxRecipient {
+  label: string;
+  ilp_address: string;
+  share_percent: number;
+  use_nym: boolean;
+}
+
+interface TaxRecipientSuite {
+  jurisdiction_did: string;
+  recipients: TaxRecipient[];
+}
+
+const FALLBACK_RECIPIENTS: TaxRecipient[] = [
+  { label: 'Cooperative Infrastructure Fund',  ilp_address: '$ilp.qualia.coop/infrastructure',   share_percent: 40, use_nym: false },
+  { label: 'Digital Rights Legal Defence',      ilp_address: '$ilp.qualia.coop/legal-defence',    share_percent: 30, use_nym: false },
+  { label: 'Open Source Sustainability Pool',   ilp_address: '$ilp.qualia.coop/oss-sustainability', share_percent: 20, use_nym: false },
+  { label: 'Disaster Recovery Reserve',         ilp_address: '$ilp.qualia.coop/disaster-reserve', share_percent: 10, use_nym: true  },
+];
+
 export default function Settings() {
   const [config, setConfig] = useState<AgentConfig>({
     storage_path: '',
@@ -14,9 +33,13 @@ export default function Settings() {
     base_connectivity_cost_ilp: 5000,
   });
   const [status, setStatus] = useState('');
+  const [taxRecipients, setTaxRecipients] = useState<TaxRecipient[]>(FALLBACK_RECIPIENTS);
 
   useEffect(() => {
     invoke<AgentConfig>('get_config').then(setConfig).catch(console.error);
+    invoke<TaxRecipientSuite>('get_tax_suite')
+      .then(suite => { if (suite?.recipients?.length) setTaxRecipients(suite.recipients); })
+      .catch(console.error);
   }, []);
 
   const handleSave = async () => {
@@ -79,22 +102,20 @@ export default function Settings() {
         <div className="text-sm text-gray-400 mb-6">Every accepted ILP payment is automatically split: 12% is dispatched as micropayments to the addresses below.</div>
 
         <div className="bg-black/30 border border-white/5 rounded-lg p-4 font-mono text-sm text-gray-300">
-          <div className="flex justify-between border-b border-white/5 pb-2 mb-2">
-            <span>Cooperative Infrastructure Fund</span>
-            <span className="text-[#ffd700]">40%</span>
-          </div>
-          <div className="flex justify-between border-b border-white/5 pb-2 mb-2">
-            <span>Digital Rights Legal Defence</span>
-            <span className="text-[#ffd700]">30%</span>
-          </div>
-          <div className="flex justify-between border-b border-white/5 pb-2 mb-2">
-            <span>Open Source Sustainability Pool</span>
-            <span className="text-[#ffd700]">20%</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Disaster Recovery Reserve</span>
-            <span className="text-[#ffd700]">10%</span>
-          </div>
+          {taxRecipients.map((r, i) => (
+            <div
+              key={i}
+              className={`flex justify-between ${i < taxRecipients.length - 1 ? 'border-b border-white/5 pb-2 mb-2' : ''}`}
+            >
+              <span className="flex items-center gap-2">
+                {r.label}
+                {r.use_nym && (
+                  <span className="text-[9px] bg-[#00f0ff]/10 text-[#00f0ff] border border-[#00f0ff]/20 px-1 rounded">NYM</span>
+                )}
+              </span>
+              <span className="text-[#ffd700]">{r.share_percent}%</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

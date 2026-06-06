@@ -50,6 +50,7 @@ use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 
 use qualia_core_db::{QualiaQuin, QUINS_PER_BLOCK};
+use crate::parsers::external_sort::ExternalSorter;
 use qualia_core_db::mini_parser::hash_token;
 use rio_api::parser::TriplesParser;
 use rio_xml::RdfXmlParser;
@@ -427,4 +428,64 @@ fn verify_q42_structure(
         }
     }
     Ok(())
+}
+
+pub fn ingest_chk(
+    input:  &Path,
+    output: &Path,
+) -> Result<IngestStats, Box<dyn std::error::Error>> {
+    let reader = File::open(input)?;
+    let temp_dir = std::env::temp_dir().join("qualia_sort_chk");
+    let mut sorter = ExternalSorter::new(temp_dir);
+
+    // .chk format does not use a lexicon currently
+    let triples = crate::parsers::chk_parser::parse_chk_stream(reader, 0, &mut sorter)?;
+
+    let bidx_p = bidx_path(output);
+    let block_seq = sorter.merge(output, &bidx_p)?;
+    
+    // Write empty lex file to satisfy downstream dependencies
+    let lex: HashMap<u64, String> = HashMap::new();
+    let lex_entries = write_lex_file(&lex_path(output), &lex)?;
+    
+    verify_q42_structure(output, block_seq)?;
+
+    Ok(IngestStats {
+        triples_ingested: triples,
+        blocks_written:   block_seq,
+        lex_entries,
+        lines_skipped:    0,
+        bidx_written:     true,
+    })
+}
+
+pub fn ingest_cbor(
+    input:  &Path,
+    output: &Path,
+) -> Result<IngestStats, Box<dyn std::error::Error>> {
+    let mut file = File::open(input)?;
+    let mut buffer = Vec::new();
+    std::io::Read::read_to_end(&mut file, &mut buffer)?;
+    
+    let temp_dir = std::env::temp_dir().join("qualia_sort_cbor");
+    let mut sorter = ExternalSorter::new(temp_dir);
+
+    // CBOR format does not use a lexicon currently
+    let triples = crate::parsers::cbor_parser::parse_cbor_ld_stream(&buffer, 0, &mut sorter)?;
+
+    let bidx_p = bidx_path(output);
+    let block_seq = sorter.merge(output, &bidx_p)?;
+    
+    let lex: HashMap<u64, String> = HashMap::new();
+    let lex_entries = write_lex_file(&lex_path(output), &lex)?;
+    
+    verify_q42_structure(output, block_seq)?;
+
+    Ok(IngestStats {
+        triples_ingested: triples,
+        blocks_written:   block_seq,
+        lex_entries,
+        lines_skipped:    0,
+        bidx_written:     true,
+    })
 }

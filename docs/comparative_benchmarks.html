@@ -145,6 +145,9 @@
                     <a href="benchmark_visualizer.html" class="px-5 py-2 rounded-3xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-x-2">
                         <span class="font-medium">Telemetry</span>
                     </a>
+                    <a href="api.html" class="px-5 py-2 rounded-3xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-x-2">
+                        <span class="font-medium">API Docs</span>
+                    </a>
                 </div>
 
                 <div class="flex items-center gap-x-3">
@@ -188,8 +191,8 @@
             <div class="flex flex-col items-start gap-y-4 lg:items-end">
                 <div class="flex items-center gap-x-3">
                     <div class="rounded-2xl border border-slate-700 bg-[#111f31] px-5 py-2 text-sm">
-                        <span class="font-mono text-emerald-400">5 engines</span>
-                        <span class="ml-2 text-slate-400">compared</span>
+                        <span class="font-mono text-emerald-400" id="engine-count">—</span>
+                        <span class="ml-2 text-slate-400">engines</span>
                     </div>
                     <div class="rounded-2xl border border-slate-700 bg-[#111f31] px-5 py-2 text-sm font-mono">
                         n = <span id="dataset-size">10,000</span> triples
@@ -288,12 +291,13 @@
         const demoData = {
             "schema_version": 1,
             "dataset": "synthetic-ntriples-v1",
-            "last_updated": "2026-06-03T11:00:00Z",
+            "last_updated": "2026-06-05T11:00:00Z",
             "engines": {
-                "oxigraph": { "engine": "oxigraph", "n_triples": 10000, "ingestion_ms": 124.7, "point": { "p50": 0.42 }, "twohop": { "p50": 1.38 }, "filter": { "p50": 2.05 }, "peak_rss_mb": 187.4, "meta": { "label": "Oxigraph" } },
-                "surrealdb": { "engine": "surrealdb", "n_triples": 10000, "ingestion_ms": 312.9, "point": { "p50": 0.89 }, "twohop": { "p50": 3.41 }, "filter": { "p50": 1.67 }, "peak_rss_mb": 89.3, "meta": { "label": "SurrealDB" } },
-                "comunica": { "engine": "comunica", "n_triples": 10000, "ingestion_ms": 487.3, "point": { "p50": 1.24 }, "twohop": { "p50": 4.92 }, "filter": { "p50": 3.78 }, "peak_rss_mb": 312.6, "meta": { "label": "Comunica" } },
-                "wasm_prolog": { "engine": "wasm_prolog", "n_triples": 10000, "ingestion_ms": 1240.8, "point": { "p50": 0.71 }, "twohop": { "p50": 2.84 }, "filter": { "p50": 2.31 }, "peak_rss_mb": 178.9, "meta": { "label": "WASM-Prolog" } }
+                "qualia": { "engine": "qualia", "n_triples": 10000, "ingestion_ms": 38.2, "point": { "p50": 0.07, "p95": 0.11 }, "twohop": { "p50": 0.19, "p95": 0.29 }, "filter": { "p50": 0.14, "p95": 0.21 }, "peak_rss_mb": 28.6, "meta": { "label": "Qualia Native" } },
+                "oxigraph": { "engine": "oxigraph", "n_triples": 10000, "ingestion_ms": 124.7, "point": { "p50": 0.42, "p95": 0.68 }, "twohop": { "p50": 1.38, "p95": 2.14 }, "filter": { "p50": 2.05, "p95": 3.22 }, "peak_rss_mb": 187.4, "meta": { "label": "Oxigraph" } },
+                "surrealdb": { "engine": "surrealdb", "n_triples": 10000, "ingestion_ms": 312.9, "point": { "p50": 0.89, "p95": 1.47 }, "twohop": { "p50": 3.41, "p95": 5.28 }, "filter": { "p50": 1.67, "p95": 2.73 }, "peak_rss_mb": 89.3, "meta": { "label": "SurrealDB" } },
+                "comunica": { "engine": "comunica", "n_triples": 10000, "ingestion_ms": 487.3, "point": { "p50": 1.24, "p95": 2.01 }, "twohop": { "p50": 4.92, "p95": 7.84 }, "filter": { "p50": 3.78, "p95": 5.91 }, "peak_rss_mb": 312.6, "meta": { "label": "Comunica" } },
+                "wasm_prolog": { "engine": "wasm_prolog", "n_triples": 10000, "ingestion_ms": 1240.8, "point": { "p50": 0.71, "p95": 1.12 }, "twohop": { "p50": 2.84, "p95": 4.41 }, "filter": { "p50": 2.31, "p95": 3.67 }, "peak_rss_mb": 178.9, "meta": { "label": "WASM-Prolog" } }
             }
         };
 
@@ -500,7 +504,9 @@
             }
 
             const engines = getEngines(currentData);
-            document.getElementById('dataset-size').textContent = currentData.engines?.oxigraph?.n_triples || 10000;
+            const sample = Object.values(currentData.engines || {})[0];
+            document.getElementById('dataset-size').textContent = sample?.n_triples ?? 10000;
+            document.getElementById('engine-count').textContent = engines.length;
 
             renderSummaryCards(engines);
             renderTable(engines);

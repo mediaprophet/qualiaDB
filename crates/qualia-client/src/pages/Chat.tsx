@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
+import { appWindow } from '@tauri-apps/api/window';
 import { Cpu, Database, Activity, Terminal, ShieldAlert, ShieldCheck, FileUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -19,7 +20,9 @@ export default function Chat() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  
+  const [activeModel, setActiveModel] = useState<string | null>(null);
+  const [interceptCount, setInterceptCount] = useState(0);
+
   // CML Context State
   const [cmlSelection, setCmlSelection] = useState<{ text: string, top: number, left: number } | null>(null);
   const [didInput, setDidInput] = useState('did:web:schema.org:Term');
@@ -36,6 +39,13 @@ export default function Chat() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [response]);
 
+  // Load active model and listen for changes from LLM Hub
+  useEffect(() => {
+    invoke<string | null>('get_active_model').then(setActiveModel).catch(console.error);
+    const unlisten = listen<string>('active-model-changed', (e) => setActiveModel(e.payload));
+    return () => { unlisten.then(f => f()); };
+  }, []);
+
   useEffect(() => {
     const unlistenToken = listen<string>('llm-token', (event) => {
       setResponse((prev) => prev + event.payload);
@@ -45,9 +55,39 @@ export default function Chat() {
       setTelemetry(event.payload);
     });
 
+    const unlistenIntercept = listen('webizen-intercept', () => {
+      // Flash the shield alert
+      setInterceptCount(c => c + 1);
+      setTimeout(() => setInterceptCount(c => Math.max(0, c - 1)), 2000);
+    });
+
+    // Use Tauri's native file-drop events so we receive absolute paths, not just filenames
+    const unlistenHover     = appWindow.listen('tauri://file-drop-hover',     () => setIsDragging(true));
+    const unlistenCancelled = appWindow.listen('tauri://file-drop-cancelled', () => setIsDragging(false));
+    const unlistenDrop      = appWindow.listen<string[]>('tauri://file-drop', async (event) => {
+      setIsDragging(false);
+      const paths = event.payload;
+      if (!paths || paths.length === 0) return;
+      const filePath = paths[0];
+      setResponse('');
+      setIsGenerating(true);
+      try {
+        const result = await invoke<string>('ingest_literature', { filePath });
+        setResponse(`⚡ [Webizen Verified] Strict local intent approved.\\n\\n${result}\\n\\n**Math Ready:** $$ E = mc^2 $$`);
+      } catch (err) {
+        setResponse(`🔴 [WEBIZEN BLOCKED INTENT]: Extraction Failed or Unsupported File: ${err}`);
+      } finally {
+        setIsGenerating(false);
+      }
+    });
+
     return () => {
       unlistenToken.then(f => f());
       unlistenTelemetry.then(f => f());
+      unlistenIntercept.then(f => f());
+      unlistenHover.then(f => f());
+      unlistenCancelled.then(f => f());
+      unlistenDrop.then(f => f());
     };
   }, []);
 
@@ -64,37 +104,16 @@ export default function Chat() {
     const serializedLayout = Array.from(intentLayout);
 
     try {
-      await invoke('run_agent_inference', { 
-        prompt, 
-        modelName: "phi3:mini (Q4_K_M)",
-        intentLayout: serializedLayout
+      await invoke('run_agent_inference', {
+        prompt,
+        modelName: activeModel ?? 'default',
+        intentLayout: serializedLayout,
       });
     } catch (e) {
       console.error(e);
     } finally {
       setIsGenerating(false);
       setPrompt('');
-    }
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      // In Tauri, we'd ideally get the real absolute path if permissions allow.
-      // For this implementation, we simulate ingestion of the dropped file.
-      setResponse('');
-      setIsGenerating(true);
-      try {
-        const result = await invoke<string>('ingest_literature', { filePath: file.name });
-        setResponse(`⚡ [Webizen Verified] Strict local intent approved.\\n\\n${result}\\n\\n**Math Ready:** $$ E = mc^2 $$`);
-      } catch (err) {
-        setResponse(`🔴 [WEBIZEN BLOCKED INTENT]: Extraction Failed or Unsupported File: ${err}`);
-      } finally {
-        setIsGenerating(false);
-      }
     }
   };
 
@@ -127,11 +146,8 @@ export default function Chat() {
   };
 
   return (
-    <div 
+    <div
       className="flex flex-col gap-6 h-full relative"
-      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-      onDragLeave={() => setIsDragging(false)}
-      onDrop={handleDrop}
       onMouseUp={handleTextSelection}
     >
       {isDragging && (
@@ -200,8 +216,22 @@ export default function Chat() {
             </div>
           )}
 
-          <h2 className="text-xl font-bold border-b border-white/10 pb-2 mb-4 mt-8 text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold border-b border-white/10 pb-2 mb-4 mt-8 text-white flex items-center gap-2 flex-wrap">
             <Terminal className="text-[#00f0ff]" /> Neuro-Symbolic Chat (Local RAG + Vision)
+            {interceptCount > 0 && (
+              <span className="animate-in fade-in zoom-in slide-in-from-top-2 duration-300 ml-4 flex items-center gap-1 text-yellow-400 bg-yellow-400/10 border border-yellow-400/30 px-2 py-0.5 rounded text-xs font-mono">
+                <ShieldAlert className="w-4 h-4 animate-pulse" /> Webizen Intercept Active
+              </span>
+            )}
+            {activeModel ? (
+              <span className="ml-auto text-[10px] font-mono text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/20 px-2 py-0.5 rounded">
+                {activeModel.replace(/-Q4_K_M\.gguf$/, '')}
+              </span>
+            ) : (
+              <span className="ml-auto text-[10px] font-mono text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-2 py-0.5 rounded">
+                No model loaded — go to LLM Hub
+              </span>
+            )}
           </h2>
           
           <div className="flex-1 overflow-y-auto mb-4 flex flex-col gap-4 pr-2">
@@ -271,9 +301,10 @@ export default function Chat() {
               placeholder="Query datasets or drop a PDF..." 
               className="flex-1 bg-black/50 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#00f0ff] font-mono text-sm" 
             />
-            <button 
+            <button
               onClick={handleExecute}
-              disabled={isGenerating}
+              disabled={isGenerating || !activeModel}
+              title={!activeModel ? 'Load a model in LLM Hub first' : undefined}
               className="bg-[#00f0ff]/10 text-[#00f0ff] border border-[#00f0ff]/30 px-6 py-3 rounded-lg font-bold hover:bg-[#00f0ff] hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]">
               {isGenerating ? 'Computing...' : 'Execute'}
             </button>

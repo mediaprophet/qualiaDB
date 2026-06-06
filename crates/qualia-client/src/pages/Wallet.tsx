@@ -72,6 +72,7 @@ export default function Wallet() {
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [sendAddr, setSendAddr] = useState('');
   const [sendAmount, setSendAmount] = useState('');
+  const [sendStatus, setSendStatus] = useState<string | null>(null);
 
   // Receive modal
   const [showReceive, setShowReceive] = useState(false);
@@ -128,12 +129,12 @@ export default function Wallet() {
   const avgChange = coins.length ? coins.reduce((s, c) => s + c.change_24h, 0) / coins.length : 0;
 
   const handleToggleNym = async () => {
-    const next = !nymActive; setNymActive(next);
-    await invoke('toggle_nym_relay', { active: next });
+    const newState = await invoke<boolean>('toggle_nym_relay').catch(() => nymActive);
+    setNymActive(newState);
   };
   const handleToggleStark = async () => {
-    const next = !starkActive; setStarkActive(next);
-    await invoke('toggle_stark_prover', { active: next });
+    const newState = await invoke<boolean>('toggle_stark_prover').catch(() => starkActive);
+    setStarkActive(newState);
   };
   const handleSolar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const w = parseInt(e.target.value); setSolarWatts(w);
@@ -167,9 +168,11 @@ export default function Wallet() {
   }, [importChain, importType, importContract, importSymbol, importName, importDecimals, refreshTokens]);
 
   const executeSend = () => {
-    setShowSend(false);
-    // TODO: wire to actual signing/broadcast when blockchain libs are integrated
-    alert(`[Mock] Broadcast ${sendAmount} ${selectedAsset?.ticker} to ${sendAddr}`);
+    setSendStatus(`[Mock] Broadcast ${sendAmount} ${selectedAsset?.ticker} → ${sendAddr}`);
+    setTimeout(() => {
+      setSendStatus(null);
+      setShowSend(false);
+    }, 3000);
   };
 
   const tickers = ['ALL', ...coins.map(c => c.ticker)];
@@ -463,9 +466,14 @@ export default function Wallet() {
               </div>
             </div>
             <p className="text-[10px] text-gray-600 font-mono mb-4">Transaction signing is not yet integrated — this will broadcast a mock transaction for UI testing.</p>
+            {sendStatus && (
+              <div className="bg-[#00ff88]/10 border border-[#00ff88]/30 rounded px-3 py-2 text-xs text-[#00ff88] font-mono mb-4">
+                {sendStatus}
+              </div>
+            )}
             <div className="flex justify-end gap-3">
-              <button onClick={() => setShowSend(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
-              <button onClick={executeSend} disabled={!sendAddr || !sendAmount} className="px-6 py-2 bg-[#00f0ff]/20 text-[#00f0ff] hover:bg-[#00f0ff]/40 border border-[#00f0ff]/30 rounded font-bold transition-all flex items-center gap-2 disabled:opacity-40">
+              <button onClick={() => { setShowSend(false); setSendStatus(null); }} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
+              <button onClick={executeSend} disabled={!sendAddr || !sendAmount || !!sendStatus} className="px-6 py-2 bg-[#00f0ff]/20 text-[#00f0ff] hover:bg-[#00f0ff]/40 border border-[#00f0ff]/30 rounded font-bold transition-all flex items-center gap-2 disabled:opacity-40">
                 <Send className="w-4 h-4" /> Broadcast Tx
               </button>
             </div>

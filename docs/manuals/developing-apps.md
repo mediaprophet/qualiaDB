@@ -1,8 +1,10 @@
 # Developing Apps on Qualia-DB
 
-Qualia-DB is not just a database; it is a full-stack engine designed to enforce a **Principal-Agent Duty of Care**. When you build a "Qualia App" (like the Qualia Desktop Agent), you are building an interface that acts exclusively on behalf of the user, bounded by strict hardware laws.
+_Branch: `0.0.6-dev` | Last updated: 2026-06-06_
 
-This guide covers how to architect and build applications on top of the Qualia-DB core using the Tauri and React framework.
+Qualia-DB is not just a database; it is a full-stack engine designed to enforce a **Principal-Agent Duty of Care**. When you build a "Qualia App", you are building an interface that acts exclusively on behalf of the user, bounded by strict hardware laws.
+
+This guide covers two things: (1) how to build a Qualia app that runs inside the desktop shell (the App Manager), and (2) how to build features within the Qualia-DB engine itself using the Tauri + Vite/React stack.
 
 ---
 
@@ -70,6 +72,50 @@ Qualia Apps do not use centralized accounts. They manage **Cryptographic Human A
 - Build Multi-Seed managers that allow users to import BIP39 mnemonics.
 - Never store raw seeds unencrypted.
 - Offload HD Wallet derivation directly to the Rust backend to ensure memory-safe cryptographic generation across different network topologies (Bitcoin, eCash, Nym).
+
+---
+
+## 5. Building a Sandboxed App for the App Manager
+
+The desktop shell serves third-party web apps via the `qualia://` custom URI scheme. This is distinct from building features *inside* the shell — it is a way to ship a standalone web app that the user installs and launches from the App Manager.
+
+### App structure
+
+A Qualia app is a directory placed in `{data_dir}/Apps/<app-name>/` containing:
+
+```
+my-app/
+├── app.json        ← required manifest
+└── index.html      ← entry point (served at qualia://localhost/my-app/index.html)
+```
+
+### `app.json` manifest
+
+```json
+{
+  "name": "My App",
+  "version": "0.1.0",
+  "required_shapes": [
+    "https://qualia.social/ns/health#VaultEntry",
+    "https://qualia.social/ns/cooperative#ProjectSlice"
+  ]
+}
+```
+
+- `required_shapes` declares the SHACL shapes the app needs from the graph. These map directly to the `target_shapes` in the P2P sync protocol (`QualiaRequest::Sync`) — the daemon only grants access to graph data matching these shapes.
+
+### Generating a developer VC
+
+Use the App Manager's Developer Credentials panel or the CLI (when implemented) to self-sign your app before loading it:
+
+```
+App ID: com.my.app
+→ generates: did:qualia:app:com.my.app:signed_vc
+```
+
+### Communicating with the daemon
+
+Apps running in the `qualia://` webview communicate with the daemon over the same Tauri IPC bridge. The `window.webizen` provider API (defined in the Webizen Protocol RFC, `docs/manuals/webizen-protocol-rfc.md`) is the intended surface for `requestAccess` and `signAndInject` calls — this bridge is partially scaffolded and is Phase 7 work.
 
 ---
 

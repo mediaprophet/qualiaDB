@@ -11,6 +11,7 @@ tokio = { version = "1.35", features = ["full"] }
 warp = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"
 reqwest = { version = "0.11", features = ["json", "multipart"] }
 git2 = "0.18"
 ed25519-dalek = { version = "2.1", features = ["rand_core"] }
@@ -24,3 +25,5 @@ bytemuck = { version = "1.14", features = ["derive"] }
 rio_xml = "0.8"
 rio_api = "0.8"
 lz4_flex = "0.11"
+sha1 = "0.11.0"
+minicbor = "2.2.2"

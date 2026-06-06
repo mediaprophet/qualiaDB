@@ -2,6 +2,8 @@
 //! Handles flushing 850 48-byte Quins into perfectly aligned 40,960-byte 
 //! QualiaSuperBlock structures onto the NVMe disk format (`.qla`).
 
+pub mod mmap;
+
 use std::fs::{File, OpenOptions};
 use std::io::{self, Seek, SeekFrom};
 use std::path::Path;
@@ -112,10 +114,16 @@ use std::pin::Pin;
 
 pub trait VirtualFileSystem {
     /// Reads a chunk of data from the local storage hierarchy
+    #[cfg(not(target_arch = "wasm32"))]
     fn read_chunk(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>> + Send>>;
+    #[cfg(target_arch = "wasm32")]
+    fn read_chunk(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>>>>;
     
     /// Writes a chunk of data to the local storage hierarchy
+    #[cfg(not(target_arch = "wasm32"))]
     fn write_chunk(&self, path: &str, data: &[u8]) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>>;
+    #[cfg(target_arch = "wasm32")]
+    fn write_chunk(&self, path: &str, data: &[u8]) -> Pin<Box<dyn Future<Output = Result<(), String>>>>;
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -144,21 +152,60 @@ pub struct OpfsVfs;
 
 #[cfg(target_arch = "wasm32")]
 impl VirtualFileSystem for OpfsVfs {
-    fn read_chunk(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>> + Send>> {
-        // Scaffolding for WASM OPFS read via web-sys FileSystemSyncAccessHandle
+    fn read_chunk(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>>>> {
         let path = path.to_string();
         Box::pin(async move {
-            // TODO: Implement actual web-sys OPFS bindings for navigator.storage().getDirectory()
-            Ok(vec![])
+            use wasm_bindgen::JsCast;
+            use wasm_bindgen_futures::JsFuture;
+
+            let window = web_sys::window().ok_or("No global window")?;
+            let navigator = window.navigator();
+            let storage = navigator.storage();
+            
+            let dir_handle_val = JsFuture::from(storage.get_directory()).await.map_err(|e| format!("{:?}", e))?;
+            let dir_handle: web_sys::FileSystemDirectoryHandle = dir_handle_val.unchecked_into();
+            
+            let file_handle_val = JsFuture::from(dir_handle.get_file_handle(&path)).await.map_err(|e| format!("{:?}", e))?;
+            let file_handle: web_sys::FileSystemFileHandle = file_handle_val.unchecked_into();
+            
+            let file_val = JsFuture::from(file_handle.get_file()).await.map_err(|e| format!("{:?}", e))?;
+            let file: web_sys::File = file_val.unchecked_into();
+            
+            let array_buffer_val = JsFuture::from(file.array_buffer()).await.map_err(|e| format!("{:?}", e))?;
+            let array_buffer: js_sys::ArrayBuffer = array_buffer_val.unchecked_into();
+            
+            let uint8_array = js_sys::Uint8Array::new(&array_buffer);
+            Ok(uint8_array.to_vec())
         })
     }
 
-    fn write_chunk(&self, path: &str, data: &[u8]) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>> {
-        // Scaffolding for WASM OPFS write
+    fn write_chunk(&self, path: &str, data: &[u8]) -> Pin<Box<dyn Future<Output = Result<(), String>>>> {
         let path = path.to_string();
-        let _data = data.to_vec();
+        let data = data.to_vec();
         Box::pin(async move {
-            // TODO: Implement actual web-sys OPFS bindings
+            use wasm_bindgen::JsCast;
+            use wasm_bindgen_futures::JsFuture;
+
+            let window = web_sys::window().ok_or("No global window")?;
+            let navigator = window.navigator();
+            let storage = navigator.storage();
+            
+            let dir_handle_val = JsFuture::from(storage.get_directory()).await.map_err(|e| format!("{:?}", e))?;
+            let dir_handle: web_sys::FileSystemDirectoryHandle = dir_handle_val.unchecked_into();
+            
+            let mut options = web_sys::FileSystemGetFileOptions::new();
+            options.create(true);
+            let file_handle_val = JsFuture::from(dir_handle.get_file_handle_with_options(&path, &options))
+                .await.map_err(|e| format!("{:?}", e))?;
+            let file_handle: web_sys::FileSystemFileHandle = file_handle_val.unchecked_into();
+            
+            let writable_val = JsFuture::from(file_handle.create_writable()).await.map_err(|e| format!("{:?}", e))?;
+            let writable: web_sys::FileSystemWritableFileStream = writable_val.unchecked_into();
+            
+            let uint8_array = js_sys::Uint8Array::from(data.as_slice());
+            JsFuture::from(writable.write_with_buffer_source(&uint8_array).map_err(|e| format!("{:?}", e))?).await.map_err(|e| format!("{:?}", e))?;
+            JsFuture::from(writable.close()).await.map_err(|e| format!("{:?}", e))?;
+            
             Ok(())
         })
     }

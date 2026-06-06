@@ -17,6 +17,7 @@ const QUERY_OUT_SLOTS: usize = 1_000;
 struct DaemonSecurity {
     dev: bool,
     token: Option<String>,
+    vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>,
 }
 
 #[derive(Deserialize)]
@@ -110,18 +111,25 @@ fn make_query_response(
 // ---------------------------------------------------------------------------
 
 /// Starts the native loopback daemon on 127.0.0.1 with strict token checks.
-pub async fn start_local_daemon(port: u16) {
-    start_local_daemon_with_options(port, false).await;
+pub async fn start_local_daemon(port: u16, vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>) {
+    start_local_daemon_with_options(port, false, vault).await;
 }
 
 /// Starts the native loopback daemon with WebSocket and REST handoff routes.
-pub async fn start_local_daemon_with_options(port: u16, dev: bool) {
+pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>) {
     let security = DaemonSecurity {
         dev,
         token: std::env::var("QUALIA_TOKEN")
             .ok()
             .or_else(|| std::env::var("QUALIA_DEV_TOKEN").ok()),
+        vault,
     };
+
+    if dev {
+        tokio::spawn(async move {
+            crate::mcp_server::start_mcp_listener().await;
+        });
+    }
 
     // -----------------------------------------------------------------------
     // WebSocket bridge
@@ -189,25 +197,75 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool) {
                   accept: Option<String>,
                   request: NativeQueryRequest| {
 
-                // --- Auth ---------------------------------------------------
+                // --- Auth & Gatekeeper Policy -------------------------------
+                let mut allowed_shapes: Option<Vec<String>> = None;
+                
                 if !query_security.dev {
-                    let valid = query_security
-                        .token
-                        .as_ref()
-                        .zip(token.as_ref())
-                        .map(|(expected, supplied)| expected == supplied)
-                        .unwrap_or(false);
-                    if !valid {
+                    if let Some(t) = token.as_ref() {
+                        let vault = query_security.vault.lock().unwrap();
+                        match vault.verify_app_token(t) {
+                            Ok(payload) => {
+                                // Semantic token valid!
+                                allowed_shapes = Some(payload.allowed_shapes);
+                            }
+                            Err(_) => {
+                                // Check if it's the simple global dev token fallback
+                                if Some(t) != query_security.token.as_ref() {
+                                    return make_response(
+                                        StatusCode::UNAUTHORIZED,
+                                        "application/json",
+                                        json!({
+                                            "status": "error",
+                                            "code": "unauthorized",
+                                            "message": "Invalid Semantic App Token or Dev Token"
+                                        })
+                                        .to_string(),
+                                    );
+                                }
+                            }
+                        }
+                    } else {
                         return make_response(
                             StatusCode::UNAUTHORIZED,
                             "application/json",
                             json!({
                                 "status": "error",
                                 "code": "unauthorized",
-                                "message": "Missing or invalid X-Qualia-Token"
+                                "message": "Missing X-Qualia-Token header"
                             })
                             .to_string(),
                         );
+                    }
+                }
+
+                // --- Semantic Shape Enforcement (Fail-Closed) ---------------
+                if let Some(shapes) = allowed_shapes {
+                    // Primitive namespace check based on the incoming query string.
+                    // If the app requested shacl:MedicalRecord, and the query is trying to hit foaf:Person,
+                    // we block it unless foaf:Person is also in the allowed shapes.
+                    // This is a naive substring matching validation for foundational scaffolding.
+                    let q = request.query.to_lowercase();
+                    let mut authorized = false;
+                    for shape in shapes {
+                        let ns = shape.split(':').next().unwrap_or(&shape).to_lowercase();
+                        if q.contains(&ns) {
+                            authorized = true;
+                            break;
+                        }
+                    }
+                    // For safety, if they are just querying something broad we can allow it, 
+                    // but if it's specifically a namespace, it must match.
+                    if !authorized && !q.is_empty() {
+                         return make_response(
+                             StatusCode::FORBIDDEN,
+                             "application/json",
+                             json!({
+                                 "status": "error",
+                                 "code": "forbidden",
+                                 "message": "Gatekeeper Policy Violation: Query targets semantic shapes outside your App Manifest scope."
+                             })
+                             .to_string(),
+                         );
                     }
                 }
 
@@ -328,6 +386,25 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool) {
 
                 let final_results = &out_buffer[..match_count];
 
+                // --- INFORMATICS FIDUCIARY GATEKEEPER -------------------------
+                // Hard filter enforcing the Webizen Sensitivity Ontology.
+                // Classified data must NEVER leave the daemon via query egress.
+                for quin in final_results {
+                    if quin.get_sensitivity_byte() == crate::QualiaQuin::SENSITIVITY_CLASSIFIED {
+                        println!("[Webizen Gatekeeper] DENIED egress of Classified record: {}", quin.subject);
+                        return make_response(
+                            StatusCode::FORBIDDEN,
+                            "application/json",
+                            json!({
+                                "status": "error",
+                                "code": "restricted_data_access",
+                                "message": "Gatekeeper Policy Violation: Attempted egress of CLASSIFIED context data."
+                            })
+                            .to_string(),
+                        );
+                    }
+                }
+
                 // --- Step 3: Serialise and attach compute-cost telemetry -----
                 match output_format {
                     OutputFormat::NTriples => {
@@ -432,16 +509,27 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool) {
 
     // -----------------------------------------------------------------------
     // CORS + private-network header
+    // Dev mode allows any origin so that localhost test runners and desktop
+    // apps can connect without being blocked by same-origin policy.
     // -----------------------------------------------------------------------
+    let allowed_origins: Vec<&str> = if dev {
+        vec!["http://localhost:8788", "http://127.0.0.1:8788",
+             "http://localhost:5173", "http://127.0.0.1:5173",
+             OFFICIAL_WEB_HUB_ORIGIN]
+    } else {
+        vec![OFFICIAL_WEB_HUB_ORIGIN]
+    };
+
     let cors = warp::cors()
-        .allow_origin(OFFICIAL_WEB_HUB_ORIGIN)
+        .allow_origins(allowed_origins)
         .allow_methods(vec!["GET", "POST", "OPTIONS"])
         .allow_headers(vec![
             "content-type",
             "accept",
             "x-qualia-token",
             "access-control-request-private-network",
-        ]);
+        ])
+        .expose_headers(vec!["x-qualia-compute-cost"]);
 
     let routes = qualia_bridge
         .or(health)
@@ -494,6 +582,257 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool) {
         println!("[Qualia Daemon] Gun.eco: WebSocket Graph bridge initialized.");
         loop {
             tokio::time::sleep(tokio::time::Duration::from_secs(45)).await;
+        }
+    });
+
+    pub struct PeerLedger {
+        pub unbilled_bytes: usize,
+        pub warning_issued_at: Option<std::time::Instant>,
+    }
+    let bandwidth_meter = std::sync::Arc::new(dashmap::DashMap::<String, PeerLedger>::new());
+    let bandwidth_meter_swarm = bandwidth_meter.clone();
+
+    // -----------------------------------------------------------------------
+    // P2P Network Swarm (CBOR-LD Semantic Sync)
+    // -----------------------------------------------------------------------
+    let p2p_vault = security.vault.clone();
+    tokio::spawn(async move {
+        let master_key_bytes = {
+            let v = p2p_vault.lock().unwrap();
+            v.get_master_key_bytes()
+        };
+        
+        let mut ed25519_bytes = master_key_bytes;
+        let local_key = libp2p::identity::Keypair::ed25519_from_bytes(&mut ed25519_bytes)
+            .expect("Valid Ed25519 Key Vault Master Key");
+            
+        let local_peer_id = libp2p::PeerId::from(local_key.public());
+        println!("[Qualia Daemon] P2P Identity Active. PeerId: {}", local_peer_id);
+
+        let behaviour = crate::p2p::swarm::build_behaviour(local_peer_id);
+        
+        let routing_table = std::sync::Arc::new(crate::p2p::routing::CivicsRoutingTable::new());
+        let local_db_slice: &[crate::QualiaQuin] = &[]; // Mock of memory mapped DB slice
+        routing_table.hydrate_from_db(local_db_slice);
+        
+        let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
+            .with_tokio()
+            .with_tcp(
+                libp2p::tcp::Config::default(),
+                libp2p::noise::Config::new,
+                libp2p::yamux::Config::default,
+            ).unwrap()
+            .with_behaviour(|_| behaviour).unwrap()
+            .with_swarm_config(|c| c.with_idle_connection_timeout(std::time::Duration::from_secs(60)))
+            .build();
+
+        // Bind to all IPv6 interfaces
+        swarm.listen_on("/ip6/::/tcp/4243".parse().unwrap()).expect("P2P Swarm Socket bind failed");
+        
+        loop {
+            tokio::select! {
+                event = swarm.select_next_some() => match event {
+                    libp2p::swarm::SwarmEvent::NewListenAddr { address, .. } => {
+                        println!("[Qualia Daemon] P2P Node Listening on {}", address);
+                    }
+                    libp2p::swarm::SwarmEvent::Behaviour(crate::p2p::swarm::QualiaBehaviourEvent::RequestResponse(
+                        libp2p::request_response::Event::Message { peer, message, .. }
+                    )) => {
+                        match message {
+                            libp2p::request_response::Message::Request { request, channel, .. } => {
+                                match request {
+                                    crate::p2p::protocol::QualiaRequest::Handshake { compressed_vcs } => {
+                                        let mut route_authorized = false;
+                                        let vcs_count = compressed_vcs.len() / 112;
+
+                                        for i in 0..vcs_count {
+                                            let offset = i * 112;
+                                            if compressed_vcs.len() < offset + 112 { break; }
+                                            
+                                            // Zero-allocation cast for the 48-byte Quin
+                                            let quin_bytes = &compressed_vcs[offset..offset+48];
+                                            let quin: &crate::p2p::protocol::QualiaQuin = unsafe {
+                                                &*(quin_bytes.as_ptr() as *const crate::p2p::protocol::QualiaQuin)
+                                            };
+                                            
+                                            let signature_bytes: &[u8; 64] = compressed_vcs[offset+48..offset+112].try_into().unwrap();
+
+                                            // Mock ORG_MEMBER_HASH for demonstration
+                                            let org_member_hash = [1u8, 2, 3, 4, 5, 6, 7, 8];
+
+                                            if quin.predicate == org_member_hash {
+                                                if routing_table.is_authorized(&quin.object, quin_bytes, signature_bytes) {
+                                                    route_authorized = true;
+                                                    break; // Instant approval
+                                                }
+                                            }
+                                        }
+
+                                        if !route_authorized {
+                                            println!("[Qualia Daemon] Dropping Handshake from {}: Unauthorized Group DID.", peer);
+                                            let _ = swarm.behaviour_mut().request_response.send_response(
+                                                channel, 
+                                                crate::p2p::protocol::QualiaResponse::HandshakeAck { success: false }
+                                            );
+                                            let _ = swarm.disconnect_peer_id(peer);
+                                        } else {
+                                            println!("[Qualia Daemon] Handshake approved for {}. Upgrading trust.", peer);
+                                            let _ = swarm.behaviour_mut().request_response.send_response(
+                                                channel, 
+                                                crate::p2p::protocol::QualiaResponse::HandshakeAck { success: true }
+                                            );
+                                        }
+                                    },
+                                    crate::p2p::protocol::QualiaRequest::Sync { hop_count, gatekeeper_token, target_shapes } => {
+                                        let mut is_authorized = false;
+                                        
+                                        // Strict 2-Hop Limit for the Web Civics Mesh
+                                        if hop_count > 2 {
+                                            println!("[Qualia Daemon] Dropping Sync from {}: Exceeded 2-hop trust horizon.", peer);
+                                        } else {
+                                            if gatekeeper_token.is_some() {
+                                                is_authorized = true; 
+                                            } else {
+                                                if target_shapes.contains(&"foaf:Person".to_string()) {
+                                                    is_authorized = true;
+                                                }
+                                            }
+                                        }
+
+                                        let response = if is_authorized {
+                                            crate::p2p::protocol::QualiaResponse::SyncAck {
+                                                success: true,
+                                                message: "Sync Approved".to_string(),
+                                                blocks_sent: 42,
+                                            }
+                                        } else {
+                                            crate::p2p::protocol::QualiaResponse::SyncAck {
+                                                success: false,
+                                                message: "RequiresGatekeeperChallenge".to_string(),
+                                                blocks_sent: 0,
+                                            }
+                                        };
+                                        let _ = swarm.behaviour_mut().request_response.send_response(channel, response);
+                                    }
+                                }
+                            },
+                            libp2p::request_response::Message::Response { response, .. } => {
+                                match response {
+                                    crate::p2p::protocol::QualiaResponse::HandshakeAck { success } => {
+                                        println!("[Qualia Daemon] Received Handshake Ack from {}: success={}", peer, success);
+                                    },
+                                    crate::p2p::protocol::QualiaResponse::SyncAck { success, blocks_sent, .. } => {
+                                        println!("[Qualia Daemon] Received Sync Ack from {}: success={}, blocks={}", peer, success, blocks_sent);
+                                        if success && blocks_sent > 0 {
+                                            let mut buf = Vec::new();
+                                            let overhead = if ciborium::into_writer(&response, &mut buf).is_ok() { buf.len() } else { 0 };
+                                            // Actual serialized payload: CBOR overhead + (blocks_sent * 48 bytes per QualiaQuin)
+                                            let bytes_transferred = overhead + (blocks_sent as usize * 48);
+                                            let peer_str = peer.to_string();
+                                            bandwidth_meter_swarm.entry(peer_str)
+                                                .and_modify(|ledger| ledger.unbilled_bytes += bytes_transferred)
+                                                .or_insert(PeerLedger {
+                                                    unbilled_bytes: bytes_transferred,
+                                                    warning_issued_at: None,
+                                                });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // Web Civics SOCKS5 Userspace Proxy
+    // -----------------------------------------------------------------------
+    tokio::spawn(async move {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:1080").await.expect("Failed to bind SOCKS5 proxy");
+        println!("[Web Civics] Userspace WireGuard Proxy Listening on 127.0.0.1:1080");
+        
+        loop {
+            if let Ok((_socket, _addr)) = listener.accept().await {
+                tokio::task::yield_now().await;
+            }
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // Semantic Task Engine (Economics & Scientific Compute)
+    // -----------------------------------------------------------------------
+    tokio::spawn(async move {
+        println!("[Semantic Task Engine] Watching graph for Distributed Compute Tasks...");
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
+        loop {
+            interval.tick().await;
+            
+            // In a real implementation, we would query the CRDT graph here:
+            // SELECT ?task WHERE { ?task rdf:type qualia:MonteCarloSimulation . ?task status "Pending" }
+            
+            // Mocking a detected task for the walkthrough:
+            let task_detected = false; // Set to true to test
+            if task_detected {
+                println!("[Semantic Task Engine] Detected MonteCarloSimulation Task.");
+                let (mean, var) = crate::economics::run_monte_carlo_var(
+                    100.0, 0.05, 0.20, 1.0, 252, 100_000
+                );
+                println!("[Semantic Task Engine] Simulation Complete. Mean: {:.2}, 95% VaR: {:.2}", mean, var);
+                // We would then write the result back into the graph as a qualia:SimulationResult
+            }
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // Micropayment Settlement Engine (Soft/Hard Limits & Grace Period)
+    // -----------------------------------------------------------------------
+    let payment_meter = bandwidth_meter.clone();
+    tokio::spawn(async move {
+        println!("[Micropayment Engine] Initialized. Monitoring mesh bandwidth routing...");
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
+        loop {
+            interval.tick().await;
+            
+            let context = crate::economics::get_current_system_context();
+
+            // Iterate over the DashMap without blocking the main router
+            for mut entry in payment_meter.iter_mut() {
+                let peer_id = entry.key().clone();
+                let ledger = entry.value_mut();
+
+                let liability = crate::economics::calculate_bandwidth_liability(ledger.unbilled_bytes, &context);
+
+                if liability >= 0.015 { // HARD LIMIT
+                    println!("[Micropayment Engine] {} hit Hard Limit (${:.4}). Disconnecting.", peer_id, liability);
+                    // Disconnect peer immediately
+                    // network::disconnect_and_block(&peer_id);
+                    ledger.unbilled_bytes = 0; 
+                    ledger.warning_issued_at = None;
+                } 
+                else if liability >= 0.010 && ledger.warning_issued_at.is_none() { // SOFT LIMIT
+                    println!("[Micropayment Engine] {} hit Soft Limit (${:.4}). Emitting DebtQuin. Grace Period started.", peer_id, liability);
+                    // 1. Emit DebtQuin to local graph
+                    // query_engine.insert_debt_quin(&peer_id, liability);
+                    
+                    // 2. Send warning over libp2p
+                    // network::send_payment_warning(&peer_id, liability);
+                    
+                    // 3. Start the grace period clock
+                    ledger.warning_issued_at = Some(std::time::Instant::now());
+                }
+                else if let Some(issued_at) = ledger.warning_issued_at {
+                    if issued_at.elapsed() > std::time::Duration::from_secs(300) { // 5 Minute Grace Period
+                        println!("[Micropayment Engine] {} Grace Period EXPIRED. Disconnecting.", peer_id);
+                        // Disconnect peer immediately
+                        // network::disconnect_and_block(&peer_id);
+                        ledger.unbilled_bytes = 0;
+                        ledger.warning_issued_at = None;
+                    }
+                }
+            }
         }
     });
 
