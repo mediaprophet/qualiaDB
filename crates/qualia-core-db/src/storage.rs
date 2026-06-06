@@ -2,6 +2,8 @@
 //! Handles flushing 850 48-byte Quins into perfectly aligned 40,960-byte 
 //! QualiaSuperBlock structures onto the NVMe disk format (`.qla`).
 
+pub mod mmap;
+
 use std::fs::{File, OpenOptions};
 use std::io::{self, Seek, SeekFrom};
 use std::path::Path;

@@ -1,4 +1,4 @@
-use std::io::{BufRead, Error, ErrorKind};
+use std::io::{BufRead, Error};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Term {

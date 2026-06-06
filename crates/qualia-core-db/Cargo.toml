@@ -18,6 +18,7 @@ wasm_simd = []
 # Feature dependencies
 alloc_buffers = []
 neon_simd_unroll = []
+vm_tracing = []
 
 [dependencies]
 futures-core = { version = "0.3", default-features = false }
@@ -59,6 +60,8 @@ web-sys = { version = "0.3", features = [
     "FileSystemFileHandle",
     "FileSystemSyncAccessHandle",
     "FileSystemWritableFileStream",
+    "FileSystemGetFileOptions",
+    "File",
     "Navigator",
     "Window"
 ] }

@@ -2,13 +2,12 @@ use crate::state::*;
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use qualia_core_db::rpc::{TaxRecipientSuite, route_tax_payment};
 use qualia_core_db::ilp_dispatcher::{IlpDispatcher, HttpIlpTransport, DispatchResult};
 use sysinfo::{System, Disks};
-use std::io::{Read, Write, Seek, SeekFrom};
+use std::io::{Write, Seek, SeekFrom};
 use futures_util::StreamExt;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -461,7 +460,6 @@ pub async fn ingest_image(file_path: String) -> Result<serde_json::Value, String
 }
 
 pub async fn ingest_image_async(file_path: String, typology: String) -> Result<(), String> {
-    let state = crate::state::APP_STATE.get().unwrap();
     // Phase 10 & 15: Asynchronous LLaVA Extraction with Typology Routing
     tokio::spawn(async move {
         let mut image_base64 = String::new();
@@ -501,7 +499,7 @@ pub async fn ingest_image_async(file_path: String, typology: String) -> Result<(
         }
         
         // Use typology lens to determine the specific facet extraction rules
-        let payload = match typology.as_str() {
+        let _payload = match typology.as_str() {
             "Meme" => serde_json::json!({
                 "lexicon_id": format!("0x{:016X}", rand::random::<u64>()),
                 "type": "Meme",
@@ -749,7 +747,7 @@ pub async fn generate_front_door_invite() -> Result<String, String> {
     Ok("did:qualia:frontdoor:88f72a-connect".to_string())
 }
 
-pub async fn mint_semantic_token(asset_id: String) -> Result<String, String> {
+pub async fn mint_semantic_token(_asset_id: String) -> Result<String, String> {
     // Phase 12 Mock: Mint ALP eToken with eMPP / RDF metadata payload
     Ok(format!("alp:0x{:04X}...", 45672_u32))
 }
@@ -787,7 +785,7 @@ pub async fn fetch_wallet_portfolio() -> Result<serde_json::Value, String> {
     ]))
 }
 
-pub async fn import_external_seed(network: String, seed: String, label: String) -> Result<String, String> {
+pub async fn import_external_seed(network: String, seed: String, _label: String) -> Result<String, String> {
     // Phase 14 Mock: Multi-Seed Account Import
     // Validate seed format
     if seed.split_whitespace().count() < 12 {
@@ -1012,47 +1010,42 @@ pub fn save_imported_accounts(accounts: serde_json::Value) -> Result<(), String>
 
 // ── App launcher ──────────────────────────────────────────────────────────────
 
-pub fn launch_installed_app(app_did: String) -> Result<(), String> {
+/// Returns the URL that should be opened in the system browser for an app.
+/// Looks up by directory name inside `{storage_path}/Apps/` — no in-memory
+/// registry needed, so previously installed apps survive restarts.
+pub fn launch_installed_app(app_name: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
-    // 1. Get the app from state
-    let apps = state.installed_apps.lock().unwrap();
-    let app = apps.iter().find(|a| a.did == app_did).ok_or("App not found")?.clone();
-    drop(apps); // Drop lock early
-    
-    // 2. Generate Semantic Token
-    let vault = state.key_vault.lock().unwrap();
-    let token = vault.issue_app_token(&app.did, app.manifest.required_shapes).map_err(|e| e.to_string())?;
-    
-    // 3. Build target URL
-    let target_url = match app.target {
-        app_registry::AppTarget::LocalDevDirectory(path) => {
-            // For dev directories, we'll map a custom localhost proxy or direct file path.
-            // For now, let's assume index.html exists.
-            format!("file:///{}", path.join("index.html").display()).replace("\\", "/")
-        },
-        app_registry::AppTarget::LocalProxyPort(port) => format!("http://localhost:{}", port),
-        app_registry::AppTarget::IsolatedVault(ref s) => format!("qualia://localhost/{}/index.html", s),
-    };
-    
-    // Append token
-    let final_url = if target_url.contains('?') {
-        format!("{}&token={}", target_url, token)
-    } else {
-        format!("{}?token={}", target_url, token)
-    };
-    
-    // 4. Launch Sandboxed Tauri window
-    let window_label = app.did.replace(":", "_").replace("-", "_");
-    
-    println!("Launching: {}", final_url);
+    let data_dir = state.config.lock().unwrap().storage_path.clone();
+    let app_dir = std::path::PathBuf::from(&data_dir).join("Apps").join(&app_name);
 
-    Ok(())
+    if !app_dir.exists() {
+        return Err(format!("App directory not found: {}", app_name));
+    }
+
+    // Check for a dev-port override: if app_dir/app.json specifies a port, use localhost
+    let manifest_path = app_dir.join("app.json");
+    if manifest_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&manifest_path) {
+            if let Ok(manifest) = serde_json::from_str::<app_registry::AppManifest>(&content) {
+                if let Some(port) = manifest.dev_port {
+                    return Ok(format!("http://localhost:{}", port));
+                }
+            }
+        }
+    }
+
+    let index_path = app_dir.join("index.html");
+    if !index_path.exists() {
+        return Err(format!("index.html not found in {}", app_dir.display()));
+    }
+
+    let url = format!("file:///{}", index_path.display()).replace('\\', "/");
+    Ok(url)
 }
 
 // ── Dashboard engine command ───────────────────────────────────────────────────
 
 pub fn run_engine_command(cmd: String) -> String {
-    let state = crate::state::APP_STATE.get().unwrap();
     match cmd.as_str() {
         "ingest_bench" => profile_energy_circumstance(),
         "zk_screen"    => format!(
@@ -1089,7 +1082,6 @@ pub struct SignedDirectoryState {
 }
 
 pub fn save_directory_state() {
-    let state = crate::state::APP_STATE.get().unwrap();
     let state = crate::state::APP_STATE.get().unwrap();
     let home = std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\".to_string());
     let qualia_dir = std::path::PathBuf::from(home).join(".qualia");
@@ -1133,7 +1125,6 @@ pub fn load_directory_state(vault: &qualia_core_db::key_vault::KeyVault) -> Dire
                     let mut sig_arr = [0u8; 64];
                     sig_arr.copy_from_slice(&sig_bytes);
                     let persistence_key = vault.derive_key("persistence");
-                    use ed25519_dalek::Signer; // to get verifying key
                     let pk = ed25519_dalek::VerifyingKey::from(&persistence_key);
                     if qualia_core_db::key_vault::KeyVault::verify_signature(pk.as_bytes(), payload.as_bytes(), &sig_arr).is_ok() {
                         return signed_state.state;
@@ -1195,7 +1186,6 @@ pub fn get_directory_actors() -> Result<Vec<Actor>, String> {
 
 pub fn add_directory_actor(mut actor: Actor) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
-    let state = crate::state::APP_STATE.get().unwrap();
     if actor.routing_hints.is_empty() {
         actor.routing_hints.push("nym:mixnet:global".to_string());
     }
@@ -1211,7 +1201,6 @@ pub fn get_delegation_rules() -> Result<Vec<DelegationRule>, String> {
 }
 
 pub fn add_delegation_rule(rule: DelegationRule) -> Result<(), String> {
-    let state = crate::state::APP_STATE.get().unwrap();
     let state = crate::state::APP_STATE.get().unwrap();
     state.delegation_rules.lock().unwrap().push(rule);
     save_directory_state();

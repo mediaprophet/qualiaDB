@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QualiaDB — API Explorer</title>
+    <style>
+        :root {
+            --bg:        #0a0a0f;
+            --panel:     rgba(20, 20, 32, 0.92);
+            --panel2:    rgba(16, 16, 26, 0.96);
+            --border:    rgba(255,255,255,0.07);
+            --accent:    #00f0ff;
+            --accent2:   #a78bfa;
+            --success:   #4ade80;
+            --warn:      #ffd700;
+            --fail:      #f87171;
+            --text:      #e2e2e2;
+            --dim:       #888;
+            --mono:      'Fira Code','JetBrains Mono',monospace;
+
+            /* category colours */
+            --col-core:    #00f0ff;
+            --col-modal:   #a78bfa;
+            --col-wasm:    #34d399;
+            --col-daemon:  #fb923c;
+            --col-cli:     #fbbf24;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, sans-serif;
+            font-size: 13px;
+        }
+
+        /* ── Top bar ──────────────────────────────────────────────────── */
+        .topbar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 18px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(10,10,15,.97);
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+
+        .topbar h1 { font-size: .95rem; font-weight: 600; color: var(--accent); white-space: nowrap; }
+
+        .search-wrap { position: relative; flex: 1; min-width: 160px; max-width: 320px; }
+        .search-wrap input {
+            width: 100%;
+            background: rgba(255,255,255,.04);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 10px 5px 28px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 12.5px;
+            outline: none;
+        }
+        .search-wrap input:focus { border-color: rgba(0,240,255,.3); }
+        .search-wrap::before {
+            content: '⌕';
+            position: absolute;
+            left: 9px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dim);
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .status-chips { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+        .chip {
+            font-size: 11px;
+            font-family: var(--mono);
+            padding: 2px 8px;
+            border-radius: 99px;
+            border: 1px solid;
+            white-space: nowrap;
+        }
+        .chip.online  { border-color: var(--success); color: var(--success); }
+        .chip.offline { border-color: var(--border);  color: var(--dim); }
+        .chip.ready   { border-color: var(--accent);  color: var(--accent); }
+
+        /* ── Layout ───────────────────────────────────────────────────── */
+        .layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Sidebar ──────────────────────────────────────────────────── */
+        .sidebar {
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 12px 0;
+        }
+
+        .cat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            padding: 10px 14px 4px;
+            color: var(--dim);
+            font-weight: 600;
+        }
+
+        .fn-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            cursor: pointer;
+            border-left: 2px solid transparent;
+            transition: background .1s;
+        }
+        .fn-item:hover   { background: rgba(255,255,255,.03); }
+        .fn-item.active  {
+            background: rgba(255,255,255,.05);
+            border-left-color: var(--accent);
+        }
+
+        .fn-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .fn-name { font-size: 12.5px; font-family: var(--mono); }
+        .fn-item.hidden { display: none; }
+
+        /* category dot colours */
+        .cat-core   .fn-dot { background: var(--col-core); }
+        .cat-modal  .fn-dot { background: var(--col-modal); }
+        .cat-wasm   .fn-dot { background: var(--col-wasm); }
+        .cat-daemon .fn-dot { background: var(--col-daemon); }
+        .cat-cli    .fn-dot { background: var(--col-cli); }
+
+        /* ── Main panel ───────────────────────────────────────────────── */
+        .main {
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .empty-state {
+            margin: auto;
+            text-align: center;
+            color: var(--dim);
+            padding: 40px;
+        }
+        .empty-state .big { font-size: 2rem; margin-bottom: 12px; }
+
+        /* ── Function header ─────────────────────────────────────────── */
+        .fn-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .fn-badge {
+            display: inline-block;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .fn-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .fn-summary {
+            color: var(--dim);
+            line-height: 1.6;
+            max-width: 700px;
+            font-size: 13px;
+        }
+
+        /* ── Content sections ────────────────────────────────────────── */
+        .fn-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--dim);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        /* Params table */
+        .params-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+        }
+        .params-table th {
+            text-align: left;
+            padding: 6px 10px;
+            font-size: 11px;
+            color: var(--dim);
+            border-bottom: 1px solid var(--border);
+            font-weight: 500;
+        }
+        .params-table td {
+            padding: 7px 10px;
+            border-bottom: 1px solid rgba(255,255,255,.04);
+            vertical-align: top;
+        }
+        .params-table td:first-child { font-family: var(--mono); color: var(--accent); }
+        .params-table td:nth-child(2) { font-family: var(--mono); color: var(--accent2); }
+        .params-table td:last-child   { color: var(--dim); line-height: 1.5; }
+
+        /* Code tabs */
+        .tabs { display: flex; gap: 2px; margin-bottom: -1px; }
+        .tab-btn {
+            padding: 5px 14px;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            background: rgba(255,255,255,.02);
+            color: var(--dim);
+            cursor: pointer;
+            font-size: 11.5px;
+            font-family: inherit;
+            transition: all .1s;
+        }
+        .tab-btn:hover  { background: rgba(255,255,255,.05); color: var(--text); }
+        .tab-btn.active { background: var(--panel2); color: var(--text); border-color: var(--border); }
+
+        .code-panel {
+            background: var(--panel2);
+            border: 1px solid var(--border);
+            border-radius: 0 6px 6px 6px;
+            position: relative;
+        }
+
+        pre.code-block {
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.7;
+            padding: 16px;
+            overflow-x: auto;
+            white-space: pre;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 8px; right: 8px;
+            padding: 3px 10px;
+            background: rgba(255,255,255,.06);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--dim);
+            cursor: pointer;
+            font-size: 11px;
+            font-family: inherit;
+            transition: all .15s;
+        }
+        .copy-btn:hover { background: rgba(255,255,255,.12); color: var(--text); }
+
+        /* ── Live widget ─────────────────────────────────────────────── */
+        .live-widget {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .live-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .live-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            flex-shrink: 0;
+        }
+
+        .live-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+        .live-inputs { display: flex; flex-wrap: wrap; gap: 10px; }
+
+        .live-field { display: flex; flex-direction: column; gap: 4px; }
+        .live-field label { font-size: 11px; color: var(--dim); }
+        .live-field input,
+        .live-field select {
+            background: rgba(255,255,255,.05);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 5px 9px;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 12px;
+            outline: none;
+            min-width: 140px;
+        }
+        .live-field input:focus,
+        .live-field select:focus { border-color: rgba(0,240,255,.3); }
+
+        .run-btn {
+            align-self: flex-end;
+            padding: 6px 18px;
+            background: rgba(0,240,255,.08);
+            border: 1px solid rgba(0,240,255,.3);
+            border-radius: 6px;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 12.5px;
+            font-family: inherit;
+            font-weight: 500;
+            transition: all .15s;
+        }
+        .run-btn:hover    { background: rgba(0,240,255,.16); }
+        .run-btn:disabled { opacity: .4; cursor: default; }
+
+        .live-output {
+            background: rgba(0,0,0,.3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--success);
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 48px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        .live-output.error { color: var(--fail); }
+        .live-output.idle  { color: var(--dim); }
+
+        /* ── Syntax highlight colours ────────────────────────────────── */
+        .k { color: #c792ea; }   /* keyword */
+        .s { color: #c3e88d; }   /* string */
+        .c { color: #546e7a; font-style: italic; } /* comment */
+        .n { color: #82aaff; }   /* name/identifier */
+        .p { color: #89ddff; }   /* punctuation */
+        .t { color: var(--accent2); }   /* type */
+        .m { color: #f78c6c; }   /* number */
+        .u { color: var(--warn); }      /* URI/URL */
+
+        /* ── Scrollbars ───────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 3px; }
+
+        /* ── Mobile ───────────────────────────────────────────────────── */
+        @media (max-width: 680px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <h1>QualiaDB · API Explorer</h1>
+    <div class="search-wrap">
+        <input type="text" id="search" placeholder="Search functions…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="status-chips">
+        <span class="chip" id="chip-wasm">… WASM</span>
+        <span class="chip" id="chip-native">◉ Daemon offline</span>
+    </div>
+    <a href="../tests/" style="font-size:11px;color:var(--dim);text-decoration:none;white-space:nowrap">→ Test Suite</a>
+    <a href="../"       style="font-size:11px;color:var(--dim);text-decoration:none;white-space:nowrap">→ Home</a>
+</div>
+
+<div class="layout">
+    <nav class="sidebar" id="sidebar"></nav>
+    <main class="main" id="main">
+        <div class="empty-state">
+            <div class="big">⬡</div>
+            <div>Select a function from the sidebar</div>
+            <div style="margin-top:6px;font-size:11px;color:#555">or start typing to search</div>
+        </div>
+    </main>
+</div>
+
+<script type="module">
+import { CATALOG, CATEGORIES, getById } from './catalog.js';
+import { loadWasm }                      from '../tests/wasm-loader.js';
+import { NativeClient, detectModes }    from '../tests/native-client.js';
+
+// ─── Shared state ──────────────────────────────────────────────────────────────
+
+let wasmMod = null;
+let nativeClient = null;
+let currentId = null;
+
+// Must be declared before the IIFE (const is not hoisted — TDZ would bite us)
+const CAT_CLASS = {
+    'Core Primitives': 'cat-core',
+    'Logic Modalities': 'cat-modal',
+    'WASM API': 'cat-wasm',
+    'Native Daemon': 'cat-daemon',
+    'CLI': 'cat-cli',
+};
+
+// ─── Init ──────────────────────────────────────────────────────────────────────
+
+(async () => {
+    // Status chips
+    const chipW = document.getElementById('chip-wasm');
+    const chipN = document.getElementById('chip-native');
+
+    loadWasm().then(mod => {
+        wasmMod = mod;
+        const ready = typeof mod.execute_ntriples_query === 'function'
+                   || typeof mod.compile_query_to_json === 'function';
+        chipW.textContent = ready ? '⬤ WASM ready' : '⬤ WASM (partial)';
+        chipW.className   = 'chip ' + (ready ? 'ready' : 'offline');
+    });
+
+    detectModes().then(d => {
+        if (d.native) {
+            nativeClient = new NativeClient('http://127.0.0.1:4242', d.token);
+            chipN.textContent = `⬤ Daemon v${d.daemonVersion || '?'}`;
+            chipN.className   = 'chip online';
+        }
+    });
+
+    buildSidebar();
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    document.getElementById('search').addEventListener('input', onSearch);
+})();
+
+// ─── Sidebar ───────────────────────────────────────────────────────────────────
+
+function buildSidebar() {
+    const sb = document.getElementById('sidebar');
+    for (const cat of CATEGORIES) {
+        const label = document.createElement('div');
+        label.className = 'cat-label';
+        label.textContent = cat;
+        sb.appendChild(label);
+
+        for (const entry of CATALOG.filter(e => e.category === cat)) {
+            const item = document.createElement('div');
+            item.className = `fn-item ${CAT_CLASS[cat] || ''}`;
+            item.dataset.id = entry.id;
+            item.innerHTML = `<span class="fn-dot"></span><span class="fn-name">${esc(entry.name)}</span>`;
+            item.addEventListener('click', () => { window.location.hash = entry.id; });
+            sb.appendChild(item);
+        }
+    }
+}
+
+function onSearch(e) {
+    const q = e.target.value.trim().toLowerCase();
+    for (const item of document.querySelectorAll('.fn-item')) {
+        const entry = getById(item.dataset.id);
+        const match = !q || entry.name.toLowerCase().includes(q)
+                          || entry.summary.toLowerCase().includes(q)
+                          || entry.category.toLowerCase().includes(q);
+        item.classList.toggle('hidden', !match);
+    }
+}
+
+// ─── Hash routing ──────────────────────────────────────────────────────────────
+
+function handleHash() {
+    const id = window.location.hash.slice(1);
+    if (id) showFunction(id);
+}
+
+// ─── Render function detail ────────────────────────────────────────────────────
+
+function showFunction(id) {
+    const entry = getById(id);
+    if (!entry) return;
+    currentId = id;
+
+    // Sidebar active state
+    for (const item of document.querySelectorAll('.fn-item')) {
+        item.classList.toggle('active', item.dataset.id === id);
+    }
+
+    const catClass = CAT_CLASS[entry.category] || '';
+    const catColor = {
+        'Core Primitives': 'var(--col-core)',
+        'Logic Modalities': 'var(--col-modal)',
+        'WASM API': 'var(--col-wasm)',
+        'Native Daemon': 'var(--col-daemon)',
+        'CLI': 'var(--col-cli)',
+    }[entry.category] || 'var(--accent)';
+
+    const main = document.getElementById('main');
+    main.innerHTML = '';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'fn-header';
+    header.innerHTML = `
+        <div class="fn-badge" style="background:${catColor}22;color:${catColor}">${esc(entry.category)}</div>
+        <div class="fn-title">${esc(entry.name)}</div>
+        <div class="fn-summary">${esc(entry.summary)}</div>`;
+    main.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'fn-body';
+
+    // Returns
+    if (entry.returns) {
+        const ret = document.createElement('div');
+        ret.innerHTML = `<div class="section-title">Returns</div>
+            <code style="font-family:var(--mono);font-size:12px;color:var(--accent2)">${esc(entry.returns)}</code>`;
+        body.appendChild(ret);
+    }
+
+    // Parameters table
+    if (entry.params?.length) {
+        const sec = document.createElement('div');
+        sec.innerHTML = `<div class="section-title">Parameters</div>`;
+        const table = document.createElement('table');
+        table.className = 'params-table';
+        table.innerHTML = `<thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>`;
+        const tbody = document.createElement('tbody');
+        for (const p of entry.params) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${esc(p.name)}</td><td>${esc(p.type)}</td><td>${esc(p.desc)}</td>`;
+            tbody.appendChild(tr);
+        }
+        table.appendChild(tbody);
+        sec.appendChild(table);
+        body.appendChild(sec);
+    }
+
+    // Code snippets
+    if (entry.snippets?.length) {
+        const sec = document.createElement('div');
+        sec.innerHTML = `<div class="section-title">Code Snippets</div>`;
+
+        const tabs = document.createElement('div');
+        tabs.className = 'tabs';
+        const panels = [];
+
+        for (let i = 0; i < entry.snippets.length; i++) {
+            const snip = entry.snippets[i];
+            const btn  = document.createElement('button');
+            btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+            btn.textContent = snip.lang;
+
+            const panel = document.createElement('div');
+            panel.className = 'code-panel';
+            panel.style.display = i === 0 ? '' : 'none';
+
+            const pre  = document.createElement('pre');
+            pre.className = 'code-block';
+            pre.textContent = snip.code;
+
+            const copy = document.createElement('button');
+            copy.className = 'copy-btn';
+            copy.textContent = 'Copy';
+            copy.addEventListener('click', () => {
+                navigator.clipboard.writeText(snip.code);
+                copy.textContent = 'Copied!';
+                setTimeout(() => copy.textContent = 'Copy', 1500);
+            });
+
+            panel.appendChild(pre);
+            panel.appendChild(copy);
+            panels.push(panel);
+
+            btn.addEventListener('click', () => {
+                tabs.querySelectorAll('.tab-btn').forEach((b,j) => {
+                    b.classList.toggle('active', j === i);
+                    panels[j].style.display = j === i ? '' : 'none';
+                });
+            });
+
+            tabs.appendChild(btn);
+        }
+
+        sec.appendChild(tabs);
+        for (const p of panels) sec.appendChild(p);
+        body.appendChild(sec);
+    }
+
+    // Live widget
+    if (entry.live) {
+        body.appendChild(buildLiveWidget(entry));
+    }
+
+    main.appendChild(body);
+}
+
+// ─── Live widget ───────────────────────────────────────────────────────────────
+
+function buildLiveWidget(entry) {
+    const widget = document.createElement('div');
+    widget.innerHTML = `<div class="section-title">Try It Live</div>`;
+
+    const card = document.createElement('div');
+    card.className = 'live-widget';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'live-header';
+
+    const dot = document.createElement('span');
+    dot.className = 'live-dot';
+
+    const lbl = document.createElement('span');
+    lbl.style.fontWeight = '500';
+    lbl.textContent = entry.name;
+
+    const note = document.createElement('span');
+    note.style.cssText = 'color:var(--dim);font-size:11px;margin-left:auto';
+
+    const isWasm   = entry.id.startsWith('wasm.') || entry.id.startsWith('core.');
+    const isDaemon = entry.id.startsWith('daemon.');
+    note.textContent = isDaemon ? 'Calls live daemon' : isWasm ? 'Runs in-browser via WASM' : 'Pure JS';
+
+    hdr.appendChild(dot); hdr.appendChild(lbl); hdr.appendChild(note);
+    card.appendChild(hdr);
+
+    const bd = document.createElement('div');
+    bd.className = 'live-body';
+
+    // Input fields
+    const inputValues = {};
+    if (entry.liveInputs?.length) {
+        const inputsRow = document.createElement('div');
+        inputsRow.className = 'live-inputs';
+        for (const field of entry.liveInputs) {
+            inputValues[field.name] = field.default || '';
+            const wrap = document.createElement('div');
+            wrap.className = 'live-field';
+            const label = document.createElement('label');
+            label.textContent = field.label;
+
+            let ctrl;
+            if (field.options) {
+                ctrl = document.createElement('select');
+                for (const opt of field.options) {
+                    const o = document.createElement('option');
+                    o.value = opt; o.textContent = opt;
+                    if (opt === field.default) o.selected = true;
+                    ctrl.appendChild(o);
+                }
+            } else {
+                ctrl = document.createElement('input');
+                ctrl.type = 'text';
+                ctrl.value = field.default || '';
+            }
+            ctrl.addEventListener('input', () => { inputValues[field.name] = ctrl.value; });
+            ctrl.addEventListener('change', () => { inputValues[field.name] = ctrl.value; });
+
+            wrap.appendChild(label);
+            wrap.appendChild(ctrl);
+            inputsRow.appendChild(wrap);
+        }
+        bd.appendChild(inputsRow);
+    }
+
+    const runBtn = document.createElement('button');
+    runBtn.className = 'run-btn';
+    runBtn.textContent = '▶ Run';
+    bd.appendChild(runBtn);
+
+    const out = document.createElement('pre');
+    out.className = 'live-output idle';
+    out.textContent = '// output will appear here';
+    bd.appendChild(out);
+
+    runBtn.addEventListener('click', async () => {
+        runBtn.disabled = true;
+        out.className = 'live-output idle';
+        out.textContent = '// running…';
+        try {
+            const result = await entry.live(wasmMod, nativeClient, { ...inputValues });
+            out.className = 'live-output';
+            out.textContent = JSON.stringify(result, bigintReplacer, 2);
+        } catch (e) {
+            out.className = 'live-output error';
+            out.textContent = `Error: ${e.message}`;
+        } finally {
+            runBtn.disabled = false;
+        }
+    });
+
+    card.appendChild(bd);
+    widget.appendChild(card);
+    return widget;
+}
+
+// ─── Utilities ─────────────────────────────────────────────────────────────────
+
+function esc(s) {
+    return String(s ?? '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function bigintReplacer(_, v) {
+    return typeof v === 'bigint' ? v.toString() + 'n' : v;
+}
+</script>
+</body>
+</html>

@@ -1,4 +1,3 @@
-use rand::Rng;
 use rand_distr::{StandardNormal, Distribution};
 
 #[cfg(all(not(target_os = "android"), not(target_arch = "wasm32")))]

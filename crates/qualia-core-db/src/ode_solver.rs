@@ -1,7 +1,6 @@
 //! Continuous Differential Constraint Solvers
 //! Pure Rust implementation of ODE/PDE solvers, replacing C-library dependencies (e.g., Sundials).
 
-use crate::QualiaQuin;
 
 /// A simple state vector representing continuous physical constraints
 pub struct PhysicalState {

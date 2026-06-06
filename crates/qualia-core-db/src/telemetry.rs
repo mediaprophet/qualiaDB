@@ -75,7 +75,7 @@ pub fn log_federated_telemetry(metric_hash: u64, value: f64) -> crate::QualiaQui
         subject: crate::q_hash("did:q42:local-node"),
         predicate: metric_hash,
         // Mock inline decimal representation for telemetry value
-        object: (0b010u64 << 60) | unsafe { core::mem::transmute::<f64, u64>(value) & 0x0FFF_FFFF_FFFF_FFFF },
+        object: (0b010u64 << 60) | (value.to_bits() & 0x0FFF_FFFF_FFFF_FFFF),
         context: 0,
         metadata: 0,
         parity: 0,

@@ -6,7 +6,6 @@ extern crate std;
 use core::ptr::write_volatile;
 use crate::QualiaQuin;
 use crate::wal::append_mutation;
-use std::io::{self, Write};
 use std::string::String;
 
 /// Explicit operational states defining the execution boundaries

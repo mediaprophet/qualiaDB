@@ -5,75 +5,184 @@ on:
     tags:
       - 'v*'
 
+# ── Job 1: qualia-cli ─────────────────────────────────────────────────────────
 jobs:
-  build:
-    name: Build (${{ matrix.os }})
+  build-cli:
+    name: CLI (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-14]
+        include:
+          - os: ubuntu-22.04
+            artifact: target/release/qualia-cli
+            asset_name: qualia-cli-linux-x86_64
+          - os: windows-latest
+            artifact: target/release/qualia-cli.exe
+            asset_name: qualia-cli-windows-x86_64.exe
+          - os: macos-14
+            artifact: target/release/qualia-cli
+            asset_name: qualia-cli-macos-aarch64
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Cargo registry + build artefacts
+      - name: Cache Cargo
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          key: ${{ runner.os }}-cargo-cli-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-cli-
 
-      - name: Install Linux system dependencies
+      - name: Linux system dependencies
         if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.0-dev \
-            build-essential \
-            libssl-dev \
-            libxdo-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
+          sudo apt-get install -y libssl-dev pkg-config
 
       - name: Build qualia-cli
         run: cargo build --release -p qualia-cli
 
-      - name: Install Frontend Dependencies
-        working-directory: ./crates/qualia-client
-        run: npm install
+      - name: Rename artifact
+        shell: bash
+        run: cp ${{ matrix.artifact }} ${{ matrix.asset_name }}
 
-      - name: Build Frontend
-        working-directory: ./crates/qualia-client
-        run: npm run build
-
-      - name: Build Tauri App (Installers)
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          projectPath: ./crates/qualia-desktop
-          tagName: ${{ github.ref_name }}
-          releaseName: 'QualiaDB ${{ github.ref_name }}'
-          releaseBody: 'See the assets to download this version and install.'
-
-      - name: Upload CLI artefact
+      - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
-          fail_on_unmatched_files: false
-          files: |
-            target/release/qualia-cli
-            target/release/qualia-cli.exe
+          files: ${{ matrix.asset_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ── Job 2: qualia-core-db WASM ────────────────────────────────────────────────
+  build-wasm:
+    name: WASM (qualia-core-db)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: wasm-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: wasm-cargo-
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM package
+        run: wasm-pack build crates/qualia-core-db --target web --release
+
+      - name: Package WASM artifacts
+        run: tar -czf qualia-core-wasm.tar.gz -C crates/qualia-core-db pkg/
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: qualia-core-wasm.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ── Job 3: Flutter desktop ────────────────────────────────────────────────────
+  build-flutter:
+    name: Flutter (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            flutter_platform: linux
+            artifact_dir: crates/qualia-flutter/build/linux/x64/release/bundle
+            asset_name: qualia-flutter-linux-x86_64.tar.gz
+          - os: windows-latest
+            flutter_platform: windows
+            artifact_dir: crates/qualia-flutter/build/windows/x64/runner/Release
+            asset_name: qualia-flutter-windows-x86_64.zip
+          - os: macos-14
+            flutter_platform: macos
+            artifact_dir: crates/qualia-flutter/build/macos/Build/Products/Release
+            asset_name: qualia-flutter-macos-aarch64.tar.gz
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-flutter-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-flutter-
+
+      - name: Linux system dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libblkid-dev \
+            liblzma-dev \
+            ninja-build \
+            libssl-dev \
+            pkg-config \
+            clang \
+            cmake \
+            libsecret-1-dev \
+            libjsoncpp-dev
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        working-directory: crates/qualia-flutter
+        run: flutter pub get
+
+      - name: Build Flutter (${{ matrix.flutter_platform }})
+        working-directory: crates/qualia-flutter
+        run: flutter build ${{ matrix.flutter_platform }} --release
+
+      - name: Package artifact (Linux / macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          tar -czf ${{ matrix.asset_name }} \
+            -C "$(dirname "${{ matrix.artifact_dir }}")" \
+            "$(basename "${{ matrix.artifact_dir }}")"
+
+      - name: Package artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "${{ matrix.artifact_dir }}\*" `
+            -DestinationPath "${{ matrix.asset_name }}"
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

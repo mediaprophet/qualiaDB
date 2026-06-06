@@ -1,6 +1,6 @@
 use crate::{QualiaQuin, QualiaSuperBlock, PermissiveRoutingLane, QUINS_PER_BLOCK, BLOCK_MULTIPLIER_SIZE};
 use std::fs::{File, create_dir_all};
-use std::io::{Write, Read, Seek, SeekFrom};
+use std::io::{Write, Read};
 use std::path::Path;
 
 pub struct SolidExporter;

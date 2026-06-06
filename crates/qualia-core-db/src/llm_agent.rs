@@ -195,7 +195,7 @@ impl LocalLlmAgent {
     /// Phase 8: Bifurcated Compute - SPSC Wait-Free Intercept
     /// Uses `rtrb` (Real-Time Ring Buffer) to establish a true zero-allocation,
     /// wait-free communication bridge between the LLM Engine and the Webizen Sentinel.
-    fn infer_local_model(&self, prompt: &str, graph_context: &str) -> (String, Vec<u64>, u32) {
+    fn infer_local_model(&self, _prompt: &str, graph_context: &str) -> (String, Vec<u64>, u32) {
         use rtrb::RingBuffer;
         use std::thread;
         use std::time::Duration;

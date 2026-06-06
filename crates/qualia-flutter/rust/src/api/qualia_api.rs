@@ -98,6 +98,18 @@ pub fn get_physics_state_time_dilation() -> f64 {
     0.0
 }
 
+pub fn list_installed_apps() -> Vec<String> {
+    core::list_installed_apps()
+}
+
+pub fn launch_installed_app(app_name: String) -> Result<String, String> {
+    core::launch_installed_app(app_name)
+}
+
+pub fn generate_app_credential(app_name: String) -> String {
+    core::generate_app_credential(app_name)
+}
+
 pub fn verify_and_install_app(zip_path: String, credential_sig: String) -> String {
     // Note: The new core signature only expects target_path. We can still validate the sig here or pass it if signature changed.
     // For now we'll just ignore credential_sig or add it if the signature was meant to have it.

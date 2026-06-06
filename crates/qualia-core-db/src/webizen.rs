@@ -347,7 +347,7 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 // In a full implementation, we'd pull the active Jurisdiction Profile
                 // and amount from the VM frame. For now, we mock the evaluation.
                 let schema = TaxRuleSchema::new_au_gst();
-                let liability = schema.evaluate("Income", 100.0);
+                let _liability = schema.evaluate("Income", 100.0);
                 
                 // We'd store this calculated liability back into the frame
                 // frame.tax_register = liability;
@@ -754,7 +754,7 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
 
 // Helper: build a throwaway QualiaQuin from VM frame registers for native dispatch
 #[inline(always)]
-fn frame_quin_or_default(frame: &VmFrame) -> &'static crate::QualiaQuin {
+fn frame_quin_or_default(_frame: &VmFrame) -> &'static crate::QualiaQuin {
     // Returns a zero Quin when actual graph data isn't available in the demo path
     static ZERO: crate::QualiaQuin = crate::QualiaQuin {
         subject: 0, predicate: 0, object: 0, context: 0, metadata: 0, parity: 0,

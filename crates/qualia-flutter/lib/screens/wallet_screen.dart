@@ -122,7 +122,7 @@ class WalletScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text('\$${item.fiatUsd.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                              Text('${item.change24h >= 0 ? '+' : ''}${item.change24h}%', style: TextStyle(color: item.change24h >= 0 ? const Color(0xFF00FF88) : Colors.red, fontSize: 12)),
+                              Text('${item.change24H >= 0 ? '+' : ''}${item.change24H}%', style: TextStyle(color: item.change24H >= 0 ? const Color(0xFF00FF88) : Colors.red, fontSize: 12)),
                             ],
                           ),
                         ),

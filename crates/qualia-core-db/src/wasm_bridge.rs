@@ -411,3 +411,180 @@ pub fn validate_shacl_constraint_wasm(val: JsValue) -> Result<JsValue, JsValue> 
         target_value: p.target_value,
     })?)
 }
+
+// ─── Query Engine & Ingestion Formats ────────────────────────────────────────
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn execute_ntriples_query(query: &str, db_bytes: &[u8], max_results: usize) -> String {
+    let mut program = [0u8; 1024];
+    if crate::mini_parser::compile_ntriples_to_bytecode(query.as_bytes(), &mut program).is_err() {
+        return r#"{"error": "Malformed query or program too large"}"#.to_string();
+    }
+    
+    if db_bytes.len() % 48 != 0 {
+        return r#"{"error": "db_bytes length must be a multiple of 48"}"#.to_string();
+    }
+    let quins = unsafe {
+        std::slice::from_raw_parts(db_bytes.as_ptr() as *const crate::QualiaQuin, db_bytes.len() / 48)
+    };
+    
+    let mut out = vec![crate::QualiaQuin::default(); max_results];
+    match crate::webizen_bytecode::execute_program_with_stats(&program, quins, &mut out) {
+        Ok(stats) => {
+            #[derive(Serialize)]
+            struct MatchOut { s: String, p: String, o: String, c: String, m: String }
+            let mut matches = Vec::new();
+            for i in 0..stats.match_count {
+                matches.push(MatchOut {
+                    s: out[i].subject.to_string(),
+                    p: out[i].predicate.to_string(),
+                    o: out[i].object.to_string(),
+                    c: out[i].context.to_string(),
+                    m: out[i].metadata.to_string(),
+                });
+            }
+            #[derive(Serialize)]
+            struct Res { matches: Vec<MatchOut>, vm_cycles: u64, direct_jump_ops: u64, lexicon_lookup_ops: u64 }
+            
+            serde_json::to_string(&Res { 
+                matches, 
+                vm_cycles: stats.vm_cycles, 
+                direct_jump_ops: stats.direct_jump_ops, 
+                lexicon_lookup_ops: stats.lexicon_lookup_ops 
+            }).unwrap_or_else(|_| "{}".to_string())
+        }
+        Err(_) => r#"{"error": "VM execution error"}"#.to_string(),
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn parse_turtle_wasm(payload: &str) -> JsValue {
+    use rio_api::parser::TriplesParser;
+    let cursor = std::io::Cursor::new(payload.as_bytes());
+    let mut parser = rio_turtle::TurtleParser::new(cursor, None);
+    let mut quins = Vec::new();
+    let mut on_triple = |t: rio_api::model::Triple| -> Result<(), std::io::Error> {
+        let s_hash = crate::q_hash(&t.subject.to_string());
+        let p_hash = crate::q_hash(&t.predicate.to_string());
+        let o_hash = crate::q_hash(&t.object.to_string());
+        quins.push(crate::QualiaQuin {
+            subject: s_hash,
+            predicate: p_hash,
+            object: o_hash,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        });
+        Ok(())
+    };
+    if parser.parse_all(&mut on_triple).is_err() {
+        return JsValue::NULL; // Handle error appropriately
+    }
+    
+    // For browser simplicity, return array of structs.
+    #[derive(Serialize)]
+    struct QOut { subject: String, predicate: String, object: String }
+    let out: Vec<QOut> = quins.iter().map(|q| QOut {
+        subject: q.subject.to_string(),
+        predicate: q.predicate.to_string(),
+        object: q.object.to_string(),
+    }).collect();
+    serde_wasm_bindgen::to_value(&out).unwrap_or(JsValue::NULL)
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn parse_n3logic_wasm(payload: &str) -> JsValue {
+    let cursor = std::io::Cursor::new(payload.as_bytes());
+    let mut parser = crate::n3_parser::N3Parser::new(cursor);
+    let mut quins = Vec::new();
+    
+    let on_n3_event = |event: crate::n3_parser::N3Event| -> Result<(), std::io::Error> {
+        if let crate::n3_parser::N3Event::StaticTriple(triple) = event {
+            let s = match triple.subject {
+                crate::n3_parser::Term::Uri(s) | crate::n3_parser::Term::Variable(s) | crate::n3_parser::Term::Literal(s) => s,
+            };
+            let p = match triple.predicate {
+                crate::n3_parser::Term::Uri(s) | crate::n3_parser::Term::Variable(s) | crate::n3_parser::Term::Literal(s) => s,
+            };
+            let o = match triple.object {
+                crate::n3_parser::Term::Uri(s) | crate::n3_parser::Term::Variable(s) | crate::n3_parser::Term::Literal(s) => s,
+            };
+            quins.push(crate::QualiaQuin {
+                subject: crate::q_hash(&s),
+                predicate: crate::q_hash(&p),
+                object: crate::q_hash(&o),
+                context: 0, metadata: 0, parity: 0,
+            });
+        }
+        Ok(())
+    };
+    
+    if parser.parse_all(on_n3_event).is_err() {
+        return JsValue::NULL;
+    }
+    
+    #[derive(Serialize)]
+    struct QOut { subject: String, predicate: String, object: String }
+    let out: Vec<QOut> = quins.iter().map(|q| QOut {
+        subject: q.subject.to_string(),
+        predicate: q.predicate.to_string(),
+        object: q.object.to_string(),
+    }).collect();
+    serde_wasm_bindgen::to_value(&out).unwrap_or(JsValue::NULL)
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn parse_cbor_ld_wasm(payload: &[u8]) -> JsValue {
+    match crate::cbor_compiler::parse_cbor_ld_to_quin(payload) {
+        Ok(q) => {
+            #[derive(Serialize)]
+            struct QOut { subject: String, predicate: String, object: String, context: String }
+            let out = QOut {
+                subject: q.subject.to_string(),
+                predicate: q.predicate.to_string(),
+                object: q.object.to_string(),
+                context: q.context.to_string(),
+            };
+            serde_wasm_bindgen::to_value(&out).unwrap_or(JsValue::NULL)
+        }
+        Err(_) => JsValue::NULL
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct JsonLdFlatTriple {
+    pub s: String,
+    pub p: String,
+    pub o: String,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn parse_json_wasm(payload: &str) -> JsValue {
+    if let Ok(triples) = serde_json::from_str::<Vec<JsonLdFlatTriple>>(payload) {
+        let mut quins = Vec::new();
+        for t in triples {
+            quins.push(crate::QualiaQuin {
+                subject: crate::q_hash(&t.s),
+                predicate: crate::q_hash(&t.p),
+                object: crate::q_hash(&t.o),
+                context: 0, metadata: 0, parity: 0,
+            });
+        }
+        #[derive(Serialize)]
+        struct QOut { subject: String, predicate: String, object: String }
+        let out: Vec<QOut> = quins.iter().map(|q| QOut {
+            subject: q.subject.to_string(),
+            predicate: q.predicate.to_string(),
+            object: q.object.to_string(),
+        }).collect();
+        serde_wasm_bindgen::to_value(&out).unwrap_or(JsValue::NULL)
+    } else {
+        JsValue::NULL
+    }
+}

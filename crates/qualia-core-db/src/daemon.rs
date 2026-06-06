@@ -509,16 +509,27 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
 
     // -----------------------------------------------------------------------
     // CORS + private-network header
+    // Dev mode allows any origin so that localhost test runners and desktop
+    // apps can connect without being blocked by same-origin policy.
     // -----------------------------------------------------------------------
+    let allowed_origins: Vec<&str> = if dev {
+        vec!["http://localhost:8788", "http://127.0.0.1:8788",
+             "http://localhost:5173", "http://127.0.0.1:5173",
+             OFFICIAL_WEB_HUB_ORIGIN]
+    } else {
+        vec![OFFICIAL_WEB_HUB_ORIGIN]
+    };
+
     let cors = warp::cors()
-        .allow_origin(OFFICIAL_WEB_HUB_ORIGIN)
+        .allow_origins(allowed_origins)
         .allow_methods(vec!["GET", "POST", "OPTIONS"])
         .allow_headers(vec![
             "content-type",
             "accept",
             "x-qualia-token",
             "access-control-request-private-network",
-        ]);
+        ])
+        .expose_headers(vec!["x-qualia-compute-cost"]);
 
     let routes = qualia_bridge
         .or(health)

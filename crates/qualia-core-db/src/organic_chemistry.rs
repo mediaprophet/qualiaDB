@@ -501,16 +501,16 @@ fn build_adj(mol: &Molecule) -> Vec<Vec<usize>> {
     adj
 }
 
-fn is_sp2_carbon(a: &Atom, adj: &[Vec<usize>], mol: &Molecule) -> bool {
+fn is_sp2_carbon(a: &Atom, _adj: &[Vec<usize>], mol: &Molecule) -> bool {
     mol.bonds.iter().any(|b| {
         (b.atom_a == a.idx || b.atom_b == a.idx)
             && (b.order == BondOrder::Double || b.order == BondOrder::Aromatic)
     })
 }
 
-fn count_aromatic_rings(atoms: &[Atom], bonds: &[Bond]) -> u32 {
+fn count_aromatic_rings(_atoms: &[Atom], bonds: &[Bond]) -> u32 {
     // Simplified: each aromatic bond that closes a ring contributes to one ring
-    let mut ring_bonds = bonds.iter().filter(|b| b.in_ring && b.order == BondOrder::Aromatic).count();
+    let ring_bonds = bonds.iter().filter(|b| b.in_ring && b.order == BondOrder::Aromatic).count();
     // Rough: 6-membered ring has 6 aromatic bonds; 5-membered has 5
     (ring_bonds / 6 + (ring_bonds % 6 > 2) as usize) as u32
 }
@@ -757,6 +757,7 @@ pub enum FunctionalGroup {
 }
 
 /// Detect functional groups in a molecule. Returns unique set.
+#[allow(non_snake_case)]
 pub fn detect_functional_groups(mol: &Molecule) -> Vec<FunctionalGroup> {
     let mut found = std::collections::HashSet::new();
     let adj = build_adj(mol);
@@ -769,7 +770,7 @@ pub fn detect_functional_groups(mol: &Molecule) -> Vec<FunctionalGroup> {
                 mol.atoms[o].element == "O"
             }
         });
-        let has_double_N = || mol.bonds.iter().any(|b| {
+        let _has_double_N = || mol.bonds.iter().any(|b| {
             (b.atom_a == atom.idx || b.atom_b == atom.idx) && b.order == BondOrder::Double && {
                 let o = if b.atom_a == atom.idx { b.atom_b } else { b.atom_a };
                 mol.atoms[o].element == "N"
@@ -807,6 +808,11 @@ pub fn detect_functional_groups(mol: &Molecule) -> Vec<FunctionalGroup> {
                 if is_adjacent_amide(atom, mol) { found.insert(FunctionalGroup::Amide); }
                 // Sulfonamide: bonded to S
                 if nbrs.iter().any(|n| n.element == "S") { found.insert(FunctionalGroup::Sulfonamide); }
+                // Nitro group: non-aromatic N bonded to ≥2 oxygens
+                if !atom.is_aromatic {
+                    let o_nbrs: Vec<_> = nbrs.iter().filter(|n| n.element == "O").collect();
+                    if o_nbrs.len() >= 2 { found.insert(FunctionalGroup::Nitro); }
+                }
             }
             "C" => {
                 let o_nbrs: Vec<_> = nbrs.iter().filter(|n| n.element == "O").collect();
@@ -835,10 +841,6 @@ pub fn detect_functional_groups(mol: &Molecule) -> Vec<FunctionalGroup> {
                 let h = atom.n_implicit_h + atom.explicit_h;
                 if h > 0 { found.insert(FunctionalGroup::Thiol); }
                 else { found.insert(FunctionalGroup::Sulfide); }
-            }
-            "N" if !atom.is_aromatic => {
-                let o_nbrs: Vec<_> = nbrs.iter().filter(|n| n.element == "O").collect();
-                if o_nbrs.len() >= 2 { found.insert(FunctionalGroup::Nitro); }
             }
             "P" => { found.insert(FunctionalGroup::Phosphate); }
             "F" | "Cl" | "Br" | "I" => { found.insert(FunctionalGroup::Halide); }

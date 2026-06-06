@@ -9,7 +9,7 @@ import 'screens/settings_screen.dart';
 
 import 'screens/ontology_hub_screen.dart';
 import 'screens/asset_library_screen.dart';
-import 'screens/app_store_screen.dart';
+import 'screens/app_vault_screen.dart';
 import 'screens/credential_manager_screen.dart';
 import 'screens/llm_hub_screen.dart';
 import 'screens/spatial_physics_screen.dart';
@@ -19,7 +19,8 @@ import 'src/rust/api/qualia_api.dart';
 import 'src/rust/frb_generated.dart';
 
 Future<void> main() async {
-  await RustLib.init();
+  await RustApi.init();
+  await initCore();
   runApp(const ProviderScope(child: QualiaApp()));
 }
 
@@ -62,7 +63,7 @@ class _QualiaHomeScreenState extends State<QualiaHomeScreen> {
     const AddressBookScreen(),
     const OntologyHubScreen(),
     const AssetLibraryScreen(),
-    const AppStoreScreen(),
+    const AppVaultScreen(),
     const CredentialManagerScreen(),
     const LLMHubScreen(),
     const SpatialPhysicsScreen(),
@@ -95,7 +96,7 @@ class _QualiaHomeScreenState extends State<QualiaHomeScreen> {
                   const SizedBox(height: 32),
                   _buildNavItem(Icons.photo_library_outlined, 5), // Asset Library
                   const SizedBox(height: 32),
-                  _buildNavItem(Icons.apps_outlined, 6), // App Store
+                  _buildNavItem(Icons.apps_outlined, 6), // App Vault
                   const SizedBox(height: 32),
                   _buildNavItem(Icons.key_outlined, 7), // Credential Manager
                   const SizedBox(height: 32),

@@ -2,11 +2,9 @@ use crate::QualiaQuin;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use std::fs::File;
 use std::io::{BufReader, Write};
-use std::path::Path;
 use rio_api::parser::TriplesParser;
 use rio_xml::RdfXmlParser;
 use rio_turtle::{TurtleParser, NTriplesParser};
-use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
 use sysinfo::System;
@@ -39,12 +37,12 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
 
     // 3. Spawn Parallel Hasher Shards (Workers)
     let mut worker_handles = vec![];
-    for worker_id in 0..target_workers {
+    for _worker_id in 0..target_workers {
         let rx = rx_raw.clone();
         let tx = tx_bin.clone();
         
         let handle = thread::spawn(move || {
-            let mut local_count = 0;
+            let mut _local_count = 0u64;
             for triple in rx {
                 // Cryptographic Hashing Simulation (Ed25519 / Blake3 mapping)
                 // In a production system, this hashes the string to a strict 64-bit ID.
@@ -52,7 +50,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
                 let s_hash = deterministic_hash(&triple.subject);
                 let p_hash = deterministic_hash(&triple.predicate);
                 let o_hash = deterministic_hash(&triple.object);
-                
+
                 let quin = QualiaQuin {
                     subject: s_hash,
                     predicate: p_hash,
@@ -61,14 +59,13 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
                     metadata: 0,
                     parity: 0,
                 };
-                
+
                 // Send back to the writer thread
                 if tx.send(quin).is_err() {
                     break;
                 }
-                local_count += 1;
+                _local_count += 1;
             }
-            // println!("Shard {} completed: processed {} quins.", worker_id, local_count);
         });
         worker_handles.push(handle);
     }

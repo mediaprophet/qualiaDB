@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QualiaDB — Comprehensive Test Suite</title>
+    <style>
+        :root {
+            --bg:      #0a0a0f;
+            --panel:   rgba(22, 22, 34, 0.9);
+            --border:  rgba(255,255,255,0.08);
+            --accent:  #00f0ff;
+            --success: #4ade80;
+            --fail:    #f87171;
+            --warn:    #ffd700;
+            --native:  #a78bfa;
+            --text:    #e2e2e2;
+            --dim:     #888;
+            --mono:    'Fira Code', 'JetBrains Mono', monospace;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(0,240,255,.04) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(167,139,250,.03) 0%, transparent 40%);
+        }
+
+        /* ── Header ──────────────────────────────────────────────────────── */
+        header {
+            position: sticky; top: 0; z-index: 10;
+            background: rgba(10,10,15,.97);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px 0;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent);
+            letter-spacing: .04em;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* ── Mode tabs ───────────────────────────────────────────────────── */
+        .mode-tabs {
+            display: flex;
+            gap: 4px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3px;
+            flex-shrink: 0;
+        }
+
+        .mode-btn {
+            padding: 4px 14px;
+            border-radius: 5px;
+            border: none;
+            background: transparent;
+            color: var(--dim);
+            cursor: pointer;
+            font-size: 12.5px;
+            font-family: inherit;
+            font-weight: 500;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+        .mode-btn:hover:not(.unavailable) { background: rgba(255,255,255,.06); color: var(--text); }
+        .mode-btn.active[data-mode="wasm"]   { background: rgba(0,240,255,.12);   color: var(--accent); }
+        .mode-btn.active[data-mode="native"] { background: rgba(167,139,250,.12); color: var(--native); }
+        .mode-btn.active[data-mode="both"]   { background: rgba(74,222,128,.10);  color: var(--success); }
+        .mode-btn.unavailable { opacity: .35; cursor: not-allowed; }
+
+        /* ── Status indicators ───────────────────────────────────────────── */
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .mode-status {
+            font-size: 11px;
+            font-family: var(--mono);
+            padding: 2px 8px;
+            border-radius: 99px;
+            border: 1px solid;
+            white-space: nowrap;
+        }
+        .mode-status.online  { border-color: var(--success); color: var(--success); }
+        .mode-status.offline { border-color: rgba(255,255,255,.15); color: var(--dim); }
+        .mode-status.loading { border-color: var(--warn); color: var(--warn); }
+        .mode-status.mobile  { border-color: var(--native); color: var(--native); }
+
+        .summary-group {
+            display: flex;
+            gap: 8px;
+            font-family: var(--mono);
+            font-size: 12px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .badge {
+            padding: 3px 10px;
+            border-radius: 99px;
+            border: 1px solid;
+            white-space: nowrap;
+        }
+        .badge.pass  { border-color: var(--success); color: var(--success); }
+        .badge.fail  { border-color: var(--fail);    color: var(--fail); }
+        .badge.total { border-color: var(--dim);     color: var(--dim); }
+
+        #status-label {
+            font-size: 12px;
+            color: var(--dim);
+            flex-shrink: 0;
+        }
+
+        button#run-btn {
+            padding: 5px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--accent);
+            background: rgba(0,240,255,.07);
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 12px;
+            font-family: inherit;
+            transition: background .15s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        button#run-btn:hover   { background: rgba(0,240,255,.15); }
+        button#run-btn:disabled{ opacity: .4; cursor: default; }
+
+        #wake-btn {
+            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(167,139,250,.4);
+            background: rgba(167,139,250,.07);
+            color: var(--native);
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            display: inline-block;
+        }
+        #wake-btn:hover { background: rgba(167,139,250,.15); }
+
+        /* ── Progress bar ────────────────────────────────────────────────── */
+        .progress-track {
+            height: 3px;
+            background: rgba(255,255,255,.05);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .bar { height: 100%; width: 0; border-radius: 2px; transition: width .18s ease, background .3s; }
+        .bar.pass { background: var(--success); }
+        .bar.fail { background: var(--fail); }
+
+        /* ── Body ────────────────────────────────────────────────────────── */
+        main { padding: 20px; max-width: 960px; margin: 0 auto; }
+
+        /* ── Suite cards ─────────────────────────────────────────────────── */
+        .suite-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .suite-card.cat-native { border-color: rgba(167,139,250,.15); }
+        .suite-card.cat-wasm   { border-color: rgba(0,240,255,.10); }
+
+        .suite-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 14px;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid transparent;
+            transition: background .1s;
+        }
+        .suite-header:hover { background: rgba(255,255,255,.025); }
+        .suite-header.has-failures { border-bottom-color: rgba(248,113,113,.2); }
+
+        .suite-toggle { font-size: 10px; color: var(--dim); width: 12px; flex-shrink: 0; }
+
+        .suite-cat {
+            font-size: 9px;
+            font-family: var(--mono);
+            padding: 1px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            flex-shrink: 0;
+        }
+        .cat-logic  .suite-cat { background: rgba(74,222,128,.1);  color: var(--success); }
+        .cat-wasm   .suite-cat { background: rgba(0,240,255,.1);   color: var(--accent); }
+        .cat-native .suite-cat { background: rgba(167,139,250,.1); color: var(--native); }
+
+        .suite-name { font-weight: 500; font-size: 13px; flex: 1; }
+        .cat-logic  .suite-name { color: var(--success); }
+        .cat-wasm   .suite-name { color: var(--accent); }
+        .cat-native .suite-name { color: var(--native); }
+
+        .suite-stats { font-family: var(--mono); font-size: 11px; display: flex; gap: 8px; flex-shrink: 0; }
+        .suite-pass { color: var(--success); }
+        .suite-fail { color: var(--fail); }
+
+        /* ── Test list ───────────────────────────────────────────────────── */
+        .suite-tests { list-style: none; display: none; padding: 4px 0 6px; }
+        .suite-card.open .suite-tests { display: block; }
+
+        .test-row {
+            display: grid;
+            grid-template-columns: 18px 1fr auto;
+            gap: 4px;
+            align-items: baseline;
+            padding: 4px 14px 4px 30px;
+            font-size: 12.5px;
+        }
+        .test-row.pass { color: rgba(255,255,255,.65); }
+        .test-row.fail { color: var(--fail); background: rgba(248,113,113,.04); }
+        .test-row.fail .test-name { color: var(--fail); }
+
+        .test-icon { font-size: 11px; text-align: center; }
+        .test-row.pass .test-icon { color: var(--success); }
+        .test-row.fail .test-icon { color: var(--fail); }
+
+        .test-name { font-family: var(--mono); }
+        .test-ms   { font-family: var(--mono); font-size: 10px; color: var(--dim); white-space: nowrap; }
+
+        .test-error {
+            grid-column: 2 / 4;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--fail);
+            background: rgba(248,113,113,.08);
+            border-left: 2px solid var(--fail);
+            padding: 4px 8px;
+            border-radius: 0 4px 4px 0;
+            margin-top: 2px;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        /* ── Legend / help text ──────────────────────────────────────────── */
+        .legend {
+            font-size: 11px;
+            color: var(--dim);
+            margin-bottom: 14px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 8px 12px;
+            background: rgba(255,255,255,.02);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+        .legend span { display: flex; align-items: center; gap: 5px; }
+
+        /* ── Mobile tweaks ───────────────────────────────────────────────── */
+        @media (max-width: 600px) {
+            main { padding: 12px; }
+            .header-row { gap: 8px; }
+            h1 { font-size: .9rem; }
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-row">
+        <h1>QualiaDB · Test Suite</h1>
+
+        <div class="mode-tabs" role="tablist">
+            <button class="mode-btn active" data-mode="wasm"   role="tab">⬡ WASM</button>
+            <button class="mode-btn"        data-mode="native" role="tab">◈ Native</button>
+            <button class="mode-btn"        data-mode="both"   role="tab">⊕ Both</button>
+        </div>
+
+        <div class="summary-group">
+            <span class="badge pass"><span id="summary-passed">0</span> passed</span>
+            <span class="badge fail"><span id="summary-failed">0</span> failed</span>
+            <span class="badge total"><span id="summary-total">0</span> total</span>
+        </div>
+
+        <span id="status-label">Initialising…</span>
+        <button id="run-btn">▶ Run</button>
+        <label id="manual-label" title="Activate WordNet integration tests — requires docs/playground/wordnet.q42 (run scripts/fetch_wordnet.sh first)">
+            <input type="checkbox" id="manual-toggle"> Manual
+        </label>
+    </div>
+
+    <div class="status-row">
+        <span id="wasm-badge"   class="mode-status loading">… Loading WASM</span>
+        <span id="native-badge" class="mode-status offline">⬤ Daemon offline</span>
+        <span id="mobile-badge" class="mode-status mobile"  style="display:none">📱 Mobile</span>
+        <a href="#" id="wake-btn" style="display:none">Launch Daemon</a>
+    </div>
+
+    <div class="progress-track">
+        <div class="bar pass" id="progress-bar"></div>
+    </div>
+</header>
+
+<main>
+    <div class="legend">
+        <span><span style="color:var(--success)">■</span> Logic — pure JS modality spec (all modes)</span>
+        <span><span style="color:var(--accent)">■</span> WASM — in-browser WebAssembly tests</span>
+        <span><span style="color:var(--native)">■</span> Native — local daemon at localhost:4242</span>
+        <span style="color:var(--dim)">WASM tests skip gracefully if function absent from current build · Native tests skip when daemon offline</span>
+    </div>
+
+    <div id="suite-list"></div>
+</main>
+
+<script type="module" src="runner.js"></script>
+</body>
+</html>

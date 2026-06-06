@@ -6,121 +6,147 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `app_meta_dir`, `identity_file_path`, `imported_accounts_path`, `to_hex`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ACTIVE_DOWNLOADS`, `ACTIVE_MODEL`, `CANCEL_FLAGS`, `DAEMON_RUNNING`, `PHYSICS_STATE`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `deref`, `deref`, `deref`, `deref`, `deref`, `initialize`, `initialize`, `initialize`, `initialize`, `initialize`
-
 Future<String> greet({required String name}) =>
-    RustLib.instance.api.crateApiQualiaApiGreet(name: name);
+    RustApi.instance.api.crateApiQualiaApiGreet(name: name);
 
 Future<HardwareStatus> getHardwareStatus() =>
-    RustLib.instance.api.crateApiQualiaApiGetHardwareStatus();
+    RustApi.instance.api.crateApiQualiaApiGetHardwareStatus();
 
 Future<bool> checkOllamaStatus() =>
-    RustLib.instance.api.crateApiQualiaApiCheckOllamaStatus();
+    RustApi.instance.api.crateApiQualiaApiCheckOllamaStatus();
 
 Future<AgentConfig> getConfig() =>
-    RustLib.instance.api.crateApiQualiaApiGetConfig();
-
-Future<void> saveConfig({required AgentConfig newConfig}) =>
-    RustLib.instance.api.crateApiQualiaApiSaveConfig(newConfig: newConfig);
-
-Future<TaxRecipientSuite> getTaxSuite() =>
-    RustLib.instance.api.crateApiQualiaApiGetTaxSuite();
+    RustApi.instance.api.crateApiQualiaApiGetConfig();
 
 Future<List<CoinBalance>> getCoinBalances() =>
-    RustLib.instance.api.crateApiQualiaApiGetCoinBalances();
-
-Future<void> saveIdentity({required String walletsJson}) => RustLib.instance.api
-    .crateApiQualiaApiSaveIdentity(walletsJson: walletsJson);
-
-Future<String?> loadIdentity() =>
-    RustLib.instance.api.crateApiQualiaApiLoadIdentity();
-
-Future<String> generateBip39Seed() =>
-    RustLib.instance.api.crateApiQualiaApiGenerateBip39Seed();
-
-Future<String> deriveWalletsFromSeed({required String seed}) =>
-    RustLib.instance.api.crateApiQualiaApiDeriveWalletsFromSeed(seed: seed);
-
-Future<String> importExternalSeed(
-        {required String network,
-        required String seed,
-        required String label}) =>
-    RustLib.instance.api.crateApiQualiaApiImportExternalSeed(
-        network: network, seed: seed, label: label);
-
-Future<String> loadImportedAccounts() =>
-    RustLib.instance.api.crateApiQualiaApiLoadImportedAccounts();
-
-Future<void> saveImportedAccounts({required String accountsJson}) =>
-    RustLib.instance.api
-        .crateApiQualiaApiSaveImportedAccounts(accountsJson: accountsJson);
-
-Future<List<ProgressPayload>> getActiveDownloads() =>
-    RustLib.instance.api.crateApiQualiaApiGetActiveDownloads();
-
-Future<void> cancelDownload({required String id}) =>
-    RustLib.instance.api.crateApiQualiaApiCancelDownload(id: id);
-
-Future<String> downloadModel(
-        {required String url,
-        required String filename,
-        required String modelId}) =>
-    RustLib.instance.api.crateApiQualiaApiDownloadModel(
-        url: url, filename: filename, modelId: modelId);
-
-Future<List<ModelInfo>> discoverModels() =>
-    RustLib.instance.api.crateApiQualiaApiDiscoverModels();
-
-Future<String?> getActiveModel() =>
-    RustLib.instance.api.crateApiQualiaApiGetActiveModel();
-
-Future<void> setActiveModel({required String modelName}) =>
-    RustLib.instance.api.crateApiQualiaApiSetActiveModel(modelName: modelName);
+    RustApi.instance.api.crateApiQualiaApiGetCoinBalances();
 
 Future<String> startDaemon() =>
-    RustLib.instance.api.crateApiQualiaApiStartDaemon();
+    RustApi.instance.api.crateApiQualiaApiStartDaemon();
 
 Future<String> daemonStatus() =>
-    RustLib.instance.api.crateApiQualiaApiDaemonStatus();
+    RustApi.instance.api.crateApiQualiaApiDaemonStatus();
 
-Future<SpatialPhysicsState> getPhysicsState() =>
-    RustLib.instance.api.crateApiQualiaApiGetPhysicsState();
+Future<double> getSpatialTemperature() =>
+    RustApi.instance.api.crateApiQualiaApiGetSpatialTemperature();
+
+Future<double> getSpatialPressure() =>
+    RustApi.instance.api.crateApiQualiaApiGetSpatialPressure();
+
+Future<double> getSpatialTimeDilation() =>
+    RustApi.instance.api.crateApiQualiaApiGetSpatialTimeDilation();
+
+Future<double> getPhysicsStateTemperature() =>
+    RustApi.instance.api.crateApiQualiaApiGetPhysicsStateTemperature();
+
+Future<double> getPhysicsStatePressure() =>
+    RustApi.instance.api.crateApiQualiaApiGetPhysicsStatePressure();
+
+Future<double> getPhysicsStateTimeDilation() =>
+    RustApi.instance.api.crateApiQualiaApiGetPhysicsStateTimeDilation();
+
+Future<List<String>> listInstalledApps() =>
+    RustApi.instance.api.crateApiQualiaApiListInstalledApps();
+
+Future<String> launchInstalledApp({required String appName}) =>
+    RustApi.instance.api.crateApiQualiaApiLaunchInstalledApp(appName: appName);
+
+Future<String> generateAppCredential({required String appName}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiGenerateAppCredential(appName: appName);
+
+Future<String> verifyAndInstallApp(
+        {required String zipPath, required String credentialSig}) =>
+    RustApi.instance.api.crateApiQualiaApiVerifyAndInstallApp(
+        zipPath: zipPath, credentialSig: credentialSig);
+
+Future<String> ingestLiterature({required String filePath}) =>
+    RustApi.instance.api.crateApiQualiaApiIngestLiterature(filePath: filePath);
+
+Future<void> initCore() => RustApi.instance.api.crateApiQualiaApiInitCore();
+
+Future<List<ModelInfo>> discoverModels() =>
+    RustApi.instance.api.crateApiQualiaApiDiscoverModels();
+
+Future<String?> getActiveModel() =>
+    RustApi.instance.api.crateApiQualiaApiGetActiveModel();
+
+Future<void> setActiveModel({required String modelName}) =>
+    RustApi.instance.api.crateApiQualiaApiSetActiveModel(modelName: modelName);
+
+Future<List<CatalogItem>> fetchModelCatalog() =>
+    RustApi.instance.api.crateApiQualiaApiFetchModelCatalog();
+
+Future<List<CatalogItem>> fetchModelCatalogReal() =>
+    RustApi.instance.api.crateApiQualiaApiFetchModelCatalogReal();
+
+Future<List<CatalogItem>> fetchOntologyCatalog() =>
+    RustApi.instance.api.crateApiQualiaApiFetchOntologyCatalog();
+
+Future<List<CatalogItem>> fetchOntologyCatalogReal() =>
+    RustApi.instance.api.crateApiQualiaApiFetchOntologyCatalogReal();
 
 Future<void> updatePhysicsState(
         {required double temperature,
         required double pressure,
         required double timeDilation}) =>
-    RustLib.instance.api.crateApiQualiaApiUpdatePhysicsState(
+    RustApi.instance.api.crateApiQualiaApiUpdatePhysicsState(
         temperature: temperature,
         pressure: pressure,
         timeDilation: timeDilation);
 
-Future<String> verifyAndInstallApp(
-        {required String zipPath, required String credentialSig}) =>
-    RustLib.instance.api.crateApiQualiaApiVerifyAndInstallApp(
-        zipPath: zipPath, credentialSig: credentialSig);
+Future<TaxRecipientSuite> getTaxSuite() =>
+    RustApi.instance.api.crateApiQualiaApiGetTaxSuite();
 
-Future<String> ingestLiterature({required String filePath}) =>
-    RustLib.instance.api.crateApiQualiaApiIngestLiterature(filePath: filePath);
+Future<String> deriveWalletsFromSeed({required String seed}) =>
+    RustApi.instance.api.crateApiQualiaApiDeriveWalletsFromSeed(seed: seed);
+
+Future<String> generateBip39Seed() =>
+    RustApi.instance.api.crateApiQualiaApiGenerateBip39Seed();
+
+Future<String> importExternalSeed(
+        {required String network,
+        required String seed,
+        required String label}) =>
+    RustApi.instance.api.crateApiQualiaApiImportExternalSeed(
+        network: network, seed: seed, label: label);
+
+Future<String?> loadIdentity() =>
+    RustApi.instance.api.crateApiQualiaApiLoadIdentity();
+
+Future<void> saveIdentity({required String walletsJson}) => RustApi.instance.api
+    .crateApiQualiaApiSaveIdentity(walletsJson: walletsJson);
+
+Future<String> loadImportedAccounts() =>
+    RustApi.instance.api.crateApiQualiaApiLoadImportedAccounts();
+
+Future<void> saveImportedAccounts({required String accountsJson}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiSaveImportedAccounts(accountsJson: accountsJson);
+
+Future<void> saveConfig({required AgentConfig newConfig}) =>
+    RustApi.instance.api.crateApiQualiaApiSaveConfig(newConfig: newConfig);
+
+Future<List<ProgressPayload>> getActiveDownloads() =>
+    RustApi.instance.api.crateApiQualiaApiGetActiveDownloads();
+
+Future<void> cancelDownload({required String id}) =>
+    RustApi.instance.api.crateApiQualiaApiCancelDownload(id: id);
+
+Future<String> downloadModel(
+        {required String url,
+        required String filename,
+        required String modelId}) =>
+    RustApi.instance.api.crateApiQualiaApiDownloadModel(
+        url: url, filename: filename, modelId: modelId);
+
+Future<SpatialPhysicsState> getPhysicsState() =>
+    RustApi.instance.api.crateApiQualiaApiGetPhysicsState();
 
 Future<String> upsertCmldDefinition(
         {required String term, required String contextDid}) =>
-    RustLib.instance.api.crateApiQualiaApiUpsertCmldDefinition(
+    RustApi.instance.api.crateApiQualiaApiUpsertCmldDefinition(
         term: term, contextDid: contextDid);
-
-Future<List<CatalogItem>> fetchModelCatalog() =>
-    RustLib.instance.api.crateApiQualiaApiFetchModelCatalog();
-
-Future<List<CatalogItem>> fetchOntologyCatalog() =>
-    RustLib.instance.api.crateApiQualiaApiFetchOntologyCatalog();
-
-Future<List<CatalogItem>> fetchModelCatalogReal() =>
-    RustLib.instance.api.crateApiQualiaApiFetchModelCatalogReal();
-
-Future<List<CatalogItem>> fetchOntologyCatalogReal() =>
-    RustLib.instance.api.crateApiQualiaApiFetchOntologyCatalogReal();
 
 class AgentConfig {
   final String storagePath;

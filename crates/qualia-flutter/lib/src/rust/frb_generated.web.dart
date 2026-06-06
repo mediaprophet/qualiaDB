@@ -7,14 +7,15 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/qualia_api.dart';
+import 'api/resource_catalog.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
-abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
-  RustLibApiImplPlatform({
+abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
+  RustApiApiImplPlatform({
     required super.handler,
     required super.wire,
     required super.generalizedFrbRustBinding,
@@ -34,6 +35,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AgentConfig dco_decode_box_autoadd_agent_config(dynamic raw);
 
   @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw);
+
+  @protected
   CatalogItem dco_decode_catalog_item(dynamic raw);
 
   @protected
@@ -46,13 +50,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   HardwareStatus dco_decode_hardware_status(dynamic raw);
 
   @protected
+  List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
   List<CatalogItem> dco_decode_list_catalog_item(dynamic raw);
 
   @protected
   List<CoinBalance> dco_decode_list_coin_balance(dynamic raw);
 
   @protected
+  List<LLMResource> dco_decode_list_llm_resource(dynamic raw);
+
+  @protected
   List<ModelInfo> dco_decode_list_model_info(dynamic raw);
+
+  @protected
+  List<OntologyResource> dco_decode_list_ontology_resource(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -64,10 +77,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TaxRecipient> dco_decode_list_tax_recipient(dynamic raw);
 
   @protected
+  LLMResource dco_decode_llm_resource(dynamic raw);
+
+  @protected
   ModelInfo dco_decode_model_info(dynamic raw);
 
   @protected
+  OntologyResource dco_decode_ontology_resource(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
+
+  @protected
+  List<String>? dco_decode_opt_list_String(dynamic raw);
 
   @protected
   ProgressPayload dco_decode_progress_payload(dynamic raw);
@@ -80,6 +105,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TaxRecipientSuite dco_decode_tax_recipient_suite(dynamic raw);
+
+  @protected
+  int dco_decode_u_32(dynamic raw);
 
   @protected
   BigInt dco_decode_u_64(dynamic raw);
@@ -103,6 +131,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AgentConfig sse_decode_box_autoadd_agent_config(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
   CatalogItem sse_decode_catalog_item(SseDeserializer deserializer);
 
   @protected
@@ -115,13 +146,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   HardwareStatus sse_decode_hardware_status(SseDeserializer deserializer);
 
   @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
   List<CatalogItem> sse_decode_list_catalog_item(SseDeserializer deserializer);
 
   @protected
   List<CoinBalance> sse_decode_list_coin_balance(SseDeserializer deserializer);
 
   @protected
+  List<LLMResource> sse_decode_list_llm_resource(SseDeserializer deserializer);
+
+  @protected
   List<ModelInfo> sse_decode_list_model_info(SseDeserializer deserializer);
+
+  @protected
+  List<OntologyResource> sse_decode_list_ontology_resource(
+      SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -135,10 +176,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  LLMResource sse_decode_llm_resource(SseDeserializer deserializer);
+
+  @protected
   ModelInfo sse_decode_model_info(SseDeserializer deserializer);
 
   @protected
+  OntologyResource sse_decode_ontology_resource(SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
+  List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
 
   @protected
   ProgressPayload sse_decode_progress_payload(SseDeserializer deserializer);
@@ -153,6 +206,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   TaxRecipientSuite sse_decode_tax_recipient_suite(
       SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
 
   @protected
   BigInt sse_decode_u_64(SseDeserializer deserializer);
@@ -180,6 +236,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       AgentConfig self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_catalog_item(CatalogItem self, SseSerializer serializer);
 
   @protected
@@ -193,6 +252,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       HardwareStatus self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_catalog_item(
       List<CatalogItem> self, SseSerializer serializer);
 
@@ -201,8 +263,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<CoinBalance> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_llm_resource(
+      List<LLMResource> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_model_info(
       List<ModelInfo> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_ontology_resource(
+      List<OntologyResource> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -217,10 +287,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<TaxRecipient> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_llm_resource(LLMResource self, SseSerializer serializer);
+
+  @protected
   void sse_encode_model_info(ModelInfo self, SseSerializer serializer);
 
   @protected
+  void sse_encode_ontology_resource(
+      OntologyResource self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
 
   @protected
   void sse_encode_progress_payload(
@@ -238,6 +321,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       TaxRecipientSuite self, SseSerializer serializer);
 
   @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_u_64(BigInt self, SseSerializer serializer);
 
   @protected
@@ -252,13 +338,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
 // Section: wire_class
 
-class RustLibWire implements BaseWire {
-  RustLibWire.fromExternalLibrary(ExternalLibrary lib);
+class RustApiWire implements BaseWire {
+  RustApiWire.fromExternalLibrary(ExternalLibrary lib);
 }
 
 @JS('wasm_bindgen')
-external RustLibWasmModule get wasmModule;
+external RustApiWasmModule get wasmModule;
 
 @JS()
 @anonymous
-extension type RustLibWasmModule._(JSObject _) implements JSObject {}
+extension type RustApiWasmModule._(JSObject _) implements JSObject {}

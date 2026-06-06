@@ -2,8 +2,7 @@ use std::fs::File;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use futures_core::Stream;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::Zeroize;
 
 pub mod query_engine;
 pub mod n3_parser;

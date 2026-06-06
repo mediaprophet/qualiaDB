@@ -2,7 +2,6 @@
 // Handles Cryptographic signatures (Bilateral Guardianship/DID) natively within the 
 // Secure Enclave, guaranteeing private keys never leak into the Rust RAM boundaries.
 
-use crate::QualiaQuin;
 
 #[cfg(target_os = "android")]
 pub mod android_keystore {

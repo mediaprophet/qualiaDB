@@ -2,7 +2,7 @@
 /// local QualiaDB Merkle-DAG state.
 /// This allows project collaborators to see financial and labor obligations 
 /// natively inside standard Git platforms (like GitHub or GitLab).
-pub fn generate_fast_export_stream(project_id: &str) -> String {
+pub fn generate_fast_export_stream(_project_id: &str) -> String {
     // In a production environment, this would iterate over the 
     // Author-Scoped Merkle signatures for the given project_id.
     let mut stream = String::new();

@@ -4,9 +4,12 @@
 
 [Watch: *The Untransferable Code*](https://www.youtube.com/watch?v=HJJs-Ve-Dhg) — the philosophical foundation of this work.
 
+> **⚠️ Pre-release — active development.**
+> This is v0.0.x software. Breaking changes to the API, binary formats, wire protocols, and `.q42` storage layout occur without deprecation notices. Nothing is stable until v0.1.0 at minimum. Do not use in production.
+
 Qualia-DB is a zero-allocation, 5-vector heterogeneous semantic graph engine built for personal devices. It enforces a strict **Principal-Agent Duty of Care**: the software is an Agent acting exclusively on behalf of the Natural Person (the Principal), never a platform extracting value for a third party.
 
-**512MB RAM floor · 48-byte Super-Quins · Webizen VM with N3/SHACL/Defeasible logic · ILP-native economics**
+**512MB RAM floor · 48-byte Super-Quins · Webizen VM with N3/SHACL/Defeasible logic · MCP fiduciary mediation · ILP-native economics**
 
 ---
 
@@ -20,19 +23,37 @@ cargo build --release -p qualia-cli
 cargo run --release -p qualia-cli -- bench --suite full
 ```
 
-**Desktop app:** Download from [Releases](https://github.com/mediaprophet/qualiaDB/releases) (Windows, macOS, Linux, Android).
+**Desktop app (Flutter):** Download from [Releases](https://github.com/mediaprophet/qualiaDB/releases) (Windows, macOS, Linux).
+
+**WASM:** `qualia-core-wasm.tar.gz` in [Releases](https://github.com/mediaprophet/qualiaDB/releases) — drop into any web project.
 
 ---
 
-## What it is
+## What It Is
 
-Qualia-DB is three things at once:
+Qualia-DB is four things at once:
 
 1. **A zero-allocation semantic graph engine** — binary `.q42` ledgers with 48-byte Super-Quins, LZ4 SuperBlocks, and microsecond memory-mapped queries. WordNet (523MB RDF) compresses to 74.6MB and streams with 6.5ms first-query latency via demand-paging.
 
-2. **A Webizen VM** — an N3Logic + SHACL + defeasible + omnimodal compiler that evaluates Rights Ontology rules, escrow adjudication, and structural constraints at query time with O(1) termination guarantees.
+2. **A Webizen VM** — an N3Logic + SHACL + full modality logic compiler that evaluates deontic norms, epistemic claims, temporal traces, paraconsistent contradictions, Rights Ontology rules, escrow adjudication, and structural constraints at query time with O(1) termination guarantees.
 
-3. **A Principal-Agent ecosystem** — DID:GIT staged axiomatic evolution, ILP Threshold Shift Licensing, decentralized threat intelligence, and a native Cooperative Workspace for shared projects.
+3. **A fiduciary AI layer** — MCP Intent Frame mediation, capability profiles, and seven LLM fiduciary rules ensure every AI agent call is pre- and post-validated against the Principal's declared rights, with conduct violations written to a tamper-proof WAL.
+
+4. **A Principal-Agent ecosystem** — DID:GIT staged axiomatic evolution, ILP Threshold Shift Licensing, decentralized threat intelligence, and a native Cooperative Workspace for shared projects.
+
+---
+
+## v0.0.6-dev Highlights (current branch)
+
+- **Full Modality Stack**: Epistemic logic (OP_KNOWS/BELIEVES/COMMON_KNOWLEDGE), LTL trace evaluation (G/F/X/U/R), Paraconsistent routing (contradiction isolation without system halt), Dialectical synthesis (thesis-antithesis-synthesis over ASP stable models).
+- **N3 → Deontic Bridge**: N3 rule parser now compiles directly to norm Quins. `^>` (Defeater) rules set `DEFEATER_BIT`. Round-trip tested.
+- **MCP Fiduciary Mediation**: `McpIntentFrame` + `enforce_fiduciary_tool_dispatch` + sanctuary gate with WAL conduct logging.
+- **LLM Agent Rules**: `AgentIntent` + `WebizenVerdict` + seven fiduciary rules including adversarial conduct tracking (DID-associated, cryptographically auditable).
+- **Capability Profiles**: QCHK binary format, six named profiles, profile-bound `ingest`, `profile compile/list/inspect` CLI.
+- **Resource Catalog**: Full download pipeline (YAML → reqwest → GGufSharder → WAL). `resources` CLI subcommand live. LLM, Ontology, and SPARQL endpoint registries.
+- **195/195 tests passing** at commit `0e4997a`.
+
+Full changelog: [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
@@ -46,27 +67,115 @@ Full release notes: [docs/manuals/RELEASE_NOTES_v0.0.5.md](docs/manuals/RELEASE_
 
 ---
 
-## v0.0.4 Highlights
+## Quick-Start CLI Examples
 
-- **Webizen Rebrand**: The legacy "Sentinel VM" architecture is now fully rebranded to "Webizen" across the codebase to accurately reflect sovereign agency.
-- **W3C Solid Interoperability Bridge**: A sandboxed `tokio` Allocation Firewall allows seamless HTTP REST export and import into legacy Solid Pods without breaking the 512MB RAM native floor.
-- **Native "Hard Science" SHACL Extensions**: Pure-Rust continuous dynamics, quantum DFT bounding, thermodynamics, and SIMD bioinformatics can now be natively invoked via `qualia:` semantic extensions off-heap.
-- **Desktop KaTeX Integration**: The Neuro-Chat UI automatically identifies mathematical offloads and renders beautiful LaTeX equations directly into the chat bubbles.
-- **HCAI DNS Frontdoor**: `qualia-cli webizen dns-frontdoor` generates zero-permission W3C `did:web` and DNS TXT records to allow discovery without compromising the offline-first vault.
+### Ingest RDF data with a capability profile
+```bash
+# Compile a JSON-LD profile to binary QCHK
+qualia profile compile profiles/health.jsonld health.chk
 
-Full release notes: [docs/manuals/RELEASE_NOTES_v0.0.4.md](docs/manuals/RELEASE_NOTES_v0.0.4.md)
+# Ingest Turtle file bound to the health profile
+qualia ingest --profile health.chk data/patient-graph.ttl output.q42
+```
+
+### Browse and download resources
+```bash
+# List available LLM models
+qualia resources list llms
+
+# Show details of a specific resource
+qualia resources show phi3-mini
+
+# Download and ingest an ontology
+qualia resources import-ontology snomed-ct
+
+# Download an LLM to local vault
+qualia resources download gemma2-2b-q4
+```
+
+### Profile management
+```bash
+# List known profiles with their q_hash IDs
+qualia profile list
+
+# Inspect a compiled QCHK profile
+qualia profile inspect health.chk
+```
+
+### Query and inspect
+```bash
+# Run the full benchmark suite
+qualia bench --suite full
+
+# Inspect Quin fields from a .q42 file
+qualia inspect output.q42
+
+# Start the local daemon
+qualia daemon start
+```
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Principal (Natural Person)                  │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ Capability Profile (QCHK)
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                MCP Intent Frame Mediation Layer                 │
+│         enforce_fiduciary_tool_dispatch + sanctuary gate        │
+└────────────┬───────────────────────────────────────────┬────────┘
+             │                                           │
+             ▼                                           ▼
+┌────────────────────────┐              ┌────────────────────────┐
+│     LLM Agent Layer    │              │    Query Engine         │
+│  AgentIntent +         │              │  SPARQL-like + N3Logic  │
+│  WebizenVerdict        │              │  mini_parser.rs         │
+│  7 fiduciary rules     │              │                         │
+└────────────┬───────────┘              └────────────┬───────────┘
+             │                                       │
+             ▼                                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Webizen VM (SlgArena 42MB)                    │
+│                                                                 │
+│  Deontic    Epistemic    LTL    Paraconsistent    ASP/DL        │
+│  0x10-12    0x20-22   0x40-44    0x30-32       modalities/      │
+│                                                                 │
+│  SHACL Compiler → WebizenOpcode bytecode                       │
+│  N3 Parser → Rule types → compile_n3_rule_to_norm              │
+│  Native Scientific: Clinical, Bioinformatics, Chemistry,        │
+│                     ODE, DFT, Thermodynamics, Geometry          │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Storage Engine (.q42)                         │
+│   SuperBlocks (LZ4) + BIDX demand-paging + WAL (Ed25519)       │
+│   48-byte QualiaQuins | FNV-1a hashed IRIs | zero heap          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Full architecture documentation: [ARCHITECTURE.md](ARCHITECTURE.md)
+
+---
 
 ## Documentation
 
 | Document | Purpose |
-|----------|---------|
-| [Architecture](docs/manuals/ARCHITECTURE.md) | 3-Core Triad, Webizen VM, Rights Ontology, ILP engine, DID:GIT, Fractal Sharding |
-| [Development Guide](docs/manuals/DEVELOPMENT.md) | Build from source, CLI reference, benchmarks, cross-compilation |
-| [Developer Guide](docs/manuals/developer-guide.md) | API reference and integration patterns |
-| [Developing Qualia Apps](docs/manuals/developing-apps.md) | Building UI pipelines, Tauri integrations, and hardware orchestration |
-| [ADRs](docs/manuals/adr/) | Architectural Decision Records (48-byte Quins, zero-alloc compiler, governance) |
-| [Glossary](docs/manuals/glossary.md) | Terms and concepts |
-| [AI Instructions](AI_INSTRUCTIONS.md) | Guidance for AI agents working on this codebase |
+|----------|---------| 
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Full layered architecture: Quin bit layout, all modalities, MCP mediation, LLM fiduciary rules, capability profiles, scientific engines, CLI |
+| [HANDOVER.md](HANDOVER.md) | Session handover for next AI agent — current state, known gaps, suggested tasks |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [TODO.md](TODO.md) | Remaining work and known gaps |
+| [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) | Phase completion status |
+| [docs/RESOURCE_CATALOG.md](docs/RESOURCE_CATALOG.md) | Resource catalog format, QCHK spec, CLI workflow |
+| [docs/manuals/DEVELOPMENT.md](docs/manuals/DEVELOPMENT.md) | Build from source, CLI reference, benchmarks, cross-compilation |
+| [ADRs](docs/manuals/adr/) | Architectural Decision Records |
+| [App Vault Developer Guide](docs/manuals/app-vault-developer-guide.md) | Build web apps for the App Vault — manifest spec, daemon API, auth, CORS |
+| [AI Instructions](AGENTS.md) | Guidance for AI agents working on this codebase |
 
 ---
 

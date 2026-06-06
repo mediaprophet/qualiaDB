@@ -1,9 +1,0 @@
-# Cooperative Brainstorming with Approach Evaluation
-
-@prefix qp: <https://qualia.org/ontology/cooperative-projects#> .
-
-# Idea with Approach & Debt Awareness
-{ ?idea a qp:Idea ; qp:approachType ?app . } => { ?idea qp:genesisIdea ?idea . } .
-
-# Link to Value-Complexity
-{ ?idea qp:impactScore ?impact ; qp:complexityScore ?comp . } => { ?idea qp:valueComplexityQuadrant ?quad . } .

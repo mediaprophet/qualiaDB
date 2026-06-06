@@ -515,8 +515,8 @@ pub fn translate_dna_to_protein(dna: &[u8], out: &mut [u8]) -> usize {
 /// Estimates the Isoelectric Point (pI) of a protein sequence using
 /// the Henderson-Hasselbalch equation and basic pKa values.
 pub fn calculate_isoelectric_point(protein: &[u8]) -> f64 {
-    let mut c_term = 1; // Alpha-COOH
-    let mut n_term = 1; // Alpha-NH2
+    let c_term = 1; // Alpha-COOH
+    let n_term = 1; // Alpha-NH2
     let mut d = 0; // Aspartic acid (D)
     let mut e = 0; // Glutamic acid (E)
     let mut c = 0; // Cysteine (C)

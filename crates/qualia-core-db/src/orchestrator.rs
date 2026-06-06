@@ -146,29 +146,32 @@ impl TaskOrchestrator {
             WebizenVerdict::Deny { rule_violated, reason, conduct_record } => {
                 // If the verdict contains a conduct violation Quin, propagate it to the immutable ledger
                 if let Some(quin) = conduct_record {
-                    if let Ok(mut wal) = crate::wal::WriteAheadLog::open(".qualia_conduct.wal") {
-                        let _ = wal.append_mutation(&quin);
-                        
-                        // Cryptographic signing pipeline (using a static key for demonstration of wiring)
-                        let secret = [42u8; 32];
-                        let signing_key = ed25519_dalek::SigningKey::from_bytes(&secret);
-                        let frame = [quin];
-                        let sub_root = crate::agency::compute_scoped_merkle_root(&frame, intent.principal_did_hash);
-                        let _signature = crate::agency::sign_agency_root(&signing_key, &sub_root);
-                        
-                        // In production, the signature and quin would be passed to SuperBlockWriter
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        if let Ok(mut wal) = crate::wal::WriteAheadLog::open(".qualia_conduct.wal") {
+                            let _ = wal.append_mutation(&quin);
+                            
+                            // Cryptographic signing pipeline (using a static key for demonstration of wiring)
+                            let secret = [42u8; 32];
+                            let signing_key = ed25519_dalek::SigningKey::from_bytes(&secret);
+                            let frame = [quin];
+                            let sub_root = crate::agency::compute_scoped_merkle_root(&frame, intent.principal_did_hash);
+                            let _signature = crate::agency::sign_agency_root(&signing_key, &sub_root);
+                            
+                            // In production, the signature and quin would be passed to SuperBlockWriter
+                        }
                     }
                 }
                 return OrchestrationResult::Blocked { rule_violated, reason };
             }
-            WebizenVerdict::DenyWithExplanation { rule_violated, reason, explanation } => {
+            WebizenVerdict::DenyWithExplanation { rule_violated, reason: _, explanation: _ } => {
                 // Return blocked with the detailed explanation
                 return OrchestrationResult::Blocked { 
                     rule_violated, 
                     reason: "Intent Frame Violation", 
                 };
             }
-            WebizenVerdict::RequireReconfirmation { reason } => {
+            WebizenVerdict::RequireReconfirmation { reason: _ } => {
                 return OrchestrationResult::Blocked { 
                     rule_violated: 0, 
                     reason: "Reconfirmation required", 
@@ -188,16 +191,19 @@ impl TaskOrchestrator {
         match agent.validate_output(&output) {
             WebizenVerdict::Deny { rule_violated, reason, conduct_record } => {
                 if let Some(quin) = conduct_record {
-                    if let Ok(mut wal) = crate::wal::WriteAheadLog::open(".qualia_conduct.wal") {
-                        let _ = wal.append_mutation(&quin);
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        if let Ok(mut wal) = crate::wal::WriteAheadLog::open(".qualia_conduct.wal") {
+                            let _ = wal.append_mutation(&quin);
+                        }
                     }
                 }
                 OrchestrationResult::Blocked { rule_violated, reason }
             }
-            WebizenVerdict::DenyWithExplanation { rule_violated, reason, explanation } => {
+            WebizenVerdict::DenyWithExplanation { rule_violated, reason: _, explanation: _ } => {
                 OrchestrationResult::Blocked { rule_violated, reason: "Output blocked due to frame bounds" }
             }
-            WebizenVerdict::RequireReconfirmation { reason } => {
+            WebizenVerdict::RequireReconfirmation { reason: _ } => {
                 OrchestrationResult::Blocked { rule_violated: 0, reason: "Output requires reconfirmation" }
             }
             _ => OrchestrationResult::Committed {

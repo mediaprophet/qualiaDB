@@ -6,6 +6,9 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "staticlib"]
 
+[lints.rust]
+unexpected_cfg = { level = "allow", check-cfg = ['cfg(frb_expand)'] }
+
 [dependencies]
 flutter_rust_bridge = "=2.12.0"
 qualia-core-db = { path = "../../qualia-core-db" }
@@ -13,6 +16,7 @@ qualia-client-core = { path = "../../qualia-client-core" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"
 lazy_static = "1.4"
 bip39 = { version = "2.2.2", features = ["rand"] }
 rand = "0.10.1"

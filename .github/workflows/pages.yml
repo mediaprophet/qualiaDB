@@ -42,10 +42,24 @@ jobs:
           key: ${{ runner.os }}-cargo-pages-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-pages-
 
+      - name: Add wasm32 target
+        run: rustup target add wasm32-unknown-unknown
+
       - name: Install system deps
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends gzip curl
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM (qualia-core-db)
+        run: wasm-pack build crates/qualia-core-db --target web --release
+
+      - name: Update playground WASM artifacts
+        run: |
+          cp crates/qualia-core-db/pkg/qualia_core_db_bg.wasm docs/playground/
+          cp crates/qualia-core-db/pkg/qualia_core_db.js      docs/playground/
 
       - name: Build WordNet dataset (100 k-triple subset for Pages demo)
         continue-on-error: true   # non-fatal: Pages deploys fine without WordNet data

@@ -1,10 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use qualia_core_db::llm_agent::{AgentRuntime, LocalLlmAgent, AgentIntent, WebizenVerdict};
-
 use std::thread;
 use std::time::Duration;
-use std::sync::Arc;
 use rtrb::RingBuffer;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -47,8 +44,8 @@ pub enum WebizenOp {
 }
 
 pub async fn execute_agent_inference(
-    prompt: String,
-    model_name: String,
+    _prompt: String,
+    _model_name: String,
     intent_layout: Vec<f64>,
 ) -> Result<(), String> {
     let temporal_end = intent_layout.get(1).copied().unwrap_or(2050.0);
