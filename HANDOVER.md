@@ -2,6 +2,48 @@
 
 ---
 
+## Session 2026-06-06 (part 3) — Autoregressive inference + Flutter chat UI wiring
+
+**Branch:** `main` + `0.0.6-dev` (both updated) | **Last commit:** `68019c4`
+
+### Completed this session
+
+#### GgufTokenizer (`gguf_sharder.rs`)
+- Real GGUF v2/v3 KV section walker: scans `tokenizer.ggml.tokens` (array of strings), `bos_token_id`, `eos_token_id`; handles all GGUF value types (uint8–float64, string, array) in `skip_value`.
+- 256-entry byte-level fallback for when no GGUF is loaded or model predates v2.
+- `encode()`: greedy longest-match tokenisation; single-byte fallback.
+- `decode()`: SentencePiece `▁` → space; `<0x##>` → raw byte.
+
+#### Autoregressive decode loop (`llm_agent.rs::infer_local_model`)
+- `QTensorEngine` + `load_gguf` initialised **inside** the spawned LLM thread (avoids `Send` requirement on DirectML/wgpu device handles).
+- Per-step: pseudo-embedding (sin-based from token ID) → `dispatch_fused_transformer_block` (DirectML/Accelerate/wgpu) → argmax logits → SPSC `LogitSummary` to Sentinel.
+- Sentinel (calling thread): injects `DenyRollback` on `0x99` anomaly byte in top-logit IEEE-754 representation. On rollback, LLM thread substitutes `cur_tok + 1 mod vocab_len`.
+- Stops at EOS token or `MAX_OUTPUT_TOKENS`; decoded via `GgufTokenizer::decode`.
+- WASM mock path preserved unchanged.
+
+#### Flutter chat UI (`chat_screen.dart`, `qualia_api.rs`)
+- `run_inference(prompt, model_path)` added to `qualia_api.rs` — calls full `TaskOrchestrator::orchestrate_inference` pipeline (intent validation → infer → output grounding).
+- FRB bindings regenerated (`frb_generated.{dart,rs}`).
+- `chat_screen.dart`: async `runInference()` call, loading indicator (`LinearProgressIndicator`), "No model loaded" banner when `modelPath` is empty, scroll-to-bottom.
+
+### Key files changed
+`crates/qualia-core-db/src/gguf_sharder.rs`,
+`crates/qualia-core-db/src/llm_agent.rs`,
+`crates/qualia-flutter/rust/src/api/qualia_api.rs`,
+`crates/qualia-flutter/rust/src/frb_generated.rs`,
+`crates/qualia-flutter/lib/screens/chat_screen.dart`,
+`crates/qualia-flutter/lib/src/rust/api/qualia_api.dart`,
+`crates/qualia-flutter/lib/src/rust/frb_generated.dart`
+
+### Immediate next tasks (priority order)
+1. **Real embedding lookup** — `GgufTokenizer` parses the KV section (vocab, BOS/EOS) but the tensor-info section (tensor names + byte offsets) is not yet parsed. Implement a `GgufTensorIndex::from_gguf(mmap)` that walks the tensor-info section after the KV section ends, builds a `HashMap<String, (u64, Vec<u64>, u32)>` (name → offset, shape, ggml_type). Use it in `infer_local_model` to look up `token_embd.weight` and slice the real embedding for each token.
+2. **modelPath threading in Flutter** — `QualiaHomeScreen._screens` is a static list; `ChatScreen` gets `modelPath = ''`. Convert to a stateful approach where `LLMHubScreen` can set `_activeModelPath` on the parent, which is then passed to `ChatScreen`.
+3. **DirectML.dll in release artifact** — add `DirectML.dll` copy step to `.github/workflows/release.yml` Windows Flutter job.
+4. **WASM rebuild** — push a tag to trigger CI rebuild of `qualia_core_db_bg.wasm` with `compile_query_to_json`.
+5. **CUDA stub** — `cudarc = "0.11"` behind `cfg(feature="cuda")`, `src/cuda_bridge.rs` mirroring `directml_bridge.rs`.
+
+---
+
 ## Session 2026-06-06 (part 2) — GPU inference, CI fixes, GH Pages
 
 **Branch:** `main` → pushed as `0.0.6-dev` | **Last commit:** see `git log --oneline -8`
