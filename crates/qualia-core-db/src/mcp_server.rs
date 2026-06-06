@@ -225,16 +225,37 @@ mod tests {
 
     #[test]
     fn test_sanctuary_override_binding() {
-        // Test parsing an MCP intent frame with a sanctuary scope override.
-        let bytes = br#"{"name": "query_graph", "arguments": {"sanctuary_override": "did:q42:patient_records"}}"#;
-        
-        let (opcode, intent_frame) = process_tools_call(b"query_graph", bytes).unwrap();
-        
-        assert_eq!(intent_frame.sanctuary_override.unwrap(), "did:q42:patient_records");
-        
-        // Test MISSING scenario
-        let bytes_missing = br#"{"name": "query_graph", "arguments": {}}"#;
-        let (_, intent_frame_missing) = process_tools_call(b"query_graph", bytes_missing).unwrap();
-        assert!(intent_frame_missing.sanctuary_override.is_none());
+        // A tools/call with sanctuary_override should proceed past the gate
+        // (it will hit execute_bare_metal_graph_traversal which returns Ok(0) stub).
+        let bytes_with_override = br#"{"jsonrpc":"2.0","method":"tools/call","params":{"name":"query_graph","arguments":{"sanctuary_override":"did:q42:patient_records"}}}"#;
+        let result = unsafe { parse_and_evaluate_mcp_stream(bytes_with_override) };
+        // Should not get SanctuaryGateTriggered — the gate passes because override is present
+        assert!(
+            !matches!(result, Err(McpSystemError::SanctuaryGateTriggered)),
+            "A valid sanctuary override must not trigger the gate"
+        );
+
+        // A tools/call WITHOUT sanctuary_override must be blocked at the gate
+        let bytes_no_override = br#"{"jsonrpc":"2.0","method":"tools/call","params":{"name":"query_graph","arguments":{}}}"#;
+        let result_blocked = unsafe { parse_and_evaluate_mcp_stream(bytes_no_override) };
+        assert!(
+            matches!(result_blocked, Err(McpSystemError::SanctuaryGateTriggered)),
+            "Missing sanctuary override must trigger SanctuaryGateTriggered"
+        );
+    }
+
+    #[test]
+    fn test_extract_override_token() {
+        // Unit test for the raw JSON extraction helper
+        let payload = br#"{"sanctuary_override":"did:q42:patient_records"}"#;
+        let extracted = extract_raw_json_string(payload, b"\"sanctuary_override\"");
+        assert_eq!(extracted, Some(b"did:q42:patient_records".as_slice()));
+    }
+
+    #[test]
+    fn test_extract_override_missing() {
+        let payload = br#"{"other_field":"value"}"#;
+        let extracted = extract_raw_json_string(payload, b"\"sanctuary_override\"");
+        assert!(extracted.is_none());
     }
 }

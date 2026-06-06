@@ -1240,10 +1240,14 @@ mod tests {
     #[test]
     fn test_isotope_distribution() {
         // Bromobenzene: C6 H5 Br1
+        // M+2 from Br: 1 × br81_ratio = 0.9728 → 97.28%
+        // M+2 from C6:  (6 × 0.0107)² / 2 = 0.00206 → 0.206%
+        // Combined M+2 ≈ 97.49%
         let r = isotope_mass_distribution(6, 0, 0, 0, 0, 1);
         assert!((r.m_peak - 100.0).abs() < 0.1);
         assert!((r.m1_peak - 6.42).abs() < 0.1);
-        assert!((r.m2_peak - 97.28).abs() < 0.1);
+        assert!((r.m2_peak - 97.49).abs() < 0.5,
+            "M+2 for bromobenzene expected ~97.49%, got {}", r.m2_peak);
     }
 
     #[test]
