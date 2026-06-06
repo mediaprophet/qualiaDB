@@ -1,0 +1,11 @@
+# flutter_rust_bridge configuration
+# Run: flutter_rust_bridge_codegen generate
+
+rust_input: rust/src/api.rs
+rust_output: lib/src/rust/api.dart
+
+# Optional: class name for the main API
+class_name: RustApi
+
+# Enable if you want to use the new v2 style
+# dart_format: true
