@@ -303,7 +303,10 @@
 
         function formatMs(val) {
             if (val === null || val === undefined) return '—';
-            if (typeof val === 'string') return val;
+            if (typeof val === 'string') {
+                if (val.startsWith('ERROR') || val === 'OOM') return '—';
+                return val;
+            }
             return Number(val).toFixed(2);
         }
 
@@ -394,8 +397,9 @@
             container.innerHTML = '';
 
             engines.forEach(engine => {
-                const val = keyFn(engine) || 0;
-                const pct = maxVal > 0 ? Math.max(8, Math.round((val / maxVal) * 100)) : 10;
+                const raw = keyFn(engine);
+                const val = typeof raw === 'number' ? raw : 0;
+                const pct = maxVal > 0 && val > 0 ? Math.max(8, Math.round((val / maxVal) * 100)) : 0;
                 const label = engine.meta?.label || engine.engine;
                 const isQualia = engine.engine === 'qualia';
 

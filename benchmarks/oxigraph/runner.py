@@ -60,10 +60,17 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
     t0 = time.perf_counter()
     try:
         store = pyoxigraph.Store()
-        # bulk_loader() is the fast path; equivalent to Qualia's zero-copy ingest
-        loader = store.bulk_loader()
         from io import BytesIO
-        loader.load_n_triples(BytesIO(nt_bytes))
+        buf = BytesIO(nt_bytes)
+        # API changed in pyoxigraph 0.3: bulk_loader() context manager removed;
+        # replaced by store.bulk_load(input, mime_type) direct method.
+        if hasattr(store, 'bulk_load'):
+            store.bulk_load(buf, "application/n-triples")
+        elif hasattr(store, 'bulk_loader'):
+            loader = store.bulk_loader()
+            loader.load_n_triples(buf)
+        else:
+            store.load(buf, "application/n-triples")
         result["ingestion_ms"]       = round((time.perf_counter() - t0) * 1000, 3)
         result["rss_before_load_mb"] = round(rss_before, 2)
         result["rss_after_load_mb"]  = round(peak_rss_mb(), 2)

@@ -101,7 +101,7 @@ jobs:
 
       - name: Start Qualia daemon (background)
         run: |
-          cargo run --release -p qualia-cli -- daemon --port 4242 &
+          cargo run --release -p qualia-cli -- daemon --dev --port 4242 &
           echo "Waiting for daemon to be healthy…"
           for i in $(seq 1 30); do
             curl -sf http://127.0.0.1:4242/health && echo "Daemon ready." && break

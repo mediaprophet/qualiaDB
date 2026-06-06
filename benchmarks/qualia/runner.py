@@ -37,10 +37,14 @@ def _probe_health(timeout: float = 1.0) -> bool:
 def _post_query(query: str, timeout: float = 30.0) -> dict:
     """POST a query to the daemon /query endpoint."""
     payload = json.dumps({"query": query}).encode()
+    headers = {"Content-Type": "application/json"}
+    token = os.environ.get("QUALIA_TOKEN") or os.environ.get("QUALIA_DEV_TOKEN")
+    if token:
+        headers["X-Qualia-Token"] = token
     req = urllib.request.Request(
         f"{DAEMON_URL}/query",
         data=payload,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout) as r:
