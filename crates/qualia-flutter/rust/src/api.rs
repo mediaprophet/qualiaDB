@@ -1,12 +1,9 @@
 use flutter_rust_bridge::frb;
-use crate::resource_catalog::{LLMResource, OntologyResource, ResourceCatalog};
 
-/// API exposed to Flutter via flutter_rust_bridge
-
+/// Load LLM resources from the Resource Catalog
 #[frb]
 pub fn load_llm_resources() -> Vec<LLMResource> {
-    // In a real implementation, this would load from resources/llms.yaml
-    // For now we return sample data that matches the catalog structure
+    // TODO: Read from resources/llms.yaml using the main QualiaDB resource loader
     vec![
         LLMResource {
             id: "phi-3-mini-4k-instruct-q4km".to_string(),
@@ -18,10 +15,10 @@ pub fn load_llm_resources() -> Vec<LLMResource> {
             tags: Some(vec!["general".to_string(), "reasoning".to_string(), "edge".to_string()]),
             recommended_for: Some(vec!["edge".to_string(), "rag".to_string()]),
         },
-        // Add more from resources/llms.yaml as needed
     ]
 }
 
+/// Load Ontology resources from the Resource Catalog
 #[frb]
 pub fn load_ontology_resources() -> Vec<OntologyResource> {
     vec![
@@ -46,15 +43,67 @@ pub fn load_ontology_resources() -> Vec<OntologyResource> {
     ]
 }
 
+/// Download an LLM model
+///
+/// This should eventually integrate with the existing QualiaDB download/persistence system
+/// (the one added in v0.0.5).
 #[frb]
 pub fn download_llm(id: String) -> Result<String, String> {
-    // TODO: Implement actual download logic using the existing download system
-    println!("Rust: Starting download for LLM: {}", id);
-    Ok(format!("Download started for {}", id))
+    println!("[Rust] Received request to download LLM: {}", id);
+
+    // TODO: Integrate with the real download system
+    // Example future implementation:
+    // let result = crate::download::start_llm_download(&id).await;
+    // match result {
+    //     Ok(path) => Ok(format!("Download started: {}", path)),
+    //     Err(e) => Err(e.to_string()),
+    // }
+
+    // For now, simulate success
+    Ok(format!("Download initiated for LLM: {}", id))
+}
+
+/// Import an ontology into the local graph
+///
+/// This should eventually:
+/// - Download the ontology (if remote)
+/// - Validate with SHACL (if configured)
+/// - Import into the Super-Quin graph with provenance
+#[frb]
+pub fn import_ontology(id: String) -> Result<String, String> {
+    println!("[Rust] Received request to import ontology: {}", id);
+
+    // TODO: Integrate with existing persistence + ontology import logic
+    // Future:
+    // let result = crate::ontology::import_ontology(&id).await;
+    // if result.is_ok() { record_provenance(...) }
+
+    Ok(format!("Import initiated for ontology: {}", id))
+}
+
+// Supporting structs (these should eventually come from the main resource module)
+
+#[frb]
+#[derive(Debug, Clone)]
+pub struct LLMResource {
+    pub id: String,
+    pub name: String,
+    pub provider: Option<String>,
+    pub size_mb: Option<u32>,
+    pub quantization: Option<String>,
+    pub license: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub recommended_for: Option<Vec<String>>,
 }
 
 #[frb]
-pub fn import_ontology(id: String) -> Result<String, String> {
-    println!("Rust: Importing ontology: {}", id);
-    Ok(format!("Import started for {}", id))
+#[derive(Debug, Clone)]
+pub struct OntologyResource {
+    pub id: String,
+    pub name: String,
+    pub acronym: Option<String>,
+    pub domain: Option<String>,
+    pub size_estimate_mb: Option<u32>,
+    pub format: String,
+    pub license: Option<String>,
 }
