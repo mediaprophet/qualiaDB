@@ -411,6 +411,8 @@ pub mod gguf_bridge;
 pub mod gguf_sharder;
 #[cfg(target_os = "windows")]
 pub mod directml_bridge;
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub mod metal_bridge;
 pub mod resource_catalog;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;

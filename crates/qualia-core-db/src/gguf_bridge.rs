@@ -157,7 +157,28 @@ impl QTensorEngine {
             }
         }
 
-        // ── wgpu / WGSL fallback (all platforms, or when DirectML unavailable) ─
+        // ── Accelerate BLAS path (macOS / Apple Silicon AMX) ─────────────────────
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
+        if let Some(mmap) = &self.gguf_mmap {
+            let offset = (self.tensor_data_offset + tensor.byte_offset) as usize;
+            let q4_bytes_needed = (rows * cols / crate::metal_bridge::Q4_K_BLOCK_SIZE)
+                * crate::metal_bridge::Q4_K_BLOCK_BYTES;
+            if offset + q4_bytes_needed <= mmap.len() {
+                let q4_slice = &mmap[offset..offset + q4_bytes_needed];
+                let weights_f32 = crate::metal_bridge::dequantize_q4_k_tensor(q4_slice, rows * cols);
+                let input_rows = (input_activations.len() / cols).max(1);
+                let result = crate::metal_bridge::accelerate_sgemm(
+                    input_rows, cols, rows, input_activations, &weights_f32
+                );
+                crate::telemetry::SIEVE_OPS_COUNT.fetch_add(
+                    rows * cols, std::sync::atomic::Ordering::Relaxed,
+                );
+                return result;
+            }
+        }
+
+        // ── wgpu / WGSL fallback (all platforms — Vulkan on Linux/NVIDIA,
+        //    Metal on macOS when mmap not loaded, D3D12 on Windows fallback) ──
         let input_bytes = bytemuck::cast_slice(input_activations);
         let input_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Input"),

@@ -2,6 +2,62 @@
 
 ---
 
+## Session 2026-06-06 (part 2) — GPU inference, CI fixes, GH Pages
+
+**Branch:** `main` → pushed as `0.0.6-dev` | **Last commit:** see `git log --oneline -8`
+
+### Completed this session
+
+#### CI / Release fixes
+- **Flutter Linux + macOS**: ran `flutter create --platforms=linux,macos .` in `crates/qualia-flutter/`; committed `linux/` and `macos/` scaffolds. Fixes both failing CI jobs.
+- **`release.yml`**: added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` workflow-level env (mandatory from 2026-06-16).
+- **`wasm_bridge.rs`**: exported `compile_query_to_json()` — was missing from compiled WASM, silently breaking 6 GH Pages files (`playground/script.js`, `src/qualia-worker.js`, `api-explorer/catalog.js`, three test suites). Takes SPARQL or N-Triples query, returns JSON bytecode representation.
+
+#### GH Pages benchmark fixes
+- **`docs/benchmark.html`** (main live page at `/benchmark.html`): wired real WASM mode — loads `qualia_core_db_bg.wasm`, runs `execute_ntriples_query` in 50-iteration timing loop, displays P50/throughput/VM cycles. Previously just showed a redirect message.
+- **`docs/playground/benchmark.html`** (transparent harness): wires real WASM alongside Oxigraph; QualiaDB column uses Rust pipeline when WASM loads, JS sim as fallback.
+
+#### GPU inference — DirectML 1.15 (Windows)
+- Downloaded `Microsoft.AI.DirectML` v1.15.4 NuGet → checked in `vendor/directml/bin/x64-win/` (17.7 MB DLL).
+- **`build.rs`**: links `d3d12 + dxgi` (system) and `DirectML` from vendor; emits `cfg(feature="directml")`; DIRECTML_LIB_PATH env-var fallback for CI.
+- **`src/directml_bridge.rs`** (new): `DmlDevice::new()` creates D3D12 + DirectML device on highest-VRAM adapter. `dequantize_q4_k_tensor()` real Q4_K→f32. `DmlGemmOp::execute()` full D3D12 pipeline with descriptor heaps + binding tables.
+- **`gguf_bridge.rs`**: `load_gguf(path)` memory-maps the GGUF file. `dispatch_fused_transformer_block()` tries DirectML Q4_K GEMM first; falls back to wgpu/WGSL.
+
+#### GPU inference — Metal / Accelerate (macOS Apple Silicon)
+- **`src/metal_bridge.rs`** (new): `dequantize_q4_k_tensor()` + `accelerate_sgemm()` via `cblas_sgemm` from Accelerate.framework. On M-series chips this runs on the AMX coprocessor (dedicated matrix-multiply hardware, no GPU scheduling overhead).
+- **`gguf_bridge.rs`**: macOS path tries Accelerate BLAS after the DirectML block.
+
+#### Platform GPU coverage (summary)
+| Platform | GPU path | Notes |
+|---|---|---|
+| Windows x64 | DirectML 1.15 → wgpu/D3D12 | SDK in vendor/ |
+| macOS Apple Silicon | Accelerate/AMX → wgpu/Metal | Frameworks linked by build.rs |
+| Linux (NVIDIA/AMD) | wgpu/Vulkan (automatic) | wgpu picks system Vulkan ICD |
+| Linux + QUALIA_CUDA=1 | cuBLAS stub (cfg gated) | Needs `cudarc` crate — not implemented yet |
+
+### Key files changed this session
+`crates/qualia-core-db/build.rs`, `src/directml_bridge.rs` (new),
+`src/metal_bridge.rs` (new), `src/gguf_bridge.rs`, `src/lib.rs`,
+`Cargo.toml`, `vendor/directml/**`,
+`.github/workflows/release.yml`,
+`docs/benchmark.html`, `docs/playground/benchmark.html`,
+`crates/qualia-flutter/linux/**` (new), `crates/qualia-flutter/macos/**` (new)
+
+### Immediate next tasks (priority order)
+1. **LLM token generation** — `infer_local_model()` in `llm_agent.rs` is still mocked.
+   The GPU compute path is wired (`dispatch_fused_transformer_block` + `load_gguf`),
+   but the autoregressive decode loop, tokenizer, and sampling are not.
+   See `NEW_SESSION_PROMPT.md` for the briefing to use in the next Claude session.
+2. **GGUF tokenizer** — `gguf_sharder.rs::extract_ontology_to_superblock()` returns zeros.
+   The vocabulary + BPE merges need to be parsed from the GGUF header KV section.
+3. **WASM rebuild** — `compile_query_to_json` is in Rust but not yet in the compiled
+   `docs/playground/qualia_core_db_bg.wasm`. Needs a tag push to trigger CI rebuild.
+4. **WellFair `index.html`** — mobile-first app; desktop variant deferred.
+5. **DirectML.dll shipping** — add `DirectML.dll` copy step to `release.yml` Windows job
+   so the CLI artifact is runnable without a separate SDK install.
+
+---
+
 ## Session 2026-06-06 — v0.0.6 release (App Vault, WASM, CI rebuild)
 
 **Branch:** `main` | **Tag:** `v0.0.6` | **Last commit:** `8579f22`
