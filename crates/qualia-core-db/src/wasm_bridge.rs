@@ -458,6 +458,44 @@ pub fn execute_ntriples_query(query: &str, db_bytes: &[u8], max_results: usize) 
     }
 }
 
+/// Compiles a query string (SPARQL WHERE-clause or N-Triples pattern) to a JSON
+/// description of the Webizen VM bytecode program.  Useful for playground inspection
+/// and benchmarking the compilation pipeline without supplying a database.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn compile_query_to_json(query: &str) -> String {
+    use crate::query_compiler::QueryCompiler;
+
+    #[derive(Serialize)]
+    struct InstructionOut { op: String }
+    #[derive(Serialize)]
+    struct ProgramOut { source: &'static str, compiled_len: usize, instructions: Vec<InstructionOut> }
+
+    // Try SPARQL / JSON-LD / N3 path first (has WHERE { } block)
+    let bytecode = QueryCompiler::compile_to_bytecode(query);
+    if !bytecode.is_empty() {
+        let instructions: Vec<InstructionOut> = bytecode.iter()
+            .map(|op| InstructionOut { op: format!("{:?}", op) })
+            .collect();
+        let compiled_len = instructions.len();
+        return serde_json::to_string(&ProgramOut { source: "query_compiler", compiled_len, instructions })
+            .unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string());
+    }
+
+    // Fall back to N-Triples mini_parser pattern
+    let mut program = [0u8; 1024];
+    match crate::mini_parser::compile_ntriples_to_bytecode(query.as_bytes(), &mut program) {
+        Ok(len) => {
+            let instructions: Vec<InstructionOut> = program[..len].iter().enumerate()
+                .map(|(i, &b)| InstructionOut { op: format!("byte[{}]={:#04x}", i, b) })
+                .collect();
+            serde_json::to_string(&ProgramOut { source: "mini_parser", compiled_len: len, instructions })
+                .unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string())
+        }
+        Err(e) => format!(r#"{{"error":"compilation failed: {}"}}"#, e),
+    }
+}
+
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn parse_turtle_wasm(payload: &str) -> JsValue {
