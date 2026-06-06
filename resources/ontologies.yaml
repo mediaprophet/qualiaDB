@@ -72,3 +72,19 @@ ontologies:
     domain: "social"
     tags: [core, social]
     last_verified: "2026-06-05"
+
+  # Additional useful ontology
+  - id: "shacl"
+    name: "SHACL"
+    acronym: "SHACL"
+    source: "W3C"
+    format: "ttl"
+    size_estimate_mb: 0.3
+    download:
+      type: "direct"
+      url: "https://www.w3.org/ns/shacl/shacl.ttl"
+    license: "W3C"
+    domain: "validation"
+    tags: [core, w3c, validation]
+    last_verified: "2026-06-06"
+    notes: "Shapes Constraint Language. Essential for data validation in QualiaDB."

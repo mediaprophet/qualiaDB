@@ -89,3 +89,22 @@ llms:
     ram_estimate_mb: 5500
     tags: [general, reasoning]
     last_verified: "2026-06-05"
+
+  # Additional practical edge model
+  - id: "mistral-7b-instruct-v0.3-q4km"
+    name: "Mistral 7B Instruct v0.3 (Q4_K_M GGUF)"
+    provider: "Mistral AI / TheBloke"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 4100
+    download:
+      type: "huggingface"
+      repo: "TheBloke/Mistral-7B-Instruct-v0.3-GGUF"
+      file: "mistral-7b-instruct-v0.3.Q4_K_M.gguf"
+    license: "Apache-2.0"
+    recommended_for:
+      - balanced
+      - reasoning
+    ram_estimate_mb: 4800
+    tags: [general, reasoning, instruction]
+    last_verified: "2026-06-05"

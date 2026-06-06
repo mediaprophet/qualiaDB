@@ -2,65 +2,69 @@
 
 **Branch:** `feat/resource-catalog`
 
-This document outlines the phased implementation of the external Resource Catalog system for LLMs, Ontologies, and SPARQL endpoints.
-
 ## Goals
+- Dynamic resource management without recompilation
+- Sovereign and offline-first by default
+- Clean integration with existing download/persistence system
 
-- Allow dynamic management of external resources without recompiling QualiaDB.
-- Keep the system sovereign and offline-first by default.
-- Integrate cleanly with the existing download/persistence system.
-- Make the catalog itself queryable inside QualiaDB where possible.
+## Current Progress
+- YAML registries created and expanded
+- Rust types and loader implemented
+- Basic structure ready for CLI and UI integration
 
-## Current State (as of 2026-06-06)
+## Integration Notes (Download / Persistence System)
 
-- `resources/` directory with YAML registries created.
-- Basic Rust module skeleton added.
-- Configuration example in `config/`.
+The Resource Catalog should integrate with the existing download system added in v0.0.5:
 
-## Phased Implementation
+- Use the same download destination and verification logic.
+- Record provenance when importing ontologies or models into the Super-Quin graph.
+- For LLMs: Store metadata + optional checksum alongside the GGUF file.
+- For Ontologies: After download, optionally run SHACL validation before importing.
+- For SPARQL: Store endpoint metadata in the management graph so it can be queried later.
 
-### Phase 1: Foundation (Current)
-- [x] Define YAML schemas and starter data
-- [x] Create master `catalog.yaml`
-- [x] Add Rust types matching the YAML
-- [ ] Implement YAML loader using `serde` + `serde_yaml`
-- [ ] Add basic CLI commands (`qualia resources list`, `qualia resources show`)
+## CLI Command Stubs (Suggested)
 
-### Phase 2: Core Integration
-- [ ] Wire loader into application startup
-- [ ] Integrate LLM downloads with existing persistence layer
-- [ ] Add ontology import path (with optional SHACL validation)
-- [ ] Store resource metadata + provenance in the Super-Quin graph
-- [ ] Support user-added custom resources via override file
+```bash
+qualia resources list llms
+qualia resources list ontologies
+qualia resources list sparql
+qualia resources show <id>
+qualia resources download <id>
+qualia resources import-ontology <id>
+```
 
-### Phase 3: Usability & UI
-- [ ] Expose resource browser in React/Vite UI
-- [ ] Add filtering, search, and tagging
-- [ ] "Download / Import" actions in the interface
-- [ ] Show resource health/status (last verified, size, license warnings)
+## Usage Example (Rust)
 
-### Phase 4: Advanced Sovereign Features
-- [ ] Optional catalog refresh tool (pulls from HF, BioPortal, LOV)
-- [ ] Checksum + signature verification on download
-- [ ] License policy enforcement
-- [ ] Export catalog as RDF/JSON-LD (so it becomes part of the semantic graph)
-- [ ] Support for local mirrors and IPFS references
+```rust
+use std::path::Path;
+use qualia_db::resources::{ResourceCatalog, load_catalog};
 
-## Technical Decisions
+fn main() {
+    let mut catalog = ResourceCatalog::new();
+    catalog.load_from_files(Path::new("resources/catalog.yaml"))
+        .expect("Failed to load resource catalog");
 
-- **Format**: YAML for human editability + git friendliness. Optional RDF export later.
-- **Loading**: `serde` + `serde_yaml` (or `serde_yml`).
-- **Storage**: Resource metadata lives in a dedicated management graph inside QualiaDB.
-- **Configuration**: `config/resources.yaml` (or TOML if preferred).
+    println!("Loaded {} LLMs", catalog.llm_count());
+    println!("Loaded {} Ontologies", catalog.ontology_count());
+    println!("Loaded {} SPARQL endpoints", catalog.sparql_count());
 
-## Open Questions
+    // Example: Find edge-friendly LLMs
+    for llm in &catalog.llms {
+        if let Some(tags) = &llm.tags {
+            if tags.contains(&"edge".to_string()) {
+                println!("Edge model available: {}", llm.name);
+            }
+        }
+    }
+}
+```
 
-- Should we support hot-reloading of the catalog while the app is running?
-- How should large ontology imports be chunked / modularized?
-- Do we want built-in support for content negotiation when downloading ontologies?
+## Next Priorities
+1. Wire the catalog into application startup
+2. Implement `qualia resources` CLI commands
+3. Connect downloads to the existing persistence layer
+4. Add UI browser in React/Vite
 
-## Next Actions
-
-1. Complete the YAML loader implementation.
-2. Add CLI commands.
-3. Integrate with the download system on `0.0.6-dev`.
+## Notes
+- Keep `allow_external_refresh` false by default for sovereignty.
+- Consider making the catalog itself importable as RDF into QualiaDB.
