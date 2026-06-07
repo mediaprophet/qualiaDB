@@ -237,6 +237,41 @@ pub enum AgentError {
     BackendUnavailable(String),
 }
 
+// ─── Embedding dispatch helpers (native) ─────────────────────────────────────
+
+#[cfg(not(target_arch = "wasm32"))]
+fn pseudo_embedding_forward(
+    token_id: u32,
+    emb_dim: usize,
+    emb_buf: &mut [f32],
+    engine: &crate::gguf_bridge::QTensorEngine,
+    wt: &crate::gguf_bridge::QTensor,
+) -> Vec<f32> {
+    for i in 0..emb_dim {
+        emb_buf[i] = (token_id as f32 * (i as f32 + 1.0) * 0.001_f32).sin()
+            * (1.0_f32 / (emb_dim as f32).sqrt());
+    }
+    engine.dispatch_fused_transformer_block(wt, &emb_buf[..emb_dim])
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn cpu_embedding_forward(
+    engine: &crate::gguf_bridge::QTensorEngine,
+    idx: &crate::gguf_sharder::GgufTensorIndex,
+    mmap: &[u8],
+    token_id: u32,
+    emb_dim: usize,
+    emb_buf: &mut [f32],
+    wt: &crate::gguf_bridge::QTensor,
+) -> Vec<f32> {
+    let n = idx.dequantize_token_embedding_into(mmap, token_id, &mut emb_buf[..emb_dim]);
+    if n > 0 {
+        engine.dispatch_fused_transformer_block(wt, &emb_buf[..n])
+    } else {
+        pseudo_embedding_forward(token_id, emb_dim, emb_buf, engine, wt)
+    }
+}
+
 // ─── LocalLlmAgent ───────────────────────────────────────────────────────────
 /// The concrete local inference agent. Uses a mock inference path for now;
 /// swap `infer_local_model` for an actual llama.cpp FFI call.
@@ -366,29 +401,46 @@ impl LocalLlmAgent {
 
                     let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
 
-                    // Zero-copy mmap slice → stack dequant from `token_embd.weight`.
-                    let emb_used = tensor_idx.as_ref().and_then(|idx| {
-                        engine.gguf_mmap.as_deref().map(|m| {
-                            idx.dequantize_token_embedding_into(m, cur, &mut emb_buf[..emb_dim])
-                        })
-                    }).unwrap_or(0);
+                    let wt = QTensor::new(vec![emb_dim, emb_dim], 0, true);
 
-                    let emb: &[f32] = if emb_used > 0 {
-                        &emb_buf[..emb_used]
-                    } else {
-                        // Deterministic pseudo-embedding when tensor-info is absent.
-                        for i in 0..emb_dim {
-                            emb_buf[i] = (cur as f32 * (i as f32 + 1.0) * 0.001_f32).sin()
-                                * (1.0_f32 / (emb_dim as f32).sqrt());
+                    // Prefer GPU path: raw mmap bytes → WGSL on-device Q6_K dequant.
+                    let logits = if let (Some(idx), Some(mmap)) =
+                        (tensor_idx.as_ref(), engine.gguf_mmap.as_deref())
+                    {
+                        if let Some(info) = idx.token_embd_info() {
+                            if let Ok(raw) = crate::ggml_quants::fetch_token_embedding(
+                                mmap,
+                                idx.tensor_data_start,
+                                info,
+                                cur,
+                            ) {
+                                if let Some(gpu_logits) = engine.dispatch_quantized_token_embedding(
+                                    raw,
+                                    info.ggml_type,
+                                    emb_dim as u32,
+                                    &wt,
+                                ) {
+                                    gpu_logits
+                                } else {
+                                    cpu_embedding_forward(
+                                        &engine, idx, mmap, cur, emb_dim, &mut emb_buf[..], &wt,
+                                    )
+                                }
+                            } else {
+                                pseudo_embedding_forward(
+                                    cur, emb_dim, &mut emb_buf[..], &engine, &wt,
+                                )
+                            }
+                        } else {
+                            pseudo_embedding_forward(
+                                cur, emb_dim, &mut emb_buf[..], &engine, &wt,
+                            )
                         }
-                        &emb_buf[..emb_dim]
+                    } else {
+                        pseudo_embedding_forward(
+                            cur, emb_dim, &mut emb_buf[..], &engine, &wt,
+                        )
                     };
-
-                    // Weight tensor sized to match the real embedding dimension.
-                    let wt = QTensor::new(vec![emb.len(), emb.len()], 0, true);
-
-                    // GPU dispatch (DirectML → Accelerate → wgpu/WGSL by platform priority).
-                    let logits = engine.dispatch_fused_transformer_block(&wt, &emb);
 
                     // Argmax over the returned logit vector.
                     let (top_i, top_v) = logits.iter().enumerate()

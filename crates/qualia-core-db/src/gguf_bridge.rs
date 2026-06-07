@@ -58,11 +58,23 @@ impl QTensor {
     }
 }
 
+/// Uniform block passed to `quantized_embedding.wgsl`.
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct EmbeddingGpuParams {
+    n_embd: u32,
+    ggml_type: u32,
+    n_output: u32,
+    raw_byte_len: u32,
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub struct QTensorEngine {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub pipeline: wgpu::ComputePipeline,
+    /// GPU-side Q6_K embedding dequant + matmul (zero CPU dequant).
+    pub embedding_pipeline: wgpu::ComputePipeline,
     pub is_initialized: bool,
     /// DirectML device — Some on Windows when DirectML 1.15 is linked.
     #[cfg(target_os = "windows")]
@@ -101,10 +113,24 @@ impl QTensorEngine {
             entry_point: "main",
         });
 
+        let emb_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Quantized Embedding Shader"),
+            source: wgpu::ShaderSource::Wgsl(
+                include_str!("shaders/quantized_embedding.wgsl").into(),
+            ),
+        });
+        let embedding_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Quantized Embedding Pipeline"),
+            layout: None,
+            module: &emb_shader,
+            entry_point: "main",
+        });
+
         Self {
             device,
             queue,
             pipeline,
+            embedding_pipeline,
             is_initialized: true,
             #[cfg(target_os = "windows")]
             dml: crate::directml_bridge::DmlDevice::new().ok(),
@@ -135,6 +161,139 @@ impl QTensorEngine {
             },
             Err(e) => eprintln!("[gguf_bridge] Could not open {path}: {e}"),
         }
+    }
+
+    /// Upload raw quantized embedding bytes to the GPU and matmul without CPU dequant.
+    /// Returns `None` when the GGML type has no WGSL kernel (caller uses CPU fallback).
+    pub fn dispatch_quantized_token_embedding(
+        &self,
+        raw_embd: &[u8],
+        ggml_type: u32,
+        n_embd: u32,
+        weight_tensor: &QTensor,
+    ) -> Option<Vec<f32>> {
+        if ggml_type != crate::ggml_quants::GGML_TYPE_Q6_K || raw_embd.is_empty() || n_embd == 0 {
+            return None;
+        }
+
+        let n_output = weight_tensor.shape.first().copied().unwrap_or(n_embd as usize) as u32;
+        let n_embd_u = n_embd;
+        let weights_elems = (n_output as usize).saturating_mul(n_embd as usize);
+
+        let params = EmbeddingGpuParams {
+            n_embd: n_embd_u,
+            ggml_type,
+            n_output,
+            raw_byte_len: raw_embd.len() as u32,
+        };
+
+        // WGSL storage uses u32 words; pad mmap slice to 4-byte alignment.
+        let word_bytes = raw_embd.len().div_ceil(4) * 4;
+        let embd_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("QuantizedEmbeddingBytes"),
+            size: word_bytes.max(4) as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        if raw_embd.len() == word_bytes {
+            self.queue.write_buffer(&embd_buf, 0, raw_embd);
+        } else {
+            const MAX_EMB_ROW_PAD: usize = 8192;
+            if word_bytes > MAX_EMB_ROW_PAD {
+                return None;
+            }
+            let mut padded = [0u8; MAX_EMB_ROW_PAD];
+            padded[..raw_embd.len()].copy_from_slice(raw_embd);
+            self.queue.write_buffer(&embd_buf, 0, &padded[..word_bytes]);
+        }
+
+        let params_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("EmbeddingParams"),
+            size: std::mem::size_of::<EmbeddingGpuParams>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        self.queue.write_buffer(&params_buf, 0, bytemuck::bytes_of(&params));
+
+        let weights_size = (weights_elems * 4).max(4) as wgpu::BufferAddress;
+        let weights_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("EmbeddingWeights"),
+            size: weights_size,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        if let Some(mmap) = &self.gguf_mmap {
+            let offset = (self.tensor_data_offset + weight_tensor.byte_offset) as usize;
+            let end = (offset + weights_elems * 4).min(mmap.len());
+            if end > offset {
+                self.queue.write_buffer(&weights_buf, 0, &mmap[offset..end]);
+            }
+        }
+
+        let output_size = (n_output as usize * 4).max(4) as wgpu::BufferAddress;
+        let output_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("EmbeddingOutput"),
+            size: output_size,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        let bind_layout = self.embedding_pipeline.get_bind_group_layout(0);
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("QuantizedEmbeddingBindGroup"),
+            layout: &bind_layout,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: embd_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: params_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: weights_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
+            ],
+        });
+
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("QuantizedEmbeddingEncoder"),
+        });
+        {
+            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("QuantizedEmbeddingPass"),
+                timestamp_writes: None,
+            });
+            cpass.set_pipeline(&self.embedding_pipeline);
+            cpass.set_bind_group(0, &bind_group, &[]);
+            cpass.dispatch_workgroups((n_output + 63) / 64, 1, 1);
+        }
+
+        let staging_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("EmbeddingStaging"),
+            size: output_size,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, output_size);
+        self.queue.submit(Some(encoder.finish()));
+
+        let buffer_slice = staging_buf.slice(..);
+        let (sender, receiver) = futures_channel::oneshot::channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |v| {
+            let _ = sender.send(v);
+        });
+        self.device.poll(wgpu::Maintain::Wait);
+
+        let rt = tokio::runtime::Runtime::new().ok()?;
+        if rt.block_on(receiver).ok()?.is_err() {
+            return None;
+        }
+
+        let data = buffer_slice.get_mapped_range();
+        let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
+        drop(data);
+        staging_buf.unmap();
+
+        crate::telemetry::SIEVE_OPS_COUNT.fetch_add(
+            weights_elems,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+        Some(result)
     }
 
     pub fn dispatch_fused_transformer_block(&self, tensor: &QTensor, input_activations: &[f32]) -> Vec<f32> {
@@ -358,6 +517,37 @@ mod tests {
         let norm: f32 = emb.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!(norm > 0.01 && norm < 1000.0, "embedding L2 norm suspicious: {norm}");
         println!("token 0 embedding L2 norm = {norm:.4}");
+    }
+
+    #[test]
+    fn test_gpu_quantized_embedding_gemma_if_exists() {
+        let path = Path::new("C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf");
+        if !path.exists() {
+            println!("Gemma GGUF not found locally; skipping GPU embedding test.");
+            return;
+        }
+        let file = File::open(path).expect("open gguf");
+        let mmap = unsafe { MmapOptions::new().map(&file).expect("mmap") };
+        let idx = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        let info = idx.token_embd_info().expect("token_embd");
+        let raw = fetch_token_embedding(&mmap, idx.tensor_data_start, info, 0).expect("fetch");
+
+        let n_embd = info.dims[0] as usize;
+        let mut cpu_emb = vec![0f32; n_embd];
+        dequantize_token_embedding_into(raw, info, &mut cpu_emb).expect("cpu dequant");
+
+        let mut engine = QTensorEngine::new();
+        engine.load_gguf(path.to_str().unwrap());
+        let wt = QTensor::new(vec![n_embd, n_embd], 0, true);
+        let gpu_logits = engine
+            .dispatch_quantized_token_embedding(raw, info.ggml_type, n_embd as u32, &wt)
+            .expect("gpu dispatch");
+
+        assert_eq!(gpu_logits.len(), n_embd);
+        let cpu_dot: f32 = cpu_emb.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let gpu_norm: f32 = gpu_logits.iter().map(|x| x * x).sum::<f32>().sqrt();
+        assert!(gpu_norm > 0.0, "GPU output all zeros");
+        println!("cpu_emb L2={cpu_dot:.4} gpu_logits L2={gpu_norm:.4}");
     }
 
     #[test]

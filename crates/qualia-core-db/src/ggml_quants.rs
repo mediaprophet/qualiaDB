@@ -14,6 +14,19 @@ pub const GGML_TYPE_Q8_0: u32 = 8;
 pub const GGML_TYPE_Q4_K: u32 = 12;
 pub const GGML_TYPE_Q6_K: u32 = 14;
 
+/// GGML `block_q6_K` — 210 bytes, 256 weights. Mirrors WGSL `BlockQ6K` layout.
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct BlockQ6K {
+    pub ql: [u8; 128],
+    pub qh: [u8; 64],
+    pub scales: [i8; 16],
+    pub d: u16,
+}
+
+pub const BLOCK_Q6K_BYTES: usize = 210;
+pub const BLOCK_Q6K_ELEMS: usize = 256;
+
 /// Elements per quantization block and packed byte size (from ggml).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GgmlBlockLayout {
@@ -312,6 +325,12 @@ mod tests {
     fn q6_k_row_bytes_stride() {
         // Gemma 4B token_embd: hidden_dim=2560 → (2560/256)*210 = 2100
         assert_eq!(ggml_row_bytes(GGML_TYPE_Q6_K, 2560), Some(2100));
+    }
+
+    #[test]
+    fn block_q6k_layout_matches_ggml() {
+        assert_eq!(std::mem::size_of::<BlockQ6K>(), BLOCK_Q6K_BYTES);
+        assert_eq!(std::mem::align_of::<BlockQ6K>(), 2);
     }
 
     #[test]
