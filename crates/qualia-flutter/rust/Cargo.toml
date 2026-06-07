@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "staticlib"]
 
 [lints.rust]
-unexpected_cfg = { level = "allow", check-cfg = ['cfg(frb_expand)'] }
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(frb_expand)'] }
 
 [dependencies]
 flutter_rust_bridge = "=2.12.0"

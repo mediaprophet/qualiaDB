@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qualia Anatomy</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <style>
+    :root {
+      --bg: #07090d;
+      --bg-soft: #0f141d;
+      --panel: rgba(11, 15, 21, 0.92);
+      --panel-border: rgba(116, 189, 255, 0.14);
+      --accent: #4db8ff;
+      --accent-soft: rgba(77, 184, 255, 0.14);
+      --ok: #5ad3a5;
+      --warn: #ffce6e;
+      --text: #edf4ff;
+      --muted: #8c98ad;
+      --chip: rgba(255, 255, 255, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top, rgba(77, 184, 255, 0.16), transparent 32%),
+        linear-gradient(180deg, #0a0f16 0%, #05070a 100%);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      overflow: hidden;
+    }
+
+    #renderCanvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      touch-action: none;
+    }
+
+    .header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 12px 20px;
+      background: rgba(5, 8, 12, 0.9);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      backdrop-filter: blur(14px);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      font-size: 1.2rem;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      border: 1px solid rgba(77, 184, 255, 0.28);
+    }
+
+    .subtitle {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .panel {
+      position: absolute;
+      z-index: 100;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      backdrop-filter: blur(18px);
+    }
+
+    .left-panel {
+      top: 82px;
+      left: 20px;
+      width: 330px;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+
+    .right-panel {
+      top: 82px;
+      right: 20px;
+      width: 320px;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+
+    .section {
+      margin-bottom: 18px;
+    }
+
+    .section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    button {
+      background: #18202d;
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 9px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.84rem;
+      transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+    }
+
+    button:hover {
+      border-color: rgba(77, 184, 255, 0.42);
+      transform: translateY(-1px);
+    }
+
+    button.active {
+      border-color: rgba(77, 184, 255, 0.48);
+      background: rgba(77, 184, 255, 0.14);
+      color: #d8efff;
+    }
+
+    .search {
+      width: 100%;
+      background: #111822;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .system-item,
+    .organ-item {
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid transparent;
+      transition: background 0.14s ease, border-color 0.14s ease;
+    }
+
+    .system-item:hover,
+    .organ-item:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .system-item.active,
+    .organ-item.active {
+      background: rgba(77, 184, 255, 0.12);
+      border-color: rgba(77, 184, 255, 0.28);
+    }
+
+    .mini-label {
+      display: block;
+      margin-top: 4px;
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .info-text {
+      font-size: 0.84rem;
+      line-height: 1.5;
+      color: #dbe5f5;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .note-card {
+      font-size: 0.76rem;
+      background: rgba(77, 184, 255, 0.06);
+      border: 1px solid rgba(77, 184, 255, 0.16);
+      padding: 10px 12px;
+      border-radius: 12px;
+      color: #d3ebff;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.76rem;
+      color: #d7e7fb;
+    }
+
+    .impact-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .impact-card {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .impact-title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--warn);
+      margin-bottom: 4px;
+    }
+
+    .empty-state {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .dicom-preview {
+      width: 100%;
+      max-height: 180px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0b1018;
+      margin-bottom: 10px;
+    }
+
+    .range-row {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .range-row input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .file-input {
+      width: 100%;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 12px;
+      left: 20px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      z-index: 100;
+    }
+
+    @media (max-width: 1080px) {
+      .left-panel,
+      .right-panel {
+        position: fixed;
+        top: auto;
+        bottom: 18px;
+        max-height: 48vh;
+      }
+
+      .left-panel {
+        width: calc(50vw - 26px);
+      }
+
+      .right-panel {
+        width: calc(50vw - 26px);
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        overflow: auto;
+      }
+
+      #renderCanvas {
+        height: 56vh;
+      }
+
+      .left-panel,
+      .right-panel {
+        position: static;
+        width: auto;
+        margin: 12px;
+        max-height: none;
+      }
+
+      .footer {
+        position: static;
+        margin: 0 12px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-wrap">
+        <div class="logo">Qualia Anatomy</div>
+        <div class="badge" id="qapp-version-badge">v…</div>
+      </div>
+      <div class="subtitle">QualiaDB + HRA reference anatomy with system-aware overlays</div>
+    </div>
+    <div>
+      <button onclick="window.location.reload()">Reload</button>
+    </div>
+  </div>
+
+  <canvas id="renderCanvas"></canvas>
+
+  <div class="panel left-panel">
+    <div class="section">
+      <div class="section-title">Reference Body</div>
+      <div class="segmented">
+        <button onclick="switchSex('male')" id="btn-male">Male (VHM)</button>
+        <button onclick="switchSex('female')" id="btn-female">Female (VHF)</button>
+      </div>
+      <input
+        type="text"
+        id="search"
+        class="search"
+        placeholder="Search organs in the current system..."
+        oninput="filterOrgans()"
+      >
+    </div>
+
+    <div class="section">
+      <div class="section-title">Systems</div>
+      <div id="systemList" class="list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Elements And Organs</div>
+      <div id="organList" class="list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">DICOM Overlay</div>
+      <input
+        id="dicomFileInput"
+        class="file-input"
+        type="file"
+        accept=".dcm,application/dicom"
+        multiple
+        onchange="onDicomFilesSelected(event)"
+      >
+      <canvas id="dicomPreview" class="dicom-preview" width="256" height="160"></canvas>
+      <div id="dicomMeta" class="info-text muted">Load a .dcm file to map imaging over the anatomy model.</div>
+      <div class="range-row">
+        <label id="dicomSliceLabel" for="dicomSlice">No slices</label>
+        <input id="dicomSlice" type="range" min="0" max="0" value="0" disabled oninput="onDicomSliceChange(event)">
+      </div>
+      <div class="range-row">
+        <label for="dicomOpacity">Overlay opacity</label>
+        <input id="dicomOpacity" type="range" min="5" max="100" value="72" oninput="onDicomOpacityChange(event)">
+      </div>
+      <div class="controls">
+        <button onclick="onDicomMapToCurrentOrgan()">Map to organ</button>
+        <button onclick="onDicomToggleVisible()">Toggle</button>
+        <button onclick="onDicomClear()">Clear</button>
+      </div>
+    </div>
+
+    <div class="note-card">
+      <strong>QualiaDB integration point</strong><br>
+      Systems, organs, and related impacts are designed to map cleanly into Quin tuples and chat-launched representation payloads.
+    </div>
+  </div>
+
+  <div class="panel right-panel">
+    <div class="section">
+      <div class="section-title">View Controls</div>
+      <div class="controls">
+        <button onclick="resetCamera()">Reset View</button>
+        <button onclick="toggleWireframe()">Wireframe</button>
+        <button onclick="toggleAutoRotate()">Auto-rotate</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Active System</div>
+      <div id="systemInfo" class="info-text">
+        Select a body system or let a Qualia chat payload focus one automatically.
+      </div>
+      <div id="systemOrgans" class="chip-row"></div>
+      <div id="impactSummary" class="impact-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Model Info</div>
+      <div id="modelInfo" class="info-text">
+        Select an organ from the left panel. Models are official HuBMAP CCF / Human Reference Atlas .glb assets.
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Launch Context</div>
+      <div id="launchContext" class="info-text">
+        Standalone mode. Opened without a Qualia chat payload.
+      </div>
+    </div>
+
+    <div class="note-card">
+      <strong>Representation mode</strong><br>
+      This app can now display an organ, a system view, and related impact notes at the same time, which makes it a better target for local Qualia chat-to-UI handoff.
+    </div>
+  </div>
+
+  <div class="footer">
+    HRA 3D Reference Objects - QualiaDB Anatomy
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/dicom-parser@1.8.21/dist/dicomParser.min.js"></script>
+  <script src="knowledge-parser.js"></script>
+  <script src="daemon-client.js"></script>
+  <script src="qualia.js"></script>
+  <script src="dicom-overlay.js"></script>
+  <script>
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, {
+      preserveDrawingBuffer: true,
+      stencil: true,
+      antialias: true
+    });
+
+    let currentScene = null;
+    let currentMesh = null;
+    let autoRotate = false;
+    let currentSex = "male";
+    let currentOrgan = null;
+    let currentSystem = null;
+    let dicomOverlayVisible = true;
+    const launchContext = {
+      source: null,
+      surface: null,
+      payload: null,
+      daemonPort: null,
+      appName: null,
+      hasToken: false
+    };
+    const knowledge = {
+      ready: false,
+      systemMap: null,
+      conditionMap: null,
+      qualiaMode: "none",
+      daemon: null
+    };
+
+    const HRA =
+      "https://raw.githubusercontent.com/hubmapconsortium/ccf-releases/main/v1.2/models";
+    const hra = file => `${HRA}/${file}`;
+
+    const MODELS = {
+      male: {
+        "Heart": hra("VH_M_Heart.glb"),
+        "Liver": hra("VH_M_Liver.glb"),
+        "Lung": hra("VH_M_Lung.glb"),
+        "Kidney (Left)": hra("VH_M_Kidney_L.glb"),
+        "Kidney (Right)": hra("VH_M_Kidney_R.glb"),
+        "Spleen": hra("VH_M_Spleen.glb"),
+        "Brain (Allen)": hra("Allen_M_Brain.glb"),
+        "Pancreas": hra("VH_M_Pancreas.glb"),
+        "Prostate": hra("VH_M_Prostate.glb"),
+        "Small Intestine": hra("VH_M_Small_Intestine.glb"),
+        "Large Intestine": hra("SBU_M_Intestine_Large.glb"),
+        "Skin": hra("VH_M_Skin.glb"),
+        "Pelvis": hra("VH_M_Pelvis.glb"),
+        "Knee (Left)": hra("VH_M_Knee_L.glb"),
+        "Knee (Right)": hra("VH_M_Knee_R.glb"),
+        "Blood Vasculature": hra("VH_M_Blood_Vasculature.glb"),
+        "Eye (Left)": hra("VH_M_Eye_L.glb"),
+        "Eye (Right)": hra("VH_M_Eye_R.glb"),
+        "Spinal Cord": hra("VH_M_Spinal_Cord.glb"),
+        "Thymus": hra("VH_M_Thymus.glb"),
+        "Lymph Node": hra("NIH_M_Lymph_Node.glb"),
+        "Urinary Bladder": hra("VH_M_Urinary_Bladder.glb")
+      },
+      female: {
+        "Heart": hra("VH_F_Heart.glb"),
+        "Liver": hra("VH_F_Liver.glb"),
+        "Lung": hra("VH_F_Lung.glb"),
+        "Kidney (Left)": hra("VH_F_Kidney_L.glb"),
+        "Kidney (Right)": hra("VH_F_Kidney_R.glb"),
+        "Spleen": hra("VH_F_Spleen.glb"),
+        "Brain (Allen)": hra("Allen_F_Brain.glb"),
+        "Pancreas": hra("VH_F_Pancreas.glb"),
+        "Small Intestine": hra("VH_F_Small_Intestine.glb"),
+        "Large Intestine": hra("SBU_F_Intestine_Large.glb"),
+        "Skin": hra("VH_F_Skin.glb"),
+        "Pelvis": hra("VH_F_Pelvis.glb"),
+        "Knee (Left)": hra("VH_F_Knee_L.glb"),
+        "Knee (Right)": hra("VH_F_Knee_R.glb"),
+        "Blood Vasculature": hra("VH_F_Blood_Vasculature.glb"),
+        "Eye (Left)": hra("VH_F_Eye_L.glb"),
+        "Eye (Right)": hra("VH_F_Eye_R.glb"),
+        "Spinal Cord": hra("VH_F_Spinal_Cord.glb"),
+        "Thymus": hra("VH_F_Thymus.glb"),
+        "Lymph Node": hra("NIH_F_Lymph_Node.glb"),
+        "Urinary Bladder": hra("VH_F_Urinary_Bladder.glb"),
+        "Uterus": hra("VH_F_Uterus.glb"),
+        "Ovary (Left)": hra("VH_F_Ovary_L.glb"),
+        "Ovary (Right)": hra("VH_F_Ovary_R.glb")
+      }
+    };
+
+    const SYSTEMS = {
+      "Circulatory (Cardiovascular) System": {
+        function: "Transports oxygen, nutrients, hormones, and waste products throughout the body.",
+        keyOrgans: ["Heart", "Blood vessels", "Blood"],
+        impacts: [
+          "Shows perfusion-related context well when the heart is in focus.",
+          "Useful for blood flow, oxygen transport, and systemic stress explanations."
+        ],
+        organs: {
+          common: ["Heart", "Blood Vasculature"]
+        }
+      },
+      "Respiratory System": {
+        function: "Facilitates the exchange of oxygen and carbon dioxide between the body and the environment.",
+        keyOrgans: ["Lungs", "Trachea", "Bronchi", "Diaphragm"],
+        impacts: [
+          "Helps represent ventilation, oxygenation, and inflammatory burden.",
+          "Pairs naturally with circulation when discussing oxygen transport."
+        ],
+        organs: {
+          common: ["Lung"]
+        }
+      },
+      "Digestive System": {
+        function: "Breaks down food, absorbs nutrients, and expels solid waste.",
+        keyOrgans: ["Mouth", "Esophagus", "Stomach", "Intestines", "Liver", "Pancreas"],
+        impacts: [
+          "Useful for gut, liver, pancreatic, and absorption-related explanations.",
+          "Can show multiple digestive organs as linked components of the same pathway."
+        ],
+        organs: {
+          common: ["Liver", "Pancreas", "Small Intestine", "Large Intestine"]
+        }
+      },
+      "Nervous System": {
+        function: "Processes sensory information, controls actions, and coordinates body functions.",
+        keyOrgans: ["Brain", "Spinal cord", "Nerves"],
+        impacts: [
+          "Best for neural signaling, cognition, and central control discussions.",
+          "Good anchor when chat asks for coordination across other systems."
+        ],
+        organs: {
+          common: ["Brain (Allen)", "Spinal Cord"]
+        }
+      },
+      "Muscular System": {
+        function: "Enables movement, maintains posture, and contributes to circulation through muscular action.",
+        keyOrgans: ["Skeletal muscles", "Smooth muscles", "Cardiac muscle"],
+        impacts: [
+          "HRA provides regional musculoskeletal anchors (knee, pelvis) rather than a full muscle-body mesh.",
+          "Cardiac muscle can be explored through the heart model."
+        ],
+        organs: {
+          common: ["Knee (Left)", "Knee (Right)", "Heart"]
+        }
+      },
+      "Skeletal System": {
+        function: "Provides structural support, protects internal organs, produces blood cells, and stores minerals.",
+        keyOrgans: ["Bones", "Cartilage", "Ligaments", "Tendons"],
+        impacts: [
+          "Pelvis and knee models provide skeletal anchors in the current HRA set.",
+          "Useful for describing support and protection relationships with other systems."
+        ],
+        organs: {
+          common: ["Pelvis", "Knee (Left)", "Knee (Right)"]
+        }
+      },
+      "Endocrine System": {
+        function: "Regulates growth, metabolism, and mood through hormones in the bloodstream.",
+        keyOrgans: ["Pituitary", "Thyroid", "Adrenal glands", "Pancreas"],
+        impacts: [
+          "Supports metabolism and hormone-oriented chat explanations.",
+          "Pancreas is the primary bundled endocrine-linked organ in the current model set."
+        ],
+        organs: {
+          common: ["Pancreas"]
+        }
+      },
+      "Immune / Lymphatic System": {
+        function: "Defends the body against pathogens and helps balance bodily fluids.",
+        keyOrgans: ["Lymph nodes", "Spleen", "Bone marrow", "Thymus", "White blood cells"],
+        impacts: [
+          "Useful for immunity, inflammation, and systemic defense explanations.",
+          "Spleen is the current bundled organ most directly tied to this system."
+        ],
+        organs: {
+          common: ["Spleen", "Thymus", "Lymph Node"]
+        }
+      },
+      "Integumentary System": {
+        function: "Acts as a physical barrier, regulates temperature, and prevents water loss.",
+        keyOrgans: ["Skin", "Hair", "Nails", "Sweat glands", "Sebaceous glands"],
+        impacts: [
+          "Full-body skin envelope models are large but now available from HRA.",
+          "Useful for barrier, temperature, and hydration discussions."
+        ],
+        organs: {
+          common: ["Skin"]
+        }
+      },
+      "Urinary (Excretory) System": {
+        function: "Filters blood to remove waste products and excess water while maintaining fluid and electrolyte balance.",
+        keyOrgans: ["Kidneys", "Ureters", "Bladder", "Urethra"],
+        impacts: [
+          "Strong fit for renal, filtration, and fluid-balance explanations.",
+          "The two kidney models can be used as local focal points inside a wider urinary view."
+        ],
+        organs: {
+          common: ["Kidney (Left)", "Kidney (Right)", "Urinary Bladder"]
+        }
+      },
+      "Reproductive System": {
+        function: "Produces sex cells and hormones to facilitate reproduction.",
+        keyOrgans: ["Ovaries", "Fallopian tubes", "Uterus", "Vagina", "Testes", "Prostate", "Seminal vesicles", "Penis"],
+        impacts: [
+          "Supports sex-specific representations and reproductive-hormone context.",
+          "The focused organ set changes automatically with the selected reference body."
+        ],
+        organs: {
+          male: ["Prostate"],
+          female: ["Uterus", "Ovary (Left)", "Ovary (Right)"]
+        }
+      },
+      "Sensory System": {
+        function: "Dedicated to processing sensory information: vision, hearing, touch, taste, and smell.",
+        keyOrgans: ["Eyes", "Ears", "Tongue", "Nose", "Somatosensory receptors in skin"],
+        impacts: [
+          "Often taught as a branch of the nervous system but useful as its own representation layer.",
+          "Brain model can anchor discussions that cross peripheral sensation and central processing."
+        ],
+        organs: {
+          common: ["Eye (Left)", "Eye (Right)", "Brain (Allen)"]
+        }
+      },
+      "Vestibular System": {
+        function: "Provides the brain with information about motion, head position, and spatial orientation for balance and gaze stability.",
+        keyOrgans: ["Semicircular canals", "Otolith organs (utricle, saccule)", "Vestibular nerve"],
+        impacts: [
+          "No dedicated inner-ear HRA asset in v1.2; brain and eye models support spatial orientation discussions.",
+          "Pairs with nervous and muscular systems when explaining dizziness, vertigo, or gait instability."
+        ],
+        organs: {
+          common: ["Brain (Allen)", "Eye (Left)"]
+        }
+      },
+      "Exocrine System": {
+        function: "Secretes substances through ducts onto epithelial surfaces, distinct from endocrine hormones entering the bloodstream.",
+        keyOrgans: ["Sweat glands", "Salivary glands", "Mammary glands", "Mucous glands", "Liver", "Pancreas"],
+        impacts: [
+          "Liver and pancreas have both endocrine and exocrine roles in this build.",
+          "Useful for digestion, thermoregulation, and glandular secretion explanations."
+        ],
+        organs: {
+          common: ["Liver", "Pancreas"]
+        }
+      },
+      "Endocannabinoid System (ECS)": {
+        function: "Cell-signaling network regulating sleep, mood, appetite, memory, and immune response to maintain homeostasis.",
+        keyOrgans: ["Endocannabinoids", "CB1 receptors", "CB2 receptors", "Metabolic enzymes (FAAH, MAGL)"],
+        impacts: [
+          "Distributed receptor network rather than a single organ; overview mode is the primary representation.",
+          "Brain and immune-linked organs are the best bundled anchors for CB1/CB2 discussions."
+        ],
+        organs: {
+          common: ["Brain (Allen)", "Spleen"]
+        }
+      },
+      "Enteric Nervous System (ENS)": {
+        function: "Semi-autonomous neural network governing gastrointestinal motility, secretion, and local reflexes — often called the second brain.",
+        keyOrgans: ["Neural sheaths of esophagus", "Stomach", "Small intestine", "Large intestine"],
+        impacts: [
+          "Technically a division of the autonomic nervous system but large and independent enough to represent separately.",
+          "Small intestine is the primary bundled anchor for gut neural plexus discussions."
+        ],
+        organs: {
+          common: ["Small Intestine", "Large Intestine"]
+        }
+      },
+      "Glymphatic System": {
+        function: "Central nervous system waste clearance pathway that flushes toxic byproducts from the brain, especially during sleep.",
+        keyOrgans: ["Astrocyte glial cells", "Cerebrospinal fluid (CSF)", "Perivascular spaces"],
+        impacts: [
+          "Identified in 2012; best represented alongside brain and sleep-related chat context.",
+          "No standalone HRA asset — brain model serves as the spatial anchor."
+        ],
+        organs: {
+          common: ["Brain (Allen)"]
+        }
+      }
+    };
+
+    function readLaunchContext() {
+      const params = new URLSearchParams(window.location.search);
+      launchContext.source = params.get("qualia_source");
+      launchContext.surface = params.get("qualia_surface");
+      launchContext.daemonPort = params.get("qualia_daemon_port");
+      launchContext.appName = params.get("qualia_qapp");
+      launchContext.hasToken = Boolean(params.get("qualia_token"));
+
+      if (window.QualiaDaemon) {
+        window.QualiaDaemon.initFromUrl();
+      }
+
+      const rawPayload = params.get("qualia_payload");
+      if (!rawPayload) return;
+
+      try {
+        launchContext.payload = JSON.parse(rawPayload);
+      } catch (err) {
+        console.warn("[Qualia Anatomy] Could not parse qualia_payload", err);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function getSystemNames() {
+      return Object.keys(SYSTEMS);
+    }
+
+    function getSystemOrgans(systemName, sex = currentSex) {
+      if (!systemName || !SYSTEMS[systemName]) return Object.keys(MODELS[sex]);
+      const config = SYSTEMS[systemName].organs || {};
+      const organNames = [
+        ...(config.common || []),
+        ...(config[sex] || [])
+      ];
+      return organNames.filter(name => MODELS[sex][name]);
+    }
+
+    function findSystemForOrgan(organName, sex = currentSex) {
+      return getSystemNames().find(systemName => getSystemOrgans(systemName, sex).includes(organName)) || null;
+    }
+
+    function getPayloadImpactCards() {
+      const payload = launchContext.payload || {};
+      const impactMap = { ...(payload.conditionImpactMap || {}) };
+      const focusSystem = currentSystem || payload.anatomySelection?.systemFocus;
+      const cards = [];
+
+      if (knowledge.ready && knowledge.conditionMap) {
+        const namedConditions = payload.conditions || payload.graphSummary?.conditions || [];
+        namedConditions.forEach(conditionName => {
+          const entry = knowledge.conditionMap.conditions?.[conditionName];
+          if (!entry) return;
+          const key = entry.primarySystem;
+          if (!impactMap[key]) {
+            impactMap[key] = `Knowledge graph primary impact: ${conditionName}`;
+          }
+        });
+      }
+
+      if (focusSystem && impactMap[focusSystem]) {
+        cards.push({
+          title: focusSystem,
+          detail: impactMap[focusSystem]
+        });
+      }
+
+      if (currentOrgan && impactMap[currentOrgan]) {
+        cards.push({
+          title: currentOrgan,
+          detail: impactMap[currentOrgan]
+        });
+      }
+
+      return cards;
+    }
+
+    async function loadKnowledgeAssets() {
+      try {
+        const response = await fetch("./Knowledge/system-map.json");
+        if (response.ok) {
+          knowledge.systemMap = await response.json();
+        }
+      } catch (err) {
+        console.warn("[Qualia Anatomy] Could not load system-map.json", err);
+      }
+
+      if (typeof window.Qualia !== "undefined") {
+        try {
+          await window.Qualia.init();
+          const status = window.Qualia.getStatus();
+          knowledge.qualiaMode = status.mode;
+
+          try {
+            const parsed = await window.Qualia.loadConditionsFromUrl("./Knowledge/conditions.ttl");
+            knowledge.conditionMap = parsed;
+            console.log(
+              `[Qualia Anatomy] Parsed conditions.ttl via ${parsed.source} (${Object.keys(parsed.conditions).length} conditions)`
+            );
+          } catch (parseErr) {
+            console.warn("[Qualia Anatomy] TTL parse failed, using JSON fallback", parseErr);
+            const fallback = await fetch("./Knowledge/condition-map.json");
+            if (fallback.ok) {
+              knowledge.conditionMap = await fallback.json();
+            }
+          }
+        } catch (err) {
+          console.warn("[Qualia Anatomy] Qualia bridge init failed", err);
+        }
+      }
+
+      if (!knowledge.conditionMap) {
+        try {
+          const fallback = await fetch("./Knowledge/condition-map.json");
+          if (fallback.ok) knowledge.conditionMap = await fallback.json();
+        } catch (err) {
+          console.warn("[Qualia Anatomy] condition-map.json fallback failed", err);
+        }
+      }
+
+      knowledge.ready = Boolean(knowledge.systemMap && knowledge.conditionMap);
+    }
+
+    async function probeDaemonGraph() {
+      if (!window.QualiaDaemon) {
+        knowledge.daemon = { connected: false, reason: "client_missing" };
+        return knowledge.daemon;
+      }
+
+      const auth = window.QualiaDaemon.getState();
+      if (!auth.hasToken || !auth.port) {
+        knowledge.daemon = {
+          connected: false,
+          reason: auth.port ? "missing_token" : "missing_port"
+        };
+        return knowledge.daemon;
+      }
+
+      const health = await window.QualiaDaemon.health();
+      if (!health.ok) {
+        knowledge.daemon = { connected: false, reason: health.reason };
+        return knowledge.daemon;
+      }
+
+      try {
+        const query = await window.QualiaDaemon.queryHealthConditions();
+        knowledge.daemon = {
+          connected: true,
+          health: health.data,
+          queryStatus: query.status,
+          resultPreview: JSON.stringify(query.result).slice(0, 280)
+        };
+      } catch (err) {
+        knowledge.daemon = {
+          connected: true,
+          health: health.data,
+          queryError: err.message
+        };
+      }
+
+      return knowledge.daemon;
+    }
+
+    function applyKnowledgeDefaultsToPayload() {
+      if (!launchContext.payload) return;
+
+      const payload = launchContext.payload;
+      const conditions = payload.conditions || payload.graphSummary?.conditions || [];
+      const graphSystems = payload.graphSummary?.systems || payload.anatomySelection?.relatedSystems || [];
+
+      const inferredSystems = [...graphSystems];
+      if (knowledge.ready && knowledge.conditionMap) {
+        conditions.forEach(conditionName => {
+          const entry = knowledge.conditionMap.conditions?.[conditionName];
+          const primary = entry?.primarySystem || entry?.primary_system;
+          if (primary) inferredSystems.push(primary);
+        });
+      }
+
+      if (!inferredSystems.length && !conditions.length) return;
+
+      payload.anatomySelection = payload.anatomySelection || {};
+      payload.systemOverlay = payload.systemOverlay || {};
+
+      if (!payload.anatomySelection.systemFocus && inferredSystems.length) {
+        payload.anatomySelection.systemFocus = inferredSystems[0];
+      }
+
+      const related = new Set([
+        ...(payload.anatomySelection.relatedSystems || []),
+        ...(payload.systemOverlay.relatedSystems || []),
+        ...inferredSystems
+      ]);
+      payload.anatomySelection.relatedSystems = [...related];
+      payload.systemOverlay.relatedSystems = [...related];
+
+      if (!payload.conditionImpactMap && payload.graphSummary?.conditionImpactMap) {
+        payload.conditionImpactMap = payload.graphSummary.conditionImpactMap;
+      }
+    }
+
+    function updateLaunchContextPanel() {
+      const panel = document.getElementById("launchContext");
+      const payload = launchContext.payload;
+
+      const knowledgeLine = knowledge.ready
+        ? `<br><span class="muted">Knowledge: ${knowledge.qualiaMode} parser, ${Object.keys(knowledge.conditionMap?.conditions || {}).length} conditions, ${knowledge.systemMap.systems.length} systems.</span>`
+        : `<br><span class="muted">Knowledge assets not loaded (standalone file mode or fetch blocked).</span>`;
+
+      const daemonLine = knowledge.daemon
+        ? knowledge.daemon.connected
+          ? `<br><span class="muted">Daemon: connected on ${escapeHtml(launchContext.daemonPort || "?")}${knowledge.daemon.queryError ? ` (query: ${escapeHtml(knowledge.daemon.queryError)})` : ""}</span>`
+          : `<br><span class="muted">Daemon: ${escapeHtml(knowledge.daemon.reason || "unavailable")}</span>`
+        : "";
+
+      const hostLine = launchContext.hasToken
+        ? `<br><span class="muted">Host session token present${launchContext.appName ? ` for ${escapeHtml(launchContext.appName)}` : ""}.</span>`
+        : `<br><span class="muted">No host session token (live graph queries disabled).</span>`;
+
+      if (!payload) {
+        panel.innerHTML = `
+          ${launchContext.source ? "Qualia-hosted mode." : "Standalone mode."}<br>
+          <span class="muted">No chat-driven representation payload detected.</span>
+          ${hostLine}
+          ${knowledgeLine}
+          ${daemonLine}
+        `;
+        return;
+      }
+
+      const prompt = payload.prompt
+        ? `<strong>Prompt:</strong> ${escapeHtml(payload.prompt)}<br><br>`
+        : "";
+      const summary = payload.summary
+        ? escapeHtml(payload.summary.slice(0, 320)).replace(/\n/g, "<br>")
+        : "No summary provided.";
+      const dicomOrgan = payload.dicomOverlay?.organ;
+      const dicomModality = payload.dicomOverlay?.modality;
+      const focusOrgan = escapeHtml(
+        payload.anatomySelection?.focusOrgan || dicomOrgan || "None"
+      );
+      const conditionList = (payload.conditions || payload.graphSummary?.conditions || [])
+        .map(name => escapeHtml(name))
+        .join(", ");
+      const focusSystem = escapeHtml(
+        payload.anatomySelection?.systemFocus ||
+        payload.systemOverlay?.focusSystem ||
+        "None"
+      );
+      const relatedSystems = (payload.anatomySelection?.relatedSystems || payload.systemOverlay?.relatedSystems || [])
+        .map(name => escapeHtml(name))
+        .join(", ");
+      const surface = escapeHtml(launchContext.surface || payload.surface || "unknown");
+      const source = escapeHtml(launchContext.source || payload.source || "unknown");
+
+      panel.innerHTML = `
+        <strong>Source:</strong> ${source}<br>
+        <strong>Surface:</strong> ${surface}<br>
+        <strong>Focus organ:</strong> ${focusOrgan}<br>
+        <strong>Focus system:</strong> ${focusSystem}<br>
+        <strong>Related systems:</strong> ${relatedSystems || "None"}<br>
+        <strong>Conditions:</strong> ${conditionList || "None"}<br>
+        <strong>DICOM overlay:</strong> ${dicomOrgan ? `${escapeHtml(dicomModality || "imaging")} → ${escapeHtml(dicomOrgan)}` : "None (load .dcm in left panel)"}<br><br>
+        ${prompt}
+        <strong>Summary:</strong><br>${summary}
+        ${hostLine}
+        ${knowledgeLine}
+        ${daemonLine}
+      `;
+    }
+
+    function applyLaunchContextDefaults() {
+      const payload = launchContext.payload;
+      if (!payload) {
+        return {
+          requestedOrgan: null,
+          requestedSystem: null
+        };
+      }
+
+      const requestedSex = payload.anatomySelection?.sex;
+      if (requestedSex === "male" || requestedSex === "female") {
+        currentSex = requestedSex;
+      }
+
+      const requestedOrgan =
+        payload.dicomOverlay?.organ ||
+        payload.anatomySelection?.focusOrgan ||
+        null;
+      const candidateOrgans = payload.anatomySelection?.candidateOrgans || [];
+      const requestedSystem =
+        payload.anatomySelection?.systemFocus ||
+        payload.systemOverlay?.focusSystem ||
+        (payload.anatomySelection?.relatedSystems || payload.systemOverlay?.relatedSystems || [])[0] ||
+        null;
+
+      if (requestedOrgan && MODELS[currentSex][requestedOrgan]) {
+        return {
+          requestedOrgan,
+          requestedSystem: requestedSystem || findSystemForOrgan(requestedOrgan, currentSex)
+        };
+      }
+
+      const compatibleOrgan = candidateOrgans.find(name => MODELS[currentSex][name]);
+      return {
+        requestedOrgan: compatibleOrgan || null,
+        requestedSystem
+      };
+    }
+
+    function createScene() {
+      if (currentScene) {
+        currentScene.dispose();
+      }
+
+      const scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0.04, 0.05, 0.08, 1);
+
+      const camera = new BABYLON.ArcRotateCamera(
+        "camera",
+        Math.PI / 2,
+        Math.PI / 2.4,
+        1.1,
+        BABYLON.Vector3.Zero(),
+        scene
+      );
+      camera.attachControl(canvas, true);
+      camera.lowerRadiusLimit = 0.25;
+      camera.upperRadiusLimit = 6;
+      camera.wheelPrecision = 40;
+      camera.pinchPrecision = 40;
+
+      const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+      hemi.intensity = 0.86;
+
+      const hemi2 = new BABYLON.HemisphericLight("hemi2", new BABYLON.Vector3(0, -1, 0), scene);
+      hemi2.intensity = 0.34;
+
+      currentScene = scene;
+      return { scene, camera };
+    }
+
+    function updateSystemPanel() {
+      const info = document.getElementById("systemInfo");
+      const organButtons = document.getElementById("systemOrgans");
+      const impactSummary = document.getElementById("impactSummary");
+
+      if (!currentSystem || !SYSTEMS[currentSystem]) {
+        info.innerHTML = `
+          <strong>All systems</strong><br>
+          <span class="muted">Browse all available organs or let a chat payload constrain the representation to a specific system.</span>
+        `;
+        organButtons.innerHTML = "";
+        impactSummary.innerHTML = "";
+        return;
+      }
+
+      const system = SYSTEMS[currentSystem];
+      const representativeOrgans = getSystemOrgans(currentSystem, currentSex);
+      const payloadImpacts = getPayloadImpactCards();
+
+      info.innerHTML = `
+        <strong>${escapeHtml(currentSystem)}</strong><br>
+        <span class="muted">${escapeHtml(system.function)}</span><br><br>
+        <strong>Key organs:</strong> ${escapeHtml(system.keyOrgans.join(", "))}
+      `;
+
+      organButtons.innerHTML = "";
+      if (representativeOrgans.length === 0) {
+        organButtons.innerHTML = `<div class="empty-state">No dedicated 3D organ asset is bundled for this system yet. The current system view stays in overview mode.</div>`;
+      } else {
+        representativeOrgans.forEach(organName => {
+          const button = document.createElement("button");
+          button.textContent = organName;
+          if (organName === currentOrgan) {
+            button.classList.add("active");
+          }
+          button.onclick = () => loadModel(MODELS[currentSex][organName], organName, currentSystem);
+          organButtons.appendChild(button);
+        });
+      }
+
+      impactSummary.innerHTML = "";
+      system.impacts.forEach(text => {
+        const card = document.createElement("div");
+        card.className = "impact-card";
+        card.innerHTML = `
+          <div class="impact-title">System note</div>
+          <div class="muted">${escapeHtml(text)}</div>
+        `;
+        impactSummary.appendChild(card);
+      });
+
+      payloadImpacts.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "impact-card";
+        card.innerHTML = `
+          <div class="impact-title">Payload impact: ${escapeHtml(item.title)}</div>
+          <div class="muted">${escapeHtml(item.detail)}</div>
+        `;
+        impactSummary.appendChild(card);
+      });
+    }
+
+    function updateModelInfo(organName, hadModel = true) {
+      const relatedSystem = currentSystem || findSystemForOrgan(organName, currentSex);
+      const payload = launchContext.payload;
+      const graphSummary = payload?.graphSummary || {};
+      const explanation = payload?.explanationCard?.body;
+
+      let html = `
+        <strong>${escapeHtml(organName || "System overview")}</strong><br>
+        <span class="muted">${hadModel ? "Official HRA Reference Organ - .glb" : "System overview without a dedicated HRA organ asset"}</span>
+      `;
+
+      if (relatedSystem) {
+        html += `<br><br><strong>System context:</strong> ${escapeHtml(relatedSystem)}`;
+      }
+
+      if (graphSummary.complexityMode) {
+        html += `<br><strong>Complexity mode:</strong> ${escapeHtml(graphSummary.complexityMode)}`;
+      }
+
+      if (launchContext.payload?.summary) {
+        html += `<br><br><span style="color:#9adcf2;">Chat-linked view active. Representation seeded from local Qualia chat.</span>`;
+      }
+
+      if (!hadModel) {
+        html += `<br><br><span class="muted">The current system does not yet ship with a dedicated 3D structure in this build, so the system panel provides the main representation.</span>`;
+      }
+
+      if (explanation) {
+        html += `<br><br><strong>Explanation card:</strong><br><span class="muted">${escapeHtml(explanation.slice(0, 220))}</span>`;
+      }
+
+      if (window.DicomOverlay?.getState().loaded) {
+        const dicom = window.DicomOverlay.getState();
+        html += `<br><br><strong>DICOM overlay:</strong> ${escapeHtml(dicom.meta?.modality || "imaging")}`;
+        if (dicom.mappedOrgan) {
+          html += ` mapped to ${escapeHtml(dicom.mappedOrgan)}`;
+        }
+      }
+
+      document.getElementById("modelInfo").innerHTML = html;
+    }
+
+    async function loadModel(url, organName, originatingSystem = null) {
+      const { scene, camera } = createScene();
+
+      const loadingEl = document.createElement("div");
+      loadingEl.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#4db8ff;font-size:1rem;pointer-events:none;";
+      loadingEl.textContent = `Loading ${organName}...`;
+      document.body.appendChild(loadingEl);
+
+      try {
+        const result = await BABYLON.SceneLoader.ImportMeshAsync("", url, "", scene);
+
+        currentMesh = result.meshes.find(mesh => mesh.getTotalVertices() > 0) || result.meshes[0];
+
+        const bounds = currentMesh.getHierarchyBoundingVectors();
+        const size = bounds.max.subtract(bounds.min);
+        const maxDim = Math.max(size.x, size.y, size.z) || 1;
+        const scale = 1.9 / maxDim;
+
+        currentMesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+
+        const center = bounds.min.add(size.scale(0.5));
+        currentMesh.position = center.scale(-scale);
+
+        result.meshes.forEach(mesh => {
+          if (mesh.material) {
+            mesh.material.backFaceCulling = false;
+            if (mesh.material.albedoColor) {
+              mesh.material.albedoColor = new BABYLON.Color3(0.82, 0.85, 0.92);
+            }
+          }
+        });
+
+        camera.target = BABYLON.Vector3.Zero();
+        camera.radius = 1.4;
+        camera.alpha = Math.PI * 0.6;
+        camera.beta = Math.PI * 0.42;
+
+        currentOrgan = organName;
+        currentSystem = originatingSystem || findSystemForOrgan(organName, currentSex);
+        highlightActiveSystem();
+        renderOrganList();
+        highlightActiveOrgan();
+        updateSystemPanel();
+        updateModelInfo(organName, true);
+        if (window.DicomOverlay) {
+          window.DicomOverlay.onSceneReady(scene, organName);
+        }
+      } catch (err) {
+        console.error(err);
+        currentOrgan = organName;
+        updateModelInfo(organName, false);
+        document.getElementById("modelInfo").innerHTML += `
+          <br><br><small style="color:#ff8d8d;">Failed to load the 3D asset: ${escapeHtml(err.message)}</small>
+        `;
+      } finally {
+        loadingEl.remove();
+      }
+    }
+
+    function selectSystem(systemName, options = {}) {
+      currentSystem = systemName || null;
+      highlightActiveSystem();
+      renderOrganList();
+      updateSystemPanel();
+
+      if (!currentSystem) {
+        if (!currentOrgan) {
+          const firstOrgan = Object.keys(MODELS[currentSex])[0];
+          if (firstOrgan) {
+            loadModel(MODELS[currentSex][firstOrgan], firstOrgan, null);
+          }
+        } else {
+          updateModelInfo(currentOrgan, true);
+        }
+        return;
+      }
+
+      const organs = getSystemOrgans(currentSystem, currentSex);
+      const explicitOrgan = options.explicitOrgan || null;
+
+      if (explicitOrgan && MODELS[currentSex][explicitOrgan]) {
+        loadModel(MODELS[currentSex][explicitOrgan], explicitOrgan, currentSystem);
+        return;
+      }
+
+      if (organs.length > 0) {
+        if (!organs.includes(currentOrgan) || options.forceLoadRepresentative) {
+          loadModel(MODELS[currentSex][organs[0]], organs[0], currentSystem);
+        } else {
+          updateModelInfo(currentOrgan, true);
+        }
+      } else {
+        currentOrgan = null;
+        highlightActiveOrgan();
+        updateModelInfo(currentSystem, false);
+      }
+    }
+
+    function switchSex(sex) {
+      currentSex = sex;
+      document.getElementById("btn-male").classList.toggle("active", sex === "male");
+      document.getElementById("btn-female").classList.toggle("active", sex === "female");
+      renderSystemList();
+      renderOrganList();
+
+      if (currentSystem) {
+        selectSystem(currentSystem, { forceLoadRepresentative: true });
+        return;
+      }
+
+      const firstOrgan = Object.keys(MODELS[sex])[0];
+      if (firstOrgan) {
+        loadModel(MODELS[sex][firstOrgan], firstOrgan, findSystemForOrgan(firstOrgan, sex));
+      }
+    }
+
+    function filterOrgans() {
+      renderOrganList();
+    }
+
+    function renderSystemList() {
+      const container = document.getElementById("systemList");
+      container.innerHTML = "";
+
+      const allItem = document.createElement("div");
+      allItem.className = `system-item${currentSystem ? "" : " active"}`;
+      allItem.innerHTML = `All systems<span class="mini-label">Show every available organ</span>`;
+      allItem.onclick = () => selectSystem(null);
+      container.appendChild(allItem);
+
+      getSystemNames().forEach(systemName => {
+        const system = SYSTEMS[systemName];
+        const item = document.createElement("div");
+        item.className = `system-item${currentSystem === systemName ? " active" : ""}`;
+        item.innerHTML = `
+          ${escapeHtml(systemName)}
+          <span class="mini-label">${escapeHtml(system.function.slice(0, 82))}${system.function.length > 82 ? "..." : ""}</span>
+        `;
+        item.onclick = () => selectSystem(systemName);
+        container.appendChild(item);
+      });
+    }
+
+    function renderOrganList() {
+      const container = document.getElementById("organList");
+      const query = document.getElementById("search").value.toLowerCase().trim();
+      let organNames = currentSystem
+        ? getSystemOrgans(currentSystem, currentSex)
+        : Object.keys(MODELS[currentSex]);
+
+      if (query) {
+        organNames = organNames.filter(name => name.toLowerCase().includes(query));
+      }
+
+      container.innerHTML = "";
+
+      if (organNames.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            No direct organ models match the current filter. Try a different system, switch sex, or clear the search.
+          </div>
+        `;
+        return;
+      }
+
+      organNames.forEach(name => {
+        const div = document.createElement("div");
+        div.className = `organ-item${name === currentOrgan ? " active" : ""}`;
+        const systemName = findSystemForOrgan(name, currentSex);
+        div.innerHTML = `
+          ${escapeHtml(name)}
+          <span class="mini-label">${escapeHtml(systemName || "Standalone organ view")}</span>
+        `;
+        div.onclick = () => loadModel(MODELS[currentSex][name], name, currentSystem || systemName);
+        container.appendChild(div);
+      });
+    }
+
+    function highlightActiveOrgan() {
+      document.querySelectorAll("#organList .organ-item").forEach(element => {
+        const title = element.childNodes[0]?.textContent?.trim();
+        element.classList.toggle("active", title === currentOrgan);
+      });
+    }
+
+    function highlightActiveSystem() {
+      document.querySelectorAll("#systemList .system-item").forEach(element => {
+        const text = element.childNodes[0]?.textContent?.trim();
+        const isAll = text === "All systems";
+        element.classList.toggle("active", isAll ? !currentSystem : text === currentSystem);
+      });
+    }
+
+    function resetCamera() {
+      if (!currentScene) return;
+      const camera = currentScene.activeCamera;
+      if (camera) {
+        camera.alpha = Math.PI * 0.6;
+        camera.beta = Math.PI * 0.42;
+        camera.radius = 1.4;
+        camera.target = BABYLON.Vector3.Zero();
+      }
+    }
+
+    function toggleWireframe() {
+      if (!currentMesh) return;
+      currentMesh.getChildMeshes().forEach(mesh => {
+        if (mesh.material) {
+          mesh.material.wireframe = !mesh.material.wireframe;
+        }
+      });
+    }
+
+    function toggleAutoRotate() {
+      autoRotate = !autoRotate;
+      if (currentScene) {
+        const camera = currentScene.activeCamera;
+        if (camera) {
+          camera.useAutoRotationBehavior = autoRotate;
+          if (autoRotate && camera.autoRotationBehavior) {
+            camera.autoRotationBehavior.idleRotationSpeed = 0.25;
+          }
+        }
+      }
+    }
+
+    async function onDicomFilesSelected(event) {
+      const files = event.target.files;
+      if (!files?.length || !window.DicomOverlay) return;
+
+      try {
+        const result = await window.DicomOverlay.loadFiles(files);
+        if (result.inferredOrgan && MODELS[currentSex][result.inferredOrgan]) {
+          loadModel(MODELS[currentSex][result.inferredOrgan], result.inferredOrgan, findSystemForOrgan(result.inferredOrgan, currentSex));
+        } else if (currentOrgan) {
+          window.DicomOverlay.applyPlacementForOrgan(currentOrgan);
+          window.DicomOverlay.onSceneReady(currentScene, currentOrgan);
+        }
+        updateModelInfo(currentOrgan, Boolean(currentMesh));
+      } catch (err) {
+        console.error(err);
+        document.getElementById("dicomMeta").textContent = `DICOM load failed: ${err.message}`;
+      }
+    }
+
+    function onDicomSliceChange(event) {
+      if (!window.DicomOverlay) return;
+      window.DicomOverlay.setSlice(Number(event.target.value));
+    }
+
+    function onDicomOpacityChange(event) {
+      if (!window.DicomOverlay) return;
+      window.DicomOverlay.setOpacity(Number(event.target.value) / 100);
+    }
+
+    function onDicomMapToCurrentOrgan() {
+      if (!window.DicomOverlay || !currentOrgan) return;
+      window.DicomOverlay.applyPlacementForOrgan(currentOrgan);
+      window.DicomOverlay.onSceneReady(currentScene, currentOrgan);
+    }
+
+    function onDicomToggleVisible() {
+      if (!window.DicomOverlay) return;
+      dicomOverlayVisible = !dicomOverlayVisible;
+      window.DicomOverlay.setVisible(dicomOverlayVisible);
+    }
+
+    function onDicomClear() {
+      if (!window.DicomOverlay) return;
+      const input = document.getElementById("dicomFileInput");
+      if (input) input.value = "";
+      window.DicomOverlay.clear();
+    }
+
+    async function loadQappVersionBadge() {
+      const badge = document.getElementById("qapp-version-badge");
+      try {
+        const response = await fetch("qapp.json", { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const manifest = await response.json();
+        const version = (manifest.version || "unknown").toString();
+        if (badge) badge.textContent = `v${version}`;
+        document.title = `Qualia Anatomy - v${version}`;
+        window.__qualiaAnatomyVersion = version;
+      } catch (error) {
+        console.warn("[Qualia Anatomy] could not load qapp.json version:", error);
+        if (badge) badge.textContent = "v?";
+      }
+    }
+
+    async function init() {
+      await loadQappVersionBadge();
+      readLaunchContext();
+      if (window.DicomOverlay) {
+        await window.DicomOverlay.init({
+          babylon: BABYLON,
+          getScene: () => currentScene
+        });
+        window.DicomOverlay.applyPayloadOverlay(launchContext.payload);
+      }
+      await loadKnowledgeAssets();
+      await probeDaemonGraph();
+      applyKnowledgeDefaultsToPayload();
+      const defaults = applyLaunchContextDefaults();
+
+      document.getElementById("btn-male").classList.toggle("active", currentSex === "male");
+      document.getElementById("btn-female").classList.toggle("active", currentSex === "female");
+
+      renderSystemList();
+      renderOrganList();
+      updateLaunchContextPanel();
+      updateSystemPanel();
+
+      if (defaults.requestedSystem) {
+        currentSystem = defaults.requestedSystem;
+        highlightActiveSystem();
+      }
+
+      if (defaults.requestedOrgan && MODELS[currentSex][defaults.requestedOrgan]) {
+        loadModel(MODELS[currentSex][defaults.requestedOrgan], defaults.requestedOrgan, defaults.requestedSystem);
+      } else if (defaults.requestedSystem) {
+        selectSystem(defaults.requestedSystem, { forceLoadRepresentative: true });
+      } else {
+        const defaultOrgan = Object.keys(MODELS[currentSex])[0] || "Heart";
+        loadModel(MODELS[currentSex][defaultOrgan], defaultOrgan, findSystemForOrgan(defaultOrgan, currentSex));
+      }
+
+      window.addEventListener("resize", () => engine.resize());
+      engine.runRenderLoop(() => {
+        if (currentScene) currentScene.render();
+      });
+
+      document.addEventListener("keydown", event => {
+        if (event.key.toLowerCase() === "r") resetCamera();
+        if (event.key.toLowerCase() === "w") toggleWireframe();
+        if (event.key.toLowerCase() === "a") toggleAutoRotate();
+      });
+
+      const version = window.__qualiaAnatomyVersion || "unknown";
+      console.log(`[Qualia Anatomy] v${version} ready - daemon, WASM/JS knowledge, expanded HRA models`);
+    }
+
+    init();
+  </script>
+</body>
+</html>

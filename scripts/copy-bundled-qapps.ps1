@@ -7,20 +7,25 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $false
 $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$AnatomySrc = Join-Path $Root "app-development\Anatomy"
+$AnatomySrc = Join-Path $Root "bundled\qapps\Anatomy"
+if (-not (Test-Path $AnatomySrc)) {
+    $AnatomySrc = Join-Path $Root "app-development\Anatomy"
+}
 $WasmSrc = Join-Path $Root "docs\playground"
 $Dest = Join-Path $OutDir "bundled\qapps\Anatomy"
 
 if (-not (Test-Path $AnatomySrc)) {
     Write-Warning "Anatomy source not found at $AnatomySrc — skipping bundled qapp copy."
-    exit 0
+    return
 }
 
 Write-Host "Copying Anatomy qapp to $Dest ..."
 New-Item -ItemType Directory -Force -Path $Dest | Out-Null
 robocopy $AnatomySrc $Dest /E /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "robocopy Anatomy failed with exit code $LASTEXITCODE" }
+$global:LASTEXITCODE = 0
 
 $WasmDest = Join-Path $Dest "wasm"
 New-Item -ItemType Directory -Force -Path $WasmDest | Out-Null
@@ -35,4 +40,4 @@ foreach ($file in @("qualia_core_db.js", "qualia_core_db_bg.wasm")) {
 }
 
 Write-Host "Bundled qapps staged under $Dest"
-exit 0
+$global:LASTEXITCODE = 0

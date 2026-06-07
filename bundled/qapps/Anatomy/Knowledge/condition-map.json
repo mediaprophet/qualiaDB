@@ -1,0 +1,86 @@
+{
+  "version": "1.0.0",
+  "description": "Primary system focus per condition; aligns conditions.ttl with Anatomy UI labels.",
+  "conditions": {
+    "Type 2 Diabetes Mellitus": {
+      "primarySystem": "Endocrine System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#Type2Diabetes"
+    },
+    "Type 1 Diabetes Mellitus": {
+      "primarySystem": "Endocrine System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#Type1Diabetes"
+    },
+    "Hypertension": {
+      "primarySystem": "Circulatory (Cardiovascular) System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#Hypertension"
+    },
+    "Chronic Kidney Disease (CKD)": {
+      "primarySystem": "Urinary (Excretory) System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#ChronicKidneyDisease"
+    },
+    "Heart Failure": {
+      "primarySystem": "Circulatory (Cardiovascular) System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#HeartFailure"
+    },
+    "Coronary Artery Disease": {
+      "primarySystem": "Circulatory (Cardiovascular) System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#CoronaryArteryDisease"
+    },
+    "Chronic Obstructive Pulmonary Disease (COPD)": {
+      "primarySystem": "Respiratory System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#COPD"
+    },
+    "Non-Alcoholic Fatty Liver Disease (NAFLD)": {
+      "primarySystem": "Digestive System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#NAFLD"
+    },
+    "Obesity": {
+      "primarySystem": "Endocrine System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#Obesity"
+    },
+    "Dyslipidemia": {
+      "primarySystem": "Endocrine System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#Dyslipidemia"
+    },
+    "Hypothyroidism": {
+      "primarySystem": "Endocrine System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#Hypothyroidism"
+    },
+    "Rheumatoid Arthritis": {
+      "primarySystem": "Skeletal System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#RheumatoidArthritis"
+    },
+    "Obstructive Sleep Apnea": {
+      "primarySystem": "Respiratory System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#ObstructiveSleepApnea"
+    },
+    "Atrial Fibrillation": {
+      "primarySystem": "Circulatory (Cardiovascular) System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#AtrialFibrillation"
+    },
+    "Peripheral Artery Disease": {
+      "primarySystem": "Circulatory (Cardiovascular) System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#PeripheralArteryDisease"
+    },
+    "Major Depressive Disorder": {
+      "primarySystem": "Nervous System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#Depression"
+    },
+    "Chronic Pain Syndrome": {
+      "primarySystem": "Nervous System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#ChronicPain"
+    },
+    "Osteoporosis": {
+      "primarySystem": "Skeletal System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#Osteoporosis"
+    },
+    "Anemia": {
+      "primarySystem": "Circulatory (Cardiovascular) System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#Anemia"
+    },
+    "Hyperlipidemia": {
+      "primarySystem": "Endocrine System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/bio#Hyperlipidemia"
+    }
+  }
+}

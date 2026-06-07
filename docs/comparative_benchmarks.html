@@ -416,7 +416,7 @@
                 return val;
             }
             const n = Number(val);
-            if (n <= 0) return '—';
+            if (!isFinite(n) || n < 0) return '—';
             if (n < 0.001) return '< 0.001';
             if (n < 1)     return n.toFixed(3);
             return n.toFixed(2);
@@ -439,7 +439,11 @@
 
         function getThroughput(engine) {
             const p50 = engine.point?.p50;
-            return (p50 > 0) ? 1000 / p50 : null;
+            const p95 = engine.point?.p95;
+            const basis = (typeof p50 === 'number' && p50 > 0)
+                ? p50
+                : ((typeof p95 === 'number' && p95 > 0) ? p95 : null);
+            return basis ? 1000 / basis : null;
         }
 
         function getJitter(stat) {
@@ -493,7 +497,7 @@
         }
 
         function hasLatency(stat) {
-            return typeof stat?.p50 === 'number' && isFinite(stat.p50) && stat.p50 > 0;
+            return typeof stat?.p50 === 'number' && isFinite(stat.p50) && stat.p50 >= 0;
         }
 
         function isIncomplete(engine) {
@@ -664,7 +668,7 @@
                 const rssNote = engine.server_rss_mb ? ' <span class="text-[10px] text-slate-500">server</span>' : '';
                 const status = getEngineStatus(engine);
 
-                const latCell = (stat) => stat?.p50
+                const latCell = (stat) => hasLatency(stat)
                     ? `<div class="font-mono">${formatMs(stat.p50)}</div>
                        <div class="text-[10px] text-slate-500 font-mono">p95 ${formatMs(stat.p95)}</div>`
                     : '—';
@@ -786,7 +790,7 @@
             const delta = getRssDelta(d);
             const status = getEngineStatus(d);
 
-            const latRow = (name, stat) => stat?.p50 ? `
+            const latRow = (name, stat) => hasLatency(stat) ? `
                 <div class="flex justify-between border-b border-slate-700 pb-3">
                     <span>${name}</span>
                     <div class="text-right">
@@ -843,7 +847,7 @@
                             <div class="space-y-0 font-mono text-[14px]">
                                 ${latRow('Point Query', d.point)}
                                 ${latRow('Two-hop', d.twohop)}
-                                ${d.filter?.p50 ? latRow('Filter', d.filter).replace('border-b border-slate-700 pb-3', '') : ''}
+                                ${hasLatency(d.filter) ? latRow('Filter', d.filter).replace('border-b border-slate-700 pb-3', '') : ''}
                             </div>
                         </div>
 
@@ -876,17 +880,26 @@
                     : 'Profile JSON missing <span class="text-amber-400">- prepare dataset and run harness</span>';
             }
 
-            const engines = getEngines(currentData);
-            const sample = Object.values(currentData.engines || {})[0];
-            document.getElementById('dataset-size').textContent = sample?.n_triples ?? 10000;
-            document.getElementById('dataset-label').textContent = currentData.dataset_label || currentData.dataset_profile || currentData.dataset || profile.label;
-            document.getElementById('engine-count').textContent = engines.length;
+            try {
+                const engines = getEngines(currentData);
+                const sample = Object.values(currentData.engines || {})[0];
+                document.getElementById('dataset-size').textContent =
+                    (sample?.n_triples ?? currentData.dataset_info?.n_triples ?? 10000).toLocaleString();
+                document.getElementById('dataset-label').textContent =
+                    currentData.dataset_label || currentData.dataset_profile || currentData.dataset || profile.label;
+                document.getElementById('engine-count').textContent = engines.length;
 
-            renderDataWarnings(engines);
-            renderExecutionEnvironment(currentData);
-            renderSummaryCards(engines);
-            renderTable(engines);
-            renderCharts(engines);
+                renderDataWarnings(engines);
+                renderExecutionEnvironment(currentData);
+                renderSummaryCards(engines);
+                renderTable(engines);
+                renderCharts(engines);
+            } catch (err) {
+                console.error('comparative benchmarks render failed', err);
+                if (statusEl) {
+                    statusEl.innerHTML = `<span class="text-rose-400">Render error — ${err.message}</span>`;
+                }
+            }
         }
 
         function runHarnessLocally() {
@@ -916,12 +929,31 @@
             }
         }
 
-        window.onload = () => {
+        // Inline onclick handlers need globals; module scope is not on window.
+        window.runHarnessLocally = runHarnessLocally;
+        window.sortTable = sortTable;
+        window.showEngineDetail = showEngineDetail;
+
+        async function boot() {
             syncProfileFromUrl();
             document.getElementById('dataset-profile-select')?.addEventListener('change', loadData);
-            loadData();
+            try {
+                await loadData();
+            } catch (err) {
+                console.error('comparative benchmarks load failed', err);
+                const statusEl = document.getElementById('last-updated');
+                if (statusEl) {
+                    statusEl.innerHTML = `<span class="text-rose-400">Load failed — ${err.message}</span>`;
+                }
+            }
             checkDaemon();
-        };
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', boot);
+        } else {
+            boot();
+        }
     </script>
 </body>
 </html>

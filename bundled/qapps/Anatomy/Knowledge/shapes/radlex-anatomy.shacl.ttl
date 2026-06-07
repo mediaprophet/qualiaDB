@@ -1,0 +1,3236 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix q42: <https://qualia.id/ns/> .
+@prefix hc: <http://purl.org/healthcarevocab/v1#> .
+@prefix radlex: <http://www.radlex.org/RID/> .
+
+# Generated from RadLex OWL — anatomical possession graph (Things, not Principals)
+
+radlex:AnatomicalEntity a owl:Class ;
+rdfs:subClassOf q42:Thing ;
+rdfs:comment "RadLex RID tokens are clinical Things a Principal may have findings about." .
+
+radlex:RID1000Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1000 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID998 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13183 ] .
+
+radlex:RID10000Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10000 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID9990 ] .
+
+radlex:RID10001Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10001 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID9990 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10002 ] .
+
+radlex:RID10002Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10002 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10001 ] .
+
+radlex:RID10003Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10003 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID9080 ] ;
+    sh:property [ sh:path radlex:Contains ; sh:hasValue radlex:RID10011 ] ;
+    sh:property [ sh:path radlex:Contains ; sh:hasValue radlex:RID10016 ] ;
+    sh:property [ sh:path radlex:Contains ; sh:hasValue radlex:RID10017 ] ;
+    sh:property [ sh:path radlex:Contains ; sh:hasValue radlex:RID10018 ] ;
+    sh:property [ sh:path radlex:Contains ; sh:hasValue radlex:RID10019 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10004 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10005 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10006 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10020 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID9510 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13211 ] .
+
+radlex:RID10004Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10004 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10003 ] .
+
+radlex:RID10005Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10005 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10003 ] .
+
+radlex:RID10006Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10006 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10007 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10008 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10003 ] .
+
+radlex:RID10007Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10007 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10006 ] .
+
+radlex:RID10008Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10008 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID7740 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10006 ] .
+
+radlex:RID1001Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1001 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID998 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13183 ] .
+
+radlex:RID10010Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10010 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID7740 ] .
+
+radlex:RID10011Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10011 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID10003 ] .
+
+radlex:RID10016Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10016 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID10003 ] .
+
+radlex:RID10017Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10017 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID10003 ] .
+
+radlex:RID10018Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10018 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID10003 ] .
+
+radlex:RID10019Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10019 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID10003 ] ;
+    sh:property [ sh:path radlex:Contains ; sh:hasValue radlex:RID10020 ] .
+
+radlex:RID1002Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1002 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID993 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID1003 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID1004 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID1005 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID1006 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID1007 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13183 ] .
+
+radlex:RID10020Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10020 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID10019 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10003 ] .
+
+radlex:RID10021Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10021 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID9080 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10022 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10024 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10025 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10026 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10027 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13211 ] .
+
+radlex:RID10022Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10022 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10023 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10021 ] .
+
+radlex:RID10023Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10023 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10022 ] .
+
+radlex:RID10024Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10024 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10021 ] .
+
+radlex:RID10025Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10025 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10021 ] .
+
+radlex:RID10026Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10026 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10021 ] .
+
+radlex:RID10027Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10027 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10028 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10021 ] .
+
+radlex:RID10028Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10028 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10027 ] .
+
+radlex:RID10029Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10029 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10030 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10031 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10032 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10033 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10034 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10039 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10046 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13284 ] .
+
+radlex:RID1003Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1003 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID1002 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13183 ] .
+
+radlex:RID10030Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10030 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10029 ] .
+
+radlex:RID10031Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10031 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10029 ] .
+
+radlex:RID10032Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10032 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10029 ] .
+
+radlex:RID10033Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10033 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10029 ] .
+
+radlex:RID10034Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10034 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10035 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10038 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10029 ] .
+
+radlex:RID10035Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10035 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID10037 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10036 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10037 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10034 ] .
+
+radlex:RID10036Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10036 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10035 ] .
+
+radlex:RID10037Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10037 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Constitutional_Part_Of ; sh:hasValue radlex:RID10035 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10035 ] .
+
+radlex:RID10038Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10038 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10034 ] .
+
+radlex:RID10039Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10039 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID10044 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10040 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10041 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10029 ] .
+
+radlex:RID1004Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1004 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID1002 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13183 ] .
+
+radlex:RID10040Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10040 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10039 ] .
+
+radlex:RID10041Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10041 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10042 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10043 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10039 ] .
+
+radlex:RID10042Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10042 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10041 ] .
+
+radlex:RID10043Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10043 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10041 ] .
+
+radlex:RID10044Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10044 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Constitutional_Part_Of ; sh:hasValue radlex:RID10039 ] .
+
+radlex:RID10046Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10046 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10052 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10029 ] .
+
+radlex:RID1005Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1005 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID1002 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13183 ] .
+
+radlex:RID10052Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10052 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10046 ] .
+
+radlex:RID10053Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10053 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10054 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10199 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID13303 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID9080 ] .
+
+radlex:RID10054Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10054 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10055 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10082 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10083 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10084 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10085 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10086 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10094 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10100 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10053 ] .
+
+radlex:RID10055Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10055 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10056 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10057 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10058 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10062 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10065 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10066 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10069 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10070 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10071 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10072 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10073 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10074 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10075 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10076 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10077 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10078 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10079 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10080 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10081 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10054 ] .
+
+radlex:RID10056Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10056 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10057Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10057 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10058Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10058 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10059 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10060 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10061 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10059Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10059 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10058 ] .
+
+radlex:RID1006Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1006 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID1002 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13183 ] .
+
+radlex:RID10060Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10060 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10058 ] .
+
+radlex:RID10061Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10061 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10058 ] .
+
+radlex:RID10062Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10062 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10063 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10064 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10063Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10063 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10062 ] .
+
+radlex:RID10064Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10064 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10062 ] .
+
+radlex:RID10065Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10065 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10066Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10066 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10067 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10068 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10067Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10067 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10066 ] .
+
+radlex:RID10068Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10068 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10066 ] .
+
+radlex:RID10069Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10069 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID1007Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1007 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID1002 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13183 ] .
+
+radlex:RID10070Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10070 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10071Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10071 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10072Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10072 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10073Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10073 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10074Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10074 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10075Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10075 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10076Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10076 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10077Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10077 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10078Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10078 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10079Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10079 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10080Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10080 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10081Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10081 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10055 ] .
+
+radlex:RID10082Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10082 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10054 ] .
+
+radlex:RID10083Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10083 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10054 ] .
+
+radlex:RID10084Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10084 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10054 ] .
+
+radlex:RID10085Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10085 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10054 ] .
+
+radlex:RID10086Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10086 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10054 ] .
+
+radlex:RID10094Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10094 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10095 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10096 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10099 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10054 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID9431 ] .
+
+radlex:RID10095Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10095 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10094 ] .
+
+radlex:RID10096Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10096 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10097 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10098 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10094 ] .
+
+radlex:RID10097Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10097 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10096 ] .
+
+radlex:RID10098Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10098 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10096 ] .
+
+radlex:RID10099Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10099 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10094 ] .
+
+radlex:RID1010Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1010 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10100Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10100 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10101 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10102 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10105 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10106 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10107 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10108 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10054 ] .
+
+radlex:RID10101Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10101 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10100 ] .
+
+radlex:RID10102Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10102 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10100 ] .
+
+radlex:RID10105Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10105 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10100 ] .
+
+radlex:RID10106Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10106 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10100 ] .
+
+radlex:RID10107Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10107 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10100 ] .
+
+radlex:RID10108Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10108 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10100 ] .
+
+radlex:RID10109Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10109 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contains ; sh:hasValue radlex:RID10149 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10111 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10112 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10113 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10114 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10119 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10121 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10132 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10143 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10146 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10147 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10189 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID1011Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1011 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10111Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10111 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10116 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10117 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10114 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10112Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10112 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10113Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10113 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10114Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10114 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10111 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10118 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10116Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10116 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10111 ] .
+
+radlex:RID10117Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10117 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10111 ] .
+
+radlex:RID10118Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10118 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10114 ] .
+
+radlex:RID10119Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10119 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10120 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10120Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10120 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10119 ] .
+
+radlex:RID10121Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10121 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10122 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10123 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10124 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10127 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10128 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10129 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10130 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10131 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10122Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10122 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10121 ] .
+
+radlex:RID10123Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10123 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10121 ] .
+
+radlex:RID10124Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10124 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10125 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10126 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10121 ] .
+
+radlex:RID10125Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10125 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10124 ] .
+
+radlex:RID10126Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10126 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10124 ] .
+
+radlex:RID10127Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10127 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10121 ] .
+
+radlex:RID10128Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10128 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10121 ] .
+
+radlex:RID10129Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10129 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10121 ] .
+
+radlex:RID1013Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1013 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1014 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1017 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1018 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID44026 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10130Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10130 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10121 ] .
+
+radlex:RID10131Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10131 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10121 ] .
+
+radlex:RID10132Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10132 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10133 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10137 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10138 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10139 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10140 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10141 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10142 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID9361 ] .
+
+radlex:RID10133Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10133 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10135 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10136 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10132 ] .
+
+radlex:RID10135Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10135 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10133 ] .
+
+radlex:RID10136Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10136 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10133 ] .
+
+radlex:RID10137Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10137 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10132 ] .
+
+radlex:RID10138Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10138 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10132 ] .
+
+radlex:RID10139Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10139 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10132 ] .
+
+radlex:RID1014Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1014 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1016 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1017 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43951 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43954 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43957 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43960 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43963 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43969 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43972 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID44003 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID44006 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID44021 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1013 ] .
+
+radlex:RID10140Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10140 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10132 ] .
+
+radlex:RID10141Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10141 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10132 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13261 ] .
+
+radlex:RID10142Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10142 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10132 ] .
+
+radlex:RID10143Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10143 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10144 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10145 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10144Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10144 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10143 ] .
+
+radlex:RID10145Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10145 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10143 ] .
+
+radlex:RID10146Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10146 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10147Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10147 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10148 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10148Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10148 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10147 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID9450 ] .
+
+radlex:RID10149Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10149 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10176 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID1015Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1015 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1161 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43975 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43978 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10151Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10151 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10153 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10154 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10155 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10156 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID9081 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10153Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10153 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10151 ] .
+
+radlex:RID10154Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10154 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10151 ] .
+
+radlex:RID10155Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10155 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10151 ] .
+
+radlex:RID10156Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10156 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10151 ] .
+
+radlex:RID10157Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10157 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10159 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10160 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10161 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10162 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID9081 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10159Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10159 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10157 ] .
+
+radlex:RID1016Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1016 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Constitutional_Part_Of ; sh:hasValue radlex:RID39952 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID39247 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID39248 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1014 ] .
+
+radlex:RID10160Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10160 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10157 ] .
+
+radlex:RID10161Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10161 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10157 ] .
+
+radlex:RID10162Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10162 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10157 ] .
+
+radlex:RID10163Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10163 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10165 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10166 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10167 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10168 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10169 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID9081 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10165Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10165 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10163 ] .
+
+radlex:RID10166Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10166 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10163 ] .
+
+radlex:RID10167Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10167 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10163 ] .
+
+radlex:RID10168Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10168 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10163 ] .
+
+radlex:RID10169Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10169 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10163 ] .
+
+radlex:RID1017Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1017 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Constitutional_Part_Of ; sh:hasValue radlex:RID39952 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID44012 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID44015 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1013 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1014 ] .
+
+radlex:RID10170Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10170 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10173Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10173 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10174Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10174 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10175Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10175 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10176Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10176 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10149 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID1018Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1018 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1019 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1022 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1023 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1055 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43937 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1013 ] .
+
+radlex:RID10185Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10185 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID10189Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10189 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10190 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10191 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10192 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10193 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10194 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10195 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10196 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10197 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10198 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10109 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13303 ] .
+
+radlex:RID1019Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1019 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1068 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1018 ] .
+
+radlex:RID10190Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10190 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10189 ] .
+
+radlex:RID10191Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10191 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10189 ] .
+
+radlex:RID10192Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10192 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10189 ] .
+
+radlex:RID10193Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10193 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10189 ] .
+
+radlex:RID10194Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10194 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10189 ] .
+
+radlex:RID10195Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10195 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10189 ] .
+
+radlex:RID10196Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10196 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10189 ] .
+
+radlex:RID10197Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10197 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10189 ] .
+
+radlex:RID10198Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10198 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10189 ] .
+
+radlex:RID10199Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10199 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10200 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10201 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10298 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10299 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10300 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10301 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10302 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10303 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10304 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10305 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10306 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10307 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10308 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10053 ] .
+
+radlex:RID1020Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1020 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10200Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10200 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10201Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10201 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10202 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10203 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10205 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10207 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10208 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10209 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10210 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10211 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10212 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10213 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10221 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10223 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10243 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10202Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10202 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10203Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10203 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10204 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10245 ] .
+
+radlex:RID10204Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10204 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10203 ] .
+
+radlex:RID10205Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10205 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10206 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10206Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10206 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10205 ] .
+
+radlex:RID10207Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10207 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10208Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10208 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10209Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10209 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID1021Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1021 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10210Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10210 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10211Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10211 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10212Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10212 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10213Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10213 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10214Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10214 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10215 ] .
+
+radlex:RID10215Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10215 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10214 ] .
+
+radlex:RID10216Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10216 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10217 ] .
+
+radlex:RID10217Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10217 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10216 ] .
+
+radlex:RID10218Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10218 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10219 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10220 ] .
+
+radlex:RID10219Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10219 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10218 ] .
+
+radlex:RID1022Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1022 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1018 ] .
+
+radlex:RID10220Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10220 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10218 ] .
+
+radlex:RID10221Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10221 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10222 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10222Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10222 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10221 ] .
+
+radlex:RID10223Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10223 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10224 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10226 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10227 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10235 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10237 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10242 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10224Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10224 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10223 ] .
+
+radlex:RID10226Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10226 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10223 ] .
+
+radlex:RID10227Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10227 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10228 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10233 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10234 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10223 ] .
+
+radlex:RID10228Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10228 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10229 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10230 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10232 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10227 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10237 ] .
+
+radlex:RID10229Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10229 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10228 ] .
+
+radlex:RID1023Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1023 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1018 ] .
+
+radlex:RID10230Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10230 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10231 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10228 ] .
+
+radlex:RID10231Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10231 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10230 ] .
+
+radlex:RID10232Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10232 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10228 ] .
+
+radlex:RID10233Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10233 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10227 ] .
+
+radlex:RID10234Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10234 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10227 ] .
+
+radlex:RID10235Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10235 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10223 ] .
+
+radlex:RID10237Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10237 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10228 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10238 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10240 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10241 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10223 ] .
+
+radlex:RID10238Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10238 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10237 ] .
+
+radlex:RID1024Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1024 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10240Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10240 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10237 ] .
+
+radlex:RID10241Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10241 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10237 ] .
+
+radlex:RID10242Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10242 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10223 ] .
+
+radlex:RID10243Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10243 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10244 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10273 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10201 ] .
+
+radlex:RID10244Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10244 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10245 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10247 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10258 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10261 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10243 ] .
+
+radlex:RID10245Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10245 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10203 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10244 ] .
+
+radlex:RID10247Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10247 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10248 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10249 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10251 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10253 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10256 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10244 ] .
+
+radlex:RID10248Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10248 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10247 ] .
+
+radlex:RID10249Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10249 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10250 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10247 ] .
+
+radlex:RID1025Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1025 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contains ; sh:hasValue radlex:RID1026 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Tributary_Of ; sh:hasValue radlex:RID1024 ] .
+
+radlex:RID10250Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10250 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10249 ] .
+
+radlex:RID10251Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10251 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10252 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10247 ] .
+
+radlex:RID10252Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10252 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10251 ] .
+
+radlex:RID10253Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10253 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10254 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10255 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10247 ] .
+
+radlex:RID10254Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10254 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10253 ] .
+
+radlex:RID10255Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10255 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10253 ] .
+
+radlex:RID10256Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10256 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10257 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10247 ] .
+
+radlex:RID10257Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10257 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10256 ] .
+
+radlex:RID10258Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10258 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10244 ] .
+
+radlex:RID1026Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1026 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID1025 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10261Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10261 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10262 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10263 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10264 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10265 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10266 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10267 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10270 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10244 ] .
+
+radlex:RID10262Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10262 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10261 ] .
+
+radlex:RID10263Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10263 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10261 ] .
+
+radlex:RID10264Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10264 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10261 ] .
+
+radlex:RID10265Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10265 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10261 ] .
+
+radlex:RID10266Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10266 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10261 ] .
+
+radlex:RID10267Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10267 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10268 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10269 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10261 ] .
+
+radlex:RID10268Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10268 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10267 ] .
+
+radlex:RID10269Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10269 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10267 ] .
+
+radlex:RID10270Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10270 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10271 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10272 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10261 ] .
+
+radlex:RID10271Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10271 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10270 ] .
+
+radlex:RID10272Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10272 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10270 ] .
+
+radlex:RID10273Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10273 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10274 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10243 ] .
+
+radlex:RID10274Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10274 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10275 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10276 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10281 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10285 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10289 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10290 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10295 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10296 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10297 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10273 ] .
+
+radlex:RID10275Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10275 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10274 ] .
+
+radlex:RID10276Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10276 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10277 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10278 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10279 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10280 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10274 ] .
+
+radlex:RID10277Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10277 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10276 ] .
+
+radlex:RID10278Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10278 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10276 ] .
+
+radlex:RID10279Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10279 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10276 ] .
+
+radlex:RID1028Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1028 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Tributary_Of ; sh:hasValue radlex:RID1024 ] .
+
+radlex:RID10280Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10280 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10276 ] .
+
+radlex:RID10281Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10281 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10282 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10283 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10284 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10274 ] .
+
+radlex:RID10282Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10282 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10281 ] .
+
+radlex:RID10283Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10283 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10281 ] .
+
+radlex:RID10284Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10284 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10281 ] .
+
+radlex:RID10285Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10285 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10286 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10287 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10288 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10274 ] .
+
+radlex:RID10286Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10286 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10285 ] .
+
+radlex:RID10287Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10287 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10285 ] .
+
+radlex:RID10288Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10288 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10285 ] .
+
+radlex:RID10289Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10289 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10274 ] .
+
+radlex:RID1029Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1029 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10290Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10290 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10291 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10292 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID10293 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10274 ] .
+
+radlex:RID10291Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10291 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10290 ] .
+
+radlex:RID10292Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10292 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10290 ] .
+
+radlex:RID10293Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10293 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10290 ] .
+
+radlex:RID10295Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10295 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10274 ] .
+
+radlex:RID10296Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10296 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10274 ] .
+
+radlex:RID10297Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10297 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10274 ] .
+
+radlex:RID10298Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10298 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10299Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10299 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID103Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID103 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID31135 ] .
+
+radlex:RID1030Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1030 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10300Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10300 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10301Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10301 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10302Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10302 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10303Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10303 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10304Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10304 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10305Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10305 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10306Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10306 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10307Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10307 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID10308Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10308 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID10199 ] .
+
+radlex:RID1031Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1031 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10312Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10312 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID10342 ] .
+
+radlex:RID1032Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1032 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10321Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10321 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID10341 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID49583 ] .
+
+radlex:RID10326Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10326 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID49581 ] .
+
+radlex:RID1033Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1033 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10334Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10334 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID49583 ] .
+
+radlex:RID10337Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10337 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID10341 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID10342 ] .
+
+radlex:RID1034Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1034 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10341Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10341 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Member ; sh:hasValue radlex:RID10321 ] ;
+    sh:property [ sh:path radlex:Has_Member ; sh:hasValue radlex:RID10337 ] .
+
+radlex:RID10342Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10342 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Member ; sh:hasValue radlex:RID10312 ] ;
+    sh:property [ sh:path radlex:Has_Member ; sh:hasValue radlex:RID10337 ] .
+
+radlex:RID10345Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10345 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID49582 ] .
+
+radlex:RID1035Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1035 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1036Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1036 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID10361Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID10361 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID49581 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID49582 ] .
+
+radlex:RID1037Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1037 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1038Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1038 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1039Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1039 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1040Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1040 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1041Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1041 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1042Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1042 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1043Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1043 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1044Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1044 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1045Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1045 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1046Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1046 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1047Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1047 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1048Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1048 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1049Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1049 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1050Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1050 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1051Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1051 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1053Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1053 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1054Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1054 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1055Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1055 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1056 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1057 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1058 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1059 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID1064 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1018 ] .
+
+radlex:RID1056Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1056 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43908 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43911 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1055 ] .
+
+radlex:RID1057Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1057 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1055 ] .
+
+radlex:RID1058Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1058 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1055 ] .
+
+radlex:RID1059Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1059 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1055 ] .
+
+radlex:RID1060Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1060 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13186 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13186 ] .
+
+radlex:RID1061Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1061 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1062Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1062 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1063Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1063 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1064Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1064 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1055 ] .
+
+radlex:RID1065Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1065 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1067Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1067 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1068Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1068 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1019 ] .
+
+radlex:RID1069Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1069 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1070Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1070 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1071Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1071 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1072Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1072 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1073Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1073 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1074Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1074 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1075Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1075 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1076Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1076 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1077Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1077 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1078Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1078 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1079Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1079 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1080Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1080 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1081Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1081 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1082Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1082 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1083Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1083 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1084Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1084 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1085Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1085 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1086Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1086 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1087Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1087 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1088Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1088 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1089Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1089 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1090Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1090 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1091Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1091 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1092Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1092 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1093Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1093 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1094Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1094 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1095Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1095 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1096Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1096 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1097Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1097 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1098Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1098 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1099Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1099 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1100Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1100 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1101Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1101 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1102Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1102 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1103Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1103 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1104Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1104 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1105Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1105 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID1104 ] .
+
+radlex:RID1106Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1106 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID1104 ] .
+
+radlex:RID1107Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1107 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1108Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1108 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID11081Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID11081 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID34297 ] .
+
+radlex:RID1109Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1109 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1110Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1110 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1111Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1111 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1112Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1112 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1113Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1113 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1114Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1114 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1117Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1117 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1119Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1119 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID112Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID112 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13211 ] .
+
+radlex:RID1120Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1120 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1121Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1121 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1122Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1122 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1124Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1124 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1125Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1125 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID1122 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1126Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1126 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID1125 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1127Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1127 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID1125 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1128Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1128 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID1127 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1129Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1129 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1130Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1130 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1131Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1131 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1132Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1132 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1134Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1134 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1135Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1135 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1136Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1136 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1137Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1137 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1138Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1138 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1139Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1139 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID114Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID114 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Contained_In ; sh:hasValue radlex:RID32954 ] ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID132 ] ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID95 ] ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID29384 ] ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID30854 ] ;
+    sh:property [ sh:path radlex:Has_Innervation_Source ; sh:hasValue radlex:RID49533 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID115 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID116 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID117 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID119 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID122 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID124 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID125 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID126 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID128 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID115 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID116 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID117 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID119 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID122 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID30332 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID31463 ] ;
+    sh:property [ sh:path radlex:Lymphatic_Drainage ; sh:hasValue radlex:RID29693 ] ;
+    sh:property [ sh:path radlex:Lymphatic_Drainage ; sh:hasValue radlex:RID29698 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID32152 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID32153 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID32154 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID94 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID29665 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID94 ] .
+
+radlex:RID1140Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1140 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1141Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1141 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1142Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1142 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1143Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1143 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1145Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1145 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1146Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1146 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1147Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1147 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1148Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1148 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1149Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1149 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID115Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID115 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID29279 ] ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID30209 ] ;
+    sh:property [ sh:path radlex:Lymphatic_Drainage ; sh:hasValue radlex:RID29684 ] ;
+    sh:property [ sh:path radlex:Lymphatic_Drainage ; sh:hasValue radlex:RID29685 ] ;
+    sh:property [ sh:path radlex:Lymphatic_Drainage ; sh:hasValue radlex:RID29687 ] ;
+    sh:property [ sh:path radlex:Lymphatic_Drainage ; sh:hasValue radlex:RID29689 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID114 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID114 ] .
+
+radlex:RID1150Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1150 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1151Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1151 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1152Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1152 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1153Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1153 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1154Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1154 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1155Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1155 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1156Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1156 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1157Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1157 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID11572Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID11572 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID11571 ] .
+
+radlex:RID11573Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID11573 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID11571 ] .
+
+radlex:RID11574Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID11574 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID11571 ] .
+
+radlex:RID11575Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID11575 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID11571 ] .
+
+radlex:RID11576Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID11576 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID11571 ] .
+
+radlex:RID1158Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1158 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1159Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1159 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID116Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID116 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID29280 ] ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID30210 ] ;
+    sh:property [ sh:path radlex:Lymphatic_Drainage ; sh:hasValue radlex:RID29684 ] ;
+    sh:property [ sh:path radlex:Lymphatic_Drainage ; sh:hasValue radlex:RID29691 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID114 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID114 ] .
+
+radlex:RID1160Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1160 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1161Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1161 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID43994 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID1015 ] .
+
+radlex:RID1162Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1162 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1163Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1163 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1164Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1164 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1165Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1165 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1166Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1166 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1167Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1167 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1168Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1168 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1169Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1169 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID117Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID117 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID29282 ] ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID30211 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID114 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID114 ] .
+
+radlex:RID1170Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1170 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID1171 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID1173 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID1175 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID1169 ] .
+
+radlex:RID1171Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1171 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID1170 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID1170 ] .
+
+radlex:RID1173Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1173 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID1170 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID1170 ] .
+
+radlex:RID1175Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1175 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID1170 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID1170 ] .
+
+radlex:RID1176Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1176 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1177Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1177 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1178Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1178 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1179Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1179 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1180Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1180 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID29520 ] .
+
+radlex:RID1181Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1181 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID29520 ] .
+
+radlex:RID1182Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1182 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID29520 ] .
+
+radlex:RID1183Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1183 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID30898 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID30899 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID30900 ] .
+
+radlex:RID1184Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1184 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID30898 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID30899 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID30900 ] .
+
+radlex:RID1185Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1185 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID30898 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID30899 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID30900 ] .
+
+radlex:RID119Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID119 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID29283 ] ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID30212 ] ;
+    sh:property [ sh:path radlex:Lymphatic_Drainage ; sh:hasValue radlex:RID29684 ] ;
+    sh:property [ sh:path radlex:Lymphatic_Drainage ; sh:hasValue radlex:RID29704 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID114 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID114 ] .
+
+radlex:RID1192Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1192 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1193Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1193 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13184 ] .
+
+radlex:RID1197Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID1197 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Tributary_Of ; sh:hasValue radlex:RID1199 ] .
+
+radlex:RID11998Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID11998 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Constitutional_Part ; sh:hasValue radlex:RID15918 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID15918 ] .
+
+radlex:RID11999Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID11999 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12002 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12002Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12002 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID11999 ] .
+
+radlex:RID12003Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12003 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID12013 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID12014 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12006Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12006 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID12003 ] .
+
+radlex:RID12007Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12007 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID12003 ] .
+
+radlex:RID12008Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12008 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID12003 ] .
+
+radlex:RID12009Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12009 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID12010 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID12011 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID12012 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12010 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12011 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12012 ] ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID12003 ] .
+
+radlex:RID12010Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12010 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID12009 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12009 ] ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID12009 ] .
+
+radlex:RID12011Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12011 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID12009 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12009 ] ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID12009 ] .
+
+radlex:RID12012Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12012 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID12009 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12009 ] ;
+    sh:property [ sh:path radlex:Segment_Of ; sh:hasValue radlex:RID12009 ] .
+
+radlex:RID12013Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12013 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID12003 ] .
+
+radlex:RID12014Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12014 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID12003 ] .
+
+radlex:RID12015Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12015 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12018 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12019 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12020 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12018 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12019 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID21312 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12018Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12018 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12015 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14153 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID27794 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14153 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID27794 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12015 ] .
+
+radlex:RID12019Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12019 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12015 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14160 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14163 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14166 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14169 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14160 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14163 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14166 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14169 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12015 ] .
+
+radlex:RID12020Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12020 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12015 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12021Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12021 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID6803 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID6803 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12024Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12024 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID12029 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12030 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12053 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12082 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID12027 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID12028 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12030 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12053 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12082 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12027Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12027 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID12024 ] .
+
+radlex:RID12028Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12028 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID12024 ] .
+
+radlex:RID12029Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12029 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID12024 ] .
+
+radlex:RID12030Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12030 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12024 ] ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID12029 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12033 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12034 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12036 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12033 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12034 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12036 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12024 ] .
+
+radlex:RID12033Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12033 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12030 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID16282 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID16282 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12030 ] .
+
+radlex:RID12034Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12034 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12030 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14187 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID27799 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14187 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID27799 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12030 ] .
+
+radlex:RID12036Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12036 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12030 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12037 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12040 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12041 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12037 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12040 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12041 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12030 ] .
+
+radlex:RID12037Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12037 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12036 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12038 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12039 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14213 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12038 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12039 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14213 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12036 ] .
+
+radlex:RID12038Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12038 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12037 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12037 ] .
+
+radlex:RID12039Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12039 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12037 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12037 ] .
+
+radlex:RID12040Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12040 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12036 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14195 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14198 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14201 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14195 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14198 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14201 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12036 ] .
+
+radlex:RID12041Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12041 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12036 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12042 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12043 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12051 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID27803 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID27823 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID27826 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID27829 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID27843 ] ;
+    sh:property [ sh:path radlex:Has_Part ; sh:hasValue radlex:RID12042 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12043 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12051 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID27803 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID27823 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID27826 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID27829 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID27843 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12036 ] .
+
+radlex:RID12042Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12042 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12041 ] ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID12041 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID12041 ] .
+
+radlex:RID12043Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12043 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12041 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12041 ] .
+
+radlex:RID12050Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12050 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID27803 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID27803 ] .
+
+radlex:RID12051Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12051 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12041 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12052 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID27835 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID27840 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12052 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID27835 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID27840 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12041 ] .
+
+radlex:RID12052Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12052 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12051 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12051 ] .
+
+radlex:RID12053Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12053 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12024 ] ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID12029 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12057 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12058 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12061 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12063 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12065 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12067 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12074 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12077 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14219 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14234 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14237 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12057 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12058 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12061 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12063 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12065 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12067 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12074 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12077 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14219 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14234 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14237 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12024 ] .
+
+radlex:RID12057Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12057 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12053 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12053 ] .
+
+radlex:RID12058Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12058 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12053 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12053 ] .
+
+radlex:RID12059Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12059 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12060Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12060 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12061Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12061 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12053 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12053 ] .
+
+radlex:RID12062Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12062 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12063Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12063 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12053 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12064 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14245 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14248 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID27858 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12064 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14245 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14248 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID27858 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12053 ] .
+
+radlex:RID12064Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12064 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12063 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12063 ] .
+
+radlex:RID12065Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12065 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12053 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID12066 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14258 ] ;
+    sh:property [ sh:path radlex:Has_Branch ; sh:hasValue radlex:RID14264 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID12066 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14258 ] ;
+    sh:property [ sh:path radlex:Has_Regional_Part ; sh:hasValue radlex:RID14264 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12053 ] .
+
+radlex:RID12066Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12066 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12065 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12065 ] .
+
+radlex:RID12067Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12067 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Branch_Of ; sh:hasValue radlex:RID12053 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Regional_Part_Of ; sh:hasValue radlex:RID12053 ] .
+
+radlex:RID12068Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12068 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12069Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12069 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12070Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12070 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+radlex:RID12071Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12071 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Continuous_With ; sh:hasValue radlex:RID12070 ] ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13186 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13186 ] .
+
+radlex:RID12072Shape a sh:NodeShape ;
+    sh:targetClass radlex:RID12072 ;
+    sh:class radlex:AnatomicalEntity ;
+    sh:property [ sh:path radlex:Member_Of ; sh:hasValue radlex:RID13190 ] ;
+    sh:property [ sh:path radlex:Part_Of ; sh:hasValue radlex:RID13190 ] .
+
+# ... truncated (512 shapes shown; increase max_shapes for full export)
+q42:PrincipalRadLexFindingShape a sh:NodeShape ;
+sh:targetClass q42:Principal ;
+sh:property [
+sh:path q42:hasFinding ;
+sh:class radlex:AnatomicalEntity ;
+sh:minCount 0 ;
+sh:message "RadLex findings attach to a Principal; the Principal is not an anatomical entity." ;
+] .
+

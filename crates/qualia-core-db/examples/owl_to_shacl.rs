@@ -10,7 +10,7 @@ fn main() {
     let root = PathBuf::from("app-development");
     let healthcare = root.join("2015-01-11.n3");
     let radlex = root.join("PunRadLex_Owl4.3/PunRadLex4.3.owl");
-    let out = root.join("Anatomy/Knowledge/shapes");
+    let out = PathBuf::from("bundled/qapps/Anatomy/Knowledge/shapes");
 
     let written = qualia_core_db::owl_to_shacl::write_anatomy_shape_bundle(
         healthcare.is_file().then_some(healthcare.as_path()),

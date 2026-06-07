@@ -33,3 +33,5 @@ if (-not (Test-Path $Out)) {
     throw "Expected installer not found: $Out"
 }
 Write-Host "Installer: $Out"
+$global:LASTEXITCODE = 0
+exit 0

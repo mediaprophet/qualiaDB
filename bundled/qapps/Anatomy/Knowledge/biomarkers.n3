@@ -1,0 +1,76 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+@prefix bio:   <https://qualia.anatomy.example/ontology/bio#> .
+@prefix impact: <https://qualia.anatomy.example/ontology/impact#> .
+@prefix organ: <https://qualia.anatomy.example/ontology/organ#> .
+@prefix lab:   <https://qualia.anatomy.example/ontology/lab#> .
+
+# =============================================
+# Biomarkers & Lab Tests for Physiology & Pathology Interpretation
+# =============================================
+
+lab:Biomarker a owl:Class ;
+    rdfs:label "Laboratory Biomarker" ;
+    rdfs:comment "A measurable indicator used to assess physiological function or pathology." .
+
+lab:hasNormalRange a owl:DatatypeProperty ;
+    rdfs:label "has normal range" ;
+    rdfs:domain lab:Biomarker ;
+    rdfs:range xsd:string .
+
+lab:indicatesImpact a owl:ObjectProperty ;
+    rdfs:label "indicates impact on" ;
+    rdfs:domain lab:Biomarker ;
+    rdfs:range organ:AnatomicalStructure .
+
+# Kidney Function
+lab:eGFR a lab:Biomarker ;
+    rdfs:label "Estimated Glomerular Filtration Rate (eGFR)" ;
+    lab:hasNormalRange "90-120 mL/min/1.73m²" ;
+    lab:indicatesImpact organ:Kidney ;
+    dcterms:description "Primary marker of renal physiological function. Lower values indicate impaired filtration (CKD staging)." .
+
+lab:Creatinine a lab:Biomarker ;
+    rdfs:label "Serum Creatinine" ;
+    lab:hasNormalRange "0.6-1.2 mg/dL" ;
+    lab:indicatesImpact organ:Kidney .
+
+lab:UACR a lab:Biomarker ;
+    rdfs:label "Urine Albumin-to-Creatinine Ratio (UACR)" ;
+    lab:hasNormalRange "<30 mg/g" ;
+    lab:indicatesImpact organ:Kidney .
+
+# Metabolic / Diabetes
+lab:HbA1c a lab:Biomarker ;
+    rdfs:label "HbA1c (Glycated Hemoglobin)" ;
+    lab:hasNormalRange "<5.7%" ;
+    lab:indicatesImpact organ:Pancreas, organ:BloodVessels ;
+    dcterms:description "Reflects average blood glucose over 2-3 months. Elevated levels indicate impaired glucose metabolism." .
+
+lab:FastingGlucose a lab:Biomarker ;
+    rdfs:label "Fasting Blood Glucose" ;
+    lab:hasNormalRange "70-99 mg/dL" ;
+    lab:indicatesImpact organ:MetabolicSystem .
+
+# Cardiovascular
+lab:Cholesterol a lab:Biomarker ;
+    rdfs:label "Total Cholesterol" ;
+    lab:hasNormalRange "<200 mg/dL" ;
+    lab:indicatesImpact organ:BloodVessels .
+
+lab:LDL a lab:Biomarker ;
+    rdfs:label "LDL Cholesterol" ;
+    lab:hasNormalRange "<100 mg/dL" ;
+    lab:indicatesImpact organ:BloodVessels .
+
+# Liver
+lab:ALT a lab:Biomarker ;
+    rdfs:label "Alanine Aminotransferase (ALT)" ;
+    lab:hasNormalRange "7-56 U/L" ;
+    lab:indicatesImpact organ:Liver .
+
+# Add more biomarkers as needed...

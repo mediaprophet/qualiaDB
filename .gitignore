@@ -5,6 +5,7 @@
 *.wal
 *.q42
 *.n3
+!bundled/qapps/**/*.n3
 
 # Keep published WordNet benchmark/test assets trackable in docs/playground
 !docs/playground/wordnet.q42

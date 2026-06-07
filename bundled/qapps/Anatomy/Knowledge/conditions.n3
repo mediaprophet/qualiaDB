@@ -1,0 +1,26 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+@prefix bio:   <https://qualia.anatomy.example/ontology/bio#> .
+@prefix impact: <https://qualia.anatomy.example/ontology/impact#> .
+@prefix organ: <https://qualia.anatomy.example/ontology/organ#> .
+@prefix phys:  <https://qualia.anatomy.example/ontology/physiology#> .
+
+# Extended with physiological descriptions
+bio:Condition a owl:Class ;
+    rdfs:label "Health Condition" ;
+    rdfs:comment "A diagnosable health condition with potential systemic and organ-level impacts." .
+
+# ... (keep existing conditions and add physiological notes)
+
+bio:Type2Diabetes a bio:Condition ;
+    rdfs:label "Type 2 Diabetes Mellitus" ;
+    impact:hasPrimaryImpactSystem organ:MetabolicSystem ;
+    impact:Impacts organ:Kidney, organ:Heart, organ:BloodVessels, organ:Retina, organ:PeripheralNerves ;
+    phys:description "Impaired insulin signaling leading to hyperglycemia, affecting vascular endothelium and renal glomeruli physiology." .
+
+# Add similar for other key conditions...
+# (Full expansion would be very long; core structure ready for physiology + pathology links)

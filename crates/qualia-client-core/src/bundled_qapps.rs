@@ -1,7 +1,7 @@
 //! Seed qapps shipped beside the desktop executable into `{storage}/Qapps/`.
 //!
 //! Release bundles place packages under `{exe}/bundled/qapps/{Name}/`.
-//! Dev builds fall back to `app-development/{Name}/` at compile-time path.
+//! Dev builds resolve `bundled/qapps/{Name}/`, then gitignored `app-development/{Name}/`.
 
 use std::fs;
 use std::io;
@@ -84,12 +84,15 @@ pub fn resolve_bundled_qapp_source(qapp_name: &str) -> Option<PathBuf> {
         }
     }
 
-    // Dev tree: crates/qualia-client-core/../../app-development/Anatomy
-    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../app-development")
-        .join(qapp_name);
-    if has_valid_manifest(&dev) {
-        return Some(dev);
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    for rel in [
+        format!("bundled/qapps/{qapp_name}"),
+        format!("app-development/{qapp_name}"),
+    ] {
+        let candidate = repo_root.join(&rel);
+        if has_valid_manifest(&candidate) {
+            return Some(candidate);
+        }
     }
 
     None
@@ -327,23 +330,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn dev_anatomy_source_resolves_when_present() {
-        let src = resolve_bundled_qapp_source("Anatomy");
-        if PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../app-development/Anatomy/qapp.json")
-            .is_file()
-        {
-            assert!(src.is_some(), "expected dev Anatomy path");
+    fn tracked_anatomy_source_resolves_when_present() {
+        let tracked = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../bundled/qapps/Anatomy/qapp.json");
+        if tracked.is_file() {
+            let src = resolve_bundled_qapp_source("Anatomy");
+            assert!(src.is_some(), "expected bundled Anatomy path");
         }
     }
 
     #[test]
     fn anatomy_manifest_version_reads_when_present() {
-        let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../app-development/Anatomy");
-        if dev.join("qapp.json").is_file() {
-            let v = read_qapp_version_from_dir(&dev);
-            assert_eq!(v.as_deref(), Some("0.0.8"));
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let anatomy = root.join("bundled/qapps/Anatomy");
+        if !anatomy.join("qapp.json").is_file() {
+            return;
         }
+        let v = read_qapp_version_from_dir(&anatomy);
+        assert_eq!(v.as_deref(), Some("0.0.8"));
     }
 }

@@ -426,7 +426,7 @@ Fixtures: commit small `tests/fixtures/foaf.ttl`, `tests/fixtures/tiny.gguf` (or
 | `crates/qualia-cli/src/resources.rs` | **Canonical** download/import pipelines to lift in-process |
 | `crates/qualia-core-db/src/resource_catalog.rs` | Canonical types + `to_quins()` |
 | `crates/qualia-core-db/src/orchestrator.rs` | `orchestrate_inference` governance |
-| `app-development/Anatomy/qapp.json` | Required ontologies for readiness checks |
+| `bundled/qapps/Anatomy/qapp.json` | Required ontologies for readiness checks |
 | `docs/planning/desktop-chat-resource-pipeline.md` | This document |
 
 ---
