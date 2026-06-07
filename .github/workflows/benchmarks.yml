@@ -91,6 +91,27 @@ jobs:
             --n 10000 \
             --output docs/comparative_benchmark_results.json
 
+      # ── Qualia WASM (core-db) ─────────────────────────────────────────────────
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build Qualia WASM for comparative harness
+        run: |
+          rustup target add wasm32-unknown-unknown
+          wasm-pack build crates/qualia-core-db \
+            --target web \
+            --release \
+            --out-dir docs/playground \
+            --out-name qualia_core_db \
+            --no-typescript
+
+      - name: Run Qualia WASM benchmark (10 k triples)
+        run: |
+          python benchmarks/harness.py \
+            --engine qualia_wasm \
+            --n 10000 \
+            --output docs/comparative_benchmark_results.json
+
       # ── Qualia Native ─────────────────────────────────────────────────────────
       - name: Build Qualia CLI (release)
         run: cargo build --release -p qualia-cli

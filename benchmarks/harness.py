@@ -33,7 +33,7 @@ from environment import (
     merge_execution_environment,
 )
 
-BASE_ENGINES = ["oxigraph", "surrealdb", "comunica", "wasm_prolog"]
+BASE_ENGINES = ["oxigraph", "surrealdb", "comunica", "wasm_prolog", "qualia_wasm"]
 
 ENGINE_META = {
     "oxigraph": {
@@ -56,6 +56,11 @@ ENGINE_META = {
         "focus": "Logical inference throughput (backtracking vs. O(1) FNV lookup)",
         "install": "Node.js + npm install tau-prolog",
     },
+    "qualia_wasm": {
+        "label": "Qualia (WASM)",
+        "focus": "Node WASM pipeline — flat quins + Webizen VM execute_ntriples_query",
+        "install": "wasm-pack build qualia-core-db → docs/playground/",
+    },
     "qualia": {
         "label": "Qualia (native daemon)",
         "focus": "Zero-allocation 5-vector graph + Sentinel VM on your hardware",
@@ -73,7 +78,8 @@ METHODOLOGY = (
     f"Each engine is run in complete isolation. 512 MB ceiling enforced. "
     f"Latency: {DEFAULT_WARMUP} warmup + {DEFAULT_SAMPLES} samples (p50/p95/p99). "
     "Ingestion paths differ by engine (Oxigraph bulk, Surreal HTTP, JS parse, Qualia native). "
-    "Qualia row (when present) measured via local daemon on port 4242. "
+    "Qualia native row (when present) measured via local daemon on port 4242. "
+    "Qualia WASM row uses execute_ntriples_query on flat QualiaQuin bytes in Node. "
     "Full Qualia ingestion + Lazy SuperBlock metrics come from qualia-cli bench --suite full."
 )
 
@@ -107,6 +113,8 @@ def normalize_result(engine: str, raw: dict, dataset_profile: dict) -> dict:
         result.setdefault("measurement_path", "wasm_js_subprocess")
     elif engine == "wasm_prolog":
         result.setdefault("measurement_path", "wasm_js_subprocess")
+    elif engine == "qualia_wasm":
+        result.setdefault("measurement_path", "wasm_node_in_process")
     else:
         result.setdefault("measurement_path", "in_process_subprocess")
     for key in ("point", "twohop", "filter"):
@@ -124,6 +132,8 @@ def run_engine(engine: str, n: int, enforce_memory_limit: bool, dataset_profile:
         from comunica.runner import benchmark_set
     elif engine == "wasm_prolog":
         from wasm_prolog.runner import benchmark_set
+    elif engine == "qualia_wasm":
+        from qualia_wasm.runner import benchmark_set
     elif engine == "qualia":
         from qualia.runner import benchmark_set
     elif engine == "qualia_q42":

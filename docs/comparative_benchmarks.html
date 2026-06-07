@@ -474,6 +474,7 @@
                 'comunica': 'bg-orange-400',
                 'wasm_prolog': 'bg-rose-400',
                 'qualia': 'bg-amber-400',
+                'qualia_wasm': 'bg-cyan-400',
                 'qualia_q42': 'bg-yellow-300'
             };
             return colors[engine] || 'bg-slate-400';
@@ -662,7 +663,7 @@
                 const row = document.createElement('tr');
                 row.className = 'engine-row';
                 const label = engine.meta?.label || engine.engine;
-                const isQualia = engine.engine === 'qualia' || engine.engine === 'qualia_q42';
+                const isQualia = engine.engine === 'qualia' || engine.engine === 'qualia_wasm' || engine.engine === 'qualia_q42';
                 const tput = getThroughput(engine);
                 const rss = getRss(engine);
                 const rssNote = engine.server_rss_mb ? ' <span class="text-[10px] text-slate-500">server</span>' : '';
@@ -679,6 +680,7 @@
                             <div class="h-2.5 w-2.5 rounded-full flex-shrink-0 ${getEngineColor(engine.engine)}"></div>
                             <span class="${isQualia ? 'text-amber-300 font-medium' : ''}">${label}</span>
                             ${engine.engine === 'qualia' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-amber-400 font-mono tracking-wider">DAEMON</span>' : ''}
+                            ${engine.engine === 'qualia_wasm' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-cyan-950 text-cyan-300 font-mono tracking-wider">WASM</span>' : ''}
                             ${engine.engine === 'qualia_q42' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-yellow-300 font-mono tracking-wider">.Q42</span>' : ''}
                             ${status ? `<span class="ml-2 text-[10px] px-2 py-px rounded font-mono tracking-wider ${status.className}">${status.label}</span>` : ''}
                         </div>
@@ -714,7 +716,7 @@
                 const val = typeof raw === 'number' ? raw : 0;
                 const pct = maxVal > 0 && val > 0 ? Math.max(4, Math.round((val / maxVal) * 100)) : 0;
                 const label = engine.meta?.label || engine.engine;
-                const isQualia = engine.engine === 'qualia' || engine.engine === 'qualia_q42';
+                const isQualia = engine.engine === 'qualia' || engine.engine === 'qualia_wasm' || engine.engine === 'qualia_q42';
 
                 const row = document.createElement('div');
                 row.className = 'flex items-center gap-x-4 text-sm';
@@ -784,7 +786,7 @@
             if (!currentData?.engines?.[key]) return;
             const d = currentData.engines[key];
             const label = d.meta?.label || key;
-            const isQualia = key === 'qualia' || key === 'qualia_q42';
+            const isQualia = key === 'qualia' || key === 'qualia_wasm' || key === 'qualia_q42';
             const tput = getThroughput(d);
             const ingestRate = formatKTps(d);
             const delta = getRssDelta(d);
@@ -810,6 +812,7 @@
                             <div>
                                 <div class="text-3xl font-semibold tracking-tight">${label}</div>
                                 ${key === 'qualia' ? '<div class="text-xs text-amber-400 mt-0.5">Native daemon • port 4242</div>' : ''}
+                                ${key === 'qualia_wasm' ? '<div class="text-xs text-cyan-300/80 mt-0.5">Node WASM • execute_ntriples_query on flat quins</div>' : ''}
                                 ${key === 'qualia_q42' ? '<div class="text-xs text-yellow-300/80 mt-0.5">In-process .q42 SuperBlock load</div>' : ''}
                             </div>
                         </div>

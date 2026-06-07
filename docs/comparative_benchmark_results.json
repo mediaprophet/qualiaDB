@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "dataset": "synthetic-ntriples-v1",
-  "last_updated": "2026-06-07T16:02:20.642700Z",
+  "last_updated": "2026-06-07T16:15:25.409756Z",
   "engines": {
     "qualia": {
       "engine": "qualia",
@@ -354,9 +354,86 @@
       "point": null,
       "twohop": null,
       "filter": null
+    },
+    "qualia_wasm": {
+      "engine": "qualia_wasm",
+      "n_triples": 10000,
+      "measurement_path": "wasm_node_in_process",
+      "engine_version": "0.0.8",
+      "ingestion_ms": 108.11,
+      "quin_count": 10000,
+      "note": "Point/filter via execute_ntriples_query on flat quins; two-hop uses subject adjacency index (same logical ops as q42_comparative_bench).",
+      "point": {
+        "min": 0.0839,
+        "max": 0.2656,
+        "mean": 0.1463,
+        "p50": 0.1375,
+        "p95": 0.2114,
+        "p99": 0.2656,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "twohop": {
+        "min": 0.001,
+        "max": 0.0049,
+        "mean": 0.0014,
+        "p50": 0.0012,
+        "p95": 0.0043,
+        "p99": 0.0049,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "filter": {
+        "min": 0.0255,
+        "max": 0.0473,
+        "mean": 0.0306,
+        "p50": 0.0294,
+        "p95": 0.0464,
+        "p99": 0.0473,
+        "samples": 30,
+        "warmup_samples": 10,
+        "unit": "milliseconds"
+      },
+      "peak_rss_mb": 0.0,
+      "_sample_policy": {
+        "warmup": 10,
+        "samples": 30
+      },
+      "dataset_file_bytes": 677780,
+      "dataset_file_mb": 0.646,
+      "dataset_format": "generated-ntriples",
+      "schema_version": 2,
+      "dataset": "synthetic-ntriples-v1",
+      "dataset_profile": "synthetic-10k",
+      "dataset_label": "Synthetic 10K triples",
+      "timestamp": "2026-06-07T16:15:25.409756Z",
+      "meta": {
+        "label": "Qualia (WASM)",
+        "focus": "Node WASM pipeline \u2014 flat quins + Webizen VM execute_ntriples_query",
+        "install": "wasm-pack build qualia-core-db \u2192 docs/playground/"
+      },
+      "dataset_info": {
+        "label": "Synthetic 10K triples",
+        "release": null,
+        "variant": null,
+        "source_format": "generated-ntriples",
+        "source_url": null,
+        "source_path": null,
+        "native_format": null,
+        "native_q42_base_path": null,
+        "native_q42_path": null,
+        "native_q42_available": false,
+        "compressed_q42_path": null,
+        "compressed_q42_available": false,
+        "n_triples": 10000,
+        "source_file_mb": 0.646,
+        "source_file_bytes": 677780
+      }
     }
   },
-  "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). Ingestion paths differ by engine (Oxigraph bulk, Surreal HTTP, JS parse, Qualia native). Qualia row (when present) measured via local daemon on port 4242. Full Qualia ingestion + Lazy SuperBlock metrics come from qualia-cli bench --suite full.",
+  "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). Ingestion paths differ by engine (Oxigraph bulk, Surreal HTTP, JS parse, Qualia native). Qualia native row (when present) measured via local daemon on port 4242. Qualia WASM row uses execute_ntriples_query on flat QualiaQuin bytes in Node. Full Qualia ingestion + Lazy SuperBlock metrics come from qualia-cli bench --suite full.",
   "execution_environment": {
     "runner": "github-actions-comparative-harness",
     "engine_version": "0.0.8",
@@ -379,7 +456,7 @@
       "has_simd_wasm": false,
       "has_npu": false
     },
-    "collected_at": "2026-06-07T16:02:20.652110Z",
+    "collected_at": "2026-06-07T16:15:25.478319Z",
     "qualia_daemon_topology": {
       "cell_memory_floor_mb": 512,
       "compute_swarm_enabled": false,
