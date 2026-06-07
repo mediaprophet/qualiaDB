@@ -14,25 +14,22 @@ export async function loadWasm() {
             const response = await fetch('../playground/qualia_core_db_bg.wasm');
             const total = parseInt(response.headers.get('content-length'), 10) || 465124;
             let loaded = 0;
-            const reader = response.body.getReader();
-            const chunks = [];
             const badge = document.getElementById('wasm-badge');
-            
-            while(true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                chunks.push(value);
-                loaded += value.length;
-                if (badge) {
-                    const pct = Math.round((loaded / total) * 100);
-                    badge.textContent = `… Loading WASM ${pct}%`;
+
+            const { readable, writable } = new TransformStream({
+                transform(chunk, controller) {
+                    loaded += chunk.length;
+                    if (badge) {
+                        const pct = Math.min(99, Math.round((loaded / total) * 100));
+                        badge.textContent = `… Loading WASM ${pct}%`;
+                    }
+                    controller.enqueue(chunk);
                 }
-            }
-            
-            const buf = new Uint8Array(loaded);
-            let pos = 0;
-            for (const c of chunks) { buf.set(c, pos); pos += c.length; }
-            await module.default(buf.buffer); // call init()
+            });
+            response.body.pipeTo(writable);
+
+            const trackedResponse = new Response(readable, { headers: response.headers });
+            await module.default(trackedResponse); // call init()
             _mod = module;
         } catch (e) {
             console.warn('[wasm-loader] WASM init failed:', e.message);
