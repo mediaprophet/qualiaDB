@@ -394,6 +394,7 @@ pub mod rules;
 pub mod npu_ffi;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod daemon_graph;
 pub mod tee_ffi;
 #[cfg(not(target_arch = "wasm32"))]
