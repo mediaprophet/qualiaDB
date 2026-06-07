@@ -2,10 +2,10 @@
 // Modes: 'wasm' | 'native' | 'both'
 
 import { TestRunner } from './test-runner.js';
-import { loadWasm }   from './wasm-loader.js';
+import { loadWasm, getWasmCoverage } from './wasm-loader.js';
 import { NativeClient, detectModes } from './native-client.js';
 
-// ─── Suite imports ────────────────────────────────────────────────────────────
+// Suite imports
 
 // Pure JS logic (all modes)
 import { register as regPrimitives }     from './suites/primitives.js';
@@ -40,15 +40,22 @@ import { register as regNativeLive }     from './suites/native-live.js';
 // Both-mode comparison (both only)
 import { register as regComparison }     from './suites/native-comparison.js';
 
-// ─── App state ────────────────────────────────────────────────────────────────
+// App state
 
-let appMode = 'wasm';   // current mode
-let detected = { wasm: false, native: false, isMobile: false, daemonVersion: null, token: '' };
+let appMode = 'wasm';
+let detected = {
+    wasm: false,
+    native: false,
+    isMobile: false,
+    daemonVersion: null,
+    token: '',
+    wasmCoverage: null,
+};
 
-// Shared test context — passed to every register() call
+// Shared test context - passed to every register() call
 let ctx = { mode: 'wasm', wasm: null, native: null, isMobile: false };
 
-// ─── UI helpers ───────────────────────────────────────────────────────────────
+// UI helpers
 
 function esc(s) {
     return String(s)
@@ -63,43 +70,56 @@ function updateModeUI() {
         btn.classList.toggle('active', btn.dataset.mode === appMode);
     }
 
-    // Native availability badge
     const nb = $id('native-badge');
     if (detected.native) {
         nb.className = 'mode-status online';
-        nb.textContent = `⬤ Daemon v${detected.daemonVersion || '?'} online`;
+        nb.textContent = `Daemon v${detected.daemonVersion || '?'} online`;
     } else {
         nb.className = 'mode-status offline';
-        nb.textContent = '⬤ Daemon offline';
+        nb.textContent = 'Daemon offline';
     }
 
-    // WASM badge
     const wb = $id('wasm-badge');
-    if (detected.wasm) {
+    const coverage = detected.wasmCoverage;
+    if (detected.wasm && coverage?.partial) {
+        wb.className = 'mode-status warn';
+        wb.textContent = `Partial WASM build (${coverage.available}/${coverage.expected} exports)`;
+    } else if (detected.wasm) {
         wb.className = 'mode-status online';
-        wb.textContent = '⬤ WASM ready';
+        wb.textContent = 'WASM ready';
     } else {
         wb.className = 'mode-status loading';
-        wb.textContent = '… Loading WASM';
+        wb.textContent = 'Loading WASM';
     }
 
-    // Mobile badge
     $id('mobile-badge').style.display = detected.isMobile ? '' : 'none';
 
-    // Disable tabs for unavailable modes
     document.querySelector('.mode-btn[data-mode="native"]')
         .classList.toggle('unavailable', !detected.native);
     document.querySelector('.mode-btn[data-mode="both"]')
         .classList.toggle('unavailable', !detected.native && !detected.wasm);
+
+    const coverageNote = $id('wasm-coverage-note');
+    if (!coverageNote) return;
+    if (coverage?.partial) {
+        const preview = coverage.missing.slice(0, 4).join(', ');
+        const suffix = coverage.missing.length > 4 ? ', ...' : '';
+        coverageNote.textContent = `Current WASM binary exposes ${coverage.available}/${coverage.expected} expected browser-test exports. Missing exports are skipped, so green results mean executable tests passed, not full feature coverage. Missing now: ${preview}${suffix}`;
+        coverageNote.style.display = '';
+    } else if (detected.wasm) {
+        coverageNote.textContent = 'Current WASM binary exposes the expected browser-test surface for this page.';
+        coverageNote.style.display = '';
+    } else {
+        coverageNote.style.display = 'none';
+    }
 }
 
-// ─── Suite list per mode ──────────────────────────────────────────────────────
+// Suite list per mode
 
 function buildRunner(mode) {
     const r = new TestRunner();
     const c = { ...ctx, mode };
 
-    // Always run pure JS modality spec tests
     regPrimitives(r, c);
     regEpistemic(r, c);
     regLtl(r, c);
@@ -112,7 +132,6 @@ function buildRunner(mode) {
     regProbabilistic(r, c);
     regCogAi(r, c);
 
-    // WASM suites
     if (mode === 'wasm' || mode === 'both') {
         regQueryEngine(r, c);
         regBioinformatics(r, c);
@@ -126,14 +145,12 @@ function buildRunner(mode) {
         regResources(r, c);
     }
 
-    // Native suites
     if (mode === 'native' || mode === 'both') {
         regNativeDaemon(r, c);
         regNativeQuery(r, c);
         regNativeLive(r, c);
     }
 
-    // Comparison suites (only when both are available)
     if (mode === 'both') {
         regComparison(r, c);
     }
@@ -141,7 +158,7 @@ function buildRunner(mode) {
     return r;
 }
 
-// ─── Result rendering ─────────────────────────────────────────────────────────
+// Result rendering
 
 let _totPassed = 0, _totFailed = 0, _totTests = 0;
 let _suiteEls = new Map();
@@ -154,7 +171,7 @@ function getOrCreateSuiteEl(name, category) {
     el.className = `suite-card cat-${category}`;
     el.innerHTML = `
         <div class="suite-header">
-            <span class="suite-toggle">▸</span>
+            <span class="suite-toggle">></span>
             <span class="suite-cat">${category}</span>
             <span class="suite-name">${esc(name)}</span>
             <span class="suite-stats">
@@ -167,7 +184,7 @@ function getOrCreateSuiteEl(name, category) {
     el.querySelector('.suite-header').addEventListener('click', () => {
         el.classList.toggle('open');
         el.querySelector('.suite-toggle').textContent =
-            el.classList.contains('open') ? '▾' : '▸';
+            el.classList.contains('open') ? 'v' : '>';
     });
 
     container.appendChild(el);
@@ -178,20 +195,20 @@ function getOrCreateSuiteEl(name, category) {
 
 function suiteCategory(name) {
     if (name.startsWith('Native:') || name.startsWith('Compare:')) return 'native';
-    if (name.startsWith('WASM:'))    return 'wasm';
+    if (name.startsWith('WASM:')) return 'wasm';
     return 'logic';
 }
 
 function addTestRow(suiteName, testName, passed, error, ms) {
-    const cat   = suiteCategory(suiteName);
+    const cat = suiteCategory(suiteName);
     const state = getOrCreateSuiteEl(suiteName, cat);
-    const li    = document.createElement('li');
+    const li = document.createElement('li');
     li.className = `test-row ${passed ? 'pass' : 'fail'}`;
     const errHtml = error
         ? `<div class="test-error">${esc(error.message || String(error))}</div>`
         : '';
     li.innerHTML = `
-        <span class="test-icon">${passed ? '✓' : '✗'}</span>
+        <span class="test-icon">${passed ? 'OK' : 'X'}</span>
         <span class="test-name">${esc(testName)}</span>
         <span class="test-ms">${ms < 1 ? '<1' : Math.round(ms)}ms</span>
         ${errHtml}`;
@@ -203,7 +220,7 @@ function addTestRow(suiteName, testName, passed, error, ms) {
 
     if (!passed && !state.el.classList.contains('open')) {
         state.el.classList.add('open');
-        state.el.querySelector('.suite-toggle').textContent = '▾';
+        state.el.querySelector('.suite-toggle').textContent = 'v';
     }
     state.el.querySelector('.suite-header').classList.toggle('has-failures', state.failCount > 0);
 }
@@ -212,45 +229,54 @@ function updateSummary() {
     const pct = _totTests ? Math.round((_totPassed / _totTests) * 100) : 0;
     $id('summary-passed').textContent = _totPassed;
     $id('summary-failed').textContent = _totFailed;
-    $id('summary-total').textContent  = _totTests;
-    $id('progress-bar').style.width   = `${pct}%`;
-    $id('progress-bar').className     = `bar ${_totFailed > 0 ? 'fail' : 'pass'}`;
+    $id('summary-total').textContent = _totTests;
+    $id('progress-bar').style.width = `${pct}%`;
+    $id('progress-bar').className = `bar ${_totFailed > 0 ? 'fail' : 'pass'}`;
 }
 
-// ─── Run ──────────────────────────────────────────────────────────────────────
+// Run
 
 export async function runAll(mode = appMode) {
     appMode = mode;
-    _totPassed = 0; _totFailed = 0; _totTests = 0;
+    _totPassed = 0;
+    _totFailed = 0;
+    _totTests = 0;
     $id('suite-list').innerHTML = '';
     _suiteEls.clear();
-    $id('status-label').textContent = `Running (${mode} mode)…`;
+    $id('status-label').textContent = `Running (${mode} mode)...`;
     $id('run-btn').disabled = true;
 
     const runner = buildRunner(mode);
 
     await runner.run(evt => {
         if (evt.type === 'pass') {
-            _totPassed++; _totTests++;
+            _totPassed++;
+            _totTests++;
             addTestRow(evt.suite.name, evt.name, true, null, evt.ms);
         } else if (evt.type === 'fail') {
-            _totFailed++; _totTests++;
+            _totFailed++;
+            _totTests++;
             addTestRow(evt.suite.name, evt.name, false, evt.error, evt.ms);
         }
         updateSummary();
     });
 
     $id('status-label').textContent = _totFailed === 0
-        ? `✓ All ${_totPassed} tests passed`
-        : `✗ ${_totFailed} failed / ${_totTests} total`;
+        ? `All ${_totPassed} tests passed`
+        : `${_totFailed} failed / ${_totTests} total`;
+
+    const coverage = detected.wasmCoverage;
+    if ((mode === 'wasm' || mode === 'both') && coverage?.partial && _totFailed === 0) {
+        $id('status-label').textContent += ` - partial WASM build (${coverage.available}/${coverage.expected} exports)`;
+    }
+
     $id('run-btn').disabled = false;
     updateModeUI();
 }
 
-// ─── Boot ─────────────────────────────────────────────────────────────────────
+// Boot
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Activate manual tests via URL param or checkbox
     if (new URLSearchParams(window.location.search).get('manual') === '1') {
         window.MANUAL_TESTS = true;
     }
@@ -262,16 +288,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Detect modes in background, then re-render badge
-    detectModes().then(d => {
+    detectModes().then(async d => {
         detected = d;
-        ctx.wasm   = null;   // loaded lazily inside suites
+        if (d.wasm) {
+            try {
+                detected.wasmCoverage = await getWasmCoverage();
+            } catch (_) {}
+        }
+        ctx.wasm = null;
         ctx.native = d.native ? new NativeClient('http://127.0.0.1:4242', d.token) : null;
         ctx.isMobile = d.isMobile;
         updateModeUI();
     });
 
-    // Wake button
     const wakeBtn = $id('wake-btn');
     if (wakeBtn) {
         wakeBtn.addEventListener('click', (e) => {
@@ -285,7 +314,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Mode tab buttons
     for (const btn of document.querySelectorAll('.mode-btn')) {
         btn.addEventListener('click', () => {
             if (!btn.classList.contains('unavailable')) {
@@ -294,9 +322,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Run button
     $id('run-btn').addEventListener('click', () => runAll(appMode));
 
-    // Initial run
     runAll('wasm');
 });
