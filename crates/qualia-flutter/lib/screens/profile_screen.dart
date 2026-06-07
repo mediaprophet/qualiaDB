@@ -114,6 +114,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
+  social.SharingPolicy _sharingFrom(
+    social.SharingPolicy base, {
+    bool? shareDisplayName,
+    bool? sharePublicDid,
+    bool? shareActiveModel,
+    bool? shareLlmOutcomes,
+    bool? shareOntologyScope,
+    bool? shareInstalledQapps,
+    bool? shareDaemonStatus,
+    bool? allowGroupChatInvites,
+    bool? allowDirectoryLookup,
+    bool? allowEmailInvites,
+  }) {
+    return social.SharingPolicy(
+      shareDisplayName: shareDisplayName ?? base.shareDisplayName,
+      sharePublicDid: sharePublicDid ?? base.sharePublicDid,
+      shareActiveModel: shareActiveModel ?? base.shareActiveModel,
+      shareLlmOutcomes: shareLlmOutcomes ?? base.shareLlmOutcomes,
+      shareOntologyScope: shareOntologyScope ?? base.shareOntologyScope,
+      shareInstalledQapps: shareInstalledQapps ?? base.shareInstalledQapps,
+      shareDaemonStatus: shareDaemonStatus ?? base.shareDaemonStatus,
+      allowGroupChatInvites:
+          allowGroupChatInvites ?? base.allowGroupChatInvites,
+      allowDirectoryLookup: allowDirectoryLookup ?? base.allowDirectoryLookup,
+      allowEmailInvites: allowEmailInvites ?? base.allowEmailInvites,
+    );
+  }
+
   Future<void> _generateInvite() async {
     try {
       final invite = await social.generateConnectInvite(frontDoorId: null);
@@ -257,113 +285,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: 'Display name',
                   subtitle: 'Show your name in group chats and invites',
                   value: sharing.shareDisplayName,
-                  onChanged: (v) => _updateSharing(social.SharingPolicy(
-                    shareDisplayName: v,
-                    sharePublicDid: sharing.sharePublicDid,
-                    shareActiveModel: sharing.shareActiveModel,
-                    shareOntologyScope: sharing.shareOntologyScope,
-                    shareInstalledQapps: sharing.shareInstalledQapps,
-                    shareDaemonStatus: sharing.shareDaemonStatus,
-                    allowGroupChatInvites: sharing.allowGroupChatInvites,
-                    allowDirectoryLookup: sharing.allowDirectoryLookup,
-                    allowEmailInvites: sharing.allowEmailInvites,
-                  )),
+                  onChanged: (v) =>
+                      _updateSharing(_sharingFrom(sharing, shareDisplayName: v)),
                 ),
                 _sharingSwitch(
                   title: 'Public DID',
                   subtitle: 'Share your Front Door / root DID for routing',
                   value: sharing.sharePublicDid,
-                  onChanged: (v) => _updateSharing(social.SharingPolicy(
-                    shareDisplayName: sharing.shareDisplayName,
-                    sharePublicDid: v,
-                    shareActiveModel: sharing.shareActiveModel,
-                    shareOntologyScope: sharing.shareOntologyScope,
-                    shareInstalledQapps: sharing.shareInstalledQapps,
-                    shareDaemonStatus: sharing.shareDaemonStatus,
-                    allowGroupChatInvites: sharing.allowGroupChatInvites,
-                    allowDirectoryLookup: sharing.allowDirectoryLookup,
-                    allowEmailInvites: sharing.allowEmailInvites,
-                  )),
+                  onChanged: (v) =>
+                      _updateSharing(_sharingFrom(sharing, sharePublicDid: v)),
                 ),
                 _sharingSwitch(
                   title: 'Active model',
                   subtitle: 'Let group context include your LLM model info',
                   value: sharing.shareActiveModel,
-                  onChanged: (v) => _updateSharing(social.SharingPolicy(
-                    shareDisplayName: sharing.shareDisplayName,
-                    sharePublicDid: sharing.sharePublicDid,
-                    shareActiveModel: v,
-                    shareOntologyScope: sharing.shareOntologyScope,
-                    shareInstalledQapps: sharing.shareInstalledQapps,
-                    shareDaemonStatus: sharing.shareDaemonStatus,
-                    allowGroupChatInvites: sharing.allowGroupChatInvites,
-                    allowDirectoryLookup: sharing.allowDirectoryLookup,
-                    allowEmailInvites: sharing.allowEmailInvites,
-                  )),
+                  onChanged: (v) =>
+                      _updateSharing(_sharingFrom(sharing, shareActiveModel: v)),
+                ),
+                _sharingSwitch(
+                  title: 'LLM outcomes',
+                  subtitle: 'Share grounded summaries with group peers when policy allows',
+                  value: sharing.shareLlmOutcomes,
+                  onChanged: (v) =>
+                      _updateSharing(_sharingFrom(sharing, shareLlmOutcomes: v)),
                 ),
                 _sharingSwitch(
                   title: 'Ontology scope',
                   subtitle: 'Share which ontologies ground your answers',
                   value: sharing.shareOntologyScope,
-                  onChanged: (v) => _updateSharing(social.SharingPolicy(
-                    shareDisplayName: sharing.shareDisplayName,
-                    sharePublicDid: sharing.sharePublicDid,
-                    shareActiveModel: sharing.shareActiveModel,
-                    shareOntologyScope: v,
-                    shareInstalledQapps: sharing.shareInstalledQapps,
-                    shareDaemonStatus: sharing.shareDaemonStatus,
-                    allowGroupChatInvites: sharing.allowGroupChatInvites,
-                    allowDirectoryLookup: sharing.allowDirectoryLookup,
-                    allowEmailInvites: sharing.allowEmailInvites,
-                  )),
+                  onChanged: (v) =>
+                      _updateSharing(_sharingFrom(sharing, shareOntologyScope: v)),
                 ),
                 _sharingSwitch(
                   title: 'Installed qapps',
                   subtitle: 'Share qapp names available on this device',
                   value: sharing.shareInstalledQapps,
-                  onChanged: (v) => _updateSharing(social.SharingPolicy(
-                    shareDisplayName: sharing.shareDisplayName,
-                    sharePublicDid: sharing.sharePublicDid,
-                    shareActiveModel: sharing.shareActiveModel,
-                    shareOntologyScope: sharing.shareOntologyScope,
-                    shareInstalledQapps: v,
-                    shareDaemonStatus: sharing.shareDaemonStatus,
-                    allowGroupChatInvites: sharing.allowGroupChatInvites,
-                    allowDirectoryLookup: sharing.allowDirectoryLookup,
-                    allowEmailInvites: sharing.allowEmailInvites,
-                  )),
+                  onChanged: (v) =>
+                      _updateSharing(_sharingFrom(sharing, shareInstalledQapps: v)),
                 ),
                 _sharingSwitch(
                   title: 'Group chat invites',
                   subtitle: 'Allow others to connect via your invite codes',
                   value: sharing.allowGroupChatInvites,
-                  onChanged: (v) => _updateSharing(social.SharingPolicy(
-                    shareDisplayName: sharing.shareDisplayName,
-                    sharePublicDid: sharing.sharePublicDid,
-                    shareActiveModel: sharing.shareActiveModel,
-                    shareOntologyScope: sharing.shareOntologyScope,
-                    shareInstalledQapps: sharing.shareInstalledQapps,
-                    shareDaemonStatus: sharing.shareDaemonStatus,
-                    allowGroupChatInvites: v,
-                    allowDirectoryLookup: sharing.allowDirectoryLookup,
-                    allowEmailInvites: sharing.allowEmailInvites,
-                  )),
+                  onChanged: (v) => _updateSharing(
+                      _sharingFrom(sharing, allowGroupChatInvites: v)),
                 ),
                 _sharingSwitch(
                   title: 'Email invites',
                   subtitle: 'Include mailto link when sharing connect codes',
                   value: sharing.allowEmailInvites,
-                  onChanged: (v) => _updateSharing(social.SharingPolicy(
-                    shareDisplayName: sharing.shareDisplayName,
-                    sharePublicDid: sharing.sharePublicDid,
-                    shareActiveModel: sharing.shareActiveModel,
-                    shareOntologyScope: sharing.shareOntologyScope,
-                    shareInstalledQapps: sharing.shareInstalledQapps,
-                    shareDaemonStatus: sharing.shareDaemonStatus,
-                    allowGroupChatInvites: sharing.allowGroupChatInvites,
-                    allowDirectoryLookup: sharing.allowDirectoryLookup,
-                    allowEmailInvites: v,
-                  )),
+                  onChanged: (v) =>
+                      _updateSharing(_sharingFrom(sharing, allowEmailInvites: v)),
                 ),
               ],
             ),
