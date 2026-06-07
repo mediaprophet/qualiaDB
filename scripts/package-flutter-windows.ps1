@@ -59,3 +59,5 @@ Write-Host "Bundled qualia_flutter_rust.dll"
 & (Join-Path $Root "scripts\copy-bundled-resources.ps1") -OutDir $OutDir
 
 Write-Host "Done. Portable bundle: $OutDir\qualia_flutter.exe"
+# robocopy uses exit code 1 for success; do not leak that to CI.
+exit 0
