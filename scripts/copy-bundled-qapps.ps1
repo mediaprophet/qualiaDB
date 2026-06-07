@@ -35,3 +35,4 @@ foreach ($file in @("qualia_core_db.js", "qualia_core_db_bg.wasm")) {
 }
 
 Write-Host "Bundled qapps staged under $Dest"
+exit 0

@@ -217,7 +217,7 @@ jobs:
 
       - name: Package .app bundle
         run: |
-          chmod +x scripts/package-flutter-macos.sh scripts/installer/build-macos-dmg.sh
+          chmod +x scripts/*.sh scripts/installer/*.sh
           ./scripts/package-flutter-macos.sh
 
       - name: Build DMG installer
@@ -278,7 +278,7 @@ jobs:
 
       - name: Package portable bundle
         run: |
-          chmod +x scripts/package-flutter-linux.sh scripts/installer/build-linux-deb.sh
+          chmod +x scripts/*.sh scripts/installer/*.sh
           ./scripts/package-flutter-linux.sh
 
       - name: Build .deb installer

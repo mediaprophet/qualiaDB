@@ -21,3 +21,4 @@ New-Item -ItemType Directory -Force -Path $Dest | Out-Null
 robocopy $Src $Dest /E /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "robocopy resources failed with exit code $LASTEXITCODE" }
 Write-Host "Bundled resources staged under $Dest"
+exit 0
