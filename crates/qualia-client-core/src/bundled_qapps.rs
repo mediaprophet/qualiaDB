@@ -281,7 +281,7 @@ pub fn apply_bundled_qapp_update(storage_path: &Path, qapp_name: &str) -> Result
     upgrade_qapp_from_source(storage_path, qapp_name, &source)
 }
 
-fn register_default_capabilities(storage_path: &Path) {
+fn register_default_capabilities(_storage_path: &Path) {
     for name in DEFAULT_BUNDLED_QAPPS {
         if let Ok(manifest) = crate::api::load_installed_qapp_package(name) {
             let _ = crate::qapp_manifest::install_qapp_capabilities(&manifest);

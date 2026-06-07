@@ -5,8 +5,14 @@ import 'package:webview_flutter/webview_flutter.dart';
 class QualiaQappWebView extends StatefulWidget {
   final String url;
   final String title;
+  final VoidCallback? onClose;
 
-  const QualiaQappWebView({super.key, required this.url, required this.title});
+  const QualiaQappWebView({
+    super.key,
+    required this.url,
+    required this.title,
+    this.onClose,
+  });
 
   @override
   State<QualiaQappWebView> createState() => _QualiaQappWebViewState();
@@ -38,7 +44,8 @@ class _QualiaQappWebViewState extends State<QualiaQappWebView> {
         title: Text(widget.title),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Close',
+          onPressed: widget.onClose ?? () => Navigator.of(context).pop(),
         ),
         actions: [
           IconButton(

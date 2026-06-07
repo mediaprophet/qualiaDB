@@ -221,7 +221,7 @@
                     <label for="dataset-profile-select" class="text-[11px] uppercase tracking-[1.5px] text-slate-500">Dataset profile</label>
                     <select id="dataset-profile-select" class="rounded-2xl border border-slate-700 bg-[#111f31] px-4 py-2 text-sm text-slate-200 focus:outline-none">
                         <option value="synthetic-10k">Synthetic 10K</option>
-                        <option value="schemaorg-30-current-https">Schema.org 30.0 &rarr; q42</option>
+                        <option value="schemaorg-30-current-https">Schema.org 30.0 (NT + q42 + c.q42)</option>
                     </select>
                 </div>
                 <div id="last-updated" class="font-mono text-xs text-slate-500 px-1">
@@ -366,9 +366,9 @@
                 prepCommand: null,
             },
             'schemaorg-30-current-https': {
-                label: 'Schema.org 30.0 &rarr; q42',
-                resultsPath: './comparative_benchmark_results.schemaorg-30-current-https-q42.json',
-                runCommand: 'python benchmarks/harness.py --all --dataset-profile schemaorg-30-current-https --output docs/comparative_benchmark_results.schemaorg-30-current-https-q42.json',
+                label: 'Schema.org 30.0 (NT + q42 + c.q42)',
+                resultsPath: './comparative_benchmark_results.schemaorg-30-current-https.json',
+                runCommand: 'python benchmarks/harness.py --all --dataset-profile schemaorg-30-current-https --output docs/comparative_benchmark_results.schemaorg-30-current-https.json',
                 prepCommand: 'powershell -ExecutionPolicy Bypass -File scripts/prepare_schemaorg_benchmark.ps1 -Release 30.0 -Variant current-https -Compress',
             },
         };
@@ -452,8 +452,11 @@
         }
 
         function getRss(engine) {
-            // Prefer server_rss (reflects actual daemon footprint for Surreal)
-            return engine.server_rss_mb ?? engine.peak_rss_mb ?? null;
+            // Prefer server_rss (reflects actual daemon footprint for Surreal).
+            // Treat 0 / missing as unmeasured — Python parent RSS on Windows is often 0.
+            const raw = engine?.server_rss_mb ?? engine?.peak_rss_mb ?? null;
+            if (raw == null || typeof raw !== 'number' || !isFinite(raw) || raw <= 0) return null;
+            return raw;
         }
 
         function getRssDelta(engine) {
@@ -467,6 +470,10 @@
             return data?.engines ? Object.values(data.engines) : [];
         }
 
+        function isQualiaEngineKey(key) {
+            return ['qualia', 'qualia_wasm', 'qualia_q42', 'qualia_cq42', 'qualia_nt'].includes(key);
+        }
+
         function getEngineColor(engine) {
             const colors = {
                 'oxigraph': 'bg-emerald-400',
@@ -475,7 +482,9 @@
                 'wasm_prolog': 'bg-rose-400',
                 'qualia': 'bg-amber-400',
                 'qualia_wasm': 'bg-cyan-400',
-                'qualia_q42': 'bg-yellow-300'
+                'qualia_q42': 'bg-yellow-300',
+                'qualia_cq42': 'bg-lime-300',
+                'qualia_nt': 'bg-amber-200',
             };
             return colors[engine] || 'bg-slate-400';
         }
@@ -484,17 +493,15 @@
             const mb = engine.dataset_file_mb;
             if (mb == null || !isFinite(mb)) return '—';
             const fmt = engine.dataset_format || 'rdf';
-            const suffix = engine.engine === 'qualia_q42'
-                ? '.q42'
-                : (fmt === 'ntriples' || fmt === 'generated-ntriples' ? '.nt' : fmt);
-            let extra = '';
-            if (engine.compressed_q42_file_mb != null && engine.engine !== 'qualia_q42') {
-                extra = `<div class="text-[10px] text-slate-500 font-mono">.c.q42 ${engine.compressed_q42_file_mb.toFixed(2)}</div>`;
-            } else if (engine.engine === 'qualia_q42' && engine.compressed_q42_file_mb != null) {
-                extra = `<div class="text-[10px] text-slate-500 font-mono">.c.q42 ${engine.compressed_q42_file_mb.toFixed(2)}</div>`;
-            }
+            const suffixByEngine = {
+                qualia_q42: '.q42',
+                qualia_cq42: '.c.q42',
+                qualia_nt: '.nt',
+            };
+            const suffix = suffixByEngine[engine.engine]
+                || (fmt === 'ntriples' || fmt === 'generated-ntriples' ? '.nt' : fmt);
             return `<div class="font-mono">${mb.toFixed(2)}</div>
-                    <div class="text-[10px] text-slate-500 font-mono">${suffix}</div>${extra}`;
+                    <div class="text-[10px] text-slate-500 font-mono">${suffix}</div>`;
         }
 
         function hasLatency(stat) {
@@ -568,6 +575,7 @@
                 } else if (datasetInfo.native_format) {
                     msg += ` Native ${datasetInfo.native_format} artifact not present in this workspace yet.`;
                 }
+                msg += ' RDF engines load the .nt source; Qualia adds qualia_nt (same .nt parse), qualia_q42 (SuperBlocks), and qualia_cq42 (LZ4 distribution).';
                 warnings.push(msg);
             }
 
@@ -629,7 +637,7 @@
                 { label: "Fastest Reported Ingestion", value: formatMs(ingestionWinner?.ingestion_ms) + " ms", sub: ingestionSub, engine: ingestionWinner?.meta?.label || ingestionWinner?.engine || '—', icon: "fa-bolt", color: "emerald" },
                 { label: "Lowest Point p50", value: formatMs(pointWinner?.point?.p50) + " ms", sub: "p95 " + formatMs(pointWinner?.point?.p95) + " ms", engine: pointWinner?.meta?.label || pointWinner?.engine || '—', icon: "fa-search", color: "blue" },
                 { label: "Best p95 Latency", value: formatMs(p95Winner?.point?.p95) + " ms", sub: "point query tail", engine: p95Winner?.meta?.label || p95Winner?.engine || '—', icon: "fa-chart-line", color: "sky" },
-                { label: "Lowest Memory", value: (getRss(memoryWinner)?.toFixed(1) ?? "?") + " MB", sub: memoryWinner?.server_rss_mb != null ? "server RSS footprint" : "peak RSS", engine: memoryWinner?.meta?.label || memoryWinner?.engine || '—', icon: "fa-microchip", color: "violet" },
+                { label: "Lowest Memory", value: memoryWinner ? (getRss(memoryWinner).toFixed(1) + " MB") : "—", sub: memoryWinner ? (memoryWinner.server_rss_mb != null ? "server RSS footprint" : "peak RSS") : "not measured for all engines", engine: memoryWinner?.meta?.label || memoryWinner?.engine || '—', icon: "fa-microchip", color: "violet" },
                 { label: "Highest Throughput", value: formatOps(getThroughput(tputWinner ?? {})), sub: "point ops/s", engine: tputWinner?.meta?.label || tputWinner?.engine || '—', icon: "fa-tachometer-alt", color: "amber" },
             ];
 
@@ -663,7 +671,7 @@
                 const row = document.createElement('tr');
                 row.className = 'engine-row';
                 const label = engine.meta?.label || engine.engine;
-                const isQualia = engine.engine === 'qualia' || engine.engine === 'qualia_wasm' || engine.engine === 'qualia_q42';
+                const isQualia = isQualiaEngineKey(engine.engine);
                 const tput = getThroughput(engine);
                 const rss = getRss(engine);
                 const rssNote = engine.server_rss_mb ? ' <span class="text-[10px] text-slate-500">server</span>' : '';
@@ -682,6 +690,8 @@
                             ${engine.engine === 'qualia' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-amber-400 font-mono tracking-wider">DAEMON</span>' : ''}
                             ${engine.engine === 'qualia_wasm' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-cyan-950 text-cyan-300 font-mono tracking-wider">WASM</span>' : ''}
                             ${engine.engine === 'qualia_q42' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-yellow-300 font-mono tracking-wider">.Q42</span>' : ''}
+                            ${engine.engine === 'qualia_cq42' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-lime-950 text-lime-300 font-mono tracking-wider">.C.Q42</span>' : ''}
+                            ${engine.engine === 'qualia_nt' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-amber-200 font-mono tracking-wider">.NT</span>' : ''}
                             ${status ? `<span class="ml-2 text-[10px] px-2 py-px rounded font-mono tracking-wider ${status.className}">${status.label}</span>` : ''}
                         </div>
                     </td>
@@ -716,7 +726,7 @@
                 const val = typeof raw === 'number' ? raw : 0;
                 const pct = maxVal > 0 && val > 0 ? Math.max(4, Math.round((val / maxVal) * 100)) : 0;
                 const label = engine.meta?.label || engine.engine;
-                const isQualia = engine.engine === 'qualia' || engine.engine === 'qualia_wasm' || engine.engine === 'qualia_q42';
+                const isQualia = isQualiaEngineKey(engine.engine);
 
                 const row = document.createElement('div');
                 row.className = 'flex items-center gap-x-4 text-sm';
@@ -786,7 +796,7 @@
             if (!currentData?.engines?.[key]) return;
             const d = currentData.engines[key];
             const label = d.meta?.label || key;
-            const isQualia = key === 'qualia' || key === 'qualia_wasm' || key === 'qualia_q42';
+            const isQualia = isQualiaEngineKey(key);
             const tput = getThroughput(d);
             const ingestRate = formatKTps(d);
             const delta = getRssDelta(d);
@@ -814,6 +824,8 @@
                                 ${key === 'qualia' ? '<div class="text-xs text-amber-400 mt-0.5">Native daemon • port 4242</div>' : ''}
                                 ${key === 'qualia_wasm' ? '<div class="text-xs text-cyan-300/80 mt-0.5">Node WASM • execute_ntriples_query on flat quins</div>' : ''}
                                 ${key === 'qualia_q42' ? '<div class="text-xs text-yellow-300/80 mt-0.5">In-process .q42 SuperBlock load</div>' : ''}
+                                ${key === 'qualia_cq42' ? '<div class="text-xs text-lime-300/80 mt-0.5">In-process .c.q42 LZ4 decompress + index</div>' : ''}
+                                ${key === 'qualia_nt' ? '<div class="text-xs text-amber-200/80 mt-0.5">In-process N-Triples parse (same RDF as Oxigraph)</div>' : ''}
                             </div>
                         </div>
                         <button onclick="this.closest('.fixed').remove()" class="text-4xl text-slate-400 hover:text-white leading-none">&times;</button>
@@ -869,9 +881,20 @@
             const profile = getSelectedProfile();
             persistProfileToUrl(profileId);
             try {
-                const res = await fetch(profile.resultsPath);
-                if (!res.ok) throw new Error();
-                currentData = await res.json();
+                const candidatePaths = [profile.resultsPath];
+                if (profileId === 'schemaorg-30-current-https') {
+                    candidatePaths.push('./comparative_benchmark_results.schemaorg-30-current-https-q42.json');
+                }
+                let loaded = null;
+                for (const path of candidatePaths) {
+                    const res = await fetch(path);
+                    if (res.ok) {
+                        loaded = await res.json();
+                        break;
+                    }
+                }
+                if (!loaded) throw new Error();
+                currentData = loaded;
                 const date = new Date(currentData.last_updated);
                 statusEl.innerHTML = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' • ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             } catch {

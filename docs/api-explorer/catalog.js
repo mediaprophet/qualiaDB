@@ -1194,7 +1194,7 @@ curl "http://127.0.0.1:4242/chat/pull?session_id=grp-abc123&since_lamport=10"
             if (!native) return { error: 'Daemon offline — start with: qualia-cli daemon --dev' };
             const sid = (inputs.session_id || 'default').trim();
             const since = inputs.since_lamport || '0';
-            const url = \`\${native.base}/chat/pull?session_id=\${encodeURIComponent(sid)}&since_lamport=\${since}\`;
+            const url = `${native.base}/chat/pull?session_id=${encodeURIComponent(sid)}&since_lamport=${since}`;
             const r = await fetch(url);
             return { status: r.status, body: await r.json() };
         },
@@ -1254,7 +1254,7 @@ const stats = await r.json();
         ],
         live: async (_wasm, native) => {
             if (!native) return { error: 'Daemon offline — start with: qualia-cli daemon --dev' };
-            const r = await fetch(\`\${native.base}/torrent/telemetry\`);
+            const r = await fetch(`${native.base}/torrent/telemetry`);
             return { status: r.status, body: await r.json() };
         },
     },

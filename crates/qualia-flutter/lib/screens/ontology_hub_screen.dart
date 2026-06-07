@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
+import '../src/rust/api/qualia_api.dart' as api;
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
 import '../src/rust/api/resource_catalog.dart' as catalog;
 import '../widgets/ontology_workbench_sheet.dart';
@@ -18,6 +22,9 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
   Set<String> _selectedIds = {};
   bool _isLoading = true;
   bool _isGridView = false;
+  String _catalogSource = 'bundled';
+  Map<String, api.ProgressPayload> _imports = {};
+  Timer? _importPollTimer;
 
   String _searchQuery = '';
   String? _selectedDomain;
@@ -27,6 +34,13 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
   void initState() {
     super.initState();
     _loadFromRustResourceCatalog();
+    _restoreActiveImports();
+  }
+
+  @override
+  void dispose() {
+    _importPollTimer?.cancel();
+    super.dispose();
   }
 
   String _normalizeKey(String value) {
@@ -37,6 +51,76 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
     final ontologyKey = _normalizeKey(ontologyId);
     final artifactKey = _normalizeKey(artifactName);
     return artifactKey.contains(ontologyKey);
+  }
+
+  double _parseSizeMb(String? raw, {double fallback = 0}) {
+    if (raw == null || raw.isEmpty) return fallback;
+    final match = RegExp(r'([\d.]+)').firstMatch(raw);
+    if (match == null) return fallback;
+    final value = double.tryParse(match.group(1) ?? '') ?? fallback;
+    final lower = raw.toLowerCase();
+    if (lower.contains('gb')) return value * 1024;
+    if (lower.contains('kb')) return value / 1024;
+    return value;
+  }
+
+  String _domainForManifestEntry(Map<String, dynamic> item) {
+    final id = (item['id'] as String? ?? '').toLowerCase();
+    if (id.contains('geo')) return 'geography';
+    if (id.contains('chebi') || id.contains('snomed')) return 'health';
+    if (id.contains('wordnet')) return 'linguistics';
+    if (id.contains('prov')) return 'provenance';
+    if (id.contains('odrl')) return 'policy';
+    if (id.contains('shacl')) return 'validation';
+    if (id.contains('foaf')) return 'social';
+    return 'general';
+  }
+
+  Future<void> _mergeRemoteManifest(List<String> installedArtifacts) async {
+    try {
+      final json = await api.fetchRemoteManifest(
+        url:
+            'https://raw.githubusercontent.com/mediaprophet/qualiaDB/refs/heads/main/manifests/ontologies.json',
+      );
+      final data = jsonDecode(json) as Map<String, dynamic>;
+      final remote = data['ontologies'] as List<dynamic>? ?? [];
+      if (remote.isEmpty) return;
+
+      final existingIds = _ontologies.map((o) => o.id).toSet();
+      var added = 0;
+      for (final entry in remote) {
+        if (entry is! Map<String, dynamic>) continue;
+        final id = entry['id'] as String?;
+        if (id == null || id.isEmpty || existingIds.contains(id)) continue;
+
+        _ontologies.add(
+          OntologyModel(
+            id: id,
+            name: entry['name'] as String? ?? id,
+            acronym: id,
+            domain: _domainForManifestEntry(entry),
+            sizeMb: _parseSizeMb(entry['size'] as String?),
+            format: (entry['type'] as String? ?? 'rdf').toLowerCase(),
+            license: 'Unknown',
+            downloadUrl: entry['url'] as String?,
+            isDownloaded: installedArtifacts.any(
+              (artifact) => _matchesInstalledArtifact(id, artifact),
+            ),
+          ),
+        );
+        existingIds.add(id);
+        added++;
+      }
+
+      if (added > 0 && mounted) {
+        setState(() => _catalogSource = 'bundled + remote');
+      } else if (mounted) {
+        setState(() => _catalogSource = 'bundled (remote synced)');
+      }
+    } catch (e) {
+      debugPrint('Remote ontology manifest unavailable: $e');
+      if (mounted) setState(() => _catalogSource = 'bundled');
+    }
   }
 
   Future<void> _loadFromRustResourceCatalog() async {
@@ -64,6 +148,7 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
           )
           .toList();
 
+      await _mergeRemoteManifest(installedArtifacts);
       _applyFilters();
     } catch (e) {
       debugPrint('Failed to load ontologies from Rust: $e');
@@ -113,12 +198,213 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Imported ${toImport.length} ontologies via Rust'),
+          content: Text('Imported ${toImport.length} ontologies'),
         ),
       );
     }
     _selectedIds.clear();
     _applyFilters();
+  }
+
+  void _beginImportTracking(OntologyModel ontology) {
+    setState(() {
+      _imports[ontology.id] = api.ProgressPayload(
+        id: ontology.id,
+        progress: 0,
+        downloadedBytes: BigInt.zero,
+        totalBytes: BigInt.from((ontology.sizeMb * 1024 * 1024).round()),
+        speedKbps: 0,
+        status: 'starting',
+      );
+    });
+    _startImportPolling();
+  }
+
+  Future<void> _restoreActiveImports() async {
+    try {
+      final active = await api.getActiveDownloads();
+      if (!mounted || active.isEmpty) return;
+      setState(() {
+        for (final item in active) {
+          _imports[item.id] = item;
+        }
+      });
+      _startImportPolling();
+    } catch (_) {}
+  }
+
+  bool _isImportInProgress(String id) {
+    final item = _imports[id];
+    if (item == null) return false;
+    return item.status == 'starting' ||
+        item.status == 'downloading' ||
+        item.status == 'processing';
+  }
+
+  void _startImportPolling() {
+    if (_importPollTimer != null) return;
+    _importPollTimer = Timer.periodic(
+      const Duration(milliseconds: 250),
+      (_) => _refreshImports(),
+    );
+    _refreshImports();
+  }
+
+  void _maybeStopImportPolling() {
+    final inProgress =
+        _imports.values.any((item) => _isImportInProgress(item.id));
+    if (!inProgress) {
+      _importPollTimer?.cancel();
+      _importPollTimer = null;
+    }
+  }
+
+  Future<void> _refreshImports() async {
+    if (!mounted) return;
+    try {
+      final active = await api.getActiveDownloads();
+      if (!mounted) return;
+      setState(() {
+        for (final item in active) {
+          _imports[item.id] = item;
+        }
+      });
+      _maybeStopImportPolling();
+    } catch (_) {}
+  }
+
+  Future<void> _cancelImport(String id) async {
+    try {
+      await api.cancelDownload(id: id);
+      if (mounted) {
+        setState(() => _imports.remove(id));
+        _maybeStopImportPolling();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cancel failed: $e')),
+        );
+      }
+    }
+  }
+
+  String? _ontologyNameForImport(String id) {
+    for (final ontology in _ontologies) {
+      if (ontology.id == id) return ontology.name;
+    }
+    return id;
+  }
+
+  String _formatBytes(BigInt bytes) {
+    if (bytes <= BigInt.zero) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    var size = bytes.toDouble();
+    var unit = 0;
+    while (size >= 1024 && unit < units.length - 1) {
+      size /= 1024;
+      unit++;
+    }
+    return '${size.toStringAsFixed(unit == 0 ? 0 : 1)} ${units[unit]}';
+  }
+
+  double? _importProgressValue(api.ProgressPayload item) {
+    if (item.totalBytes > BigInt.zero) {
+      return (item.progress / 100).clamp(0.0, 1.0);
+    }
+    if (item.status == 'processing') return null;
+    return null;
+  }
+
+  String _importStatusLabel(api.ProgressPayload item) {
+    switch (item.status) {
+      case 'starting':
+        return 'Connecting...';
+      case 'processing':
+        return 'Compiling to .q42...';
+      case 'downloading':
+        return '${item.progress.toStringAsFixed(0)}%';
+      case 'complete':
+        return 'Complete';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'error':
+        return 'Failed';
+      default:
+        return item.status;
+    }
+  }
+
+  Widget _buildImportProgress(api.ProgressPayload item) {
+    final transferred = _formatBytes(item.downloadedBytes);
+    final total = item.totalBytes > BigInt.zero
+        ? _formatBytes(item.totalBytes)
+        : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                total == null ? transferred : '$transferred / $total',
+                style: const TextStyle(fontSize: 11),
+              ),
+            ),
+            if (item.speedKbps > 0)
+              Text(
+                '${item.speedKbps.toStringAsFixed(0)} KB/s',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        LinearProgressIndicator(value: _importProgressValue(item)),
+      ],
+    );
+  }
+
+  Widget _buildImportBanner(api.ProgressPayload item) {
+    final name = _ontologyNameForImport(item.id);
+    final inProgress = _isImportInProgress(item.id);
+    return Material(
+      color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.35),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (inProgress)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                Expanded(
+                  child: Text(
+                    '$name — ${_importStatusLabel(item)}',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (inProgress)
+                  TextButton(
+                    onPressed: () => _cancelImport(item.id),
+                    child: const Text('Cancel'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            _buildImportProgress(item),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showDetails(OntologyModel ontology) {
@@ -139,19 +425,40 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
     bool pop = true,
   }) async {
     if (pop) Navigator.pop(context);
+    if (_isImportInProgress(ontology.id)) return;
+
+    _beginImportTracking(ontology);
     try {
       await catalog.importOntology(id: ontology.id);
       if (!mounted) return;
+      setState(() => _imports.remove(ontology.id));
       await _loadFromRustResourceCatalog();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${ontology.name} imported')),
+        SnackBar(
+          content: Text(
+            '${ontology.name} compiled to Index/${ontology.id}.q42',
+          ),
+        ),
       );
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      setState(() {
+        _imports[ontology.id] = api.ProgressPayload(
+          id: ontology.id,
+          progress: 0,
+          downloadedBytes: BigInt.zero,
+          totalBytes: BigInt.from((ontology.sizeMb * 1024 * 1024).round()),
+          speedKbps: 0,
+          status: e.toString() == 'Cancelled' ? 'cancelled' : 'error',
+        );
+      });
+      if (e.toString() != 'Cancelled') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Import failed: $e')),
         );
       }
+    } finally {
+      _maybeStopImportPolling();
     }
   }
 
@@ -182,7 +489,17 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ontology Hub'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Ontology Hub'),
+            if (!_isLoading)
+              Text(
+                '${_filtered.length} of ${_ontologies.length} ontologies · $_catalogSource',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.build_circle_outlined),
@@ -213,6 +530,14 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
       ),
       body: Column(
         children: [
+          if (_imports.values.any(
+            (item) => _isImportInProgress(item.id) || item.status == 'error',
+          ))
+            ..._imports.values
+                .where(
+                  (item) => _isImportInProgress(item.id) || item.status == 'error',
+                )
+                .map(_buildImportBanner),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -265,11 +590,16 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
       decoration: const InputDecoration(labelText: 'Domain'),
       value: _selectedDomain,
       items: const [
-        DropdownMenuItem(value: null, child: Text('All')),
+        DropdownMenuItem(value: null, child: Text('All domains')),
+        DropdownMenuItem(value: 'general', child: Text('General')),
         DropdownMenuItem(value: 'provenance', child: Text('Provenance')),
         DropdownMenuItem(value: 'policy', child: Text('Policy')),
         DropdownMenuItem(value: 'health', child: Text('Health')),
         DropdownMenuItem(value: 'validation', child: Text('Validation')),
+        DropdownMenuItem(value: 'social', child: Text('Social')),
+        DropdownMenuItem(value: 'geography', child: Text('Geography')),
+        DropdownMenuItem(value: 'linguistics', child: Text('Linguistics')),
+        DropdownMenuItem(value: 'science', child: Text('Science')),
       ],
       onChanged: (value) {
         _selectedDomain = value;
@@ -299,36 +629,56 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
       itemBuilder: (context, index) {
         final ontology = _filtered[index];
         final selected = _selectedIds.contains(ontology.id);
+        final importItem = _imports[ontology.id];
+        final importing = importItem != null && _isImportInProgress(ontology.id);
         return Card(
-          child: ListTile(
-            leading: Checkbox(
-              value: selected,
-              onChanged: (_) => _toggleSelection(ontology.id),
-            ),
-            title: Text('${ontology.name} (${ontology.acronym ?? ontology.id})'),
-            subtitle: Text('${ontology.domain} | ~${ontology.sizeMb} MB'),
-            trailing: Wrap(
-              spacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                if (ontology.isDownloaded)
-                  IconButton(
-                    tooltip: 'Remove ontology',
-                    onPressed: () => _removeOntology(ontology, pop: false),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-                ontology.isDownloaded
-                    ? const Chip(
+          child: Column(
+            children: [
+              ListTile(
+                leading: Checkbox(
+                  value: selected,
+                  onChanged: importing ? null : (_) => _toggleSelection(ontology.id),
+                ),
+                title: Text('${ontology.name} (${ontology.acronym ?? ontology.id})'),
+                subtitle: Text(
+                  '${ontology.domain} | ~${ontology.sizeMb} MB → .q42'
+                  '${importing ? " | ${_importStatusLabel(importItem!)}" : ""}',
+                ),
+                trailing: Wrap(
+                  spacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (ontology.isDownloaded)
+                      IconButton(
+                        tooltip: 'Remove ontology',
+                        onPressed: () => _removeOntology(ontology, pop: false),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    if (ontology.isDownloaded)
+                      const Chip(
                         label: Text('Imported'),
                         backgroundColor: Colors.green,
                       )
-                    : ElevatedButton(
-                        onPressed: () => _showDetails(ontology),
+                    else if (importing)
+                      OutlinedButton(
+                        onPressed: null,
+                        child: const Text('Importing...'),
+                      )
+                    else
+                      ElevatedButton(
+                        onPressed: () => _importOntology(ontology, pop: false),
                         child: const Text('Import'),
                       ),
-              ],
-            ),
-            onTap: () => _showDetails(ontology),
+                  ],
+                ),
+                onTap: () => _showDetails(ontology),
+              ),
+              if (importing)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: _buildImportProgress(importItem!),
+                ),
+            ],
           ),
         );
       },
@@ -347,6 +697,8 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
       itemCount: _filtered.length,
       itemBuilder: (context, index) {
         final ontology = _filtered[index];
+        final importItem = _imports[ontology.id];
+        final importing = importItem != null && _isImportInProgress(ontology.id);
         return Card(
           child: InkWell(
             onTap: () => _showDetails(ontology),
@@ -360,7 +712,7 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
                     children: [
                       Checkbox(
                         value: _selectedIds.contains(ontology.id),
-                        onChanged: (_) => _toggleSelection(ontology.id),
+                        onChanged: importing ? null : (_) => _toggleSelection(ontology.id),
                       ),
                       if (ontology.isDownloaded)
                         IconButton(
@@ -376,9 +728,18 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '${ontology.domain} | ~${ontology.sizeMb} MB',
+                    '${ontology.domain} | ~${ontology.sizeMb} MB → .q42',
                     style: const TextStyle(fontSize: 12),
                   ),
+                  if (importing) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _importStatusLabel(importItem!),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
+                    _buildImportProgress(importItem),
+                  ],
                   if (ontology.isDownloaded)
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
@@ -392,8 +753,8 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () => _showDetails(ontology),
-                        child: const Text('Import'),
+                        onPressed: importing ? null : () => _importOntology(ontology, pop: false),
+                        child: Text(importing ? 'Importing...' : 'Import'),
                       ),
                     ),
                 ],
@@ -460,6 +821,12 @@ class OntologyDetailSheet extends StatelessWidget {
             Text('Format: ${ontology.format}'),
             Text('Size: ~${ontology.sizeMb} MB'),
             Text('License: ${ontology.license}'),
+            const SizedBox(height: 12),
+            Text(
+              'Import downloads RDF/OWL, compiles to Index/${ontology.id}.q42, '
+              'then removes the raw source file to save disk space.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const SizedBox(height: 32),
             if (!ontology.isDownloaded)
               SizedBox(

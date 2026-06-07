@@ -17,7 +17,7 @@ $WasmSrc = Join-Path $Root "docs\playground"
 $Dest = Join-Path $OutDir "bundled\qapps\Anatomy"
 
 if (-not (Test-Path $AnatomySrc)) {
-    Write-Warning "Anatomy source not found at $AnatomySrc — skipping bundled qapp copy."
+    Write-Warning "Anatomy source not found at $AnatomySrc - skipping bundled qapp copy."
     return
 }
 

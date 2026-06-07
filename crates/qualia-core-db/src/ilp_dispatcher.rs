@@ -319,13 +319,34 @@ mod tests {
 
     #[test]
     fn test_nym_flag_propagated_to_receipt() {
-        let plan = route_tax_payment(10_000, &make_suite()).unwrap();
+        use crate::rpc::TaxRecipient;
+        let suite = TaxRecipientSuite {
+            jurisdiction_did: "did:gov:test:nym".to_string(),
+            recipients: vec![
+                TaxRecipient {
+                    label: "Direct".into(),
+                    ilp_address: "$ilp.test/direct".into(),
+                    share_percent: 50,
+                    use_nym: false,
+                },
+                TaxRecipient {
+                    label: "Private".into(),
+                    ilp_address: "$ilp.test/private".into(),
+                    share_percent: 50,
+                    use_nym: true,
+                },
+            ],
+        };
+        let plan = route_tax_payment(10_000, &suite).unwrap();
         let dispatcher = IlpDispatcher::new(MockTransport { force_result: None });
         let result = dispatcher.dispatch(&plan);
 
-        // Disaster Recovery Reserve (last in default suite) has use_nym = true
         let nym_receipt = result.receipts.iter().find(|r| r.via_nym);
-        assert!(nym_receipt.is_some(), "Expected at least one Nym-routed receipt");
+        assert!(nym_receipt.is_some(), "Expected one Nym-routed receipt when opted in");
+        assert_eq!(
+            result.receipts.iter().filter(|r| r.via_nym).count(),
+            1
+        );
     }
 
     #[test]

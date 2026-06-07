@@ -90,7 +90,11 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True, dataset=No
             "error": f"could not parse bench.mjs output: {exc}\nstdout: {proc.stdout[:300]}",
         }
 
-    result["peak_rss_mb"] = round(peak_rss_mb(), 2)
+    binary_rss = result.get("peak_rss_mb")
+    if binary_rss is None or binary_rss <= 0:
+        measured = round(peak_rss_mb(), 2)
+        if measured > 0:
+            result["peak_rss_mb"] = measured
     result.setdefault(
         "_sample_policy",
         {"warmup": DEFAULT_WARMUP, "samples": DEFAULT_SAMPLES},

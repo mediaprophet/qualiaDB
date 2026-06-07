@@ -229,5 +229,8 @@ function loadNT() {
         result.filter = `ERROR: ${err.message}`;
     }
 
+    result.peak_rss_mb =
+        Math.round((process.memoryUsage().rss / (1024 * 1024)) * 100) / 100;
+
     process.stdout.write(JSON.stringify(result, null, 2) + "\n");
 })();

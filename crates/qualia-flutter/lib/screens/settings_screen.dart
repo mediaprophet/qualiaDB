@@ -308,7 +308,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Every accepted ILP payment is automatically split: 12% is dispatched as micropayments to the addresses below.',
+                  'Every accepted ILP payment is automatically split: 12% is dispatched as micropayments to the addresses below. '
+                  'Nym mixnet routing per recipient is optional.',
                   style: TextStyle(color: Colors.grey, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
@@ -369,7 +370,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             const SizedBox(width: 8),
                             Column(
                               children: [
-                                const Text('NYM', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                const Text('NYM (opt)', style: TextStyle(fontSize: 10, color: Colors.grey)),
                                 Switch(
                                   value: recipients[i].useNym,
                                   onChanged: (v) => setState(() => recipients[i].useNym = v),

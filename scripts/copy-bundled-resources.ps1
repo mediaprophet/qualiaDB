@@ -13,7 +13,7 @@ $Src = Join-Path $Root "resources"
 $Dest = Join-Path $OutDir "bundled\resources"
 
 if (-not (Test-Path $Src)) {
-    Write-Warning "resources/ not found at $Src — skipping bundled resources copy."
+    Write-Warning "resources/ not found at $Src - skipping bundled resources copy."
     return
 }
 

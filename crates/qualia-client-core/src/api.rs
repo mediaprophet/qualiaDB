@@ -8,7 +8,7 @@ use crate::engine::q42_compiler;
 use futures_util::StreamExt;
 use qualia_core_db::ilp_dispatcher::{DispatchResult, HttpIlpTransport, IlpDispatcher};
 use qualia_core_db::rpc::{route_tax_payment, TaxRecipientSuite};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
@@ -81,11 +81,22 @@ pub struct WalletStatus {
 }
 
 pub fn get_wallet_status() -> WalletStatus {
+    let nym_connected = crate::state::APP_STATE
+        .get()
+        .map(|s| s.nym_relay_active.load(Ordering::Relaxed))
+        .unwrap_or(false);
     WalletStatus {
         lightning_sats: 450000,
         ilp_microcents: 1250000,
-        nym_connected: true,
+        nym_connected,
     }
+}
+
+fn nym_mixnet_opted_in() -> bool {
+    crate::state::APP_STATE
+        .get()
+        .map(|s| s.nym_relay_active.load(Ordering::Relaxed))
+        .unwrap_or(false)
 }
 
 pub fn get_config() -> AgentConfig {
@@ -281,6 +292,8 @@ pub async fn download_and_vectorize(
         None,
     )
     .map_err(|e| e.to_string())?;
+
+    let _ = std::fs::remove_file(&dest_path);
 
     let done_payload = ProgressPayload {
         id: item_id.clone(),
@@ -537,13 +550,33 @@ pub async fn import_catalog_ontology(id: String) -> Result<serde_json::Value, St
     let storage_path = state.config.lock().unwrap().storage_path.clone();
     let catalog = load_workspace_catalog();
 
-    let result = crate::resource_import::import_catalog_ontology(
+    let cancelled = Arc::new(AtomicBool::new(false));
+    state
+        .download_handles
+        .lock()
+        .unwrap()
+        .insert(id.clone(), cancelled.clone());
+
+    let progress = crate::resource_import::ImportProgressCtx {
+        id: id.clone(),
+        handles: state.download_handles.clone(),
+        active_downloads: state.active_downloads.clone(),
+        download_events: state.download_events.clone(),
+    };
+
+    let result = crate::resource_import::import_catalog_ontology_with_options(
         &catalog,
         &id,
         Path::new(&storage_path),
+        Some(&progress),
+        true,
     )
     .await
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| {
+        state.download_handles.lock().unwrap().remove(&id);
+        state.active_downloads.lock().unwrap().remove(&id);
+        e.to_string()
+    })?;
 
     qualia_core_db::daemon_graph::init_daemon_graph(&storage_path);
 
@@ -809,75 +842,88 @@ pub struct TxRecord {
 
 pub fn get_coin_balances() -> Vec<CoinBalance> {
     let id = read_identity();
-    let addr = |key: &str, fallback: &str| -> String {
+    let has_identity = id.is_some();
+    let addr = |key: &str| -> String {
         id.as_ref()
             .and_then(|v| v.get(key))
             .and_then(|v| v.as_str())
-            .unwrap_or(fallback)
+            .unwrap_or("")
             .to_string()
     };
-    vec![
+    let status: String = if has_identity {
+        "unsynced".into()
+    } else {
+        "awaiting_identity".into()
+    };
+    let zero_display = if has_identity { "0" } else { "—" };
+
+    let mut balances = vec![
         CoinBalance {
             coin: "eCash".into(),
             ticker: "XEC".into(),
-            address: addr("ecash_xec", "ecash:q… (generate identity first)"),
-            balance: 1_250_000.0,
-            balance_display: "1,250,000.00".into(),
-            fiat_usd: 245.00,
-            price_usd: 0.000196,
-            change_24h: 3.2,
+            address: addr("ecash_xec"),
+            balance: 0.0,
+            balance_display: zero_display.into(),
+            fiat_usd: 0.0,
+            price_usd: 0.0,
+            change_24h: 0.0,
             network: "eCash".into(),
-            status: "online".into(),
+            status: status.clone(),
         },
         CoinBalance {
             coin: "Bitcoin".into(),
             ticker: "BTC".into(),
-            address: "bc1q… (generate identity first)".into(),
-            balance: 0.00450000,
-            balance_display: "0.00450000".into(),
-            fiat_usd: 441.00,
-            price_usd: 98_000.0,
-            change_24h: -1.4,
+            address: addr("bitcoin_btc"),
+            balance: 0.0,
+            balance_display: zero_display.into(),
+            fiat_usd: 0.0,
+            price_usd: 0.0,
+            change_24h: 0.0,
             network: "Bitcoin".into(),
-            status: "online".into(),
+            status: status.clone(),
         },
         CoinBalance {
             coin: "Monero".into(),
             ticker: "XMR".into(),
-            address: "4… (generate identity first)".into(),
-            balance: 4.5,
-            balance_display: "4.50000000".into(),
-            fiat_usd: 720.00,
-            price_usd: 160.0,
-            change_24h: 0.8,
+            address: addr("monero_xmr"),
+            balance: 0.0,
+            balance_display: zero_display.into(),
+            fiat_usd: 0.0,
+            price_usd: 0.0,
+            change_24h: 0.0,
             network: "Monero".into(),
-            status: "online".into(),
-        },
-        CoinBalance {
-            coin: "Nym".into(),
-            ticker: "NYM".into(),
-            address: addr("nym_mixnet", "n1… (generate identity first)"),
-            balance: 2_400.0,
-            balance_display: "2,400.00".into(),
-            fiat_usd: 48.00,
-            price_usd: 0.02,
-            change_24h: -2.1,
-            network: "Nyx Chain".into(),
-            status: "online".into(),
+            status: status.clone(),
         },
         CoinBalance {
             coin: "Ethereum".into(),
             ticker: "ETH".into(),
-            address: addr("ethereum", "0x… (generate identity first)"),
-            balance: 1.42,
-            balance_display: "1.42000000".into(),
-            fiat_usd: 4_260.00,
-            price_usd: 3_000.0,
-            change_24h: 1.9,
+            address: addr("ethereum"),
+            balance: 0.0,
+            balance_display: zero_display.into(),
+            fiat_usd: 0.0,
+            price_usd: 0.0,
+            change_24h: 0.0,
             network: "Ethereum".into(),
-            status: "online".into(),
+            status: status.clone(),
         },
-    ]
+    ];
+
+    if nym_mixnet_opted_in() {
+        balances.push(CoinBalance {
+            coin: "Nym".into(),
+            ticker: "NYM".into(),
+            address: addr("nym_mixnet"),
+            balance: 0.0,
+            balance_display: zero_display.into(),
+            fiat_usd: 0.0,
+            price_usd: 0.0,
+            change_24h: 0.0,
+            network: "Nyx Chain".into(),
+            status,
+        });
+    }
+
+    balances
 }
 
 pub fn get_transaction_history(ticker: String) -> Vec<TxRecord> {
@@ -1003,10 +1049,18 @@ pub fn get_transaction_history(ticker: String) -> Vec<TxRecord> {
             counterparty: "0xSender7c4…".into(),
         },
     ];
+    let nym_enabled = nym_mixnet_opted_in();
+    let filtered: Vec<TxRecord> = all
+        .into_iter()
+        .filter(|tx| nym_enabled || tx.ticker != "NYM")
+        .collect();
     if ticker.is_empty() || ticker == "ALL" {
-        all
+        filtered
     } else {
-        all.into_iter().filter(|tx| tx.ticker == ticker).collect()
+        filtered
+            .into_iter()
+            .filter(|tx| tx.ticker == ticker)
+            .collect()
     }
 }
 
@@ -1060,12 +1114,16 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
     let xec_hex = to_hex(&seed_bytes[16..24]);
     let eth_hex = to_hex(&seed_bytes[24..32]);
     let nym_hex = to_hex(&seed_bytes[32..40]);
+    let btc_hex = to_hex(&seed_bytes[40..48]);
+    let xmr_hex = to_hex(&seed_bytes[48..56]);
 
     Ok(serde_json::json!({
         "qualia_root": format!("did:qualia:0x{}", hex_seed),
         "nym_mixnet": format!("n1{}...", nym_hex),
         "ecash_xec": format!("ecash:q{}...", xec_hex),
-        "ethereum": format!("0x{}...", eth_hex)
+        "ethereum": format!("0x{}...", eth_hex),
+        "bitcoin_btc": format!("bc1q{}...", &btc_hex[0..btc_hex.len().min(16)]),
+        "monero_xmr": format!("4{}...", &xmr_hex[0..xmr_hex.len().min(16)])
     }))
 }
 
@@ -1155,7 +1213,7 @@ pub async fn toggle_nym_relay() -> Result<bool, String> {
         // Spawn asynchronous background daemon for packet routing
         tokio::spawn(async move {
             let mut packets_routed = 0;
-            let mut packets_dropped = 0;
+            let mut _packets_dropped = 0;
 
             while active_clone.load(Ordering::Relaxed) {
                 // Simulate network fluctuations and calculate memory backpressure
@@ -1165,7 +1223,7 @@ pub async fn toggle_nym_relay() -> Result<bool, String> {
                 let is_congested = buffer_memory_mb > 45.0;
 
                 if is_congested {
-                    packets_dropped += 15;
+                    _packets_dropped += 15;
                 } else {
                     packets_routed += 42;
                 }
@@ -1197,7 +1255,7 @@ pub async fn toggle_stark_prover() -> Result<bool, String> {
 
         // Spawn asynchronous background daemon for out-of-core proof chunking
         tokio::spawn(async move {
-            let mut fragments_paged = 0;
+            let mut _fragments_paged = 0;
 
             while active_clone.load(Ordering::Relaxed) {
                 let current_solar = solar_clone.load(Ordering::Relaxed);
@@ -1211,7 +1269,7 @@ pub async fn toggle_stark_prover() -> Result<bool, String> {
                     //     fragments_paged,
                     // });
                 } else {
-                    fragments_paged += 8; // Simulate 48-byte Super-Quin paging writes
+                    _fragments_paged += 8; // Simulate 48-byte Super-Quin paging writes
 
                     // let _ = window_clone.emit("stark-telemetry", StarkTelemetry {
                     //     status: "Proving Execution Active".to_string(),
@@ -1933,15 +1991,22 @@ fn persist_active_model_record(
 }
 
 pub fn restore_active_model_on_startup() {
-    let Some(record) = load_active_model_record_from_disk() else {
-        return;
-    };
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    if Path::new(&record.gguf_path).is_file() {
-        let _ =
-            crate::model_lifecycle::activate_model_for_id(&record.model_id, Path::new(&storage));
-        *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
+    let storage_path = Path::new(&storage);
+
+    if let Some(record) = load_active_model_record_from_disk() {
+        if Path::new(&record.gguf_path).is_file() {
+            let _ = crate::model_lifecycle::activate_model_for_id(&record.model_id, storage_path);
+            *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
+            return;
+        }
+    }
+
+    let catalog = load_workspace_catalog();
+    let prefs = crate::model_preferences::ensure_preferences(storage_path, &catalog);
+    if prefs.auto_select {
+        let _ = try_apply_model_preference("chat");
     }
 }
 
@@ -1981,17 +2046,76 @@ pub fn get_model_lifecycle_status() -> Result<serde_json::Value, String> {
 pub fn set_active_model(model_name: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    let model_id = model_name
-        .trim_end_matches(".gguf")
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or(model_name.as_str())
-        .to_string();
+    let storage_path = Path::new(&storage);
 
-    let record =
-        crate::model_lifecycle::activate_model_for_id(&model_id, Path::new(&storage))
-            .map_err(|e| e.to_string())?;
+    let record = if Path::new(&model_name).is_file() {
+        crate::model_lifecycle::finalize_local_gguf(Path::new(&model_name), storage_path)
+            .map_err(|e| e.to_string())?
+    } else {
+        let model_id = model_name
+            .trim_end_matches(".gguf")
+            .rsplit(['/', '\\'])
+            .next()
+            .unwrap_or(model_name.as_str())
+            .to_string();
+        crate::model_lifecycle::activate_model_for_id(&model_id, storage_path)
+            .map_err(|e| e.to_string())?
+    };
 
+    persist_active_model_record(&record)?;
+    *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
+    Ok(())
+}
+
+pub fn get_model_preferences() -> crate::model_preferences::ModelPreferences {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let catalog = load_workspace_catalog();
+    crate::model_preferences::ensure_preferences(Path::new(&storage), &catalog)
+}
+
+pub fn save_model_preferences(
+    prefs: crate::model_preferences::ModelPreferences,
+) -> Result<(), String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    crate::model_preferences::save_preferences(Path::new(&storage), &prefs)
+}
+
+pub fn list_installed_llm_ids() -> Vec<String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    crate::model_preferences::list_installed_model_ids(Path::new(&storage))
+}
+
+pub fn resolve_model_preference(
+    task: &str,
+) -> Option<crate::model_preferences::ResolvedModelPreference> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let catalog = load_workspace_catalog();
+    let prefs = get_model_preferences();
+    let task = crate::model_preferences::ModelTask::from_str_lossy(task);
+    crate::model_preferences::resolve_preference(
+        Path::new(&storage),
+        &catalog,
+        &prefs,
+        task,
+    )
+}
+
+pub fn try_apply_model_preference(task: &str) -> Result<(), String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let catalog = load_workspace_catalog();
+    let prefs = get_model_preferences();
+    let task = crate::model_preferences::ModelTask::from_str_lossy(task);
+    let record = crate::model_preferences::apply_preference(
+        Path::new(&storage),
+        &catalog,
+        &prefs,
+        task,
+    )?;
     persist_active_model_record(&record)?;
     *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
     Ok(())
@@ -2030,6 +2154,20 @@ pub async fn install_catalog_llm(id: String) -> Result<serde_json::Value, String
         e.to_string()
     })?;
     let total_bytes = response.content_length().unwrap_or(0);
+    let starting_payload = ProgressPayload {
+        id: id.clone(),
+        progress: 0.0,
+        downloaded_bytes: 0,
+        total_bytes,
+        speed_kbps: 0.0,
+        status: "downloading".to_string(),
+    };
+    let _ = state.download_events.send(starting_payload.clone());
+    active_dl
+        .lock()
+        .unwrap()
+        .insert(id.clone(), starting_payload);
+
     let mut dest = std::fs::File::create(&dest_path).map_err(|e| e.to_string())?;
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
@@ -3069,7 +3207,7 @@ pub fn generate_front_door(label: String) -> Result<FrontDoor, String> {
         did_uri,
         label,
         created_at: now.to_string(),
-        routing_hints: vec!["nym:mixnet:sydney1".to_string()],
+        routing_hints: vec![],
     };
 
     drop(vault);
@@ -3084,11 +3222,8 @@ pub fn get_directory_actors() -> Result<Vec<Actor>, String> {
     Ok(actors)
 }
 
-pub fn add_directory_actor(mut actor: Actor) -> Result<(), String> {
+pub fn add_directory_actor(actor: Actor) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
-    if actor.routing_hints.is_empty() {
-        actor.routing_hints.push("nym:mixnet:global".to_string());
-    }
     state.directory_actors.lock().unwrap().push(actor);
     save_directory_state();
     Ok(())

@@ -238,7 +238,14 @@ class _CredentialManagerScreenState extends State<CredentialManagerScreen> with 
                   childAspectRatio: 3.5,
                   children: [
                     _buildWalletCard('Qualia Root', _derivedWallets!['qualia_root']!, const Color(0xFF00F0FF)),
-                    _buildWalletCard('Nym Mixnet (Nyx)', _derivedWallets!['nym_mixnet']!, const Color(0xFFB026FF)),
+                    _buildWalletCard('Bitcoin (BTC)', _derivedWallets!['bitcoin_btc'] ?? '—', const Color(0xFFF7931A)),
+                    _buildWalletCard('Monero (XMR)', _derivedWallets!['monero_xmr'] ?? '—', const Color(0xFFFF6600)),
+                    _buildWalletCard(
+                      'Nym Mixnet (optional)',
+                      _derivedWallets!['nym_mixnet']!,
+                      const Color(0xFFB026FF),
+                      label: 'Enable in Wallet → Optional privacy',
+                    ),
                     _buildWalletCard('eCash (XEC)', _derivedWallets!['ecash_xec']!, const Color(0xFF00FF88)),
                     _buildWalletCard('Ethereum (EVM)', _derivedWallets!['ethereum']!, Colors.grey),
                   ],

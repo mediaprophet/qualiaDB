@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `block_on`, `find_open_port`, `load_persisted_directory`, `map_actor`, `map_front_door`, `map_progress`, `map_qpu_chat_result`, `map_rule`, `map_tax_suite`, `map_token`, `parse_manifest_items`, `spawn_daemon_background`, `to_actor`, `to_core_tax_suite`, `to_rule`
+// These functions are ignored because they are not marked as `pub`: `block_on`, `find_open_port`, `load_persisted_directory`, `map_actor`, `map_front_door`, `map_progress`, `map_qpu_chat_result`, `map_rule`, `map_tax_suite`, `map_token`, `parse_manifest_items`, `parse_ontology_manifest_items`, `spawn_daemon_background`, `to_actor`, `to_core_tax_suite`, `to_rule`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PaymentReceipt`, `PhysicsStore`
 
 Future<String> greet({required String name}) =>

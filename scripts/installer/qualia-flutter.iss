@@ -11,7 +11,7 @@
 
 [Setup]
 AppId={{A7B3C9D1-4E2F-4A8B-9C1D-QualiaFlutter01}
-AppName=QualiaDB
+AppName=QualiaDB Flutter
 AppVersion={#AppVersion}
 AppPublisher=QualiaDB
 DefaultDirName={autopf}\QualiaDB

@@ -118,3 +118,119 @@ pub async fn import_ontology(id: String) -> Result<String, String> {
     let val = qualia_client_core::import_catalog_ontology(id).await?;
     serde_json::to_string(&val).map_err(|e| e.to_string())
 }
+
+// ── Model load preferences (priority + conditions) ───────────────────────────
+
+#[frb]
+#[derive(Debug, Clone)]
+pub struct ModelLoadConditionFrb {
+    pub require_installed: bool,
+    pub task: String,
+    pub min_ram_gb: Option<f64>,
+    pub respect_ram_estimate: bool,
+    pub require_multimodal: bool,
+}
+
+#[frb]
+#[derive(Debug, Clone)]
+pub struct ModelPreferenceEntryFrb {
+    pub model_id: String,
+    pub label: String,
+    pub priority: u32,
+    pub when: ModelLoadConditionFrb,
+}
+
+#[frb]
+#[derive(Debug, Clone)]
+pub struct ModelPreferencesFrb {
+    pub auto_select: bool,
+    pub entries: Vec<ModelPreferenceEntryFrb>,
+}
+
+#[frb]
+#[derive(Debug, Clone)]
+pub struct ResolvedModelPreferenceFrb {
+    pub model_id: String,
+    pub label: String,
+    pub reason: String,
+    pub gguf_path: String,
+    pub priority: u32,
+    pub task: String,
+}
+
+fn map_condition(c: qualia_client_core::model_preferences::ModelLoadCondition) -> ModelLoadConditionFrb {
+    ModelLoadConditionFrb {
+        require_installed: c.require_installed,
+        task: c.task.as_str().to_string(),
+        min_ram_gb: c.min_ram_gb,
+        respect_ram_estimate: c.respect_ram_estimate,
+        require_multimodal: c.require_multimodal,
+    }
+}
+
+fn map_entry(e: qualia_client_core::model_preferences::ModelPreferenceEntry) -> ModelPreferenceEntryFrb {
+    ModelPreferenceEntryFrb {
+        model_id: e.model_id,
+        label: e.label,
+        priority: e.priority,
+        when: map_condition(e.when),
+    }
+}
+
+fn unmap_condition(c: ModelLoadConditionFrb) -> qualia_client_core::model_preferences::ModelLoadCondition {
+    qualia_client_core::model_preferences::ModelLoadCondition {
+        require_installed: c.require_installed,
+        task: qualia_client_core::model_preferences::ModelTask::from_str_lossy(&c.task),
+        min_ram_gb: c.min_ram_gb,
+        respect_ram_estimate: c.respect_ram_estimate,
+        require_multimodal: c.require_multimodal,
+    }
+}
+
+fn unmap_entry(e: ModelPreferenceEntryFrb) -> qualia_client_core::model_preferences::ModelPreferenceEntry {
+    qualia_client_core::model_preferences::ModelPreferenceEntry {
+        model_id: e.model_id,
+        label: e.label,
+        priority: e.priority,
+        when: unmap_condition(e.when),
+    }
+}
+
+#[frb]
+pub fn get_model_preferences() -> ModelPreferencesFrb {
+    let prefs = qualia_client_core::get_model_preferences();
+    ModelPreferencesFrb {
+        auto_select: prefs.auto_select,
+        entries: prefs.entries.into_iter().map(map_entry).collect(),
+    }
+}
+
+#[frb]
+pub fn save_model_preferences(prefs: ModelPreferencesFrb) -> Result<(), String> {
+    qualia_client_core::save_model_preferences(qualia_client_core::model_preferences::ModelPreferences {
+        auto_select: prefs.auto_select,
+        entries: prefs.entries.into_iter().map(unmap_entry).collect(),
+    })
+}
+
+#[frb]
+pub fn list_installed_llm_ids() -> Vec<String> {
+    qualia_client_core::list_installed_llm_ids()
+}
+
+#[frb]
+pub fn resolve_model_preference(task: String) -> Option<ResolvedModelPreferenceFrb> {
+    qualia_client_core::resolve_model_preference(&task).map(|r| ResolvedModelPreferenceFrb {
+        model_id: r.model_id,
+        label: r.label,
+        reason: r.reason,
+        gguf_path: r.gguf_path,
+        priority: r.priority,
+        task: r.task,
+    })
+}
+
+#[frb]
+pub fn apply_model_preference(task: String) -> Result<(), String> {
+    qualia_client_core::try_apply_model_preference(&task)
+}

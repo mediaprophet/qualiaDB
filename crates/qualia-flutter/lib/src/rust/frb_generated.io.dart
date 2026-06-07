@@ -76,6 +76,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       dynamic raw);
 
   @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  ModelPreferencesFrb dco_decode_box_autoadd_model_preferences_frb(dynamic raw);
+
+  @protected
   OntologyTorrentPolicy dco_decode_box_autoadd_ontology_torrent_policy(
       dynamic raw);
 
@@ -86,6 +92,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   QpuOracleSettingsInput dco_decode_box_autoadd_qpu_oracle_settings_input(
       dynamic raw);
+
+  @protected
+  ResolvedModelPreferenceFrb
+      dco_decode_box_autoadd_resolved_model_preference_frb(dynamic raw);
 
   @protected
   TaxRecipientSuite dco_decode_box_autoadd_tax_recipient_suite(dynamic raw);
@@ -229,6 +239,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   List<ModelInfo> dco_decode_list_model_info(dynamic raw);
 
   @protected
+  List<ModelPreferenceEntryFrb> dco_decode_list_model_preference_entry_frb(
+      dynamic raw);
+
+  @protected
   List<OntologyResource> dco_decode_list_ontology_resource(dynamic raw);
 
   @protected
@@ -265,6 +279,15 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   ModelInfo dco_decode_model_info(dynamic raw);
 
   @protected
+  ModelLoadConditionFrb dco_decode_model_load_condition_frb(dynamic raw);
+
+  @protected
+  ModelPreferenceEntryFrb dco_decode_model_preference_entry_frb(dynamic raw);
+
+  @protected
+  ModelPreferencesFrb dco_decode_model_preferences_frb(dynamic raw);
+
+  @protected
   OntologyResource dco_decode_ontology_resource(dynamic raw);
 
   @protected
@@ -275,6 +298,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  ResolvedModelPreferenceFrb?
+      dco_decode_opt_box_autoadd_resolved_model_preference_frb(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
@@ -305,6 +335,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   QpuOracleSettingsInput dco_decode_qpu_oracle_settings_input(dynamic raw);
+
+  @protected
+  ResolvedModelPreferenceFrb dco_decode_resolved_model_preference_frb(
+      dynamic raw);
 
   @protected
   SharingPolicy dco_decode_sharing_policy(dynamic raw);
@@ -405,6 +439,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       SseDeserializer deserializer);
 
   @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  ModelPreferencesFrb sse_decode_box_autoadd_model_preferences_frb(
+      SseDeserializer deserializer);
+
+  @protected
   OntologyTorrentPolicy sse_decode_box_autoadd_ontology_torrent_policy(
       SseDeserializer deserializer);
 
@@ -415,6 +456,11 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   QpuOracleSettingsInput sse_decode_box_autoadd_qpu_oracle_settings_input(
       SseDeserializer deserializer);
+
+  @protected
+  ResolvedModelPreferenceFrb
+      sse_decode_box_autoadd_resolved_model_preference_frb(
+          SseDeserializer deserializer);
 
   @protected
   TaxRecipientSuite sse_decode_box_autoadd_tax_recipient_suite(
@@ -571,6 +617,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   List<ModelInfo> sse_decode_list_model_info(SseDeserializer deserializer);
 
   @protected
+  List<ModelPreferenceEntryFrb> sse_decode_list_model_preference_entry_frb(
+      SseDeserializer deserializer);
+
+  @protected
   List<OntologyResource> sse_decode_list_ontology_resource(
       SseDeserializer deserializer);
 
@@ -612,6 +662,18 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   ModelInfo sse_decode_model_info(SseDeserializer deserializer);
 
   @protected
+  ModelLoadConditionFrb sse_decode_model_load_condition_frb(
+      SseDeserializer deserializer);
+
+  @protected
+  ModelPreferenceEntryFrb sse_decode_model_preference_entry_frb(
+      SseDeserializer deserializer);
+
+  @protected
+  ModelPreferencesFrb sse_decode_model_preferences_frb(
+      SseDeserializer deserializer);
+
+  @protected
   OntologyResource sse_decode_ontology_resource(SseDeserializer deserializer);
 
   @protected
@@ -624,6 +686,14 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  ResolvedModelPreferenceFrb?
+      sse_decode_opt_box_autoadd_resolved_model_preference_frb(
+          SseDeserializer deserializer);
 
   @protected
   int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
@@ -659,6 +729,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   QpuOracleSettingsInput sse_decode_qpu_oracle_settings_input(
+      SseDeserializer deserializer);
+
+  @protected
+  ResolvedModelPreferenceFrb sse_decode_resolved_model_preference_frb(
       SseDeserializer deserializer);
 
   @protected
@@ -770,6 +844,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       DelegationRuleBridge self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_model_preferences_frb(
+      ModelPreferencesFrb self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_ontology_torrent_policy(
       OntologyTorrentPolicy self, SseSerializer serializer);
 
@@ -780,6 +861,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_box_autoadd_qpu_oracle_settings_input(
       QpuOracleSettingsInput self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_resolved_model_preference_frb(
+      ResolvedModelPreferenceFrb self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_tax_recipient_suite(
@@ -953,6 +1038,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       List<ModelInfo> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_model_preference_entry_frb(
+      List<ModelPreferenceEntryFrb> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_ontology_resource(
       List<OntologyResource> self, SseSerializer serializer);
 
@@ -997,6 +1086,18 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void sse_encode_model_info(ModelInfo self, SseSerializer serializer);
 
   @protected
+  void sse_encode_model_load_condition_frb(
+      ModelLoadConditionFrb self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_model_preference_entry_frb(
+      ModelPreferenceEntryFrb self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_model_preferences_frb(
+      ModelPreferencesFrb self, SseSerializer serializer);
+
+  @protected
   void sse_encode_ontology_resource(
       OntologyResource self, SseSerializer serializer);
 
@@ -1010,6 +1111,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_resolved_model_preference_frb(
+      ResolvedModelPreferenceFrb? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
@@ -1047,6 +1155,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_qpu_oracle_settings_input(
       QpuOracleSettingsInput self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_resolved_model_preference_frb(
+      ResolvedModelPreferenceFrb self, SseSerializer serializer);
 
   @protected
   void sse_encode_sharing_policy(SharingPolicy self, SseSerializer serializer);

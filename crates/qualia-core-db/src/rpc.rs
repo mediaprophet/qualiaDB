@@ -10,7 +10,7 @@
 //! The Tax Router is transport-agnostic — it produces a TaxDispatchPlan which
 //! the ILP layer (or future Lightning/Nym bridge) executes as discrete micropayments.
 //! Each recipient address is an ILP Payment Pointer ("$...") or a stablecoin
-//! wallet address ("did:..."). Nym mixnet routing is used for remote recipients.
+//! wallet address ("did:..."). Nym mixnet routing is opt-in per recipient (`use_nym`).
 
 use serde::{Deserialize, Serialize};
 use crate::telemetry::get_telemetry_snapshot;
@@ -157,7 +157,7 @@ impl TaxRecipientSuite {
                     label: "Disaster Recovery Reserve".to_string(),
                     ilp_address: "$ilp.qualia.coop/disaster-reserve".to_string(),
                     share_percent: 10,
-                    use_nym: true,
+                    use_nym: false,
                 },
             ],
         }

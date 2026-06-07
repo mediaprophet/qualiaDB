@@ -25,7 +25,6 @@ pub fn dispatch_qubo(matrix: &QuboMatrix, shots: u32) -> Result<QpuDispatchResul
 
     let mut assignment = [0u8; MAX_QUBO_VARS];
     let mut used_remote = false;
-    let mut backend = "classical".to_string();
     let mut provenance_json = String::new();
 
     if let Some(token) = qpu_oracle::resolve_dwave_token() {
@@ -33,7 +32,7 @@ pub fn dispatch_qubo(matrix: &QuboMatrix, shots: u32) -> Result<QpuDispatchResul
             match submit_dwave_qubo(&token, matrix, shots) {
                 Ok(json) => {
                     used_remote = true;
-                    backend = "dwave_advantage".to_string();
+                    let backend = "dwave_advantage".to_string();
                     provenance_json = json.clone();
                     let mut bits = [0u8; MAX_QPU_SAMPLES];
                     let mut len = 0;
@@ -83,14 +82,13 @@ pub fn dispatch_vqe(parameter_vector: &[f64], shots: u32) -> Result<QpuDispatchR
     let mut assignment = [0u8; MAX_QUBO_VARS];
     let mut provenance_json = String::new();
     let mut used_remote = false;
-    let mut backend = "classical_dft".to_string();
 
     if let Some(token) = qpu_oracle::resolve_ibm_token() {
         if qpu_oracle::target_architecture("dft_ground_state").is_some() {
             match submit_ibm_vqe(&token, parameter_vector, shots) {
                 Ok(json) => {
                     used_remote = true;
-                    backend = "ibm_gate_model".to_string();
+                    let backend = "ibm_gate_model".to_string();
                     provenance_json = json.clone();
                     let mut bits = [0u8; MAX_QPU_SAMPLES];
                     let mut len = 0;

@@ -16,6 +16,7 @@ pub mod qpu_dispatcher;
 pub mod qpu_pipeline;
 pub mod resource_import;
 pub mod model_lifecycle;
+pub mod model_preferences;
 pub mod vision_ingest;
 pub mod chat_session;
 pub mod context_binding;

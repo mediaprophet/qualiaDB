@@ -4,11 +4,9 @@ import 'dart:ui';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import '../screens/llm_hub_screen.dart';
 import '../screens/ontology_hub_screen.dart';
-import '../screens/qualia_qapp_webview.dart';
+import '../services/qapp_launcher.dart';
 import '../src/rust/api/qapp_api.dart';
 import '../src/rust/api/qualia_api.dart';
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
@@ -197,20 +195,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
       } catch (_) {
         // Manifest may already be registered; launch still proceeds.
       }
-      final url = await launchInstalledQapp(qappName: qappName);
-      if (!mounted) return;
-      if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) {
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => QualiaQappWebView(url: url, title: qappName),
-          ),
-        );
-      } else {
-        final uri = Uri.parse(url);
-        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-          throw Exception('Could not open $url');
-        }
-      }
+      await QappLauncher.launchInstalledToBrowser(qappName: qappName);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

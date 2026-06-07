@@ -118,7 +118,7 @@ import init, { execute_ntriples_query, get_engine_version } from './playground/q
 ```
 WASM mode runs `execute_ntriples_query(pattern, EMPTY_DB, maxResults)` in batched loops and reports per-call p50/p95 plus derived throughput.
 
-**What WASM mode measures**: empty-database pipeline cost for the browser-exposed query path.  
+**What WASM mode measures**: `docs/benchmark.html` loads Schema.org NT / `.q42` / `.c.q42` (or synthetic NT) into flat QualiaQuin bytes, then runs `execute_ntriples_query`. Empty-DB pipeline-only mode remains available as an explicit storage-format option.  
 **What it does NOT measure**: a loaded `.q42` dataset, daemon HTTP overhead, or a same-page side-by-side competitor run.
 
 The `Avg Throughput` card on `benchmark.html` is the average of the selected suite's per-scenario throughputs, not the same metric as comparative `point ops/s`.

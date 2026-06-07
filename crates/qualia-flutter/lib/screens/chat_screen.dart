@@ -5,8 +5,6 @@ import 'package:file_picker/file_picker.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import 'chat_environment_sheet.dart';
 import 'chat_history_drawer.dart';
 import '../widgets/add_friends_sheet.dart';
@@ -20,11 +18,12 @@ import '../widgets/chat_session_shares_sheet.dart';
 import '../src/rust/api/chat_files.dart' as chat_files;
 import '../src/rust/api/chat_graph.dart' as graph;
 import '../src/rust/api/social_api.dart' as social;
-import 'qualia_qapp_webview.dart';
+import '../services/qapp_launcher.dart';
 import '../services/chat_speech_service.dart';
 import '../src/rust/api/chat_session.dart' as chat;
 import '../services/qpu_feature_service.dart';
 import '../src/rust/api/qapp_api.dart';
+import '../main.dart' show activeModelPathProvider, shellNavIndexProvider;
 import '../src/rust/api/qualia_api.dart' as api;
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
 import '../src/rust/api/resource_catalog.dart' as catalog;
@@ -95,7 +94,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _relayTimer = Timer.periodic(const Duration(seconds: 4), (_) => _pullRelay());
     _loadBranchTypes();
     _loadOwnerDid();
+    _syncActiveModelFromRust();
 
+  }
+
+  Future<void> _syncActiveModelFromRust() async {
+    try {
+      final active = await api.getActiveModel();
+      if (!mounted || active == null || active.isEmpty) return;
+      if (ref.read(activeModelPathProvider).isEmpty) {
+        ref.read(activeModelPathProvider.notifier).state = active;
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadOwnerDid() async {
@@ -914,6 +924,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     };
 
     try {
+      await QappLauncher.ensureProtocol();
       try {
         registerQappFromInstalledManifest(qappName: 'Anatomy');
       } catch (_) {}
@@ -927,21 +938,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       if (!mounted) return;
 
-      if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) {
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => QualiaQappWebView(
-              url: url,
-              title: focusOrgan != null ? 'Anatomy: $focusOrgan' : 'Anatomy',
-            ),
-          ),
-        );
-      } else {
-        final uri = Uri.parse(url);
-        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-          throw Exception('Could not open $url');
-        }
-      }
+      await QappLauncher.showPanel(
+        context,
+        url: url,
+        title: focusOrgan != null ? 'Anatomy: $focusOrgan' : 'Anatomy',
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1399,19 +1400,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
 
         if (widget.modelPath.isEmpty)
-
           MaterialBanner(
-
             content: const Text(
-              'No model loaded — download and activate a model in LLM Hub',
+              'No active model — open LLM Hub to browse a local .gguf or download from the catalog.',
             ),
-
+            leading: const Icon(Icons.memory_outlined),
             actions: [
-
-              TextButton(onPressed: () {}, child: const Text('Dismiss')),
-
+              TextButton(
+                onPressed: () =>
+                    ref.read(shellNavIndexProvider.notifier).state = 7,
+                child: const Text('LLM Hub'),
+              ),
             ],
-
           ),
 
         Expanded(

@@ -1,0 +1,40 @@
+{
+  "id": "schemaorg-30-current-https",
+  "label": "Schema.org 30.0 current HTTPS",
+  "n_triples": 17949,
+  "queries": {
+    "point_subject": "https://schema.org/archiveHeld",
+    "twohop_start": "https://schema.org/video",
+    "filter_predicate": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+    "point": "SELECT * WHERE { <https://schema.org/archiveHeld> ?p ?o } LIMIT 100",
+    "twohop": "SELECT * WHERE {\n    <https://schema.org/video> ?p1 ?b .\n    ?b ?p2 ?o .\n} LIMIT 1",
+    "filter": "SELECT * WHERE { ?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?o } LIMIT 100"
+  },
+  "paths": {
+    "nt": "../data/schemaorg/30.0/schemaorg-current-https.nt",
+    "q42": "../data/schemaorg/30.0/schemaorg-current-https.q42",
+    "cq42": "../data/schemaorg/30.0/schemaorg-current-https.c.q42"
+  },
+  "dataset_info": {
+    "label": "Schema.org 30.0 current HTTPS",
+    "release": "30.0",
+    "variant": "current-https",
+    "source_format": "ntriples",
+    "source_url": "https://raw.githubusercontent.com/schemaorg/schemaorg/main/data/releases/30.0/schemaorg-current-https.nt",
+    "source_path": "C:\\Projects\\qualiaDB\\data\\schemaorg\\30.0\\schemaorg-current-https.nt",
+    "native_format": "q42",
+    "native_q42_base_path": "C:\\Projects\\qualiaDB\\data\\schemaorg\\30.0\\schemaorg-current-https",
+    "native_q42_path": "C:\\Projects\\qualiaDB\\data\\schemaorg\\30.0\\schemaorg-current-https.q42",
+    "native_q42_available": true,
+    "compressed_q42_path": "C:\\Projects\\qualiaDB\\data\\schemaorg\\30.0\\schemaorg-current-https.c.q42",
+    "compressed_q42_available": true,
+    "n_triples": 17949,
+    "missing_source": false,
+    "source_file_mb": 2.263,
+    "source_file_bytes": 2372609,
+    "native_q42_file_mb": 0.859,
+    "native_q42_file_bytes": 901120,
+    "compressed_q42_file_mb": 0.233,
+    "compressed_q42_file_bytes": 244118
+  }
+}

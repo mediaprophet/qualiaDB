@@ -243,7 +243,7 @@ pub fn parse_healthcare_owl_lines(path: &Path) -> Result<HealthcareOwlModel, Owl
                 _ => continue,
             };
             ingest_owl_triple(&mut model, subject, RDF_TYPE.to_string(), expanded);
-        } else if let Some(label) = line.strip_prefix("rdfs:label") {
+        } else if line.strip_prefix("rdfs:label").is_some() {
             if let Some(value) = extract_turtle_string_literal(line) {
                 ingest_owl_triple(&mut model, subject, RDFS_LABEL.to_string(), value);
             }

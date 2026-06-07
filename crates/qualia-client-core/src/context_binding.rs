@@ -4,7 +4,6 @@
 
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::Read;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -70,6 +69,7 @@ pub struct ChatEnvironmentConfig {
 struct OntologyMetaSidecar {
     ontology_id: String,
     quin_count: u64,
+    #[allow(dead_code)]
     q42_path: String,
 }
 
@@ -408,7 +408,6 @@ fn write_environment_manifest_q42(
 }
 
 fn write_quins_to_q42(quins: &[QualiaQuin], out_path: &Path) -> Result<(), BindError> {
-    use std::io::Write;
     let mut out_file = File::create(out_path)?;
     let mut block_id: u64 = 0;
     let mut buffer = Vec::with_capacity(393_216);

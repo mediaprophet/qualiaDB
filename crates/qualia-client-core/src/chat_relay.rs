@@ -194,7 +194,7 @@ pub fn publish_envelope(
 }
 
 #[derive(Debug, Deserialize)]
-struct PullResponse {
+pub struct PullResponse {
     messages: Vec<RelayEnvelope>,
     latest_lamport: u64,
 }

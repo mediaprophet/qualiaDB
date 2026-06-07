@@ -6,6 +6,7 @@ use std::sync::{Arc, OnceLock};
 use qualia_core_db::{
     gguf_sharder::GGufSharder,
     orchestrator::{ModelLifecycle, NullThermalGovernor, TaskOrchestrator},
+    q_hash,
     resource_catalog::{LLMResource, ResourceCatalog},
     wal::WriteAheadLog,
 };
@@ -342,6 +343,113 @@ pub fn load_install_manifest(storage_root: &Path, model_id: &str) -> Option<Inst
     let path = install_manifest_path(&models_dir(storage_root), model_id);
     let text = std::fs::read_to_string(path).ok()?;
     serde_json::from_str(&text).ok()
+}
+
+fn sanitize_local_model_id(stem: &str) -> String {
+    let cleaned: String = stem
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    if cleaned.is_empty() {
+        "local-model".to_string()
+    } else {
+        cleaned
+    }
+}
+
+/// Register and activate a user-selected `.gguf` file at an arbitrary path.
+///
+/// Writes `{model_id}.install.json` under `{storage_root}/Models/` (path is not copied),
+/// maps GGUF tensor pointers into the WAL, and transitions lifecycle → `Active`.
+pub fn finalize_local_gguf(
+    gguf_path: &Path,
+    storage_root: &Path,
+) -> Result<ActiveModelRecord, ModelError> {
+    if !gguf_path.is_file() {
+        return Err(ModelError::Io(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("GGUF not found: {}", gguf_path.display()),
+        )));
+    }
+
+    let models = models_dir(storage_root);
+    std::fs::create_dir_all(&models)?;
+
+    let stem = gguf_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("local-model");
+    let model_id = sanitize_local_model_id(stem);
+    let path_str = gguf_path.to_string_lossy().into_owned();
+    let profile_id = q_hash(&format!("profile:local:{model_id}"));
+
+    let sharder = GGufSharder::new(path_str.clone());
+    let pointer_quins = sharder.generate_bidx_pointer_map();
+    let pointer_quin_count = pointer_quins.len();
+
+    let wal_path = models.join("models.wal");
+    let mut wal = WriteAheadLog::open(&wal_path)
+        .map_err(|e| ModelError::Wal(format!("Cannot open {}: {}", wal_path.display(), e)))?;
+
+    let subject = q_hash(&format!("local-gguf:{model_id}"));
+    let predicate = q_hash("prov:wasDerivedFrom");
+    let object = q_hash(&path_str);
+    let context = q_hash("ctx:local-gguf");
+    let prov = qualia_core_db::QualiaQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata: unix_now(),
+        parity: subject ^ predicate ^ object ^ context,
+    };
+    wal.append_mutation(&prov)
+        .map_err(|e| ModelError::Wal(e.to_string()))?;
+
+    for quin in pointer_quins {
+        wal.append_mutation(&quin)
+            .map_err(|e| ModelError::Wal(e.to_string()))?;
+    }
+
+    let manifest = InstallManifest {
+        model_id: model_id.clone(),
+        gguf_path: path_str.clone(),
+        profile_id,
+        quantization: "local".to_string(),
+        pointer_quin_count,
+        vision_pointer_quin_count: 0,
+        installed_at: unix_now(),
+        wal_path: wal_path.to_string_lossy().into_owned(),
+        modality: "text".to_string(),
+        architecture: None,
+        mmproj_path: None,
+        context_window: 4096,
+    };
+    let json = serde_json::to_string_pretty(&manifest)?;
+    std::fs::write(install_manifest_path(&models, &model_id), json)?;
+
+    orchestrator()
+        .load_model(profile_id)
+        .map_err(|e| ModelError::Activate(e.to_string()))?;
+
+    let lifecycle = *orchestrator().current_model_state.lock().unwrap();
+    Ok(ActiveModelRecord {
+        model_id,
+        gguf_path: path_str,
+        profile_id,
+        quantization: "local".to_string(),
+        lifecycle_state: lifecycle_label(lifecycle).to_string(),
+        modality: "text".to_string(),
+        architecture: None,
+        mmproj_path: None,
+        context_window: 4096,
+    })
 }
 
 pub fn activate_model_for_id(model_id: &str, storage_root: &Path) -> Result<ActiveModelRecord, ModelError> {

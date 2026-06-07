@@ -263,7 +263,7 @@ pub fn accept_connect_invite(input: &str) -> Result<ChatContact, String> {
         verification_status: "INVITE_ACCEPTED".to_string(),
         pairwise_did: invite.inviter_did.clone(),
         root_did_uri: Some(invite.front_door_did.clone()),
-        routing_hints: vec!["nym:mixnet:global".to_string()],
+        routing_hints: vec![],
     };
 
     crate::api::add_directory_actor(actor)?;

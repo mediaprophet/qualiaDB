@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tray_manager/tray_manager.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'screens/dashboard_screen.dart';
@@ -19,7 +18,7 @@ import 'screens/qapp_vault_screen.dart';
 import 'screens/credential_manager_screen.dart';
 import 'screens/llm_hub_screen.dart';
 import 'screens/spatial_physics_screen.dart';
-import 'screens/qualia_qapp_webview.dart';
+import 'services/qapp_launcher.dart';
 
 import 'platform/desktop_window.dart';
 import 'screens/prerequisites_overlay.dart';
@@ -34,6 +33,9 @@ import 'widgets/hardware_telemetry_bar.dart';
 
 /// The absolute path to the currently active `.gguf` model file.
 final activeModelPathProvider = StateProvider<String>((ref) => '');
+
+/// Left-rail shell index (0 = Dashboard, 1 = Chat, 7 = LLM Hub, 9 = Wallet, …).
+final shellNavIndexProvider = StateProvider<int>((ref) => 0);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -90,7 +92,6 @@ class QualiaHomeScreen extends ConsumerStatefulWidget {
 
 class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
     with WindowListener, TrayListener {
-  int _currentIndex = 0;
   bool _showPrerequisites = false;
   bool _showSetup = false;
 
@@ -100,8 +101,8 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
     if (isDesktopTarget) {
       windowManager.addListener(this);
       trayManager.addListener(this);
-      TrayService.instance.onOpenSettings = () {
-        if (mounted) setState(() => _currentIndex = 10);
+        TrayService.instance.onOpenSettings = () {
+        if (mounted) ref.read(shellNavIndexProvider.notifier).state = 10;
       };
     }
     _checkStartup();
@@ -129,11 +130,11 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
   void _handleDeepLink(QualiaDeepLink link) {
     switch (link.route) {
       case 'settings':
-        setState(() => _currentIndex = 10);
+        ref.read(shellNavIndexProvider.notifier).state = 10;
       case 'chat':
-        setState(() => _currentIndex = 1);
+        ref.read(shellNavIndexProvider.notifier).state = 1;
       case 'wallet':
-        setState(() => _currentIndex = 2);
+        ref.read(shellNavIndexProvider.notifier).state = 9;
       case 'qapp':
         if (link.qappName != null) _openQualiaQapp(link.qappName!);
     }
@@ -141,20 +142,7 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
 
   Future<void> _openQualiaQapp(String qappName) async {
     try {
-      final url = await launchInstalledQapp(qappName: qappName);
-      if (!mounted) return;
-      if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) {
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => QualiaQappWebView(url: url, title: qappName),
-          ),
-        );
-      } else {
-        final uri = Uri.parse(url);
-        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-          throw Exception('Could not open $url');
-        }
-      }
+      await QappLauncher.launchInstalledToBrowser(qappName: qappName);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -229,10 +217,11 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
     }
   }
 
+  int get _currentIndex => ref.watch(shellNavIndexProvider);
+
   static const List<Widget> _staticScreens = [
     DashboardScreen(),
-    SizedBox.shrink(),
-    WalletScreen(),
+    SizedBox.shrink(), // 1 = Chat (built separately)
     AddressBookScreen(),
     OntologyHubScreen(),
     AssetLibraryScreen(),
@@ -240,6 +229,7 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
     CredentialManagerScreen(),
     LLMHubScreen(),
     SpatialPhysicsScreen(),
+    WalletScreen(),
     SettingsScreen(),
     ProfileScreen(),
   ];
@@ -274,36 +264,39 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
           Container(
             width: 80,
             color: Theme.of(context).colorScheme.surface,
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  _buildNavItem(Icons.dashboard_outlined, 0),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.chat_bubble_outline, 1),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.account_balance_wallet_outlined, 2),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.perm_contact_calendar_outlined, 3),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.hub_outlined, 4),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.photo_library_outlined, 5),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.apps_outlined, 6),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.key_outlined, 7),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.memory_outlined, 8),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.view_in_ar_outlined, 9),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.settings_outlined, 10),
-                  const SizedBox(height: 32),
-                  _buildNavItem(Icons.person_outline, 11),
-                  const SizedBox(height: 16),
-                ],
-              ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    children: [
+                      _buildNavItem(Icons.dashboard_outlined, 0),
+                      const SizedBox(height: 24),
+                      _buildNavItem(Icons.chat_bubble_outline, 1),
+                      const SizedBox(height: 24),
+                      _buildNavItem(Icons.perm_contact_calendar_outlined, 2),
+                      const SizedBox(height: 24),
+                      _buildNavItem(Icons.hub_outlined, 3),
+                      const SizedBox(height: 24),
+                      _buildNavItem(Icons.photo_library_outlined, 4),
+                      const SizedBox(height: 24),
+                      _buildNavItem(Icons.apps_outlined, 5),
+                      const SizedBox(height: 24),
+                      _buildNavItem(Icons.key_outlined, 6),
+                      const SizedBox(height: 24),
+                      _buildNavItem(Icons.memory_outlined, 7),
+                      const SizedBox(height: 24),
+                      _buildNavItem(Icons.view_in_ar_outlined, 8),
+                    ],
+                  ),
+                ),
+                _buildNavItem(Icons.account_balance_wallet_outlined, 9),
+                const SizedBox(height: 24),
+                _buildNavItem(Icons.settings_outlined, 10),
+                const SizedBox(height: 24),
+                _buildNavItem(Icons.person_outline, 11),
+                const SizedBox(height: 16),
+              ],
             ),
           ),
           Expanded(
@@ -321,7 +314,7 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
     final isActive = _currentIndex == index;
     return IconButton(
       icon: Icon(icon),
-      onPressed: () => setState(() => _currentIndex = index),
+      onPressed: () => ref.read(shellNavIndexProvider.notifier).state = index,
       color: isActive
           ? Theme.of(context).colorScheme.primary
           : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),

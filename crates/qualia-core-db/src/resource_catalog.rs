@@ -525,8 +525,8 @@ mod load_tests {
             "expected >=3 multimodal LLMs, got {multimodal}"
         );
         assert!(
-            cat.ontologies.len() >= 5,
-            "expected >=5 ontologies, got {}",
+            cat.ontologies.len() >= 12,
+            "expected >=12 ontologies, got {}",
             cat.ontologies.len()
         );
         assert!(

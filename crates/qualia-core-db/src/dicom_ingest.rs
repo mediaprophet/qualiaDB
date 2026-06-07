@@ -121,7 +121,7 @@ pub struct DicomBlobStore {
 
 impl DicomBlobStore {
     pub fn open(path: &Path) -> Result<Self, std::io::Error> {
-        let mut file = OpenOptions::new()
+        let file = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)

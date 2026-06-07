@@ -1,0 +1,37 @@
+{
+  "id": "synthetic-10k",
+  "label": "Synthetic 10K triples",
+  "n_triples": 10000,
+  "queries": {
+    "point_subject": "http://q.test/s/0",
+    "twohop_start": "http://q.test/s/0",
+    "filter_predicate": "http://q.test/p/0",
+    "point": "SELECT * WHERE { <http://q.test/s/0> ?p ?o }",
+    "twohop": "SELECT * WHERE {\n    <http://q.test/s/0> ?p1 ?b .\n    ?b ?p2 ?o .\n} LIMIT 1",
+    "filter": "SELECT * WHERE { ?s <http://q.test/p/0> ?o } LIMIT 100"
+  },
+  "paths": {
+    "nt": null,
+    "q42": null,
+    "cq42": null
+  },
+  "dataset_info": {
+    "label": "Synthetic 10K triples",
+    "release": null,
+    "variant": null,
+    "source_format": "generated-ntriples",
+    "source_url": null,
+    "source_path": null,
+    "native_format": null,
+    "native_q42_base_path": null,
+    "native_q42_path": null,
+    "native_q42_available": false,
+    "compressed_q42_path": null,
+    "compressed_q42_available": false,
+    "n_triples": 10000,
+    "source_file_mb": 0.646,
+    "source_file_bytes": 677780
+  },
+  "generate_synthetic": true,
+  "synthetic_n": 10000
+}

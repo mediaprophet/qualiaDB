@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use sha1::{Digest, Sha1};
-use sha2::{Digest as Sha256Digest, Sha256};
+use sha1::{Digest as Sha1Digest, Sha1};
+use sha2::Sha256;
 
 use crate::q42_compress;
 use crate::resource_import;
@@ -188,6 +188,7 @@ fn extension_from_uri(uri: &str) -> String {
 }
 
 fn sha256_file(path: &Path) -> Result<String, String> {
+    use sha2::Digest as Sha2Digest;
     let mut file = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut hasher = Sha256::new();
     let mut buf = [0u8; 65_536];

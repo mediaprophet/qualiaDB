@@ -6,8 +6,8 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `load_catalog`, `map_llm`, `map_ontology`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `load_catalog`, `map_condition`, `map_entry`, `map_llm`, `map_ontology`, `unmap_condition`, `unmap_entry`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<List<LLMResource>> loadLlmResources() =>
     RustApi.instance.api.crateApiResourceCatalogLoadLlmResources();
@@ -26,6 +26,25 @@ Future<String> getModelLifecycleStatus() =>
 
 Future<String> importOntology({required String id}) =>
     RustApi.instance.api.crateApiResourceCatalogImportOntology(id: id);
+
+Future<ModelPreferencesFrb> getModelPreferences() =>
+    RustApi.instance.api.crateApiResourceCatalogGetModelPreferences();
+
+Future<void> saveModelPreferences({required ModelPreferencesFrb prefs}) =>
+    RustApi.instance.api
+        .crateApiResourceCatalogSaveModelPreferences(prefs: prefs);
+
+Future<List<String>> listInstalledLlmIds() =>
+    RustApi.instance.api.crateApiResourceCatalogListInstalledLlmIds();
+
+Future<ResolvedModelPreferenceFrb?> resolveModelPreference(
+        {required String task}) =>
+    RustApi.instance.api
+        .crateApiResourceCatalogResolveModelPreference(task: task);
+
+Future<void> applyModelPreference({required String task}) =>
+    RustApi.instance.api
+        .crateApiResourceCatalogApplyModelPreference(task: task);
 
 class LLMResource {
   final String id;
@@ -106,6 +125,90 @@ class LLMResource {
           isMultimodal == other.isMultimodal;
 }
 
+class ModelLoadConditionFrb {
+  final bool requireInstalled;
+  final String task;
+  final double? minRamGb;
+  final bool respectRamEstimate;
+  final bool requireMultimodal;
+
+  const ModelLoadConditionFrb({
+    required this.requireInstalled,
+    required this.task,
+    this.minRamGb,
+    required this.respectRamEstimate,
+    required this.requireMultimodal,
+  });
+
+  @override
+  int get hashCode =>
+      requireInstalled.hashCode ^
+      task.hashCode ^
+      minRamGb.hashCode ^
+      respectRamEstimate.hashCode ^
+      requireMultimodal.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ModelLoadConditionFrb &&
+          runtimeType == other.runtimeType &&
+          requireInstalled == other.requireInstalled &&
+          task == other.task &&
+          minRamGb == other.minRamGb &&
+          respectRamEstimate == other.respectRamEstimate &&
+          requireMultimodal == other.requireMultimodal;
+}
+
+class ModelPreferenceEntryFrb {
+  final String modelId;
+  final String label;
+  final int priority;
+  final ModelLoadConditionFrb when;
+
+  const ModelPreferenceEntryFrb({
+    required this.modelId,
+    required this.label,
+    required this.priority,
+    required this.when,
+  });
+
+  @override
+  int get hashCode =>
+      modelId.hashCode ^ label.hashCode ^ priority.hashCode ^ when.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ModelPreferenceEntryFrb &&
+          runtimeType == other.runtimeType &&
+          modelId == other.modelId &&
+          label == other.label &&
+          priority == other.priority &&
+          when == other.when;
+}
+
+class ModelPreferencesFrb {
+  final bool autoSelect;
+  final List<ModelPreferenceEntryFrb> entries;
+
+  const ModelPreferencesFrb({
+    required this.autoSelect,
+    required this.entries,
+  });
+
+  @override
+  int get hashCode => autoSelect.hashCode ^ entries.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ModelPreferencesFrb &&
+          runtimeType == other.runtimeType &&
+          autoSelect == other.autoSelect &&
+          entries == other.entries;
+}
+
 class OntologyResource {
   final String id;
   final String name;
@@ -155,4 +258,43 @@ class OntologyResource {
           license == other.license &&
           downloadUrl == other.downloadUrl &&
           notes == other.notes;
+}
+
+class ResolvedModelPreferenceFrb {
+  final String modelId;
+  final String label;
+  final String reason;
+  final String ggufPath;
+  final int priority;
+  final String task;
+
+  const ResolvedModelPreferenceFrb({
+    required this.modelId,
+    required this.label,
+    required this.reason,
+    required this.ggufPath,
+    required this.priority,
+    required this.task,
+  });
+
+  @override
+  int get hashCode =>
+      modelId.hashCode ^
+      label.hashCode ^
+      reason.hashCode ^
+      ggufPath.hashCode ^
+      priority.hashCode ^
+      task.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ResolvedModelPreferenceFrb &&
+          runtimeType == other.runtimeType &&
+          modelId == other.modelId &&
+          label == other.label &&
+          reason == other.reason &&
+          ggufPath == other.ggufPath &&
+          priority == other.priority &&
+          task == other.task;
 }

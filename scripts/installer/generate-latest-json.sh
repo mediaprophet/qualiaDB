@@ -17,7 +17,7 @@ cat > "$OUT" <<EOF
   "macos_url": "${BASE}/QualiaDB-${VERSION}-macos-arm64.dmg",
   "linux_url": "${BASE}/QualiaDB-${VERSION}-linux-x64.deb",
   "linux_portable_url": "${BASE}/qualia-flutter-linux-x64.tar.gz",
-  "notes": "QualiaDB Flutter desktop release v${VERSION}"
+  "notes": "QualiaDB Flutter desktop v${VERSION}. QualiaDB-Setup-*-x64.exe is the Inno Setup installer (qualia_flutter.exe). qualia-flutter-windows-x64.zip is the portable bundle (same app, no installer). Legacy Tauri builds are no longer published."
 }
 EOF
 

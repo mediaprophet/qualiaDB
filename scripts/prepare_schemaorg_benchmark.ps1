@@ -56,5 +56,5 @@ Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Green
 Write-Host "  1. Build q42 bench helper: cargo build --release -p qualia-cli"
 Write-Host "  2. Run comparative harness with the Schema.org profile:"
-Write-Host "     python benchmarks/harness.py --all --dataset-profile schemaorg-30-current-https --output docs/comparative_benchmark_results.schemaorg-30-current-https-q42.json"
+Write-Host "     python benchmarks/harness.py --all --dataset-profile schemaorg-30-current-https --output docs/comparative_benchmark_results.schemaorg-30-current-https.json"
 Write-Host "  3. Open docs/comparative_benchmarks.html and select the Schema.org 30.0 profile."

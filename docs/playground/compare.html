@@ -72,6 +72,31 @@
     white-space: nowrap;
   }
   .uri-status { font-size: .72rem; color: #6b7280; margin-top: .45rem; min-height: 1.1rem; }
+  .load-progress { margin-top: .65rem; text-align: left; }
+  .load-progress[hidden] { display: none !important; }
+  .load-progress-track {
+    background: #111;
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: .25rem;
+  }
+  .load-progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #7c3aed, #3b82f6);
+    transition: width .15s ease-out;
+  }
+  .load-progress-fill.indeterminate {
+    width: 35% !important;
+    animation: load-indeterminate 1.1s ease-in-out infinite;
+  }
+  @keyframes load-indeterminate {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(320%); }
+  }
+  .load-progress-label { font-size: .7rem; color: #7c83a8; font-family: 'JetBrains Mono', monospace; }
   .fmt-row { display: flex; gap: .5rem; justify-content: center; margin: .5rem 0 .6rem; flex-wrap: wrap; }
   .fmt-btn {
     padding: .3rem .9rem;
@@ -186,7 +211,7 @@
 
 <div class="hero">
   <h1>RDF to .q42 Comparator</h1>
-  <p style="color:#888;font-size:0.85rem;margin-top:-0.4rem;">Now with remote URI loading, streamed HTTP fetch progress when the browser supports it, format auto-detection, and browser-side compressed <code>.c.q42</code> transport generation for comparison.</p>
+  <p style="color:#888;font-size:0.85rem;margin-top:-0.4rem;">Remote URI import uses jsDelivr (for this repo), the local Qualia daemon <code>/proxy/fetch</code> relay when running, or a public CORS fallback. Upload and fetch show live progress bars. Parsing runs in pure browser JavaScript (not WASM).</p>
   <p>Load your original RDF source and either provide an existing .q42 or .nq output, or let the page generate a browser-delivery <code>.c.q42</code> artifact from the original. The comparator estimates compression ratio, semantic fidelity, and parse-time speedup in-browser.</p>
 </div>
 
@@ -201,7 +226,11 @@
       <input type="url" id="origUri" class="uri-input" placeholder="https://example.org/data.ttl">
       <button type="button" class="uri-load" id="loadOrigUri">Load URI</button>
     </div>
-    <div class="uri-status" id="origStatus">HTTP GET with streamed progress when available. Remote hosts still need to allow CORS.</div>
+    <div class="uri-status" id="origStatus">Paste a URL and click Load URI. Cross-origin fetches use jsDelivr, daemon proxy, or CORS relay.</div>
+    <div class="load-progress" id="origProgress" hidden>
+      <div class="load-progress-track"><div class="load-progress-fill" id="origProgressFill"></div></div>
+      <span class="load-progress-label" id="origProgressLabel"></span>
+    </div>
     <div class="dz-name" id="origName"></div>
     <div class="dz-size" id="origSize"></div>
   </div>
@@ -221,7 +250,11 @@
       <input type="url" id="q42Uri" class="uri-input" placeholder="https://example.org/output.q42">
       <button type="button" class="uri-load" id="loadQ42Uri">Load URI</button>
     </div>
-    <div class="uri-status" id="q42Status">Remote .q42, .c.q42, or .nq works here when the host allows CORS. If you skip this side, the page can generate a compressed browser <code>.c.q42</code> transport from the original.</div>
+    <div class="uri-status" id="q42Status">Remote .q42, .c.q42, or .nq — or generate a compressed browser <code>.c.q42</code> transport from the original.</div>
+    <div class="load-progress" id="q42Progress" hidden>
+      <div class="load-progress-track"><div class="load-progress-fill" id="q42ProgressFill"></div></div>
+      <span class="load-progress-label" id="q42ProgressLabel"></span>
+    </div>
     <div class="dz-name" id="q42Name"></div>
     <div class="dz-size" id="q42Size"></div>
   </div>
@@ -329,8 +362,8 @@
   </div>
 </div>
 
-<script>
-'use strict';
+<script type="module">
+import { fetchRemoteText } from '../js/cors-fetch.js';
 
 let origSource = null;
 let q42Source = null;
@@ -753,19 +786,67 @@ function setDropLoaded(config, source, statusText) {
   document.getElementById(config.statusId).textContent = statusText || '';
 }
 
-async function readFileText(file) {
+const PROGRESS_PREFIX = {
+  dzOriginal: 'orig',
+  dzQ42: 'q42',
+};
+
+function setLoadProgress(zoneId, { pct = null, label = '', active = true, indeterminate = false } = {}) {
+  const prefix = PROGRESS_PREFIX[zoneId];
+  if (!prefix) return;
+  const wrap = document.getElementById(`${prefix}Progress`);
+  const fill = document.getElementById(`${prefix}ProgressFill`);
+  const text = document.getElementById(`${prefix}ProgressLabel`);
+  if (!wrap || !fill || !text) return;
+
+  if (!active) {
+    wrap.hidden = true;
+    fill.classList.remove('indeterminate');
+    fill.style.width = '0%';
+    text.textContent = '';
+    return;
+  }
+
+  wrap.hidden = false;
+  text.textContent = label;
+  fill.classList.toggle('indeterminate', indeterminate || pct == null);
+  if (!indeterminate && pct != null) {
+    fill.style.width = `${Math.max(0, Math.min(100, pct)).toFixed(1)}%`;
+  }
+}
+
+async function readFileText(file, zoneId) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = event => resolve(event.target.result);
-    reader.onerror = reject;
+    reader.onprogress = (event) => {
+      if (!event.lengthComputable) {
+        setLoadProgress(zoneId, { label: `Reading ${file.name}…`, indeterminate: true });
+        return;
+      }
+      const pct = (event.loaded / event.total) * 100;
+      setLoadProgress(zoneId, {
+        pct,
+        label: `Reading ${formatBytes(event.loaded)} / ${formatBytes(event.total)} (${pct.toFixed(0)}%)`,
+      });
+    };
+    reader.onload = (event) => {
+      setLoadProgress(zoneId, { pct: 100, label: `Read ${formatBytes(file.size)}` });
+      resolve(event.target.result);
+    };
+    reader.onerror = () => {
+      setLoadProgress(zoneId, { active: false });
+      reject(reader.error);
+    };
+    setLoadProgress(zoneId, { label: `Reading ${file.name}…`, indeterminate: true });
     reader.readAsText(file);
   });
 }
 
-async function readSourceText(source) {
+async function readSourceText(source, zoneId = null) {
   if (typeof source.text === 'string') return source.text;
   if (source.file) {
-    source.text = await readFileText(source.file);
+    const resolvedZone = zoneId || (source === origSource ? 'dzOriginal' : 'dzQ42');
+    source.text = await readFileText(source.file, resolvedZone);
     return source.text;
   }
   throw new Error('No source text available');
@@ -777,13 +858,19 @@ async function generateDerivedQ42FromOriginal(force = false) {
 
   const statusEl = document.getElementById('q42Status');
   statusEl.textContent = 'Generating compressed browser .c.q42 transport from original source...';
+  setLoadProgress('dzQ42', { label: 'Reading original source…', indeterminate: true });
 
   try {
-    const origText = await readSourceText(origSource);
+    const origText = await readSourceText(origSource, 'dzOriginal');
+    setLoadProgress('dzQ42', { label: 'Parsing RDF to quads…', indeterminate: true });
     const originalFormat = effectiveOriginalFormatFromText(origText);
-    const quads = [...parseToQuads(origText, originalFormat)].sort();
+    const quads = await parseToQuadsAsync(origText, originalFormat, (pct, label) => {
+      setLoadProgress('dzQ42', { pct, label });
+    });
     const q42Text = quads.length ? `${quads.join('\n')}\n` : '';
+    setLoadProgress('dzQ42', { label: 'Compressing .c.q42 transport…', indeterminate: true });
     const compressedBytes = buildCompressedBrowserQ42FromQuads(quads);
+    setLoadProgress('dzQ42', { label: 'Validating round-trip…', indeterminate: true });
     const decompressedBytes = decompressLz4Stream(compressedBytes);
     if (decompressedBytes.length !== quads.length * QUIN_SIZE) {
       throw new Error('compressed transport failed round-trip validation');
@@ -808,8 +895,10 @@ async function generateDerivedQ42FromOriginal(force = false) {
       q42Source,
       `Generated compressed browser .c.q42 transport from ${originalFormat} (${quads.length.toLocaleString()} quads). Load your own q42/nq file to override it.`
     );
+    setLoadProgress('dzQ42', { pct: 100, label: `Generated ${formatBytes(compressedBytes.byteLength)} transport` });
   } catch (error) {
     statusEl.textContent = `Generation failed: ${error.message}`;
+    setLoadProgress('dzQ42', { active: false });
     throw error;
   } finally {
     updateCompareReady();
@@ -849,45 +938,22 @@ function extractUrlName(url) {
   }
 }
 
-async function fetchTextFromUri(url, statusEl) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-  const contentType = response.headers.get('content-type') || '';
-  const total = Number(response.headers.get('content-length')) || 0;
-
-  if (!response.body || !response.body.getReader) {
-    const text = await response.text();
-    if (statusEl) statusEl.textContent = `Fetched ${formatBytes(text.length)} (non-streaming response)`;
-    return { text, size: text.length, contentType };
+async function fetchTextFromUri(url, statusEl, zoneId) {
+  const loaded = await fetchRemoteText(url, {
+    onProgress: (p) => {
+      if (statusEl && p.label) statusEl.textContent = p.label;
+      setLoadProgress(zoneId, {
+        pct: p.pct,
+        label: p.label || 'Fetching…',
+        indeterminate: p.pct == null,
+      });
+    },
+  });
+  if (statusEl) {
+    statusEl.textContent = `Fetched ${formatBytes(loaded.size)} via ${loaded.via}`;
   }
-
-  const reader = response.body.getReader();
-  const chunks = [];
-  let received = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    received += value.byteLength;
-    if (statusEl) {
-      statusEl.textContent = total
-        ? `Streaming ${formatBytes(received)} / ${formatBytes(total)}`
-        : `Streaming ${formatBytes(received)}`;
-    }
-  }
-
-  const bytes = new Uint8Array(received);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-
-  const text = new TextDecoder().decode(bytes);
-  if (statusEl) statusEl.textContent = `Fetched ${formatBytes(received)} via streamed HTTP GET`;
-  return { text, size: received, contentType };
+  setLoadProgress(zoneId, { pct: 100, label: `Fetched ${formatBytes(loaded.size)} via ${loaded.via}` });
+  return loaded;
 }
 
 async function loadUriSource(kind) {
@@ -897,9 +963,11 @@ async function loadUriSource(kind) {
   const url = input.value.trim();
   if (!url) return;
 
+  const zoneId = isOriginal ? 'dzOriginal' : 'dzQ42';
   statusEl.textContent = 'Fetching remote resource...';
+  setLoadProgress(zoneId, { label: 'Starting fetch…', indeterminate: true });
   try {
-    const loaded = await fetchTextFromUri(url, statusEl);
+    const loaded = await fetchTextFromUri(url, statusEl, zoneId);
     const sample = loaded.text.slice(0, 8192);
     const source = {
       kind: 'uri',
@@ -934,10 +1002,8 @@ async function loadUriSource(kind) {
 
     updateCompareReady();
   } catch (error) {
-    const maybeCors = error && /Failed to fetch|NetworkError/i.test(String(error.message || error));
-    statusEl.textContent = maybeCors
-      ? 'Fetch failed. The remote host may be blocking cross-origin requests.'
-      : `Fetch failed: ${error.message}`;
+    setLoadProgress(zoneId, { active: false });
+    statusEl.textContent = `Fetch failed: ${error.message}`;
   }
 }
 
@@ -959,7 +1025,9 @@ function setupDrop(config) {
   input.addEventListener('change', async event => {
     const file = event.target.files[0];
     if (!file) return;
+    setLoadProgress(config.zoneId, { label: `Sniffing ${file.name}…`, indeterminate: true });
     const { source, status } = await sniffFileSource(config.kind, file);
+    setLoadProgress(config.zoneId, { active: false });
     if (config.kind === 'original') origSource = source;
     else q42Source = source;
     setDropLoaded(config, source, status);
@@ -979,7 +1047,9 @@ function setupDrop(config) {
     zone.classList.remove('drag-over');
     const file = event.dataTransfer.files[0];
     if (!file) return;
+    setLoadProgress(config.zoneId, { label: `Sniffing ${file.name}…`, indeterminate: true });
     const { source, status } = await sniffFileSource(config.kind, file);
+    setLoadProgress(config.zoneId, { active: false });
     if (config.kind === 'original') origSource = source;
     else q42Source = source;
     setDropLoaded(config, source, status);
@@ -1018,9 +1088,34 @@ document.getElementById('btnGenerateQ42').addEventListener('click', async () => 
   } catch {}
 });
 
+async function parseToQuadsAsync(text, fmt, onProgress) {
+  const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+  const quads = new Set();
+  const chunkSize = 8000;
+
+  for (let start = 0; start < lines.length; start += chunkSize) {
+    const slice = lines.slice(start, start + chunkSize);
+    parseLinesToQuads(slice, fmt, quads);
+    if (onProgress) {
+      const pct = lines.length ? ((start + slice.length) / lines.length) * 100 : 100;
+      onProgress(pct, `Parsing quads… ${Math.min(start + slice.length, lines.length).toLocaleString()} / ${lines.length.toLocaleString()} lines`);
+    }
+    if (start + chunkSize < lines.length) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+
+  return [...quads].sort();
+}
+
 function parseToQuads(text, fmt) {
   const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
   const quads = new Set();
+  parseLinesToQuads(lines, fmt, quads);
+  return quads;
+}
+
+function parseLinesToQuads(lines, fmt, quads) {
 
   function normalizeStatement(line) {
     const compact = line.replace(/\s+/g, ' ').trim();
@@ -1055,8 +1150,9 @@ function parseToQuads(text, fmt) {
       if (normalized) quads.add(normalized);
     }
   } else if (fmt === 'jsonld') {
-    const ids = [...text.matchAll(/"@id"\s*:\s*"([^"]+)"/g)].map(match => match[1]);
-    const types = [...text.matchAll(/"@type"\s*:\s*"([^"]+)"/g)].map(match => match[1]);
+    const joined = lines.join('\n');
+    const ids = [...joined.matchAll(/"@id"\s*:\s*"([^"]+)"/g)].map(match => match[1]);
+    const types = [...joined.matchAll(/"@type"\s*:\s*"([^"]+)"/g)].map(match => match[1]);
     for (let i = 0; i < Math.min(ids.length, types.length); i++) {
       quads.add(`<${ids[i]}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <${types[i]}> ${DEFAULT_GRAPH} .`);
     }
@@ -1078,7 +1174,7 @@ function parseToQuads(text, fmt) {
     }
   } else if (fmt === 'rdfxml' || fmt === 'owl') {
     const parser = new DOMParser();
-    const doc = parser.parseFromString(text, 'text/xml');
+    const doc = parser.parseFromString(lines.join('\n'), 'text/xml');
     const elements = doc.querySelectorAll('*');
     for (const el of elements) {
       if (el.children.length === 0) continue;

@@ -170,3 +170,82 @@ jobs:
           name: llm-benchmark-results
           path: docs/llm_benchmark_results.json
           retention-days: 30
+
+  benchmark-schemaorg:
+    runs-on: ubuntu-latest
+    needs: benchmark
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-bench-
+
+      - name: Install Python benchmark dependencies
+        run: pip install --quiet -r benchmarks/requirements.txt
+
+      - name: Install Comunica and WASM-Prolog Node dependencies
+        run: |
+          cd benchmarks/comunica && npm install --prefer-offline
+          cd ../wasm_prolog && npm install --prefer-offline
+
+      - name: Install wasm-pack and build Qualia WASM
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          rustup target add wasm32-unknown-unknown
+          wasm-pack build crates/qualia-core-db \
+            --target web \
+            --release \
+            --out-dir docs/playground \
+            --out-name qualia_core_db \
+            --no-typescript
+
+      - name: Install SurrealDB
+        run: |
+          curl -sSf https://install.surrealdb.com | sh
+          echo "$HOME/.surrealdb" >> $GITHUB_PATH
+
+      - name: Build Qualia CLI and q42_comparative_bench
+        run: cargo build --release -p qualia-cli
+
+      - name: Prepare Schema.org NT + q42 + c.q42 artifacts
+        run: bash scripts/prepare_schemaorg_benchmark.sh 30.0 current-https
+
+      - name: Run Schema.org comparative harness (all engines)
+        run: |
+          python benchmarks/harness.py \
+            --all \
+            --no-qualia \
+            --dataset-profile schemaorg-30-current-https \
+            --output docs/comparative_benchmark_results.schemaorg-30-current-https.json
+
+      - name: Commit Schema.org benchmark results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/comparative_benchmark_results.schemaorg-30-current-https.json
+          git diff --cached --quiet \
+            || git commit -m "chore: update Schema.org comparative benchmark results [skip ci]"
+          git push
+
+      - name: Upload Schema.org comparative results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: comparative-benchmark-results-schemaorg
+          path: docs/comparative_benchmark_results.schemaorg-30-current-https.json
+          retention-days: 30

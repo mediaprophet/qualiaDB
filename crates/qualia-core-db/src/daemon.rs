@@ -8,7 +8,78 @@ use warp::Filter;
 
 const OFFICIAL_WEB_HUB_ORIGIN: &str = "https://mediaprophet.github.io";
 const QUERY_PAYLOAD_LIMIT_BYTES: u64 = 64 * 1024;
+const PROXY_FETCH_MAX_BYTES: usize = 64 * 1024 * 1024;
 const CELL_MEMORY_FLOOR_MB: u16 = 512;
+
+/// Block loopback / RFC1918 targets for the browser CORS relay (`GET /proxy/fetch`).
+fn proxy_target_allowed(url: &reqwest::Url) -> bool {
+    match url.scheme() {
+        "http" | "https" => {}
+        _ => return false,
+    }
+
+    let host = match url.host_str() {
+        Some(h) => h.to_ascii_lowercase(),
+        None => return false,
+    };
+
+    if host == "localhost" || host.ends_with(".localhost") || host == "127.0.0.1" {
+        return false;
+    }
+    if host.starts_with("127.") || host == "::1" || host == "[::1]" {
+        return false;
+    }
+    if host.starts_with("10.")
+        || host.starts_with("192.168.")
+        || host.starts_with("169.254.")
+        || host.starts_with("fe80:")
+    {
+        return false;
+    }
+    if let Some(stripped) = host.strip_prefix('[').and_then(|h| h.strip_suffix(']')) {
+        if let Ok(ip) = stripped.parse::<std::net::IpAddr>() {
+            return !ip_is_restricted(ip);
+        }
+    }
+    if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+        return !ip_is_restricted(ip);
+    }
+
+    true
+}
+
+fn ip_is_restricted(ip: std::net::IpAddr) -> bool {
+    match ip {
+        std::net::IpAddr::V4(v4) => v4.is_loopback() || v4.is_private() || v4.is_link_local(),
+        std::net::IpAddr::V6(v6) => {
+            v6.is_loopback() || v6.is_unicast_link_local() || v6.is_unique_local()
+        }
+    }
+}
+
+fn proxy_fetch_error(status: StatusCode, message: impl Into<String>) -> warp::http::Response<warp::hyper::Body> {
+    let body = json!({
+        "status": "error",
+        "message": message.into()
+    })
+    .to_string();
+    warp::http::Response::builder()
+        .status(status)
+        .header("content-type", "application/json")
+        .body(warp::hyper::Body::from(body))
+        .expect("proxy error response")
+}
+
+fn proxy_fetch_ok(content_type: &str, bytes: Vec<u8>) -> warp::http::Response<warp::hyper::Body> {
+    let mut response = warp::http::Response::new(warp::hyper::Body::from(bytes));
+    *response.status_mut() = StatusCode::OK;
+    response.headers_mut().insert(
+        warp::http::header::CONTENT_TYPE,
+        warp::http::HeaderValue::from_str(content_type)
+            .unwrap_or_else(|_| warp::http::HeaderValue::from_static("application/octet-stream")),
+    );
+    response
+}
 
 /// Fractal-sharding topology configured at daemon boot (`qualia-cli daemon --workers N`).
 #[derive(Clone, Copy, Debug, Default, serde::Serialize)]
@@ -548,6 +619,107 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         );
 
     // -----------------------------------------------------------------------
+    // GET /proxy/fetch?url=…  — CORS relay for GH Pages / playground URI import
+    // -----------------------------------------------------------------------
+    let proxy_fetch = warp::path!("proxy" / "fetch")
+        .and(warp::get())
+        .and(warp::query::<std::collections::HashMap<String, String>>())
+        .and_then(
+            |qs: std::collections::HashMap<String, String>| async move {
+                let target = qs.get("url").cloned().unwrap_or_default();
+                if target.is_empty() {
+                    return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                        StatusCode::BAD_REQUEST,
+                        "missing url query parameter",
+                    ));
+                }
+
+                let parsed = match reqwest::Url::parse(&target) {
+                    Ok(url) => url,
+                    Err(_) => {
+                        return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                            StatusCode::BAD_REQUEST,
+                            "invalid url",
+                        ));
+                    }
+                };
+
+                if !proxy_target_allowed(&parsed) {
+                    return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                        StatusCode::FORBIDDEN,
+                        "target host is not allowed",
+                    ));
+                }
+
+                let client = match reqwest::Client::builder()
+                    .timeout(std::time::Duration::from_secs(120))
+                    .redirect(reqwest::redirect::Policy::limited(5))
+                    .build()
+                {
+                    Ok(c) => c,
+                    Err(_) => {
+                        return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "proxy client init failed",
+                        ));
+                    }
+                };
+
+                let response = match client.get(parsed).send().await {
+                    Ok(r) => r,
+                    Err(e) => {
+                        return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                            StatusCode::BAD_GATEWAY,
+                            format!("upstream fetch failed: {e}"),
+                        ));
+                    }
+                };
+
+                if !response.status().is_success() {
+                    return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                        StatusCode::BAD_GATEWAY,
+                        format!("upstream HTTP {}", response.status()),
+                    ));
+                }
+
+                let content_type = response
+                    .headers()
+                    .get(reqwest::header::CONTENT_TYPE)
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("application/octet-stream")
+                    .to_string();
+
+                let bytes = match response.bytes().await {
+                    Ok(b) => b,
+                    Err(e) => {
+                        return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                            StatusCode::BAD_GATEWAY,
+                            format!("upstream body read failed: {e}"),
+                        ));
+                    }
+                };
+
+                if bytes.len() > PROXY_FETCH_MAX_BYTES {
+                    return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                        StatusCode::PAYLOAD_TOO_LARGE,
+                        "upstream payload exceeds 64 MiB proxy limit",
+                    ));
+                }
+
+                Ok::<_, warp::Rejection>(proxy_fetch_ok(&content_type, bytes.to_vec()))
+            },
+        );
+
+    let proxy_preflight = warp::path!("proxy" / "fetch")
+        .and(warp::options())
+        .map(|| {
+            warp::reply::with_status(
+                warp::reply::json(&json!({ "status": "ok" })),
+                StatusCode::OK,
+            )
+        });
+
+    // -----------------------------------------------------------------------
     // OPTIONS preflight
     // -----------------------------------------------------------------------
     let preflight = warp::path("health")
@@ -598,6 +770,8 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     let routes = qualia_bridge
         .or(health)
         .or(query)
+        .or(proxy_fetch)
+        .or(proxy_preflight)
         .or(relay_routes)
         .or(torrent_routes)
         .or(cache)
@@ -615,6 +789,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     println!("  Health:    http://127.0.0.1:{port}/health");
     println!("  Query:     http://127.0.0.1:{port}/query");
     println!("  Chat relay: http://127.0.0.1:{port}/chat/publish | /chat/pull");
+    println!("  CORS proxy: http://127.0.0.1:{port}/proxy/fetch?url=<encoded>");
     println!("  WebTorrent: http://127.0.0.1:{port}/torrent/webseed/{{hash}} | /torrent/seed");
     println!(
         "  Mode:      {}",

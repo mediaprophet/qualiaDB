@@ -845,15 +845,51 @@ pub async fn fetch_model_catalog_real() -> Vec<CatalogItem> {
 }
 
 pub async fn fetch_ontology_catalog() -> Vec<CatalogItem> {
-    parse_manifest_items(
+    parse_ontology_manifest_items(
         &fetch_remote_manifest(
-            "https://raw.githubusercontent.com/mediaprophet/qualiaDB/main/resources/ontology_manifest.json"
+            "https://raw.githubusercontent.com/mediaprophet/qualiaDB/refs/heads/main/manifests/ontologies.json"
                 .into(),
         )
         .await
         .unwrap_or_default(),
-        "ontology",
     )
+}
+
+fn parse_ontology_manifest_items(json: &str) -> Vec<CatalogItem> {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(json) else {
+        return vec![];
+    };
+    let Some(arr) = v.get("ontologies").and_then(|i| i.as_array()) else {
+        return parse_manifest_items(json, "ontology");
+    };
+    arr.iter()
+        .filter_map(|item| {
+            Some(CatalogItem {
+                id: item.get("id")?.as_str()?.into(),
+                name: item
+                    .get("name")
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("Unknown")
+                    .into(),
+                tag: "ontology".into(),
+                params: item
+                    .get("url")
+                    .and_then(|u| u.as_str())
+                    .map(String::from),
+                format: item
+                    .get("type")
+                    .and_then(|f| f.as_str())
+                    .unwrap_or("")
+                    .into(),
+                size: item
+                    .get("size")
+                    .and_then(|s| s.as_str())
+                    .unwrap_or("")
+                    .into(),
+                vram: None,
+            })
+        })
+        .collect()
 }
 
 pub async fn fetch_ontology_catalog_real() -> Vec<CatalogItem> {
