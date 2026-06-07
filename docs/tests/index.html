@@ -4,18 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QualiaDB — Comprehensive Test Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <style>
+        .glass {
+            background: rgba(17, 23, 31, 0.72);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(148, 163, 184, 0.10);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35),
+                        inset 0 1px 0 rgba(255,255,255,0.06);
+            border-radius: 20px;
+        }
+
+        .glass-strong {
+            background: rgba(17, 23, 31, 0.85);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .nav-active {
+            color: white;
+            border-bottom: 2px solid #3b82f6;
+        }
+
         :root {
-            --bg:      #0a0a0f;
-            --panel:   rgba(22, 22, 34, 0.9);
-            --border:  rgba(255,255,255,0.08);
-            --accent:  #00f0ff;
-            --success: #4ade80;
-            --fail:    #f87171;
-            --warn:    #ffd700;
+            --bg:      #0a0e17;
+            --panel:   rgba(17, 23, 31, 0.72);
+            --border:  rgba(148, 163, 184, 0.10);
+            --accent:  #3b82f6;
+            --success: #10b981;
+            --fail:    #ef4444;
+            --warn:    #f59e0b;
             --native:  #a78bfa;
-            --text:    #e2e2e2;
-            --dim:     #888;
+            --text:    #e2e8f0;
+            --dim:     #94a3b8;
             --mono:    'Fira Code', 'JetBrains Mono', monospace;
         }
 
@@ -34,8 +58,8 @@
 
         /* ── Header ──────────────────────────────────────────────────────── */
         header {
-            position: sticky; top: 0; z-index: 10;
-            background: rgba(10,10,15,.97);
+            position: sticky; top: 64px; z-index: 10;
+            background: rgba(10, 14, 23, 0.95);
             backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border);
             padding: 12px 20px 0;
@@ -292,7 +316,45 @@
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 3px; }
     </style>
 </head>
-<body>
+<body class="bg-[#0a0e17] text-slate-200">
+
+    <!-- Unified Navigation -->
+    <nav class="glass-strong border-b border-white/10 sticky top-0 z-50">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold tracking-tight text-xl">Qualia</span>
+                            <span class="text-blue-400 text-xl">DB</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-6 text-sm">
+                        <a href="../index.html" class="hover:text-white transition-colors">Home</a>
+                        <a href="../cooperativeproject/index.html" class="hover:text-white transition-colors">Projects</a>
+                        <a href="../comparative_benchmarks.html" class="hover:text-white transition-colors">Comparative</a>
+                        <a href="../benchmark.html" class="hover:text-white transition-colors">Live Benchmarks</a>
+                        <a href="../benchmark_visualizer.html" class="hover:text-white transition-colors">Visualizer</a>
+                        <a href="../cost_model.html" class="hover:text-white transition-colors">Cost Model</a>
+                        <a href="../api.html" class="hover:text-white transition-colors">API Docs</a>
+                        <a href="index.html" class="nav-active font-medium">Test Suite</a>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i>
+                        <span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
 
 <header>
     <div class="header-row">
