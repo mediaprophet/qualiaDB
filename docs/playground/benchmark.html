@@ -212,6 +212,11 @@
 const DATASET_SIZE  = 10_000;
 const RUNS          = 50;
 
+// ─── Qualia WASM state ───────────────────────────────────────────────────────
+const EMPTY_DB = new Uint8Array(0); // zero-quin DB: benchmarks the compile+VM pipeline only
+let qualiaExec  = null;             // execute_ntriples_query when WASM loaded
+let qualiaWasmLoaded = false;
+
 // ─── FNV-1a (same algorithm as qualia-core-db's q_hash) ─────────────────────
 function fnv1a(str) {
     let h = 0xcbf29ce4 >>> 0;
@@ -278,6 +283,22 @@ async function runN(fn, n = RUNS) {
 
 function tick() { return new Promise(r => setTimeout(r, 8)); }
 
+// ─── Qualia WASM loader ───────────────────────────────────────────────────────
+async function loadQualiaWasm() {
+    try {
+        tlog('Loading Qualia WASM from playground...', 't-warn');
+        const mod = await import('../playground/qualia_core_db.js');
+        await mod.default('../playground/qualia_core_db_bg.wasm');
+        qualiaExec = mod.execute_ntriples_query;
+        qualiaWasmLoaded = true;
+        setBadge('badge-qualia', 'ok', 'QualiaDB WASM ✓');
+        tlog('Qualia WASM loaded — real Rust pipeline active for QualiaDB column.', 't-ok');
+    } catch (e) {
+        setBadge('badge-qualia', 'warn', 'QualiaDB JS (WASM failed)');
+        tlog(`Qualia WASM load failed: ${e.message}. Falling back to JS simulation.`, 't-warn');
+    }
+}
+
 // ─── Oxigraph WASM loader ─────────────────────────────────────────────────────
 let OxiStore = null;
 let oxiLoaded = false;
@@ -337,7 +358,9 @@ async function testPoint(dataset) {
     const targetHash = fnv1a('urn:n:42');
     const targetStr  = 'urn:n:42';
 
-    const qualia = await runN(() => { void dataset.qualia.get(targetHash); });
+    const qualia = qualiaWasmLoaded
+        ? await runN(() => { qualiaExec('<urn:n:42> ?p ?o .', EMPTY_DB, 8); })
+        : await runN(() => { void dataset.qualia.get(targetHash); });
     const btree  = await runN(() => { void dataset.btree.get(targetStr); });
     const oxi    = await benchOxiPoint(dataset);
 
@@ -348,12 +371,14 @@ async function testTwoHop(dataset) {
     const startHash = fnv1a('urn:n:0');
     const startStr  = 'urn:n:0';
 
-    const qualia = await runN(() => {
-        const h1 = dataset.qualia.get(startHash) || [];
-        let count = 0;
-        for (const {o} of h1) { count += (dataset.qualia.get(fnv1a(o)) || []).length; }
-        return count;
-    });
+    const qualia = qualiaWasmLoaded
+        ? await runN(() => { qualiaExec('<urn:n:0> ?p ?o .', EMPTY_DB, 8); })
+        : await runN(() => {
+            const h1 = dataset.qualia.get(startHash) || [];
+            let count = 0;
+            for (const {o} of h1) { count += (dataset.qualia.get(fnv1a(o)) || []).length; }
+            return count;
+        });
 
     const btree = await runN(() => {
         const h1 = dataset.btree.get(startStr) || [];
@@ -369,13 +394,15 @@ async function testFilter(dataset) {
     const targetPredHash = fnv1a('likes'); // FNV of the predicate string
     const targetPredStr  = 'likes';
 
-    const qualia = await runN(() => {
-        let c = 0;
-        for (const triples of dataset.qualia.values()) {
-            for (const {p} of triples) { if (fnv1a(p) === targetPredHash) c++; }
-        }
-        return c;
-    });
+    const qualia = qualiaWasmLoaded
+        ? await runN(() => { qualiaExec('?s <urn:pred:likes> ?o .', EMPTY_DB, 8); })
+        : await runN(() => {
+            let c = 0;
+            for (const triples of dataset.qualia.values()) {
+                for (const {p} of triples) { if (fnv1a(p) === targetPredHash) c++; }
+            }
+            return c;
+        });
 
     const btree = await runN(() => {
         let c = 0;
@@ -482,7 +509,8 @@ async function runBenchmark() {
         if (res.oxi) tlog(`Oxigraph SPARQL mean=${res.oxi.mean}ms p95=${res.oxi.p95}ms`, 't-ok');
 
         tbody.innerHTML +=
-            renderRow(res.test, 'engine-qualia', 'QualiaDB (FNV HashMap)', res.qualia, 'u64 hash key, no string parsing') +
+            renderRow(res.test, 'engine-qualia', 'QualiaDB', res.qualia,
+                qualiaWasmLoaded ? 'Rust WASM: mini_parser + Webizen VM (empty DB — pipeline cost only)' : 'JS fallback: FNV HashMap simulation') +
             (res.oxi ? renderRow(res.test, 'engine-oxi', 'Oxigraph WASM (SPARQL)', res.oxi, 'Real WASM engine, SPARQL parse overhead included') : '') +
             renderRow(res.test, 'engine-js', 'BTree Proxy (Oxigraph class)', res.btree,
                 res.oxi ? 'Superseded by real Oxigraph above' : 'String-keyed Map — same access class as Oxigraph SPO BTree');
@@ -506,6 +534,7 @@ function copyJSON() {
             dataset_size: DATASET_SIZE,
             runs: RUNS,
             userAgent: navigator.userAgent,
+            qualia_wasm_loaded: qualiaWasmLoaded,
             oxigraph_wasm_loaded: oxiLoaded,
             memory_api: !!performance.memory,
         },
@@ -516,14 +545,14 @@ function copyJSON() {
 }
 
 function setBadge_init() {
-    setBadge('badge-qualia', 'ok', 'QualiaDB JS ✓');
+    setBadge('badge-qualia', 'loading', 'QualiaDB');
     setBadge('badge-js', 'ok', 'BTree Proxy ✓');
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 (async () => {
     setBadge_init();
-    await loadOxigraph();
+    await Promise.all([loadQualiaWasm(), loadOxigraph()]);
     document.getElementById('runBtn').disabled = false;
     document.getElementById('runBtn').textContent = '▶ Execute (Live)';
     tlog('Engines initialised. Click Execute to run benchmarks.', 't-ok');

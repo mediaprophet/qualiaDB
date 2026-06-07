@@ -70,17 +70,17 @@ jobs:
         with:
           enablement: true
 
+      - name: Build Rust documentation
+        run: cargo doc --no-deps -p qualia-core-db -p qualia-cli -p qualia-client-core
+
+      - name: Stage Rust docs into Jekyll source
+        run: cp -r target/doc docs/rustdoc
+
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
           source: ./docs
           destination: ./_site
-
-      - name: Build Rust documentation
-        run: cargo doc --no-deps
-
-      - name: Copy Rust docs to site
-        run: cp -r target/doc ./_site/rustdoc
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

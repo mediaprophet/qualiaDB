@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-// TODO: Import generated bridge when flutter_rust_bridge codegen is run
-// import 'package:qualia_flutter/bridge_generated.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
+import '../main.dart' show activeModelPathProvider;
 
-class LLMHubScreen extends StatefulWidget {
+class LLMHubScreen extends ConsumerStatefulWidget {
   const LLMHubScreen({super.key});
 
   @override
-  State<LLMHubScreen> createState() => _LLMHubScreenState();
+  ConsumerState<LLMHubScreen> createState() => _LLMHubScreenState();
 }
 
-class _LLMHubScreenState extends State<LLMHubScreen> {
+class _LLMHubScreenState extends ConsumerState<LLMHubScreen> {
   List<LLMModel> _models = [];
   List<LLMModel> _filteredModels = [];
   Set<String> _selectedIds = {};
@@ -105,6 +106,28 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
     _selectedIds.clear();
   }
 
+  /// Open a native file picker to select a local `.gguf` model file and
+  /// write its absolute path to [activeModelPathProvider].
+  Future<void> _browseLocalGguf() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['gguf'],
+      dialogTitle: 'Select a GGUF model file',
+    );
+    if (result != null && result.files.single.path != null) {
+      ref.read(activeModelPathProvider.notifier).state =
+          result.files.single.path!;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Active model set: ${result.files.single.name}'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+      }
+    }
+  }
+
   void _showDetails(LLMModel model) {
     showModalBottomSheet(
       context: context,
@@ -115,11 +138,23 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final activeModel = ref.watch(activeModelPathProvider);
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('LLM Hub'),
         actions: [
-          IconButton(icon: Icon(_isGridView ? Icons.list : Icons.grid_view), onPressed: () => setState(() => _isGridView = !_isGridView)),
+          // Browse for a local GGUF file and set it as active
+          TextButton.icon(
+            icon: const Icon(Icons.folder_open),
+            label: const Text('Browse local GGUF…'),
+            onPressed: _browseLocalGguf,
+          ),
+          IconButton(
+            icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
+            onPressed: () => setState(() => _isGridView = !_isGridView),
+          ),
           if (_selectedIds.isNotEmpty)
             IconButton(icon: const Icon(Icons.download), onPressed: _downloadSelected),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadFromRustResourceCatalog),
@@ -129,6 +164,34 @@ class _LLMHubScreenState extends State<LLMHubScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                // Active-model status bar
+                if (activeModel.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    color: cs.primary.withOpacity(0.12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle, size: 16, color: cs.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Active model: ${activeModel.split(RegExp(r'[\\/]')).last}',
+                            style: TextStyle(color: cs.primary, fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.clear, size: 16, color: cs.primary),
+                          tooltip: 'Deselect model',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () =>
+                              ref.read(activeModelPathProvider.notifier).state = '',
+                        ),
+                      ],
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -210,13 +273,16 @@ class LLMModel {
     this.isDownloaded = false, this.isEdgeRecommended = false});
 }
 
-class LLMModelDetailSheet extends StatelessWidget {
+class LLMModelDetailSheet extends ConsumerWidget {
   final LLMModel model;
 
   const LLMModelDetailSheet({super.key, required this.model});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeModel = ref.watch(activeModelPathProvider);
+    final cs = Theme.of(context).colorScheme;
+
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.65,
@@ -231,7 +297,53 @@ class LLMModelDetailSheet extends StatelessWidget {
           Text('Quantization: ${model.quantization}'),
           Text('License: ${model.license}'),
           const SizedBox(height: 24),
-          ElevatedButton(onPressed: () {}, child: const Text('Download via Rust')),
+          // Download via Rust pipeline
+          ElevatedButton.icon(
+            icon: const Icon(Icons.download),
+            label: const Text('Download via Rust'),
+            onPressed: () {
+              // TODO: await api.downloadLlm(model.id) — shows progress in active downloads
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Queued: ${model.name}')),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          // If a local file has been selected, allow setting this as the active model
+          // (matches on name as a heuristic — full path matching comes with the download pipeline)
+          if (activeModel.isNotEmpty &&
+              activeModel.toLowerCase().contains(model.id.toLowerCase()))
+            Row(children: [
+              Icon(Icons.check_circle, color: cs.primary, size: 16),
+              const SizedBox(width: 6),
+              Text('Currently active', style: TextStyle(color: cs.primary, fontSize: 13)),
+            ]),
+          const SizedBox(height: 8),
+          // Browse to select a locally downloaded GGUF for this model
+          OutlinedButton.icon(
+            icon: const Icon(Icons.folder_open),
+            label: const Text('Use local file…'),
+            onPressed: () async {
+              final result = await FilePicker.platform.pickFiles(
+                type: FileType.custom,
+                allowedExtensions: ['gguf'],
+                dialogTitle: 'Select ${model.name} GGUF file',
+              );
+              if (result?.files.single.path != null) {
+                ref.read(activeModelPathProvider.notifier).state =
+                    result!.files.single.path!;
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Active: ${model.name}'),
+                      backgroundColor: cs.primary,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
         ]),
       ),
     );

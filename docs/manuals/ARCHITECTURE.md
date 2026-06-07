@@ -56,22 +56,39 @@ Qualia-DB runs LLM inference entirely in-process. There is no Ollama, no Python 
 
 | Step | Component | Detail |
 |------|-----------|--------|
-| 1 | `gguf_sharder.rs` | Parses GGUF header; generates `QualiaQuin` pointer map (byte offsets encoded into quin object fields; upper 4 bits = modality flag `0b1001`) |
-| 2 | `gguf_bridge.rs` | Maps model weights into the OS page cache via `memmap2` (zero heap allocation); dispatches fused transformer blocks to the GPU |
-| 3 | `shaders/fused_tensor_contraction.wgsl` | WGSL compute shader, 64 threads/workgroup, 4096 FMA ops per thread; runs on DirectML / Vulkan / Metal / WebGPU via `wgpu` |
-| 4 | `llm_agent.rs` | `LocalLlmAgent` orchestrates the Phase 8 bifurcated compute via two SPSC ring buffers (`rtrb`) |
-| 5 | `orchestrator.rs` | `TaskOrchestrator` manages `ModelLifecycle` state machine and `ThermalGovernor` |
+| 1 | `gguf_sharder.rs` · `GgufTokenizer` | Parses GGUF v2/v3 KV section: extracts vocabulary (`tokenizer.ggml.tokens`), BOS/EOS IDs. Greedy longest-match `encode()`; SentencePiece `▁`-aware `decode()`. Falls back to 256-entry byte-level tokeniser when no model is loaded. |
+| 2 | `gguf_sharder.rs` · `GGufSharder` | Parses GGUF header magic + tensor count; generates `QualiaQuin` pointer map (byte offsets in object field, upper 4 bits = modality flag `0b1001`). |
+| 3 | `gguf_bridge.rs` · `QTensorEngine` | `load_gguf(path)` memory-maps weights via `memmap2` (zero heap). `dispatch_fused_transformer_block()` tries DirectML → Accelerate → wgpu/WGSL in order. |
+| 4 | `shaders/fused_tensor_contraction.wgsl` | WGSL compute shader, 64 threads/workgroup, 4096 FMA ops per thread; backend via DirectML 1.15 / Vulkan / Metal / WebGPU. |
+| 5 | `llm_agent.rs` · `LocalLlmAgent` | `infer_local_model()` runs the Phase 8 autoregressive decode loop: tokenise prompt → per-step GPU dispatch → SPSC logit stream → sentinel rollback check → argmax sample → EOS detection → detokenise. |
+| 6 | `orchestrator.rs` · `TaskOrchestrator` | `orchestrate_inference()` gates every call: `validate_intent` → `infer` → `validate_output`. Manages `ModelLifecycle` state machine and `ThermalGovernor`. |
+
+### Platform GPU Priority
+
+| Platform | Primary path | Fallback |
+|---|---|---|
+| Windows x64 | DirectML 1.15 (D3D12, hardware-vendor kernels) | wgpu / D3D12 |
+| macOS Apple Silicon | Accelerate `cblas_sgemm` (AMX coprocessor) | wgpu / Metal |
+| Linux (NVIDIA/AMD) | wgpu / Vulkan (system ICD) | — |
+| WASM | Mock path (GPU not accessible from browser) | — |
 
 ### Phase 8 Bifurcated Compute
 
-Token generation uses two wait-free SPSC ring buffers:
+Token generation uses two wait-free SPSC ring buffers (`rtrb`) keeping the governance intercept off the critical allocation path:
 
 ```
-LLM Engine thread  ──logits──►  LogitStream  ──►  Webizen Sentinel thread
-                   ◄─control──  ControlStream ◄──  (detects anomalies; can DenyRollback)
+LLM Engine thread  ──LogitSummary──►  LogitStream  ──►  Webizen Sentinel (calling thread)
+                   ◄──DenyRollback──  ControlStream ◄──  (checks anomaly byte; injects rollback)
 ```
 
-The Sentinel reads logit vectors in real time. If it detects an anomaly (e.g., `0x99` byte signature), it injects a `DenyRollback` into `ControlStream` and the LLM recalculates mid-generation.
+Per decode step:
+1. LLM thread embeds the current token and calls `dispatch_fused_transformer_block()`.
+2. Argmax + anomaly flag are packed into a fixed-size `LogitSummary` (no heap) and pushed to `LogitStream`.
+3. Sentinel reads the summary. If `anomaly_byte == 0x99` (anachronism signature), it pushes `DenyRollback` to `ControlStream`.
+4. On the next step, the LLM thread pops `ControlStream`. If a rollback is pending, it substitutes a safe neighbour token instead of the argmax.
+5. Loop ends at EOS token or `MAX_OUTPUT_TOKENS` (2048).
+
+> **Note — real embedding lookup deferred.** The current decode loop uses a deterministic pseudo-embedding (sin-based from token ID) because the GGUF tensor-info section parser (tensor names → byte offsets) is not yet implemented. The GPU compute, SPSC ring, governance pipeline, and tokeniser are all real. See the `HANDOVER.md` "Immediate next tasks" for the embedding lookup work item.
 
 ### AgentBackend Variants
 
@@ -138,13 +155,13 @@ Qualia-DB explicitly rejects the infinite rent-seeking paradigm of the legacy we
 
 ## The Consumer Packaging
 
-Qualia-DB ships with two tightly-bound consumer interfaces:
+Qualia-DB ships with three tightly-bound consumer interfaces:
 
-1. **Qualia Desktop App (`crates/qualia-desktop` + `crates/qualia-client`)** — A Tauri desktop shell whose frontend is a Vite/React app (`qualia-client`). Provides the LLM Hub, Ontology Hub, App Manager (sandboxed web apps served via the `qualia://` URI scheme), Wallet, Address Book, Credential Manager, and Asset Library. The App Manager loads third-party edge-native web apps from `{data_dir}/Apps/` directories containing an `app.json` manifest; apps are verified via VCs before launch.
+1. **Qualia Flutter App (`crates/qualia-flutter/`)** — A Flutter desktop app (Windows, macOS, Linux) backed by a flutter_rust_bridge FFI layer. Provides the Chat UI (wired to `runInference` via FRB), LLM Hub (model browser + download), Ontology Hub, App Vault (sandboxed web apps launched in the system browser), Wallet, Address Book, Credential Manager, Asset Library, and Spatial Physics visualiser. See [Flutter API Reference](flutter-api-reference.md) for all exported functions.
 
 2. **Qualia CLI (`crates/qualia-cli`)** — The primary toolchain for data ingestion, benchmarking, daemon management, capability profile compilation, and resource catalog operations.
 
-3. **WASM Bridge (`crates/qualia-core-db`, WASM target)** — Builds to `docs/playground/` for the browser-based demo (GitHub Pages). Uses OPFS for block caching and SharedArrayBuffer for zero-copy IPC.
+3. **WASM Bridge (`crates/qualia-core-db`, WASM target)** — Builds to `docs/playground/` for the browser-based demo (GitHub Pages). Uses OPFS for block caching and SharedArrayBuffer for zero-copy IPC. Note: LLM inference is not available in the WASM target (GPU paths require native OS APIs); the WASM path falls through to the mock ring-buffer.
 
 ---
 

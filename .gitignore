@@ -22,6 +22,9 @@ gemma-4-E4B-it-GGUF/
 # wasm-pack output (copied to docs/playground/ manually or by pages.yml)
 crates/qualia-core-db/pkg/
 
+# Generated Rust API docs staged for Jekyll (CI only)
+docs/rustdoc/
+
 # Vendored Node.js binary (local tooling only, not needed in repo)
 node_dist/
 node.zip

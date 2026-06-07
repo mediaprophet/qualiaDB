@@ -142,6 +142,9 @@
                     <a href="benchmark.html" class="px-5 py-2 rounded-3xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-x-2">
                         <span class="font-medium">Live Suite</span>
                     </a>
+                    <a href="cost_model.html" class="px-5 py-2 rounded-3xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-x-2">
+                        <span class="font-medium">Cost Model</span>
+                    </a>
                     <a href="benchmark_visualizer.html" class="px-5 py-2 rounded-3xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-x-2">
                         <span class="font-medium">Telemetry</span>
                     </a>
@@ -174,6 +177,14 @@
             </div>
         </div>
     </nav>
+
+    <!-- Disclaimer banner -->
+    <div class="border-b border-amber-900/40 bg-amber-950/30">
+        <div class="max-w-screen-2xl mx-auto px-8 py-2.5 flex items-center gap-x-3 text-xs text-amber-300/80">
+            <i class="fa-solid fa-flask-vial flex-shrink-0"></i>
+            <span><strong>Active development</strong> — benchmarks run on a synthetic 10K-triple dataset on CI hardware. Results at production scale (100M+ triples, high concurrency, heterogeneous data) may differ. <a href="https://github.com/mediaprophet/qualiaDB/tree/main/benchmarks" class="underline hover:text-amber-200">Run the open-source harness</a> against your own dataset to verify.</span>
+        </div>
+    </div>
 
     <div class="max-w-screen-2xl mx-auto px-8 pt-10 pb-20">
         <!-- Hero Header -->
@@ -228,15 +239,16 @@
 
             <div class="glass-strong overflow-hidden rounded-3xl border border-slate-700 premium-shadow">
                 <div class="overflow-x-auto">
-                    <table class="data-table w-full min-w-[920px]">
+                    <table class="data-table w-full min-w-[1080px]">
                         <thead class="bg-[#0f1623]">
                             <tr>
-                                <th class="w-64 text-left">Engine</th>
-                                <th onclick="sortTable(1)" class="cursor-pointer text-right hover:text-white">Ingestion</th>
-                                <th onclick="sortTable(2)" class="cursor-pointer text-right hover:text-white">Point p50</th>
-                                <th onclick="sortTable(3)" class="cursor-pointer text-right hover:text-white">Two-hop p50</th>
-                                <th onclick="sortTable(4)" class="cursor-pointer text-right hover:text-white">Filter p50</th>
-                                <th onclick="sortTable(5)" class="cursor-pointer text-right hover:text-white">Peak RSS</th>
+                                <th class="w-56 text-left">Engine</th>
+                                <th onclick="sortTable(1)" class="cursor-pointer text-right hover:text-white">Ingestion<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">ms · triples/s</div></th>
+                                <th onclick="sortTable(2)" class="cursor-pointer text-right hover:text-white">Point<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">p50 · p95</div></th>
+                                <th onclick="sortTable(3)" class="cursor-pointer text-right hover:text-white">Two-hop<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">p50 · p95</div></th>
+                                <th onclick="sortTable(4)" class="cursor-pointer text-right hover:text-white">Filter<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">p50 · p95</div></th>
+                                <th onclick="sortTable(5)" class="cursor-pointer text-right hover:text-white">Throughput<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">point ops/s</div></th>
+                                <th onclick="sortTable(6)" class="cursor-pointer text-right hover:text-white">RSS<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">MB</div></th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -251,23 +263,35 @@
         <!-- Charts -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="glass p-8">
-                <div class="mb-7 flex items-center justify-between">
-                    <div>
-                        <div class="font-semibold text-xl tracking-tight">Ingestion Time</div>
-                        <div class="text-xs text-slate-500 mt-0.5">Lower is better • real-world cost</div>
-                    </div>
+                <div class="mb-6">
+                    <div class="font-semibold text-xl tracking-tight">Ingestion Time</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Lower is better • ms to load 10k triples</div>
                 </div>
-                <div id="ingestion-chart" class="space-y-5"></div>
+                <div id="ingestion-chart" class="space-y-4"></div>
             </div>
 
             <div class="glass p-8">
-                <div class="mb-7 flex items-center justify-between">
-                    <div>
-                        <div class="font-semibold text-xl tracking-tight">Point Query Latency (p50)</div>
-                        <div class="text-xs text-slate-500 mt-0.5">30 samples • lower is better</div>
-                    </div>
+                <div class="mb-6">
+                    <div class="font-semibold text-xl tracking-tight">Point Query Latency (p50)</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Lower is better • indexed lookup</div>
                 </div>
-                <div id="point-chart" class="space-y-5"></div>
+                <div id="point-chart" class="space-y-4"></div>
+            </div>
+
+            <div class="glass p-8">
+                <div class="mb-6">
+                    <div class="font-semibold text-xl tracking-tight">Filter Scan Latency (p50)</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Lower is better • predicate scan across all triples</div>
+                </div>
+                <div id="filter-chart" class="space-y-4"></div>
+            </div>
+
+            <div class="glass p-8">
+                <div class="mb-6">
+                    <div class="font-semibold text-xl tracking-tight">Peak Memory (RSS)</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Lower is better • server/process RSS under load</div>
+                </div>
+                <div id="memory-chart" class="space-y-4"></div>
             </div>
         </div>
 
@@ -306,12 +330,57 @@
             }
         };
 
+        // ── Formatters ────────────────────────────────────────────────────────────
         function formatMs(val) {
             if (val === null || val === undefined) return '—';
-            if (typeof val === 'string') return val;
-            return Number(val).toFixed(2);
+            if (typeof val === 'string') {
+                if (val.startsWith('ERROR') || val === 'OOM') return '—';
+                return val;
+            }
+            const n = Number(val);
+            if (n <= 0) return '—';
+            if (n < 0.001) return '< 0.001';
+            if (n < 1)     return n.toFixed(3);
+            return n.toFixed(2);
         }
 
+        function formatOps(opsPerSec) {
+            if (!opsPerSec || !isFinite(opsPerSec)) return '—';
+            if (opsPerSec >= 1e6) return (opsPerSec / 1e6).toFixed(1) + 'M';
+            if (opsPerSec >= 1e3) return Math.round(opsPerSec / 1e3) + 'K';
+            return Math.round(opsPerSec).toString();
+        }
+
+        function formatKTps(engine) {
+            if (!engine.ingestion_ms || !engine.n_triples) return '—';
+            const tps = (engine.n_triples / engine.ingestion_ms) * 1000;
+            if (tps >= 1e6) return (tps / 1e6).toFixed(2) + 'M t/s';
+            if (tps >= 1e3) return Math.round(tps / 1e3) + 'K t/s';
+            return Math.round(tps) + ' t/s';
+        }
+
+        function getThroughput(engine) {
+            const p50 = engine.point?.p50;
+            return (p50 > 0) ? 1000 / p50 : null;
+        }
+
+        function getJitter(stat) {
+            if (!stat?.p99 || !stat?.p50) return null;
+            return stat.p99 - stat.p50;
+        }
+
+        function getRss(engine) {
+            // Prefer server_rss (reflects actual daemon footprint for Surreal)
+            return engine.server_rss_mb ?? engine.peak_rss_mb ?? null;
+        }
+
+        function getRssDelta(engine) {
+            if (engine.rss_after_load_mb != null && engine.rss_before_load_mb != null)
+                return engine.rss_after_load_mb - engine.rss_before_load_mb;
+            return null;
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────────────
         function getEngines(data) {
             return data?.engines ? Object.values(data.engines) : [];
         }
@@ -327,40 +396,55 @@
             return colors[engine] || 'bg-slate-400';
         }
 
+        // ── Summary cards ─────────────────────────────────────────────────────────
         function renderSummaryCards(engines) {
             const container = document.getElementById('summary-cards');
             container.innerHTML = '';
-
             if (!engines.length) return;
 
-            const ingestionWinner = engines.reduce((a, b) => (a.ingestion_ms || 9999) < (b.ingestion_ms || 9999) ? a : b);
-            const pointWinner = engines.reduce((a, b) => (a.point?.p50 || 999) < (b.point?.p50 || 999) ? a : b);
-            const memoryWinner = engines.reduce((a, b) => (a.peak_rss_mb || 9999) < (b.peak_rss_mb || 9999) ? a : b);
+            const valid = f => e => typeof f(e) === 'number' && isFinite(f(e));
+
+            const ingestionWinner = engines.filter(valid(e => e.ingestion_ms))
+                .reduce((a, b) => a.ingestion_ms < b.ingestion_ms ? a : b, engines[0]);
+            const pointWinner = engines.filter(valid(e => e.point?.p50))
+                .reduce((a, b) => a.point.p50 < b.point.p50 ? a : b, engines[0]);
+            const memoryWinner = engines.filter(valid(e => e.peak_rss_mb))
+                .reduce((a, b) => a.peak_rss_mb < b.peak_rss_mb ? a : b, engines[0]);
+            const p95Winner = engines.filter(valid(e => e.point?.p95))
+                .reduce((a, b) => a.point.p95 < b.point.p95 ? a : b, engines[0]);
+            const tputWinner = engines.filter(valid(e => getThroughput(e)))
+                .reduce((a, b) => getThroughput(a) > getThroughput(b) ? a : b, engines[0]);
 
             const cards = [
-                { label: "Fastest Ingestion", value: formatMs(ingestionWinner.ingestion_ms) + " ms", engine: ingestionWinner.meta?.label || ingestionWinner.engine, icon: "fa-bolt", color: "emerald" },
-                { label: "Fastest Point p50", value: formatMs(pointWinner.point?.p50) + " ms", engine: pointWinner.meta?.label || pointWinner.engine, icon: "fa-search", color: "blue" },
-                { label: "Lowest Memory", value: (memoryWinner.peak_rss_mb || "?") + " MB", engine: memoryWinner.meta?.label || memoryWinner.engine, icon: "fa-microchip", color: "violet" },
-                { label: "Native Advantage", value: "O(1) FNV + Lazy", engine: "Qualia Native", icon: "fa-shield-halved", color: "amber" }
+                { label: "Fastest Ingestion", value: formatMs(ingestionWinner?.ingestion_ms) + " ms", sub: formatKTps(ingestionWinner ?? {}), engine: ingestionWinner?.meta?.label || ingestionWinner?.engine || '—', icon: "fa-bolt", color: "emerald" },
+                { label: "Lowest Point p50", value: formatMs(pointWinner?.point?.p50) + " ms", sub: "p95 " + formatMs(pointWinner?.point?.p95) + " ms", engine: pointWinner?.meta?.label || pointWinner?.engine || '—', icon: "fa-search", color: "blue" },
+                { label: "Best p95 Latency", value: formatMs(p95Winner?.point?.p95) + " ms", sub: "point query tail", engine: p95Winner?.meta?.label || p95Winner?.engine || '—', icon: "fa-chart-line", color: "sky" },
+                { label: "Lowest Memory", value: (memoryWinner?.peak_rss_mb?.toFixed(1) ?? "?") + " MB", sub: "peak RSS", engine: memoryWinner?.meta?.label || memoryWinner?.engine || '—', icon: "fa-microchip", color: "violet" },
+                { label: "Highest Throughput", value: formatOps(getThroughput(tputWinner ?? {})), sub: "point ops/s", engine: tputWinner?.meta?.label || tputWinner?.engine || '—', icon: "fa-tachometer-alt", color: "amber" },
             ];
+
+            // 5-card grid — override to 5 cols on large screens
+            container.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4';
 
             cards.forEach(card => {
                 const el = document.createElement('div');
-                el.className = `glass glass-hover p-6`;
+                el.className = 'glass glass-hover p-6';
                 el.innerHTML = `
                     <div class="flex justify-between items-start">
-                        <div>
+                        <div class="min-w-0">
                             <div class="section-label">${card.label}</div>
-                            <div class="mt-5 text-[42px] font-semibold tracking-[-1.5px] stat-value">${card.value}</div>
-                            <div class="text-xs text-slate-400 mt-1">${card.engine}</div>
+                            <div class="mt-4 text-[32px] font-semibold tracking-[-1px] stat-value leading-tight">${card.value}</div>
+                            <div class="text-[10px] text-slate-500 mt-0.5 font-mono">${card.sub || ''}</div>
+                            <div class="text-xs text-slate-400 mt-1 truncate">${card.engine}</div>
                         </div>
-                        <i class="fa-solid ${card.icon} text-4xl text-${card.color}-400 mt-1 opacity-80"></i>
+                        <i class="fa-solid ${card.icon} text-3xl text-${card.color}-400 mt-1 opacity-70 flex-shrink-0 ml-2"></i>
                     </div>
                 `;
                 container.appendChild(el);
             });
         }
 
+        // ── Main table ────────────────────────────────────────────────────────────
         function renderTable(engines) {
             const tbody = document.getElementById('results-body');
             tbody.innerHTML = '';
@@ -370,20 +454,32 @@
                 row.className = 'engine-row';
                 const label = engine.meta?.label || engine.engine;
                 const isQualia = engine.engine === 'qualia';
+                const tput = getThroughput(engine);
+                const rss = getRss(engine);
+                const rssNote = engine.server_rss_mb ? ' <span class="text-[10px] text-slate-500">server</span>' : '';
+
+                const latCell = (stat) => stat?.p50
+                    ? `<div class="font-mono">${formatMs(stat.p50)}</div>
+                       <div class="text-[10px] text-slate-500 font-mono">p95 ${formatMs(stat.p95)}</div>`
+                    : '—';
 
                 row.innerHTML = `
                     <td class="font-semibold">
                         <div class="flex items-center gap-x-3">
                             <div class="h-2.5 w-2.5 rounded-full flex-shrink-0 ${getEngineColor(engine.engine)}"></div>
                             <span class="${isQualia ? 'text-amber-300 font-medium' : ''}">${label}</span>
-                            ${isQualia ? '<span class="ml-2.5 text-[10px] px-2 py-px rounded bg-amber-950 text-amber-400 font-mono tracking-wider">NATIVE</span>' : ''}
+                            ${isQualia ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-amber-400 font-mono tracking-wider">NATIVE</span>' : ''}
                         </div>
                     </td>
-                    <td class="text-right font-mono">${formatMs(engine.ingestion_ms)}</td>
-                    <td class="text-right font-mono">${formatMs(engine.point?.p50)}</td>
-                    <td class="text-right font-mono">${formatMs(engine.twohop?.p50)}</td>
-                    <td class="text-right font-mono">${formatMs(engine.filter?.p50)}</td>
-                    <td class="text-right font-mono">${engine.peak_rss_mb ? engine.peak_rss_mb.toFixed(1) : '—'}</td>
+                    <td class="text-right">
+                        <div class="font-mono">${formatMs(engine.ingestion_ms)}</div>
+                        <div class="text-[10px] text-slate-500 font-mono">${formatKTps(engine)}</div>
+                    </td>
+                    <td class="text-right">${latCell(engine.point)}</td>
+                    <td class="text-right">${latCell(engine.twohop)}</td>
+                    <td class="text-right">${latCell(engine.filter)}</td>
+                    <td class="text-right font-mono">${tput ? formatOps(tput) : '—'}</td>
+                    <td class="text-right font-mono">${rss != null ? rss.toFixed(1) + rssNote : '—'}</td>
                     <td class="text-center">
                         <button onclick="showEngineDetail('${engine.engine}')" class="text-slate-400 hover:text-blue-400 px-2">
                             <i class="fa-solid fa-info-circle"></i>
@@ -394,13 +490,16 @@
             });
         }
 
-        function renderBarChart(containerId, engines, keyFn, maxVal) {
+        // ── Bar charts ────────────────────────────────────────────────────────────
+        function renderBarChart(containerId, engines, keyFn, labelFn, maxVal) {
             const container = document.getElementById(containerId);
+            if (!container) return;
             container.innerHTML = '';
 
             engines.forEach(engine => {
-                const val = keyFn(engine) || 0;
-                const pct = maxVal > 0 ? Math.max(8, Math.round((val / maxVal) * 100)) : 10;
+                const raw = keyFn(engine);
+                const val = typeof raw === 'number' ? raw : 0;
+                const pct = maxVal > 0 && val > 0 ? Math.max(4, Math.round((val / maxVal) * 100)) : 0;
                 const label = engine.meta?.label || engine.engine;
                 const isQualia = engine.engine === 'qualia';
 
@@ -411,7 +510,7 @@
                     <div class="flex-1 bg-slate-800 rounded-full p-px">
                         <div class="bar ${isQualia ? 'bar-qualia' : ''}" style="width: ${pct}%;"></div>
                     </div>
-                    <div class="w-16 flex-shrink-0 text-right font-mono text-xs">${val.toFixed(1)}</div>
+                    <div class="w-20 flex-shrink-0 text-right font-mono text-xs">${labelFn(engine, val)}</div>
                 `;
                 container.appendChild(row);
             });
@@ -419,12 +518,29 @@
 
         function renderCharts(engines) {
             const maxIngestion = Math.max(...engines.map(e => e.ingestion_ms || 0)) || 1;
-            const maxPoint = Math.max(...engines.map(e => e.point?.p50 || 0)) || 1;
+            const maxPoint    = Math.max(...engines.map(e => e.point?.p50 || 0)) || 1;
+            const maxRss      = Math.max(...engines.map(e => getRss(e) || 0)) || 1;
+            const maxFilter   = Math.max(...engines.map(e => e.filter?.p50 || 0)) || 1;
 
-            renderBarChart('ingestion-chart', engines, e => e.ingestion_ms || 0, maxIngestion);
-            renderBarChart('point-chart', engines, e => e.point?.p50 || 0, maxPoint);
+            renderBarChart('ingestion-chart', engines,
+                e => e.ingestion_ms || 0,
+                (e, v) => formatMs(v) + ' ms',
+                maxIngestion);
+            renderBarChart('point-chart', engines,
+                e => e.point?.p50 || 0,
+                (e, v) => formatMs(v) + ' ms',
+                maxPoint);
+            renderBarChart('memory-chart', engines,
+                e => getRss(e) || 0,
+                (e, v) => v > 0 ? v.toFixed(1) + ' MB' : '—',
+                maxRss);
+            renderBarChart('filter-chart', engines,
+                e => e.filter?.p50 || 0,
+                (e, v) => formatMs(v) + ' ms',
+                maxFilter);
         }
 
+        // ── Sort ──────────────────────────────────────────────────────────────────
         function sortTable(col) {
             if (!currentData) return;
             const engines = getEngines(currentData);
@@ -441,26 +557,41 @@
                 2: e => e.point?.p50 || 0,
                 3: e => e.twohop?.p50 || 0,
                 4: e => e.filter?.p50 || 0,
-                5: e => e.peak_rss_mb || 0
+                5: e => getThroughput(e) || 0,
+                6: e => getRss(e) || 0,
             };
 
-            engines.sort((a, b) => (getters[col](a) - getters[col](b)) * sortDirection);
+            engines.sort((a, b) => ((getters[col]?.(a) ?? 0) - (getters[col]?.(b) ?? 0)) * sortDirection);
             renderTable(engines);
         }
 
+        // ── Detail modal ──────────────────────────────────────────────────────────
         function showEngineDetail(key) {
             if (!currentData?.engines?.[key]) return;
             const d = currentData.engines[key];
             const label = d.meta?.label || key;
             const isQualia = key === 'qualia';
+            const tput = getThroughput(d);
+            const ingestRate = formatKTps(d);
+            const delta = getRssDelta(d);
+
+            const latRow = (name, stat) => stat?.p50 ? `
+                <div class="flex justify-between border-b border-slate-700 pb-3">
+                    <span>${name}</span>
+                    <div class="text-right">
+                        <div class="font-semibold">${formatMs(stat.p50)} <span class="text-slate-500 text-xs">p50</span></div>
+                        <div class="text-xs text-slate-400">${formatMs(stat.p95)} p95 &nbsp;•&nbsp; ${formatMs(stat.p99)} p99</div>
+                        <div class="text-xs text-slate-500">jitter +${formatMs(getJitter(stat))} ms</div>
+                    </div>
+                </div>` : '';
 
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-6';
             modal.innerHTML = `
-                <div class="glass-strong w-full max-w-md rounded-3xl p-9">
+                <div class="glass-strong w-full max-w-lg rounded-3xl p-9 max-h-[90vh] overflow-y-auto">
                     <div class="flex justify-between items-start">
                         <div class="flex items-center gap-x-3">
-                            <div class="h-3.5 w-3.5 rounded-full ${getEngineColor(key)}"></div>
+                            <div class="h-3.5 w-3.5 rounded-full flex-shrink-0 ${getEngineColor(key)}"></div>
                             <div>
                                 <div class="text-3xl font-semibold tracking-tight">${label}</div>
                                 ${isQualia ? '<div class="text-xs text-amber-400 mt-0.5">Native daemon • port 4242</div>' : ''}
@@ -469,26 +600,38 @@
                         <button onclick="this.closest('.fixed').remove()" class="text-4xl text-slate-400 hover:text-white leading-none">&times;</button>
                     </div>
 
-                    <div class="mt-9 space-y-8">
-                        <div class="grid grid-cols-2 gap-x-8">
+                    <div class="mt-8 space-y-6">
+                        <!-- Ingestion + Memory row -->
+                        <div class="grid grid-cols-3 gap-4">
                             <div>
                                 <div class="text-xs text-slate-500 tracking-wider">INGESTION</div>
-                                <div class="mt-2 font-mono text-5xl font-semibold tracking-[-1.5px]">${formatMs(d.ingestion_ms)}</div>
+                                <div class="mt-1 font-mono text-2xl font-semibold">${formatMs(d.ingestion_ms)} <span class="text-sm text-slate-400">ms</span></div>
+                                <div class="text-xs text-slate-500 mt-0.5">${ingestRate}</div>
                             </div>
                             <div>
                                 <div class="text-xs text-slate-500 tracking-wider">PEAK RSS</div>
-                                <div class="mt-2 font-mono text-5xl font-semibold tracking-[-1.5px]">${d.peak_rss_mb || d.server_rss_mb || '—'} <span class="text-xl">MB</span></div>
+                                <div class="mt-1 font-mono text-2xl font-semibold">${getRss(d)?.toFixed(1) ?? '—'} <span class="text-sm text-slate-400">MB</span></div>
+                                ${delta != null ? `<div class="text-xs text-slate-500 mt-0.5">+${delta.toFixed(2)} MB dataset</div>` : ''}
+                            </div>
+                            <div>
+                                <div class="text-xs text-slate-500 tracking-wider">THROUGHPUT</div>
+                                <div class="mt-1 font-mono text-2xl font-semibold">${tput ? formatOps(tput) : '—'} <span class="text-sm text-slate-400">ops/s</span></div>
+                                <div class="text-xs text-slate-500 mt-0.5">point query</div>
                             </div>
                         </div>
 
+                        <!-- Latency detail -->
                         <div>
-                            <div class="text-xs text-slate-500 tracking-wider mb-4">LATENCY (p50 / p95)</div>
-                            <div class="space-y-3 font-mono text-[15px]">
-                                <div class="flex justify-between border-b border-slate-700 pb-3"><span>Point Query</span> <span class="font-semibold">${formatMs(d.point?.p50)} / ${formatMs(d.point?.p95)}</span></div>
-                                <div class="flex justify-between border-b border-slate-700 pb-3"><span>Two-hop</span> <span class="font-semibold">${formatMs(d.twohop?.p50)} / ${formatMs(d.twohop?.p95)}</span></div>
-                                <div class="flex justify-between"><span>Filter</span> <span class="font-semibold">${formatMs(d.filter?.p50)} / ${formatMs(d.filter?.p95)}</span></div>
+                            <div class="text-xs text-slate-500 tracking-wider mb-3">LATENCY — p50 / p95 / p99 / jitter</div>
+                            <div class="space-y-0 font-mono text-[14px]">
+                                ${latRow('Point Query', d.point)}
+                                ${latRow('Two-hop', d.twohop)}
+                                ${d.filter?.p50 ? latRow('Filter', d.filter).replace('border-b border-slate-700 pb-3', '') : ''}
                             </div>
                         </div>
+
+                        ${d.note ? `<div class="text-xs text-slate-500 italic border-t border-slate-700 pt-4">${d.note}</div>` : ''}
+                        ${d.meta?.focus ? `<div class="text-xs text-slate-400 border-t border-slate-700 pt-4"><span class="text-slate-500">Focus:</span> ${d.meta.focus}</div>` : ''}
                     </div>
                 </div>
             `;

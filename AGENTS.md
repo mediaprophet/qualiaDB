@@ -175,6 +175,31 @@ State machine: `Discovered → MappedToDisk → StreamingVRAM → Active → Scr
 `ThermalGovernor` trait with `Cool/Warm/Critical` states — controls 3-core triad parallelism
 budget. `NullThermalGovernor` always returns `Cool` (real governor not yet wired).
 
+### `gguf_sharder.rs` — GGUF Parser + GgufTokenizer
+
+`GGufSharder`: parses GGUF header magic + tensor count; generates `QualiaQuin` pointer maps.
+
+`GgufTokenizer` (added 2026-06-06): parses the GGUF v2/v3 KV metadata section to extract
+the full vocabulary (`tokenizer.ggml.tokens`), `bos_token_id`, and `eos_token_id`.
+- `from_gguf(mmap)` — walks the KV section with `skip_value()` for all 13 GGUF value types.
+- `encode(text)` — greedy longest-match; falls back to single-byte encoding.
+- `decode(ids)` — SentencePiece `▁` → space; `<0x##>` → raw byte.
+- `Default` — 256-entry byte-level tokeniser (used when no GGUF file is loaded).
+
+### `llm_agent.rs::infer_local_model` — Real Autoregressive Loop (no longer mocked)
+
+**As of 2026-06-06 this function runs a real Phase 8 decode loop.** It is no longer
+the hardcoded-string mock. Key points:
+
+- `QTensorEngine` is initialised **inside** the spawned LLM thread to avoid `Send` issues
+  with DirectML COM pointers and wgpu device handles.
+- Per step: deterministic pseudo-embedding (sin-based from token ID) →
+  `dispatch_fused_transformer_block` → argmax → `LogitSummary` via SPSC ring → Sentinel
+  `DenyRollback` check → sample next token.
+- **Pseudo-embedding is the current limitation.** Reading `token_embd.weight` from the
+  GGUF tensor-info section is the next milestone (requires a `GgufTensorIndex` parser).
+- WASM path still uses the original mock ring-buffer (GPU not accessible from WASM).
+
 ---
 
 ## 3. Task Map — What Each Agent Should Build

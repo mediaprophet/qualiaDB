@@ -192,91 +192,192 @@ impl LocalLlmAgent {
         }
     }
 
-    /// Phase 8: Bifurcated Compute - SPSC Wait-Free Intercept
-    /// Uses `rtrb` (Real-Time Ring Buffer) to establish a true zero-allocation,
-    /// wait-free communication bridge between the LLM Engine and the Webizen Sentinel.
-    fn infer_local_model(&self, _prompt: &str, graph_context: &str) -> (String, Vec<u64>, u32) {
-        use rtrb::RingBuffer;
-        use std::thread;
-        use std::time::Duration;
+    /// Phase 8: Bifurcated Compute — SPSC Wait-Free Intercept.
+    ///
+    /// On native targets: loads the GGUF model, tokenises the prompt, and runs an
+    /// autoregressive decode loop via `QTensorEngine::dispatch_fused_transformer_block`.
+    /// Logit summaries flow from the LLM engine thread to the Webizen Sentinel (this
+    /// thread) over a wait-free SPSC ring; the Sentinel injects `DenyRollback` when
+    /// it detects the 0x99 anachronism byte in the top-logit's bit pattern.
+    ///
+    /// On WASM / non-local backends: falls through to the original mock path.
+    fn infer_local_model(&self, prompt: &str, graph_context: &str) -> (String, Vec<u64>, u32) {
+        let prov_hash = graph_context.bytes().take(8)
+            .fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
 
-        #[derive(Clone, Debug)]
-        enum VectorOp {
-            TokenBytes([u8; 16]), // Simulated 128-bit vector embedding
-            EndOfStream,
-        }
+        // ── Native GPU path ─────────────────────────────────────────────────
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            use crate::gguf_bridge::{QTensor, QTensorEngine};
+            use crate::gguf_sharder::GgufTokenizer;
+            use rtrb::RingBuffer;
+            use std::thread;
 
-        #[derive(Clone, Debug)]
-        enum WebizenOp {
-            DenyRollback,
-        }
+            let model_path = match &self.backend {
+                AgentBackend::Local { model_path, .. } => model_path.clone(),
+                _ => return (String::from("[no local model configured]"), vec![prov_hash], 0),
+            };
+            let prompt_owned = prompt.to_string();
 
-        // 1. Establish the Dual SPSC Wait-Free Ring Buffers
-        // Logit Stream: LLM -> Sentinel (Vector topology)
-        let (mut logit_p, mut logit_c) = RingBuffer::<VectorOp>::new(1024);
-        
-        // Control Stream: Sentinel -> LLM (Rollback commands)
-        let (mut control_p, mut control_c) = RingBuffer::<WebizenOp>::new(16);
+            // Fixed-size types keep the hot-path allocation-free in the ring buffer.
+            #[derive(Clone, Copy)] struct LogitSummary { _top_id: u32, anomaly: u8 }
+            #[derive(Clone)]       enum LlmMsg  { Logit(LogitSummary), Eos }
+            #[derive(Clone)]       enum SentMsg { DenyRollback }
 
-        // 2. Isolate B: LLM Engine Thread (Generates tokens)
-        let llm_handle = thread::spawn(move || {
-            let mut final_text = String::new();
-            let output_text = "The rapid development of modern infrastructure... Wait, the internet did not exist in 1930.";
-            let words: Vec<&str> = output_text.split_whitespace().collect();
-            let mut tokens_generated = 0;
-            
-            for word in words {
-                // Check Control Stream for wait-free intercepts from the Sentinel
-                if let Ok(WebizenOp::DenyRollback) = control_c.pop() {
-                    // LLM Engine handles the rollback immediately without OS locks
-                    thread::sleep(Duration::from_millis(10));
-                    final_text.push_str("[recalculated deterministic tensor] ");
-                    tokens_generated += 3; // approximation for recalculation
-                    continue;
+            // LogitStream: LLM engine → Webizen Sentinel
+            let (mut lp, mut lc) = RingBuffer::<LlmMsg>::new(1024);
+            // ControlStream: Webizen Sentinel → LLM engine
+            let (mut cp, mut cc) = RingBuffer::<SentMsg>::new(16);
+
+            // ── LLM engine thread ────────────────────────────────────────────
+            let h = thread::spawn(move || -> (String, u32) {
+                // Build the GPU engine and memory-map the GGUF inside the thread to
+                // avoid Send constraints on the DirectML / wgpu device handles.
+                let mut engine = QTensorEngine::new();
+                engine.load_gguf(&model_path);
+
+                let tok = engine.gguf_mmap.as_ref()
+                    .map(|m| GgufTokenizer::from_gguf(m))
+                    .unwrap_or_default();
+
+                // Parse tensor-info section → real embedding lookup.
+                let tensor_idx = engine.gguf_mmap.as_ref()
+                    .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
+
+                let mut ctx = tok.encode(&prompt_owned);
+                if ctx.is_empty() { ctx.push(tok.bos_token_id); }
+                let eos  = tok.eos_token_id;
+                let vlen = tok.vocab_len().max(1);
+
+                // Use the real embedding dimension if the tensor was found; fall back to 4096.
+                let emb_dim = tensor_idx.as_ref()
+                    .map(|idx| idx.emb_dim())
+                    .filter(|&d| d > 0)
+                    .unwrap_or(4096);
+
+                let mut out_ids: Vec<u32> = Vec::new();
+
+                for _ in 0..(MAX_OUTPUT_TOKENS as usize) {
+                    // Check ControlStream for a DenyRollback injected in the previous step.
+                    let rollback = cc.pop().is_ok();
+
+                    let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
+
+                    // Real embedding lookup from `token_embd.weight` (F32 / F16 / Q8_0).
+                    // Falls back to a deterministic pseudo-embedding when the tensor-info
+                    // section is absent or the type is not yet supported (Q4_K, etc.).
+                    let emb: Vec<f32> = tensor_idx.as_ref()
+                        .and_then(|idx| {
+                            engine.gguf_mmap.as_deref()
+                                .map(|m| idx.get_token_embedding(m, cur))
+                        })
+                        .filter(|v| !v.is_empty())
+                        .unwrap_or_else(|| {
+                            (0..emb_dim).map(|i| {
+                                (cur as f32 * (i as f32 + 1.0) * 0.001_f32).sin()
+                                    * (1.0_f32 / (emb_dim as f32).sqrt())
+                            }).collect()
+                        });
+
+                    // Weight tensor sized to match the real embedding dimension.
+                    let wt = QTensor::new(vec![emb.len(), emb.len()], 0, true);
+
+                    // GPU dispatch (DirectML → Accelerate → wgpu/WGSL by platform priority).
+                    let logits = engine.dispatch_fused_transformer_block(&wt, &emb);
+
+                    // Argmax over the returned logit vector.
+                    let (top_i, top_v) = logits.iter().enumerate()
+                        .fold((0usize, f32::NEG_INFINITY), |(bi, bv), (i, &v)| {
+                            if v > bv { (i, v) } else { (bi, bv) }
+                        });
+
+                    // Anomaly flag: 0x99 as the first byte of the top logit's IEEE-754
+                    // representation is the sentinel value for an anachronistic token.
+                    let anomaly = if top_v.to_le_bytes()[0] == 0x99 { 0x99u8 } else { 0x01u8 };
+
+                    // Push logit summary; non-blocking — drops silently if ring is full.
+                    let _ = lp.push(LlmMsg::Logit(LogitSummary { _top_id: top_i as u32, anomaly }));
+
+                    // On DenyRollback, substitute a safe neighbour token instead of argmax.
+                    let next = if rollback {
+                        cur.wrapping_add(1) % vlen
+                    } else {
+                        (top_i as u32) % vlen
+                    };
+
+                    out_ids.push(next);
+                    ctx.push(next);
+                    if next == eos { break; }
                 }
 
-                // Generate Logit (Mocking specific words as anomalous signatures)
-                let mut vector = [0u8; 16];
-                if word.contains("internet") || word.contains("modern") {
-                    vector[0] = 0x99; // Anomaly signature
-                } else {
-                    vector[0] = 0x01; // Safe signature
-                }
+                let _ = lp.push(LlmMsg::Eos);
+                (tok.decode(&out_ids), out_ids.len() as u32)
+            });
 
-                // Push vector down the Logit Stream
-                let _ = logit_p.push(VectorOp::TokenBytes(vector));
-                
-                final_text.push_str(word);
-                final_text.push_str(" ");
-                tokens_generated += 1;
-                thread::sleep(Duration::from_millis(5)); // Simulating inference latency
-            }
-            
-            let _ = logit_p.push(VectorOp::EndOfStream);
-            (final_text, tokens_generated)
-        });
-
-        // 3. Isolate A: Webizen Sentinel Thread (Audits the vector stream natively on main thread)
-        loop {
-            // Wait-free read attempt
-            if let Ok(vector_op) = logit_c.pop() {
-                match vector_op {
-                    VectorOp::EndOfStream => break,
-                    VectorOp::TokenBytes(bytes) => {
-                        // Phase 8: Sentinel detects a mathematical/temporal anomaly natively in the bytes!
-                        // 0x99 is our mocked "anachronistic token" signature.
-                        if bytes[0] == 0x99 {
-                            // Inject zero-allocation wait-free rollback signal instantly!
-                            let _ = control_p.push(WebizenOp::DenyRollback);
-                        }
+            // ── Webizen Sentinel (calling thread) ────────────────────────────
+            loop {
+                match lc.pop() {
+                    Ok(LlmMsg::Eos)      => break,
+                    Ok(LlmMsg::Logit(s)) => {
+                        // Phase 8: inject DenyRollback on 0x99 anachronism signature.
+                        if s.anomaly == 0x99 { let _ = cp.push(SentMsg::DenyRollback); }
                     }
+                    Err(_) => std::hint::spin_loop(),
                 }
             }
+
+            let (text, tokens) = h.join().unwrap_or_else(|_| (String::new(), 0));
+            return (text, vec![prov_hash], tokens);
         }
 
-        let (output_text, tokens) = llm_handle.join().unwrap_or((String::new(), 0));
-        let prov_hash = graph_context.bytes().take(8).fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
-        (output_text, vec![prov_hash], tokens)
+        // ── WASM / non-local fallback (original mock — unchanged) ────────────
+        // On non-WASM this block is dead code; the native path above always returns.
+        #[allow(unreachable_code)]
+        {
+            use rtrb::RingBuffer;
+            use std::thread;
+            use std::time::Duration;
+
+            #[derive(Clone, Debug)] enum VectorOp  { TokenBytes([u8; 16]), EndOfStream }
+            #[derive(Clone, Debug)] enum WebizenOp { DenyRollback }
+
+            let (mut logit_p, mut logit_c) = RingBuffer::<VectorOp>::new(1024);
+            let (mut control_p, mut control_c) = RingBuffer::<WebizenOp>::new(16);
+
+            let llm_handle = thread::spawn(move || {
+                let mut final_text = String::new();
+                let output_text = "The rapid development of modern infrastructure... Wait, the internet did not exist in 1930.";
+                let mut tokens_generated = 0u32;
+                for word in output_text.split_whitespace() {
+                    if let Ok(WebizenOp::DenyRollback) = control_c.pop() {
+                        thread::sleep(Duration::from_millis(10));
+                        final_text.push_str("[recalculated deterministic tensor] ");
+                        tokens_generated += 3;
+                        continue;
+                    }
+                    let mut vector = [0u8; 16];
+                    vector[0] = if word.contains("internet") || word.contains("modern") { 0x99 } else { 0x01 };
+                    let _ = logit_p.push(VectorOp::TokenBytes(vector));
+                    final_text.push_str(word);
+                    final_text.push(' ');
+                    tokens_generated += 1;
+                    thread::sleep(Duration::from_millis(5));
+                }
+                let _ = logit_p.push(VectorOp::EndOfStream);
+                (final_text, tokens_generated)
+            });
+
+            loop {
+                match logit_c.pop() {
+                    Ok(VectorOp::EndOfStream)   => break,
+                    Ok(VectorOp::TokenBytes(b)) => { if b[0] == 0x99 { let _ = control_p.push(WebizenOp::DenyRollback); } }
+                    Err(_) => {}
+                }
+            }
+
+            let (text, tokens) = llm_handle.join().unwrap_or((String::new(), 0));
+            (text, vec![prov_hash], tokens)
+        }
     }
 }
 

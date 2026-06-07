@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # ── Job 1: qualia-cli ─────────────────────────────────────────────────────────
 jobs:
   build-cli:
@@ -57,6 +63,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ matrix.asset_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Ship DirectML.dll as a separate release asset on Windows so users can
+      # place it next to the CLI exe without needing the DirectML SDK installed.
+      - name: Upload DirectML.dll (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vendor/directml/bin/x64-win/DirectML.dll
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -119,6 +135,7 @@ jobs:
             flutter_platform: macos
             artifact_dir: crates/qualia-flutter/build/macos/Build/Products/Release
             asset_name: qualia-flutter-macos-aarch64.tar.gz
+            experimental: true
 
     steps:
       - uses: actions/checkout@v4
@@ -164,6 +181,7 @@ jobs:
 
       - name: Build Flutter (${{ matrix.flutter_platform }})
         working-directory: crates/qualia-flutter
+        continue-on-error: ${{ matrix.experimental == true }}
         run: flutter build ${{ matrix.flutter_platform }} --release
 
       - name: Package artifact (Linux / macOS)
@@ -172,6 +190,13 @@ jobs:
           tar -czf ${{ matrix.asset_name }} \
             -C "$(dirname "${{ matrix.artifact_dir }}")" \
             "$(basename "${{ matrix.artifact_dir }}")"
+
+      - name: Copy DirectML.dll into artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Copy-Item "vendor\directml\bin\x64-win\DirectML.dll" `
+            "${{ matrix.artifact_dir }}\DirectML.dll"
 
       - name: Package artifact (Windows)
         if: matrix.os == 'windows-latest'

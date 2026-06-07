@@ -14,9 +14,13 @@ import 'screens/credential_manager_screen.dart';
 import 'screens/llm_hub_screen.dart';
 import 'screens/spatial_physics_screen.dart';
 
-// Import the generated rust bridge bindings
 import 'src/rust/api/qualia_api.dart';
 import 'src/rust/frb_generated.dart';
+
+/// The absolute path to the currently active `.gguf` model file.
+/// Empty string means no model is selected.
+/// Written by LLMHubScreen (file picker), read by ChatScreen (inference).
+final activeModelPathProvider = StateProvider<String>((ref) => '');
 
 Future<void> main() async {
   await RustApi.init();
@@ -46,28 +50,40 @@ class QualiaApp extends StatelessWidget {
   }
 }
 
-class QualiaHomeScreen extends StatefulWidget {
+class QualiaHomeScreen extends ConsumerStatefulWidget {
   const QualiaHomeScreen({super.key});
 
   @override
-  State<QualiaHomeScreen> createState() => _QualiaHomeScreenState();
+  ConsumerState<QualiaHomeScreen> createState() => _QualiaHomeScreenState();
 }
 
-class _QualiaHomeScreenState extends State<QualiaHomeScreen> {
+class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const ChatScreen(),
-    const WalletScreen(),
-    const AddressBookScreen(),
-    const OntologyHubScreen(),
-    const AssetLibraryScreen(),
-    const AppVaultScreen(),
-    const CredentialManagerScreen(),
-    const LLMHubScreen(),
-    const SpatialPhysicsScreen(),
-    const SettingsScreen(),
+  /// Build the screen widget for [index], injecting live state where needed.
+  Widget _buildScreen(int index) {
+    switch (index) {
+      case 1:
+        // Chat screen reads the active model path from the provider.
+        return ChatScreen(modelPath: ref.watch(activeModelPathProvider));
+      default:
+        return _staticScreens[index];
+    }
+  }
+
+  /// Screens that need no dynamic state can stay as const widgets.
+  static const List<Widget> _staticScreens = [
+    DashboardScreen(),       // 0
+    SizedBox.shrink(),       // 1 — replaced by _buildScreen (ChatScreen)
+    WalletScreen(),          // 2
+    AddressBookScreen(),     // 3
+    OntologyHubScreen(),     // 4
+    AssetLibraryScreen(),    // 5
+    AppVaultScreen(),        // 6
+    CredentialManagerScreen(), // 7
+    LLMHubScreen(),          // 8
+    SpatialPhysicsScreen(),  // 9
+    SettingsScreen(),        // 10
   ];
 
   @override
@@ -92,19 +108,19 @@ class _QualiaHomeScreenState extends State<QualiaHomeScreen> {
                   const SizedBox(height: 32),
                   _buildNavItem(Icons.perm_contact_calendar_outlined, 3),
                   const SizedBox(height: 32),
-                  _buildNavItem(Icons.hub_outlined, 4), // Ontology Hub
+                  _buildNavItem(Icons.hub_outlined, 4),
                   const SizedBox(height: 32),
-                  _buildNavItem(Icons.photo_library_outlined, 5), // Asset Library
+                  _buildNavItem(Icons.photo_library_outlined, 5),
                   const SizedBox(height: 32),
-                  _buildNavItem(Icons.apps_outlined, 6), // App Vault
+                  _buildNavItem(Icons.apps_outlined, 6),
                   const SizedBox(height: 32),
-                  _buildNavItem(Icons.key_outlined, 7), // Credential Manager
+                  _buildNavItem(Icons.key_outlined, 7),
                   const SizedBox(height: 32),
-                  _buildNavItem(Icons.memory_outlined, 8), // LLM Hub
+                  _buildNavItem(Icons.memory_outlined, 8),
                   const SizedBox(height: 32),
-                  _buildNavItem(Icons.view_in_ar_outlined, 9), // Spatial Physics
+                  _buildNavItem(Icons.view_in_ar_outlined, 9),
                   const SizedBox(height: 32),
-                  _buildNavItem(Icons.settings_outlined, 10), // Settings
+                  _buildNavItem(Icons.settings_outlined, 10),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -112,9 +128,9 @@ class _QualiaHomeScreenState extends State<QualiaHomeScreen> {
           ),
           // Main Content Area
           Expanded(
-            child: Container(
-              color: Theme.of(context).colorScheme.background,
-              child: _screens[_currentIndex],
+            child: ColoredBox(
+              color: Theme.of(context).colorScheme.surface,
+              child: _buildScreen(_currentIndex),
             ),
           ),
         ],
@@ -123,11 +139,12 @@ class _QualiaHomeScreenState extends State<QualiaHomeScreen> {
   }
 
   Widget _buildNavItem(IconData icon, int index) {
+    final isActive = _currentIndex == index;
     return IconButton(
       icon: Icon(icon),
       onPressed: () => setState(() => _currentIndex = index),
-      color: _currentIndex == index 
-          ? Theme.of(context).colorScheme.primary 
+      color: isActive
+          ? Theme.of(context).colorScheme.primary
           : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
     );
   }

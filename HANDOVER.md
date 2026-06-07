@@ -1,4 +1,146 @@
 # QualiaDB — Handover Document
+
+---
+
+## Session 2026-06-06 (part 3) — Autoregressive inference + Flutter chat UI wiring
+
+**Branch:** `main` + `0.0.6-dev` (both updated) | **Last commit:** `68019c4`
+
+### Completed this session
+
+#### GgufTokenizer (`gguf_sharder.rs`)
+- Real GGUF v2/v3 KV section walker: scans `tokenizer.ggml.tokens` (array of strings), `bos_token_id`, `eos_token_id`; handles all GGUF value types (uint8–float64, string, array) in `skip_value`.
+- 256-entry byte-level fallback for when no GGUF is loaded or model predates v2.
+- `encode()`: greedy longest-match tokenisation; single-byte fallback.
+- `decode()`: SentencePiece `▁` → space; `<0x##>` → raw byte.
+
+#### Autoregressive decode loop (`llm_agent.rs::infer_local_model`)
+- `QTensorEngine` + `load_gguf` initialised **inside** the spawned LLM thread (avoids `Send` requirement on DirectML/wgpu device handles).
+- Per-step: pseudo-embedding (sin-based from token ID) → `dispatch_fused_transformer_block` (DirectML/Accelerate/wgpu) → argmax logits → SPSC `LogitSummary` to Sentinel.
+- Sentinel (calling thread): injects `DenyRollback` on `0x99` anomaly byte in top-logit IEEE-754 representation. On rollback, LLM thread substitutes `cur_tok + 1 mod vocab_len`.
+- Stops at EOS token or `MAX_OUTPUT_TOKENS`; decoded via `GgufTokenizer::decode`.
+- WASM mock path preserved unchanged.
+
+#### Flutter chat UI (`chat_screen.dart`, `qualia_api.rs`)
+- `run_inference(prompt, model_path)` added to `qualia_api.rs` — calls full `TaskOrchestrator::orchestrate_inference` pipeline (intent validation → infer → output grounding).
+- FRB bindings regenerated (`frb_generated.{dart,rs}`).
+- `chat_screen.dart`: async `runInference()` call, loading indicator (`LinearProgressIndicator`), "No model loaded" banner when `modelPath` is empty, scroll-to-bottom.
+
+### Key files changed
+`crates/qualia-core-db/src/gguf_sharder.rs`,
+`crates/qualia-core-db/src/llm_agent.rs`,
+`crates/qualia-flutter/rust/src/api/qualia_api.rs`,
+`crates/qualia-flutter/rust/src/frb_generated.rs`,
+`crates/qualia-flutter/lib/screens/chat_screen.dart`,
+`crates/qualia-flutter/lib/src/rust/api/qualia_api.dart`,
+`crates/qualia-flutter/lib/src/rust/frb_generated.dart`
+
+### Immediate next tasks (priority order)
+1. **Real embedding lookup** — `GgufTokenizer` parses the KV section (vocab, BOS/EOS) but the tensor-info section (tensor names + byte offsets) is not yet parsed. Implement a `GgufTensorIndex::from_gguf(mmap)` that walks the tensor-info section after the KV section ends, builds a `HashMap<String, (u64, Vec<u64>, u32)>` (name → offset, shape, ggml_type). Use it in `infer_local_model` to look up `token_embd.weight` and slice the real embedding for each token.
+2. **modelPath threading in Flutter** — `QualiaHomeScreen._screens` is a static list; `ChatScreen` gets `modelPath = ''`. Convert to a stateful approach where `LLMHubScreen` can set `_activeModelPath` on the parent, which is then passed to `ChatScreen`.
+3. **DirectML.dll in release artifact** — add `DirectML.dll` copy step to `.github/workflows/release.yml` Windows Flutter job.
+4. **WASM rebuild** — push a tag to trigger CI rebuild of `qualia_core_db_bg.wasm` with `compile_query_to_json`.
+5. **CUDA stub** — `cudarc = "0.11"` behind `cfg(feature="cuda")`, `src/cuda_bridge.rs` mirroring `directml_bridge.rs`.
+
+---
+
+## Session 2026-06-06 (part 2) — GPU inference, CI fixes, GH Pages
+
+**Branch:** `main` → pushed as `0.0.6-dev` | **Last commit:** see `git log --oneline -8`
+
+### Completed this session
+
+#### CI / Release fixes
+- **Flutter Linux + macOS**: ran `flutter create --platforms=linux,macos .` in `crates/qualia-flutter/`; committed `linux/` and `macos/` scaffolds. Fixes both failing CI jobs.
+- **`release.yml`**: added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` workflow-level env (mandatory from 2026-06-16).
+- **`wasm_bridge.rs`**: exported `compile_query_to_json()` — was missing from compiled WASM, silently breaking 6 GH Pages files (`playground/script.js`, `src/qualia-worker.js`, `api-explorer/catalog.js`, three test suites). Takes SPARQL or N-Triples query, returns JSON bytecode representation.
+
+#### GH Pages benchmark fixes
+- **`docs/benchmark.html`** (main live page at `/benchmark.html`): wired real WASM mode — loads `qualia_core_db_bg.wasm`, runs `execute_ntriples_query` in 50-iteration timing loop, displays P50/throughput/VM cycles. Previously just showed a redirect message.
+- **`docs/playground/benchmark.html`** (transparent harness): wires real WASM alongside Oxigraph; QualiaDB column uses Rust pipeline when WASM loads, JS sim as fallback.
+
+#### GPU inference — DirectML 1.15 (Windows)
+- Downloaded `Microsoft.AI.DirectML` v1.15.4 NuGet → checked in `vendor/directml/bin/x64-win/` (17.7 MB DLL).
+- **`build.rs`**: links `d3d12 + dxgi` (system) and `DirectML` from vendor; emits `cfg(feature="directml")`; DIRECTML_LIB_PATH env-var fallback for CI.
+- **`src/directml_bridge.rs`** (new): `DmlDevice::new()` creates D3D12 + DirectML device on highest-VRAM adapter. `dequantize_q4_k_tensor()` real Q4_K→f32. `DmlGemmOp::execute()` full D3D12 pipeline with descriptor heaps + binding tables.
+- **`gguf_bridge.rs`**: `load_gguf(path)` memory-maps the GGUF file. `dispatch_fused_transformer_block()` tries DirectML Q4_K GEMM first; falls back to wgpu/WGSL.
+
+#### GPU inference — Metal / Accelerate (macOS Apple Silicon)
+- **`src/metal_bridge.rs`** (new): `dequantize_q4_k_tensor()` + `accelerate_sgemm()` via `cblas_sgemm` from Accelerate.framework. On M-series chips this runs on the AMX coprocessor (dedicated matrix-multiply hardware, no GPU scheduling overhead).
+- **`gguf_bridge.rs`**: macOS path tries Accelerate BLAS after the DirectML block.
+
+#### Platform GPU coverage (summary)
+| Platform | GPU path | Notes |
+|---|---|---|
+| Windows x64 | DirectML 1.15 → wgpu/D3D12 | SDK in vendor/ |
+| macOS Apple Silicon | Accelerate/AMX → wgpu/Metal | Frameworks linked by build.rs |
+| Linux (NVIDIA/AMD) | wgpu/Vulkan (automatic) | wgpu picks system Vulkan ICD |
+| Linux + QUALIA_CUDA=1 | cuBLAS stub (cfg gated) | Needs `cudarc` crate — not implemented yet |
+
+### Key files changed this session
+`crates/qualia-core-db/build.rs`, `src/directml_bridge.rs` (new),
+`src/metal_bridge.rs` (new), `src/gguf_bridge.rs`, `src/lib.rs`,
+`Cargo.toml`, `vendor/directml/**`,
+`.github/workflows/release.yml`,
+`docs/benchmark.html`, `docs/playground/benchmark.html`,
+`crates/qualia-flutter/linux/**` (new), `crates/qualia-flutter/macos/**` (new)
+
+### Immediate next tasks (priority order)
+1. **LLM token generation** — `infer_local_model()` in `llm_agent.rs` is still mocked.
+   The GPU compute path is wired (`dispatch_fused_transformer_block` + `load_gguf`),
+   but the autoregressive decode loop, tokenizer, and sampling are not.
+   See `NEW_SESSION_PROMPT.md` for the briefing to use in the next Claude session.
+2. **GGUF tokenizer** — `gguf_sharder.rs::extract_ontology_to_superblock()` returns zeros.
+   The vocabulary + BPE merges need to be parsed from the GGUF header KV section.
+3. **WASM rebuild** — `compile_query_to_json` is in Rust but not yet in the compiled
+   `docs/playground/qualia_core_db_bg.wasm`. Needs a tag push to trigger CI rebuild.
+4. **WellFair `index.html`** — mobile-first app; desktop variant deferred.
+5. **DirectML.dll shipping** — add `DirectML.dll` copy step to `release.yml` Windows job
+   so the CLI artifact is runnable without a separate SDK install.
+
+---
+
+## Session 2026-06-06 — v0.0.6 release (App Vault, WASM, CI rebuild)
+
+**Branch:** `main` | **Tag:** `v0.0.6` | **Last commit:** `8579f22`
+
+### Completed this session
+- **App Vault** (Flutter): renamed from AppStore, FRB-wired (`list_installed_apps`,
+  `launch_installed_app`, `generate_app_credential`), system browser launch via
+  `url_launcher`, directory picker for install via `file_picker`, `dev_port` in manifest
+- **FRB**: fixed `flutter_rust_bridge.yaml` (was pointing at deleted `api.rs`),
+  regenerated all bindings including new `resource_catalog.dart`
+- **WASM**: rebuilt `qualia_core_db_bg.wasm` (465KB, 29 exports, was stale 46KB),
+  `pages.yml` now rebuilds WASM on every deploy
+- **CI**: `release.yml` rewritten (Flutter + WASM + CLI, Tauri removed),
+  `permissions: contents: write` added (was causing 403 on all uploads)
+- **Docs**: `app-vault-developer-guide.md`, `BUILD_ERRORS_V0-0-6.md`, README warning
+- **Cleanup**: cooperative/wellfair/social → `app-development/` (gitignored),
+  migration scripts → `scratch/` (gitignored), node.zip deleted, 1601 social files
+  removed from tracking, broken Unicode-named directory deleted
+
+### Immediate next tasks
+1. **Flutter Linux/macOS platforms**: `flutter create --platforms=linux,macos .`
+   in `crates/qualia-flutter/` then commit. Blocks those release jobs.
+2. **DirectML SDK**: see `docs/BUILD_ERRORS_V0-0-6.md` §Error 3
+3. **benchmark.html**: wire to actual `qualia_core_db.js` WASM, not JS simulation
+4. **WellFair app**: `app-development/wellfair/app.json` exists, needs `index.html`
+   + daemon query JS (port 5173, CORS-allowed in dev mode)
+5. **Node.js 24**: add `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` to `release.yml`
+
+### Key files changed
+`crates/qualia-flutter/lib/main.dart`, `lib/screens/app_vault_screen.dart`,
+`lib/screens/wallet_screen.dart`, `lib/src/rust/api/qualia_api.dart`,
+`lib/src/rust/api/resource_catalog.dart` (new), `rust/src/api/qualia_api.rs`,
+`rust/src/api/resource_catalog.rs`, `flutter_rust_bridge.yaml`, `pubspec.yaml`,
+`pubspec.lock`, `frb_generated.{dart,rs}`, `crates/qualia-client-core/src/api.rs`,
+`crates/qualia-client-core/src/app_registry.rs`, `.github/workflows/release.yml`,
+`.github/workflows/pages.yml`, `.gitignore`, `README.md`,
+`docs/playground/qualia_core_db{.js,_bg.wasm}` (rebuilt)
+
+---
+
+## Session 2026-06-05 — Full codebase audit
 _Full codebase audit completed: 2026-06-05._
 _Covers qualia-core-db (55 modules), qualia-desktop, and qualia-client._
 

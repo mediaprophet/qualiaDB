@@ -106,10 +106,11 @@ These break things if violated:
 
 | Task | Start here |
 |------|-----------|
-| Modifying inference | `llm_agent.rs`, then `gguf_bridge.rs` |
+| Modifying inference | `llm_agent.rs`, then `gguf_bridge.rs`, then `gguf_sharder.rs` |
 | Adding a logic modality | `AGENTS.md §3` + `deontic_logic.rs` as template |
 | Touching the graph engine | `orchestrator.rs`, `storage.rs`, `wal.rs` |
 | MCP server changes | `mcp_server.rs` |
+| Flutter FRB API changes | `crates/qualia-flutter/rust/src/api/qualia_api.rs`, then run `flutter_rust_bridge_codegen generate` |
 | Benchmark harness | `benchmarks/harness.py`, `benchmarks/qualia/runner.py` |
 | Governance / rights | `webizen.rs`, `agency.rs`, `deontic_logic.rs` |
 | Profile / identity | `profiles.rs`, `key_vault.rs`, `identifier.rs` |
@@ -122,3 +123,5 @@ These break things if violated:
 - `ARCHITECTURE.md §5` previously said "llama.cpp" — **corrected** 2026-06-06. The backend is `wgpu`, not llama.cpp.
 - `logic.rs::Always/Eventually/Next` opcodes are **not** real LTL operators — they compare a float threshold on a single Quin. Use `temporal_ltl.rs::evaluate_ltl_trace` instead. See `AGENTS.md §4-B`.
 - `logic.rs::extract_float` uses `0b001 << 60` as an f32 tag, conflicting with `resolver.rs` which uses the same bits for `xsd:integer`. See `AGENTS.md §4-D`. Do not "fix" this unilaterally.
+- `infer_local_model()` in `llm_agent.rs` is **no longer mocked** as of 2026-06-06. It runs a real Phase 8 autoregressive loop through the GPU layer. The remaining limitation is pseudo-embeddings (sin-based from token ID) — real embedding lookup requires the GGUF tensor-info section parser (not yet implemented). See `HANDOVER.md` next-task #1.
+- The `qualia_api.rs` comment on `check_ollama_status()` is a legacy stub. Qualia does not use Ollama. The function always returns `false`.
