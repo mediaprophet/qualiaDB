@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #0a0a0f; }
+    canvas { display: block; width: 100%; height: 100vh; }
+  </style>
+</head>
+<body>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+let temperature = 50, pressure = 50, timeDilation = 1.0;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 0, 5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const p1 = new THREE.PointLight(0x00f0ff, 2);
+p1.position.set(10, 10, 10);
+scene.add(p1);
+const p2 = new THREE.PointLight(0xb026ff, 1);
+p2.position.set(-10, -10, -10);
+scene.add(p2);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableZoom = false;
+controls.autoRotate = true;
+
+let mesh, wire;
+
+function rebuildGeometry() {
+  const scale = 1 + (pressure / 100) * 0.5;
+  const verts = new Float32Array([
+    0, scale, 0,
+    scale, 0, scale,
+    scale, 0, -scale,
+    -scale, 0, -scale,
+    -scale, 0, scale,
+    0, -scale, 0
+  ]);
+  const idxs = new Uint16Array([
+    0,1,2, 0,2,3, 0,3,4, 0,4,1,
+    5,2,1, 5,3,2, 5,4,3, 5,1,4
+  ]);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  geo.setIndex(new THREE.BufferAttribute(idxs, 1));
+  geo.computeVertexNormals();
+
+  if (mesh) scene.remove(mesh);
+  if (wire) scene.remove(wire);
+
+  const color = temperature > 70 ? 0xff4444 : 0x00f0ff;
+  mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    color, transparent: true, opacity: 0.8, wireframe: false
+  }));
+  wire = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    color: 0xb026ff, wireframe: true
+  }));
+  scene.add(mesh);
+  scene.add(wire);
+}
+
+rebuildGeometry();
+
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+  const t = clock.elapsedTime;
+  if (mesh && wire) {
+    const warp = Math.sin(t * timeDilation) * (temperature / 100) * 0.2;
+    const s = 1 + warp;
+    mesh.scale.set(s, s, s);
+    wire.scale.set(s, s, s);
+    mesh.rotation.x += delta * timeDilation;
+    mesh.rotation.y += delta * timeDilation * 1.5;
+    wire.rotation.copy(mesh.rotation);
+  }
+  controls.autoRotateSpeed = timeDilation;
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+window.updatePhysics = (temp, press, dil) => {
+  const changed = temp !== temperature || press !== pressure;
+  temperature = temp; pressure = press; timeDilation = dil;
+  if (changed) rebuildGeometry();
+};
+
+if (window.FlutterPhysics) {
+  window.updatePhysics(
+    window.FlutterPhysics.temperature,
+    window.FlutterPhysics.pressure,
+    window.FlutterPhysics.timeDilation
+  );
+}
+</script>
+</body>
+</html>

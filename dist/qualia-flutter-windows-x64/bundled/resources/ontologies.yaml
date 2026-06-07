@@ -1,0 +1,220 @@
+ontologies:
+  - id: "prov-o"
+    name: "PROV-O: The PROV Ontology"
+    acronym: "PROV-O"
+    source: "W3C"
+    format: "ttl"
+    size_estimate_mb: 0.06
+    download:
+      type: "direct"
+      url: "https://www.w3.org/ns/prov-o.ttl"
+    license: "W3C"
+    domain: "provenance"
+    tags: [core, w3c, provenance]
+    last_verified: "2026-06-08"
+    notes: "Core ontology for provenance. Highly recommended for QualiaDB."
+
+  - id: "odrl"
+    name: "ODRL Vocabulary & Expression"
+    acronym: "ODRL"
+    source: "W3C"
+    format: "ttl"
+    size_estimate_mb: 0.15
+    download:
+      type: "direct"
+      url: "https://www.w3.org/ns/odrl/2/ODRL.ttl"
+    license: "W3C"
+    domain: "policy"
+    tags: [core, w3c, consent, policy]
+    last_verified: "2026-06-08"
+
+  - id: "shacl"
+    name: "SHACL"
+    acronym: "SHACL"
+    source: "W3C"
+    format: "ttl"
+    size_estimate_mb: 0.3
+    download:
+      type: "direct"
+      url: "https://www.w3.org/ns/shacl/shacl.ttl"
+    license: "W3C"
+    domain: "validation"
+    tags: [core, w3c, validation]
+    last_verified: "2026-06-08"
+    notes: "Shapes Constraint Language. Essential for data validation in QualiaDB."
+
+  - id: "schemaorg"
+    name: "Schema.org (JSON-LD)"
+    acronym: "schema"
+    source: "schema.org"
+    format: "jsonld"
+    size_estimate_mb: 1.7
+    download:
+      type: "direct"
+      url: "https://schema.org/version/latest/schemaorg-current-https.jsonld"
+    license: "CC-BY-SA"
+    domain: "general"
+    tags: [web, structured-data, core]
+    last_verified: "2026-06-08"
+    notes: "Current Schema.org vocabulary release (JSON-LD)."
+
+  - id: "schema-org"
+    name: "Schema.org (RDF release 27.0)"
+    acronym: "schema"
+    source: "schema.org"
+    format: "rdf"
+    size_estimate_mb: 5
+    download:
+      type: "github"
+      repo: "schemaorg/schemaorg"
+      path: "data/releases/27.0/schemaorg-all-https.rdf"
+    license: "CC-BY-SA"
+    domain: "general"
+    tags: [web, structured-data, benchmark]
+    last_verified: "2026-06-08"
+    notes: "Pinned RDF snapshot used by comparative benchmarks."
+
+  - id: "skos"
+    name: "SKOS Core"
+    acronym: "SKOS"
+    source: "W3C"
+    format: "rdf"
+    size_estimate_mb: 0.08
+    download:
+      type: "direct"
+      url: "https://www.w3.org/2004/02/skos/core.rdf"
+    license: "W3C"
+    domain: "general"
+    tags: [core, w3c, taxonomy]
+    last_verified: "2026-06-08"
+
+  - id: "foaf"
+    name: "Friend of a Friend (FOAF)"
+    acronym: "FOAF"
+    source: "xmlns.com"
+    format: "rdf"
+    size_estimate_mb: 0.06
+    download:
+      type: "direct"
+      url: "http://xmlns.com/foaf/spec/index.rdf"
+    license: "CC-BY"
+    domain: "social"
+    tags: [core, social]
+    last_verified: "2026-06-08"
+
+  - id: "dc-terms"
+    name: "Dublin Core Terms"
+    acronym: "DC"
+    source: "Dublin Core"
+    format: "ttl"
+    size_estimate_mb: 0.04
+    download:
+      type: "direct"
+      url: "https://www.dublincore.org/specifications/dublin-core/dcmi-terms/dublin_core_terms.ttl"
+    license: "CC-BY"
+    domain: "general"
+    tags: [core, metadata]
+    last_verified: "2026-06-08"
+
+  - id: "geonames"
+    name: "GeoNames Ontology"
+    acronym: "GeoNames"
+    source: "GeoNames"
+    format: "rdf"
+    size_estimate_mb: 0.2
+    download:
+      type: "direct"
+      url: "https://www.geonames.org/ontology/ontology_v3.3.rdf"
+    license: "CC-BY"
+    domain: "geography"
+    tags: [geography, places]
+    last_verified: "2026-06-08"
+
+  - id: "dbpedia-ont"
+    name: "DBpedia Ontology"
+    acronym: "DBpedia"
+    source: "DBpedia"
+    format: "nt"
+    size_estimate_mb: 5.4
+    download:
+      type: "direct"
+      url: "https://databus.dbpedia.org/dbpedia/ontology/dbo-snapshots/2023.11.01/ontology--DEV_type=parsed_sorted.nt"
+    license: "CC-BY-SA"
+    domain: "general"
+    tags: [wikipedia, knowledge-graph]
+    last_verified: "2026-06-08"
+
+  - id: "wordnet-rdf"
+    name: "English WordNet 2024"
+    acronym: "WordNet"
+    source: "Global WordNet Association"
+    format: "ttl"
+    size_estimate_mb: 28
+    download:
+      type: "direct"
+      url: "https://github.com/globalwordnet/english-wordnet/releases/download/2024-edition/english-wordnet-2024.ttl.gz"
+    license: "CC-BY"
+    domain: "linguistics"
+    tags: [lexicon, nlp]
+    last_verified: "2026-06-08"
+    notes: "Compressed TTL (.gz). Decompress locally if import fails on your build."
+
+  - id: "chebi"
+    name: "ChEBI Chemical Entities"
+    acronym: "ChEBI"
+    source: "EBI"
+    format: "owl"
+    size_estimate_mb: 36
+    download:
+      type: "direct"
+      url: "https://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi.owl"
+    license: "CC-BY"
+    domain: "science"
+    tags: [chemistry, life-sciences]
+    last_verified: "2026-06-08"
+
+  - id: "open-cyc"
+    name: "OpenCyc 4.0"
+    acronym: "OpenCyc"
+    source: "Cycorp"
+    format: "owl"
+    size_estimate_mb: 128
+    download:
+      type: "direct"
+      url: "https://github.com/asanchez75/opencyc/raw/master/opencyc-latest.owl"
+    license: "OpenCyc"
+    domain: "general"
+    tags: [upper-ontology, commonsense]
+    last_verified: "2026-06-08"
+
+  - id: "wikidata-props"
+    name: "Wikidata Properties Dump"
+    acronym: "Wikidata"
+    source: "Wikimedia"
+    format: "json"
+    size_estimate_mb: 400
+    download:
+      type: "direct"
+      url: "https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz"
+    license: "CC0"
+    domain: "general"
+    tags: [wikidata, large]
+    import_strategy: "modular"
+    last_verified: "2026-06-08"
+    notes: "Very large JSON dump. Prefer subsets for edge deployment."
+
+  - id: "snomedct-us"
+    name: "SNOMED CT US Edition"
+    acronym: "SNOMEDCT"
+    source: "BioPortal"
+    format: "owl"
+    size_estimate_mb: 850
+    download:
+      type: "direct"
+      url: "https://bioontology.org/ontologies/SNOMEDCT/download"
+    license: "UMLS"
+    domain: "health"
+    tags: [medical, clinical, large]
+    import_strategy: "modular"
+    last_verified: "2026-06-08"
+    notes: "Large clinical terminology. Requires UMLS/BioPortal access for some mirrors."

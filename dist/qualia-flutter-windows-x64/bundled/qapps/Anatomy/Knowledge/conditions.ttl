@@ -1,0 +1,273 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+@prefix bio:   <https://qualia.anatomy.example/ontology/bio#> .
+@prefix impact: <https://qualia.anatomy.example/ontology/impact#> .
+@prefix organ: <https://qualia.anatomy.example/ontology/organ#> .
+
+# =============================================
+# BioStatus / Impact Ontology - Conditions
+# Version: 0.1 (starter set for Qualia Anatomy)
+# Purpose: Define common conditions and their primary
+#          impacts on organs and biological systems.
+#          Designed to be extended and used with QualiaDB.
+# =============================================
+
+bio:Condition a owl:Class ;
+    rdfs:label "Health Condition" ;
+    rdfs:comment "A diagnosable health condition that can have systemic and organ-level impacts." .
+
+impact:Impacts a owl:ObjectProperty ;
+    rdfs:label "impacts" ;
+    rdfs:domain bio:Condition ;
+    rdfs:range organ:AnatomicalStructure ;
+    rdfs:comment "Indicates that the condition has a direct or indirect impact on the target anatomical structure or system." .
+
+impact:hasPrimaryImpactSystem a owl:ObjectProperty ;
+    rdfs:label "has primary impact system" ;
+    rdfs:domain bio:Condition ;
+    rdfs:range organ:OrganSystem ;
+    rdfs:comment "The primary organ system most significantly affected by this condition." .
+
+impact:severity a owl:DatatypeProperty ;
+    rdfs:label "severity" ;
+    rdfs:domain impact:Impact ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Qualitative severity level of the impact (Mild, Moderate, Severe, Progressive)." .
+
+# =============================================
+# Organ Systems — aligned with Anatomy UI (17 systems)
+# Legacy IRIs kept via owl:sameAs / rdfs:subClassOf for existing conditions.
+# =============================================
+
+organ:OrganSystem a owl:Class ;
+    rdfs:label "Organ System" .
+
+organ:CirculatorySystem a organ:OrganSystem ;
+    rdfs:label "Circulatory (Cardiovascular) System" ;
+    rdfs:comment "Transports oxygen, nutrients, hormones, and waste throughout the body." .
+
+organ:CardiovascularSystem owl:sameAs organ:CirculatorySystem .
+
+organ:RespiratorySystem a organ:OrganSystem ;
+    rdfs:label "Respiratory System" ;
+    rdfs:comment "Gas exchange between body and environment." .
+
+organ:DigestiveSystem a organ:OrganSystem ;
+    rdfs:label "Digestive System" ;
+    rdfs:comment "Food breakdown, nutrient absorption, and waste elimination." .
+
+organ:HepatobiliarySystem rdfs:subClassOf organ:DigestiveSystem ;
+    rdfs:label "Hepatobiliary System" .
+
+organ:NervousSystem a organ:OrganSystem ;
+    rdfs:label "Nervous System" ;
+    rdfs:comment "Sensory processing, motor control, and coordination." .
+
+organ:MuscularSystem a organ:OrganSystem ;
+    rdfs:label "Muscular System" ;
+    rdfs:comment "Movement, posture, and cardiac/smooth muscle function." .
+
+organ:SkeletalSystem a organ:OrganSystem ;
+    rdfs:label "Skeletal System" ;
+    rdfs:comment "Structural support, protection, hematopoiesis, mineral storage." .
+
+organ:MusculoskeletalSystem a organ:OrganSystem ;
+    rdfs:label "Musculoskeletal System" ;
+    rdfs:comment "Legacy composite; prefer MuscularSystem + SkeletalSystem for new data." .
+
+organ:EndocrineSystem a organ:OrganSystem ;
+    rdfs:label "Endocrine System" ;
+    rdfs:comment "Hormone regulation of growth, metabolism, and mood." .
+
+organ:MetabolicSystem owl:sameAs organ:EndocrineSystem .
+
+organ:ImmuneLymphaticSystem a organ:OrganSystem ;
+    rdfs:label "Immune / Lymphatic System" ;
+    rdfs:comment "Pathogen defense and fluid balance." .
+
+organ:IntegumentarySystem a organ:OrganSystem ;
+    rdfs:label "Integumentary System" ;
+    rdfs:comment "Barrier protection, thermoregulation, and water retention." .
+
+organ:UrinarySystem a organ:OrganSystem ;
+    rdfs:label "Urinary (Excretory) System" ;
+    rdfs:comment "Blood filtration, waste removal, and fluid/electrolyte balance." .
+
+organ:RenalSystem owl:sameAs organ:UrinarySystem .
+
+organ:ReproductiveSystem a organ:OrganSystem ;
+    rdfs:label "Reproductive System" ;
+    rdfs:comment "Gamete production and reproductive hormones." .
+
+organ:SensorySystem a organ:OrganSystem ;
+    rdfs:label "Sensory System" ;
+    rdfs:comment "Vision, hearing, touch, taste, and smell processing." ;
+    rdfs:subClassOf organ:NervousSystem .
+
+organ:VestibularSystem a organ:OrganSystem ;
+    rdfs:label "Vestibular System" ;
+    rdfs:comment "Balance, head position, and spatial orientation." ;
+    rdfs:subClassOf organ:SensorySystem .
+
+organ:ExocrineSystem a organ:OrganSystem ;
+    rdfs:label "Exocrine System" ;
+    rdfs:comment "Duct-mediated secretion onto epithelial surfaces." .
+
+organ:EndocannabinoidSystem a organ:OrganSystem ;
+    rdfs:label "Endocannabinoid System (ECS)" ;
+    rdfs:comment "Homeostatic cell-signaling via endocannabinoids and CB1/CB2 receptors." .
+
+organ:EntericNervousSystem a organ:OrganSystem ;
+    rdfs:label "Enteric Nervous System (ENS)" ;
+    rdfs:comment "Semi-autonomous GI neural network; second brain." ;
+    rdfs:subClassOf organ:NervousSystem .
+
+organ:GlymphaticSystem a organ:OrganSystem ;
+    rdfs:label "Glymphatic System" ;
+    rdfs:comment "CNS waste clearance via astrocytes and CSF during sleep." ;
+    rdfs:subClassOf organ:NervousSystem .
+
+organ:HematologicSystem a organ:OrganSystem ;
+    rdfs:label "Hematologic System" ;
+    rdfs:comment "Blood cell production and oxygen-carrying capacity." .
+
+# =============================================
+# Common Conditions (starting set)
+# Goal: Expand toward 42+ high-impact conditions
+# =============================================
+
+bio:Type2Diabetes a bio:Condition ;
+    rdfs:label "Type 2 Diabetes Mellitus" ;
+    impact:hasPrimaryImpactSystem organ:MetabolicSystem ;
+    impact:Impacts organ:Kidney, organ:Heart, organ:BloodVessels, organ:Retina, organ:PeripheralNerves ;
+    dcterms:description "Chronic metabolic disorder characterized by insulin resistance and relative insulin deficiency. Major driver of microvascular and macrovascular complications." .
+
+bio:Type1Diabetes a bio:Condition ;
+    rdfs:label "Type 1 Diabetes Mellitus" ;
+    impact:hasPrimaryImpactSystem organ:MetabolicSystem ;
+    impact:Impacts organ:Kidney, organ:Heart, organ:BloodVessels, organ:Retina, organ:PeripheralNerves ;
+    dcterms:description "Autoimmune destruction of pancreatic beta cells leading to absolute insulin deficiency." .
+
+bio:Hypertension a bio:Condition ;
+    rdfs:label "Hypertension" ;
+    impact:hasPrimaryImpactSystem organ:CardiovascularSystem ;
+    impact:Impacts organ:Heart, organ:Kidney, organ:BloodVessels, organ:Brain ;
+    dcterms:description "Persistently elevated blood pressure. Major risk factor for cardiovascular disease, stroke, and chronic kidney disease." .
+
+bio:ChronicKidneyDisease a bio:Condition ;
+    rdfs:label "Chronic Kidney Disease (CKD)" ;
+    impact:hasPrimaryImpactSystem organ:RenalSystem ;
+    impact:Impacts organ:Heart, organ:BloodVessels, organ:Bone ;
+    dcterms:description "Progressive loss of kidney function over months or years. Strongly linked to cardiovascular disease." .
+
+bio:HeartFailure a bio:Condition ;
+    rdfs:label "Heart Failure" ;
+    impact:hasPrimaryImpactSystem organ:CardiovascularSystem ;
+    impact:Impacts organ:Kidney, organ:Lung, organ:Liver ;
+    dcterms:description "Clinical syndrome resulting from structural or functional cardiac impairment." .
+
+bio:CoronaryArteryDisease a bio:Condition ;
+    rdfs:label "Coronary Artery Disease" ;
+    impact:hasPrimaryImpactSystem organ:CardiovascularSystem ;
+    impact:Impacts organ:Heart, organ:BloodVessels ;
+    dcterms:description "Atherosclerotic narrowing of the coronary arteries." .
+
+bio:COPD a bio:Condition ;
+    rdfs:label "Chronic Obstructive Pulmonary Disease (COPD)" ;
+    impact:hasPrimaryImpactSystem organ:RespiratorySystem ;
+    impact:Impacts organ:Heart, organ:BloodVessels ;
+    dcterms:description "Progressive lung disease characterized by airflow limitation. Often coexists with cardiovascular disease." .
+
+bio:NAFLD a bio:Condition ;
+    rdfs:label "Non-Alcoholic Fatty Liver Disease (NAFLD)" ;
+    impact:hasPrimaryImpactSystem organ:HepatobiliarySystem ;
+    impact:Impacts organ:Liver, organ:MetabolicSystem, organ:CardiovascularSystem ;
+    dcterms:description "Accumulation of fat in the liver not caused by alcohol. Strongly associated with metabolic syndrome." .
+
+bio:Obesity a bio:Condition ;
+    rdfs:label "Obesity" ;
+    impact:hasPrimaryImpactSystem organ:MetabolicSystem ;
+    impact:Impacts organ:Heart, organ:Kidney, organ:Liver, organ:Joints, organ:RespiratorySystem ;
+    dcterms:description "Excess body fat that increases risk of many chronic diseases." .
+
+bio:Dyslipidemia a bio:Condition ;
+    rdfs:label "Dyslipidemia" ;
+    impact:hasPrimaryImpactSystem organ:MetabolicSystem ;
+    impact:Impacts organ:BloodVessels, organ:Heart ;
+    dcterms:description "Abnormal levels of lipids in the blood (high LDL, low HDL, high triglycerides)." .
+
+bio:Hypothyroidism a bio:Condition ;
+    rdfs:label "Hypothyroidism" ;
+    impact:hasPrimaryImpactSystem organ:MetabolicSystem ;
+    impact:Impacts organ:Heart, organ:MetabolicSystem, organ:NervousSystem ;
+    dcterms:description "Underactive thyroid gland leading to slowed metabolism." .
+
+bio:RheumatoidArthritis a bio:Condition ;
+    rdfs:label "Rheumatoid Arthritis" ;
+    impact:hasPrimaryImpactSystem organ:MusculoskeletalSystem ;
+    impact:Impacts organ:Joints, organ:Heart, organ:Lung, organ:BloodVessels ;
+    dcterms:description "Chronic autoimmune inflammatory disease primarily affecting joints. Has significant extra-articular manifestations." .
+
+bio:ObstructiveSleepApnea a bio:Condition ;
+    rdfs:label "Obstructive Sleep Apnea" ;
+    impact:hasPrimaryImpactSystem organ:RespiratorySystem ;
+    impact:Impacts organ:Heart, organ:BloodVessels, organ:Brain ;
+    dcterms:description "Repeated collapse of the upper airway during sleep leading to intermittent hypoxia." .
+
+bio:AtrialFibrillation a bio:Condition ;
+    rdfs:label "Atrial Fibrillation" ;
+    impact:hasPrimaryImpactSystem organ:CardiovascularSystem ;
+    impact:Impacts organ:Heart, organ:Brain, organ:BloodVessels ;
+    dcterms:description "Common cardiac arrhythmia associated with increased risk of stroke and heart failure." .
+
+bio:PeripheralArteryDisease a bio:Condition ;
+    rdfs:label "Peripheral Artery Disease" ;
+    impact:hasPrimaryImpactSystem organ:CardiovascularSystem ;
+    impact:Impacts organ:BloodVessels, organ:Legs, organ:Heart ;
+    dcterms:description "Atherosclerotic disease affecting arteries outside the heart and brain." .
+
+bio:Depression a bio:Condition ;
+    rdfs:label "Major Depressive Disorder" ;
+    impact:hasPrimaryImpactSystem organ:NervousSystem ;
+    impact:Impacts organ:Brain, organ:CardiovascularSystem, organ:MetabolicSystem ;
+    dcterms:description "Mood disorder with significant physical health comorbidities and increased cardiovascular risk." .
+
+bio:ChronicPain a bio:Condition ;
+    rdfs:label "Chronic Pain Syndrome" ;
+    impact:hasPrimaryImpactSystem organ:NervousSystem ;
+    impact:Impacts organ:Brain, organ:MusculoskeletalSystem, organ:MetabolicSystem ;
+    dcterms:description "Persistent pain lasting more than 3 months, often with central sensitization." .
+
+bio:Osteoporosis a bio:Condition ;
+    rdfs:label "Osteoporosis" ;
+    impact:hasPrimaryImpactSystem organ:MusculoskeletalSystem ;
+    impact:Impacts organ:Bone ;
+    dcterms:description "Systemic skeletal disease characterized by low bone mass and microarchitectural deterioration." .
+
+bio:Anemia a bio:Condition ;
+    rdfs:label "Anemia" ;
+    impact:hasPrimaryImpactSystem organ:HematologicSystem ;
+    impact:Impacts organ:Heart, organ:Brain, organ:Kidney ;
+    dcterms:description "Reduced oxygen-carrying capacity of the blood. Multiple underlying causes." .
+
+bio:Hyperlipidemia a bio:Condition ;
+    rdfs:label "Hyperlipidemia" ;
+    impact:hasPrimaryImpactSystem organ:MetabolicSystem ;
+    impact:Impacts organ:BloodVessels, organ:Heart ;
+    dcterms:description "Elevated levels of lipids in the blood. Major contributor to atherosclerosis." .
+
+# Note: This is an initial set. The goal is to expand to 42+ well-modeled conditions
+# with richer interaction data (diet, pharmacology) over time.
+
+# =============================================
+# Future Extensions (planned)
+# =============================================
+# - Add diet interaction properties (e.g. high_glycemic_load_worsens)
+# - Add medication interaction classes
+# - Link to UBERON anatomy ontology for precise anatomical structures
+# - Add SHACL shapes for validation
+# - Integrate with QualiaDB Quin model for reasoning

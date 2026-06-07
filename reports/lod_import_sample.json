@@ -1,0 +1,239 @@
+{
+  "generated": "2026-06-08",
+  "total": 10,
+  "reachable": 3,
+  "added_to_proposed": 3,
+  "skipped_reasons": {
+    "no URLs": 2,
+    "no reachable URLs": 4,
+    "sparql-only (no dump)": 1
+  },
+  "datasets": [
+    {
+      "id": "bioportal-imr",
+      "title": "Molecule role (INOH Protein name/family name ontology)",
+      "reachable": true,
+      "skipped_reason": null,
+      "probes": [
+        {
+          "url": "http://www.bioontology.org/wiki/index.php/BioPortal_REST_services",
+          "ok": false,
+          "status": "HTTP 404",
+          "kind": "download"
+        },
+        {
+          "url": "http://sparql.bioontology.org/",
+          "ok": true,
+          "status": "200",
+          "kind": "download"
+        },
+        {
+          "url": "http://rest.bioontology.org/bioportal/ontologies/download/45784?apikey=BP_API_KEY",
+          "ok": true,
+          "status": "200",
+          "kind": "download"
+        },
+        {
+          "url": "http://bioportal.bioontology.org/ontologies/1029",
+          "ok": false,
+          "status": "HTTP 404",
+          "kind": "website"
+        }
+      ],
+      "catalog_id": "bioportal-imr"
+    },
+    {
+      "id": "caligraph",
+      "title": "CaLiGraph",
+      "reachable": true,
+      "skipped_reason": null,
+      "probes": [
+        {
+          "url": "http://caligraph.org/sparql",
+          "ok": true,
+          "status": "200",
+          "kind": "sparql"
+        },
+        {
+          "url": "http://caligraph.org",
+          "ok": true,
+          "status": "200",
+          "kind": "website"
+        }
+      ],
+      "catalog_id": "caligraph"
+    },
+    {
+      "id": "ispra-lod-place",
+      "title": "ISPRA - The administrative divisions of Italy (regions/provinces/municipalities)",
+      "reachable": false,
+      "skipped_reason": "sparql-only (no dump)",
+      "probes": [
+        {
+          "url": "http://dati.isprambiente.it/downloads/luoghi.nt.gz",
+          "ok": false,
+          "status": "HTTP 404",
+          "kind": "download"
+        },
+        {
+          "url": "http://dati.isprambiente.it/sparql",
+          "ok": true,
+          "status": "200",
+          "kind": "sparql"
+        }
+      ],
+      "catalog_id": null
+    },
+    {
+      "id": "knoesis-linked-sensor-data",
+      "title": "Linked Sensor Data (Kno.e.sis)",
+      "reachable": false,
+      "skipped_reason": "no reachable URLs",
+      "probes": [
+        {
+          "url": "http://sonicbanana.cs.wright.edu/knoesis_linkedsensordata.tar.gz",
+          "ok": false,
+          "status": "URLError",
+          "kind": "download"
+        },
+        {
+          "url": "http://sonicbanana.cs.wright.edu/knoesis_linkedobservationdata_charley.tar.gz",
+          "ok": false,
+          "status": "URLError",
+          "kind": "download"
+        },
+        {
+          "url": "http://sonicbanana.cs.wright.edu:8890/sparql",
+          "ok": false,
+          "status": "URLError",
+          "kind": "sparql"
+        },
+        {
+          "url": "http://wiki.knoesis.org/index.php/SSW_Datasets",
+          "ok": false,
+          "status": "URLError",
+          "kind": "website"
+        }
+      ],
+      "catalog_id": null
+    },
+    {
+      "id": "linked-hypernyms",
+      "title": "linked hypernyms",
+      "reachable": true,
+      "skipped_reason": null,
+      "probes": [
+        {
+          "url": "http://ner.vse.cz/datasets/linkedhypernyms/nl.instances.all.nt.gz",
+          "ok": true,
+          "status": "200",
+          "kind": "download"
+        },
+        {
+          "url": "http://ner.vse.cz/datasets/linkedhypernyms/en.instances.all.nt.gz",
+          "ok": true,
+          "status": "200",
+          "kind": "download"
+        },
+        {
+          "url": "http://ner.vse.cz/datasets/linkedhypernyms/de.instances.all.nt.gz",
+          "ok": true,
+          "status": "200",
+          "kind": "download"
+        },
+        {
+          "url": "http://ner.vse.cz/datasets/linkedhypernyms/",
+          "ok": true,
+          "status": "200",
+          "kind": "download"
+        }
+      ],
+      "catalog_id": "linked-hypernyms"
+    },
+    {
+      "id": "sears",
+      "title": "sears.com",
+      "reachable": false,
+      "skipped_reason": "no reachable URLs",
+      "probes": [
+        {
+          "url": "http://www.sears.com/Sitemap_Index.xml",
+          "ok": false,
+          "status": "HTTP Error 403: Forbidden",
+          "kind": "download"
+        },
+        {
+          "url": "http://www.sears.com/",
+          "ok": false,
+          "status": "HTTP 429",
+          "kind": "website"
+        }
+      ],
+      "catalog_id": null
+    },
+    {
+      "id": "semantic-web-grundlagen",
+      "title": "semantic-web-grundlagen",
+      "reachable": false,
+      "skipped_reason": "no URLs",
+      "probes": [],
+      "catalog_id": null
+    },
+    {
+      "id": "soil-maps",
+      "title": "Erosion-endangered soil zones dataset from Czech Republic @PSNC",
+      "reachable": false,
+      "skipped_reason": "no reachable URLs",
+      "probes": [
+        {
+          "url": "https://www.foodie-cloud.org/sparql",
+          "ok": false,
+          "status": "URLError",
+          "kind": "sparql"
+        },
+        {
+          "url": "https://www.foodie-cloud.org/fct/",
+          "ok": false,
+          "status": "URLError",
+          "kind": "website"
+        }
+      ],
+      "catalog_id": null
+    },
+    {
+      "id": "statusnet-bonifaz-ec",
+      "title": "statusnet-bonifaz-ec",
+      "reachable": false,
+      "skipped_reason": "no URLs",
+      "probes": [],
+      "catalog_id": null
+    },
+    {
+      "id": "wiktionary-dbpedia-org",
+      "title": "wiktionary.dbpedia.org",
+      "reachable": false,
+      "skipped_reason": "no reachable URLs",
+      "probes": [
+        {
+          "url": "http://downloads.dbpedia.org/wiktionary/",
+          "ok": false,
+          "status": "HTTP 404",
+          "kind": "download"
+        },
+        {
+          "url": "http://wiktionary.dbpedia.org/sparql",
+          "ok": false,
+          "status": "URLError",
+          "kind": "sparql"
+        },
+        {
+          "url": "http://wiktionary.dbpedia.org",
+          "ok": false,
+          "status": "URLError",
+          "kind": "website"
+        }
+      ],
+      "catalog_id": null
+    }
+  ]
+}

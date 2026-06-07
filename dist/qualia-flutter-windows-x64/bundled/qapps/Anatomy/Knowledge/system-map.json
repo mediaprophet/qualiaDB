@@ -1,0 +1,115 @@
+{
+  "version": "1.0.0",
+  "description": "Canonical map between Anatomy UI system labels, ontology IRIs, and bundled HRA organ models.",
+  "systems": [
+    {
+      "id": "circulatory",
+      "label": "Circulatory (Cardiovascular) System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#CirculatorySystem",
+      "legacyIris": ["https://qualia.anatomy.example/ontology/organ#CardiovascularSystem"],
+      "organs": { "common": ["Heart"] }
+    },
+    {
+      "id": "respiratory",
+      "label": "Respiratory System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#RespiratorySystem",
+      "organs": { "common": ["Lung"] }
+    },
+    {
+      "id": "digestive",
+      "label": "Digestive System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#DigestiveSystem",
+      "legacyIris": ["https://qualia.anatomy.example/ontology/organ#HepatobiliarySystem"],
+      "organs": { "common": ["Liver", "Pancreas", "Small Intestine"] }
+    },
+    {
+      "id": "nervous",
+      "label": "Nervous System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#NervousSystem",
+      "organs": { "common": ["Brain (Allen)"] }
+    },
+    {
+      "id": "muscular",
+      "label": "Muscular System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#MuscularSystem",
+      "organs": { "common": ["Heart"] }
+    },
+    {
+      "id": "skeletal",
+      "label": "Skeletal System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#SkeletalSystem",
+      "organs": { "common": [] }
+    },
+    {
+      "id": "endocrine",
+      "label": "Endocrine System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#EndocrineSystem",
+      "legacyIris": ["https://qualia.anatomy.example/ontology/organ#MetabolicSystem"],
+      "organs": { "common": ["Pancreas"] }
+    },
+    {
+      "id": "immune_lymphatic",
+      "label": "Immune / Lymphatic System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#ImmuneLymphaticSystem",
+      "organs": { "common": ["Spleen"] }
+    },
+    {
+      "id": "integumentary",
+      "label": "Integumentary System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#IntegumentarySystem",
+      "organs": { "common": [] }
+    },
+    {
+      "id": "urinary",
+      "label": "Urinary (Excretory) System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#UrinarySystem",
+      "legacyIris": ["https://qualia.anatomy.example/ontology/organ#RenalSystem"],
+      "organs": { "common": ["Kidney (Left)", "Kidney (Right)"] }
+    },
+    {
+      "id": "reproductive",
+      "label": "Reproductive System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#ReproductiveSystem",
+      "organs": {
+        "male": ["Prostate"],
+        "female": ["Uterus", "Ovary (Left)", "Ovary (Right)"]
+      }
+    },
+    {
+      "id": "sensory",
+      "label": "Sensory System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#SensorySystem",
+      "organs": { "common": ["Brain (Allen)"] }
+    },
+    {
+      "id": "vestibular",
+      "label": "Vestibular System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#VestibularSystem",
+      "organs": { "common": [] }
+    },
+    {
+      "id": "exocrine",
+      "label": "Exocrine System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#ExocrineSystem",
+      "organs": { "common": ["Liver", "Pancreas"] }
+    },
+    {
+      "id": "ecs",
+      "label": "Endocannabinoid System (ECS)",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#EndocannabinoidSystem",
+      "organs": { "common": ["Brain (Allen)", "Spleen"] }
+    },
+    {
+      "id": "ens",
+      "label": "Enteric Nervous System (ENS)",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#EntericNervousSystem",
+      "organs": { "common": ["Small Intestine"] }
+    },
+    {
+      "id": "glymphatic",
+      "label": "Glymphatic System",
+      "ontologyIri": "https://qualia.anatomy.example/ontology/organ#GlymphaticSystem",
+      "organs": { "common": ["Brain (Allen)"] }
+    }
+  ]
+}
