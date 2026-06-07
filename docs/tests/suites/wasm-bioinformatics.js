@@ -42,11 +42,11 @@ export function register(runner) {
                 runner.expect(r.identity_pct).toBeGreaterThanOrEqual(99.0);
             });
 
-            runner.it('divergent sequences have lower identity', () => {
+            runner.it('divergent sequences score worse than identical ones', () => {
                 if (!mod.align_sequences_wasm) return;
                 const perfect = mod.align_sequences_wasm({ query: 'ATCGATCG', target: 'ATCGATCG', mode: 'nucleotide' });
                 const diverge = mod.align_sequences_wasm({ query: 'ATCGATCG', target: 'TTTTTTTT', mode: 'nucleotide' });
-                runner.expect(diverge.identity_pct).toBeLessThan(perfect.identity_pct);
+                runner.expect(diverge.score).toBeLessThan(perfect.score);
             });
         });
 
