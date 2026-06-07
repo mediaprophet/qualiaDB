@@ -6,9 +6,16 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/chat_agents.dart';
+import 'api/chat_files.dart';
+import 'api/chat_graph.dart';
+import 'api/chat_session.dart';
+import 'api/ontology_workbench.dart';
+import 'api/qapp_api.dart';
 import 'api/qualia_api.dart';
 import 'api/resource_catalog.dart';
 import 'api/simple.dart';
+import 'api/social_api.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -22,41 +29,200 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
     required super.portManager,
   });
 
+  CrossPlatformFinalizerArg
+      get rust_arc_decrement_strong_count_QappManifestPtr => wire
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest;
+
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  QappManifest
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          dynamic raw);
+
+  @protected
+  QappManifest
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          dynamic raw);
+
+  @protected
+  RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw);
+
   @protected
   String dco_decode_String(dynamic raw);
+
+  @protected
+  ActorBridge dco_decode_actor_bridge(dynamic raw);
 
   @protected
   AgentConfig dco_decode_agent_config(dynamic raw);
 
   @protected
+  AttachChatFileResult dco_decode_attach_chat_file_result(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  ActorBridge dco_decode_box_autoadd_actor_bridge(dynamic raw);
 
   @protected
   AgentConfig dco_decode_box_autoadd_agent_config(dynamic raw);
 
   @protected
+  ChatFileSharing dco_decode_box_autoadd_chat_file_sharing(dynamic raw);
+
+  @protected
+  DelegationRuleBridge dco_decode_box_autoadd_delegation_rule_bridge(
+      dynamic raw);
+
+  @protected
+  OntologyTorrentPolicy dco_decode_box_autoadd_ontology_torrent_policy(
+      dynamic raw);
+
+  @protected
+  OutcomeSharingPolicy dco_decode_box_autoadd_outcome_sharing_policy(
+      dynamic raw);
+
+  @protected
+  QpuOracleSettingsInput dco_decode_box_autoadd_qpu_oracle_settings_input(
+      dynamic raw);
+
+  @protected
+  TaxRecipientSuite dco_decode_box_autoadd_tax_recipient_suite(dynamic raw);
+
+  @protected
+  TorrentBandwidthPolicy dco_decode_box_autoadd_torrent_bandwidth_policy(
+      dynamic raw);
+
+  @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  UserProfile dco_decode_box_autoadd_user_profile(dynamic raw);
 
   @protected
   CatalogItem dco_decode_catalog_item(dynamic raw);
 
   @protected
+  ChatBranchType dco_decode_chat_branch_type(dynamic raw);
+
+  @protected
+  ChatContact dco_decode_chat_contact(dynamic raw);
+
+  @protected
+  ChatFilePreview dco_decode_chat_file_preview(dynamic raw);
+
+  @protected
+  ChatFileRecord dco_decode_chat_file_record(dynamic raw);
+
+  @protected
+  ChatFileSharing dco_decode_chat_file_sharing(dynamic raw);
+
+  @protected
+  ChatFragment dco_decode_chat_fragment(dynamic raw);
+
+  @protected
+  ChatGraphEdge dco_decode_chat_graph_edge(dynamic raw);
+
+  @protected
+  ChatGraphView dco_decode_chat_graph_view(dynamic raw);
+
+  @protected
+  ChatMessage dco_decode_chat_message(dynamic raw);
+
+  @protected
+  ChatParticipant dco_decode_chat_participant(dynamic raw);
+
+  @protected
+  ChatReaction dco_decode_chat_reaction(dynamic raw);
+
+  @protected
+  ChatSessionShareTarget dco_decode_chat_session_share_target(dynamic raw);
+
+  @protected
+  ChatSessionSummary dco_decode_chat_session_summary(dynamic raw);
+
+  @protected
   CoinBalance dco_decode_coin_balance(dynamic raw);
+
+  @protected
+  ConnectInviteSummary dco_decode_connect_invite_summary(dynamic raw);
+
+  @protected
+  DelegationRuleBridge dco_decode_delegation_rule_bridge(dynamic raw);
+
+  @protected
+  DispatchResult dco_decode_dispatch_result(dynamic raw);
+
+  @protected
+  double dco_decode_f_32(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
 
   @protected
+  FrontDoorBridge dco_decode_front_door_bridge(dynamic raw);
+
+  @protected
   HardwareStatus dco_decode_hardware_status(dynamic raw);
+
+  @protected
+  HardwareTelemetry dco_decode_hardware_telemetry(dynamic raw);
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<ActorBridge> dco_decode_list_actor_bridge(dynamic raw);
+
+  @protected
   List<CatalogItem> dco_decode_list_catalog_item(dynamic raw);
 
   @protected
+  List<ChatBranchType> dco_decode_list_chat_branch_type(dynamic raw);
+
+  @protected
+  List<ChatContact> dco_decode_list_chat_contact(dynamic raw);
+
+  @protected
+  List<ChatFileRecord> dco_decode_list_chat_file_record(dynamic raw);
+
+  @protected
+  List<ChatFragment> dco_decode_list_chat_fragment(dynamic raw);
+
+  @protected
+  List<ChatGraphEdge> dco_decode_list_chat_graph_edge(dynamic raw);
+
+  @protected
+  List<ChatMessage> dco_decode_list_chat_message(dynamic raw);
+
+  @protected
+  List<ChatParticipant> dco_decode_list_chat_participant(dynamic raw);
+
+  @protected
+  List<ChatReaction> dco_decode_list_chat_reaction(dynamic raw);
+
+  @protected
+  List<ChatSessionShareTarget> dco_decode_list_chat_session_share_target(
+      dynamic raw);
+
+  @protected
+  List<ChatSessionSummary> dco_decode_list_chat_session_summary(dynamic raw);
+
+  @protected
   List<CoinBalance> dco_decode_list_coin_balance(dynamic raw);
+
+  @protected
+  List<DelegationRuleBridge> dco_decode_list_delegation_rule_bridge(
+      dynamic raw);
+
+  @protected
+  List<FrontDoorBridge> dco_decode_list_front_door_bridge(dynamic raw);
 
   @protected
   List<LLMResource> dco_decode_list_llm_resource(dynamic raw);
@@ -68,6 +234,15 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   List<OntologyResource> dco_decode_list_ontology_resource(dynamic raw);
 
   @protected
+  List<OntologyShareCard> dco_decode_list_ontology_share_card(dynamic raw);
+
+  @protected
+  Float32List dco_decode_list_prim_f_32_strict(dynamic raw);
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -75,6 +250,15 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   List<TaxRecipient> dco_decode_list_tax_recipient(dynamic raw);
+
+  @protected
+  List<TokenEntry> dco_decode_list_token_entry(dynamic raw);
+
+  @protected
+  List<TxRecord> dco_decode_list_tx_record(dynamic raw);
+
+  @protected
+  List<WorkbenchEntry> dco_decode_list_workbench_entry(dynamic raw);
 
   @protected
   LLMResource dco_decode_llm_resource(dynamic raw);
@@ -86,16 +270,46 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   OntologyResource dco_decode_ontology_resource(dynamic raw);
 
   @protected
+  OntologyShareCard dco_decode_ontology_share_card(dynamic raw);
+
+  @protected
+  OntologyTorrentPolicy dco_decode_ontology_torrent_policy(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
 
   @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
+
+  @protected
   List<String>? dco_decode_opt_list_String(dynamic raw);
 
   @protected
+  OutcomeSharingPolicy dco_decode_outcome_sharing_policy(dynamic raw);
+
+  @protected
+  ParticipantAgentConfig dco_decode_participant_agent_config(dynamic raw);
+
+  @protected
+  PrerequisiteStatus dco_decode_prerequisite_status(dynamic raw);
+
+  @protected
   ProgressPayload dco_decode_progress_payload(dynamic raw);
+
+  @protected
+  QpuChatCommandResult dco_decode_qpu_chat_command_result(dynamic raw);
+
+  @protected
+  QpuOracleSettings dco_decode_qpu_oracle_settings(dynamic raw);
+
+  @protected
+  QpuOracleSettingsInput dco_decode_qpu_oracle_settings_input(dynamic raw);
+
+  @protected
+  SharingPolicy dco_decode_sharing_policy(dynamic raw);
 
   @protected
   SpatialPhysicsState dco_decode_spatial_physics_state(dynamic raw);
@@ -105,6 +319,18 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   TaxRecipientSuite dco_decode_tax_recipient_suite(dynamic raw);
+
+  @protected
+  TokenEntry dco_decode_token_entry(dynamic raw);
+
+  @protected
+  TorrentBandwidthPolicy dco_decode_torrent_bandwidth_policy(dynamic raw);
+
+  @protected
+  TxRecord dco_decode_tx_record(dynamic raw);
+
+  @protected
+  int dco_decode_u_16(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -119,40 +345,226 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
+  UserProfile dco_decode_user_profile(dynamic raw);
+
+  @protected
+  BigInt dco_decode_usize(dynamic raw);
+
+  @protected
+  WalletStatus dco_decode_wallet_status(dynamic raw);
+
+  @protected
+  WorkbenchEntry dco_decode_workbench_entry(dynamic raw);
+
+  @protected
+  WorkbenchImportResult dco_decode_workbench_import_result(dynamic raw);
+
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+
+  @protected
+  QappManifest
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          SseDeserializer deserializer);
+
+  @protected
+  QappManifest
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<String> sse_decode_StreamSink_String_Sse(
+      SseDeserializer deserializer);
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  ActorBridge sse_decode_actor_bridge(SseDeserializer deserializer);
 
   @protected
   AgentConfig sse_decode_agent_config(SseDeserializer deserializer);
 
   @protected
+  AttachChatFileResult sse_decode_attach_chat_file_result(
+      SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  ActorBridge sse_decode_box_autoadd_actor_bridge(SseDeserializer deserializer);
 
   @protected
   AgentConfig sse_decode_box_autoadd_agent_config(SseDeserializer deserializer);
 
   @protected
+  ChatFileSharing sse_decode_box_autoadd_chat_file_sharing(
+      SseDeserializer deserializer);
+
+  @protected
+  DelegationRuleBridge sse_decode_box_autoadd_delegation_rule_bridge(
+      SseDeserializer deserializer);
+
+  @protected
+  OntologyTorrentPolicy sse_decode_box_autoadd_ontology_torrent_policy(
+      SseDeserializer deserializer);
+
+  @protected
+  OutcomeSharingPolicy sse_decode_box_autoadd_outcome_sharing_policy(
+      SseDeserializer deserializer);
+
+  @protected
+  QpuOracleSettingsInput sse_decode_box_autoadd_qpu_oracle_settings_input(
+      SseDeserializer deserializer);
+
+  @protected
+  TaxRecipientSuite sse_decode_box_autoadd_tax_recipient_suite(
+      SseDeserializer deserializer);
+
+  @protected
+  TorrentBandwidthPolicy sse_decode_box_autoadd_torrent_bandwidth_policy(
+      SseDeserializer deserializer);
+
+  @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  UserProfile sse_decode_box_autoadd_user_profile(SseDeserializer deserializer);
 
   @protected
   CatalogItem sse_decode_catalog_item(SseDeserializer deserializer);
 
   @protected
+  ChatBranchType sse_decode_chat_branch_type(SseDeserializer deserializer);
+
+  @protected
+  ChatContact sse_decode_chat_contact(SseDeserializer deserializer);
+
+  @protected
+  ChatFilePreview sse_decode_chat_file_preview(SseDeserializer deserializer);
+
+  @protected
+  ChatFileRecord sse_decode_chat_file_record(SseDeserializer deserializer);
+
+  @protected
+  ChatFileSharing sse_decode_chat_file_sharing(SseDeserializer deserializer);
+
+  @protected
+  ChatFragment sse_decode_chat_fragment(SseDeserializer deserializer);
+
+  @protected
+  ChatGraphEdge sse_decode_chat_graph_edge(SseDeserializer deserializer);
+
+  @protected
+  ChatGraphView sse_decode_chat_graph_view(SseDeserializer deserializer);
+
+  @protected
+  ChatMessage sse_decode_chat_message(SseDeserializer deserializer);
+
+  @protected
+  ChatParticipant sse_decode_chat_participant(SseDeserializer deserializer);
+
+  @protected
+  ChatReaction sse_decode_chat_reaction(SseDeserializer deserializer);
+
+  @protected
+  ChatSessionShareTarget sse_decode_chat_session_share_target(
+      SseDeserializer deserializer);
+
+  @protected
+  ChatSessionSummary sse_decode_chat_session_summary(
+      SseDeserializer deserializer);
+
+  @protected
   CoinBalance sse_decode_coin_balance(SseDeserializer deserializer);
+
+  @protected
+  ConnectInviteSummary sse_decode_connect_invite_summary(
+      SseDeserializer deserializer);
+
+  @protected
+  DelegationRuleBridge sse_decode_delegation_rule_bridge(
+      SseDeserializer deserializer);
+
+  @protected
+  DispatchResult sse_decode_dispatch_result(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
+  FrontDoorBridge sse_decode_front_door_bridge(SseDeserializer deserializer);
+
+  @protected
   HardwareStatus sse_decode_hardware_status(SseDeserializer deserializer);
+
+  @protected
+  HardwareTelemetry sse_decode_hardware_telemetry(SseDeserializer deserializer);
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
+  List<ActorBridge> sse_decode_list_actor_bridge(SseDeserializer deserializer);
+
+  @protected
   List<CatalogItem> sse_decode_list_catalog_item(SseDeserializer deserializer);
 
   @protected
+  List<ChatBranchType> sse_decode_list_chat_branch_type(
+      SseDeserializer deserializer);
+
+  @protected
+  List<ChatContact> sse_decode_list_chat_contact(SseDeserializer deserializer);
+
+  @protected
+  List<ChatFileRecord> sse_decode_list_chat_file_record(
+      SseDeserializer deserializer);
+
+  @protected
+  List<ChatFragment> sse_decode_list_chat_fragment(
+      SseDeserializer deserializer);
+
+  @protected
+  List<ChatGraphEdge> sse_decode_list_chat_graph_edge(
+      SseDeserializer deserializer);
+
+  @protected
+  List<ChatMessage> sse_decode_list_chat_message(SseDeserializer deserializer);
+
+  @protected
+  List<ChatParticipant> sse_decode_list_chat_participant(
+      SseDeserializer deserializer);
+
+  @protected
+  List<ChatReaction> sse_decode_list_chat_reaction(
+      SseDeserializer deserializer);
+
+  @protected
+  List<ChatSessionShareTarget> sse_decode_list_chat_session_share_target(
+      SseDeserializer deserializer);
+
+  @protected
+  List<ChatSessionSummary> sse_decode_list_chat_session_summary(
+      SseDeserializer deserializer);
+
+  @protected
   List<CoinBalance> sse_decode_list_coin_balance(SseDeserializer deserializer);
+
+  @protected
+  List<DelegationRuleBridge> sse_decode_list_delegation_rule_bridge(
+      SseDeserializer deserializer);
+
+  @protected
+  List<FrontDoorBridge> sse_decode_list_front_door_bridge(
+      SseDeserializer deserializer);
 
   @protected
   List<LLMResource> sse_decode_list_llm_resource(SseDeserializer deserializer);
@@ -163,6 +575,16 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   List<OntologyResource> sse_decode_list_ontology_resource(
       SseDeserializer deserializer);
+
+  @protected
+  List<OntologyShareCard> sse_decode_list_ontology_share_card(
+      SseDeserializer deserializer);
+
+  @protected
+  Float32List sse_decode_list_prim_f_32_strict(SseDeserializer deserializer);
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -176,6 +598,16 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<TokenEntry> sse_decode_list_token_entry(SseDeserializer deserializer);
+
+  @protected
+  List<TxRecord> sse_decode_list_tx_record(SseDeserializer deserializer);
+
+  @protected
+  List<WorkbenchEntry> sse_decode_list_workbench_entry(
+      SseDeserializer deserializer);
+
+  @protected
   LLMResource sse_decode_llm_resource(SseDeserializer deserializer);
 
   @protected
@@ -185,16 +617,54 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   OntologyResource sse_decode_ontology_resource(SseDeserializer deserializer);
 
   @protected
+  OntologyShareCard sse_decode_ontology_share_card(
+      SseDeserializer deserializer);
+
+  @protected
+  OntologyTorrentPolicy sse_decode_ontology_torrent_policy(
+      SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
   int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
   List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
 
   @protected
+  OutcomeSharingPolicy sse_decode_outcome_sharing_policy(
+      SseDeserializer deserializer);
+
+  @protected
+  ParticipantAgentConfig sse_decode_participant_agent_config(
+      SseDeserializer deserializer);
+
+  @protected
+  PrerequisiteStatus sse_decode_prerequisite_status(
+      SseDeserializer deserializer);
+
+  @protected
   ProgressPayload sse_decode_progress_payload(SseDeserializer deserializer);
+
+  @protected
+  QpuChatCommandResult sse_decode_qpu_chat_command_result(
+      SseDeserializer deserializer);
+
+  @protected
+  QpuOracleSettings sse_decode_qpu_oracle_settings(
+      SseDeserializer deserializer);
+
+  @protected
+  QpuOracleSettingsInput sse_decode_qpu_oracle_settings_input(
+      SseDeserializer deserializer);
+
+  @protected
+  SharingPolicy sse_decode_sharing_policy(SseDeserializer deserializer);
 
   @protected
   SpatialPhysicsState sse_decode_spatial_physics_state(
@@ -206,6 +676,19 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   TaxRecipientSuite sse_decode_tax_recipient_suite(
       SseDeserializer deserializer);
+
+  @protected
+  TokenEntry sse_decode_token_entry(SseDeserializer deserializer);
+
+  @protected
+  TorrentBandwidthPolicy sse_decode_torrent_bandwidth_policy(
+      SseDeserializer deserializer);
+
+  @protected
+  TxRecord sse_decode_tx_record(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_u_16(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -220,47 +703,248 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
+  UserProfile sse_decode_user_profile(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer);
+
+  @protected
+  WalletStatus sse_decode_wallet_status(SseDeserializer deserializer);
+
+  @protected
+  WorkbenchEntry sse_decode_workbench_entry(SseDeserializer deserializer);
+
+  @protected
+  WorkbenchImportResult sse_decode_workbench_import_result(
+      SseDeserializer deserializer);
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
+  void sse_encode_AnyhowException(
+      AnyhowException self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          QappManifest self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          QappManifest self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_String_Sse(
+      RustStreamSink<String> self, SseSerializer serializer);
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_actor_bridge(ActorBridge self, SseSerializer serializer);
+
+  @protected
   void sse_encode_agent_config(AgentConfig self, SseSerializer serializer);
 
   @protected
+  void sse_encode_attach_chat_file_result(
+      AttachChatFileResult self, SseSerializer serializer);
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_actor_bridge(
+      ActorBridge self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_agent_config(
       AgentConfig self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_chat_file_sharing(
+      ChatFileSharing self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_delegation_rule_bridge(
+      DelegationRuleBridge self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_ontology_torrent_policy(
+      OntologyTorrentPolicy self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_outcome_sharing_policy(
+      OutcomeSharingPolicy self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_qpu_oracle_settings_input(
+      QpuOracleSettingsInput self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_tax_recipient_suite(
+      TaxRecipientSuite self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_torrent_bandwidth_policy(
+      TorrentBandwidthPolicy self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_user_profile(
+      UserProfile self, SseSerializer serializer);
 
   @protected
   void sse_encode_catalog_item(CatalogItem self, SseSerializer serializer);
 
   @protected
+  void sse_encode_chat_branch_type(
+      ChatBranchType self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_contact(ChatContact self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_file_preview(
+      ChatFilePreview self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_file_record(
+      ChatFileRecord self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_file_sharing(
+      ChatFileSharing self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_fragment(ChatFragment self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_graph_edge(ChatGraphEdge self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_graph_view(ChatGraphView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_message(ChatMessage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_participant(
+      ChatParticipant self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_reaction(ChatReaction self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_session_share_target(
+      ChatSessionShareTarget self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_session_summary(
+      ChatSessionSummary self, SseSerializer serializer);
+
+  @protected
   void sse_encode_coin_balance(CoinBalance self, SseSerializer serializer);
 
   @protected
+  void sse_encode_connect_invite_summary(
+      ConnectInviteSummary self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_delegation_rule_bridge(
+      DelegationRuleBridge self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_dispatch_result(
+      DispatchResult self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer);
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_front_door_bridge(
+      FrontDoorBridge self, SseSerializer serializer);
 
   @protected
   void sse_encode_hardware_status(
       HardwareStatus self, SseSerializer serializer);
 
   @protected
+  void sse_encode_hardware_telemetry(
+      HardwareTelemetry self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_actor_bridge(
+      List<ActorBridge> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_catalog_item(
       List<CatalogItem> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_chat_branch_type(
+      List<ChatBranchType> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_contact(
+      List<ChatContact> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_file_record(
+      List<ChatFileRecord> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_fragment(
+      List<ChatFragment> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_graph_edge(
+      List<ChatGraphEdge> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_message(
+      List<ChatMessage> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_participant(
+      List<ChatParticipant> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_reaction(
+      List<ChatReaction> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_session_share_target(
+      List<ChatSessionShareTarget> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_session_summary(
+      List<ChatSessionSummary> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_coin_balance(
       List<CoinBalance> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_delegation_rule_bridge(
+      List<DelegationRuleBridge> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_front_door_bridge(
+      List<FrontDoorBridge> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_llm_resource(
@@ -275,6 +959,17 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       List<OntologyResource> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_ontology_share_card(
+      List<OntologyShareCard> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_prim_f_32_strict(
+      Float32List self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
       Uint8List self, SseSerializer serializer);
 
@@ -287,6 +982,17 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       List<TaxRecipient> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_token_entry(
+      List<TokenEntry> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_tx_record(List<TxRecord> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_workbench_entry(
+      List<WorkbenchEntry> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_llm_resource(LLMResource self, SseSerializer serializer);
 
   @protected
@@ -297,17 +1003,55 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       OntologyResource self, SseSerializer serializer);
 
   @protected
+  void sse_encode_ontology_share_card(
+      OntologyShareCard self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ontology_torrent_policy(
+      OntologyTorrentPolicy self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_outcome_sharing_policy(
+      OutcomeSharingPolicy self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_participant_agent_config(
+      ParticipantAgentConfig self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_prerequisite_status(
+      PrerequisiteStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_progress_payload(
       ProgressPayload self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_qpu_chat_command_result(
+      QpuChatCommandResult self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_qpu_oracle_settings(
+      QpuOracleSettings self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_qpu_oracle_settings_input(
+      QpuOracleSettingsInput self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sharing_policy(SharingPolicy self, SseSerializer serializer);
 
   @protected
   void sse_encode_spatial_physics_state(
@@ -319,6 +1063,19 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_tax_recipient_suite(
       TaxRecipientSuite self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_token_entry(TokenEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_torrent_bandwidth_policy(
+      TorrentBandwidthPolicy self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tx_record(TxRecord self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_16(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
@@ -333,6 +1090,23 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void sse_encode_unit(void self, SseSerializer serializer);
 
   @protected
+  void sse_encode_user_profile(UserProfile self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_wallet_status(WalletStatus self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_workbench_entry(
+      WorkbenchEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_workbench_import_result(
+      WorkbenchImportResult self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
@@ -340,6 +1114,18 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
 class RustApiWire implements BaseWire {
   RustApiWire.fromExternalLibrary(ExternalLibrary lib);
+
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          int ptr) =>
+      wasmModule
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+              ptr);
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          int ptr) =>
+      wasmModule
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+              ptr);
 }
 
 @JS('wasm_bindgen')
@@ -347,4 +1133,12 @@ external RustApiWasmModule get wasmModule;
 
 @JS()
 @anonymous
-extension type RustApiWasmModule._(JSObject _) implements JSObject {}
+extension type RustApiWasmModule._(JSObject _) implements JSObject {
+  external void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          int ptr);
+
+  external void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          int ptr);
+}

@@ -192,7 +192,7 @@
             <div class="max-w-3xl">
                 <div class="mb-5 inline-flex items-center gap-x-2 rounded-3xl border border-blue-900/50 bg-blue-950/40 px-5 py-1.5 text-xs font-semibold tracking-[1.2px] text-blue-400">
                     <i class="fa-solid fa-flask"></i>
-                    <span>COMPARATIVE HARNESS v1 • 512 MB SOVEREIGN EDGE</span>
+                    <span>COMPARATIVE HARNESS v2 • 512 MB SOVEREIGN EDGE</span>
                 </div>
 
                 <h1 class="font-display text-[72px] leading-[1.05] font-semibold tracking-[-3.8px]">
@@ -213,6 +213,16 @@
                     <div class="rounded-2xl border border-slate-700 bg-[#111f31] px-5 py-2 text-sm font-mono">
                         n = <span id="dataset-size">10,000</span> triples
                     </div>
+                    <div class="rounded-2xl border border-slate-700 bg-[#111f31] px-5 py-2 text-sm">
+                        <span class="font-mono text-blue-300" id="dataset-label">synthetic-10k</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 px-1">
+                    <label for="dataset-profile-select" class="text-[11px] uppercase tracking-[1.5px] text-slate-500">Dataset profile</label>
+                    <select id="dataset-profile-select" class="rounded-2xl border border-slate-700 bg-[#111f31] px-4 py-2 text-sm text-slate-200 focus:outline-none">
+                        <option value="synthetic-10k">Synthetic 10K</option>
+                        <option value="schemaorg-30-current-https">Schema.org 30.0 &rarr; q42</option>
+                    </select>
                 </div>
                 <div id="last-updated" class="font-mono text-xs text-slate-500 px-1">
                     Loading results…
@@ -230,6 +240,29 @@
 
         <div id="data-warnings" class="hidden"></div>
 
+        <!-- Run environment (schema v2) -->
+        <div id="execution-environment-panel" class="mb-8 hidden">
+            <div class="section-label mb-3 px-1 tracking-[1px]">RUN ENVIRONMENT</div>
+            <div class="glass-strong rounded-3xl border border-slate-700 p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+                <div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Harness host</div>
+                    <div id="env-device" class="font-mono text-slate-200">—</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Qualia topology</div>
+                    <div id="env-topology" class="font-mono text-amber-300/90">—</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Measurement paths</div>
+                    <div id="env-paths" class="font-mono text-slate-300 text-xs leading-relaxed">—</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Schema</div>
+                    <div id="env-schema" class="font-mono text-slate-400">—</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Comparison Table -->
         <div class="mb-8">
             <div class="mb-5 flex items-baseline justify-between px-1">
@@ -241,16 +274,17 @@
 
             <div class="glass-strong overflow-hidden rounded-3xl border border-slate-700 premium-shadow">
                 <div class="overflow-x-auto">
-                    <table class="data-table w-full min-w-[1080px]">
+                    <table class="data-table w-full min-w-[1180px]">
                         <thead class="bg-[#0f1623]">
                             <tr>
                                 <th class="w-56 text-left">Engine</th>
-                                <th onclick="sortTable(1)" class="cursor-pointer text-right hover:text-white">Ingestion<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">ms · triples/s</div></th>
-                                <th onclick="sortTable(2)" class="cursor-pointer text-right hover:text-white">Point<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">p50 · p95</div></th>
-                                <th onclick="sortTable(3)" class="cursor-pointer text-right hover:text-white">Two-hop<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">p50 · p95</div></th>
-                                <th onclick="sortTable(4)" class="cursor-pointer text-right hover:text-white">Filter<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">p50 · p95</div></th>
-                                <th onclick="sortTable(5)" class="cursor-pointer text-right hover:text-white">Throughput<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">point ops/s</div></th>
-                                <th onclick="sortTable(6)" class="cursor-pointer text-right hover:text-white">RSS<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">MB</div></th>
+                                <th onclick="sortTable(1)" class="cursor-pointer text-right hover:text-white">Dataset file<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">MB on disk</div></th>
+                                <th onclick="sortTable(2)" class="cursor-pointer text-right hover:text-white">Ingestion<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">ms · triples/s</div></th>
+                                <th onclick="sortTable(3)" class="cursor-pointer text-right hover:text-white">Point<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">p50 · p95</div></th>
+                                <th onclick="sortTable(4)" class="cursor-pointer text-right hover:text-white">Two-hop<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">p50 · p95</div></th>
+                                <th onclick="sortTable(5)" class="cursor-pointer text-right hover:text-white">Filter<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">p50 · p95</div></th>
+                                <th onclick="sortTable(6)" class="cursor-pointer text-right hover:text-white">Throughput<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">point ops/s</div></th>
+                                <th onclick="sortTable(7)" class="cursor-pointer text-right hover:text-white">RSS<div class="text-[9px] text-slate-600 font-normal normal-case tracking-normal">MB</div></th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -308,16 +342,58 @@
                 </div>
                 <div onclick="runHarnessLocally()" 
                      class="cursor-pointer font-mono text-sm px-6 py-4 rounded-2xl border border-slate-600 bg-[#0f1623] hover:bg-[#1a2233] transition-colors flex items-center gap-x-3">
-                    python benchmarks/harness.py --all --output docs/comparative_benchmark_results.json
+                    Click to copy the selected profile command
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import {
+            formatTopologySummary,
+            formatDeviceSummary,
+            formatDaemonBadgeText,
+        } from './js/benchmark-environment.js';
+
         let currentData = null;
         let sortColumn = null;
         let sortDirection = 1;
+        const DATASET_PROFILES = {
+            'synthetic-10k': {
+                label: 'Synthetic 10K',
+                resultsPath: './comparative_benchmark_results.json',
+                runCommand: 'python benchmarks/harness.py --all --dataset-profile synthetic-10k --output docs/comparative_benchmark_results.json',
+                prepCommand: null,
+            },
+            'schemaorg-30-current-https': {
+                label: 'Schema.org 30.0 &rarr; q42',
+                resultsPath: './comparative_benchmark_results.schemaorg-30-current-https-q42.json',
+                runCommand: 'python benchmarks/harness.py --all --dataset-profile schemaorg-30-current-https --output docs/comparative_benchmark_results.schemaorg-30-current-https-q42.json',
+                prepCommand: 'powershell -ExecutionPolicy Bypass -File scripts/prepare_schemaorg_benchmark.ps1 -Release 30.0 -Variant current-https -Compress',
+            },
+        };
+
+        function getSelectedProfileId() {
+            return document.getElementById('dataset-profile-select')?.value || 'synthetic-10k';
+        }
+
+        function getSelectedProfile() {
+            return DATASET_PROFILES[getSelectedProfileId()] || DATASET_PROFILES['synthetic-10k'];
+        }
+
+        function syncProfileFromUrl() {
+            const url = new URL(window.location.href);
+            const profile = url.searchParams.get('profile');
+            if (!profile || !DATASET_PROFILES[profile]) return;
+            const select = document.getElementById('dataset-profile-select');
+            if (select) select.value = profile;
+        }
+
+        function persistProfileToUrl(profileId) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('profile', profileId);
+            window.history.replaceState({}, '', url);
+        }
 
         const demoData = {
             "schema_version": 1,
@@ -393,9 +469,27 @@
                 'surrealdb': 'bg-violet-400',
                 'comunica': 'bg-orange-400',
                 'wasm_prolog': 'bg-rose-400',
-                'qualia': 'bg-amber-400'
+                'qualia': 'bg-amber-400',
+                'qualia_q42': 'bg-yellow-300'
             };
             return colors[engine] || 'bg-slate-400';
+        }
+
+        function formatFileMb(engine) {
+            const mb = engine.dataset_file_mb;
+            if (mb == null || !isFinite(mb)) return '—';
+            const fmt = engine.dataset_format || 'rdf';
+            const suffix = engine.engine === 'qualia_q42'
+                ? '.q42'
+                : (fmt === 'ntriples' || fmt === 'generated-ntriples' ? '.nt' : fmt);
+            let extra = '';
+            if (engine.compressed_q42_file_mb != null && engine.engine !== 'qualia_q42') {
+                extra = `<div class="text-[10px] text-slate-500 font-mono">.c.q42 ${engine.compressed_q42_file_mb.toFixed(2)}</div>`;
+            } else if (engine.engine === 'qualia_q42' && engine.compressed_q42_file_mb != null) {
+                extra = `<div class="text-[10px] text-slate-500 font-mono">.c.q42 ${engine.compressed_q42_file_mb.toFixed(2)}</div>`;
+            }
+            return `<div class="font-mono">${mb.toFixed(2)}</div>
+                    <div class="text-[10px] text-slate-500 font-mono">${suffix}</div>${extra}`;
         }
 
         function hasLatency(stat) {
@@ -412,25 +506,89 @@
             return null;
         }
 
+        function renderExecutionEnvironment(data) {
+            const panel = document.getElementById('execution-environment-panel');
+            const env = data?.execution_environment;
+            if (!env) {
+                panel.classList.add('hidden');
+                return;
+            }
+            panel.classList.remove('hidden');
+            document.getElementById('env-device').textContent =
+                formatDeviceSummary(env) || 'Not recorded';
+            const topo = env.qualia_daemon_topology || env.topology;
+            document.getElementById('env-topology').textContent =
+                formatTopologySummary({ topology: topo }) || 'single cell (default)';
+
+            const engines = data.engines || {};
+            const pathLines = Object.entries(engines).map(([key, e]) => {
+                const path = e.measurement_path || 'unknown';
+                const label = e.meta?.label || key;
+                return `${label}: ${path}`;
+            });
+            document.getElementById('env-paths').innerHTML = pathLines.length
+                ? pathLines.join('<br>')
+                : '—';
+
+            const schema = data.schema_version ?? 1;
+            document.getElementById('env-schema').textContent =
+                `v${schema} · ${env.runner || 'harness'} · ${env.collected_at?.slice(0, 10) || '—'}`;
+        }
+
         function renderDataWarnings(engines) {
             const mount = document.getElementById('data-warnings');
             if (!mount) return;
+            const warnings = [];
+            const datasetInfo = currentData?.dataset_info;
+
             const incomplete = engines.filter(engine => getEngineStatus(engine));
-            if (!incomplete.length) {
+            if (incomplete.length) {
+                const names = incomplete.map(engine => engine.meta?.label || engine.engine).join(', ');
+                warnings.push(`<strong>Incomplete rows:</strong> ${names} — dashes mean missing data, not zero.`);
+            }
+
+            if (datasetInfo?.source_path) {
+                let msg = `<strong>Dataset profile:</strong> ${datasetInfo.label || currentData?.dataset_label || currentData?.dataset || 'custom'} — source format ${datasetInfo.source_format || 'rdf'}.`;
+                if (datasetInfo.source_file_mb != null) {
+                    msg += ` Source NT: ${datasetInfo.source_file_mb.toFixed(2)} MB.`;
+                }
+                if (datasetInfo.native_q42_file_mb != null) {
+                    msg += ` Native .q42: ${datasetInfo.native_q42_file_mb.toFixed(2)} MB.`;
+                }
+                if (datasetInfo.compressed_q42_file_mb != null) {
+                    msg += ` Compressed .c.q42: ${datasetInfo.compressed_q42_file_mb.toFixed(2)} MB.`;
+                }
+                if (datasetInfo.native_q42_available) {
+                    msg += ` Native ${datasetInfo.native_format || 'q42'} artifact detected.`;
+                } else if (datasetInfo.native_format) {
+                    msg += ` Native ${datasetInfo.native_format} artifact not present in this workspace yet.`;
+                }
+                warnings.push(msg);
+            }
+
+            const qualia = engines.find(e => e.engine === 'qualia');
+            if (qualia?.measurement_path === 'daemon_http_query') {
+                const topo = qualia.execution_environment?.topology
+                    || currentData?.execution_environment?.qualia_daemon_topology;
+                const cells = topo?.worker_cells_configured ?? 1;
+                if (cells > 1) {
+                    warnings.push(`<strong>Multi-cell daemon:</strong> Qualia was measured with ${cells} fractal worker cells — compare latency against single-cell or in-process runs carefully.`);
+                } else {
+                    warnings.push(`<strong>Measurement path:</strong> Qualia uses daemon HTTP queries; other engines run in-process — absolute latency is not apples-to-apples.`);
+                }
+            }
+
+            if (!warnings.length) {
                 mount.innerHTML = '';
                 mount.className = 'hidden';
                 return;
             }
 
-            const names = incomplete.map(engine => engine.meta?.label || engine.engine).join(', ');
             mount.className = 'mb-8 rounded-2xl border border-amber-900/40 bg-amber-950/30 px-5 py-4 text-sm text-amber-200';
             mount.innerHTML = `
                 <div class="flex items-start gap-3">
                     <i class="fa-solid fa-triangle-exclamation mt-0.5 text-amber-400"></i>
-                    <div>
-                        <div class="font-semibold text-amber-100">Some benchmark rows are incomplete</div>
-                        <div class="mt-1 text-amber-200/80">${names} do not currently have a full latency set in the published results JSON, so dashes on this page mean missing data rather than a measured zero.</div>
-                    </div>
+                    <div class="space-y-2">${warnings.map(w => `<div>${w}</div>`).join('')}</div>
                 </div>
             `;
         }
@@ -500,7 +658,7 @@
                 const row = document.createElement('tr');
                 row.className = 'engine-row';
                 const label = engine.meta?.label || engine.engine;
-                const isQualia = engine.engine === 'qualia';
+                const isQualia = engine.engine === 'qualia' || engine.engine === 'qualia_q42';
                 const tput = getThroughput(engine);
                 const rss = getRss(engine);
                 const rssNote = engine.server_rss_mb ? ' <span class="text-[10px] text-slate-500">server</span>' : '';
@@ -516,10 +674,12 @@
                         <div class="flex items-center gap-x-3">
                             <div class="h-2.5 w-2.5 rounded-full flex-shrink-0 ${getEngineColor(engine.engine)}"></div>
                             <span class="${isQualia ? 'text-amber-300 font-medium' : ''}">${label}</span>
-                            ${isQualia ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-amber-400 font-mono tracking-wider">NATIVE</span>' : ''}
+                            ${engine.engine === 'qualia' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-amber-400 font-mono tracking-wider">DAEMON</span>' : ''}
+                            ${engine.engine === 'qualia_q42' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-yellow-300 font-mono tracking-wider">.Q42</span>' : ''}
                             ${status ? `<span class="ml-2 text-[10px] px-2 py-px rounded font-mono tracking-wider ${status.className}">${status.label}</span>` : ''}
                         </div>
                     </td>
+                    <td class="text-right">${formatFileMb(engine)}</td>
                     <td class="text-right">
                         <div class="font-mono">${formatMs(engine.ingestion_ms)}</div>
                         <div class="text-[10px] text-slate-500 font-mono">${formatKTps(engine)}</div>
@@ -550,7 +710,7 @@
                 const val = typeof raw === 'number' ? raw : 0;
                 const pct = maxVal > 0 && val > 0 ? Math.max(4, Math.round((val / maxVal) * 100)) : 0;
                 const label = engine.meta?.label || engine.engine;
-                const isQualia = engine.engine === 'qualia';
+                const isQualia = engine.engine === 'qualia' || engine.engine === 'qualia_q42';
 
                 const row = document.createElement('div');
                 row.className = 'flex items-center gap-x-4 text-sm';
@@ -602,12 +762,13 @@
             }
 
             const getters = {
-                1: e => e.ingestion_ms || 0,
-                2: e => e.point?.p50 || 0,
-                3: e => e.twohop?.p50 || 0,
-                4: e => e.filter?.p50 || 0,
-                5: e => getThroughput(e) || 0,
-                6: e => getRss(e) || 0,
+                1: e => e.dataset_file_mb || 0,
+                2: e => e.ingestion_ms || 0,
+                3: e => e.point?.p50 || 0,
+                4: e => e.twohop?.p50 || 0,
+                5: e => e.filter?.p50 || 0,
+                6: e => getThroughput(e) || 0,
+                7: e => getRss(e) || 0,
             };
 
             engines.sort((a, b) => ((getters[col]?.(a) ?? 0) - (getters[col]?.(b) ?? 0)) * sortDirection);
@@ -619,7 +780,7 @@
             if (!currentData?.engines?.[key]) return;
             const d = currentData.engines[key];
             const label = d.meta?.label || key;
-            const isQualia = key === 'qualia';
+            const isQualia = key === 'qualia' || key === 'qualia_q42';
             const tput = getThroughput(d);
             const ingestRate = formatKTps(d);
             const delta = getRssDelta(d);
@@ -644,7 +805,8 @@
                             <div class="h-3.5 w-3.5 rounded-full flex-shrink-0 ${getEngineColor(key)}"></div>
                             <div>
                                 <div class="text-3xl font-semibold tracking-tight">${label}</div>
-                                ${isQualia ? '<div class="text-xs text-amber-400 mt-0.5">Native daemon • port 4242</div>' : ''}
+                                ${key === 'qualia' ? '<div class="text-xs text-amber-400 mt-0.5">Native daemon • port 4242</div>' : ''}
+                                ${key === 'qualia_q42' ? '<div class="text-xs text-yellow-300/80 mt-0.5">In-process .q42 SuperBlock load</div>' : ''}
                             </div>
                         </div>
                         <button onclick="this.closest('.fixed').remove()" class="text-4xl text-slate-400 hover:text-white leading-none">&times;</button>
@@ -652,7 +814,12 @@
 
                     <div class="mt-8 space-y-6">
                         <!-- Ingestion + Memory row -->
-                        <div class="grid grid-cols-3 gap-4">
+                        <div class="grid grid-cols-4 gap-4">
+                            <div>
+                                <div class="text-xs text-slate-500 tracking-wider">DATASET FILE</div>
+                                <div class="mt-1 font-mono text-2xl font-semibold">${d.dataset_file_mb != null ? d.dataset_file_mb.toFixed(2) : '—'} <span class="text-sm text-slate-400">MB</span></div>
+                                <div class="text-xs text-slate-500 mt-0.5">${d.dataset_format || 'artifact'}</div>
+                            </div>
                             <div>
                                 <div class="text-xs text-slate-500 tracking-wider">INGESTION</div>
                                 <div class="mt-1 font-mono text-2xl font-semibold">${formatMs(d.ingestion_ms)} <span class="text-sm text-slate-400">ms</span></div>
@@ -680,6 +847,7 @@
                             </div>
                         </div>
 
+                        ${d.execution_environment?.topology ? `<div class="text-xs text-slate-500 border-t border-slate-700 pt-4"><span class="text-slate-400">Topology:</span> ${formatTopologySummary(d.execution_environment)} · ${d.measurement_path || 'daemon_http_query'}</div>` : ''}
                         ${d.note ? `<div class="text-xs text-slate-500 italic border-t border-slate-700 pt-4">${d.note}</div>` : ''}
                         ${d.meta?.focus ? `<div class="text-xs text-slate-400 border-t border-slate-700 pt-4"><span class="text-slate-500">Focus:</span> ${d.meta.focus}</div>` : ''}
                     </div>
@@ -690,32 +858,43 @@
 
         async function loadData() {
             const statusEl = document.getElementById('last-updated');
+            const profileId = getSelectedProfileId();
+            const profile = getSelectedProfile();
+            persistProfileToUrl(profileId);
             try {
-                const res = await fetch('./comparative_benchmark_results.json');
+                const res = await fetch(profile.resultsPath);
                 if (!res.ok) throw new Error();
                 currentData = await res.json();
                 const date = new Date(currentData.last_updated);
                 statusEl.innerHTML = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' • ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             } catch {
-                currentData = demoData;
-                statusEl.innerHTML = 'Demo data <span class="text-amber-400">— run harness to update</span>';
+                currentData = profileId === 'synthetic-10k'
+                    ? demoData
+                    : { schema_version: 2, dataset: profileId, dataset_label: profile.label, dataset_info: {}, engines: {} };
+                statusEl.innerHTML = profileId === 'synthetic-10k'
+                    ? 'Demo data <span class="text-amber-400">— run harness to update</span>'
+                    : 'Profile JSON missing <span class="text-amber-400">- prepare dataset and run harness</span>';
             }
 
             const engines = getEngines(currentData);
             const sample = Object.values(currentData.engines || {})[0];
             document.getElementById('dataset-size').textContent = sample?.n_triples ?? 10000;
+            document.getElementById('dataset-label').textContent = currentData.dataset_label || currentData.dataset_profile || currentData.dataset || profile.label;
             document.getElementById('engine-count').textContent = engines.length;
 
             renderDataWarnings(engines);
+            renderExecutionEnvironment(currentData);
             renderSummaryCards(engines);
             renderTable(engines);
             renderCharts(engines);
         }
 
         function runHarnessLocally() {
-            const cmd = 'cargo run --release -p qualia-cli -- bench --suite full';
+            const profile = getSelectedProfile();
+            const cmd = profile.runCommand;
             navigator.clipboard.writeText(cmd).then(() => {
-                alert('Command copied to clipboard:\n\n' + cmd + '\n\nRun it, then reload this page.');
+                const prep = profile.prepCommand ? '\n\nPrepare source/q42 first:\n' + profile.prepCommand : '';
+                alert('Command copied to clipboard:\n\n' + cmd + prep + '\n\nRun it, then reload this page.');
             }).catch(() => {
                 prompt('Copy and run this command:', cmd);
             });
@@ -727,8 +906,9 @@
                 if (res.ok) {
                     const d = await res.json();
                     document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
+                    document.getElementById('daemon-text').textContent = formatDaemonBadgeText(d);
                     document.getElementById('daemon-badge').className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    window._liveDaemonHealth = d;
                 }
             } catch(e) {
                 document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
@@ -736,7 +916,12 @@
             }
         }
 
-        window.onload = () => { loadData(); checkDaemon(); };
+        window.onload = () => {
+            syncProfileFromUrl();
+            document.getElementById('dataset-profile-select')?.addEventListener('change', loadData);
+            loadData();
+            checkDaemon();
+        };
     </script>
 </body>
 </html>

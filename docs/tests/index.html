@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QualiaDB — Comprehensive Test Suite</title>
+    <title>QualiaDB — Test Suite (0.0.8)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <style>
@@ -306,6 +306,73 @@
         }
         .legend span { display: flex; align-items: center; gap: 5px; }
 
+        .run-panel {
+            margin-bottom: 14px;
+            padding: 14px 16px;
+            background: rgba(255,255,255,.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .run-panel h2 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+        .run-panel p, .run-panel li {
+            font-size: 12px;
+            color: var(--dim);
+            line-height: 1.55;
+        }
+        .run-panel ul { margin: 6px 0 0 18px; }
+        .run-panel code {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: #cbd5e1;
+            background: rgba(0,0,0,.35);
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+        .catalog-section { margin-bottom: 20px; }
+        .catalog-section h2 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 6px;
+        }
+        .catalog-section .catalog-note {
+            font-size: 12px;
+            color: var(--dim);
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .results-section h2 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+        .catalog-card .suite-stats { color: var(--dim); }
+        .catalog-card .test-row { color: rgba(255,255,255,.4); }
+        .catalog-card .test-row .test-icon { color: var(--dim); }
+        .catalog-card .test-ms { display: none; }
+        .catalog-card .suite-module {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--dim);
+            margin-left: 6px;
+            flex-shrink: 0;
+        }
+        .engine-pill {
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(59,130,246,.35);
+            color: #93c5fd;
+            background: rgba(59,130,246,.08);
+        }
+
         /* ── Mobile tweaks ───────────────────────────────────────────────── */
         @media (max-width: 600px) {
             main { padding: 12px; }
@@ -347,6 +414,7 @@
                 </div>
 
                 <div class="flex items-center gap-4">
+                    <span id="nav-engine-version" class="engine-pill" title="WASM engine from docs/playground/">Engine …</span>
                     <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
                        class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
                         <i class="fab fa-github"></i>
@@ -393,17 +461,47 @@
 </header>
 
 <main>
+    <div class="run-panel">
+        <h2>Run locally</h2>
+        <p>Headless (CI-safe, no browser):</p>
+        <ul>
+            <li><code>node docs/tests/run-headless.mjs --mode logic</code> — <strong>199</strong> JS reference tests</li>
+            <li><code>node docs/tests/run-headless.mjs --mode wasm</code> — <strong>352</strong> logic + WASM export tests (loads <code>docs/playground/</code>)</li>
+            <li><code>node docs/tests/run-headless.mjs --mode native</code> — logic + daemon tests (requires <code>localhost:4242</code>)</li>
+            <li><code>.\docs\tests\run-local.ps1 -Serve</code> — headless then serve at <code>http://localhost:8765/tests/index.html</code></li>
+        </ul>
+        <p style="margin-top:8px">Rebuild WASM after engine changes: <code>wasm-pack build crates/qualia-core-db --target web --out-dir ../../docs/playground --no-typescript</code></p>
+    </div>
+
     <div class="legend">
         <span><span style="color:var(--success)">■</span> Logic — pure JS modality spec (all modes)</span>
         <span><span style="color:var(--accent)">■</span> WASM — in-browser WebAssembly tests</span>
         <span><span style="color:var(--native)">■</span> Native — local daemon at localhost:4242</span>
-        <span style="color:var(--dim)">WASM tests skip gracefully if function absent from current build · Native tests skip when daemon offline</span>
+    </div>
+
+    <div class="catalog-section">
+        <h2>Suite catalog (branch 0.0.8-dev)</h2>
+        <p class="catalog-note">
+            Expandable suites below mirror the live runner layout for the selected mode.
+            Manual WordNet ingest tests: enable <strong>Manual</strong> checkbox or <code>?manual=1</code>
+            (requires <code>docs/playground/wordnet.q42</code>).
+            <span id="catalog-stats"></span>
+        </p>
+        <div id="suite-catalog"></div>
     </div>
 
     <div class="legend" id="wasm-coverage-note" style="display:none"></div>
-    <div id="suite-list"></div>
+
+    <div class="results-section">
+        <h2>Live results</h2>
+        <div id="suite-list"></div>
+    </div>
 </main>
 
+<script type="module">
+    import { bindEngineBadge } from '../js/qualia-wasm-runtime.js';
+    bindEngineBadge('nav-engine-version', { base: '..' }, 'Engine v');
+</script>
 <script type="module" src="runner.js"></script>
 </body>
 </html>

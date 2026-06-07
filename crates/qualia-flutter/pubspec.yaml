@@ -1,7 +1,7 @@
 name: qualia_flutter
 description: "A new Flutter project for QualiaDB desktop application."
 publish_to: 'none'
-version: 1.0.0+1
+version: 0.0.8+1
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -14,6 +14,16 @@ dependencies:
   google_fonts: ^6.2.1
   file_picker: ^8.0.0
   url_launcher: ^6.3.0
+  window_manager: ^0.5.1
+  tray_manager: ^0.5.1
+  path_provider: ^2.1.5
+  package_info_plus: ^8.3.0
+  webview_flutter: ^4.10.0
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+  flutter_markdown: ^0.7.6+2
+  flutter_math_fork: ^0.7.2
+  app_links: ^6.3.3
 
 dev_dependencies:
   flutter_test:
@@ -24,3 +34,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/tray_icon.ico
+    - assets/icons/tray_icon.png
+    - assets/web/spatial_mesh.html

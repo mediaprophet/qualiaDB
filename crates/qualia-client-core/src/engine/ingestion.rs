@@ -44,26 +44,3 @@ pub fn process_pdf(file_name: &str) -> Result<IngestionResult, String> {
     })
 }
 
-/// Parses raw Semantic Web ontologies (.rdf, .owl, .ttl, *-star) and maps them to Semantic Bookmarks.
-pub fn process_ontology(file_name: &str) -> Result<IngestionResult, String> {
-    println!("Parsing Raw Semantic Web Ontology: {}", file_name);
-    
-    // In production, this would use a parser like `rio_turtle` or `sophia` 
-    // to iterate over the triples/quads, handling standard and RDF-star syntax.
-    
-    let simulated_bookmarks = vec![
-        SemanticBookmark {
-            entity: format!("Ontology Root: {}", file_name),
-            tags: vec!["Source:SemanticWeb".to_string(), "Status:Ingested".to_string()],
-        },
-        SemanticBookmark {
-            entity: "Class Definition".to_string(),
-            tags: vec!["OWL:Class".to_string(), "Ontology".to_string()],
-        },
-    ];
-
-    Ok(IngestionResult {
-        message: format!("Successfully mapped semantic ontology {} to native graph.", file_name),
-        bookmarks: simulated_bookmarks,
-    })
-}

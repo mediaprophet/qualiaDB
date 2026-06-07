@@ -19,7 +19,7 @@ pub struct Formula {
     pub triples: Vec<Triple>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuleType {
     Strict,
     Defeasible,

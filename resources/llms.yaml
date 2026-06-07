@@ -108,3 +108,116 @@ llms:
     ram_estimate_mb: 4800
     tags: [general, reasoning, instruction]
     last_verified: "2026-06-05"
+
+  - id: "qwen2.5-3b-instruct-q4km"
+    name: "Qwen2.5 3B Instruct (Q4_K_M GGUF)"
+    provider: "Alibaba / unsloth"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 2100
+    download:
+      type: "huggingface"
+      repo: "unsloth/Qwen2.5-3B-Instruct-GGUF"
+      file: "Qwen2.5-3B-Instruct-Q4_K_M.gguf"
+    license: "Apache-2.0"
+    recommended_for: [edge, coding, general]
+    ram_estimate_mb: 2600
+    tags: [general, coding, reasoning, edge]
+    modality: text
+    context_window: 32768
+    last_verified: "2026-06-07"
+
+  - id: "smolvlm2-500m-video-q8"
+    name: "SmolVLM2 500M Video Instruct (Q8_0 GGUF)"
+    provider: "HuggingFaceTB / ggml-org"
+    format: "gguf"
+    quantization: "Q8_0"
+    size_mb: 420
+    download:
+      type: "huggingface"
+      repo: "ggml-org/SmolVLM2-500M-Video-Instruct-GGUF"
+      file: "SmolVLM2-500M-Video-Instruct-Q8_0.gguf"
+    vision_projector:
+      type: "huggingface"
+      repo: "ggml-org/SmolVLM2-500M-Video-Instruct-GGUF"
+      file: "mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf"
+    license: "Apache-2.0"
+    recommended_for: [edge, vision, video]
+    ram_estimate_mb: 1200
+    tags: [multimodal, vision, edge, video]
+    modality: multimodal
+    architecture: smolvlm
+    context_window: 8192
+    last_verified: "2026-06-07"
+    notes: "Lightest multimodal bundle — image + short video frames."
+
+  - id: "qwen2.5-vl-3b-instruct-q4km"
+    name: "Qwen2.5-VL 3B Instruct (Q4_K_M GGUF)"
+    provider: "Alibaba / ggml-org"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 1840
+    download:
+      type: "huggingface"
+      repo: "ggml-org/Qwen2.5-VL-3B-Instruct-GGUF"
+      file: "Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf"
+    vision_projector:
+      type: "huggingface"
+      repo: "ggml-org/Qwen2.5-VL-3B-Instruct-GGUF"
+      file: "mmproj-Qwen2.5-VL-3B-Instruct-f16.gguf"
+    license: "Apache-2.0"
+    recommended_for: [vision, edge, document]
+    ram_estimate_mb: 4500
+    tags: [multimodal, vision, document, edge]
+    modality: multimodal
+    architecture: qwen2vl
+    context_window: 8192
+    last_verified: "2026-06-07"
+    notes: "Strong small vision-language model for charts, UI, and clinical imaging previews."
+
+  - id: "llava-1.6-mistral-7b-q4km"
+    name: "LLaVA 1.6 Mistral 7B (Q4_K_M GGUF)"
+    provider: "cjpais"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 4370
+    download:
+      type: "huggingface"
+      repo: "cjpais/llava-1.6-mistral-7b-gguf"
+      file: "llava-v1.6-mistral-7b.Q4_K_M.gguf"
+    vision_projector:
+      type: "huggingface"
+      repo: "cjpais/llava-1.6-mistral-7b-gguf"
+      file: "mmproj-model-f16.gguf"
+    license: "Apache-2.0"
+    recommended_for: [vision, balanced]
+    ram_estimate_mb: 8000
+    tags: [multimodal, vision, llava]
+    modality: multimodal
+    architecture: llava
+    context_window: 8192
+    last_verified: "2026-06-07"
+    notes: "Classic LLaVA 1.6 + Mistral-7B; requires ≥8 GB RAM."
+
+  - id: "smolvlm2-2.2b-instruct-q4km"
+    name: "SmolVLM2 2.2B Instruct (Q4_K_M GGUF)"
+    provider: "HuggingFaceTB / ggml-org"
+    format: "gguf"
+    quantization: "Q4_K_M"
+    size_mb: 1400
+    download:
+      type: "huggingface"
+      repo: "ggml-org/SmolVLM2-2.2B-Instruct-GGUF"
+      file: "SmolVLM2-2.2B-Instruct-Q4_K_M.gguf"
+    vision_projector:
+      type: "huggingface"
+      repo: "ggml-org/SmolVLM2-2.2B-Instruct-GGUF"
+      file: "mmproj-SmolVLM2-2.2B-Instruct-f16.gguf"
+    license: "Apache-2.0"
+    recommended_for: [vision, balanced, edge]
+    ram_estimate_mb: 3200
+    tags: [multimodal, vision, edge]
+    modality: multimodal
+    architecture: smolvlm
+    context_window: 8192
+    last_verified: "2026-06-07"

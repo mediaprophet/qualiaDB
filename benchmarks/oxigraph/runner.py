@@ -15,7 +15,15 @@ import time
 
 # Allow running as a standalone script from the repo root
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from common import latency_stats_ms, peak_rss_mb, apply_512mb_limit, generate_ntriples, DEFAULT_WARMUP, DEFAULT_SAMPLES
+from common import (
+    latency_stats_ms,
+    peak_rss_mb,
+    apply_512mb_limit,
+    generate_ntriples,
+    record_dataset_file_metrics,
+    DEFAULT_WARMUP,
+    DEFAULT_SAMPLES,
+)
 
 # SPARQL queries — same logical operations as the Qualia CLI bench
 # Subject 0 is the anchor; predicate 0 is the high-frequency lane (n/5 triples).
@@ -31,7 +39,7 @@ SELECT * WHERE {
 _FILTER_QUERY = "SELECT * WHERE { ?s <http://q.test/p/0> ?o } LIMIT 100"
 
 
-def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
+def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
     """
     Run the full Oxigraph benchmark suite.
 
@@ -43,7 +51,18 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
         dict with ingestion_ms, point/twohop/filter latency stats, and peak RSS.
         Latency stats now use the project-wide DEFAULT_WARMUP/DEFAULT_SAMPLES.
     """
-    result: dict = {"engine": "oxigraph", "n_triples": n}
+    if dataset is None:
+        dataset = {
+            "n_triples": n,
+            "nt_bytes": generate_ntriples(n),
+            "queries": {
+                "point": _POINT_QUERY,
+                "twohop": _TWOHOP_QUERY,
+                "filter": _FILTER_QUERY,
+            },
+        }
+
+    result: dict = {"engine": "oxigraph", "n_triples": dataset.get("n_triples", n)}
 
     try:
         import pyoxigraph
@@ -55,7 +74,17 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
         apply_512mb_limit()
 
     # ── Ingestion ─────────────────────────────────────────────────────────────────────
-    nt_bytes = generate_ntriples(n)
+    nt_bytes = dataset.get("nt_bytes")
+    if not nt_bytes:
+        result["ingestion_ms"] = "ERROR"
+        result["error"] = f"dataset source not available for profile {dataset.get('id', 'unknown')}"
+        return result
+
+    queries = dataset.get("queries") or {}
+    point_query = queries.get("point", _POINT_QUERY)
+    twohop_query = queries.get("twohop", _TWOHOP_QUERY)
+    filter_query = queries.get("filter", _FILTER_QUERY)
+
     rss_before = peak_rss_mb()
     t0 = time.perf_counter()
     try:
@@ -86,7 +115,7 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
     # ── Point lookup ─────────────────────────────────────────────────────────────────────
     try:
         result["point"] = latency_stats_ms(
-            lambda: list(store.query(_POINT_QUERY)),
+            lambda: list(store.query(point_query)),
             warmup=DEFAULT_WARMUP, samples=DEFAULT_SAMPLES,
         )
     except MemoryError:
@@ -97,7 +126,7 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
     # ── Two-hop traversal ─────────────────────────────────────────────────────────────────────
     try:
         result["twohop"] = latency_stats_ms(
-            lambda: list(store.query(_TWOHOP_QUERY)),
+            lambda: list(store.query(twohop_query)),
             warmup=DEFAULT_WARMUP, samples=DEFAULT_SAMPLES,
         )
     except MemoryError:
@@ -108,7 +137,7 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
     # ── Predicate filter scan ─────────────────────────────────────────────────────────────────
     try:
         result["filter"] = latency_stats_ms(
-            lambda: list(store.query(_FILTER_QUERY)),
+            lambda: list(store.query(filter_query)),
             warmup=DEFAULT_WARMUP, samples=DEFAULT_SAMPLES,
         )
     except MemoryError:
@@ -117,7 +146,7 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
         result["filter"] = f"ERROR: {exc}"
 
     result["peak_rss_mb"] = round(peak_rss_mb(), 2)
-    return result
+    return record_dataset_file_metrics(result, dataset)
 
 
 if __name__ == "__main__":

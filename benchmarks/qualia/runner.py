@@ -15,12 +15,15 @@ The daemon must be started with:
 """
 import json
 import os
+import os.path
 import sys
 import time
 import urllib.request
+from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from common import latency_stats_ms, DEFAULT_WARMUP, DEFAULT_SAMPLES
+from common import latency_stats_ms, record_dataset_file_metrics, DEFAULT_WARMUP, DEFAULT_SAMPLES
+from environment import SCHEMA_VERSION, fetch_daemon_execution_environment
 
 DAEMON_URL = "http://127.0.0.1:4242"
 
@@ -56,13 +59,18 @@ def _us_to_ms_stats(s: dict) -> dict:
     return out
 
 
-def _probe_health(timeout: float = 1.0) -> bool:
+def _probe_health(timeout: float = 1.0) -> Optional[dict]:
     try:
         req = urllib.request.Request(f"{DAEMON_URL}/health", method="GET")
         with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.status == 200
+            return json.loads(r.read())
     except Exception:
-        return False
+        return None
+
+
+def _probe_health_ok(timeout: float = 1.0) -> bool:
+    health = _probe_health(timeout)
+    return health is not None and health.get("status") == "active"
 
 
 def _post_query(query: str, timeout: float = 30.0) -> dict:
@@ -82,29 +90,70 @@ def _post_query(query: str, timeout: float = 30.0) -> dict:
         return json.loads(r.read())
 
 
-def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
+def _artifact_size_mb(path):
+    if not path or not os.path.exists(path):
+        return None
+    return round(os.path.getsize(path) / (1024 * 1024), 3)
+
+
+def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
+    if dataset is None:
+        dataset = {
+            "n_triples": n,
+            "queries": {},
+            "dataset_info": {},
+        }
+
     result = {
         "engine": "qualia",
-        "n_triples": n,
+        "n_triples": dataset.get("n_triples", n),
+        "schema_version": SCHEMA_VERSION,
+        "measurement_path": "daemon_http_query",
         "qualia_daemon_available": False,
     }
+    dataset_info = dataset.get("dataset_info") or {}
+    native_q42_path = dataset_info.get("native_q42_path")
+    if native_q42_path:
+        result["native_dataset_format"] = "q42"
+        result["native_q42_artifact"] = {
+            "path": native_q42_path,
+            "available": os.path.exists(native_q42_path),
+            "size_mb": _artifact_size_mb(native_q42_path),
+            "compressed_path": dataset_info.get("compressed_q42_path"),
+            "compressed_available": dataset_info.get("compressed_q42_available", False),
+            "compressed_size_mb": _artifact_size_mb(dataset_info.get("compressed_q42_path")),
+        }
 
-    if not _probe_health():
+    health = _probe_health()
+    if not health:
         result["note"] = "Qualia daemon not running on port 4242. Start with: cargo run --release -p qualia-cli -- daemon"
         return result
 
     result["qualia_daemon_available"] = True
     result["note"] = "Measured via local Qualia daemon (port 4242)"
+    result["daemon_version"] = health.get("version")
+
+    daemon_env = health.get("execution_environment") or fetch_daemon_execution_environment()
+    if daemon_env:
+        result["execution_environment"] = daemon_env
+        topo = daemon_env.get("topology") or {}
+        cells = topo.get("worker_cells_configured", 1)
+        swarm = topo.get("compute_swarm_enabled", False)
+        if cells > 1 or swarm:
+            result["note"] += f" | {cells} fractal cell(s)"
+            if swarm:
+                result["note"] += ", compute_swarm enabled"
 
     # Standard queries (same logical operations as other runners)
-    _POINT = "SELECT * WHERE { <http://q.test/s/0> ?p ?o }"
-    _TWOHOP = """
+    queries = dataset.get("queries") or {}
+    _POINT = queries.get("point", "SELECT * WHERE { <http://q.test/s/0> ?p ?o }")
+    _TWOHOP = queries.get("twohop", """
         SELECT * WHERE {
             <http://q.test/s/0> ?p1 ?b .
             ?b ?p2 ?o .
         } LIMIT 1
-    """
-    _FILTER = "SELECT * WHERE { ?s <http://q.test/p/0> ?o } LIMIT 100"
+    """)
+    _FILTER = queries.get("filter", "SELECT * WHERE { ?s <http://q.test/p/0> ?o } LIMIT 100")
 
     try:
         result["point"] = latency_stats_ms(
@@ -155,7 +204,7 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
                         + " Query latencies from qualia-cli bench in-process (µs→ms)."
                     ).strip()
 
-    return result
+    return record_dataset_file_metrics(result, dataset)
 
 
 if __name__ == "__main__":

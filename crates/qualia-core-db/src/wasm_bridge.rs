@@ -605,3 +605,62 @@ pub fn parse_json_wasm(payload: &str) -> JsValue {
         JsValue::NULL
     }
 }
+
+// ─── Engine metadata ─────────────────────────────────────────────────────────
+
+/// Capabilities compiled into the browser WASM build (native-only modules omitted).
+#[cfg(target_arch = "wasm32")]
+const WASM_CAPABILITY_REGISTRY: &[&str] = &[
+    "SHACL",
+    "QueryEngine",
+    "N3Parser",
+    "N3Compiler",
+    "DeonticLogic",
+    "EpistemicLogic",
+    "ParaconsistentLogic",
+    "DialecticalLogic",
+    "TemporalLTL",
+    "Bioinformatics",
+    "OrganicChemistry",
+    "Economics",
+    "CogAI",
+    "Profiles",
+    "ResourceCatalog",
+    "WasmIngest",
+];
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Serialize)]
+struct EngineInfo {
+    version: &'static str,
+    engine: &'static str,
+    target: &'static str,
+    capabilities: Vec<&'static str>,
+}
+
+/// Returns the qualia-core-db crate version baked in at compile time (matches daemon `/health`).
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn get_engine_version() -> String {
+    crate::ENGINE_VERSION.to_string()
+}
+
+/// Structured engine metadata for browser UIs and diagnostics.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn get_engine_info() -> Result<JsValue, JsValue> {
+    let info = EngineInfo {
+        version: crate::ENGINE_VERSION,
+        engine: "qualia-core-db",
+        target: "wasm32",
+        capabilities: WASM_CAPABILITY_REGISTRY.to_vec(),
+    };
+    serde_wasm_bindgen::to_value(&info).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+/// Capability names available in this WASM build.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn list_capabilities_wasm() -> Result<JsValue, JsValue> {
+    serde_wasm_bindgen::to_value(WASM_CAPABILITY_REGISTRY).map_err(|e| JsValue::from_str(&e.to_string()))
+}

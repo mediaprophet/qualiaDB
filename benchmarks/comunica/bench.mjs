@@ -11,10 +11,19 @@
 
 import { QueryEngine } from "@comunica/query-sparql";
 import { Store, Parser } from "n3";
+import fs from "node:fs";
 
 const N       = parseInt(process.argv[2] ?? "10000", 10);
 const WARMUP  = 10;
 const SAMPLES = 50;
+const NT_PATH = process.env.QUALIA_BENCH_NT_PATH || null;
+const QUERIES = (() => {
+    try {
+        return JSON.parse(process.env.QUALIA_BENCH_QUERIES_JSON || "{}");
+    } catch {
+        return {};
+    }
+})();
 
 // ── Synthetic N-Triples dataset (same structure as common.py) ─────────────────
 function generateNT(n) {
@@ -55,6 +64,13 @@ const POINT_Q  = "SELECT * WHERE { <http://q.test/s/0> ?p ?o }";
 const TWOHOP_Q = "SELECT * WHERE { <http://q.test/s/0> ?p1 ?b . ?b ?p2 ?o . } LIMIT 1";
 const FILTER_Q = "SELECT * WHERE { ?s <http://q.test/p/0> ?o } LIMIT 100";
 
+function loadNT() {
+    if (NT_PATH) {
+        return fs.readFileSync(NT_PATH, "utf8");
+    }
+    return generateNT(N);
+}
+
 async function drainStream(stream) {
     const results = [];
     for await (const binding of stream) { results.push(binding); }
@@ -71,7 +87,7 @@ async function drainStream(stream) {
     try {
         store = new Store();
         const parser = new Parser({ format: "N-Triples" });
-        store.addQuads(parser.parse(generateNT(N)));
+        store.addQuads(parser.parse(loadNT()));
         result.ingestion_ms = Math.round(Number(process.hrtime.bigint() - t0) / 1e4) / 100;
         result.quad_count = store.size;
     } catch (err) {
@@ -85,7 +101,7 @@ async function drainStream(stream) {
     // Point lookup
     try {
         result.point = await latencyStatsMs(async () => {
-            const stream = await engine.queryBindings(POINT_Q, { sources: [store] });
+            const stream = await engine.queryBindings(QUERIES.point || POINT_Q, { sources: [store] });
             await drainStream(stream);
         });
     } catch (err) {
@@ -95,7 +111,7 @@ async function drainStream(stream) {
     // Two-hop traversal
     try {
         result.twohop = await latencyStatsMs(async () => {
-            const stream = await engine.queryBindings(TWOHOP_Q, { sources: [store] });
+            const stream = await engine.queryBindings(QUERIES.twohop || TWOHOP_Q, { sources: [store] });
             await drainStream(stream);
         });
     } catch (err) {
@@ -105,7 +121,7 @@ async function drainStream(stream) {
     // Predicate filter scan
     try {
         result.filter = await latencyStatsMs(async () => {
-            const stream = await engine.queryBindings(FILTER_Q, { sources: [store] });
+            const stream = await engine.queryBindings(QUERIES.filter || FILTER_Q, { sources: [store] });
             await drainStream(stream);
         });
     } catch (err) {

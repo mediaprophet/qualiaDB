@@ -95,6 +95,17 @@ pub enum ShaclConstraint {
     SolveOdeDynamics,
     DftGroundState,
     PredictReceptorBinding,
+    // ── Qualia native: quantum oracle ─────────────────────────────────────────
+    /// `q42:QuantumTask` — egress-permitted remote QPU invocation.
+    QuantumTask {
+        max_shots: u32,
+        architecture: u8,
+        fallback_to_classical: bool,
+    },
+    /// `q42:hasLinearBias` — QUBO node bias.
+    QuboLinearBias { var_index: u8, bias: f32 },
+    /// `q42:hasCouplerWeight` — QUBO quadratic coupler.
+    QuboCouplerWeight { var_a: u8, var_b: u8, weight: f32 },
     // ── Qualia native: biosciences ───────────────────────────────────────────
     /// Legacy form (routes to NucleotideAlignment).
     BioSequenceAlignment,
@@ -377,6 +388,17 @@ impl ShaclCompiler {
             ShaclConstraint::SolveOdeDynamics         => ops.push(SlgOpcode::NativeOdeSolver),
             ShaclConstraint::DftGroundState           => ops.push(SlgOpcode::NativeQuantumDft),
             ShaclConstraint::PredictReceptorBinding   => ops.push(SlgOpcode::NativeReceptorBinding),
+            ShaclConstraint::QuantumTask { architecture, .. } => {
+                ops.push(SlgOpcode::NativeQuboCompile);
+                ops.push(SlgOpcode::NativeQuantumEgress(*architecture));
+                ops.push(SlgOpcode::NativeQuantumIngress);
+            }
+            ShaclConstraint::QuboLinearBias { var_index, bias } => {
+                ops.push(SlgOpcode::NativeQuboEmitLinear(*var_index, bias.to_bits()));
+            }
+            ShaclConstraint::QuboCouplerWeight { var_a, var_b, weight } => {
+                ops.push(SlgOpcode::NativeQuboEmitCoupler(*var_a, *var_b, weight.to_bits()));
+            }
             // Biosciences
             ShaclConstraint::BioSequenceAlignment
             | ShaclConstraint::AlignNucleotideSequence { .. } => ops.push(SlgOpcode::NativeNucleotideAlign),
@@ -503,6 +525,20 @@ impl ShaclCompiler {
             "qualia:thermoMetropolisStep"         => ShaclConstraint::ThermoMetropolisStep,
             "qualia:solveOdeDynamics"             => ShaclConstraint::SolveOdeDynamics,
             "qualia:dftGroundState"               => ShaclConstraint::DftGroundState,
+            "qualia:quantumTask" | "q42:quantumTask" => ShaclConstraint::QuantumTask {
+                max_shots: value as u32,
+                architecture: 0,
+                fallback_to_classical: true,
+            },
+            "qualia:hasLinearBias" | "q42:hasLinearBias" => ShaclConstraint::QuboLinearBias {
+                var_index: 0,
+                bias: value,
+            },
+            "qualia:hasCouplerWeight" | "q42:hasCouplerWeight" => ShaclConstraint::QuboCouplerWeight {
+                var_a: 0,
+                var_b: 1,
+                weight: value,
+            },
             "qualia:bioSequenceAlignment"         => ShaclConstraint::BioSequenceAlignment,
             "qualia:alignNucleotideSequence"      => ShaclConstraint::AlignNucleotideSequence { gap_open: value, gap_extend: value * 0.5 },
             "qualia:alignProteinSequence"         => ShaclConstraint::AlignProteinSequence { matrix: ProteinScoringMatrix::Blosum62 },

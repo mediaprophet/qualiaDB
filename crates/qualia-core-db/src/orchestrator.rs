@@ -7,6 +7,9 @@
 //!   RawInput → [Orchestrator] → validate_intent → [LlmAgent.infer] → validate_output → .q42 commit
 
 use crate::llm_agent::{AgentIntent, AgentRuntime, WebizenVerdict};
+use crate::n3_compiler::{compile_rules_with_shacl_gate, default_observation_shape, N3OutputMode};
+use crate::n3_parser::{N3Event, N3Parser};
+use crate::webizen::{SlgArena, SlgOpcode, VmFrame};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -116,6 +119,48 @@ impl TaskOrchestrator {
         });
     }
 
+    /// Parse LLM-emitted N3, validate via SHACL compiler, and execute on the Sentinel VM.
+    fn gate_llm_n3_output(text: &str, contract_hash: u64) -> Result<(), &'static str> {
+        let mut rules = Vec::new();
+        let mut parser = N3Parser::new(std::io::Cursor::new(text.as_bytes()));
+        parser
+            .parse_all(|event| {
+                if let N3Event::LogicRule(rule) = event {
+                    rules.push(rule);
+                }
+                Ok(())
+            })
+            .map_err(|_| "Invalid N3 output from LLM")?;
+
+        if rules.is_empty() {
+            return Err("LLM did not emit parseable N3 assertions");
+        }
+
+        let shape = default_observation_shape();
+        let shapes = [&shape];
+        let mut opcodes = [SlgOpcode::Call; 256];
+        let mut quins = [crate::QualiaQuin::default(); 64];
+        let program = compile_rules_with_shacl_gate(
+            &rules,
+            &shapes,
+            &mut opcodes,
+            &mut quins,
+            contract_hash,
+        )
+        .map_err(|_| "SHACL validation failed for LLM N3 output")?;
+
+        let mut arena = SlgArena::new();
+        let mut frame = VmFrame::default();
+        let _ = crate::n3_compiler::execute_compiled_program(
+            &mut arena,
+            &opcodes[..program.opcode_count],
+            &mut frame,
+            32,
+        )
+        .map_err(|_| "Sentinel VM memory overflow")?;
+        Ok(())
+    }
+
     /// Runs a full, Webizen-gated inference cycle for a registered LLM sub-agent.
     pub fn orchestrate_inference(
         &self,
@@ -181,11 +226,29 @@ impl TaskOrchestrator {
             WebizenVerdict::Permit => {}
         }
 
+        // 1b. Quantum egress gate — block classified prompts from remote QPU
+        if let Some(reason) = crate::qubo_compiler::quantum_prompt_gate(prompt) {
+            return OrchestrationResult::Blocked {
+                rule_violated: crate::q_hash("q42:QuantumTaskShape"),
+                reason,
+            };
+        }
+
         // 2. Inference
         let output = match agent.infer(prompt, graph_context) {
             Ok(o) => o,
             Err(e) => return OrchestrationResult::Failed(format!("{:?}", e)),
         };
+
+        // 2b. Optional CogAI symbolic path: compile LLM-emitted N3 through SHACL → bytecode.
+        if intent.output_mode == N3OutputMode::N3Assertions || intent.output_mode == N3OutputMode::GraphMutation {
+            if let Err(reason) = Self::gate_llm_n3_output(&output.text, intent.principal_did_hash) {
+                return OrchestrationResult::Blocked {
+                    rule_violated: crate::q_hash("q42:N3Compiler"),
+                    reason,
+                };
+            }
+        }
 
         // 3. Post-flight: validate output grounding
         match agent.validate_output(&output) {
@@ -218,6 +281,7 @@ impl TaskOrchestrator {
 pub mod tests {
     use super::*;
     use crate::llm_agent::{AgentIntent, LocalLlmAgent, SANCTUARY_SCOPE_WEBIZEN};
+    use crate::n3_compiler::N3OutputMode;
 
     #[test]
     pub fn qualia_validate_ring_buffer() {}
@@ -232,6 +296,9 @@ pub mod tests {
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
             mcp_intent_frame_hash: 0x1234,
+            output_mode: N3OutputMode::FreeText,
+            clearance_ceiling: 0,
+            max_sentinel_depth: 32,
             active_profile: None,
         };
         let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
@@ -249,6 +316,9 @@ pub mod tests {
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
             mcp_intent_frame_hash: 0x1234,
+            output_mode: N3OutputMode::FreeText,
+            clearance_ceiling: 0,
+            max_sentinel_depth: 32,
             active_profile: None,
         };
         let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
@@ -273,6 +343,9 @@ pub mod tests {
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
             mcp_intent_frame_hash: 0x1234,
+            output_mode: N3OutputMode::FreeText,
+            clearance_ceiling: 0,
+            max_sentinel_depth: 32,
             active_profile: None,
         };
         let orch = TaskOrchestrator::new(Box::new(MockCriticalThermalGovernor));

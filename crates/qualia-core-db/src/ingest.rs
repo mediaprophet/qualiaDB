@@ -1,4 +1,6 @@
-use crate::QualiaQuin;
+use crate::{q_hash, QualiaQuin};
+
+const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use std::fs::File;
 use std::io::{BufReader, Write};
@@ -17,7 +19,7 @@ pub struct RawTriple {
     pub object: String,
 }
 
-pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()> {
+pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u64> {
     let start_time = Instant::now();
     println!("Initializing Native Ingestion Pipeline...");
 
@@ -44,20 +46,20 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
         let handle = thread::spawn(move || {
             let mut _local_count = 0u64;
             for triple in rx {
-                // Cryptographic Hashing Simulation (Ed25519 / Blake3 mapping)
-                // In a production system, this hashes the string to a strict 64-bit ID.
-                // We'll use a simple deterministic hash for the benchmark.
-                let s_hash = deterministic_hash(&triple.subject);
-                let p_hash = deterministic_hash(&triple.predicate);
-                let o_hash = deterministic_hash(&triple.object);
+                let s_hash = q_hash(&triple.subject);
+                let p_hash = q_hash(&triple.predicate);
+                let o_hash = q_hash(&triple.object) & OBJECT_HASH_MASK;
+                let context = 0u64;
+                let metadata = 0u64;
+                let parity = s_hash ^ p_hash ^ o_hash ^ context ^ metadata;
 
                 let quin = QualiaQuin {
                     subject: s_hash,
                     predicate: p_hash,
                     object: o_hash,
-                    context: 0,
-                    metadata: 0,
-                    parity: 0,
+                    context,
+                    metadata,
+                    parity,
                 };
 
                 // Send back to the writer thread
@@ -133,7 +135,10 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
     };
 
     let path_lower = in_path.to_lowercase();
-    if path_lower.ends_with(".rdf") || path_lower.ends_with(".xml") {
+    if path_lower.ends_with(".rdf")
+        || path_lower.ends_with(".xml")
+        || path_lower.ends_with(".owl")
+    {
         let mut parser = RdfXmlParser::new(buf_reader, None);
         if let Err(e) = parser.parse_all(&mut on_triple) {
             eprintln!("RDF/XML Parsing Error: {}", e);
@@ -184,7 +189,11 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
         if let Err(e) = parser.parse_all(on_n3_event) {
             eprintln!("N3 Logic Parsing Error: {}", e);
         }
-        println!("Registered {} N3 Logic Rules into the Webizen VM.", rules_parsed);
+        let fired = webizen.fire_registered_rules(crate::q_hash("q42:ingestSession"));
+        println!(
+            "Registered {} N3 Logic Rules; fired {} through Core-1 Sentinel VM.",
+            rules_parsed, fired
+        );
     } else {
         eprintln!("Unsupported file extension. Expected .rdf, .xml, .ttl, .nt, or .n3");
     }
@@ -205,15 +214,5 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
     println!("Wrote {} Super-Quins to {}.", total_written, out_path);
     println!("Total Time: {:?}", duration);
 
-    Ok(())
-}
-
-fn deterministic_hash(input: &str) -> u64 {
-    // Simple FNV-1a hash for deterministic benchmark ID generation
-    let mut hash: u64 = 0xcbf29ce484222325;
-    for byte in input.bytes() {
-        hash ^= byte as u64;
-        hash = hash.wrapping_mul(0x100000001b3);
-    }
-    hash
+    Ok(total_written)
 }

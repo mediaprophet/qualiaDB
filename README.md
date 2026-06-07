@@ -43,7 +43,7 @@ Qualia-DB is four things at once:
 
 ---
 
-## v0.0.6-dev Highlights (current branch)
+## v0.0.8-dev Highlights (current branch)
 
 - **In-process LLM inference**: `GgufTokenizer` parses the GGUF v2/v3 KV section (vocabulary, BOS/EOS IDs); greedy longest-match encode; SentencePiece-aware decode. `infer_local_model()` runs a real autoregressive decode loop — GPU dispatch via DirectML 1.15 (Windows) / Accelerate AMX (macOS) / wgpu/Vulkan (Linux) — with Phase 8 SPSC Webizen Sentinel mid-generation rollback. No Ollama, no Python.
 - **Flutter Chat UI wired**: `runInference(prompt, modelPath)` exported via flutter_rust_bridge. The Chat screen calls the full `TaskOrchestrator` governance pipeline (intent validation → Phase 8 GPU loop → provenance grounding) and shows a live loading indicator.
@@ -178,7 +178,7 @@ Full architecture documentation: [ARCHITECTURE.md](ARCHITECTURE.md)
 | [docs/manuals/DEVELOPMENT.md](docs/manuals/DEVELOPMENT.md) | Build from source, CLI reference, benchmarks, cross-compilation |
 | [docs/manuals/flutter-api-reference.md](docs/manuals/flutter-api-reference.md) | Flutter FRB API reference — all exported functions, data types, inference usage |
 | [ADRs](docs/manuals/adr/) | Architectural Decision Records |
-| [App Vault Developer Guide](docs/manuals/app-vault-developer-guide.md) | Build web apps for the App Vault — manifest spec, daemon API, auth, CORS |
+| [Qapp Vault Developer Guide](docs/manuals/qapp-vault-developer-guide.md) | Build web qapps for the Qapp Vault — manifest spec, daemon API, auth, CORS |
 | [AI Instructions](AGENTS.md) | Guidance for AI agents working on this codebase |
 
 ---

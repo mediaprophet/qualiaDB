@@ -6,20 +6,52 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `block_on`, `find_open_port`, `load_persisted_directory`, `map_actor`, `map_front_door`, `map_progress`, `map_qpu_chat_result`, `map_rule`, `map_tax_suite`, `map_token`, `parse_manifest_items`, `spawn_daemon_background`, `to_actor`, `to_core_tax_suite`, `to_rule`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PaymentReceipt`, `PhysicsStore`
+
 Future<String> greet({required String name}) =>
     RustApi.instance.api.crateApiQualiaApiGreet(name: name);
+
+Future<void> initCore() => RustApi.instance.api.crateApiQualiaApiInitCore();
 
 Future<HardwareStatus> getHardwareStatus() =>
     RustApi.instance.api.crateApiQualiaApiGetHardwareStatus();
 
+Future<HardwareTelemetry> getHardwareTelemetry() =>
+    RustApi.instance.api.crateApiQualiaApiGetHardwareTelemetry();
+
+Future<String> profileEnergyCircumstance() =>
+    RustApi.instance.api.crateApiQualiaApiProfileEnergyCircumstance();
+
 Future<bool> checkOllamaStatus() =>
     RustApi.instance.api.crateApiQualiaApiCheckOllamaStatus();
+
+Future<String> runEngineCommand({required String cmd}) =>
+    RustApi.instance.api.crateApiQualiaApiRunEngineCommand(cmd: cmd);
 
 Future<AgentConfig> getConfig() =>
     RustApi.instance.api.crateApiQualiaApiGetConfig();
 
-Future<List<CoinBalance>> getCoinBalances() =>
-    RustApi.instance.api.crateApiQualiaApiGetCoinBalances();
+Future<void> saveConfig({required AgentConfig newConfig}) =>
+    RustApi.instance.api.crateApiQualiaApiSaveConfig(newConfig: newConfig);
+
+Future<bool> isFirstRun() => RustApi.instance.api.crateApiQualiaApiIsFirstRun();
+
+Future<QpuOracleSettings> getQpuSettings() =>
+    RustApi.instance.api.crateApiQualiaApiGetQpuSettings();
+
+Future<bool> isQpuFeatureUnlocked() =>
+    RustApi.instance.api.crateApiQualiaApiIsQpuFeatureUnlocked();
+
+Future<QpuOracleSettings> saveQpuSettings(
+        {required QpuOracleSettingsInput input}) =>
+    RustApi.instance.api.crateApiQualiaApiSaveQpuSettings(input: input);
+
+Future<QpuChatCommandResult> handleQpuChatCommand({required String text}) =>
+    RustApi.instance.api.crateApiQualiaApiHandleQpuChatCommand(text: text);
+
+Future<QpuChatCommandResult> handleEngineChatCommand({required String text}) =>
+    RustApi.instance.api.crateApiQualiaApiHandleEngineChatCommand(text: text);
 
 Future<String> startDaemon() =>
     RustApi.instance.api.crateApiQualiaApiStartDaemon();
@@ -45,46 +77,8 @@ Future<double> getPhysicsStatePressure() =>
 Future<double> getPhysicsStateTimeDilation() =>
     RustApi.instance.api.crateApiQualiaApiGetPhysicsStateTimeDilation();
 
-Future<List<String>> listInstalledApps() =>
-    RustApi.instance.api.crateApiQualiaApiListInstalledApps();
-
-Future<String> launchInstalledApp({required String appName}) =>
-    RustApi.instance.api.crateApiQualiaApiLaunchInstalledApp(appName: appName);
-
-Future<String> generateAppCredential({required String appName}) =>
-    RustApi.instance.api
-        .crateApiQualiaApiGenerateAppCredential(appName: appName);
-
-Future<String> verifyAndInstallApp(
-        {required String zipPath, required String credentialSig}) =>
-    RustApi.instance.api.crateApiQualiaApiVerifyAndInstallApp(
-        zipPath: zipPath, credentialSig: credentialSig);
-
-Future<String> ingestLiterature({required String filePath}) =>
-    RustApi.instance.api.crateApiQualiaApiIngestLiterature(filePath: filePath);
-
-Future<void> initCore() => RustApi.instance.api.crateApiQualiaApiInitCore();
-
-Future<List<ModelInfo>> discoverModels() =>
-    RustApi.instance.api.crateApiQualiaApiDiscoverModels();
-
-Future<String?> getActiveModel() =>
-    RustApi.instance.api.crateApiQualiaApiGetActiveModel();
-
-Future<void> setActiveModel({required String modelName}) =>
-    RustApi.instance.api.crateApiQualiaApiSetActiveModel(modelName: modelName);
-
-Future<List<CatalogItem>> fetchModelCatalog() =>
-    RustApi.instance.api.crateApiQualiaApiFetchModelCatalog();
-
-Future<List<CatalogItem>> fetchModelCatalogReal() =>
-    RustApi.instance.api.crateApiQualiaApiFetchModelCatalogReal();
-
-Future<List<CatalogItem>> fetchOntologyCatalog() =>
-    RustApi.instance.api.crateApiQualiaApiFetchOntologyCatalog();
-
-Future<List<CatalogItem>> fetchOntologyCatalogReal() =>
-    RustApi.instance.api.crateApiQualiaApiFetchOntologyCatalogReal();
+Future<SpatialPhysicsState> getPhysicsState() =>
+    RustApi.instance.api.crateApiQualiaApiGetPhysicsState();
 
 Future<void> updatePhysicsState(
         {required double temperature,
@@ -95,8 +89,46 @@ Future<void> updatePhysicsState(
         pressure: pressure,
         timeDilation: timeDilation);
 
+Future<WalletStatus> getWalletStatus() =>
+    RustApi.instance.api.crateApiQualiaApiGetWalletStatus();
+
+Future<List<CoinBalance>> getCoinBalances() =>
+    RustApi.instance.api.crateApiQualiaApiGetCoinBalances();
+
+Future<List<TxRecord>> getTransactionHistory({required String ticker}) =>
+    RustApi.instance.api.crateApiQualiaApiGetTransactionHistory(ticker: ticker);
+
+Future<List<TokenEntry>> getTokens() =>
+    RustApi.instance.api.crateApiQualiaApiGetTokens();
+
+Future<TokenEntry> addToken(
+        {required String chain,
+        required String tokenType,
+        required String contract,
+        required String symbol,
+        required String name,
+        required int decimals}) =>
+    RustApi.instance.api.crateApiQualiaApiAddToken(
+        chain: chain,
+        tokenType: tokenType,
+        contract: contract,
+        symbol: symbol,
+        name: name,
+        decimals: decimals);
+
+Future<void> removeToken({required String id}) =>
+    RustApi.instance.api.crateApiQualiaApiRemoveToken(id: id);
+
 Future<TaxRecipientSuite> getTaxSuite() =>
     RustApi.instance.api.crateApiQualiaApiGetTaxSuite();
+
+Future<void> saveTaxSuite({required TaxRecipientSuite suite}) =>
+    RustApi.instance.api.crateApiQualiaApiSaveTaxSuite(suite: suite);
+
+Future<DispatchResult> dispatchTaxPayment(
+        {required BigInt grossAmountMicroCents}) =>
+    RustApi.instance.api.crateApiQualiaApiDispatchTaxPayment(
+        grossAmountMicroCents: grossAmountMicroCents);
 
 Future<String> deriveWalletsFromSeed({required String seed}) =>
     RustApi.instance.api.crateApiQualiaApiDeriveWalletsFromSeed(seed: seed);
@@ -124,8 +156,161 @@ Future<void> saveImportedAccounts({required String accountsJson}) =>
     RustApi.instance.api
         .crateApiQualiaApiSaveImportedAccounts(accountsJson: accountsJson);
 
-Future<void> saveConfig({required AgentConfig newConfig}) =>
-    RustApi.instance.api.crateApiQualiaApiSaveConfig(newConfig: newConfig);
+Future<List<String>> listInstalledQapps() =>
+    RustApi.instance.api.crateApiQualiaApiListInstalledQapps();
+
+Future<String> launchInstalledQapp({required String qappName}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiLaunchInstalledQapp(qappName: qappName);
+
+Future<String> launchInstalledQappWithContext(
+        {required String qappName,
+        String? entrypoint,
+        String? surface,
+        String? payloadJson,
+        String? source}) =>
+    RustApi.instance.api.crateApiQualiaApiLaunchInstalledQappWithContext(
+        qappName: qappName,
+        entrypoint: entrypoint,
+        surface: surface,
+        payloadJson: payloadJson,
+        source: source);
+
+Future<String> inspectInstalledQappReadiness({required String qappName}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiInspectInstalledQappReadiness(qappName: qappName);
+
+Future<List<String>> listInstalledOntologyArtifacts() =>
+    RustApi.instance.api.crateApiQualiaApiListInstalledOntologyArtifacts();
+
+Future<String> removeInstalledOntology({required String ontologyId}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiRemoveInstalledOntology(ontologyId: ontologyId);
+
+Future<String> removeInstalledModel({required String modelId}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiRemoveInstalledModel(modelId: modelId);
+
+Future<String> testSparqlEndpoint({required String endpointOrId}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiTestSparqlEndpoint(endpointOrId: endpointOrId);
+
+Future<int> startQualiaProtocol() =>
+    RustApi.instance.api.crateApiQualiaApiStartQualiaProtocol();
+
+Future<int> qualiaProtocolPort() =>
+    RustApi.instance.api.crateApiQualiaApiQualiaProtocolPort();
+
+Future<void> downloadAndInstallUpdate({required String url}) =>
+    RustApi.instance.api.crateApiQualiaApiDownloadAndInstallUpdate(url: url);
+
+Future<void> registerQualiaUriHandler({required String exePath}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiRegisterQualiaUriHandler(exePath: exePath);
+
+Future<PrerequisiteStatus> checkPrerequisites() =>
+    RustApi.instance.api.crateApiQualiaApiCheckPrerequisites();
+
+Future<bool> configureWebview2Runtime() =>
+    RustApi.instance.api.crateApiQualiaApiConfigureWebview2Runtime();
+
+Future<void> installPrerequisite({required String kind}) =>
+    RustApi.instance.api.crateApiQualiaApiInstallPrerequisite(kind: kind);
+
+Future<String> generateQappCredential({required String qappName}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiGenerateQappCredential(qappName: qappName);
+
+Future<String> buildAnatomyGraphContextJson(
+        {required String qappName,
+        required String userPrompt,
+        required String agentReply}) =>
+    RustApi.instance.api.crateApiQualiaApiBuildAnatomyGraphContextJson(
+        qappName: qappName, userPrompt: userPrompt, agentReply: agentReply);
+
+Future<String> buildAnatomyGraphContextJsonWithDicom(
+        {required String qappName,
+        required String userPrompt,
+        required String agentReply,
+        String? dicomFilePath}) =>
+    RustApi.instance.api.crateApiQualiaApiBuildAnatomyGraphContextJsonWithDicom(
+        qappName: qappName,
+        userPrompt: userPrompt,
+        agentReply: agentReply,
+        dicomFilePath: dicomFilePath);
+
+Future<String> parseDicomMetadataJson({required String filePath}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiParseDicomMetadataJson(filePath: filePath);
+
+Future<String> buildDicomOverlaySpecJson({required String filePath}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiBuildDicomOverlaySpecJson(filePath: filePath);
+
+Future<String> verifyAndInstallQapp(
+        {required String zipPath, required String credentialSig}) =>
+    RustApi.instance.api.crateApiQualiaApiVerifyAndInstallQapp(
+        zipPath: zipPath, credentialSig: credentialSig);
+
+Future<String> ingestLiterature({required String filePath}) =>
+    RustApi.instance.api.crateApiQualiaApiIngestLiterature(filePath: filePath);
+
+Future<String> upsertCmldDefinition(
+        {required String term, required String contextDid}) =>
+    RustApi.instance.api.crateApiQualiaApiUpsertCmldDefinition(
+        term: term, contextDid: contextDid);
+
+Future<String> ingestPdf({required String fileName}) =>
+    RustApi.instance.api.crateApiQualiaApiIngestPdf(fileName: fileName);
+
+Future<String> ingestOntology({required String fileName}) =>
+    RustApi.instance.api.crateApiQualiaApiIngestOntology(fileName: fileName);
+
+Future<String> ingestImage({required String filePath}) =>
+    RustApi.instance.api.crateApiQualiaApiIngestImage(filePath: filePath);
+
+Future<void> ingestImageAsync(
+        {required String filePath, required String typology}) =>
+    RustApi.instance.api.crateApiQualiaApiIngestImageAsync(
+        filePath: filePath, typology: typology);
+
+Future<String> exportToSolid(
+        {required String inputQ42Path, required String outputDirPath}) =>
+    RustApi.instance.api.crateApiQualiaApiExportToSolid(
+        inputQ42Path: inputQ42Path, outputDirPath: outputDirPath);
+
+Future<String> mintSemanticToken({required String assetId}) =>
+    RustApi.instance.api.crateApiQualiaApiMintSemanticToken(assetId: assetId);
+
+Future<String> fetchWalletPortfolio() =>
+    RustApi.instance.api.crateApiQualiaApiFetchWalletPortfolio();
+
+Future<String> fetchTorrentTelemetry() =>
+    RustApi.instance.api.crateApiQualiaApiFetchTorrentTelemetry();
+
+Future<List<ModelInfo>> discoverModels() =>
+    RustApi.instance.api.crateApiQualiaApiDiscoverModels();
+
+Future<String?> getActiveModel() =>
+    RustApi.instance.api.crateApiQualiaApiGetActiveModel();
+
+Future<void> setActiveModel({required String modelName}) =>
+    RustApi.instance.api.crateApiQualiaApiSetActiveModel(modelName: modelName);
+
+Future<String> fetchRemoteManifest({required String url}) =>
+    RustApi.instance.api.crateApiQualiaApiFetchRemoteManifest(url: url);
+
+Future<List<CatalogItem>> fetchModelCatalog() =>
+    RustApi.instance.api.crateApiQualiaApiFetchModelCatalog();
+
+Future<List<CatalogItem>> fetchModelCatalogReal() =>
+    RustApi.instance.api.crateApiQualiaApiFetchModelCatalogReal();
+
+Future<List<CatalogItem>> fetchOntologyCatalog() =>
+    RustApi.instance.api.crateApiQualiaApiFetchOntologyCatalog();
+
+Future<List<CatalogItem>> fetchOntologyCatalogReal() =>
+    RustApi.instance.api.crateApiQualiaApiFetchOntologyCatalogReal();
 
 Future<List<ProgressPayload>> getActiveDownloads() =>
     RustApi.instance.api.crateApiQualiaApiGetActiveDownloads();
@@ -140,28 +325,125 @@ Future<String> downloadModel(
     RustApi.instance.api.crateApiQualiaApiDownloadModel(
         url: url, filename: filename, modelId: modelId);
 
-Future<SpatialPhysicsState> getPhysicsState() =>
-    RustApi.instance.api.crateApiQualiaApiGetPhysicsState();
+Future<String> downloadAndVectorize(
+        {required String url,
+        required String filename,
+        required String itemId}) =>
+    RustApi.instance.api.crateApiQualiaApiDownloadAndVectorize(
+        url: url, filename: filename, itemId: itemId);
 
-Future<String> upsertCmldDefinition(
-        {required String term, required String contextDid}) =>
-    RustApi.instance.api.crateApiQualiaApiUpsertCmldDefinition(
-        term: term, contextDid: contextDid);
+Future<bool> toggleNymRelay() =>
+    RustApi.instance.api.crateApiQualiaApiToggleNymRelay();
 
-/// Run local LLM inference through the full Webizen-gated orchestration pipeline.
-///
-/// This is the primary entry point for the Flutter chat UI. It:
-///   1. Validates the intent against the Rights Ontology (pre-flight)
-///   2. Calls `LocalLlmAgent::infer()` → Phase 8 bifurcated SPSC GPU loop
-///   3. Validates provenance citations on the output (post-flight)
-///
-/// `model_path` should be the absolute path to a `.gguf` file on-device
-/// (e.g. the path selected in LLMHubScreen after download).
-/// Pass an empty string to get a descriptive placeholder response.
+Future<bool> toggleStarkProver() =>
+    RustApi.instance.api.crateApiQualiaApiToggleStarkProver();
+
+Future<void> updateSolarInput({required int watts}) =>
+    RustApi.instance.api.crateApiQualiaApiUpdateSolarInput(watts: watts);
+
+Future<List<FrontDoorBridge>> getFrontDoors() =>
+    RustApi.instance.api.crateApiQualiaApiGetFrontDoors();
+
+Future<FrontDoorBridge> generateFrontDoor({required String label}) =>
+    RustApi.instance.api.crateApiQualiaApiGenerateFrontDoor(label: label);
+
+Future<String> generateFrontDoorInvite() =>
+    RustApi.instance.api.crateApiQualiaApiGenerateFrontDoorInvite();
+
+Future<List<ActorBridge>> getDirectoryActors() =>
+    RustApi.instance.api.crateApiQualiaApiGetDirectoryActors();
+
+Future<void> addDirectoryActor({required ActorBridge actor}) =>
+    RustApi.instance.api.crateApiQualiaApiAddDirectoryActor(actor: actor);
+
+Future<List<DelegationRuleBridge>> getDelegationRules() =>
+    RustApi.instance.api.crateApiQualiaApiGetDelegationRules();
+
+Future<void> addDelegationRule({required DelegationRuleBridge rule}) =>
+    RustApi.instance.api.crateApiQualiaApiAddDelegationRule(rule: rule);
+
+Future<String> acceptVaultHandshake(
+        {required String didKey, required String payload}) =>
+    RustApi.instance.api.crateApiQualiaApiAcceptVaultHandshake(
+        didKey: didKey, payload: payload);
+
+Future<String> receiveVaultJob(
+        {required String jobId,
+        required String taskType,
+        required List<int> dataBlobCbor}) =>
+    RustApi.instance.api.crateApiQualiaApiReceiveVaultJob(
+        jobId: jobId, taskType: taskType, dataBlobCbor: dataBlobCbor);
+
 Future<String> runInference(
         {required String prompt, required String modelPath}) =>
     RustApi.instance.api
         .crateApiQualiaApiRunInference(prompt: prompt, modelPath: modelPath);
+
+/// NDJSON stream: `{"event":"token","data":"..."}` then `{"event":"done","data":{...}}`.
+Stream<String> runInferenceStream(
+        {required String prompt,
+        required String modelPath,
+        required String sessionId,
+        String? replyToFragmentId}) =>
+    RustApi.instance.api.crateApiQualiaApiRunInferenceStream(
+        prompt: prompt,
+        modelPath: modelPath,
+        sessionId: sessionId,
+        replyToFragmentId: replyToFragmentId);
+
+Future<void> cancelInferenceStream() =>
+    RustApi.instance.api.crateApiQualiaApiCancelInferenceStream();
+
+class ActorBridge {
+  final String id;
+  final String actorType;
+  final String name;
+  final String? organization;
+  final List<String> qualifications;
+  final List<String> roles;
+  final String verificationStatus;
+  final String pairwiseDid;
+  final String? rootDidUri;
+
+  const ActorBridge({
+    required this.id,
+    required this.actorType,
+    required this.name,
+    this.organization,
+    required this.qualifications,
+    required this.roles,
+    required this.verificationStatus,
+    required this.pairwiseDid,
+    this.rootDidUri,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      actorType.hashCode ^
+      name.hashCode ^
+      organization.hashCode ^
+      qualifications.hashCode ^
+      roles.hashCode ^
+      verificationStatus.hashCode ^
+      pairwiseDid.hashCode ^
+      rootDidUri.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ActorBridge &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          actorType == other.actorType &&
+          name == other.name &&
+          organization == other.organization &&
+          qualifications == other.qualifications &&
+          roles == other.roles &&
+          verificationStatus == other.verificationStatus &&
+          pairwiseDid == other.pairwiseDid &&
+          rootDidUri == other.rootDidUri;
+}
 
 class AgentConfig {
   final String storagePath;
@@ -288,6 +570,120 @@ class CoinBalance {
           status == other.status;
 }
 
+class DelegationRuleBridge {
+  final String id;
+  final String actorId;
+  final List<String> grantedRoles;
+  final String legalBasis;
+  final String privacyModeLimit;
+  final List<String> allowedRecordTypes;
+  final List<String> restrictedRecords;
+  final bool isActive;
+
+  const DelegationRuleBridge({
+    required this.id,
+    required this.actorId,
+    required this.grantedRoles,
+    required this.legalBasis,
+    required this.privacyModeLimit,
+    required this.allowedRecordTypes,
+    required this.restrictedRecords,
+    required this.isActive,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      actorId.hashCode ^
+      grantedRoles.hashCode ^
+      legalBasis.hashCode ^
+      privacyModeLimit.hashCode ^
+      allowedRecordTypes.hashCode ^
+      restrictedRecords.hashCode ^
+      isActive.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DelegationRuleBridge &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          actorId == other.actorId &&
+          grantedRoles == other.grantedRoles &&
+          legalBasis == other.legalBasis &&
+          privacyModeLimit == other.privacyModeLimit &&
+          allowedRecordTypes == other.allowedRecordTypes &&
+          restrictedRecords == other.restrictedRecords &&
+          isActive == other.isActive;
+}
+
+class DispatchResult {
+  final BigInt grossAmountMicroCents;
+  final BigInt taxPoolMicroCents;
+  final BigInt principalRemainderMicroCents;
+  final BigInt totalSent;
+  final BigInt totalQueued;
+  final BigInt totalFailed;
+
+  const DispatchResult({
+    required this.grossAmountMicroCents,
+    required this.taxPoolMicroCents,
+    required this.principalRemainderMicroCents,
+    required this.totalSent,
+    required this.totalQueued,
+    required this.totalFailed,
+  });
+
+  @override
+  int get hashCode =>
+      grossAmountMicroCents.hashCode ^
+      taxPoolMicroCents.hashCode ^
+      principalRemainderMicroCents.hashCode ^
+      totalSent.hashCode ^
+      totalQueued.hashCode ^
+      totalFailed.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DispatchResult &&
+          runtimeType == other.runtimeType &&
+          grossAmountMicroCents == other.grossAmountMicroCents &&
+          taxPoolMicroCents == other.taxPoolMicroCents &&
+          principalRemainderMicroCents == other.principalRemainderMicroCents &&
+          totalSent == other.totalSent &&
+          totalQueued == other.totalQueued &&
+          totalFailed == other.totalFailed;
+}
+
+class FrontDoorBridge {
+  final String id;
+  final String didUri;
+  final String label;
+  final String createdAt;
+
+  const FrontDoorBridge({
+    required this.id,
+    required this.didUri,
+    required this.label,
+    required this.createdAt,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^ didUri.hashCode ^ label.hashCode ^ createdAt.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FrontDoorBridge &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          didUri == other.didUri &&
+          label == other.label &&
+          createdAt == other.createdAt;
+}
+
 class HardwareStatus {
   final double ramTotalGb;
   final double ramUsedGb;
@@ -313,6 +709,37 @@ class HardwareStatus {
           vramEstimatedGb == other.vramEstimatedGb;
 }
 
+class HardwareTelemetry {
+  final double cpuPercent;
+  final double ramUsedGb;
+  final double ramTotalGb;
+  final String daemonStatus;
+
+  const HardwareTelemetry({
+    required this.cpuPercent,
+    required this.ramUsedGb,
+    required this.ramTotalGb,
+    required this.daemonStatus,
+  });
+
+  @override
+  int get hashCode =>
+      cpuPercent.hashCode ^
+      ramUsedGb.hashCode ^
+      ramTotalGb.hashCode ^
+      daemonStatus.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HardwareTelemetry &&
+          runtimeType == other.runtimeType &&
+          cpuPercent == other.cpuPercent &&
+          ramUsedGb == other.ramUsedGb &&
+          ramTotalGb == other.ramTotalGb &&
+          daemonStatus == other.daemonStatus;
+}
+
 class ModelInfo {
   final String name;
   final bool isActive;
@@ -335,6 +762,49 @@ class ModelInfo {
           name == other.name &&
           isActive == other.isActive &&
           avatarType == other.avatarType;
+}
+
+class PrerequisiteStatus {
+  final bool platformRequiresCheck;
+  final bool webview2Ready;
+  final bool webview2Bundled;
+  final bool webview2Evergreen;
+  final bool vcRedistReady;
+  final bool allReady;
+  final String bundledWebview2Dir;
+
+  const PrerequisiteStatus({
+    required this.platformRequiresCheck,
+    required this.webview2Ready,
+    required this.webview2Bundled,
+    required this.webview2Evergreen,
+    required this.vcRedistReady,
+    required this.allReady,
+    required this.bundledWebview2Dir,
+  });
+
+  @override
+  int get hashCode =>
+      platformRequiresCheck.hashCode ^
+      webview2Ready.hashCode ^
+      webview2Bundled.hashCode ^
+      webview2Evergreen.hashCode ^
+      vcRedistReady.hashCode ^
+      allReady.hashCode ^
+      bundledWebview2Dir.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PrerequisiteStatus &&
+          runtimeType == other.runtimeType &&
+          platformRequiresCheck == other.platformRequiresCheck &&
+          webview2Ready == other.webview2Ready &&
+          webview2Bundled == other.webview2Bundled &&
+          webview2Evergreen == other.webview2Evergreen &&
+          vcRedistReady == other.vcRedistReady &&
+          allReady == other.allReady &&
+          bundledWebview2Dir == other.bundledWebview2Dir;
 }
 
 class ProgressPayload {
@@ -376,6 +846,129 @@ class ProgressPayload {
           status == other.status;
 }
 
+class QpuChatCommandResult {
+  final bool handled;
+  final String response;
+  final bool featureUnlocked;
+
+  const QpuChatCommandResult({
+    required this.handled,
+    required this.response,
+    required this.featureUnlocked,
+  });
+
+  @override
+  int get hashCode =>
+      handled.hashCode ^ response.hashCode ^ featureUnlocked.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QpuChatCommandResult &&
+          runtimeType == other.runtimeType &&
+          handled == other.handled &&
+          response == other.response &&
+          featureUnlocked == other.featureUnlocked;
+}
+
+class QpuOracleSettings {
+  final bool featureUnlocked;
+  final bool ibmTokenConfigured;
+  final bool dwaveTokenConfigured;
+  final int maxShotsPerTask;
+  final bool fallbackToClassical;
+  final bool enableQuboRouting;
+  final bool enableDftGroundState;
+  final bool enableDefeasibleResolution;
+  final double ibmQuotaMinutesRemaining;
+  final double dwaveQuotaMinutesRemaining;
+
+  const QpuOracleSettings({
+    required this.featureUnlocked,
+    required this.ibmTokenConfigured,
+    required this.dwaveTokenConfigured,
+    required this.maxShotsPerTask,
+    required this.fallbackToClassical,
+    required this.enableQuboRouting,
+    required this.enableDftGroundState,
+    required this.enableDefeasibleResolution,
+    required this.ibmQuotaMinutesRemaining,
+    required this.dwaveQuotaMinutesRemaining,
+  });
+
+  @override
+  int get hashCode =>
+      featureUnlocked.hashCode ^
+      ibmTokenConfigured.hashCode ^
+      dwaveTokenConfigured.hashCode ^
+      maxShotsPerTask.hashCode ^
+      fallbackToClassical.hashCode ^
+      enableQuboRouting.hashCode ^
+      enableDftGroundState.hashCode ^
+      enableDefeasibleResolution.hashCode ^
+      ibmQuotaMinutesRemaining.hashCode ^
+      dwaveQuotaMinutesRemaining.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QpuOracleSettings &&
+          runtimeType == other.runtimeType &&
+          featureUnlocked == other.featureUnlocked &&
+          ibmTokenConfigured == other.ibmTokenConfigured &&
+          dwaveTokenConfigured == other.dwaveTokenConfigured &&
+          maxShotsPerTask == other.maxShotsPerTask &&
+          fallbackToClassical == other.fallbackToClassical &&
+          enableQuboRouting == other.enableQuboRouting &&
+          enableDftGroundState == other.enableDftGroundState &&
+          enableDefeasibleResolution == other.enableDefeasibleResolution &&
+          ibmQuotaMinutesRemaining == other.ibmQuotaMinutesRemaining &&
+          dwaveQuotaMinutesRemaining == other.dwaveQuotaMinutesRemaining;
+}
+
+class QpuOracleSettingsInput {
+  final int maxShotsPerTask;
+  final bool fallbackToClassical;
+  final bool enableQuboRouting;
+  final bool enableDftGroundState;
+  final bool enableDefeasibleResolution;
+  final String? ibmToken;
+  final String? dwaveToken;
+
+  const QpuOracleSettingsInput({
+    required this.maxShotsPerTask,
+    required this.fallbackToClassical,
+    required this.enableQuboRouting,
+    required this.enableDftGroundState,
+    required this.enableDefeasibleResolution,
+    this.ibmToken,
+    this.dwaveToken,
+  });
+
+  @override
+  int get hashCode =>
+      maxShotsPerTask.hashCode ^
+      fallbackToClassical.hashCode ^
+      enableQuboRouting.hashCode ^
+      enableDftGroundState.hashCode ^
+      enableDefeasibleResolution.hashCode ^
+      ibmToken.hashCode ^
+      dwaveToken.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QpuOracleSettingsInput &&
+          runtimeType == other.runtimeType &&
+          maxShotsPerTask == other.maxShotsPerTask &&
+          fallbackToClassical == other.fallbackToClassical &&
+          enableQuboRouting == other.enableQuboRouting &&
+          enableDftGroundState == other.enableDftGroundState &&
+          enableDefeasibleResolution == other.enableDefeasibleResolution &&
+          ibmToken == other.ibmToken &&
+          dwaveToken == other.dwaveToken;
+}
+
 class SpatialPhysicsState {
   final double temperature;
   final double pressure;
@@ -404,7 +997,7 @@ class SpatialPhysicsState {
 class TaxRecipient {
   final String label;
   final String ilpAddress;
-  final double sharePercent;
+  final BigInt sharePercent;
   final bool useNym;
 
   const TaxRecipient({
@@ -451,4 +1044,135 @@ class TaxRecipientSuite {
           runtimeType == other.runtimeType &&
           jurisdictionDid == other.jurisdictionDid &&
           recipients == other.recipients;
+}
+
+class TokenEntry {
+  final String id;
+  final String chain;
+  final String tokenType;
+  final String contract;
+  final String symbol;
+  final String name;
+  final String balance;
+  final int decimals;
+  final double fiatUsd;
+
+  const TokenEntry({
+    required this.id,
+    required this.chain,
+    required this.tokenType,
+    required this.contract,
+    required this.symbol,
+    required this.name,
+    required this.balance,
+    required this.decimals,
+    required this.fiatUsd,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      chain.hashCode ^
+      tokenType.hashCode ^
+      contract.hashCode ^
+      symbol.hashCode ^
+      name.hashCode ^
+      balance.hashCode ^
+      decimals.hashCode ^
+      fiatUsd.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TokenEntry &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          chain == other.chain &&
+          tokenType == other.tokenType &&
+          contract == other.contract &&
+          symbol == other.symbol &&
+          name == other.name &&
+          balance == other.balance &&
+          decimals == other.decimals &&
+          fiatUsd == other.fiatUsd;
+}
+
+class TxRecord {
+  final String txid;
+  final String ticker;
+  final String direction;
+  final String amount;
+  final String label;
+  final String timestamp;
+  final String status;
+  final int confirmations;
+  final String fee;
+  final String counterparty;
+
+  const TxRecord({
+    required this.txid,
+    required this.ticker,
+    required this.direction,
+    required this.amount,
+    required this.label,
+    required this.timestamp,
+    required this.status,
+    required this.confirmations,
+    required this.fee,
+    required this.counterparty,
+  });
+
+  @override
+  int get hashCode =>
+      txid.hashCode ^
+      ticker.hashCode ^
+      direction.hashCode ^
+      amount.hashCode ^
+      label.hashCode ^
+      timestamp.hashCode ^
+      status.hashCode ^
+      confirmations.hashCode ^
+      fee.hashCode ^
+      counterparty.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TxRecord &&
+          runtimeType == other.runtimeType &&
+          txid == other.txid &&
+          ticker == other.ticker &&
+          direction == other.direction &&
+          amount == other.amount &&
+          label == other.label &&
+          timestamp == other.timestamp &&
+          status == other.status &&
+          confirmations == other.confirmations &&
+          fee == other.fee &&
+          counterparty == other.counterparty;
+}
+
+class WalletStatus {
+  final BigInt lightningSats;
+  final BigInt ilpMicrocents;
+  final bool nymConnected;
+
+  const WalletStatus({
+    required this.lightningSats,
+    required this.ilpMicrocents,
+    required this.nymConnected,
+  });
+
+  @override
+  int get hashCode =>
+      lightningSats.hashCode ^ ilpMicrocents.hashCode ^ nymConnected.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is WalletStatus &&
+          runtimeType == other.runtimeType &&
+          lightningSats == other.lightningSats &&
+          ilpMicrocents == other.ilpMicrocents &&
+          nymConnected == other.nymConnected;
 }

@@ -1,11 +1,21 @@
 // Lazy WASM initialisation - loads once, caches, shares across all test suites.
-// Import path is relative to this file (docs/tests/), so playground is ../playground/.
+// Works in browser (docs/tests/) and Node (run-headless.mjs).
+
+import {
+    initQualiaWasm,
+    getEngineVersion,
+    getEngineInfo,
+} from '../js/qualia-wasm-runtime.js';
+
+const _isNode = typeof process !== 'undefined' && Boolean(process.versions?.node);
 
 let _mod = null;
-let _initPromise = null;
 let _coverage = null;
 
 const EXPECTED_WASM_EXPORTS = [
+    'get_engine_version',
+    'get_engine_info',
+    'list_capabilities_wasm',
     'compile_query_to_json',
     'execute_ntriples_query',
     'align_sequences_wasm',
@@ -49,43 +59,73 @@ function summarizeCoverage(mod) {
     };
 }
 
+async function loadWasmInNode() {
+    const { pathToFileURL } = await import('node:url');
+    const { dirname, join } = await import('node:path');
+    const { readFileSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const here = dirname(fileURLToPath(import.meta.url));
+    const playground = join(here, '..', 'playground');
+    const jsUrl = pathToFileURL(join(playground, 'qualia_core_db.js')).href;
+    const wasmPath = join(playground, 'qualia_core_db_bg.wasm');
+    const module = await import(jsUrl);
+    const bytes = readFileSync(wasmPath);
+    if (typeof module.initSync === 'function') {
+        module.initSync({ module: bytes });
+    } else {
+        await module.default(bytes);
+    }
+    return module;
+}
+
+async function loadWasmInBrowser() {
+    const badge = typeof document !== 'undefined'
+        ? document.getElementById('wasm-badge')
+        : null;
+
+    const jsUrl = '../playground/qualia_core_db.js';
+    const wasmUrl = '../playground/qualia_core_db_bg.wasm';
+
+    try {
+        const module = await import(jsUrl);
+        const response = await fetch(wasmUrl);
+        const total = parseInt(response.headers.get('content-length'), 10) || 465124;
+        let loaded = 0;
+
+        const { readable, writable } = new TransformStream({
+            transform(chunk, controller) {
+                loaded += chunk.length;
+                if (badge) {
+                    const pct = Math.min(99, Math.round((loaded / total) * 100));
+                    badge.textContent = `Loading WASM ${pct}%`;
+                }
+                controller.enqueue(chunk);
+            },
+        });
+        response.body.pipeTo(writable);
+
+        const trackedResponse = new Response(readable, { headers: response.headers });
+        await module.default(trackedResponse);
+        return module;
+    } catch (e) {
+        console.warn('[wasm-loader] WASM init failed:', e.message);
+        return initQualiaWasm({ base: '..' }).catch(() => ({}));
+    }
+}
+
 export async function loadWasm() {
     if (_mod) return _mod;
-    if (_initPromise) return _initPromise;
 
-    _initPromise = (async () => {
-        try {
-            const module = await import('../playground/qualia_core_db.js');
-            const response = await fetch('../playground/qualia_core_db_bg.wasm');
-            const total = parseInt(response.headers.get('content-length'), 10) || 465124;
-            let loaded = 0;
-            const badge = document.getElementById('wasm-badge');
+    try {
+        _mod = _isNode ? await loadWasmInNode() : await loadWasmInBrowser();
+        if (!_mod || !Object.keys(_mod).length) _mod = {};
+    } catch (e) {
+        console.warn('[wasm-loader] WASM init failed:', e.message);
+        _mod = {};
+    }
 
-            const { readable, writable } = new TransformStream({
-                transform(chunk, controller) {
-                    loaded += chunk.length;
-                    if (badge) {
-                        const pct = Math.min(99, Math.round((loaded / total) * 100));
-                        badge.textContent = `Loading WASM ${pct}%`;
-                    }
-                    controller.enqueue(chunk);
-                }
-            });
-            response.body.pipeTo(writable);
-
-            const trackedResponse = new Response(readable, { headers: response.headers });
-            await module.default(trackedResponse);
-            _mod = module;
-            _coverage = summarizeCoverage(module);
-        } catch (e) {
-            console.warn('[wasm-loader] WASM init failed:', e.message);
-            _mod = {};
-            _coverage = summarizeCoverage(_mod);
-        }
-        return _mod;
-    })();
-
-    return _initPromise;
+    _coverage = summarizeCoverage(_mod);
+    return _mod;
 }
 
 export async function getWasmCoverage() {
@@ -95,9 +135,25 @@ export async function getWasmCoverage() {
     return _coverage;
 }
 
+export async function getWasmVersion() {
+    const mod = await loadWasm();
+    return getEngineVersion(mod);
+}
+
+export async function getWasmInfo() {
+    const mod = await loadWasm();
+    return getEngineInfo(mod);
+}
+
 // Convenience: call fn(mod) only if fn exists in the module, else skip.
 export function wasmFn(mod, name) {
     const fn = mod[name];
     if (typeof fn !== 'function') return null;
     return fn;
+}
+
+/** Reset cached module (for tests / hot reload). */
+export function resetWasmCache() {
+    _mod = null;
+    _coverage = null;
 }

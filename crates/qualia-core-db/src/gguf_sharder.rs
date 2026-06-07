@@ -232,6 +232,15 @@ impl GGufSharder {
     /// Generates the Master Record map connecting N3 logic semantic rules to the exact 
     /// 60-bit byte offsets in the massive GGUF tensor payload.
     pub fn generate_bidx_pointer_map(&self) -> Vec<QualiaQuin> {
+        let flag = if self.source_gguf_path.to_ascii_lowercase().contains("mmproj") {
+            crate::MODALITY_FLAG_VISION_TENSOR
+        } else {
+            crate::MODALITY_FLAG_LLM_TENSOR
+        };
+        self.generate_bidx_pointer_map_with_flag(flag)
+    }
+
+    pub fn generate_bidx_pointer_map_with_flag(&self, modality_flag: u8) -> Vec<QualiaQuin> {
         let mut pointers = Vec::new();
 
         // Actual GGUF header parsing (reading magic bytes, version, tensor count)
@@ -259,7 +268,7 @@ impl GGufSharder {
                         let q_tensor = QualiaQuin {
                             subject: crate::q_hash(&tensor_name),
                             predicate: crate::q_hash("has_tensor_offset"),
-                            object: ((crate::MODALITY_FLAG_LLM_TENSOR as u64) << 60) | byte_offset,
+                            object: ((modality_flag as u64) << 60) | byte_offset,
                             context: crate::q_hash("model_vocabulary"),
                             metadata: 0,
                             parity: 0,
@@ -276,7 +285,7 @@ impl GGufSharder {
         let q_tensor = QualiaQuin {
             subject: crate::q_hash("blk.0.attn_q.weight"),
             predicate: crate::q_hash("has_tensor_offset"),
-            object: ((crate::MODALITY_FLAG_LLM_TENSOR as u64) << 60) | mock_byte_offset,
+            object: ((modality_flag as u64) << 60) | mock_byte_offset,
             context: crate::q_hash("model_vocabulary"),
             metadata: 0,
             parity: 0,

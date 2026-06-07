@@ -138,8 +138,9 @@
                                     <span class="font-medium">WASM</span>
                                 </button>
                             </div>
-                            <div class="mt-2 text-right">
-                                <span id="wasm-badge" class="text-xs text-slate-500 font-mono">WASM Loading…</span>
+                            <div class="mt-2 text-right space-y-1">
+                                <span id="wasm-badge" class="text-xs text-slate-500 font-mono block">WASM Loading…</span>
+                                <span id="run-environment-text" class="text-[10px] text-slate-600 font-mono block">Environment…</span>
                             </div>
                         </div>
 
@@ -153,6 +154,17 @@
                                 <option value="filter">Predicate Filter</option>
                                 <option value="ingest">Ingestion Performance</option>
                             </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-3">Dataset Profile</label>
+                            <select id="datasetProfile" class="w-full glass px-5 py-4 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="synthetic-10k">Synthetic / built-in live path</option>
+                                <option value="schemaorg-30-current-https">Schema.org 30.0 -> q42 artifact</option>
+                            </select>
+                            <p id="dataset-profile-help" class="mt-3 text-xs leading-relaxed text-slate-500">
+                                Browser WASM mode still measures empty-DB pipeline cost. Use the Schema.org profile for comparative/native runs after preparing a local `.q42` artifact.
+                            </p>
                         </div>
 
                         <button onclick="runBenchmark()"
@@ -194,7 +206,7 @@
 
     <!-- Load Qualia WASM and expose execute_ntriples_query globally -->
     <script type="module">
-        import init, { execute_ntriples_query } from './playground/qualia_core_db.js';
+        import init, { execute_ntriples_query, get_engine_version } from './playground/qualia_core_db.js';
         const el = document.getElementById('wasm-badge');
         try {
             const response = await fetch('./playground/qualia_core_db_bg.wasm');
@@ -221,10 +233,13 @@
 
             await init(trackedResponse);
             window._qualiaExec = execute_ntriples_query;
+            const wasmVer = typeof get_engine_version === 'function' ? get_engine_version() : null;
+            window._wasmEngineVersion = wasmVer;
             if (el) {
-                el.textContent = 'WASM Ready';
+                el.textContent = wasmVer ? `WASM v${wasmVer}` : 'WASM Ready';
                 el.className = el.className.replace('text-slate-500', 'text-emerald-400');
             }
+            if (window.refreshRunEnvironment) window.refreshRunEnvironment();
         } catch(e) {
             console.warn('Qualia WASM load failed:', e.message);
             if (el) {
@@ -237,6 +252,10 @@
     <script>
         let currentMode = 'native';
         let daemonOnline = false;
+        const DATASET_PROFILE_HELP = {
+            'synthetic-10k': 'Synthetic profile: native mode measures browser-to-daemon latency, and WASM mode measures empty-db pipeline cost.',
+            'schemaorg-30-current-https': 'Schema.org 30.0 -> q42 profile: prepare the local source + native .q42 artifact with scripts/prepare_schemaorg_benchmark.ps1, then use comparative_benchmarks.html for the saved profile JSON.',
+        };
 
         function formatLatency(ms) {
             if (ms === 0) return { val: "0", unit: 'ns' };
@@ -262,6 +281,16 @@
             full:   'Full Suite'
         };
 
+        function currentDatasetProfile() {
+            return document.getElementById('datasetProfile')?.value || 'synthetic-10k';
+        }
+
+        function updateDatasetProfileHelp() {
+            const key = currentDatasetProfile();
+            const mount = document.getElementById('dataset-profile-help');
+            if (mount) mount.textContent = DATASET_PROFILE_HELP[key] || DATASET_PROFILE_HELP['synthetic-10k'];
+        }
+
         // ── Daemon check ───────────────────────────────────────────────────────
         async function checkDaemon() {
             try {
@@ -269,14 +298,20 @@
                 if (res.ok) {
                     const d = await res.json();
                     daemonOnline = true;
+                    window._liveDaemonHealth = d;
                     document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
+                    const label = window.formatDaemonBadgeText
+                        ? window.formatDaemonBadgeText(d)
+                        : `Daemon v${d.version}`;
+                    document.getElementById('daemon-text').textContent = label;
                     document.getElementById('daemon-badge').className =
                         'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    if (window.refreshRunEnvironment) window.refreshRunEnvironment();
                     return d;
                 }
             } catch(e) {}
             daemonOnline = false;
+            window._liveDaemonHealth = null;
             document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
             document.getElementById('daemon-text').textContent = 'Daemon Offline';
             return null;
@@ -294,6 +329,7 @@
                 wasmBtn.classList.add('!border-blue-500', 'bg-blue-500/10');
                 nativeBtn.classList.remove('!border-blue-500', 'bg-blue-500/10');
             }
+            if (window.refreshRunEnvironment) window.refreshRunEnvironment();
         }
 
         // ── Single query timing ────────────────────────────────────────────────
@@ -542,7 +578,43 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-native').classList.add('!border-blue-500', 'bg-blue-500/10');
+            document.getElementById('datasetProfile')?.addEventListener('change', updateDatasetProfileHelp);
+            updateDatasetProfileHelp();
             checkDaemon();
+        });
+    </script>
+
+    <script type="module">
+        import {
+            formatDaemonBadgeText,
+            formatDeviceSummary,
+            formatTopologySummary,
+            collectBrowserExecutionEnvironment,
+        } from './js/benchmark-environment.js';
+
+        window.formatDaemonBadgeText = formatDaemonBadgeText;
+
+        window.refreshRunEnvironment = async function refreshRunEnvironment() {
+            const el = document.getElementById('run-environment-text');
+            if (!el) return;
+            const wasmVer = typeof window._wasmEngineVersion === 'string' ? window._wasmEngineVersion : null;
+            const nativeMode = document.getElementById('btn-native')?.classList.contains('!border-blue-500');
+            const env = await collectBrowserExecutionEnvironment({
+                runner: nativeMode && window._liveDaemonHealth
+                    ? 'browser-live-benchmark (native daemon)'
+                    : 'browser-live-benchmark (wasm)',
+                measurementPath: nativeMode && window._liveDaemonHealth ? 'daemon_http_query' : 'wasm_pipeline',
+                engineVersion: wasmVer,
+                daemonHealth: window._liveDaemonHealth,
+            });
+            window._executionEnvironment = env;
+            const topo = formatTopologySummary(env);
+            const device = formatDeviceSummary(env);
+            el.textContent = [device, topo].filter(Boolean).join(' · ') || 'Environment recorded';
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => window.refreshRunEnvironment?.(), 500);
         });
     </script>
 </body>

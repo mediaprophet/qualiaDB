@@ -1,6 +1,6 @@
 # Qualia-DB Developer Guide
 
-_Branch: `0.0.6-dev` | Last updated: 2026-06-06_
+_Branch: `0.0.8-dev` | Last updated: 2026-06-07_
 
 Qualia-DB is a bare-metal semantic graph database designed specifically for constrained personal environments (mobile devices, IoT, browsers). It enforces a strict 512 MB RAM floor and operates with absolute zero dynamic heap allocation during execution, making garbage-collection pauses mathematically impossible.
 
@@ -176,13 +176,29 @@ See the full API reference at [flutter-api-reference.md](flutter-api-reference.m
 
 | Screen | Primary API calls |
 |---|---|
-| Chat | `runInference(prompt, modelPath)` |
+| Chat | `runInference`, `getLocalAgentConfig`, `updateAgentOutcomeSharing`, `syncChatRelay`, `getChatGraph` |
+| Group Chat | `createGroupChatSession`, `getChatParticipants`, `addChatParticipant`, `syncChatRelay` |
 | LLM Hub | `loadLlmResources()`, `downloadLlm(id)`, `downloadModel(url, filename, modelId)` |
-| Ontology Hub | `loadOntologyResources()`, `importOntology(id)` |
-| App Vault | `listInstalledApps()`, `launchInstalledApp(appName)`, `verifyAndInstallApp(zipPath, credentialSig)` |
+| Ontology Hub / Workbench | `workbenchImportOntologyUri`, `listWorkbenchOntologies`, `setWorkbenchSeed`, `setWorkbenchTorrentPolicy` |
+| Qapp Vault | `listInstalledQapps()`, `launchInstalledQapp(qappName)`, `verifyAndInstallQapp(zipPath, credentialSig)` |
 | Wallet | `getCoinBalances()`, `deriveWalletsFromSeed(seed)`, `generateBip39Seed()` |
 | Settings | `getConfig()`, `saveConfig(newConfig)` |
-| Dashboard | `getHardwareStatus()`, `daemonStatus()`, `startDaemon()` |
+| Dashboard | `getHardwareStatus()`, `daemonStatus()`, `startDaemon()`, `fetchTorrentTelemetry()` |
+
+### Daemon endpoints (v0.0.8)
+
+Beyond `/health` and `/query`, the loopback daemon exposes:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /chat/publish` | Group-chat relay inbox append |
+| `GET /chat/pull` | Incremental relay pull by Lamport watermark |
+| `GET /torrent/webseed/{hash}` | HTTP web seed for `.c.q42` artifacts |
+| `POST /torrent/seed` / `/unseed` | Register/stop ontology seeds |
+| `GET /torrent/telemetry` | Live seeder stats (`seeder: "qualia-daemon"`) |
+| `POST /torrent/sync` | Reload seeds from workbench index |
+
+See [flutter-api-reference.md](flutter-api-reference.md) and the [API Explorer](../api-explorer/) for snippets.
 
 ---
 

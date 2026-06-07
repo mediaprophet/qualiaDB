@@ -8,6 +8,52 @@ use warp::Filter;
 
 const OFFICIAL_WEB_HUB_ORIGIN: &str = "https://mediaprophet.github.io";
 const QUERY_PAYLOAD_LIMIT_BYTES: u64 = 64 * 1024;
+const CELL_MEMORY_FLOOR_MB: u16 = 512;
+
+/// Fractal-sharding topology configured at daemon boot (`qualia-cli daemon --workers N`).
+#[derive(Clone, Copy, Debug, Default, serde::Serialize)]
+pub struct DaemonTopology {
+    pub worker_cells_configured: u16,
+    pub compute_swarm_enabled: bool,
+}
+
+static DAEMON_TOPOLOGY: std::sync::OnceLock<DaemonTopology> = std::sync::OnceLock::new();
+
+/// Called by `qualia-cli daemon` before the HTTP server starts.
+pub fn configure_daemon_topology(topology: DaemonTopology) {
+    let _ = DAEMON_TOPOLOGY.set(topology);
+}
+
+fn current_topology() -> DaemonTopology {
+    *DAEMON_TOPOLOGY.get().unwrap_or(&DaemonTopology {
+        worker_cells_configured: 1,
+        compute_swarm_enabled: false,
+    })
+}
+
+/// JSON block shared by `/health`, benchmark exports, and the comparative harness.
+pub fn execution_environment_json() -> serde_json::Value {
+    let topo = current_topology();
+    let mode = if topo.worker_cells_configured > 1 || topo.compute_swarm_enabled {
+        "fractal_swarm"
+    } else {
+        "single_cell"
+    };
+    json!({
+        "runner": "qualia-core-db daemon",
+        "engine_version": crate::ENGINE_VERSION,
+        "memory_ceiling_mb": CELL_MEMORY_FLOOR_MB,
+        "measurement_path": "daemon_http_query",
+        "topology": {
+            "mode": mode,
+            "worker_cells_configured": topo.worker_cells_configured,
+            "worker_cells_active_during_run": topo.worker_cells_configured,
+            "compute_swarm_enabled": topo.compute_swarm_enabled,
+            "cell_memory_floor_mb": CELL_MEMORY_FLOOR_MB,
+            "scheduling": "fixed-pool"
+        }
+    })
+}
 
 /// Maximum number of result Quins the daemon will buffer per request.
 /// At 48 bytes each, 1 000 Quins consume 48 KB — well inside the 512 MB ceiling.
@@ -117,6 +163,14 @@ pub async fn start_local_daemon(port: u16, vault: std::sync::Arc<std::sync::Mute
 
 /// Starts the native loopback daemon with WebSocket and REST handoff routes.
 pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>) {
+    let storage_path = std::env::var("QUALIA_STORAGE_PATH").unwrap_or_else(|_| {
+        std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .map(|h| format!("{h}/.qualia"))
+            .unwrap_or_else(|_| ".qualia".to_string())
+    });
+    crate::daemon_graph::init_daemon_graph(&storage_path);
+
     let security = DaemonSecurity {
         dev,
         token: std::env::var("QUALIA_TOKEN")
@@ -140,7 +194,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
             ws.on_upgrade(move |mut socket| async move {
                 let handshake = json!({
                     "type": "HANDSHAKE_SUCCESS",
-                    "payload": { "mode": "NATIVE", "version": env!("CARGO_PKG_VERSION") }
+                    "payload": { "mode": "NATIVE", "version": crate::ENGINE_VERSION }
                 });
                 if socket
                     .send(warp::ws::Message::text(handshake.to_string()))
@@ -176,7 +230,10 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
             warp::reply::json(&json!({
                 "status": "active",
                 "engine": "qualia-core-db",
-                "version": env!("CARGO_PKG_VERSION")
+                "version": crate::ENGINE_VERSION,
+                "graph_quin_count": crate::daemon_graph::graph_quin_count(),
+                "webtorrent": crate::webtorrent_seeder::telemetry(),
+                "execution_environment": execution_environment_json()
             })),
             StatusCode::OK,
         )
@@ -203,7 +260,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                 if !query_security.dev {
                     if let Some(t) = token.as_ref() {
                         let vault = query_security.vault.lock().unwrap();
-                        match vault.verify_app_token(t) {
+                        match vault.verify_qapp_token(t) {
                             Ok(payload) => {
                                 // Semantic token valid!
                                 allowed_shapes = Some(payload.allowed_shapes);
@@ -343,11 +400,8 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                 let mut out_buffer =
                     vec![crate::QualiaQuin::default(); QUERY_OUT_SLOTS];
 
-                // `current_database_state` is the live in-process Quin graph.
-                // The storage layer will populate this once the mmap shard is
-                // wired into the daemon; for now an empty slice is used so that
-                // the full pipeline compiles and the HTTP contract is exercised.
-                let current_database_state: &[crate::QualiaQuin] = &[];
+                let graph_guard = crate::daemon_graph::graph_read_guard();
+                let current_database_state = graph_guard.as_slice();
 
                 let (match_count, vm_cycles) = match crate::webizen_bytecode::execute_program(
                     &program,
@@ -523,6 +577,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     let cors = warp::cors()
         .allow_origins(allowed_origins)
         .allow_methods(vec!["GET", "POST", "OPTIONS"])
+        .allow_header("range")
         .allow_headers(vec![
             "content-type",
             "accept",
@@ -531,9 +586,20 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         ])
         .expose_headers(vec!["x-qualia-compute-cost"]);
 
+    let relay_routes = crate::chat_relay_daemon::chat_relay_routes(
+        storage_path.clone(),
+        security.vault.clone(),
+    );
+
+    crate::webtorrent_seeder::sync_from_workbench(&storage_path, port);
+
+    let torrent_routes = crate::webtorrent_routes::webtorrent_routes(port);
+
     let routes = qualia_bridge
         .or(health)
         .or(query)
+        .or(relay_routes)
+        .or(torrent_routes)
         .or(cache)
         .or(preflight)
         .with(cors)
@@ -548,6 +614,8 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     println!("  WebSocket: ws://127.0.0.1:{port}/qualia-bridge");
     println!("  Health:    http://127.0.0.1:{port}/health");
     println!("  Query:     http://127.0.0.1:{port}/query");
+    println!("  Chat relay: http://127.0.0.1:{port}/chat/publish | /chat/pull");
+    println!("  WebTorrent: http://127.0.0.1:{port}/torrent/webseed/{{hash}} | /torrent/seed");
     println!(
         "  Mode:      {}",
         if security.dev { "dev token bypass" } else { "token required" }
@@ -568,13 +636,6 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         println!("[Qualia Daemon] Nym Mixnet: Sphinx Packet routing initialized.");
         loop {
             tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
-        }
-    });
-
-    tokio::spawn(async {
-        println!("[Qualia Daemon] WebTorrent: Native Magnet URI and DHT seeder initialized.");
-        loop {
-            tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
         }
     });
 

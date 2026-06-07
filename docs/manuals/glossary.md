@@ -1,6 +1,6 @@
 # Qualia-DB Glossary
 
-_Branch: `0.0.6-dev` | Last updated: 2026-06-06_
+_Branch: `0.0.8-dev` | Last updated: 2026-06-07_
 
 ---
 
@@ -89,14 +89,15 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 
 ---
 
-## App Manager & Desktop Shell
+## Qapp Vault & Desktop Shell
 
-- **qualia-client** (`crates/qualia-client/`): Vite/React frontend for the Tauri desktop app. Provides LLM Hub, Ontology Hub, App Manager, Wallet, Address Book, Credential Manager, Asset Library pages.
-- **qualia-desktop** (`crates/qualia-desktop/`): Tauri shell. Manages the daemon, system tray, hardware telemetry, and the `qualia://` URI scheme.
-- **`qualia://` URI scheme**: Custom Tauri protocol serving files from `{data_dir}/Apps/{app_name}/`. Allows sandboxed third-party web apps to run in the desktop webview.
-- **AppManifest** (`app_registry.rs`): JSON (`app.json`) describing a Qualia app — `name`, `version`, `required_shapes` (SHACL shape IRIs the app needs from the graph).
-- **AppTarget**: Where an app's files live — `LocalDevDirectory(PathBuf)`, `LocalProxyPort(u16)`, or `IsolatedVault(String)`.
-- **App Manager (AppStore page)**: UI at `/apps` route. Lists installed apps (directories in `Apps/`), launches them, and generates developer VCs for self-signing.
+- **qualia-flutter** (`crates/qualia-flutter/`): **Shipped desktop app** (Windows, macOS, Linux). FRB bridge to `qualia-client-core`. Qapp Vault is `QappVaultScreen` (nav index 6); qapps launch in `QualiaQappWebView`.
+- **qualia-cli** (`crates/qualia-cli/`): Native CLI for engine operations, benchmarks, ingest, and profiles.
+- **qualia-core-wasm**: Browser/edge WASM build of the engine (playground + Releases artifact).
+- **qualia-client** + **qualia-desktop** (`crates/qualia-client/`, `crates/qualia-desktop/`): **Legacy** Tauri/React prototype — not in release CI since v0.0.6.
+- **Loopback qapp asset server** (`qapps_protocol.rs`): Serves `{data_dir}/Qapps/{qapp_name}/` over `http://127.0.0.1:{port}/` (started by Flutter via `startQualiaProtocol()`).
+- **QappPackageManifest** (`qapp_registry.rs`): JSON (`qapp.json`) describing a Qualia qapp — `name`, `version`, `required_shapes` (SHACL shape IRIs the qapp needs from the graph).
+- **QappTarget**: Where a qapp's files live — `LocalDevDirectory(PathBuf)`, `LocalProxyPort(u16)`, or `IsolatedVault(String)`.
 
 ---
 
@@ -122,6 +123,20 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 - **q_hash()**: FNV-1a hash at compile time for all IRIs. Replaces runtime string allocation in the engine core.
 
 ---
+
+## Chat & Social Layer
+
+- **Sub-Agent**: A local LLM or Webizen agent bound to a human principal in a chat session. Identified by `did:qualia:subagent:{principal_hash}:{session_hash}`. Sub-agents are not independent chat participants — they act on behalf of their principal.
+- **Outcome Sharing Policy**: Explicit permission for relaying *processed* agent outcomes (summaries, grounded answers) to other group members. Raw prompts are never shared. Visibility: `owner_only`, `session_participants`, or `specific_dids`.
+- **Chat Relay**: Daemon HTTP inbox (`POST /chat/publish`, `GET /chat/pull`) storing signed envelopes as JSONL under `{storage}/ChatRelay/`. Enables group-chat sync without a central cloud broker.
+- **Session DID**: Stable decentralized identifier for a chat session, used for ontology share cards and relay routing.
+
+## Ontology Workbench & Permissive Commons
+
+- **`.c.q42`**: Compressed ontology artifact produced by the workbench import pipeline (LZ4 SuperBlocks). Distinct from raw `.q42` graph binaries.
+- **Workbench**: Ontology Hub pipeline — URI import, compression, SHA-1 info hash, magnet URI generation, and audience-scoped sharing policy.
+- **HTTP Web Seed**: BEP-19 style serving of `.c.q42` files via `GET /torrent/webseed/{info_hash}` on the Qualia daemon. Magnet URIs include `ws=` pointing at this endpoint.
+- **Share Card**: Filtered ontology metadata (title, magnet, quin count) visible to a contact or session DID per torrent policy.
 
 ## Tooling & Harness
 

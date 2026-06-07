@@ -22,7 +22,14 @@ import time
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from common import latency_stats_ms, peak_rss_mb, generate_ntriples, DEFAULT_WARMUP, DEFAULT_SAMPLES
+from common import (
+    latency_stats_ms,
+    peak_rss_mb,
+    generate_ntriples,
+    record_dataset_file_metrics,
+    DEFAULT_WARMUP,
+    DEFAULT_SAMPLES,
+)
 
 BATCH   = 500          # triples per INSERT statement
 _NT_RE  = re.compile(r'<([^>]+)>\s+<([^>]+)>\s+<([^>]+)>\s+\.')
@@ -51,11 +58,22 @@ def _sql(url: str, auth: str, stmt: str) -> list:
         return json.loads(r.read())
 
 
-def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
+def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
+    if dataset is None:
+        dataset = {
+            "n_triples": n,
+            "nt_bytes": generate_ntriples(n),
+            "queries": {
+                "point": "SELECT * FROM triple WHERE s = 'http://q.test/s/0';",
+                "twohop": "LET $b = (SELECT VALUE o FROM triple WHERE s = 'http://q.test/s/0' LIMIT 1)[0]; SELECT * FROM triple WHERE s = $b LIMIT 1;",
+                "filter": "SELECT * FROM triple WHERE p = 'http://q.test/p/0' LIMIT 100;",
+            },
+        }
+
     if not shutil.which("surreal"):
         return {
             "engine": "surrealdb",
-            "n_triples": n,
+            "n_triples": dataset.get("n_triples", n),
             "error": "surreal binary not found — add to PATH",
         }
 
@@ -68,7 +86,7 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
 
-    result: dict = {"engine": "surrealdb", "n_triples": n}
+    result: dict = {"engine": "surrealdb", "n_triples": dataset.get("n_triples", n)}
 
     try:
         for _ in range(30):
@@ -82,8 +100,18 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
             return result
 
         # Ingestion
-        nt_lines = generate_ntriples(n).decode().strip().split("\n")
-        triples  = [_NT_RE.match(ln).groups() for ln in nt_lines]
+        nt_bytes = dataset.get("nt_bytes")
+        if not nt_bytes:
+            result["ingestion_ms"] = "ERROR"
+            result["error"] = f"dataset source not available for profile {dataset.get('id', 'unknown')}"
+            return result
+
+        nt_lines = nt_bytes.decode("utf-8").strip().split("\n")
+        triples = []
+        for ln in nt_lines:
+            match = _NT_RE.match(ln)
+            if match:
+                triples.append(match.groups())
 
         rss_before = peak_rss_mb()
         t0 = time.perf_counter()
@@ -101,19 +129,26 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
         result["rss_after_load_mb"] = round(peak_rss_mb(), 2)
 
         # Queries — now using standardized sample counts
-        _POINT = "SELECT * FROM triple WHERE s = 'http://q.test/s/0';"
+        queries = dataset.get("queries") or {}
+        point_subject = queries.get("point_subject", "http://q.test/s/0")
+        filter_predicate = queries.get("filter_predicate", "http://q.test/p/0")
+        _POINT = f"SELECT * FROM triple WHERE s = '{point_subject}';"
         try:
             result["point"] = latency_stats_ms(lambda: _sql(url, auth, _POINT), warmup=DEFAULT_WARMUP, samples=DEFAULT_SAMPLES)
         except Exception as exc:
             result["point"] = f"ERROR: {exc}"
 
-        _TWOHOP = "LET $b = (SELECT VALUE o FROM triple WHERE s = 'http://q.test/s/0' LIMIT 1)[0]; SELECT * FROM triple WHERE s = $b LIMIT 1;"
+        twohop_start = queries.get("twohop_start", point_subject)
+        _TWOHOP = (
+            f"LET $b = (SELECT VALUE o FROM triple WHERE s = '{twohop_start}' LIMIT 1)[0]; "
+            "SELECT * FROM triple WHERE s = $b LIMIT 1;"
+        )
         try:
             result["twohop"] = latency_stats_ms(lambda: _sql(url, auth, _TWOHOP), warmup=DEFAULT_WARMUP, samples=DEFAULT_SAMPLES)
         except Exception as exc:
             result["twohop"] = f"ERROR: {exc}"
 
-        _FILTER = "SELECT * FROM triple WHERE p = 'http://q.test/p/0' LIMIT 100;"
+        _FILTER = f"SELECT * FROM triple WHERE p = '{filter_predicate}' LIMIT 100;"
         try:
             result["filter"] = latency_stats_ms(lambda: _sql(url, auth, _FILTER), warmup=DEFAULT_WARMUP, samples=DEFAULT_SAMPLES)
         except Exception as exc:
@@ -133,7 +168,7 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
         try: proc.wait(timeout=5)
         except subprocess.TimeoutExpired: proc.kill()
 
-    return result
+    return record_dataset_file_metrics(result, dataset)
 
 
 if __name__ == "__main__":

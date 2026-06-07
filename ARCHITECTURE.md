@@ -1,6 +1,6 @@
 # QualiaDB Architecture
 
-_Branch: `0.0.6-dev` | Last updated: 2026-06-06_
+_Branch: `0.0.8-dev` | Last updated: 2026-06-07_
 
 QualiaDB is a zero-allocation, mechanically sympathetic semantic database and multi-agent collaboration ecosystem. It bridges the string-heavy reality of the Semantic Web with hardware-aligned execution paths, enforcing strict constraints to ensure bounded memory and deterministic performance.
 
@@ -547,21 +547,26 @@ qualia ingest --profile health.chk data.ttl output.q42
 | **Edge Native** | `npu_ffi.rs`, `tee_ffi.rs` | NPU sieve dispatch, TEE C-ABI declarations |
 | **P2P / Federated** | `wasm_edge.rs`, `nym_adapter.rs` | WebRTC offloading, Nym mixnet, federated node manager |
 
-### Tauri/React Desktop (`crates/qualia-desktop/` + `crates/qualia-client/`)
+### Flutter Desktop (`crates/qualia-flutter/`) — **shipped desktop target**
 
-The primary active desktop target. `qualia-desktop` is the Tauri shell (Rust); `qualia-client` is a Vite/React frontend.
+Built and released via `.github/workflows/release.yml` (Windows, macOS, Linux). Backed by `qualia_flutter_rust` (flutter_rust_bridge) calling `qualia-client-core`.
 
-Pages: Dashboard, LLM Hub, Ontology Hub, App Manager, Wallet, Address Book, Credential Manager, Asset Library, Physics Engine, Chat, Settings.
+Screens: Dashboard, Chat, Wallet, Address Book, Ontology Hub, Asset Library, **Qapp Vault**, Credential Manager, LLM Hub, Spatial Physics, Settings.
 
-**App Manager** (`/apps` route): Lists apps installed in `{data_dir}/Apps/`, launches them in a webview via the `qualia://localhost/{app-name}/` URI scheme, and issues developer VCs. Apps declare SHACL `required_shapes` in an `app.json` manifest — these map to `target_shapes` in the P2P sync protocol.
-
-⚠ The Tauri command handler (`commands/mod.rs`) currently has `generate_handler![]` empty. `list_installed_apps`, `launch_installed_app`, and `generate_app_credential` exist in `qualia-client-core/src/api.rs` but are not yet registered as `#[tauri::command]`. See §15-F.
-
-### Flutter Desktop (`crates/qualia-flutter/`)
+**Qapp Vault** (`QappVaultScreen`, nav index 6): Lists qapps in `{data_dir}/Qapps/`, installs from a directory picker, launches via loopback HTTP in `QualiaQappWebView`, and supports chat → qapp handoff (`launchInstalledQappWithContext`). Qapps declare `required_shapes` in `qapp.json`.
 
 - **LLM Hub** — grid/list view, bulk actions, download state persists across navigation, detail panel
 - **Ontology Hub** — browse, import, namespace view
-- **FRB bridge** (`rust/src/api.rs`) — `download_llm`, `import_ontology` delegate to `qualia-cli` subprocess
+- **FRB bridge** (`rust/src/api/qualia_api.rs`) — inference, qapp vault, resource catalog, daemon control
+
+### Tauri/React (`crates/qualia-desktop/` + `crates/qualia-client/`) — **legacy**
+
+Early desktop prototype. **Not built or released by CI** (Tauri removed from `release.yml` in v0.0.6). Retained in-tree for reference; do not treat as the active desktop shell. New UI work belongs in Flutter.
+
+### CLI (`crates/qualia-cli/`) and WASM (`qualia-core-wasm`)
+
+- **CLI** — engine operations, benchmarks, profile compile, resource ingest, daemon control
+- **WASM** — browser playground and edge-native engine builds (`qualia-core-wasm.tar.gz` in Releases)
 
 ---
 
@@ -602,9 +607,9 @@ pub fn partition_defeasible(
 
 None of the writers produce what the archive reader expects. `SuperBlockWriter` should become the canonical on-disk format.
 
-### 15-F App Manager Tauri Commands Not Registered
+### 15-F Legacy Tauri Desktop (not shipped)
 
-`crates/qualia-desktop/src/commands/mod.rs` contains `tauri::generate_handler![]` — an empty handler list. The functions `list_installed_apps`, `launch_installed_app`, and `generate_app_credential` exist in `qualia-client-core/src/api.rs` but lack `#[tauri::command]` attributes and are not included in the handler. The UI (`AppStore.tsx`) calls `invoke('list_installed_apps')` etc. — these calls currently return errors. Additionally, `launch_installed_app` has no implementation that opens a Tauri webview at `qualia://localhost/{app_name}/index.html`.
+`qualia-desktop` / `qualia-client` remain in-tree but are not release targets. Qapp Vault for end users is **Flutter only** (`QappVaultScreen` + `QualiaQappWebView` + FRB → `qualia-client-core`). Loopback qapp assets are served by `qapps_protocol.rs`, started from Flutter at init.
 
 ---
 

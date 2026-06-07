@@ -11,6 +11,7 @@ use std::path::PathBuf;
 pub mod commands;
 pub use commands::*;
 
+use qualia_client_core::qapp_registry::QAPPS_DIR;
 use qualia_client_core::state::{init_app_state, dirs_default_path, AppState};
 pub use commands::*;
 
@@ -29,7 +30,7 @@ fn main() {
                 .components()
                 .filter(|c| matches!(c, std::path::Component::Normal(_)))
                 .collect();
-            let full_path = PathBuf::from(dirs_default_path()).join("Apps").join(safe_path);
+            let full_path = PathBuf::from(dirs_default_path()).join(QAPPS_DIR).join(safe_path);
             
             match std::fs::read(&full_path) {
                 Ok(data) => {
@@ -54,6 +55,10 @@ fn main() {
         })
         .setup(move |app| {
             let handle = app.handle();
+
+            if let Err(e) = qualia_client_core::api::start_qualia_protocol() {
+                eprintln!("Qapp loopback asset server failed to start: {e}");
+            }
 
             // ── Phase 10: Native Hardware Orchestration (sysinfo) ─────────────
             let telemetry_handle = handle.clone();
@@ -141,11 +146,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_generate_app_credential() {
-        let app_name = "com.qualia.testapp".to_string();
-        let credential = generate_app_credential(app_name);
+    fn test_generate_qapp_credential() {
+        let qapp_name = "com.qualia.testqapp".to_string();
+        let credential = generate_qapp_credential(qapp_name);
         
         println!("Generated Credential: {}", credential);
-        assert_eq!(credential, "did:qualia:app:com.qualia.testapp:signed_vc");
+        assert_eq!(credential, "did:qualia:qapp:com.qualia.testqapp:signed_vc");
     }
 }

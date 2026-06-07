@@ -999,7 +999,7 @@ GET http://127.0.0.1:4242/health
             js(`
 const r    = await fetch('http://127.0.0.1:4242/health');
 const body = await r.json();
-// { status: "active", engine: "qualia-core-db", version: "0.0.5" }
+// { status: "active", engine: "qualia-core-db", version: "0.0.8", webtorrent: { … } }
 `),
             cli(`
 # Start the daemon (dev mode — no token required)
@@ -1094,13 +1094,13 @@ const ws = new WebSocket('ws://127.0.0.1:4242/qualia-bridge');
 ws.onmessage = (e) => {
   const msg = JSON.parse(e.data);
   // msg.type    === "HANDSHAKE_SUCCESS"
-  // msg.payload === { mode: "NATIVE", version: "0.0.5" }
+  // msg.payload === { mode: "NATIVE", version: "0.0.8" }
 };
 `),
             cli(`
 # WebSocket test with websocat (install: cargo install websocat)
 websocat ws://127.0.0.1:4242/qualia-bridge
-# Immediately receives: {"type":"HANDSHAKE_SUCCESS","payload":{"mode":"NATIVE","version":"0.0.5"}}
+# Immediately receives: {"type":"HANDSHAKE_SUCCESS","payload":{"mode":"NATIVE","version":"0.0.8"}}
 `),
         ],
         live: async (_wasm, native) => {
@@ -1112,6 +1112,348 @@ websocat ws://127.0.0.1:4242/qualia-bridge
                 ws.onerror   = () => { clearTimeout(t); resolve({ error: 'WebSocket connection refused' }); };
             });
         },
+    },
+
+    {
+        id: 'daemon.chat_publish',
+        category: 'Native Daemon',
+        name: 'POST /chat/publish',
+        summary: 'Append a signed relay envelope to a group-chat inbox. Messages are stored as JSONL under {storage}/ChatRelay/{session_id}/inbox.jsonl. Ed25519 signatures are verified when signature_hex is present.',
+        params: [
+            { name: 'session_id', type: 'string', desc: 'Chat session identifier' },
+            { name: 'lamport', type: 'u64', desc: 'Monotonic Lamport clock for ordering' },
+            { name: 'role', type: 'string', desc: '"user" | "assistant" | "system"' },
+            { name: 'content', type: 'string', desc: 'Message body' },
+            { name: 'author_did', type: 'string', desc: 'Principal or sub-agent DID' },
+            { name: 'signature_hex', type: 'string', desc: 'Optional 64-byte Ed25519 signature (hex)' },
+        ],
+        returns: '{ ok: true, lamport: number }',
+        snippets: [
+            http(`
+POST http://127.0.0.1:4242/chat/publish
+Content-Type: application/json
+
+{
+  "session_id": "grp-abc123",
+  "lamport": 42,
+  "role": "assistant",
+  "content": "Grounded summary with provenance.",
+  "author_did": "did:qualia:subagent:…",
+  "author_name": "Alice",
+  "reply_to_fragment": null,
+  "timestamp": 1717756800,
+  "signature_hex": "<128-char hex>"
+}
+`),
+            js(`
+const envelope = {
+  session_id: 'grp-abc123',
+  lamport: 42,
+  role: 'assistant',
+  content: 'Grounded summary.',
+  author_did: 'did:qualia:principal:…',
+  timestamp: Math.floor(Date.now() / 1000),
+  signature_hex: '',
+};
+const r = await fetch('http://127.0.0.1:4242/chat/publish', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(envelope),
+});
+`),
+        ],
+    },
+
+    {
+        id: 'daemon.chat_pull',
+        category: 'Native Daemon',
+        name: 'GET /chat/pull',
+        summary: 'Pull relay messages for a session since a Lamport watermark. Used by desktop clients to sync group-chat inboxes without a central cloud broker.',
+        params: [
+            { name: 'session_id', type: 'string', desc: 'Chat session identifier (required query param)' },
+            { name: 'since_lamport', type: 'u64', desc: 'Return messages with lamport > this value (default 0)' },
+        ],
+        returns: '{ messages: RelayEnvelope[], latest_lamport: number }',
+        snippets: [
+            http(`
+GET http://127.0.0.1:4242/chat/pull?session_id=grp-abc123&since_lamport=0
+`),
+            js(`
+const sessionId = 'grp-abc123';
+const since = 0;
+const r = await fetch(
+  \`http://127.0.0.1:4242/chat/pull?session_id=\${sessionId}&since_lamport=\${since}\`
+);
+const { messages, latest_lamport } = await r.json();
+`),
+            cli(`
+curl "http://127.0.0.1:4242/chat/pull?session_id=grp-abc123&since_lamport=10"
+`),
+        ],
+        live: async (_wasm, native, inputs) => {
+            if (!native) return { error: 'Daemon offline — start with: qualia-cli daemon --dev' };
+            const sid = (inputs.session_id || 'default').trim();
+            const since = inputs.since_lamport || '0';
+            const url = \`\${native.base}/chat/pull?session_id=\${encodeURIComponent(sid)}&since_lamport=\${since}\`;
+            const r = await fetch(url);
+            return { status: r.status, body: await r.json() };
+        },
+        liveInputs: [
+            { name: 'session_id', label: 'Session ID', default: 'default' },
+            { name: 'since_lamport', label: 'Since Lamport', default: '0' },
+        ],
+    },
+
+    {
+        id: 'daemon.torrent_seed',
+        category: 'Native Daemon',
+        name: 'POST /torrent/seed',
+        summary: 'Register a .c.q42 ontology artifact for HTTP web-seeding on the Qualia daemon. Seeding runs in-process (seeder: qualia-daemon), not in the Flutter UI. Magnets include a ws= parameter pointing at /torrent/webseed/{hash}.',
+        params: [
+            { name: 'info_hash', type: 'string', desc: 'SHA-1 info hash (40 hex chars)' },
+            { name: 'file_path', type: 'string', desc: 'Absolute path to the .c.q42 file' },
+            { name: 'display_name', type: 'string', desc: 'Human-readable torrent name' },
+            { name: 'ontology_id', type: 'string', desc: 'Workbench ontology identifier' },
+        ],
+        returns: '{ status: "ok", seed: SeedRecord, seeder: "qualia-daemon" }',
+        snippets: [
+            http(`
+POST http://127.0.0.1:4242/torrent/seed
+Content-Type: application/json
+
+{
+  "info_hash": "a1b2c3d4e5f6789012345678abcdef0123456789",
+  "file_path": "C:/Users/me/.qualia/Index/ontologies/prov-o.c.q42",
+  "display_name": "W3C PROV-O (compressed)",
+  "ontology_id": "prov-o"
+}
+`),
+            cli(`
+# Reload seeds from workbench index after daemon boot
+curl -X POST http://127.0.0.1:4242/torrent/sync
+`),
+        ],
+    },
+
+    {
+        id: 'daemon.torrent_telemetry',
+        category: 'Native Daemon',
+        name: 'GET /torrent/telemetry',
+        summary: 'Live WebTorrent seeder statistics from the Qualia daemon. Also embedded in GET /health under the webtorrent key.',
+        params: [],
+        returns: '{ seeder: "qualia-daemon", seeders, leechers, speed, status, uploaded_session_kb, active_ontologies, … }',
+        snippets: [
+            http(`
+GET http://127.0.0.1:4242/torrent/telemetry
+`),
+            js(`
+const r = await fetch('http://127.0.0.1:4242/torrent/telemetry');
+const stats = await r.json();
+// stats.seeder === "qualia-daemon"
+`),
+        ],
+        live: async (_wasm, native) => {
+            if (!native) return { error: 'Daemon offline — start with: qualia-cli daemon --dev' };
+            const r = await fetch(\`\${native.base}/torrent/telemetry\`);
+            return { status: r.status, body: await r.json() };
+        },
+    },
+
+    {
+        id: 'daemon.torrent_webseed',
+        category: 'Native Daemon',
+        name: 'GET /torrent/webseed/{info_hash}',
+        summary: 'Serve a registered .c.q42 file as an HTTP web seed (BEP-19). Supports Range requests for partial fetches. Referenced by magnet URIs via the ws= parameter.',
+        params: [
+            { name: 'info_hash', type: 'string', desc: 'SHA-1 info hash (path segment)' },
+            { name: 'Range', type: 'header', desc: 'Optional bytes=start-end for partial content' },
+        ],
+        returns: 'application/octet-stream (200 or 206 Partial Content)',
+        snippets: [
+            http(`
+GET http://127.0.0.1:4242/torrent/webseed/a1b2c3d4e5f6789012345678abcdef0123456789
+Range: bytes=0-4095
+`),
+            js(`
+// Magnet URI from workbench includes ws= pointing here:
+// magnet:?xt=urn:btih:…&dn=PROV-O&ws=http%3A%2F%2F127.0.0.1%3A4242%2Ftorrent%2Fwebseed%2F…
+const hash = 'a1b2c3d4e5f6789012345678abcdef0123456789';
+const r = await fetch(\`http://127.0.0.1:4242/torrent/webseed/\${hash}\`);
+const bytes = await r.arrayBuffer();
+`),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DESKTOP CHAT (Flutter FRB)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'chat.sub_agent',
+        category: 'Desktop Chat',
+        name: 'getLocalAgentConfig()',
+        summary: 'Returns the local principal\'s sub-agent binding for a chat session. Local LLM/Webizen agents are sub-agents of human participants — not independent chat actors. Each participant may use a different model/backend.',
+        params: [{ name: 'sessionId', type: 'string', desc: 'Chat session ID' }],
+        returns: 'ParticipantAgentConfig { principalDid, subAgentDid, modelId?, backend, outcomeSharing, updatedAt }',
+        snippets: [
+            js(`
+import { getLocalAgentConfig } from './src/rust/api/chat_agents.dart';
+
+const cfg = await getLocalAgentConfig(sessionId: 'grp-abc123');
+// cfg.subAgentDid  → did:qualia:subagent:{principal_hash}:{session_hash}
+// cfg.backend      → "local" | "remote" | "hybrid"
+`),
+            rs(`
+use qualia_client_core::chat_agents;
+
+let cfg = chat_agents::load_local_agent_config(&storage, &session_id)?;
+// cfg.sub_agent_did is derived — not a peer participant
+`),
+        ],
+    },
+
+    {
+        id: 'chat.outcome_sharing',
+        category: 'Desktop Chat',
+        name: 'updateAgentOutcomeSharing()',
+        summary: 'Set explicit permissions for sharing Webizen-processed outcomes (summaries, grounded answers) with other group members. Raw prompts are never relayed — only processed results when policy permits.',
+        params: [
+            { name: 'sessionId', type: 'string', desc: 'Chat session ID' },
+            { name: 'policy.visibility', type: 'string', desc: 'owner_only | session_participants | specific_dids' },
+            { name: 'policy.allowPeerLlmContext', type: 'bool', desc: 'Peers may include this outcome in their LLM context' },
+        ],
+        returns: 'ParticipantAgentConfig',
+        snippets: [
+            js(`
+import { updateAgentOutcomeSharing, OutcomeSharingPolicy } from './chat_agents.dart';
+
+await updateAgentOutcomeSharing(
+  sessionId: 'grp-abc123',
+  policy: OutcomeSharingPolicy(
+    visibility: 'session_participants',
+    shareProvenance: true,
+    shareModelAttribution: false,
+    allowPeerLlmContext: true,
+    allowedDids: [],
+  ),
+);
+`),
+        ],
+    },
+
+    {
+        id: 'chat.sync_relay',
+        category: 'Desktop Chat',
+        name: 'syncChatRelay()',
+        summary: 'Pull new messages from the daemon relay inbox and merge into the local session WAL. Call periodically or after sending to keep group chats in sync.',
+        params: [{ name: 'sessionId', type: 'string?', desc: 'Session to sync (null = all active sessions)' }],
+        returns: 'u64 — latest Lamport clock after sync',
+        snippets: [
+            js(`
+import { syncChatRelay } from './src/rust/api/chat_graph.dart';
+
+const latest = await syncChatRelay(sessionId: 'grp-abc123');
+`),
+            http(`
+# Under the hood: GET /chat/pull?session_id=…&since_lamport=…
+# then local WAL merge + signature validation
+`),
+        ],
+    },
+
+    {
+        id: 'chat.group_session',
+        category: 'Desktop Chat',
+        name: 'createGroupChatSession()',
+        summary: 'Create a multi-participant chat session with a stable session DID for ontology sharing and relay sync.',
+        params: [
+            { name: 'title', type: 'string?', desc: 'Display title' },
+            { name: 'participantDids', type: 'string[]', desc: 'Initial participant DIDs' },
+        ],
+        returns: 'string — new session_id',
+        snippets: [
+            js(`
+import { createGroupChatSession } from './src/rust/api/chat_session.dart';
+
+const id = await createGroupChatSession(
+  title: 'Clinical review',
+  participantDids: ['did:qualia:…', 'did:qualia:…'],
+);
+`),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ONTOLOGY WORKBENCH (Flutter FRB)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'workbench.import_uri',
+        category: 'Ontology Workbench',
+        name: 'workbenchImportOntologyUri()',
+        summary: 'Import an ontology from a remote URI, compress to .c.q42, compute SHA-1 info hash, and build a magnet URI with ws= web-seed parameter for Permissive Commons sharing.',
+        params: [
+            { name: 'uri', type: 'string', desc: 'Source ontology URL (Turtle, N-Triples, etc.)' },
+            { name: 'ontologyId', type: 'string?', desc: 'Stable ID (auto-derived if omitted)' },
+            { name: 'domain', type: 'string?', desc: 'Domain tag for share cards' },
+            { name: 'title', type: 'string?', desc: 'Display title' },
+        ],
+        returns: 'WorkbenchImportResult { entry, compressRatio, sourceRemoved }',
+        snippets: [
+            js(`
+import { workbenchImportOntologyUri } from './src/rust/api/ontology_workbench.dart';
+
+const result = await workbenchImportOntologyUri(
+  uri: 'https://www.w3.org/ns/prov-o',
+  ontologyId: 'prov-o',
+  domain: 'provenance',
+  title: 'W3C PROV-O',
+);
+// result.entry.magnetUri includes ws=http://127.0.0.1:4242/torrent/webseed/…
+`),
+            cli(`
+# After import, enable seeding via the Ontology Hub UI or:
+curl -X POST http://127.0.0.1:4242/torrent/seed -H "Content-Type: application/json" \\
+  -d '{"info_hash":"…","file_path":"…/prov-o.c.q42","display_name":"PROV-O","ontology_id":"prov-o"}'
+`),
+        ],
+    },
+
+    {
+        id: 'workbench.set_seed',
+        category: 'Ontology Workbench',
+        name: 'setWorkbenchSeed()',
+        summary: 'Toggle active seeding for a workbench ontology. Registers the .c.q42 with the Qualia daemon seeder and updates workbench.jsonl index.',
+        params: [
+            { name: 'ontologyId', type: 'string', desc: 'Workbench ontology ID' },
+            { name: 'active', type: 'bool', desc: 'true to seed, false to unseed' },
+        ],
+        returns: 'WorkbenchEntry with updated seedActive and upload stats',
+        snippets: [
+            js(`
+import { setWorkbenchSeed } from './src/rust/api/ontology_workbench.dart';
+
+const entry = await setWorkbenchSeed(ontologyId: 'prov-o', active: true);
+// Daemon serves via GET /torrent/webseed/{info_hash}
+`),
+        ],
+    },
+
+    {
+        id: 'workbench.share_cards',
+        category: 'Ontology Workbench',
+        name: 'listOntologySharesForSession()',
+        summary: 'List ontology share cards visible to a chat session DID. Cards respect per-ontology torrent policy (audience, allowed contact/session DIDs).',
+        params: [{ name: 'sessionDid', type: 'string', desc: 'Chat session DID' }],
+        returns: 'OntologyShareCard[] { ontologyId, title, domain, magnetUri, infoHashSha1, quinCount }',
+        snippets: [
+            js(`
+import { listOntologySharesForSession } from './src/rust/api/ontology_workbench.dart';
+
+const cards = await listOntologySharesForSession(sessionDid: sessionDid);
+// Each card.magnetUri is ready for WebTorrent clients with ws= web seed
+`),
+        ],
     },
 
     // ═══════════════════════════════════════════════════════════════════════════

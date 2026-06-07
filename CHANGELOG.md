@@ -6,6 +6,38 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.8] — 2026-06-07
+
+### Summary
+
+v0.0.8 ships cooperative group chat with sub-agent hierarchy, daemon-backed chat relay, Qualia-native WebTorrent HTTP web-seeding for ontology artifacts, and the Ontology Workbench import/share pipeline. Flutter desktop is the primary shipped shell.
+
+### Added — Group Chat & Sub-Agents
+
+- **`chat_agents.rs`**: Sub-agent DID derivation (`did:qualia:subagent:…`), `OutcomeSharingPolicy`, cooperative peer context for multi-LLM inference.
+- **Chat relay**: `POST /chat/publish` + `GET /chat/pull` on the Qualia daemon; `syncChatRelay()` FRB binding.
+- **Chat graph**: Fragment replies, branch types, reactions, file attachments with sharing policy.
+- **Group sessions**: `createGroupChatSession`, participant management, session DIDs for ontology sharing.
+
+### Added — WebTorrent Seeder (Daemon)
+
+- **`webtorrent_seeder.rs`** + **`webtorrent_routes.rs`**: In-process HTTP web-seed for `.c.q42` files; magnet builder with `ws=` parameter; upload telemetry (`seeder: "qualia-daemon"`).
+- Daemon boot syncs active seeds from `{storage}/Index/workbench.jsonl`.
+- Flutter syncs workbench seeds ~2s after daemon start.
+
+### Added — Ontology Workbench
+
+- URI import → `.c.q42` compression → SHA-1 info hash → magnet URI.
+- Per-ontology torrent policy (audience, contact/session DIDs, bandwidth limits).
+- Share cards for contacts and chat session DIDs.
+
+### Changed
+
+- API Explorer (`docs/api-explorer/`) updated for v0.0.8: chat relay, WebTorrent, Desktop Chat, and Ontology Workbench catalog entries.
+- Manuals and LLM helper docs refreshed for current inference stack and Flutter FRB surface.
+
+---
+
 ## [0.0.6-dev] — 2026-06-06
 
 ### Summary

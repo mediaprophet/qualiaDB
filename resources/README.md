@@ -37,6 +37,16 @@ Simply edit the appropriate `.yaml` file and commit. No code changes required.
 
 Future enhancements may include an optional "Refresh Catalog" feature that pulls from Hugging Face, BioPortal, LOV, etc., but always stores results locally.
 
+### Importing from LOD Cloud
+
+```bash
+pip install pyyaml
+python scripts/import_lod_cloud_catalog.py              # probe + write proposed YAML
+python scripts/import_lod_cloud_catalog.py --apply    # merge into ontologies.yaml
+```
+
+Output: `resources/ontologies_lod_proposed.yaml` (review before `--apply`).
+
 ## Configuration
 
 See `../config/resources.example.yaml` for runtime preferences (preferred quantization, license filters, download behavior, etc.).

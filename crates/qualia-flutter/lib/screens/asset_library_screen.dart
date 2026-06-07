@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../src/rust/api/qualia_api.dart';
 import 'dart:math' as math;
 
@@ -39,46 +41,79 @@ class _AssetLibraryScreenState extends State<AssetLibraryScreen> with TickerProv
 
   Future<void> _handleIngest() async {
     if (_pipelineState != 'idle') return;
+
+    final isImage = _typologyLens != 'Generic' && _typologyLens != 'Literature';
+    final result = await FilePicker.platform.pickFiles(
+      type: isImage ? FileType.image : FileType.custom,
+      allowedExtensions: isImage ? null : ['pdf', 'txt', 'md'],
+      dialogTitle: isImage ? 'Select image to ingest' : 'Select document to ingest',
+      withData: false,
+    );
+    if (result == null || result.files.single.path == null) return;
+    final filePath = result.files.single.path!;
+
     setState(() {
       _pipelineState = 'analyzing';
       _assets.insert(0, {
         'id': 'ghost-node',
-        'type': _typologyLens == 'Generic' ? 'Analyzing...' : 'Extracting \$_typologyLens Facets...',
-        'facet': 'Pending Vision Extraction',
+        'type': 'Analyzing…',
+        'facet': 'Pending extraction',
         'origin': 'Unknown',
         'region': 'Pending...',
-        'magnet': 'Initializing local seed...',
+        'magnet': 'Initializing…',
         'alpTokenId': null,
-        'isGhost': true
+        'isGhost': true,
       });
     });
 
     try {
-      final res = await ingestLiterature(filePath: 'dummy_file.pdf');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res)));
+      String summary;
+      Map<String, dynamic> meta = {};
+
+      if (isImage) {
+        await ingestImageAsync(filePath: filePath, typology: _typologyLens);
+        final jsonStr = await ingestImage(filePath: filePath);
+        meta = jsonDecode(jsonStr) as Map<String, dynamic>;
+        summary = 'Image ingested (${meta['type'] ?? _typologyLens})';
+      } else if (filePath.toLowerCase().endsWith('.pdf')) {
+        final jsonStr = await ingestPdf(fileName: filePath);
+        meta = jsonDecode(jsonStr) as Map<String, dynamic>;
+        summary = meta['message'] as String? ?? 'PDF ingested';
+      } else {
+        summary = await ingestLiterature(filePath: filePath);
       }
-      await upsertCmldDefinition(term: 'dummy_file', contextDid: 'did:qualia:context:123');
+
+      final tokenId = await mintSemanticToken(assetId: meta['lexicon_id']?.toString() ?? filePath);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$summary — token: $tokenId')),
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _pipelineState = 'idle';
+        _assets[0] = {
+          'id': meta['lexicon_id']?.toString() ?? 'asset-${DateTime.now().millisecondsSinceEpoch}',
+          'type': meta['type']?.toString() ?? _typologyLens,
+          'facet': meta['facet']?.toString() ?? summary,
+          'origin': meta['origin']?.toString() ?? 'Native Desktop Edge',
+          'region': meta['region']?.toString() ?? filePath,
+          'magnet': meta['magnet_uri']?.toString() ?? 'local',
+          'alpTokenId': tokenId,
+          'isGhost': false,
+        };
+      });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ingest Error: \$e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ingest error: $e')));
+        setState(() {
+          _pipelineState = 'idle';
+          if (_assets.isNotEmpty && _assets[0]['isGhost'] == true) _assets.removeAt(0);
+        });
       }
     }
-
-    if (!mounted) return;
-    setState(() {
-      _pipelineState = 'idle';
-      _assets[0] = {
-        'id': 'new_asset_\${DateTime.now().millisecondsSinceEpoch}',
-        'type': _typologyLens == 'Generic' ? 'Unstructured Ingestion' : '\$_typologyLens Semantic Web',
-        'facet': 'Locally Signed & Hashed',
-        'origin': 'Native Desktop Edge',
-        'region': '0xAA...BB',
-        'magnet': 'magnet:?xt=urn:btih:NEW...',
-        'alpTokenId': 'ALP-NEW-1',
-        'isGhost': false
-      };
-    });
   }
 
   @override

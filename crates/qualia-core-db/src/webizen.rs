@@ -1,5 +1,12 @@
+use crate::deontic_logic::{
+    compile_norm_quin, evaluate_deontic_contract, harvest_defeater_fingerprints,
+    norm_has_active_defeater, DeonticStatus, DeonticVerdict, DEFEATER_BIT, MAX_DEFEATER_SLOTS,
+    OP_PERMIT,
+};
+use crate::modalities::{
+    asp, dialectical, dl, epistemic, linear, paraconsistent, probabilistic,
+};
 use crate::QualiaQuin;
-use crate::modalities::{dl, asp, probabilistic, linear};
 use crate::tax_schema::TaxRuleSchema;
 
 
@@ -33,10 +40,14 @@ use crate::n3_parser::Rule;
 
 /// The 42MB Static Tabling Arena for SLG Resolution
 /// Implemented as a Zero-Allocation Static Ring-Buffer Arena
+const RECENT_SLOT_RING: usize = 512;
+
 pub struct SlgArena {
     // We will use a safe Vec wrapper here since it is allocated strictly once and never grown.
     buffer: alloc::vec::Vec<QualiaQuin>,
     head_pointer: usize,
+    recent_slots: [usize; RECENT_SLOT_RING],
+    recent_slot_head: usize,
     // Native Rule Registry to hold N3 Logical Implications
     rule_registry: alloc::vec::Vec<Rule>,
 }
@@ -58,6 +69,8 @@ impl SlgArena {
         Self {
             buffer,
             head_pointer: 0,
+            recent_slots: [0; RECENT_SLOT_RING],
+            recent_slot_head: 0,
             rule_registry: alloc::vec::Vec::new(),
         }
     }
@@ -66,6 +79,52 @@ impl SlgArena {
     pub fn register_rule(&mut self, rule: Rule) {
         vm_log!("🧠 Webizen registered new N3 Rule: {:?}", rule);
         self.rule_registry.push(rule);
+    }
+
+    pub fn rule_count(&self) -> usize {
+        self.rule_registry.len()
+    }
+
+    /// Collect recently written Quins with valid ECC parity (bounded scan, zero heap).
+    pub fn collect_active_quins(&self, out: &mut [QualiaQuin]) -> usize {
+        let mut n = 0usize;
+        let scan = RECENT_SLOT_RING.min(self.recent_slot_head);
+        for off in 0..scan {
+            let ring_idx = (self.recent_slot_head + RECENT_SLOT_RING - 1 - off) % RECENT_SLOT_RING;
+            let idx = self.recent_slots[ring_idx];
+            let q = self.buffer[idx];
+            if q.subject == 0 {
+                continue;
+            }
+            let expected = q.subject ^ q.predicate ^ q.object ^ q.context;
+            if q.parity != expected {
+                continue;
+            }
+            if n < out.len() {
+                out[n] = q;
+                n += 1;
+            }
+        }
+        n
+    }
+
+    /// Compile registered N3 rules to norms + bytecode and execute on Core 1 (cold path).
+    pub fn fire_registered_rules(&mut self, contract_hash: u64) -> usize {
+        let rules = self.rule_registry.clone();
+        let mut fired = 0usize;
+        for rule in &rules {
+            if let Some(norm) = crate::deontic_logic::compile_n3_rule_to_norm(rule, contract_hash, 0) {
+                self.write_table(norm);
+            }
+            let mut opcodes = [SlgOpcode::Halt; 64];
+            if let Ok(count) = crate::n3_compiler::compile_rule_to_opcodes(rule, &mut opcodes) {
+                let mut frame = VmFrame::default();
+                if execute_vm_frame(self, &opcodes[..count], &mut frame).is_some() {
+                    fired += 1;
+                }
+            }
+        }
+        fired
     }
 
     /// Checks the SLG Arena for a previously proven sub-goal.
@@ -88,9 +147,31 @@ impl SlgArena {
         
         // Cyclic Eviction Policy: Overwrite whatever is in the slot natively
         self.buffer[slot] = result;
+        self.recent_slots[self.recent_slot_head % RECENT_SLOT_RING] = slot;
+        self.recent_slot_head = self.recent_slot_head.saturating_add(1);
         
         // Increment global ring-buffer pointer (used if we wanted strict sequential FIFO instead of hashed slots)
         self.head_pointer = (self.head_pointer + 1) % MAX_SLOTS;
+    }
+
+    pub(crate) fn find_mutable_quin(
+        &mut self,
+        subject: u64,
+        predicate: u64,
+        object: u64,
+    ) -> Option<&mut QualiaQuin> {
+        let scan = RECENT_SLOT_RING.min(self.recent_slot_head);
+        for off in 0..scan {
+            let ring_idx = (self.recent_slot_head + RECENT_SLOT_RING - 1 - off) % RECENT_SLOT_RING;
+            let idx = self.recent_slots[ring_idx];
+            let matches = self.buffer[idx].subject == subject
+                && self.buffer[idx].predicate == predicate
+                && (object == 0 || self.buffer[idx].object == object);
+            if matches {
+                return Some(&mut self.buffer[idx]);
+            }
+        }
+        None
     }
 }
 
@@ -144,6 +225,16 @@ pub enum SlgOpcode {
     NativeQuantumDft,
     /// `qualia:predictReceptorBinding` — PINN binding affinity.
     NativeReceptorBinding,
+    /// Compile semantic constraints into blind QUBO matrix (Core 2).
+    NativeQuboCompile,
+    /// Emit linear QUBO bias: (var_index, f32_bits).
+    NativeQuboEmitLinear(u8, u32),
+    /// Emit quadratic coupler: (var_a, var_b, f32_bits).
+    NativeQuboEmitCoupler(u8, u8, u32),
+    /// Egress to remote QPU: 0=annealer, 1=gate-model. Yields frame to Core 3.
+    NativeQuantumEgress(u8),
+    /// Ingress: collapse provider JSON into provenance Quins.
+    NativeQuantumIngress,
 
     // ── Native: biosciences ───────────────────────────────────────────────────
     /// `qualia:alignNucleotideSequence` — Smith-Waterman with BLAST nucleotide matrix.
@@ -263,10 +354,60 @@ pub enum SlgOpcode {
 }
 
 /// The Execution Frame tracking variable bindings without touching the heap
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct VmFrame {
     pub subject_reg: u64,
     pub predicate_reg: u64,
     pub object_reg: u64,
+    pub context_reg: u64,
+}
+
+#[inline]
+fn frame_to_quin(frame: &VmFrame) -> QualiaQuin {
+    let mut q = QualiaQuin {
+        subject: frame.subject_reg,
+        predicate: frame.predicate_reg,
+        object: frame.object_reg,
+        context: frame.context_reg,
+        metadata: 1,
+        parity: 0,
+    };
+    q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+    q
+}
+
+#[inline]
+fn current_unix32() -> u32 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as u32)
+        .unwrap_or(0)
+}
+
+fn unify_frame(arena: &SlgArena, frame: &mut VmFrame) -> bool {
+    if arena
+        .check_table(frame.subject_reg, frame.predicate_reg, frame.object_reg)
+        .is_some()
+    {
+        return true;
+    }
+
+    let mut scratch = [QualiaQuin::default(); 256];
+    let count = arena.collect_active_quins(&mut scratch);
+    for q in &scratch[..count] {
+        let subject_ok = frame.subject_reg == 0 || q.subject == frame.subject_reg;
+        let predicate_ok = frame.predicate_reg == 0 || q.predicate == frame.predicate_reg;
+        let object_ok = frame.object_reg == 0 || q.object == frame.object_reg;
+        if subject_ok && predicate_ok && object_ok {
+            frame.subject_reg = q.subject;
+            frame.predicate_reg = q.predicate;
+            frame.object_reg = q.object;
+            frame.context_reg = q.context;
+            return true;
+        }
+    }
+
+    frame.subject_reg != 0 && frame.predicate_reg != 0
 }
 
 /// The Bytecode Evaluator for the Prolog Webizen
@@ -285,12 +426,13 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 }
             },
             SlgOpcode::CheckDefeaters => {
-                // Here, the Webizen checks if the current context has any defeaters
-                // that override the active rule. 
-                // We'll mock a simple priority lookup. If a stronger rule fired, we would return None.
-                let has_defeater = false; // Mocked evaluation
-                if has_defeater {
-                    return None; // Rule is defeated, sub-goal fails
+                let mut scratch = [QualiaQuin::default(); 512];
+                let count = arena.collect_active_quins(&mut scratch);
+                let mut fp_buf = [0u64; MAX_DEFEATER_SLOTS];
+                let fp_count = harvest_defeater_fingerprints(&scratch[..count], &mut fp_buf);
+                let goal = frame_to_quin(frame);
+                if norm_has_active_defeater(&goal, &fp_buf[..fp_count]) {
+                    return None;
                 }
             },
             SlgOpcode::CheckSubsumption => {
@@ -301,8 +443,8 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
             },
             SlgOpcode::BranchWorld => {
                 let mut out_worlds = [0; asp::MAX_STABLE_MODELS];
-                let _count = asp::enumerate_stable_models(frame_quin_or_default(frame), &[], &mut out_worlds);
-                // Fork execution frames...
+                let goal = frame_to_quin(frame);
+                let _count = asp::enumerate_stable_models(&goal, &[], &mut out_worlds);
             },
             SlgOpcode::CheckThreshold => {
                 let meets_threshold = probabilistic::evaluate_threshold(0.5, 0.8);
@@ -311,37 +453,30 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 }
             },
             SlgOpcode::ConsumeFact => {
-                let mut mock_q = crate::QualiaQuin::default();
-                linear::consume_quin(&mut mock_q);
+                if let Some(q) = arena.find_mutable_quin(
+                    frame.subject_reg,
+                    frame.predicate_reg,
+                    frame.object_reg,
+                ) {
+                    linear::consume_quin(q);
+                } else {
+                    return None;
+                }
             },
             SlgOpcode::Unify => {
-                // Mock Unification: Binding logic variables
-                // In a real WAM, this unifies graph nodes with the execution frame registers
+                if !unify_frame(arena, frame) {
+                    return None;
+                }
             },
             SlgOpcode::Call => {
-                // If not cached, execute the deep traversal (mocked here as returning a successful logic fixed-point)
-                let result = QualiaQuin {
-                    subject: frame.subject_reg,
-                    predicate: frame.predicate_reg,
-                    object: frame.object_reg,
-                    context: 0,
-                    metadata: 1, // 1 denotes Proven Sub-goal
-                    parity: 0,
-                };
-                
-                // Write the resulting 48-byte SuperQuin into the SlgArena
+                let result = frame_to_quin(frame);
+                if result.subject == 0 || result.predicate == 0 {
+                    return None;
+                }
                 arena.write_table(result);
             },
             SlgOpcode::Return => {
-                // Reconstruct the proven Quin from the registers and return
-                return Some(QualiaQuin {
-                    subject: frame.subject_reg,
-                    predicate: frame.predicate_reg,
-                    object: frame.object_reg,
-                    context: 0,
-                    metadata: 1,
-                    parity: 0,
-                });
+                return Some(frame_to_quin(frame));
             },
             SlgOpcode::ApplyTaxSchema => {
                 // In a full implementation, we'd pull the active Jurisdiction Profile
@@ -463,10 +598,8 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 if sim < 0.4 { return None; }
             },
             SlgOpcode::NativeReceptorBinding => {
-                let affinity = crate::quantum_dft::pinn_predict_receptor_binding(
-                    &[*frame_quin_or_default(frame)],
-                    &[*frame_quin_or_default(frame)],
-                );
+                let goal = frame_to_quin(frame);
+                let affinity = crate::quantum_dft::pinn_predict_receptor_binding(&[goal], &[goal]);
                 vm_log!("[Webizen] NativeReceptorBinding: affinity={:.2} kcal/mol", affinity);
             },
             // ── Biomedical ────────────────────────────────────────────────
@@ -704,25 +837,127 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 vm_log!("[Webizen] NativeIsotopeDistribution evaluated");
             },
             SlgOpcode::NativeDeonticEval => {
-                vm_log!("[Webizen] NativeDeonticEval: evaluating deontic obligation");
+                let mut scratch = [QualiaQuin::default(); 512];
+                let count = arena.collect_active_quins(&mut scratch);
+                let mut verdicts = [DeonticVerdict::default(); 64];
+                let vcount = evaluate_deontic_contract(
+                    &scratch[..count],
+                    current_unix32(),
+                    &mut verdicts,
+                )
+                .unwrap_or(0);
+                let goal = frame_to_quin(frame);
+                for verdict in &verdicts[..vcount] {
+                    if verdict.norm.subject == goal.subject
+                        && verdict.norm.predicate == goal.predicate
+                        && verdict.norm.object == goal.object
+                        && !matches!(verdict.status, DeonticStatus::Active)
+                    {
+                        return None;
+                    }
+                }
+                vm_log!("[Webizen] NativeDeonticEval: {} norms evaluated", vcount);
             },
             SlgOpcode::NativeEpistemicEval(min_certainty) => {
-                vm_log!("[Webizen] NativeEpistemicEval: min_certainty={}", min_certainty);
+                let mut scratch = [QualiaQuin::default(); 512];
+                let count = arena.collect_active_quins(&mut scratch);
+                let mut verdicts = [epistemic::EpistemicVerdict {
+                    claim: QualiaQuin::default(),
+                    status: epistemic::EpistemicStatus::Skipped,
+                    certainty: 0,
+                }; 64];
+                let vcount = epistemic::evaluate_epistemic_frame(
+                    &scratch[..count],
+                    frame.subject_reg,
+                    frame.context_reg,
+                    &mut verdicts,
+                )
+                .unwrap_or(0);
+                let mut ok = false;
+                for verdict in &verdicts[..vcount] {
+                    if verdict.certainty >= min_certainty
+                        && verdict.status == epistemic::EpistemicStatus::Active
+                    {
+                        ok = true;
+                        break;
+                    }
+                }
+                if !ok {
+                    return None;
+                }
             },
             SlgOpcode::NativeLinearConsume => {
-                vm_log!("[Webizen] NativeLinearConsume: linear logic fact consumed");
+                if let Some(q) = arena.find_mutable_quin(
+                    frame.subject_reg,
+                    frame.predicate_reg,
+                    frame.object_reg,
+                ) {
+                    linear::consume_quin(q);
+                } else {
+                    return None;
+                }
             },
             SlgOpcode::NativeAspStableModels => {
-                vm_log!("[Webizen] NativeAspStableModels: evaluating stable models");
+                let mut out_worlds = [0; asp::MAX_STABLE_MODELS];
+                let goal = frame_to_quin(frame);
+                let world_count = asp::enumerate_stable_models(&goal, &[], &mut out_worlds);
+                if world_count == 0 {
+                    return None;
+                }
+                frame.context_reg = out_worlds[0];
             },
             SlgOpcode::NativeParaconsistentIsolate => {
-                vm_log!("[Webizen] NativeParaconsistentIsolate: routing contradiction");
+                let mut scratch = [QualiaQuin::default(); 64];
+                let count = arena.collect_active_quins(&mut scratch);
+                if count == 0 {
+                    return None;
+                }
+                let mut consistent = [QualiaQuin::default(); 64];
+                let mut isolated = [QualiaQuin::default(); 64];
+                let routed = paraconsistent::route_paraconsistent(
+                    &scratch[..count],
+                    &mut consistent,
+                    &mut isolated,
+                );
+                if routed.is_err() {
+                    return None;
+                }
+                let (_, iso_count) = routed.unwrap_or((0, 0));
+                for q in &isolated[..iso_count] {
+                    arena.write_table(*q);
+                }
             },
             SlgOpcode::NativeDialecticalSynthesis => {
-                vm_log!("[Webizen] NativeDialecticalSynthesis: synthesizing contradiction");
+                let mut scratch = [QualiaQuin::default(); 64];
+                let count = arena.collect_active_quins(&mut scratch);
+                if count < 2 {
+                    return None;
+                }
+                if let Some(syn) =
+                    dialectical::synthesize_dialectical(&scratch[0], &scratch[1])
+                {
+                    arena.write_table(syn);
+                    frame.subject_reg = syn.subject;
+                    frame.predicate_reg = syn.predicate;
+                    frame.object_reg = syn.object;
+                    frame.context_reg = syn.context;
+                } else {
+                    return None;
+                }
             },
             SlgOpcode::NativeUnless => {
-                vm_log!("[Webizen] NativeUnless: evaluating Non-Monotonic Default Logic locally on Core 1");
+                let goal = frame_to_quin(frame);
+                let property_path = (goal.predicate >> 8) & !DEFEATER_BIT;
+                let defeater = compile_norm_quin(
+                    goal.subject,
+                    OP_PERMIT,
+                    property_path,
+                    goal.object,
+                    goal.context,
+                    0,
+                    true,
+                );
+                arena.write_table(defeater);
             },
             SlgOpcode::NativeRetrieveByActivation | SlgOpcode::NativeDecayMetadata => {
                 // CORE 2 ISOLATION RULE (ACT-R Escalation): 
@@ -744,22 +979,30 @@ pub fn execute_vm_frame(arena: &mut SlgArena, bytecode: &[SlgOpcode], frame: &mu
                 vm_log!("[Webizen] CORE 2 YIELD: Suspending frame and pushing geometric ops to async GPU Sieve.");
                 return None;
             },
+            SlgOpcode::NativeQuboCompile => {
+                vm_log!("[Webizen] NativeQuboCompile: semantic subgraph → blind QUBO matrix (Core 2)");
+            }
+            SlgOpcode::NativeQuboEmitLinear(var, bits) => {
+                let bias = f32::from_bits(bits);
+                vm_log!("[Webizen] OP_EMIT_WEIGHT linear var={} bias={}", var, bias);
+            }
+            SlgOpcode::NativeQuboEmitCoupler(a, b, bits) => {
+                let w = f32::from_bits(bits);
+                vm_log!("[Webizen] OP_EMIT_WEIGHT coupler {}-{} weight={}", a, b, w);
+            }
+            SlgOpcode::NativeQuantumEgress(arch) => {
+                vm_log!("[Webizen] CORE 3 YIELD: NativeQuantumEgress arch={} — suspending for blind HTTP egress", arch);
+                return None;
+            }
+            SlgOpcode::NativeQuantumIngress => {
+                vm_log!("[Webizen] NativeQuantumIngress: collapsing QPU response → provenance Quins");
+            }
         }
 
         instruction_pointer += 1;
     }
 
     None
-}
-
-// Helper: build a throwaway QualiaQuin from VM frame registers for native dispatch
-#[inline(always)]
-fn frame_quin_or_default(_frame: &VmFrame) -> &'static crate::QualiaQuin {
-    // Returns a zero Quin when actual graph data isn't available in the demo path
-    static ZERO: crate::QualiaQuin = crate::QualiaQuin {
-        subject: 0, predicate: 0, object: 0, context: 0, metadata: 0, parity: 0,
-    };
-    &ZERO
 }
 
 impl VmFrame {
@@ -908,12 +1151,75 @@ mod tests {
     }
 
     #[test]
+    fn check_defeaters_blocks_defeated_norm() {
+        let mut arena = SlgArena::new();
+        let contract = crate::q_hash("did:web:nda:contract-001");
+        let alice = crate::q_hash("did:web:alice.example");
+        let disclose = crate::q_hash("q42:disclose");
+        let data = crate::q_hash("q42:data:project-x:confidential");
+
+        let forbid = crate::deontic_logic::compile_norm_quin(
+            alice, crate::deontic_logic::OP_FORBID, disclose, data, contract, 0, false,
+        );
+        let defeater = crate::deontic_logic::compile_norm_quin(
+            alice,
+            crate::deontic_logic::OP_PERMIT,
+            disclose,
+            crate::q_hash("q42:role:certified-auditor"),
+            contract,
+            0,
+            true,
+        );
+        arena.write_table(forbid);
+        arena.write_table(defeater);
+
+        let mut frame = VmFrame {
+            subject_reg: alice,
+            predicate_reg: forbid.predicate,
+            object_reg: data,
+            context_reg: contract,
+        };
+        let bytecode = [SlgOpcode::CheckDefeaters, SlgOpcode::Return];
+        assert!(
+            execute_vm_frame(&mut arena, &bytecode, &mut frame).is_none(),
+            "CheckDefeaters must fail when a matching defeater exists"
+        );
+    }
+
+    #[test]
+    fn unify_binds_frame_from_arena_fact() {
+        let mut arena = SlgArena::new();
+        let fact = QualiaQuin {
+            subject: 10,
+            predicate: 20,
+            object: 30,
+            context: 40,
+            metadata: 0,
+            parity: 10 ^ 20 ^ 30 ^ 40,
+        };
+        arena.write_table(fact);
+
+        let mut frame = VmFrame {
+            subject_reg: 10,
+            predicate_reg: 20,
+            object_reg: 0,
+            context_reg: 0,
+        };
+        let bytecode = [SlgOpcode::Unify, SlgOpcode::Return];
+        let result = execute_vm_frame(&mut arena, &bytecode, &mut frame).expect("unify");
+        assert_eq!(frame.object_reg, 30);
+        assert_eq!(frame.context_reg, 40);
+        assert_eq!(result.object, 30);
+        assert_eq!(result.context, 40);
+    }
+
+    #[test]
     fn test_async_retrieve_logic() {
         // Initialize the DHAT profiler to ensure zero heap allocations
         let _profiler = dhat::Profiler::builder().testing().build();
         
         let mut arena = SlgArena::new();
-        let mut frame = VmFrame { subject_reg: 0, predicate_reg: 0, object_reg: 0 };
+        let mut frame = VmFrame::default();
         
         let bytecode = vec![SlgOpcode::NativeRetrieveByActivation];
         

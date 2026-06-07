@@ -37,6 +37,10 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
+                    <div id="wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                        <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
+                        <span id="wasm-text">WASM…</span>
+                    </div>
                     <div id="daemon-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
                         <div class="w-2 h-2 rounded-full bg-slate-500" id="daemon-dot"></div>
                         <span id="daemon-text">Checking...</span>
@@ -119,6 +123,22 @@
         </div>
     </div>
 
+    <script type="module">
+        import { bindEngineBadge } from './js/qualia-wasm-runtime.js';
+
+        bindEngineBadge('wasm-text', { base: '.' }, '').then(ver => {
+            const dot = document.getElementById('wasm-dot');
+            const badge = document.getElementById('wasm-badge');
+            if (ver) {
+                dot.className = 'w-2 h-2 rounded-full bg-cyan-400';
+                document.getElementById('wasm-text').textContent = `WASM v${ver}`;
+                badge.className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
+            } else {
+                dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                document.getElementById('wasm-text').textContent = 'WASM offline';
+            }
+        });
+    </script>
     <script>
         async function checkDaemon() {
             try {

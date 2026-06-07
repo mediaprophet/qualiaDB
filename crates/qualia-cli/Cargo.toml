@@ -1,12 +1,18 @@
 [package]
 name = "qualia-cli"
-version = "0.0.7"
+version = "0.0.8"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
+default-run = "qualia-cli"
+
+[[bin]]
+name = "q42_comparative_bench"
+path = "src/bin/q42_comparative_bench.rs"
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }
 qualia-core-db = { path = "../qualia-core-db" }
+qualia-client-core = { path = "../qualia-client-core" }
 tokio = { version = "1.35", features = ["full"] }
 warp = "0.3"
 serde = { version = "1.0", features = ["derive"] }

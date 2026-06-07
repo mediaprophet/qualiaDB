@@ -44,7 +44,7 @@ qualia-desktop/src/
 │   ├── ontology.rs           (ingest_ontology, ingest_literature, export_to_solid,
 │   │                          upsert_cmld_definition)
 │   ├── assets.rs             (ingest_image, ingest_image_async, fetch_torrent_telemetry)
-│   ├── apps.rs               (list_installed_apps, app credential VC, launch_installed_app)
+│   ├── qapps.rs              (list_installed_qapps, qapp credential VC, launch_installed_qapp)
 │   ├── daemon.rs             (query_daemon HTTP proxy, check_daemon_health)
 │   ├── downloads.rs          (download_model, download_and_vectorize, cancel_download,
 │   │                          get_active_downloads, fetch_remote_manifest)
@@ -276,8 +276,8 @@ after handshake. Replace the hardcoded `"did:qualia:frontdoor:88f72a-connect"`.
 
 ### 4.3  Real app credential VC via `agency.rs`
 
-`generate_app_credential` signs `(app_name + timestamp)` with the master identity key
-using `agency.rs::sign_agency_root()`. `verify_and_install_app` calls `verify_human_agency()`
+`generate_qapp_credential` signs `(qapp_name + timestamp)` with the master identity key
+using `agency.rs::sign_agency_root()`. `verify_and_install_qapp` calls `verify_human_agency()`
 instead of the prefix-string check.
 
 ### 4.4  Real chain balance queries

@@ -79,6 +79,8 @@ This is **mandatory infrastructure**, not optional middleware. Do not bypass or 
 ```
 localhost:4242  =  Qualia semantic graph daemon
                    Endpoints: /health, /query (SPARQL-style over quins)
+                   Chat relay: /chat/publish, /chat/pull
+                   WebTorrent: /torrent/webseed/{hash}, /torrent/seed, /torrent/telemetry
                    NOT an LLM server
 ```
 
@@ -111,6 +113,8 @@ These break things if violated:
 | Touching the graph engine | `orchestrator.rs`, `storage.rs`, `wal.rs` |
 | MCP server changes | `mcp_server.rs` |
 | Flutter FRB API changes | `crates/qualia-flutter/rust/src/api/qualia_api.rs`, then run `flutter_rust_bridge_codegen generate` |
+| Group chat / sub-agents | `chat_agents.rs`, `chat_relay.rs`, `chat_inference.rs` in `qualia-client-core` |
+| Ontology workbench / seeding | `ontology_workbench.rs`, `webtorrent_seeder.rs`, `webtorrent_routes.rs` |
 | Benchmark harness | `benchmarks/harness.py`, `benchmarks/qualia/runner.py` |
 | Governance / rights | `webizen.rs`, `agency.rs`, `deontic_logic.rs` |
 | Profile / identity | `profiles.rs`, `key_vault.rs`, `identifier.rs` |

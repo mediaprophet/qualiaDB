@@ -67,7 +67,8 @@ export async function detectModes() {
         wasm:     false,
         native:   false,
         token:    '',
-        isMobile: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent),
+        isMobile: typeof navigator !== 'undefined'
+            && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent),
         daemonVersion: null,
     };
 

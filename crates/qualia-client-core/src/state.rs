@@ -4,14 +4,19 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use qualia_core_db::rpc::TaxRecipientSuite;
-use crate::app_registry;
+use crate::qapp_registry;
 
 pub static APP_STATE: OnceLock<Arc<AppState>> = OnceLock::new();
 
 pub fn init_app_state() -> Arc<AppState> {
+    let config = load_config_from_disk();
+    init_data_directories(&config.storage_path);
+    let meta = app_meta_dir();
+    let _ = std::fs::create_dir_all(&meta);
+    let meta_str = meta.to_string_lossy().into_owned();
     let state = Arc::new(AppState {
-        config: Mutex::new(load_config_from_disk()),
-        tax_suite: Mutex::new(load_suite_from_disk(&load_config_from_disk().storage_path)),
+        config: Mutex::new(config.clone()),
+        tax_suite: Mutex::new(load_suite_from_disk(&config.storage_path)),
         daemon_running: Arc::new(Mutex::new(false)),
         nym_relay_active: Arc::new(AtomicBool::new(false)),
         stark_prover_active: Arc::new(AtomicBool::new(false)),
@@ -23,8 +28,11 @@ pub fn init_app_state() -> Arc<AppState> {
         directory_actors: Arc::new(Mutex::new(Vec::new())),
         delegation_rules: Arc::new(Mutex::new(Vec::new())),
         front_doors: Arc::new(Mutex::new(Vec::new())),
-        installed_apps: Arc::new(Mutex::new(Vec::new())),
-        key_vault: Arc::new(Mutex::new(qualia_core_db::key_vault::KeyVault::load_or_generate(".qualia").unwrap())),
+        installed_qapps: Arc::new(Mutex::new(Vec::new())),
+        key_vault: Arc::new(Mutex::new(
+            qualia_core_db::key_vault::KeyVault::load_or_generate(&meta_str)
+                .unwrap_or_else(|e| panic!("KeyVault init failed ({meta_str}): {e}")),
+        )),
         download_events: tokio::sync::broadcast::channel(100).0,
     });
     APP_STATE.set(state.clone()).ok();
@@ -103,7 +111,7 @@ pub fn load_config_from_disk() -> AgentConfig {
 
 pub fn init_data_directories(storage_path: &str) {
     let base = PathBuf::from(storage_path);
-    for sub in &["Models", "Index", "Apps", "SemanticLibrary", "Identity"] {
+    for sub in &["Models", "Index", "Qapps", "SemanticLibrary", "Identity", "Chats"] {
         let _ = std::fs::create_dir_all(base.join(sub));
     }
 }
@@ -134,7 +142,7 @@ pub struct AppState {
     pub directory_actors: Arc<Mutex<Vec<Actor>>>,
     pub delegation_rules: Arc<Mutex<Vec<DelegationRule>>>,
     pub front_doors: Arc<Mutex<Vec<FrontDoor>>>,
-    pub installed_apps: Arc<Mutex<Vec<app_registry::RegisteredApp>>>,
+    pub installed_qapps: Arc<Mutex<Vec<qapp_registry::RegisteredQapp>>>,
     pub key_vault: Arc<Mutex<qualia_core_db::key_vault::KeyVault>>,
     pub download_events: tokio::sync::broadcast::Sender<ProgressPayload>,
 }
