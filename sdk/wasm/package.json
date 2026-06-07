@@ -4,7 +4,7 @@
   "collaborators": [
     "Timothy Charles Holborn <timothy.holborn@gmail.com>"
   ],
-  "version": "0.0.5",
+  "version": "0.0.7",
   "files": [
     "qualia_core_db_bg.wasm",
     "qualia_core_db.js",
