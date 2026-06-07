@@ -2,8 +2,16 @@
 /crates/qualia-core-db/target
 /crates/qualia-cli/target
 *.rdf
+*.wal
 *.q42
 *.n3
+
+# Keep published WordNet benchmark/test assets trackable in docs/playground
+!docs/playground/wordnet.q42
+!docs/playground/wordnet.c.q42
+!docs/playground/wordnet.q42.lex
+!docs/playground/wordnet.q42.lex.lz4
+!docs/playground/wordnet.q42.bidx
 
 # Claude Code session files (dev-machine only)
 .claude/

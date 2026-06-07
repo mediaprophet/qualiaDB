@@ -442,23 +442,31 @@
             if (!engines.length) return;
 
             const valid = f => e => typeof f(e) === 'number' && isFinite(f(e));
+            const complete = engines.filter(engine => !engine?.error && !isIncomplete(engine));
+            const nonError = engines.filter(engine => !engine?.error);
+            const winner = (pool, metric, compare) => {
+                const candidates = pool.filter(valid(metric));
+                if (!candidates.length) return null;
+                return candidates.reduce((best, current) => compare(metric(best), metric(current)) ? best : current);
+            };
 
-            const ingestionWinner = engines.filter(valid(e => e.ingestion_ms))
-                .reduce((a, b) => a.ingestion_ms < b.ingestion_ms ? a : b, engines[0]);
-            const pointWinner = engines.filter(valid(e => e.point?.p50))
-                .reduce((a, b) => a.point.p50 < b.point.p50 ? a : b, engines[0]);
-            const memoryWinner = engines.filter(valid(e => e.peak_rss_mb))
-                .reduce((a, b) => a.peak_rss_mb < b.peak_rss_mb ? a : b, engines[0]);
-            const p95Winner = engines.filter(valid(e => e.point?.p95))
-                .reduce((a, b) => a.point.p95 < b.point.p95 ? a : b, engines[0]);
-            const tputWinner = engines.filter(valid(e => getThroughput(e)))
-                .reduce((a, b) => getThroughput(a) > getThroughput(b) ? a : b, engines[0]);
+            const ingestionWinner = winner(nonError, e => e.ingestion_ms, (a, b) => a < b);
+            const pointWinner = winner(complete, e => e.point?.p50, (a, b) => a < b);
+            const memoryWinner = winner(nonError, e => getRss(e), (a, b) => a < b);
+            const p95Winner = winner(complete, e => e.point?.p95, (a, b) => a < b);
+            const tputWinner = winner(complete, e => getThroughput(e), (a, b) => a > b);
+
+            const ingestionSub = !ingestionWinner
+                ? 'methodology varies by engine'
+                : (ingestionWinner.engine === 'qualia' && ingestionWinner.qualia_daemon_available)
+                    ? formatKTps(ingestionWinner) + ' · daemon-side metric'
+                    : formatKTps(ingestionWinner) + ' · methodology varies';
 
             const cards = [
-                { label: "Fastest Ingestion", value: formatMs(ingestionWinner?.ingestion_ms) + " ms", sub: formatKTps(ingestionWinner ?? {}), engine: ingestionWinner?.meta?.label || ingestionWinner?.engine || '—', icon: "fa-bolt", color: "emerald" },
+                { label: "Fastest Reported Ingestion", value: formatMs(ingestionWinner?.ingestion_ms) + " ms", sub: ingestionSub, engine: ingestionWinner?.meta?.label || ingestionWinner?.engine || '—', icon: "fa-bolt", color: "emerald" },
                 { label: "Lowest Point p50", value: formatMs(pointWinner?.point?.p50) + " ms", sub: "p95 " + formatMs(pointWinner?.point?.p95) + " ms", engine: pointWinner?.meta?.label || pointWinner?.engine || '—', icon: "fa-search", color: "blue" },
                 { label: "Best p95 Latency", value: formatMs(p95Winner?.point?.p95) + " ms", sub: "point query tail", engine: p95Winner?.meta?.label || p95Winner?.engine || '—', icon: "fa-chart-line", color: "sky" },
-                { label: "Lowest Memory", value: (memoryWinner?.peak_rss_mb?.toFixed(1) ?? "?") + " MB", sub: "peak RSS", engine: memoryWinner?.meta?.label || memoryWinner?.engine || '—', icon: "fa-microchip", color: "violet" },
+                { label: "Lowest Memory", value: (getRss(memoryWinner)?.toFixed(1) ?? "?") + " MB", sub: memoryWinner?.server_rss_mb != null ? "server RSS footprint" : "peak RSS", engine: memoryWinner?.meta?.label || memoryWinner?.engine || '—', icon: "fa-microchip", color: "violet" },
                 { label: "Highest Throughput", value: formatOps(getThroughput(tputWinner ?? {})), sub: "point ops/s", engine: tputWinner?.meta?.label || tputWinner?.engine || '—', icon: "fa-tachometer-alt", color: "amber" },
             ];
 
