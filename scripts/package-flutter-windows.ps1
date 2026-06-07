@@ -7,7 +7,25 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# robocopy uses exit code 1 for successful copy; do not treat as a native-command error.
+$PSNativeCommandUseErrorActionPreference = $false
 $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+
+function Invoke-RobocopyChecked {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Destination,
+        [switch]$Mirror,
+        [switch]$Recurse
+    )
+    $args = @($Source, $Destination)
+    if ($Mirror) { $args += "/MIR" }
+    elseif ($Recurse) { $args += "/E" }
+    $args += "/NFL", "/NDL", "/NJH", "/NJS", "/nc", "/ns", "/np"
+    robocopy @args | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit code $LASTEXITCODE" }
+    $global:LASTEXITCODE = 0
+}
 if (-not $OutDir) {
     $OutDir = Join-Path $Root "dist\qualia-flutter-windows-x64"
 }
@@ -34,8 +52,7 @@ if (-not (Test-Path $RustDll)) { throw "Rust DLL missing: $RustDll" }
 
 Write-Host "Staging portable bundle to $OutDir ..."
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
-robocopy $Build $OutDir /MIR /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
-if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit code $LASTEXITCODE" }
+Invoke-RobocopyChecked -Source $Build -Destination $OutDir -Mirror
 
 Copy-Item $RustDll $OutDir -Force
 if (Test-Path $DirectMl) {
@@ -49,8 +66,8 @@ $WebView2Vendor = Join-Path $Root "vendor\webview2"
 if (Test-Path $WebView2Vendor) {
     $Dest = Join-Path $OutDir "WebView2Runtime"
     New-Item -ItemType Directory -Force -Path $Dest | Out-Null
-    robocopy $WebView2Vendor $Dest /E /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
-    if ($LASTEXITCODE -lt 8) { Write-Host "Bundled WebView2 Fixed Version runtime" }
+    Invoke-RobocopyChecked -Source $WebView2Vendor -Destination $Dest -Recurse
+    Write-Host "Bundled WebView2 Fixed Version runtime"
 }
 
 Write-Host "Bundled qualia_flutter_rust.dll"
@@ -59,5 +76,5 @@ Write-Host "Bundled qualia_flutter_rust.dll"
 & (Join-Path $Root "scripts\copy-bundled-resources.ps1") -OutDir $OutDir
 
 Write-Host "Done. Portable bundle: $OutDir\qualia_flutter.exe"
-# robocopy uses exit code 1 for success; do not leak that to CI.
+$global:LASTEXITCODE = 0
 exit 0

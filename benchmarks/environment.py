@@ -74,12 +74,33 @@ def collect_device_manifest() -> dict[str, Any]:
     }
 
 
+def collect_ci_environment() -> Optional[dict[str, Any]]:
+    """GitHub Actions runner metadata when the harness runs in CI."""
+    if not os.environ.get("GITHUB_ACTIONS"):
+        return None
+    return {
+        "provider": "github-actions",
+        "runner_os": os.environ.get("RUNNER_OS"),
+        "runner_arch": os.environ.get("RUNNER_ARCH"),
+        "runner_name": os.environ.get("RUNNER_NAME"),
+        "workflow": os.environ.get("GITHUB_WORKFLOW"),
+        "run_id": os.environ.get("GITHUB_RUN_ID"),
+        "repository": os.environ.get("GITHUB_REPOSITORY"),
+    }
+
+
+def _harness_runner_label() -> str:
+    if os.environ.get("GITHUB_ACTIONS"):
+        return "github-actions-comparative-harness"
+    return "python-comparative-harness"
+
+
 def collect_harness_environment(
-    runner: str = "python-comparative-harness",
+    runner: Optional[str] = None,
     measurement_path: str = "harness_isolated_subprocess",
 ) -> dict[str, Any]:
-    return {
-        "runner": runner,
+    env: dict[str, Any] = {
+        "runner": runner or _harness_runner_label(),
         "engine_version": None,
         "memory_ceiling_mb": MEMORY_CEILING_MB,
         "measurement_path": measurement_path,
@@ -94,6 +115,10 @@ def collect_harness_environment(
         "device_manifest": collect_device_manifest(),
         "collected_at": _utc_now(),
     }
+    ci = collect_ci_environment()
+    if ci:
+        env["ci_environment"] = ci
+    return env
 
 
 def fetch_daemon_health(base_url: str = DAEMON_URL, timeout: float = 1.0) -> Optional[dict[str, Any]]:
@@ -124,9 +149,15 @@ def merge_execution_environment(
     base: dict[str, Any],
     daemon_env: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    """Attach harness host manifest; overlay daemon topology when Qualia was measured via daemon."""
+    """Refresh harness host manifest on every merge; overlay daemon topology when Qualia was measured via daemon."""
     out = dict(base)
-    out.setdefault("device_manifest", collect_device_manifest())
+    out["runner"] = _harness_runner_label()
+    out["device_manifest"] = collect_device_manifest()
+    ci = collect_ci_environment()
+    if ci:
+        out["ci_environment"] = ci
+    else:
+        out.pop("ci_environment", None)
     out["collected_at"] = _utc_now()
     if daemon_env:
         topo = daemon_env.get("topology") or {}

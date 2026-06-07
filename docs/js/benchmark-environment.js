@@ -93,6 +93,21 @@ export function formatTopologySummary(env) {
 
 export function formatDeviceSummary(env) {
     const dm = env?.device_manifest;
+    const ci = env?.ci_environment;
+    if (!dm && !ci) return '';
+
+    if (ci?.provider === 'github-actions') {
+        const parts = ['GitHub Actions'];
+        if (ci.runner_os) parts.push(ci.runner_os);
+        if (ci.runner_arch) parts.push(ci.runner_arch);
+        if (ci.runner_name && !ci.runner_name.startsWith('GitHub Actions')) {
+            parts.push(ci.runner_name);
+        }
+        if (dm?.cpu_logical_cores) parts.push(`${dm.cpu_logical_cores} cores`);
+        if (dm?.ram_reported_gb) parts.push(`${dm.ram_reported_gb} GB RAM`);
+        return parts.join(' · ');
+    }
+
     if (!dm) return '';
     const parts = [dm.host_class, dm.os].filter(Boolean);
     if (dm.cpu_logical_cores) parts.push(`${dm.cpu_logical_cores} cores`);
