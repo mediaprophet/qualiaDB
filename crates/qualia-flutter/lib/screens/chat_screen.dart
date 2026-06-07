@@ -98,14 +98,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   }
 
-  Future<void> _syncActiveModelFromRust() async {
+  Future<void> _syncActiveModelFromRust({bool force = false}) async {
     try {
       final active = await api.getActiveModel();
       if (!mounted || active == null || active.isEmpty) return;
-      if (ref.read(activeModelPathProvider).isEmpty) {
+      if (force || ref.read(activeModelPathProvider).isEmpty) {
         ref.read(activeModelPathProvider.notifier).state = active;
       }
     } catch (_) {}
+  }
+
+  Future<bool> _ensureActiveModel() async {
+    try {
+      final lifecycleJson = await catalog.getModelLifecycleStatus();
+      if (_parseLifecycleState(lifecycleJson) == 'Active') return true;
+      await catalog.applyModelPreference(task: 'chat');
+      await _syncActiveModelFromRust(force: true);
+      final retry = await catalog.getModelLifecycleStatus();
+      return _parseLifecycleState(retry) == 'Active';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _openEnvironmentSheet() async {
+    if (_sessionId == null || _isInferring) return;
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ChatEnvironmentSheet(sessionId: _sessionId!),
+    );
+    if (changed == true && mounted) {
+      await _syncActiveModelFromRust(force: true);
+      setState(() {});
+    }
   }
 
   Future<void> _loadOwnerDid() async {
@@ -1068,19 +1094,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return;
       }
 
-      final lifecycleJson = await catalog.getModelLifecycleStatus();
-      final lifecycle = _parseLifecycleState(lifecycleJson);
+      var lifecycleJson = await catalog.getModelLifecycleStatus();
+      var lifecycle = _parseLifecycleState(lifecycleJson);
       if (lifecycle != 'Active') {
-        setState(() {
-          _messages[agentIndex] = _Message(
-            role: 'agent',
-            content:
-                'No active model — download and activate a model in LLM Hub first.',
-          );
-          _isInferring = false;
-        });
-        _scrollToBottom();
-        return;
+        final recovered = await _ensureActiveModel();
+        if (!recovered) {
+          setState(() {
+            _messages[agentIndex] = _Message(
+              role: 'agent',
+              content:
+                  'No active model — open Chat environment (tune icon) to pick an installed model, or LLM Hub to download one.',
+            );
+            _isInferring = false;
+          });
+          _scrollToBottom();
+          return;
+        }
+        lifecycleJson = await catalog.getModelLifecycleStatus();
+        lifecycle = _parseLifecycleState(lifecycleJson);
       }
 
       if (_sessionId != null) {
@@ -1333,11 +1364,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   tooltip: 'Chat environment',
                   onPressed: _sessionId == null || _isInferring
                       ? null
-                      : () => showModalBottomSheet<bool>(
-                            context: context,
-                            isScrollControlled: true,
-                            builder: (_) => ChatEnvironmentSheet(sessionId: _sessionId!),
-                          ),
+                      : _openEnvironmentSheet,
                 ),
                 if (_isGroup)
                   IconButton(
@@ -1390,22 +1417,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
         ChatEnvironmentBar(
           sessionId: _sessionId,
-          onTap: _sessionId == null || _isInferring
-              ? null
-              : () => showModalBottomSheet<bool>(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (_) => ChatEnvironmentSheet(sessionId: _sessionId!),
-                  ),
+          onTap: _sessionId == null || _isInferring ? null : _openEnvironmentSheet,
         ),
 
         if (widget.modelPath.isEmpty)
           MaterialBanner(
             content: const Text(
-              'No active model — open LLM Hub to browse a local .gguf or download from the catalog.',
+              'No active model — open Chat environment to pick an installed model, or LLM Hub to download.',
             ),
             leading: const Icon(Icons.memory_outlined),
             actions: [
+              TextButton(
+                onPressed: _sessionId == null ? null : _openEnvironmentSheet,
+                child: const Text('Choose model'),
+              ),
               TextButton(
                 onPressed: () =>
                     ref.read(shellNavIndexProvider.notifier).state = 7,

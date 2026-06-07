@@ -419,6 +419,10 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
       if (!mounted) return;
       setState(() => _downloads.remove(model.id));
       await _refreshAll();
+      final active = await api.getActiveModel();
+      if (active != null && active.isNotEmpty) {
+        ref.read(activeModelPathProvider.notifier).state = active;
+      }
       if (_preferences?.autoSelect == true) {
         await _applyAutoSelect();
       }

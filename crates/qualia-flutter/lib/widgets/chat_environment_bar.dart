@@ -2,21 +2,18 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../main.dart' show shellNavIndexProvider;
 import '../src/rust/api/chat_session.dart' as chat;
 import '../src/rust/api/resource_catalog.dart' as catalog;
 
 /// Compact status strip: model, ontologies, daemon, session.
-class ChatEnvironmentBar extends ConsumerWidget {
+class ChatEnvironmentBar extends StatelessWidget {
   final String? sessionId;
   final VoidCallback? onTap;
 
   const ChatEnvironmentBar({super.key, required this.sessionId, this.onTap});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return FutureBuilder<_EnvSnapshot>(
       future: _load(sessionId),
       builder: (context, snap) {
@@ -40,20 +37,13 @@ class ChatEnvironmentBar extends ConsumerWidget {
                             spacing: 6,
                             runSpacing: 4,
                             children: [
-                              GestureDetector(
-                                onTap: (data?.modelActive ?? false)
-                                    ? null
-                                    : () => ref
-                                        .read(shellNavIndexProvider.notifier)
-                                        .state = 7,
-                                child: _chip(
-                                  context,
-                                  icon: Icons.memory_outlined,
-                                  label: data?.modelActive ?? false
-                                      ? (data?.modelLabel ?? 'Model active')
-                                      : 'No model — tap for LLM Hub',
-                                  highlight: data?.modelActive ?? false,
-                                ),
+                              _chip(
+                                context,
+                                icon: Icons.memory_outlined,
+                                label: data?.modelActive ?? false
+                                    ? (data?.modelLabel ?? 'Model active')
+                                    : 'No model — tap to choose',
+                                highlight: data?.modelActive ?? false,
                               ),
                               _chip(
                                 context,
