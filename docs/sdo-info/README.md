@@ -1,0 +1,120 @@
+# SDO Standards Backlog
+
+This folder tracks which parts of QualiaDB are plausible candidates for
+external standardization, which ones are still internal-only, and which
+standards body is the best fit when we are ready.
+
+## Why this exists
+
+QualiaDB already exposes several custom artifacts and protocol surfaces:
+
+- `.q42` storage and transport artifacts
+- `.q42.lex` and `.q42.bidx` sidecars
+- `.qualia` vault manifests / collection descriptors
+- `did:q42` identifiers / topological pointers
+- QCHK capability profiles
+- SHACL-native Qualia extensions
+- Solid bridge behaviors
+- MCP intent mediation and fiduciary control surfaces
+
+Some of these are good standards candidates. Some are not ready yet. This
+folder is where we keep that distinction explicit.
+
+## Ground rules
+
+1. Do not submit an external spec for a format that is still internally
+   inconsistent.
+2. Separate normative specs from implementation guides and architecture notes.
+3. Prefer the smallest viable scope for each submission.
+4. Treat multi-vendor interoperability as the threshold for externalization.
+
+## SDO track guide
+
+### W3C / Solid CG
+
+Best fit for:
+
+- RDF / SHACL / DID / Solid-facing extensions
+- vocabulary registries
+- implementation guidance for linked-data interoperability
+
+Recommended document style:
+
+- ReSpec or Bikeshed-style HTML draft
+- start as a Community Group Report or Note-style editor's draft
+
+### IETF
+
+Best fit for:
+
+- media types
+- HTTP transport conventions
+- URI / protocol behaviors
+- wire-level interoperability rules
+
+Recommended document style:
+
+- Internet-Draft
+- author in RFCXML directly, or Markdown that compiles to RFCXML
+
+### OASIS
+
+Best fit for:
+
+- profile bundles
+- package / interchange specifications
+- guidance documents that may later grow into a formal committee spec
+
+Recommended document style:
+
+- Committee Note for guidance
+- Committee Specification for a normative interchange format
+- author in DocBook XML / OASIS publication pipeline
+
+### Internal only
+
+Use an internal explainer or ADR first when:
+
+- the surface is single-vendor
+- the semantics are still moving
+- the repo has multiple incompatible encodings already
+- there is no obvious external working group yet
+
+## What to read next
+
+- [standards-backlog.md](./standards-backlog.md)
+- [q42-format-internal-draft.md](./q42-format-internal-draft.md)
+- [qualia-vault-manifest.md](./qualia-vault-manifest.md)
+- [did-q42-method-draft.md](./did-q42-method-draft.md)
+
+## Ecosystem label
+
+Use `Qualia Protocol Ecosystem` as the umbrella label for external-facing
+standards work.
+
+Avoid using `Qualia Protocol` as a single monolithic spec title. In this repo
+it currently spans at least five different surfaces that should standardize
+separately:
+
+- q42 container and transport profile
+- `.qualia` vault manifest
+- `did:q42` method
+- Qualia sync protocol
+- Qualia qapp loopback protocol
+- Webizen protocol
+
+## Primary external process references
+
+- W3C document types and Note track: <https://www.w3.org/standards/types/>
+- W3C process: <https://www.w3.org/policies/process/>
+- W3C Community Group reports: <https://www.w3.org/community/reports/>
+- DID Core: <https://www.w3.org/TR/did-core/>
+- DID Specification Registries: <https://www.w3.org/TR/did-spec-registries/>
+- Solid specification and process entry point: <https://solidproject.org/specification>
+- Solid Protocol TR: <https://solidproject.org/TR/protocol>
+- IETF Internet-Drafts: <https://www.ietf.org/how/ids/>
+- IETF author guidance: <https://authors.ietf.org/getting-started>
+- IETF Markdown drafting: <https://authors.ietf.org/drafting-in-markdown>
+- OASIS specification lifecycle: <https://docs.oasis-open.org/templates/TCHandbook/content/tcprocess/standardsapprovalprocess/specificationlifecycle.htm>
+- OASIS Committee Specification guidance: <https://docs.oasis-open.org/TChandbook/Reference/CommitteeSpecs.html>
+- OASIS DocBook authoring templates: <https://docs.oasis-open.org/templates/DocBook/spec-0.8/oasis-specification-0.8-wd05.html>
