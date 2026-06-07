@@ -11,7 +11,28 @@ export async function loadWasm() {
     _initPromise = (async () => {
         try {
             const module = await import('../playground/qualia_core_db.js');
-            await module.default(); // call init()
+            const response = await fetch('../playground/qualia_core_db_bg.wasm');
+            const total = parseInt(response.headers.get('content-length'), 10) || 465124;
+            let loaded = 0;
+            const reader = response.body.getReader();
+            const chunks = [];
+            const badge = document.getElementById('wasm-badge');
+            
+            while(true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+                loaded += value.length;
+                if (badge) {
+                    const pct = Math.round((loaded / total) * 100);
+                    badge.textContent = `… Loading WASM ${pct}%`;
+                }
+            }
+            
+            const buf = new Uint8Array(loaded);
+            let pos = 0;
+            for (const c of chunks) { buf.set(c, pos); pos += c.length; }
+            await module.default(buf.buffer); // call init()
             _mod = module;
         } catch (e) {
             console.warn('[wasm-loader] WASM init failed:', e.message);

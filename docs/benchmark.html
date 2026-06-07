@@ -70,6 +70,7 @@
                         <a href="benchmark.html" class="nav-active font-medium">Live Benchmarks</a>
                         <a href="benchmark_visualizer.html" class="hover:text-white transition-colors">Visualizer</a>
                         <a href="api.html" class="hover:text-white transition-colors">API Docs</a>
+                        <a href="tests/index.html" class="hover:text-white transition-colors">Test Suite</a>
                     </div>
                 </div>
 
@@ -187,9 +188,55 @@
         </div>
     </div>
 
+<<<<<<< Updated upstream
+=======
+    <!-- Load Qualia WASM and expose execute_ntriples_query globally -->
+    <script type="module">
+        import init, { execute_ntriples_query } from './playground/qualia_core_db.js';
+        try {
+            const response = await fetch('./playground/qualia_core_db_bg.wasm');
+            const total = parseInt(response.headers.get('content-length'), 10) || 465124;
+            let loaded = 0;
+            const reader = response.body.getReader();
+            const chunks = [];
+            const el = document.getElementById('wasm-badge');
+            
+            while(true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+                loaded += value.length;
+                if (el) {
+                    const pct = Math.round((loaded / total) * 100);
+                    el.textContent = `WASM Loading ${pct}%`;
+                }
+            }
+            
+            const buf = new Uint8Array(loaded);
+            let pos = 0;
+            for (const c of chunks) { buf.set(c, pos); pos += c.length; }
+            
+            await init(buf.buffer);
+            window._qualiaExec = execute_ntriples_query;
+            if (el) { el.textContent = 'WASM Ready'; el.className = el.className.replace('text-slate-500', 'text-emerald-400'); }
+        } catch(e) {
+            console.warn('Qualia WASM load failed:', e.message);
+            const el = document.getElementById('wasm-badge');
+            if (el) { el.textContent = 'WASM Failed'; el.className = el.className.replace('text-slate-500', 'text-red-400'); }
+        }
+    </script>
+
+>>>>>>> Stashed changes
     <script>
         let currentMode = 'native';
         let daemonOnline = false;
+
+        function formatLatency(ms) {
+            if (ms === 0) return { val: "0", unit: 'ns' };
+            if (ms >= 1) return { val: ms.toFixed(2), unit: 'ms' };
+            if (ms >= 0.001) return { val: Math.round(ms * 1000).toLocaleString(), unit: 'µs' };
+            return { val: Math.round(ms * 1000000).toLocaleString(), unit: 'ns' };
+        }
 
         // ── Benchmark query patterns ───────────────────────────────────────────
         const QUERIES = {
@@ -284,6 +331,7 @@
             status.className = `px-4 py-1.5 text-xs rounded-2xl bg-amber-500/10 text-amber-400 flex items-center gap-2`;
 
             if (currentMode === 'wasm') {
+<<<<<<< Updated upstream
                 container.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-full text-center py-12">
                         <i class="fas fa-puzzle-piece text-4xl text-slate-600 mb-4"></i>
@@ -292,6 +340,115 @@
                     </div>`;
                 status.innerHTML = `<i class="fas fa-info-circle"></i> <span>See Playground</span>`;
                 status.className = `px-4 py-1.5 text-xs rounded-2xl bg-blue-500/10 text-blue-400 flex items-center gap-2`;
+=======
+                if (!window._qualiaExec) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-center py-12 space-y-3">
+                            <i class="fas fa-exclamation-triangle text-4xl text-amber-500/40 mb-2"></i>
+                            <p class="text-slate-300 font-medium">Qualia WASM not loaded</p>
+                            <p class="text-sm text-slate-500">Check the browser console for load errors.</p>
+                        </div>`;
+                    status.innerHTML = `<i class="fas fa-times-circle"></i> <span>WASM Failed</span>`;
+                    status.className = `px-4 py-1.5 text-xs rounded-2xl bg-red-500/10 text-red-400 flex items-center gap-2`;
+                    return;
+                }
+                // Run WASM benchmarks: execute_ntriples_query(pattern, emptyDb, maxResults)
+                const EMPTY_DB = new Uint8Array(0);
+                const ITERS = 5000;
+                const BATCHES = 10;
+                try {
+                    const suite = document.getElementById('benchmarkSuite').value;
+                    const keys = suite === 'full' ? ['point','twohop','filter','ingest'] : [suite];
+                    const results = [];
+                    for (const key of keys) {
+                        container.innerHTML = `<div class="flex items-center gap-3 text-slate-400 py-12 justify-center"><i class="fas fa-spinner fa-spin"></i> Running <span class="font-mono text-white">${SUITE_LABELS[key]}</span>…</div>`;
+                        await new Promise(r => setTimeout(r, 0)); // yield to paint
+                        const pattern = QUERIES[key];
+                        
+                        // Warmup
+                        for (let i = 0; i < 100; i++) window._qualiaExec(pattern, EMPTY_DB, 8);
+
+                        const latencies = [];
+                        let vmCycles = 0, directJumps = 0;
+                        for (let b = 0; b < BATCHES; b++) {
+                            const t0 = performance.now();
+                            let raw = "";
+                            for (let i = 0; i < ITERS; i++) {
+                                raw = window._qualiaExec(pattern, EMPTY_DB, 8);
+                            }
+                            const t1 = performance.now();
+                            latencies.push((t1 - t0) / ITERS);
+                            if (b === BATCHES - 1) {
+                                try { const j = JSON.parse(raw); vmCycles = j.vm_cycles || 0; directJumps = j.direct_jump_ops || 0; } catch(_) {}
+                            }
+                        }
+                        latencies.sort((a, b) => a - b);
+                        const p50 = latencies[Math.floor(latencies.length * 0.5)];
+                        const p95 = latencies[Math.floor(latencies.length * 0.95)];
+                        const throughput = Math.round(1000 / p50);
+                        results.push({ label: SUITE_LABELS[key], p50, p95, throughput, vmCycles, directJumps });
+                    }
+                    const avgP50  = results.reduce((s, r) => s + r.p50, 0) / results.length;
+                    const totalVm = results.reduce((s, r) => s + r.vmCycles, 0);
+                    const avgTput = results.reduce((s, r) => s + r.throughput, 0) / results.length;
+
+                    const avgP50Fmt = formatLatency(avgP50);
+
+                    let rowsHtml = results.map(r => {
+                        const p50Fmt = formatLatency(r.p50);
+                        return `
+                        <div class="glass p-4 rounded-2xl">
+                            <div class="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">${r.label}</div>
+                            <div class="grid grid-cols-3 gap-3 text-center">
+                                <div>
+                                    <div class="text-xl font-semibold font-mono">${p50Fmt.val}<span class="text-xs text-slate-400 ml-1">${p50Fmt.unit}</span></div>
+                                    <div class="text-xs text-slate-500">P50</div>
+                                </div>
+                                <div>
+                                    <div class="text-xl font-semibold font-mono text-amber-400">${isFinite(r.throughput) ? r.throughput.toLocaleString() : '> 1B'}<span class="text-xs text-slate-400 ml-1">ops/s</span></div>
+                                    <div class="text-xs text-slate-500">Throughput</div>
+                                </div>
+                                <div>
+                                    <div class="text-xl font-semibold font-mono text-blue-400">${r.vmCycles.toLocaleString()}</div>
+                                    <div class="text-xs text-slate-500">VM cycles</div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                    container.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="font-mono text-sm text-emerald-400">✓ COMPLETED</span>
+                                    <span class="ml-3 text-sm text-slate-400">WASM • ${SUITE_LABELS[suite]} • ${ITERS * BATCHES} iterations (empty DB — pipeline cost)</span>
+                                </div>
+                                <span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="glass p-5 rounded-2xl">
+                                    <div class="text-xs text-slate-400 mb-1">Avg P50 Latency</div>
+                                    <div class="text-3xl font-semibold font-mono">${avgP50Fmt.val}<span class="text-base font-normal text-slate-400 ml-1">${avgP50Fmt.unit}</span></div>
+                                </div>
+                                <div class="glass p-5 rounded-2xl">
+                                    <div class="text-xs text-slate-400 mb-1">Avg Throughput</div>
+                                    <div class="text-3xl font-semibold font-mono">${isFinite(Math.round(avgTput)) ? Math.round(avgTput).toLocaleString() : '> 1B'}<span class="text-base font-normal text-slate-400 ml-1">ops/s</span></div>
+                                </div>
+                                <div class="glass p-5 rounded-2xl">
+                                    <div class="text-xs text-slate-400 mb-1">Total VM Cycles</div>
+                                    <div class="text-3xl font-semibold font-mono text-blue-400">${totalVm.toLocaleString()}</div>
+                                </div>
+                            </div>
+                            ${results.length > 1 ? `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${rowsHtml}</div>` : rowsHtml}
+                        </div>`;
+                    status.innerHTML = `<i class="fas fa-check-circle"></i> <span>Complete</span>`;
+                    status.className = `px-4 py-1.5 text-xs rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center gap-2`;
+                } catch(e) {
+                    container.innerHTML = `<div class="text-red-400 py-8 text-center text-sm">${e.message}</div>`;
+                    status.innerHTML = `<i class="fas fa-times-circle"></i> <span>Error</span>`;
+                    status.className = `px-4 py-1.5 text-xs rounded-2xl bg-red-500/10 text-red-400 flex items-center gap-2`;
+                }
+>>>>>>> Stashed changes
                 return;
             }
 
@@ -327,12 +484,20 @@
                 const totalVm = results.reduce((s, r) => s + r.vmCycles, 0);
                 const avgTput = results.reduce((s, r) => s + r.throughput, 0) / results.length;
 
-                let rowsHtml = results.map(r => `
+                const avgP50Fmt = formatLatency(avgP50);
+
+                let rowsHtml = results.map(r => {
+                    const p50Fmt = formatLatency(r.p50);
+                    return `
                     <div class="glass p-4 rounded-2xl">
                         <div class="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">${r.label}</div>
                         <div class="grid grid-cols-3 gap-3 text-center">
                             <div>
+<<<<<<< Updated upstream
                                 <div class="text-xl font-semibold font-mono">${r.p50.toFixed(1)}<span class="text-xs text-slate-400 ml-1">ms</span></div>
+=======
+                                <div class="text-xl font-semibold font-mono">${p50Fmt.val}<span class="text-xs text-slate-400 ml-1">${p50Fmt.unit}</span></div>
+>>>>>>> Stashed changes
                                 <div class="text-xs text-slate-500">P50</div>
                             </div>
                             <div>
@@ -344,7 +509,8 @@
                                 <div class="text-xs text-slate-500">VM cycles</div>
                             </div>
                         </div>
-                    </div>`).join('');
+                    </div>`;
+                }).join('');
 
                 container.innerHTML = `
                     <div class="space-y-4">
@@ -358,7 +524,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="glass p-5 rounded-2xl">
                                 <div class="text-xs text-slate-400 mb-1">Avg P50 Latency</div>
+<<<<<<< Updated upstream
                                 <div class="text-3xl font-semibold font-mono">${avgP50.toFixed(1)}<span class="text-base font-normal text-slate-400 ml-1">ms</span></div>
+=======
+                                <div class="text-3xl font-semibold font-mono">${avgP50Fmt.val}<span class="text-base font-normal text-slate-400 ml-1">${avgP50Fmt.unit}</span></div>
+>>>>>>> Stashed changes
                             </div>
                             <div class="glass p-5 rounded-2xl">
                                 <div class="text-xs text-slate-400 mb-1">Avg Throughput</div>
