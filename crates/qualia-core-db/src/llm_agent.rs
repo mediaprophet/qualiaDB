@@ -352,6 +352,11 @@ impl LocalLlmAgent {
                     .filter(|&d| d > 0)
                     .unwrap_or(4096);
 
+                // Stack buffer for zero-heap embedding dequant (covers up to 8192-dim models).
+                const MAX_EMB_DIM: usize = 8192;
+                let mut emb_buf = [0f32; MAX_EMB_DIM];
+                let emb_dim = emb_dim.min(MAX_EMB_DIM);
+
                 let mut out_ids: Vec<u32> = Vec::new();
                 let mut streamed_len = 0usize;
 
@@ -361,21 +366,23 @@ impl LocalLlmAgent {
 
                     let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
 
-                    // Real embedding lookup from `token_embd.weight` (F32 / F16 / Q8_0).
-                    // Falls back to a deterministic pseudo-embedding when the tensor-info
-                    // section is absent or the type is not yet supported (Q4_K, etc.).
-                    let emb: Vec<f32> = tensor_idx.as_ref()
-                        .and_then(|idx| {
-                            engine.gguf_mmap.as_deref()
-                                .map(|m| idx.get_token_embedding(m, cur))
+                    // Zero-copy mmap slice → stack dequant from `token_embd.weight`.
+                    let emb_used = tensor_idx.as_ref().and_then(|idx| {
+                        engine.gguf_mmap.as_deref().map(|m| {
+                            idx.dequantize_token_embedding_into(m, cur, &mut emb_buf[..emb_dim])
                         })
-                        .filter(|v| !v.is_empty())
-                        .unwrap_or_else(|| {
-                            (0..emb_dim).map(|i| {
-                                (cur as f32 * (i as f32 + 1.0) * 0.001_f32).sin()
-                                    * (1.0_f32 / (emb_dim as f32).sqrt())
-                            }).collect()
-                        });
+                    }).unwrap_or(0);
+
+                    let emb: &[f32] = if emb_used > 0 {
+                        &emb_buf[..emb_used]
+                    } else {
+                        // Deterministic pseudo-embedding when tensor-info is absent.
+                        for i in 0..emb_dim {
+                            emb_buf[i] = (cur as f32 * (i as f32 + 1.0) * 0.001_f32).sin()
+                                * (1.0_f32 / (emb_dim as f32).sqrt());
+                        }
+                        &emb_buf[..emb_dim]
+                    };
 
                     // Weight tensor sized to match the real embedding dimension.
                     let wt = QTensor::new(vec![emb.len(), emb.len()], 0, true);

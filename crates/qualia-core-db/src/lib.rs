@@ -442,6 +442,8 @@ pub mod daemon_swarm;
 pub mod gguf_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gguf_sharder;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ggml_quants;
 #[cfg(target_os = "windows")]
 pub mod directml_bridge;
 #[cfg(any(target_os = "macos", target_os = "ios"))]

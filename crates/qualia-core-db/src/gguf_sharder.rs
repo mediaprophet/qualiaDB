@@ -45,6 +45,7 @@ fn gguf_skip_value(mmap: &[u8], pos: &mut usize, vtype: u32) -> Option<()> {
 // ─── GgufTensorIndex ─────────────────────────────────────────────────────────
 
 /// Shape + type + offset for one tensor parsed from the GGUF tensor-info section.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GgufTensorInfo {
     /// Tensor shape (up to 4 dimensions; extra dims truncated).
     pub dims: [u64; 4],
@@ -65,11 +66,17 @@ pub struct GgufTensorIndex {
     entries: Vec<(u64, GgufTensorInfo)>, // (name_hash, info)
     /// Absolute byte offset in the mmap where tensor payload data begins.
     pub tensor_data_start: u64,
+    /// Cached metadata for `token_embd.weight` (embedding lookup target).
+    token_embd: Option<GgufTensorInfo>,
 }
 
 impl GgufTensorIndex {
     pub fn from_gguf(mmap: &[u8]) -> Self {
-        Self::try_build(mmap).unwrap_or_else(|| Self { entries: vec![], tensor_data_start: 0 })
+        Self::try_build(mmap).unwrap_or_else(|| Self {
+            entries: vec![],
+            tensor_data_start: 0,
+            token_embd: None,
+        })
     }
 
     fn try_build(mmap: &[u8]) -> Option<Self> {
@@ -132,7 +139,9 @@ impl GgufTensorIndex {
 
         // Tensor data block starts after the tensor-info section, aligned to 32 bytes.
         let tensor_data_start = ((pos as u64 + 31) & !31) as u64;
-        Some(Self { entries, tensor_data_start })
+        let emb_hash = gguf_name_hash(b"token_embd.weight");
+        let token_embd = entries.iter().find(|(h, _)| *h == emb_hash).map(|(_, i)| *i);
+        Some(Self { entries, tensor_data_start, token_embd })
     }
 
     fn find(&self, name: &[u8]) -> Option<&GgufTensorInfo> {
@@ -140,69 +149,63 @@ impl GgufTensorIndex {
         self.entries.iter().find(|(eh, _)| *eh == h).map(|(_, i)| i)
     }
 
-    /// Return the embedding dimension (n_embd) from `token_embd.weight`, or 0 if unknown.
-    pub fn emb_dim(&self) -> usize {
-        self.find(b"token_embd.weight").map(|i| i.dims[0] as usize).unwrap_or(0)
+    /// Cached `token_embd.weight` tensor metadata.
+    pub fn token_embd_info(&self) -> Option<&GgufTensorInfo> {
+        self.token_embd.as_ref()
     }
 
-    /// Slice the F32 / F16 / Q8_0 token embedding for `token_id` directly from the
-    /// memory-mapped GGUF. Returns an empty Vec if the tensor is not found, the token ID
-    /// is out of range, or the quantisation type is not supported (caller falls back to
-    /// the deterministic pseudo-embedding).
-    pub fn get_token_embedding(&self, mmap: &[u8], token_id: u32) -> Vec<f32> {
-        let info = match self.find(b"token_embd.weight") {
+    /// Return the embedding dimension (n_embd) from `token_embd.weight`, or 0 if unknown.
+    pub fn emb_dim(&self) -> usize {
+        self.token_embd_info().map(|i| i.dims[0] as usize).unwrap_or(0)
+    }
+
+    /// Vocabulary size from `token_embd.weight` shape `[n_embd, n_vocab]`.
+    pub fn vocab_dim(&self) -> usize {
+        self.token_embd_info().map(|i| i.dims[1] as usize).unwrap_or(0)
+    }
+
+    /// Dequantize one token embedding into caller-supplied `out` (zero heap in hot path).
+    pub fn dequantize_token_embedding_into(
+        &self,
+        mmap: &[u8],
+        token_id: u32,
+        out: &mut [f32],
+    ) -> usize {
+        let info = match self.token_embd_info() {
             Some(i) => i,
-            None    => return vec![],
+            None => return 0,
         };
+        let n_embd = info.dims[0] as usize;
+        let n_vocab = info.dims[1] as usize;
+        if n_embd == 0 || token_id as usize >= n_vocab || out.len() < n_embd {
+            return 0;
+        }
+        let raw = match crate::ggml_quants::fetch_token_embedding(
+            mmap,
+            self.tensor_data_start,
+            info,
+            token_id,
+        ) {
+            Ok(s) => s,
+            Err(_) => return 0,
+        };
+        crate::ggml_quants::dequantize_row_into(raw, info.ggml_type, n_embd, out)
+            .unwrap_or(0)
+    }
 
-        let n_embd  = info.dims[0] as usize; // embedding dimension
-        let n_vocab = info.dims[1] as usize; // vocabulary size
-        if n_embd == 0 || token_id as usize >= n_vocab { return vec![]; }
-
-        let base = (self.tensor_data_start + info.byte_offset) as usize;
-
-        match info.ggml_type {
-            // F32 — 4 bytes per element
-            0 => {
-                let start = base + token_id as usize * n_embd * 4;
-                let end   = start + n_embd * 4;
-                if end > mmap.len() { return vec![0.0; n_embd]; }
-                (0..n_embd).map(|i| {
-                    f32::from_le_bytes(mmap[start+i*4..start+i*4+4].try_into().unwrap_or([0;4]))
-                }).collect()
-            }
-            // F16 — 2 bytes per element
-            1 => {
-                let start = base + token_id as usize * n_embd * 2;
-                let end   = start + n_embd * 2;
-                if end > mmap.len() { return vec![0.0; n_embd]; }
-                (0..n_embd).map(|i| {
-                    half::f16::from_le_bytes(
-                        mmap[start+i*2..start+i*2+2].try_into().unwrap_or([0;2])
-                    ).to_f32()
-                }).collect()
-            }
-            // Q8_0 — 32 i8 values + 1 f16 scale = 34 bytes per block of 32 elements
-            8 => {
-                const BLOCK_ELEMS: usize = 32;
-                const BLOCK_BYTES: usize = 34; // 2 (f16 d) + 32 (i8 qs)
-                let n_blocks    = n_embd.div_ceil(BLOCK_ELEMS);
-                let bytes_per_t = n_blocks * BLOCK_BYTES;
-                let start       = base + token_id as usize * bytes_per_t;
-                if start + bytes_per_t > mmap.len() { return vec![0.0; n_embd]; }
-                let mut result = vec![0.0f32; n_embd];
-                for b in 0..n_blocks {
-                    let bs    = start + b * BLOCK_BYTES;
-                    let scale = half::f16::from_le_bytes([mmap[bs], mmap[bs+1]]).to_f32();
-                    let elems = (BLOCK_ELEMS).min(n_embd - b * BLOCK_ELEMS);
-                    for j in 0..elems {
-                        result[b * BLOCK_ELEMS + j] = mmap[bs + 2 + j] as i8 as f32 * scale;
-                    }
-                }
-                result
-            }
-            // All other types (Q4_K, Q4_0, etc.) — fall through to pseudo-embedding
-            _ => vec![],
+    /// Slice and dequantize a token embedding (test / legacy path; allocates `Vec`).
+    pub fn get_token_embedding(&self, mmap: &[u8], token_id: u32) -> Vec<f32> {
+        let n_embd = self.emb_dim();
+        if n_embd == 0 {
+            return vec![];
+        }
+        let mut out = vec![0.0f32; n_embd];
+        let n = self.dequantize_token_embedding_into(mmap, token_id, &mut out);
+        if n == 0 {
+            vec![]
+        } else {
+            out.truncate(n);
+            out
         }
     }
 }

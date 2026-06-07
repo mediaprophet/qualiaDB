@@ -5,7 +5,28 @@
 //! GGUF tensor bytes are memory-mapped via `memmap2` — zero heap copy.
 
 use crate::QualiaQuin;
+use crate::gguf_sharder::GgufTensorInfo;
 use memmap2::MmapOptions;
+
+pub use crate::ggml_quants::{ExecutionError, fetch_token_embedding};
+
+/// Dequantize a mmap embedding row into caller-supplied `out` (no heap allocation).
+pub fn dequantize_token_embedding_into(
+    raw: &[u8],
+    tensor: &GgufTensorInfo,
+    out: &mut [f32],
+) -> Result<usize, ExecutionError> {
+    let n_embd = tensor.dims[0] as usize;
+    if out.len() < n_embd {
+        return Err(ExecutionError::MmapBounds);
+    }
+    crate::ggml_quants::dequantize_row_into(raw, tensor.ggml_type, n_embd, out)
+        .map_err(|e| match e {
+            crate::ggml_quants::GgmlDequantError::UnsupportedType => ExecutionError::UnsupportedType,
+            crate::ggml_quants::GgmlDequantError::BufferTooSmall
+            | crate::ggml_quants::GgmlDequantError::TruncatedInput => ExecutionError::MmapBounds,
+        })
+}
 
 /// Represents a Q4_K Quantized or standard float Tensor mapped from a monolithic GGUF file.
 #[derive(Debug, Clone)]
@@ -99,32 +120,21 @@ impl QTensorEngine {
         match File::open(path) {
             Ok(f) => match unsafe { MmapOptions::new().map(&f) } {
                 Ok(mmap) => {
-                    // Scan GGUF header to find where tensor data starts.
-                    // GGUF v3 layout: magic(4) + version(4) + tensor_count(8) + kv_count(8)
-                    // Followed by kv metadata, then tensor info, then tensor data (aligned to 32 bytes).
-                    // We use a conservative offset scan here; a full parser lives in gguf_sharder.rs.
-                    let data_offset = Self::locate_tensor_data_start(&mmap);
-                    self.tensor_data_offset = data_offset;
+                    // memmap2 clones the file handle internally (try_clone); dropping `f` is safe.
+                    // Tensor payload base must match gguf_sharder::GgufTensorIndex (full KV walk).
+                    let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+                    self.tensor_data_offset = index.tensor_data_start;
                     self.gguf_mmap = Some(mmap);
-                    eprintln!("[gguf_bridge] Mapped {} — tensor data at offset {:#x}", path, data_offset);
+                    eprintln!(
+                        "[gguf_bridge] Mapped {} — tensor data at offset {:#x}",
+                        path,
+                        self.tensor_data_offset
+                    );
                 }
                 Err(e) => eprintln!("[gguf_bridge] mmap failed for {path}: {e}"),
             },
             Err(e) => eprintln!("[gguf_bridge] Could not open {path}: {e}"),
         }
-    }
-
-    /// Scan the GGUF file for the start of tensor payload data.
-    /// Searches for the 32-byte alignment boundary after the header/metadata.
-    fn locate_tensor_data_start(mmap: &[u8]) -> u64 {
-        if mmap.len() < 24 || &mmap[0..4] != b"GGUF" { return 0; }
-        let tensor_count = u64::from_le_bytes(mmap[8..16].try_into().unwrap_or([0;8]));
-        // Heuristic: tensor data typically starts after the first 1MB for small models,
-        // later for large ones. For now use the tensor_count × avg-metadata-size estimate.
-        // A production parser would walk the kv section byte by byte.
-        let estimated_header_bytes = 24u64 + tensor_count * 64 + 65536; // conservative
-        let aligned = (estimated_header_bytes + 31) & !31;
-        aligned.min(mmap.len() as u64)
     }
 
     pub fn dispatch_fused_transformer_block(&self, tensor: &QTensor, input_activations: &[f32]) -> Vec<f32> {
@@ -317,6 +327,37 @@ mod tests {
         // Should return a valid u64 semantic ID, not a string
         let decoded = engine.decode_lexicon_bound(&logits, &valid_ids);
         assert_eq!(decoded, valid_ids[0], "Failed to bind decoding to logic lexicon");
+    }
+
+    #[test]
+    fn test_fetch_token_embedding_gemma_if_exists() {
+        let path = Path::new("C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf");
+        if !path.exists() {
+            println!("Gemma GGUF not found locally; skipping embedding lookup test.");
+            return;
+        }
+        let file = File::open(path).expect("open gguf");
+        let mmap = unsafe { MmapOptions::new().map(&file).expect("mmap") };
+        let idx = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        let info = idx.token_embd_info().expect("token_embd.weight missing");
+        println!(
+            "token_embd: ggml_type={} dims=[{}, {}] offset={:#x}",
+            info.ggml_type, info.dims[0], info.dims[1], info.byte_offset
+        );
+
+        let raw = fetch_token_embedding(&mmap, idx.tensor_data_start, info, 0)
+            .expect("fetch token 0");
+        assert!(!raw.is_empty(), "empty embedding slice");
+
+        let n_embd = info.dims[0] as usize;
+        let mut emb = vec![0f32; n_embd];
+        let n = dequantize_token_embedding_into(raw, info, &mut emb)
+            .expect("dequantize token 0");
+        assert_eq!(n, n_embd);
+
+        let norm: f32 = emb.iter().map(|x| x * x).sum::<f32>().sqrt();
+        assert!(norm > 0.01 && norm < 1000.0, "embedding L2 norm suspicious: {norm}");
+        println!("token 0 embedding L2 norm = {norm:.4}");
     }
 
     #[test]
