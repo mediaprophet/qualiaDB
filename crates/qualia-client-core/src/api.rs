@@ -1608,50 +1608,6 @@ fn append_hash_fragment(mut base_url: String, hash_fragment: Option<String>) -> 
     base_url
 }
 
-#[derive(Deserialize)]
-struct OntologyCatalogFile {
-    #[serde(default)]
-    ontologies: Vec<CatalogOntologyEntry>,
-}
-
-#[derive(Deserialize)]
-struct CatalogOntologyEntry {
-    id: String,
-}
-
-#[derive(Deserialize)]
-struct LlmCatalogFile {
-    #[serde(default)]
-    llms: Vec<CatalogLlmEntry>,
-}
-
-#[derive(Deserialize)]
-struct CatalogLlmEntry {
-    id: String,
-    #[serde(default)]
-    download: Option<CatalogDownloadEntry>,
-}
-
-#[derive(Deserialize)]
-struct CatalogDownloadEntry {
-    #[serde(default)]
-    file: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct SparqlCatalogFile {
-    #[serde(default)]
-    sparql_endpoints: Vec<CatalogSparqlEntry>,
-}
-
-#[derive(Deserialize)]
-struct CatalogSparqlEntry {
-    id: String,
-    endpoint: String,
-    #[serde(default)]
-    federation_supported: Option<bool>,
-}
-
 #[derive(Serialize)]
 struct SparqlEndpointProbe {
     target: String,
@@ -1681,16 +1637,40 @@ struct QappReadinessReport {
     checks: Vec<AppRequirementCheck>,
 }
 
-fn workspace_resources_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-        .join("resources")
+fn load_workspace_catalog() -> qualia_core_db::resource_catalog::ResourceCatalog {
+    qualia_core_db::resource_catalog::load_default()
+        .unwrap_or_else(|_| qualia_core_db::resource_catalog::ResourceCatalog::empty())
 }
 
-fn load_yaml_file<T: DeserializeOwned>(path: &Path) -> Option<T> {
-    let content = std::fs::read_to_string(path).ok()?;
-    serde_yaml::from_str(&content).ok()
+fn catalog_has_llm(
+    catalog: &qualia_core_db::resource_catalog::ResourceCatalog,
+    model: &str,
+) -> bool {
+    if catalog.find_llm(model).is_some() {
+        return true;
+    }
+    let target = normalize_resource_key(model);
+    catalog.llms.iter().any(|entry| {
+        normalize_resource_key(&entry.id) == target
+            || entry
+                .download
+                .local_filename()
+                .map(|file| normalize_resource_key(&file) == target)
+                .unwrap_or(false)
+    })
+}
+
+fn catalog_has_ontology(
+    catalog: &qualia_core_db::resource_catalog::ResourceCatalog,
+    ontology: &str,
+) -> bool {
+    if catalog.find_ontology(ontology).is_some() {
+        return true;
+    }
+    let target = normalize_resource_key(ontology);
+    catalog.ontologies.iter().any(|entry| {
+        normalize_resource_key(&entry.id) == target
+    })
 }
 
 fn normalize_resource_key(value: &str) -> String {
@@ -1740,21 +1720,17 @@ fn resolve_sparql_endpoint_from_catalog(
         return Ok((endpoint_or_id.to_string(), None));
     }
 
-    let resources_dir = workspace_resources_dir();
-    let sparql_catalog =
-        load_yaml_file::<SparqlCatalogFile>(&resources_dir.join("sparql_endpoints.yaml"))
-            .unwrap_or(SparqlCatalogFile {
-                sparql_endpoints: Vec::new(),
-            });
-
-    sparql_catalog
-        .sparql_endpoints
-        .into_iter()
-        .find(|entry| {
-            entry.id == endpoint_or_id
-                || normalize_resource_key(&entry.id) == normalize_resource_key(endpoint_or_id)
+    let catalog = load_workspace_catalog();
+    catalog
+        .find_sparql(endpoint_or_id)
+        .or_else(|| {
+            let target = normalize_resource_key(endpoint_or_id);
+            catalog
+                .sparql_endpoints
+                .iter()
+                .find(|entry| normalize_resource_key(&entry.id) == target)
         })
-        .map(|entry| (entry.endpoint, entry.federation_supported))
+        .map(|entry| (entry.endpoint.clone(), entry.federation_supported))
         .ok_or_else(|| format!("Unknown SPARQL endpoint id: {}", endpoint_or_id))
 }
 
@@ -1811,20 +1787,7 @@ pub fn inspect_installed_qapp_readiness(qapp_name: String) -> Result<String, Str
     let index_dir = PathBuf::from(&data_dir).join("Index");
     let library_dir = PathBuf::from(&data_dir).join("SemanticLibrary");
 
-    let resources_dir = workspace_resources_dir();
-    let ontology_catalog = load_yaml_file::<OntologyCatalogFile>(
-        &resources_dir.join("ontologies.yaml"),
-    )
-    .unwrap_or(OntologyCatalogFile {
-        ontologies: Vec::new(),
-    });
-    let llm_catalog = load_yaml_file::<LlmCatalogFile>(&resources_dir.join("llms.yaml"))
-        .unwrap_or(LlmCatalogFile { llms: Vec::new() });
-    let sparql_catalog =
-        load_yaml_file::<SparqlCatalogFile>(&resources_dir.join("sparql_endpoints.yaml"))
-            .unwrap_or(SparqlCatalogFile {
-                sparql_endpoints: Vec::new(),
-            });
+    let catalog = load_workspace_catalog();
 
     let mut checks = Vec::new();
 
@@ -1847,10 +1810,7 @@ pub fn inspect_installed_qapp_readiness(qapp_name: String) -> Result<String, Str
     }
 
     for ontology in &extension.required_ontologies {
-        let in_catalog = ontology_catalog.ontologies.iter().any(|entry| {
-            entry.id == *ontology
-                || normalize_resource_key(&entry.id) == normalize_resource_key(ontology)
-        });
+        let in_catalog = catalog_has_ontology(&catalog, ontology);
         let installed = directory_contains_requirement(&index_dir, ontology)
             || directory_contains_requirement(&library_dir, ontology);
         let status = if installed { "ready" } else { "missing" };
@@ -1880,16 +1840,7 @@ pub fn inspect_installed_qapp_readiness(qapp_name: String) -> Result<String, Str
     }
 
     for model in &extension.required_models {
-        let in_catalog = llm_catalog.llms.iter().any(|entry| {
-            entry.id == *model
-                || normalize_resource_key(&entry.id) == normalize_resource_key(model)
-                || entry
-                    .download
-                    .as_ref()
-                    .and_then(|download| download.file.as_ref())
-                    .map(|file| normalize_resource_key(file) == normalize_resource_key(model))
-                    .unwrap_or(false)
-        });
+        let in_catalog = catalog_has_llm(&catalog, model);
         let installed = directory_contains_requirement(&models_dir, model);
         let status = if installed { "ready" } else { "missing" };
         let detail = if installed {
@@ -1918,11 +1869,14 @@ pub fn inspect_installed_qapp_readiness(qapp_name: String) -> Result<String, Str
     }
 
     for endpoint in &extension.optional_remote_endpoints {
-        let match_entry = sparql_catalog.sparql_endpoints.iter().find(|entry| {
-            entry.id == *endpoint
-                || entry.endpoint == *endpoint
-                || normalize_resource_key(&entry.id) == normalize_resource_key(endpoint)
-        });
+        let match_entry = catalog
+            .find_sparql(endpoint)
+            .or_else(|| {
+                catalog.sparql_endpoints.iter().find(|entry| {
+                    entry.endpoint == *endpoint
+                        || normalize_resource_key(&entry.id) == normalize_resource_key(endpoint)
+                })
+            });
         let (status, detail) = if let Some(entry) = match_entry {
             let federation_note = match entry.federation_supported {
                 Some(true) => " Federation is advertised as supported.",

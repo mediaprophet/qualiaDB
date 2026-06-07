@@ -50,6 +50,8 @@ pub struct DownloadInfo {
     pub file: Option<String>,
     /// Direct URL for `"direct"` or `"github"` sources.
     pub url: Option<String>,
+    /// Path within a GitHub repo (used with `type: github`).
+    pub path: Option<String>,
 }
 
 impl DownloadInfo {
@@ -60,6 +62,15 @@ impl DownloadInfo {
                 let repo = self.repo.as_deref()?;
                 let file = self.file.as_deref()?;
                 Some(format!("https://huggingface.co/{}/resolve/main/{}", repo, file))
+            }
+            "github" => {
+                let repo = self.repo.as_deref()?;
+                let path = self.path.as_deref()?;
+                let path = path.trim_start_matches('/');
+                Some(format!(
+                    "https://raw.githubusercontent.com/{}/main/{}",
+                    repo, path
+                ))
             }
             _ => self.url.clone(),
         }
@@ -208,7 +219,8 @@ pub struct OntologyResource {
     pub acronym: Option<String>,
     pub source: Option<String>,
     pub format: String,
-    pub size_estimate_mb: Option<u32>,
+    /// YAML may use fractional estimates (e.g. `0.2` MB).
+    pub size_estimate_mb: Option<f64>,
     pub download: DownloadInfo,
     pub license: Option<String>,
     pub domain: Option<String>,
@@ -231,8 +243,9 @@ impl OntologyResource {
         }
 
         if let Some(sz) = self.size_estimate_mb {
+            let mb = sz.ceil().max(0.0) as u64;
             out.push(Self::quin(subject, q_hash("ont:hasSizeMb"),
-                INLINE_TAG_INTEGER | sz as u64, CTX_ONT));
+                INLINE_TAG_INTEGER | mb, CTX_ONT));
         }
 
         if let Some(ref lic) = self.license {
@@ -312,5 +325,189 @@ impl ResourceCatalog {
 
     pub fn find_sparql(&self, id: &str) -> Option<&SPARQLResource> {
         self.sparql_endpoints.iter().find(|r| r.id == id)
+    }
+
+    /// Serialize a summary for FRB / JSON consumers.
+    pub fn summary_json(&self) -> String {
+        #[derive(Serialize)]
+        struct Summary {
+            llm_count: usize,
+            ontology_count: usize,
+            sparql_count: usize,
+        }
+        serde_json::to_string(&Summary {
+            llm_count: self.llms.len(),
+            ontology_count: self.ontologies.len(),
+            sparql_count: self.sparql_endpoints.len(),
+        })
+        .unwrap_or_else(|_| "{}".to_string())
+    }
+}
+
+// ─── YAML loader (canonical — CLI, Flutter, client-core) ─────────────────────
+
+use std::path::{Path, PathBuf};
+
+/// Errors loading `resources/*.yaml`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CatalogError {
+    Io { path: PathBuf, message: String },
+    Parse { path: PathBuf, message: String },
+    Index { message: String },
+}
+
+impl std::fmt::Display for CatalogError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CatalogError::Io { path, message } => {
+                write!(f, "cannot read {}: {}", path.display(), message)
+            }
+            CatalogError::Parse { path, message } => {
+                write!(f, "{}: {}", path.display(), message)
+            }
+            CatalogError::Index { message } => write!(f, "catalog.yaml: {}", message),
+        }
+    }
+}
+
+impl std::error::Error for CatalogError {}
+
+#[derive(Debug, Deserialize)]
+struct CatalogRoot {
+    catalog: CatalogMeta,
+}
+
+#[derive(Debug, Deserialize)]
+struct CatalogMeta {
+    sources: CatalogSources,
+}
+
+#[derive(Debug, Deserialize)]
+struct CatalogSources {
+    llms: String,
+    ontologies: String,
+    sparql_endpoints: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct LlmsFile {
+    llms: Vec<LLMResource>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OntologiesFile {
+    ontologies: Vec<OntologyResource>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SparqlFile {
+    sparql_endpoints: Vec<SPARQLResource>,
+}
+
+fn read_yaml<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, CatalogError> {
+    let raw = std::fs::read_to_string(path).map_err(|e| CatalogError::Io {
+        path: path.to_path_buf(),
+        message: e.to_string(),
+    })?;
+    serde_yaml::from_str(&raw).map_err(|e| CatalogError::Parse {
+        path: path.to_path_buf(),
+        message: e.to_string(),
+    })
+}
+
+/// Resolve the resources directory for desktop / dev builds.
+///
+/// Order: `QUALIA_RESOURCES_DIR` → `{exe}/bundled/resources/` → dev tree `../../resources`.
+pub fn resolve_resources_dir() -> PathBuf {
+    if let Ok(extra) = std::env::var("QUALIA_RESOURCES_DIR") {
+        return PathBuf::from(extra);
+    }
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(root) = exe.parent() {
+            for rel in ["bundled/resources", "resources", "bundled"] {
+                let candidate = root.join(rel);
+                if candidate.join("catalog.yaml").is_file() {
+                    return candidate;
+                }
+            }
+        }
+    }
+
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../resources")
+}
+
+/// Load the full catalog from `dir/catalog.yaml` and referenced child YAML files.
+pub fn load_from_dir(dir: &Path) -> Result<ResourceCatalog, CatalogError> {
+    let index_path = dir.join("catalog.yaml");
+    let index: CatalogRoot = read_yaml(&index_path)?;
+
+    let llms_path = dir.join(&index.catalog.sources.llms);
+    let ont_path = dir.join(&index.catalog.sources.ontologies);
+    let sparql_path = dir.join(&index.catalog.sources.sparql_endpoints);
+
+    let llms_file: LlmsFile = read_yaml(&llms_path)?;
+    let ont_file: OntologiesFile = read_yaml(&ont_path)?;
+    let sparql_file: SparqlFile = read_yaml(&sparql_path)?;
+
+    Ok(ResourceCatalog {
+        llms: llms_file.llms,
+        ontologies: ont_file.ontologies,
+        sparql_endpoints: sparql_file.sparql_endpoints,
+    })
+}
+
+/// Load from [`resolve_resources_dir()`].
+pub fn load_default() -> Result<ResourceCatalog, CatalogError> {
+    load_from_dir(&resolve_resources_dir())
+}
+
+#[cfg(test)]
+mod load_tests {
+    use super::*;
+
+    fn resources_fixture_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../resources")
+    }
+
+    #[test]
+    fn loads_all_entries_from_committed_yaml() {
+        let dir = resources_fixture_dir();
+        let cat = load_from_dir(&dir).expect("catalog should load");
+        assert!(
+            cat.llms.len() >= 3,
+            "expected >=3 LLMs, got {}",
+            cat.llms.len()
+        );
+        assert!(
+            cat.ontologies.len() >= 5,
+            "expected >=5 ontologies, got {}",
+            cat.ontologies.len()
+        );
+        assert!(
+            cat.sparql_endpoints.len() >= 3,
+            "expected >=3 SPARQL endpoints, got {}",
+            cat.sparql_endpoints.len()
+        );
+    }
+
+    #[test]
+    fn github_download_resolves_raw_url() {
+        let info = DownloadInfo {
+            download_type: "github".to_string(),
+            repo: Some("schemaorg/schemaorg".to_string()),
+            file: None,
+            url: None,
+            path: Some("data/releases/27.0/schemaorg-all-https.rdf".to_string()),
+        };
+        let url = info.resolved_url().expect("github url");
+        assert!(url.contains("raw.githubusercontent.com/schemaorg/schemaorg"));
+        assert!(url.contains("schemaorg-all-https.rdf"));
+    }
+
+    #[test]
+    fn find_llm_by_id() {
+        let cat = load_from_dir(&resources_fixture_dir()).unwrap();
+        assert!(cat.find_llm("phi-3-mini-4k-instruct-q4km").is_some());
     }
 }

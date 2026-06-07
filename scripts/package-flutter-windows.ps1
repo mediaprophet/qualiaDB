@@ -56,5 +56,6 @@ if (Test-Path $WebView2Vendor) {
 Write-Host "Bundled qualia_flutter_rust.dll"
 
 & (Join-Path $Root "scripts\copy-bundled-qapps.ps1") -OutDir $OutDir
+& (Join-Path $Root "scripts\copy-bundled-resources.ps1") -OutDir $OutDir
 
 Write-Host "Done. Portable bundle: $OutDir\qualia_flutter.exe"

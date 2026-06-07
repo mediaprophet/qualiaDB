@@ -23,59 +23,20 @@
 
 use std::path::{Path, PathBuf};
 use qualia_core_db::{
-    resource_catalog::{LLMResource, OntologyResource, ResourceCatalog},
+    resource_catalog::{self, LLMResource, OntologyResource, ResourceCatalog},
     gguf_sharder::GGufSharder,
     wal::WriteAheadLog,
 };
-use serde::Deserialize;
-
-// ─── YAML loaders ────────────────────────────────────────────────────────────
-
-#[derive(Debug, Deserialize)]
-struct CatalogIndex {
-    sources: CatalogSources,
-}
-
-#[derive(Debug, Deserialize)]
-struct CatalogSources {
-    llms: String,
-    ontologies: String,
-    sparql_endpoints: String,
-}
 
 /// Load the full `ResourceCatalog` from the YAML files under `catalog_dir`.
-/// Expects `catalog_dir/catalog.yaml` to list the sub-file paths.
 pub fn load_catalog(catalog_dir: &Path) -> Result<ResourceCatalog, String> {
-    let index_path = catalog_dir.join("catalog.yaml");
-    let index_raw = std::fs::read_to_string(&index_path)
-        .map_err(|e| format!("Cannot read {}: {}", index_path.display(), e))?;
-    let index: CatalogIndex = serde_yaml::from_str(&index_raw)
-        .map_err(|e| format!("catalog.yaml parse error: {}", e))?;
-
-    let llms = load_yaml::<Vec<LLMResource>>(&catalog_dir.join(&index.sources.llms))?;
-    let ontologies =
-        load_yaml::<Vec<OntologyResource>>(&catalog_dir.join(&index.sources.ontologies))?;
-
-    // SPARQL endpoints use the canonical SPARQLResource type; just count them for now
-    // (they don't require download / import pipeline).
-    let sparql_raw = std::fs::read_to_string(catalog_dir.join(&index.sources.sparql_endpoints))
-        .unwrap_or_default();
-    let sparql_endpoints = serde_yaml::from_str(&sparql_raw).unwrap_or_default();
-
-    Ok(ResourceCatalog { llms, ontologies, sparql_endpoints })
-}
-
-fn load_yaml<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
-    let raw = std::fs::read_to_string(path)
-        .map_err(|e| format!("Cannot read {}: {}", path.display(), e))?;
-    serde_yaml::from_str(&raw)
-        .map_err(|e| format!("{}: parse error: {}", path.display(), e))
+    resource_catalog::load_from_dir(catalog_dir).map_err(|e| e.to_string())
 }
 
 // ─── CLI entry point ─────────────────────────────────────────────────────────
 
 pub async fn handle(subcommand: &str, arg: Option<&str>) {
-    let catalog_dir = PathBuf::from("resources");
+    let catalog_dir = resource_catalog::resolve_resources_dir();
     let catalog = match load_catalog(&catalog_dir) {
         Ok(c) => c,
         Err(e) => { eprintln!("Error loading catalog: {}", e); return; }
