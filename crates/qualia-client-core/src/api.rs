@@ -1278,6 +1278,80 @@ pub async fn run_agent_inference(
     Ok(())
 }
 
+// ── Chat sessions ─────────────────────────────────────────────────────────────
+
+pub fn create_chat_session(title: Option<String>) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    crate::chat_session::create_session(Path::new(&storage), title, None)
+        .map_err(|e| e.to_string())
+}
+
+pub fn list_chat_sessions() -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let sessions = crate::chat_session::list_sessions(Path::new(&storage))
+        .map_err(|e| e.to_string())?;
+    serde_json::to_value(sessions).map_err(|e| e.to_string())
+}
+
+pub fn load_chat_session(id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let session = crate::chat_session::load_session(Path::new(&storage), &id)
+        .map_err(|e| e.to_string())?;
+    serde_json::to_value(session).map_err(|e| e.to_string())
+}
+
+pub fn append_chat_message(session_id: String, role: String, content: String) -> Result<u64, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let role = crate::chat_session::Role::from_str(&role).map_err(|e| e.to_string())?;
+    crate::chat_session::append_message(Path::new(&storage), &session_id, role, &content)
+        .map_err(|e| e.to_string())
+}
+
+pub fn compact_chat_session(session_id: String) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let path = crate::chat_session::compact_session_to_q42(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
+pub fn delete_chat_session(session_id: String) -> Result<(), String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    crate::chat_session::delete_session(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())
+}
+
+pub fn rename_chat_session(session_id: String, title: String) -> Result<(), String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    crate::chat_session::rename_session(Path::new(&storage), &session_id, &title)
+        .map_err(|e| e.to_string())
+}
+
+pub fn get_last_chat_session_id() -> Option<String> {
+    crate::chat_session::get_last_session_id()
+}
+
+pub fn set_last_chat_session_id(session_id: String) -> Result<(), String> {
+    crate::chat_session::set_last_session_id(&session_id).map_err(|e| e.to_string())
+}
+
+pub fn ensure_chat_session() -> Result<String, String> {
+    if let Some(id) = get_last_chat_session_id() {
+        let state = crate::state::APP_STATE.get().unwrap();
+        let storage = state.config.lock().unwrap().storage_path.clone();
+        if crate::chat_session::load_session(Path::new(&storage), &id).is_ok() {
+            return Ok(id);
+        }
+    }
+    create_chat_session(None)
+}
+
 // ── Active model + lifecycle ───────────────────────────────────────────────────
 
 pub fn active_model_path() -> PathBuf {

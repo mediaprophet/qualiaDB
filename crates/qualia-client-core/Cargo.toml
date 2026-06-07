@@ -23,6 +23,8 @@ pdf-extract = "0.10.0"
 ed25519-dalek = "2.2.0"
 rtrb = "0.3.4"
 tiny_http = "0.12"
+bytemuck = "1.14"
+lz4_flex = "0.11"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

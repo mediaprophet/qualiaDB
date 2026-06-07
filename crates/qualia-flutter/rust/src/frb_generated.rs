@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -862951983;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1220379710;
 
 // Section: executor
 
@@ -187,6 +187,45 @@ fn wire__crate__api__qualia_api__add_token_impl(
                         api_symbol,
                         api_name,
                         api_decimals,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__append_chat_message_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "append_chat_message",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_role = <String>::sse_decode(&mut deserializer);
+            let api_content = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::append_chat_message(
+                        api_session_id,
+                        api_role,
+                        api_content,
                     )?;
                     Ok(output_ok)
                 })())
@@ -536,6 +575,39 @@ fn wire__crate__api__qapp_api__check_qapp_update_from_path_impl(
         },
     )
 }
+fn wire__crate__api__chat_session__compact_chat_session_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "compact_chat_session",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::compact_chat_session(api_session_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qapp_api__compile_anatomy_wildcard_query_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -598,6 +670,39 @@ fn wire__crate__api__qualia_api__configure_webview2_runtime_impl(
         },
     )
 }
+fn wire__crate__api__chat_session__create_chat_session_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "create_chat_session",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_title = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::create_chat_session(api_title)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__daemon_status_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -624,6 +729,39 @@ fn wire__crate__api__qualia_api__daemon_status_impl(
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Result::<_, ()>::Ok(crate::api::qualia_api::daemon_status())?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__delete_chat_session_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "delete_chat_session",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::delete_chat_session(api_session_id)?;
                     Ok(output_ok)
                 })())
             }
@@ -879,6 +1017,38 @@ fn wire__crate__api__qualia_api__download_model_impl(
                     })()
                     .await,
                 )
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__ensure_chat_session_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "ensure_chat_session",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::ensure_chat_session()?;
+                    Ok(output_ok)
+                })())
             }
         },
     )
@@ -1765,6 +1935,39 @@ fn wire__crate__api__qualia_api__get_hardware_telemetry_impl(
                 transform_result_sse::<_, ()>((move || {
                     let output_ok =
                         Result::<_, ()>::Ok(crate::api::qualia_api::get_hardware_telemetry())?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__get_last_chat_session_id_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_last_chat_session_id",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok =
+                        Result::<_, ()>::Ok(crate::api::chat_session::get_last_chat_session_id())?;
                     Ok(output_ok)
                 })())
             }
@@ -2926,6 +3129,38 @@ fn wire__crate__api__qualia_api__launch_installed_qapp_with_context_impl(
         },
     )
 }
+fn wire__crate__api__chat_session__list_chat_sessions_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_chat_sessions",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::list_chat_sessions()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__list_installed_ontology_artifacts_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -3019,6 +3254,72 @@ fn wire__crate__api__qapp_api__list_qapp_update_offers_impl(
                 let output_ok = crate::api::qapp_api::list_qapp_update_offers()?;
                 Ok(output_ok)
             })())
+        },
+    )
+}
+fn wire__crate__api__chat_session__load_chat_session_messages_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "load_chat_session_messages",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::load_chat_session_messages(api_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__load_chat_session_title_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "load_chat_session_title",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::load_chat_session_title(api_id)?;
+                    Ok(output_ok)
+                })())
+            }
         },
     )
 }
@@ -3589,6 +3890,41 @@ fn wire__crate__api__qualia_api__remove_token_impl(
         },
     )
 }
+fn wire__crate__api__chat_session__rename_chat_session_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "rename_chat_session",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_title = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::chat_session::rename_chat_session(api_session_id, api_title)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__run_engine_command_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -3900,6 +4236,40 @@ fn wire__crate__api__qualia_api__set_active_model_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::api::qualia_api::set_active_model(api_model_name)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__set_last_chat_session_id_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_last_chat_session_id",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::chat_session::set_last_chat_session_id(api_session_id)?;
                     Ok(output_ok)
                 })())
             }
@@ -4378,6 +4748,40 @@ impl SseDecode for crate::api::qualia_api::CatalogItem {
     }
 }
 
+impl SseDecode for crate::api::chat_session::ChatMessage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_lamport = <u64>::sse_decode(deserializer);
+        let mut var_role = <String>::sse_decode(deserializer);
+        let mut var_content = <String>::sse_decode(deserializer);
+        let mut var_timestamp = <u64>::sse_decode(deserializer);
+        return crate::api::chat_session::ChatMessage {
+            lamport: var_lamport,
+            role: var_role,
+            content: var_content,
+            timestamp: var_timestamp,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_session::ChatSessionSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_createdAt = <u64>::sse_decode(deserializer);
+        let mut var_updatedAt = <u64>::sse_decode(deserializer);
+        let mut var_messageCount = <u64>::sse_decode(deserializer);
+        return crate::api::chat_session::ChatSessionSummary {
+            id: var_id,
+            title: var_title,
+            created_at: var_createdAt,
+            updated_at: var_updatedAt,
+            message_count: var_messageCount,
+        };
+    }
+}
+
 impl SseDecode for crate::api::qualia_api::CoinBalance {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4543,6 +4947,34 @@ impl SseDecode for Vec<crate::api::qualia_api::CatalogItem> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::qualia_api::CatalogItem>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::chat_session::ChatMessage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chat_session::ChatMessage>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::chat_session::ChatSessionSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chat_session::ChatSessionSummary>::sse_decode(
                 deserializer,
             ));
         }
@@ -5115,453 +5547,519 @@ fn pde_ffi_dispatcher_primary_impl(
             data_len,
         ),
         4 => wire__crate__api__qualia_api__add_token_impl(port, ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__qualia_api__build_anatomy_graph_context_json_impl(
+        5 => wire__crate__api__chat_session__append_chat_message_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        8 => wire__crate__api__qualia_api__build_anatomy_graph_context_json_with_dicom_impl(
+        8 => wire__crate__api__qualia_api__build_anatomy_graph_context_json_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__qualia_api__build_dicom_overlay_spec_json_impl(
+        9 => wire__crate__api__qualia_api__build_anatomy_graph_context_json_with_dicom_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__api__qualia_api__cancel_download_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__qualia_api__check_ollama_status_impl(
+        10 => wire__crate__api__qualia_api__build_dicom_overlay_spec_json_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__qualia_api__check_prerequisites_impl(
+        11 => wire__crate__api__qualia_api__cancel_download_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__qualia_api__check_ollama_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        16 => wire__crate__api__qualia_api__configure_webview2_runtime_impl(
+        13 => wire__crate__api__qualia_api__check_prerequisites_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__api__qualia_api__daemon_status_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__qualia_api__derive_wallets_from_seed_impl(
+        16 => wire__crate__api__chat_session__compact_chat_session_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__api__qualia_api__discover_models_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__qualia_api__dispatch_tax_payment_impl(
+        18 => wire__crate__api__qualia_api__configure_webview2_runtime_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__api__qualia_api__download_and_install_update_impl(
+        19 => wire__crate__api__chat_session__create_chat_session_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        23 => wire__crate__api__qualia_api__download_and_vectorize_impl(
+        20 => wire__crate__api__qualia_api__daemon_status_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__chat_session__delete_chat_session_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        24 => wire__crate__api__qualia_api__download_model_impl(port, ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__qualia_api__export_to_solid_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__qualia_api__fetch_model_catalog_impl(
+        22 => wire__crate__api__qualia_api__derive_wallets_from_seed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__api__qualia_api__fetch_model_catalog_real_impl(
+        24 => wire__crate__api__qualia_api__discover_models_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__qualia_api__dispatch_tax_payment_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__qualia_api__fetch_ontology_catalog_impl(
+        26 => wire__crate__api__qualia_api__download_and_install_update_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__qualia_api__fetch_ontology_catalog_real_impl(
+        27 => wire__crate__api__qualia_api__download_and_vectorize_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => wire__crate__api__qualia_api__fetch_remote_manifest_impl(
+        28 => wire__crate__api__qualia_api__download_model_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__chat_session__ensure_chat_session_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => wire__crate__api__qualia_api__fetch_torrent_telemetry_impl(
+        35 => wire__crate__api__qualia_api__export_to_solid_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__qualia_api__fetch_model_catalog_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        37 => wire__crate__api__qualia_api__fetch_wallet_portfolio_impl(
+        37 => wire__crate__api__qualia_api__fetch_model_catalog_real_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        38 => wire__crate__api__qualia_api__generate_bip39_seed_impl(
+        38 => wire__crate__api__qualia_api__fetch_ontology_catalog_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        39 => wire__crate__api__qualia_api__generate_front_door_impl(
+        39 => wire__crate__api__qualia_api__fetch_ontology_catalog_real_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        40 => wire__crate__api__qualia_api__generate_front_door_invite_impl(
+        40 => wire__crate__api__qualia_api__fetch_remote_manifest_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        41 => wire__crate__api__qualia_api__generate_qapp_credential_impl(
+        41 => wire__crate__api__qualia_api__fetch_torrent_telemetry_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        42 => wire__crate__api__qualia_api__get_active_downloads_impl(
+        42 => wire__crate__api__qualia_api__fetch_wallet_portfolio_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        43 => {
+        43 => wire__crate__api__qualia_api__generate_bip39_seed_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        44 => wire__crate__api__qualia_api__generate_front_door_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        45 => wire__crate__api__qualia_api__generate_front_door_invite_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        46 => wire__crate__api__qualia_api__generate_qapp_credential_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        47 => wire__crate__api__qualia_api__get_active_downloads_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        48 => {
             wire__crate__api__qualia_api__get_active_model_impl(port, ptr, rust_vec_len, data_len)
         }
-        44 => {
+        49 => {
             wire__crate__api__qualia_api__get_coin_balances_impl(port, ptr, rust_vec_len, data_len)
         }
-        45 => wire__crate__api__qualia_api__get_config_impl(port, ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__qualia_api__get_delegation_rules_impl(
+        50 => wire__crate__api__qualia_api__get_config_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__qualia_api__get_delegation_rules_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        47 => wire__crate__api__qualia_api__get_directory_actors_impl(
+        52 => wire__crate__api__qualia_api__get_directory_actors_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        48 => wire__crate__api__qualia_api__get_front_doors_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__qualia_api__get_hardware_status_impl(
+        53 => wire__crate__api__qualia_api__get_front_doors_impl(port, ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__qualia_api__get_hardware_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        50 => wire__crate__api__qualia_api__get_hardware_telemetry_impl(
+        55 => wire__crate__api__qualia_api__get_hardware_telemetry_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        51 => wire__crate__api__resource_catalog__get_model_lifecycle_status_impl(
+        56 => wire__crate__api__chat_session__get_last_chat_session_id_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        52 => {
+        57 => wire__crate__api__resource_catalog__get_model_lifecycle_status_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        58 => {
             wire__crate__api__qualia_api__get_physics_state_impl(port, ptr, rust_vec_len, data_len)
         }
-        53 => wire__crate__api__qualia_api__get_physics_state_pressure_impl(
+        59 => wire__crate__api__qualia_api__get_physics_state_pressure_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        54 => wire__crate__api__qualia_api__get_physics_state_temperature_impl(
+        60 => wire__crate__api__qualia_api__get_physics_state_temperature_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        55 => wire__crate__api__qualia_api__get_physics_state_time_dilation_impl(
+        61 => wire__crate__api__qualia_api__get_physics_state_time_dilation_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        56 => {
+        62 => {
             wire__crate__api__qualia_api__get_qpu_settings_impl(port, ptr, rust_vec_len, data_len)
         }
-        57 => wire__crate__api__qualia_api__get_spatial_pressure_impl(
+        63 => wire__crate__api__qualia_api__get_spatial_pressure_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        58 => wire__crate__api__qualia_api__get_spatial_temperature_impl(
+        64 => wire__crate__api__qualia_api__get_spatial_temperature_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        59 => wire__crate__api__qualia_api__get_spatial_time_dilation_impl(
+        65 => wire__crate__api__qualia_api__get_spatial_time_dilation_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        60 => wire__crate__api__qualia_api__get_tax_suite_impl(port, ptr, rust_vec_len, data_len),
-        61 => wire__crate__api__qualia_api__get_tokens_impl(port, ptr, rust_vec_len, data_len),
-        62 => wire__crate__api__qualia_api__get_transaction_history_impl(
+        66 => wire__crate__api__qualia_api__get_tax_suite_impl(port, ptr, rust_vec_len, data_len),
+        67 => wire__crate__api__qualia_api__get_tokens_impl(port, ptr, rust_vec_len, data_len),
+        68 => wire__crate__api__qualia_api__get_transaction_history_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        63 => {
+        69 => {
             wire__crate__api__qualia_api__get_wallet_status_impl(port, ptr, rust_vec_len, data_len)
         }
-        64 => wire__crate__api__qualia_api__greet_impl(port, ptr, rust_vec_len, data_len),
-        66 => wire__crate__api__qualia_api__handle_engine_chat_command_impl(
+        70 => wire__crate__api__qualia_api__greet_impl(port, ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__qualia_api__handle_engine_chat_command_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        67 => wire__crate__api__qualia_api__handle_qpu_chat_command_impl(
+        73 => wire__crate__api__qualia_api__handle_qpu_chat_command_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        68 => wire__crate__api__qualia_api__import_external_seed_impl(
+        74 => wire__crate__api__qualia_api__import_external_seed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        69 => wire__crate__api__resource_catalog__import_ontology_impl(
+        75 => wire__crate__api__resource_catalog__import_ontology_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        70 => wire__crate__api__qualia_api__ingest_image_impl(port, ptr, rust_vec_len, data_len),
-        71 => {
+        76 => wire__crate__api__qualia_api__ingest_image_impl(port, ptr, rust_vec_len, data_len),
+        77 => {
             wire__crate__api__qualia_api__ingest_image_async_impl(port, ptr, rust_vec_len, data_len)
         }
-        72 => {
+        78 => {
             wire__crate__api__qualia_api__ingest_literature_impl(port, ptr, rust_vec_len, data_len)
         }
-        73 => wire__crate__api__qualia_api__ingest_ontology_impl(port, ptr, rust_vec_len, data_len),
-        74 => wire__crate__api__qualia_api__ingest_pdf_impl(port, ptr, rust_vec_len, data_len),
-        75 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        76 => wire__crate__api__qualia_api__init_core_impl(port, ptr, rust_vec_len, data_len),
-        77 => wire__crate__api__qualia_api__inspect_installed_qapp_readiness_impl(
+        79 => wire__crate__api__qualia_api__ingest_ontology_impl(port, ptr, rust_vec_len, data_len),
+        80 => wire__crate__api__qualia_api__ingest_pdf_impl(port, ptr, rust_vec_len, data_len),
+        81 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__qualia_api__init_core_impl(port, ptr, rust_vec_len, data_len),
+        83 => wire__crate__api__qualia_api__inspect_installed_qapp_readiness_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        78 => wire__crate__api__resource_catalog__install_catalog_llm_impl(
+        84 => wire__crate__api__resource_catalog__install_catalog_llm_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        79 => wire__crate__api__qualia_api__install_prerequisite_impl(
+        85 => wire__crate__api__qualia_api__install_prerequisite_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        81 => wire__crate__api__qualia_api__is_first_run_impl(port, ptr, rust_vec_len, data_len),
-        82 => wire__crate__api__qualia_api__is_qpu_feature_unlocked_impl(
+        87 => wire__crate__api__qualia_api__is_first_run_impl(port, ptr, rust_vec_len, data_len),
+        88 => wire__crate__api__qualia_api__is_qpu_feature_unlocked_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        83 => wire__crate__api__qualia_api__launch_installed_qapp_impl(
+        89 => wire__crate__api__qualia_api__launch_installed_qapp_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        84 => wire__crate__api__qualia_api__launch_installed_qapp_with_context_impl(
+        90 => wire__crate__api__qualia_api__launch_installed_qapp_with_context_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        85 => wire__crate__api__qualia_api__list_installed_ontology_artifacts_impl(
+        91 => wire__crate__api__chat_session__list_chat_sessions_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        86 => wire__crate__api__qualia_api__list_installed_qapps_impl(
+        92 => wire__crate__api__qualia_api__list_installed_ontology_artifacts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        88 => wire__crate__api__qualia_api__load_identity_impl(port, ptr, rust_vec_len, data_len),
-        89 => wire__crate__api__qualia_api__load_imported_accounts_impl(
+        93 => wire__crate__api__qualia_api__list_installed_qapps_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        90 => wire__crate__api__resource_catalog__load_llm_resources_impl(
+        95 => wire__crate__api__chat_session__load_chat_session_messages_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        91 => wire__crate__api__resource_catalog__load_ontology_resources_impl(
+        96 => wire__crate__api__chat_session__load_chat_session_title_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        92 => wire__crate__api__resource_catalog__load_resource_catalog_summary_impl(
+        97 => wire__crate__api__qualia_api__load_identity_impl(port, ptr, rust_vec_len, data_len),
+        98 => wire__crate__api__qualia_api__load_imported_accounts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        93 => wire__crate__api__qualia_api__mint_semantic_token_impl(
+        99 => wire__crate__api__resource_catalog__load_llm_resources_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        94 => wire__crate__api__qualia_api__parse_dicom_metadata_json_impl(
+        100 => wire__crate__api__resource_catalog__load_ontology_resources_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        95 => wire__crate__api__qualia_api__profile_energy_circumstance_impl(
+        101 => wire__crate__api__resource_catalog__load_resource_catalog_summary_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        97 => wire__crate__api__qualia_api__qualia_protocol_port_impl(
+        102 => wire__crate__api__qualia_api__mint_semantic_token_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        98 => {
+        103 => wire__crate__api__qualia_api__parse_dicom_metadata_json_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        104 => wire__crate__api__qualia_api__profile_energy_circumstance_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        106 => wire__crate__api__qualia_api__qualia_protocol_port_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        107 => {
             wire__crate__api__qualia_api__receive_vault_job_impl(port, ptr, rust_vec_len, data_len)
         }
-        101 => wire__crate__api__qualia_api__register_qualia_uri_handler_impl(
+        110 => wire__crate__api__qualia_api__register_qualia_uri_handler_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        102 => wire__crate__api__qualia_api__remove_installed_model_impl(
+        111 => wire__crate__api__qualia_api__remove_installed_model_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        103 => wire__crate__api__qualia_api__remove_installed_ontology_impl(
+        112 => wire__crate__api__qualia_api__remove_installed_ontology_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        104 => wire__crate__api__qualia_api__remove_token_impl(port, ptr, rust_vec_len, data_len),
-        105 => {
+        113 => wire__crate__api__qualia_api__remove_token_impl(port, ptr, rust_vec_len, data_len),
+        114 => wire__crate__api__chat_session__rename_chat_session_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        115 => {
             wire__crate__api__qualia_api__run_engine_command_impl(port, ptr, rust_vec_len, data_len)
         }
-        106 => wire__crate__api__qualia_api__run_inference_impl(port, ptr, rust_vec_len, data_len),
-        107 => wire__crate__api__qualia_api__run_inference_stream_impl(
+        116 => wire__crate__api__qualia_api__run_inference_impl(port, ptr, rust_vec_len, data_len),
+        117 => wire__crate__api__qualia_api__run_inference_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        108 => wire__crate__api__qualia_api__save_config_impl(port, ptr, rust_vec_len, data_len),
-        109 => wire__crate__api__qualia_api__save_identity_impl(port, ptr, rust_vec_len, data_len),
-        110 => wire__crate__api__qualia_api__save_imported_accounts_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        111 => {
-            wire__crate__api__qualia_api__save_qpu_settings_impl(port, ptr, rust_vec_len, data_len)
-        }
-        112 => wire__crate__api__qualia_api__save_tax_suite_impl(port, ptr, rust_vec_len, data_len),
-        113 => {
-            wire__crate__api__qualia_api__set_active_model_impl(port, ptr, rust_vec_len, data_len)
-        }
-        114 => wire__crate__api__qualia_api__start_daemon_impl(port, ptr, rust_vec_len, data_len),
-        115 => wire__crate__api__qualia_api__start_qualia_protocol_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        117 => wire__crate__api__qualia_api__test_sparql_endpoint_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        118 => {
-            wire__crate__api__qualia_api__toggle_nym_relay_impl(port, ptr, rust_vec_len, data_len)
-        }
-        119 => wire__crate__api__qualia_api__toggle_stark_prover_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        120 => wire__crate__api__qualia_api__update_physics_state_impl(
+        118 => wire__crate__api__qualia_api__save_config_impl(port, ptr, rust_vec_len, data_len),
+        119 => wire__crate__api__qualia_api__save_identity_impl(port, ptr, rust_vec_len, data_len),
+        120 => wire__crate__api__qualia_api__save_imported_accounts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
         121 => {
-            wire__crate__api__qualia_api__update_solar_input_impl(port, ptr, rust_vec_len, data_len)
+            wire__crate__api__qualia_api__save_qpu_settings_impl(port, ptr, rust_vec_len, data_len)
         }
-        122 => wire__crate__api__qualia_api__upsert_cmld_definition_impl(
+        122 => wire__crate__api__qualia_api__save_tax_suite_impl(port, ptr, rust_vec_len, data_len),
+        123 => {
+            wire__crate__api__qualia_api__set_active_model_impl(port, ptr, rust_vec_len, data_len)
+        }
+        124 => wire__crate__api__chat_session__set_last_chat_session_id_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        123 => wire__crate__api__qualia_api__verify_and_install_qapp_impl(
+        125 => wire__crate__api__qualia_api__start_daemon_impl(port, ptr, rust_vec_len, data_len),
+        126 => wire__crate__api__qualia_api__start_qualia_protocol_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        128 => wire__crate__api__qualia_api__test_sparql_endpoint_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        129 => {
+            wire__crate__api__qualia_api__toggle_nym_relay_impl(port, ptr, rust_vec_len, data_len)
+        }
+        130 => wire__crate__api__qualia_api__toggle_stark_prover_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        131 => wire__crate__api__qualia_api__update_physics_state_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        132 => {
+            wire__crate__api__qualia_api__update_solar_input_impl(port, ptr, rust_vec_len, data_len)
+        }
+        133 => wire__crate__api__qualia_api__upsert_cmld_definition_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        134 => wire__crate__api__qualia_api__verify_and_install_qapp_impl(
             port,
             ptr,
             rust_vec_len,
@@ -5579,52 +6077,52 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        5 => wire__crate__api__qapp_api__apply_qapp_update_impl(ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__qapp_api__apply_qapp_update_from_path_impl(
+        6 => wire__crate__api__qapp_api__apply_qapp_update_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__qapp_api__apply_qapp_update_from_path_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        13 => wire__crate__api__qapp_api__check_qapp_update_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__qapp_api__check_qapp_update_from_path_impl(
+        14 => wire__crate__api__qapp_api__check_qapp_update_impl(ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__qapp_api__check_qapp_update_from_path_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        15 => wire__crate__api__qapp_api__compile_anatomy_wildcard_query_impl(
+        17 => wire__crate__api__qapp_api__compile_anatomy_wildcard_query_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__api__qapp_api__dicom_ingest_status_impl(ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__qapp_api__eval_comorbidity_json_from_daemon_impl(
+        23 => wire__crate__api__qapp_api__dicom_ingest_status_impl(ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__qapp_api__eval_comorbidity_json_from_daemon_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => {
+        31 => {
             wire__crate__api__qapp_api__execute_dicom_volume_query_impl(ptr, rust_vec_len, data_len)
         }
-        27 => {
+        32 => {
             wire__crate__api__qapp_api__execute_qapp_scoped_query_impl(ptr, rust_vec_len, data_len)
         }
-        28 => wire__crate__api__qapp_api__execute_qapp_scoped_query_zero_alloc_impl(
+        33 => wire__crate__api__qapp_api__execute_qapp_scoped_query_zero_alloc_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => wire__crate__api__qapp_api__execution_error_label_impl(ptr, rust_vec_len, data_len),
-        65 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        80 => wire__crate__api__qapp_api__installed_qapp_version_impl(ptr, rust_vec_len, data_len),
-        87 => wire__crate__api__qapp_api__list_qapp_update_offers_impl(ptr, rust_vec_len, data_len),
-        96 => wire__crate__api__qapp_api__qapp_id_hash_impl(ptr, rust_vec_len, data_len),
-        99 => wire__crate__api__qapp_api__register_qapp_from_installed_manifest_impl(
+        34 => wire__crate__api__qapp_api__execution_error_label_impl(ptr, rust_vec_len, data_len),
+        71 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        86 => wire__crate__api__qapp_api__installed_qapp_version_impl(ptr, rust_vec_len, data_len),
+        94 => wire__crate__api__qapp_api__list_qapp_update_offers_impl(ptr, rust_vec_len, data_len),
+        105 => wire__crate__api__qapp_api__qapp_id_hash_impl(ptr, rust_vec_len, data_len),
+        108 => wire__crate__api__qapp_api__register_qapp_from_installed_manifest_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        100 => wire__crate__api__qapp_api__register_qapp_manifest_impl(ptr, rust_vec_len, data_len),
-        116 => wire__crate__api__qapp_api__submit_dicom_ingest_impl(ptr, rust_vec_len, data_len),
+        109 => wire__crate__api__qapp_api__register_qapp_manifest_impl(ptr, rust_vec_len, data_len),
+        127 => wire__crate__api__qapp_api__submit_dicom_ingest_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5719,6 +6217,53 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::qualia_api::CatalogItem>
     for crate::api::qualia_api::CatalogItem
 {
     fn into_into_dart(self) -> crate::api::qualia_api::CatalogItem {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_session::ChatMessage {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.lamport.into_into_dart().into_dart(),
+            self.role.into_into_dart().into_dart(),
+            self.content.into_into_dart().into_dart(),
+            self.timestamp.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_session::ChatMessage
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_session::ChatMessage>
+    for crate::api::chat_session::ChatMessage
+{
+    fn into_into_dart(self) -> crate::api::chat_session::ChatMessage {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_session::ChatSessionSummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.title.into_into_dart().into_dart(),
+            self.created_at.into_into_dart().into_dart(),
+            self.updated_at.into_into_dart().into_dart(),
+            self.message_count.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_session::ChatSessionSummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_session::ChatSessionSummary>
+    for crate::api::chat_session::ChatSessionSummary
+{
+    fn into_into_dart(self) -> crate::api::chat_session::ChatSessionSummary {
         self
     }
 }
@@ -6323,6 +6868,27 @@ impl SseEncode for crate::api::qualia_api::CatalogItem {
     }
 }
 
+impl SseEncode for crate::api::chat_session::ChatMessage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.lamport, serializer);
+        <String>::sse_encode(self.role, serializer);
+        <String>::sse_encode(self.content, serializer);
+        <u64>::sse_encode(self.timestamp, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_session::ChatSessionSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.title, serializer);
+        <u64>::sse_encode(self.created_at, serializer);
+        <u64>::sse_encode(self.updated_at, serializer);
+        <u64>::sse_encode(self.message_count, serializer);
+    }
+}
+
 impl SseEncode for crate::api::qualia_api::CoinBalance {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -6434,6 +7000,26 @@ impl SseEncode for Vec<crate::api::qualia_api::CatalogItem> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::qualia_api::CatalogItem>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::chat_session::ChatMessage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chat_session::ChatMessage>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::chat_session::ChatSessionSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chat_session::ChatSessionSummary>::sse_encode(item, serializer);
         }
     }
 }

@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/chat_session.dart';
 import 'api/qapp_api.dart';
 import 'api/qualia_api.dart';
 import 'api/resource_catalog.dart';
@@ -77,6 +78,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   CatalogItem dco_decode_catalog_item(dynamic raw);
 
   @protected
+  ChatMessage dco_decode_chat_message(dynamic raw);
+
+  @protected
+  ChatSessionSummary dco_decode_chat_session_summary(dynamic raw);
+
+  @protected
   CoinBalance dco_decode_coin_balance(dynamic raw);
 
   @protected
@@ -108,6 +115,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   List<CatalogItem> dco_decode_list_catalog_item(dynamic raw);
+
+  @protected
+  List<ChatMessage> dco_decode_list_chat_message(dynamic raw);
+
+  @protected
+  List<ChatSessionSummary> dco_decode_list_chat_session_summary(dynamic raw);
 
   @protected
   List<CoinBalance> dco_decode_list_coin_balance(dynamic raw);
@@ -272,6 +285,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   CatalogItem sse_decode_catalog_item(SseDeserializer deserializer);
 
   @protected
+  ChatMessage sse_decode_chat_message(SseDeserializer deserializer);
+
+  @protected
+  ChatSessionSummary sse_decode_chat_session_summary(
+      SseDeserializer deserializer);
+
+  @protected
   CoinBalance sse_decode_coin_balance(SseDeserializer deserializer);
 
   @protected
@@ -304,6 +324,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   List<CatalogItem> sse_decode_list_catalog_item(SseDeserializer deserializer);
+
+  @protected
+  List<ChatMessage> sse_decode_list_chat_message(SseDeserializer deserializer);
+
+  @protected
+  List<ChatSessionSummary> sse_decode_list_chat_session_summary(
+      SseDeserializer deserializer);
 
   @protected
   List<CoinBalance> sse_decode_list_coin_balance(SseDeserializer deserializer);
@@ -484,6 +511,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void sse_encode_catalog_item(CatalogItem self, SseSerializer serializer);
 
   @protected
+  void sse_encode_chat_message(ChatMessage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_session_summary(
+      ChatSessionSummary self, SseSerializer serializer);
+
+  @protected
   void sse_encode_coin_balance(CoinBalance self, SseSerializer serializer);
 
   @protected
@@ -522,6 +556,14 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_list_catalog_item(
       List<CatalogItem> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_message(
+      List<ChatMessage> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chat_session_summary(
+      List<ChatSessionSummary> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_coin_balance(

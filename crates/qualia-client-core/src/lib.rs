@@ -17,6 +17,7 @@ pub mod qpu_pipeline;
 pub mod resource_import;
 pub mod model_lifecycle;
 pub mod vision_ingest;
+pub mod chat_session;
 
 pub use state::*;
 pub use api::*;

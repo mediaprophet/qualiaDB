@@ -111,7 +111,7 @@ pub fn load_config_from_disk() -> AgentConfig {
 
 pub fn init_data_directories(storage_path: &str) {
     let base = PathBuf::from(storage_path);
-    for sub in &["Models", "Index", "Qapps", "SemanticLibrary", "Identity"] {
+    for sub in &["Models", "Index", "Qapps", "SemanticLibrary", "Identity", "Chats"] {
         let _ = std::fs::create_dir_all(base.join(sub));
     }
 }

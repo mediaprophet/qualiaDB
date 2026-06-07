@@ -7,8 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'chat_history_drawer.dart';
 import 'qualia_qapp_webview.dart';
 import '../services/chat_speech_service.dart';
+import '../src/rust/api/chat_session.dart' as chat;
 import '../services/qpu_feature_service.dart';
 import '../src/rust/api/qapp_api.dart';
 import '../src/rust/api/qualia_api.dart' as api;
@@ -34,7 +36,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   final List<_Message> _messages = [];
 
+  String? _sessionId;
+  String _sessionTitle = 'Chat';
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   bool _isInferring = false;
+  bool _sessionLoading = true;
 
   bool _speechReady = false;
 
@@ -59,6 +66,79 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     });
 
+    _initSession();
+
+  }
+
+  Future<void> _initSession() async {
+    try {
+      final id = await chat.ensureChatSession();
+      final title = await chat.loadChatSessionTitle(id: id);
+      final stored = await chat.loadChatSessionMessages(id: id);
+      if (!mounted) return;
+      setState(() {
+        _sessionId = id;
+        _sessionTitle = title;
+        _messages
+          ..clear()
+          ..addAll(stored.map((m) => _Message(role: m.role, content: m.content)));
+        _sessionLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Chat session init failed: $e');
+      if (mounted) setState(() => _sessionLoading = false);
+    }
+  }
+
+  Future<void> _startNewChat() async {
+    try {
+      final id = await chat.createChatSession(title: 'New chat');
+      if (!mounted) return;
+      setState(() {
+        _sessionId = id;
+        _sessionTitle = 'New chat';
+        _messages.clear();
+      });
+      await chat.setLastChatSessionId(sessionId: id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not create chat: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _switchSession(String id) async {
+    try {
+      final title = await chat.loadChatSessionTitle(id: id);
+      final stored = await chat.loadChatSessionMessages(id: id);
+      await chat.setLastChatSessionId(sessionId: id);
+      if (!mounted) return;
+      setState(() {
+        _sessionId = id;
+        _sessionTitle = title;
+        _messages
+          ..clear()
+          ..addAll(stored.map((m) => _Message(role: m.role, content: m.content)));
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load chat: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _persistMessage(String role, String content) async {
+    final id = _sessionId;
+    if (id == null || content.trim().isEmpty) return;
+    try {
+      await chat.appendChatMessage(sessionId: id, role: role, content: content);
+    } catch (e) {
+      debugPrint('Failed to persist chat message: $e');
+    }
   }
 
 
@@ -584,6 +664,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     });
 
+    unawaited(_persistMessage('user', text));
+
     _promptController.clear();
 
     _scrollToBottom();
@@ -600,6 +682,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           _messages[agentIndex] = _Message(role: 'agent', content: qpuCmd.response);
           _isInferring = false;
         });
+        unawaited(_persistMessage('agent', qpuCmd.response));
         _scrollToBottom();
         return;
       }
@@ -662,11 +745,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
           if (!mounted) return;
 
+          final reply = _messages[agentIndex].content;
           setState(() => _isInferring = false);
+          unawaited(_persistMessage('agent', reply));
 
           if (_ttsEnabled) {
 
-            ChatSpeechService.instance.speakAgentResponse(_messages[agentIndex].content);
+            ChatSpeechService.instance.speakAgentResponse(reply);
 
           }
 
@@ -729,9 +814,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final cs = Theme.of(context).colorScheme;
 
-    return Column(
+    if (_sessionLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Scaffold(
+      key: _scaffoldKey,
+      drawer: ChatHistoryDrawer(
+        activeSessionId: _sessionId,
+        onSessionSelected: _switchSession,
+        onNewChat: _startNewChat,
+      ),
+      body: Column(
 
       children: [
+
+        Material(
+          color: cs.surfaceContainerLow,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.history),
+                  tooltip: 'Chat history',
+                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                ),
+                Expanded(
+                  child: Text(
+                    _sessionTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_comment_outlined),
+                  tooltip: 'New chat',
+                  onPressed: _isInferring ? null : _startNewChat,
+                ),
+              ],
+            ),
+          ),
+        ),
 
         if (widget.modelPath.isEmpty)
 
@@ -923,6 +1047,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       ],
 
+    ),
     );
 
   }
