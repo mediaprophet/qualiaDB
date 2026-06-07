@@ -104,7 +104,9 @@ fn try_load_index_dir(store: &mut Vec<QualiaQuin>, storage_path: &str) {
         {
             continue;
         }
-        if let Ok(quins) = crate::q42_reader::read_q42_quins(&path) {
+        // Compatibility path: some local datasets are still legacy framed
+        // compressed artifacts even though canonical raw `.q42` is block-based.
+        if let Ok(quins) = crate::q42_reader::read_c_q42_quins(&path) {
             for quin in quins {
                 push_quin(store, quin);
             }

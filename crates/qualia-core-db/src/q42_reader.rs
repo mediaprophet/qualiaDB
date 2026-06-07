@@ -1,4 +1,9 @@
-//! Read LZ4-compressed `.q42` block files produced by `ingest::streaming_import_rdf`.
+//! Read legacy framed LZ4 transport artifacts produced by
+//! `ingest::streaming_import_rdf`.
+//!
+//! This module does **not** read canonical raw `.q42` SuperBlock containers.
+//! It reads the older 16-byte-header + LZ4-payload framing that should now be
+//! treated as a `.c.q42`-style transport artifact during the migration window.
 
 use std::fs::File;
 use std::io::Read;
@@ -6,8 +11,12 @@ use std::path::Path;
 
 use crate::QualiaQuin;
 
-/// Decompress all quin slots from a `.q42` block file.
-pub fn read_q42_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
+/// Decompress all quin slots from a legacy framed compressed transport file.
+///
+/// Prefer this function only for `.c.q42`-style payloads or other explicitly
+/// legacy framed artifacts. Canonical raw `.q42` readers should operate on
+/// 40,960-byte `QualiaSuperBlock` pages directly.
+pub fn read_c_q42_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
     let mut file = File::open(path)?;
     let file_len = file.metadata()?.len();
     let mut offset = 0u64;
@@ -39,13 +48,21 @@ pub fn read_q42_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
     Ok(quins)
 }
 
+/// Legacy compatibility wrapper.
+///
+/// This name predates the raw `.q42` versus transport `.c.q42` split and is
+/// retained only to avoid breaking older call sites all at once.
+pub fn read_q42_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
+    read_c_q42_quins(path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{q_hash, QualiaQuin};
     use std::io::Write;
 
-    fn write_test_q42(path: &Path, quins: &[QualiaQuin]) {
+    fn write_test_c_q42(path: &Path, quins: &[QualiaQuin]) {
         let mut file = File::create(path).unwrap();
         let bytes: Vec<u8> = quins
             .iter()
@@ -59,10 +76,10 @@ mod tests {
     }
 
     #[test]
-    fn roundtrip_read_q42() {
+    fn roundtrip_read_c_q42() {
         let dir = std::env::temp_dir().join(format!("q42-read-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("test.q42");
+        let path = dir.join("test.c.q42");
         let s = q_hash("ex:subject");
         let p = q_hash("ex:predicate");
         let o = q_hash("ex:object");
@@ -74,8 +91,8 @@ mod tests {
             metadata: 0,
             parity: s ^ p ^ o,
         };
-        write_test_q42(&path, &[quin]);
-        let loaded = read_q42_quins(&path).unwrap();
+        write_test_c_q42(&path, &[quin]);
+        let loaded = read_c_q42_quins(&path).unwrap();
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].subject, s);
         let _ = std::fs::remove_dir_all(dir);

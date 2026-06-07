@@ -1,3 +1,11 @@
+//! Legacy streaming import path for RDF text sources.
+//!
+//! Important: this function currently writes framed LZ4 blocks directly to the
+//! output path. That behavior predates the canonical split between raw `.q42`
+//! SuperBlock containers and `.c.q42` transport artifacts, and should now be
+//! treated as a migration-era compatibility format rather than the governing
+//! raw `.q42` layout.
+
 use crate::{q_hash, QualiaQuin};
 
 const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
