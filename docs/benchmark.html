@@ -195,36 +195,42 @@
     <!-- Load Qualia WASM and expose execute_ntriples_query globally -->
     <script type="module">
         import init, { execute_ntriples_query } from './playground/qualia_core_db.js';
+        const el = document.getElementById('wasm-badge');
         try {
             const response = await fetch('./playground/qualia_core_db_bg.wasm');
             const total = parseInt(response.headers.get('content-length'), 10) || 465124;
             let loaded = 0;
-            const reader = response.body.getReader();
-            const chunks = [];
-            const el = document.getElementById('wasm-badge');
-            
-            while(true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                chunks.push(value);
-                loaded += value.length;
-                if (el) {
-                    const pct = Math.round((loaded / total) * 100);
-                    el.textContent = `WASM Loading ${pct}%`;
+
+            // Intercept the stream to count bytes, then hand a fresh Response to init()
+            const { readable, writable } = new TransformStream({
+                transform(chunk, controller) {
+                    loaded += chunk.length;
+                    if (el) {
+                        const pct = Math.min(99, Math.round((loaded / total) * 100));
+                        el.textContent = `WASM Loading ${pct}%`;
+                    }
+                    controller.enqueue(chunk);
                 }
-            }
-            
-            const buf = new Uint8Array(loaded);
-            let pos = 0;
-            for (const c of chunks) { buf.set(c, pos); pos += c.length; }
-            
-            await init(buf.buffer);
+            });
+            response.body.pipeTo(writable);
+
+            // Pass a new Response wrapping the tracked stream — wasm-bindgen handles the rest
+            const trackedResponse = new Response(readable, {
+                headers: response.headers
+            });
+
+            await init(trackedResponse);
             window._qualiaExec = execute_ntriples_query;
-            if (el) { el.textContent = 'WASM Ready'; el.className = el.className.replace('text-slate-500', 'text-emerald-400'); }
+            if (el) {
+                el.textContent = 'WASM Ready';
+                el.className = el.className.replace('text-slate-500', 'text-emerald-400');
+            }
         } catch(e) {
             console.warn('Qualia WASM load failed:', e.message);
-            const el = document.getElementById('wasm-badge');
-            if (el) { el.textContent = 'WASM Failed'; el.className = el.className.replace('text-slate-500', 'text-red-400'); }
+            if (el) {
+                el.textContent = 'WASM Failed';
+                el.className = el.className.replace('text-slate-500', 'text-red-400');
+            }
         }
     </script>
 
