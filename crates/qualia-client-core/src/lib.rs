@@ -14,6 +14,9 @@ pub mod prerequisites;
 pub mod qpu_oracle;
 pub mod qpu_dispatcher;
 pub mod qpu_pipeline;
+pub mod resource_import;
+pub mod model_lifecycle;
+pub mod vision_ingest;
 
 pub use state::*;
 pub use api::*;

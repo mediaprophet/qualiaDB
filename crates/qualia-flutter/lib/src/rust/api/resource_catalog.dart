@@ -6,34 +6,24 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `catalog_file`, `default_gguf`, `load_yaml`, `resolved_url`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `RawDownload`, `RawLLM`, `RawOntology`
+// These functions are ignored because they are not marked as `pub`: `load_catalog`, `map_llm`, `map_ontology`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 
-/// Load all LLM entries from `resources/llms.yaml`.
-///
-/// Returns an empty vec if the catalog file cannot be read — the UI should
-/// surface this as "catalog not found" rather than crashing.
 Future<List<LLMResource>> loadLlmResources() =>
     RustApi.instance.api.crateApiResourceCatalogLoadLlmResources();
 
-/// Load all ontology entries from `resources/ontologies.yaml`.
 Future<List<OntologyResource>> loadOntologyResources() =>
     RustApi.instance.api.crateApiResourceCatalogLoadOntologyResources();
 
-/// Initiate a GGUF model download.
-///
-/// The full download pipeline (streaming fetch → GGufSharder pointer map →
-/// WAL provenance Quin → CapabilityProfile) is implemented in
-/// `qualia-cli resources download <id>`. This function invokes that CLI
-/// command as a subprocess so the async I/O runs in the CLI's tokio runtime.
-Future<String> downloadLlm({required String id}) =>
-    RustApi.instance.api.crateApiResourceCatalogDownloadLlm(id: id);
+Future<String> loadResourceCatalogSummary() =>
+    RustApi.instance.api.crateApiResourceCatalogLoadResourceCatalogSummary();
 
-/// Initiate an ontology download + .q42 import.
-///
-/// Full pipeline: streaming fetch → `ingest::streaming_import_rdf` → WAL
-/// provenance Quin. Implemented in `qualia-cli resources import-ontology <id>`.
+Future<String> installCatalogLlm({required String id}) =>
+    RustApi.instance.api.crateApiResourceCatalogInstallCatalogLlm(id: id);
+
+Future<String> getModelLifecycleStatus() =>
+    RustApi.instance.api.crateApiResourceCatalogGetModelLifecycleStatus();
+
 Future<String> importOntology({required String id}) =>
     RustApi.instance.api.crateApiResourceCatalogImportOntology(id: id);
 
@@ -41,8 +31,6 @@ class LLMResource {
   final String id;
   final String name;
   final String? provider;
-
-  /// Always `"gguf"` for Qualia-compatible models.
   final String format;
   final String? quantization;
   final int? sizeMb;
@@ -50,10 +38,12 @@ class LLMResource {
   final String? license;
   final List<String>? tags;
   final List<String>? recommendedFor;
-
-  /// Resolved download URL (HuggingFace or direct).
   final String? downloadUrl;
   final String? notes;
+  final String? modality;
+  final String? architecture;
+  final int? contextWindow;
+  final bool isMultimodal;
 
   const LLMResource({
     required this.id,
@@ -68,6 +58,10 @@ class LLMResource {
     this.recommendedFor,
     this.downloadUrl,
     this.notes,
+    this.modality,
+    this.architecture,
+    this.contextWindow,
+    required this.isMultimodal,
   });
 
   @override
@@ -83,7 +77,11 @@ class LLMResource {
       tags.hashCode ^
       recommendedFor.hashCode ^
       downloadUrl.hashCode ^
-      notes.hashCode;
+      notes.hashCode ^
+      modality.hashCode ^
+      architecture.hashCode ^
+      contextWindow.hashCode ^
+      isMultimodal.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -101,7 +99,11 @@ class LLMResource {
           tags == other.tags &&
           recommendedFor == other.recommendedFor &&
           downloadUrl == other.downloadUrl &&
-          notes == other.notes;
+          notes == other.notes &&
+          modality == other.modality &&
+          architecture == other.architecture &&
+          contextWindow == other.contextWindow &&
+          isMultimodal == other.isMultimodal;
 }
 
 class OntologyResource {

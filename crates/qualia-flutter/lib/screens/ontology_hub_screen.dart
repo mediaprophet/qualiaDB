@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../src/rust/api/qualia_api.dart';
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
 import '../src/rust/api/resource_catalog.dart' as catalog;
 
@@ -140,15 +139,7 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
   }) async {
     if (pop) Navigator.pop(context);
     try {
-      if (ontology.downloadUrl != null && ontology.downloadUrl!.isNotEmpty) {
-        await downloadAndVectorize(
-          url: ontology.downloadUrl!,
-          filename: '${ontology.id}.${ontology.format}',
-          itemId: ontology.id,
-        );
-      } else {
-        await catalog.importOntology(id: ontology.id);
-      }
+      await catalog.importOntology(id: ontology.id);
       if (!mounted) return;
       await _loadFromRustResourceCatalog();
       ScaffoldMessenger.of(context).showSnackBar(

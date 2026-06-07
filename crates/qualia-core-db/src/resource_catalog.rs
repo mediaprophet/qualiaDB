@@ -107,9 +107,25 @@ pub struct LLMResource {
     pub tags: Option<Vec<String>>,
     pub last_verified: Option<String>,
     pub notes: Option<String>,
+    /// `text` (default) or `multimodal` (requires `vision_projector`).
+    pub modality: Option<String>,
+    /// Vision / CLIP projector GGUF paired with the language model.
+    pub vision_projector: Option<DownloadInfo>,
+    /// Architecture family for multimodal routing: `llava`, `qwen2vl`, `smolvlm`, `gemma3`.
+    pub architecture: Option<String>,
+    /// Recommended decode context window in tokens.
+    pub context_window: Option<u32>,
 }
 
 impl LLMResource {
+    pub fn is_multimodal(&self) -> bool {
+        matches!(self.modality.as_deref(), Some("multimodal" | "vision"))
+            || self.vision_projector.is_some()
+    }
+
+    pub fn effective_context_window(&self) -> u32 {
+        self.context_window.unwrap_or(if self.is_multimodal() { 8192 } else { 4096 })
+    }
     /// Encode this catalog entry as a set of `QualiaQuin`s.
     ///
     /// Returns Quins using the `catalog:llm` context graph.  Vec allocation is
@@ -156,6 +172,14 @@ impl LLMResource {
                 q_hash(prov), CTX_LLM));
         }
 
+        if self.is_multimodal() {
+            out.push(Self::quin(subject, q_hash("llm:hasModality"), q_hash("multimodal"), CTX_LLM));
+        }
+
+        if let Some(ref arch) = self.architecture {
+            out.push(Self::quin(subject, q_hash("llm:hasArchitecture"), q_hash(arch), CTX_LLM));
+        }
+
         out
     }
 
@@ -189,17 +213,33 @@ impl LLMResource {
     /// The profile ID is deterministic: `q_hash("profile:{id}")`, so callers
     /// can look it up without storing a separate reference.
     pub fn to_capability_profile(&self, local_path: &str) -> CapabilityProfile {
+        self.to_capability_profile_with_projector(local_path, None)
+    }
+
+    pub fn to_capability_profile_with_projector(
+        &self,
+        local_path: &str,
+        vision_projector_path: Option<&str>,
+    ) -> CapabilityProfile {
+        let modality = if self.is_multimodal() {
+            "multimodal".to_string()
+        } else {
+            "text".to_string()
+        };
         CapabilityProfile {
             profile_id: q_hash(&format!("profile:{}", self.id)),
-            active_engines: vec![],  // no engine restrictions — all SlgOpcodes permitted
+            active_engines: vec![],
             loaded_ontologies: vec![],
             preferred_backend: AgentBackend::Local {
                 model_path: local_path.to_string(),
-                context_window: 4096,
+                context_window: self.effective_context_window(),
                 quantization: self.quantization.clone()
                     .unwrap_or_else(|| "Q4_K_M".to_string()),
+                vision_projector_path: vision_projector_path.map(|s| s.to_string()),
+                modality,
+                architecture: self.architecture.clone(),
             },
-            permitted_intent_frames: vec![],  // no frame restrictions
+            permitted_intent_frames: vec![],
         }
     }
 
@@ -475,9 +515,14 @@ mod load_tests {
         let dir = resources_fixture_dir();
         let cat = load_from_dir(&dir).expect("catalog should load");
         assert!(
-            cat.llms.len() >= 3,
-            "expected >=3 LLMs, got {}",
+            cat.llms.len() >= 10,
+            "expected >=10 LLMs, got {}",
             cat.llms.len()
+        );
+        let multimodal = cat.llms.iter().filter(|m| m.is_multimodal()).count();
+        assert!(
+            multimodal >= 3,
+            "expected >=3 multimodal LLMs, got {multimodal}"
         );
         assert!(
             cat.ontologies.len() >= 5,

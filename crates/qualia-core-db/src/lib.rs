@@ -161,6 +161,8 @@ impl QualiaQuin {
 
 pub const MODALITY_FLAG_LLM_TENSOR: u8 = 0b1001;
 pub const MODALITY_FLAG_DENSE_PHYSICS: u8 = 0b1000;
+/// CLIP / mmproj vision encoder tensors in a multimodal GGUF bundle.
+pub const MODALITY_FLAG_VISION_TENSOR: u8 = 0b1010;
 
 pub trait QuinPointerExt {
     fn extract_modality_flag(&self) -> u8;

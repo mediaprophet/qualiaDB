@@ -22,6 +22,10 @@ pub struct LLMResource {
     pub recommended_for: Option<Vec<String>>,
     pub download_url: Option<String>,
     pub notes: Option<String>,
+    pub modality: Option<String>,
+    pub architecture: Option<String>,
+    pub context_window: Option<u32>,
+    pub is_multimodal: bool,
 }
 
 #[frb]
@@ -56,6 +60,10 @@ fn map_llm(r: CoreLlm) -> LLMResource {
         recommended_for: r.recommended_for,
         download_url: r.download.resolved_url(),
         notes: r.notes,
+        modality: r.modality,
+        architecture: r.architecture,
+        context_window: r.context_window,
+        is_multimodal: r.is_multimodal(),
     }
 }
 
@@ -93,37 +101,19 @@ pub fn load_resource_catalog_summary() -> String {
 }
 
 #[frb]
-pub fn download_llm(id: String) -> Result<String, String> {
-    let status = std::process::Command::new("qualia-cli")
-        .args(["resources", "download", &id])
-        .status()
-        .map_err(|e| format!("Failed to launch qualia-cli: {}", e))?;
-
-    if status.success() {
-        Ok(format!("Download complete for: {}", id))
-    } else {
-        Err(format!(
-            "qualia-cli resources download {} failed (exit {:?})",
-            id,
-            status.code()
-        ))
-    }
+pub async fn install_catalog_llm(id: String) -> Result<String, String> {
+    let val = qualia_client_core::install_catalog_llm(id).await?;
+    serde_json::to_string(&val).map_err(|e| e.to_string())
 }
 
 #[frb]
-pub fn import_ontology(id: String) -> Result<String, String> {
-    let status = std::process::Command::new("qualia-cli")
-        .args(["resources", "import-ontology", &id])
-        .status()
-        .map_err(|e| format!("Failed to launch qualia-cli: {}", e))?;
+pub fn get_model_lifecycle_status() -> Result<String, String> {
+    let val = qualia_client_core::get_model_lifecycle_status()?;
+    serde_json::to_string(&val).map_err(|e| e.to_string())
+}
 
-    if status.success() {
-        Ok(format!("Ontology imported: {}", id))
-    } else {
-        Err(format!(
-            "qualia-cli resources import-ontology {} failed (exit {:?})",
-            id,
-            status.code()
-        ))
-    }
+#[frb]
+pub async fn import_ontology(id: String) -> Result<String, String> {
+    let val = qualia_client_core::import_catalog_ontology(id).await?;
+    serde_json::to_string(&val).map_err(|e| e.to_string())
 }

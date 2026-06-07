@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1420837610;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -862951983;
 
 // Section: executor
 
@@ -836,39 +836,6 @@ fn wire__crate__api__qualia_api__download_and_vectorize_impl(
                     })()
                     .await,
                 )
-            }
-        },
-    )
-}
-fn wire__crate__api__resource_catalog__download_llm_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "download_llm",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_id = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::resource_catalog::download_llm(api_id)?;
-                    Ok(output_ok)
-                })())
             }
         },
     )
@@ -1804,6 +1771,38 @@ fn wire__crate__api__qualia_api__get_hardware_telemetry_impl(
         },
     )
 }
+fn wire__crate__api__resource_catalog__get_model_lifecycle_status_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_model_lifecycle_status",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::resource_catalog::get_model_lifecycle_status()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__get_physics_state_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2380,7 +2379,7 @@ fn wire__crate__api__resource_catalog__import_ontology_impl(
     rust_vec_len_: i32,
     data_len_: i32,
 ) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
             debug_name: "import_ontology",
             port: Some(port_),
@@ -2398,11 +2397,15 @@ fn wire__crate__api__resource_catalog__import_ontology_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <String>::sse_decode(&mut deserializer);
             deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::resource_catalog::import_ontology(api_id)?;
-                    Ok(output_ok)
-                })())
+            move |context| async move {
+                transform_result_sse::<_, String>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::resource_catalog::import_ontology(api_id).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
             }
         },
     )
@@ -2674,6 +2677,43 @@ fn wire__crate__api__qualia_api__inspect_installed_qapp_readiness_impl(
                         crate::api::qualia_api::inspect_installed_qapp_readiness(api_qapp_name)?;
                     Ok(output_ok)
                 })())
+            }
+        },
+    )
+}
+fn wire__crate__api__resource_catalog__install_catalog_llm_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "install_catalog_llm",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, String>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::resource_catalog::install_catalog_llm(api_id).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
             }
         },
     )
@@ -3106,6 +3146,40 @@ fn wire__crate__api__resource_catalog__load_ontology_resources_impl(
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Result::<_, ()>::Ok(
                         crate::api::resource_catalog::load_ontology_resources(),
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__resource_catalog__load_resource_catalog_summary_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "load_resource_catalog_summary",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(
+                        crate::api::resource_catalog::load_resource_catalog_summary(),
                     )?;
                     Ok(output_ok)
                 })())
@@ -4651,6 +4725,10 @@ impl SseDecode for crate::api::resource_catalog::LLMResource {
         let mut var_recommendedFor = <Option<Vec<String>>>::sse_decode(deserializer);
         let mut var_downloadUrl = <Option<String>>::sse_decode(deserializer);
         let mut var_notes = <Option<String>>::sse_decode(deserializer);
+        let mut var_modality = <Option<String>>::sse_decode(deserializer);
+        let mut var_architecture = <Option<String>>::sse_decode(deserializer);
+        let mut var_contextWindow = <Option<u32>>::sse_decode(deserializer);
+        let mut var_isMultimodal = <bool>::sse_decode(deserializer);
         return crate::api::resource_catalog::LLMResource {
             id: var_id,
             name: var_name,
@@ -4664,6 +4742,10 @@ impl SseDecode for crate::api::resource_catalog::LLMResource {
             recommended_for: var_recommendedFor,
             download_url: var_downloadUrl,
             notes: var_notes,
+            modality: var_modality,
+            architecture: var_architecture,
+            context_window: var_contextWindow,
+            is_multimodal: var_isMultimodal,
         };
     }
 }
@@ -5096,110 +5178,113 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        24 => {
-            wire__crate__api__resource_catalog__download_llm_impl(port, ptr, rust_vec_len, data_len)
-        }
-        25 => wire__crate__api__qualia_api__download_model_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__qualia_api__export_to_solid_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__qualia_api__fetch_model_catalog_impl(
+        24 => wire__crate__api__qualia_api__download_model_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__qualia_api__export_to_solid_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__qualia_api__fetch_model_catalog_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__qualia_api__fetch_model_catalog_real_impl(
+        32 => wire__crate__api__qualia_api__fetch_model_catalog_real_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__qualia_api__fetch_ontology_catalog_impl(
+        33 => wire__crate__api__qualia_api__fetch_ontology_catalog_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => wire__crate__api__qualia_api__fetch_ontology_catalog_real_impl(
+        34 => wire__crate__api__qualia_api__fetch_ontology_catalog_real_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => wire__crate__api__qualia_api__fetch_remote_manifest_impl(
+        35 => wire__crate__api__qualia_api__fetch_remote_manifest_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        37 => wire__crate__api__qualia_api__fetch_torrent_telemetry_impl(
+        36 => wire__crate__api__qualia_api__fetch_torrent_telemetry_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        38 => wire__crate__api__qualia_api__fetch_wallet_portfolio_impl(
+        37 => wire__crate__api__qualia_api__fetch_wallet_portfolio_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        39 => wire__crate__api__qualia_api__generate_bip39_seed_impl(
+        38 => wire__crate__api__qualia_api__generate_bip39_seed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        40 => wire__crate__api__qualia_api__generate_front_door_impl(
+        39 => wire__crate__api__qualia_api__generate_front_door_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        41 => wire__crate__api__qualia_api__generate_front_door_invite_impl(
+        40 => wire__crate__api__qualia_api__generate_front_door_invite_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        42 => wire__crate__api__qualia_api__generate_qapp_credential_impl(
+        41 => wire__crate__api__qualia_api__generate_qapp_credential_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        43 => wire__crate__api__qualia_api__get_active_downloads_impl(
+        42 => wire__crate__api__qualia_api__get_active_downloads_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        44 => {
+        43 => {
             wire__crate__api__qualia_api__get_active_model_impl(port, ptr, rust_vec_len, data_len)
         }
-        45 => {
+        44 => {
             wire__crate__api__qualia_api__get_coin_balances_impl(port, ptr, rust_vec_len, data_len)
         }
-        46 => wire__crate__api__qualia_api__get_config_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__qualia_api__get_delegation_rules_impl(
+        45 => wire__crate__api__qualia_api__get_config_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__qualia_api__get_delegation_rules_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        48 => wire__crate__api__qualia_api__get_directory_actors_impl(
+        47 => wire__crate__api__qualia_api__get_directory_actors_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        49 => wire__crate__api__qualia_api__get_front_doors_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__qualia_api__get_hardware_status_impl(
+        48 => wire__crate__api__qualia_api__get_front_doors_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__qualia_api__get_hardware_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        51 => wire__crate__api__qualia_api__get_hardware_telemetry_impl(
+        50 => wire__crate__api__qualia_api__get_hardware_telemetry_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        51 => wire__crate__api__resource_catalog__get_model_lifecycle_status_impl(
             port,
             ptr,
             rust_vec_len,
@@ -5300,171 +5385,183 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        78 => wire__crate__api__qualia_api__install_prerequisite_impl(
+        78 => wire__crate__api__resource_catalog__install_catalog_llm_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        80 => wire__crate__api__qualia_api__is_first_run_impl(port, ptr, rust_vec_len, data_len),
-        81 => wire__crate__api__qualia_api__is_qpu_feature_unlocked_impl(
+        79 => wire__crate__api__qualia_api__install_prerequisite_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        82 => wire__crate__api__qualia_api__launch_installed_qapp_impl(
+        81 => wire__crate__api__qualia_api__is_first_run_impl(port, ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__qualia_api__is_qpu_feature_unlocked_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        83 => wire__crate__api__qualia_api__launch_installed_qapp_with_context_impl(
+        83 => wire__crate__api__qualia_api__launch_installed_qapp_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        84 => wire__crate__api__qualia_api__list_installed_ontology_artifacts_impl(
+        84 => wire__crate__api__qualia_api__launch_installed_qapp_with_context_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        85 => wire__crate__api__qualia_api__list_installed_qapps_impl(
+        85 => wire__crate__api__qualia_api__list_installed_ontology_artifacts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        87 => wire__crate__api__qualia_api__load_identity_impl(port, ptr, rust_vec_len, data_len),
-        88 => wire__crate__api__qualia_api__load_imported_accounts_impl(
+        86 => wire__crate__api__qualia_api__list_installed_qapps_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        89 => wire__crate__api__resource_catalog__load_llm_resources_impl(
+        88 => wire__crate__api__qualia_api__load_identity_impl(port, ptr, rust_vec_len, data_len),
+        89 => wire__crate__api__qualia_api__load_imported_accounts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        90 => wire__crate__api__resource_catalog__load_ontology_resources_impl(
+        90 => wire__crate__api__resource_catalog__load_llm_resources_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        91 => wire__crate__api__qualia_api__mint_semantic_token_impl(
+        91 => wire__crate__api__resource_catalog__load_ontology_resources_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        92 => wire__crate__api__qualia_api__parse_dicom_metadata_json_impl(
+        92 => wire__crate__api__resource_catalog__load_resource_catalog_summary_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        93 => wire__crate__api__qualia_api__profile_energy_circumstance_impl(
+        93 => wire__crate__api__qualia_api__mint_semantic_token_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        95 => wire__crate__api__qualia_api__qualia_protocol_port_impl(
+        94 => wire__crate__api__qualia_api__parse_dicom_metadata_json_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        96 => {
+        95 => wire__crate__api__qualia_api__profile_energy_circumstance_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        97 => wire__crate__api__qualia_api__qualia_protocol_port_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        98 => {
             wire__crate__api__qualia_api__receive_vault_job_impl(port, ptr, rust_vec_len, data_len)
         }
-        99 => wire__crate__api__qualia_api__register_qualia_uri_handler_impl(
+        101 => wire__crate__api__qualia_api__register_qualia_uri_handler_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        100 => wire__crate__api__qualia_api__remove_installed_model_impl(
+        102 => wire__crate__api__qualia_api__remove_installed_model_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        101 => wire__crate__api__qualia_api__remove_installed_ontology_impl(
+        103 => wire__crate__api__qualia_api__remove_installed_ontology_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        102 => wire__crate__api__qualia_api__remove_token_impl(port, ptr, rust_vec_len, data_len),
-        103 => {
+        104 => wire__crate__api__qualia_api__remove_token_impl(port, ptr, rust_vec_len, data_len),
+        105 => {
             wire__crate__api__qualia_api__run_engine_command_impl(port, ptr, rust_vec_len, data_len)
         }
-        104 => wire__crate__api__qualia_api__run_inference_impl(port, ptr, rust_vec_len, data_len),
-        105 => wire__crate__api__qualia_api__run_inference_stream_impl(
+        106 => wire__crate__api__qualia_api__run_inference_impl(port, ptr, rust_vec_len, data_len),
+        107 => wire__crate__api__qualia_api__run_inference_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        106 => wire__crate__api__qualia_api__save_config_impl(port, ptr, rust_vec_len, data_len),
-        107 => wire__crate__api__qualia_api__save_identity_impl(port, ptr, rust_vec_len, data_len),
-        108 => wire__crate__api__qualia_api__save_imported_accounts_impl(
+        108 => wire__crate__api__qualia_api__save_config_impl(port, ptr, rust_vec_len, data_len),
+        109 => wire__crate__api__qualia_api__save_identity_impl(port, ptr, rust_vec_len, data_len),
+        110 => wire__crate__api__qualia_api__save_imported_accounts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        109 => {
+        111 => {
             wire__crate__api__qualia_api__save_qpu_settings_impl(port, ptr, rust_vec_len, data_len)
         }
-        110 => wire__crate__api__qualia_api__save_tax_suite_impl(port, ptr, rust_vec_len, data_len),
-        111 => {
+        112 => wire__crate__api__qualia_api__save_tax_suite_impl(port, ptr, rust_vec_len, data_len),
+        113 => {
             wire__crate__api__qualia_api__set_active_model_impl(port, ptr, rust_vec_len, data_len)
         }
-        112 => wire__crate__api__qualia_api__start_daemon_impl(port, ptr, rust_vec_len, data_len),
-        113 => wire__crate__api__qualia_api__start_qualia_protocol_impl(
+        114 => wire__crate__api__qualia_api__start_daemon_impl(port, ptr, rust_vec_len, data_len),
+        115 => wire__crate__api__qualia_api__start_qualia_protocol_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        115 => wire__crate__api__qualia_api__test_sparql_endpoint_impl(
+        117 => wire__crate__api__qualia_api__test_sparql_endpoint_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        116 => {
+        118 => {
             wire__crate__api__qualia_api__toggle_nym_relay_impl(port, ptr, rust_vec_len, data_len)
         }
-        117 => wire__crate__api__qualia_api__toggle_stark_prover_impl(
+        119 => wire__crate__api__qualia_api__toggle_stark_prover_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        118 => wire__crate__api__qualia_api__update_physics_state_impl(
+        120 => wire__crate__api__qualia_api__update_physics_state_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        119 => {
+        121 => {
             wire__crate__api__qualia_api__update_solar_input_impl(port, ptr, rust_vec_len, data_len)
         }
-        120 => wire__crate__api__qualia_api__upsert_cmld_definition_impl(
+        122 => wire__crate__api__qualia_api__upsert_cmld_definition_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        121 => wire__crate__api__qualia_api__verify_and_install_qapp_impl(
+        123 => wire__crate__api__qualia_api__verify_and_install_qapp_impl(
             port,
             ptr,
             rust_vec_len,
@@ -5500,34 +5597,34 @@ fn pde_ffi_dispatcher_sync_impl(
             data_len,
         ),
         19 => wire__crate__api__qapp_api__dicom_ingest_status_impl(ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__qapp_api__eval_comorbidity_json_from_daemon_impl(
+        25 => wire__crate__api__qapp_api__eval_comorbidity_json_from_daemon_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => {
+        26 => {
             wire__crate__api__qapp_api__execute_dicom_volume_query_impl(ptr, rust_vec_len, data_len)
         }
-        28 => {
+        27 => {
             wire__crate__api__qapp_api__execute_qapp_scoped_query_impl(ptr, rust_vec_len, data_len)
         }
-        29 => wire__crate__api__qapp_api__execute_qapp_scoped_query_zero_alloc_impl(
+        28 => wire__crate__api__qapp_api__execute_qapp_scoped_query_zero_alloc_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        30 => wire__crate__api__qapp_api__execution_error_label_impl(ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__qapp_api__execution_error_label_impl(ptr, rust_vec_len, data_len),
         65 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        79 => wire__crate__api__qapp_api__installed_qapp_version_impl(ptr, rust_vec_len, data_len),
-        86 => wire__crate__api__qapp_api__list_qapp_update_offers_impl(ptr, rust_vec_len, data_len),
-        94 => wire__crate__api__qapp_api__qapp_id_hash_impl(ptr, rust_vec_len, data_len),
-        97 => wire__crate__api__qapp_api__register_qapp_from_installed_manifest_impl(
+        80 => wire__crate__api__qapp_api__installed_qapp_version_impl(ptr, rust_vec_len, data_len),
+        87 => wire__crate__api__qapp_api__list_qapp_update_offers_impl(ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__qapp_api__qapp_id_hash_impl(ptr, rust_vec_len, data_len),
+        99 => wire__crate__api__qapp_api__register_qapp_from_installed_manifest_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        98 => wire__crate__api__qapp_api__register_qapp_manifest_impl(ptr, rust_vec_len, data_len),
-        114 => wire__crate__api__qapp_api__submit_dicom_ingest_impl(ptr, rust_vec_len, data_len),
+        100 => wire__crate__api__qapp_api__register_qapp_manifest_impl(ptr, rust_vec_len, data_len),
+        116 => wire__crate__api__qapp_api__submit_dicom_ingest_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5792,6 +5889,10 @@ impl flutter_rust_bridge::IntoDart for crate::api::resource_catalog::LLMResource
             self.recommended_for.into_into_dart().into_dart(),
             self.download_url.into_into_dart().into_dart(),
             self.notes.into_into_dart().into_dart(),
+            self.modality.into_into_dart().into_dart(),
+            self.architecture.into_into_dart().into_dart(),
+            self.context_window.into_into_dart().into_dart(),
+            self.is_multimodal.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6472,6 +6573,10 @@ impl SseEncode for crate::api::resource_catalog::LLMResource {
         <Option<Vec<String>>>::sse_encode(self.recommended_for, serializer);
         <Option<String>>::sse_encode(self.download_url, serializer);
         <Option<String>>::sse_encode(self.notes, serializer);
+        <Option<String>>::sse_encode(self.modality, serializer);
+        <Option<String>>::sse_encode(self.architecture, serializer);
+        <Option<u32>>::sse_encode(self.context_window, serializer);
+        <bool>::sse_encode(self.is_multimodal, serializer);
     }
 }
 

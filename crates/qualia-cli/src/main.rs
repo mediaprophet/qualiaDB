@@ -518,8 +518,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let out_path = output.to_string_lossy().to_string();
             
             match qualia_core_db::ingest::streaming_import_rdf(&in_path, &out_path) {
-                Ok(_) => {
-                    println!("✨ Done!");
+                Ok(quin_count) => {
+                    println!("✨ Done! Wrote {quin_count} Super-Quins.");
                 }
                 Err(e) => {
                     eprintln!("❌ Import Failed: {}", e);

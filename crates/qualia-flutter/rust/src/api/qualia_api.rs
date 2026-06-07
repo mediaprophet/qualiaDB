@@ -93,6 +93,7 @@ pub fn greet(name: String) -> String {
 pub fn init_core() {
     let _ = core::configure_webview2_runtime();
     state::init_app_state();
+    core::restore_active_model_on_startup();
     load_persisted_directory();
     let _ = core::start_qualia_protocol();
     let _ = core::seed_bundled_qapps();

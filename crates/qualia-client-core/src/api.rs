@@ -9,7 +9,7 @@ use futures_util::StreamExt;
 use qualia_core_db::ilp_dispatcher::{DispatchResult, HttpIlpTransport, IlpDispatcher};
 use qualia_core_db::rpc::{route_tax_payment, TaxRecipientSuite};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::io::{Seek, SeekFrom, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::Arc;
@@ -274,8 +274,13 @@ pub async fn download_and_vectorize(
         .unwrap()
         .insert(item_id.clone(), processing_payload);
 
-    let dest_str = dest_path.to_string_lossy().to_string();
-    let _result = ingestion::process_ontology(&dest_str).map_err(|e| e.to_string())?;
+    let _quin_count = crate::resource_import::ingest_local_rdf(
+        &dest_path,
+        &item_id,
+        Path::new(&storage_path),
+        None,
+    )
+    .map_err(|e| e.to_string())?;
 
     let done_payload = ProgressPayload {
         id: item_id.clone(),
@@ -489,60 +494,58 @@ pub async fn upsert_cmld_definition(term: String, context_did: String) -> Result
     ))
 }
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::fs::OpenOptions;
-
 pub async fn ingest_ontology(file_name: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
     let index_dir = PathBuf::from(&storage_path).join("Index");
-    let index_path = index_dir.join(format!("{}.q42.bidx", file_name.replace(" ", "_")));
+    let source_path = index_dir.join(&file_name);
 
-    let _ = std::fs::create_dir_all(&index_dir);
+    if !source_path.is_file() {
+        return Err(format!(
+            "Ontology source not found in Index/: {}",
+            source_path.display()
+        ));
+    }
 
-    // 1. Simulate the backend writing a true hardware-aligned 40,960 byte SuperBlock
-    let mut file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(&index_path)
-        .map_err(|e| e.to_string())?;
+    let ontology_id = source_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(&file_name)
+        .to_string();
 
-    // Pad to 40,960 bytes
-    let empty_block = vec![0u8; 40960];
-    file.write_all(&empty_block).map_err(|e| e.to_string())?;
+    let quin_count = crate::resource_import::ingest_local_rdf(
+        &source_path,
+        &ontology_id,
+        Path::new(&storage_path),
+        None,
+    )
+    .map_err(|e| e.to_string())?;
 
-    // 2. Write exact deterministic bounds at the absolute offset
-    let target_offset = 40960; // Absolute offset to the second block (page-aligned)
-    file.seek(SeekFrom::Start(target_offset))
-        .map_err(|e| e.to_string())?;
-
-    // Write 64-bit Lexicon Node ID
-    let mock_lexicon_id: u64 = 0x8F3B_C122_A943_0001;
-    file.write_u64::<LittleEndian>(mock_lexicon_id)
-        .map_err(|e| e.to_string())?;
-
-    // Write IEEE-754 Float Bound
-    let true_ieee754_bound: f64 = 0.9423984183;
-    file.write_f64::<LittleEndian>(true_ieee754_bound)
-        .map_err(|e| e.to_string())?;
-
-    // 3. VFS Direct Byte Reading (No serde_json overhead during lookup)
-    file.seek(SeekFrom::Start(target_offset))
-        .map_err(|e| e.to_string())?;
-
-    let extracted_lexicon_id = file.read_u64::<LittleEndian>().map_err(|e| e.to_string())?;
-    let extracted_float = file.read_f64::<LittleEndian>().map_err(|e| e.to_string())?;
+    let q42_path = index_dir.join(format!("{ontology_id}.q42"));
 
     Ok(serde_json::json!({
         "status": "success",
         "file": file_name,
-        "nodes_added": 12845,
-        "processing_time_ms": 3421,
-        "lexicon_sample": format!("0x{:016X}", extracted_lexicon_id),
-        "vector_bound_ieee754": extracted_float
+        "ontology_id": ontology_id,
+        "q42_path": q42_path.to_string_lossy(),
+        "quin_count": quin_count,
     }))
+}
+
+pub async fn import_catalog_ontology(id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage_path = state.config.lock().unwrap().storage_path.clone();
+    let catalog = load_workspace_catalog();
+
+    let result = crate::resource_import::import_catalog_ontology(
+        &catalog,
+        &id,
+        Path::new(&storage_path),
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+
+    serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
 pub async fn export_to_solid(
@@ -555,90 +558,38 @@ pub async fn export_to_solid(
 }
 
 pub async fn ingest_image(file_path: String) -> Result<serde_json::Value, String> {
-    // Phase 9 Mock: Simulate native LLaVA extraction and binding to magnet URI
-    let mock_lexicon_id = format!("0x{:08X}", 2654924194_u32);
+    ingest_image_typed(file_path, "Generic Asset".to_string()).await
+}
 
-    Ok(serde_json::json!({
-        "status": "success",
-        "file": file_path,
-        "lexicon_id": mock_lexicon_id,
-        "type": "Meme",
-        "facet": "Extracted Sarcasm Tensor",
-        "origin": "Native Rust LLaVA",
-        "magnet_uri": "magnet:?xt=urn:btih:8c1e..."
-    }))
+pub async fn ingest_image_typed(
+    file_path: String,
+    typology: String,
+) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let active = load_active_model_record_from_disk();
+    let result = crate::vision_ingest::ingest_image_with_active_record(
+        Path::new(&storage),
+        active,
+        Path::new(&file_path),
+        &typology,
+    )
+    .map_err(|e| e.to_string())?;
+    serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
 pub async fn ingest_image_async(file_path: String, typology: String) -> Result<(), String> {
-    // Phase 10 & 15: Asynchronous LLaVA Extraction with Typology Routing
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let active = load_active_model_record_from_disk();
     tokio::spawn(async move {
-        let mut image_base64 = String::new();
-        if let Ok(bytes) = std::fs::read(&file_path) {
-            use base64::{engine::general_purpose, Engine as _};
-            image_base64 = general_purpose::STANDARD.encode(&bytes);
-        }
-
-        let client = reqwest::Client::new();
-        let prompt = format!("Describe this image briefly for a {} context.", typology);
-
-        let ollama_req = serde_json::json!({
-            "model": "llava",
-            "prompt": prompt,
-            "stream": false,
-            "images": [image_base64]
-        });
-
-        let mut facet_text = "Fallback Extracted Semantic Tensor".to_string();
-
-        let response = client
-            .post("http://127.0.0.1:11434/api/generate")
-            .json(&ollama_req)
-            .timeout(std::time::Duration::from_secs(15))
-            .send()
-            .await;
-
-        if let Ok(resp) = response {
-            if let Ok(json) = resp.json::<serde_json::Value>().await {
-                if let Some(text) = json["response"].as_str() {
-                    facet_text = text.to_string();
-                }
-            }
-        } else {
-            // Simulated fallback if ollama is not running
-            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-        }
-
-        // Use typology lens to determine the specific facet extraction rules
-        let _payload = match typology.as_str() {
-            "Meme" => serde_json::json!({
-                "lexicon_id": format!("0x{:016X}", rand::random::<u64>()),
-                "type": "Meme",
-                "facet": format!("Distracted Boyfriend | Irony Tensor: 0.9 | Text: '{}'", facet_text),
-                "origin": "2015 Internet",
-                "region": "xywh=0,0,1024,768",
-                "magnet_uri": "magnet:?xt=urn:btih:meme9f2c..."
-            }),
-            "Heraldry" => serde_json::json!({
-                "lexicon_id": format!("0x{:016X}", rand::random::<u64>()),
-                "type": "Heraldry",
-                "facet": format!("Charge: Lion Rampant | Tincture: Or on Gules | Extracted: {}", facet_text),
-                "origin": "14th Century",
-                "region": "xywh=200,150,400,600",
-                "magnet_uri": "magnet:?xt=urn:btih:heraldry8b1a..."
-            }),
-            _ => serde_json::json!({
-                "lexicon_id": format!("0x{:016X}", rand::random::<u64>()),
-                "type": "Generic Asset",
-                "facet": facet_text,
-                "origin": "Native Swarm Worker",
-                "region": "t=1m20s",
-                "magnet_uri": "magnet:?xt=urn:btih:9f2c..."
-            }),
-        };
-
-        /* TODO: remove ingestion-complete */
+        let _ = crate::vision_ingest::ingest_image_with_active_record(
+            Path::new(&storage),
+            active,
+            Path::new(&file_path),
+            &typology,
+        );
     });
-
     Ok(())
 }
 
@@ -1298,13 +1249,15 @@ pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
     if let Ok(entries) = std::fs::read_dir(&models_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
-            if path.extension().map(|e| e == "gguf").unwrap_or(false) {
+            let name = path
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+            if path.extension().map(|e| e == "gguf").unwrap_or(false)
+                && !name.to_ascii_lowercase().contains("mmproj")
+            {
                 models.push(llm_offload::ModelInfo {
-                    name: path
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .to_string(),
+                    name,
                     is_active: false,
                     avatar_type: "local".to_string(),
                 });
@@ -1325,17 +1278,88 @@ pub async fn run_agent_inference(
     Ok(())
 }
 
-// ── Active model ─────────────────────────────────────────────────────────────
+// ── Active model + lifecycle ───────────────────────────────────────────────────
 
 pub fn active_model_path() -> PathBuf {
+    app_meta_dir().join("active_model.json")
+}
+
+fn legacy_active_model_path() -> PathBuf {
     app_meta_dir().join("active_model.txt")
 }
 
-pub fn load_active_model_from_disk() -> Option<String> {
-    std::fs::read_to_string(active_model_path())
+pub fn load_active_model_record_from_disk() -> Option<crate::model_lifecycle::ActiveModelRecord> {
+    let json_path = active_model_path();
+    if let Ok(text) = std::fs::read_to_string(&json_path) {
+        if let Ok(record) = serde_json::from_str(&text) {
+            return Some(record);
+        }
+    }
+
+    // Migrate legacy bare filename.
+    let legacy = std::fs::read_to_string(legacy_active_model_path())
         .ok()
         .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
+        .filter(|s| !s.is_empty())?;
+
+    let state = crate::state::APP_STATE.get()?;
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let model_id = legacy
+        .trim_end_matches(".gguf")
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(&legacy)
+        .to_string();
+
+    if let Some(manifest) =
+        crate::model_lifecycle::load_install_manifest(Path::new(&storage), &model_id)
+    {
+        let record = crate::model_lifecycle::ActiveModelRecord {
+            model_id: manifest.model_id,
+            gguf_path: manifest.gguf_path,
+            profile_id: manifest.profile_id,
+            quantization: manifest.quantization,
+            lifecycle_state: crate::model_lifecycle::lifecycle_label(
+                crate::model_lifecycle::get_model_lifecycle_state(),
+            )
+            .to_string(),
+            modality: manifest.modality,
+            architecture: manifest.architecture,
+            mmproj_path: manifest.mmproj_path,
+            context_window: manifest.context_window,
+        };
+        let _ = persist_active_model_record(&record);
+        let _ = std::fs::remove_file(legacy_active_model_path());
+        return Some(record);
+    }
+
+    None
+}
+
+pub fn load_active_model_from_disk() -> Option<String> {
+    load_active_model_record_from_disk().map(|r| r.gguf_path)
+}
+
+fn persist_active_model_record(
+    record: &crate::model_lifecycle::ActiveModelRecord,
+) -> Result<(), String> {
+    let meta = app_meta_dir();
+    std::fs::create_dir_all(&meta).map_err(|e| e.to_string())?;
+    let json = serde_json::to_string_pretty(record).map_err(|e| e.to_string())?;
+    std::fs::write(active_model_path(), json).map_err(|e| e.to_string())
+}
+
+pub fn restore_active_model_on_startup() {
+    let Some(record) = load_active_model_record_from_disk() else {
+        return;
+    };
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    if Path::new(&record.gguf_path).is_file() {
+        let _ =
+            crate::model_lifecycle::activate_model_for_id(&record.model_id, Path::new(&storage));
+        *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
+    }
 }
 
 pub fn get_active_model() -> Option<String> {
@@ -1343,14 +1367,186 @@ pub fn get_active_model() -> Option<String> {
     state.active_model.lock().unwrap().clone()
 }
 
+pub fn get_model_lifecycle_status() -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let path = state.active_model.lock().unwrap().clone();
+    let active = load_active_model_record_from_disk().or_else(|| {
+        path.as_ref().map(|gguf| crate::model_lifecycle::ActiveModelRecord {
+            model_id: gguf
+                .rsplit(['/', '\\'])
+                .next()
+                .unwrap_or(gguf)
+                .trim_end_matches(".gguf")
+                .to_string(),
+            gguf_path: gguf.clone(),
+            profile_id: 0,
+            quantization: String::new(),
+            lifecycle_state: crate::model_lifecycle::lifecycle_label(
+                crate::model_lifecycle::get_model_lifecycle_state(),
+            )
+            .to_string(),
+            modality: "text".to_string(),
+            architecture: None,
+            mmproj_path: None,
+            context_window: 4096,
+        })
+    });
+    let status = crate::model_lifecycle::get_model_status(active);
+    serde_json::to_value(status).map_err(|e| e.to_string())
+}
+
 pub fn set_active_model(model_name: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
-    let meta = app_meta_dir();
-    std::fs::create_dir_all(&meta).map_err(|e| e.to_string())?;
-    std::fs::write(active_model_path(), &model_name).map_err(|e| e.to_string())?;
-    *state.active_model.lock().unwrap() = Some(model_name.clone());
-    /* TODO: remove active-model-changed */
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let model_id = model_name
+        .trim_end_matches(".gguf")
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(model_name.as_str())
+        .to_string();
+
+    let record =
+        crate::model_lifecycle::activate_model_for_id(&model_id, Path::new(&storage))
+            .map_err(|e| e.to_string())?;
+
+    persist_active_model_record(&record)?;
+    *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
     Ok(())
+}
+
+pub async fn install_catalog_llm(id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage_path = state.config.lock().unwrap().storage_path.clone();
+    let handles = state.download_handles.clone();
+    let active_dl = state.active_downloads.clone();
+    let catalog = load_workspace_catalog();
+
+    let model = catalog
+        .find_llm(&id)
+        .ok_or_else(|| format!("LLM not found in catalog: {id}"))?;
+    let url = model
+        .download
+        .resolved_url()
+        .ok_or_else(|| format!("No download URL for: {id}"))?;
+    let filename = model
+        .download
+        .local_filename()
+        .unwrap_or_else(|| format!("{id}.gguf"));
+
+    let models_dir = PathBuf::from(&storage_path).join("Models");
+    std::fs::create_dir_all(&models_dir).map_err(|e| e.to_string())?;
+    let dest_path = models_dir.join(&filename);
+
+    let cancelled = Arc::new(AtomicBool::new(false));
+    handles.lock().unwrap().insert(id.clone(), cancelled.clone());
+
+    let client = reqwest::Client::new();
+    let response = client.get(&url).send().await.map_err(|e| {
+        handles.lock().unwrap().remove(&id);
+        active_dl.lock().unwrap().remove(&id);
+        e.to_string()
+    })?;
+    let total_bytes = response.content_length().unwrap_or(0);
+    let mut dest = std::fs::File::create(&dest_path).map_err(|e| e.to_string())?;
+    let mut stream = response.bytes_stream();
+    let mut downloaded: u64 = 0;
+    let mut last_report = std::time::Instant::now();
+    let mut last_downloaded: u64 = 0;
+
+    while let Some(chunk) = stream.next().await {
+        if cancelled.load(Ordering::Relaxed) {
+            let _ = std::fs::remove_file(&dest_path);
+            let payload = ProgressPayload {
+                id: id.clone(),
+                progress: 0.0,
+                downloaded_bytes: downloaded,
+                total_bytes,
+                speed_kbps: 0.0,
+                status: "cancelled".to_string(),
+            };
+            let _ = state.download_events.send(payload.clone());
+            handles.lock().unwrap().remove(&id);
+            active_dl.lock().unwrap().remove(&id);
+            return Err("Cancelled".to_string());
+        }
+        let chunk = chunk.map_err(|e| e.to_string())?;
+        dest.write_all(&chunk).map_err(|e| e.to_string())?;
+        downloaded += chunk.len() as u64;
+
+        let now = std::time::Instant::now();
+        if now.duration_since(last_report).as_millis() >= 200 {
+            let elapsed = now.duration_since(last_report).as_secs_f64().max(0.001);
+            let speed_kbps = ((downloaded - last_downloaded) as f64 / 1024.0) / elapsed;
+            let progress = if total_bytes > 0 {
+                (downloaded as f64 / total_bytes as f64) * 100.0
+            } else {
+                0.0
+            };
+            let payload = ProgressPayload {
+                id: id.clone(),
+                progress,
+                downloaded_bytes: downloaded,
+                total_bytes,
+                speed_kbps,
+                status: "downloading".to_string(),
+            };
+            let _ = state.download_events.send(payload.clone());
+            active_dl.lock().unwrap().insert(id.clone(), payload);
+            last_report = now;
+            last_downloaded = downloaded;
+        }
+    }
+
+    let processing_payload = ProgressPayload {
+        id: id.clone(),
+        progress: 100.0,
+        downloaded_bytes: downloaded,
+        total_bytes,
+        speed_kbps: 0.0,
+        status: "processing".to_string(),
+    };
+    let _ = state.download_events.send(processing_payload.clone());
+    active_dl.lock().unwrap().insert(id.clone(), processing_payload);
+
+    let mut mmproj_path: Option<PathBuf> = None;
+    if model.is_multimodal() {
+        let vp = model.vision_projector.as_ref().ok_or_else(|| {
+            "Multimodal catalog entry missing vision_projector download".to_string()
+        })?;
+        let vp_url = vp
+            .resolved_url()
+            .ok_or_else(|| "No download URL for vision projector".to_string())?;
+        let vp_name = vp
+            .local_filename()
+            .unwrap_or_else(|| format!("{id}-mmproj.gguf"));
+        let vp_dest = models_dir.join(&vp_name);
+        crate::resource_import::stream_download(&vp_url, &vp_dest)
+            .await
+            .map_err(|e| e.to_string())?;
+        mmproj_path = Some(vp_dest);
+    }
+
+    let result = crate::model_lifecycle::finalize_llm_install(
+        model,
+        &dest_path,
+        mmproj_path.as_deref(),
+        Path::new(&storage_path),
+    )
+    .map_err(|e| e.to_string())?;
+
+    let done_payload = ProgressPayload {
+        id: id.clone(),
+        progress: 100.0,
+        downloaded_bytes: downloaded,
+        total_bytes,
+        speed_kbps: 0.0,
+        status: "complete".to_string(),
+    };
+    let _ = state.download_events.send(done_payload.clone());
+    handles.lock().unwrap().remove(&id);
+    active_dl.lock().unwrap().remove(&id);
+
+    serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
 // ── Active downloads (persists across page navigation) ────────────────────────
@@ -2013,18 +2209,21 @@ pub fn remove_installed_model(model_id: String) -> Result<String, String> {
     let mut removed_names = Vec::new();
 
     for path in matches {
-        if path
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        let is_gguf = path
             .extension()
             .map(|ext| ext.to_string_lossy().eq_ignore_ascii_case("gguf"))
-            .unwrap_or(false)
-        {
-            let file_name = path
-                .file_name()
-                .map(|name| name.to_string_lossy().to_string())
-                .unwrap_or_default();
+            .unwrap_or(false);
+        let is_install = name.ends_with(".install.json");
+        if is_gguf || is_install {
             std::fs::remove_file(&path)
                 .map_err(|e| format!("Failed to remove {}: {}", path.display(), e))?;
-            removed_names.push(file_name);
+            if is_gguf {
+                removed_names.push(name);
+            }
         }
     }
 
@@ -2042,6 +2241,7 @@ pub fn remove_installed_model(model_id: String) -> Result<String, String> {
             {
                 *active_model = None;
                 let _ = std::fs::remove_file(active_model_path());
+                let _ = std::fs::remove_file(legacy_active_model_path());
             }
         }
     }

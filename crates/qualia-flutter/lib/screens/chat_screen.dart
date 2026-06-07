@@ -13,6 +13,7 @@ import '../services/qpu_feature_service.dart';
 import '../src/rust/api/qapp_api.dart';
 import '../src/rust/api/qualia_api.dart' as api;
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
+import '../src/rust/api/resource_catalog.dart' as catalog;
 import '../widgets/latex_math_keyboard.dart';
 import '../widgets/markdown_message.dart';
 
@@ -603,6 +604,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return;
       }
 
+      final lifecycleJson = await catalog.getModelLifecycleStatus();
+      final lifecycle = _parseLifecycleState(lifecycleJson);
+      if (lifecycle != 'Active') {
+        setState(() {
+          _messages[agentIndex] = _Message(
+            role: 'agent',
+            content:
+                'No active model — download and activate a model in LLM Hub first.',
+          );
+          _isInferring = false;
+        });
+        _scrollToBottom();
+        return;
+      }
+
       _streamSub?.cancel();
       final stream = api.runInferenceStream(
 
@@ -674,6 +690,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 
 
+  String _parseLifecycleState(String lifecycleJson) {
+    try {
+      final map = jsonDecode(lifecycleJson) as Map<String, dynamic>;
+      return map['lifecycle_state'] as String? ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
   void _scrollToBottom() {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -712,7 +737,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
           MaterialBanner(
 
-            content: const Text('No model loaded — select one in LLM Hub'),
+            content: const Text(
+              'No model loaded — download and activate a model in LLM Hub',
+            ),
 
             actions: [
 

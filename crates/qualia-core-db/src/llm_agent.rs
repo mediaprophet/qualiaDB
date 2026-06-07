@@ -43,6 +43,15 @@ pub enum AgentBackend {
         model_path: String,     // e.g. "~/.qualia/models/phi3-mini-4bit.gguf"
         context_window: u32,    // tokens; typically 4096 for Phi-3-mini
         quantization: String,   // "Q4_K_M", "Q8_0", etc.
+        /// Path to mmproj / vision projector GGUF when `modality` is multimodal.
+        #[serde(default)]
+        vision_projector_path: Option<String>,
+        /// `text` or `multimodal`
+        #[serde(default = "default_local_modality")]
+        modality: String,
+        /// Architecture hint: `llava`, `qwen2vl`, `smolvlm`, `gemma3`, etc.
+        #[serde(default)]
+        architecture: Option<String>,
     },
     /// Remote model call. REQUIRES:
     ///   - Explicit Principal consent (signed VC)
@@ -60,6 +69,10 @@ pub enum AgentBackend {
         remote_endpoint_did: String,
         consent_required: bool, // Always true in production
     },
+}
+
+fn default_local_modality() -> String {
+    "text".to_string()
 }
 
 // ─── AgentIntent ─────────────────────────────────────────────────────────────
@@ -241,6 +254,9 @@ impl LocalLlmAgent {
                 model_path: model_path.into(),
                 context_window: 4096,
                 quantization: "Q4_K_M".into(),
+                vision_projector_path: None,
+                modality: default_local_modality(),
+                architecture: None,
             },
             memory_used_bytes: std::sync::atomic::AtomicU64::new(0),
         }

@@ -72,6 +72,8 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen> {
           downloadUrl: resource.downloadUrl,
           isDownloaded: downloaded,
           isEdgeRecommended: (resource.tags ?? []).contains('edge'),
+          isMultimodal: resource.isMultimodal,
+          architecture: resource.architecture,
         );
       }).toList();
 
@@ -109,8 +111,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen> {
   }
 
   Future<void> _downloadModel(LLMModel model) async {
-    final url = model.downloadUrl;
-    if (url == null || url.isEmpty) {
+    if (model.downloadUrl == null || model.downloadUrl!.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No download URL for this model')),
@@ -119,19 +120,18 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen> {
       return;
     }
 
-    final filename = '${model.id}.gguf';
     try {
-      api.downloadModel(url: url, filename: filename, modelId: model.id);
+      catalog.installCatalogLlm(id: model.id);
       _startDownloadPolling();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Downloading ${model.name}...')),
+          SnackBar(content: Text('Installing ${model.name}...')),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Download failed: $e')),
+          SnackBar(content: Text('Install failed: $e')),
         );
       }
     }
@@ -410,7 +410,9 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen> {
             ),
             title: Text(model.name),
             subtitle: Text(
-              '${model.provider} | ${model.sizeMb} MB${download != null ? " | ${download.progress.toStringAsFixed(0)}%" : ""}',
+              '${model.provider} | ${model.sizeMb} MB'
+              '${model.isMultimodal ? " | multimodal" : ""}'
+              '${download != null ? " | ${download.progress.toStringAsFixed(0)}%" : ""}',
             ),
             trailing: Wrap(
               spacing: 8,
@@ -467,14 +469,22 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text('${model.sizeMb} MB | ${model.quantization}'),
+                  if (model.isMultimodal)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Chip(
+                        label: Text('Multimodal VLM'),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
                   if (model.isDownloaded)
-                    Padding(
+                  Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Wrap(
                         spacing: 8,
                         children: [
                           Chip(
-                            label: Text(isActive ? 'Active' : 'Local'),
+                            label: Text(isActive ? 'Active' : 'Installed'),
                           ),
                           IconButton(
                             tooltip: 'Remove local model',
@@ -523,6 +533,8 @@ class LLMModel {
   final String? downloadUrl;
   bool isDownloaded;
   final bool isEdgeRecommended;
+  final bool isMultimodal;
+  final String? architecture;
 
   LLMModel({
     required this.id,
@@ -536,6 +548,8 @@ class LLMModel {
     this.downloadUrl,
     this.isDownloaded = false,
     this.isEdgeRecommended = false,
+    this.isMultimodal = false,
+    this.architecture,
   });
 }
 
