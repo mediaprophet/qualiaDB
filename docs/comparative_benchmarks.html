@@ -192,7 +192,7 @@
             <div class="max-w-3xl">
                 <div class="mb-5 inline-flex items-center gap-x-2 rounded-3xl border border-blue-900/50 bg-blue-950/40 px-5 py-1.5 text-xs font-semibold tracking-[1.2px] text-blue-400">
                     <i class="fa-solid fa-flask"></i>
-                    <span>COMPARATIVE HARNESS v1 • 512 MB SOVEREIGN EDGE</span>
+                    <span>COMPARATIVE HARNESS v2 • 512 MB SOVEREIGN EDGE</span>
                 </div>
 
                 <h1 class="font-display text-[72px] leading-[1.05] font-semibold tracking-[-3.8px]">
@@ -229,6 +229,29 @@
         </div>
 
         <div id="data-warnings" class="hidden"></div>
+
+        <!-- Run environment (schema v2) -->
+        <div id="execution-environment-panel" class="mb-8 hidden">
+            <div class="section-label mb-3 px-1 tracking-[1px]">RUN ENVIRONMENT</div>
+            <div class="glass-strong rounded-3xl border border-slate-700 p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+                <div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Harness host</div>
+                    <div id="env-device" class="font-mono text-slate-200">—</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Qualia topology</div>
+                    <div id="env-topology" class="font-mono text-amber-300/90">—</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Measurement paths</div>
+                    <div id="env-paths" class="font-mono text-slate-300 text-xs leading-relaxed">—</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Schema</div>
+                    <div id="env-schema" class="font-mono text-slate-400">—</div>
+                </div>
+            </div>
+        </div>
 
         <!-- Main Comparison Table -->
         <div class="mb-8">
@@ -314,7 +337,13 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import {
+            formatTopologySummary,
+            formatDeviceSummary,
+            formatDaemonBadgeText,
+        } from './js/benchmark-environment.js';
+
         let currentData = null;
         let sortColumn = null;
         let sortDirection = 1;
@@ -412,25 +441,69 @@
             return null;
         }
 
+        function renderExecutionEnvironment(data) {
+            const panel = document.getElementById('execution-environment-panel');
+            const env = data?.execution_environment;
+            if (!env) {
+                panel.classList.add('hidden');
+                return;
+            }
+            panel.classList.remove('hidden');
+            document.getElementById('env-device').textContent =
+                formatDeviceSummary(env) || 'Not recorded';
+            const topo = env.qualia_daemon_topology || env.topology;
+            document.getElementById('env-topology').textContent =
+                formatTopologySummary({ topology: topo }) || 'single cell (default)';
+
+            const engines = data.engines || {};
+            const pathLines = Object.entries(engines).map(([key, e]) => {
+                const path = e.measurement_path || 'unknown';
+                const label = e.meta?.label || key;
+                return `${label}: ${path}`;
+            });
+            document.getElementById('env-paths').innerHTML = pathLines.length
+                ? pathLines.join('<br>')
+                : '—';
+
+            const schema = data.schema_version ?? 1;
+            document.getElementById('env-schema').textContent =
+                `v${schema} · ${env.runner || 'harness'} · ${env.collected_at?.slice(0, 10) || '—'}`;
+        }
+
         function renderDataWarnings(engines) {
             const mount = document.getElementById('data-warnings');
             if (!mount) return;
+            const warnings = [];
+
             const incomplete = engines.filter(engine => getEngineStatus(engine));
-            if (!incomplete.length) {
+            if (incomplete.length) {
+                const names = incomplete.map(engine => engine.meta?.label || engine.engine).join(', ');
+                warnings.push(`<strong>Incomplete rows:</strong> ${names} — dashes mean missing data, not zero.`);
+            }
+
+            const qualia = engines.find(e => e.engine === 'qualia');
+            if (qualia?.measurement_path === 'daemon_http_query') {
+                const topo = qualia.execution_environment?.topology
+                    || currentData?.execution_environment?.qualia_daemon_topology;
+                const cells = topo?.worker_cells_configured ?? 1;
+                if (cells > 1) {
+                    warnings.push(`<strong>Multi-cell daemon:</strong> Qualia was measured with ${cells} fractal worker cells — compare latency against single-cell or in-process runs carefully.`);
+                } else {
+                    warnings.push(`<strong>Measurement path:</strong> Qualia uses daemon HTTP queries; other engines run in-process — absolute latency is not apples-to-apples.`);
+                }
+            }
+
+            if (!warnings.length) {
                 mount.innerHTML = '';
                 mount.className = 'hidden';
                 return;
             }
 
-            const names = incomplete.map(engine => engine.meta?.label || engine.engine).join(', ');
             mount.className = 'mb-8 rounded-2xl border border-amber-900/40 bg-amber-950/30 px-5 py-4 text-sm text-amber-200';
             mount.innerHTML = `
                 <div class="flex items-start gap-3">
                     <i class="fa-solid fa-triangle-exclamation mt-0.5 text-amber-400"></i>
-                    <div>
-                        <div class="font-semibold text-amber-100">Some benchmark rows are incomplete</div>
-                        <div class="mt-1 text-amber-200/80">${names} do not currently have a full latency set in the published results JSON, so dashes on this page mean missing data rather than a measured zero.</div>
-                    </div>
+                    <div class="space-y-2">${warnings.map(w => `<div>${w}</div>`).join('')}</div>
                 </div>
             `;
         }
@@ -680,6 +753,7 @@
                             </div>
                         </div>
 
+                        ${d.execution_environment?.topology ? `<div class="text-xs text-slate-500 border-t border-slate-700 pt-4"><span class="text-slate-400">Topology:</span> ${formatTopologySummary(d.execution_environment)} · ${d.measurement_path || 'daemon_http_query'}</div>` : ''}
                         ${d.note ? `<div class="text-xs text-slate-500 italic border-t border-slate-700 pt-4">${d.note}</div>` : ''}
                         ${d.meta?.focus ? `<div class="text-xs text-slate-400 border-t border-slate-700 pt-4"><span class="text-slate-500">Focus:</span> ${d.meta.focus}</div>` : ''}
                     </div>
@@ -707,6 +781,7 @@
             document.getElementById('engine-count').textContent = engines.length;
 
             renderDataWarnings(engines);
+            renderExecutionEnvironment(currentData);
             renderSummaryCards(engines);
             renderTable(engines);
             renderCharts(engines);
@@ -727,8 +802,9 @@
                 if (res.ok) {
                     const d = await res.json();
                     document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
+                    document.getElementById('daemon-text').textContent = formatDaemonBadgeText(d);
                     document.getElementById('daemon-badge').className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    window._liveDaemonHealth = d;
                 }
             } catch(e) {
                 document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';

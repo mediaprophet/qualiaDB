@@ -25,8 +25,12 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from common import DEFAULT_WARMUP, DEFAULT_SAMPLES
-
-SCHEMA_VERSION = 1
+from environment import (
+    SCHEMA_VERSION,
+    collect_harness_environment,
+    fetch_daemon_execution_environment,
+    merge_execution_environment,
+)
 DATASET = "synthetic-ntriples-v1"
 
 BASE_ENGINES = ["oxigraph", "surrealdb", "comunica", "wasm_prolog"]
@@ -87,6 +91,14 @@ def normalize_result(engine: str, raw: dict) -> dict:
     result.setdefault("n_triples", 10_000)
     result.setdefault("timestamp", datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"))
     result["meta"] = ENGINE_META.get(engine, {})
+    if engine == "qualia":
+        result.setdefault("measurement_path", "daemon_http_query")
+    elif engine == "comunica":
+        result.setdefault("measurement_path", "wasm_js_subprocess")
+    elif engine == "wasm_prolog":
+        result.setdefault("measurement_path", "wasm_js_subprocess")
+    else:
+        result.setdefault("measurement_path", "in_process_subprocess")
     for key in ("point", "twohop", "filter"):
         if key not in result:
             result[key] = None
@@ -111,7 +123,7 @@ def run_engine(engine: str, n: int, enforce_memory_limit: bool) -> dict:
     return normalize_result(engine, raw)
 
 
-def merge_into_output(output_path: str, engine: str, result: dict) -> None:
+def merge_into_output(output_path: str, engine: str, result: dict, daemon_env=None) -> None:
     existing: dict = {}
     if os.path.exists(output_path):
         with open(output_path) as f:
@@ -127,6 +139,13 @@ def merge_into_output(output_path: str, engine: str, result: dict) -> None:
     existing["schema_version"] = SCHEMA_VERSION
     existing["dataset"] = DATASET
     existing["methodology"] = METHODOLOGY
+
+    if "execution_environment" not in existing:
+        existing["execution_environment"] = collect_harness_environment()
+    existing["execution_environment"] = merge_execution_environment(
+        existing["execution_environment"],
+        daemon_env=daemon_env if engine == "qualia" else None,
+    )
 
     with open(output_path, "w") as f:
         json.dump(existing, f, indent=2)
@@ -180,7 +199,8 @@ def main() -> None:
         print(json.dumps(result, indent=2), flush=True)
 
         if args.output:
-            merge_into_output(args.output, engine, result)
+            daemon_env = fetch_daemon_execution_environment() if engine == "qualia" else None
+            merge_into_output(args.output, engine, result, daemon_env=daemon_env)
 
 
 if __name__ == "__main__":

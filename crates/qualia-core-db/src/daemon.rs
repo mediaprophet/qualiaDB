@@ -8,6 +8,52 @@ use warp::Filter;
 
 const OFFICIAL_WEB_HUB_ORIGIN: &str = "https://mediaprophet.github.io";
 const QUERY_PAYLOAD_LIMIT_BYTES: u64 = 64 * 1024;
+const CELL_MEMORY_FLOOR_MB: u16 = 512;
+
+/// Fractal-sharding topology configured at daemon boot (`qualia-cli daemon --workers N`).
+#[derive(Clone, Copy, Debug, Default, serde::Serialize)]
+pub struct DaemonTopology {
+    pub worker_cells_configured: u16,
+    pub compute_swarm_enabled: bool,
+}
+
+static DAEMON_TOPOLOGY: std::sync::OnceLock<DaemonTopology> = std::sync::OnceLock::new();
+
+/// Called by `qualia-cli daemon` before the HTTP server starts.
+pub fn configure_daemon_topology(topology: DaemonTopology) {
+    let _ = DAEMON_TOPOLOGY.set(topology);
+}
+
+fn current_topology() -> DaemonTopology {
+    *DAEMON_TOPOLOGY.get().unwrap_or(&DaemonTopology {
+        worker_cells_configured: 1,
+        compute_swarm_enabled: false,
+    })
+}
+
+/// JSON block shared by `/health`, benchmark exports, and the comparative harness.
+pub fn execution_environment_json() -> serde_json::Value {
+    let topo = current_topology();
+    let mode = if topo.worker_cells_configured > 1 || topo.compute_swarm_enabled {
+        "fractal_swarm"
+    } else {
+        "single_cell"
+    };
+    json!({
+        "runner": "qualia-core-db daemon",
+        "engine_version": env!("CARGO_PKG_VERSION"),
+        "memory_ceiling_mb": CELL_MEMORY_FLOOR_MB,
+        "measurement_path": "daemon_http_query",
+        "topology": {
+            "mode": mode,
+            "worker_cells_configured": topo.worker_cells_configured,
+            "worker_cells_active_during_run": topo.worker_cells_configured,
+            "compute_swarm_enabled": topo.compute_swarm_enabled,
+            "cell_memory_floor_mb": CELL_MEMORY_FLOOR_MB,
+            "scheduling": "fixed-pool"
+        }
+    })
+}
 
 /// Maximum number of result Quins the daemon will buffer per request.
 /// At 48 bytes each, 1 000 Quins consume 48 KB — well inside the 512 MB ceiling.
@@ -176,7 +222,8 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
             warp::reply::json(&json!({
                 "status": "active",
                 "engine": "qualia-core-db",
-                "version": env!("CARGO_PKG_VERSION")
+                "version": env!("CARGO_PKG_VERSION"),
+                "execution_environment": execution_environment_json()
             })),
             StatusCode::OK,
         )

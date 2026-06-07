@@ -11,6 +11,7 @@ pub mod ingest;
 pub mod compress;
 pub mod resources;
 mod parsers;
+mod benchmark_env;
 
 /// The Qualia-DB Block Inspector & Data Ingestion CLI
 #[derive(Parser)]
@@ -428,6 +429,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let storage_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());
             let vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&storage_dir).expect("Failed to load KeyVault");
             let vault_arc = std::sync::Arc::new(std::sync::Mutex::new(vault));
+            qualia_core_db::daemon::configure_daemon_topology(qualia_core_db::daemon::DaemonTopology {
+                worker_cells_configured: *workers,
+                compute_swarm_enabled: *compute_swarm,
+            });
             qualia_core_db::daemon::start_local_daemon_with_options(*port, is_dev, vault_arc).await;
         }
         Commands::ExportSolid { input, output } => {
@@ -1083,7 +1088,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Format qualia values (real measured). Keep competitor references as before for the "shootout" narrative.
             let results = serde_json::json!({
-                "environment": "Native Rust CLI (LLM Sandbox)",
+                "schema_version": 2,
+                "execution_environment": benchmark_env::bench_execution_environment(),
+                "environment": "Native Rust CLI (qualia-cli bench)",
                 "memory_limit_enforced": "512MB (Qualia Floor)",
                 "timestamp": timestamp,
                 "methodology": {

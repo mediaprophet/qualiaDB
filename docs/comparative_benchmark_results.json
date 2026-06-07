@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "dataset": "synthetic-ntriples-v1",
   "last_updated": "2026-06-07T02:33:12.434699Z",
   "engines": {
@@ -43,14 +43,15 @@
       },
       "ingestion_ms": 0.034903,
       "peak_rss_mb": 11.36,
-      "schema_version": 1,
+      "schema_version": 2,
       "dataset": "synthetic-ntriples-v1",
       "timestamp": "2026-06-07T02:33:12.434699Z",
       "meta": {
         "label": "Qualia (native daemon)",
         "focus": "Zero-allocation 5-vector graph + Sentinel VM on your hardware",
         "install": "cargo run --release -p qualia-cli -- daemon --port 4242"
-      }
+      },
+      "measurement_path": "daemon_http_query"
     },
     "oxigraph": {
       "engine": "oxigraph",
@@ -92,14 +93,15 @@
         "unit": "milliseconds"
       },
       "peak_rss_mb": 36.23,
-      "schema_version": 1,
+      "schema_version": 2,
       "dataset": "synthetic-ntriples-v1",
       "timestamp": "2026-06-07T02:31:09.371048Z",
       "meta": {
         "label": "Oxigraph",
         "focus": "Memory bloat & native Rust SPARQL speed",
         "install": "pip install pyoxigraph psutil"
-      }
+      },
+      "measurement_path": "in_process_subprocess"
     },
     "surrealdb": {
       "engine": "surrealdb",
@@ -142,14 +144,15 @@
       },
       "server_rss_mb": 153.59,
       "peak_rss_mb": 27.82,
-      "schema_version": 1,
+      "schema_version": 2,
       "dataset": "synthetic-ntriples-v1",
       "timestamp": "2026-06-07T02:31:14.785957Z",
       "meta": {
         "label": "SurrealDB",
         "focus": "Relational-vs-graph overhead (SQL-like document/graph parsing)",
         "install": "surreal CLI binary required"
-      }
+      },
+      "measurement_path": "in_process_subprocess"
     },
     "comunica": {
       "engine": "comunica",
@@ -194,14 +197,15 @@
         "warmup": 10,
         "samples": 30
       },
-      "schema_version": 1,
+      "schema_version": 2,
       "dataset": "synthetic-ntriples-v1",
       "timestamp": "2026-06-07T02:31:51.806803Z",
       "meta": {
         "label": "Comunica",
         "focus": "WASM/JS execution penalty (high-level runtime overhead)",
         "install": "Node.js + npm install @comunica/query-sparql n3"
-      }
+      },
+      "measurement_path": "wasm_js_subprocess"
     },
     "wasm_prolog": {
       "engine": "wasm_prolog",
@@ -213,7 +217,7 @@
         "samples": 30,
         "note": "Prolog uses fewer samples by design"
       },
-      "schema_version": 1,
+      "schema_version": 2,
       "dataset": "synthetic-ntriples-v1",
       "timestamp": "2026-06-07T02:31:52.549454Z",
       "meta": {
@@ -223,8 +227,33 @@
       },
       "point": null,
       "twohop": null,
-      "filter": null
+      "filter": null,
+      "measurement_path": "wasm_js_subprocess"
     }
   },
-  "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). Ingestion paths differ by engine (Oxigraph bulk, Surreal HTTP, JS parse, Qualia native). Qualia row (when present) measured via local daemon on port 4242. Full Qualia ingestion + Lazy SuperBlock metrics come from qualia-cli bench --suite full."
+  "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). Ingestion paths differ by engine (Oxigraph bulk, Surreal HTTP, JS parse, Qualia native). Qualia row (when present) measured via local daemon on port 4242. Full Qualia ingestion + Lazy SuperBlock metrics come from qualia-cli bench --suite full.",
+  "execution_environment": {
+    "runner": "python-comparative-harness",
+    "engine_version": null,
+    "memory_ceiling_mb": 512,
+    "measurement_path": "harness_isolated_subprocess",
+    "topology": {
+      "mode": "serial_harness",
+      "worker_cells_configured": 1,
+      "worker_cells_active_during_run": 1,
+      "compute_swarm_enabled": false,
+      "cell_memory_floor_mb": 512,
+      "scheduling": "serial"
+    },
+    "device_manifest": {
+      "host_class": "X86_64_SERVER",
+      "cpu_arch": "AMD64",
+      "os": "Windows",
+      "cpu_logical_cores": 8,
+      "ram_reported_gb": null,
+      "has_simd_wasm": false,
+      "has_npu": false
+    },
+    "collected_at": "2026-06-07T04:42:14.083404Z"
+  }
 }

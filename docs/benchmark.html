@@ -138,8 +138,9 @@
                                     <span class="font-medium">WASM</span>
                                 </button>
                             </div>
-                            <div class="mt-2 text-right">
-                                <span id="wasm-badge" class="text-xs text-slate-500 font-mono">WASM Loading…</span>
+                            <div class="mt-2 text-right space-y-1">
+                                <span id="wasm-badge" class="text-xs text-slate-500 font-mono block">WASM Loading…</span>
+                                <span id="run-environment-text" class="text-[10px] text-slate-600 font-mono block">Environment…</span>
                             </div>
                         </div>
 
@@ -222,10 +223,12 @@
             await init(trackedResponse);
             window._qualiaExec = execute_ntriples_query;
             const wasmVer = typeof get_engine_version === 'function' ? get_engine_version() : null;
+            window._wasmEngineVersion = wasmVer;
             if (el) {
                 el.textContent = wasmVer ? `WASM v${wasmVer}` : 'WASM Ready';
                 el.className = el.className.replace('text-slate-500', 'text-emerald-400');
             }
+            if (window.refreshRunEnvironment) window.refreshRunEnvironment();
         } catch(e) {
             console.warn('Qualia WASM load failed:', e.message);
             if (el) {
@@ -270,14 +273,20 @@
                 if (res.ok) {
                     const d = await res.json();
                     daemonOnline = true;
+                    window._liveDaemonHealth = d;
                     document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
+                    const label = window.formatDaemonBadgeText
+                        ? window.formatDaemonBadgeText(d)
+                        : `Daemon v${d.version}`;
+                    document.getElementById('daemon-text').textContent = label;
                     document.getElementById('daemon-badge').className =
                         'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    if (window.refreshRunEnvironment) window.refreshRunEnvironment();
                     return d;
                 }
             } catch(e) {}
             daemonOnline = false;
+            window._liveDaemonHealth = null;
             document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
             document.getElementById('daemon-text').textContent = 'Daemon Offline';
             return null;
@@ -295,6 +304,7 @@
                 wasmBtn.classList.add('!border-blue-500', 'bg-blue-500/10');
                 nativeBtn.classList.remove('!border-blue-500', 'bg-blue-500/10');
             }
+            if (window.refreshRunEnvironment) window.refreshRunEnvironment();
         }
 
         // ── Single query timing ────────────────────────────────────────────────
@@ -544,6 +554,40 @@
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-native').classList.add('!border-blue-500', 'bg-blue-500/10');
             checkDaemon();
+        });
+    </script>
+
+    <script type="module">
+        import {
+            formatDaemonBadgeText,
+            formatDeviceSummary,
+            formatTopologySummary,
+            collectBrowserExecutionEnvironment,
+        } from './js/benchmark-environment.js';
+
+        window.formatDaemonBadgeText = formatDaemonBadgeText;
+
+        window.refreshRunEnvironment = async function refreshRunEnvironment() {
+            const el = document.getElementById('run-environment-text');
+            if (!el) return;
+            const wasmVer = typeof window._wasmEngineVersion === 'string' ? window._wasmEngineVersion : null;
+            const nativeMode = document.getElementById('btn-native')?.classList.contains('!border-blue-500');
+            const env = await collectBrowserExecutionEnvironment({
+                runner: nativeMode && window._liveDaemonHealth
+                    ? 'browser-live-benchmark (native daemon)'
+                    : 'browser-live-benchmark (wasm)',
+                measurementPath: nativeMode && window._liveDaemonHealth ? 'daemon_http_query' : 'wasm_pipeline',
+                engineVersion: wasmVer,
+                daemonHealth: window._liveDaemonHealth,
+            });
+            window._executionEnvironment = env;
+            const topo = formatTopologySummary(env);
+            const device = formatDeviceSummary(env);
+            el.textContent = [device, topo].filter(Boolean).join(' · ') || 'Environment recorded';
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => window.refreshRunEnvironment?.(), 500);
         });
     </script>
 </body>
