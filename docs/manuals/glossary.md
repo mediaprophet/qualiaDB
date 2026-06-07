@@ -74,7 +74,7 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 - **enforce_fiduciary_tool_dispatch**: Zero-allocation byte-level JSON dispatcher in `mcp_server.rs`. State machine: `HandshakePhase → AllocationFirewallActive → SanctuaryGated`.
 - **AgentIntent** / **WebizenVerdict**: Intent declaration struct and 5-outcome verdict enum used by the 7 fiduciary rules in `llm_agent.rs`.
 - **CapabilityProfile**: Declares allowed engine operations and ontology namespaces for an agent session.
-- **QCHK format**: Magic header + profile_id + payload_len + JSON-LD profile body. File extension `.chk`. Compiled via `qualia-cli profile compile`.
+- **QCHK format**: Magic header + profile_id + payload_len + JSON-LD profile body. Canonical file extension `.qchk` (legacy `.chk` accepted during migration). Compiled via `qualia-cli profile compile`.
 - **Named profiles**: general, health, chemistry, research, legal, financial.
 
 ---
@@ -116,8 +116,8 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 ## Serialization & Formats
 
 - **CogAI Cognitive AI Chunks (`.chk` text)**: Human-readable ACT-R-inspired chunks-and-rules format from the [W3C Cognitive AI Community Group](https://github.com/w3c-cg/cogai). A chunk is a named, typed collection of properties (`type id { key value; ... }`). Rules use `conditions => actions` syntax with variable binding (`?var`). Maps to RDF via `@rdfmap` declarations. This is a *data ingest source* — the engine compiles chunks into Quins and ACT-R opcodes (`RetrieveByActivation`, `DecayMetadata`) into the Webizen VM. Do not confuse with QCHK binary profiles.
-- **QCHK (`.chk` binary)**: QualiaDB Capability Profile binary format. Identified by magic bytes `0x51 0x43 0x48 0x4B` ("QCHK") at offset 0. This is a *constraint binding* for agent sessions, not an ingest data source. See MCP & Capability Layer above.
-- **`.chk` extension collision**: Both CogAI Chunks (text) and QCHK profiles (binary) use `.chk`. Always check the magic bytes at offset 0 to distinguish them. The ingest pipeline reads CogAI text chunks; `--profile` reads QCHK binaries.
+- **QCHK (`.qchk` binary)**: QualiaDB Capability Profile binary format. Identified by magic bytes `0x51 0x43 0x48 0x4B` ("QCHK") at offset 0. This is a *constraint binding* for agent sessions, not an ingest data source. Legacy `.chk` QCHK files remain readable during migration.
+- **Capability envelope migration**: CogAI Chunks keep the `.chk` extension. QCHK profiles move to `.qchk`. Always check the magic bytes at offset 0 when handling older profile files.
 - **CBOR-LD**: Compact binary Linked Data. Primary runtime format for protocol exchanges, mobile storage, and verifiable claims.
 - **`.q42`**: Native graph binary. Sequence of LZ4-compressed SuperBlocks.
 - **q_hash()**: FNV-1a hash at compile time for all IRIs. Replaces runtime string allocation in the engine core.

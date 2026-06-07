@@ -1,5 +1,6 @@
 // QCHK Capability Profile tests.
-// Covers: magic byte validation, profile ID computation, .chk disambiguation,
+// Covers: magic byte validation, profile ID computation, .qchk canonical naming
+// plus legacy .chk disambiguation,
 // QCHK binary format structure, and the 6 named profiles.
 //
 // Source-of-truth: crates/qualia-core-db/src/profiles.rs

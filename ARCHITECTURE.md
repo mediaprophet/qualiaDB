@@ -98,9 +98,9 @@ A `.q42.bidx` sidecar file records the subject-hash range covered by each SuperB
 The CLI is the entry point for sovereign data ingestion into `.q42` vaults.
 
 - **Formats**: CogAI Cognitive AI Chunks (`.chk` text — W3C CG chunks-and-rules format), CBOR-LD (`.cbor` / `.cbor-ld`), N-Triples, Turtle, JSON-LD, RDF/XML via the Rio streaming parser.
-- **Profile-bound ingestion**: `qualia ingest --profile <file>.chk` binds a `CapabilityProfile` for the ingest session, restricting available opcodes and ontologies.
+- **Profile-bound ingestion**: `qualia ingest --profile <file>.qchk` binds a `CapabilityProfile` for the ingest session, restricting available opcodes and ontologies.
 
-> ⚠ **`.chk` extension collision**: Two distinct formats share this extension. The QCHK magic bytes (`0x51 0x43 0x48 0x4B` = "QCHK") at offset 0 identify a binary Capability Profile. A `.chk` file without that magic is a CogAI Cognitive AI Chunks text file (human-readable ACT-R chunks-and-rules). The ingest pipeline reads CogAI text chunks; the profile system reads QCHK binaries. Never conflate the two.
+> ⚠ **Capability envelope migration**: CogAI Chunks remain `.chk` text inputs. QCHK capability envelopes are migrating to `.qchk`; legacy `.chk` QCHK files are compatibility-only and should be renamed over time. The `QCHK` magic bytes (`0x51 0x43 0x48 0x4B`) still identify the binary profile payload.
 - **Zero-Allocation Parsing**: Values are hashed directly into Quins using FNV-1a; no intermediate string representation enters the engine.
 - **Sort-First Ingestor**: Before SuperBlock emission, Quins are sorted by subject hash for BIDX-indexable output.
 - **Multi-Pass External Sorter**: Handles datasets larger than RAM by buffering ~50 MB chunks, sorting, and flushing to disk. A K-way merge emits the final sorted `.q42` stream.
@@ -415,7 +415,7 @@ pub struct CapabilityProfile {
 
 ### QCHK Binary Format
 
-Capability profiles are compiled to `.chk` files for efficient loading:
+Capability profiles are compiled to `.qchk` files for efficient loading:
 
 ```
 Offset  Size  Field
@@ -497,7 +497,7 @@ This encodes agreement *structure*, not norms. The bridge from `AgreementDID` Qu
 | `inspect` | Decode and display Quin fields from a `.q42` file |
 | `dump` | Stream-dump raw Quins |
 | `daemon` | Start/stop the Warp HTTP daemon (port 4242) |
-| `ingest [--profile <file>.chk]` | Ingest RDF/N3/CBOR-LD into a `.q42` vault; profile-bound if `--profile` given |
+| `ingest [--profile <file>.qchk]` | Ingest RDF/N3/CBOR-LD into a `.q42` vault; profile-bound if `--profile` given |
 | `import` | Import from external sources |
 | `query` | Execute SPARQL-like queries |
 | `compress` | Compress existing `.q42` file |
@@ -508,9 +508,9 @@ This encodes agreement *structure*, not norms. The bridge from `AgreementDID` Qu
 | `resources show <id>` | Show resource details |
 | `resources download <id>` | Download a resource (streams → GGufSharder → WAL) |
 | `resources import-ontology <id>` | Download + SHACL-validate + ingest ontology |
-| `profile compile <input.jsonld> <output.chk>` | Compile JSON-LD profile to QCHK binary |
+| `profile compile <input.jsonld> <output.qchk>` | Compile JSON-LD profile to QCHK binary |
 | `profile list` | List known profiles with q_hash IDs |
-| `profile inspect <file.chk>` | Decode and display a QCHK profile |
+| `profile inspect <file.qchk>` | Decode and display a QCHK profile |
 | `webizen init` | Initialize Webizen identity |
 | `webizen ingest` | Ingest via Webizen pipeline |
 | `webizen validate-gitmark` | Validate git commit mark |
@@ -522,16 +522,16 @@ This encodes agreement *structure*, not norms. The bridge from `AgreementDID` Qu
 
 ```bash
 # Compile a JSON-LD capability profile to QCHK binary
-qualia profile compile profile-health.jsonld health.chk
+qualia profile compile profile-health.jsonld health.qchk
 
 # List known profiles and their q_hash IDs
 qualia profile list
 
 # Inspect a compiled profile
-qualia profile inspect health.chk
+qualia profile inspect health.qchk
 
 # Bind profile during ingest
-qualia ingest --profile health.chk data.ttl output.q42
+qualia ingest --profile health.qchk data.ttl output.q42
 ```
 
 ---

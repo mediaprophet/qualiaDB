@@ -120,7 +120,7 @@ The Webizen Sentinel reads logit vectors in real time as the LLM generates token
 Every LLM call passes through `orchestrate_inference()`: pre-flight `validate_intent()` (N3Logic Rights Ontology check), actual inference, post-flight `validate_output()` (≥ 1 provenance Quin required). The `McpIntentFrame` carries purpose_hash, deontic_constraints, and the active `CapabilityProfile` ID with every tool call.
 
 ### 10. Capability Profiles
-QCHK (`.chk`) binary bundles declare the allowed engine operations and ontology namespaces for an agent session. Six named profiles: general, health, chemistry, research, legal, financial. Compiled via `qualia-cli profile compile`.
+QCHK (`.qchk`) binary bundles declare the allowed engine operations and ontology namespaces for an agent session. Six named profiles: general, health, chemistry, research, legal, financial. Legacy `.chk` QCHK files remain readable during migration, but `.qchk` is now canonical.
 
 ---
 

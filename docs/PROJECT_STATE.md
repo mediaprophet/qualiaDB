@@ -84,7 +84,7 @@ Key themes:
 - QCHK binary format (magic + profile_id + payload_len + JSON-LD)
 - 6 named profiles: general, health, chemistry, research, legal, financial
 - CLI: `profile compile/list/inspect`
-- `ingest --profile <file>.chk` binding
+- `ingest --profile <file>.qchk` binding
 
 #### Resource Catalog
 

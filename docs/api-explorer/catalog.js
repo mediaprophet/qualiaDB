@@ -1728,8 +1728,8 @@ fn decay_activation(level: f32, rate: f32, elapsed_ms: u64) -> f32 {
     {
         id: 'profiles.qchk_format',
         category: 'Capability Profiles',
-        name: 'QCHK Binary Format (.chk binary)',
-        summary: 'QualiaDB Capability Profile binary format. Declares the allowed engine operations and ontology namespaces for an agent session. Six named profiles: general, health, chemistry, research, legal, financial. Compiled via qualia-cli profile compile. Distinguished from CogAI text .chk files by the "QCHK" magic bytes at offset 0.',
+        name: 'QCHK Binary Format (.qchk binary)',
+        summary: 'QualiaDB Capability Profile binary format. Declares the allowed engine operations and ontology namespaces for an agent session. Six named profiles: general, health, chemistry, research, legal, financial. Compiled via qualia-cli profile compile. Canonical extension: .qchk. Legacy .chk QCHK files are distinguished from CogAI text .chk files by the "QCHK" magic bytes at offset 0.',
         params: [
             { name: 'profile_id',   type: 'u64 (little-endian at offset 4)',  desc: 'q_hash("profile:<name>") — e.g. q_hash("profile:health")' },
             { name: 'payload_len',  type: 'u32 (little-endian at offset 12)', desc: 'Byte length of the JSON-LD payload' },
@@ -1739,18 +1739,18 @@ fn decay_activation(level: f32, rate: f32, elapsed_ms: u64) -> f32 {
         snippets: [
             cli(`
 # Compile a JSON-LD capability profile to a QCHK binary
-qualia-cli profile compile health.jsonld --out health.chk
+qualia-cli profile compile health.jsonld --out health.qchk
 
 # List all known profile IDs and their q_hash values
 qualia-cli profile list
 
-# Decode and inspect a compiled .chk file
-qualia-cli profile inspect health.chk
+# Decode and inspect a compiled .qchk file
+qualia-cli profile inspect health.qchk
 
 # Bind a profile during ingest (restricts opcodes to health-permitted set)
-qualia-cli ingest --input patient-graph.ttl --output patient.q42 --profile health.chk
+qualia-cli ingest --input patient-graph.ttl --output patient.q42 --profile health.qchk
 
-# ── .chk disambiguation ─────────────────────────────────────────────────
+# ── .qchk / legacy .chk disambiguation ──────────────────────────────────
 # QCHK binary: offset 0 = 0x51 0x43 0x48 0x4B ("QCHK") — binary profile
 # CogAI text:  offset 0 = plain text (type char) — ACT-R chunks-and-rules
 `),
@@ -1763,7 +1763,7 @@ qualia-cli ingest --input patient-graph.ttl --output patient.q42 --profile healt
 
 use qualia_core_db::profiles::CapabilityProfile;
 
-let profile = CapabilityProfile::load_from_chk(std::fs::read("health.chk")?)?;
+let profile = CapabilityProfile::load_from_chk(std::fs::read("health.qchk")?)?;
 assert_eq!(profile.profile_id, q_hash("profile:health"));
 `),
             js(`

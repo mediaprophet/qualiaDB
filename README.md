@@ -75,10 +75,10 @@ Full release notes: [docs/manuals/RELEASE_NOTES_v0.0.5.md](docs/manuals/RELEASE_
 ### Ingest RDF data with a capability profile
 ```bash
 # Compile a JSON-LD profile to binary QCHK
-qualia profile compile profiles/health.jsonld health.chk
+qualia profile compile profiles/health.jsonld health.qchk
 
 # Ingest Turtle file bound to the health profile
-qualia ingest --profile health.chk data/patient-graph.ttl output.q42
+qualia ingest --profile health.qchk data/patient-graph.ttl output.q42
 ```
 
 ### Browse and download resources
@@ -102,7 +102,7 @@ qualia resources download gemma2-2b-q4
 qualia profile list
 
 # Inspect a compiled QCHK profile
-qualia profile inspect health.chk
+qualia profile inspect health.qchk
 ```
 
 ### Query and inspect

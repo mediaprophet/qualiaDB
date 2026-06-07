@@ -14,7 +14,7 @@ CBOR-LD gatekeeping and WASM OPFS bridging bypass heap-saturation attacks, writi
 
 Supported ingest formats: CogAI Cognitive AI Chunks (`.chk` text — W3C CG ACT-R chunks-and-rules), CBOR-LD, N-Triples, Turtle, JSON-LD, RDF/XML.
 
-> ⚠ **`.chk` extension collision**: Two distinct formats share the `.chk` extension. A CogAI Chunks text file is a human-readable ingest source. A QCHK binary (magic bytes `"QCHK"`) is a Capability Profile constraint binding used with `--profile`. They are distinguished by the magic bytes at offset 0 — never conflate them.
+> ⚠ **Capability envelope migration**: CogAI Chunks remain `.chk` text files. QCHK capability envelopes are migrating to `.qchk`; legacy `.chk` QCHK files are compatibility-only. Use the `QCHK` magic bytes to detect old profile files during migration.
 
 ### 2. GPU Sieve (Geometric Pruning)
 Graph nodes are mapped into Minkowski space within continuous 128 KB memory-mapped `QualiaSuperBlocks`. The GPU calculates bounding-hull collisions to retrieve data at sub-microsecond speeds without loading unrelated blocks. The WGSL compute shader (`shaders/fused_tensor_contraction.wgsl`) runs 64 threads/workgroup across DirectML / Vulkan / Metal / WebGPU via `wgpu`.
@@ -129,7 +129,7 @@ Qualia-DB is a framework for **Intentional Computing** — computing that strict
 
 - **First-Class Agency** — No admin superuser supersedes the Principal. Cryptographic keys are the absolute root of trust.
 - **WebRTC CRDT Mesh & M:N Guardianship** — Distributed consensus via a local WebRTC Mesh. `did:q42` Webizens form an M:N gossip network using `Automerge` CRDTs. High-risk operations are packaged as `QuorumRequest`s broadcast to N Guardian Webizens; M ratifications required to proceed.
-- **Capability Profiles** — `.chk` (QCHK) binary bundles declare the allowed engine operations and ontology namespaces for an agent session. Six named profiles: general, health, chemistry, research, legal, financial.
+- **Capability Profiles** — `.qchk` (QCHK) binary bundles declare the allowed engine operations and ontology namespaces for an agent session. Six named profiles: general, health, chemistry, research, legal, financial.
 
 ---
 

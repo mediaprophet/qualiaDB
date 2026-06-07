@@ -94,8 +94,8 @@ qualia-cli ingest --input ./data/something.ttl --output ./data/out.q42
 # Ingest a CogAI Chunks file (W3C CG ACT-R format)
 qualia-cli ingest --input ./data/knowledge.chk --output ./data/out.q42
 
-# Ingest with a bound Capability Profile (QCHK binary — different from CogAI .chk)
-qualia-cli ingest --input ./data/something.ttl --output ./data/out.q42 --profile health.chk
+# Ingest with a bound Capability Profile (QCHK binary — canonical extension .qchk)
+qualia-cli ingest --input ./data/something.ttl --output ./data/out.q42 --profile health.qchk
 
 # Compress a .q42 file (LZ4 block-stream)
 qualia-cli compress --input ./data/out.q42 --output ./data/out.c.q42
@@ -110,9 +110,9 @@ qualia-cli inspect ./data/out.q42
 qualia-cli daemon --dev --workers 8 --compute-swarm
 
 # Capability Profiles
-qualia-cli profile compile health.jsonld --out health.chk
+qualia-cli profile compile health.jsonld --out health.qchk
 qualia-cli profile list
-qualia-cli profile inspect health.chk
+qualia-cli profile inspect health.qchk
 
 # Resource Catalog (LLMs, ontologies, SPARQL endpoints)
 qualia-cli resources list llms
