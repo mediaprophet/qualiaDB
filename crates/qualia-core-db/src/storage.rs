@@ -69,6 +69,12 @@ impl SuperBlockWriter {
                 written += n;
             }
         }
+
+        #[cfg(not(any(target_family = "unix", target_family = "windows")))]
+        {
+            use std::io::Write;
+            self.file.write_all(bytes)?;
+        }
         
         // Sync to guarantee physical sector write
         self.file.sync_data()?;
@@ -193,8 +199,8 @@ impl VirtualFileSystem for OpfsVfs {
             let dir_handle_val = JsFuture::from(storage.get_directory()).await.map_err(|e| format!("{:?}", e))?;
             let dir_handle: web_sys::FileSystemDirectoryHandle = dir_handle_val.unchecked_into();
             
-            let mut options = web_sys::FileSystemGetFileOptions::new();
-            options.create(true);
+            let options = web_sys::FileSystemGetFileOptions::new();
+            options.set_create(true);
             let file_handle_val = JsFuture::from(dir_handle.get_file_handle_with_options(&path, &options))
                 .await.map_err(|e| format!("{:?}", e))?;
             let file_handle: web_sys::FileSystemFileHandle = file_handle_val.unchecked_into();

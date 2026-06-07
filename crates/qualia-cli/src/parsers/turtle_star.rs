@@ -64,7 +64,6 @@ pub fn parse_turtle_star_stream<R: Read>(
         // Process tokens to handle RDF-Star nested claims: << s p o >> p2 o2 .
         let mut i = 0;
         let mut subject = 0;
-        let mut is_nested_subject = false;
 
         if i < tokens.len() && tokens[i] == "<<" {
             // Nested claim as subject
@@ -86,7 +85,6 @@ pub fn parse_turtle_star_stream<R: Read>(
 
                 // Folding into virtual 64-bit pointer
                 subject = (ns ^ np ^ no) | (1u64 << 63); // Set MSB
-                is_nested_subject = true;
                 i += 5;
             }
         } else if i < tokens.len() {
@@ -117,11 +115,9 @@ pub fn parse_turtle_star_stream<R: Read>(
                     count += 1;
     
                     object = (ns ^ np ^ no) | (1u64 << 63); // Set MSB
-                    i += 5;
                  }
             } else {
                 object = hash_str(&tokens[i]);
-                i += 1;
             }
 
             if subject != 0 && object != 0 {

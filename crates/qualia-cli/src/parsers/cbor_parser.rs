@@ -17,7 +17,7 @@ fn hash_bytes(b: &[u8]) -> u64 {
 /// Parses a CBOR-LD stream and streams directly into the external sorter.
 /// No massive allocations are made.
 pub fn parse_cbor_ld_stream(
-    mut bytes: &[u8],
+    bytes: &[u8],
     context_hash: u64,
     sorter: &mut super::external_sort::ExternalSorter,
 ) -> Result<u64, Box<dyn std::error::Error>> {

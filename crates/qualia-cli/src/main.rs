@@ -1,9 +1,8 @@
 use clap::{Parser, Subcommand};
-use qualia_core_db::{QualiaQuin, query_compiler::QueryCompiler};
+use qualia_core_db::QualiaQuin;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use warp::Filter;
 use serde::{Deserialize, Serialize};
 
 pub mod telemetry_server;
@@ -262,12 +261,14 @@ struct RpcRequest {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct RpcParams {
     query: Option<String>,
     token: Option<String>,
 }
 
 #[derive(Serialize)]
+#[allow(dead_code)]
 struct RpcResponse {
     jsonrpc: String,
     result: Option<serde_json::Value>,
@@ -1274,7 +1275,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 // Commit to Git
                 let git_repo = git2::Repository::open(repo)?;
-                let mut binary_payload = std::fs::read(&out_q42)?;
+                let binary_payload = std::fs::read(&out_q42)?;
                 let oid = git_repo.blob(&binary_payload)?;
                 println!("📦 Embedded {} bytes as agnostic .qualia blob: {}", binary_payload.len(), oid);
                 

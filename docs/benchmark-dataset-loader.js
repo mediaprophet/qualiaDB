@@ -268,12 +268,22 @@ export function queriesForManifest(manifest, suite) {
     const pointSubject = q.point_subject || 'http://q.test/s/0';
     const filterPredicate = q.filter_predicate || 'http://q.test/p/0';
     const twohopStart = q.twohop_start || pointSubject;
+    let twohopSecond = q.twohop_second || null;
+    if (!twohopSecond && manifest.generate_synthetic) {
+        const m = String(twohopStart).match(/\/s\/(\d+)$/);
+        const i = m ? Number(m[1]) : 0;
+        const n = manifest.synthetic_n || manifest.n_triples || 10000;
+        twohopSecond = `http://q.test/o/${(i * 13) % n}`;
+    }
     return {
         point: `<${pointSubject}> ?p ?o .`,
         twohop: null,
+        twohop1: `<${twohopStart}> ?p ?o .`,
+        twohop2: twohopSecond ? `<${twohopSecond}> ?p ?o .` : null,
         filter: `?s <${filterPredicate}> ?o .`,
         ingest: '?s ?p ?o .',
         twohopStart,
+        twohopSecond,
         pointSubject,
         filterPredicate,
     };

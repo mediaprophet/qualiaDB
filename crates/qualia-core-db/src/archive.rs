@@ -1,5 +1,7 @@
 use std::fs::File;
-use std::io::{self, Cursor, Read};
+use std::io;
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::{Cursor, Read};
 use std::path::Path;
 use memmap2::MmapOptions;
 

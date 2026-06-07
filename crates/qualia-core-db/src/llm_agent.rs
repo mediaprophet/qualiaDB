@@ -285,6 +285,7 @@ impl LocalLlmAgent {
         self.infer_local_model_inner::<fn(String)>(prompt, graph_context, None)
     }
 
+    #[cfg_attr(target_arch = "wasm32", allow(unused_variables, unused_mut))]
     fn infer_local_model_inner<F: FnMut(String) + Send>(
         &self,
         prompt: &str,

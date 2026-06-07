@@ -267,8 +267,8 @@
         let currentMode = 'native';
         let daemonOnline = false;
         const DATASET_PROFILE_HELP = {
-            'synthetic-10k': 'Synthetic 10K graph. Native mode hits the daemon; WASM parses generated N-Triples in-browser.',
-            'schemaorg-30-current-https': 'Real Schema.org 30.0 ontology (~18K triples). WASM can load .nt, native .q42, or compressed .c.q42 from data/schemaorg/30.0/.',
+            'synthetic-10k': 'Synthetic 10K graph. Native loads flat quins into the daemon via WebSocket bench_load, then queries over WS.',
+            'schemaorg-30-current-https': 'Schema.org 30.0 (~18K triples). Native and WASM both load the same NT/q42/c.q42 artifacts before benchmarking.',
         };
 
         function formatLatency(ms) {
@@ -277,15 +277,6 @@
             if (ms >= 0.001) return { val: Math.round(ms * 1000).toLocaleString(), unit: 'µs' };
             return { val: Math.round(ms * 1000000).toLocaleString(), unit: 'ns' };
         }
-
-        // ── Benchmark query patterns ───────────────────────────────────────────
-        const QUERIES = {
-            point:  '<http://qualia.local/s/1> ?p ?o .',
-            twohop: '?s <http://qualia.local/p/hop> ?o .',
-            filter: '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?o .',
-            ingest: '?s ?p ?o .',
-            full:   null   // runs all four
-        };
 
         const SUITE_LABELS = {
             point:  'Point Lookup',
@@ -304,7 +295,7 @@
             const mount = document.getElementById('dataset-profile-help');
             if (mount) mount.textContent = DATASET_PROFILE_HELP[key] || DATASET_PROFILE_HELP['synthetic-10k'];
             const wasmWrap = document.getElementById('wasm-storage-wrap');
-            if (wasmWrap) wasmWrap.classList.toggle('hidden', currentMode !== 'wasm');
+            if (wasmWrap) wasmWrap.classList.toggle('hidden', false);
             const fmt = document.getElementById('wasmStorageFormat');
             if (fmt && key === 'synthetic-10k') {
                 fmt.value = 'synthetic';
@@ -358,36 +349,34 @@
             if (window.refreshRunEnvironment) window.refreshRunEnvironment();
         }
 
-        // ── Single query timing ────────────────────────────────────────────────
-        async function runQuery(query) {
-            const t0 = performance.now();
-            const res = await fetch('http://localhost:4242/query', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                signal: AbortSignal.timeout(10000),
-                body: JSON.stringify({ query, format: 'json-ld' })
-            });
-            const t1 = performance.now();
-            const cost = res.headers.get('X-Qualia-Compute-Cost') || '0+0';
-            const [matchCount, vmCycles] = cost.split('+').map(Number);
-            return { latencyMs: t1 - t0, matchCount, vmCycles };
-        }
+        // ── Native WebSocket batched benchmark (parity with WASM loop structure) ─
+        async function benchmarkNativeWs(wsClient, pattern, { iters = 2000, batches = 10, twohop2 = null } = {}) {
+            for (let i = 0; i < 100; i++) {
+                await wsClient.queryMetrics(pattern);
+                if (twohop2) await wsClient.queryMetrics(twohop2);
+            }
 
-        // ── P50 over N iterations ──────────────────────────────────────────────
-        async function benchmarkQuery(query, iters = 10) {
             const latencies = [];
-            let vmCycles = 0, matchCount = 0;
-            for (let i = 0; i < iters; i++) {
-                const r = await runQuery(query);
-                latencies.push(r.latencyMs);
-                vmCycles = r.vmCycles;
-                matchCount = r.matchCount;
+            let vmCycles = 0;
+            let matchCount = 0;
+            for (let b = 0; b < batches; b++) {
+                const t0 = performance.now();
+                let last = null;
+                for (let i = 0; i < iters; i++) {
+                    last = await wsClient.queryMetrics(pattern);
+                    if (twohop2) await wsClient.queryMetrics(twohop2);
+                }
+                const t1 = performance.now();
+                latencies.push((t1 - t0) / iters);
+                if (last) {
+                    vmCycles = last.vmCycles;
+                    matchCount = last.matchCount;
+                }
             }
             latencies.sort((a, b) => a - b);
             const p50 = latencies[Math.floor(latencies.length * 0.5)];
             const p95 = latencies[Math.floor(latencies.length * 0.95)];
-            const throughput = Math.round(1000 / p50);
-            return { p50, p95, throughput, vmCycles, matchCount };
+            return { p50, p95, throughput: Math.round(1000 / p50), vmCycles, matchCount };
         }
 
         // ── Main benchmark runner ──────────────────────────────────────────────
@@ -561,38 +550,63 @@
                 return;
             }
 
-            // Re-check daemon
             const health = await checkDaemon();
             if (!health) {
                 container.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-full text-center py-12 space-y-3">
                         <i class="fas fa-plug text-4xl text-red-500/40 mb-2"></i>
                         <p class="text-slate-300 font-medium">Daemon not reachable at localhost:4242</p>
-                        <p class="text-sm text-slate-500">Start it with: <span class="font-mono text-blue-400">qualia-cli daemon --dev --port 4242</span></p>
+                        <p class="text-sm text-slate-500">Start it with: <span class="font-mono text-blue-400">cargo run --release -p qualia-cli -- daemon --dev --port 4242</span></p>
                     </div>`;
                 status.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>Offline</span>`;
                 status.className = `px-4 py-1.5 text-xs rounded-2xl bg-red-500/10 text-red-400 flex items-center gap-2`;
                 return;
             }
 
-            try {
-                const suitesToRun = suite === 'full'
-                    ? [['point','twohop','filter','ingest']]
-                    : [[suite]];
-                const keys = suite === 'full' ? ['point','twohop','filter','ingest'] : [suite];
+            if (!window._qualiaWsClient) {
+                container.innerHTML = `<div class="text-red-400 py-8 text-center text-sm">WebSocket client not loaded</div>`;
+                return;
+            }
 
+            const profileId = currentDatasetProfile();
+            const storageFormat = document.getElementById('wasmStorageFormat')?.value
+                || (profileId === 'synthetic-10k' ? 'synthetic' : 'nt');
+            const ITERS = 2000;
+            const BATCHES = 10;
+
+            try {
+                container.innerHTML = `<div class="flex items-center gap-3 text-slate-400 py-12 justify-center"><i class="fas fa-spinner fa-spin"></i> Loading dataset <span class="font-mono text-white">${profileId}</span> for native WS bench…</div>`;
+                await new Promise(r => setTimeout(r, 0));
+
+                const manifest = await window._benchFetchManifest(profileId);
+                const loaded = await window._benchLoadDataset(manifest, storageFormat === 'pipeline' ? 'synthetic' : storageFormat);
+                const querySet = window._benchQueriesForManifest(manifest);
+
+                const wsClient = window._qualiaWsClient;
+                await wsClient.connect();
+                container.innerHTML = `<div class="flex items-center gap-3 text-slate-400 py-12 justify-center"><i class="fas fa-spinner fa-spin"></i> Uploading ${loaded.quinCount.toLocaleString()} quins to daemon via WebSocket…</div>`;
+                const benchLoaded = await wsClient.benchLoad(loaded.db);
+                const datasetLabel = loaded.label;
+                const loadNote = `${datasetLabel} • ${benchLoaded.quin_count?.toLocaleString?.() || loaded.quinCount.toLocaleString()} quins on daemon • load ${loaded.loadMs.toFixed(0)} ms`;
+
+                const keys = suite === 'full' ? ['point','twohop','filter','ingest'] : [suite];
                 const results = [];
                 for (const key of keys) {
-                    container.innerHTML = `<div class="flex items-center gap-3 text-slate-400 py-12 justify-center"><i class="fas fa-spinner fa-spin"></i> Running <span class="font-mono text-white">${SUITE_LABELS[key]}</span>…</div>`;
-                    const r = await benchmarkQuery(QUERIES[key], 10);
+                    container.innerHTML = `<div class="flex items-center gap-3 text-slate-400 py-12 justify-center"><i class="fas fa-spinner fa-spin"></i> Running <span class="font-mono text-white">${SUITE_LABELS[key]}</span> via WebSocket…</div>`;
+                    let pattern = querySet[key];
+                    let twohop2 = null;
+                    if (key === 'twohop') {
+                        pattern = querySet.twohop1 || querySet.point;
+                        twohop2 = querySet.twohop2;
+                    }
+                    if (!pattern) continue;
+                    const r = await benchmarkNativeWs(wsClient, pattern, { iters: ITERS, batches: BATCHES, twohop2 });
                     results.push({ label: SUITE_LABELS[key], ...r });
                 }
 
-                // Aggregate for summary cards
                 const avgP50 = results.reduce((s, r) => s + r.p50, 0) / results.length;
                 const totalVm = results.reduce((s, r) => s + r.vmCycles, 0);
                 const avgTput = results.reduce((s, r) => s + r.throughput, 0) / results.length;
-
                 const avgP50Fmt = formatLatency(avgP50);
 
                 let rowsHtml = results.map(r => {
@@ -622,7 +636,7 @@
                         <div class="flex justify-between items-center">
                             <div>
                                 <span class="font-mono text-sm text-emerald-400">✓ COMPLETED</span>
-                                <span class="ml-3 text-sm text-slate-400">NATIVE • ${SUITE_LABELS[suite]} • 10 iterations</span>
+                                <span class="ml-3 text-sm text-slate-400">NATIVE WS • ${SUITE_LABELS[suite]} • ${ITERS * BATCHES} iterations • ${loadNote}</span>
                             </div>
                             <span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>
                         </div>
@@ -645,7 +659,6 @@
 
                 status.innerHTML = `<i class="fas fa-check-circle"></i> <span>Complete</span>`;
                 status.className = `px-4 py-1.5 text-xs rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center gap-2`;
-
             } catch(e) {
                 container.innerHTML = `<div class="text-red-400 py-8 text-center text-sm">${e.message}</div>`;
                 status.innerHTML = `<i class="fas fa-times-circle"></i> <span>Error</span>`;
@@ -678,6 +691,8 @@
             return {
                 point: q.point,
                 twohop: q.twohop,
+                twohop1: q.twohop1,
+                twohop2: q.twohop2,
                 filter: q.filter,
                 ingest: q.ingest,
                 twohopStart: q.twohopStart,
@@ -685,6 +700,11 @@
         };
         window._benchBuildIndex = buildSubjectIndex;
         window._benchQHash = qHash;
+    </script>
+
+    <script type="module">
+        import { QualiaWsClient } from './js/qualia-ws-client.js';
+        window._qualiaWsClient = new QualiaWsClient('http://127.0.0.1:4242');
     </script>
 
     <script type="module">
@@ -704,9 +724,9 @@
             const nativeMode = document.getElementById('btn-native')?.classList.contains('!border-blue-500');
             const env = await collectBrowserExecutionEnvironment({
                 runner: nativeMode && window._liveDaemonHealth
-                    ? 'browser-live-benchmark (native daemon)'
+                    ? 'browser-live-benchmark (native daemon ws)'
                     : 'browser-live-benchmark (wasm)',
-                measurementPath: nativeMode && window._liveDaemonHealth ? 'daemon_http_query' : 'wasm_pipeline',
+                measurementPath: nativeMode && window._liveDaemonHealth ? 'daemon_ws_query_metrics' : 'wasm_pipeline',
                 engineVersion: wasmVer,
                 daemonHealth: window._liveDaemonHealth,
             });

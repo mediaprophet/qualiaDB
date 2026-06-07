@@ -65,6 +65,34 @@ export function register(runner, ctx) {
             runner.expect(wasmResult.matches.length).toBe(0);
             if (ok) runner.expect(body['@graph'].length).toBe(0);
         });
+
+        runner.it('WebSocket metrics query returns vm_cycles', async () => {
+            if (!ctx.native) return;
+            const wsUrl = ctx.native.base.replace('http://', 'ws://') + '/qualia-bridge';
+            const frame = await new Promise((resolve, reject) => {
+                const ws = new WebSocket(wsUrl);
+                const timer = setTimeout(() => { ws.close(); reject(new Error('timeout')); }, 5000);
+                ws.onmessage = (e) => {
+                    const msg = JSON.parse(e.data);
+                    if (msg.type === 'HANDSHAKE_SUCCESS') {
+                        ws.send(JSON.stringify({
+                            type: 'query',
+                            id: 42,
+                            query: '?s ?p ?o',
+                            format: 'metrics',
+                        }));
+                        return;
+                    }
+                    clearTimeout(timer);
+                    ws.close();
+                    resolve(msg);
+                };
+                ws.onerror = () => { clearTimeout(timer); reject(new Error('ws error')); };
+            });
+            runner.expect(frame.type).toBe('result');
+            runner.expect(typeof frame.vm_cycles).toBe('number');
+            runner.expect(frame.vm_cycles).toBeGreaterThanOrEqual(0);
+        });
     });
 
     runner.describe('Native: WebSocket Bridge', () => {

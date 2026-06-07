@@ -3,7 +3,6 @@
 
 #![cfg(target_arch = "wasm32")]
 
-use crate::QualiaQuin;
 use wasm_bindgen::prelude::*;
 
 /// WASM edge offload descriptor — distinct from governance [`crate::llm_agent::AgentIntent`].
@@ -121,7 +120,7 @@ pub fn serialize_float64_array(data: &[f64]) -> js_sys::Float64Array {
 
 /// Proposes a new M:N Guardianship agreement to the local WebRTC mesh.
 #[wasm_bindgen]
-pub fn webizen_propose_agreement(nominated_guardians: js_sys::Array, principal: String, domain: String, threshold: u8) -> u64 {
+pub fn webizen_propose_agreement(_nominated_guardians: js_sys::Array, principal: String, domain: String, threshold: u8) -> u64 {
     // Mock implementation: Mints the DID and broadcasts via WebRTC
     // Returns a deterministic mock agreement_id for testing
     let mut base_id = crate::q_hash(&principal).wrapping_add(crate::q_hash(&domain));
@@ -138,7 +137,7 @@ pub fn webizen_poll_agreements() -> String {
 
 /// Signs a pending agreement, advancing its state machine and triggering WebRTC peer sync.
 #[wasm_bindgen]
-pub fn webizen_sign_agreement(agreement_id: u64, _private_key_mock: String) {
+pub fn webizen_sign_agreement(_agreement_id: u64, _private_key_mock: String) {
     // Transitions to PartiallySigned or Ratified based on threshold
     // Writes the q42:issuesConsentToken to the local DAG for the WebRTC synchronizer
 }

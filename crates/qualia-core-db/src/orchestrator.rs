@@ -190,23 +190,23 @@ impl TaskOrchestrator {
         match agent.validate_intent(&intent) {
             WebizenVerdict::Deny { rule_violated, reason, conduct_record } => {
                 // If the verdict contains a conduct violation Quin, propagate it to the immutable ledger
+                #[cfg(not(target_arch = "wasm32"))]
                 if let Some(quin) = conduct_record {
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        if let Ok(mut wal) = crate::wal::WriteAheadLog::open(".qualia_conduct.wal") {
-                            let _ = wal.append_mutation(&quin);
-                            
-                            // Cryptographic signing pipeline (using a static key for demonstration of wiring)
-                            let secret = [42u8; 32];
-                            let signing_key = ed25519_dalek::SigningKey::from_bytes(&secret);
-                            let frame = [quin];
-                            let sub_root = crate::agency::compute_scoped_merkle_root(&frame, intent.principal_did_hash);
-                            let _signature = crate::agency::sign_agency_root(&signing_key, &sub_root);
-                            
-                            // In production, the signature and quin would be passed to SuperBlockWriter
-                        }
+                    if let Ok(mut wal) = crate::wal::WriteAheadLog::open(".qualia_conduct.wal") {
+                        let _ = wal.append_mutation(&quin);
+
+                        // Cryptographic signing pipeline (using a static key for demonstration of wiring)
+                        let secret = [42u8; 32];
+                        let signing_key = ed25519_dalek::SigningKey::from_bytes(&secret);
+                        let frame = [quin];
+                        let sub_root = crate::agency::compute_scoped_merkle_root(&frame, intent.principal_did_hash);
+                        let _signature = crate::agency::sign_agency_root(&signing_key, &sub_root);
+
+                        // In production, the signature and quin would be passed to SuperBlockWriter
                     }
                 }
+                #[cfg(target_arch = "wasm32")]
+                let _ = conduct_record;
                 return OrchestrationResult::Blocked { rule_violated, reason };
             }
             WebizenVerdict::DenyWithExplanation { rule_violated, reason: _, explanation: _ } => {
@@ -253,14 +253,14 @@ impl TaskOrchestrator {
         // 3. Post-flight: validate output grounding
         match agent.validate_output(&output) {
             WebizenVerdict::Deny { rule_violated, reason, conduct_record } => {
+                #[cfg(not(target_arch = "wasm32"))]
                 if let Some(quin) = conduct_record {
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        if let Ok(mut wal) = crate::wal::WriteAheadLog::open(".qualia_conduct.wal") {
-                            let _ = wal.append_mutation(&quin);
-                        }
+                    if let Ok(mut wal) = crate::wal::WriteAheadLog::open(".qualia_conduct.wal") {
+                        let _ = wal.append_mutation(&quin);
                     }
                 }
+                #[cfg(target_arch = "wasm32")]
+                let _ = conduct_record;
                 OrchestrationResult::Blocked { rule_violated, reason }
             }
             WebizenVerdict::DenyWithExplanation { rule_violated, reason: _, explanation: _ } => {

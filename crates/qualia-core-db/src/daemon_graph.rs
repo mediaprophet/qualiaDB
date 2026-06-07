@@ -7,7 +7,8 @@ use crate::{q_hash, QualiaQuin};
 use std::path::Path;
 use std::sync::{OnceLock, RwLock};
 
-const MAX_GRAPH_QUINS: usize = 8_192;
+/// Bench datasets (Schema.org ~18K quins) must fit for browser/native parity.
+const MAX_GRAPH_QUINS: usize = 65_536;
 
 static GRAPH: OnceLock<RwLock<Vec<QualiaQuin>>> = OnceLock::new();
 
@@ -136,6 +137,30 @@ pub fn graph_read_guard(
     graph_lock().read().expect("daemon graph poisoned")
 }
 
+/// Replace the in-memory graph with flat 48-byte QualiaQuin bytes (browser bench_load).
+pub fn replace_graph_from_flat_bytes(bytes: &[u8]) -> Result<usize, &'static str> {
+    if bytes.is_empty() {
+        let lock = graph_lock();
+        if let Ok(mut guard) = lock.write() {
+            guard.clear();
+        }
+        return Ok(0);
+    }
+    if bytes.len() % 48 != 0 {
+        return Err("db_bytes length must be a multiple of 48");
+    }
+    let quin_count = bytes.len() / 48;
+    if quin_count > MAX_GRAPH_QUINS {
+        return Err("graph exceeds daemon MAX_GRAPH_QUINS");
+    }
+    let quins: &[QualiaQuin] = bytemuck::cast_slice(bytes);
+    let lock = graph_lock();
+    let mut guard = lock.write().map_err(|_| "daemon graph poisoned")?;
+    guard.clear();
+    guard.extend_from_slice(quins);
+    Ok(quin_count)
+}
+
 /// Known condition subject hashes for Anatomy graph → label mapping.
 pub fn condition_label_for_subject_hash(subject: u64) -> Option<&'static str> {
     const BIO: &str = "https://qualia.anatomy.example/ontology/bio#";
@@ -166,5 +191,19 @@ mod tests {
     fn seed_graph_has_health_quins() {
         init_daemon_graph("/tmp/qualia-test-graph");
         assert!(graph_quin_count() >= 8);
+    }
+
+    #[test]
+    fn replace_graph_from_flat_bytes_round_trip() {
+        let quin = triple_quin(
+            "http://q.test/s/0",
+            "http://q.test/p/0",
+            "http://q.test/o/0",
+            "did:qualia:test",
+        );
+        let bytes = bytemuck::bytes_of(&quin);
+        let count = replace_graph_from_flat_bytes(bytes).expect("load flat quin");
+        assert_eq!(count, 1);
+        assert_eq!(graph_quin_count(), 1);
     }
 }

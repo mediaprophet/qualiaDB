@@ -70,6 +70,67 @@ fn proxy_fetch_error(status: StatusCode, message: impl Into<String>) -> warp::ht
         .expect("proxy error response")
 }
 
+fn ws_query_error_json(id: u64, err: QueryExecError) -> serde_json::Value {
+    match err {
+        QueryExecError::EmptyQuery => json!({
+            "type": "error",
+            "id": id,
+            "code": "empty_query",
+            "message": "query must be non-empty",
+        }),
+        QueryExecError::ParseError(message) => json!({
+            "type": "error",
+            "id": id,
+            "code": "parse_error",
+            "message": message,
+        }),
+        QueryExecError::OutputBufferFull => json!({
+            "type": "error",
+            "id": id,
+            "code": "result_set_too_large",
+            "message": "query matched more than the output buffer allows",
+        }),
+        QueryExecError::InvalidProgram => json!({
+            "type": "error",
+            "id": id,
+            "code": "vm_error",
+            "message": "internal VM rejected the compiled program",
+        }),
+        QueryExecError::ClassifiedEgress => json!({
+            "type": "error",
+            "id": id,
+            "code": "restricted_data_access",
+            "message": "gatekeeper blocked classified context egress",
+        }),
+    }
+}
+
+fn decode_bench_load_b64(b64: &str) -> Result<Vec<u8>, &'static str> {
+    let cleaned: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
+    let padded = match cleaned.len() % 4 {
+        0 => cleaned,
+        n => format!("{cleaned}{}", "=".repeat(4 - n)),
+    };
+    let mut out = Vec::with_capacity(padded.len() * 3 / 4);
+    let table = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut buf = 0u32;
+    let mut bits = 0u32;
+    for ch in padded.bytes() {
+        if ch == b'=' {
+            break;
+        }
+        let val = table.iter().position(|&t| t == ch).ok_or("invalid base64")? as u32;
+        buf = (buf << 6) | val;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((buf >> bits) as u8);
+            buf &= (1u32 << bits) - 1;
+        }
+    }
+    Ok(out)
+}
+
 fn proxy_fetch_ok(content_type: &str, bytes: Vec<u8>) -> warp::http::Response<warp::hyper::Body> {
     let mut response = warp::http::Response::new(warp::hyper::Body::from(bytes));
     *response.status_mut() = StatusCode::OK;
@@ -126,9 +187,7 @@ pub fn execution_environment_json() -> serde_json::Value {
     })
 }
 
-/// Maximum number of result Quins the daemon will buffer per request.
-/// At 48 bytes each, 1 000 Quins consume 48 KB — well inside the 512 MB ceiling.
-const QUERY_OUT_SLOTS: usize = 1_000;
+use crate::daemon_query::{self, QueryExecError};
 
 #[derive(Clone)]
 struct DaemonSecurity {
@@ -257,11 +316,13 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     }
 
     // -----------------------------------------------------------------------
-    // WebSocket bridge
+    // WebSocket bridge — handshake + query metrics + bench_load
     // -----------------------------------------------------------------------
+    let ws_dev = dev;
     let qualia_bridge = warp::path("qualia-bridge")
         .and(warp::ws())
-        .map(|ws: warp::ws::Ws| {
+        .map(move |ws: warp::ws::Ws| {
+            let dev = ws_dev;
             ws.on_upgrade(move |mut socket| async move {
                 let handshake = json!({
                     "type": "HANDSHAKE_SUCCESS",
@@ -274,15 +335,136 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                 {
                     println!("[Qualia Daemon] Client connected to Native WebSocket Bridge");
                 }
+
+                let mut pending_bench_id: Option<u64> = None;
+
                 while let Some(result) = socket.next().await {
                     match result {
-                        Ok(msg) => {
-                            if msg.is_text() {
-                                let _text = msg.to_str().unwrap_or_default();
-                            } else if msg.is_binary() {
-                                let _bytes = msg.as_bytes();
+                        Ok(msg) if msg.is_binary() => {
+                            if let Some(id) = pending_bench_id.take() {
+                                let bytes = msg.as_bytes();
+                                let reply = match crate::daemon_graph::replace_graph_from_flat_bytes(bytes)
+                                {
+                                    Ok(count) => json!({
+                                        "type": "bench_loaded",
+                                        "id": id,
+                                        "quin_count": count,
+                                        "graph_quin_count": crate::daemon_graph::graph_quin_count(),
+                                    }),
+                                    Err(message) => json!({
+                                        "type": "error",
+                                        "id": id,
+                                        "code": "bench_load_failed",
+                                        "message": message,
+                                    }),
+                                };
+                                let _ = socket.send(warp::ws::Message::text(reply.to_string())).await;
                             }
                         }
+                        Ok(msg) if msg.is_text() => {
+                            let text = msg.to_str().unwrap_or_default();
+                            let Ok(frame) = serde_json::from_str::<serde_json::Value>(text) else {
+                                let _ = socket.send(warp::ws::Message::text(json!({
+                                    "type": "error",
+                                    "code": "invalid_json",
+                                    "message": "expected JSON frame"
+                                }).to_string())).await;
+                                continue;
+                            };
+
+                            let frame_type = frame.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                            let id = frame.get("id").and_then(|v| v.as_u64()).unwrap_or(0);
+
+                            let reply = match frame_type {
+                                "query" => {
+                                    let query = frame
+                                        .get("query")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("")
+                                        .to_string();
+                                    let format = frame
+                                        .get("format")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("metrics");
+                                    if format != "metrics" {
+                                        json!({
+                                            "type": "error",
+                                            "id": id,
+                                            "code": "unsupported_format",
+                                            "message": "WebSocket queries support format=metrics only"
+                                        })
+                                    } else {
+                                        let graph = crate::daemon_graph::graph_read_guard();
+                                        match daemon_query::execute_ntriples_metrics(&query, graph.as_slice()) {
+                                            Ok(stats) => json!({
+                                                "type": "result",
+                                                "id": id,
+                                                "match_count": stats.match_count,
+                                                "vm_cycles": stats.vm_cycles,
+                                                "direct_jump_ops": stats.direct_jump_ops,
+                                                "lexicon_lookup_ops": stats.lexicon_lookup_ops,
+                                            }),
+                                            Err(err) => ws_query_error_json(id, err),
+                                        }
+                                    }
+                                }
+                                "bench_load" if dev => {
+                                    if frame.get("byte_length").and_then(|v| v.as_u64()).is_some() {
+                                        pending_bench_id = Some(id);
+                                        json!({
+                                            "type": "bench_load_ready",
+                                            "id": id,
+                                            "message": "send next binary frame with flat QualiaQuin bytes"
+                                        })
+                                    } else if let Some(b64) = frame.get("db_b64").and_then(|v| v.as_str()) {
+                                        match decode_bench_load_b64(b64) {
+                                            Ok(bytes) => match crate::daemon_graph::replace_graph_from_flat_bytes(&bytes) {
+                                                Ok(count) => json!({
+                                                    "type": "bench_loaded",
+                                                    "id": id,
+                                                    "quin_count": count,
+                                                    "graph_quin_count": crate::daemon_graph::graph_quin_count(),
+                                                }),
+                                                Err(message) => json!({
+                                                    "type": "error",
+                                                    "id": id,
+                                                    "code": "bench_load_failed",
+                                                    "message": message,
+                                                }),
+                                            },
+                                            Err(message) => json!({
+                                                "type": "error",
+                                                "id": id,
+                                                "code": "bench_load_failed",
+                                                "message": message,
+                                            }),
+                                        }
+                                    } else {
+                                        json!({
+                                            "type": "error",
+                                            "id": id,
+                                            "code": "bench_load_failed",
+                                            "message": "bench_load requires db_b64 or byte_length + binary frame"
+                                        })
+                                    }
+                                }
+                                "bench_load" => json!({
+                                    "type": "error",
+                                    "id": id,
+                                    "code": "forbidden",
+                                    "message": "bench_load requires daemon --dev"
+                                }),
+                                _ => json!({
+                                    "type": "error",
+                                    "id": id,
+                                    "code": "unknown_type",
+                                    "message": format!("unsupported frame type: {frame_type}")
+                                }),
+                            };
+
+                            let _ = socket.send(warp::ws::Message::text(reply.to_string())).await;
+                        }
+                        Ok(_) => {}
                         Err(e) => {
                             eprintln!("[Qualia Daemon] WebSocket error: {e}");
                             break;
@@ -443,44 +625,41 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                     );
                 }
 
-                // --- Step 1: Compile query → bytecode program ----------------
-                let mut program = [0u8; 1024];
-                if let Err(parse_err) = crate::mini_parser::compile_ntriples_to_bytecode(
-                    request.query.as_bytes(),
-                    &mut program,
-                ) {
-                    return make_response(
-                        StatusCode::BAD_REQUEST,
-                        "application/json",
-                        json!({
-                            "status": "error",
-                            "code": "parse_error",
-                            "message": format!(
-                                "Query could not be compiled to bytecode: {:?}. \
-                                 Supply a single N-Triples pattern, e.g. \
-                                 \"<subject> ?p <object> .\"",
-                                parse_err
-                            )
-                        })
-                        .to_string(),
-                    );
-                }
-
-                // --- Step 2: Execute VM against the in-memory graph ----------
-                // Pre-allocate a fixed output slice (48 bytes × 1 000 = 48 KB).
-                let mut out_buffer =
-                    vec![crate::QualiaQuin::default(); QUERY_OUT_SLOTS];
-
                 let graph_guard = crate::daemon_graph::graph_read_guard();
-                let current_database_state = graph_guard.as_slice();
-
-                let (match_count, vm_cycles) = match crate::webizen_bytecode::execute_program(
-                    &program,
-                    current_database_state,
-                    &mut out_buffer,
+                let (stats, final_results) = match daemon_query::execute_ntriples_pattern_on_graph(
+                    &request.query,
+                    graph_guard.as_slice(),
                 ) {
                     Ok(pair) => pair,
-                    Err(crate::webizen_bytecode::VmError::OutputBufferFull) => {
+                    Err(QueryExecError::EmptyQuery) => {
+                        return make_response(
+                            StatusCode::BAD_REQUEST,
+                            "application/json",
+                            json!({
+                                "status": "error",
+                                "code": "empty_query",
+                                "message": "Query payload must include a non-empty query string"
+                            })
+                            .to_string(),
+                        );
+                    }
+                    Err(QueryExecError::ParseError(detail)) => {
+                        return make_response(
+                            StatusCode::BAD_REQUEST,
+                            "application/json",
+                            json!({
+                                "status": "error",
+                                "code": "parse_error",
+                                "message": format!(
+                                    "Query could not be compiled to bytecode: {detail}. \
+                                     Supply a single N-Triples pattern, e.g. \
+                                     \"<subject> ?p <object> .\""
+                                )
+                            })
+                            .to_string(),
+                        );
+                    }
+                    Err(QueryExecError::OutputBufferFull) => {
                         return make_response(
                             StatusCode::PAYLOAD_TOO_LARGE,
                             "application/json",
@@ -488,14 +667,15 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                                 "status": "error",
                                 "code": "result_set_too_large",
                                 "message": format!(
-                                    "Query matched more than {QUERY_OUT_SLOTS} Quins. \
-                                     Add more constraints to narrow the result set."
+                                    "Query matched more than {} Quins. \
+                                     Add more constraints to narrow the result set.",
+                                    daemon_query::QUERY_OUT_SLOTS
                                 )
                             })
                             .to_string(),
                         );
                     }
-                    Err(crate::webizen_bytecode::VmError::InvalidProgram) => {
+                    Err(QueryExecError::InvalidProgram) => {
                         return make_response(
                             StatusCode::INTERNAL_SERVER_ERROR,
                             "application/json",
@@ -507,16 +687,8 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                             .to_string(),
                         );
                     }
-                };
-
-                let final_results = &out_buffer[..match_count];
-
-                // --- INFORMATICS FIDUCIARY GATEKEEPER -------------------------
-                // Hard filter enforcing the Webizen Sensitivity Ontology.
-                // Classified data must NEVER leave the daemon via query egress.
-                for quin in final_results {
-                    if quin.get_sensitivity_byte() == crate::QualiaQuin::SENSITIVITY_CLASSIFIED {
-                        println!("[Webizen Gatekeeper] DENIED egress of Classified record: {}", quin.subject);
+                    Err(QueryExecError::ClassifiedEgress) => {
+                        println!("[Webizen Gatekeeper] DENIED egress of Classified record");
                         return make_response(
                             StatusCode::FORBIDDEN,
                             "application/json",
@@ -528,9 +700,12 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                             .to_string(),
                         );
                     }
-                }
+                };
 
-                // --- Step 3: Serialise and attach compute-cost telemetry -----
+                let match_count = stats.match_count;
+                let vm_cycles = stats.vm_cycles;
+
+                // --- Serialise and attach compute-cost telemetry -------------
                 match output_format {
                     OutputFormat::NTriples => {
                         // `format_ntriples_to` writes directly to the Vec<u8>
@@ -538,7 +713,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                         let mut body_buf: Vec<u8> =
                             Vec::with_capacity(match_count.max(1) * 80);
                         let _ = crate::resolver::format_ntriples_to(
-                            final_results,
+                            &final_results,
                             &mut body_buf,
                         );
                         let body = String::from_utf8(body_buf).unwrap_or_default();

@@ -21,7 +21,9 @@ pub struct PrerequisiteStatus {
     pub bundled_webview2_dir: String,
 }
 
+#[cfg(windows)]
 const VC_REDIST_URL: &str = "https://aka.ms/vs/17/release/vc_redist.x64.exe";
+#[cfg(windows)]
 const WEBVIEW2_BOOTSTRAPPER_URL: &str = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
 
 #[cfg(windows)]

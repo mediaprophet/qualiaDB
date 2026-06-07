@@ -25,7 +25,16 @@ fn host_class() -> &'static str {
     {
         return "WASM_BROWSER";
     }
-    "UNKNOWN"
+    #[cfg(not(any(
+        all(target_arch = "aarch64", target_os = "macos"),
+        all(target_arch = "aarch64", any(target_os = "android", target_os = "ios")),
+        all(target_arch = "aarch64", not(any(target_os = "macos", target_os = "android", target_os = "ios"))),
+        target_arch = "x86_64",
+        target_arch = "wasm32",
+    )))]
+    {
+        return "UNKNOWN";
+    }
 }
 
 /// Non-identifying device/host fingerprint for cross-machine benchmark cohorts.

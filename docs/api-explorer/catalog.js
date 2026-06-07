@@ -1084,17 +1084,28 @@ curl -X POST http://127.0.0.1:4242/query \\
         id: 'daemon.websocket',
         category: 'Native Daemon',
         name: 'WS /qualia-bridge',
-        summary: 'WebSocket bridge for real-time native compute offload. On connect the daemon immediately sends a HANDSHAKE_SUCCESS frame with mode="NATIVE" and the current version. Used by the desktop/mobile apps for streaming graph updates.',
-        params: [],
-        returns: 'First message: { type: "HANDSHAKE_SUCCESS", payload: { mode: "NATIVE", version: "0.0.x" } }',
+        summary: 'WebSocket bridge for native compute offload and browser benchmarks. On connect: HANDSHAKE_SUCCESS. Query frames use format=metrics (no JSON-LD payload). Dev daemon supports bench_load (binary flat QualiaQuin bytes).',
+        params: [
+            { name: 'query', type: 'string', desc: 'N-Triples pattern for type=query frames' },
+            { name: 'format', type: 'string', desc: '"metrics" — returns match_count + vm_cycles only' },
+        ],
+        returns: 'HANDSHAKE_SUCCESS, then { type: "result", match_count, vm_cycles, direct_jump_ops } or bench_loaded',
         snippets: [
             js(`
 const ws = new WebSocket('ws://127.0.0.1:4242/qualia-bridge');
-
 ws.onmessage = (e) => {
   const msg = JSON.parse(e.data);
-  // msg.type    === "HANDSHAKE_SUCCESS"
-  // msg.payload === { mode: "NATIVE", version: "0.0.8" }
+  if (msg.type === 'HANDSHAKE_SUCCESS') {
+    ws.send(JSON.stringify({
+      type: 'query',
+      id: 1,
+      query: '<http://q.test/s/0> ?p ?o .',
+      format: 'metrics',
+    }));
+  }
+  if (msg.type === 'result') {
+    // msg.match_count, msg.vm_cycles — no HTTP/JSON-LD overhead
+  }
 };
 `),
             cli(`
