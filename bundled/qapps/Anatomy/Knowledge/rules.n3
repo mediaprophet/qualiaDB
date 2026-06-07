@@ -1,0 +1,116 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix bio:   <https://qualia.anatomy.example/ontology/bio#> .
+@prefix impact: <https://qualia.anatomy.example/ontology/impact#> .
+@prefix organ: <https://qualia.anatomy.example/ontology/organ#> .
+@prefix diet:  <https://qualia.anatomy.example/ontology/diet#> .
+
+# =============================================
+# BioStatus Impact Rules (N3Logic)
+# Version: 0.1
+# These rules demonstrate combined systemic impacts
+# and can later be expanded or executed with an N3 reasoner.
+# =============================================
+
+# --- Rule: Type 2 Diabetes + Hypertension synergy on vascular system ---
+{
+    ?agent bio:hasCondition bio:Type2Diabetes .
+    ?agent bio:hasCondition bio:Hypertension .
+} => {
+    ?agent impact:hasIncreasedRiskOn organ:BloodVessels .
+    ?agent impact:hasIncreasedRiskOn organ:Kidney .
+    ?agent impact:combinedSystemicBurden "High" .
+} .
+
+# --- Rule: Diabetes + High Glycemic Diet worsens renal impact ---
+{
+    ?agent bio:hasCondition bio:Type2Diabetes .
+    ?agent diet:hasPattern diet:HighGlycemicLoad .
+} => {
+    ?agent impact:hasWorsenedImpactOn organ:Kidney .
+    ?agent impact:renalRiskLevel "Elevated" .
+} .
+
+# --- Rule: Hypertension + High Sodium Diet ---
+{
+    ?agent bio:hasCondition bio:Hypertension .
+    ?agent diet:hasPattern diet:HighSodium .
+} => {
+    ?agent impact:hasWorsenedImpactOn organ:Heart .
+    ?agent impact:hasWorsenedImpactOn organ:BloodVessels .
+    ?agent impact:cardiovascularRiskLevel "Elevated" .
+} .
+
+# --- Rule: Obesity amplifies multiple conditions ---
+{
+    ?agent bio:hasCondition bio:Obesity .
+    ?agent bio:hasCondition bio:Type2Diabetes .
+} => {
+    ?agent impact:hasIncreasedRiskOn organ:Heart .
+    ?agent impact:hasIncreasedRiskOn organ:Kidney .
+    ?agent impact:hasIncreasedRiskOn organ:Liver .
+} .
+
+{
+    ?agent bio:hasCondition bio:Obesity .
+    ?agent bio:hasCondition bio:Hypertension .
+} => {
+    ?agent impact:hasIncreasedRiskOn organ:CardiovascularSystem .
+    ?agent impact:combinedSystemicBurden "High" .
+} .
+
+# --- Rule: COPD + Cardiovascular disease interaction ---
+{
+    ?agent bio:hasCondition bio:COPD .
+    ?agent bio:hasCondition bio:HeartFailure .
+} => {
+    ?agent impact:hasIncreasedRiskOn organ:Heart .
+    ?agent impact:hasIncreasedRiskOn organ:Lung .
+    ?agent impact:respiratoryCardiacBurden "High" .
+} .
+
+# --- Rule: Rheumatoid Arthritis + Cardiovascular risk ---
+{
+    ?agent bio:hasCondition bio:RheumatoidArthritis .
+} => {
+    ?agent impact:hasIncreasedRiskOn organ:Heart .
+    ?agent impact:hasIncreasedRiskOn organ:BloodVessels .
+} .
+
+# --- Rule: Sleep Apnea + Hypertension synergy ---
+{
+    ?agent bio:hasCondition bio:ObstructiveSleepApnea .
+    ?agent bio:hasCondition bio:Hypertension .
+} => {
+    ?agent impact:hasIncreasedRiskOn organ:Heart .
+    ?agent impact:hasIncreasedRiskOn organ:Brain .
+    ?agent impact:cardiovascularRiskLevel "High" .
+} .
+
+# --- Rule: Multiple conditions increase overall systemic burden ---
+{
+    ?agent bio:hasCondition ?c1 .
+    ?agent bio:hasCondition ?c2 .
+    ?c1 != ?c2 .
+} => {
+    ?agent impact:hasMultipleConditions true .
+    ?agent impact:overallSystemicBurden "Elevated" .
+} .
+
+# =============================================
+# Notes & Future Rules
+# =============================================
+# These are starter N3Logic rules demonstrating:
+# - Condition + Condition interactions
+# - Condition + Diet interactions
+# - Increased risk propagation to organ systems
+#
+# Planned expansions:
+# - More granular severity scoring
+# - Medication interaction rules
+# - Protective factor rules (e.g. good diet, exercise)
+# - Integration with QualiaDB Prolog Sentinel
+# - Rules that output specific 3D visualization hints
+#
+# These rules can be executed with an N3 reasoner (e.g. EYE)
+# or translated into QualiaDB rules.

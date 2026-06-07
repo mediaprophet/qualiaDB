@@ -1,0 +1,125 @@
+{
+  "name": "Anatomy",
+  "version": "0.0.8",
+  "required_shapes": [
+    "schema:HealthCondition",
+    "schema:MedicalRecord",
+    "qualia:BiometricRecord",
+    "qualia:SleepRecord",
+    "qualia:MedicationRecord",
+    "qualia:ConsentRecord",
+    "qualia:AnatomicalStructure"
+  ],
+  "x_qualia": {
+    "app_id": "did:qualia:qapp:anatomy",
+    "display_name": "Qualia Anatomy",
+    "category": "health-visualization",
+    "launch_modes": [
+      "static-web",
+      "wasm-local",
+      "flutter-app-vault",
+      "online-daemon-aware"
+    ],
+    "preferred_launch_mode": "flutter-app-vault",
+    "supports_offline": true,
+    "requires": [
+      {
+        "capability": "qualia.localDaemon.health",
+        "required": false
+      },
+      {
+        "capability": "qualia.localDaemon.query",
+        "required": false
+      },
+      {
+        "capability": "qualia.wasm.execute_ntriples_query",
+        "required": false
+      },
+      {
+        "capability": "qualia.flutter.chatRepresentationLaunch",
+        "required": false
+      }
+    ],
+    "required_ontologies": [
+      "q42:anatomy",
+      "snomedct-us",
+      "https://qualia.anatomy.example/ontology/bio#"
+    ],
+    "optional_remote_endpoints": [
+      "wikidata-main"
+    ],
+    "max_sensitivity_clearance": "0x00",
+    "entrypoints": {
+      "web": "index.html",
+      "representation": "index.html#representation",
+      "chat_component": "index.html#chat-component"
+    },
+    "wasm": {
+      "engine_package": "qualia-core-wasm",
+      "expected_exports": [
+        "get_engine_version",
+        "compile_query_to_json",
+        "execute_ntriples_query",
+        "parse_turtle_wasm",
+        "parse_n3logic_wasm",
+        "validate_shacl_constraint_wasm"
+      ]
+    },
+    "local_daemon": {
+      "health_path": "/health",
+      "query_path": "/query",
+      "websocket_path": "/qualia-bridge",
+      "requires_token": true,
+      "launch_params": ["qualia_token", "qualia_daemon_port", "qualia_qapp"]
+    },
+    "auth": {
+      "handoff": "host-launch-url",
+      "token_header": "X-Qualia-Token",
+      "issuer": "qualia.key_vault.issue_qapp_token"
+    },
+    "chat_integration": {
+      "intent": "anatomy:represent-graph-complexity",
+      "payload_version": "1.0.0",
+      "supports_launch_from_chat": true,
+      "supports_return_to_chat": true,
+      "graph_context_builder": "qualia.build_anatomy_graph_context_json",
+      "emits": ["conditions", "conditionImpactMap", "systems", "daemonMatchCount", "dicomOverlay"]
+    },
+    "representation_contract": {
+      "accepts": [
+        "anatomySelection",
+        "conditionImpactMap",
+        "conditions",
+        "dicomOverlay",
+        "graphSummary",
+        "explanationCard",
+        "systemOverlay",
+        "systemFocus",
+        "relatedSystems"
+      ],
+      "dicomOverlay": {
+        "version": "1.0.0",
+        "supports": ["single-slice", "multi-slice-series", "metadata-organ-inference", "heuristic-plane-overlay"],
+        "future": ["patient-space-registration", "volume-rendering", "flutter-file-handoff"],
+        "fields": ["organ", "opacity", "visible", "placement", "seriesInstanceUID"]
+      },
+      "knowledge_assets": [
+        "Knowledge/system-map.json",
+        "Knowledge/condition-map.json",
+        "Knowledge/conditions.ttl",
+        "Knowledge/shapes.shacl",
+        "Knowledge/dicom-organ-map.json"
+      ],
+      "supported_system_count": 17
+    },
+    "ui_surfaces": [
+      "full-screen",
+      "panel",
+      "embedded"
+    ],
+    "notes": [
+      "Qapp Vault installer reads qapp.json: name, version, required_shapes, dev_port, and x_qualia.",
+      "Static mode must remain functional even when no daemon, token, or WASM runtime is available."
+    ]
+  }
+}

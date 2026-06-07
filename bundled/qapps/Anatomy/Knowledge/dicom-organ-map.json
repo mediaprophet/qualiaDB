@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "description": "Maps common DICOM metadata tokens to Anatomy bundled organ models.",
+  "tagMatchers": [
+    { "tokens": ["heart", "cardiac", "coronary", "aorta"], "organ": "Heart" },
+    { "tokens": ["lung", "pulmonary", "chest ct", "thorax"], "organ": "Lung" },
+    { "tokens": ["liver", "hepatic"], "organ": "Liver" },
+    { "tokens": ["brain", "cerebral", "cranial", "head"], "organ": "Brain (Allen)" },
+    { "tokens": ["kidney", "renal"], "organ": "Kidney (Left)" },
+    { "tokens": ["pancrea", "pancreatic"], "organ": "Pancreas" },
+    { "tokens": ["spleen", "splenic"], "organ": "Spleen" },
+    { "tokens": ["intestin", "bowel", "abdomen"], "organ": "Small Intestine" },
+    { "tokens": ["prostate"], "organ": "Prostate" },
+    { "tokens": ["uterus", "uterine"], "organ": "Uterus" },
+    { "tokens": ["ovary", "ovarian"], "organ": "Ovary (Left)" }
+  ],
+  "notes": [
+    "Inference uses Body Part Examined (0018,0015) and Series/Study Description.",
+    "Spatial registration is heuristic in phase 1; true patient-space transforms belong in dicomOverlay.placement from the host/graph."
+  ]
+}
