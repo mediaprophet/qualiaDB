@@ -194,7 +194,7 @@
 
     <!-- Load Qualia WASM and expose execute_ntriples_query globally -->
     <script type="module">
-        import init, { execute_ntriples_query } from './playground/qualia_core_db.js';
+        import init, { execute_ntriples_query, get_engine_version } from './playground/qualia_core_db.js';
         const el = document.getElementById('wasm-badge');
         try {
             const response = await fetch('./playground/qualia_core_db_bg.wasm');
@@ -221,8 +221,9 @@
 
             await init(trackedResponse);
             window._qualiaExec = execute_ntriples_query;
+            const wasmVer = typeof get_engine_version === 'function' ? get_engine_version() : null;
             if (el) {
-                el.textContent = 'WASM Ready';
+                el.textContent = wasmVer ? `WASM v${wasmVer}` : 'WASM Ready';
                 el.className = el.className.replace('text-slate-500', 'text-emerald-400');
             }
         } catch(e) {

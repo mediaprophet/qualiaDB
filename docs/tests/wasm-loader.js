@@ -4,6 +4,7 @@
 let _mod = null;
 let _initPromise = null;
 let _coverage = null;
+let _wasmVersion = null;
 
 const EXPECTED_WASM_EXPORTS = [
     'compile_query_to_json',
@@ -76,6 +77,9 @@ export async function loadWasm() {
             const trackedResponse = new Response(readable, { headers: response.headers });
             await module.default(trackedResponse);
             _mod = module;
+            _wasmVersion = typeof module.get_engine_version === 'function'
+                ? module.get_engine_version()
+                : null;
             _coverage = summarizeCoverage(module);
         } catch (e) {
             console.warn('[wasm-loader] WASM init failed:', e.message);
@@ -93,6 +97,15 @@ export async function getWasmCoverage() {
     const mod = await loadWasm();
     if (!_coverage) _coverage = summarizeCoverage(mod);
     return _coverage;
+}
+
+export async function getWasmVersion() {
+    if (_wasmVersion) return _wasmVersion;
+    const mod = await loadWasm();
+    if (!_wasmVersion && typeof mod?.get_engine_version === 'function') {
+        _wasmVersion = mod.get_engine_version();
+    }
+    return _wasmVersion;
 }
 
 // Convenience: call fn(mod) only if fn exists in the module, else skip.

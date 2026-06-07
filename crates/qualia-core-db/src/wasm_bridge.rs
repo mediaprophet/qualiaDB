@@ -605,3 +605,12 @@ pub fn parse_json_wasm(payload: &str) -> JsValue {
         JsValue::NULL
     }
 }
+
+// ─── Engine metadata ─────────────────────────────────────────────────────────
+
+/// Returns the qualia-core-db crate version baked in at compile time (matches daemon `/health`).
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn get_engine_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}

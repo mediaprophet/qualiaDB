@@ -435,7 +435,10 @@ const CAT_CLASS = {
         wasmMod = mod;
         const ready = typeof mod.execute_ntriples_query === 'function'
                    || typeof mod.compile_query_to_json === 'function';
-        chipW.textContent = ready ? '⬤ WASM ready' : '⬤ WASM (partial)';
+        const ver = typeof mod.get_engine_version === 'function' ? mod.get_engine_version() : null;
+        chipW.textContent = ready
+            ? (ver ? `⬤ WASM v${ver}` : '⬤ WASM ready')
+            : '⬤ WASM (partial)';
         chipW.className   = 'chip ' + (ready ? 'ready' : 'offline');
     });
 

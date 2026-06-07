@@ -2,7 +2,7 @@
 // Modes: 'wasm' | 'native' | 'both'
 
 import { TestRunner } from './test-runner.js';
-import { loadWasm, getWasmCoverage } from './wasm-loader.js';
+import { loadWasm, getWasmCoverage, getWasmVersion } from './wasm-loader.js';
 import { NativeClient, detectModes } from './native-client.js';
 
 // Suite imports
@@ -50,6 +50,7 @@ let detected = {
     daemonVersion: null,
     token: '',
     wasmCoverage: null,
+    wasmVersion: null,
 };
 
 // Shared test context - passed to every register() call
@@ -81,12 +82,13 @@ function updateModeUI() {
 
     const wb = $id('wasm-badge');
     const coverage = detected.wasmCoverage;
+    const ver = detected.wasmVersion ? ` v${detected.wasmVersion}` : '';
     if (detected.wasm && coverage?.partial) {
         wb.className = 'mode-status warn';
-        wb.textContent = `Partial WASM build (${coverage.available}/${coverage.expected} exports)`;
+        wb.textContent = `Partial WASM${ver} (${coverage.available}/${coverage.expected} exports)`;
     } else if (detected.wasm) {
         wb.className = 'mode-status online';
-        wb.textContent = 'WASM ready';
+        wb.textContent = `WASM${ver} ready`;
     } else {
         wb.className = 'mode-status loading';
         wb.textContent = 'Loading WASM';
@@ -293,6 +295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (d.wasm) {
             try {
                 detected.wasmCoverage = await getWasmCoverage();
+                detected.wasmVersion = await getWasmVersion();
             } catch (_) {}
         }
         ctx.wasm = null;

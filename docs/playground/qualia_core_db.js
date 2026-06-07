@@ -365,6 +365,27 @@ export function execute_ntriples_query(query, db_bytes, max_results) {
 }
 
 /**
+ * Returns the qualia-core-db crate version baked in at compile time (matches daemon `/health`).
+ * @returns {string}
+ */
+export function get_engine_version() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.get_engine_version(retptr);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        deferred1_0 = r0;
+        deferred1_1 = r1;
+        return getStringFromWasm0(r0, r1);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        wasm.__wbindgen_export4(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
  * Intercepts heavy computational opcodes and constructs an AgentIntent to offload them
  * @param {number} opcode
  * @param {number} payload_size
