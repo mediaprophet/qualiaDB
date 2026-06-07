@@ -47,6 +47,7 @@ fn load_catalog() -> ResourceCatalog {
 }
 
 fn map_llm(r: CoreLlm) -> LLMResource {
+    let is_multimodal = r.is_multimodal();
     LLMResource {
         id: r.id,
         name: r.name,
@@ -63,7 +64,7 @@ fn map_llm(r: CoreLlm) -> LLMResource {
         modality: r.modality,
         architecture: r.architecture,
         context_window: r.context_window,
-        is_multimodal: r.is_multimodal(),
+        is_multimodal,
     }
 }
 

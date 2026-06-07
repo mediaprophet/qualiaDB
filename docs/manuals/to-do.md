@@ -6,6 +6,16 @@ This document tracks foundational architectural components that are pending inte
 
 ---
 
+## Phase 7 — Completed (v0.0.8)
+
+- [x] **Group chat sub-agent hierarchy** — `chat_agents.rs`, outcome sharing policy, cooperative multi-LLM context
+- [x] **Daemon chat relay** — `/chat/publish` + `/chat/pull`, `syncChatRelay()` FRB
+- [x] **Qualia-native WebTorrent seeder** — daemon HTTP web seeds for `.c.q42`, magnet `ws=` parameter
+- [x] **Ontology Workbench** — URI import, compression, seeding, share cards by contact/session DID
+- [x] **Chat graph UX** — fragments, reactions, file attachments, graph panel
+
+---
+
 ## Phase 7 — Known Gaps (Next Milestone)
 
 The following are confirmed by code inspection:

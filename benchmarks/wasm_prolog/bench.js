@@ -12,11 +12,20 @@
 
 "use strict";
 
+const fs = require("fs");
 const pl = require("tau-prolog");
 
 const N       = parseInt(process.argv[2] || "10000", 10);
 const WARMUP  = 5;   // fewer warmup/samples — Prolog is slower by design
 const SAMPLES = 20;
+const NT_PATH = process.env.QUALIA_BENCH_NT_PATH || null;
+const QUERIES = (() => {
+    try {
+        return JSON.parse(process.env.QUALIA_BENCH_QUERIES_JSON || "{}");
+    } catch {
+        return {};
+    }
+})();
 
 // ── Generate Prolog facts matching the synthetic N-Triples dataset ────────────
 // triple(SubjectIdx, PredicateIdx, ObjectIdx).
@@ -32,6 +41,33 @@ function generateFacts(n) {
     // Two-hop rule: path(X, Z) :- triple(X, _, Y), triple(Y, _, Z).
     lines.push("two_hop(X, Z) :- triple(X, _, Y), triple(Y, _, Z).");
     return lines.join("\n");
+}
+
+function loadFactsFromNt(path) {
+    const text = fs.readFileSync(path, "utf8");
+    const lines = [];
+    const tokenIds = new Map();
+    let nextId = 0;
+
+    const intern = (token) => {
+        if (!tokenIds.has(token)) {
+            tokenIds.set(token, `n${nextId++}`);
+        }
+        return tokenIds.get(token);
+    };
+
+    for (const line of text.split(/\r?\n/)) {
+        const match = line.match(/^\s*<([^>]+)>\s+<([^>]+)>\s+(.+?)\s+\.\s*$/);
+        if (!match) continue;
+        const [, subject, predicate, object] = match;
+        const s = intern(`<${subject}>`);
+        const p = intern(`<${predicate}>`);
+        const o = intern(object.trim());
+        lines.push(`triple(${s}, ${p}, ${o}).`);
+    }
+
+    lines.push("two_hop(X, Z) :- triple(X, _, Y), triple(Y, _, Z).");
+    return { facts: lines.join("\n"), tokenIds };
 }
 
 // ── Timing helper (synchronous — tau-prolog is a sync JS interpreter) ─────────
@@ -75,7 +111,8 @@ const session = pl.create(SESSION_LIMIT);
 
 const t0 = process.hrtime.bigint();
 let consultOk = false;
-session.consult(generateFacts(N), {
+const loaded = NT_PATH ? loadFactsFromNt(NT_PATH) : { facts: generateFacts(N), tokenIds: null };
+session.consult(loaded.facts, {
     success: () => { consultOk = true; },
     error:   (e) => { result.error = `consult failed: ${JSON.stringify(e)}`; },
 });
@@ -87,12 +124,16 @@ if (!consultOk) {
 }
 
 // Point lookup — find all predicates/objects for subject s0
-result.point = latencyStats(() => queryFirst(session, "triple(s0, P, O)"));
+const pointToken = loaded.tokenIds?.get(`<${QUERIES.point_subject}>`) || "s0";
+const twohopToken = loaded.tokenIds?.get(`<${QUERIES.twohop_start}>`) || "s0";
+const filterToken = loaded.tokenIds?.get(`<${QUERIES.filter_predicate}>`) || "p0";
+
+result.point = latencyStats(() => queryFirst(session, `triple(${pointToken}, P, O)`));
 
 // Two-hop traversal — first result of path(s0, Z)
-result.twohop = latencyStats(() => queryFirst(session, "two_hop(s0, Z)"));
+result.twohop = latencyStats(() => queryFirst(session, `two_hop(${twohopToken}, Z)`));
 
 // Predicate filter — all subjects with predicate p0
-result.filter = latencyStats(() => queryFirst(session, "triple(S, p0, O)"));
+result.filter = latencyStats(() => queryFirst(session, `triple(S, ${filterToken}, O)`));
 
 process.stdout.write(JSON.stringify(result, null, 2) + "\n");

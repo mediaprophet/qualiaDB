@@ -193,11 +193,7 @@ function getOrCreateSuiteEl(name, category) {
         </div>
         <ul class="suite-tests"></ul>`;
 
-    el.querySelector('.suite-header').addEventListener('click', () => {
-        el.classList.toggle('open');
-        el.querySelector('.suite-toggle').textContent =
-            el.classList.contains('open') ? 'v' : '>';
-    });
+    bindSuiteCardToggle(el);
 
     container.appendChild(el);
     const state = { el, passCount: 0, failCount: 0 };
@@ -209,6 +205,130 @@ function suiteCategory(name) {
     if (name.startsWith('Native:') || name.startsWith('Compare:')) return 'native';
     if (name.startsWith('WASM:')) return 'wasm';
     return 'logic';
+}
+
+/** Resolve source module from suite name / describe path (for catalog subtitles). */
+function suiteModule(name, path = []) {
+    const root = path[0] || name;
+    const rules = [
+        ['Core Primitives', 'primitives.js'],
+        ['Modality: Epistemic', 'modality-epistemic.js'],
+        ['Modality: Temporal LTL', 'modality-ltl.js'],
+        ['Modality: Paraconsistent', 'modality-paraconsistent.js'],
+        ['Modality: Linear', 'modality-linear.js'],
+        ['Modality: Dialectical', 'modality-dialectical.js'],
+        ['Modality: Spatio-Temporal', 'modality-spatio-temporal.js'],
+        ['Modality: Description Logic', 'modality-dl.js'],
+        ['Modality: Answer Set Programming', 'modality-asp.js'],
+        ['Modality: Probabilistic', 'modality-probabilistic.js'],
+        ['Modality: Diffusion', 'modality-probabilistic.js'],
+        ['Modality: CogAI', 'modality-cogai.js'],
+        ['Agency:', 'modality-agency.js'],
+        ['Comorbidity:', 'modality-comorbidity.js'],
+        ['DICOM:', 'modality-dicom.js'],
+        ['Deontic:', 'modality-deontic.js'],
+        ['Ontology:', 'ontology-alignment.js'],
+        ['WASM: Query Engine', 'wasm-query-engine.js'],
+        ['WASM: Bioinformatics', 'wasm-bioinformatics.js'],
+        ['WASM: Clinical', 'wasm-clinical.js'],
+        ['WASM: Organic Chemistry', 'wasm-chemistry.js'],
+        ['WASM: Economics', 'wasm-economics.js'],
+        ['WASM: SHACL', 'wasm-shacl.js'],
+        ['WASM: Governance', 'wasm-governance.js'],
+        ['WASM: Ingest', 'wasm-ingest.js'],
+        ['WASM: Capability Profiles', 'wasm-profiles.js'],
+        ['WASM: Resource Catalog', 'wasm-resources.js'],
+        ['Native: Daemon', 'native-daemon.js'],
+        ['Native: Dev-mode', 'native-daemon.js'],
+        ['Native: Query', 'native-query.js'],
+        ['Native: Query Pipeline', 'native-live.js'],
+        ['Native: Error Codes', 'native-live.js'],
+        ['Native: Concurrent', 'native-live.js'],
+        ['Native: Response Integrity', 'native-live.js'],
+        ['Compare:', 'native-comparison.js'],
+        ['Native: WebSocket', 'native-comparison.js'],
+    ];
+    for (const [prefix, mod] of rules) {
+        if (root.startsWith(prefix) || name.startsWith(prefix)) return mod;
+    }
+    return '';
+}
+
+function enumerateSuites(suites, path = []) {
+    const rows = [];
+    for (const suite of suites) {
+        const suitePath = [...path, suite.name];
+        const leafTests = suite.tests.filter(t => !t._isSuite);
+        const nested = suite.tests.filter(t => t._isSuite);
+
+        if (leafTests.length) {
+            rows.push({
+                name: suite.name,
+                path: suitePath,
+                category: suiteCategory(suite.name),
+                module: suiteModule(suite.name, suitePath),
+                tests: leafTests.map(t => t.name),
+            });
+        }
+        for (const item of nested) {
+            rows.push(...enumerateSuites([item.suite], suitePath));
+        }
+    }
+    return rows;
+}
+
+function bindSuiteCardToggle(el) {
+    el.querySelector('.suite-header').addEventListener('click', () => {
+        el.classList.toggle('open');
+        el.querySelector('.suite-toggle').textContent =
+            el.classList.contains('open') ? 'v' : '>';
+    });
+}
+
+function renderCatalog(mode) {
+    const container = $id('suite-catalog');
+    if (!container) return;
+
+    const runner = buildRunner(mode);
+    const rows = enumerateSuites(runner._suites);
+    const totalTests = rows.reduce((n, r) => n + r.tests.length, 0);
+
+    container.innerHTML = '';
+    for (const row of rows) {
+        const el = document.createElement('div');
+        el.className = `suite-card catalog-card cat-${row.category}`;
+        const modHtml = row.module
+            ? `<span class="suite-module">${esc(row.module)}</span>`
+            : '';
+        el.innerHTML = `
+            <div class="suite-header">
+                <span class="suite-toggle">></span>
+                <span class="suite-cat">${row.category}</span>
+                <span class="suite-name">${esc(row.name)}</span>
+                ${modHtml}
+                <span class="suite-stats">${row.tests.length} tests</span>
+            </div>
+            <ul class="suite-tests"></ul>`;
+
+        const list = el.querySelector('.suite-tests');
+        for (const testName of row.tests) {
+            const li = document.createElement('li');
+            li.className = 'test-row pass';
+            li.innerHTML = `
+                <span class="test-icon">·</span>
+                <span class="test-name">${esc(testName)}</span>
+                <span class="test-ms"></span>`;
+            list.appendChild(li);
+        }
+
+        bindSuiteCardToggle(el);
+        container.appendChild(el);
+    }
+
+    const stats = $id('catalog-stats');
+    if (stats) {
+        stats.textContent = ` — ${rows.length} suites, ${totalTests} tests (${mode} mode).`;
+    }
 }
 
 function addTestRow(suiteName, testName, passed, error, ms) {
@@ -250,6 +370,7 @@ function updateSummary() {
 
 export async function runAll(mode = appMode) {
     appMode = mode;
+    renderCatalog(mode);
     _totPassed = 0;
     _totFailed = 0;
     _totTests = 0;

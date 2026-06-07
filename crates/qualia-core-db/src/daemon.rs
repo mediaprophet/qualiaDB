@@ -232,6 +232,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                 "engine": "qualia-core-db",
                 "version": crate::ENGINE_VERSION,
                 "graph_quin_count": crate::daemon_graph::graph_quin_count(),
+                "webtorrent": crate::webtorrent_seeder::telemetry(),
                 "execution_environment": execution_environment_json()
             })),
             StatusCode::OK,
@@ -576,6 +577,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     let cors = warp::cors()
         .allow_origins(allowed_origins)
         .allow_methods(vec!["GET", "POST", "OPTIONS"])
+        .allow_header("range")
         .allow_headers(vec![
             "content-type",
             "accept",
@@ -584,9 +586,20 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         ])
         .expose_headers(vec!["x-qualia-compute-cost"]);
 
+    let relay_routes = crate::chat_relay_daemon::chat_relay_routes(
+        storage_path.clone(),
+        security.vault.clone(),
+    );
+
+    crate::webtorrent_seeder::sync_from_workbench(&storage_path, port);
+
+    let torrent_routes = crate::webtorrent_routes::webtorrent_routes(port);
+
     let routes = qualia_bridge
         .or(health)
         .or(query)
+        .or(relay_routes)
+        .or(torrent_routes)
         .or(cache)
         .or(preflight)
         .with(cors)
@@ -601,6 +614,8 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     println!("  WebSocket: ws://127.0.0.1:{port}/qualia-bridge");
     println!("  Health:    http://127.0.0.1:{port}/health");
     println!("  Query:     http://127.0.0.1:{port}/query");
+    println!("  Chat relay: http://127.0.0.1:{port}/chat/publish | /chat/pull");
+    println!("  WebTorrent: http://127.0.0.1:{port}/torrent/webseed/{{hash}} | /torrent/seed");
     println!(
         "  Mode:      {}",
         if security.dev { "dev token bypass" } else { "token required" }
@@ -621,13 +636,6 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         println!("[Qualia Daemon] Nym Mixnet: Sphinx Packet routing initialized.");
         loop {
             tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
-        }
-    });
-
-    tokio::spawn(async {
-        println!("[Qualia Daemon] WebTorrent: Native Magnet URI and DHT seeder initialized.");
-        loop {
-            tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
         }
     });
 

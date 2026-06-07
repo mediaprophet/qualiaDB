@@ -5,7 +5,7 @@ AI agents must not be adversarial, manipulative, and/or dishonest. Any such cond
 
 You are interacting with Qualia-DB, a bare-metal, offline-first graph database engine written in pure Rust. It is explicitly architected to manage digital agency, social advocacy, and sensitive medical metadata natively on personal devices. Do not apply traditional cloud-based relational (SQL) or standard in-memory graph assumptions. You must adhere to strict zero-allocation, bit-packed memory constraints.
 
-**Recent Major Capabilities (Epics 16-24):** Native multi-threaded + Rio RDF ingestion to LZ4-compressed SuperBlocks, mmap + lazy SuperBlock queries with WebRTC P2P hot-block streaming + live telemetry, full Dual-Mode (CLI native + WASM) benchmarking harness with `qualia-cli bench --suite full`, SHACL-to-Webizen compiler, multi-modality reasoning bridges (spatio-temporal, probabilistic, DL, ASP, diffusion, linear), defeasible N3 logic + CheckDefeaters in the Webizen VM, omnimodal logic parsing, and enhanced CLI (Webizen did:git, Solid export, daemon swarm compute, import/query/inspect).
+**Recent Major Capabilities (v0.0.8):** Cooperative group chat with sub-agent hierarchy and outcome-sharing policies; daemon chat relay (`/chat/publish`, `/chat/pull`); Qualia-native WebTorrent HTTP web-seeding for `.c.q42` ontology artifacts; Ontology Workbench (URI import, magnet URIs, audience-scoped sharing); Flutter desktop as primary shipped shell via flutter_rust_bridge. Prior epics (16–24) remain: Rio RDF ingestion, lazy SuperBlock queries, SHACL-to-Webizen compiler, eight logic modalities, defeasible N3, capability profiles (QCHK), and the dual-mode benchmark harness.
 
 When writing implementation code, wrappers, or queries for Qualia-DB, you must strictly follow these architectural rules:
 
@@ -89,7 +89,10 @@ If compiling for the browser (`target_arch = "wasm32"`), the Triad must be grace
 Do not add Ollama, llama.cpp HTTP, Python/TensorFlow/PyTorch, or any external model server. If a new inference backend is needed, model it on `LocalLlmAgent` in `llm_agent.rs` and wire it into the `AgentBackend` enum.
 
 ### The daemon on port 4242 is the graph engine, not an LLM server
-`localhost:4242` is the Qualia semantic graph daemon (`/health`, `/query`). LLM inference runs in-process alongside it. Do not POST prompts to port 4242.
+`localhost:4242` is the Qualia semantic graph daemon. Core endpoints: `/health`, `/query`. v0.0.8 also exposes chat relay (`/chat/publish`, `/chat/pull`) and WebTorrent web seeds (`/torrent/webseed/{hash}`, `/torrent/seed`, `/torrent/telemetry`). LLM inference runs in-process alongside the daemon — do not POST prompts to port 4242.
+
+### Group chat sub-agent model (v0.0.8)
+Local LLM/Webizen agents are **sub-agents of human principals** (`did:qualia:subagent:…`), not independent chat peers. Outcome sharing is opt-in via `OutcomeSharingPolicy` — only processed results may be relayed, never raw prompts. See `chat_agents.rs` and `chat_relay.rs`.
 
 ## 9. LLM Benchmarking Harness (Dual-Mode)
 
@@ -102,25 +105,26 @@ cargo run --release -p qualia-cli -- benchmark --suite full
 - Executes against the real engine: `lazy_superblock_query` (LZ4 SuperBlocks, partial loading, WebRTC-mocked remote streaming).
 - Spawns a WebSocket telemetry server on `:9090` for the live visualiser.
 - Writes `docs/llm_benchmark_results.json` (12 categories: point, twohop, filter, ingestion, cyclic, ttfq, jitter, sync, intercept, obligation_escrow, provenance_val, nym_partition).
+- `docs/llm_benchmark_results.json` is not an apples-to-apples same-machine comparison: Qualia values are measured live in the current run, while competitor values may remain reference/historical placeholders.
 - **Known limitation**: cyclic/escrow/provenance/nym tests fall back to a synthetic FNV loop when no `.q42` file is present at cwd — they silently report ~0.1 ms. Run after `bash scripts/fetch_wordnet.sh` to get real file-backed numbers.
 - Criterion micro-benches: `cargo bench -p qualia-core-db`
 
-### Mode B — Browser WASM (real engine, no Rust toolchain required)
-Open `docs/benchmark.html` in Chrome or Firefox (module workers required; Safari unsupported).
+### Mode B - Browser WASM (pipeline benchmark, no Rust toolchain required)
+Open `docs/benchmark.html`.
 
-The page now uses a **module worker** (`docs/src/qualia-worker.js`) that imports the real wasm-pack build:
+The page imports the real wasm-pack build directly in the page module:
 ```javascript
-import { compile_query_to_json } from '../playground/qualia_core_db.js';
+import init, { execute_ntriples_query, get_engine_version } from './playground/qualia_core_db.js';
 ```
-Every Qualia-DB timing cell is a **real `performance.now()` measurement** of `compile_query_to_json` — the full QueryCompiler + WebizenCompiler pipeline (tokenise → AST → FNV Quin plan → Webizen bytecode). N=50 iterations, reporting p50 ± stddev.
+WASM mode runs `execute_ntriples_query(pattern, EMPTY_DB, maxResults)` in batched loops and reports per-call p50/p95 plus derived throughput.
 
-**What WASM mode measures**: query/rule compilation latency.  
-**What it does NOT measure**: query execution against a loaded `.q42` dataset (that requires the native daemon or CLI).
+**What WASM mode measures**: empty-database pipeline cost for the browser-exposed query path.  
+**What it does NOT measure**: a loaded `.q42` dataset, daemon HTTP overhead, or a same-page side-by-side competitor run.
 
-Competitor columns in the browser table are **reference values** (marked `†`) from CLI bench runs and published benchmarks. They are not measured in the browser. The JSON artifact from `shareResults()` contains the raw stats object with min/p50/p95/max/stddev/n for all Qualia cells.
+The `Avg Throughput` card on `benchmark.html` is the average of the selected suite's per-scenario throughputs, not the same metric as comparative `point ops/s`.
 
-### Mode C — Native daemon + browser UI
-When `cargo run --release -p qualia-cli -- daemon --dev` is running on port 4242, `benchmark.html` connects via WebSocket and routes queries to the real Rust engine, measuring actual round-trip latency.
+### Mode C - Native daemon + browser UI
+When `cargo run --release -p qualia-cli -- daemon --dev --port 4242` is running, `benchmark.html` issues HTTP `POST` requests to `http://localhost:4242/query` and measures browser-to-daemon round-trip latency. Throughput is derived from the measured p50 (`1000 / p50_ms`).
 
 Always surface the strict 512MB + zero-alloc constraints, and that standard engines OOM or timeout on the humanitarian/rights tests (escrow, nym partitioning, etc.).
 
@@ -167,5 +171,6 @@ The daemon also exposes the full JSON-RPC surface (including neurosymbolic LLM i
 See also the new [docs/glossary.md](docs/glossary.md) for definitions of Super-Quin, Webizen, Modalities, Lazy SuperBlock, did:git, Permissive Commons, etc.
 - **Fractal Sharding / Swarm**: `qualia-cli daemon --workers N --compute-swarm` spins isolated 512MB cells on big iron for parallel LLM offload / deep inference without violating per-cell floors.
 - **Desktop Webizen (libpcap)**: network_webizen.html + qualia-desktop shows active telemetry blocking + P2P reputation DAGs.
-- **Wellfair / Mobile / Desktop**: See crates/qualia-android, qualia-desktop (Tauri), and the wellfair/ Python+web monorepo for the consumer "Native Vault" (holograph, verifiable comms, Sanctuary Lanes, etc.).
+- **Flutter Desktop (primary)**: `crates/qualia-flutter/` — Windows/macOS/Linux shell via FRB. Legacy Tauri `qualia-desktop` is not in release CI.
+- **Wellfair / Mobile**: See crates/qualia-android and the wellfair/ Python+web monorepo for the consumer "Native Vault".
 - When contributing or scripting, run `cargo check -p qualia-core-db -p qualia-cli` and the native bench to keep the harness green.

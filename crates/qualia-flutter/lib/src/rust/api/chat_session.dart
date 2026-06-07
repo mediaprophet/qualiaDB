@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<String> createChatSession({String? title}) =>
     RustApi.instance.api.crateApiChatSessionCreateChatSession(title: title);
@@ -16,6 +16,13 @@ Future<String> ensureChatSession() =>
 
 Future<List<ChatSessionSummary>> listChatSessions() =>
     RustApi.instance.api.crateApiChatSessionListChatSessions();
+
+Future<List<ChatSessionShareTarget>> listChatSessionShareTargets() =>
+    RustApi.instance.api.crateApiChatSessionListChatSessionShareTargets();
+
+Future<String> getChatSessionDid({required String sessionId}) =>
+    RustApi.instance.api
+        .crateApiChatSessionGetChatSessionDid(sessionId: sessionId);
 
 Future<List<ChatMessage>> loadChatSessionMessages({required String id}) =>
     RustApi.instance.api.crateApiChatSessionLoadChatSessionMessages(id: id);
@@ -50,22 +57,86 @@ Future<void> setLastChatSessionId({required String sessionId}) =>
     RustApi.instance.api
         .crateApiChatSessionSetLastChatSessionId(sessionId: sessionId);
 
+Future<String> compileSessionEnvironment({required String sessionId}) =>
+    RustApi.instance.api
+        .crateApiChatSessionCompileSessionEnvironment(sessionId: sessionId);
+
+Future<String> updateSessionEnvironment(
+        {required String sessionId,
+        required List<String> ontologyIds,
+        required List<String> priorSessionIds}) =>
+    RustApi.instance.api.crateApiChatSessionUpdateSessionEnvironment(
+        sessionId: sessionId,
+        ontologyIds: ontologyIds,
+        priorSessionIds: priorSessionIds);
+
+Future<String> getSessionEnvironment({required String sessionId}) =>
+    RustApi.instance.api
+        .crateApiChatSessionGetSessionEnvironment(sessionId: sessionId);
+
+Future<List<String>> listInstalledOntologyIdsForChat() =>
+    RustApi.instance.api.crateApiChatSessionListInstalledOntologyIdsForChat();
+
+Future<String> createGroupChatSession(
+        {String? title, required List<String> participantDids}) =>
+    RustApi.instance.api.crateApiChatSessionCreateGroupChatSession(
+        title: title, participantDids: participantDids);
+
+Future<List<ChatParticipant>> getChatParticipants(
+        {required String sessionId}) =>
+    RustApi.instance.api
+        .crateApiChatSessionGetChatParticipants(sessionId: sessionId);
+
+Future<List<ChatParticipant>> addChatParticipant(
+        {required String sessionId, required String participantDid}) =>
+    RustApi.instance.api.crateApiChatSessionAddChatParticipant(
+        sessionId: sessionId, participantDid: participantDid);
+
+Future<List<ChatParticipant>> removeChatParticipant(
+        {required String sessionId, required String participantDid}) =>
+    RustApi.instance.api.crateApiChatSessionRemoveChatParticipant(
+        sessionId: sessionId, participantDid: participantDid);
+
 class ChatMessage {
   final BigInt lamport;
   final String role;
   final String content;
   final BigInt timestamp;
+  final String? authorName;
+  final String? authorDid;
+  final String? replyToFragment;
+  final String? subAgentOf;
+  final String? agentDid;
+  final String? authorDisplay;
+  final String? modelId;
 
   const ChatMessage({
     required this.lamport,
     required this.role,
     required this.content,
     required this.timestamp,
+    this.authorName,
+    this.authorDid,
+    this.replyToFragment,
+    this.subAgentOf,
+    this.agentDid,
+    this.authorDisplay,
+    this.modelId,
   });
 
   @override
   int get hashCode =>
-      lamport.hashCode ^ role.hashCode ^ content.hashCode ^ timestamp.hashCode;
+      lamport.hashCode ^
+      role.hashCode ^
+      content.hashCode ^
+      timestamp.hashCode ^
+      authorName.hashCode ^
+      authorDid.hashCode ^
+      replyToFragment.hashCode ^
+      subAgentOf.hashCode ^
+      agentDid.hashCode ^
+      authorDisplay.hashCode ^
+      modelId.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -75,7 +146,84 @@ class ChatMessage {
           lamport == other.lamport &&
           role == other.role &&
           content == other.content &&
-          timestamp == other.timestamp;
+          timestamp == other.timestamp &&
+          authorName == other.authorName &&
+          authorDid == other.authorDid &&
+          replyToFragment == other.replyToFragment &&
+          subAgentOf == other.subAgentOf &&
+          agentDid == other.agentDid &&
+          authorDisplay == other.authorDisplay &&
+          modelId == other.modelId;
+}
+
+class ChatParticipant {
+  final String did;
+  final String displayName;
+  final String actorId;
+  final String role;
+  final BigInt joinedAt;
+
+  const ChatParticipant({
+    required this.did,
+    required this.displayName,
+    required this.actorId,
+    required this.role,
+    required this.joinedAt,
+  });
+
+  @override
+  int get hashCode =>
+      did.hashCode ^
+      displayName.hashCode ^
+      actorId.hashCode ^
+      role.hashCode ^
+      joinedAt.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChatParticipant &&
+          runtimeType == other.runtimeType &&
+          did == other.did &&
+          displayName == other.displayName &&
+          actorId == other.actorId &&
+          role == other.role &&
+          joinedAt == other.joinedAt;
+}
+
+class ChatSessionShareTarget {
+  final String sessionId;
+  final String sessionDid;
+  final String title;
+  final String sessionKind;
+  final BigInt participantCount;
+
+  const ChatSessionShareTarget({
+    required this.sessionId,
+    required this.sessionDid,
+    required this.title,
+    required this.sessionKind,
+    required this.participantCount,
+  });
+
+  @override
+  int get hashCode =>
+      sessionId.hashCode ^
+      sessionDid.hashCode ^
+      title.hashCode ^
+      sessionKind.hashCode ^
+      participantCount.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChatSessionShareTarget &&
+          runtimeType == other.runtimeType &&
+          sessionId == other.sessionId &&
+          sessionDid == other.sessionDid &&
+          title == other.title &&
+          sessionKind == other.sessionKind &&
+          participantCount == other.participantCount;
 }
 
 class ChatSessionSummary {
@@ -84,6 +232,9 @@ class ChatSessionSummary {
   final BigInt createdAt;
   final BigInt updatedAt;
   final BigInt messageCount;
+  final String sessionKind;
+  final BigInt participantCount;
+  final String sessionDid;
 
   const ChatSessionSummary({
     required this.id,
@@ -91,6 +242,9 @@ class ChatSessionSummary {
     required this.createdAt,
     required this.updatedAt,
     required this.messageCount,
+    required this.sessionKind,
+    required this.participantCount,
+    required this.sessionDid,
   });
 
   @override
@@ -99,7 +253,10 @@ class ChatSessionSummary {
       title.hashCode ^
       createdAt.hashCode ^
       updatedAt.hashCode ^
-      messageCount.hashCode;
+      messageCount.hashCode ^
+      sessionKind.hashCode ^
+      participantCount.hashCode ^
+      sessionDid.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -110,5 +267,8 @@ class ChatSessionSummary {
           title == other.title &&
           createdAt == other.createdAt &&
           updatedAt == other.updatedAt &&
-          messageCount == other.messageCount;
+          messageCount == other.messageCount &&
+          sessionKind == other.sessionKind &&
+          participantCount == other.participantCount &&
+          sessionDid == other.sessionDid;
 }

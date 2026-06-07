@@ -15,13 +15,14 @@ The daemon must be started with:
 """
 import json
 import os
+import os.path
 import sys
 import time
 import urllib.request
 from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from common import latency_stats_ms, DEFAULT_WARMUP, DEFAULT_SAMPLES
+from common import latency_stats_ms, record_dataset_file_metrics, DEFAULT_WARMUP, DEFAULT_SAMPLES
 from environment import SCHEMA_VERSION, fetch_daemon_execution_environment
 
 DAEMON_URL = "http://127.0.0.1:4242"
@@ -89,14 +90,39 @@ def _post_query(query: str, timeout: float = 30.0) -> dict:
         return json.loads(r.read())
 
 
-def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
+def _artifact_size_mb(path):
+    if not path or not os.path.exists(path):
+        return None
+    return round(os.path.getsize(path) / (1024 * 1024), 3)
+
+
+def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
+    if dataset is None:
+        dataset = {
+            "n_triples": n,
+            "queries": {},
+            "dataset_info": {},
+        }
+
     result = {
         "engine": "qualia",
-        "n_triples": n,
+        "n_triples": dataset.get("n_triples", n),
         "schema_version": SCHEMA_VERSION,
         "measurement_path": "daemon_http_query",
         "qualia_daemon_available": False,
     }
+    dataset_info = dataset.get("dataset_info") or {}
+    native_q42_path = dataset_info.get("native_q42_path")
+    if native_q42_path:
+        result["native_dataset_format"] = "q42"
+        result["native_q42_artifact"] = {
+            "path": native_q42_path,
+            "available": os.path.exists(native_q42_path),
+            "size_mb": _artifact_size_mb(native_q42_path),
+            "compressed_path": dataset_info.get("compressed_q42_path"),
+            "compressed_available": dataset_info.get("compressed_q42_available", False),
+            "compressed_size_mb": _artifact_size_mb(dataset_info.get("compressed_q42_path")),
+        }
 
     health = _probe_health()
     if not health:
@@ -119,14 +145,15 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
                 result["note"] += ", compute_swarm enabled"
 
     # Standard queries (same logical operations as other runners)
-    _POINT = "SELECT * WHERE { <http://q.test/s/0> ?p ?o }"
-    _TWOHOP = """
+    queries = dataset.get("queries") or {}
+    _POINT = queries.get("point", "SELECT * WHERE { <http://q.test/s/0> ?p ?o }")
+    _TWOHOP = queries.get("twohop", """
         SELECT * WHERE {
             <http://q.test/s/0> ?p1 ?b .
             ?b ?p2 ?o .
         } LIMIT 1
-    """
-    _FILTER = "SELECT * WHERE { ?s <http://q.test/p/0> ?o } LIMIT 100"
+    """)
+    _FILTER = queries.get("filter", "SELECT * WHERE { ?s <http://q.test/p/0> ?o } LIMIT 100")
 
     try:
         result["point"] = latency_stats_ms(
@@ -177,7 +204,7 @@ def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True) -> dict:
                         + " Query latencies from qualia-cli bench in-process (µs→ms)."
                     ).strip()
 
-    return result
+    return record_dataset_file_metrics(result, dataset)
 
 
 if __name__ == "__main__":

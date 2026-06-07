@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
 import '../src/rust/api/resource_catalog.dart' as catalog;
+import '../widgets/ontology_workbench_sheet.dart';
 
 /// Ontology Hub integrated with Rust resource catalog and local install state.
 class OntologyHubScreen extends StatefulWidget {
@@ -183,6 +184,18 @@ class _OntologyHubScreenState extends State<OntologyHubScreen> {
       appBar: AppBar(
         title: const Text('Ontology Hub'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.build_circle_outlined),
+            tooltip: 'Ontology workbench',
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => SizedBox(
+                height: MediaQuery.of(context).size.height * 0.88,
+                child: const OntologyWorkbenchSheet(),
+              ),
+            ),
+          ),
           IconButton(
             icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
             onPressed: () => setState(() => _isGridView = !_isGridView),

@@ -124,6 +124,20 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 
 ---
 
+## Chat & Social Layer
+
+- **Sub-Agent**: A local LLM or Webizen agent bound to a human principal in a chat session. Identified by `did:qualia:subagent:{principal_hash}:{session_hash}`. Sub-agents are not independent chat participants — they act on behalf of their principal.
+- **Outcome Sharing Policy**: Explicit permission for relaying *processed* agent outcomes (summaries, grounded answers) to other group members. Raw prompts are never shared. Visibility: `owner_only`, `session_participants`, or `specific_dids`.
+- **Chat Relay**: Daemon HTTP inbox (`POST /chat/publish`, `GET /chat/pull`) storing signed envelopes as JSONL under `{storage}/ChatRelay/`. Enables group-chat sync without a central cloud broker.
+- **Session DID**: Stable decentralized identifier for a chat session, used for ontology share cards and relay routing.
+
+## Ontology Workbench & Permissive Commons
+
+- **`.c.q42`**: Compressed ontology artifact produced by the workbench import pipeline (LZ4 SuperBlocks). Distinct from raw `.q42` graph binaries.
+- **Workbench**: Ontology Hub pipeline — URI import, compression, SHA-1 info hash, magnet URI generation, and audience-scoped sharing policy.
+- **HTTP Web Seed**: BEP-19 style serving of `.c.q42` files via `GET /torrent/webseed/{info_hash}` on the Qualia daemon. Magnet URIs include `ws=` pointing at this endpoint.
+- **Share Card**: Filtered ontology metadata (title, magnet, quin count) visible to a contact or session DID per torrent policy.
+
 ## Tooling & Harness
 
 - **qualia-cli**: Main binary. Key subcommands: `bench` / `benchmark`, `ingest`, `import`, `compress`, `query`, `inspect`, `daemon`, `profile`, `resources`, `webizen`, `export-solid`, `shacl`, `benchmark-action`.

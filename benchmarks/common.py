@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import statistics
+from typing import Any, Dict, Optional
 
 
 # Standardized defaults (used by all runners unless explicitly overridden)
@@ -79,6 +80,53 @@ def apply_512mb_limit():
         resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
     except Exception:
         pass  # best-effort; CI may restrict setrlimit
+
+
+def file_size_bytes(path: Optional[str]) -> Optional[int]:
+    if not path or not os.path.isfile(path):
+        return None
+    return os.path.getsize(path)
+
+
+def file_size_mb(path: Optional[str]) -> Optional[float]:
+    nbytes = file_size_bytes(path)
+    if nbytes is None:
+        return None
+    return round(nbytes / (1024 * 1024), 3)
+
+
+def record_dataset_file_metrics(result: Dict[str, Any], dataset: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Attach on-disk dataset artifact sizes so comparative tables can show
+    what each engine actually loaded (NT source vs native .q42).
+    """
+    if dataset is None:
+        return result
+
+    dataset_info = dataset.get("dataset_info") or {}
+    nt_bytes = dataset.get("nt_bytes")
+    source_path = dataset.get("source_path") or dataset_info.get("source_path")
+
+    if result.get("dataset_file_mb") is None and nt_bytes is not None:
+        result["dataset_file_bytes"] = len(nt_bytes)
+        result["dataset_file_mb"] = round(len(nt_bytes) / (1024 * 1024), 3)
+        result["dataset_format"] = dataset.get("source_format") or dataset_info.get("source_format") or "ntriples"
+    elif result.get("dataset_file_mb") is None and source_path:
+        nbytes = file_size_bytes(source_path)
+        if nbytes is not None:
+            result["dataset_file_bytes"] = nbytes
+            result["dataset_file_mb"] = round(nbytes / (1024 * 1024), 3)
+            result["dataset_format"] = dataset.get("source_format") or dataset_info.get("source_format") or "ntriples"
+            result["dataset_file_path"] = source_path
+
+    q42_path = dataset_info.get("native_q42_path")
+    if q42_path and os.path.exists(q42_path):
+        result["native_q42_file_mb"] = file_size_mb(q42_path)
+    c_path = dataset_info.get("compressed_q42_path")
+    if c_path and os.path.exists(c_path):
+        result["compressed_q42_file_mb"] = file_size_mb(c_path)
+
+    return result
 
 
 def generate_ntriples(n: int) -> bytes:

@@ -24,14 +24,14 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from common import DEFAULT_WARMUP, DEFAULT_SAMPLES
+from common import DEFAULT_WARMUP, DEFAULT_SAMPLES, record_dataset_file_metrics
+from datasets import list_dataset_profiles, load_dataset_profile
 from environment import (
     SCHEMA_VERSION,
     collect_harness_environment,
     fetch_daemon_execution_environment,
     merge_execution_environment,
 )
-DATASET = "synthetic-ntriples-v1"
 
 BASE_ENGINES = ["oxigraph", "surrealdb", "comunica", "wasm_prolog"]
 
@@ -61,6 +61,11 @@ ENGINE_META = {
         "focus": "Zero-allocation 5-vector graph + Sentinel VM on your hardware",
         "install": "cargo run --release -p qualia-cli -- daemon --port 4242",
     },
+    "qualia_q42": {
+        "label": "Qualia (.q42 artifact)",
+        "focus": "Pre-compiled SuperBlock load vs RDF text parse — mmap .q42 index",
+        "install": "cargo build --release -p qualia-cli (q42_comparative_bench)",
+    },
 }
 
 
@@ -83,16 +88,21 @@ def _qualia_daemon_healthy() -> bool:
         return False
 
 
-def normalize_result(engine: str, raw: dict) -> dict:
+def normalize_result(engine: str, raw: dict, dataset_profile: dict) -> dict:
     result = dict(raw)
     result.setdefault("engine", engine)
     result.setdefault("schema_version", SCHEMA_VERSION)
-    result.setdefault("dataset", DATASET)
-    result.setdefault("n_triples", 10_000)
+    result.setdefault("dataset", dataset_profile["dataset"])
+    result.setdefault("dataset_profile", dataset_profile["id"])
+    result.setdefault("dataset_label", dataset_profile["label"])
+    result.setdefault("n_triples", dataset_profile["n_triples"])
     result.setdefault("timestamp", datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"))
     result["meta"] = ENGINE_META.get(engine, {})
+    result["dataset_info"] = dict(dataset_profile.get("dataset_info") or {})
     if engine == "qualia":
         result.setdefault("measurement_path", "daemon_http_query")
+    elif engine == "qualia_q42":
+        result.setdefault("measurement_path", "in_process_q42_mmap")
     elif engine == "comunica":
         result.setdefault("measurement_path", "wasm_js_subprocess")
     elif engine == "wasm_prolog":
@@ -102,10 +112,10 @@ def normalize_result(engine: str, raw: dict) -> dict:
     for key in ("point", "twohop", "filter"):
         if key not in result:
             result[key] = None
-    return result
+    return record_dataset_file_metrics(result, dataset_profile)
 
 
-def run_engine(engine: str, n: int, enforce_memory_limit: bool) -> dict:
+def run_engine(engine: str, n: int, enforce_memory_limit: bool, dataset_profile: dict) -> dict:
     if engine == "oxigraph":
         from oxigraph.runner import benchmark_set
     elif engine == "surrealdb":
@@ -116,14 +126,16 @@ def run_engine(engine: str, n: int, enforce_memory_limit: bool) -> dict:
         from wasm_prolog.runner import benchmark_set
     elif engine == "qualia":
         from qualia.runner import benchmark_set
+    elif engine == "qualia_q42":
+        from qualia.q42_runner import benchmark_set
     else:
         return {"engine": engine, "error": f"unknown engine: {engine}"}
 
-    raw = benchmark_set(n=n, enforce_memory_limit=enforce_memory_limit)
-    return normalize_result(engine, raw)
+    raw = benchmark_set(n=n, enforce_memory_limit=enforce_memory_limit, dataset=dataset_profile)
+    return normalize_result(engine, raw, dataset_profile)
 
 
-def merge_into_output(output_path: str, engine: str, result: dict, daemon_env=None) -> None:
+def merge_into_output(output_path: str, engine: str, result: dict, dataset_profile: dict, daemon_env=None) -> None:
     existing: dict = {}
     if os.path.exists(output_path):
         with open(output_path) as f:
@@ -137,7 +149,10 @@ def merge_into_output(output_path: str, engine: str, result: dict, daemon_env=No
     existing["engines"][engine] = result
     existing["last_updated"] = result.get("timestamp")
     existing["schema_version"] = SCHEMA_VERSION
-    existing["dataset"] = DATASET
+    existing["dataset"] = dataset_profile["dataset"]
+    existing["dataset_profile"] = dataset_profile["id"]
+    existing["dataset_label"] = dataset_profile["label"]
+    existing["dataset_info"] = dict(dataset_profile.get("dataset_info") or {})
     existing["methodology"] = METHODOLOGY
 
     if "execution_environment" not in existing:
@@ -163,7 +178,11 @@ def main() -> None:
 """
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--engine", choices=BASE_ENGINES + ["qualia"], help="Single engine to benchmark")
+    group.add_argument(
+        "--engine",
+        choices=BASE_ENGINES + ["qualia", "qualia_q42"],
+        help="Single engine to benchmark",
+    )
     group.add_argument("--all", action="store_true", help="Run all engines (Qualia auto-included if daemon healthy)")
 
     parser.add_argument("--n", type=int, default=10_000, help="Synthetic dataset size in triples")
@@ -171,10 +190,17 @@ def main() -> None:
     parser.add_argument("--no-memory-limit", action="store_true", help="Disable 512 MB ceiling (debug only)")
     parser.add_argument("--no-qualia", action="store_true", help="Do not include Qualia even if daemon is running")
     parser.add_argument("--qualia", action="store_true", help="Force include Qualia (even if not auto-detected)")
+    parser.add_argument(
+        "--dataset-profile",
+        choices=list_dataset_profiles(),
+        default="synthetic-10k",
+        help="Dataset profile to benchmark",
+    )
 
     args = parser.parse_args()
 
     enforce = not args.no_memory_limit
+    dataset_profile = load_dataset_profile(args.dataset_profile, n=args.n)
 
     if args.engine:
         targets = [args.engine]
@@ -192,15 +218,23 @@ def main() -> None:
             targets.append("qualia")
             print("[harness] Qualia daemon detected on port 4242 — including native reference", flush=True)
 
+        if dataset_profile.get("dataset_info", {}).get("native_q42_available"):
+            targets.append("qualia_q42")
+            print("[harness] Native .q42 artifact present — including Qualia (.q42) row", flush=True)
+
     for engine in targets:
         meta = ENGINE_META.get(engine, {})
-        print(f"\n[harness] -- {meta.get('label', engine)} (n={args.n:,}) --", flush=True)
-        result = run_engine(engine, args.n, enforce)
+        print(
+            f"\n[harness] -- {meta.get('label', engine)} "
+            f"(profile={dataset_profile['id']}, n={dataset_profile['n_triples']:,}) --",
+            flush=True,
+        )
+        result = run_engine(engine, args.n, enforce, dataset_profile)
         print(json.dumps(result, indent=2), flush=True)
 
         if args.output:
             daemon_env = fetch_daemon_execution_environment() if engine == "qualia" else None
-            merge_into_output(args.output, engine, result, daemon_env=daemon_env)
+            merge_into_output(args.output, engine, result, dataset_profile, daemon_env=daemon_env)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ import 'screens/chat_screen.dart';
 import 'screens/wallet_screen.dart';
 import 'screens/address_book_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/profile_screen.dart';
 import 'screens/ontology_hub_screen.dart';
 import 'screens/asset_library_screen.dart';
 import 'screens/qapp_vault_screen.dart';
@@ -240,6 +241,7 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
     LLMHubScreen(),
     SpatialPhysicsScreen(),
     SettingsScreen(),
+    ProfileScreen(),
   ];
 
   @override
@@ -297,6 +299,8 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
                   _buildNavItem(Icons.view_in_ar_outlined, 9),
                   const SizedBox(height: 32),
                   _buildNavItem(Icons.settings_outlined, 10),
+                  const SizedBox(height: 32),
+                  _buildNavItem(Icons.person_outline, 11),
                   const SizedBox(height: 16),
                 ],
               ),

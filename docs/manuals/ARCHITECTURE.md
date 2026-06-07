@@ -157,7 +157,7 @@ Qualia-DB explicitly rejects the infinite rent-seeking paradigm of the legacy we
 
 Qualia-DB ships with three tightly-bound consumer interfaces:
 
-1. **Qualia Flutter App (`crates/qualia-flutter/`)** — A Flutter desktop app (Windows, macOS, Linux) backed by a flutter_rust_bridge FFI layer. Provides the Chat UI (wired to `runInference` via FRB), LLM Hub (model browser + download), Ontology Hub, Qapp Vault (sandboxed qapps launched in an embedded WebView), Wallet, Address Book, Credential Manager, Asset Library, and Spatial Physics visualiser. See [Flutter API Reference](flutter-api-reference.md) for all exported functions.
+1. **Qualia Flutter App (`crates/qualia-flutter/`)** — Primary desktop shell (Windows, macOS, Linux) via flutter_rust_bridge. Provides cooperative group chat with sub-agent hierarchy, ontology branches, chat graph panel, LLM Hub, Ontology Workbench (URI import → `.c.q42` → magnet sharing), Qapp Vault (embedded WebView), Wallet, Address Book, and Spatial Physics. The Qualia daemon on loopback also serves chat relay (`/chat/publish`, `/chat/pull`) and HTTP web seeds for ontology artifacts (`/torrent/webseed/{hash}`). See [Flutter API Reference](flutter-api-reference.md) and [RELEASE_NOTES_v0.0.8.md](RELEASE_NOTES_v0.0.8.md).
 
 2. **Qualia CLI (`crates/qualia-cli`)** — The primary toolchain for data ingestion, benchmarking, daemon management, capability profile compilation, and resource catalog operations.
 

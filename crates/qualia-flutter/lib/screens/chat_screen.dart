@@ -7,7 +7,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'chat_environment_sheet.dart';
 import 'chat_history_drawer.dart';
+import '../widgets/add_friends_sheet.dart';
+import '../widgets/chat_agent_outcome_sheet.dart';
+import '../widgets/chat_file_permissions_sheet.dart';
+import '../widgets/chat_files_panel.dart';
+import '../widgets/chat_image_attachment.dart';
+import '../widgets/chat_graph_panel.dart';
+import '../widgets/chat_reaction_bar.dart';
+import '../widgets/chat_session_shares_sheet.dart';
+import '../src/rust/api/chat_files.dart' as chat_files;
+import '../src/rust/api/chat_graph.dart' as graph;
+import '../src/rust/api/social_api.dart' as social;
 import 'qualia_qapp_webview.dart';
 import '../services/chat_speech_service.dart';
 import '../src/rust/api/chat_session.dart' as chat;
@@ -16,6 +28,8 @@ import '../src/rust/api/qapp_api.dart';
 import '../src/rust/api/qualia_api.dart' as api;
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
 import '../src/rust/api/resource_catalog.dart' as catalog;
+import '../widgets/chat_citation_chips.dart';
+import '../widgets/chat_environment_bar.dart';
 import '../widgets/latex_math_keyboard.dart';
 import '../widgets/markdown_message.dart';
 
@@ -38,6 +52,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   String? _sessionId;
   String _sessionTitle = 'Chat';
+  List<chat.ChatParticipant> _participants = [];
+  bool _isGroup = false;
+  String? _replyToFragmentId;
+  String? _replyAnchorPreview;
+  _PendingSelection? _pendingSelection;
+  List<graph.ChatBranchType> _branchTypes = [];
+  String? _selectedBranchTypeId;
+  Map<BigInt, List<graph.ChatReaction>> _reactions = {};
+  List<chat_files.ChatFileRecord> _chatFiles = [];
+  String? _ownerDid;
+  Timer? _relayTimer;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   bool _isInferring = false;
@@ -67,7 +92,115 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
 
     _initSession();
+    _relayTimer = Timer.periodic(const Duration(seconds: 4), (_) => _pullRelay());
+    _loadBranchTypes();
+    _loadOwnerDid();
 
+  }
+
+  Future<void> _loadOwnerDid() async {
+    try {
+      final profile = await social.getUserProfile();
+      if (mounted) setState(() => _ownerDid = profile.publicDid);
+    } catch (_) {}
+  }
+
+  chat_files.ChatFileRecord? _fileForLamport(BigInt? lamport) {
+    if (lamport == null) return null;
+    for (final f in _chatFiles) {
+      if (f.messageLamport == lamport) return f;
+    }
+    return null;
+  }
+
+  Future<void> _loadChatFiles() async {
+    final id = _sessionId;
+    if (id == null) return;
+    try {
+      final files = await chat_files.listChatFiles(sessionId: id);
+      if (mounted) setState(() => _chatFiles = files);
+    } catch (_) {}
+  }
+
+  Future<void> _loadBranchTypes() async {
+    try {
+      final types = await graph.listChatBranchTypes();
+      if (mounted) setState(() => _branchTypes = types);
+    } catch (_) {}
+  }
+
+  Future<void> _loadReactions() async {
+    final id = _sessionId;
+    if (id == null) return;
+    try {
+      final reactions = await graph.listChatReactions(sessionId: id);
+      if (!mounted) return;
+      final map = <BigInt, List<graph.ChatReaction>>{};
+      for (final r in reactions) {
+        map.putIfAbsent(r.messageLamport, () => []).add(r);
+      }
+      setState(() => _reactions = map);
+    } catch (_) {}
+  }
+
+  Future<void> _pullRelay() async {
+    if (_sessionId == null || !_isGroup) return;
+    try {
+      final n = await graph.syncChatRelay(sessionId: _sessionId);
+      if (n > BigInt.zero && mounted) {
+        await _reloadMessages();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _reloadMessages() async {
+    final id = _sessionId;
+    if (id == null) return;
+    final stored = await chat.loadChatSessionMessages(id: id);
+    if (!mounted) return;
+    setState(() {
+      _messages
+        ..clear()
+        ..addAll(stored.map((m) => _Message(
+              role: m.role,
+              content: m.content,
+              lamport: m.lamport,
+              authorName: m.authorDisplay ?? m.authorName,
+              replyToFragment: m.replyToFragment,
+              subAgentOf: m.subAgentOf,
+              modelId: m.modelId,
+            )));
+    });
+  }
+
+  Future<void> _showAgentOutcomeSharing() async {
+    final id = _sessionId;
+    if (id == null) return;
+    await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ChatAgentOutcomeSheet(
+        sessionId: id,
+        participantDids: _participants.map((p) => p.did).toList(),
+      ),
+    );
+  }
+
+  Future<void> _loadParticipants(String id) async {
+    try {
+      final participants = await chat.getChatParticipants(sessionId: id);
+      if (!mounted) return;
+      setState(() {
+        _participants = participants;
+        _isGroup = participants.length > 1;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _participants = [];
+        _isGroup = false;
+      });
+    }
   }
 
   Future<void> _initSession() async {
@@ -81,9 +214,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _sessionTitle = title;
         _messages
           ..clear()
-          ..addAll(stored.map((m) => _Message(role: m.role, content: m.content)));
+          ..addAll(stored.map((m) => _Message(
+                role: m.role,
+                content: m.content,
+                lamport: m.lamport,
+                authorName: m.authorDisplay ?? m.authorName,
+                replyToFragment: m.replyToFragment,
+                subAgentOf: m.subAgentOf,
+                modelId: m.modelId,
+              )));
         _sessionLoading = false;
       });
+      await _loadParticipants(id);
+      await _pullRelay();
+      await _loadReactions();
+      await _loadChatFiles();
     } catch (e) {
       debugPrint('Chat session init failed: $e');
       if (mounted) setState(() => _sessionLoading = false);
@@ -98,6 +243,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _sessionId = id;
         _sessionTitle = 'New chat';
         _messages.clear();
+        _participants = [];
+        _isGroup = false;
       });
       await chat.setLastChatSessionId(sessionId: id);
     } catch (e) {
@@ -120,8 +267,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _sessionTitle = title;
         _messages
           ..clear()
-          ..addAll(stored.map((m) => _Message(role: m.role, content: m.content)));
+          ..addAll(stored.map((m) => _Message(
+                role: m.role,
+                content: m.content,
+                lamport: m.lamport,
+                authorName: m.authorDisplay ?? m.authorName,
+                replyToFragment: m.replyToFragment,
+                subAgentOf: m.subAgentOf,
+                modelId: m.modelId,
+              )));
       });
+      await _loadParticipants(id);
+      await _pullRelay();
+      await _loadReactions();
+      await _loadChatFiles();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -131,14 +290,105 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Future<void> _persistMessage(String role, String content) async {
+  Future<void> _openAddFriends({bool createGroup = false}) async {
+    if (_sessionId == null && !createGroup) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AddFriendsSheet(
+        sessionId: _sessionId,
+        createGroup: createGroup,
+        onGroupCreated: (id) => _switchSession(id),
+        onParticipantsChanged: () {
+          if (_sessionId != null) _loadParticipants(_sessionId!);
+        },
+      ),
+    );
+  }
+
+  Future<void> _persistMessage(
+    String role,
+    String content, {
+    String? replyToFragment,
+    String? branchTypeId,
+  }) async {
     final id = _sessionId;
     if (id == null || content.trim().isEmpty) return;
     try {
-      await chat.appendChatMessage(sessionId: id, role: role, content: content);
+      if (replyToFragment != null) {
+        await graph.appendChatMessageReply(
+          sessionId: id,
+          role: role,
+          content: content,
+          replyToFragment: replyToFragment,
+          branchTypeId: branchTypeId,
+        );
+      } else {
+        await chat.appendChatMessage(sessionId: id, role: role, content: content);
+      }
     } catch (e) {
       debugPrint('Failed to persist chat message: $e');
     }
+  }
+
+  void _onTextSelected(int messageIndex, BigInt lamport, String content, TextSelection selection) {
+    if (selection.start == selection.end) return;
+    final start = selection.start.clamp(0, content.length);
+    final end = selection.end.clamp(start, content.length);
+    final selected = content.substring(start, end).trim();
+    if (selected.isEmpty) return;
+    setState(() {
+      _pendingSelection = _PendingSelection(
+        messageIndex: messageIndex,
+        lamport: lamport,
+        content: content,
+        start: start,
+        end: end,
+        text: selected,
+      );
+      _replyAnchorPreview = selected;
+    });
+  }
+
+  Future<void> _prepareReplyFragment() async {
+    final pending = _pendingSelection;
+    final id = _sessionId;
+    if (pending == null || id == null) return;
+    try {
+      final fragment = await graph.createChatFragment(
+        sessionId: id,
+        messageLamport: pending.lamport,
+        anchorStart: pending.start,
+        anchorEnd: pending.end,
+      );
+      if (!mounted) return;
+      setState(() {
+        _replyToFragmentId = fragment.fragmentId;
+        _replyAnchorPreview = fragment.anchorText;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fragment failed: $e')),
+        );
+      }
+    }
+  }
+
+  String _branchTypeLabel(String? id) {
+    if (id == null) return 'Type';
+    for (final t in _branchTypes) {
+      if (t.id == id) return '${t.emoji} ${t.label}';
+    }
+    return 'Type';
+  }
+
+  void _clearReplyTarget() {
+    setState(() {
+      _replyToFragmentId = null;
+      _replyAnchorPreview = null;
+      _pendingSelection = null;
+    });
   }
 
 
@@ -148,6 +398,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void dispose() {
 
     _streamSub?.cancel();
+    _relayTimer?.cancel();
 
     _promptController.dispose();
 
@@ -159,68 +410,184 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 
 
-  Future<void> _ingestFile() async {
+  Future<void> _attachChatFile() async {
+    final sessionId = _sessionId;
+    if (sessionId == null) return;
 
     final result = await FilePicker.platform.pickFiles(
-
       type: FileType.custom,
-
-      allowedExtensions: ['txt', 'md', 'pdf'],
-
-      dialogTitle: 'Ingest literature for context',
-
+      allowedExtensions: ['txt', 'md', 'pdf', 'png', 'jpg', 'jpeg', 'webp', 'gif'],
+      dialogTitle: 'Attach file or image to chat',
     );
-
     if (result == null || result.files.single.path == null) return;
 
     final path = result.files.single.path!;
+    final fileName = result.files.single.name;
 
-    setState(() {
-
-      _messages.add(_Message(role: 'user', content: '[Ingest] $path'));
-
-      _messages.add(const _Message(role: 'agent', content: 'Ingesting…'));
-
-      _isInferring = true;
-
-    });
-
-    final idx = _messages.length - 1;
-
+    chat_files.ChatFilePreview? preview;
     try {
+      preview = await chat_files.previewChatFile(sourcePath: path);
+    } catch (_) {}
 
-      final summary = path.toLowerCase().endsWith('.pdf')
-
-          ? (await api.ingestPdf(fileName: path))
-
-          : await api.ingestLiterature(filePath: path);
-
-      setState(() {
-
-        _messages[idx] = _Message(
-
-          role: 'agent',
-
-          content: '⚡ Webizen verified ingest complete.\n\n$summary\n\n**Math ready:** \$\$ E = mc^2 \$\$',
-
-        );
-
-      });
-
-    } catch (e) {
-
-      setState(() {
-
-        _messages[idx] = _Message(role: 'agent', content: '🔴 WEBIZEN BLOCKED: $e');
-
-      });
-
-    } finally {
-
-      if (mounted) setState(() => _isInferring = false);
-
+    chat_files.ChatFileSharing sharing;
+    try {
+      sharing = await chat_files.defaultChatFileSharing(sessionId: sessionId);
+    } catch (_) {
+      sharing = chat_files.ChatFileSharing(
+        visibility: _isGroup ? 'session_participants' : 'owner_only',
+        allowDownload: true,
+        allowLlmContext: true,
+        allowRelaySync: false,
+        allowedDids: [],
+        expiresAt: null,
+      );
     }
 
+    if (!mounted) return;
+    final participantDids = _participants.map((p) => p.did).toList();
+    final confirmed = await showModalBottomSheet<chat_files.ChatFileSharing>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ChatFilePermissionsSheet(
+        fileName: fileName,
+        sourcePath: path,
+        preview: preview,
+        initialSharing: sharing,
+        participantDids: participantDids,
+      ),
+    );
+    if (confirmed == null) return;
+
+    setState(() => _isInferring = true);
+    try {
+      final attached = await chat_files.attachChatFile(
+        sessionId: sessionId,
+        sourcePath: path,
+        sharing: confirmed,
+      );
+      await _reloadMessages();
+      await _loadChatFiles();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Attached ${attached.file.originalName}'
+              '${attached.file.pageCount != null ? ' (${attached.file.pageCount} pages)' : ''}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Attach failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isInferring = false);
+    }
+  }
+
+  Future<void> _editFileSharing(chat_files.ChatFileRecord file) async {
+    final sessionId = _sessionId;
+    if (sessionId == null) return;
+
+    final confirmed = await showModalBottomSheet<chat_files.ChatFileSharing>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ChatFilePermissionsSheet(
+        fileName: file.originalName,
+        preview: chat_files.ChatFilePreview(
+          mimeType: file.mimeType,
+          extension_: file.extension_,
+          pageCount: file.pageCount,
+          textPreview: file.textPreview,
+          parseStatus: file.parseStatus,
+          parseError: file.parseError,
+          mediaKind: file.mediaKind,
+          imageWidth: file.imageWidth,
+          imageHeight: file.imageHeight,
+        ),
+        initialSharing: file.sharing,
+        participantDids: _participants.map((p) => p.did).toList(),
+      ),
+    );
+    if (confirmed == null) return;
+
+    try {
+      await chat_files.setChatFileSharing(
+        sessionId: sessionId,
+        fileId: file.fileId,
+        sharing: confirmed,
+      );
+      await _loadChatFiles();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update sharing: $e')),
+        );
+      }
+    }
+  }
+
+  void _showSessionShares() {
+    final sessionId = _sessionId;
+    if (sessionId == null) return;
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.55,
+        child: ChatSessionSharesSheet(sessionId: sessionId),
+      ),
+    ).then((posted) {
+      if (posted == true && mounted) _reloadMessages();
+    });
+  }
+
+  void _showChatFilesPanel() {
+    final sessionId = _sessionId;
+    if (sessionId == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.5,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Chat files',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.attach_file),
+                    tooltip: 'Attach file',
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _attachChatFile();
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ChatFilesPanel(
+                chatFiles: _chatFiles,
+                sessionId: sessionId,
+                ownerDid: _ownerDid,
+                onEditSharing: _editFileSharing,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
 
@@ -664,7 +1031,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     });
 
-    unawaited(_persistMessage('user', text));
+    if (_pendingSelection != null && _replyToFragmentId == null) {
+      await _prepareReplyFragment();
+    }
+    final replyFrag = _replyToFragmentId;
+    final branchType = _selectedBranchTypeId;
+    unawaited(_persistMessage(
+      'user',
+      text,
+      replyToFragment: replyFrag,
+      branchTypeId: branchType,
+    ));
+    unawaited(_maybeAutoTitle(text));
+    _clearReplyTarget();
+    setState(() => _selectedBranchTypeId = null);
 
     _promptController.clear();
 
@@ -702,61 +1082,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return;
       }
 
+      if (_sessionId != null) {
+        await chat.compileSessionEnvironment(sessionId: _sessionId!);
+      }
+
       _streamSub?.cancel();
       final stream = api.runInferenceStream(
-
         prompt: text,
-
         modelPath: widget.modelPath,
-
+        sessionId: _sessionId ?? '',
+        replyToFragmentId: replyFrag,
       );
 
       _streamSub = stream.listen(
-
-        (token) {
-
-          setState(() {
-
-            _messages[agentIndex] = _Message(
-
-              role: 'agent',
-
-              content: _messages[agentIndex].content + token,
-
-            );
-
-          });
-
-          _scrollToBottom();
-
-        },
-
+        (line) => _handleInferenceEvent(line, agentIndex),
         onError: (e) {
-
           setState(() {
-
-            _messages[agentIndex] = _Message(role: 'agent', content: '[Error: $e]');
-
+            _messages[agentIndex] = _Message(
+              role: 'agent',
+              content: 'Error: $e',
+              committed: false,
+            );
+            _isInferring = false;
           });
-
         },
-
         onDone: () {
-
-          if (!mounted) return;
-
-          final reply = _messages[agentIndex].content;
-          setState(() => _isInferring = false);
-          unawaited(_persistMessage('agent', reply));
-
-          if (_ttsEnabled) {
-
-            ChatSpeechService.instance.speakAgentResponse(reply);
-
+          if (mounted && _isInferring) {
+            setState(() => _isInferring = false);
           }
-
         },
-
       );
 
     } catch (e) {
@@ -774,6 +1128,103 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
 
+
+  void _handleInferenceEvent(String line, int agentIndex) {
+    try {
+      final map = jsonDecode(line) as Map<String, dynamic>;
+      final event = map['event'] as String? ?? '';
+      final data = map['data'];
+
+      if (event == 'token' && data is String) {
+        setState(() {
+          final prev = _messages[agentIndex];
+          _messages[agentIndex] = prev.copyWith(content: prev.content + data);
+        });
+        _scrollToBottom();
+        return;
+      }
+
+      if (event == 'error') {
+        final msg = data is String ? data : data.toString();
+        setState(() {
+          _messages[agentIndex] = _Message(
+            role: 'agent',
+            content: msg,
+            committed: false,
+          );
+          _isInferring = false;
+        });
+        return;
+      }
+
+      if (event == 'done' && data is Map<String, dynamic>) {
+        final text = data['text'] as String? ?? _messages[agentIndex].content;
+        final committed = data['committed'] as bool? ?? false;
+        final blockReason = data['block_reason'] as String?;
+        final prov = (data['provenance_hashes'] as List<dynamic>? ?? const [])
+            .length;
+        final citations = <ChatCitation>[];
+        for (final c in data['citations'] as List<dynamic>? ?? const []) {
+          if (c is Map<String, dynamic>) {
+            citations.add(ChatCitation(
+              ontologyId: c['ontology_id'] as String? ?? '',
+              label: c['label'] as String? ?? '',
+            ));
+          }
+        }
+
+        final display = committed
+            ? text
+            : (blockReason != null && blockReason.isNotEmpty)
+                ? '**Webizen blocked:** $blockReason\n\n$text'
+                : text;
+
+        setState(() {
+          _messages[agentIndex] = _Message(
+            role: 'agent',
+            content: display,
+            citations: citations,
+            provenanceCount: prov,
+            committed: committed,
+            blockReason: blockReason,
+          );
+          _isInferring = false;
+        });
+
+        if (committed) {
+          unawaited(_persistMessage('agent', text));
+          if (_ttsEnabled) {
+            ChatSpeechService.instance.speakAgentResponse(text);
+          }
+        }
+        _scrollToBottom();
+      }
+    } catch (_) {
+      // Legacy plain-text fallback
+      setState(() {
+        final prev = _messages[agentIndex];
+        _messages[agentIndex] = prev.copyWith(content: prev.content + line);
+      });
+      _scrollToBottom();
+    }
+  }
+
+  Future<void> _maybeAutoTitle(String firstMessage) async {
+    if (_sessionId == null) return;
+    if (_sessionTitle != 'Chat' && _sessionTitle != 'New chat') return;
+    final title = firstMessage.length > 48
+        ? '${firstMessage.substring(0, 45)}…'
+        : firstMessage;
+    try {
+      await chat.renameChatSession(sessionId: _sessionId!, title: title);
+      if (mounted) setState(() => _sessionTitle = title);
+    } catch (_) {}
+  }
+
+  void _stopInference() {
+    api.cancelInferenceStream();
+    setState(() => _isInferring = false);
+  }
 
   String _parseLifecycleState(String lifecycleJson) {
     try {
@@ -824,6 +1275,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         activeSessionId: _sessionId,
         onSessionSelected: _switchSession,
         onNewChat: _startNewChat,
+        onGroupCreated: _switchSession,
       ),
       body: Column(
 
@@ -848,6 +1300,60 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                 ),
                 IconButton(
+                  icon: const Icon(Icons.share_outlined),
+                  tooltip: 'Shared ontologies (session DID)',
+                  onPressed: _sessionId == null ? null : _showSessionShares,
+                ),
+                IconButton(
+                  icon: Badge(
+                    isLabelVisible: _chatFiles.isNotEmpty,
+                    label: Text('${_chatFiles.length}'),
+                    child: const Icon(Icons.folder_open_outlined),
+                  ),
+                  tooltip: 'Chat files',
+                  onPressed: _sessionId == null ? null : _showChatFilesPanel,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.account_tree_outlined),
+                  tooltip: 'Chat graph',
+                  onPressed: _sessionId == null
+                      ? null
+                      : () => showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.55,
+                              child: ChatGraphPanel(sessionId: _sessionId!),
+                            ),
+                          ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.tune),
+                  tooltip: 'Chat environment',
+                  onPressed: _sessionId == null || _isInferring
+                      ? null
+                      : () => showModalBottomSheet<bool>(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => ChatEnvironmentSheet(sessionId: _sessionId!),
+                          ),
+                ),
+                if (_isGroup)
+                  IconButton(
+                    icon: const Icon(Icons.smart_toy_outlined),
+                    tooltip: 'Sub-agent outcome sharing',
+                    onPressed: _isInferring || _sessionId == null
+                        ? null
+                        : _showAgentOutcomeSharing,
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.group_add_outlined),
+                  tooltip: _isGroup ? 'Add friend' : 'Start group chat',
+                  onPressed: _isInferring || _sessionId == null
+                      ? null
+                      : () => _openAddFriends(createGroup: !_isGroup),
+                ),
+                IconButton(
                   icon: const Icon(Icons.add_comment_outlined),
                   tooltip: 'New chat',
                   onPressed: _isInferring ? null : _startNewChat,
@@ -855,6 +1361,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ],
             ),
           ),
+        ),
+
+        if (_participants.isNotEmpty)
+          Material(
+            color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+            child: SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                itemCount: _participants.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                itemBuilder: (context, i) {
+                  final p = _participants[i];
+                  return Chip(
+                    label: Text(p.displayName, style: const TextStyle(fontSize: 12)),
+                    visualDensity: VisualDensity.compact,
+                    avatar: p.role == 'owner'
+                        ? const Icon(Icons.star, size: 14)
+                        : const Icon(Icons.person_outline, size: 14),
+                  );
+                },
+              ),
+            ),
+          ),
+
+        ChatEnvironmentBar(
+          sessionId: _sessionId,
+          onTap: _sessionId == null || _isInferring
+              ? null
+              : () => showModalBottomSheet<bool>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => ChatEnvironmentSheet(sessionId: _sessionId!),
+                  ),
         ),
 
         if (widget.modelPath.isEmpty)
@@ -890,6 +1431,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               final isUser = m.role == 'user';
 
               final display = m.content.isEmpty && _isInferring && !isUser ? '…' : m.content;
+              final authorLabel = m.authorName;
+              final replyTag = m.replyToFragment;
 
               return Align(
 
@@ -911,11 +1454,85 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                   ),
 
-                  child: isUser
-                      ? (display.contains(r'$')
-                          ? MarkdownMessage(content: display, style: TextStyle(color: cs.onSurface))
-                          : Text(display))
-                      : MarkdownMessage(content: display, style: TextStyle(color: cs.onSurface)),
+                  child: Column(
+                    crossAxisAlignment:
+                        isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                    children: [
+                      if (authorLabel != null && authorLabel.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            authorLabel,
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: cs.secondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      if (!isUser && m.subAgentOf != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            m.modelId != null
+                                ? 'Sub-agent · ${m.modelId}'
+                                : 'Sub-agent of participant',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: cs.tertiary,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                          ),
+                        ),
+                      if (replyTag != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Chip(
+                            label: Text('↳ fragment ${replyTag.length > 8 ? replyTag.substring(0, 8) : replyTag}…', style: const TextStyle(fontSize: 11)),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      if (_sessionId != null && m.lamport != null)
+                        ChatReactionBar(
+                          sessionId: _sessionId!,
+                          messageLamport: m.lamport!,
+                          reactions: _reactions[m.lamport] ?? const [],
+                          onChanged: _loadReactions,
+                        ),
+                      if (_sessionId != null)
+                        Builder(builder: (context) {
+                          final attached = _fileForLamport(m.lamport);
+                          if (attached == null || attached.mediaKind != 'image') {
+                            return const SizedBox.shrink();
+                          }
+                          return ChatImageAttachment(
+                            sessionId: _sessionId!,
+                            file: attached,
+                          );
+                        }),
+                      isUser
+                          ? (display.contains(r'$')
+                              ? MarkdownMessage(
+                                  content: display,
+                                  style: TextStyle(color: cs.onSurface),
+                                )
+                              : SelectableText(
+                                  display,
+                                  onSelectionChanged: (sel, _) =>
+                                      _onTextSelected(i, m.lamport ?? BigInt.zero, display, sel),
+                                ))
+                          : SelectableText(
+                              display,
+                              onSelectionChanged: (sel, _) =>
+                                  _onTextSelected(i, m.lamport ?? BigInt.zero, display, sel),
+                            ),
+                      if (!isUser)
+                        ChatCitationChips(
+                          citations: m.citations,
+                          provenanceCount: m.provenanceCount,
+                          committed: m.committed,
+                        ),
+                    ],
+                  ),
 
                 ),
 
@@ -928,6 +1545,54 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
 
         if (_isInferring) const LinearProgressIndicator(),
+        if (_replyAnchorPreview != null || _pendingSelection != null)
+          Material(
+            color: cs.primaryContainer.withValues(alpha: 0.35),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.reply, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Reply to: ${_replyAnchorPreview ?? _pendingSelection?.text ?? ''}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  if (_pendingSelection != null && _replyToFragmentId == null)
+                    TextButton(onPressed: _prepareReplyFragment, child: const Text('Pin')),
+                  if (_branchTypes.isNotEmpty)
+                    PopupMenuButton<String>(
+                      tooltip: 'Branch type',
+                      initialValue: _selectedBranchTypeId,
+                      onSelected: (v) => setState(() => _selectedBranchTypeId = v),
+                      itemBuilder: (_) => _branchTypes
+                          .map(
+                            (t) => PopupMenuItem(
+                              value: t.id,
+                              child: Text('${t.emoji} ${t.label}'),
+                            ),
+                          )
+                          .toList(),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          _branchTypeLabel(_selectedBranchTypeId),
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: _clearReplyTarget,
+                  ),
+                ],
+              ),
+            ),
+          ),
         if (_showMathKeyboard)
           LatexMathKeyboard(
             onInsert: (s) => insertAtCursor(_promptController, s),
@@ -974,13 +1639,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
 
               IconButton(
-
-                icon: const Icon(Icons.upload_file),
-
-                tooltip: 'Ingest file',
-
-                onPressed: _isInferring ? null : _ingestFile,
-
+                icon: const Icon(Icons.attach_file),
+                tooltip: 'Attach file or image',
+                onPressed: _isInferring ? null : _attachChatFile,
               ),
 
               IconButton(
@@ -1025,18 +1686,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
               const SizedBox(width: 8),
 
+              if (_isInferring)
+                IconButton(
+                  icon: const Icon(Icons.stop_circle_outlined),
+                  color: cs.error,
+                  tooltip: 'Stop generation',
+                  onPressed: _stopInference,
+                ),
+
               IconButton(
-
                 icon: _isInferring
-
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(Icons.send),
-
                 color: cs.primary,
-
                 onPressed: _isInferring ? null : _sendMessage,
-
               ),
 
             ],
@@ -1056,13 +1723,66 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 
 
-class _Message {
-
-  final String role;
-
+class _PendingSelection {
+  final int messageIndex;
+  final BigInt lamport;
   final String content;
+  final int start;
+  final int end;
+  final String text;
 
-  const _Message({required this.role, required this.content});
+  const _PendingSelection({
+    required this.messageIndex,
+    required this.lamport,
+    required this.content,
+    required this.start,
+    required this.end,
+    required this.text,
+  });
+}
 
+class _Message {
+  final String role;
+  final String content;
+  final BigInt? lamport;
+  final String? authorName;
+  final String? replyToFragment;
+  final String? subAgentOf;
+  final String? modelId;
+  final List<ChatCitation> citations;
+  final int provenanceCount;
+  final bool committed;
+  final String? blockReason;
+
+  const _Message({
+    required this.role,
+    required this.content,
+    this.lamport,
+    this.authorName,
+    this.replyToFragment,
+    this.subAgentOf,
+    this.modelId,
+    this.citations = const [],
+    this.provenanceCount = 0,
+    this.committed = false,
+    this.blockReason,
+  });
+
+  _Message copyWith({
+    String? content,
+    List<ChatCitation>? citations,
+    int? provenanceCount,
+    bool? committed,
+    String? blockReason,
+  }) {
+    return _Message(
+      role: role,
+      content: content ?? this.content,
+      citations: citations ?? this.citations,
+      provenanceCount: provenanceCount ?? this.provenanceCount,
+      committed: committed ?? this.committed,
+      blockReason: blockReason ?? this.blockReason,
+    );
+  }
 }
 

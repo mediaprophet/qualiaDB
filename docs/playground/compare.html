@@ -3,145 +3,234 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RDF ↔ .q42 Comparator — QualiaDB Playground</title>
-<meta name="description" content="Drag and drop your original RDF file and its .q42 output to compare size, semantic fidelity, and parse performance side-by-side.">
+<title>RDF to .q42 Comparator - QualiaDB Playground</title>
+<meta name="description" content="Compare an original RDF source and its .q42 or .nq output by file size, semantic fidelity, and parse performance.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
-  /* ── Page-specific overrides ─────────────────────────────────────── */
   body { background: #050508; color: #e0e0f0; font-family: 'Inter', sans-serif; margin: 0; }
-
-  .hero { text-align:center; padding: 3rem 1rem 1.5rem; }
-  .hero h1 { font-size: clamp(1.6rem,4vw,2.8rem); font-weight:700;
-    background: linear-gradient(135deg,#a78bfa,#60a5fa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:0 0 .5rem; }
-  .hero p { color:#888; font-size:.95rem; max-width:560px; margin: 0 auto; }
-
-  /* Drop zones */
-  .drop-row { display:flex; gap:1rem; margin: 1.5rem auto; max-width:860px; padding: 0 1rem; }
+  .hero { text-align: center; padding: 3rem 1rem 1.5rem; }
+  .hero h1 {
+    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    font-weight: 700;
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0 0 .5rem;
+  }
+  .hero p { color: #888; font-size: .95rem; max-width: 620px; margin: 0 auto; }
+  .drop-row { display: flex; gap: 1rem; margin: 1.5rem auto; max-width: 960px; padding: 0 1rem; }
   .drop-zone {
-    flex:1; border: 2px dashed #333; border-radius:14px; padding: 2rem 1rem;
-    text-align:center; cursor:pointer; transition: border-color .2s, background .2s;
-    background: #0d0d1a; position:relative;
+    flex: 1;
+    border: 2px dashed #333;
+    border-radius: 14px;
+    padding: 1.4rem 1rem;
+    text-align: center;
+    transition: border-color .2s, background .2s;
+    background: #0d0d1a;
+    position: relative;
   }
   .drop-zone:hover, .drop-zone.drag-over { border-color: #7c3aed; background: #1a0d2e; }
   .drop-zone.loaded { border-color: #10b981; border-style: solid; }
-  .drop-zone .dz-icon { font-size:2.2rem; margin-bottom:.5rem; }
-  .drop-zone .dz-label { font-size:.8rem; color:#555; margin-top:.5rem; }
-  .drop-zone .dz-name { font-size:.85rem; color:#a78bfa; margin-top:.4rem; font-family:'JetBrains Mono',monospace; }
-  .drop-zone .dz-size { font-size:.75rem; color:#10b981; }
-  input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
-
-  /* Format selector */
-  .fmt-row { display:flex; gap:.5rem; justify-content:center; margin:.5rem 0 1.5rem; flex-wrap:wrap; }
+  .drop-zone .dz-icon { font-size: 2.2rem; margin-bottom: .5rem; }
+  .drop-zone .dz-label { font-size: .8rem; color: #555; margin-top: .5rem; }
+  .drop-zone .dz-name { font-size: .85rem; color: #a78bfa; margin-top: .55rem; font-family: 'JetBrains Mono', monospace; word-break: break-all; }
+  .drop-zone .dz-size { font-size: .75rem; color: #10b981; margin-top: .15rem; }
+  input[type=file] { display: none; }
+  .dz-actions { margin-top: .9rem; display: flex; justify-content: center; }
+  .dz-btn {
+    border: 1px solid #2a2a44;
+    background: #121225;
+    color: #cfcff8;
+    border-radius: 10px;
+    padding: .5rem .85rem;
+    font-size: .78rem;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+  }
+  .uri-box { margin-top: .9rem; display: flex; gap: .45rem; align-items: center; }
+  .uri-input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid #26263f;
+    background: #090914;
+    color: #d7d7f5;
+    border-radius: 10px;
+    padding: .55rem .75rem;
+    font-size: .78rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .uri-load {
+    border: 1px solid #334155;
+    background: #111827;
+    color: #93c5fd;
+    border-radius: 10px;
+    padding: .55rem .8rem;
+    font-size: .76rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .uri-status { font-size: .72rem; color: #6b7280; margin-top: .45rem; min-height: 1.1rem; }
+  .fmt-row { display: flex; gap: .5rem; justify-content: center; margin: .5rem 0 .6rem; flex-wrap: wrap; }
   .fmt-btn {
-    padding:.3rem .9rem; border-radius:20px; border:1px solid #333; background:transparent;
-    color:#888; font-size:.78rem; cursor:pointer; transition: all .15s;
+    padding: .3rem .9rem;
+    border-radius: 20px;
+    border: 1px solid #333;
+    background: transparent;
+    color: #888;
+    font-size: .78rem;
+    cursor: pointer;
+    transition: all .15s;
   }
-  .fmt-btn.active { border-color:#7c3aed; background:#1a0d2e; color:#a78bfa; font-weight:600; }
-
-  /* Compare button */
+  .fmt-btn.active { border-color: #7c3aed; background: #1a0d2e; color: #a78bfa; font-weight: 600; }
+  .fmt-note { text-align: center; color: #666; font-size: .76rem; margin: 0 0 1.25rem; }
   #btnCompare {
-    display:block; margin: 0 auto 2rem; padding:.75rem 2.5rem;
-    background:linear-gradient(135deg,#7c3aed,#3b82f6); color:#fff; font-size:1rem; font-weight:700;
-    border:none; border-radius:10px; cursor:pointer; transition: opacity .2s, transform .1s;
-    font-family:'Inter',sans-serif; letter-spacing:.02em;
+    display: block;
+    margin: 0 auto 2rem;
+    padding: .75rem 2.5rem;
+    background: linear-gradient(135deg, #7c3aed, #3b82f6);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity .2s, transform .1s;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: .02em;
   }
-  #btnCompare:disabled { opacity:.35; cursor:not-allowed; }
-  #btnCompare:not(:disabled):hover { opacity:.9; transform:translateY(-1px); }
-
-  /* Results */
-  #results { max-width:860px; margin:0 auto 4rem; padding: 0 1rem; display:none; }
+  #btnCompare:disabled { opacity: .35; cursor: not-allowed; }
+  #btnCompare:not(:disabled):hover { opacity: .9; transform: translateY(-1px); }
+  #results { max-width: 860px; margin: 0 auto 4rem; padding: 0 1rem; display: none; }
   .section-card {
-    background:#0d0d1a; border:1px solid #1e1e3a; border-radius:14px;
-    padding:1.2rem 1.4rem; margin-bottom:1rem;
+    background: #0d0d1a;
+    border: 1px solid #1e1e3a;
+    border-radius: 14px;
+    padding: 1.2rem 1.4rem;
+    margin-bottom: 1rem;
   }
   .section-title {
-    font-size:.7rem; font-weight:700; letter-spacing:.12em; color:#555;
-    font-family:'JetBrains Mono',monospace; margin-bottom:1rem; text-transform:uppercase;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    color: #555;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
   }
-
-  /* Stat rows */
-  .stat-row { display:flex; justify-content:space-between; align-items:center;
-    padding:.3rem 0; border-bottom:1px solid #111; }
-  .stat-row:last-child { border-bottom:none; }
-  .stat-label { font-size:.85rem; color:#888; }
-  .stat-value { font-size:.85rem; font-family:'JetBrains Mono',monospace; font-weight:600; }
-  .green  { color:#10b981; }  .red { color:#f87171; } .gold { color:#fbbf24; }
-  .blue   { color:#60a5fa; }  .purple { color:#a78bfa; }
-
-  /* Bar charts */
-  .bar-wrap { margin:.4rem 0 .8rem; }
-  .bar-label-row { display:flex; justify-content:space-between; font-size:.78rem; margin-bottom:.2rem; }
-  .bar-track { background:#111; border-radius:4px; height:6px; overflow:hidden; }
-  .bar-fill { height:100%; border-radius:4px; transition:width .6s cubic-bezier(.4,0,.2,1); }
-
-  /* Fidelity badge */
-  .fidelity-big {
-    font-size:3rem; font-weight:700; text-align:center; padding:1rem 0 .5rem;
-    font-family:'JetBrains Mono',monospace;
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .3rem 0;
+    border-bottom: 1px solid #111;
   }
-
-  /* Diff section */
-  #diffToggle { background:none; border:none; color:#a78bfa; font-size:.82rem; cursor:pointer;
-    padding:.3rem 0; text-decoration:underline; font-family:'Inter',sans-serif; }
-  #diffBox { display:none; background:#030308; border:1px solid #1e1e3a; border-radius:8px;
-    padding:.8rem; margin-top:.6rem; max-height:240px; overflow-y:auto; }
-  .diff-line { font-family:'JetBrains Mono',monospace; font-size:.72rem; padding:.1rem 0;
-    word-break:break-all; }
-  .diff-minus { color:#f87171; } .diff-plus { color:#fbbf24; }
-
-  /* Spinner */
-  .spinner { display:inline-block; width:16px; height:16px; border:2px solid #fff4;
-    border-top-color:#a78bfa; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
-  @keyframes spin { to { transform:rotate(360deg); } }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { font-size: .85rem; color: #888; }
+  .stat-value { font-size: .85rem; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .bar-wrap { margin: .4rem 0 .8rem; }
+  .bar-label-row { display: flex; justify-content: space-between; font-size: .78rem; margin-bottom: .2rem; }
+  .bar-track { background: #111; border-radius: 4px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+  .fidelity-big { font-size: 3rem; font-weight: 700; text-align: center; padding: 1rem 0 .5rem; font-family: 'JetBrains Mono', monospace; }
+  #diffToggle {
+    background: none;
+    border: none;
+    color: #a78bfa;
+    font-size: .82rem;
+    cursor: pointer;
+    padding: .3rem 0;
+    text-decoration: underline;
+    font-family: 'Inter', sans-serif;
+  }
+  #diffBox {
+    display: none;
+    background: #030308;
+    border: 1px solid #1e1e3a;
+    border-radius: 8px;
+    padding: .8rem;
+    margin-top: .6rem;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .diff-line { font-family: 'JetBrains Mono', monospace; font-size: .72rem; padding: .1rem 0; word-break: break-all; }
+  .diff-minus { color: #f87171; }
+  .diff-plus { color: #fbbf24; }
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #fff4;
+    border-top-color: #a78bfa;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 860px) {
+    .drop-row { flex-direction: column; }
+  }
 </style>
 </head>
 <body>
 <div class="grid-bg"></div>
 
 <nav style="text-align:center;padding:1rem;border-bottom:1px solid #111;">
-  <a href="../index.html" style="color:#888;text-decoration:none;font-size:.85rem;">← qualiaDB home</a>
-  &nbsp;·&nbsp;
+  <a href="../index.html" style="color:#888;text-decoration:none;font-size:.85rem;">&lt;- qualiaDB home</a>
+  &nbsp;|&nbsp;
   <a href="benchmark.html" style="color:#888;text-decoration:none;font-size:.85rem;">Benchmark</a>
-  &nbsp;·&nbsp;
+  &nbsp;|&nbsp;
   <a href="index.html" style="color:#888;text-decoration:none;font-size:.85rem;">Playground</a>
 </nav>
 
 <div class="hero">
-  <h1>RDF ↔ .q42 Comparator</h1>
-    <p style="color:#888;font-size:0.85rem;margin-top:-0.4rem;">Now with LZ4 SuperBlock awareness + fidelity for SHACL/Defeasible content. For massive files + live lazy metrics use the native CLI: <code>qualia-cli import ...</code> then <code>bench --suite full</code>.</p>
-  <p>Drop your original RDF file and its converted .q42 output. The comparator measures
-     compression ratio, semantic fidelity (quad-level diff), and parse-time speedup — all in-browser.</p>
+  <h1>RDF to .q42 Comparator</h1>
+  <p style="color:#888;font-size:0.85rem;margin-top:-0.4rem;">Now with remote URI loading, streamed HTTP fetch progress when the browser supports it, format auto-detection, and browser-side compressed <code>.c.q42</code> transport generation for comparison.</p>
+  <p>Load your original RDF source and either provide an existing .q42 or .nq output, or let the page generate a browser-delivery <code>.c.q42</code> artifact from the original. The comparator estimates compression ratio, semantic fidelity, and parse-time speedup in-browser.</p>
 </div>
 
-<!-- Drop zones -->
 <div class="drop-row">
   <div class="drop-zone" id="dzOriginal">
     <input type="file" id="fileOriginal" accept=".nt,.ttl,.n3,.jsonld,.json,.csv,.nq,.rdf,.owl">
-    <div class="dz-icon">📄</div>
-    <div style="font-weight:600;color:#ccc;">Original RDF file</div>
-    <div class="dz-label">.nt · .ttl · .n3 · .jsonld · .csv · .nq · .rdf · .owl</div>
+    <div class="dz-icon">RDF</div>
+    <div style="font-weight:600;color:#ccc;">Original RDF source</div>
+    <div class="dz-label">Drop a file here, choose one, or fetch it from a URI.</div>
+    <div class="dz-actions"><button type="button" class="dz-btn" id="btnOriginalFile">Choose file</button></div>
+    <div class="uri-box">
+      <input type="url" id="origUri" class="uri-input" placeholder="https://example.org/data.ttl">
+      <button type="button" class="uri-load" id="loadOrigUri">Load URI</button>
+    </div>
+    <div class="uri-status" id="origStatus">HTTP GET with streamed progress when available. Remote hosts still need to allow CORS.</div>
     <div class="dz-name" id="origName"></div>
     <div class="dz-size" id="origSize"></div>
   </div>
 
-  <div style="display:flex;align-items:center;font-size:1.4rem;color:#444;flex-shrink:0;">↔</div>
+  <div style="display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#444;flex-shrink:0;">vs</div>
 
   <div class="drop-zone" id="dzQ42">
     <input type="file" id="fileQ42" accept=".q42,.nq">
-    <div class="dz-icon">⚡</div>
-    <div style="font-weight:600;color:#ccc;">.q42 / .nq output</div>
-    <div class="dz-label">.q42 or .nq (exported from Ontology Converter)</div>
+    <div class="dz-icon">Q42</div>
+    <div style="font-weight:600;color:#ccc;">.q42 / .c.q42 / .nq output</div>
+    <div class="dz-label">Load an existing textual .q42 export or .nq output, or generate a compressed browser transport from the original source.</div>
+    <div class="dz-actions" style="gap:.55rem; flex-wrap:wrap;">
+      <button type="button" class="dz-btn" id="btnQ42File">Choose file</button>
+      <button type="button" class="dz-btn" id="btnGenerateQ42" disabled>Generate from original</button>
+    </div>
+    <div class="uri-box">
+      <input type="url" id="q42Uri" class="uri-input" placeholder="https://example.org/output.q42">
+      <button type="button" class="uri-load" id="loadQ42Uri">Load URI</button>
+    </div>
+    <div class="uri-status" id="q42Status">Remote .q42, .c.q42, or .nq works here when the host allows CORS. If you skip this side, the page can generate a compressed browser <code>.c.q42</code> transport from the original.</div>
     <div class="dz-name" id="q42Name"></div>
     <div class="dz-size" id="q42Size"></div>
   </div>
 </div>
 
-<!-- Format selector for the original file -->
 <div class="fmt-row" id="fmtRow">
   <span style="color:#555;font-size:.82rem;align-self:center;">Original format:</span>
-  <button class="fmt-btn active" data-fmt="ntriples">N-Triples</button>
+  <button class="fmt-btn active" data-fmt="auto">Auto</button>
+  <button class="fmt-btn" data-fmt="ntriples">N-Triples</button>
   <button class="fmt-btn" data-fmt="turtle">Turtle</button>
   <button class="fmt-btn" data-fmt="jsonld">JSON-LD</button>
   <button class="fmt-btn" data-fmt="csv">CSV</button>
@@ -149,15 +238,13 @@
   <button class="fmt-btn" data-fmt="rdfxml">RDF/XML</button>
   <button class="fmt-btn" data-fmt="owl">OWL</button>
 </div>
+<div class="fmt-note" id="fmtDetectNote">Auto-detect is enabled. The page will try filename, content-type, and file contents unless you override it.</div>
 
-<button id="btnCompare" disabled>Compare files</button>
+<button id="btnCompare" disabled>Compare sources</button>
 
-<!-- Results -->
 <div id="results">
-
-  <!-- Size -->
   <div class="section-card">
-    <div class="section-title">📦 File Size</div>
+    <div class="section-title">File Size</div>
     <div class="bar-wrap">
       <div class="bar-label-row">
         <span style="color:#f87171">Original RDF</span>
@@ -167,50 +254,48 @@
     </div>
     <div class="bar-wrap">
       <div class="bar-label-row">
-        <span style="color:#60a5fa">.q42 output</span>
+        <span style="color:#60a5fa">.q42 / .c.q42 output</span>
         <span id="q42SizeLabel" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#60a5fa"></span>
       </div>
       <div class="bar-track"><div class="bar-fill" id="barQ42" style="background:#3b82f6;width:0%"></div></div>
     </div>
     <div class="stat-row">
       <span class="stat-label">Compression ratio</span>
-      <span class="stat-value green" id="compressionRatio">—</span>
+      <span class="stat-value" id="compressionRatio">-</span>
     </div>
     <div class="stat-row">
       <span class="stat-label">Space saved</span>
-      <span class="stat-value green" id="spaceSaved">—</span>
+      <span class="stat-value" id="spaceSaved">-</span>
     </div>
   </div>
 
-  <!-- Fidelity -->
   <div class="section-card">
-    <div class="section-title">🧬 Semantic Fidelity</div>
-    <div class="fidelity-big" id="fidelityBig">—</div>
+    <div class="section-title">Semantic Fidelity</div>
+    <div class="fidelity-big" id="fidelityBig">-</div>
     <div class="stat-row">
       <span class="stat-label">Original quads</span>
-      <span class="stat-value" id="origQuads">—</span>
+      <span class="stat-value" id="origQuads">-</span>
     </div>
     <div class="stat-row">
-      <span class="stat-label">.q42 quads</span>
-      <span class="stat-value" id="q42Quads">—</span>
+      <span class="stat-label">.q42-side quads</span>
+      <span class="stat-value" id="q42Quads">-</span>
     </div>
     <div class="stat-row">
       <span class="stat-label">Matched</span>
-      <span class="stat-value green" id="matchedQuads">—</span>
+      <span class="stat-value" id="matchedQuads">-</span>
     </div>
     <div class="stat-row" id="rowMissing" style="display:none">
-      <span class="stat-label">Missing from .q42</span>
-      <span class="stat-value red" id="missingCount">—</span>
+      <span class="stat-label">Missing from q42 side</span>
+      <span class="stat-value" id="missingCount">-</span>
     </div>
     <div class="stat-row" id="rowExtra" style="display:none">
-      <span class="stat-label">Extra in .q42</span>
-      <span class="stat-value gold" id="extraCount">—</span>
+      <span class="stat-label">Extra in q42 side</span>
+      <span class="stat-value" id="extraCount">-</span>
     </div>
   </div>
 
-  <!-- Parse performance -->
   <div class="section-card">
-    <div class="section-title">⚡ Parse Performance</div>
+    <div class="section-title">Parse Performance</div>
     <div class="bar-wrap">
       <div class="bar-label-row">
         <span style="color:#f87171">Original RDF parse</span>
@@ -220,137 +305,783 @@
     </div>
     <div class="bar-wrap">
       <div class="bar-label-row">
-        <span style="color:#60a5fa">.q42 parse</span>
+        <span style="color:#60a5fa">q42-side parse</span>
         <span id="q42ParseLabel" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#60a5fa"></span>
       </div>
       <div class="bar-track"><div class="bar-fill" id="barQ42Parse" style="background:#3b82f6;width:0%"></div></div>
     </div>
     <div class="stat-row">
       <span class="stat-label">Load speedup</span>
-      <span class="stat-value green" id="speedup">—</span>
+      <span class="stat-value" id="speedup">-</span>
     </div>
-    <p style="font-size:.72rem;color:#444;margin:.6rem 0 0">
-      ⓘ Parse time measured in-browser with <code>performance.now()</code>. JavaScript line-splitting
-      approximates the on-device WASM/JNI engine; actual speedup on hardware will be higher.
-    </p>
+    <p style="font-size:.72rem;color:#444;margin:.6rem 0 0">Parse time is estimated in-browser with <code>performance.now()</code>. This is only a lightweight client-side approximation.</p>
   </div>
 
-  <!-- Diff -->
   <div class="section-card" id="diffCard" style="display:none">
-    <div class="section-title">🔍 Quad Diff</div>
-    <button id="diffToggle">▼ Show diff</button>
+    <div class="section-title">Quad Diff</div>
+    <button id="diffToggle">Show diff</button>
     <div id="diffBox"></div>
-    <p style="font-size:.72rem;color:#444;margin:.5rem 0 0">
-      − lines: quads in original but absent from .q42 &nbsp;·&nbsp;
-      + lines: quads in .q42 not present in original (capped at 20 each)
-    </p>
+    <p style="font-size:.72rem;color:#444;margin:.5rem 0 0">Minus lines are present in the original but missing from the .q42 side. Plus lines are extra on the .q42 side. Each side is capped at 20 samples.</p>
   </div>
 
-  <!-- Export -->
   <div style="text-align:center;margin-top:1.5rem">
-    <button id="btnExport"
-      style="background:#1a0d2e;border:1px solid #7c3aed;color:#a78bfa;padding:.55rem 1.5rem;
-             border-radius:8px;cursor:pointer;font-size:.85rem;font-family:'Inter',sans-serif;">
-      ⬇ Export comparison JSON
-    </button>
+    <button id="btnExport" style="background:#1a0d2e;border:1px solid #7c3aed;color:#a78bfa;padding:.55rem 1.5rem;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:'Inter',sans-serif;">Export comparison JSON</button>
   </div>
-</div><!-- /results -->
+</div>
 
 <script>
 'use strict';
-// ── State ───────────────────────────────────────────────────────────────────
-let origFile = null, q42File = null, selectedFmt = 'ntriples';
+
+let origSource = null;
+let q42Source = null;
+let selectedFmt = 'auto';
 let lastReport = null;
+const textEncoder = new TextEncoder();
+const FNV_OFFSET = 0xcbf29ce484222325n;
+const FNV_PRIME = 0x100000001b3n;
+const U64_MASK = 0xffffffffffffffffn;
+const MSB = 1n << 63n;
+const OBJECT_HASH_MASK = 0x0fff_ffff_ffff_ffffn;
+const BLOCK_STREAM_CHUNK_SIZE = 393_216;
+const QUIN_SIZE = 48;
 
-// ── Drop zone wiring ────────────────────────────────────────────────────────
-function setupDrop(dzId, inputId, nameId, sizeId, onLoad) {
-  const dz    = document.getElementById(dzId);
-  const input = document.getElementById(inputId);
-  const nameEl = document.getElementById(nameId);
-  const sizeEl = document.getElementById(sizeId);
+const FORMAT_ALIASES = {
+  nt: 'ntriples',
+  ttl: 'turtle',
+  turtle: 'turtle',
+  jsonld: 'jsonld',
+  json: 'jsonld',
+  csv: 'csv',
+  nq: 'nquads',
+  nquads: 'nquads',
+  rdf: 'rdfxml',
+  rdfxml: 'rdfxml',
+  owl: 'owl',
+  q42: 'nquads',
+};
 
-  const load = file => {
-    nameEl.textContent = file.name;
-    sizeEl.textContent = formatBytes(file.size);
-    dz.classList.add('loaded');
-    onLoad(file);
-    checkReady();
-  };
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 0) return 'unknown size';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
 
-  input.addEventListener('change', e => { if (e.target.files[0]) load(e.target.files[0]); });
-  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
-  dz.addEventListener('dragleave', ()  => dz.classList.remove('drag-over'));
-  dz.addEventListener('drop', e => {
-    e.preventDefault(); dz.classList.remove('drag-over');
-    const f = e.dataTransfer.files[0]; if (f) load(f);
+function estimateTextBytes(text) {
+  return textEncoder.encode(text).byteLength;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function fileExtension(name = '') {
+  const clean = name.split('?')[0].split('#')[0];
+  const idx = clean.lastIndexOf('.');
+  return idx > -1 ? clean.slice(idx + 1).toLowerCase() : '';
+}
+
+function detectFormatFromName(name = '') {
+  return FORMAT_ALIASES[fileExtension(name)] || null;
+}
+
+function detectFormatFromContentType(contentType = '') {
+  const lower = contentType.toLowerCase();
+  if (lower.includes('n-quads') || lower.includes('application/nq')) return 'nquads';
+  if (lower.includes('n-triples')) return 'ntriples';
+  if (lower.includes('turtle')) return 'turtle';
+  if (lower.includes('ld+json') || lower.includes('json')) return 'jsonld';
+  if (lower.includes('csv')) return 'csv';
+  if (lower.includes('rdf+xml') || lower.includes('xml')) return 'rdfxml';
+  return null;
+}
+
+function detectFormatFromText(text = '') {
+  const sample = text.trim().slice(0, 6000);
+  if (!sample) return null;
+  const firstLine = sample.split('\n').map(line => line.trim()).find(Boolean) || '';
+
+  if (firstLine.startsWith('{') || firstLine.startsWith('[') || sample.includes('"@context"')) return 'jsonld';
+  if (sample.startsWith('<?xml') || sample.includes('<rdf:RDF') || sample.includes(':RDF')) {
+    return sample.includes('owl:') ? 'owl' : 'rdfxml';
+  }
+  if (/^([^,\n]+,){2,}[^,\n]+$/m.test(firstLine) || /\bsubject\b.*\bpredicate\b.*\bobject\b/i.test(sample)) return 'csv';
+  if (/^<[^>]+>\s+<[^>]+>\s+.+\s+<[^>]+>\s+\.\s*$/m.test(sample)) return 'nquads';
+  if (/^<[^>]+>\s+<[^>]+>\s+.+\s+\.\s*$/m.test(sample)) return 'ntriples';
+  if (/@prefix|PREFIX|BASE|;\s*$|,\s*$|\sa\s+/m.test(sample)) return 'turtle';
+  return null;
+}
+
+function detectFormat(meta = {}) {
+  return detectFormatFromName(meta.name || '')
+    || detectFormatFromContentType(meta.contentType || '')
+    || detectFormatFromText(meta.text || '')
+    || null;
+}
+
+function detectQ42LikeFormat(meta = {}) {
+  return detectFormat(meta) || 'nquads';
+}
+
+const DEFAULT_GRAPH = '<urn:qualia:default>';
+const Q42_CONFIG = { zoneId: 'dzQ42', nameId: 'q42Name', sizeId: 'q42Size', statusId: 'q42Status' };
+
+function currentDetectedOriginalFormat() {
+  return origSource?.detectedFormat || null;
+}
+
+function effectiveOriginalFormatFromText(text = '') {
+  if (selectedFmt !== 'auto') return selectedFmt;
+  return currentDetectedOriginalFormat()
+    || detectFormat({
+      name: origSource?.name || '',
+      contentType: origSource?.contentType || '',
+      text,
+    })
+    || 'ntriples';
+}
+
+function updateFormatNote(reason) {
+  const note = document.getElementById('fmtDetectNote');
+  if (selectedFmt !== 'auto') {
+    note.textContent = reason
+      ? `Using ${selectedFmt} (${reason}).`
+      : `Using ${selectedFmt}.`;
+    return;
+  }
+
+  const detected = currentDetectedOriginalFormat();
+  note.textContent = detected
+    ? `Auto-detect is enabled. Currently using ${detected}${reason ? ` (${reason})` : ''}.`
+    : 'Auto-detect is enabled. The page will try filename, content-type, and file contents unless you override it.';
+}
+
+function derivedQ42Name(name = 'generated') {
+  const clean = name.split('?')[0].split('#')[0];
+  const idx = clean.lastIndexOf('.');
+  const base = idx > 0 ? clean.slice(0, idx) : clean;
+  return `${base || 'generated'}.c.q42`;
+}
+
+function fnv1a64(str) {
+  const bytes = textEncoder.encode(str);
+  let hash = FNV_OFFSET;
+  for (const byte of bytes) {
+    hash = BigInt.asUintN(64, (hash ^ BigInt(byte)) * FNV_PRIME);
+  }
+  return hash;
+}
+
+function stripToken(token = '') {
+  if (token.startsWith('<') && token.endsWith('>')) return token.slice(1, -1);
+  if (token.startsWith('"')) {
+    const rest = token.slice(1);
+    let i = 0;
+    while (i < rest.length) {
+      if (rest[i] === '\\') {
+        i += 2;
+        continue;
+      }
+      if (rest[i] === '"') return rest.slice(0, i);
+      i += 1;
+    }
+  }
+  return token;
+}
+
+function hashQuadToken(token, { objectField = false } = {}) {
+  const inner = stripToken(token);
+  if (inner.startsWith('did:q42:')) {
+    const payload = inner.slice('did:q42:'.length);
+    if (payload) return fnv1a64(payload) | MSB;
+  }
+  const hashed = fnv1a64(inner);
+  return objectField ? (hashed & OBJECT_HASH_MASK) : hashed;
+}
+
+function quadToTerms(quad) {
+  const body = quad.trim().replace(/\s+\.$/, '');
+  return body.match(/<[^>]+>|_:[^\s]+|"[^"]*"(?:@[A-Za-z0-9-]+|\^\^<[^>]+>)?|[^\s]+/g) || [];
+}
+
+function setU64LE(view, byteOffset, value) {
+  const normalized = BigInt.asUintN(64, value);
+  view.setUint32(byteOffset, Number(normalized & 0xffff_ffffn), true);
+  view.setUint32(byteOffset + 4, Number((normalized >> 32n) & 0xffff_ffffn), true);
+}
+
+function buildCompressedBrowserQ42FromQuads(quads) {
+  const raw = new Uint8Array(quads.length * QUIN_SIZE);
+  const view = new DataView(raw.buffer);
+
+  for (let i = 0; i < quads.length; i += 1) {
+    const terms = quadToTerms(quads[i]);
+    if (terms.length < 3) continue;
+    const subject = hashQuadToken(terms[0]);
+    const predicate = hashQuadToken(terms[1]);
+    const object = hashQuadToken(terms[2], { objectField: true });
+    const context = 0n;
+    const metadata = 0n;
+    const parity = BigInt.asUintN(64, subject ^ predicate ^ object ^ context);
+    const offset = i * QUIN_SIZE;
+    setU64LE(view, offset, subject);
+    setU64LE(view, offset + 8, predicate);
+    setU64LE(view, offset + 16, object);
+    setU64LE(view, offset + 24, context);
+    setU64LE(view, offset + 32, metadata);
+    setU64LE(view, offset + 40, parity);
+  }
+
+  return buildLz4BlockStream(raw);
+}
+
+function buildLz4BlockStream(rawBytes) {
+  const blocks = [];
+  let totalBytes = 0;
+  let blockId = 0;
+
+  for (let offset = 0; offset < rawBytes.length; offset += BLOCK_STREAM_CHUNK_SIZE) {
+    const chunk = rawBytes.subarray(offset, Math.min(rawBytes.length, offset + BLOCK_STREAM_CHUNK_SIZE));
+    const payload = buildLz4FlexPayload(chunk);
+    const block = new Uint8Array(16 + payload.length);
+    const view = new DataView(block.buffer);
+    setU64LE(view, 0, BigInt(blockId));
+    view.setUint32(8, payload.length, true);
+    view.setUint32(12, chunk.length, true);
+    block.set(payload, 16);
+    blocks.push(block);
+    totalBytes += block.length;
+    blockId += 1;
+  }
+
+  const stream = new Uint8Array(totalBytes);
+  let pos = 0;
+  for (const block of blocks) {
+    stream.set(block, pos);
+    pos += block.length;
+  }
+  return stream;
+}
+
+function buildLz4FlexPayload(chunk) {
+  const rawBlock = encodeLz4Block(chunk);
+  const payload = new Uint8Array(4 + rawBlock.length);
+  const view = new DataView(payload.buffer);
+  view.setUint32(0, chunk.length, true);
+  payload.set(rawBlock, 4);
+  return payload;
+}
+
+function encodeLz4Block(input) {
+  const length = input.length;
+  if (length === 0) return new Uint8Array(0);
+
+  const table = new Int32Array(1 << 16);
+  table.fill(-1);
+  const out = [];
+  let anchor = 0;
+  let cursor = 0;
+
+  while (cursor + 4 <= length) {
+    const seq =
+      input[cursor] |
+      (input[cursor + 1] << 8) |
+      (input[cursor + 2] << 16) |
+      (input[cursor + 3] << 24);
+    const hash = ((seq * 2654435761) >>> 16) & 0xffff;
+    const ref = table[hash];
+    table[hash] = cursor;
+
+    if (ref < 0 || cursor - ref > 0xffff) {
+      cursor += 1;
+      continue;
+    }
+    if (
+      input[ref] !== input[cursor] ||
+      input[ref + 1] !== input[cursor + 1] ||
+      input[ref + 2] !== input[cursor + 2] ||
+      input[ref + 3] !== input[cursor + 3]
+    ) {
+      cursor += 1;
+      continue;
+    }
+
+    let matchLen = 4;
+    while (
+      cursor + matchLen < length &&
+      ref + matchLen < length &&
+      input[ref + matchLen] === input[cursor + matchLen]
+    ) {
+      matchLen += 1;
+    }
+
+    emitLz4Sequence(out, input.subarray(anchor, cursor), cursor - ref, matchLen);
+    cursor += matchLen;
+    anchor = cursor;
+  }
+
+  emitLastLz4Literals(out, input.subarray(anchor));
+  return Uint8Array.from(out);
+}
+
+function emitLz4Sequence(out, literals, offset, matchLen) {
+  const literalLen = literals.length;
+  const matchExtra = matchLen - 4;
+  let token = Math.min(literalLen, 15) << 4;
+  token |= Math.min(matchExtra, 15);
+  out.push(token);
+  writeLz4Length(out, literalLen, 15);
+  for (const byte of literals) out.push(byte);
+  out.push(offset & 0xff, (offset >> 8) & 0xff);
+  writeLz4Length(out, matchExtra, 15);
+}
+
+function emitLastLz4Literals(out, literals) {
+  const literalLen = literals.length;
+  out.push(Math.min(literalLen, 15) << 4);
+  writeLz4Length(out, literalLen, 15);
+  for (const byte of literals) out.push(byte);
+}
+
+function writeLz4Length(out, length, inlineCap) {
+  let remaining = length - inlineCap;
+  if (remaining <= 0) return;
+  while (remaining >= 255) {
+    out.push(255);
+    remaining -= 255;
+  }
+  out.push(remaining);
+}
+
+function readU32LE(bytes, offset) {
+  return (bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24)) >>> 0;
+}
+
+function decodeLz4Block(src, uncompLen) {
+  const dst = new Uint8Array(uncompLen);
+  let si = 0;
+  let di = 0;
+
+  while (si < src.length) {
+    const token = src[si++];
+    let literalLen = token >>> 4;
+    if (literalLen === 15) {
+      let extension = 255;
+      while (extension === 255 && si < src.length) {
+        extension = src[si++];
+        literalLen += extension;
+      }
+    }
+    dst.set(src.subarray(si, si + literalLen), di);
+    si += literalLen;
+    di += literalLen;
+    if (si >= src.length) break;
+
+    const offset = src[si] | (src[si + 1] << 8);
+    si += 2;
+    let matchLen = (token & 0x0f) + 4;
+    if ((token & 0x0f) === 15) {
+      let extension = 255;
+      while (extension === 255 && si < src.length) {
+        extension = src[si++];
+        matchLen += extension;
+      }
+    }
+    let matchPos = di - offset;
+    for (let i = 0; i < matchLen; i += 1) dst[di++] = dst[matchPos++];
+  }
+
+  return dst;
+}
+
+function decompressLz4Stream(bytes) {
+  const chunks = [];
+  let total = 0;
+  let offset = 0;
+
+  while (offset + 16 <= bytes.length) {
+    const compLen = readU32LE(bytes, offset + 8);
+    const uncompLen = readU32LE(bytes, offset + 12);
+    offset += 16;
+    if (!compLen || offset + compLen > bytes.length) break;
+    const payload = bytes.subarray(offset, offset + compLen);
+    const block = decodeLz4Block(payload.subarray(4), uncompLen);
+    chunks.push(block);
+    total += block.length;
+    offset += compLen;
+  }
+
+  const joined = new Uint8Array(total);
+  let pos = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, pos);
+    pos += chunk.length;
+  }
+  return joined;
+}
+
+function setSelectedFormat(fmt, reason) {
+  if (!fmt) return;
+  selectedFmt = fmt;
+  document.querySelectorAll('.fmt-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.fmt === fmt);
   });
+  updateFormatNote(reason);
+  if (origSource && q42Source && q42Source.generated) {
+    generateDerivedQ42FromOriginal(true).catch(() => {});
+  }
 }
 
-setupDrop('dzOriginal', 'fileOriginal', 'origName', 'origSize', f => { origFile = f; });
-setupDrop('dzQ42',      'fileQ42',      'q42Name',  'q42Size',  f => { q42File  = f; });
-
-function checkReady() {
-  document.getElementById('btnCompare').disabled = !(origFile && q42File);
-}
-
-// ── Format buttons ──────────────────────────────────────────────────────────
 document.querySelectorAll('.fmt-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedFmt = btn.dataset.fmt;
-  });
+  btn.addEventListener('click', () => setSelectedFormat(btn.dataset.fmt, 'manual override'));
 });
 
-// ── Core comparison ─────────────────────────────────────────────────────────
+function updateCompareReady() {
+  document.getElementById('btnCompare').disabled = !(origSource && q42Source);
+  const generateBtn = document.getElementById('btnGenerateQ42');
+  if (generateBtn) {
+    generateBtn.disabled = !origSource;
+    generateBtn.textContent = q42Source && q42Source.generated ? 'Re-generate from original' : 'Generate from original';
+  }
+}
 
-/** Parse RDF text to a Set of normalised quad strings. */
+function setDropLoaded(config, source, statusText) {
+  const zone = document.getElementById(config.zoneId);
+  zone.classList.add('loaded');
+  document.getElementById(config.nameId).textContent = source.name || '(unnamed)';
+  document.getElementById(config.sizeId).textContent = formatBytes(source.size);
+  document.getElementById(config.statusId).textContent = statusText || '';
+}
+
+async function readFileText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = event => resolve(event.target.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+async function readSourceText(source) {
+  if (typeof source.text === 'string') return source.text;
+  if (source.file) {
+    source.text = await readFileText(source.file);
+    return source.text;
+  }
+  throw new Error('No source text available');
+}
+
+async function generateDerivedQ42FromOriginal(force = false) {
+  if (!origSource) return;
+  if (q42Source && !force && !q42Source.generated) return;
+
+  const statusEl = document.getElementById('q42Status');
+  statusEl.textContent = 'Generating compressed browser .c.q42 transport from original source...';
+
+  try {
+    const origText = await readSourceText(origSource);
+    const originalFormat = effectiveOriginalFormatFromText(origText);
+    const quads = [...parseToQuads(origText, originalFormat)].sort();
+    const q42Text = quads.length ? `${quads.join('\n')}\n` : '';
+    const compressedBytes = buildCompressedBrowserQ42FromQuads(quads);
+    const decompressedBytes = decompressLz4Stream(compressedBytes);
+    if (decompressedBytes.length !== quads.length * QUIN_SIZE) {
+      throw new Error('compressed transport failed round-trip validation');
+    }
+
+    q42Source = {
+      kind: 'generated',
+      generated: true,
+      name: derivedQ42Name(origSource.name || 'generated'),
+      size: compressedBytes.byteLength,
+      text: q42Text,
+      contentType: 'application/octet-stream',
+      detectedFormat: 'nquads',
+      sourceFormat: originalFormat,
+      artifactFormat: 'c.q42',
+      artifactEncoding: 'lz4-block-stream',
+      semanticQuadCount: quads.length,
+    };
+
+    setDropLoaded(
+      Q42_CONFIG,
+      q42Source,
+      `Generated compressed browser .c.q42 transport from ${originalFormat} (${quads.length.toLocaleString()} quads). Load your own q42/nq file to override it.`
+    );
+  } catch (error) {
+    statusEl.textContent = `Generation failed: ${error.message}`;
+    throw error;
+  } finally {
+    updateCompareReady();
+  }
+}
+
+async function sniffFileSource(kind, file) {
+  const sample = await file.slice(0, 8192).text();
+  const detected = kind === 'original'
+    ? detectFormat({ name: file.name, contentType: file.type, text: sample })
+    : detectQ42LikeFormat({ name: file.name, contentType: file.type, text: sample });
+  const source = {
+    kind: 'file',
+    file,
+    name: file.name,
+    size: file.size,
+    contentType: file.type || '',
+    detectedFormat: detected,
+  };
+  const status = kind === 'original'
+    ? (detected ? `Loaded from file. Detected ${detected}.` : 'Loaded from file. Format not confidently detected.')
+    : `Loaded from file. Treating output as ${detected || 'nquads'}.`;
+  if (kind === 'original') {
+    if (selectedFmt === 'auto') updateFormatNote(`auto-detected from ${file.name}`);
+    else if (detected) updateFormatNote('manual override active');
+  }
+  return { source, status };
+}
+
+function extractUrlName(url) {
+  try {
+    const parsed = new URL(url);
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    return parts[parts.length - 1] || parsed.hostname;
+  } catch {
+    return url;
+  }
+}
+
+async function fetchTextFromUri(url, statusEl) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+  const contentType = response.headers.get('content-type') || '';
+  const total = Number(response.headers.get('content-length')) || 0;
+
+  if (!response.body || !response.body.getReader) {
+    const text = await response.text();
+    if (statusEl) statusEl.textContent = `Fetched ${formatBytes(text.length)} (non-streaming response)`;
+    return { text, size: text.length, contentType };
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let received = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.byteLength;
+    if (statusEl) {
+      statusEl.textContent = total
+        ? `Streaming ${formatBytes(received)} / ${formatBytes(total)}`
+        : `Streaming ${formatBytes(received)}`;
+    }
+  }
+
+  const bytes = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  const text = new TextDecoder().decode(bytes);
+  if (statusEl) statusEl.textContent = `Fetched ${formatBytes(received)} via streamed HTTP GET`;
+  return { text, size: received, contentType };
+}
+
+async function loadUriSource(kind) {
+  const isOriginal = kind === 'original';
+  const input = document.getElementById(isOriginal ? 'origUri' : 'q42Uri');
+  const statusEl = document.getElementById(isOriginal ? 'origStatus' : 'q42Status');
+  const url = input.value.trim();
+  if (!url) return;
+
+  statusEl.textContent = 'Fetching remote resource...';
+  try {
+    const loaded = await fetchTextFromUri(url, statusEl);
+    const sample = loaded.text.slice(0, 8192);
+    const source = {
+      kind: 'uri',
+      url,
+      name: extractUrlName(url),
+      size: loaded.size,
+      text: loaded.text,
+      contentType: loaded.contentType,
+      detectedFormat: isOriginal
+        ? detectFormat({ name: extractUrlName(url), contentType: loaded.contentType, text: sample })
+        : detectQ42LikeFormat({ name: extractUrlName(url), contentType: loaded.contentType, text: sample }),
+    };
+
+    if (isOriginal) {
+      origSource = source;
+      if (selectedFmt === 'auto') updateFormatNote(`auto-detected from ${source.name}`);
+      else if (source.detectedFormat) updateFormatNote('manual override active');
+      setDropLoaded(
+        { zoneId: 'dzOriginal', nameId: 'origName', sizeId: 'origSize', statusId: 'origStatus' },
+        source,
+        source.detectedFormat ? `Loaded from URI. Detected ${source.detectedFormat}.` : 'Loaded from URI. Format not confidently detected.'
+      );
+      await generateDerivedQ42FromOriginal(false);
+    } else {
+      q42Source = source;
+      setDropLoaded(
+        Q42_CONFIG,
+        source,
+        `Loaded from URI. Treating output as ${source.detectedFormat || 'nquads'}.`
+      );
+    }
+
+    updateCompareReady();
+  } catch (error) {
+    const maybeCors = error && /Failed to fetch|NetworkError/i.test(String(error.message || error));
+    statusEl.textContent = maybeCors
+      ? 'Fetch failed. The remote host may be blocking cross-origin requests.'
+      : `Fetch failed: ${error.message}`;
+  }
+}
+
+function setupDrop(config) {
+  const zone = document.getElementById(config.zoneId);
+  const input = document.getElementById(config.inputId);
+  const button = document.getElementById(config.buttonId);
+
+  button.addEventListener('click', event => {
+    event.stopPropagation();
+    input.click();
+  });
+
+  zone.addEventListener('click', event => {
+    if (event.target.closest('.uri-box') || event.target.closest('.uri-load') || event.target.closest('.dz-btn')) return;
+    input.click();
+  });
+
+  input.addEventListener('change', async event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const { source, status } = await sniffFileSource(config.kind, file);
+    if (config.kind === 'original') origSource = source;
+    else q42Source = source;
+    setDropLoaded(config, source, status);
+    if (config.kind === 'original') await generateDerivedQ42FromOriginal(false);
+    updateCompareReady();
+  });
+
+  zone.addEventListener('dragover', event => {
+    event.preventDefault();
+    zone.classList.add('drag-over');
+  });
+
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+
+  zone.addEventListener('drop', async event => {
+    event.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = event.dataTransfer.files[0];
+    if (!file) return;
+    const { source, status } = await sniffFileSource(config.kind, file);
+    if (config.kind === 'original') origSource = source;
+    else q42Source = source;
+    setDropLoaded(config, source, status);
+    if (config.kind === 'original') await generateDerivedQ42FromOriginal(false);
+    updateCompareReady();
+  });
+}
+
+setupDrop({
+  kind: 'original',
+  zoneId: 'dzOriginal',
+  inputId: 'fileOriginal',
+  buttonId: 'btnOriginalFile',
+  nameId: 'origName',
+  sizeId: 'origSize',
+  statusId: 'origStatus',
+});
+
+setupDrop({
+  kind: 'q42',
+  zoneId: 'dzQ42',
+  inputId: 'fileQ42',
+  buttonId: 'btnQ42File',
+  nameId: 'q42Name',
+  sizeId: 'q42Size',
+  statusId: 'q42Status',
+});
+
+document.getElementById('loadOrigUri').addEventListener('click', () => loadUriSource('original'));
+document.getElementById('loadQ42Uri').addEventListener('click', () => loadUriSource('q42'));
+document.getElementById('origUri').addEventListener('keydown', event => { if (event.key === 'Enter') loadUriSource('original'); });
+document.getElementById('q42Uri').addEventListener('keydown', event => { if (event.key === 'Enter') loadUriSource('q42'); });
+document.getElementById('btnGenerateQ42').addEventListener('click', async () => {
+  try {
+    await generateDerivedQ42FromOriginal(true);
+  } catch {}
+});
+
 function parseToQuads(text, fmt) {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
   const quads = new Set();
 
+  function normalizeStatement(line) {
+    const compact = line.replace(/\s+/g, ' ').trim();
+    if (!compact || compact.startsWith('#')) return null;
+    if (!compact.endsWith('.')) return compact;
+
+    const body = compact.slice(0, -1).trim();
+    const terms = body.match(/<[^>]+>|_:[^\s]+|"[^"]*"(?:@[A-Za-z0-9-]+|\^\^<[^>]+>)?|[^\s]+/g);
+    if (!terms || terms.length < 3) return compact;
+    if (terms.length === 3) return `${terms[0]} ${terms[1]} ${terms[2]} ${DEFAULT_GRAPH} .`;
+    return `${terms[0]} ${terms[1]} ${terms[2]} ${terms[3]} .`;
+  }
+
   if (fmt === 'ntriples' || fmt === 'nquads') {
-    for (const l of lines) {
-      if (!l.startsWith('#')) quads.add(l.replace(/\s+/g, ' '));
+    for (const line of lines) {
+      const normalized = normalizeStatement(line);
+      if (normalized) quads.add(normalized);
     }
   } else if (fmt === 'turtle') {
     const prefixes = {};
-    for (const l of lines) {
-      const pm = l.match(/@?prefix\s+(\w*):\s*<([^>]+)>/i);
-      if (pm) { prefixes[pm[1]] = pm[2]; continue; }
-      if (l.startsWith('#')) continue;
-      let expanded = l.replace(/(\w+):(\w+)/g, (_, p, local) =>
-        prefixes[p] ? `<${prefixes[p]}${local}>` : `${p}:${local}`
+    for (const line of lines) {
+      const prefixMatch = line.match(/@?prefix\s+(\w*):\s*<([^>]+)>/i);
+      if (prefixMatch) {
+        prefixes[prefixMatch[1]] = prefixMatch[2];
+        continue;
+      }
+      if (line.startsWith('#')) continue;
+      const expanded = line.replace(/(\w+):(\w+)/g, (_, prefix, local) =>
+        prefixes[prefix] ? `<${prefixes[prefix]}${local}>` : `${prefix}:${local}`
       );
-      quads.add(expanded.replace(/\s+/g, ' '));
+      const normalized = normalizeStatement(expanded);
+      if (normalized) quads.add(normalized);
     }
   } else if (fmt === 'jsonld') {
-    const idMatches   = [...text.matchAll(/"@id"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
-    const typeMatches = [...text.matchAll(/"@type"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
-    for (let i = 0; i < Math.min(idMatches.length, typeMatches.length); i++) {
-      quads.add(`<${idMatches[i]}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <${typeMatches[i]}> <urn:qualia:default> .`);
+    const ids = [...text.matchAll(/"@id"\s*:\s*"([^"]+)"/g)].map(match => match[1]);
+    const types = [...text.matchAll(/"@type"\s*:\s*"([^"]+)"/g)].map(match => match[1]);
+    for (let i = 0; i < Math.min(ids.length, types.length); i++) {
+      quads.add(`<${ids[i]}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <${types[i]}> ${DEFAULT_GRAPH} .`);
     }
   } else if (fmt === 'csv') {
-    const rows = lines;
-    if (rows.length < 2) return quads;
-    const headers = rows[0].split(',').map(h => h.trim().replace(/^"|"$/g,'').toLowerCase());
-    const si = headers.findIndex(h => ['subject','s','entity','id','uri'].includes(h));
-    const pi = headers.findIndex(h => ['predicate','p','property','relation','type'].includes(h));
-    const oi = headers.findIndex(h => ['object','o','value','target','label'].includes(h));
-    for (let r = 1; r < rows.length; r++) {
-      const cols = rows[r].split(',').map(c => c.trim().replace(/^"|"$/g,''));
-      const s = cols[si > -1 ? si : 0] || ''; const p = cols[pi > -1 ? pi : 1] || ''; const o = cols[oi > -1 ? oi : 2] || '';
+    if (lines.length < 2) return quads;
+    const headers = lines[0].split(',').map(header => header.trim().replace(/^"|"$/g, '').toLowerCase());
+    const si = headers.findIndex(h => ['subject', 's', 'entity', 'id', 'uri'].includes(h));
+    const pi = headers.findIndex(h => ['predicate', 'p', 'property', 'relation', 'type'].includes(h));
+    const oi = headers.findIndex(h => ['object', 'o', 'value', 'target', 'label'].includes(h));
+    for (let row = 1; row < lines.length; row++) {
+      const cols = lines[row].split(',').map(col => col.trim().replace(/^"|"$/g, ''));
+      const s = cols[si > -1 ? si : 0] || '';
+      const p = cols[pi > -1 ? pi : 1] || '';
+      const o = cols[oi > -1 ? oi : 2] || '';
       const sf = s.startsWith('http') ? `<${s}>` : `"${s}"`;
       const pf = p.startsWith('http') ? `<${p}>` : `<urn:qualia:${p}>`;
-      const of_ = o.startsWith('http') ? `<${o}>` : `"${o}"`;
-      quads.add(`${sf} ${pf} ${of_} <urn:qualia:default> .`);
+      const of = o.startsWith('http') ? `<${o}>` : `"${o}"`;
+      quads.add(`${sf} ${pf} ${of} ${DEFAULT_GRAPH} .`);
     }
   } else if (fmt === 'rdfxml' || fmt === 'owl') {
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, 'text/xml');
     const elements = doc.querySelectorAll('*');
     for (const el of elements) {
-      if (el.children.length === 0) continue; // Skip leaf nodes in this simple pass
+      if (el.children.length === 0) continue;
       const about = el.getAttribute('rdf:about') || el.getAttribute('rdf:ID');
       if (!about) continue;
       const subj = about.startsWith('http') ? `<${about}>` : `<urn:qualia:${about}>`;
@@ -358,131 +1089,175 @@ function parseToQuads(text, fmt) {
         const pred = `<urn:qualia:${child.tagName}>`;
         const res = child.getAttribute('rdf:resource');
         const obj = res ? `<${res}>` : `"${child.textContent.trim()}"`;
-        quads.add(`${subj} ${pred} ${obj} <urn:qualia:default> .`);
+        quads.add(`${subj} ${pred} ${obj} ${DEFAULT_GRAPH} .`);
       }
     }
   }
+
   return quads;
 }
 
-async function readText(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = e => res(e.target.result);
-    r.onerror = rej;
-    r.readAsText(file);
-  });
-}
-
-// ── Compare ─────────────────────────────────────────────────────────────────
 document.getElementById('btnCompare').addEventListener('click', async () => {
   const btn = document.getElementById('btnCompare');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Comparing…';
+  btn.innerHTML = '<span class="spinner"></span> Comparing...';
 
-  const [origText, q42Text] = await Promise.all([readText(origFile), readText(q42File)]);
+  try {
+    const [origText, q42Text] = await Promise.all([readSourceText(origSource), readSourceText(q42Source)]);
 
-  // Size
-  const origBytes = origFile.size;
-  const q42Bytes  = q42File.size;
-  const ratio     = origBytes / (q42Bytes || 1);
-  const saved     = 1 - (q42Bytes / (origBytes || 1));
+    const origBytes = origSource.size || origText.length;
+    const q42Bytes = q42Source.size || q42Text.length;
+    const ratio = origBytes / Math.max(q42Bytes, 1);
+    const saved = 1 - (q42Bytes / Math.max(origBytes, 1));
+    const effectiveOriginalFormat = effectiveOriginalFormatFromText(origText);
 
-  // Parse + timing
-  const t0Orig  = performance.now();
-  const origSet = parseToQuads(origText, selectedFmt);
-  const tOrig   = performance.now() - t0Orig;
+    const t0Orig = performance.now();
+    const origSet = parseToQuads(origText, effectiveOriginalFormat);
+    const tOrig = performance.now() - t0Orig;
 
-  const t0Q42   = performance.now();
-  const q42Set  = parseToQuads(q42Text, 'nquads');   // .q42 is always N-Quads line format
-  const tQ42    = performance.now() - t0Q42;
+    const q42Fmt = detectQ42LikeFormat(q42Source);
+    const t0Q42 = performance.now();
+    const q42Set = parseToQuads(q42Text, q42Fmt);
+    const tQ42 = performance.now() - t0Q42;
 
-  // Diff
-  const missing = [...origSet].filter(q => !q42Set.has(q)).slice(0, 20);
-  const extra   = [...q42Set].filter(q => !origSet.has(q)).slice(0, 20);
-  const matched = [...origSet].filter(q => q42Set.has(q)).length;
-  const fidelity = origSet.size > 0 ? (matched / origSet.size * 100) : 100;
-  const speedup  = tQ42 > 0 ? tOrig / tQ42 : Infinity;
+    const missing = [...origSet].filter(quad => !q42Set.has(quad)).slice(0, 20);
+    const extra = [...q42Set].filter(quad => !origSet.has(quad)).slice(0, 20);
+    const matched = [...origSet].filter(quad => q42Set.has(quad)).length;
+    const fidelity = origSet.size > 0 ? (matched / origSet.size) * 100 : 100;
+    const speedup = tQ42 > 0 ? tOrig / tQ42 : Infinity;
 
-  lastReport = { origBytes, q42Bytes, ratio, saved, origQuads: origSet.size,
-    q42Quads: q42Set.size, matched, missing, extra, fidelity,
-    origParseMs: tOrig, q42ParseMs: tQ42, speedup };
+    lastReport = {
+      origBytes,
+      q42Bytes,
+      ratio,
+      saved,
+      origQuads: origSet.size,
+      q42Quads: q42Set.size,
+      matched,
+      missing,
+      extra,
+      fidelity,
+      origParseMs: tOrig,
+      q42ParseMs: tQ42,
+      speedup,
+      originalSource: {
+        kind: origSource.kind,
+        name: origSource.name,
+        url: origSource.url || null,
+        format: effectiveOriginalFormat,
+        formatSelection: selectedFmt,
+      },
+      q42Source: {
+        kind: q42Source.kind,
+        name: q42Source.name,
+        url: q42Source.url || null,
+        format: q42Fmt,
+        artifactFormat: q42Source.artifactFormat || null,
+        artifactEncoding: q42Source.artifactEncoding || null,
+      },
+    };
 
-  renderResults(lastReport);
-  btn.disabled = false;
-  btn.innerHTML = '↻ Re-compare';
+    renderResults(lastReport);
+    btn.innerHTML = 'Re-compare';
+  } catch (error) {
+    alert(`Compare failed: ${error.message}`);
+    btn.innerHTML = 'Compare sources';
+  } finally {
+    btn.disabled = false;
+  }
 });
 
-// ── Render ───────────────────────────────────────────────────────────────────
-function renderResults(r) {
+function renderResults(report) {
   document.getElementById('results').style.display = 'block';
+  document.getElementById('origSizeLabel').textContent = formatBytes(report.origBytes);
+  document.getElementById('q42SizeLabel').textContent = formatBytes(report.q42Bytes);
+  document.getElementById('barQ42').style.width = `${Math.min(100, (report.q42Bytes / Math.max(report.origBytes, 1)) * 100).toFixed(1)}%`;
+  document.getElementById('compressionRatio').textContent = `${report.ratio.toFixed(1)}x`;
+  document.getElementById('spaceSaved').textContent = `${(report.saved * 100).toFixed(0)}%`;
 
-  // Size
-  document.getElementById('origSizeLabel').textContent = formatBytes(r.origBytes);
-  document.getElementById('q42SizeLabel').textContent  = formatBytes(r.q42Bytes);
-  document.getElementById('barQ42').style.width        = `${Math.min(100, r.q42Bytes / r.origBytes * 100).toFixed(1)}%`;
-  document.getElementById('compressionRatio').textContent = `${r.ratio.toFixed(1)}×`;
-  document.getElementById('spaceSaved').textContent       = `${(r.saved * 100).toFixed(0)}%`;
+  const fidelityBig = document.getElementById('fidelityBig');
+  fidelityBig.textContent = `${report.fidelity.toFixed(1)}%`;
+  fidelityBig.style.color = report.fidelity >= 99 ? '#10b981' : report.fidelity >= 90 ? '#fbbf24' : '#f87171';
 
-  // Fidelity
-  const fc = document.getElementById('fidelityBig');
-  fc.textContent = `${r.fidelity.toFixed(1)}%`;
-  fc.style.color = r.fidelity >= 99 ? '#10b981' : r.fidelity >= 90 ? '#fbbf24' : '#f87171';
+  document.getElementById('origQuads').textContent = report.origQuads.toLocaleString();
+  document.getElementById('q42Quads').textContent = report.q42Quads.toLocaleString();
+  document.getElementById('matchedQuads').textContent = report.matched.toLocaleString();
 
-  document.getElementById('origQuads').textContent   = r.origQuads.toLocaleString();
-  document.getElementById('q42Quads').textContent    = r.q42Quads.toLocaleString();
-  document.getElementById('matchedQuads').textContent = r.matched.toLocaleString();
+  const rowMissing = document.getElementById('rowMissing');
+  const rowExtra = document.getElementById('rowExtra');
+  rowMissing.style.display = report.missing.length ? 'flex' : 'none';
+  rowExtra.style.display = report.extra.length ? 'flex' : 'none';
+  if (report.missing.length) document.getElementById('missingCount').textContent = report.missing.length + (report.missing.length === 20 ? '+' : '');
+  if (report.extra.length) document.getElementById('extraCount').textContent = report.extra.length + (report.extra.length === 20 ? '+' : '');
 
-  const rowM = document.getElementById('rowMissing');
-  const rowE = document.getElementById('rowExtra');
-  if (r.missing.length) { rowM.style.display='flex'; document.getElementById('missingCount').textContent = r.missing.length + (r.missing.length===20?'+':''); }
-  if (r.extra.length)   { rowE.style.display='flex'; document.getElementById('extraCount').textContent   = r.extra.length   + (r.extra.length  ===20?'+':''); }
+  document.getElementById('origParseLabel').textContent = `${report.origParseMs.toFixed(1)} ms`;
+  document.getElementById('q42ParseLabel').textContent = `${report.q42ParseMs.toFixed(2)} ms`;
+  const maxMs = Math.max(report.origParseMs, 0.01);
+  document.getElementById('barQ42Parse').style.width = `${Math.min(100, (report.q42ParseMs / maxMs) * 100).toFixed(1)}%`;
+  document.getElementById('speedup').textContent = report.speedup > 200 ? '>200x' : `${report.speedup.toFixed(1)}x`;
 
-  // Parse perf
-  document.getElementById('origParseLabel').textContent = `${r.origParseMs.toFixed(1)} ms`;
-  document.getElementById('q42ParseLabel').textContent  = `${r.q42ParseMs.toFixed(2)} ms`;
-  const maxMs = Math.max(r.origParseMs, 0.01);
-  document.getElementById('barQ42Parse').style.width = `${Math.min(100, r.q42ParseMs / maxMs * 100).toFixed(1)}%`;
-  document.getElementById('speedup').textContent = r.speedup > 200 ? '>200×' : `${r.speedup.toFixed(1)}×`;
-
-  // Diff
-  if (r.missing.length || r.extra.length) {
-    document.getElementById('diffCard').style.display = 'block';
-    const box = document.getElementById('diffBox');
-    box.innerHTML = [
-      ...r.missing.map(q => `<div class="diff-line diff-minus">− ${escHtml(q.slice(0,120))}</div>`),
-      ...r.extra.map(q   => `<div class="diff-line diff-plus">+ ${escHtml(q.slice(0,120))}</div>`),
+  const diffCard = document.getElementById('diffCard');
+  const diffBox = document.getElementById('diffBox');
+  const diffToggle = document.getElementById('diffToggle');
+  if (report.missing.length || report.extra.length) {
+    diffCard.style.display = 'block';
+    diffBox.style.display = 'none';
+    diffToggle.textContent = 'Show diff';
+    diffBox.innerHTML = [
+      ...report.missing.map(quad => `<div class="diff-line diff-minus">- ${escHtml(quad.slice(0, 160))}</div>`),
+      ...report.extra.map(quad => `<div class="diff-line diff-plus">+ ${escHtml(quad.slice(0, 160))}</div>`),
     ].join('');
-    document.getElementById('diffToggle').addEventListener('click', () => {
-      const open = box.style.display === 'block';
-      box.style.display = open ? 'none' : 'block';
-      document.getElementById('diffToggle').textContent = open ? '▼ Show diff' : '▲ Hide diff';
-    });
+  } else {
+    diffCard.style.display = 'none';
+    diffBox.innerHTML = '';
   }
 
-  document.getElementById('results').scrollIntoView({ behavior:'smooth' });
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
 }
 
-// ── Export ───────────────────────────────────────────────────────────────────
+document.getElementById('diffToggle').addEventListener('click', () => {
+  const diffBox = document.getElementById('diffBox');
+  const open = diffBox.style.display === 'block';
+  diffBox.style.display = open ? 'none' : 'block';
+  document.getElementById('diffToggle').textContent = open ? 'Show diff' : 'Hide diff';
+});
+
+async function bootstrapFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const origUriParam = params.get('orig_uri');
+  const q42UriParam = params.get('q42_uri');
+  const formatParam = params.get('orig_format');
+  const normalizedFormat = formatParam ? (FORMAT_ALIASES[formatParam.toLowerCase()] || formatParam.toLowerCase()) : null;
+
+  if (normalizedFormat) {
+    setSelectedFormat(normalizedFormat, 'from URL parameter');
+  }
+  if (origUriParam) {
+    document.getElementById('origUri').value = origUriParam;
+    await loadUriSource('original');
+  }
+  if (q42UriParam) {
+    document.getElementById('q42Uri').value = q42UriParam;
+    await loadUriSource('q42');
+  }
+}
+
 document.getElementById('btnExport').addEventListener('click', () => {
   if (!lastReport) return;
-  const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type:'application/json' });
-  const a = Object.assign(document.createElement('a'), {
+  const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type: 'application/json' });
+  const anchor = Object.assign(document.createElement('a'), {
     href: URL.createObjectURL(blob),
     download: `qualia-compare-${Date.now()}.json`,
   });
-  a.click(); URL.revokeObjectURL(a.href);
+  anchor.click();
+  URL.revokeObjectURL(anchor.href);
 });
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function formatBytes(b) {
-  if (b < 1024) return `${b} B`;
-  if (b < 1024*1024) return `${(b/1024).toFixed(1)} KB`;
-  return `${(b/(1024*1024)).toFixed(2)} MB`;
-}
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+bootstrapFromQuery().catch(error => {
+  console.warn('Query bootstrap failed:', error);
+});
+
+updateFormatNote();
 </script>
 </body>
 </html>

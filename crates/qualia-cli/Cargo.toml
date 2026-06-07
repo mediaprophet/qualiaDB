@@ -3,6 +3,11 @@ name = "qualia-cli"
 version = "0.0.8"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
+default-run = "qualia-cli"
+
+[[bin]]
+name = "q42_comparative_bench"
+path = "src/bin/q42_comparative_bench.rs"
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }

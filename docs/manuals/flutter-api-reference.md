@@ -11,6 +11,10 @@ Import path in Dart:
 ```dart
 import 'package:qualia_flutter/src/rust/api/qualia_api.dart' as api;
 import 'package:qualia_flutter/src/rust/api/resource_catalog.dart' as catalog;
+import 'package:qualia_flutter/src/rust/api/chat_agents.dart' as agents;
+import 'package:qualia_flutter/src/rust/api/chat_session.dart' as chat;
+import 'package:qualia_flutter/src/rust/api/chat_graph.dart' as graph;
+import 'package:qualia_flutter/src/rust/api/ontology_workbench.dart' as workbench;
 ```
 
 ## Current Corrections
@@ -378,6 +382,95 @@ Read/write the spatial physics parameters displayed in the Spatial Physics scree
 
 ---
 
+## Chat Sessions
+
+Import: `chat_session.dart`
+
+| Function | Description |
+|---|---|
+| `createChatSession(title?)` | New 1:1 session |
+| `createGroupChatSession(title?, participantDids)` | Multi-participant group chat |
+| `listChatSessions()` | All sessions with metadata |
+| `getChatSessionDid(sessionId)` | Stable session DID for sharing |
+| `loadChatSessionMessages(sessionId)` | Full message history |
+| `appendChatMessage(sessionId, role, content)` | Append user/assistant message |
+| `getChatParticipants` / `addChatParticipant` / `removeChatParticipant` | Group membership |
+| `listChatSessionShareTargets()` | Contacts/sessions eligible for sharing |
+
+---
+
+## Chat Agents (Sub-Agent Hierarchy)
+
+Import: `chat_agents.dart`
+
+Local LLM/Webizen agents are **sub-agents of the human principal**, not independent chat actors.
+
+### `getLocalAgentConfig`
+
+```dart
+Future<ParticipantAgentConfig> getLocalAgentConfig({required String sessionId})
+```
+
+Returns `principalDid`, `subAgentDid` (`did:qualia:subagent:…`), `modelId`, `backend`, and `outcomeSharing`.
+
+### `updateAgentOutcomeSharing`
+
+```dart
+Future<ParticipantAgentConfig> updateAgentOutcomeSharing({
+  required String sessionId,
+  required OutcomeSharingPolicy policy,
+})
+```
+
+Controls whether processed outcomes (not raw prompts) may be relayed to peers.
+
+**`OutcomeSharingPolicy` fields:** `visibility` (`owner_only` | `session_participants` | `specific_dids`), `shareProvenance`, `shareModelAttribution`, `allowPeerLlmContext`, `allowedDids`.
+
+### `getDefaultOutcomeSharing`
+
+```dart
+Future<OutcomeSharingPolicy> getDefaultOutcomeSharing({required String sessionId})
+```
+
+---
+
+## Chat Graph & Relay
+
+Import: `chat_graph.dart`
+
+| Function | Description |
+|---|---|
+| `getChatGraph(sessionId)` | Branch/fragment graph view for the session |
+| `createChatFragment(sessionId, branchType, content, …)` | Ontology branch fragment |
+| `appendChatMessageReply(sessionId, fragmentId, content)` | Reply anchored to a fragment |
+| `syncChatRelay(sessionId?)` | Pull daemon relay inbox; returns latest Lamport |
+| `toggleChatReaction` / `listChatReactions` | Emoji reactions on messages |
+| `listChatBranchTypes()` | Available ontology branch types |
+
+Daemon endpoints (loopback): `POST /chat/publish`, `GET /chat/pull?session_id=…&since_lamport=…`.
+
+---
+
+## Ontology Workbench
+
+Import: `ontology_workbench.dart`
+
+| Function | Description |
+|---|---|
+| `workbenchImportOntologyUri(uri, ontologyId?, domain?, title?)` | Import URI → `.c.q42` + magnet |
+| `listWorkbenchOntologies()` | All workbench entries |
+| `setWorkbenchSeed(ontologyId, active)` | Register/unregister daemon web seed |
+| `setWorkbenchTorrentPolicy(ontologyId, policy)` | Per-ontology sharing policy |
+| `getTorrentBandwidthPolicy` / `setTorrentBandwidthPolicy` | Global upload limits |
+| `listOntologySharesForSession(sessionDid)` | Share cards visible to a session |
+| `fetchTorrentTelemetry()` (qualia_api) | Live seeder stats from daemon |
+
+**`WorkbenchEntry` fields:** `ontologyId`, `title`, `sourceUri`, `cQ42Path`, `quinCount`, `sha256`, `infoHashSha1`, `magnetUri`, `seedActive`, upload byte counters.
+
+Seeding runs on the Qualia daemon (`seeder: "qualia-daemon"`), not in the Flutter UI layer.
+
+---
+
 ## Catalog Items (Legacy stubs)
 
 The following functions exist to satisfy older Dart bindings and return empty lists
@@ -417,6 +510,10 @@ Future<void> cancelDownload({required String id})
 | `CatalogItem` | `id`, `name`, `tag`, `params?`, `format`, `size`, `vram?` |
 | `ProgressPayload` | `id`, `progress`, `downloadedBytes`, `totalBytes`, `speedKbps`, `status` |
 | `SpatialPhysicsState` | `temperature`, `pressure`, `timeDilation` |
+| `ParticipantAgentConfig` | `principalDid`, `subAgentDid`, `modelId?`, `backend`, `outcomeSharing`, `updatedAt` |
+| `OutcomeSharingPolicy` | `visibility`, `shareProvenance`, `shareModelAttribution`, `allowPeerLlmContext`, `allowedDids` |
+| `WorkbenchEntry` | `ontologyId`, `title`, `magnetUri`, `infoHashSha1`, `seedActive`, `torrent`, upload counters |
+| `OntologyShareCard` | `ontologyId`, `title`, `domain`, `magnetUri`, `infoHashSha1`, `quinCount` |
 | `TaxRecipientSuite` | `jurisdictionDid`, `recipients: List<TaxRecipient>` |
 | `TaxRecipient` | `label`, `ilpAddress`, `sharePercent`, `useNym` |
 | `LLMResource` | `id`, `name`, `provider?`, `format`, `quantization?`, `sizeMb?`, `ramEstimateMb?`, `license?`, `tags?`, `recommendedFor?`, `downloadUrl?`, `notes?` |

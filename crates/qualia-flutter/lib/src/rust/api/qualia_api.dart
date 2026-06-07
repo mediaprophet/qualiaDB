@@ -379,11 +379,20 @@ Future<String> runInference(
     RustApi.instance.api
         .crateApiQualiaApiRunInference(prompt: prompt, modelPath: modelPath);
 
-/// Stream inference output word-by-word after the Webizen-gated pipeline completes.
+/// NDJSON stream: `{"event":"token","data":"..."}` then `{"event":"done","data":{...}}`.
 Stream<String> runInferenceStream(
-        {required String prompt, required String modelPath}) =>
+        {required String prompt,
+        required String modelPath,
+        required String sessionId,
+        String? replyToFragmentId}) =>
     RustApi.instance.api.crateApiQualiaApiRunInferenceStream(
-        prompt: prompt, modelPath: modelPath);
+        prompt: prompt,
+        modelPath: modelPath,
+        sessionId: sessionId,
+        replyToFragmentId: replyToFragmentId);
+
+Future<void> cancelInferenceStream() =>
+    RustApi.instance.api.crateApiQualiaApiCancelInferenceStream();
 
 class ActorBridge {
   final String id;

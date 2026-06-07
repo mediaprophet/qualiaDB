@@ -545,6 +545,8 @@ pub async fn import_catalog_ontology(id: String) -> Result<serde_json::Value, St
     .await
     .map_err(|e| e.to_string())?;
 
+    qualia_core_db::daemon_graph::init_daemon_graph(&storage_path);
+
     serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
@@ -1068,8 +1070,8 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
 }
 
 pub async fn generate_front_door_invite() -> Result<String, String> {
-    // Phase 11 Mock: Generate an ephemeral Front Door DID for email sharing
-    Ok("did:qualia:frontdoor:88f72a-connect".to_string())
+    let invite = crate::social_connect::generate_connect_invite(None)?;
+    Ok(invite.invite_json)
 }
 
 pub async fn mint_semantic_token(_asset_id: String) -> Result<String, String> {
@@ -1231,14 +1233,118 @@ pub fn update_solar_input(watts: u32) {
 }
 
 pub async fn fetch_torrent_telemetry() -> Result<serde_json::Value, String> {
-    let _state = crate::state::APP_STATE.get().unwrap();
-    // Return dummy since librqbit is disabled
-    Ok(serde_json::json!({
-        "seeders": 1,
-        "leechers": 0,
-        "speed": "0.0 MB/s",
-        "status": "Active (librqbit)"
-    }))
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    Ok(crate::ontology_workbench::torrent_telemetry(Path::new(&storage)))
+}
+
+pub fn sync_workbench_torrent_seeds(storage_path: &str) -> Result<serde_json::Value, String> {
+    crate::ontology_workbench::sync_workbench_seeds_to_daemon(Path::new(storage_path))
+}
+
+pub async fn workbench_import_ontology_uri(
+    uri: String,
+    ontology_id: Option<String>,
+    domain: Option<String>,
+    title: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let result = crate::ontology_workbench::import_from_uri(
+        Path::new(&storage),
+        uri,
+        ontology_id,
+        domain,
+        title,
+    )
+    .await?;
+    serde_json::to_value(result).map_err(|e| e.to_string())
+}
+
+pub fn list_workbench_ontologies() -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let entries = crate::ontology_workbench::list_workbench_entries(Path::new(&storage))?;
+    serde_json::to_value(entries).map_err(|e| e.to_string())
+}
+
+pub fn set_workbench_torrent_policy(
+    ontology_id: String,
+    policy_json: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let policy: crate::ontology_workbench::OntologyTorrentPolicy =
+        serde_json::from_value(policy_json).map_err(|e| e.to_string())?;
+    let updated = crate::ontology_workbench::set_torrent_policy(
+        Path::new(&storage),
+        &ontology_id,
+        policy,
+    )?;
+    serde_json::to_value(updated).map_err(|e| e.to_string())
+}
+
+pub fn set_workbench_seed(ontology_id: String, active: bool) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let updated =
+        crate::ontology_workbench::set_seed_active(Path::new(&storage), &ontology_id, active)?;
+    serde_json::to_value(updated).map_err(|e| e.to_string())
+}
+
+pub fn get_torrent_bandwidth_policy() -> Result<serde_json::Value, String> {
+    let policy = crate::ontology_workbench::load_bandwidth_policy();
+    serde_json::to_value(policy).map_err(|e| e.to_string())
+}
+
+pub fn set_torrent_bandwidth_policy(policy_json: serde_json::Value) -> Result<serde_json::Value, String> {
+    let policy: crate::ontology_workbench::TorrentBandwidthGlobal =
+        serde_json::from_value(policy_json).map_err(|e| e.to_string())?;
+    crate::ontology_workbench::save_bandwidth_policy(&policy)?;
+    serde_json::to_value(policy).map_err(|e| e.to_string())
+}
+
+pub fn list_ontology_shares_for_contact(contact_did: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let cards = crate::ontology_workbench::list_share_cards_for_contact(
+        Path::new(&storage),
+        &contact_did,
+    )?;
+    serde_json::to_value(cards).map_err(|e| e.to_string())
+}
+
+pub fn list_ontology_shares_for_session(session_did: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let cards = crate::ontology_workbench::list_share_cards_for_session(
+        Path::new(&storage),
+        &session_did,
+    )?;
+    serde_json::to_value(cards).map_err(|e| e.to_string())
+}
+
+pub fn list_chat_session_share_targets() -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let targets = crate::chat_session::list_session_share_targets(Path::new(&storage))
+        .map_err(|e| e.to_string())?;
+    serde_json::to_value(targets).map_err(|e| e.to_string())
+}
+
+pub fn get_chat_session_did(session_id: String) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    crate::chat_session::get_session_did(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())
+}
+
+pub fn update_chat_contact_categories(
+    contact_did: String,
+    categories: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    let contact = crate::social_connect::update_contact_categories(&contact_did, categories)?;
+    serde_json::to_value(contact).map_err(|e| e.to_string())
 }
 
 pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
@@ -1304,11 +1410,31 @@ pub fn load_chat_session(id: String) -> Result<serde_json::Value, String> {
 }
 
 pub fn append_chat_message(session_id: String, role: String, content: String) -> Result<u64, String> {
+    append_chat_message_reply(session_id, role, content, None, None)
+}
+
+pub fn append_chat_message_reply(
+    session_id: String,
+    role: String,
+    content: String,
+    reply_to_fragment: Option<String>,
+    branch_type_id: Option<String>,
+) -> Result<u64, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
     let role = crate::chat_session::Role::from_str(&role).map_err(|e| e.to_string())?;
-    crate::chat_session::append_message(Path::new(&storage), &session_id, role, &content)
-        .map_err(|e| e.to_string())
+    crate::chat_session::append_message_with_author(
+        Path::new(&storage),
+        &session_id,
+        role,
+        &content,
+        reply_to_fragment,
+        None,
+        None,
+        None,
+        branch_type_id,
+    )
+    .map_err(|e| e.to_string())
 }
 
 pub fn compact_chat_session(session_id: String) -> Result<String, String> {
@@ -1341,6 +1467,84 @@ pub fn set_last_chat_session_id(session_id: String) -> Result<(), String> {
     crate::chat_session::set_last_session_id(&session_id).map_err(|e| e.to_string())
 }
 
+pub fn compile_session_environment(session_id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let catalog = load_workspace_catalog();
+    let env = crate::context_binding::refresh_session_environment(
+        Path::new(&storage),
+        &catalog,
+        &session_id,
+    )
+    .map_err(|e| e.to_string())?;
+    serde_json::to_value(env).map_err(|e| e.to_string())
+}
+
+pub fn update_session_environment(
+    session_id: String,
+    ontology_ids: Vec<String>,
+    prior_session_ids: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let catalog = load_workspace_catalog();
+    let session = crate::chat_session::load_session(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())?;
+    let config = crate::context_binding::ChatEnvironmentConfig {
+        session_id: session_id.clone(),
+        ontology_ids,
+        prior_session_ids,
+        session_kind: session.meta.session_kind,
+        participants: session.meta.participants.clone(),
+    };
+    let env = crate::context_binding::compile_chat_environment(
+        Path::new(&storage),
+        &catalog,
+        &config,
+    )
+    .map_err(|e| e.to_string())?;
+    env.save_to_session_dir(Path::new(&storage))
+        .map_err(|e| e.to_string())?;
+    serde_json::to_value(env).map_err(|e| e.to_string())
+}
+
+pub fn get_session_environment(session_id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let session = crate::chat_session::load_session(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())?;
+    serde_json::to_value(session.environment).map_err(|e| e.to_string())
+}
+
+pub fn list_installed_ontology_ids_for_chat() -> Vec<String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    crate::context_binding::list_installed_ontology_ids(Path::new(&storage))
+}
+
+pub fn run_chat_inference(session_id: String, prompt: String) -> Result<String, String> {
+    let result = crate::chat_inference::run_chat_inference_with_options(&session_id, &prompt, None);
+    if result.committed {
+        Ok(result.text)
+    } else {
+        Err(result
+            .block_reason
+            .unwrap_or_else(|| "Inference blocked".to_string()))
+    }
+}
+
+pub fn run_chat_inference_detailed(
+    session_id: String,
+    prompt: String,
+) -> Result<serde_json::Value, String> {
+    let result = crate::chat_inference::run_chat_inference_with_options(&session_id, &prompt, None);
+    serde_json::to_value(result).map_err(|e| e.to_string())
+}
+
+pub fn cancel_chat_inference() {
+    crate::chat_inference::request_cancel_inference();
+}
+
 pub fn ensure_chat_session() -> Result<String, String> {
     if let Some(id) = get_last_chat_session_id() {
         let state = crate::state::APP_STATE.get().unwrap();
@@ -1350,6 +1554,311 @@ pub fn ensure_chat_session() -> Result<String, String> {
         }
     }
     create_chat_session(None)
+}
+
+pub fn create_group_chat_session(
+    title: Option<String>,
+    participant_dids: Vec<String>,
+) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    crate::chat_session::create_group_session(Path::new(&storage), title, &participant_dids)
+        .map_err(|e| e.to_string())
+}
+
+pub fn add_chat_participant(session_id: String, participant_did: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let participants = crate::chat_session::add_participant(
+        Path::new(&storage),
+        &session_id,
+        &participant_did,
+    )
+    .map_err(|e| e.to_string())?;
+    serde_json::to_value(participants).map_err(|e| e.to_string())
+}
+
+pub fn remove_chat_participant(session_id: String, participant_did: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let participants = crate::chat_session::remove_participant(
+        Path::new(&storage),
+        &session_id,
+        &participant_did,
+    )
+    .map_err(|e| e.to_string())?;
+    serde_json::to_value(participants).map_err(|e| e.to_string())
+}
+
+pub fn get_chat_participants(session_id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let participants =
+        crate::chat_session::get_participants(Path::new(&storage), &session_id)
+            .map_err(|e| e.to_string())?;
+    serde_json::to_value(participants).map_err(|e| e.to_string())
+}
+
+pub fn get_local_agent_config(session_id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let cfg = crate::chat_agents::load_local_agent_config(Path::new(&storage), &session_id)?;
+    serde_json::to_value(cfg).map_err(|e| e.to_string())
+}
+
+pub fn update_agent_outcome_sharing(
+    session_id: String,
+    policy_json: String,
+) -> Result<serde_json::Value, String> {
+    let policy: crate::chat_agents::OutcomeSharingPolicy =
+        serde_json::from_str(&policy_json).map_err(|e| e.to_string())?;
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let cfg = crate::chat_agents::update_outcome_sharing(
+        Path::new(&storage),
+        &session_id,
+        policy,
+    )?;
+    serde_json::to_value(cfg).map_err(|e| e.to_string())
+}
+
+pub fn get_default_outcome_sharing(session_id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let session = crate::chat_session::load_session(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())?;
+    let policy = crate::chat_agents::default_outcome_sharing(session.meta.session_kind);
+    serde_json::to_value(policy).map_err(|e| e.to_string())
+}
+
+// ── Profile + social connect ───────────────────────────────────────────────────
+
+pub fn get_user_profile() -> Result<serde_json::Value, String> {
+    let profile = crate::user_profile::load_profile();
+    serde_json::to_value(profile).map_err(|e| e.to_string())
+}
+
+pub fn save_user_profile(profile_json: String) -> Result<serde_json::Value, String> {
+    let mut profile: crate::user_profile::UserProfile =
+        serde_json::from_str(&profile_json).map_err(|e| e.to_string())?;
+    profile.public_did = crate::user_profile::resolve_public_did(&profile);
+    crate::user_profile::save_profile(&profile)?;
+    serde_json::to_value(profile).map_err(|e| e.to_string())
+}
+
+pub fn generate_connect_invite(front_door_id: Option<String>) -> Result<serde_json::Value, String> {
+    let invite = crate::social_connect::generate_connect_invite(front_door_id)?;
+    serde_json::to_value(invite).map_err(|e| e.to_string())
+}
+
+pub fn accept_connect_invite(input: String) -> Result<serde_json::Value, String> {
+    let contact = crate::social_connect::accept_connect_invite(&input)?;
+    serde_json::to_value(contact).map_err(|e| e.to_string())
+}
+
+pub fn list_chat_contacts() -> Result<serde_json::Value, String> {
+    let contacts = crate::social_connect::list_chat_contacts();
+    serde_json::to_value(contacts).map_err(|e| e.to_string())
+}
+
+pub fn get_chat_graph(session_id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let graph = crate::chat_graph::load_graph(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())?;
+    let session = crate::chat_session::load_session(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())?;
+    let reactions =
+        crate::chat_ontology::list_reactions(Path::new(&storage), &session_id).unwrap_or_default();
+    let branch_types = crate::chat_ontology::list_branch_types(Path::new(&storage));
+    serde_json::to_value(serde_json::json!({
+        "fragments": graph.fragments,
+        "edges": graph.edges,
+        "messages": session.messages,
+        "reactions": reactions,
+        "branch_types": branch_types,
+        "wordnet": crate::chat_ontology::resolve_wordnet_q42(Path::new(&storage))
+            .map(|p| p.to_string_lossy().to_string()),
+    }))
+    .map_err(|e| e.to_string())
+}
+
+pub fn create_chat_fragment(
+    session_id: String,
+    message_lamport: u64,
+    anchor_start: u32,
+    anchor_end: u32,
+) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let session = crate::chat_session::load_session(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())?;
+    let msg = session
+        .messages
+        .iter()
+        .find(|m| m.lamport == message_lamport)
+        .ok_or_else(|| format!("message {message_lamport} not found"))?;
+    let fragment = crate::chat_graph::create_fragment_from_selection(
+        Path::new(&storage),
+        &session_id,
+        message_lamport,
+        &msg.content,
+        anchor_start,
+        anchor_end,
+    )
+    .map_err(|e| e.to_string())?;
+    serde_json::to_value(fragment).map_err(|e| e.to_string())
+}
+
+pub fn sync_chat_relay(session_id: Option<String>) -> Result<u64, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    if let Some(id) = session_id {
+        Ok(crate::chat_relay::sync_session_relay(Path::new(&storage), &id)? as u64)
+    } else {
+        Ok(crate::chat_relay::sync_all_group_sessions()? as u64)
+    }
+}
+
+pub fn start_chat_relay_poller() {
+    crate::chat_relay::start_relay_poller();
+}
+
+pub fn list_chat_branch_types() -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let types = crate::chat_ontology::list_branch_types(Path::new(&storage));
+    serde_json::to_value(types).map_err(|e| e.to_string())
+}
+
+pub fn classify_chat_branch(
+    anchor_text: String,
+    reply_text: String,
+) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let c = crate::chat_ontology::classify_branch(Path::new(&storage), &anchor_text, &reply_text);
+    serde_json::to_value(c).map_err(|e| e.to_string())
+}
+
+pub fn toggle_chat_reaction(
+    session_id: String,
+    message_lamport: u64,
+    emoji: String,
+) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let reactions = crate::chat_ontology::toggle_reaction(
+        Path::new(&storage),
+        &session_id,
+        message_lamport,
+        &emoji,
+    )?;
+    serde_json::to_value(reactions).map_err(|e| e.to_string())
+}
+
+pub fn list_chat_reactions(session_id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let reactions = crate::chat_ontology::list_reactions(Path::new(&storage), &session_id)?;
+    serde_json::to_value(reactions).map_err(|e| e.to_string())
+}
+
+pub fn wordnet_chat_ontology_status() -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let path = crate::chat_ontology::resolve_wordnet_q42(Path::new(&storage));
+    Ok(serde_json::json!({
+        "available": path.is_some(),
+        "q42_path": path.as_ref().map(|p| p.to_string_lossy().to_string()),
+        "lex_path": path.as_ref().and_then(|p| crate::chat_ontology::resolve_wordnet_lex(p).map(|l| l.to_string_lossy().to_string())),
+    }))
+}
+
+pub fn default_chat_file_sharing(session_id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let session = crate::chat_session::load_session(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())?;
+    let sharing = crate::chat_files::default_sharing_for_session(session.meta.session_kind);
+    serde_json::to_value(sharing).map_err(|e| e.to_string())
+}
+
+pub fn attach_chat_file(
+    session_id: String,
+    source_path: String,
+    sharing_json: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let sharing: crate::chat_files::ChatFileSharing =
+        serde_json::from_value(sharing_json).map_err(|e| e.to_string())?;
+    let result = crate::chat_files::attach_chat_file(
+        Path::new(&storage),
+        &session_id,
+        Path::new(&source_path),
+        sharing,
+    )?;
+    serde_json::to_value(result).map_err(|e| e.to_string())
+}
+
+pub fn list_chat_files(session_id: String) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let files = crate::chat_files::list_chat_files(Path::new(&storage), &session_id, None)?;
+    serde_json::to_value(files).map_err(|e| e.to_string())
+}
+
+pub fn set_chat_file_sharing(
+    session_id: String,
+    file_id: String,
+    sharing_json: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let sharing: crate::chat_files::ChatFileSharing =
+        serde_json::from_value(sharing_json).map_err(|e| e.to_string())?;
+    let updated = crate::chat_files::set_chat_file_sharing(
+        Path::new(&storage),
+        &session_id,
+        &file_id,
+        sharing,
+    )?;
+    serde_json::to_value(updated).map_err(|e| e.to_string())
+}
+
+pub fn get_chat_file_local_path(
+    session_id: String,
+    file_id: String,
+    variant: String,
+) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let path = crate::chat_files::resolve_chat_file_path(
+        Path::new(&storage),
+        &session_id,
+        &file_id,
+        &variant,
+        None,
+    )?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+pub fn parse_chat_file_preview(source_path: String) -> Result<serde_json::Value, String> {
+    let path = Path::new(&source_path);
+    if !path.is_file() {
+        return Err(format!("File not found: {}", path.display()));
+    }
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)
+        .and_then(|mut f| std::io::Read::read_to_end(&mut f, &mut bytes))
+        .map_err(|e| e.to_string())?;
+    let name = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("file");
+    let parsed = crate::chat_files::parse_document_bytes(name, &bytes);
+    serde_json::to_value(parsed).map_err(|e| e.to_string())
 }
 
 // ── Active model + lifecycle ───────────────────────────────────────────────────
@@ -1684,8 +2193,10 @@ pub fn get_active_daemon_port() -> u16 {
     if active != 0 {
         return active;
     }
-    let state = crate::state::APP_STATE.get().unwrap();
-    state.config.lock().unwrap().daemon_port
+    crate::state::APP_STATE
+        .get()
+        .map(|state| state.config.lock().unwrap().daemon_port)
+        .unwrap_or(4242)
 }
 
 /// Issues a signed semantic app token scoped to the installed app's manifest shapes.
@@ -1907,7 +2418,7 @@ struct QappReadinessReport {
     checks: Vec<AppRequirementCheck>,
 }
 
-fn load_workspace_catalog() -> qualia_core_db::resource_catalog::ResourceCatalog {
+pub fn load_workspace_catalog() -> qualia_core_db::resource_catalog::ResourceCatalog {
     qualia_core_db::resource_catalog::load_default()
         .unwrap_or_else(|_| qualia_core_db::resource_catalog::ResourceCatalog::empty())
 }

@@ -24,6 +24,8 @@
             --col-modal:   #a78bfa;
             --col-wasm:    #34d399;
             --col-daemon:  #fb923c;
+            --col-chat:    #f472b6;
+            --col-workbench: #60a5fa;
             --col-cli:     #fbbf24;
         }
 
@@ -143,6 +145,8 @@
         .cat-modal  .fn-dot { background: var(--col-modal); }
         .cat-wasm   .fn-dot { background: var(--col-wasm); }
         .cat-daemon .fn-dot { background: var(--col-daemon); }
+        .cat-chat   .fn-dot { background: var(--col-chat); }
+        .cat-workbench .fn-dot { background: var(--col-workbench); }
         .cat-cli    .fn-dot { background: var(--col-cli); }
 
         /* ── Main panel ───────────────────────────────────────────────── */
@@ -381,7 +385,7 @@
 <body>
 
 <div class="topbar">
-    <h1>QualiaDB · API Explorer</h1>
+    <h1>QualiaDB · API Explorer <span style="font-weight:400;color:var(--dim);font-size:.8rem">v0.0.8</span></h1>
     <div class="search-wrap">
         <input type="text" id="search" placeholder="Search functions…" autocomplete="off" spellcheck="false">
     </div>
@@ -421,6 +425,8 @@ const CAT_CLASS = {
     'Logic Modalities': 'cat-modal',
     'WASM API': 'cat-wasm',
     'Native Daemon': 'cat-daemon',
+    'Desktop Chat': 'cat-chat',
+    'Ontology Workbench': 'cat-workbench',
     'CLI': 'cat-cli',
 };
 
@@ -522,6 +528,8 @@ function showFunction(id) {
         'Logic Modalities': 'var(--col-modal)',
         'WASM API': 'var(--col-wasm)',
         'Native Daemon': 'var(--col-daemon)',
+        'Desktop Chat': 'var(--col-chat)',
+        'Ontology Workbench': 'var(--col-workbench)',
         'CLI': 'var(--col-cli)',
     }[entry.category] || 'var(--accent)';
 

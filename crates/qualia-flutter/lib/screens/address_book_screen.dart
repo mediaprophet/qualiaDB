@@ -112,7 +112,14 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
       final invite = await api.generateFrontDoorInvite();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invite DID: $invite')),
+          SnackBar(
+            content: Text(
+              invite.startsWith('{')
+                  ? 'Connect invite JSON copied to snackbar — share via Profile for full code + email'
+                  : 'Invite: $invite',
+            ),
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } catch (e) {

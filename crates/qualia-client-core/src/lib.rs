@@ -18,6 +18,18 @@ pub mod resource_import;
 pub mod model_lifecycle;
 pub mod vision_ingest;
 pub mod chat_session;
+pub mod context_binding;
+pub mod chat_retrieval;
+pub mod chat_inference;
+pub mod user_profile;
+pub mod social_connect;
+pub mod chat_graph;
+pub mod chat_relay;
+pub mod chat_ontology;
+pub mod chat_files;
+pub mod chat_agents;
+pub mod q42_compress;
+pub mod ontology_workbench;
 
 pub use state::*;
 pub use api::*;

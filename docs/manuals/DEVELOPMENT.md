@@ -9,8 +9,9 @@ _Branch: `0.0.8-dev` | Last updated: 2026-06-07_
 
 - [Rust stable](https://rustup.rs/) (`rustup update stable`)
 - [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/) (for WASM browser builds)
-- [Tauri CLI v1.x](https://tauri.app/v1/guides/getting-started/prerequisites/) (for the desktop app)
-- Node.js ≥ 18 (for the Vite/React frontend and browser benchmark runner)
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) ≥ 3.16 (primary desktop app — `crates/qualia-flutter/`)
+- [Tauri CLI v1.x](https://tauri.app/v1/guides/getting-started/prerequisites/) (legacy `qualia-desktop` — not in release CI)
+- Node.js ≥ 18 (for browser benchmark runner and docs test suite)
 
 ---
 
@@ -49,6 +50,23 @@ git push origin v0.0.6
 ```
 
 Local cross-compilation of full Tauri desktop apps from Windows is not straightforward (Tauri bundlers are platform-specific). Use CI for macOS/Linux desktop releases.
+
+### Flutter desktop (primary shipped shell, v0.0.8)
+
+```bash
+cd crates/qualia-flutter
+flutter pub get
+flutter run -d windows   # or macos / linux
+
+# After editing rust/src/api/*.rs:
+flutter_rust_bridge_codegen generate
+```
+
+Serve local docs (API Explorer at `http://localhost:8765/api-explorer/`):
+
+```powershell
+.\docs\tests\run-local.ps1 -Serve -Port 8765
+```
 
 ### Cross-compiling the CLI locally (Windows → Linux)
 

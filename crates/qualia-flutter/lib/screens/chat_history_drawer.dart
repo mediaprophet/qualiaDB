@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../src/rust/api/chat_session.dart' as chat;
+import '../widgets/add_friends_sheet.dart';
 
 /// Sidebar drawer listing persisted chat sessions.
 class ChatHistoryDrawer extends StatefulWidget {
   final String? activeSessionId;
   final ValueChanged<String> onSessionSelected;
   final VoidCallback onNewChat;
+  final ValueChanged<String>? onGroupCreated;
 
   const ChatHistoryDrawer({
     super.key,
     required this.activeSessionId,
     required this.onSessionSelected,
     required this.onNewChat,
+    this.onGroupCreated,
   });
 
   @override
@@ -105,6 +108,23 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
                     },
                   ),
                   IconButton(
+                    tooltip: 'New group chat',
+                    icon: const Icon(Icons.group_add_outlined),
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) => AddFriendsSheet(
+                          createGroup: true,
+                          onGroupCreated: (id) {
+                            widget.onGroupCreated?.call(id);
+                            Navigator.pop(context);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  IconButton(
                     tooltip: 'Refresh',
                     icon: const Icon(Icons.refresh),
                     onPressed: _reload,
@@ -146,7 +166,9 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     subtitle: Text(
-                                      '${s.messageCount} message${s.messageCount == BigInt.one ? '' : 's'}',
+                                      s.sessionKind == 'group'
+                                          ? 'Group · ${s.participantCount} people · ${s.messageCount} msgs'
+                                          : '${s.messageCount} message${s.messageCount == BigInt.one ? '' : 's'}',
                                       style: Theme.of(context).textTheme.bodySmall,
                                     ),
                                     onTap: () {

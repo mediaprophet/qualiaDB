@@ -157,7 +157,7 @@ await client.queryText(query, timeoutMs?)
 ```
 docs/api-explorer/
 ├── index.html     Full single-page app — sidebar, detail panel, live widget
-└── catalog.js     25-entry function catalog (all snippets + live() runners)
+└── catalog.js     45-entry function catalog (all snippets + live() runners)
 ```
 
 ### Catalog structure
@@ -202,7 +202,9 @@ Each entry in `CATALOG` (in `catalog.js`) looks like:
 | Core Primitives | cyan | q_hash, QualiaQuin, Routing Lanes |
 | Logic Modalities | purple | All 10 modalities |
 | WASM API | green | execute_ntriples_query, bioinformatics, clinical, chemistry, economics, SHACL, governance |
-| Native Daemon | orange | GET /health, POST /query, WS /qualia-bridge |
+| Native Daemon | orange | /health, /query, WS /qualia-bridge, /chat/publish, /chat/pull, /torrent/* |
+| Desktop Chat | pink | Sub-agent config, outcome sharing, relay sync, group sessions (FRB) |
+| Ontology Workbench | blue | URI import, seeding, share cards (FRB) |
 | CLI | amber | daemon, ingest, dump |
 
 ### Adding a new entry
@@ -272,23 +274,25 @@ Without `expose_headers`, the `X-Qualia-Compute-Cost: {matches}+{cycles}` respon
 .\target\release\qualia-cli.exe daemon --dev --port 4242
 ```
 
-The daemon version is currently **v0.0.5**. Its in-memory graph is empty (the mmap storage layer is not yet wired in — see `daemon.rs` line ~350: `let current_database_state: &[crate::QualiaQuin] = &[];`). All queries return 0 results. The full HTTP pipeline (compile → VM → format negotiation → CORS → auth) is exercised.
+The daemon version is currently **v0.0.8**. Its in-memory graph may be empty when mmap storage is not wired (see `daemon.rs`). The full HTTP pipeline (compile → VM → format negotiation → CORS → auth) is exercised. v0.0.8 also exposes chat relay (`/chat/publish`, `/chat/pull`) and WebTorrent web seeds (`/torrent/*`).
 
 ---
 
 ## What the tests actually verify
 
-### Native tests — confirmed behaviours (v0.0.5 daemon)
+### Native tests — confirmed behaviours (v0.0.8 daemon)
 
 | Behaviour | Value |
 |---|---|
-| `/health` body | `{ status: "active", engine: "qualia-core-db", version: "0.0.5" }` |
+| `/health` body | `{ status: "active", engine: "qualia-core-db", version: "0.0.8", webtorrent: { … } }` |
 | Query response `@context['@vocab']` | `"https://qualia-db.org/vocab#"` |
 | `X-Qualia-Compute-Cost` format | `"{matchCount}+{vmCycles}"` e.g. `"0+0"` |
 | Bad format response | HTTP 406, body `{ code: "not_acceptable", status: "error", message: "Supported: …" }` |
 | Empty query | HTTP 400, body `{ code: "empty_query" }` |
 | `q42` format | HTTP 501, body `{ code: "not_implemented" }` |
-| WebSocket first message | `{ type: "HANDSHAKE_SUCCESS", payload: { mode: "NATIVE", version: "0.0.5" } }` |
+| WebSocket first message | `{ type: "HANDSHAKE_SUCCESS", payload: { mode: "NATIVE", version: "0.0.8" } }` |
+| `/chat/pull` | `{ messages: [], latest_lamport: N }` (empty inbox OK) |
+| `/torrent/telemetry` | `{ seeder: "qualia-daemon", … }` |
 | Dev mode auth | No token needed — any or no `X-Qualia-Token` value returns 200 |
 
 ### Unverified (WASM functions not in v0.0.5 binary)

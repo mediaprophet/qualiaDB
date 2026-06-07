@@ -86,9 +86,29 @@ fn seed_anatomy_health_graph(store: &mut Vec<QualiaQuin>) {
     }
 }
 
-fn try_load_index_dir(_store: &mut Vec<QualiaQuin>, storage_path: &str) {
-    // Future: mmap `{storage_path}/Index/*.q42` and decompress frames into Quins.
-    let _ = Path::new(storage_path).join("Index");
+fn try_load_index_dir(store: &mut Vec<QualiaQuin>, storage_path: &str) {
+    let index = Path::new(storage_path).join("Index");
+    let Ok(entries) = std::fs::read_dir(&index) else {
+        return;
+    };
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("q42") {
+            continue;
+        }
+        if path
+            .file_name()
+            .map(|n| n.to_string_lossy().contains(".meta."))
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        if let Ok(quins) = crate::q42_reader::read_q42_quins(&path) {
+            for quin in quins {
+                push_quin(store, quin);
+            }
+        }
+    }
 }
 
 /// Initialise or refresh the daemon graph from storage path.

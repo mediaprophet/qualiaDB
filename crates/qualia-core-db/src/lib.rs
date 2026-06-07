@@ -9,6 +9,10 @@ pub mod n3_parser;
 pub mod n3_compiler;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod q42_reader;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod q42_lex;
 pub mod llm_agent;
 pub mod profiles;
 pub mod solid_ldp;
@@ -18,6 +22,12 @@ pub mod modalities;
 pub mod dicom;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod dicom_ingest;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod chat_relay_daemon;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod webtorrent_seeder;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod webtorrent_routes;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod comorbidity_eval;
 

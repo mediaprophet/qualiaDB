@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1220379710;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 437132845;
 
 // Section: executor
 
@@ -47,6 +47,39 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
+fn wire__crate__api__social_api__accept_connect_invite_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "accept_connect_invite",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_input = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::social_api::accept_connect_invite(api_input)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__accept_vault_handshake_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -76,6 +109,43 @@ fn wire__crate__api__qualia_api__accept_vault_handshake_impl(
                 transform_result_sse::<_, String>((move || {
                     let output_ok =
                         crate::api::qualia_api::accept_vault_handshake(api_did_key, api_payload)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__add_chat_participant_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "add_chat_participant",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_participant_did = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::add_chat_participant(
+                        api_session_id,
+                        api_participant_did,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -233,6 +303,49 @@ fn wire__crate__api__chat_session__append_chat_message_impl(
         },
     )
 }
+fn wire__crate__api__chat_graph__append_chat_message_reply_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "append_chat_message_reply",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_role = <String>::sse_decode(&mut deserializer);
+            let api_content = <String>::sse_decode(&mut deserializer);
+            let api_reply_to_fragment = <Option<String>>::sse_decode(&mut deserializer);
+            let api_branch_type_id = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_graph::append_chat_message_reply(
+                        api_session_id,
+                        api_role,
+                        api_content,
+                        api_reply_to_fragment,
+                        api_branch_type_id,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qapp_api__apply_qapp_update_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -294,6 +407,46 @@ fn wire__crate__api__qapp_api__apply_qapp_update_from_path_impl(
                 )?;
                 Ok(output_ok)
             })())
+        },
+    )
+}
+fn wire__crate__api__chat_files__attach_chat_file_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "attach_chat_file",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_source_path = <String>::sse_decode(&mut deserializer);
+            let api_sharing =
+                <crate::api::chat_files::ChatFileSharing>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_files::attach_chat_file(
+                        api_session_id,
+                        api_source_path,
+                        api_sharing,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
         },
     )
 }
@@ -439,6 +592,40 @@ fn wire__crate__api__qualia_api__cancel_download_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::api::qualia_api::cancel_download(api_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__qualia_api__cancel_inference_stream_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "cancel_inference_stream",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok({
+                        crate::api::qualia_api::cancel_inference_stream();
+                    })?;
                     Ok(output_ok)
                 })())
             }
@@ -637,6 +824,40 @@ fn wire__crate__api__qapp_api__compile_anatomy_wildcard_query_impl(
         },
     )
 }
+fn wire__crate__api__chat_session__compile_session_environment_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "compile_session_environment",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::chat_session::compile_session_environment(api_session_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__configure_webview2_runtime_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -664,6 +885,47 @@ fn wire__crate__api__qualia_api__configure_webview2_runtime_impl(
                 transform_result_sse::<_, ()>((move || {
                     let output_ok =
                         Result::<_, ()>::Ok(crate::api::qualia_api::configure_webview2_runtime())?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_graph__create_chat_fragment_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "create_chat_fragment",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_message_lamport = <u64>::sse_decode(&mut deserializer);
+            let api_anchor_start = <u32>::sse_decode(&mut deserializer);
+            let api_anchor_end = <u32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_graph::create_chat_fragment(
+                        api_session_id,
+                        api_message_lamport,
+                        api_anchor_start,
+                        api_anchor_end,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -703,6 +965,43 @@ fn wire__crate__api__chat_session__create_chat_session_impl(
         },
     )
 }
+fn wire__crate__api__chat_session__create_group_chat_session_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "create_group_chat_session",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_title = <Option<String>>::sse_decode(&mut deserializer);
+            let api_participant_dids = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::create_group_chat_session(
+                        api_title,
+                        api_participant_dids,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__daemon_status_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -729,6 +1028,40 @@ fn wire__crate__api__qualia_api__daemon_status_impl(
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Result::<_, ()>::Ok(crate::api::qualia_api::daemon_status())?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_files__default_chat_file_sharing_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "default_chat_file_sharing",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::chat_files::default_chat_file_sharing(api_session_id)?;
                     Ok(output_ok)
                 })())
             }
@@ -1544,6 +1877,40 @@ fn wire__crate__api__qualia_api__generate_bip39_seed_impl(
         },
     )
 }
+fn wire__crate__api__social_api__generate_connect_invite_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "generate_connect_invite",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_front_door_id = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::social_api::generate_connect_invite(api_front_door_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__generate_front_door_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1714,6 +2081,145 @@ fn wire__crate__api__qualia_api__get_active_model_impl(
         },
     )
 }
+fn wire__crate__api__chat_files__get_chat_file_local_path_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_chat_file_local_path",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_file_id = <String>::sse_decode(&mut deserializer);
+            let api_variant = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_files::get_chat_file_local_path(
+                        api_session_id,
+                        api_file_id,
+                        api_variant,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_graph__get_chat_graph_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_chat_graph",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_graph::get_chat_graph(api_session_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__get_chat_participants_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_chat_participants",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::chat_session::get_chat_participants(api_session_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__get_chat_session_did_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_chat_session_did",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::get_chat_session_did(api_session_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__get_coin_balances_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1773,6 +2279,40 @@ fn wire__crate__api__qualia_api__get_config_impl(
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Result::<_, ()>::Ok(crate::api::qualia_api::get_config())?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_agents__get_default_outcome_sharing_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_default_outcome_sharing",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::chat_agents::get_default_outcome_sharing(api_session_id)?;
                     Ok(output_ok)
                 })())
             }
@@ -1968,6 +2508,40 @@ fn wire__crate__api__chat_session__get_last_chat_session_id_impl(
                 transform_result_sse::<_, ()>((move || {
                     let output_ok =
                         Result::<_, ()>::Ok(crate::api::chat_session::get_last_chat_session_id())?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_agents__get_local_agent_config_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_local_agent_config",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::chat_agents::get_local_agent_config(api_session_id)?;
                     Ok(output_ok)
                 })())
             }
@@ -2173,6 +2747,40 @@ fn wire__crate__api__qualia_api__get_qpu_settings_impl(
         },
     )
 }
+fn wire__crate__api__chat_session__get_session_environment_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_session_environment",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::chat_session::get_session_environment(api_session_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__get_spatial_pressure_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2336,6 +2944,38 @@ fn wire__crate__api__qualia_api__get_tokens_impl(
         },
     )
 }
+fn wire__crate__api__ontology_workbench__get_torrent_bandwidth_policy_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_torrent_bandwidth_policy",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::ontology_workbench::get_torrent_bandwidth_policy()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__get_transaction_history_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2365,6 +3005,38 @@ fn wire__crate__api__qualia_api__get_transaction_history_impl(
                     let output_ok = Result::<_, ()>::Ok(
                         crate::api::qualia_api::get_transaction_history(api_ticker),
                     )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__social_api__get_user_profile_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_user_profile",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::social_api::get_user_profile()?;
                     Ok(output_ok)
                 })())
             }
@@ -3129,6 +3801,168 @@ fn wire__crate__api__qualia_api__launch_installed_qapp_with_context_impl(
         },
     )
 }
+fn wire__crate__api__chat_graph__list_chat_branch_types_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_chat_branch_types",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_graph::list_chat_branch_types()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__social_api__list_chat_contacts_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_chat_contacts",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::social_api::list_chat_contacts()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_files__list_chat_files_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_chat_files",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_files::list_chat_files(api_session_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_graph__list_chat_reactions_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_chat_reactions",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_graph::list_chat_reactions(api_session_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__list_chat_session_share_targets_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_chat_session_share_targets",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::list_chat_session_share_targets()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__chat_session__list_chat_sessions_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -3195,6 +4029,40 @@ fn wire__crate__api__qualia_api__list_installed_ontology_artifacts_impl(
         },
     )
 }
+fn wire__crate__api__chat_session__list_installed_ontology_ids_for_chat_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_installed_ontology_ids_for_chat",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(
+                        crate::api::chat_session::list_installed_ontology_ids_for_chat(),
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__list_installed_qapps_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -3228,6 +4096,42 @@ fn wire__crate__api__qualia_api__list_installed_qapps_impl(
         },
     )
 }
+fn wire__crate__api__ontology_workbench__list_ontology_shares_for_session_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_ontology_shares_for_session",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_did = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::ontology_workbench::list_ontology_shares_for_session(
+                            api_session_did,
+                        )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qapp_api__list_qapp_update_offers_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -3254,6 +4158,38 @@ fn wire__crate__api__qapp_api__list_qapp_update_offers_impl(
                 let output_ok = crate::api::qapp_api::list_qapp_update_offers()?;
                 Ok(output_ok)
             })())
+        },
+    )
+}
+fn wire__crate__api__ontology_workbench__list_workbench_ontologies_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_workbench_ontologies",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::ontology_workbench::list_workbench_ontologies()?;
+                    Ok(output_ok)
+                })())
+            }
         },
     )
 }
@@ -3559,6 +4495,39 @@ fn wire__crate__api__qualia_api__parse_dicom_metadata_json_impl(
         },
     )
 }
+fn wire__crate__api__chat_files__preview_chat_file_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "preview_chat_file",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_source_path = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_files::preview_chat_file(api_source_path)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__profile_energy_circumstance_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -3790,6 +4759,43 @@ fn wire__crate__api__qualia_api__register_qualia_uri_handler_impl(
         },
     )
 }
+fn wire__crate__api__chat_session__remove_chat_participant_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "remove_chat_participant",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_participant_did = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::remove_chat_participant(
+                        api_session_id,
+                        api_participant_did,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__remove_installed_model_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -3982,13 +4988,13 @@ fn wire__crate__api__qualia_api__run_inference_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_prompt = <String>::sse_decode(&mut deserializer);
-            let api_model_path = <String>::sse_decode(&mut deserializer);
+            let api__model_path = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Result::<_, ()>::Ok(crate::api::qualia_api::run_inference(
                         api_prompt,
-                        api_model_path,
+                        api__model_path,
                     ))?;
                     Ok(output_ok)
                 })())
@@ -4019,7 +5025,9 @@ fn wire__crate__api__qualia_api__run_inference_stream_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_prompt = <String>::sse_decode(&mut deserializer);
-            let api_model_path = <String>::sse_decode(&mut deserializer);
+            let api__model_path = <String>::sse_decode(&mut deserializer);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_reply_to_fragment_id = <Option<String>>::sse_decode(&mut deserializer);
             let api_sink =
                 <StreamSink<String, flutter_rust_bridge::for_generated::SseCodec>>::sse_decode(
                     &mut deserializer,
@@ -4030,7 +5038,9 @@ fn wire__crate__api__qualia_api__run_inference_stream_impl(
                     let output_ok = Result::<_, ()>::Ok({
                         crate::api::qualia_api::run_inference_stream(
                             api_prompt,
-                            api_model_path,
+                            api__model_path,
+                            api_session_id,
+                            api_reply_to_fragment_id,
                             api_sink,
                         );
                     })?;
@@ -4209,6 +5219,39 @@ fn wire__crate__api__qualia_api__save_tax_suite_impl(
         },
     )
 }
+fn wire__crate__api__social_api__save_user_profile_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "save_user_profile",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_profile = <crate::api::social_api::UserProfile>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::social_api::save_user_profile(api_profile)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__set_active_model_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -4236,6 +5279,46 @@ fn wire__crate__api__qualia_api__set_active_model_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::api::qualia_api::set_active_model(api_model_name)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_files__set_chat_file_sharing_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_chat_file_sharing",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_file_id = <String>::sse_decode(&mut deserializer);
+            let api_sharing =
+                <crate::api::chat_files::ChatFileSharing>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_files::set_chat_file_sharing(
+                        api_session_id,
+                        api_file_id,
+                        api_sharing,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -4270,6 +5353,118 @@ fn wire__crate__api__chat_session__set_last_chat_session_id_impl(
                 transform_result_sse::<_, String>((move || {
                     let output_ok =
                         crate::api::chat_session::set_last_chat_session_id(api_session_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__ontology_workbench__set_torrent_bandwidth_policy_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_torrent_bandwidth_policy",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_policy = <crate::api::ontology_workbench::TorrentBandwidthPolicy>::sse_decode(
+                &mut deserializer,
+            );
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::ontology_workbench::set_torrent_bandwidth_policy(api_policy)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__ontology_workbench__set_workbench_seed_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_workbench_seed",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_ontology_id = <String>::sse_decode(&mut deserializer);
+            let api_active = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::ontology_workbench::set_workbench_seed(
+                        api_ontology_id,
+                        api_active,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__ontology_workbench__set_workbench_torrent_policy_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_workbench_torrent_policy",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_ontology_id = <String>::sse_decode(&mut deserializer);
+            let api_policy = <crate::api::ontology_workbench::OntologyTorrentPolicy>::sse_decode(
+                &mut deserializer,
+            );
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::ontology_workbench::set_workbench_torrent_policy(
+                        api_ontology_id,
+                        api_policy,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -4372,6 +5567,39 @@ fn wire__crate__api__qapp_api__submit_dicom_ingest_impl(
         },
     )
 }
+fn wire__crate__api__chat_graph__sync_chat_relay_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "sync_chat_relay",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_graph::sync_chat_relay(api_session_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__test_sparql_endpoint_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -4400,6 +5628,45 @@ fn wire__crate__api__qualia_api__test_sparql_endpoint_impl(
                 transform_result_sse::<_, String>((move || {
                     let output_ok =
                         crate::api::qualia_api::test_sparql_endpoint(api_endpoint_or_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_graph__toggle_chat_reaction_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "toggle_chat_reaction",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_message_lamport = <u64>::sse_decode(&mut deserializer);
+            let api_emoji = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_graph::toggle_chat_reaction(
+                        api_session_id,
+                        api_message_lamport,
+                        api_emoji,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -4476,6 +5743,81 @@ fn wire__crate__api__qualia_api__toggle_stark_prover_impl(
         },
     )
 }
+fn wire__crate__api__chat_agents__update_agent_outcome_sharing_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "update_agent_outcome_sharing",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_policy =
+                <crate::api::chat_agents::OutcomeSharingPolicy>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_agents::update_agent_outcome_sharing(
+                        api_session_id,
+                        api_policy,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__social_api__update_chat_contact_categories_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "update_chat_contact_categories",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_contact_did = <String>::sse_decode(&mut deserializer);
+            let api_categories = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::social_api::update_chat_contact_categories(
+                        api_contact_did,
+                        api_categories,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__qualia_api__update_physics_state_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -4511,6 +5853,45 @@ fn wire__crate__api__qualia_api__update_physics_state_impl(
                             api_time_dilation,
                         );
                     })?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chat_session__update_session_environment_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "update_session_environment",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_ontology_ids = <Vec<String>>::sse_decode(&mut deserializer);
+            let api_prior_session_ids = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_session::update_session_environment(
+                        api_session_id,
+                        api_ontology_ids,
+                        api_prior_session_ids,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -4626,6 +6007,84 @@ fn wire__crate__api__qualia_api__verify_and_install_qapp_impl(
         },
     )
 }
+fn wire__crate__api__chat_graph__wordnet_chat_ontology_status_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "wordnet_chat_ontology_status",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chat_graph::wordnet_chat_ontology_status()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__ontology_workbench__workbench_import_ontology_uri_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "workbench_import_ontology_uri",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_uri = <String>::sse_decode(&mut deserializer);
+            let api_ontology_id = <Option<String>>::sse_decode(&mut deserializer);
+            let api_domain = <Option<String>>::sse_decode(&mut deserializer);
+            let api_title = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, String>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::ontology_workbench::workbench_import_ontology_uri(
+                                api_uri,
+                                api_ontology_id,
+                                api_domain,
+                                api_title,
+                            )
+                            .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 
 // Section: related_funcs
 
@@ -4719,6 +6178,18 @@ impl SseDecode for crate::api::qualia_api::AgentConfig {
     }
 }
 
+impl SseDecode for crate::api::chat_files::AttachChatFileResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_file = <crate::api::chat_files::ChatFileRecord>::sse_decode(deserializer);
+        let mut var_messageLamport = <u64>::sse_decode(deserializer);
+        return crate::api::chat_files::AttachChatFileResult {
+            file: var_file,
+            message_lamport: var_messageLamport,
+        };
+    }
+}
+
 impl SseDecode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4748,6 +6219,203 @@ impl SseDecode for crate::api::qualia_api::CatalogItem {
     }
 }
 
+impl SseDecode for crate::api::chat_graph::ChatBranchType {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_label = <String>::sse_decode(deserializer);
+        let mut var_emoji = <String>::sse_decode(deserializer);
+        let mut var_description = <String>::sse_decode(deserializer);
+        let mut var_wordnetGroundingHash = <Option<String>>::sse_decode(deserializer);
+        return crate::api::chat_graph::ChatBranchType {
+            id: var_id,
+            label: var_label,
+            emoji: var_emoji,
+            description: var_description,
+            wordnet_grounding_hash: var_wordnetGroundingHash,
+        };
+    }
+}
+
+impl SseDecode for crate::api::social_api::ChatContact {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_actorId = <String>::sse_decode(deserializer);
+        let mut var_displayName = <String>::sse_decode(deserializer);
+        let mut var_did = <String>::sse_decode(deserializer);
+        let mut var_source = <String>::sse_decode(deserializer);
+        let mut var_addedAt = <u64>::sse_decode(deserializer);
+        let mut var_categories = <Vec<String>>::sse_decode(deserializer);
+        return crate::api::social_api::ChatContact {
+            actor_id: var_actorId,
+            display_name: var_displayName,
+            did: var_did,
+            source: var_source,
+            added_at: var_addedAt,
+            categories: var_categories,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_files::ChatFilePreview {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_mimeType = <String>::sse_decode(deserializer);
+        let mut var_extension_ = <String>::sse_decode(deserializer);
+        let mut var_pageCount = <Option<u32>>::sse_decode(deserializer);
+        let mut var_textPreview = <String>::sse_decode(deserializer);
+        let mut var_parseStatus = <String>::sse_decode(deserializer);
+        let mut var_parseError = <Option<String>>::sse_decode(deserializer);
+        let mut var_mediaKind = <String>::sse_decode(deserializer);
+        let mut var_imageWidth = <Option<u32>>::sse_decode(deserializer);
+        let mut var_imageHeight = <Option<u32>>::sse_decode(deserializer);
+        return crate::api::chat_files::ChatFilePreview {
+            mime_type: var_mimeType,
+            extension: var_extension_,
+            page_count: var_pageCount,
+            text_preview: var_textPreview,
+            parse_status: var_parseStatus,
+            parse_error: var_parseError,
+            media_kind: var_mediaKind,
+            image_width: var_imageWidth,
+            image_height: var_imageHeight,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_files::ChatFileRecord {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_fileId = <String>::sse_decode(deserializer);
+        let mut var_originalName = <String>::sse_decode(deserializer);
+        let mut var_mimeType = <String>::sse_decode(deserializer);
+        let mut var_extension_ = <String>::sse_decode(deserializer);
+        let mut var_sha256 = <String>::sse_decode(deserializer);
+        let mut var_byteSize = <u64>::sse_decode(deserializer);
+        let mut var_pageCount = <Option<u32>>::sse_decode(deserializer);
+        let mut var_textPreview = <String>::sse_decode(deserializer);
+        let mut var_authorDid = <String>::sse_decode(deserializer);
+        let mut var_authorName = <Option<String>>::sse_decode(deserializer);
+        let mut var_messageLamport = <Option<u64>>::sse_decode(deserializer);
+        let mut var_attachedAt = <u64>::sse_decode(deserializer);
+        let mut var_sharing = <crate::api::chat_files::ChatFileSharing>::sse_decode(deserializer);
+        let mut var_parseStatus = <String>::sse_decode(deserializer);
+        let mut var_parseError = <Option<String>>::sse_decode(deserializer);
+        let mut var_mediaKind = <String>::sse_decode(deserializer);
+        let mut var_imageWidth = <Option<u32>>::sse_decode(deserializer);
+        let mut var_imageHeight = <Option<u32>>::sse_decode(deserializer);
+        let mut var_thumbnailRelPath = <Option<String>>::sse_decode(deserializer);
+        let mut var_visionLexiconId = <Option<String>>::sse_decode(deserializer);
+        let mut var_visionFacet = <Option<String>>::sse_decode(deserializer);
+        let mut var_visionStatus = <Option<String>>::sse_decode(deserializer);
+        return crate::api::chat_files::ChatFileRecord {
+            file_id: var_fileId,
+            original_name: var_originalName,
+            mime_type: var_mimeType,
+            extension: var_extension_,
+            sha256: var_sha256,
+            byte_size: var_byteSize,
+            page_count: var_pageCount,
+            text_preview: var_textPreview,
+            author_did: var_authorDid,
+            author_name: var_authorName,
+            message_lamport: var_messageLamport,
+            attached_at: var_attachedAt,
+            sharing: var_sharing,
+            parse_status: var_parseStatus,
+            parse_error: var_parseError,
+            media_kind: var_mediaKind,
+            image_width: var_imageWidth,
+            image_height: var_imageHeight,
+            thumbnail_rel_path: var_thumbnailRelPath,
+            vision_lexicon_id: var_visionLexiconId,
+            vision_facet: var_visionFacet,
+            vision_status: var_visionStatus,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_files::ChatFileSharing {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_visibility = <String>::sse_decode(deserializer);
+        let mut var_allowDownload = <bool>::sse_decode(deserializer);
+        let mut var_allowLlmContext = <bool>::sse_decode(deserializer);
+        let mut var_allowRelaySync = <bool>::sse_decode(deserializer);
+        let mut var_allowedDids = <Vec<String>>::sse_decode(deserializer);
+        let mut var_expiresAt = <Option<u64>>::sse_decode(deserializer);
+        return crate::api::chat_files::ChatFileSharing {
+            visibility: var_visibility,
+            allow_download: var_allowDownload,
+            allow_llm_context: var_allowLlmContext,
+            allow_relay_sync: var_allowRelaySync,
+            allowed_dids: var_allowedDids,
+            expires_at: var_expiresAt,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_graph::ChatFragment {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_fragmentId = <String>::sse_decode(deserializer);
+        let mut var_messageLamport = <u64>::sse_decode(deserializer);
+        let mut var_anchorStart = <u32>::sse_decode(deserializer);
+        let mut var_anchorEnd = <u32>::sse_decode(deserializer);
+        let mut var_anchorText = <String>::sse_decode(deserializer);
+        let mut var_authorDid = <Option<String>>::sse_decode(deserializer);
+        let mut var_authorName = <Option<String>>::sse_decode(deserializer);
+        let mut var_createdAt = <u64>::sse_decode(deserializer);
+        return crate::api::chat_graph::ChatFragment {
+            fragment_id: var_fragmentId,
+            message_lamport: var_messageLamport,
+            anchor_start: var_anchorStart,
+            anchor_end: var_anchorEnd,
+            anchor_text: var_anchorText,
+            author_did: var_authorDid,
+            author_name: var_authorName,
+            created_at: var_createdAt,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_graph::ChatGraphEdge {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_childFragmentId = <String>::sse_decode(deserializer);
+        let mut var_parentFragmentId = <String>::sse_decode(deserializer);
+        let mut var_replyMessageLamport = <u64>::sse_decode(deserializer);
+        let mut var_createdAt = <u64>::sse_decode(deserializer);
+        let mut var_branchTypeId = <Option<String>>::sse_decode(deserializer);
+        let mut var_branchLabel = <Option<String>>::sse_decode(deserializer);
+        let mut var_branchEmoji = <Option<String>>::sse_decode(deserializer);
+        let mut var_wordnetGroundingHash = <Option<String>>::sse_decode(deserializer);
+        return crate::api::chat_graph::ChatGraphEdge {
+            child_fragment_id: var_childFragmentId,
+            parent_fragment_id: var_parentFragmentId,
+            reply_message_lamport: var_replyMessageLamport,
+            created_at: var_createdAt,
+            branch_type_id: var_branchTypeId,
+            branch_label: var_branchLabel,
+            branch_emoji: var_branchEmoji,
+            wordnet_grounding_hash: var_wordnetGroundingHash,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_graph::ChatGraphView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_fragments =
+            <Vec<crate::api::chat_graph::ChatFragment>>::sse_decode(deserializer);
+        let mut var_edges = <Vec<crate::api::chat_graph::ChatGraphEdge>>::sse_decode(deserializer);
+        return crate::api::chat_graph::ChatGraphView {
+            fragments: var_fragments,
+            edges: var_edges,
+        };
+    }
+}
+
 impl SseDecode for crate::api::chat_session::ChatMessage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4755,11 +6423,79 @@ impl SseDecode for crate::api::chat_session::ChatMessage {
         let mut var_role = <String>::sse_decode(deserializer);
         let mut var_content = <String>::sse_decode(deserializer);
         let mut var_timestamp = <u64>::sse_decode(deserializer);
+        let mut var_authorName = <Option<String>>::sse_decode(deserializer);
+        let mut var_authorDid = <Option<String>>::sse_decode(deserializer);
+        let mut var_replyToFragment = <Option<String>>::sse_decode(deserializer);
+        let mut var_subAgentOf = <Option<String>>::sse_decode(deserializer);
+        let mut var_agentDid = <Option<String>>::sse_decode(deserializer);
+        let mut var_authorDisplay = <Option<String>>::sse_decode(deserializer);
+        let mut var_modelId = <Option<String>>::sse_decode(deserializer);
         return crate::api::chat_session::ChatMessage {
             lamport: var_lamport,
             role: var_role,
             content: var_content,
             timestamp: var_timestamp,
+            author_name: var_authorName,
+            author_did: var_authorDid,
+            reply_to_fragment: var_replyToFragment,
+            sub_agent_of: var_subAgentOf,
+            agent_did: var_agentDid,
+            author_display: var_authorDisplay,
+            model_id: var_modelId,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_session::ChatParticipant {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_did = <String>::sse_decode(deserializer);
+        let mut var_displayName = <String>::sse_decode(deserializer);
+        let mut var_actorId = <String>::sse_decode(deserializer);
+        let mut var_role = <String>::sse_decode(deserializer);
+        let mut var_joinedAt = <u64>::sse_decode(deserializer);
+        return crate::api::chat_session::ChatParticipant {
+            did: var_did,
+            display_name: var_displayName,
+            actor_id: var_actorId,
+            role: var_role,
+            joined_at: var_joinedAt,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_graph::ChatReaction {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_messageLamport = <u64>::sse_decode(deserializer);
+        let mut var_emoji = <String>::sse_decode(deserializer);
+        let mut var_authorDid = <String>::sse_decode(deserializer);
+        let mut var_authorName = <Option<String>>::sse_decode(deserializer);
+        let mut var_createdAt = <u64>::sse_decode(deserializer);
+        return crate::api::chat_graph::ChatReaction {
+            message_lamport: var_messageLamport,
+            emoji: var_emoji,
+            author_did: var_authorDid,
+            author_name: var_authorName,
+            created_at: var_createdAt,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_session::ChatSessionShareTarget {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_sessionId = <String>::sse_decode(deserializer);
+        let mut var_sessionDid = <String>::sse_decode(deserializer);
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_sessionKind = <String>::sse_decode(deserializer);
+        let mut var_participantCount = <u64>::sse_decode(deserializer);
+        return crate::api::chat_session::ChatSessionShareTarget {
+            session_id: var_sessionId,
+            session_did: var_sessionDid,
+            title: var_title,
+            session_kind: var_sessionKind,
+            participant_count: var_participantCount,
         };
     }
 }
@@ -4772,12 +6508,18 @@ impl SseDecode for crate::api::chat_session::ChatSessionSummary {
         let mut var_createdAt = <u64>::sse_decode(deserializer);
         let mut var_updatedAt = <u64>::sse_decode(deserializer);
         let mut var_messageCount = <u64>::sse_decode(deserializer);
+        let mut var_sessionKind = <String>::sse_decode(deserializer);
+        let mut var_participantCount = <u64>::sse_decode(deserializer);
+        let mut var_sessionDid = <String>::sse_decode(deserializer);
         return crate::api::chat_session::ChatSessionSummary {
             id: var_id,
             title: var_title,
             created_at: var_createdAt,
             updated_at: var_updatedAt,
             message_count: var_messageCount,
+            session_kind: var_sessionKind,
+            participant_count: var_participantCount,
+            session_did: var_sessionDid,
         };
     }
 }
@@ -4806,6 +6548,24 @@ impl SseDecode for crate::api::qualia_api::CoinBalance {
             change_24h: var_change24H,
             network: var_network,
             status: var_status,
+        };
+    }
+}
+
+impl SseDecode for crate::api::social_api::ConnectInviteSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
+        let mut var_inviteJson = <String>::sse_decode(deserializer);
+        let mut var_mailtoUrl = <String>::sse_decode(deserializer);
+        let mut var_inviterDid = <String>::sse_decode(deserializer);
+        let mut var_expiresAt = <u64>::sse_decode(deserializer);
+        return crate::api::social_api::ConnectInviteSummary {
+            code: var_code,
+            invite_json: var_inviteJson,
+            mailto_url: var_mailtoUrl,
+            inviter_did: var_inviterDid,
+            expires_at: var_expiresAt,
         };
     }
 }
@@ -4954,6 +6714,76 @@ impl SseDecode for Vec<crate::api::qualia_api::CatalogItem> {
     }
 }
 
+impl SseDecode for Vec<crate::api::chat_graph::ChatBranchType> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chat_graph::ChatBranchType>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::social_api::ChatContact> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::social_api::ChatContact>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::chat_files::ChatFileRecord> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chat_files::ChatFileRecord>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::chat_graph::ChatFragment> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chat_graph::ChatFragment>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::chat_graph::ChatGraphEdge> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chat_graph::ChatGraphEdge>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::chat_session::ChatMessage> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4963,6 +6793,46 @@ impl SseDecode for Vec<crate::api::chat_session::ChatMessage> {
             ans_.push(<crate::api::chat_session::ChatMessage>::sse_decode(
                 deserializer,
             ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::chat_session::ChatParticipant> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chat_session::ChatParticipant>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::chat_graph::ChatReaction> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chat_graph::ChatReaction>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::chat_session::ChatSessionShareTarget> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chat_session::ChatSessionShareTarget>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -5064,6 +6934,20 @@ impl SseDecode for Vec<crate::api::resource_catalog::OntologyResource> {
     }
 }
 
+impl SseDecode for Vec<crate::api::ontology_workbench::OntologyShareCard> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(
+                <crate::api::ontology_workbench::OntologyShareCard>::sse_decode(deserializer),
+            );
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<f32> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5137,6 +7021,18 @@ impl SseDecode for Vec<crate::api::qualia_api::TxRecord> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::qualia_api::TxRecord>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::ontology_workbench::WorkbenchEntry> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::ontology_workbench::WorkbenchEntry>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -5222,6 +7118,50 @@ impl SseDecode for crate::api::resource_catalog::OntologyResource {
     }
 }
 
+impl SseDecode for crate::api::ontology_workbench::OntologyShareCard {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_ontologyId = <String>::sse_decode(deserializer);
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_domain = <String>::sse_decode(deserializer);
+        let mut var_magnetUri = <String>::sse_decode(deserializer);
+        let mut var_infoHashSha1 = <String>::sse_decode(deserializer);
+        let mut var_quinCount = <u64>::sse_decode(deserializer);
+        return crate::api::ontology_workbench::OntologyShareCard {
+            ontology_id: var_ontologyId,
+            title: var_title,
+            domain: var_domain,
+            magnet_uri: var_magnetUri,
+            info_hash_sha1: var_infoHashSha1,
+            quin_count: var_quinCount,
+        };
+    }
+}
+
+impl SseDecode for crate::api::ontology_workbench::OntologyTorrentPolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_seedEnabled = <bool>::sse_decode(deserializer);
+        let mut var_shareEnabled = <bool>::sse_decode(deserializer);
+        let mut var_audience = <String>::sse_decode(deserializer);
+        let mut var_allowedCategories = <Vec<String>>::sse_decode(deserializer);
+        let mut var_allowedContactDids = <Vec<String>>::sse_decode(deserializer);
+        let mut var_allowedSessionDids = <Vec<String>>::sse_decode(deserializer);
+        let mut var_bandwidthLimitKbps = <u32>::sse_decode(deserializer);
+        let mut var_maxUploadMbPerDay = <Option<u32>>::sse_decode(deserializer);
+        return crate::api::ontology_workbench::OntologyTorrentPolicy {
+            seed_enabled: var_seedEnabled,
+            share_enabled: var_shareEnabled,
+            audience: var_audience,
+            allowed_categories: var_allowedCategories,
+            allowed_contact_dids: var_allowedContactDids,
+            allowed_session_dids: var_allowedSessionDids,
+            bandwidth_limit_kbps: var_bandwidthLimitKbps,
+            max_upload_mb_per_day: var_maxUploadMbPerDay,
+        };
+    }
+}
+
 impl SseDecode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5244,6 +7184,17 @@ impl SseDecode for Option<u32> {
     }
 }
 
+impl SseDecode for Option<u64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<u64>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<Vec<String>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5252,6 +7203,45 @@ impl SseDecode for Option<Vec<String>> {
         } else {
             return None;
         }
+    }
+}
+
+impl SseDecode for crate::api::chat_agents::OutcomeSharingPolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_visibility = <String>::sse_decode(deserializer);
+        let mut var_shareProvenance = <bool>::sse_decode(deserializer);
+        let mut var_shareModelAttribution = <bool>::sse_decode(deserializer);
+        let mut var_allowPeerLlmContext = <bool>::sse_decode(deserializer);
+        let mut var_allowedDids = <Vec<String>>::sse_decode(deserializer);
+        return crate::api::chat_agents::OutcomeSharingPolicy {
+            visibility: var_visibility,
+            share_provenance: var_shareProvenance,
+            share_model_attribution: var_shareModelAttribution,
+            allow_peer_llm_context: var_allowPeerLlmContext,
+            allowed_dids: var_allowedDids,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chat_agents::ParticipantAgentConfig {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_principalDid = <String>::sse_decode(deserializer);
+        let mut var_subAgentDid = <String>::sse_decode(deserializer);
+        let mut var_modelId = <Option<String>>::sse_decode(deserializer);
+        let mut var_backend = <String>::sse_decode(deserializer);
+        let mut var_outcomeSharing =
+            <crate::api::chat_agents::OutcomeSharingPolicy>::sse_decode(deserializer);
+        let mut var_updatedAt = <u64>::sse_decode(deserializer);
+        return crate::api::chat_agents::ParticipantAgentConfig {
+            principal_did: var_principalDid,
+            sub_agent_did: var_subAgentDid,
+            model_id: var_modelId,
+            backend: var_backend,
+            outcome_sharing: var_outcomeSharing,
+            updated_at: var_updatedAt,
+        };
     }
 }
 
@@ -5361,6 +7351,34 @@ impl SseDecode for crate::api::qualia_api::QpuOracleSettingsInput {
     }
 }
 
+impl SseDecode for crate::api::social_api::SharingPolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_shareDisplayName = <bool>::sse_decode(deserializer);
+        let mut var_sharePublicDid = <bool>::sse_decode(deserializer);
+        let mut var_shareActiveModel = <bool>::sse_decode(deserializer);
+        let mut var_shareLlmOutcomes = <bool>::sse_decode(deserializer);
+        let mut var_shareOntologyScope = <bool>::sse_decode(deserializer);
+        let mut var_shareInstalledQapps = <bool>::sse_decode(deserializer);
+        let mut var_shareDaemonStatus = <bool>::sse_decode(deserializer);
+        let mut var_allowGroupChatInvites = <bool>::sse_decode(deserializer);
+        let mut var_allowDirectoryLookup = <bool>::sse_decode(deserializer);
+        let mut var_allowEmailInvites = <bool>::sse_decode(deserializer);
+        return crate::api::social_api::SharingPolicy {
+            share_display_name: var_shareDisplayName,
+            share_public_did: var_sharePublicDid,
+            share_active_model: var_shareActiveModel,
+            share_llm_outcomes: var_shareLlmOutcomes,
+            share_ontology_scope: var_shareOntologyScope,
+            share_installed_qapps: var_shareInstalledQapps,
+            share_daemon_status: var_shareDaemonStatus,
+            allow_group_chat_invites: var_allowGroupChatInvites,
+            allow_directory_lookup: var_allowDirectoryLookup,
+            allow_email_invites: var_allowEmailInvites,
+        };
+    }
+}
+
 impl SseDecode for crate::api::qualia_api::SpatialPhysicsState {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5430,6 +7448,18 @@ impl SseDecode for crate::api::qualia_api::TokenEntry {
     }
 }
 
+impl SseDecode for crate::api::ontology_workbench::TorrentBandwidthPolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_globalLimitKbps = <u32>::sse_decode(deserializer);
+        let mut var_meteredMode = <bool>::sse_decode(deserializer);
+        return crate::api::ontology_workbench::TorrentBandwidthPolicy {
+            global_limit_kbps: var_globalLimitKbps,
+            metered_mode: var_meteredMode,
+        };
+    }
+}
+
 impl SseDecode for crate::api::qualia_api::TxRecord {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5491,6 +7521,28 @@ impl SseDecode for () {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {}
 }
 
+impl SseDecode for crate::api::social_api::UserProfile {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_displayName = <String>::sse_decode(deserializer);
+        let mut var_bio = <Option<String>>::sse_decode(deserializer);
+        let mut var_publicDid = <String>::sse_decode(deserializer);
+        let mut var_activeFrontDoorId = <Option<String>>::sse_decode(deserializer);
+        let mut var_relayBaseUrl = <Option<String>>::sse_decode(deserializer);
+        let mut var_sharing = <crate::api::social_api::SharingPolicy>::sse_decode(deserializer);
+        let mut var_updatedAt = <u64>::sse_decode(deserializer);
+        return crate::api::social_api::UserProfile {
+            display_name: var_displayName,
+            bio: var_bio,
+            public_did: var_publicDid,
+            active_front_door_id: var_activeFrontDoorId,
+            relay_base_url: var_relayBaseUrl,
+            sharing: var_sharing,
+            updated_at: var_updatedAt,
+        };
+    }
+}
+
 impl SseDecode for usize {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5512,6 +7564,58 @@ impl SseDecode for crate::api::qualia_api::WalletStatus {
     }
 }
 
+impl SseDecode for crate::api::ontology_workbench::WorkbenchEntry {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_ontologyId = <String>::sse_decode(deserializer);
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_sourceUri = <String>::sse_decode(deserializer);
+        let mut var_domain = <String>::sse_decode(deserializer);
+        let mut var_cQ42Path = <String>::sse_decode(deserializer);
+        let mut var_quinCount = <u64>::sse_decode(deserializer);
+        let mut var_sha256 = <String>::sse_decode(deserializer);
+        let mut var_infoHashSha1 = <String>::sse_decode(deserializer);
+        let mut var_magnetUri = <String>::sse_decode(deserializer);
+        let mut var_importedAt = <u64>::sse_decode(deserializer);
+        let mut var_torrent =
+            <crate::api::ontology_workbench::OntologyTorrentPolicy>::sse_decode(deserializer);
+        let mut var_seedActive = <bool>::sse_decode(deserializer);
+        let mut var_bytesUploadedTotal = <u64>::sse_decode(deserializer);
+        let mut var_bytesUploadedToday = <u64>::sse_decode(deserializer);
+        return crate::api::ontology_workbench::WorkbenchEntry {
+            ontology_id: var_ontologyId,
+            title: var_title,
+            source_uri: var_sourceUri,
+            domain: var_domain,
+            c_q42_path: var_cQ42Path,
+            quin_count: var_quinCount,
+            sha256: var_sha256,
+            info_hash_sha1: var_infoHashSha1,
+            magnet_uri: var_magnetUri,
+            imported_at: var_importedAt,
+            torrent: var_torrent,
+            seed_active: var_seedActive,
+            bytes_uploaded_total: var_bytesUploadedTotal,
+            bytes_uploaded_today: var_bytesUploadedToday,
+        };
+    }
+}
+
+impl SseDecode for crate::api::ontology_workbench::WorkbenchImportResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_entry =
+            <crate::api::ontology_workbench::WorkbenchEntry>::sse_decode(deserializer);
+        let mut var_compressRatio = <f64>::sse_decode(deserializer);
+        let mut var_sourceRemoved = <bool>::sse_decode(deserializer);
+        return crate::api::ontology_workbench::WorkbenchImportResult {
+            entry: var_entry,
+            compress_ratio: var_compressRatio,
+            source_removed: var_sourceRemoved,
+        };
+    }
+}
+
 impl SseDecode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5528,538 +7632,758 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => wire__crate__api__qualia_api__accept_vault_handshake_impl(
+        1 => wire__crate__api__social_api__accept_connect_invite_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        2 => wire__crate__api__qualia_api__add_delegation_rule_impl(
+        2 => wire__crate__api__qualia_api__accept_vault_handshake_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        3 => wire__crate__api__qualia_api__add_directory_actor_impl(
+        3 => wire__crate__api__chat_session__add_chat_participant_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        4 => wire__crate__api__qualia_api__add_token_impl(port, ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__chat_session__append_chat_message_impl(
+        4 => wire__crate__api__qualia_api__add_delegation_rule_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        8 => wire__crate__api__qualia_api__build_anatomy_graph_context_json_impl(
+        5 => wire__crate__api__qualia_api__add_directory_actor_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__qualia_api__build_anatomy_graph_context_json_with_dicom_impl(
+        6 => wire__crate__api__qualia_api__add_token_impl(port, ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__chat_session__append_chat_message_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__api__qualia_api__build_dicom_overlay_spec_json_impl(
+        8 => wire__crate__api__chat_graph__append_chat_message_reply_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__qualia_api__cancel_download_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__qualia_api__check_ollama_status_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        13 => wire__crate__api__qualia_api__check_prerequisites_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        16 => wire__crate__api__chat_session__compact_chat_session_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        18 => wire__crate__api__qualia_api__configure_webview2_runtime_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        19 => wire__crate__api__chat_session__create_chat_session_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        20 => wire__crate__api__qualia_api__daemon_status_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__chat_session__delete_chat_session_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        22 => wire__crate__api__qualia_api__derive_wallets_from_seed_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        24 => wire__crate__api__qualia_api__discover_models_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__qualia_api__dispatch_tax_payment_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        26 => wire__crate__api__qualia_api__download_and_install_update_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        27 => wire__crate__api__qualia_api__download_and_vectorize_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        28 => wire__crate__api__qualia_api__download_model_impl(port, ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__chat_session__ensure_chat_session_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        35 => wire__crate__api__qualia_api__export_to_solid_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__qualia_api__fetch_model_catalog_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        37 => wire__crate__api__qualia_api__fetch_model_catalog_real_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        38 => wire__crate__api__qualia_api__fetch_ontology_catalog_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        39 => wire__crate__api__qualia_api__fetch_ontology_catalog_real_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        40 => wire__crate__api__qualia_api__fetch_remote_manifest_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        41 => wire__crate__api__qualia_api__fetch_torrent_telemetry_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        42 => wire__crate__api__qualia_api__fetch_wallet_portfolio_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        43 => wire__crate__api__qualia_api__generate_bip39_seed_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        44 => wire__crate__api__qualia_api__generate_front_door_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        45 => wire__crate__api__qualia_api__generate_front_door_invite_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        46 => wire__crate__api__qualia_api__generate_qapp_credential_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        47 => wire__crate__api__qualia_api__get_active_downloads_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        48 => {
-            wire__crate__api__qualia_api__get_active_model_impl(port, ptr, rust_vec_len, data_len)
+        11 => {
+            wire__crate__api__chat_files__attach_chat_file_impl(port, ptr, rust_vec_len, data_len)
         }
-        49 => {
-            wire__crate__api__qualia_api__get_coin_balances_impl(port, ptr, rust_vec_len, data_len)
-        }
-        50 => wire__crate__api__qualia_api__get_config_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__qualia_api__get_delegation_rules_impl(
+        12 => wire__crate__api__qualia_api__build_anatomy_graph_context_json_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        52 => wire__crate__api__qualia_api__get_directory_actors_impl(
+        13 => wire__crate__api__qualia_api__build_anatomy_graph_context_json_with_dicom_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        53 => wire__crate__api__qualia_api__get_front_doors_impl(port, ptr, rust_vec_len, data_len),
-        54 => wire__crate__api__qualia_api__get_hardware_status_impl(
+        14 => wire__crate__api__qualia_api__build_dicom_overlay_spec_json_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        55 => wire__crate__api__qualia_api__get_hardware_telemetry_impl(
+        15 => wire__crate__api__qualia_api__cancel_download_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__qualia_api__cancel_inference_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        56 => wire__crate__api__chat_session__get_last_chat_session_id_impl(
+        17 => wire__crate__api__qualia_api__check_ollama_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        57 => wire__crate__api__resource_catalog__get_model_lifecycle_status_impl(
+        18 => wire__crate__api__qualia_api__check_prerequisites_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        21 => wire__crate__api__chat_session__compact_chat_session_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        23 => wire__crate__api__chat_session__compile_session_environment_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        24 => wire__crate__api__qualia_api__configure_webview2_runtime_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        25 => wire__crate__api__chat_graph__create_chat_fragment_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        26 => wire__crate__api__chat_session__create_chat_session_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        27 => wire__crate__api__chat_session__create_group_chat_session_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        28 => wire__crate__api__qualia_api__daemon_status_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__chat_files__default_chat_file_sharing_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        30 => wire__crate__api__chat_session__delete_chat_session_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        31 => wire__crate__api__qualia_api__derive_wallets_from_seed_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        33 => wire__crate__api__qualia_api__discover_models_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__qualia_api__dispatch_tax_payment_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        35 => wire__crate__api__qualia_api__download_and_install_update_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        36 => wire__crate__api__qualia_api__download_and_vectorize_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        37 => wire__crate__api__qualia_api__download_model_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__chat_session__ensure_chat_session_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        44 => wire__crate__api__qualia_api__export_to_solid_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__qualia_api__fetch_model_catalog_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        46 => wire__crate__api__qualia_api__fetch_model_catalog_real_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        47 => wire__crate__api__qualia_api__fetch_ontology_catalog_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        48 => wire__crate__api__qualia_api__fetch_ontology_catalog_real_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        49 => wire__crate__api__qualia_api__fetch_remote_manifest_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        50 => wire__crate__api__qualia_api__fetch_torrent_telemetry_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        51 => wire__crate__api__qualia_api__fetch_wallet_portfolio_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        52 => wire__crate__api__qualia_api__generate_bip39_seed_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        53 => wire__crate__api__social_api__generate_connect_invite_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        54 => wire__crate__api__qualia_api__generate_front_door_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        55 => wire__crate__api__qualia_api__generate_front_door_invite_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        56 => wire__crate__api__qualia_api__generate_qapp_credential_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        57 => wire__crate__api__qualia_api__get_active_downloads_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
         58 => {
+            wire__crate__api__qualia_api__get_active_model_impl(port, ptr, rust_vec_len, data_len)
+        }
+        59 => wire__crate__api__chat_files__get_chat_file_local_path_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        60 => wire__crate__api__chat_graph__get_chat_graph_impl(port, ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__chat_session__get_chat_participants_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        62 => wire__crate__api__chat_session__get_chat_session_did_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        63 => {
+            wire__crate__api__qualia_api__get_coin_balances_impl(port, ptr, rust_vec_len, data_len)
+        }
+        64 => wire__crate__api__qualia_api__get_config_impl(port, ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__chat_agents__get_default_outcome_sharing_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        66 => wire__crate__api__qualia_api__get_delegation_rules_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        67 => wire__crate__api__qualia_api__get_directory_actors_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        68 => wire__crate__api__qualia_api__get_front_doors_impl(port, ptr, rust_vec_len, data_len),
+        69 => wire__crate__api__qualia_api__get_hardware_status_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        70 => wire__crate__api__qualia_api__get_hardware_telemetry_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        71 => wire__crate__api__chat_session__get_last_chat_session_id_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        72 => wire__crate__api__chat_agents__get_local_agent_config_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        73 => wire__crate__api__resource_catalog__get_model_lifecycle_status_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        74 => {
             wire__crate__api__qualia_api__get_physics_state_impl(port, ptr, rust_vec_len, data_len)
         }
-        59 => wire__crate__api__qualia_api__get_physics_state_pressure_impl(
+        75 => wire__crate__api__qualia_api__get_physics_state_pressure_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        60 => wire__crate__api__qualia_api__get_physics_state_temperature_impl(
+        76 => wire__crate__api__qualia_api__get_physics_state_temperature_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        61 => wire__crate__api__qualia_api__get_physics_state_time_dilation_impl(
+        77 => wire__crate__api__qualia_api__get_physics_state_time_dilation_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        62 => {
+        78 => {
             wire__crate__api__qualia_api__get_qpu_settings_impl(port, ptr, rust_vec_len, data_len)
         }
-        63 => wire__crate__api__qualia_api__get_spatial_pressure_impl(
+        79 => wire__crate__api__chat_session__get_session_environment_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        64 => wire__crate__api__qualia_api__get_spatial_temperature_impl(
+        80 => wire__crate__api__qualia_api__get_spatial_pressure_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        65 => wire__crate__api__qualia_api__get_spatial_time_dilation_impl(
+        81 => wire__crate__api__qualia_api__get_spatial_temperature_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        66 => wire__crate__api__qualia_api__get_tax_suite_impl(port, ptr, rust_vec_len, data_len),
-        67 => wire__crate__api__qualia_api__get_tokens_impl(port, ptr, rust_vec_len, data_len),
-        68 => wire__crate__api__qualia_api__get_transaction_history_impl(
+        82 => wire__crate__api__qualia_api__get_spatial_time_dilation_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        69 => {
+        83 => wire__crate__api__qualia_api__get_tax_suite_impl(port, ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__qualia_api__get_tokens_impl(port, ptr, rust_vec_len, data_len),
+        85 => wire__crate__api__ontology_workbench__get_torrent_bandwidth_policy_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        86 => wire__crate__api__qualia_api__get_transaction_history_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        87 => {
+            wire__crate__api__social_api__get_user_profile_impl(port, ptr, rust_vec_len, data_len)
+        }
+        88 => {
             wire__crate__api__qualia_api__get_wallet_status_impl(port, ptr, rust_vec_len, data_len)
         }
-        70 => wire__crate__api__qualia_api__greet_impl(port, ptr, rust_vec_len, data_len),
-        72 => wire__crate__api__qualia_api__handle_engine_chat_command_impl(
+        89 => wire__crate__api__qualia_api__greet_impl(port, ptr, rust_vec_len, data_len),
+        91 => wire__crate__api__qualia_api__handle_engine_chat_command_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        73 => wire__crate__api__qualia_api__handle_qpu_chat_command_impl(
+        92 => wire__crate__api__qualia_api__handle_qpu_chat_command_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        74 => wire__crate__api__qualia_api__import_external_seed_impl(
+        93 => wire__crate__api__qualia_api__import_external_seed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        75 => wire__crate__api__resource_catalog__import_ontology_impl(
+        94 => wire__crate__api__resource_catalog__import_ontology_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        76 => wire__crate__api__qualia_api__ingest_image_impl(port, ptr, rust_vec_len, data_len),
-        77 => {
+        95 => wire__crate__api__qualia_api__ingest_image_impl(port, ptr, rust_vec_len, data_len),
+        96 => {
             wire__crate__api__qualia_api__ingest_image_async_impl(port, ptr, rust_vec_len, data_len)
         }
-        78 => {
+        97 => {
             wire__crate__api__qualia_api__ingest_literature_impl(port, ptr, rust_vec_len, data_len)
         }
-        79 => wire__crate__api__qualia_api__ingest_ontology_impl(port, ptr, rust_vec_len, data_len),
-        80 => wire__crate__api__qualia_api__ingest_pdf_impl(port, ptr, rust_vec_len, data_len),
-        81 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        82 => wire__crate__api__qualia_api__init_core_impl(port, ptr, rust_vec_len, data_len),
-        83 => wire__crate__api__qualia_api__inspect_installed_qapp_readiness_impl(
+        98 => wire__crate__api__qualia_api__ingest_ontology_impl(port, ptr, rust_vec_len, data_len),
+        99 => wire__crate__api__qualia_api__ingest_pdf_impl(port, ptr, rust_vec_len, data_len),
+        100 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        101 => wire__crate__api__qualia_api__init_core_impl(port, ptr, rust_vec_len, data_len),
+        102 => wire__crate__api__qualia_api__inspect_installed_qapp_readiness_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        84 => wire__crate__api__resource_catalog__install_catalog_llm_impl(
+        103 => wire__crate__api__resource_catalog__install_catalog_llm_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        85 => wire__crate__api__qualia_api__install_prerequisite_impl(
+        104 => wire__crate__api__qualia_api__install_prerequisite_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        87 => wire__crate__api__qualia_api__is_first_run_impl(port, ptr, rust_vec_len, data_len),
-        88 => wire__crate__api__qualia_api__is_qpu_feature_unlocked_impl(
+        106 => wire__crate__api__qualia_api__is_first_run_impl(port, ptr, rust_vec_len, data_len),
+        107 => wire__crate__api__qualia_api__is_qpu_feature_unlocked_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        89 => wire__crate__api__qualia_api__launch_installed_qapp_impl(
+        108 => wire__crate__api__qualia_api__launch_installed_qapp_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        90 => wire__crate__api__qualia_api__launch_installed_qapp_with_context_impl(
+        109 => wire__crate__api__qualia_api__launch_installed_qapp_with_context_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        91 => wire__crate__api__chat_session__list_chat_sessions_impl(
+        110 => wire__crate__api__chat_graph__list_chat_branch_types_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        92 => wire__crate__api__qualia_api__list_installed_ontology_artifacts_impl(
+        111 => {
+            wire__crate__api__social_api__list_chat_contacts_impl(port, ptr, rust_vec_len, data_len)
+        }
+        112 => {
+            wire__crate__api__chat_files__list_chat_files_impl(port, ptr, rust_vec_len, data_len)
+        }
+        113 => wire__crate__api__chat_graph__list_chat_reactions_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        93 => wire__crate__api__qualia_api__list_installed_qapps_impl(
+        114 => wire__crate__api__chat_session__list_chat_session_share_targets_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        95 => wire__crate__api__chat_session__load_chat_session_messages_impl(
+        115 => wire__crate__api__chat_session__list_chat_sessions_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        96 => wire__crate__api__chat_session__load_chat_session_title_impl(
+        116 => wire__crate__api__qualia_api__list_installed_ontology_artifacts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        97 => wire__crate__api__qualia_api__load_identity_impl(port, ptr, rust_vec_len, data_len),
-        98 => wire__crate__api__qualia_api__load_imported_accounts_impl(
+        117 => wire__crate__api__chat_session__list_installed_ontology_ids_for_chat_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        99 => wire__crate__api__resource_catalog__load_llm_resources_impl(
+        118 => wire__crate__api__qualia_api__list_installed_qapps_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        100 => wire__crate__api__resource_catalog__load_ontology_resources_impl(
+        119 => wire__crate__api__ontology_workbench__list_ontology_shares_for_session_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        101 => wire__crate__api__resource_catalog__load_resource_catalog_summary_impl(
+        121 => wire__crate__api__ontology_workbench__list_workbench_ontologies_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        102 => wire__crate__api__qualia_api__mint_semantic_token_impl(
+        122 => wire__crate__api__chat_session__load_chat_session_messages_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        103 => wire__crate__api__qualia_api__parse_dicom_metadata_json_impl(
+        123 => wire__crate__api__chat_session__load_chat_session_title_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        104 => wire__crate__api__qualia_api__profile_energy_circumstance_impl(
+        124 => wire__crate__api__qualia_api__load_identity_impl(port, ptr, rust_vec_len, data_len),
+        125 => wire__crate__api__qualia_api__load_imported_accounts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        106 => wire__crate__api__qualia_api__qualia_protocol_port_impl(
+        126 => wire__crate__api__resource_catalog__load_llm_resources_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        107 => {
+        127 => wire__crate__api__resource_catalog__load_ontology_resources_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        128 => wire__crate__api__resource_catalog__load_resource_catalog_summary_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        129 => wire__crate__api__qualia_api__mint_semantic_token_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        130 => wire__crate__api__qualia_api__parse_dicom_metadata_json_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        131 => {
+            wire__crate__api__chat_files__preview_chat_file_impl(port, ptr, rust_vec_len, data_len)
+        }
+        132 => wire__crate__api__qualia_api__profile_energy_circumstance_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        134 => wire__crate__api__qualia_api__qualia_protocol_port_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        135 => {
             wire__crate__api__qualia_api__receive_vault_job_impl(port, ptr, rust_vec_len, data_len)
         }
-        110 => wire__crate__api__qualia_api__register_qualia_uri_handler_impl(
+        138 => wire__crate__api__qualia_api__register_qualia_uri_handler_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        111 => wire__crate__api__qualia_api__remove_installed_model_impl(
+        139 => wire__crate__api__chat_session__remove_chat_participant_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        112 => wire__crate__api__qualia_api__remove_installed_ontology_impl(
+        140 => wire__crate__api__qualia_api__remove_installed_model_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        113 => wire__crate__api__qualia_api__remove_token_impl(port, ptr, rust_vec_len, data_len),
-        114 => wire__crate__api__chat_session__rename_chat_session_impl(
+        141 => wire__crate__api__qualia_api__remove_installed_ontology_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        115 => {
+        142 => wire__crate__api__qualia_api__remove_token_impl(port, ptr, rust_vec_len, data_len),
+        143 => wire__crate__api__chat_session__rename_chat_session_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        144 => {
             wire__crate__api__qualia_api__run_engine_command_impl(port, ptr, rust_vec_len, data_len)
         }
-        116 => wire__crate__api__qualia_api__run_inference_impl(port, ptr, rust_vec_len, data_len),
-        117 => wire__crate__api__qualia_api__run_inference_stream_impl(
+        145 => wire__crate__api__qualia_api__run_inference_impl(port, ptr, rust_vec_len, data_len),
+        146 => wire__crate__api__qualia_api__run_inference_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        118 => wire__crate__api__qualia_api__save_config_impl(port, ptr, rust_vec_len, data_len),
-        119 => wire__crate__api__qualia_api__save_identity_impl(port, ptr, rust_vec_len, data_len),
-        120 => wire__crate__api__qualia_api__save_imported_accounts_impl(
+        147 => wire__crate__api__qualia_api__save_config_impl(port, ptr, rust_vec_len, data_len),
+        148 => wire__crate__api__qualia_api__save_identity_impl(port, ptr, rust_vec_len, data_len),
+        149 => wire__crate__api__qualia_api__save_imported_accounts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        121 => {
+        150 => {
             wire__crate__api__qualia_api__save_qpu_settings_impl(port, ptr, rust_vec_len, data_len)
         }
-        122 => wire__crate__api__qualia_api__save_tax_suite_impl(port, ptr, rust_vec_len, data_len),
-        123 => {
+        151 => wire__crate__api__qualia_api__save_tax_suite_impl(port, ptr, rust_vec_len, data_len),
+        152 => {
+            wire__crate__api__social_api__save_user_profile_impl(port, ptr, rust_vec_len, data_len)
+        }
+        153 => {
             wire__crate__api__qualia_api__set_active_model_impl(port, ptr, rust_vec_len, data_len)
         }
-        124 => wire__crate__api__chat_session__set_last_chat_session_id_impl(
+        154 => wire__crate__api__chat_files__set_chat_file_sharing_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        125 => wire__crate__api__qualia_api__start_daemon_impl(port, ptr, rust_vec_len, data_len),
-        126 => wire__crate__api__qualia_api__start_qualia_protocol_impl(
+        155 => wire__crate__api__chat_session__set_last_chat_session_id_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        128 => wire__crate__api__qualia_api__test_sparql_endpoint_impl(
+        156 => wire__crate__api__ontology_workbench__set_torrent_bandwidth_policy_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        129 => {
+        157 => wire__crate__api__ontology_workbench__set_workbench_seed_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        158 => wire__crate__api__ontology_workbench__set_workbench_torrent_policy_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        159 => wire__crate__api__qualia_api__start_daemon_impl(port, ptr, rust_vec_len, data_len),
+        160 => wire__crate__api__qualia_api__start_qualia_protocol_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        162 => {
+            wire__crate__api__chat_graph__sync_chat_relay_impl(port, ptr, rust_vec_len, data_len)
+        }
+        163 => wire__crate__api__qualia_api__test_sparql_endpoint_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        164 => wire__crate__api__chat_graph__toggle_chat_reaction_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        165 => {
             wire__crate__api__qualia_api__toggle_nym_relay_impl(port, ptr, rust_vec_len, data_len)
         }
-        130 => wire__crate__api__qualia_api__toggle_stark_prover_impl(
+        166 => wire__crate__api__qualia_api__toggle_stark_prover_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        131 => wire__crate__api__qualia_api__update_physics_state_impl(
+        167 => wire__crate__api__chat_agents__update_agent_outcome_sharing_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        132 => {
+        168 => wire__crate__api__social_api__update_chat_contact_categories_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        169 => wire__crate__api__qualia_api__update_physics_state_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        170 => wire__crate__api__chat_session__update_session_environment_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        171 => {
             wire__crate__api__qualia_api__update_solar_input_impl(port, ptr, rust_vec_len, data_len)
         }
-        133 => wire__crate__api__qualia_api__upsert_cmld_definition_impl(
+        172 => wire__crate__api__qualia_api__upsert_cmld_definition_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        134 => wire__crate__api__qualia_api__verify_and_install_qapp_impl(
+        173 => wire__crate__api__qualia_api__verify_and_install_qapp_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        174 => wire__crate__api__chat_graph__wordnet_chat_ontology_status_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        175 => wire__crate__api__ontology_workbench__workbench_import_ontology_uri_impl(
             port,
             ptr,
             rust_vec_len,
@@ -6077,52 +8401,54 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        6 => wire__crate__api__qapp_api__apply_qapp_update_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__qapp_api__apply_qapp_update_from_path_impl(
+        9 => wire__crate__api__qapp_api__apply_qapp_update_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__qapp_api__apply_qapp_update_from_path_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__api__qapp_api__check_qapp_update_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__qapp_api__check_qapp_update_from_path_impl(
+        19 => wire__crate__api__qapp_api__check_qapp_update_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__qapp_api__check_qapp_update_from_path_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__api__qapp_api__compile_anatomy_wildcard_query_impl(
+        22 => wire__crate__api__qapp_api__compile_anatomy_wildcard_query_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        23 => wire__crate__api__qapp_api__dicom_ingest_status_impl(ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__qapp_api__eval_comorbidity_json_from_daemon_impl(
+        32 => wire__crate__api__qapp_api__dicom_ingest_status_impl(ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__qapp_api__eval_comorbidity_json_from_daemon_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => {
+        40 => {
             wire__crate__api__qapp_api__execute_dicom_volume_query_impl(ptr, rust_vec_len, data_len)
         }
-        32 => {
+        41 => {
             wire__crate__api__qapp_api__execute_qapp_scoped_query_impl(ptr, rust_vec_len, data_len)
         }
-        33 => wire__crate__api__qapp_api__execute_qapp_scoped_query_zero_alloc_impl(
+        42 => wire__crate__api__qapp_api__execute_qapp_scoped_query_zero_alloc_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__qapp_api__execution_error_label_impl(ptr, rust_vec_len, data_len),
-        71 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        86 => wire__crate__api__qapp_api__installed_qapp_version_impl(ptr, rust_vec_len, data_len),
-        94 => wire__crate__api__qapp_api__list_qapp_update_offers_impl(ptr, rust_vec_len, data_len),
-        105 => wire__crate__api__qapp_api__qapp_id_hash_impl(ptr, rust_vec_len, data_len),
-        108 => wire__crate__api__qapp_api__register_qapp_from_installed_manifest_impl(
+        43 => wire__crate__api__qapp_api__execution_error_label_impl(ptr, rust_vec_len, data_len),
+        90 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        105 => wire__crate__api__qapp_api__installed_qapp_version_impl(ptr, rust_vec_len, data_len),
+        120 => {
+            wire__crate__api__qapp_api__list_qapp_update_offers_impl(ptr, rust_vec_len, data_len)
+        }
+        133 => wire__crate__api__qapp_api__qapp_id_hash_impl(ptr, rust_vec_len, data_len),
+        136 => wire__crate__api__qapp_api__register_qapp_from_installed_manifest_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        109 => wire__crate__api__qapp_api__register_qapp_manifest_impl(ptr, rust_vec_len, data_len),
-        127 => wire__crate__api__qapp_api__submit_dicom_ingest_impl(ptr, rust_vec_len, data_len),
+        137 => wire__crate__api__qapp_api__register_qapp_manifest_impl(ptr, rust_vec_len, data_len),
+        161 => wire__crate__api__qapp_api__submit_dicom_ingest_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -6195,6 +8521,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::qualia_api::AgentConfig>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_files::AttachChatFileResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.file.into_into_dart().into_dart(),
+            self.message_lamport.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_files::AttachChatFileResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_files::AttachChatFileResult>
+    for crate::api::chat_files::AttachChatFileResult
+{
+    fn into_into_dart(self) -> crate::api::chat_files::AttachChatFileResult {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::qualia_api::CatalogItem {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -6221,6 +8568,224 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::qualia_api::CatalogItem>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_graph::ChatBranchType {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.label.into_into_dart().into_dart(),
+            self.emoji.into_into_dart().into_dart(),
+            self.description.into_into_dart().into_dart(),
+            self.wordnet_grounding_hash.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_graph::ChatBranchType
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_graph::ChatBranchType>
+    for crate::api::chat_graph::ChatBranchType
+{
+    fn into_into_dart(self) -> crate::api::chat_graph::ChatBranchType {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::social_api::ChatContact {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.actor_id.into_into_dart().into_dart(),
+            self.display_name.into_into_dart().into_dart(),
+            self.did.into_into_dart().into_dart(),
+            self.source.into_into_dart().into_dart(),
+            self.added_at.into_into_dart().into_dart(),
+            self.categories.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::social_api::ChatContact
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::social_api::ChatContact>
+    for crate::api::social_api::ChatContact
+{
+    fn into_into_dart(self) -> crate::api::social_api::ChatContact {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_files::ChatFilePreview {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.mime_type.into_into_dart().into_dart(),
+            self.extension.into_into_dart().into_dart(),
+            self.page_count.into_into_dart().into_dart(),
+            self.text_preview.into_into_dart().into_dart(),
+            self.parse_status.into_into_dart().into_dart(),
+            self.parse_error.into_into_dart().into_dart(),
+            self.media_kind.into_into_dart().into_dart(),
+            self.image_width.into_into_dart().into_dart(),
+            self.image_height.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_files::ChatFilePreview
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_files::ChatFilePreview>
+    for crate::api::chat_files::ChatFilePreview
+{
+    fn into_into_dart(self) -> crate::api::chat_files::ChatFilePreview {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_files::ChatFileRecord {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.file_id.into_into_dart().into_dart(),
+            self.original_name.into_into_dart().into_dart(),
+            self.mime_type.into_into_dart().into_dart(),
+            self.extension.into_into_dart().into_dart(),
+            self.sha256.into_into_dart().into_dart(),
+            self.byte_size.into_into_dart().into_dart(),
+            self.page_count.into_into_dart().into_dart(),
+            self.text_preview.into_into_dart().into_dart(),
+            self.author_did.into_into_dart().into_dart(),
+            self.author_name.into_into_dart().into_dart(),
+            self.message_lamport.into_into_dart().into_dart(),
+            self.attached_at.into_into_dart().into_dart(),
+            self.sharing.into_into_dart().into_dart(),
+            self.parse_status.into_into_dart().into_dart(),
+            self.parse_error.into_into_dart().into_dart(),
+            self.media_kind.into_into_dart().into_dart(),
+            self.image_width.into_into_dart().into_dart(),
+            self.image_height.into_into_dart().into_dart(),
+            self.thumbnail_rel_path.into_into_dart().into_dart(),
+            self.vision_lexicon_id.into_into_dart().into_dart(),
+            self.vision_facet.into_into_dart().into_dart(),
+            self.vision_status.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_files::ChatFileRecord
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_files::ChatFileRecord>
+    for crate::api::chat_files::ChatFileRecord
+{
+    fn into_into_dart(self) -> crate::api::chat_files::ChatFileRecord {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_files::ChatFileSharing {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.visibility.into_into_dart().into_dart(),
+            self.allow_download.into_into_dart().into_dart(),
+            self.allow_llm_context.into_into_dart().into_dart(),
+            self.allow_relay_sync.into_into_dart().into_dart(),
+            self.allowed_dids.into_into_dart().into_dart(),
+            self.expires_at.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_files::ChatFileSharing
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_files::ChatFileSharing>
+    for crate::api::chat_files::ChatFileSharing
+{
+    fn into_into_dart(self) -> crate::api::chat_files::ChatFileSharing {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_graph::ChatFragment {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.fragment_id.into_into_dart().into_dart(),
+            self.message_lamport.into_into_dart().into_dart(),
+            self.anchor_start.into_into_dart().into_dart(),
+            self.anchor_end.into_into_dart().into_dart(),
+            self.anchor_text.into_into_dart().into_dart(),
+            self.author_did.into_into_dart().into_dart(),
+            self.author_name.into_into_dart().into_dart(),
+            self.created_at.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_graph::ChatFragment
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_graph::ChatFragment>
+    for crate::api::chat_graph::ChatFragment
+{
+    fn into_into_dart(self) -> crate::api::chat_graph::ChatFragment {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_graph::ChatGraphEdge {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.child_fragment_id.into_into_dart().into_dart(),
+            self.parent_fragment_id.into_into_dart().into_dart(),
+            self.reply_message_lamport.into_into_dart().into_dart(),
+            self.created_at.into_into_dart().into_dart(),
+            self.branch_type_id.into_into_dart().into_dart(),
+            self.branch_label.into_into_dart().into_dart(),
+            self.branch_emoji.into_into_dart().into_dart(),
+            self.wordnet_grounding_hash.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_graph::ChatGraphEdge
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_graph::ChatGraphEdge>
+    for crate::api::chat_graph::ChatGraphEdge
+{
+    fn into_into_dart(self) -> crate::api::chat_graph::ChatGraphEdge {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_graph::ChatGraphView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.fragments.into_into_dart().into_dart(),
+            self.edges.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_graph::ChatGraphView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_graph::ChatGraphView>
+    for crate::api::chat_graph::ChatGraphView
+{
+    fn into_into_dart(self) -> crate::api::chat_graph::ChatGraphView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::chat_session::ChatMessage {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -6228,6 +8793,13 @@ impl flutter_rust_bridge::IntoDart for crate::api::chat_session::ChatMessage {
             self.role.into_into_dart().into_dart(),
             self.content.into_into_dart().into_dart(),
             self.timestamp.into_into_dart().into_dart(),
+            self.author_name.into_into_dart().into_dart(),
+            self.author_did.into_into_dart().into_dart(),
+            self.reply_to_fragment.into_into_dart().into_dart(),
+            self.sub_agent_of.into_into_dart().into_dart(),
+            self.agent_did.into_into_dart().into_dart(),
+            self.author_display.into_into_dart().into_dart(),
+            self.model_id.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6244,6 +8816,78 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_session::ChatMessage>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_session::ChatParticipant {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.did.into_into_dart().into_dart(),
+            self.display_name.into_into_dart().into_dart(),
+            self.actor_id.into_into_dart().into_dart(),
+            self.role.into_into_dart().into_dart(),
+            self.joined_at.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_session::ChatParticipant
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_session::ChatParticipant>
+    for crate::api::chat_session::ChatParticipant
+{
+    fn into_into_dart(self) -> crate::api::chat_session::ChatParticipant {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_graph::ChatReaction {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.message_lamport.into_into_dart().into_dart(),
+            self.emoji.into_into_dart().into_dart(),
+            self.author_did.into_into_dart().into_dart(),
+            self.author_name.into_into_dart().into_dart(),
+            self.created_at.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_graph::ChatReaction
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_graph::ChatReaction>
+    for crate::api::chat_graph::ChatReaction
+{
+    fn into_into_dart(self) -> crate::api::chat_graph::ChatReaction {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_session::ChatSessionShareTarget {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.session_id.into_into_dart().into_dart(),
+            self.session_did.into_into_dart().into_dart(),
+            self.title.into_into_dart().into_dart(),
+            self.session_kind.into_into_dart().into_dart(),
+            self.participant_count.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_session::ChatSessionShareTarget
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_session::ChatSessionShareTarget>
+    for crate::api::chat_session::ChatSessionShareTarget
+{
+    fn into_into_dart(self) -> crate::api::chat_session::ChatSessionShareTarget {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::chat_session::ChatSessionSummary {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -6252,6 +8896,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::chat_session::ChatSessionSumm
             self.created_at.into_into_dart().into_dart(),
             self.updated_at.into_into_dart().into_dart(),
             self.message_count.into_into_dart().into_dart(),
+            self.session_kind.into_into_dart().into_dart(),
+            self.participant_count.into_into_dart().into_dart(),
+            self.session_did.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6293,6 +8940,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::qualia_api::CoinBalance>
     for crate::api::qualia_api::CoinBalance
 {
     fn into_into_dart(self) -> crate::api::qualia_api::CoinBalance {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::social_api::ConnectInviteSummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.code.into_into_dart().into_dart(),
+            self.invite_json.into_into_dart().into_dart(),
+            self.mailto_url.into_into_dart().into_dart(),
+            self.inviter_did.into_into_dart().into_dart(),
+            self.expires_at.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::social_api::ConnectInviteSummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::social_api::ConnectInviteSummary>
+    for crate::api::social_api::ConnectInviteSummary
+{
+    fn into_into_dart(self) -> crate::api::social_api::ConnectInviteSummary {
         self
     }
 }
@@ -6504,6 +9175,107 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::resource_catalog::OntologyRes
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::ontology_workbench::OntologyShareCard {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.ontology_id.into_into_dart().into_dart(),
+            self.title.into_into_dart().into_dart(),
+            self.domain.into_into_dart().into_dart(),
+            self.magnet_uri.into_into_dart().into_dart(),
+            self.info_hash_sha1.into_into_dart().into_dart(),
+            self.quin_count.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::ontology_workbench::OntologyShareCard
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::ontology_workbench::OntologyShareCard>
+    for crate::api::ontology_workbench::OntologyShareCard
+{
+    fn into_into_dart(self) -> crate::api::ontology_workbench::OntologyShareCard {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::ontology_workbench::OntologyTorrentPolicy {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.seed_enabled.into_into_dart().into_dart(),
+            self.share_enabled.into_into_dart().into_dart(),
+            self.audience.into_into_dart().into_dart(),
+            self.allowed_categories.into_into_dart().into_dart(),
+            self.allowed_contact_dids.into_into_dart().into_dart(),
+            self.allowed_session_dids.into_into_dart().into_dart(),
+            self.bandwidth_limit_kbps.into_into_dart().into_dart(),
+            self.max_upload_mb_per_day.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::ontology_workbench::OntologyTorrentPolicy
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::ontology_workbench::OntologyTorrentPolicy>
+    for crate::api::ontology_workbench::OntologyTorrentPolicy
+{
+    fn into_into_dart(self) -> crate::api::ontology_workbench::OntologyTorrentPolicy {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_agents::OutcomeSharingPolicy {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.visibility.into_into_dart().into_dart(),
+            self.share_provenance.into_into_dart().into_dart(),
+            self.share_model_attribution.into_into_dart().into_dart(),
+            self.allow_peer_llm_context.into_into_dart().into_dart(),
+            self.allowed_dids.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_agents::OutcomeSharingPolicy
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_agents::OutcomeSharingPolicy>
+    for crate::api::chat_agents::OutcomeSharingPolicy
+{
+    fn into_into_dart(self) -> crate::api::chat_agents::OutcomeSharingPolicy {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chat_agents::ParticipantAgentConfig {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.principal_did.into_into_dart().into_dart(),
+            self.sub_agent_did.into_into_dart().into_dart(),
+            self.model_id.into_into_dart().into_dart(),
+            self.backend.into_into_dart().into_dart(),
+            self.outcome_sharing.into_into_dart().into_dart(),
+            self.updated_at.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chat_agents::ParticipantAgentConfig
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chat_agents::ParticipantAgentConfig>
+    for crate::api::chat_agents::ParticipantAgentConfig
+{
+    fn into_into_dart(self) -> crate::api::chat_agents::ParticipantAgentConfig {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::qualia_api::PrerequisiteStatus {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -6640,6 +9412,35 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::qualia_api::QpuOracleSettings
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::social_api::SharingPolicy {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.share_display_name.into_into_dart().into_dart(),
+            self.share_public_did.into_into_dart().into_dart(),
+            self.share_active_model.into_into_dart().into_dart(),
+            self.share_llm_outcomes.into_into_dart().into_dart(),
+            self.share_ontology_scope.into_into_dart().into_dart(),
+            self.share_installed_qapps.into_into_dart().into_dart(),
+            self.share_daemon_status.into_into_dart().into_dart(),
+            self.allow_group_chat_invites.into_into_dart().into_dart(),
+            self.allow_directory_lookup.into_into_dart().into_dart(),
+            self.allow_email_invites.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::social_api::SharingPolicy
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::social_api::SharingPolicy>
+    for crate::api::social_api::SharingPolicy
+{
+    fn into_into_dart(self) -> crate::api::social_api::SharingPolicy {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::qualia_api::SpatialPhysicsState {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -6734,6 +9535,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::qualia_api::TokenEntry>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::ontology_workbench::TorrentBandwidthPolicy {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.global_limit_kbps.into_into_dart().into_dart(),
+            self.metered_mode.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::ontology_workbench::TorrentBandwidthPolicy
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::ontology_workbench::TorrentBandwidthPolicy>
+    for crate::api::ontology_workbench::TorrentBandwidthPolicy
+{
+    fn into_into_dart(self) -> crate::api::ontology_workbench::TorrentBandwidthPolicy {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::qualia_api::TxRecord {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -6763,6 +9585,32 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::qualia_api::TxRecord>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::social_api::UserProfile {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.display_name.into_into_dart().into_dart(),
+            self.bio.into_into_dart().into_dart(),
+            self.public_did.into_into_dart().into_dart(),
+            self.active_front_door_id.into_into_dart().into_dart(),
+            self.relay_base_url.into_into_dart().into_dart(),
+            self.sharing.into_into_dart().into_dart(),
+            self.updated_at.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::social_api::UserProfile
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::social_api::UserProfile>
+    for crate::api::social_api::UserProfile
+{
+    fn into_into_dart(self) -> crate::api::social_api::UserProfile {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::qualia_api::WalletStatus {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -6781,6 +9629,61 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::qualia_api::WalletStatus>
     for crate::api::qualia_api::WalletStatus
 {
     fn into_into_dart(self) -> crate::api::qualia_api::WalletStatus {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::ontology_workbench::WorkbenchEntry {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.ontology_id.into_into_dart().into_dart(),
+            self.title.into_into_dart().into_dart(),
+            self.source_uri.into_into_dart().into_dart(),
+            self.domain.into_into_dart().into_dart(),
+            self.c_q42_path.into_into_dart().into_dart(),
+            self.quin_count.into_into_dart().into_dart(),
+            self.sha256.into_into_dart().into_dart(),
+            self.info_hash_sha1.into_into_dart().into_dart(),
+            self.magnet_uri.into_into_dart().into_dart(),
+            self.imported_at.into_into_dart().into_dart(),
+            self.torrent.into_into_dart().into_dart(),
+            self.seed_active.into_into_dart().into_dart(),
+            self.bytes_uploaded_total.into_into_dart().into_dart(),
+            self.bytes_uploaded_today.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::ontology_workbench::WorkbenchEntry
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::ontology_workbench::WorkbenchEntry>
+    for crate::api::ontology_workbench::WorkbenchEntry
+{
+    fn into_into_dart(self) -> crate::api::ontology_workbench::WorkbenchEntry {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::ontology_workbench::WorkbenchImportResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.entry.into_into_dart().into_dart(),
+            self.compress_ratio.into_into_dart().into_dart(),
+            self.source_removed.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::ontology_workbench::WorkbenchImportResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::ontology_workbench::WorkbenchImportResult>
+    for crate::api::ontology_workbench::WorkbenchImportResult
+{
+    fn into_into_dart(self) -> crate::api::ontology_workbench::WorkbenchImportResult {
         self
     }
 }
@@ -6848,6 +9751,14 @@ impl SseEncode for crate::api::qualia_api::AgentConfig {
     }
 }
 
+impl SseEncode for crate::api::chat_files::AttachChatFileResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::chat_files::ChatFileRecord>::sse_encode(self.file, serializer);
+        <u64>::sse_encode(self.message_lamport, serializer);
+    }
+}
+
 impl SseEncode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -6868,6 +9779,120 @@ impl SseEncode for crate::api::qualia_api::CatalogItem {
     }
 }
 
+impl SseEncode for crate::api::chat_graph::ChatBranchType {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.label, serializer);
+        <String>::sse_encode(self.emoji, serializer);
+        <String>::sse_encode(self.description, serializer);
+        <Option<String>>::sse_encode(self.wordnet_grounding_hash, serializer);
+    }
+}
+
+impl SseEncode for crate::api::social_api::ChatContact {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.actor_id, serializer);
+        <String>::sse_encode(self.display_name, serializer);
+        <String>::sse_encode(self.did, serializer);
+        <String>::sse_encode(self.source, serializer);
+        <u64>::sse_encode(self.added_at, serializer);
+        <Vec<String>>::sse_encode(self.categories, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_files::ChatFilePreview {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.mime_type, serializer);
+        <String>::sse_encode(self.extension, serializer);
+        <Option<u32>>::sse_encode(self.page_count, serializer);
+        <String>::sse_encode(self.text_preview, serializer);
+        <String>::sse_encode(self.parse_status, serializer);
+        <Option<String>>::sse_encode(self.parse_error, serializer);
+        <String>::sse_encode(self.media_kind, serializer);
+        <Option<u32>>::sse_encode(self.image_width, serializer);
+        <Option<u32>>::sse_encode(self.image_height, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_files::ChatFileRecord {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.file_id, serializer);
+        <String>::sse_encode(self.original_name, serializer);
+        <String>::sse_encode(self.mime_type, serializer);
+        <String>::sse_encode(self.extension, serializer);
+        <String>::sse_encode(self.sha256, serializer);
+        <u64>::sse_encode(self.byte_size, serializer);
+        <Option<u32>>::sse_encode(self.page_count, serializer);
+        <String>::sse_encode(self.text_preview, serializer);
+        <String>::sse_encode(self.author_did, serializer);
+        <Option<String>>::sse_encode(self.author_name, serializer);
+        <Option<u64>>::sse_encode(self.message_lamport, serializer);
+        <u64>::sse_encode(self.attached_at, serializer);
+        <crate::api::chat_files::ChatFileSharing>::sse_encode(self.sharing, serializer);
+        <String>::sse_encode(self.parse_status, serializer);
+        <Option<String>>::sse_encode(self.parse_error, serializer);
+        <String>::sse_encode(self.media_kind, serializer);
+        <Option<u32>>::sse_encode(self.image_width, serializer);
+        <Option<u32>>::sse_encode(self.image_height, serializer);
+        <Option<String>>::sse_encode(self.thumbnail_rel_path, serializer);
+        <Option<String>>::sse_encode(self.vision_lexicon_id, serializer);
+        <Option<String>>::sse_encode(self.vision_facet, serializer);
+        <Option<String>>::sse_encode(self.vision_status, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_files::ChatFileSharing {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.visibility, serializer);
+        <bool>::sse_encode(self.allow_download, serializer);
+        <bool>::sse_encode(self.allow_llm_context, serializer);
+        <bool>::sse_encode(self.allow_relay_sync, serializer);
+        <Vec<String>>::sse_encode(self.allowed_dids, serializer);
+        <Option<u64>>::sse_encode(self.expires_at, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_graph::ChatFragment {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.fragment_id, serializer);
+        <u64>::sse_encode(self.message_lamport, serializer);
+        <u32>::sse_encode(self.anchor_start, serializer);
+        <u32>::sse_encode(self.anchor_end, serializer);
+        <String>::sse_encode(self.anchor_text, serializer);
+        <Option<String>>::sse_encode(self.author_did, serializer);
+        <Option<String>>::sse_encode(self.author_name, serializer);
+        <u64>::sse_encode(self.created_at, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_graph::ChatGraphEdge {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.child_fragment_id, serializer);
+        <String>::sse_encode(self.parent_fragment_id, serializer);
+        <u64>::sse_encode(self.reply_message_lamport, serializer);
+        <u64>::sse_encode(self.created_at, serializer);
+        <Option<String>>::sse_encode(self.branch_type_id, serializer);
+        <Option<String>>::sse_encode(self.branch_label, serializer);
+        <Option<String>>::sse_encode(self.branch_emoji, serializer);
+        <Option<String>>::sse_encode(self.wordnet_grounding_hash, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_graph::ChatGraphView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::api::chat_graph::ChatFragment>>::sse_encode(self.fragments, serializer);
+        <Vec<crate::api::chat_graph::ChatGraphEdge>>::sse_encode(self.edges, serializer);
+    }
+}
+
 impl SseEncode for crate::api::chat_session::ChatMessage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -6875,6 +9900,46 @@ impl SseEncode for crate::api::chat_session::ChatMessage {
         <String>::sse_encode(self.role, serializer);
         <String>::sse_encode(self.content, serializer);
         <u64>::sse_encode(self.timestamp, serializer);
+        <Option<String>>::sse_encode(self.author_name, serializer);
+        <Option<String>>::sse_encode(self.author_did, serializer);
+        <Option<String>>::sse_encode(self.reply_to_fragment, serializer);
+        <Option<String>>::sse_encode(self.sub_agent_of, serializer);
+        <Option<String>>::sse_encode(self.agent_did, serializer);
+        <Option<String>>::sse_encode(self.author_display, serializer);
+        <Option<String>>::sse_encode(self.model_id, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_session::ChatParticipant {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.did, serializer);
+        <String>::sse_encode(self.display_name, serializer);
+        <String>::sse_encode(self.actor_id, serializer);
+        <String>::sse_encode(self.role, serializer);
+        <u64>::sse_encode(self.joined_at, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_graph::ChatReaction {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.message_lamport, serializer);
+        <String>::sse_encode(self.emoji, serializer);
+        <String>::sse_encode(self.author_did, serializer);
+        <Option<String>>::sse_encode(self.author_name, serializer);
+        <u64>::sse_encode(self.created_at, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_session::ChatSessionShareTarget {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.session_id, serializer);
+        <String>::sse_encode(self.session_did, serializer);
+        <String>::sse_encode(self.title, serializer);
+        <String>::sse_encode(self.session_kind, serializer);
+        <u64>::sse_encode(self.participant_count, serializer);
     }
 }
 
@@ -6886,6 +9951,9 @@ impl SseEncode for crate::api::chat_session::ChatSessionSummary {
         <u64>::sse_encode(self.created_at, serializer);
         <u64>::sse_encode(self.updated_at, serializer);
         <u64>::sse_encode(self.message_count, serializer);
+        <String>::sse_encode(self.session_kind, serializer);
+        <u64>::sse_encode(self.participant_count, serializer);
+        <String>::sse_encode(self.session_did, serializer);
     }
 }
 
@@ -6902,6 +9970,17 @@ impl SseEncode for crate::api::qualia_api::CoinBalance {
         <f64>::sse_encode(self.change_24h, serializer);
         <String>::sse_encode(self.network, serializer);
         <String>::sse_encode(self.status, serializer);
+    }
+}
+
+impl SseEncode for crate::api::social_api::ConnectInviteSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
+        <String>::sse_encode(self.invite_json, serializer);
+        <String>::sse_encode(self.mailto_url, serializer);
+        <String>::sse_encode(self.inviter_did, serializer);
+        <u64>::sse_encode(self.expires_at, serializer);
     }
 }
 
@@ -7004,12 +10083,92 @@ impl SseEncode for Vec<crate::api::qualia_api::CatalogItem> {
     }
 }
 
+impl SseEncode for Vec<crate::api::chat_graph::ChatBranchType> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chat_graph::ChatBranchType>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::social_api::ChatContact> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::social_api::ChatContact>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::chat_files::ChatFileRecord> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chat_files::ChatFileRecord>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::chat_graph::ChatFragment> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chat_graph::ChatFragment>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::chat_graph::ChatGraphEdge> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chat_graph::ChatGraphEdge>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::chat_session::ChatMessage> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::chat_session::ChatMessage>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::chat_session::ChatParticipant> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chat_session::ChatParticipant>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::chat_graph::ChatReaction> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chat_graph::ChatReaction>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::chat_session::ChatSessionShareTarget> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chat_session::ChatSessionShareTarget>::sse_encode(item, serializer);
         }
     }
 }
@@ -7084,6 +10243,16 @@ impl SseEncode for Vec<crate::api::resource_catalog::OntologyResource> {
     }
 }
 
+impl SseEncode for Vec<crate::api::ontology_workbench::OntologyShareCard> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::ontology_workbench::OntologyShareCard>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<f32> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7144,6 +10313,16 @@ impl SseEncode for Vec<crate::api::qualia_api::TxRecord> {
     }
 }
 
+impl SseEncode for Vec<crate::api::ontology_workbench::WorkbenchEntry> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::ontology_workbench::WorkbenchEntry>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for crate::api::resource_catalog::LLMResource {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7190,6 +10369,32 @@ impl SseEncode for crate::api::resource_catalog::OntologyResource {
     }
 }
 
+impl SseEncode for crate::api::ontology_workbench::OntologyShareCard {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.ontology_id, serializer);
+        <String>::sse_encode(self.title, serializer);
+        <String>::sse_encode(self.domain, serializer);
+        <String>::sse_encode(self.magnet_uri, serializer);
+        <String>::sse_encode(self.info_hash_sha1, serializer);
+        <u64>::sse_encode(self.quin_count, serializer);
+    }
+}
+
+impl SseEncode for crate::api::ontology_workbench::OntologyTorrentPolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.seed_enabled, serializer);
+        <bool>::sse_encode(self.share_enabled, serializer);
+        <String>::sse_encode(self.audience, serializer);
+        <Vec<String>>::sse_encode(self.allowed_categories, serializer);
+        <Vec<String>>::sse_encode(self.allowed_contact_dids, serializer);
+        <Vec<String>>::sse_encode(self.allowed_session_dids, serializer);
+        <u32>::sse_encode(self.bandwidth_limit_kbps, serializer);
+        <Option<u32>>::sse_encode(self.max_upload_mb_per_day, serializer);
+    }
+}
+
 impl SseEncode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7210,6 +10415,16 @@ impl SseEncode for Option<u32> {
     }
 }
 
+impl SseEncode for Option<u64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <u64>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<Vec<String>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7217,6 +10432,32 @@ impl SseEncode for Option<Vec<String>> {
         if let Some(value) = self {
             <Vec<String>>::sse_encode(value, serializer);
         }
+    }
+}
+
+impl SseEncode for crate::api::chat_agents::OutcomeSharingPolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.visibility, serializer);
+        <bool>::sse_encode(self.share_provenance, serializer);
+        <bool>::sse_encode(self.share_model_attribution, serializer);
+        <bool>::sse_encode(self.allow_peer_llm_context, serializer);
+        <Vec<String>>::sse_encode(self.allowed_dids, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chat_agents::ParticipantAgentConfig {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.principal_did, serializer);
+        <String>::sse_encode(self.sub_agent_did, serializer);
+        <Option<String>>::sse_encode(self.model_id, serializer);
+        <String>::sse_encode(self.backend, serializer);
+        <crate::api::chat_agents::OutcomeSharingPolicy>::sse_encode(
+            self.outcome_sharing,
+            serializer,
+        );
+        <u64>::sse_encode(self.updated_at, serializer);
     }
 }
 
@@ -7283,6 +10524,22 @@ impl SseEncode for crate::api::qualia_api::QpuOracleSettingsInput {
     }
 }
 
+impl SseEncode for crate::api::social_api::SharingPolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.share_display_name, serializer);
+        <bool>::sse_encode(self.share_public_did, serializer);
+        <bool>::sse_encode(self.share_active_model, serializer);
+        <bool>::sse_encode(self.share_llm_outcomes, serializer);
+        <bool>::sse_encode(self.share_ontology_scope, serializer);
+        <bool>::sse_encode(self.share_installed_qapps, serializer);
+        <bool>::sse_encode(self.share_daemon_status, serializer);
+        <bool>::sse_encode(self.allow_group_chat_invites, serializer);
+        <bool>::sse_encode(self.allow_directory_lookup, serializer);
+        <bool>::sse_encode(self.allow_email_invites, serializer);
+    }
+}
+
 impl SseEncode for crate::api::qualia_api::SpatialPhysicsState {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7322,6 +10579,14 @@ impl SseEncode for crate::api::qualia_api::TokenEntry {
         <String>::sse_encode(self.balance, serializer);
         <u8>::sse_encode(self.decimals, serializer);
         <f64>::sse_encode(self.fiat_usd, serializer);
+    }
+}
+
+impl SseEncode for crate::api::ontology_workbench::TorrentBandwidthPolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.global_limit_kbps, serializer);
+        <bool>::sse_encode(self.metered_mode, serializer);
     }
 }
 
@@ -7374,6 +10639,19 @@ impl SseEncode for () {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
 }
 
+impl SseEncode for crate::api::social_api::UserProfile {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.display_name, serializer);
+        <Option<String>>::sse_encode(self.bio, serializer);
+        <String>::sse_encode(self.public_did, serializer);
+        <Option<String>>::sse_encode(self.active_front_door_id, serializer);
+        <Option<String>>::sse_encode(self.relay_base_url, serializer);
+        <crate::api::social_api::SharingPolicy>::sse_encode(self.sharing, serializer);
+        <u64>::sse_encode(self.updated_at, serializer);
+    }
+}
+
 impl SseEncode for usize {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7390,6 +10668,38 @@ impl SseEncode for crate::api::qualia_api::WalletStatus {
         <u64>::sse_encode(self.lightning_sats, serializer);
         <u64>::sse_encode(self.ilp_microcents, serializer);
         <bool>::sse_encode(self.nym_connected, serializer);
+    }
+}
+
+impl SseEncode for crate::api::ontology_workbench::WorkbenchEntry {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.ontology_id, serializer);
+        <String>::sse_encode(self.title, serializer);
+        <String>::sse_encode(self.source_uri, serializer);
+        <String>::sse_encode(self.domain, serializer);
+        <String>::sse_encode(self.c_q42_path, serializer);
+        <u64>::sse_encode(self.quin_count, serializer);
+        <String>::sse_encode(self.sha256, serializer);
+        <String>::sse_encode(self.info_hash_sha1, serializer);
+        <String>::sse_encode(self.magnet_uri, serializer);
+        <u64>::sse_encode(self.imported_at, serializer);
+        <crate::api::ontology_workbench::OntologyTorrentPolicy>::sse_encode(
+            self.torrent,
+            serializer,
+        );
+        <bool>::sse_encode(self.seed_active, serializer);
+        <u64>::sse_encode(self.bytes_uploaded_total, serializer);
+        <u64>::sse_encode(self.bytes_uploaded_today, serializer);
+    }
+}
+
+impl SseEncode for crate::api::ontology_workbench::WorkbenchImportResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::ontology_workbench::WorkbenchEntry>::sse_encode(self.entry, serializer);
+        <f64>::sse_encode(self.compress_ratio, serializer);
+        <bool>::sse_encode(self.source_removed, serializer);
     }
 }
 

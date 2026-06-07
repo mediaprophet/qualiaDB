@@ -60,9 +60,14 @@ fn spawn_daemon_background() -> String {
     qualia_core_db::daemon_graph::init_daemon_graph(&config.storage_path);
     let vault = state.key_vault.clone();
     let flag = state.daemon_running.clone();
+    let storage_path = config.storage_path.clone();
     std::thread::spawn(move || {
         block_on(async {
             *flag.lock().unwrap() = true;
+            tokio::spawn(async move {
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                let _ = core::sync_workbench_torrent_seeds(&storage_path);
+            });
             qualia_core_db::daemon::start_local_daemon(port, vault).await;
             *flag.lock().unwrap() = false;
             DAEMON_SPAWNED.store(false, Ordering::SeqCst);
@@ -98,6 +103,7 @@ pub fn init_core() {
     let _ = core::start_qualia_protocol();
     let _ = core::seed_bundled_qapps();
     let _ = spawn_daemon_background();
+    core::start_chat_relay_poller();
 }
 
 // ── Hardware / system ─────────────────────────────────────────────────────────
@@ -1100,56 +1106,64 @@ pub fn receive_vault_job(
 
 // ── Inference ─────────────────────────────────────────────────────────────────
 
-pub fn run_inference(prompt: String, model_path: String) -> String {
-    use qualia_core_db::{
-        llm_agent::{AgentBackend, AgentIntent, LocalLlmAgent},
-        orchestrator::{NullThermalGovernor, OrchestrationResult, TaskOrchestrator},
-        q_hash,
+pub fn run_inference(prompt: String, _model_path: String) -> String {
+    let session_id = match core::ensure_chat_session() {
+        Ok(id) => id,
+        Err(e) => return format!("[Session error: {e}]"),
     };
-
-    if model_path.is_empty() {
-        return "[No model loaded — select a GGUF model in LLM Hub first]".to_string();
-    }
-
-    let agent = LocalLlmAgent {
-        agent_did: "did:qualia:flutter-chat-agent".to_string(),
-        backend: AgentBackend::Local {
-            model_path: model_path.clone(),
-            context_window: 4096,
-            quantization: "Q4_K_M".to_string(),
-        },
-        memory_used_bytes: std::sync::atomic::AtomicU64::new(0),
-    };
-
-    let intent = AgentIntent {
-        intent_predicate: q_hash("llm:ReadGraph"),
-        requested_graph_scope: vec![q_hash("user:chat_context")],
-        requires_network: false,
-        ilp_offer_micro_cents: 0,
-        principal_did_hash: q_hash("did:qualia:flutter-user"),
-        mcp_intent_frame_hash: q_hash("purpose:General"),
-        output_mode: qualia_core_db::n3_compiler::N3OutputMode::FreeText,
-        clearance_ceiling: 0,
-        max_sentinel_depth: 32,
-        active_profile: None,
-    };
-
-    let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
-    match orch.orchestrate_inference(&agent, &prompt, "flutter_chat_context", intent) {
-        OrchestrationResult::Committed { text, .. } => text,
-        OrchestrationResult::Blocked { reason, .. } => format!("[Webizen blocked: {}]", reason),
-        OrchestrationResult::Failed(e) => format!("[Inference error: {}]", e),
+    match core::run_chat_inference(session_id, prompt) {
+        Ok(text) => text,
+        Err(e) => format!("[{e}]"),
     }
 }
 
-/// Stream inference output word-by-word after the Webizen-gated pipeline completes.
-pub fn run_inference_stream(prompt: String, model_path: String, sink: StreamSink<String>) {
+/// NDJSON stream: `{"event":"token","data":"..."}` then `{"event":"done","data":{...}}`.
+pub fn run_inference_stream(
+    prompt: String,
+    _model_path: String,
+    session_id: String,
+    reply_to_fragment_id: Option<String>,
+    sink: StreamSink<String>,
+) {
     std::thread::spawn(move || {
-        let full = run_inference(prompt, model_path);
-        for piece in full.split_inclusive(|c: char| c.is_whitespace()) {
-            if !piece.is_empty() {
-                let _ = sink.add(piece.to_string());
+        let (tx, rx) = std::sync::mpsc::sync_channel::<String>(512);
+        std::thread::spawn(move || {
+            while let Ok(line) = rx.recv() {
+                let _ = sink.add(line);
             }
-        }
+        });
+
+        let sid = if session_id.is_empty() {
+            match core::ensure_chat_session() {
+                Ok(id) => id,
+                Err(e) => {
+                    let _ = tx.send(qualia_client_core::chat_inference::stream_event_error(&e));
+                    return;
+                }
+            }
+        } else {
+            session_id
+        };
+
+        let tx_token = tx.clone();
+        let on_token = std::sync::Arc::new(move |delta: String| {
+            let _ = tx_token.send(qualia_client_core::chat_inference::stream_event_token(&delta));
+        });
+
+        let options = qualia_client_core::chat_inference::ChatInferenceOptions {
+            reply_to_fragment_id: reply_to_fragment_id.filter(|s| !s.is_empty()),
+        };
+        let result = qualia_client_core::chat_inference::run_chat_inference_full(
+            &sid,
+            &prompt,
+            Some(on_token),
+            options,
+        );
+
+        let _ = tx.send(qualia_client_core::chat_inference::stream_event_done(&result));
     });
+}
+
+pub fn cancel_inference_stream() {
+    core::cancel_chat_inference();
 }

@@ -333,27 +333,36 @@
             padding: 1px 5px;
             border-radius: 4px;
         }
-        .suite-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11.5px;
-            margin-top: 8px;
-        }
-        .suite-table th, .suite-table td {
-            text-align: left;
-            padding: 6px 8px;
-            border-bottom: 1px solid rgba(255,255,255,.06);
-        }
-        .suite-table th {
-            color: var(--dim);
+        .catalog-section { margin-bottom: 20px; }
+        .catalog-section h2 {
+            font-size: 13px;
             font-weight: 600;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: .05em;
+            color: var(--accent);
+            margin-bottom: 6px;
         }
-        .suite-table .cat-logic { color: var(--success); }
-        .suite-table .cat-wasm { color: var(--accent); }
-        .suite-table .cat-native { color: var(--native); }
+        .catalog-section .catalog-note {
+            font-size: 12px;
+            color: var(--dim);
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .results-section h2 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+        .catalog-card .suite-stats { color: var(--dim); }
+        .catalog-card .test-row { color: rgba(255,255,255,.4); }
+        .catalog-card .test-row .test-icon { color: var(--dim); }
+        .catalog-card .test-ms { display: none; }
+        .catalog-card .suite-module {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--dim);
+            margin-left: 6px;
+            flex-shrink: 0;
+        }
         .engine-pill {
             font-family: var(--mono);
             font-size: 11px;
@@ -470,50 +479,23 @@
         <span><span style="color:var(--native)">■</span> Native — local daemon at localhost:4242</span>
     </div>
 
-    <div class="run-panel">
+    <div class="catalog-section">
         <h2>Suite catalog (branch 0.0.8-dev)</h2>
-        <table class="suite-table">
-            <thead>
-                <tr><th>Category</th><th>Suite</th><th>Module</th><th>Modes</th></tr>
-            </thead>
-            <tbody>
-                <tr><td class="cat-logic">Logic</td><td>Core Primitives</td><td><code>primitives.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Epistemic Logic</td><td><code>modality-epistemic.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Temporal LTL</td><td><code>modality-ltl.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Paraconsistent Logic</td><td><code>modality-paraconsistent.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Linear Logic</td><td><code>modality-linear.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Dialectical Logic</td><td><code>modality-dialectical.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Spatio-Temporal (Allen)</td><td><code>modality-spatio-temporal.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Description Logic</td><td><code>modality-dl.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Answer Set Programming</td><td><code>modality-asp.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Probabilistic + Diffusion</td><td><code>modality-probabilistic.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>CogAI Chunks</td><td><code>modality-cogai.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Agency (Principal ≠ Thing)</td><td><code>modality-agency.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Comorbidity risk</td><td><code>modality-comorbidity.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>DICOM split-ingest Quins</td><td><code>modality-dicom.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>Deontic O/P/F + unless</td><td><code>modality-deontic.js</code></td><td>all</td></tr>
-                <tr><td class="cat-logic">Logic</td><td>OWL → SHACL alignment</td><td><code>ontology-alignment.js</code></td><td>all</td></tr>
-                <tr><td class="cat-wasm">WASM</td><td>Query Engine + metadata</td><td><code>wasm-query-engine.js</code></td><td>wasm, both</td></tr>
-                <tr><td class="cat-wasm">WASM</td><td>Bioinformatics</td><td><code>wasm-bioinformatics.js</code></td><td>wasm, both</td></tr>
-                <tr><td class="cat-wasm">WASM</td><td>Clinical Engine</td><td><code>wasm-clinical.js</code></td><td>wasm, both</td></tr>
-                <tr><td class="cat-wasm">WASM</td><td>Organic Chemistry</td><td><code>wasm-chemistry.js</code></td><td>wasm, both</td></tr>
-                <tr><td class="cat-wasm">WASM</td><td>Economics / simulation</td><td><code>wasm-economics.js</code></td><td>wasm, both</td></tr>
-                <tr><td class="cat-wasm">WASM</td><td>SHACL constraints</td><td><code>wasm-shacl.js</code></td><td>wasm, both</td></tr>
-                <tr><td class="cat-wasm">WASM</td><td>Governance &amp; Webizen</td><td><code>wasm-governance.js</code></td><td>wasm, both</td></tr>
-                <tr><td class="cat-wasm">WASM</td><td>Ingest formats</td><td><code>wasm-ingest.js</code></td><td>wasm, both</td></tr>
-                <tr><td class="cat-wasm">WASM</td><td>Capability Profiles (QCHK)</td><td><code>wasm-profiles.js</code></td><td>wasm, both</td></tr>
-                <tr><td class="cat-wasm">WASM</td><td>Resource Catalog</td><td><code>wasm-resources.js</code></td><td>wasm, both</td></tr>
-                <tr><td class="cat-native">Native</td><td>Daemon Health</td><td><code>native-daemon.js</code></td><td>native, both</td></tr>
-                <tr><td class="cat-native">Native</td><td>Query (JSON-LD / N-Triples)</td><td><code>native-query.js</code></td><td>native, both</td></tr>
-                <tr><td class="cat-native">Native</td><td>Live pipeline</td><td><code>native-live.js</code></td><td>native, both</td></tr>
-                <tr><td class="cat-native">Native</td><td>WASM ↔ Native comparison</td><td><code>native-comparison.js</code></td><td>both only</td></tr>
-            </tbody>
-        </table>
-        <p style="margin-top:10px">Manual WordNet ingest tests: enable <strong>Manual</strong> checkbox or <code>?manual=1</code> (requires <code>docs/playground/wordnet.q42</code>).</p>
+        <p class="catalog-note">
+            Expandable suites below mirror the live runner layout for the selected mode.
+            Manual WordNet ingest tests: enable <strong>Manual</strong> checkbox or <code>?manual=1</code>
+            (requires <code>docs/playground/wordnet.q42</code>).
+            <span id="catalog-stats"></span>
+        </p>
+        <div id="suite-catalog"></div>
     </div>
 
     <div class="legend" id="wasm-coverage-note" style="display:none"></div>
-    <div id="suite-list"></div>
+
+    <div class="results-section">
+        <h2>Live results</h2>
+        <div id="suite-list"></div>
+    </div>
 </main>
 
 <script type="module">

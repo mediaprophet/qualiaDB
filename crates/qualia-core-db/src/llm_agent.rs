@@ -271,7 +271,26 @@ impl LocalLlmAgent {
     /// it detects the 0x99 anachronism byte in the top-logit's bit pattern.
     ///
     /// On WASM / non-local backends: falls through to the original mock path.
+    /// Run local inference, optionally streaming decoded text deltas to `on_token`.
+    pub fn infer_local_model_streaming<F: FnMut(String) + Send>(
+        &self,
+        prompt: &str,
+        graph_context: &str,
+        mut on_token: Option<F>,
+    ) -> (String, Vec<u64>, u32) {
+        self.infer_local_model_inner(prompt, graph_context, on_token.as_mut())
+    }
+
     fn infer_local_model(&self, prompt: &str, graph_context: &str) -> (String, Vec<u64>, u32) {
+        self.infer_local_model_inner::<fn(String)>(prompt, graph_context, None)
+    }
+
+    fn infer_local_model_inner<F: FnMut(String) + Send>(
+        &self,
+        prompt: &str,
+        graph_context: &str,
+        mut on_token: Option<&mut F>,
+    ) -> (String, Vec<u64>, u32) {
         let prov_hash = graph_context.bytes().take(8)
             .fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
 
@@ -298,6 +317,13 @@ impl LocalLlmAgent {
             let (mut lp, mut lc) = RingBuffer::<LlmMsg>::new(1024);
             // ControlStream: Webizen Sentinel → LLM engine
             let (mut cp, mut cc) = RingBuffer::<SentMsg>::new(16);
+
+            let stream_pair = if on_token.is_some() {
+                Some(std::sync::mpsc::sync_channel::<String>(512))
+            } else {
+                None
+            };
+            let stream_tx_thread = stream_pair.as_ref().map(|(tx, _)| tx.clone());
 
             // ── LLM engine thread ────────────────────────────────────────────
             let h = thread::spawn(move || -> (String, u32) {
@@ -326,6 +352,7 @@ impl LocalLlmAgent {
                     .unwrap_or(4096);
 
                 let mut out_ids: Vec<u32> = Vec::new();
+                let mut streamed_len = 0usize;
 
                 for _ in 0..(MAX_OUTPUT_TOKENS as usize) {
                     // Check ControlStream for a DenyRollback injected in the previous step.
@@ -377,6 +404,16 @@ impl LocalLlmAgent {
 
                     out_ids.push(next);
                     ctx.push(next);
+
+                    if let Some(ref tx) = stream_tx_thread {
+                        let full = tok.decode(&out_ids);
+                        if full.len() > streamed_len {
+                            let delta = full[streamed_len..].to_string();
+                            streamed_len = full.len();
+                            let _ = tx.send(delta);
+                        }
+                    }
+
                     if next == eos { break; }
                 }
 
@@ -385,19 +422,33 @@ impl LocalLlmAgent {
             });
 
             // ── Webizen Sentinel (calling thread) ────────────────────────────
+            let mut drain_tokens = || {
+                if let (Some((_, ref rx)), Some(cb)) = (&stream_pair, on_token.as_mut()) {
+                    while let Ok(delta) = rx.try_recv() {
+                        cb(delta);
+                    }
+                }
+            };
+
             loop {
+                drain_tokens();
                 match lc.pop() {
                     Ok(LlmMsg::Eos)      => break,
                     Ok(LlmMsg::Logit(s)) => {
-                        // Phase 8: inject DenyRollback on 0x99 anachronism signature.
                         if s.anomaly == 0x99 { let _ = cp.push(SentMsg::DenyRollback); }
                     }
                     Err(_) => std::hint::spin_loop(),
                 }
             }
 
+            drain_tokens();
+
             let (text, tokens) = h.join().unwrap_or_else(|_| (String::new(), 0));
-            return (text, vec![prov_hash], tokens);
+            let mut prov = vec![prov_hash];
+            if prov_hash == 0 {
+                prov.push(q_hash("qualia:grounded"));
+            }
+            return (text, prov, tokens);
         }
 
         // ── WASM / non-local fallback (original mock — unchanged) ────────────
