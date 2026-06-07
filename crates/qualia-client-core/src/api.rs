@@ -2255,6 +2255,14 @@ pub async fn install_catalog_llm(id: String) -> Result<serde_json::Value, String
     )
     .map_err(|e| e.to_string())?;
 
+    // New installs should be immediately usable in chat (not left at MappedToDisk).
+    if let Ok(record) =
+        crate::model_lifecycle::activate_model_for_id(&id, Path::new(&storage_path))
+    {
+        let _ = persist_active_model_record(&record);
+        *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
+    }
+
     let done_payload = ProgressPayload {
         id: id.clone(),
         progress: 100.0,

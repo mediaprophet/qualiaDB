@@ -1,7 +1,10 @@
 //! LZ4 distribution artifacts — `.c.q42` for browser / WebTorrent deploy.
 //!
-//! Ingest via `streaming_import_rdf` already emits LZ4 block streams compatible
-//! with `q42_reader`. This module finalizes the distribution filename and stats.
+//! This module currently preserves a transitional compatibility path where some
+//! ingest outputs are already framed as LZ4 transport blocks. That behavior
+//! should not be confused with the canonical raw `.q42` SuperBlock container.
+//! Long term, `.c.q42` should be derived from raw `.q42`, not treated as the
+//! same artifact under a different filename.
 
 use std::fs;
 use std::io::{Read, Write};
@@ -21,8 +24,10 @@ pub struct CompressStats {
 
 /// Finalize `{ontology_id}.q42` as `{ontology_id}.c.q42` for sharing.
 ///
-/// Flat ingest output is already LZ4-blocked; we copy to the `.c.q42` name so
-/// the original RDF can be removed while keeping a canonical seed artifact.
+/// Transitional note: this currently assumes the input is already a legacy
+/// framed LZ4 transport artifact. It is therefore a compatibility shim, not
+/// the canonical raw-`.q42` to `.c.q42` conversion path described by the new
+/// internal format draft.
 pub fn finalize_c_q42(q42_path: &Path, c_q42_path: &Path) -> Result<CompressStats, String> {
     if !q42_path.is_file() {
         return Err(format!("Missing .q42 artifact: {}", q42_path.display()));

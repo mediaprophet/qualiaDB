@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use qualia_core_db::mini_parser::hash_token;
-use qualia_core_db::q42_reader::read_q42_quins;
+use qualia_core_db::q42_reader::read_c_q42_quins;
 use qualia_core_db::{q_hash, QualiaQuin, QUINS_PER_BLOCK};
 use sysinfo::System;
 
@@ -112,7 +112,7 @@ fn read_ntriples_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
 fn load_quins(path: &Path, format: InputFormat) -> std::io::Result<Vec<QualiaQuin>> {
     match format {
         InputFormat::Superblock => read_cli_superblock_quins(path),
-        InputFormat::Cq42 => read_q42_quins(path),
+        InputFormat::Cq42 => read_c_q42_quins(path),
         InputFormat::Ntriples => read_ntriples_quins(path),
     }
 }

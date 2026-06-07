@@ -161,8 +161,9 @@ enum Commands {
         /// Resource ID or list filter (optional)
         arg: Option<String>,
     },
-    /// Manage Capability Profiles: compile a JSON-LD source into a .chk binary,
-    /// list known profile IDs, or inspect an existing .chk file.
+    /// Manage Capability Profiles: compile a JSON-LD source into a .qchk
+    /// binary, list known profile IDs, or inspect an existing .qchk file.
+    /// Legacy `.chk` QCHK files remain readable during migration.
     Profile {
         #[command(subcommand)]
         action: ProfileAction,
@@ -171,20 +172,20 @@ enum Commands {
 
 #[derive(Subcommand, Debug)]
 enum ProfileAction {
-    /// Compile a JSON-LD capability profile source into a binary .chk file.
-    /// Usage: qualia-cli profile compile health.jsonld [--out health.chk]
+    /// Compile a JSON-LD capability profile source into a binary .qchk file.
+    /// Usage: qualia-cli profile compile health.jsonld [--out health.qchk]
     Compile {
         /// JSON-LD profile source file
         input: PathBuf,
-        /// Output path (defaults to <input>.chk)
+        /// Output path (defaults to <input>.qchk)
         #[arg(long)]
         out: Option<PathBuf>,
     },
     /// List all known profile ID hashes and their semantic descriptions.
     List,
-    /// Inspect a compiled .chk profile binary: show ID, payload size, and JSON-LD source.
+    /// Inspect a compiled .qchk profile binary: show ID, payload size, and JSON-LD source.
     Inspect {
-        /// Path to the .chk file
+        /// Path to the .qchk file (legacy `.chk` also accepted)
         file: PathBuf,
     },
 }
@@ -579,7 +580,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Profile { action } => {
             match action {
                 ProfileAction::Compile { input, out } => {
-                    let out_path = out.clone().unwrap_or_else(|| input.with_extension("chk"));
+                    let out_path = out.clone().unwrap_or_else(|| input.with_extension("qchk"));
                     println!("============================================================");
                     println!("⚡ Qualia Capability Profile Compiler");
                     println!("  input  : {}", input.display());
@@ -633,14 +634,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Err(e) => eprintln!("❌ Cannot read file: {}", e),
                         Ok(bytes) => {
                             if bytes.len() < 16 || &bytes[0..4] != b"QCHK" {
-                                eprintln!("❌ Not a valid .chk file (missing QCHK magic)");
+                                eprintln!("❌ Not a valid QCHK profile (.qchk or legacy .chk missing QCHK magic)");
                             } else {
                                 let profile_id = u64::from_le_bytes(bytes[4..12].try_into().unwrap());
                                 let payload_len = u32::from_le_bytes(bytes[12..16].try_into().unwrap()) as usize;
                                 let payload = &bytes[16..16 + payload_len.min(bytes.len().saturating_sub(16))];
                                 println!("  Profile ID : 0x{:016X}", profile_id);
                                 println!("  Payload    : {} bytes (JSON-LD source)", payload_len);
-                                println!("  Total .chk : {} bytes", bytes.len());
+                                println!("  Total file : {} bytes", bytes.len());
                                 println!();
                                 println!("--- JSON-LD Source ---");
                                 println!("{}", String::from_utf8_lossy(payload));
