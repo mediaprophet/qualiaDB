@@ -2,24 +2,39 @@
 
 **Layer 1 Application Protocol over Qualia-DB**
 
-This specification defines the `Webizen` protocol—the Layer 1 application standard that provides Identity Management, Social Graph resolution, and the Permissive Commons rules over the bare-metal Qualia-DB (Layer 0) engine.
+This specification defines the `Webizen` protocol—the Layer 1 application
+standard that provides identifier management, social-graph resolution, and the
+Permissive Commons rules over the bare-metal Qualia-DB (Layer 0) engine.
 
 While Qualia-DB provides the physical 512MB memory boundary and the zero-allocation Webizen logic VM, the Webizen Protocol dictates how human beings establish cryptographic agency, project personas, and legally govern their shared data.
 
 ---
 
-## 1. Identity Nyms as N-Dimensional Inferences
+## 1. Identifier Nyms as N-Dimensional Inferences
 
-In traditional Web3 or database architectures, "Identity" is treated as a static noun—usually a flat JSON document permanently bound to a single public key.
+In traditional Web3 or database architectures, "identity" is often treated as
+a static noun—usually a flat JSON document permanently bound to a single public
+key.
 
-The Webizen Protocol rejects this static model. Identity is a **behavior**. It is an enumerated set of **Identity Nyms** (personas, pseudonyms, facets) that continually develop and resolve over time. 
+The Webizen Protocol rejects that reduction. Human identity is not defined here
+as a DID, nym, credential, or auth token. Instead, the protocol models
+**Identifier Nyms** as technical, contextual projections around human identity
+that continually develop and resolve over time.
 
-Because the underlying engine evaluates data as 48-byte Quins across a Spatiotemporal context vector, an Identity Nym is an **n-dimensional inference** derived from:
-1. **Subjective Inferences**: Claims made *by* the human author about a specific nym (e.g., self-asserted preferences, local truths, temporal moods).
-2. **Objective Inferences**: Claims made *about* the nym by external cryptographic actors in the Address Book (e.g., peer attestations, bilateral edge connections).
-3. **Input Format Dynamics**: As the data formats, temporal context (time-of-day, historical epoch), and spatial coordinates shift, the Webizen VM dynamically re-evaluates the active Identity Nym.
+Because the underlying engine evaluates data as 48-byte Quins across a
+spatiotemporal context vector, an Identifier Nym is an **n-dimensional
+inference** derived from:
+1. **Subjective Inferences**: Claims made *by* the human author about a
+   specific nym or presentation context.
+2. **Objective Inferences**: Claims made *about* that nym or identifier
+   context by external cryptographic actors in the Address Book.
+3. **Input Format Dynamics**: As the data formats, temporal context
+   (time-of-day, historical epoch), and spatial coordinates shift, the Webizen
+   VM dynamically re-evaluates the active Identifier Nym.
 
-As the analysis of these inferences develops over time, the identity is never static. Resolution questions are continuously recalculated by the logic VM based on the rolling window of the temporal context.
+As the analysis of these inferences develops over time, the active identifier
+resolution is never static. Resolution questions are continuously recalculated
+by the logic VM based on the rolling window of the temporal context.
 
 ---
 
@@ -33,24 +48,34 @@ By adding a peer's Decentralized Identifier (DID) to the local directory, the us
 
 ## 3. The Web-Extension Helper Bridge
 
-To seamlessly interface Webizen Identity Nyms with standard Web3 and Social-Web applications, the protocol relies on a native **Web-Extension Helper Bridge**.
+To seamlessly interface Webizen Identifier Nyms with standard Web3 and
+social-web applications, the protocol relies on a native **Web-Extension
+Helper Bridge**.
 
 ### 3.1 Role of the Extension
 The extension acts as the secure, user-facing proxy to the underlying Qualia-DB Daemon.
 - **Key Management**: It securely holds the root `ed25519-dalek` keypairs, isolating them from malicious web pages.
 - **Nym Injection**: It injects the `window.webizen` provider API into the browser DOM.
-- **Configuration Dashboard**: It provides the UI for users to manage their Address Book, select which specific *Identity Nym* they want to project to a specific app, and configure advanced Spatiotemporal context vectors.
+- **Configuration Dashboard**: It provides the UI for users to manage their
+  Address Book, select which specific *Identifier Nym* they want to project to
+  a specific app, and configure advanced Spatiotemporal context vectors.
 
 ### 3.2 The Authorization Flow
 When a decentralized app requests to read or write data:
 1. **App Request**: The app calls `window.webizen.requestAccess({ scopes: [...] })`.
-2. **Intercept & Nym Selection**: The Helper Bridge intercepts the call. The user is prompted via the extension UI to select which Identity Nym (facet) they wish to present to the application.
+2. **Intercept & Nym Selection**: The Helper Bridge intercepts the call. The
+   user is prompted via the extension UI to select which Identifier Nym
+   (facet) they wish to present to the application.
 3. **Delegated Signing**: The app constructs 48-byte Quins and passes them to `window.webizen.signAndInject(quin)`.
 4. **Merkle Aggregation**: The Helper Bridge signs the data with the selected Nym's sub-key, injecting the authorized objective inference into the Layer 0 graph.
 
 ### 3.3 Serverless Sync via WebTorrent (Layer 1 Transport)
-Because Qualia-DB stores its entire memory state as a strictly bounded, flat binary `.q42` file, the Webizen Protocol officially designates **WebTorrent** as a native Layer-1 Transport Protocol. 
-Instead of relying on centralized servers for graph replication, the Webizen Browser Extension utilizes WebRTC to natively seed the subjective graph to the DHT community. The Native Local Daemon simultaneously runs a WebTorrent instance to leech and synchronize CRDT deltas offline.
+Because Qualia-DB stores its memory state in bounded binary artifacts, the
+broader Webizen architecture has explored **WebTorrent** and WebRTC-oriented
+distribution profiles. However, the currently implemented daemon sync path is a
+libp2p request-response protocol rather than a fully standardized WebRTC mesh.
+This section should therefore be read as an architectural direction, not as the
+final statement of the implemented sync grammar.
 
 ---
 

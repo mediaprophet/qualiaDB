@@ -451,7 +451,7 @@ abstract class RustApiApi extends BaseApi {
   Future<String> crateApiQualiaApiReceiveVaultJob(
       {required String jobId,
       required String taskType,
-      required List<int> dataBlobCbor});
+      required List<int> dataBlobCborLd});
 
   BigInt crateApiQappApiRegisterQappFromInstalledManifest(
       {required String qappName});
@@ -4103,13 +4103,13 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   Future<String> crateApiQualiaApiReceiveVaultJob(
       {required String jobId,
       required String taskType,
-      required List<int> dataBlobCbor}) {
+      required List<int> dataBlobCborLd}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(jobId, serializer);
         sse_encode_String(taskType, serializer);
-        sse_encode_list_prim_u_8_loose(dataBlobCbor, serializer);
+        sse_encode_list_prim_u_8_loose(dataBlobCborLd, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 138, port: port_);
       },
@@ -4118,7 +4118,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiQualiaApiReceiveVaultJobConstMeta,
-      argValues: [jobId, taskType, dataBlobCbor],
+      argValues: [jobId, taskType, dataBlobCborLd],
       apiImpl: this,
     ));
   }
@@ -4126,7 +4126,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   TaskConstMeta get kCrateApiQualiaApiReceiveVaultJobConstMeta =>
       const TaskConstMeta(
         debugName: "receive_vault_job",
-        argNames: ["jobId", "taskType", "dataBlobCbor"],
+        argNames: ["jobId", "taskType", "dataBlobCborLd"],
       );
 
   @override

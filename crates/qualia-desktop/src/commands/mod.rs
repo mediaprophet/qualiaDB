@@ -133,7 +133,7 @@ pub fn dispatch_tax_payment(gross_amount_micro_cents: u64) -> Result<DispatchRes
 pub fn accept_vault_handshake(did_key: String, payload: String) -> Result<String, String> { api::accept_vault_handshake(did_key, payload) }
 
 #[command]
-pub fn receive_vault_job(job_id: String, task_type: String, data_blob_cbor: Vec<u8>) -> Result<String, String> { api::receive_vault_job(job_id, task_type, data_blob_cbor) }
+pub fn receive_vault_job(job_id: String, task_type: String, data_blob_cbor_ld: Vec<u8>) -> Result<String, String> { api::receive_vault_job(job_id, task_type, data_blob_cbor_ld) }
 
 // ── Ingest ────────────────────────────────────────────────────────────────────
 

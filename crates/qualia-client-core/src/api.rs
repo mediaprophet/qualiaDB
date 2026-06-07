@@ -457,7 +457,7 @@ pub fn accept_vault_handshake(did_key: String, _payload: String) -> Result<Strin
 pub fn receive_vault_job(
     job_id: String,
     task_type: String,
-    _data_blob_cbor: Vec<u8>,
+    _data_blob_cbor_ld: Vec<u8>,
 ) -> Result<String, String> {
     println!("[VC-12] Offload job {} type {}", job_id, task_type);
     if task_type == "LLM_INFERENCE" && check_ollama_status() {

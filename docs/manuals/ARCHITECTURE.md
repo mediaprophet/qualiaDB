@@ -32,7 +32,14 @@ Data filtering is not enough — human-centric databases must execute logic. Nes
 
 ## Lazy SuperBlocks, LZ4 Compression & Massive Datasets
 
-Core data lives in 40,960-byte SuperBlocks (exactly 10 disk sectors) with high-density LZ4 compression. The engine lazily scans only 16-byte headers and seeks over irrelevant blocks in O(1) time, decompressing on demand. "Missing" local blocks can be streamed from peers via WebRTC DataChannel. This lets 50 GB+ semantic ledgers run comfortably inside the 512 MB floor.
+Core data lives in 40,960-byte SuperBlocks (exactly 10 disk sectors) with
+high-density LZ4 compression. The engine lazily scans only 16-byte headers and
+seeks over irrelevant blocks in O(1) time, decompressing on demand. "Missing"
+local blocks can be streamed from peers through the sync layer; the currently
+implemented daemon path is libp2p request-response over TCP + Noise + Yamux,
+while broader WebRTC transport language elsewhere in the repo remains a future
+or adjacent profile. This lets 50 GB+ semantic ledgers run comfortably inside
+the 512 MB floor.
 
 Real-world example: WordNet (523 MB RDF) → 74.6 MB `.q42` · 5.56 M quins · 6.5 ms first-query latency via demand-paging with no full load.
 
@@ -125,10 +132,17 @@ Qualia-DB natively encodes a **Rights Ontology** directly into the Webizen VM (w
 
 ## Intentional Computing (Anti-Usury Architecture)
 
-Qualia-DB is a framework for **Intentional Computing** — computing that strictly honours the intent, sovereignty, and Duty of Care of the natural person (the Principal).
+Qualia-DB is a framework for **Intentional Computing** — computing that
+strictly honours the intent, agency, and Duty of Care of the natural person
+(the Principal).
 
 - **First-Class Agency** — No admin superuser supersedes the Principal. Cryptographic keys are the absolute root of trust.
-- **WebRTC CRDT Mesh & M:N Guardianship** — Distributed consensus via a local WebRTC Mesh. `did:q42` Webizens form an M:N gossip network using `Automerge` CRDTs. High-risk operations are packaged as `QuorumRequest`s broadcast to N Guardian Webizens; M ratifications required to proceed.
+- **Sync Mesh & M:N Guardianship** — Distributed consensus remains the broader
+  architectural goal. The currently implemented daemon sync profile uses a
+  libp2p request-response path, while WebRTC mesh language in older docs
+  describes an adjacent or future-facing transport profile. High-risk
+  operations are packaged as `QuorumRequest`s broadcast to N Guardian
+  Webizens; M ratifications required to proceed.
 - **Capability Profiles** — `.qchk` (QCHK) binary bundles declare the allowed engine operations and ontology namespaces for an agent session. Six named profiles: general, health, chemistry, research, legal, financial.
 
 ---
@@ -153,9 +167,9 @@ Qualia-DB explicitly rejects the infinite rent-seeking paradigm of the legacy we
 
 ---
 
-## The Consumer Packaging
+## Human-Facing Packaging
 
-Qualia-DB ships with three tightly-bound consumer interfaces:
+Qualia-DB ships with three tightly-bound human-facing interfaces:
 
 1. **Qualia Flutter App (`crates/qualia-flutter/`)** — Primary desktop shell (Windows, macOS, Linux) via flutter_rust_bridge. Provides cooperative group chat with sub-agent hierarchy, ontology branches, chat graph panel, LLM Hub, Ontology Workbench (URI import → `.c.q42` → magnet sharing), Qapp Vault (embedded WebView), Wallet, Address Book, and Spatial Physics. The Qualia daemon on loopback also serves chat relay (`/chat/publish`, `/chat/pull`) and HTTP web seeds for ontology artifacts (`/torrent/webseed/{hash}`). See [Flutter API Reference](flutter-api-reference.md) and [RELEASE_NOTES_v0.0.8.md](RELEASE_NOTES_v0.0.8.md).
 

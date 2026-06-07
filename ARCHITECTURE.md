@@ -95,7 +95,8 @@ A `.q42.bidx` sidecar file records the subject-hash range covered by each SuperB
 
 ## 4. Ingestion Pipeline (`ingest.rs`, `qualia-cli`)
 
-The CLI is the entry point for sovereign data ingestion into `.q42` vaults.
+The CLI is the entry point for human-centric, agency-preserving data ingestion
+into `.q42` vaults.
 
 - **Formats**: CogAI Cognitive AI Chunks (`.chk` text — W3C CG chunks-and-rules format), CBOR-LD (`.cbor` / `.cbor-ld`), N-Triples, Turtle, JSON-LD, RDF/XML via the Rio streaming parser.
 - **Profile-bound ingestion**: `qualia ingest --profile <file>.qchk` binds a `CapabilityProfile` for the ingest session, restricting available opcodes and ontologies.
@@ -479,7 +480,7 @@ This encodes agreement *structure*, not norms. The bridge from `AgreementDID` Qu
 
 ---
 
-## 12. Agency & Identity (`agency.rs`, `identifier.rs`)
+## 12. Agency & Identifiers (`agency.rs`, `identifier.rs`)
 
 - **`compute_scoped_merkle_root(frame, author_did_hash)`** — SHA256 over Quins where `quin.context == author_did`. Zero-alloc via `bytemuck::cast_ref`.
 - **`derive_lane_key(pin, salt)`** — currently SHA256-based. Production needs PBKDF2 with ≥ 310,000 iterations (known gap for Sanctuary Mode).
@@ -511,7 +512,7 @@ This encodes agreement *structure*, not norms. The bridge from `AgreementDID` Qu
 | `profile compile <input.jsonld> <output.qchk>` | Compile JSON-LD profile to QCHK binary |
 | `profile list` | List known profiles with q_hash IDs |
 | `profile inspect <file.qchk>` | Decode and display a QCHK profile |
-| `webizen init` | Initialize Webizen identity |
+| `webizen init` | Initialize Webizen identifier material |
 | `webizen ingest` | Ingest via Webizen pipeline |
 | `webizen validate-gitmark` | Validate git commit mark |
 | `webizen publish-ipfs` | Publish to IPFS |
@@ -541,11 +542,11 @@ qualia ingest --profile health.qchk data.ttl output.q42
 | Target | Files | Notes |
 |--------|-------|-------|
 | **Native CLI** | `crates/qualia-cli/` | Full feature set, 512 MB budget |
-| **Desktop — Tauri/React** | `crates/qualia-desktop/` + `crates/qualia-client/` | Active primary desktop. Vite/React frontend, Tauri shell, `qualia://` URI scheme for sandboxed apps |
-| **Desktop — Flutter** | `crates/qualia-flutter/` | Alternative desktop target; LLM Hub, Ontology Hub, FRB bridge to CLI subprocess |
+| **Desktop — Tauri/React** | `crates/qualia-desktop/` + `crates/qualia-client/` | Legacy desktop prototype retained in-tree for reference. Not the primary shipped desktop target. |
+| **Desktop — Flutter** | `crates/qualia-flutter/` | Primary shipped desktop target; LLM Hub, Ontology Hub, Qapp Vault, and FRB bridge to CLI subprocess |
 | **WASM (Browser)** | `wasm_bridge.rs`, `wasm_edge.rs` | SIMD variant, OPFS auto-cache, `#[wasm_bindgen]` |
 | **Edge Native** | `npu_ffi.rs`, `tee_ffi.rs` | NPU sieve dispatch, TEE C-ABI declarations |
-| **P2P / Federated** | `wasm_edge.rs`, `nym_adapter.rs` | WebRTC offloading, Nym mixnet, federated node manager |
+| **P2P / Federated** | `wasm_edge.rs`, `nym_adapter.rs`, `p2p/*` | Implemented daemon sync currently uses libp2p request-response over TCP + Noise + Yamux; broader WebRTC and Nym profiles remain adjacent or evolving layers |
 
 ### Flutter Desktop (`crates/qualia-flutter/`) — **shipped desktop target**
 

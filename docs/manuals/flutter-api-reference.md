@@ -265,7 +265,7 @@ Returns a JSON readiness report for required ontologies, models, and SPARQL endp
 
 ---
 
-## Wallet & Identity
+## Wallet & Identifiers
 
 ### `getCoinBalances`
 
@@ -312,7 +312,7 @@ Future<String?> loadIdentity()
 Future<void> saveIdentity({required String walletsJson})
 ```
 
-Load/persist the wallet identity JSON blob to the device keychain.
+Load/persist the wallet and identifier JSON blob to the device keychain.
 
 ### `loadImportedAccounts` / `saveImportedAccounts`
 

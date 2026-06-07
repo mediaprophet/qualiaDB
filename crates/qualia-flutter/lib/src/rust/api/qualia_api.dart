@@ -370,9 +370,9 @@ Future<String> acceptVaultHandshake(
 Future<String> receiveVaultJob(
         {required String jobId,
         required String taskType,
-        required List<int> dataBlobCbor}) =>
+        required List<int> dataBlobCborLd}) =>
     RustApi.instance.api.crateApiQualiaApiReceiveVaultJob(
-        jobId: jobId, taskType: taskType, dataBlobCbor: dataBlobCbor);
+        jobId: jobId, taskType: taskType, dataBlobCborLd: dataBlobCborLd);
 
 Future<String> runInference(
         {required String prompt, required String modelPath}) =>

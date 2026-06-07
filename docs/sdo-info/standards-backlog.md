@@ -55,7 +55,7 @@ already shows multiple distinct operational boundaries:
 
 - Layer 0 container and sidecars
 - vault or collection manifest layer
-- DID / identity method
+- DID / identifier method
 - sync and transport protocol
 - localhost qapp serving boundary
 - governance / consent / agency protocol
@@ -216,17 +216,17 @@ Each of those should become its own draft with its own conformance language.
 
 ## 10. Webizen protocol
 
-- Scope: the higher-level identity, consent, governance, and defeasible logic
+- Scope: the higher-level identifier, consent, governance, and defeasible logic
   contract layered above the core Qualia engine.
 - Why it is non-standard: it is a real candidate protocol surface, but it is
-  too broad to standardize until Layer 0 and identity semantics settle.
+  too broad to standardize until Layer 0 and identifier semantics settle.
 - First doc to write here: `webizen-protocol-split.md`
 - Primary SDO: W3C Community Group or Solid Community Group
 - Recommended format: Community Group Report-style HTML draft
-- Why this fit: the protocol is rooted in identity, linked data, consent, and
+- Why this fit: the protocol is rooted in identifiers, linked data, consent, and
   agency semantics rather than raw transport.
 - Exit criteria before submission:
-  - split identity semantics from engine internals
+  - split identifier semantics from engine internals
   - define conformance targets
   - separate normative protocol behavior from philosophical framing
 
@@ -246,7 +246,7 @@ Each of those should become its own draft with its own conformance language.
 - [x] `q42-format-internal-draft.md`
 - [x] `did-q42-method-draft.md`
 - [x] `qualia-vault-manifest.md`
-- [ ] `qualia-sync-protocol.md`
+- [x] `qualia-sync-protocol.md`
 - [ ] `qualia-shacl-extensions.md`
 - [ ] `qualia-qapp-loopback-protocol.md`
 - [ ] `solid-webizen-bridge-profile.md`

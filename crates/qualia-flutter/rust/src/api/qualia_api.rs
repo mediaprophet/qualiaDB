@@ -1135,9 +1135,9 @@ pub fn accept_vault_handshake(did_key: String, payload: String) -> Result<String
 pub fn receive_vault_job(
     job_id: String,
     task_type: String,
-    data_blob_cbor: Vec<u8>,
+    data_blob_cbor_ld: Vec<u8>,
 ) -> Result<String, String> {
-    core::receive_vault_job(job_id, task_type, data_blob_cbor)
+    core::receive_vault_job(job_id, task_type, data_blob_cbor_ld)
 }
 
 // ── Inference ─────────────────────────────────────────────────────────────────

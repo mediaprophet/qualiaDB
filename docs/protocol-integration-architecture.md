@@ -15,12 +15,22 @@ layout: null
 This architecture defines how decentralized protocols (GUN, WebTorrent, WebRTC, Git + git-mark) integrate with the Qualia engine to power Cooperative Projects, while being deeply embedded in the **Wellfair** personal vault.
 
 Wellfair serves a dual purpose:
-- As the individual’s sovereign personal data vault (health, life events, consent, privacy).
+- As the individual's human-centric personal vault (health, life events,
+  consent, privacy).
 - As the layer enabling **fair dealings** in project activities, while actively protecting personal boundaries, appointments, health needs, and rest from being overridden by project demands.
 
 The Qualia engine provides the core logic, provenance, and semantic foundation. **CBOR-LD** is adopted as the primary native serialization format for runtime, mobile, and protocol exchanges.
 
-This document serves as a practical specification for AI coding agents implementing features in Wellfair mobile and related systems.
+This document serves as a practical specification for AI coding agents
+implementing features in Wellfair mobile and related systems.
+
+Important implementation note:
+
+- the currently implemented Qualia daemon sync path is libp2p request-response
+  over TCP + Noise + Yamux with CBOR-framed messages
+- the broader semantic payload direction remains CBOR-LD
+- GUN and WebRTC in this document describe integration targets or adjacent
+  protocol profiles, not the already-frozen engine sync grammar
 
 ---
 

@@ -28,6 +28,22 @@ folder is where we keep that distinction explicit.
 3. Prefer the smallest viable scope for each submission.
 4. Treat multi-vendor interoperability as the threshold for externalization.
 
+## Terminology guardrail
+
+Within this standards folder, use the following distinction consistently:
+
+- `human identity` means the enumerated human reality of a person in their
+  lived and social context
+- `identifier` means a technical label such as a DID, URI, hash, pointer, or
+  method-specific token
+- `auth` means authentication and authorization material
+- `verifiable claim` and `verifiable credential` mean attestation artifacts,
+  not human identity itself
+
+Do not define human identity as a nym, identifier, credential, or auth token.
+The environment may carry and relate those technical elements, but they remain
+supporting artifacts around human identity rather than substitutes for it.
+
 ## SDO track guide
 
 ### W3C / Solid CG
@@ -86,6 +102,7 @@ Use an internal explainer or ADR first when:
 - [q42-format-internal-draft.md](./q42-format-internal-draft.md)
 - [qualia-vault-manifest.md](./qualia-vault-manifest.md)
 - [did-q42-method-draft.md](./did-q42-method-draft.md)
+- [qualia-sync-protocol.md](./qualia-sync-protocol.md)
 
 ## Ecosystem label
 

@@ -51,9 +51,11 @@ principles:
 2. The manifest describes a vault context, not an application-owned dataset.
 3. Desktop and mobile environments open the manifest in service of the person,
    not the other way around.
-4. Identity context, dignity, and continuity of access matter more than host-
-   specific launcher assumptions.
-5. The manifest should remain portable across Qualia environments, including
+4. Human identity must not be reduced to identifiers, nyms, auth artifacts, or
+   credentials.
+5. Identifier context, dignity, and continuity of access matter more than
+   host-specific launcher assumptions.
+6. The manifest should remain portable across Qualia environments, including
    current desktop shells and future personal mobile vault environments such as
    Wellfair.
 
@@ -79,7 +81,9 @@ Because of that, `.qualia` should be designed as:
 A `.qualia` manifest should be able to express at least:
 
 - the vault name
-- the identity context in which the vault is opened
+- the identifier context in which the vault is opened
+- any human-facing context needed to preserve agency and continuity without
+  redefining human identity as an identifier
 - which `.q42` artifacts belong to the vault
 - which capability envelopes are associated with the vault
 - which qapp or shell entry context should be preferred
@@ -116,7 +120,8 @@ expression.
 This draft proposes the following minimum terms:
 
 - `qualia:vaultName`
-- `qualia:identityContext`
+- `qualia:identifierContext`
+- `qualia:humanContext`
 - `qualia:includesDataFile`
 - `qualia:includesLexiconFile`
 - `qualia:includesBlockIndexFile`
@@ -142,7 +147,8 @@ Optional but useful extensions:
   a qualia:VaultManifest ;
   qualia:vaultName "Personal Agency Vault" ;
   qualia:description "Human-centric vault manifest for desktop and mobile continuity." ;
-  qualia:identityContext <did:q42:example-person-root> ;
+  qualia:identifierContext <did:q42:example-person-root> ;
+  qualia:humanContext "Primary personal vault context for continuity across desktop and mobile environments." ;
   qualia:agencyContext <did:q42:example-agency-context> ;
   qualia:includesDataFile <vault/main.q42>, <vault/health.q42> ;
   qualia:includesLexiconFile <vault/main.q42.lex>, <vault/health.q42.lex> ;
@@ -159,12 +165,14 @@ Optional but useful extensions:
 When a `.qualia` manifest is opened, the vault environment should:
 
 1. parse the manifest
-2. establish the identity and agency context
-3. locate associated `.q42` artifacts
-4. load associated sidecars when available
-5. apply any associated `.qchk` capability envelopes
-6. resolve the preferred qapp or shell entry context
-7. present the vault in a human-centric way appropriate to the environment
+2. establish the identifier and agency context
+3. preserve any stated human context without collapsing it into a mere
+   technical identifier
+4. locate associated `.q42` artifacts
+5. load associated sidecars when available
+6. apply any associated `.qchk` capability envelopes
+7. resolve the preferred qapp or shell entry context
+8. present the vault in a human-centric way appropriate to the environment
 
 This is an opening flow, not a transport protocol.
 
@@ -191,15 +199,17 @@ it should remain conceptually distinct:
 
 1. Should the manifest point to relative paths only, or allow URI-based
    references too?
-2. Should multiple identity contexts be allowed, or should one primary context
-   always be required?
-3. Should `.qualia` allow embedded display preferences, or should those remain
+2. Should multiple identifier contexts be allowed, or should one primary
+   context always be required?
+3. Should there also be a more formal human-context vocabulary that remains
+   distinct from identifier, auth, and credential fields?
+4. Should `.qualia` allow embedded display preferences, or should those remain
    environment-local only?
-4. Should Wellfair-specific fields remain extension terms, or become part of
+5. Should Wellfair-specific fields remain extension terms, or become part of
    the shared core vocabulary?
-5. Should there be a signature wrapper for `.qualia`, or should integrity be
+6. Should there be a signature wrapper for `.qualia`, or should integrity be
    handled through adjacent vault state and key-vault mechanisms?
-6. Should a CBOR-LD projection be standardized later for compact sync or mobile
+7. Should a CBOR-LD projection be standardized later for compact sync or mobile
    transfer, while keeping Turtle as the primary human-facing form and N3 as an
    optional richer textual profile?
 

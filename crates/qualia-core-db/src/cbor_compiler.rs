@@ -8,7 +8,9 @@ pub enum ParseError {
 }
 
 /// The Strict Binary Gatekeeper for Qualia-DB network payloads.
-/// Explicitly rejects text-based semantic payloads and enforces CBOR/CBOR-LD binary ingestion.
+/// Explicitly rejects text-based semantic payloads and enforces binary
+/// CBOR-framed ingestion, with the intended semantic payload profile being
+/// CBOR-LD.
 pub fn ingest_network_payload(payload: &[u8]) -> Result<&[u8], ParseError> {
     if payload.is_empty() {
         return Err(ParseError::MalformedPayload);

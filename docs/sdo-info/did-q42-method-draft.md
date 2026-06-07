@@ -9,7 +9,7 @@ Ecosystem.
 ## 1. Role
 
 `did:q42` is currently used inside QualiaDB as a compact method-specific
-identifier that marks a topological pointer or pointer-derived identity token
+identifier that marks a topological pointer or pointer-derived identifier token
 inside Quin execution paths.
 
 At present, the method is:
@@ -22,7 +22,7 @@ It is not yet:
 
 - a fully specified DID method with network resolution semantics
 - a stable DID Document production format
-- a general human-facing identity method outside Qualia environments
+- a definition of human identity outside Qualia environments
 
 ## 2. Current Implementation Reality
 
@@ -146,19 +146,28 @@ It does not yet have:
 ## 8. Relationship To Human-Centric Agency
 
 This method draft should not overclaim that every current `did:q42` value is a
-human identity in the richer social sense.
+human identity in the richer enumerated sense.
 
 At the moment, `did:q42` serves two overlapping but distinct roles:
 
 - pointer-oriented internal addressing
-- identity-context anchoring in some higher-level Qualia and Webizen flows
+- identifier-context anchoring in some higher-level Qualia and Webizen flows
 
 For standards work, those roles must be separated carefully so that:
 
-- human-centric identity and agency are not collapsed into raw storage offsets
+- human identity is not collapsed into raw storage offsets, nyms, auth
+  material, or credential artifacts
 - method syntax remains technically precise
 - future DID Document semantics can describe people, agreements, groups, or
-  vault contexts without being reduced to a disk-layout metaphor
+  vault contexts without pretending that a DID by itself exhausts human
+  identity
+
+Put differently:
+
+- `did:q42` is an identifier form
+- authentication and authorization remain separate concerns
+- verifiable claims and verifiable credentials are attestation artifacts
+- none of those artifacts should be used as the definition of human identity
 
 ## 9. Initial Conformance Targets
 
@@ -216,7 +225,8 @@ or refining the method.
 Key contradictions or unfinished areas:
 
 1. The prose sometimes describes `did:q42` as a physical topological pointer,
-   while higher-level flows use it more like an identity root.
+   while higher-level flows use it more like an identifier root for human,
+   group, agreement, or vault contexts.
 2. The parser comments mention base-58 or multibase, but no such validation is
    currently enforced.
 3. The resolver emits `did:q42:ptr/{hex}` as a display surface, but the parser
@@ -232,7 +242,7 @@ This draft recommends the following sequence:
 2. Freeze a narrow textual syntax for the method-specific identifier.
 3. Decide whether `did:q42` is:
    - primarily a pointer method
-   - primarily an identity method
+   - primarily an identifier method
    - or a layered method where pointer tokens are one representation profile
 4. Define a minimal DID Document model only after those roles are separated.
 5. Add privacy and security considerations before any W3C-facing submission.
@@ -243,8 +253,8 @@ This draft recommends the following sequence:
    should it remain more general?
 2. Should `did:q42:ptr/{hex}` become a formal DID URL path form, or remain only
    a renderer convenience?
-3. Should human identity roots and topological pointer forms use the same method
-   syntax, or related but distinct profiles?
+3. Should human-facing identifier roots and topological pointer forms use the
+   same method syntax, or related but distinct profiles?
 4. What should a minimal DID Document for `did:q42` contain in v1?
 5. How should agreement, group, vault, and personal identity contexts differ
    under this method?

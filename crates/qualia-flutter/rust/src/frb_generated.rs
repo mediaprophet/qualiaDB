@@ -4749,14 +4749,14 @@ fn wire__crate__api__qualia_api__receive_vault_job_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_job_id = <String>::sse_decode(&mut deserializer);
             let api_task_type = <String>::sse_decode(&mut deserializer);
-            let api_data_blob_cbor = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_data_blob_cbor_ld = <Vec<u8>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::api::qualia_api::receive_vault_job(
                         api_job_id,
                         api_task_type,
-                        api_data_blob_cbor,
+                        api_data_blob_cbor_ld,
                     )?;
                     Ok(output_ok)
                 })())
