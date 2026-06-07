@@ -102,6 +102,51 @@ pub fn fetch_token_embedding<'a>(
     Ok(&mmap[start..end])
 }
 
+/// Total packed byte length of a GGUF tensor from its shape and `ggml_type`.
+pub fn tensor_byte_len(tensor: &GgufTensorInfo) -> Option<usize> {
+    let n0 = tensor.dims[0] as usize;
+    if n0 == 0 {
+        return None;
+    }
+    let row = ggml_row_bytes(tensor.ggml_type, n0)?;
+    if tensor.n_dims <= 1 || tensor.dims[1] == 0 {
+        Some(row)
+    } else {
+        Some(row.checked_mul(tensor.dims[1] as usize)?)
+    }
+}
+
+/// Zero-copy slice of an entire tensor payload from the mmap.
+pub fn fetch_tensor_bytes<'a>(
+    mmap: &'a [u8],
+    tensor_data_start: u64,
+    tensor: &GgufTensorInfo,
+) -> Result<&'a [u8], ExecutionError> {
+    let len = tensor_byte_len(tensor).ok_or(ExecutionError::UnsupportedType)?;
+    let start = (tensor_data_start + tensor.byte_offset) as usize;
+    let end = start + len;
+    if end > mmap.len() {
+        return Err(ExecutionError::MmapBounds);
+    }
+    Ok(&mmap[start..end])
+}
+
+/// Dequantize one matrix row (`row` index along `dims[1]`) into `out`.
+pub fn dequant_matrix_row_into(
+    raw: &[u8],
+    info: &GgufTensorInfo,
+    row: usize,
+    out: &mut [f32],
+) -> Result<usize, GgmlDequantError> {
+    let n0 = info.dims[0] as usize;
+    let row_bytes = ggml_row_bytes(info.ggml_type, n0).ok_or(GgmlDequantError::UnsupportedType)?;
+    let start = row.checked_mul(row_bytes).ok_or(GgmlDequantError::TruncatedInput)?;
+    if start + row_bytes > raw.len() {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+    dequantize_row_into(&raw[start..start + row_bytes], info.ggml_type, n0, out)
+}
+
 /// Dequantize one embedding row from raw mmap bytes into `out`.
 /// Returns the number of `f32` elements written (≤ `out.len()`).
 pub fn dequantize_row_into(

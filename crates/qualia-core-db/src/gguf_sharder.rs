@@ -56,18 +56,97 @@ pub struct GgufTensorInfo {
     pub byte_offset: u64,
 }
 
+/// Architecture hyper-parameters parsed from the GGUF KV section.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct GgufHyperparams {
+    pub n_layer: u32,
+    pub n_embd: u32,
+    pub n_head: u32,
+}
+
+/// Per-layer transformer weight metadata (all `Option` — absent tensors skipped).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LayerTensors {
+    pub attn_q: Option<GgufTensorInfo>,
+    pub attn_k: Option<GgufTensorInfo>,
+    pub attn_v: Option<GgufTensorInfo>,
+    pub attn_output: Option<GgufTensorInfo>,
+    pub ffn_gate: Option<GgufTensorInfo>,
+    pub ffn_up: Option<GgufTensorInfo>,
+    pub ffn_down: Option<GgufTensorInfo>,
+}
+
 /// Lookup table from tensor-name hash → `GgufTensorInfo`, built by walking the
 /// GGUF tensor-info section that immediately follows the KV metadata section.
-///
-/// Constructed once at model-load time; `get_token_embedding` is called per
-/// decode step but only slices the already-mapped `mmap` — no heap allocation
-/// beyond the returned `Vec<f32>`.
 pub struct GgufTensorIndex {
     entries: Vec<(u64, GgufTensorInfo)>, // (name_hash, info)
     /// Absolute byte offset in the mmap where tensor payload data begins.
     pub tensor_data_start: u64,
     /// Cached metadata for `token_embd.weight` (embedding lookup target).
     token_embd: Option<GgufTensorInfo>,
+    /// Cached `output.weight` for final vocabulary projection.
+    output_weight: Option<GgufTensorInfo>,
+    pub hyperparams: GgufHyperparams,
+    /// Largest tensor payload in the file (informational).
+    pub max_tensor_bytes: usize,
+    /// Largest layer matmul tensor (attn/ffn weights) — sizes reusable GPU staging.
+    pub max_layer_tensor_bytes: usize,
+}
+
+/// True when `name` is a per-layer matmul weight consumed by `dispatch_transformer_layer`.
+fn is_layer_matmul_tensor_name(name: &[u8]) -> bool {
+    const SUFFIXES: [&[u8]; 7] = [
+        b"attn_q.weight",
+        b"attn_k.weight",
+        b"attn_v.weight",
+        b"attn_output.weight",
+        b"ffn_gate.weight",
+        b"ffn_up.weight",
+        b"ffn_down.weight",
+    ];
+    if !name.starts_with(b"blk.") {
+        return false;
+    }
+    SUFFIXES.iter().any(|s| name.ends_with(s))
+}
+
+/// Write `blk.{layer}.{suffix}` into `out`; returns total bytes written.
+pub fn write_blk_tensor_name(layer: u32, suffix: &[u8], out: &mut [u8]) -> usize {
+    let prefix = b"blk.";
+    let mut n = 0usize;
+    if out.len() < prefix.len() + 1 + suffix.len() {
+        return 0;
+    }
+    out[..prefix.len()].copy_from_slice(prefix);
+    n += prefix.len();
+    let mut v = layer;
+    let mut digits = [0u8; 10];
+    let mut d = 0usize;
+    if v == 0 {
+        digits[0] = b'0';
+        d = 1;
+    } else {
+        while v > 0 && d < digits.len() {
+            digits[d] = b'0' + (v % 10) as u8;
+            v /= 10;
+            d += 1;
+        }
+    }
+    for i in (0..d).rev() {
+        if n >= out.len() {
+            return n;
+        }
+        out[n] = digits[i];
+        n += 1;
+    }
+    if n >= out.len() {
+        return n;
+    }
+    out[n] = b'.';
+    n += 1;
+    let copy = suffix.len().min(out.len() - n);
+    out[n..n + copy].copy_from_slice(&suffix[..copy]);
+    n + copy
 }
 
 impl GgufTensorIndex {
@@ -76,7 +155,32 @@ impl GgufTensorIndex {
             entries: vec![],
             tensor_data_start: 0,
             token_embd: None,
+            output_weight: None,
+            hyperparams: GgufHyperparams::default(),
+            max_tensor_bytes: 0,
+            max_layer_tensor_bytes: 0,
         })
+    }
+
+    fn parse_kv_hyperparams(key: &str, vtype: u32, mmap: &[u8], pos: &mut usize) -> GgufHyperparams {
+        let mut patch = GgufHyperparams::default();
+        if vtype != 4 {
+            let _ = gguf_skip_value(mmap, pos, vtype);
+            return patch;
+        }
+        if *pos + 4 > mmap.len() {
+            return patch;
+        }
+        let v = u32::from_le_bytes(mmap[*pos..*pos + 4].try_into().unwrap_or([0; 4]));
+        *pos += 4;
+        if key.ends_with("block_count") {
+            patch.n_layer = v;
+        } else if key.ends_with("embedding_length") && !key.contains("per_layer") {
+            patch.n_embd = v;
+        } else if key.ends_with("attention.head_count") && !key.contains("kv") {
+            patch.n_head = v;
+        }
+        patch
     }
 
     fn try_build(mmap: &[u8]) -> Option<Self> {
@@ -86,28 +190,33 @@ impl GgufTensorIndex {
         let tensor_count = u64::from_le_bytes(mmap[8..16].try_into().ok()?);
         let kv_count     = u64::from_le_bytes(mmap[16..24].try_into().ok()?);
 
-        // Walk through the entire KV section to find where it ends.
+        let mut hyperparams = GgufHyperparams::default();
         let mut pos = 24usize;
         for _ in 0..kv_count {
             if pos + 8 > mmap.len() { return None; }
             let klen = u64::from_le_bytes(mmap[pos..pos+8].try_into().ok()?) as usize;
             pos += 8;
             if pos + klen + 4 > mmap.len() { return None; }
+            let key = std::str::from_utf8(&mmap[pos..pos + klen]).unwrap_or("");
             pos += klen;
             let vtype = u32::from_le_bytes(mmap[pos..pos+4].try_into().ok()?);
             pos += 4;
-            gguf_skip_value(mmap, &mut pos, vtype)?;
+            let patch = Self::parse_kv_hyperparams(key, vtype, mmap, &mut pos);
+            if patch.n_layer != 0 { hyperparams.n_layer = patch.n_layer; }
+            if patch.n_embd != 0 { hyperparams.n_embd = patch.n_embd; }
+            if patch.n_head != 0 { hyperparams.n_head = patch.n_head; }
         }
 
-        // Parse the tensor-info section.
         let mut entries = Vec::with_capacity(tensor_count.min(4096) as usize);
+        let mut max_tensor_bytes = 0usize;
+        let mut max_layer_tensor_bytes = 0usize;
         for _ in 0..tensor_count {
-            // Tensor name
             if pos + 8 > mmap.len() { break; }
             let nlen = u64::from_le_bytes(mmap[pos..pos+8].try_into().ok()?) as usize;
             pos += 8;
             if pos + nlen > mmap.len() { break; }
-            let name_hash = gguf_name_hash(&mmap[pos..pos+nlen]);
+            let name = &mmap[pos..pos + nlen];
+            let name_hash = gguf_name_hash(name);
             pos += nlen;
 
             // n_dims
@@ -129,24 +238,69 @@ impl GgufTensorIndex {
             let ggml_type   = u32::from_le_bytes(mmap[pos..pos+4].try_into().ok()?); pos += 4;
             let byte_offset = u64::from_le_bytes(mmap[pos..pos+8].try_into().ok()?); pos += 8;
 
-            entries.push((name_hash, GgufTensorInfo {
+            let info = GgufTensorInfo {
                 dims,
                 n_dims: n_dims_raw.min(4) as u32,
                 ggml_type,
                 byte_offset,
-            }));
+            };
+            if let Some(tb) = crate::ggml_quants::tensor_byte_len(&info) {
+                max_tensor_bytes = max_tensor_bytes.max(tb);
+                if is_layer_matmul_tensor_name(name) {
+                    max_layer_tensor_bytes = max_layer_tensor_bytes.max(tb);
+                }
+            }
+            entries.push((name_hash, info));
         }
 
-        // Tensor data block starts after the tensor-info section, aligned to 32 bytes.
         let tensor_data_start = ((pos as u64 + 31) & !31) as u64;
         let emb_hash = gguf_name_hash(b"token_embd.weight");
+        let out_hash = gguf_name_hash(b"output.weight");
         let token_embd = entries.iter().find(|(h, _)| *h == emb_hash).map(|(_, i)| *i);
-        Some(Self { entries, tensor_data_start, token_embd })
+        let output_weight = entries.iter().find(|(h, _)| *h == out_hash).map(|(_, i)| *i);
+        if hyperparams.n_embd == 0 {
+            hyperparams.n_embd = token_embd.map(|t| t.dims[0] as u32).unwrap_or(0);
+        }
+        Some(Self {
+            entries,
+            tensor_data_start,
+            token_embd,
+            output_weight,
+            hyperparams,
+            max_tensor_bytes,
+            max_layer_tensor_bytes,
+        })
     }
 
-    fn find(&self, name: &[u8]) -> Option<&GgufTensorInfo> {
+    fn find(&self, name: &[u8]) -> Option<GgufTensorInfo> {
         let h = gguf_name_hash(name);
-        self.entries.iter().find(|(eh, _)| *eh == h).map(|(_, i)| i)
+        self.entries.iter().find(|(eh, _)| *eh == h).map(|(_, i)| *i)
+    }
+
+    fn find_layer_tensor(&self, layer: u32, suffix: &[u8]) -> Option<GgufTensorInfo> {
+        let mut name = [0u8; 96];
+        let n = write_blk_tensor_name(layer, suffix, &mut name);
+        if n == 0 {
+            return None;
+        }
+        self.find(&name[..n])
+    }
+
+    /// Retrieve attention + FFN tensor metadata for one transformer block.
+    pub fn get_layer_tensors(&self, layer_idx: u32) -> LayerTensors {
+        LayerTensors {
+            attn_q: self.find_layer_tensor(layer_idx, b"attn_q.weight"),
+            attn_k: self.find_layer_tensor(layer_idx, b"attn_k.weight"),
+            attn_v: self.find_layer_tensor(layer_idx, b"attn_v.weight"),
+            attn_output: self.find_layer_tensor(layer_idx, b"attn_output.weight"),
+            ffn_gate: self.find_layer_tensor(layer_idx, b"ffn_gate.weight"),
+            ffn_up: self.find_layer_tensor(layer_idx, b"ffn_up.weight"),
+            ffn_down: self.find_layer_tensor(layer_idx, b"ffn_down.weight"),
+        }
+    }
+
+    pub fn output_weight_info(&self) -> Option<&GgufTensorInfo> {
+        self.output_weight.as_ref()
     }
 
     /// Cached `token_embd.weight` tensor metadata.
@@ -474,6 +628,58 @@ impl GgufTokenizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn probe_gguf_layer_names_if_exists() {
+        use std::fs::File;
+        use memmap2::MmapOptions;
+        let path = "C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf";
+        if !std::path::Path::new(path).exists() {
+            return;
+        }
+        let f = File::open(path).unwrap();
+        let mmap = unsafe { MmapOptions::new().map(&f).unwrap() };
+        if mmap.len() < 24 || &mmap[0..4] != b"GGUF" { return; }
+        let tensor_count = u64::from_le_bytes(mmap[8..16].try_into().unwrap()) as usize;
+        let kv_count = u64::from_le_bytes(mmap[16..24].try_into().unwrap()) as usize;
+        let mut pos = 24usize;
+        for _ in 0..kv_count {
+            let klen = u64::from_le_bytes(mmap[pos..pos + 8].try_into().unwrap()) as usize;
+            pos += 8;
+            let key = std::str::from_utf8(&mmap[pos..pos + klen]).unwrap_or("");
+            pos += klen;
+            let vtype = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
+            pos += 4;
+            if key.contains("block") || key.contains("layer") || key.contains("embedding") || key.contains("head") {
+                if vtype == 4 && pos + 4 <= mmap.len() {
+                    let v = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
+                    println!("KV {key} = {v}");
+                }
+            }
+            gguf_skip_value(&mmap, &mut pos, vtype).unwrap();
+        }
+        let mut blk_samples = 0usize;
+        for _ in 0..tensor_count {
+            let nlen = u64::from_le_bytes(mmap[pos..pos + 8].try_into().unwrap()) as usize;
+            pos += 8;
+            let name = std::str::from_utf8(&mmap[pos..pos + nlen]).unwrap_or("");
+            pos += nlen;
+            let n_dims = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap()) as usize;
+            pos += 4;
+            let mut dims = [0u64; 4];
+            for d in 0..n_dims {
+                dims[d] = u64::from_le_bytes(mmap[pos..pos + 8].try_into().unwrap());
+                pos += 8;
+            }
+            let ggml_type = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
+            let byte_off = u64::from_le_bytes(mmap[pos + 4..pos + 12].try_into().unwrap());
+            pos += 12;
+            if name.starts_with("blk.0.") && (name.contains("attn_q") || name.contains("ffn_down")) {
+                println!("tensor: {name} type={ggml_type} dims={dims:?} off={byte_off:#x}");
+                blk_samples += 1;
+            }
+        }
+    }
 
     #[test]
     fn test_gguf_ontology_extraction() {

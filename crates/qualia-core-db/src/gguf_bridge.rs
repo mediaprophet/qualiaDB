@@ -68,11 +68,67 @@ struct EmbeddingGpuParams {
     raw_byte_len: u32,
 }
 
+/// Uniform block passed to `fused_transformer.wgsl`.
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct GemmGpuParams {
+    n_in: u32,
+    n_out: u32,
+    weight_ggml_type: u32,
+    weight_row_elems: u32,
+    weight_byte_len: u32,
+}
+
+/// Max GEMM row/column for stack buffers and reusable GPU staging (Gemma 4 FFN = 4×2560).
+const MAX_STACK_GEMM_DIM: usize = 10240;
+const MAX_STACK_GEMM_OUT: usize = MAX_STACK_GEMM_DIM;
+const MAX_STACK_GEMM_IN: usize = MAX_STACK_GEMM_DIM;
+/// wgpu default max buffer size on many drivers (256 MiB).
+const MAX_WGPU_WEIGHT_STAGING: usize = 64 * 1024 * 1024;
+
+#[inline]
+fn relu_inplace(buf: &mut [f32], n: usize) {
+    for v in buf.iter_mut().take(n) {
+        if *v < 0.0 { *v = 0.0; }
+    }
+}
+
+#[inline]
+fn add_residual_inplace(dst: &mut [f32], src: &[f32], n: usize) {
+    for i in 0..n.min(dst.len()).min(src.len()) {
+        dst[i] += src[i];
+    }
+}
+
+/// Zero-heap CPU GEMM: `out[i] = dot(weight_row(i), input)` with per-row dequant.
+fn stack_gemm_quant(
+    raw: &[u8],
+    info: &GgufTensorInfo,
+    input: &[f32],
+    out: &mut [f32],
+    n_in: usize,
+    n_out: usize,
+) -> bool {
+    if n_in > input.len() || n_out > out.len() {
+        return false;
+    }
+    let mut row = [0f32; MAX_STACK_GEMM_IN];
+    for i in 0..n_out {
+        if crate::ggml_quants::dequant_matrix_row_into(raw, info, i, &mut row[..n_in]).unwrap_or(0) < n_in {
+            return false;
+        }
+        out[i] = row[..n_in].iter().zip(&input[..n_in]).map(|(w, x)| w * x).sum();
+    }
+    true
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub struct QTensorEngine {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub pipeline: wgpu::ComputePipeline,
+    /// Legacy f32×f32 mock block for offset-0 `QTensor` fallback (no mmap).
+    mock_pipeline: wgpu::ComputePipeline,
     /// GPU-side Q6_K embedding dequant + matmul (zero CPU dequant).
     pub embedding_pipeline: wgpu::ComputePipeline,
     pub is_initialized: bool,
@@ -83,6 +139,15 @@ pub struct QTensorEngine {
     pub gguf_mmap: Option<memmap2::Mmap>,
     /// Byte offset into the mmap where tensor data begins.
     pub tensor_data_offset: u64,
+    pub hyperparams: crate::gguf_sharder::GgufHyperparams,
+    pub max_tensor_bytes: usize,
+    /// Reused layer staging buffers (one layer in VRAM at a time).
+    gemm_input_buf: Option<wgpu::Buffer>,
+    gemm_weight_buf: Option<wgpu::Buffer>,
+    gemm_output_buf: Option<wgpu::Buffer>,
+    gemm_params_buf: Option<wgpu::Buffer>,
+    gemm_output_staging: Option<wgpu::Buffer>,
+    gemm_max_out_dim: u32,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -103,13 +168,26 @@ impl QTensorEngine {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Transformer Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/fused_tensor_contraction.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/fused_transformer.wgsl").into()),
         });
 
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Fused Transformer Pipeline"),
             layout: None,
             module: &shader,
+            entry_point: "main",
+        });
+
+        let mock_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Mock Fused Contraction Shader"),
+            source: wgpu::ShaderSource::Wgsl(
+                include_str!("shaders/fused_tensor_contraction.wgsl").into(),
+            ),
+        });
+        let mock_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Mock Fused Contraction Pipeline"),
+            layout: None,
+            module: &mock_shader,
             entry_point: "main",
         });
 
@@ -130,13 +208,63 @@ impl QTensorEngine {
             device,
             queue,
             pipeline,
+            mock_pipeline,
             embedding_pipeline,
             is_initialized: true,
             #[cfg(target_os = "windows")]
             dml: crate::directml_bridge::DmlDevice::new().ok(),
             gguf_mmap: None,
             tensor_data_offset: 0,
+            hyperparams: crate::gguf_sharder::GgufHyperparams::default(),
+            max_tensor_bytes: 0,
+            gemm_input_buf: None,
+            gemm_weight_buf: None,
+            gemm_output_buf: None,
+            gemm_params_buf: None,
+            gemm_output_staging: None,
+            gemm_max_out_dim: MAX_STACK_GEMM_OUT as u32,
         }
+    }
+
+    fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
+        if self.gemm_weight_buf.is_some() && max_weight_bytes <= self.max_tensor_bytes {
+            return;
+        }
+        let w_bytes = max_weight_bytes.max(4) as wgpu::BufferAddress;
+        let in_bytes = (MAX_STACK_GEMM_IN * 4) as wgpu::BufferAddress;
+        let out_bytes = (max_out_dim as usize * 4).max(4) as wgpu::BufferAddress;
+        self.gemm_input_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("LayerGemmInput"),
+            size: in_bytes,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        }));
+        self.gemm_weight_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("LayerGemmWeight"),
+            size: w_bytes,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        }));
+        self.gemm_output_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("LayerGemmOutput"),
+            size: out_bytes,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        }));
+        self.gemm_params_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("LayerGemmParams"),
+            size: std::mem::size_of::<GemmGpuParams>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        }));
+        self.gemm_output_staging = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("LayerGemmStaging"),
+            size: out_bytes,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        }));
+        self.gemm_max_out_dim = max_out_dim;
+        self.max_tensor_bytes = max_weight_bytes;
     }
 
     /// Memory-map a GGUF file so tensor bytes are accessible without heap allocation.
@@ -150,11 +278,19 @@ impl QTensorEngine {
                     // Tensor payload base must match gguf_sharder::GgufTensorIndex (full KV walk).
                     let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
                     self.tensor_data_offset = index.tensor_data_start;
+                    self.hyperparams = index.hyperparams;
+                    let staging = index
+                        .max_layer_tensor_bytes
+                        .max(4096)
+                        .min(MAX_WGPU_WEIGHT_STAGING);
+                    self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
                     self.gguf_mmap = Some(mmap);
                     eprintln!(
-                        "[gguf_bridge] Mapped {} — tensor data at offset {:#x}",
+                        "[gguf_bridge] Mapped {} — tensor @ {:#x}, {} layers, max tensor {} bytes",
                         path,
-                        self.tensor_data_offset
+                        self.tensor_data_offset,
+                        self.hyperparams.n_layer,
+                        index.max_tensor_bytes,
                     );
                 }
                 Err(e) => eprintln!("[gguf_bridge] mmap failed for {path}: {e}"),
@@ -382,7 +518,7 @@ impl QTensorEngine {
             mapped_at_creation: false,
         });
 
-        let bind_group_layout = self.pipeline.get_bind_group_layout(0);
+        let bind_group_layout = self.mock_pipeline.get_bind_group_layout(0);
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &bind_group_layout,
@@ -396,7 +532,7 @@ impl QTensorEngine {
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes: None });
-            cpass.set_pipeline(&self.pipeline);
+            cpass.set_pipeline(&self.mock_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
             cpass.dispatch_workgroups(4096 / 64, 1, 1);
         }
@@ -425,6 +561,217 @@ impl QTensorEngine {
 
         crate::telemetry::SIEVE_OPS_COUNT.fetch_add(4096 * 4096, std::sync::atomic::Ordering::Relaxed);
         result
+    }
+
+    fn write_weight_words(&self, raw: &[u8], max_bytes: usize) {
+        let weight_buf = self.gemm_weight_buf.as_ref().expect("gemm weight buf");
+        let upload = if raw.len() <= max_bytes { raw } else { &raw[..max_bytes] };
+        self.queue.write_buffer(weight_buf, 0, upload);
+    }
+
+    /// Quantized GEMM into caller `out` using reused GPU buffers (Q6_K) or CPU dequant fallback.
+    pub fn dispatch_gemm_into(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        info: &GgufTensorInfo,
+        input: &[f32],
+        out: &mut [f32],
+        n_in: usize,
+        n_out: usize,
+    ) -> bool {
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return false,
+        };
+        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        if n_in > input.len() || n_out > out.len() {
+            return false;
+        }
+
+        let weight_bytes = raw.len();
+        if info.ggml_type == crate::ggml_quants::GGML_TYPE_Q6_K
+            && n_in <= MAX_STACK_GEMM_IN
+            && n_out <= self.gemm_max_out_dim as usize
+            && weight_bytes <= self.max_tensor_bytes
+            && self.gemm_input_buf.is_some()
+        {
+            let params = GemmGpuParams {
+                n_in: n_in as u32,
+                n_out: n_out as u32,
+                weight_ggml_type: info.ggml_type,
+                weight_row_elems: info.dims[0] as u32,
+                weight_byte_len: raw.len() as u32,
+            };
+            let input_buf = self.gemm_input_buf.as_ref().unwrap();
+            let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
+            let output_buf = self.gemm_output_buf.as_ref().unwrap();
+            let params_buf = self.gemm_params_buf.as_ref().unwrap();
+            let staging = self.gemm_output_staging.as_ref().unwrap();
+
+            self.queue.write_buffer(input_buf, 0, bytemuck::cast_slice(&input[..n_in]));
+            self.write_weight_words(raw, self.max_tensor_bytes);
+            self.queue.write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
+
+            let bind_layout = self.pipeline.get_bind_group_layout(0);
+            let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("LayerGemmBindGroup"),
+                layout: &bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 1, resource: weight_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 2, resource: params_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
+                ],
+            });
+
+            let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("LayerGemmEncoder"),
+            });
+            {
+                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: None,
+                    timestamp_writes: None,
+                });
+                cpass.set_pipeline(&self.pipeline);
+                cpass.set_bind_group(0, &bind_group, &[]);
+                cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
+            }
+            let out_bytes = (n_out * 4) as wgpu::BufferAddress;
+            encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
+            self.queue.submit(Some(encoder.finish()));
+
+            let slice = staging.slice(..out_bytes);
+            let (tx, rx) = futures_channel::oneshot::channel();
+            slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
+            self.device.poll(wgpu::Maintain::Wait);
+            if let Ok(rt) = tokio::runtime::Runtime::new() {
+                if rt.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
+                    let data = slice.get_mapped_range();
+                    let floats: &[f32] = bytemuck::cast_slice(&data);
+                    out[..n_out].copy_from_slice(&floats[..n_out]);
+                    drop(data);
+                    staging.unmap();
+                    return true;
+                }
+            }
+            let _ = staging.unmap();
+        }
+
+        stack_gemm_quant(raw, info, input, out, n_in, n_out)
+    }
+
+    fn matmul_dims(info: &GgufTensorInfo) -> (usize, usize) {
+        let n_in = info.dims[0] as usize;
+        let n_out = if info.n_dims > 1 && info.dims[1] > 0 {
+            info.dims[1] as usize
+        } else {
+            1
+        };
+        (n_in, n_out)
+    }
+
+    /// One transformer block using real mmap tensor offsets (stack buffers only).
+    pub fn dispatch_transformer_layer(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        layer: u32,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+    ) -> bool {
+        let tensors = index.get_layer_tensors(layer);
+
+        if let Some(info) = tensors.attn_output {
+            let (n_in, n_out) = Self::matmul_dims(&info);
+            if n_in <= emb_dim && self.dispatch_gemm_into(index, &info, &hidden[..n_in], scratch_a, n_in, n_out) {
+                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n_out], emb_dim.min(n_out));
+            }
+        }
+
+        if let Some(info) = tensors.ffn_gate {
+            let (n_in, n_out) = Self::matmul_dims(&info);
+            if n_in <= emb_dim
+                && self.dispatch_gemm_into(index, &info, &hidden[..n_in], scratch_a, n_in, n_out)
+            {
+                relu_inplace(&mut scratch_a[..n_out], n_out);
+                if let Some(up) = tensors.ffn_up {
+                    let (up_in, up_out) = Self::matmul_dims(&up);
+                    if up_in <= n_out
+                        && self.dispatch_gemm_into(index, &up, &scratch_a[..up_in], scratch_b, up_in, up_out)
+                    {
+                        if let Some(down) = tensors.ffn_down {
+                            let (dn_in, dn_out) = Self::matmul_dims(&down);
+                            if dn_in <= up_out
+                                && self.dispatch_gemm_into(
+                                    index, &down, &scratch_b[..dn_in], scratch_a, dn_in, dn_out,
+                                )
+                            {
+                                add_residual_inplace(
+                                    &mut hidden[..emb_dim],
+                                    &scratch_a[..dn_out],
+                                    emb_dim.min(dn_out),
+                                );
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    /// Sequential layer-by-layer forward (one tensor payload in VRAM at a time).
+    /// `max_layers`: `0` runs all blocks; otherwise caps how many layers execute.
+    pub fn dispatch_transformer_forward(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+        max_layers: u32,
+    ) -> u32 {
+        let n_layer = index.hyperparams.n_layer;
+        if n_layer == 0 {
+            return 0;
+        }
+        let limit = if max_layers == 0 {
+            n_layer
+        } else {
+            max_layers.min(n_layer)
+        };
+        let mut ran = 0u32;
+        for layer in 0..limit {
+            if self.dispatch_transformer_layer(index, layer, hidden, emb_dim, scratch_a, scratch_b) {
+                ran += 1;
+            }
+        }
+        ran
+    }
+
+    /// Final logits via `output.weight` into stack `logits_out`.
+    pub fn dispatch_output_logits_into(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &[f32],
+        emb_dim: usize,
+        logits_out: &mut [f32],
+    ) -> usize {
+        if let Some(info) = index.output_weight_info() {
+            let (n_in, n_out) = Self::matmul_dims(info);
+            let n = n_out.min(logits_out.len());
+            if n_in <= emb_dim && n > 0 && self.dispatch_gemm_into(index, info, &hidden[..n_in], logits_out, n_in, n) {
+                return n;
+            }
+        }
+        let n = emb_dim.min(logits_out.len());
+        logits_out[..n].copy_from_slice(&hidden[..n]);
+        n
     }
 
     pub fn decode_lexicon_bound(&self, _logits: &[f32], valid_lexicon_ids: &[u64]) -> u64 {
@@ -548,6 +895,33 @@ mod tests {
         let gpu_norm: f32 = gpu_logits.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!(gpu_norm > 0.0, "GPU output all zeros");
         println!("cpu_emb L2={cpu_dot:.4} gpu_logits L2={gpu_norm:.4}");
+    }
+
+    #[test]
+    fn test_layer_tensors_and_matmul_gemma_if_exists() {
+        let path = Path::new("C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf");
+        if !path.exists() {
+            return;
+        }
+        let file = File::open(path).expect("open");
+        let mmap = unsafe { MmapOptions::new().map(&file).expect("mmap") };
+        let idx = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        assert_eq!(idx.hyperparams.n_layer, 42);
+        assert!(idx.max_layer_tensor_bytes > 0);
+        assert!(idx.max_layer_tensor_bytes < idx.max_tensor_bytes);
+
+        let layer0 = idx.get_layer_tensors(0);
+        assert!(layer0.ffn_down.is_some());
+        assert!(layer0.attn_q.is_some());
+
+        let mut engine = QTensorEngine::new();
+        engine.load_gguf(path.to_str().unwrap());
+        let mut hidden = [0f32; 2560];
+        hidden[0] = 1.0;
+        let mut scratch_a = [0f32; 10240];
+        let mut scratch_b = [0f32; 10240];
+        assert!(engine.dispatch_transformer_layer(&idx, 0, &mut hidden, 2560, &mut scratch_a, &mut scratch_b));
+        println!("layer0 hidden[0]={}", hidden[0]);
     }
 
     #[test]

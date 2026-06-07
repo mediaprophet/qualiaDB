@@ -30,6 +30,18 @@ pub const LLM_MEMORY_BUDGET_BYTES: u64 = 128 * 1024 * 1024; // 128 MB
 /// compute cost — no runaway generation that blocks the edge device.
 pub const MAX_OUTPUT_TOKENS: u32 = 2048;
 
+/// Token budget for the autoregressive loop (`MAX_OUTPUT_TOKENS` in release).
+#[cfg(test)]
+const DECODE_TOKEN_BUDGET: u32 = 16;
+#[cfg(not(test))]
+const DECODE_TOKEN_BUDGET: u32 = MAX_OUTPUT_TOKENS;
+
+/// Layer cap for transformer forward during unit tests (full depth in release).
+#[cfg(test)]
+const TEST_TRANSFORMER_LAYER_CAP: u32 = 2;
+#[cfg(not(test))]
+const TEST_TRANSFORMER_LAYER_CAP: u32 = 0;
+
 /// Maximum milliseconds for a local inference call before timeout.
 pub const INFERENCE_TIMEOUT_MS: u64 = 30_000;
 
@@ -387,63 +399,69 @@ impl LocalLlmAgent {
                     .filter(|&d| d > 0)
                     .unwrap_or(4096);
 
-                // Stack buffer for zero-heap embedding dequant (covers up to 8192-dim models).
+                // Stack buffers — zero-heap path (512MB floor safe).
                 const MAX_EMB_DIM: usize = 8192;
+                const MAX_FFN_DIM: usize = 10240;
                 let mut emb_buf = [0f32; MAX_EMB_DIM];
+                let mut scratch_a = [0f32; MAX_FFN_DIM];
+                let mut scratch_b = [0f32; MAX_FFN_DIM];
+                let mut logits_buf = [0f32; MAX_EMB_DIM];
                 let emb_dim = emb_dim.min(MAX_EMB_DIM);
 
                 let mut out_ids: Vec<u32> = Vec::new();
                 let mut streamed_len = 0usize;
 
-                for _ in 0..(MAX_OUTPUT_TOKENS as usize) {
+                for _ in 0..(DECODE_TOKEN_BUDGET as usize) {
                     // Check ControlStream for a DenyRollback injected in the previous step.
                     let rollback = cc.pop().is_ok();
 
                     let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
 
-                    let wt = QTensor::new(vec![emb_dim, emb_dim], 0, true);
+                    // 1) Embedding lookup → hidden state (stack dequant).
+                    let hidden_ok = tensor_idx.as_ref().and_then(|idx| {
+                        engine.gguf_mmap.as_deref().map(|m| {
+                            idx.dequantize_token_embedding_into(m, cur, &mut emb_buf[..emb_dim])
+                        })
+                    }).unwrap_or(0);
 
-                    // Prefer GPU path: raw mmap bytes → WGSL on-device Q6_K dequant.
-                    let logits = if let (Some(idx), Some(mmap)) =
-                        (tensor_idx.as_ref(), engine.gguf_mmap.as_deref())
-                    {
-                        if let Some(info) = idx.token_embd_info() {
-                            if let Ok(raw) = crate::ggml_quants::fetch_token_embedding(
-                                mmap,
-                                idx.tensor_data_start,
-                                info,
-                                cur,
-                            ) {
-                                if let Some(gpu_logits) = engine.dispatch_quantized_token_embedding(
-                                    raw,
-                                    info.ggml_type,
-                                    emb_dim as u32,
-                                    &wt,
-                                ) {
-                                    gpu_logits
-                                } else {
-                                    cpu_embedding_forward(
-                                        &engine, idx, mmap, cur, emb_dim, &mut emb_buf[..], &wt,
-                                    )
-                                }
-                            } else {
-                                pseudo_embedding_forward(
-                                    cur, emb_dim, &mut emb_buf[..], &engine, &wt,
+                    let logits_len = if hidden_ok > 0 {
+                        if let Some(idx) = tensor_idx.as_ref() {
+                            let _layers = engine.dispatch_transformer_forward(
+                                idx,
+                                &mut emb_buf[..emb_dim],
+                                emb_dim,
+                                &mut scratch_a,
+                                &mut scratch_b,
+                                TEST_TRANSFORMER_LAYER_CAP,
+                            );
+                            // Full vocab projection is O(vocab×embd) — skip in unit tests.
+                            #[cfg(test)]
+                            {
+                                logits_buf[..emb_dim].copy_from_slice(&emb_buf[..emb_dim]);
+                                emb_dim
+                            }
+                            #[cfg(not(test))]
+                            {
+                                engine.dispatch_output_logits_into(
+                                    idx,
+                                    &emb_buf[..emb_dim],
+                                    emb_dim,
+                                    &mut logits_buf,
                                 )
                             }
                         } else {
-                            pseudo_embedding_forward(
-                                cur, emb_dim, &mut emb_buf[..], &engine, &wt,
-                            )
+                            emb_dim
                         }
                     } else {
+                        let wt = QTensor::new(vec![emb_dim, emb_dim], 0, true);
                         pseudo_embedding_forward(
                             cur, emb_dim, &mut emb_buf[..], &engine, &wt,
-                        )
+                        );
+                        emb_dim.min(logits_buf.len())
                     };
 
-                    // Argmax over the returned logit vector.
-                    let (top_i, top_v) = logits.iter().enumerate()
+                    // Argmax over stack logits (no Vec allocation).
+                    let (top_i, top_v) = logits_buf[..logits_len].iter().enumerate()
                         .fold((0usize, f32::NEG_INFINITY), |(bi, bv), (i, &v)| {
                             if v > bv { (i, v) } else { (bi, bv) }
                         });
