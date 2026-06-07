@@ -130,6 +130,7 @@
             white-space: nowrap;
         }
         .mode-status.online  { border-color: var(--success); color: var(--success); }
+        .mode-status.warn    { border-color: var(--warn); color: var(--warn); }
         .mode-status.offline { border-color: rgba(255,255,255,.15); color: var(--dim); }
         .mode-status.loading { border-color: var(--warn); color: var(--warn); }
         .mode-status.mobile  { border-color: var(--native); color: var(--native); }
@@ -399,6 +400,7 @@
         <span style="color:var(--dim)">WASM tests skip gracefully if function absent from current build · Native tests skip when daemon offline</span>
     </div>
 
+    <div class="legend" id="wasm-coverage-note" style="display:none"></div>
     <div id="suite-list"></div>
 </main>
 

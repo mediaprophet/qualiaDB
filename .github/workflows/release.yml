@@ -103,15 +103,32 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build WASM package
-        run: wasm-pack build crates/qualia-core-db --target web --release
+        run: |
+          wasm-pack build crates/qualia-core-db \
+            --target web \
+            --release \
+            --out-dir ../../docs/playground \
+            --out-name qualia_core_db \
+            --no-typescript
 
-      - name: Package WASM artifacts
-        run: tar -czf qualia-core-wasm.tar.gz -C crates/qualia-core-db pkg/
+      - name: Package WASM artifacts (GitHub Pages compatible)
+        run: |
+          mkdir -p release-assets/qualia-core-wasm
+          cp docs/playground/qualia_core_db.js release-assets/qualia-core-wasm/
+          cp docs/playground/qualia_core_db_bg.wasm release-assets/qualia-core-wasm/
+          tar -czf qualia-core-wasm-pages.tar.gz -C release-assets qualia-core-wasm
+
+      - name: Package WASM artifacts (raw wasm-pack pkg)
+        run: tar -czf qualia-core-wasm.tar.gz -C docs/playground qualia_core_db.js qualia_core_db_bg.wasm
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
-          files: qualia-core-wasm.tar.gz
+          files: |
+            qualia-core-wasm.tar.gz
+            qualia-core-wasm-pages.tar.gz
+            docs/playground/qualia_core_db.js
+            docs/playground/qualia_core_db_bg.wasm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
