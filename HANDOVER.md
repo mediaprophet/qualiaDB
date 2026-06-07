@@ -4,7 +4,7 @@
 
 ## Session 2026-06-06 (part 3) — Autoregressive inference + Flutter chat UI wiring
 
-**Branch:** `main` + `0.0.6-dev` (both updated) | **Last commit:** `68019c4`
+**Branch:** `0.0.8-dev` | **Version:** `0.0.8-dev`
 
 ### Completed this session
 
@@ -331,3 +331,17 @@ See [PLAN.md](PLAN.md) for the full 7-phase implementation plan.
 - ALP token minting — hardcoded token ID
 - ILP STREAM payments — SPSP resolution works, full STREAM needs connector sidecar
 - WASM OPFS bindings — scaffolded, two TODOs
+
+---
+
+## Session 2026-06-07 — Qapp rename completion
+
+**Completed:**
+- Renamed app → qapp across Rust API (`qualia-client-core`), Flutter FRB (`qapp_vault_screen.dart`, `qualia_qapp_webview.dart`), and file names (`qapp_registry.rs`, `qapps_protocol.rs`).
+- Renamed docs: `qapp-vault-developer-guide.md`, `developing-qapps.md`; updated `flutter-api-reference.md`, `glossary.md`, `ARCHITECTURE.md`, `to-do.md`, `PROJECT_STATE.md`.
+- **Shipped desktop = Flutter only** (Tauri removed from `release.yml` v0.0.6). Legacy `qualia-desktop`/`qualia-client` qapp renames kept in-tree but not release targets.
+- `QappManifest` / `execute_scoped_query` hot path + `daemon_graph` anatomy seed data (prior in same branch).
+
+**Left incomplete (Anatomy integration — see gitignored `app-development/Anatomy/TODO.md`):**
+- Install Anatomy into `{storage}/Qapps/Anatomy/` and end-to-end smoke test.
+- Chat ↔ Anatomy bidirectional handoff polish, WASM path, DICOM/knowledge expansion.

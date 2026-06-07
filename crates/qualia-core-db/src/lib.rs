@@ -6,6 +6,7 @@ use zeroize::Zeroize;
 
 pub mod query_engine;
 pub mod n3_parser;
+pub mod n3_compiler;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest;
 pub mod llm_agent;
@@ -13,10 +14,19 @@ pub mod profiles;
 pub mod solid_ldp;
 pub mod wasm_bridge;
 pub mod modalities;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod dicom;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod dicom_ingest;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod comorbidity_eval;
 
 /// The Global Capability Registry exposes which features are compiled into the
 /// current qualia-core-db binary. This allows the CLI to dynamically self-document
 /// and progressively expose features like SHACL extensions or specific logic modalities.
+/// Crate semver baked in at compile time — shared by daemon `/health`, CLI, and WASM `get_engine_version()`.
+pub const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub const CAPABILITY_REGISTRY: &[&str] = &[
     "SHACL",
     "Memory",
@@ -30,6 +40,10 @@ pub const CAPABILITY_REGISTRY: &[&str] = &[
     "Bioinformatics",
     "OrganicChemistry",
     "Economics",
+    "DicomImaging",
+    "ComorbidityEval",
+    "CogAI",
+    "N3Compiler",
 ];
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
@@ -368,6 +382,7 @@ pub mod rules;
 pub mod npu_ffi;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon;
+pub mod daemon_graph;
 pub mod tee_ffi;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod wal;
@@ -380,6 +395,7 @@ pub mod tax_schema;
 pub mod spatial_sieve;
 pub mod webizen;
 pub mod shacl_compiler;
+pub mod owl_to_shacl;
 pub mod agency;
 pub mod query_compiler;
 pub mod fuzz_testing;
@@ -402,6 +418,8 @@ pub mod clinical_engine;
 pub mod organic_chemistry;
 pub mod ode_solver;
 pub mod quantum_dft;
+pub mod qubo_compiler;
+pub mod qpu_ingress;
 pub mod thermodynamics;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon_swarm;
@@ -599,6 +617,12 @@ mod tests {
         };
         assert_eq!(q4.identify_routing_lane(), PermissiveRoutingLane::SpatiotemporalAmbiguous);
         assert_eq!(q4.extract_clean_metadata_value(), 999);
+    }
+
+    #[test]
+    fn engine_version_matches_cargo_pkg_version() {
+        assert_eq!(ENGINE_VERSION, env!("CARGO_PKG_VERSION"));
+        assert!(!ENGINE_VERSION.is_empty());
     }
 }
 

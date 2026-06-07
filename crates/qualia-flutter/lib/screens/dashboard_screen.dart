@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class DashboardScreen extends StatefulWidget {
+import '../services/hardware_telemetry_service.dart';
+import '../src/rust/api/qualia_api.dart' as api;
+
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final List<String> _logs = ['[System] Initialized. Awaiting ILP routes.'];
   String? _runningTask;
 
@@ -21,17 +25,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_runningTask != null) return;
     setState(() => _runningTask = cmd);
     _appendLog('> Executing: $label');
-    
-    // Simulate rust execution
-    await Future.delayed(const Duration(seconds: 2));
-    _appendLog('Command completed successfully.');
-    
-    setState(() => _runningTask = null);
+    try {
+      final result = await api.runEngineCommand(cmd: cmd);
+      _appendLog(result.replaceAll('\n', ' | '));
+    } catch (e) {
+      _appendLog('Error: $e');
+    } finally {
+      setState(() => _runningTask = null);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final telemetry = ref.watch(hardwareTelemetryProvider);    return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,7 +49,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 24),
+          if (telemetry != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'CPU ${telemetry.cpuPercent.toStringAsFixed(1)}% · '
+              'RAM ${telemetry.ramUsedGb.toStringAsFixed(2)} / ${telemetry.ramTotalGb.toStringAsFixed(2)} GB · '
+              'daemon ${telemetry.daemonStatus}',
+              style: const TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'monospace'),
+            ),
+          ],          const SizedBox(height: 24),
           Row(
             children: [
               ElevatedButton.icon(
@@ -59,8 +73,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 16),
               ElevatedButton.icon(
                 icon: const Icon(Icons.security),
-                label: Text(_runningTask == 'zk_screen' ? 'Running...' : '[Zero-Knowledge] Toxicity Screening'),
-                onPressed: _runningTask != null ? null : () => _runCommand('zk_screen', '[Zero-Knowledge] Toxicity Screening'),
+                label: Text(_runningTask == 'zk_screen' ? 'Running...' : 'Zero-Knowledge Screen'),
+                onPressed: _runningTask != null ? null : () => _runCommand('zk_screen', 'Zero-Knowledge Screen'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00F0FF).withOpacity(0.2),
                   foregroundColor: const Color(0xFF00F0FF),
@@ -69,29 +83,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           Expanded(
             child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.black,
-                border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.3)),
-                borderRadius: BorderRadius.circular(8.0),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white10),
               ),
-              padding: const EdgeInsets.all(16.0),
               child: ListView.builder(
                 itemCount: _logs.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Text(
-                      _logs[index],
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        color: Colors.greenAccent,
-                      ),
-                    ),
-                  );
-                },
+                itemBuilder: (context, i) => Text(
+                  _logs[i],
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Color(0xFF00FF88)),
+                ),
               ),
             ),
           ),

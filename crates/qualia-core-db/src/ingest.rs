@@ -184,7 +184,11 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<()
         if let Err(e) = parser.parse_all(on_n3_event) {
             eprintln!("N3 Logic Parsing Error: {}", e);
         }
-        println!("Registered {} N3 Logic Rules into the Webizen VM.", rules_parsed);
+        let fired = webizen.fire_registered_rules(crate::q_hash("q42:ingestSession"));
+        println!(
+            "Registered {} N3 Logic Rules; fired {} through Core-1 Sentinel VM.",
+            rules_parsed, fired
+        );
     } else {
         eprintln!("Unsupported file extension. Expected .rdf, .xml, .ttl, .nt, or .n3");
     }

@@ -1,12 +1,19 @@
 // Lazy WASM initialisation - loads once, caches, shares across all test suites.
-// Import path is relative to this file (docs/tests/), so playground is ../playground/.
+// Delegates to docs/js/qualia-wasm-runtime.js (playground path: ../playground/).
+
+import {
+    initQualiaWasm,
+    getEngineVersion,
+    getEngineInfo,
+} from '../js/qualia-wasm-runtime.js';
 
 let _mod = null;
-let _initPromise = null;
 let _coverage = null;
-let _wasmVersion = null;
 
 const EXPECTED_WASM_EXPORTS = [
+    'get_engine_version',
+    'get_engine_info',
+    'list_capabilities_wasm',
     'compile_query_to_json',
     'execute_ntriples_query',
     'align_sequences_wasm',
@@ -52,44 +59,41 @@ function summarizeCoverage(mod) {
 
 export async function loadWasm() {
     if (_mod) return _mod;
-    if (_initPromise) return _initPromise;
 
-    _initPromise = (async () => {
-        try {
-            const module = await import('../playground/qualia_core_db.js');
-            const response = await fetch('../playground/qualia_core_db_bg.wasm');
-            const total = parseInt(response.headers.get('content-length'), 10) || 465124;
-            let loaded = 0;
-            const badge = document.getElementById('wasm-badge');
+    const badge = document.getElementById('wasm-badge');
+    try {
+        const { jsUrl, wasmUrl } = {
+            jsUrl: '../playground/qualia_core_db.js',
+            wasmUrl: '../playground/qualia_core_db_bg.wasm',
+        };
+        const module = await import(jsUrl);
+        const response = await fetch(wasmUrl);
+        const total = parseInt(response.headers.get('content-length'), 10) || 465124;
+        let loaded = 0;
 
-            const { readable, writable } = new TransformStream({
-                transform(chunk, controller) {
-                    loaded += chunk.length;
-                    if (badge) {
-                        const pct = Math.min(99, Math.round((loaded / total) * 100));
-                        badge.textContent = `Loading WASM ${pct}%`;
-                    }
-                    controller.enqueue(chunk);
+        const { readable, writable } = new TransformStream({
+            transform(chunk, controller) {
+                loaded += chunk.length;
+                if (badge) {
+                    const pct = Math.min(99, Math.round((loaded / total) * 100));
+                    badge.textContent = `Loading WASM ${pct}%`;
                 }
-            });
-            response.body.pipeTo(writable);
+                controller.enqueue(chunk);
+            }
+        });
+        response.body.pipeTo(writable);
 
-            const trackedResponse = new Response(readable, { headers: response.headers });
-            await module.default(trackedResponse);
-            _mod = module;
-            _wasmVersion = typeof module.get_engine_version === 'function'
-                ? module.get_engine_version()
-                : null;
-            _coverage = summarizeCoverage(module);
-        } catch (e) {
-            console.warn('[wasm-loader] WASM init failed:', e.message);
-            _mod = {};
-            _coverage = summarizeCoverage(_mod);
-        }
-        return _mod;
-    })();
+        const trackedResponse = new Response(readable, { headers: response.headers });
+        await module.default(trackedResponse);
+        _mod = module;
+    } catch (e) {
+        console.warn('[wasm-loader] WASM init failed:', e.message);
+        _mod = await initQualiaWasm({ base: '..' }).catch(() => ({}));
+        if (!_mod || !Object.keys(_mod).length) _mod = {};
+    }
 
-    return _initPromise;
+    _coverage = summarizeCoverage(_mod);
+    return _mod;
 }
 
 export async function getWasmCoverage() {
@@ -100,12 +104,13 @@ export async function getWasmCoverage() {
 }
 
 export async function getWasmVersion() {
-    if (_wasmVersion) return _wasmVersion;
     const mod = await loadWasm();
-    if (!_wasmVersion && typeof mod?.get_engine_version === 'function') {
-        _wasmVersion = mod.get_engine_version();
-    }
-    return _wasmVersion;
+    return getEngineVersion(mod);
+}
+
+export async function getWasmInfo() {
+    const mod = await loadWasm();
+    return getEngineInfo(mod);
 }
 
 // Convenience: call fn(mod) only if fn exists in the module, else skip.

@@ -1,72 +1,76 @@
 use crate::state::*;
 
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use qualia_core_db::rpc::{TaxRecipientSuite, route_tax_payment};
-use qualia_core_db::ilp_dispatcher::{IlpDispatcher, HttpIlpTransport, DispatchResult};
-use sysinfo::{System, Disks};
-use std::io::{Write, Seek, SeekFrom};
-use futures_util::StreamExt;
-use std::time::Duration;
-use tokio::time::sleep;
+use crate::qapp_paths::{qapps_dir, resolve_package_manifest_path};
+use crate::qapp_registry;
 use crate::engine::ingestion;
 use crate::engine::llm_offload;
-use crate::app_registry;
 use crate::engine::q42_compiler;
+use futures_util::StreamExt;
+use qualia_core_db::ilp_dispatcher::{DispatchResult, HttpIlpTransport, IlpDispatcher};
+use qualia_core_db::rpc::{route_tax_payment, TaxRecipientSuite};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::io::{Seek, SeekFrom, Write};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+use sysinfo::{Disks, System};
+use tokio::time::sleep;
 // ── Tauri commands ────────────────────────────────────────────────────────────
 
-pub fn list_installed_apps() -> Vec<String> {
+pub fn list_installed_qapps() -> Vec<String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let data_dir = state.config.lock().unwrap().storage_path.clone();
-    let apps_dir = PathBuf::from(&data_dir).join("Apps");
-    let mut apps = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(apps_dir) {
+    let qapps_dir = qapps_dir(&data_dir);
+    let mut qapps = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(qapps_dir) {
         for entry in entries.filter_map(Result::ok) {
             if entry.path().is_dir() {
-                apps.push(entry.file_name().to_string_lossy().to_string());
+                qapps.push(entry.file_name().to_string_lossy().to_string());
             }
         }
     }
-    apps
+    qapps
 }
 
-pub fn generate_app_credential(app_name: String) -> String {
-    format!("did:qualia:app:{}:signed_vc", app_name)
+pub fn generate_qapp_credential(qapp_name: String) -> String {
+    format!("did:qualia:qapp:{}:signed_vc", qapp_name)
 }
 
-pub fn verify_and_install_app(target_path: String) -> Result<String, String> {
+pub fn verify_and_install_qapp(target_path: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let path = std::path::PathBuf::from(&target_path);
-    let manifest_path = path.join("app.json");
-    if !manifest_path.exists() {
-        return Err("app.json not found in directory".into());
-    }
-    
+    let manifest_path = resolve_package_manifest_path(&path)
+        .ok_or_else(|| "qapp.json not found in directory".to_string())?;
+
     let content = std::fs::read_to_string(&manifest_path).map_err(|e| e.to_string())?;
-    let manifest: app_registry::AppManifest = serde_json::from_str(&content).map_err(|e| format!("Invalid app.json: {}", e))?;
-    
-    let app_did = format!("did:qualia:app:{}", manifest.name.to_lowercase().replace(" ", "-"));
-    
-    // Check if we are running a dev port by looking at the path string.
-    // If it starts with a port number, we assign LocalProxyPort.
+    let manifest: qapp_registry::QappPackageManifest =
+        serde_json::from_str(&content).map_err(|e| format!("Invalid qapp package manifest: {e}"))?;
+
+    let qapp_did = format!(
+        "did:qualia:qapp:{}",
+        manifest.name.to_lowercase().replace(" ", "-")
+    );
+
     let target = if let Ok(port) = target_path.parse::<u16>() {
-        app_registry::AppTarget::LocalProxyPort(port)
+        qapp_registry::QappTarget::LocalProxyPort(port)
     } else {
-        app_registry::AppTarget::LocalDevDirectory(path)
+        qapp_registry::QappTarget::LocalDevDirectory(path)
     };
-    
-    let registered_app = app_registry::RegisteredApp {
-        did: app_did.clone(),
+
+    let registered_qapp = qapp_registry::RegisteredQapp {
+        did: qapp_did.clone(),
         manifest,
         target,
     };
-    
-    state.installed_apps.lock().unwrap().push(registered_app);
+
+    let qapp_id_hash = crate::qapp_manifest::install_qapp_capabilities(&registered_qapp.manifest)
+        .map_err(|e| format!("Qapp capability compile failed: {e:?}"))?;
+
+    state.installed_qapps.lock().unwrap().push(registered_qapp);
     save_directory_state();
-    
-    Ok(app_did)
+
+    Ok(format!("{qapp_did} (hash={qapp_id_hash})"))
 }
 
 #[derive(Serialize)]
@@ -103,7 +107,10 @@ pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
     let margin: u64 = 15 * 1024 * 1024 * 1024;
     let requested = new_config.storage_quota_gb * 1024 * 1024 * 1024;
     if available.saturating_sub(requested) < margin {
-        return Err("OS_SAFETY_VIOLATION: Would leave the host OS with less than the 15 GB safety margin.".to_string());
+        return Err(
+            "OS_SAFETY_VIOLATION: Would leave the host OS with less than the 15 GB safety margin."
+                .to_string(),
+        );
     }
     // Persist config to disk
     let meta = app_meta_dir();
@@ -116,11 +123,35 @@ pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
     Ok(())
 }
 
+// ── QPU Oracle (hidden until chat unlock) ─────────────────────────────────────
+
+pub use crate::qpu_oracle::{QpuChatCommandResult, QpuOracleSettings, QpuOracleSettingsInput};
+
+pub fn get_qpu_settings() -> QpuOracleSettings {
+    crate::qpu_oracle::get_qpu_settings()
+}
+
+pub fn is_qpu_feature_unlocked() -> bool {
+    crate::qpu_oracle::is_qpu_feature_unlocked()
+}
+
+pub fn save_qpu_settings(input: QpuOracleSettingsInput) -> Result<QpuOracleSettings, String> {
+    crate::qpu_oracle::save_qpu_settings(input)
+}
+
+pub fn handle_qpu_chat_command(text: String) -> QpuChatCommandResult {
+    crate::qpu_oracle::handle_qpu_chat_command(&text)
+}
+
+pub fn handle_engine_chat_command(text: String) -> QpuChatCommandResult {
+    crate::qpu_pipeline::handle_engine_chat_command(&text)
+}
+
 pub fn profile_energy_circumstance() -> String {
     let mut sys = System::new_all();
     sys.refresh_all();
     let total_mem = sys.total_memory() / 1024 / 1024;
-    let used_mem  = sys.used_memory()  / 1024 / 1024;
+    let used_mem = sys.used_memory() / 1024 / 1024;
     format!(
         "Energy: AC_POWER\nTotal RAM: {} MB\nUsed RAM: {} MB\nSwarm Auth: GRANTED",
         total_mem, used_mem
@@ -128,7 +159,9 @@ pub fn profile_energy_circumstance() -> String {
 }
 
 pub fn check_ollama_status() -> bool {
-    std::process::Command::new("ollama").arg("-v").output()
+    std::process::Command::new("ollama")
+        .arg("-v")
+        .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
 }
@@ -166,7 +199,10 @@ pub async fn download_and_vectorize(
     let dest_path = index_dir.join(&filename);
 
     let cancelled = Arc::new(AtomicBool::new(false));
-    handles.lock().unwrap().insert(item_id.clone(), cancelled.clone());
+    handles
+        .lock()
+        .unwrap()
+        .insert(item_id.clone(), cancelled.clone());
 
     let response = reqwest::get(&url).await.map_err(|e| {
         handles.lock().unwrap().remove(&item_id);
@@ -184,8 +220,12 @@ pub async fn download_and_vectorize(
         if cancelled.load(Ordering::Relaxed) {
             let _ = std::fs::remove_file(&dest_path);
             let payload = ProgressPayload {
-                id: item_id.clone(), progress: 0.0, downloaded_bytes: downloaded,
-                total_bytes, speed_kbps: 0.0, status: "cancelled".to_string(),
+                id: item_id.clone(),
+                progress: 0.0,
+                downloaded_bytes: downloaded,
+                total_bytes,
+                speed_kbps: 0.0,
+                status: "cancelled".to_string(),
             };
             let _ = state.download_events.send(payload.clone());
             handles.lock().unwrap().remove(&item_id);
@@ -200,10 +240,18 @@ pub async fn download_and_vectorize(
         if now.duration_since(last_report).as_millis() >= 200 {
             let elapsed = now.duration_since(last_report).as_secs_f64().max(0.001);
             let speed_kbps = ((downloaded - last_downloaded) as f64 / 1024.0) / elapsed;
-            let progress = if total_bytes > 0 { (downloaded as f64 / total_bytes as f64) * 100.0 } else { 0.0 };
+            let progress = if total_bytes > 0 {
+                (downloaded as f64 / total_bytes as f64) * 100.0
+            } else {
+                0.0
+            };
             let payload = ProgressPayload {
-                id: item_id.clone(), progress, downloaded_bytes: downloaded,
-                total_bytes, speed_kbps, status: "downloading".to_string(),
+                id: item_id.clone(),
+                progress,
+                downloaded_bytes: downloaded,
+                total_bytes,
+                speed_kbps,
+                status: "downloading".to_string(),
             };
             let _ = state.download_events.send(payload.clone());
             active_dl.lock().unwrap().insert(item_id.clone(), payload);
@@ -213,18 +261,29 @@ pub async fn download_and_vectorize(
     }
 
     let processing_payload = ProgressPayload {
-        id: item_id.clone(), progress: 100.0, downloaded_bytes: downloaded,
-        total_bytes, speed_kbps: 0.0, status: "processing".to_string(),
+        id: item_id.clone(),
+        progress: 100.0,
+        downloaded_bytes: downloaded,
+        total_bytes,
+        speed_kbps: 0.0,
+        status: "processing".to_string(),
     };
     let _ = state.download_events.send(processing_payload.clone());
-    active_dl.lock().unwrap().insert(item_id.clone(), processing_payload);
+    active_dl
+        .lock()
+        .unwrap()
+        .insert(item_id.clone(), processing_payload);
 
     let dest_str = dest_path.to_string_lossy().to_string();
     let _result = ingestion::process_ontology(&dest_str).map_err(|e| e.to_string())?;
 
     let done_payload = ProgressPayload {
-        id: item_id.clone(), progress: 100.0, downloaded_bytes: downloaded,
-        total_bytes, speed_kbps: 0.0, status: "complete".to_string(),
+        id: item_id.clone(),
+        progress: 100.0,
+        downloaded_bytes: downloaded,
+        total_bytes,
+        speed_kbps: 0.0,
+        status: "complete".to_string(),
     };
     let _ = state.download_events.send(done_payload.clone());
     handles.lock().unwrap().remove(&item_id);
@@ -247,7 +306,10 @@ pub async fn download_model(
     let dest_path = models_dir.join(&filename);
 
     let cancelled = Arc::new(AtomicBool::new(false));
-    handles.lock().unwrap().insert(model_id.clone(), cancelled.clone());
+    handles
+        .lock()
+        .unwrap()
+        .insert(model_id.clone(), cancelled.clone());
 
     let response = reqwest::get(&url).await.map_err(|e| {
         handles.lock().unwrap().remove(&model_id);
@@ -265,8 +327,12 @@ pub async fn download_model(
         if cancelled.load(Ordering::Relaxed) {
             let _ = std::fs::remove_file(&dest_path);
             let payload = ProgressPayload {
-                id: model_id.clone(), progress: 0.0, downloaded_bytes: downloaded,
-                total_bytes, speed_kbps: 0.0, status: "cancelled".to_string(),
+                id: model_id.clone(),
+                progress: 0.0,
+                downloaded_bytes: downloaded,
+                total_bytes,
+                speed_kbps: 0.0,
+                status: "cancelled".to_string(),
             };
             let _ = state.download_events.send(payload.clone());
             handles.lock().unwrap().remove(&model_id);
@@ -281,10 +347,18 @@ pub async fn download_model(
         if now.duration_since(last_report).as_millis() >= 200 {
             let elapsed = now.duration_since(last_report).as_secs_f64().max(0.001);
             let speed_kbps = ((downloaded - last_downloaded) as f64 / 1024.0) / elapsed;
-            let progress = if total_bytes > 0 { (downloaded as f64 / total_bytes as f64) * 100.0 } else { 0.0 };
+            let progress = if total_bytes > 0 {
+                (downloaded as f64 / total_bytes as f64) * 100.0
+            } else {
+                0.0
+            };
             let payload = ProgressPayload {
-                id: model_id.clone(), progress, downloaded_bytes: downloaded,
-                total_bytes, speed_kbps, status: "downloading".to_string(),
+                id: model_id.clone(),
+                progress,
+                downloaded_bytes: downloaded,
+                total_bytes,
+                speed_kbps,
+                status: "downloading".to_string(),
             };
             let _ = state.download_events.send(payload.clone());
             active_dl.lock().unwrap().insert(model_id.clone(), payload);
@@ -294,8 +368,12 @@ pub async fn download_model(
     }
 
     let done_payload = ProgressPayload {
-        id: model_id.clone(), progress: 100.0, downloaded_bytes: downloaded,
-        total_bytes, speed_kbps: 0.0, status: "complete".to_string(),
+        id: model_id.clone(),
+        progress: 100.0,
+        downloaded_bytes: downloaded,
+        total_bytes,
+        speed_kbps: 0.0,
+        status: "complete".to_string(),
     };
     let _ = state.download_events.send(done_payload.clone());
     handles.lock().unwrap().remove(&model_id);
@@ -311,12 +389,17 @@ pub fn cancel_download(id: String) -> Result<(), String> {
     Ok(())
 }
 
-pub fn start_daemon() -> String { "Daemon Started".to_string() }
+pub fn start_daemon() -> String {
+    "Daemon Started".to_string()
+}
 
 pub fn daemon_status() -> String {
     let state = crate::state::APP_STATE.get().unwrap();
-    if *state.daemon_running.lock().unwrap() { "running".to_string() }
-    else { "stopped".to_string() }
+    if *state.daemon_running.lock().unwrap() {
+        "running".to_string()
+    } else {
+        "stopped".to_string()
+    }
 }
 
 pub fn get_tax_suite() -> TaxRecipientSuite {
@@ -329,20 +412,20 @@ pub fn save_tax_suite(suite: TaxRecipientSuite) -> Result<(), String> {
     suite.validate()?;
     let data_dir = state.config.lock().unwrap().storage_path.clone();
     let path = suite_file_path(&data_dir);
-    if let Some(p) = path.parent() { std::fs::create_dir_all(p).map_err(|e| e.to_string())?; }
+    if let Some(p) = path.parent() {
+        std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
+    }
     let json = serde_json::to_string_pretty(&suite).map_err(|e| e.to_string())?;
     std::fs::write(&path, json).map_err(|e| e.to_string())?;
     *state.tax_suite.lock().unwrap() = suite;
     Ok(())
 }
 
-pub fn dispatch_tax_payment(
-    gross_amount_micro_cents: u64,
-) -> Result<DispatchResult, String> {
+pub fn dispatch_tax_payment(gross_amount_micro_cents: u64) -> Result<DispatchResult, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let suite = state.tax_suite.lock().unwrap().clone();
-    let plan  = route_tax_payment(gross_amount_micro_cents, &suite)?;
-    let disp  = IlpDispatcher::new(HttpIlpTransport {
+    let plan = route_tax_payment(gross_amount_micro_cents, &suite)?;
+    let disp = IlpDispatcher::new(HttpIlpTransport {
         connector_url: "http://localhost:7770".to_string(),
     });
     Ok(disp.dispatch(&plan))
@@ -353,7 +436,11 @@ pub fn accept_vault_handshake(did_key: String, _payload: String) -> Result<Strin
     Ok("HANDSHAKE_SUCCESS".to_string())
 }
 
-pub fn receive_vault_job(job_id: String, task_type: String, _data_blob_cbor: Vec<u8>) -> Result<String, String> {
+pub fn receive_vault_job(
+    job_id: String,
+    task_type: String,
+    _data_blob_cbor: Vec<u8>,
+) -> Result<String, String> {
     println!("[VC-12] Offload job {} type {}", job_id, task_type);
     if task_type == "LLM_INFERENCE" && check_ollama_status() {
         Ok("INFERENCE_QUEUED".to_string())
@@ -382,18 +469,28 @@ pub async fn ingest_literature(file_path: String) -> Result<String, String> {
     std::fs::copy(&source_path, &dest_path).map_err(|e| e.to_string())?;
 
     let text = pdf_extract::extract_text(&dest_path).map_err(|e| e.to_string())?;
-    let preview = if text.len() > 100 { &text[0..100] } else { &text };
+    let preview = if text.len() > 100 {
+        &text[0..100]
+    } else {
+        &text
+    };
 
-    Ok(format!("Successfully ingested literature: {}. Generated ontology nodes from preview: '{}...'", filename.to_string_lossy(), preview.replace("\n", " ")))
+    Ok(format!(
+        "Successfully ingested literature: {}. Generated ontology nodes from preview: '{}...'",
+        filename.to_string_lossy(),
+        preview.replace("\n", " ")
+    ))
 }
 
 pub async fn upsert_cmld_definition(term: String, context_did: String) -> Result<String, String> {
-    Ok(format!("Successfully mapped '{}' to Context: {}", term, context_did))
+    Ok(format!(
+        "Successfully mapped '{}' to Context: {}",
+        term, context_did
+    ))
 }
 
-
-use std::fs::OpenOptions;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::fs::OpenOptions;
 
 pub async fn ingest_ontology(file_name: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
@@ -404,27 +501,37 @@ pub async fn ingest_ontology(file_name: String) -> Result<serde_json::Value, Str
     let _ = std::fs::create_dir_all(&index_dir);
 
     // 1. Simulate the backend writing a true hardware-aligned 40,960 byte SuperBlock
-    let mut file = OpenOptions::new().read(true).write(true).create(true).truncate(true).open(&index_path).map_err(|e| e.to_string())?;
-    
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&index_path)
+        .map_err(|e| e.to_string())?;
+
     // Pad to 40,960 bytes
     let empty_block = vec![0u8; 40960];
     file.write_all(&empty_block).map_err(|e| e.to_string())?;
-    
+
     // 2. Write exact deterministic bounds at the absolute offset
     let target_offset = 40960; // Absolute offset to the second block (page-aligned)
-    file.seek(SeekFrom::Start(target_offset)).map_err(|e| e.to_string())?;
-    
+    file.seek(SeekFrom::Start(target_offset))
+        .map_err(|e| e.to_string())?;
+
     // Write 64-bit Lexicon Node ID
     let mock_lexicon_id: u64 = 0x8F3B_C122_A943_0001;
-    file.write_u64::<LittleEndian>(mock_lexicon_id).map_err(|e| e.to_string())?;
-    
+    file.write_u64::<LittleEndian>(mock_lexicon_id)
+        .map_err(|e| e.to_string())?;
+
     // Write IEEE-754 Float Bound
     let true_ieee754_bound: f64 = 0.9423984183;
-    file.write_f64::<LittleEndian>(true_ieee754_bound).map_err(|e| e.to_string())?;
+    file.write_f64::<LittleEndian>(true_ieee754_bound)
+        .map_err(|e| e.to_string())?;
 
     // 3. VFS Direct Byte Reading (No serde_json overhead during lookup)
-    file.seek(SeekFrom::Start(target_offset)).map_err(|e| e.to_string())?;
-    
+    file.seek(SeekFrom::Start(target_offset))
+        .map_err(|e| e.to_string())?;
+
     let extracted_lexicon_id = file.read_u64::<LittleEndian>().map_err(|e| e.to_string())?;
     let extracted_float = file.read_f64::<LittleEndian>().map_err(|e| e.to_string())?;
 
@@ -438,7 +545,10 @@ pub async fn ingest_ontology(file_name: String) -> Result<serde_json::Value, Str
     }))
 }
 
-pub async fn export_to_solid(input_q42_path: String, output_dir_path: String) -> Result<String, String> {
+pub async fn export_to_solid(
+    input_q42_path: String,
+    output_dir_path: String,
+) -> Result<String, String> {
     qualia_core_db::solid_ldp::SolidExporter::export_to_solid_pod(&input_q42_path, &output_dir_path)
         .map(|_| format!("Exported to {}", output_dir_path))
         .map_err(|e| e.to_string())
@@ -447,7 +557,7 @@ pub async fn export_to_solid(input_q42_path: String, output_dir_path: String) ->
 pub async fn ingest_image(file_path: String) -> Result<serde_json::Value, String> {
     // Phase 9 Mock: Simulate native LLaVA extraction and binding to magnet URI
     let mock_lexicon_id = format!("0x{:08X}", 2654924194_u32);
-    
+
     Ok(serde_json::json!({
         "status": "success",
         "file": file_path,
@@ -464,13 +574,13 @@ pub async fn ingest_image_async(file_path: String, typology: String) -> Result<(
     tokio::spawn(async move {
         let mut image_base64 = String::new();
         if let Ok(bytes) = std::fs::read(&file_path) {
-            use base64::{Engine as _, engine::general_purpose};
+            use base64::{engine::general_purpose, Engine as _};
             image_base64 = general_purpose::STANDARD.encode(&bytes);
         }
 
         let client = reqwest::Client::new();
         let prompt = format!("Describe this image briefly for a {} context.", typology);
-        
+
         let ollama_req = serde_json::json!({
             "model": "llava",
             "prompt": prompt,
@@ -497,7 +607,7 @@ pub async fn ingest_image_async(file_path: String, typology: String) -> Result<(
             // Simulated fallback if ollama is not running
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         }
-        
+
         // Use typology lens to determine the specific facet extraction rules
         let _payload = match typology.as_str() {
             "Meme" => serde_json::json!({
@@ -525,10 +635,10 @@ pub async fn ingest_image_async(file_path: String, typology: String) -> Result<(
                 "magnet_uri": "magnet:?xt=urn:btih:9f2c..."
             }),
         };
-        
+
         /* TODO: remove ingestion-complete */
     });
-    
+
     Ok(())
 }
 
@@ -536,15 +646,15 @@ pub async fn ingest_image_async(file_path: String, typology: String) -> Result<(
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TokenEntry {
-    id:         String,
-    chain:      String,  // "eCash" | "Ethereum" | "Nyx"
-    token_type: String,  // "ALP" | "SLP" | "ERC-20" | "CW-20"
-    contract:   String,  // token ID / contract address
-    symbol:     String,
-    name:       String,
-    balance:    String,
-    decimals:   u8,
-    fiat_usd:   f64,
+    id: String,
+    chain: String,      // "eCash" | "Ethereum" | "Nyx"
+    token_type: String, // "ALP" | "SLP" | "ERC-20" | "CW-20"
+    contract: String,   // token ID / contract address
+    symbol: String,
+    name: String,
+    balance: String,
+    decimals: u8,
+    fiat_usd: f64,
 }
 
 pub fn tokens_file_path(storage_path: &str) -> PathBuf {
@@ -553,13 +663,83 @@ pub fn tokens_file_path(storage_path: &str) -> PathBuf {
 
 pub fn default_tokens() -> Vec<TokenEntry> {
     vec![
-        TokenEntry { id: "alp-lion".into(),       chain: "eCash".into(),    token_type: "ALP".into(),   contract: "alp:0x1A2B3C4D...".into(),                                   symbol: "LION".into(),  name: "Lion Rampant (Heraldry)".into(),  balance: "1.00".into(),       decimals: 8, fiat_usd: 0.0 },
-        TokenEntry { id: "alp-horus".into(),      chain: "eCash".into(),    token_type: "ALP".into(),   contract: "alp:0x9B4C5D6E...".into(),                                   symbol: "HORUS".into(), name: "Eye of Horus (Artifact)".into(),  balance: "50.00".into(),      decimals: 8, fiat_usd: 0.0 },
-        TokenEntry { id: "slp-meme".into(),       chain: "eCash".into(),    token_type: "SLP".into(),   contract: "slp:0x44F1A2B3...".into(),                                   symbol: "MEME".into(),  name: "Early Beta Meme Coin".into(),     balance: "150000.00".into(),  decimals: 2, fiat_usd: 0.0 },
-        TokenEntry { id: "erc20-usdt".into(),     chain: "Ethereum".into(), token_type: "ERC-20".into(), contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7".into(),          symbol: "USDT".into(),  name: "Tether USD".into(),               balance: "250.00".into(),     decimals: 6, fiat_usd: 250.0 },
-        TokenEntry { id: "erc20-usdc".into(),     chain: "Ethereum".into(), token_type: "ERC-20".into(), contract: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48".into(),          symbol: "USDC".into(),  name: "USD Coin".into(),                 balance: "100.00".into(),     decimals: 6, fiat_usd: 100.0 },
-        TokenEntry { id: "erc20-link".into(),     chain: "Ethereum".into(), token_type: "ERC-20".into(), contract: "0x514910771AF9Ca656af840dff83E8264EcF986CA".into(),           symbol: "LINK".into(),  name: "Chainlink Token".into(),          balance: "12.50".into(),     decimals: 18, fiat_usd: 162.5 },
-        TokenEntry { id: "cw20-vnym".into(),      chain: "Nyx".into(),      token_type: "CW-20".into(), contract: "nyx1staking000000000000000000000000000000000000".into(),       symbol: "vNYM".into(),  name: "Vested NYM (Staking)".into(),     balance: "100.00".into(),     decimals: 6, fiat_usd: 2.0 },
+        TokenEntry {
+            id: "alp-lion".into(),
+            chain: "eCash".into(),
+            token_type: "ALP".into(),
+            contract: "alp:0x1A2B3C4D...".into(),
+            symbol: "LION".into(),
+            name: "Lion Rampant (Heraldry)".into(),
+            balance: "1.00".into(),
+            decimals: 8,
+            fiat_usd: 0.0,
+        },
+        TokenEntry {
+            id: "alp-horus".into(),
+            chain: "eCash".into(),
+            token_type: "ALP".into(),
+            contract: "alp:0x9B4C5D6E...".into(),
+            symbol: "HORUS".into(),
+            name: "Eye of Horus (Artifact)".into(),
+            balance: "50.00".into(),
+            decimals: 8,
+            fiat_usd: 0.0,
+        },
+        TokenEntry {
+            id: "slp-meme".into(),
+            chain: "eCash".into(),
+            token_type: "SLP".into(),
+            contract: "slp:0x44F1A2B3...".into(),
+            symbol: "MEME".into(),
+            name: "Early Beta Meme Coin".into(),
+            balance: "150000.00".into(),
+            decimals: 2,
+            fiat_usd: 0.0,
+        },
+        TokenEntry {
+            id: "erc20-usdt".into(),
+            chain: "Ethereum".into(),
+            token_type: "ERC-20".into(),
+            contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7".into(),
+            symbol: "USDT".into(),
+            name: "Tether USD".into(),
+            balance: "250.00".into(),
+            decimals: 6,
+            fiat_usd: 250.0,
+        },
+        TokenEntry {
+            id: "erc20-usdc".into(),
+            chain: "Ethereum".into(),
+            token_type: "ERC-20".into(),
+            contract: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48".into(),
+            symbol: "USDC".into(),
+            name: "USD Coin".into(),
+            balance: "100.00".into(),
+            decimals: 6,
+            fiat_usd: 100.0,
+        },
+        TokenEntry {
+            id: "erc20-link".into(),
+            chain: "Ethereum".into(),
+            token_type: "ERC-20".into(),
+            contract: "0x514910771AF9Ca656af840dff83E8264EcF986CA".into(),
+            symbol: "LINK".into(),
+            name: "Chainlink Token".into(),
+            balance: "12.50".into(),
+            decimals: 18,
+            fiat_usd: 162.5,
+        },
+        TokenEntry {
+            id: "cw20-vnym".into(),
+            chain: "Nyx".into(),
+            token_type: "CW-20".into(),
+            contract: "nyx1staking000000000000000000000000000000000000".into(),
+            symbol: "vNYM".into(),
+            name: "Vested NYM (Staking)".into(),
+            balance: "100.00".into(),
+            decimals: 6,
+            fiat_usd: 2.0,
+        },
     ]
 }
 
@@ -594,13 +774,37 @@ pub fn add_token(
     let storage_path = state.config.lock().unwrap().storage_path.clone();
     let mut tokens = load_tokens_from_disk(&storage_path);
 
-    if tokens.iter().any(|t| t.contract.to_lowercase() == contract.to_lowercase() && t.chain == chain) {
+    if tokens
+        .iter()
+        .any(|t| t.contract.to_lowercase() == contract.to_lowercase() && t.chain == chain)
+    {
         return Err("Token already in wallet".to_string());
     }
 
-    let slug: String = contract.chars().rev().take(8).collect::<String>().chars().rev().collect();
-    let id = format!("{}-{}", chain.to_lowercase().replace(' ', "-"), slug.to_lowercase());
-    let entry = TokenEntry { id, chain, token_type, contract, symbol, name, balance: "0.00".into(), decimals, fiat_usd: 0.0 };
+    let slug: String = contract
+        .chars()
+        .rev()
+        .take(8)
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect();
+    let id = format!(
+        "{}-{}",
+        chain.to_lowercase().replace(' ', "-"),
+        slug.to_lowercase()
+    );
+    let entry = TokenEntry {
+        id,
+        chain,
+        token_type,
+        contract,
+        symbol,
+        name,
+        balance: "0.00".into(),
+        decimals,
+        fiat_usd: 0.0,
+    };
     tokens.push(entry.clone());
     save_tokens_to_disk(&storage_path, &tokens)?;
     Ok(entry)
@@ -617,7 +821,8 @@ pub fn remove_token(id: String) -> Result<(), String> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub fn read_identity() -> Option<serde_json::Value> {
-    std::fs::read_to_string(identity_file_path()).ok()
+    std::fs::read_to_string(identity_file_path())
+        .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
 }
 
@@ -639,11 +844,11 @@ pub struct CoinBalance {
 pub struct TxRecord {
     txid: String,
     ticker: String,
-    direction: String,    // "in" | "out"
+    direction: String, // "in" | "out"
     amount: String,
     label: String,
     timestamp: String,
-    status: String,       // "confirmed" | "pending"
+    status: String, // "confirmed" | "pending"
     confirmations: u32,
     fee: String,
     counterparty: String,
@@ -659,29 +864,197 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
             .to_string()
     };
     vec![
-        CoinBalance { coin: "eCash".into(),    ticker: "XEC".into(), address: addr("ecash_xec",  "ecash:q… (generate identity first)"), balance: 1_250_000.0, balance_display: "1,250,000.00".into(), fiat_usd: 245.00,    price_usd: 0.000196, change_24h:  3.2, network: "eCash".into(),     status: "online".into() },
-        CoinBalance { coin: "Bitcoin".into(),   ticker: "BTC".into(), address: "bc1q… (generate identity first)".into(),                  balance: 0.00450000, balance_display: "0.00450000".into(),   fiat_usd: 441.00,    price_usd: 98_000.0, change_24h: -1.4, network: "Bitcoin".into(),   status: "online".into() },
-        CoinBalance { coin: "Monero".into(),    ticker: "XMR".into(), address: "4… (generate identity first)".into(),                     balance: 4.5,        balance_display: "4.50000000".into(),   fiat_usd: 720.00,    price_usd: 160.0,    change_24h:  0.8, network: "Monero".into(),    status: "online".into() },
-        CoinBalance { coin: "Nym".into(),       ticker: "NYM".into(), address: addr("nym_mixnet", "n1… (generate identity first)"),        balance: 2_400.0,    balance_display: "2,400.00".into(),     fiat_usd: 48.00,     price_usd: 0.02,     change_24h: -2.1, network: "Nyx Chain".into(), status: "online".into() },
-        CoinBalance { coin: "Ethereum".into(),  ticker: "ETH".into(), address: addr("ethereum",   "0x… (generate identity first)"),        balance: 1.42,       balance_display: "1.42000000".into(),   fiat_usd: 4_260.00,  price_usd: 3_000.0,  change_24h:  1.9, network: "Ethereum".into(),  status: "online".into() },
+        CoinBalance {
+            coin: "eCash".into(),
+            ticker: "XEC".into(),
+            address: addr("ecash_xec", "ecash:q… (generate identity first)"),
+            balance: 1_250_000.0,
+            balance_display: "1,250,000.00".into(),
+            fiat_usd: 245.00,
+            price_usd: 0.000196,
+            change_24h: 3.2,
+            network: "eCash".into(),
+            status: "online".into(),
+        },
+        CoinBalance {
+            coin: "Bitcoin".into(),
+            ticker: "BTC".into(),
+            address: "bc1q… (generate identity first)".into(),
+            balance: 0.00450000,
+            balance_display: "0.00450000".into(),
+            fiat_usd: 441.00,
+            price_usd: 98_000.0,
+            change_24h: -1.4,
+            network: "Bitcoin".into(),
+            status: "online".into(),
+        },
+        CoinBalance {
+            coin: "Monero".into(),
+            ticker: "XMR".into(),
+            address: "4… (generate identity first)".into(),
+            balance: 4.5,
+            balance_display: "4.50000000".into(),
+            fiat_usd: 720.00,
+            price_usd: 160.0,
+            change_24h: 0.8,
+            network: "Monero".into(),
+            status: "online".into(),
+        },
+        CoinBalance {
+            coin: "Nym".into(),
+            ticker: "NYM".into(),
+            address: addr("nym_mixnet", "n1… (generate identity first)"),
+            balance: 2_400.0,
+            balance_display: "2,400.00".into(),
+            fiat_usd: 48.00,
+            price_usd: 0.02,
+            change_24h: -2.1,
+            network: "Nyx Chain".into(),
+            status: "online".into(),
+        },
+        CoinBalance {
+            coin: "Ethereum".into(),
+            ticker: "ETH".into(),
+            address: addr("ethereum", "0x… (generate identity first)"),
+            balance: 1.42,
+            balance_display: "1.42000000".into(),
+            fiat_usd: 4_260.00,
+            price_usd: 3_000.0,
+            change_24h: 1.9,
+            network: "Ethereum".into(),
+            status: "online".into(),
+        },
     ]
 }
 
 pub fn get_transaction_history(ticker: String) -> Vec<TxRecord> {
     let all = vec![
-        TxRecord { txid: "7a9b4f2e1c3d…4c1f".into(), ticker: "XEC".into(), direction: "out".into(), amount: "0.0001".into(),      label: "Mint ALP Token".into(),          timestamp: "2026-06-05 14:32".into(), status: "confirmed".into(), confirmations: 142,  fee: "0.00001 XEC".into(),  counterparty: "eCash Burn Address".into() },
-        TxRecord { txid: "99a1bcd4ef56…bb2c".into(), ticker: "NYM".into(), direction: "out".into(), amount: "100.00".into(),      label: "Mixnet Staking".into(),          timestamp: "2026-06-04 09:12".into(), status: "confirmed".into(), confirmations: 320,  fee: "0.01 NYM".into(),     counterparty: "mixGateway1".into() },
-        TxRecord { txid: "4cc288ab12dc…11a9".into(), ticker: "XEC".into(), direction: "in".into(),  amount: "50,000.00".into(),   label: "Received XEC".into(),            timestamp: "2026-06-03 17:45".into(), status: "confirmed".into(), confirmations: 580,  fee: "".into(),             counterparty: "ecash:qsender7x…".into() },
-        TxRecord { txid: "b8f1234abc99…de45".into(), ticker: "ETH".into(), direction: "out".into(), amount: "0.05".into(),        label: "Smart Contract Interaction".into(), timestamp: "2026-06-02 11:20".into(), status: "confirmed".into(), confirmations: 1280, fee: "0.002 ETH".into(),    counterparty: "0xContract4f2…".into() },
-        TxRecord { txid: "c2d4567ef890…ab12".into(), ticker: "BTC".into(), direction: "in".into(),  amount: "0.00100000".into(),  label: "Received BTC".into(),            timestamp: "2026-06-01 08:55".into(), status: "confirmed".into(), confirmations: 2100, fee: "".into(),             counterparty: "bc1qsender9a…".into() },
-        TxRecord { txid: "e1f23456789a…cd34".into(), ticker: "XEC".into(), direction: "out".into(), amount: "1,000.00".into(),    label: "ALP Token Transfer".into(),      timestamp: "2026-05-31 16:30".into(), status: "confirmed".into(), confirmations: 3400, fee: "0.00001 XEC".into(),  counterparty: "ecash:qrecipient3b…".into() },
-        TxRecord { txid: "a9b0c1d2e3f4…5678".into(), ticker: "XMR".into(), direction: "in".into(),  amount: "2.00000000".into(),  label: "Received XMR".into(),            timestamp: "2026-05-30 14:10".into(), status: "confirmed".into(), confirmations: 4800, fee: "".into(),             counterparty: "4xmrSender8b…".into() },
-        TxRecord { txid: "f8e7d6c5b4a3…2109".into(), ticker: "NYM".into(), direction: "in".into(),  amount: "500.00".into(),      label: "Staking Reward".into(),          timestamp: "2026-05-29 10:00".into(), status: "confirmed".into(), confirmations: 5200, fee: "".into(),             counterparty: "Nym Gateway Reward".into() },
-        TxRecord { txid: "1a2b3c4d5e6f…7890".into(), ticker: "XEC".into(), direction: "in".into(),  amount: "250,000.00".into(),  label: "Initial Funding".into(),         timestamp: "2026-05-25 08:00".into(), status: "confirmed".into(), confirmations: 9100, fee: "".into(),             counterparty: "ecash:qfunding2a…".into() },
-        TxRecord { txid: "0f1e2d3c4b5a…6789".into(), ticker: "ETH".into(), direction: "in".into(),  amount: "1.42000000".into(),  label: "ETH Transfer In".into(),         timestamp: "2026-05-20 12:00".into(), status: "confirmed".into(), confirmations: 12400, fee: "".into(),            counterparty: "0xSender7c4…".into() },
+        TxRecord {
+            txid: "7a9b4f2e1c3d…4c1f".into(),
+            ticker: "XEC".into(),
+            direction: "out".into(),
+            amount: "0.0001".into(),
+            label: "Mint ALP Token".into(),
+            timestamp: "2026-06-05 14:32".into(),
+            status: "confirmed".into(),
+            confirmations: 142,
+            fee: "0.00001 XEC".into(),
+            counterparty: "eCash Burn Address".into(),
+        },
+        TxRecord {
+            txid: "99a1bcd4ef56…bb2c".into(),
+            ticker: "NYM".into(),
+            direction: "out".into(),
+            amount: "100.00".into(),
+            label: "Mixnet Staking".into(),
+            timestamp: "2026-06-04 09:12".into(),
+            status: "confirmed".into(),
+            confirmations: 320,
+            fee: "0.01 NYM".into(),
+            counterparty: "mixGateway1".into(),
+        },
+        TxRecord {
+            txid: "4cc288ab12dc…11a9".into(),
+            ticker: "XEC".into(),
+            direction: "in".into(),
+            amount: "50,000.00".into(),
+            label: "Received XEC".into(),
+            timestamp: "2026-06-03 17:45".into(),
+            status: "confirmed".into(),
+            confirmations: 580,
+            fee: "".into(),
+            counterparty: "ecash:qsender7x…".into(),
+        },
+        TxRecord {
+            txid: "b8f1234abc99…de45".into(),
+            ticker: "ETH".into(),
+            direction: "out".into(),
+            amount: "0.05".into(),
+            label: "Smart Contract Interaction".into(),
+            timestamp: "2026-06-02 11:20".into(),
+            status: "confirmed".into(),
+            confirmations: 1280,
+            fee: "0.002 ETH".into(),
+            counterparty: "0xContract4f2…".into(),
+        },
+        TxRecord {
+            txid: "c2d4567ef890…ab12".into(),
+            ticker: "BTC".into(),
+            direction: "in".into(),
+            amount: "0.00100000".into(),
+            label: "Received BTC".into(),
+            timestamp: "2026-06-01 08:55".into(),
+            status: "confirmed".into(),
+            confirmations: 2100,
+            fee: "".into(),
+            counterparty: "bc1qsender9a…".into(),
+        },
+        TxRecord {
+            txid: "e1f23456789a…cd34".into(),
+            ticker: "XEC".into(),
+            direction: "out".into(),
+            amount: "1,000.00".into(),
+            label: "ALP Token Transfer".into(),
+            timestamp: "2026-05-31 16:30".into(),
+            status: "confirmed".into(),
+            confirmations: 3400,
+            fee: "0.00001 XEC".into(),
+            counterparty: "ecash:qrecipient3b…".into(),
+        },
+        TxRecord {
+            txid: "a9b0c1d2e3f4…5678".into(),
+            ticker: "XMR".into(),
+            direction: "in".into(),
+            amount: "2.00000000".into(),
+            label: "Received XMR".into(),
+            timestamp: "2026-05-30 14:10".into(),
+            status: "confirmed".into(),
+            confirmations: 4800,
+            fee: "".into(),
+            counterparty: "4xmrSender8b…".into(),
+        },
+        TxRecord {
+            txid: "f8e7d6c5b4a3…2109".into(),
+            ticker: "NYM".into(),
+            direction: "in".into(),
+            amount: "500.00".into(),
+            label: "Staking Reward".into(),
+            timestamp: "2026-05-29 10:00".into(),
+            status: "confirmed".into(),
+            confirmations: 5200,
+            fee: "".into(),
+            counterparty: "Nym Gateway Reward".into(),
+        },
+        TxRecord {
+            txid: "1a2b3c4d5e6f…7890".into(),
+            ticker: "XEC".into(),
+            direction: "in".into(),
+            amount: "250,000.00".into(),
+            label: "Initial Funding".into(),
+            timestamp: "2026-05-25 08:00".into(),
+            status: "confirmed".into(),
+            confirmations: 9100,
+            fee: "".into(),
+            counterparty: "ecash:qfunding2a…".into(),
+        },
+        TxRecord {
+            txid: "0f1e2d3c4b5a…6789".into(),
+            ticker: "ETH".into(),
+            direction: "in".into(),
+            amount: "1.42000000".into(),
+            label: "ETH Transfer In".into(),
+            timestamp: "2026-05-20 12:00".into(),
+            status: "confirmed".into(),
+            confirmations: 12400,
+            fee: "".into(),
+            counterparty: "0xSender7c4…".into(),
+        },
     ];
-    if ticker.is_empty() || ticker == "ALL" { all }
-    else { all.into_iter().filter(|tx| tx.ticker == ticker).collect() }
+    if ticker.is_empty() || ticker == "ALL" {
+        all
+    } else {
+        all.into_iter().filter(|tx| tx.ticker == ticker).collect()
+    }
 }
 
 pub fn is_first_run() -> bool {
@@ -706,7 +1079,7 @@ pub fn load_identity() -> Result<Option<serde_json::Value>, String> {
     Ok(Some(val))
 }
 
-use bip39::{Mnemonic, Language};
+use bip39::{Language, Mnemonic};
 
 pub fn to_hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
@@ -714,7 +1087,8 @@ pub fn to_hex(bytes: &[u8]) -> String {
 
 pub async fn generate_bip39_seed() -> Result<String, String> {
     // Generate a secure, randomized 12-word seed phrase natively
-    let mnemonic = Mnemonic::generate_in(Language::English, 12).map_err(|_| "Failed to generate".to_string())?;
+    let mnemonic = Mnemonic::generate_in(Language::English, 12)
+        .map_err(|_| "Failed to generate".to_string())?;
     let words: Vec<&str> = mnemonic.words().collect();
     Ok(words.join(" "))
 }
@@ -724,16 +1098,16 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
         Ok(m) => m,
         Err(_) => return Err("Invalid 12-word seed phrase.".to_string()),
     };
-    
+
     // Deterministically generate keys based on the secure seed
     let seed_bytes = mnemonic.to_seed("");
-    
+
     // Mock derivation by hex-encoding slices of the master seed
     let hex_seed = to_hex(&seed_bytes[0..16]);
     let xec_hex = to_hex(&seed_bytes[16..24]);
     let eth_hex = to_hex(&seed_bytes[24..32]);
     let nym_hex = to_hex(&seed_bytes[32..40]);
-    
+
     Ok(serde_json::json!({
         "qualia_root": format!("did:qualia:0x{}", hex_seed),
         "nym_mixnet": format!("n1{}...", nym_hex),
@@ -785,7 +1159,11 @@ pub async fn fetch_wallet_portfolio() -> Result<serde_json::Value, String> {
     ]))
 }
 
-pub async fn import_external_seed(network: String, seed: String, _label: String) -> Result<String, String> {
+pub async fn import_external_seed(
+    network: String,
+    seed: String,
+    _label: String,
+) -> Result<String, String> {
     // Phase 14 Mock: Multi-Seed Account Import
     // Validate seed format
     if seed.split_whitespace().count() < 12 {
@@ -820,7 +1198,6 @@ pub async fn toggle_nym_relay() -> Result<bool, String> {
 
     if new_state {
         let active_clone = active.clone();
-        
 
         // Spawn asynchronous background daemon for packet routing
         tokio::spawn(async move {
@@ -864,7 +1241,6 @@ pub async fn toggle_stark_prover() -> Result<bool, String> {
     if new_state {
         let active_clone = active.clone();
         let solar_clone = state.simulated_solar_watts.clone();
-        
 
         // Spawn asynchronous background daemon for out-of-core proof chunking
         tokio::spawn(async move {
@@ -924,7 +1300,11 @@ pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
             let path = entry.path();
             if path.extension().map(|e| e == "gguf").unwrap_or(false) {
                 models.push(llm_offload::ModelInfo {
-                    name: path.file_name().unwrap_or_default().to_string_lossy().to_string(),
+                    name: path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string(),
                     is_active: false,
                     avatar_type: "local".to_string(),
                 });
@@ -947,10 +1327,13 @@ pub async fn run_agent_inference(
 
 // ── Active model ─────────────────────────────────────────────────────────────
 
-pub fn active_model_path() -> PathBuf { app_meta_dir().join("active_model.txt") }
+pub fn active_model_path() -> PathBuf {
+    app_meta_dir().join("active_model.txt")
+}
 
 pub fn load_active_model_from_disk() -> Option<String> {
-    std::fs::read_to_string(active_model_path()).ok()
+    std::fs::read_to_string(active_model_path())
+        .ok()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
 }
@@ -960,9 +1343,7 @@ pub fn get_active_model() -> Option<String> {
     state.active_model.lock().unwrap().clone()
 }
 
-pub fn set_active_model(
-    model_name: String,
-) -> Result<(), String> {
+pub fn set_active_model(model_name: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let meta = app_meta_dir();
     std::fs::create_dir_all(&meta).map_err(|e| e.to_string())?;
@@ -976,21 +1357,31 @@ pub fn set_active_model(
 
 pub fn get_active_downloads() -> Vec<ProgressPayload> {
     let state = crate::state::APP_STATE.get().unwrap();
-    state.active_downloads.lock().unwrap().values().cloned().collect()
+    state
+        .active_downloads
+        .lock()
+        .unwrap()
+        .values()
+        .cloned()
+        .collect()
 }
 
 // ── Remote manifest fetch ─────────────────────────────────────────────────────
 
 pub async fn fetch_remote_manifest(url: String) -> Result<String, String> {
-    reqwest::get(&url).await
+    reqwest::get(&url)
+        .await
         .map_err(|e| format!("Network error: {}", e))?
-        .text().await
+        .text()
+        .await
         .map_err(|e| format!("Response error: {}", e))
 }
 
 // ── Imported accounts persistence ────────────────────────────────────────────
 
-pub fn imported_accounts_path() -> PathBuf { app_meta_dir().join("imported_accounts.json") }
+pub fn imported_accounts_path() -> PathBuf {
+    app_meta_dir().join("imported_accounts.json")
+}
 
 pub fn load_imported_accounts() -> Result<serde_json::Value, String> {
     let path = imported_accounts_path();
@@ -1008,39 +1399,795 @@ pub fn save_imported_accounts(accounts: serde_json::Value) -> Result<(), String>
     std::fs::write(imported_accounts_path(), json).map_err(|e| e.to_string())
 }
 
-// ── App launcher ──────────────────────────────────────────────────────────────
+// ── Daemon port + app session tokens ──────────────────────────────────────────
 
-/// Returns the URL that should be opened in the system browser for an app.
-/// Looks up by directory name inside `{storage_path}/Apps/` — no in-memory
-/// registry needed, so previously installed apps survive restarts.
-pub fn launch_installed_app(app_name: String) -> Result<String, String> {
+static ACTIVE_DAEMON_PORT: AtomicU16 = AtomicU16::new(0);
+
+/// Records the loopback port chosen when the graph daemon last started.
+pub fn set_active_daemon_port(port: u16) {
+    ACTIVE_DAEMON_PORT.store(port, Ordering::SeqCst);
+}
+
+/// Returns the active daemon port when known, otherwise the configured default.
+pub fn get_active_daemon_port() -> u16 {
+    let active = ACTIVE_DAEMON_PORT.load(Ordering::SeqCst);
+    if active != 0 {
+        return active;
+    }
+    let state = crate::state::APP_STATE.get().unwrap();
+    state.config.lock().unwrap().daemon_port
+}
+
+/// Issues a signed semantic app token scoped to the installed app's manifest shapes.
+pub fn build_anatomy_graph_context_json(
+    qapp_name: String,
+    user_prompt: String,
+    agent_reply: String,
+) -> Result<String, String> {
+    crate::anatomy_context::build_anatomy_graph_context_json(qapp_name, user_prompt, agent_reply)
+}
+
+pub fn build_anatomy_graph_context_json_with_dicom(
+    qapp_name: String,
+    user_prompt: String,
+    agent_reply: String,
+    dicom_file_path: Option<String>,
+) -> Result<String, String> {
+    crate::anatomy_context::build_anatomy_graph_context_json_with_dicom(
+        qapp_name,
+        user_prompt,
+        agent_reply,
+        dicom_file_path,
+    )
+}
+
+pub fn parse_dicom_metadata_json(file_path: String) -> Result<String, String> {
+    crate::anatomy_context::parse_dicom_metadata_json(file_path)
+}
+
+pub fn build_dicom_overlay_spec_json(file_path: String) -> Result<String, String> {
+    crate::anatomy_context::build_dicom_overlay_spec_json(file_path)
+}
+
+pub fn submit_dicom_ingest(file_path: String, patient_did_hash: u64) -> Result<u64, String> {
+    crate::qapp_api::submit_dicom_ingest(file_path, patient_did_hash)
+}
+
+pub fn dicom_ingest_status(job_id: u64) -> u8 {
+    crate::qapp_api::dicom_ingest_status(job_id)
+}
+
+pub fn execute_dicom_volume_query(
+    patient_did_hash: u64,
+    series_hash: u64,
+) -> Result<Vec<u8>, String> {
+    crate::qapp_api::execute_dicom_volume_query(patient_did_hash, series_hash)
+}
+
+pub fn issue_qapp_session_token(qapp_name: &str) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let data_dir = state.config.lock().unwrap().storage_path.clone();
-    let app_dir = std::path::PathBuf::from(&data_dir).join("Apps").join(&app_name);
-
-    if !app_dir.exists() {
-        return Err(format!("App directory not found: {}", app_name));
+    let qapp_dir = qapps_dir(&data_dir).join(qapp_name);
+    if !qapp_dir.exists() {
+        return Err(format!("Qapp directory not found: {qapp_name}"));
     }
 
-    // Check for a dev-port override: if app_dir/app.json specifies a port, use localhost
-    let manifest_path = app_dir.join("app.json");
-    if manifest_path.exists() {
-        if let Ok(content) = std::fs::read_to_string(&manifest_path) {
-            if let Ok(manifest) = serde_json::from_str::<app_registry::AppManifest>(&content) {
-                if let Some(port) = manifest.dev_port {
-                    return Ok(format!("http://localhost:{}", port));
+    let manifest = load_qapp_package_from_dir(&qapp_dir)?;
+    let qapp_did = format!(
+        "did:qualia:qapp:{}",
+        manifest.name.to_lowercase().replace(' ', "-")
+    );
+    let vault = state.key_vault.lock().unwrap();
+    vault.issue_qapp_token(&qapp_did, manifest.required_shapes.clone())
+}
+
+// ── Qapp launcher ─────────────────────────────────────────────────────────────
+
+/// Load `qapp.json` for an installed qapp.
+pub fn load_installed_qapp_package(qapp_name: &str) -> Result<qapp_registry::QappPackageManifest, String> {
+    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let data_dir = state.config.lock().unwrap().storage_path.clone();
+    let qapp_dir = qapps_dir(&data_dir).join(qapp_name);
+    load_qapp_package_from_dir(&qapp_dir)
+}
+
+pub(crate) fn load_qapp_package_from_dir(qapp_dir: &Path) -> Result<qapp_registry::QappPackageManifest, String> {
+    let manifest_path = resolve_package_manifest_path(qapp_dir)
+        .ok_or_else(|| format!("qapp.json not found in {}", qapp_dir.display()))?;
+    let content = std::fs::read_to_string(&manifest_path).map_err(|e| e.to_string())?;
+    serde_json::from_str::<qapp_registry::QappPackageManifest>(&content)
+        .map_err(|e| format!("Invalid qapp package manifest: {e}"))
+}
+
+fn resolve_entrypoint_path(
+    manifest: &qapp_registry::QappPackageManifest,
+    entrypoint: Option<&str>,
+) -> String {
+    let named_entrypoints = manifest.x_qualia.as_ref().map(|ext| &ext.entrypoints);
+
+    match entrypoint {
+        Some(requested) if !requested.trim().is_empty() => named_entrypoints
+            .and_then(|map| map.get(requested))
+            .cloned()
+            .unwrap_or_else(|| requested.to_string()),
+        _ => named_entrypoints
+            .and_then(|map| map.get("web"))
+            .cloned()
+            .unwrap_or_else(|| "index.html".to_string()),
+    }
+}
+
+fn split_asset_and_hash(relative_path: &str) -> (String, Option<String>) {
+    let mut parts = relative_path.splitn(2, '#');
+    let asset = parts.next().unwrap_or("").trim().trim_start_matches('/');
+    let hash = parts
+        .next()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let asset_path = if asset.is_empty() {
+        "index.html".to_string()
+    } else {
+        asset.to_string()
+    };
+    (asset_path, hash.map(str::to_string))
+}
+
+fn encode_query_component(input: &str) -> String {
+    let mut encoded = String::with_capacity(input.len());
+    for byte in input.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
+            encoded.push(char::from(byte));
+        } else {
+            encoded.push('%');
+            encoded.push_str(&format!("{:02X}", byte));
+        }
+    }
+    encoded
+}
+
+fn append_launch_context(
+    mut base_url: String,
+    source: Option<String>,
+    surface: Option<String>,
+    payload_json: Option<String>,
+    qapp_name: Option<&str>,
+) -> String {
+    let mut params = Vec::new();
+
+    if let Some(source) = source.filter(|value| !value.trim().is_empty()) {
+        params.push(format!(
+            "qualia_source={}",
+            encode_query_component(source.trim())
+        ));
+    }
+
+    if let Some(surface) = surface.filter(|value| !value.trim().is_empty()) {
+        params.push(format!(
+            "qualia_surface={}",
+            encode_query_component(surface.trim())
+        ));
+    }
+
+    if let Some(payload_json) = payload_json.filter(|value| !value.trim().is_empty()) {
+        params.push(format!(
+            "qualia_payload={}",
+            encode_query_component(payload_json.trim())
+        ));
+    }
+
+    if let Some(qapp_name) = qapp_name.filter(|value| !value.trim().is_empty()) {
+        if let Ok(token) = issue_qapp_session_token(qapp_name.trim()) {
+            params.push(format!(
+                "qualia_token={}",
+                encode_query_component(&token)
+            ));
+        }
+        let port = get_active_daemon_port();
+        if port > 0 {
+            params.push(format!("qualia_daemon_port={port}"));
+        }
+        params.push(format!(
+            "qualia_qapp={}",
+            encode_query_component(qapp_name.trim())
+        ));
+    }
+
+    if !params.is_empty() {
+        base_url.push(if base_url.contains('?') { '&' } else { '?' });
+        base_url.push_str(&params.join("&"));
+    }
+
+    base_url
+}
+
+fn append_hash_fragment(mut base_url: String, hash_fragment: Option<String>) -> String {
+    if let Some(hash_fragment) = hash_fragment {
+        base_url.push('#');
+        base_url.push_str(&hash_fragment);
+    }
+    base_url
+}
+
+#[derive(Deserialize)]
+struct OntologyCatalogFile {
+    #[serde(default)]
+    ontologies: Vec<CatalogOntologyEntry>,
+}
+
+#[derive(Deserialize)]
+struct CatalogOntologyEntry {
+    id: String,
+}
+
+#[derive(Deserialize)]
+struct LlmCatalogFile {
+    #[serde(default)]
+    llms: Vec<CatalogLlmEntry>,
+}
+
+#[derive(Deserialize)]
+struct CatalogLlmEntry {
+    id: String,
+    #[serde(default)]
+    download: Option<CatalogDownloadEntry>,
+}
+
+#[derive(Deserialize)]
+struct CatalogDownloadEntry {
+    #[serde(default)]
+    file: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct SparqlCatalogFile {
+    #[serde(default)]
+    sparql_endpoints: Vec<CatalogSparqlEntry>,
+}
+
+#[derive(Deserialize)]
+struct CatalogSparqlEntry {
+    id: String,
+    endpoint: String,
+    #[serde(default)]
+    federation_supported: Option<bool>,
+}
+
+#[derive(Serialize)]
+struct SparqlEndpointProbe {
+    target: String,
+    resolved_endpoint: String,
+    reachable: bool,
+    status_code: Option<u16>,
+    detail: String,
+    federation_supported: Option<bool>,
+}
+
+#[derive(Serialize)]
+struct AppRequirementCheck {
+    kind: String,
+    id: String,
+    required: bool,
+    status: String,
+    detail: String,
+}
+
+#[derive(Serialize)]
+struct QappReadinessReport {
+    qapp_name: String,
+    ready: bool,
+    summary: String,
+    blocking_issues: usize,
+    optional_warnings: usize,
+    checks: Vec<AppRequirementCheck>,
+}
+
+fn workspace_resources_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("resources")
+}
+
+fn load_yaml_file<T: DeserializeOwned>(path: &Path) -> Option<T> {
+    let content = std::fs::read_to_string(path).ok()?;
+    serde_yaml::from_str(&content).ok()
+}
+
+fn normalize_resource_key(value: &str) -> String {
+    value
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .map(|c| c.to_ascii_lowercase())
+        .collect()
+}
+
+fn directory_contains_requirement(dir: &Path, requirement: &str) -> bool {
+    let target = normalize_resource_key(requirement);
+    std::fs::read_dir(dir)
+        .ok()
+        .into_iter()
+        .flat_map(|entries| entries.filter_map(Result::ok))
+        .any(|entry| {
+            let file_name = entry.file_name();
+            let candidate = normalize_resource_key(&file_name.to_string_lossy());
+            candidate.contains(&target) || target.contains(&candidate)
+        })
+}
+
+fn collect_matching_files(dir: &Path, requirement: &str) -> Vec<PathBuf> {
+    let target = normalize_resource_key(requirement);
+    std::fs::read_dir(dir)
+        .ok()
+        .into_iter()
+        .flat_map(|entries| entries.filter_map(Result::ok))
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file())
+        .filter(|path| {
+            let file_name = path
+                .file_name()
+                .map(|name| name.to_string_lossy().to_string())
+                .unwrap_or_default();
+            let candidate = normalize_resource_key(&file_name);
+            candidate.contains(&target) || target.contains(&candidate)
+        })
+        .collect()
+}
+
+fn resolve_sparql_endpoint_from_catalog(
+    endpoint_or_id: &str,
+) -> Result<(String, Option<bool>), String> {
+    if endpoint_or_id.starts_with("http://") || endpoint_or_id.starts_with("https://") {
+        return Ok((endpoint_or_id.to_string(), None));
+    }
+
+    let resources_dir = workspace_resources_dir();
+    let sparql_catalog =
+        load_yaml_file::<SparqlCatalogFile>(&resources_dir.join("sparql_endpoints.yaml"))
+            .unwrap_or(SparqlCatalogFile {
+                sparql_endpoints: Vec::new(),
+            });
+
+    sparql_catalog
+        .sparql_endpoints
+        .into_iter()
+        .find(|entry| {
+            entry.id == endpoint_or_id
+                || normalize_resource_key(&entry.id) == normalize_resource_key(endpoint_or_id)
+        })
+        .map(|entry| (entry.endpoint, entry.federation_supported))
+        .ok_or_else(|| format!("Unknown SPARQL endpoint id: {}", endpoint_or_id))
+}
+
+fn evaluate_capability_requirement(
+    requirement: &qapp_registry::QappLaunchRequirement,
+    daemon_running: bool,
+) -> AppRequirementCheck {
+    let (status, detail) = match requirement.capability.as_str() {
+        "qualia.localDaemon.health" | "qualia.localDaemon.query" => {
+            if daemon_running {
+                ("ready", "Local Qualia daemon is running.")
+            } else {
+                ("missing", "Local Qualia daemon is not currently running.")
+            }
+        }
+        "qualia.wasm.execute_ntriples_query"
+        | "qualia.wasm.compile_query_to_json"
+        | "qualia.wasm.validate_shacl_constraint" => (
+            "declared",
+            "WASM capability is manifest-declared but not actively verified by the desktop host.",
+        ),
+        "qualia.flutter.chatRepresentationLaunch" => (
+            "ready",
+            "Flutter desktop host can launch an app with chat representation context.",
+        ),
+        _ => (
+            "declared",
+            "Capability is declared in the manifest but not yet actively checked by the desktop host.",
+        ),
+    };
+
+    AppRequirementCheck {
+        kind: "capability".to_string(),
+        id: requirement.capability.clone(),
+        required: requirement.required,
+        status: status.to_string(),
+        detail: detail.to_string(),
+    }
+}
+
+pub fn inspect_installed_qapp_readiness(qapp_name: String) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let data_dir = state.config.lock().unwrap().storage_path.clone();
+    let qapp_dir = qapps_dir(&data_dir).join(&qapp_name);
+    if !qapp_dir.exists() {
+        return Err(format!("Qapp directory not found: {qapp_name}"));
+    }
+
+    let manifest = load_qapp_package_from_dir(&qapp_dir)?;
+    let extension = manifest.x_qualia.clone().unwrap_or_default();
+    let daemon_running = *state.daemon_running.lock().unwrap();
+
+    let models_dir = PathBuf::from(&data_dir).join("Models");
+    let index_dir = PathBuf::from(&data_dir).join("Index");
+    let library_dir = PathBuf::from(&data_dir).join("SemanticLibrary");
+
+    let resources_dir = workspace_resources_dir();
+    let ontology_catalog = load_yaml_file::<OntologyCatalogFile>(
+        &resources_dir.join("ontologies.yaml"),
+    )
+    .unwrap_or(OntologyCatalogFile {
+        ontologies: Vec::new(),
+    });
+    let llm_catalog = load_yaml_file::<LlmCatalogFile>(&resources_dir.join("llms.yaml"))
+        .unwrap_or(LlmCatalogFile { llms: Vec::new() });
+    let sparql_catalog =
+        load_yaml_file::<SparqlCatalogFile>(&resources_dir.join("sparql_endpoints.yaml"))
+            .unwrap_or(SparqlCatalogFile {
+                sparql_endpoints: Vec::new(),
+            });
+
+    let mut checks = Vec::new();
+
+    for requirement in &extension.requires {
+        checks.push(evaluate_capability_requirement(requirement, daemon_running));
+    }
+
+    if extension.local_daemon.is_some() {
+        checks.push(AppRequirementCheck {
+            kind: "daemon".to_string(),
+            id: "local-daemon".to_string(),
+            required: false,
+            status: if daemon_running { "ready" } else { "inactive" }.to_string(),
+            detail: if daemon_running {
+                "Local Qualia daemon is available for app integrations.".to_string()
+            } else {
+                "App declares local daemon integration, but the daemon is not running.".to_string()
+            },
+        });
+    }
+
+    for ontology in &extension.required_ontologies {
+        let in_catalog = ontology_catalog.ontologies.iter().any(|entry| {
+            entry.id == *ontology
+                || normalize_resource_key(&entry.id) == normalize_resource_key(ontology)
+        });
+        let installed = directory_contains_requirement(&index_dir, ontology)
+            || directory_contains_requirement(&library_dir, ontology);
+        let status = if installed { "ready" } else { "missing" };
+        let detail = if installed {
+            format!(
+                "Ontology `{}` appears to be present in local Qualia storage.",
+                ontology
+            )
+        } else if in_catalog {
+            format!(
+                "Ontology `{}` is known in the bundled resource catalog but is not installed locally.",
+                ontology
+            )
+        } else {
+            format!(
+                "Ontology `{}` is required by the app but is not installed and was not found in the bundled catalog.",
+                ontology
+            )
+        };
+        checks.push(AppRequirementCheck {
+            kind: "ontology".to_string(),
+            id: ontology.clone(),
+            required: true,
+            status: status.to_string(),
+            detail,
+        });
+    }
+
+    for model in &extension.required_models {
+        let in_catalog = llm_catalog.llms.iter().any(|entry| {
+            entry.id == *model
+                || normalize_resource_key(&entry.id) == normalize_resource_key(model)
+                || entry
+                    .download
+                    .as_ref()
+                    .and_then(|download| download.file.as_ref())
+                    .map(|file| normalize_resource_key(file) == normalize_resource_key(model))
+                    .unwrap_or(false)
+        });
+        let installed = directory_contains_requirement(&models_dir, model);
+        let status = if installed { "ready" } else { "missing" };
+        let detail = if installed {
+            format!(
+                "Model `{}` appears to be present in the local Models directory.",
+                model
+            )
+        } else if in_catalog {
+            format!(
+                "Model `{}` is known in the bundled model catalog but is not downloaded locally.",
+                model
+            )
+        } else {
+            format!(
+                "Model `{}` is required by the app but is not present and was not found in the bundled model catalog.",
+                model
+            )
+        };
+        checks.push(AppRequirementCheck {
+            kind: "model".to_string(),
+            id: model.clone(),
+            required: true,
+            status: status.to_string(),
+            detail,
+        });
+    }
+
+    for endpoint in &extension.optional_remote_endpoints {
+        let match_entry = sparql_catalog.sparql_endpoints.iter().find(|entry| {
+            entry.id == *endpoint
+                || entry.endpoint == *endpoint
+                || normalize_resource_key(&entry.id) == normalize_resource_key(endpoint)
+        });
+        let (status, detail) = if let Some(entry) = match_entry {
+            let federation_note = match entry.federation_supported {
+                Some(true) => " Federation is advertised as supported.",
+                Some(false) => " Federation is not advertised as supported.",
+                None => "",
+            };
+            (
+                "cataloged",
+                format!(
+                    "Endpoint `{}` is known to the bundled SPARQL catalog at {}.{}",
+                    endpoint, entry.endpoint, federation_note
+                ),
+            )
+        } else if endpoint.starts_with("http://") || endpoint.starts_with("https://") {
+            (
+                "declared",
+                format!(
+                    "Endpoint `{}` is declared directly in the manifest. The desktop host does not currently verify live reachability.",
+                    endpoint
+                ),
+            )
+        } else {
+            (
+                "missing",
+                format!(
+                    "Endpoint `{}` is not present in the bundled SPARQL catalog and is not an explicit URL.",
+                    endpoint
+                ),
+            )
+        };
+        checks.push(AppRequirementCheck {
+            kind: "sparql-endpoint".to_string(),
+            id: endpoint.clone(),
+            required: false,
+            status: status.to_string(),
+            detail,
+        });
+    }
+
+    let blocking_issues = checks
+        .iter()
+        .filter(|check| check.required && check.status != "ready")
+        .count();
+    let optional_warnings = checks
+        .iter()
+        .filter(|check| {
+            !check.required && !matches!(check.status.as_str(), "ready" | "cataloged" | "declared")
+        })
+        .count();
+    let ready = blocking_issues == 0;
+    let summary = if ready {
+        format!(
+            "`{}` is ready to launch with {} optional warnings.",
+            qapp_name, optional_warnings
+        )
+    } else {
+        format!(
+            "`{}` is missing {} required resources or capabilities.",
+            qapp_name, blocking_issues
+        )
+    };
+
+    let report = QappReadinessReport {
+        qapp_name,
+        ready,
+        summary,
+        blocking_issues,
+        optional_warnings,
+        checks,
+    };
+    serde_json::to_string(&report).map_err(|e| e.to_string())
+}
+
+pub fn list_installed_ontology_artifacts() -> Vec<String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let data_dir = state.config.lock().unwrap().storage_path.clone();
+    let dirs = [
+        PathBuf::from(&data_dir).join("Index"),
+        PathBuf::from(&data_dir).join("SemanticLibrary"),
+    ];
+    let mut artifacts = Vec::new();
+
+    for dir in dirs {
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.filter_map(Result::ok) {
+                let path = entry.path();
+                if path.is_file() {
+                    artifacts.push(entry.file_name().to_string_lossy().to_string());
                 }
             }
         }
     }
 
-    let index_path = app_dir.join("index.html");
-    if !index_path.exists() {
-        return Err(format!("index.html not found in {}", app_dir.display()));
+    artifacts.sort();
+    artifacts.dedup();
+    artifacts
+}
+
+pub fn remove_installed_ontology(ontology_id: String) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let data_dir = state.config.lock().unwrap().storage_path.clone();
+    let dirs = [
+        PathBuf::from(&data_dir).join("Index"),
+        PathBuf::from(&data_dir).join("SemanticLibrary"),
+    ];
+    let mut removed = 0usize;
+
+    for dir in dirs {
+        for path in collect_matching_files(&dir, &ontology_id) {
+            std::fs::remove_file(&path)
+                .map_err(|e| format!("Failed to remove {}: {}", path.display(), e))?;
+            removed += 1;
+        }
     }
 
-    let url = format!("file:///{}", index_path.display()).replace('\\', "/");
-    Ok(url)
+    if removed == 0 {
+        return Err(format!(
+            "No installed ontology artifacts matched `{}`.",
+            ontology_id
+        ));
+    }
+
+    Ok(format!(
+        "Removed {} ontology artifact(s) for `{}`.",
+        removed, ontology_id
+    ))
+}
+
+pub fn remove_installed_model(model_id: String) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let data_dir = state.config.lock().unwrap().storage_path.clone();
+    let models_dir = PathBuf::from(&data_dir).join("Models");
+    let matches = collect_matching_files(&models_dir, &model_id);
+    let mut removed_names = Vec::new();
+
+    for path in matches {
+        if path
+            .extension()
+            .map(|ext| ext.to_string_lossy().eq_ignore_ascii_case("gguf"))
+            .unwrap_or(false)
+        {
+            let file_name = path
+                .file_name()
+                .map(|name| name.to_string_lossy().to_string())
+                .unwrap_or_default();
+            std::fs::remove_file(&path)
+                .map_err(|e| format!("Failed to remove {}: {}", path.display(), e))?;
+            removed_names.push(file_name);
+        }
+    }
+
+    if removed_names.is_empty() {
+        return Err(format!("No installed model matched `{}`.", model_id));
+    }
+
+    {
+        let mut active_model = state.active_model.lock().unwrap();
+        if let Some(current) = active_model.clone() {
+            let normalized_current = normalize_resource_key(&current);
+            if removed_names
+                .iter()
+                .any(|name| normalized_current.contains(&normalize_resource_key(name)))
+            {
+                *active_model = None;
+                let _ = std::fs::remove_file(active_model_path());
+            }
+        }
+    }
+
+    Ok(format!(
+        "Removed {} model file(s): {}",
+        removed_names.len(),
+        removed_names.join(", ")
+    ))
+}
+
+pub fn test_sparql_endpoint(endpoint_or_id: String) -> Result<String, String> {
+    let (endpoint, federation_supported) =
+        resolve_sparql_endpoint_from_catalog(&endpoint_or_id)?;
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(8))
+        .build()
+        .map_err(|e| format!("SPARQL probe client error: {}", e))?;
+
+    let response = client
+        .get(&endpoint)
+        .header("Accept", "application/sparql-results+json, application/json;q=0.9, */*;q=0.1")
+        .send();
+
+    let probe = match response {
+        Ok(response) => {
+            let status = response.status();
+            let reachable = status.is_success()
+                || status.is_redirection()
+                || matches!(status.as_u16(), 400 | 401 | 403 | 405 | 406);
+            SparqlEndpointProbe {
+                target: endpoint_or_id,
+                resolved_endpoint: endpoint,
+                reachable,
+                status_code: Some(status.as_u16()),
+                detail: format!("Endpoint responded with HTTP {}.", status.as_u16()),
+                federation_supported,
+            }
+        }
+        Err(err) => SparqlEndpointProbe {
+            target: endpoint_or_id,
+            resolved_endpoint: endpoint,
+            reachable: false,
+            status_code: None,
+            detail: format!("Endpoint probe failed: {}", err),
+            federation_supported,
+        },
+    };
+
+    serde_json::to_string(&probe).map_err(|e| e.to_string())
+}
+
+/// Returns the URL that should be opened in the system browser for a qapp.
+/// Looks up by directory name inside `{storage_path}/Qapps/`.
+pub fn launch_installed_qapp(qapp_name: String) -> Result<String, String> {
+    launch_installed_qapp_with_context(qapp_name.clone(), None, None, None, None)
+}
+
+pub fn launch_installed_qapp_with_context(
+    qapp_name: String,
+    entrypoint: Option<String>,
+    surface: Option<String>,
+    payload_json: Option<String>,
+    source: Option<String>,
+) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    let data_dir = state.config.lock().unwrap().storage_path.clone();
+    let qapp_dir = qapps_dir(&data_dir).join(&qapp_name);
+
+    if !qapp_dir.exists() {
+        return Err(format!("Qapp directory not found: {qapp_name}"));
+    }
+
+    let manifest = load_qapp_package_from_dir(&qapp_dir)?;
+    let resolved_entrypoint = resolve_entrypoint_path(&manifest, entrypoint.as_deref());
+    let (asset_path, hash_fragment) = split_asset_and_hash(&resolved_entrypoint);
+    let asset_file = qapp_dir.join(&asset_path);
+
+    let base_url = if let Some(port) = manifest.dev_port {
+        let trimmed = asset_path.trim_start_matches('/');
+        if trimmed.is_empty() || trimmed == "index.html" {
+            format!("http://localhost:{}", port)
+        } else {
+            format!("http://localhost:{}/{}", port, trimmed)
+        }
+    } else {
+        if !asset_file.exists() {
+            return Err(format!("{} not found in {}", asset_path, qapp_dir.display()));
+        }
+
+        if crate::qapps_protocol::qualia_protocol_port() != 0 {
+            crate::qapps_protocol::qualia_qapp_asset_url(&qapp_name, &asset_path)
+                .unwrap_or_else(|_| format!("file:///{}", asset_file.display()).replace('\\', "/"))
+        } else {
+            format!("file:///{}", asset_file.display()).replace('\\', "/")
+        }
+    };
+
+    let base_url = append_launch_context(base_url, source, surface, payload_json, Some(&qapp_name));
+    Ok(append_hash_fragment(base_url, hash_fragment))
 }
 
 // ── Dashboard engine command ───────────────────────────────────────────────────
@@ -1048,7 +2195,7 @@ pub fn launch_installed_app(app_name: String) -> Result<String, String> {
 pub fn run_engine_command(cmd: String) -> String {
     match cmd.as_str() {
         "ingest_bench" => profile_energy_circumstance(),
-        "zk_screen"    => format!(
+        "zk_screen" => format!(
             "Daemon: {} | Ollama: {}",
             daemon_status(),
             check_ollama_status()
@@ -1072,7 +2219,7 @@ pub struct DirectoryState {
     pub actors: Vec<Actor>,
     pub rules: Vec<DelegationRule>,
     pub front_doors: Vec<FrontDoor>,
-    pub installed_apps: Vec<app_registry::RegisteredApp>,
+    pub installed_qapps: Vec<qapp_registry::RegisteredQapp>,
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -1088,34 +2235,39 @@ pub fn save_directory_state() {
     if !qualia_dir.exists() {
         let _ = std::fs::create_dir_all(&qualia_dir);
     }
-    
+
     let ds = DirectoryState {
         actors: state.directory_actors.lock().unwrap().clone(),
         rules: state.delegation_rules.lock().unwrap().clone(),
         front_doors: state.front_doors.lock().unwrap().clone(),
-        installed_apps: state.installed_apps.lock().unwrap().clone(),
+        installed_qapps: state.installed_qapps.lock().unwrap().clone(),
     };
-    
+
     let payload = serde_json::to_string(&ds).unwrap();
     let vault = state.key_vault.lock().unwrap();
     // Since we don't have the derived key in scope here easily, we sign with master for persistence.
     // In a real implementation, we'd sign with the specific identity.
     let sig = vault.sign_payload(&vault.derive_key("persistence"), payload.as_bytes());
     let sig_hex = hex::encode(sig.to_bytes());
-    
+
     let signed_state = SignedDirectoryState {
         state: ds,
         signature_hex: sig_hex,
     };
-    
+
     let state_path = qualia_dir.join("directory_state.json");
-    let _ = std::fs::write(&state_path, serde_json::to_string_pretty(&signed_state).unwrap());
+    let _ = std::fs::write(
+        &state_path,
+        serde_json::to_string_pretty(&signed_state).unwrap(),
+    );
 }
 
 pub fn load_directory_state(vault: &qualia_core_db::key_vault::KeyVault) -> DirectoryState {
     let home = std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\".to_string());
-    let state_path = std::path::PathBuf::from(home).join(".qualia").join("directory_state.json");
-    
+    let state_path = std::path::PathBuf::from(home)
+        .join(".qualia")
+        .join("directory_state.json");
+
     if state_path.exists() {
         if let Ok(content) = std::fs::read_to_string(&state_path) {
             if let Ok(signed_state) = serde_json::from_str::<SignedDirectoryState>(&content) {
@@ -1126,7 +2278,13 @@ pub fn load_directory_state(vault: &qualia_core_db::key_vault::KeyVault) -> Dire
                     sig_arr.copy_from_slice(&sig_bytes);
                     let persistence_key = vault.derive_key("persistence");
                     let pk = ed25519_dalek::VerifyingKey::from(&persistence_key);
-                    if qualia_core_db::key_vault::KeyVault::verify_signature(pk.as_bytes(), payload.as_bytes(), &sig_arr).is_ok() {
+                    if qualia_core_db::key_vault::KeyVault::verify_signature(
+                        pk.as_bytes(),
+                        payload.as_bytes(),
+                        &sig_arr,
+                    )
+                    .is_ok()
+                    {
                         return signed_state.state;
                     } else {
                         eprintln!("WARNING: directory_state.json signature validation failed! Tampering detected.");
@@ -1135,12 +2293,12 @@ pub fn load_directory_state(vault: &qualia_core_db::key_vault::KeyVault) -> Dire
             }
         }
     }
-    
+
     DirectoryState {
         actors: Vec::new(),
         rules: Vec::new(),
         front_doors: Vec::new(),
-        installed_apps: Vec::new(),
+        installed_qapps: Vec::new(),
     }
 }
 
@@ -1153,17 +2311,20 @@ pub fn get_front_doors() -> Result<Vec<FrontDoor>, String> {
 pub fn generate_front_door(label: String) -> Result<FrontDoor, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     use std::time::{SystemTime, UNIX_EPOCH};
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
-    
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+
     let vault = state.key_vault.lock().unwrap();
     let fd_id = format!("fd-{}", now);
     let derived_key = vault.derive_key(&fd_id);
     let pub_key_hex = hex::encode(ed25519_dalek::VerifyingKey::from(&derived_key).as_bytes());
     let did_uri = format!("did:qualia:frontdoor:{}", pub_key_hex);
-    
+
     // Optional: Pre-generate the WebID-TLS cert here if needed
     // let (cert, _) = vault.generate_webid_tls_cert(&derived_key, &did_uri).unwrap();
-    
+
     let door = FrontDoor {
         id: fd_id,
         did_uri,
@@ -1171,7 +2332,7 @@ pub fn generate_front_door(label: String) -> Result<FrontDoor, String> {
         created_at: now.to_string(),
         routing_hints: vec!["nym:mixnet:sydney1".to_string()],
     };
-    
+
     drop(vault);
     state.front_doors.lock().unwrap().push(door.clone());
     save_directory_state();
@@ -1207,6 +2368,109 @@ pub fn add_delegation_rule(rule: DelegationRule) -> Result<(), String> {
     Ok(())
 }
 
+// ── Qualia protocol + desktop updater ─────────────────────────────────────────
+
+pub fn seed_bundled_qapps() -> Result<Vec<String>, String> {
+    crate::bundled_qapps::seed_bundled_qapps()
+}
+
+pub fn installed_qapp_version(qapp_name: &str) -> Result<Option<String>, String> {
+    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    Ok(crate::bundled_qapps::installed_qapp_version(
+        Path::new(&storage),
+        qapp_name,
+    ))
+}
+
+pub fn check_qapp_update(qapp_name: String) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    let status = crate::bundled_qapps::check_bundled_qapp_update(&qapp_name, Path::new(&storage));
+    serde_json::to_string(&status).map_err(|e| e.to_string())
+}
+
+pub fn check_qapp_update_from_path(qapp_name: String, source_path: String) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    let status = crate::bundled_qapps::check_qapp_update_from_source(
+        &qapp_name,
+        Path::new(&storage),
+        Path::new(&source_path),
+    )?;
+    serde_json::to_string(&status).map_err(|e| e.to_string())
+}
+
+pub fn list_qapp_update_offers() -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    let offers = crate::bundled_qapps::list_bundled_qapp_updates(Path::new(&storage));
+    serde_json::to_string(&offers).map_err(|e| e.to_string())
+}
+
+pub fn apply_qapp_update(qapp_name: String) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    crate::bundled_qapps::apply_bundled_qapp_update(Path::new(&storage), &qapp_name)
+}
+
+pub fn apply_qapp_update_from_path(qapp_name: String, source_path: String) -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    crate::bundled_qapps::upgrade_qapp_from_source(
+        Path::new(&storage),
+        &qapp_name,
+        Path::new(&source_path),
+    )
+}
+
+pub fn start_qualia_protocol() -> Result<u16, String> {
+    crate::qapps_protocol::start_qualia_protocol()
+}
+
+pub fn qualia_protocol_port() -> u16 {
+    crate::qapps_protocol::qualia_protocol_port()
+}
+
+pub async fn download_and_install_update(url: String) -> Result<(), String> {
+    crate::update_installer::download_and_install_update(url).await
+}
+
+pub fn register_qualia_uri_handler(exe_path: String) -> Result<(), String> {
+    crate::qapps_protocol::register_qualia_uri_handler(&exe_path)
+}
+
+// ── Windows runtime prerequisites ─────────────────────────────────────────────
+
+pub struct PrerequisiteStatus {
+    pub platform_requires_check: bool,
+    pub webview2_ready: bool,
+    pub webview2_bundled: bool,
+    pub webview2_evergreen: bool,
+    pub vc_redist_ready: bool,
+    pub all_ready: bool,
+    pub bundled_webview2_dir: String,
+}
+
+pub fn check_prerequisites() -> PrerequisiteStatus {
+    let s = crate::prerequisites::check_prerequisites();
+    PrerequisiteStatus {
+        platform_requires_check: s.platform_requires_check,
+        webview2_ready: s.webview2_ready,
+        webview2_bundled: s.webview2_bundled,
+        webview2_evergreen: s.webview2_evergreen,
+        vc_redist_ready: s.vc_redist_ready,
+        all_ready: s.all_ready,
+        bundled_webview2_dir: s.bundled_webview2_dir,
+    }
+}
+
+pub fn configure_webview2_runtime() -> bool {
+    crate::prerequisites::configure_webview2_runtime()
+}
+
+pub async fn install_prerequisite(kind: String) -> Result<(), String> {
+    crate::prerequisites::install_prerequisite(kind).await
+}
+
 // ── main ──────────────────────────────────────────────────────────────────────
-
-

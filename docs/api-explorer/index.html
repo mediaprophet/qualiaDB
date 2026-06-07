@@ -435,9 +435,18 @@ const CAT_CLASS = {
         wasmMod = mod;
         const ready = typeof mod.execute_ntriples_query === 'function'
                    || typeof mod.compile_query_to_json === 'function';
-        const ver = typeof mod.get_engine_version === 'function' ? mod.get_engine_version() : null;
+        let ver = typeof mod.get_engine_version === 'function' ? mod.get_engine_version() : null;
+        let capCount = null;
+        if (typeof mod.get_engine_info === 'function') {
+            try {
+                const info = mod.get_engine_info();
+                ver = info.version || ver;
+                capCount = info.capabilities?.length ?? null;
+            } catch (_) {}
+        }
+        const capSuffix = capCount != null ? ` · ${capCount} caps` : '';
         chipW.textContent = ready
-            ? (ver ? `⬤ WASM v${ver}` : '⬤ WASM ready')
+            ? (ver ? `⬤ WASM v${ver}${capSuffix}` : '⬤ WASM ready')
             : '⬤ WASM (partial)';
         chipW.className   = 'chip ' + (ready ? 'ready' : 'offline');
     });

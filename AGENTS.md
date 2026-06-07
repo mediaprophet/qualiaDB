@@ -1,5 +1,5 @@
 # QualiaDB — Multi-Agent Collaboration Ecosystem
-_Branch: `0.0.6-dev` | Last updated: 2026-06-05 by Claude Sonnet 4.6_
+_Branch: `0.0.8-dev` | Last updated: 2026-06-07_
 
 This document is the coordination layer for concurrent or sequential AI-agent sessions
 working on the QualiaDB engine. Read it before writing a single line of code.
@@ -602,7 +602,7 @@ At the end of your session:
 1. **Run tests:** `cargo test -p qualia-core-db --lib` — all tests must pass.
 2. **Update this file (AGENTS.md):** move your completed task from §3 to §2 with status ✅.
 3. **Update HANDOVER.md §3 (Engine Capability Inventory):** add your module to Tier 1 or Tier 2.
-4. **Commit + push** to `0.0.6-dev` with prefix `feat(modality):` or `fix(modality):`.
+4. **Commit + push** to `0.0.8-dev` with prefix `feat(modality):` or `fix(modality):`.
 5. **Leave a session note** at the bottom of this doc (§7) describing what you did,
    what you left incomplete, and any architectural decisions future agents should know.
 

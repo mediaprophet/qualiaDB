@@ -101,6 +101,33 @@ export function register(runner) {
             const output = mod.serialize_float_array(input);
             runner.expect(output instanceof Uint8Array).toBeTruthy();
         });
+
+        runner.describe('Engine metadata', () => {
+
+            runner.it('get_engine_version returns semver string', () => {
+                if (!mod.get_engine_version) return;
+                const v = mod.get_engine_version();
+                runner.expect(typeof v).toBe('string');
+                runner.expect(/^\d+\.\d+\.\d+/.test(v)).toBeTruthy();
+            });
+
+            runner.it('get_engine_info returns version + engine + target', () => {
+                if (!mod.get_engine_info) return;
+                const info = mod.get_engine_info();
+                runner.expect(info.version).toBeTruthy();
+                runner.expect(info.engine).toBe('qualia-core-db');
+                runner.expect(info.target).toBe('wasm32');
+                runner.expect(Array.isArray(info.capabilities)).toBeTruthy();
+                runner.expect(info.capabilities.length).toBeGreaterThan(0);
+            });
+
+            runner.it('list_capabilities_wasm matches get_engine_info.capabilities', () => {
+                if (!mod.get_engine_info || !mod.list_capabilities_wasm) return;
+                const info = mod.get_engine_info();
+                const caps = mod.list_capabilities_wasm();
+                runner.expect(caps.length).toBe(info.capabilities.length);
+            });
+        });
     });
 }
 

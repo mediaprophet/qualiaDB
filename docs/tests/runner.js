@@ -19,6 +19,11 @@ import { register as regDl }             from './suites/modality-dl.js';
 import { register as regAsp }            from './suites/modality-asp.js';
 import { register as regProbabilistic }  from './suites/modality-probabilistic.js';
 import { register as regCogAi }          from './suites/modality-cogai.js';
+import { register as regAgency }         from './suites/modality-agency.js';
+import { register as regComorbidity }    from './suites/modality-comorbidity.js';
+import { register as regDicom }            from './suites/modality-dicom.js';
+import { register as regDeontic }        from './suites/modality-deontic.js';
+import { register as regOntology }       from './suites/ontology-alignment.js';
 
 // WASM-backed (wasm + both)
 import { register as regQueryEngine }    from './suites/wasm-query-engine.js';
@@ -133,6 +138,11 @@ function buildRunner(mode) {
     regAsp(r, c);
     regProbabilistic(r, c);
     regCogAi(r, c);
+    regAgency(r, c);
+    regComorbidity(r, c);
+    regDicom(r, c);
+    regDeontic(r, c);
+    regOntology(r, c);
 
     if (mode === 'wasm' || mode === 'both') {
         regQueryEngine(r, c);

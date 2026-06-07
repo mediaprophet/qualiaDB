@@ -1,7 +1,7 @@
 # Development Guide
 
 Build, test, benchmark, and contribute to Qualia-DB.
-_Branch: `0.0.6-dev` | Last updated: 2026-06-06_
+_Branch: `0.0.8-dev` | Last updated: 2026-06-07_
 
 ---
 
@@ -203,7 +203,7 @@ These files supersede the older `AI_INSTRUCTIONS.md`. Both `CLAUDE.md` and `AGEN
 
 ## Releases & Versioning
 
-- Current: Core/Desktop/CLI **0.0.6-dev**
+- Current: Core/Desktop/CLI **0.0.8-dev**
 - Release notes: see `CHANGELOG.md` and `docs/manuals/RELEASE_NOTES_v0.0.4.md`
 - Release config: `release.toml` (cargo-release)
 - Next milestone (Phase 7): WASM profile loading, ZK-STARK, Nym integration, TEE, CI/CD signing

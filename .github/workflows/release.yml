@@ -66,9 +66,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Ship DirectML.dll as a separate release asset on Windows so users can
-      # place it next to the CLI exe without needing the DirectML SDK installed.
-      - name: Upload DirectML.dll (Windows)
+      - name: Upload DirectML.dll (Windows CLI)
         if: matrix.os == 'windows-latest'
         uses: softprops/action-gh-release@v2
         with:
@@ -132,27 +130,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# ── Job 3: Flutter desktop ────────────────────────────────────────────────────
-  build-flutter:
-    name: Flutter (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            flutter_platform: linux
-            artifact_dir: crates/qualia-flutter/build/linux/x64/release/bundle
-            asset_name: qualia-flutter-linux-x86_64.tar.gz
-          - os: windows-latest
-            flutter_platform: windows
-            artifact_dir: crates/qualia-flutter/build/windows/x64/runner/Release
-            asset_name: qualia-flutter-windows-x86_64.zip
-          - os: macos-14
-            flutter_platform: macos
-            artifact_dir: crates/qualia-flutter/build/macos/Build/Products/Release
-            asset_name: qualia-flutter-macos-aarch64.tar.gz
-            experimental: true
+# ── Job 3: Flutter desktop — Windows x64 installer + portable zip ─────────────
+  build-flutter-windows:
+    name: Flutter Windows x64 (installer)
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -167,24 +148,12 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-flutter-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-flutter-
+          key: windows-cargo-flutter-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: windows-cargo-flutter-
 
-      - name: Linux system dependencies
-        if: matrix.os == 'ubuntu-22.04'
+      - name: Install NuGet + Inno Setup
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-dev \
-            libblkid-dev \
-            liblzma-dev \
-            ninja-build \
-            libssl-dev \
-            pkg-config \
-            clang \
-            cmake \
-            libsecret-1-dev \
-            libjsoncpp-dev
+          choco install nuget.commandline innosetup -y --no-progress
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
@@ -192,39 +161,170 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Flutter pub get
-        working-directory: crates/qualia-flutter
-        run: flutter pub get
+      - name: Package portable bundle (Flutter + Rust FFI + DirectML)
+        shell: pwsh
+        run: .\scripts\package-flutter-windows.ps1
 
-      - name: Build Flutter (${{ matrix.flutter_platform }})
-        working-directory: crates/qualia-flutter
-        continue-on-error: ${{ matrix.experimental == true }}
-        run: flutter build ${{ matrix.flutter_platform }} --release
-
-      - name: Package artifact (Linux / macOS)
-        if: matrix.os != 'windows-latest'
+      - name: Build Inno Setup installer
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ github.ref_name }}
         run: |
-          tar -czf ${{ matrix.asset_name }} \
-            -C "$(dirname "${{ matrix.artifact_dir }}")" \
-            "$(basename "${{ matrix.artifact_dir }}")"
+          $v = $env:APP_VERSION -replace '^v',''
+          .\scripts\installer\build-windows-installer.ps1 -AppVersion $v
 
-      - name: Copy DirectML.dll into artifact (Windows)
-        if: matrix.os == 'windows-latest'
+      - name: Create portable zip
         shell: pwsh
         run: |
-          Copy-Item "vendor\directml\bin\x64-win\DirectML.dll" `
-            "${{ matrix.artifact_dir }}\DirectML.dll"
-
-      - name: Package artifact (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          Compress-Archive -Path "${{ matrix.artifact_dir }}\*" `
-            -DestinationPath "${{ matrix.asset_name }}"
+          Compress-Archive -Path "dist\qualia-flutter-windows-x64\*" `
+            -DestinationPath "qualia-flutter-windows-x64.zip" -Force
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.asset_name }}
+          files: |
+            dist/QualiaDB-Setup-*-x64.exe
+            qualia-flutter-windows-x64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ── Job 4: Flutter desktop — macOS Apple Silicon (.dmg) ───────────────────────
+  build-flutter-macos:
+    name: Flutter macOS arm64 (DMG)
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: macos-cargo-flutter-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: macos-cargo-flutter-
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Package .app bundle
+        run: |
+          chmod +x scripts/package-flutter-macos.sh scripts/installer/build-macos-dmg.sh
+          ./scripts/package-flutter-macos.sh
+
+      - name: Build DMG installer
+        env:
+          APP_VERSION: ${{ github.ref_name }}
+        run: |
+          export APP_VERSION="${APP_VERSION#v}"
+          ./scripts/installer/build-macos-dmg.sh
+
+      - name: Create portable tar.gz
+        run: |
+          tar -czf qualia-flutter-macos-arm64.tar.gz \
+            -C dist/qualia-flutter-macos-arm64 qualia_flutter.app
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/QualiaDB-*-macos-arm64.dmg
+            qualia-flutter-macos-arm64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ── Job 5: Flutter desktop — Linux x64 (.deb + portable tar.gz) ───────────────
+  build-flutter-linux:
+    name: Flutter Linux x64 (deb)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: linux-cargo-flutter-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: linux-cargo-flutter-
+
+      - name: Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev libblkid-dev liblzma-dev ninja-build \
+            libssl-dev pkg-config clang cmake libsecret-1-dev libjsoncpp-dev \
+            dpkg-dev
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Package portable bundle
+        run: |
+          chmod +x scripts/package-flutter-linux.sh scripts/installer/build-linux-deb.sh
+          ./scripts/package-flutter-linux.sh
+
+      - name: Build .deb installer
+        env:
+          APP_VERSION: ${{ github.ref_name }}
+        run: |
+          export APP_VERSION="${APP_VERSION#v}"
+          ./scripts/installer/build-linux-deb.sh
+
+      - name: Create portable tar.gz
+        run: |
+          tar -czf qualia-flutter-linux-x64.tar.gz \
+            -C dist/qualia-flutter-linux-x64 .
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/QualiaDB-*-linux-x64.deb
+            qualia-flutter-linux-x64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ── Job 6: Updater manifest (latest.json) ─────────────────────────────────────
+  publish-updater-manifest:
+    name: Publish latest.json
+    needs:
+      - build-flutter-windows
+      - build-flutter-macos
+      - build-flutter-linux
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate latest.json
+        env:
+          APP_VERSION: ${{ github.ref_name }}
+        run: |
+          chmod +x scripts/installer/generate-latest-json.sh
+          VERSION="${APP_VERSION#v}"
+          ./scripts/installer/generate-latest-json.sh "$VERSION" latest.json
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: latest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

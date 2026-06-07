@@ -1,4 +1,4 @@
-use tauri::command;
+use tauri::{command, AppHandle, Manager, WindowBuilder, WindowUrl};
 use qualia_client_core::api;
 use qualia_client_core::api::{WalletStatus, HardwareStatus, TokenEntry, CoinBalance, TxRecord};
 use qualia_client_core::state::{AgentConfig, ProgressPayload, Actor, DelegationRule, FrontDoor};
@@ -6,19 +6,43 @@ use qualia_client_core::engine::{ingestion, llm_offload};
 use qualia_core_db::rpc::TaxRecipientSuite;
 use qualia_core_db::ilp_dispatcher::DispatchResult;
 
-// ── App store ─────────────────────────────────────────────────────────────────
+// ── Qapp vault ────────────────────────────────────────────────────────────────
 
 #[command]
-pub fn list_installed_apps() -> Vec<String> { api::list_installed_apps() }
+pub fn list_installed_qapps() -> Vec<String> { api::list_installed_qapps() }
 
 #[command]
-pub fn generate_app_credential(app_name: String) -> String { api::generate_app_credential(app_name) }
+pub fn generate_qapp_credential(qapp_name: String) -> String { api::generate_qapp_credential(qapp_name) }
 
 #[command]
-pub fn verify_and_install_app(target_path: String) -> Result<String, String> { api::verify_and_install_app(target_path) }
+pub fn verify_and_install_qapp(target_path: String) -> Result<String, String> { api::verify_and_install_qapp(target_path) }
 
 #[command]
-pub fn launch_installed_app(app_did: String) -> Result<(), String> { api::launch_installed_app(app_did) }
+pub fn launch_installed_qapp(app: AppHandle, qapp_name: String) -> Result<(), String> {
+    let url = api::launch_installed_qapp(qapp_name.clone())?;
+    let label: String = format!(
+        "qapp-{}",
+        qapp_name
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+            .collect::<String>()
+    );
+
+    if let Some(window) = app.get_window(&label) {
+        window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    let parsed = url
+        .parse()
+        .map_err(|e| format!("Invalid launch URL '{url}': {e}"))?;
+    WindowBuilder::new(&app, label, WindowUrl::External(parsed))
+        .title(qapp_name)
+        .inner_size(1200.0, 800.0)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
 
 // ── Hardware / system ─────────────────────────────────────────────────────────
 
@@ -220,7 +244,7 @@ pub fn add_delegation_rule(rule: DelegationRule) -> Result<(), String> { api::ad
 
 pub fn get_invoke_handler() -> impl Fn(tauri::Invoke) {
     tauri::generate_handler![
-        list_installed_apps, generate_app_credential, verify_and_install_app, launch_installed_app,
+        list_installed_qapps, generate_qapp_credential, verify_and_install_qapp, launch_installed_qapp,
         get_hardware_status, profile_energy_circumstance,
         start_daemon, daemon_status, run_engine_command,
         get_config, save_config,

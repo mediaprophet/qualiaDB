@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/qapp_api.dart';
 import 'api/qualia_api.dart';
 import 'api/resource_catalog.dart';
 import 'api/simple.dart';
@@ -72,7 +73,7 @@ class RustApi extends BaseEntrypoint<RustApiApi, RustApiApiImpl, RustApiWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1274833330;
+  int get rustContentHash => 1420837610;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -84,20 +85,93 @@ class RustApi extends BaseEntrypoint<RustApiApi, RustApiApiImpl, RustApiWire> {
 }
 
 abstract class RustApiApi extends BaseApi {
+  Future<String> crateApiQualiaApiAcceptVaultHandshake(
+      {required String didKey, required String payload});
+
+  Future<void> crateApiQualiaApiAddDelegationRule(
+      {required DelegationRuleBridge rule});
+
+  Future<void> crateApiQualiaApiAddDirectoryActor({required ActorBridge actor});
+
+  Future<TokenEntry> crateApiQualiaApiAddToken(
+      {required String chain,
+      required String tokenType,
+      required String contract,
+      required String symbol,
+      required String name,
+      required int decimals});
+
+  String crateApiQappApiApplyQappUpdate({required String qappName});
+
+  String crateApiQappApiApplyQappUpdateFromPath(
+      {required String qappName, required String sourcePath});
+
+  Future<String> crateApiQualiaApiBuildAnatomyGraphContextJson(
+      {required String qappName,
+      required String userPrompt,
+      required String agentReply});
+
+  Future<String> crateApiQualiaApiBuildAnatomyGraphContextJsonWithDicom(
+      {required String qappName,
+      required String userPrompt,
+      required String agentReply,
+      String? dicomFilePath});
+
+  Future<String> crateApiQualiaApiBuildDicomOverlaySpecJson(
+      {required String filePath});
+
   Future<void> crateApiQualiaApiCancelDownload({required String id});
 
   Future<bool> crateApiQualiaApiCheckOllamaStatus();
+
+  Future<PrerequisiteStatus> crateApiQualiaApiCheckPrerequisites();
+
+  String crateApiQappApiCheckQappUpdate({required String qappName});
+
+  String crateApiQappApiCheckQappUpdateFromPath(
+      {required String qappName, required String sourcePath});
+
+  Uint8List crateApiQappApiCompileAnatomyWildcardQuery();
+
+  Future<bool> crateApiQualiaApiConfigureWebview2Runtime();
 
   Future<String> crateApiQualiaApiDaemonStatus();
 
   Future<String> crateApiQualiaApiDeriveWalletsFromSeed({required String seed});
 
+  int crateApiQappApiDicomIngestStatus({required BigInt jobId});
+
   Future<List<ModelInfo>> crateApiQualiaApiDiscoverModels();
+
+  Future<DispatchResult> crateApiQualiaApiDispatchTaxPayment(
+      {required BigInt grossAmountMicroCents});
+
+  Future<void> crateApiQualiaApiDownloadAndInstallUpdate({required String url});
+
+  Future<String> crateApiQualiaApiDownloadAndVectorize(
+      {required String url, required String filename, required String itemId});
 
   Future<String> crateApiResourceCatalogDownloadLlm({required String id});
 
   Future<String> crateApiQualiaApiDownloadModel(
       {required String url, required String filename, required String modelId});
+
+  String crateApiQappApiEvalComorbidityJsonFromDaemon(
+      {required BigInt patientDidHash, required BigInt targetOrganHash});
+
+  Uint8List crateApiQappApiExecuteDicomVolumeQuery(
+      {required BigInt patientDidHash, required BigInt seriesHash});
+
+  Float32List crateApiQappApiExecuteQappScopedQuery(
+      {required BigInt appIdHash, required List<int> queryBytecode});
+
+  Float32List crateApiQappApiExecuteQappScopedQueryZeroAlloc(
+      {required BigInt appIdHash, required List<int> queryBytecode});
+
+  String crateApiQappApiExecutionErrorLabel({required String code});
+
+  Future<String> crateApiQualiaApiExportToSolid(
+      {required String inputQ42Path, required String outputDirPath});
 
   Future<List<CatalogItem>> crateApiQualiaApiFetchModelCatalog();
 
@@ -107,10 +181,21 @@ abstract class RustApiApi extends BaseApi {
 
   Future<List<CatalogItem>> crateApiQualiaApiFetchOntologyCatalogReal();
 
-  Future<String> crateApiQualiaApiGenerateAppCredential(
-      {required String appName});
+  Future<String> crateApiQualiaApiFetchRemoteManifest({required String url});
+
+  Future<String> crateApiQualiaApiFetchTorrentTelemetry();
+
+  Future<String> crateApiQualiaApiFetchWalletPortfolio();
 
   Future<String> crateApiQualiaApiGenerateBip39Seed();
+
+  Future<FrontDoorBridge> crateApiQualiaApiGenerateFrontDoor(
+      {required String label});
+
+  Future<String> crateApiQualiaApiGenerateFrontDoorInvite();
+
+  Future<String> crateApiQualiaApiGenerateQappCredential(
+      {required String qappName});
 
   Future<List<ProgressPayload>> crateApiQualiaApiGetActiveDownloads();
 
@@ -120,7 +205,15 @@ abstract class RustApiApi extends BaseApi {
 
   Future<AgentConfig> crateApiQualiaApiGetConfig();
 
+  Future<List<DelegationRuleBridge>> crateApiQualiaApiGetDelegationRules();
+
+  Future<List<ActorBridge>> crateApiQualiaApiGetDirectoryActors();
+
+  Future<List<FrontDoorBridge>> crateApiQualiaApiGetFrontDoors();
+
   Future<HardwareStatus> crateApiQualiaApiGetHardwareStatus();
+
+  Future<HardwareTelemetry> crateApiQualiaApiGetHardwareTelemetry();
 
   Future<SpatialPhysicsState> crateApiQualiaApiGetPhysicsState();
 
@@ -130,6 +223,8 @@ abstract class RustApiApi extends BaseApi {
 
   Future<double> crateApiQualiaApiGetPhysicsStateTimeDilation();
 
+  Future<QpuOracleSettings> crateApiQualiaApiGetQpuSettings();
+
   Future<double> crateApiQualiaApiGetSpatialPressure();
 
   Future<double> crateApiQualiaApiGetSpatialTemperature();
@@ -138,24 +233,69 @@ abstract class RustApiApi extends BaseApi {
 
   Future<TaxRecipientSuite> crateApiQualiaApiGetTaxSuite();
 
+  Future<List<TokenEntry>> crateApiQualiaApiGetTokens();
+
+  Future<List<TxRecord>> crateApiQualiaApiGetTransactionHistory(
+      {required String ticker});
+
+  Future<WalletStatus> crateApiQualiaApiGetWalletStatus();
+
   Future<String> crateApiQualiaApiGreet({required String name});
 
   String crateApiSimpleGreet({required String name});
+
+  Future<QpuChatCommandResult> crateApiQualiaApiHandleEngineChatCommand(
+      {required String text});
+
+  Future<QpuChatCommandResult> crateApiQualiaApiHandleQpuChatCommand(
+      {required String text});
 
   Future<String> crateApiQualiaApiImportExternalSeed(
       {required String network, required String seed, required String label});
 
   Future<String> crateApiResourceCatalogImportOntology({required String id});
 
+  Future<String> crateApiQualiaApiIngestImage({required String filePath});
+
+  Future<void> crateApiQualiaApiIngestImageAsync(
+      {required String filePath, required String typology});
+
   Future<String> crateApiQualiaApiIngestLiterature({required String filePath});
+
+  Future<String> crateApiQualiaApiIngestOntology({required String fileName});
+
+  Future<String> crateApiQualiaApiIngestPdf({required String fileName});
 
   Future<void> crateApiSimpleInitApp();
 
   Future<void> crateApiQualiaApiInitCore();
 
-  Future<String> crateApiQualiaApiLaunchInstalledApp({required String appName});
+  Future<String> crateApiQualiaApiInspectInstalledQappReadiness(
+      {required String qappName});
 
-  Future<List<String>> crateApiQualiaApiListInstalledApps();
+  Future<void> crateApiQualiaApiInstallPrerequisite({required String kind});
+
+  String? crateApiQappApiInstalledQappVersion({required String qappName});
+
+  Future<bool> crateApiQualiaApiIsFirstRun();
+
+  Future<bool> crateApiQualiaApiIsQpuFeatureUnlocked();
+
+  Future<String> crateApiQualiaApiLaunchInstalledQapp(
+      {required String qappName});
+
+  Future<String> crateApiQualiaApiLaunchInstalledQappWithContext(
+      {required String qappName,
+      String? entrypoint,
+      String? surface,
+      String? payloadJson,
+      String? source});
+
+  Future<List<String>> crateApiQualiaApiListInstalledOntologyArtifacts();
+
+  Future<List<String>> crateApiQualiaApiListInstalledQapps();
+
+  String crateApiQappApiListQappUpdateOffers();
 
   Future<String?> crateApiQualiaApiLoadIdentity();
 
@@ -165,7 +305,44 @@ abstract class RustApiApi extends BaseApi {
 
   Future<List<OntologyResource>> crateApiResourceCatalogLoadOntologyResources();
 
+  Future<String> crateApiQualiaApiMintSemanticToken({required String assetId});
+
+  Future<String> crateApiQualiaApiParseDicomMetadataJson(
+      {required String filePath});
+
+  Future<String> crateApiQualiaApiProfileEnergyCircumstance();
+
+  BigInt crateApiQappApiQappIdHash({required String appId});
+
+  Future<int> crateApiQualiaApiQualiaProtocolPort();
+
+  Future<String> crateApiQualiaApiReceiveVaultJob(
+      {required String jobId,
+      required String taskType,
+      required List<int> dataBlobCbor});
+
+  BigInt crateApiQappApiRegisterQappFromInstalledManifest(
+      {required String qappName});
+
+  BigInt crateApiQappApiRegisterQappManifest({required QappManifest manifest});
+
+  Future<void> crateApiQualiaApiRegisterQualiaUriHandler(
+      {required String exePath});
+
+  Future<String> crateApiQualiaApiRemoveInstalledModel(
+      {required String modelId});
+
+  Future<String> crateApiQualiaApiRemoveInstalledOntology(
+      {required String ontologyId});
+
+  Future<void> crateApiQualiaApiRemoveToken({required String id});
+
+  Future<String> crateApiQualiaApiRunEngineCommand({required String cmd});
+
   Future<String> crateApiQualiaApiRunInference(
+      {required String prompt, required String modelPath});
+
+  Stream<String> crateApiQualiaApiRunInferenceStream(
       {required String prompt, required String modelPath});
 
   Future<void> crateApiQualiaApiSaveConfig({required AgentConfig newConfig});
@@ -175,20 +352,48 @@ abstract class RustApiApi extends BaseApi {
   Future<void> crateApiQualiaApiSaveImportedAccounts(
       {required String accountsJson});
 
+  Future<QpuOracleSettings> crateApiQualiaApiSaveQpuSettings(
+      {required QpuOracleSettingsInput input});
+
+  Future<void> crateApiQualiaApiSaveTaxSuite(
+      {required TaxRecipientSuite suite});
+
   Future<void> crateApiQualiaApiSetActiveModel({required String modelName});
 
   Future<String> crateApiQualiaApiStartDaemon();
+
+  Future<int> crateApiQualiaApiStartQualiaProtocol();
+
+  BigInt crateApiQappApiSubmitDicomIngest(
+      {required String filePath, required BigInt patientDidHash});
+
+  Future<String> crateApiQualiaApiTestSparqlEndpoint(
+      {required String endpointOrId});
+
+  Future<bool> crateApiQualiaApiToggleNymRelay();
+
+  Future<bool> crateApiQualiaApiToggleStarkProver();
 
   Future<void> crateApiQualiaApiUpdatePhysicsState(
       {required double temperature,
       required double pressure,
       required double timeDilation});
 
+  Future<void> crateApiQualiaApiUpdateSolarInput({required int watts});
+
   Future<String> crateApiQualiaApiUpsertCmldDefinition(
       {required String term, required String contextDid});
 
-  Future<String> crateApiQualiaApiVerifyAndInstallApp(
+  Future<String> crateApiQualiaApiVerifyAndInstallQapp(
       {required String zipPath, required String credentialSig});
+
+  RustArcIncrementStrongCountFnType
+      get rust_arc_increment_strong_count_QappManifest;
+
+  RustArcDecrementStrongCountFnType
+      get rust_arc_decrement_strong_count_QappManifest;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_QappManifestPtr;
 }
 
 class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
@@ -200,17 +405,278 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   });
 
   @override
+  Future<String> crateApiQualiaApiAcceptVaultHandshake(
+      {required String didKey, required String payload}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(didKey, serializer);
+        sse_encode_String(payload, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 1, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiAcceptVaultHandshakeConstMeta,
+      argValues: [didKey, payload],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiAcceptVaultHandshakeConstMeta =>
+      const TaskConstMeta(
+        debugName: "accept_vault_handshake",
+        argNames: ["didKey", "payload"],
+      );
+
+  @override
+  Future<void> crateApiQualiaApiAddDelegationRule(
+      {required DelegationRuleBridge rule}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_box_autoadd_delegation_rule_bridge(rule, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 2, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiAddDelegationRuleConstMeta,
+      argValues: [rule],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiAddDelegationRuleConstMeta =>
+      const TaskConstMeta(
+        debugName: "add_delegation_rule",
+        argNames: ["rule"],
+      );
+
+  @override
+  Future<void> crateApiQualiaApiAddDirectoryActor(
+      {required ActorBridge actor}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_box_autoadd_actor_bridge(actor, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 3, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiAddDirectoryActorConstMeta,
+      argValues: [actor],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiAddDirectoryActorConstMeta =>
+      const TaskConstMeta(
+        debugName: "add_directory_actor",
+        argNames: ["actor"],
+      );
+
+  @override
+  Future<TokenEntry> crateApiQualiaApiAddToken(
+      {required String chain,
+      required String tokenType,
+      required String contract,
+      required String symbol,
+      required String name,
+      required int decimals}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(chain, serializer);
+        sse_encode_String(tokenType, serializer);
+        sse_encode_String(contract, serializer);
+        sse_encode_String(symbol, serializer);
+        sse_encode_String(name, serializer);
+        sse_encode_u_8(decimals, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 4, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_token_entry,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiAddTokenConstMeta,
+      argValues: [chain, tokenType, contract, symbol, name, decimals],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiAddTokenConstMeta => const TaskConstMeta(
+        debugName: "add_token",
+        argNames: [
+          "chain",
+          "tokenType",
+          "contract",
+          "symbol",
+          "name",
+          "decimals"
+        ],
+      );
+
+  @override
+  String crateApiQappApiApplyQappUpdate({required String qappName}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiApplyQappUpdateConstMeta,
+      argValues: [qappName],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiApplyQappUpdateConstMeta =>
+      const TaskConstMeta(
+        debugName: "apply_qapp_update",
+        argNames: ["qappName"],
+      );
+
+  @override
+  String crateApiQappApiApplyQappUpdateFromPath(
+      {required String qappName, required String sourcePath}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        sse_encode_String(sourcePath, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiApplyQappUpdateFromPathConstMeta,
+      argValues: [qappName, sourcePath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiApplyQappUpdateFromPathConstMeta =>
+      const TaskConstMeta(
+        debugName: "apply_qapp_update_from_path",
+        argNames: ["qappName", "sourcePath"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiBuildAnatomyGraphContextJson(
+      {required String qappName,
+      required String userPrompt,
+      required String agentReply}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        sse_encode_String(userPrompt, serializer);
+        sse_encode_String(agentReply, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 7, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiBuildAnatomyGraphContextJsonConstMeta,
+      argValues: [qappName, userPrompt, agentReply],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiBuildAnatomyGraphContextJsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "build_anatomy_graph_context_json",
+        argNames: ["qappName", "userPrompt", "agentReply"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiBuildAnatomyGraphContextJsonWithDicom(
+      {required String qappName,
+      required String userPrompt,
+      required String agentReply,
+      String? dicomFilePath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        sse_encode_String(userPrompt, serializer);
+        sse_encode_String(agentReply, serializer);
+        sse_encode_opt_String(dicomFilePath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 8, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta:
+          kCrateApiQualiaApiBuildAnatomyGraphContextJsonWithDicomConstMeta,
+      argValues: [qappName, userPrompt, agentReply, dicomFilePath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta
+      get kCrateApiQualiaApiBuildAnatomyGraphContextJsonWithDicomConstMeta =>
+          const TaskConstMeta(
+            debugName: "build_anatomy_graph_context_json_with_dicom",
+            argNames: ["qappName", "userPrompt", "agentReply", "dicomFilePath"],
+          );
+
+  @override
+  Future<String> crateApiQualiaApiBuildDicomOverlaySpecJson(
+      {required String filePath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(filePath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 9, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiBuildDicomOverlaySpecJsonConstMeta,
+      argValues: [filePath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiBuildDicomOverlaySpecJsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "build_dicom_overlay_spec_json",
+        argNames: ["filePath"],
+      );
+
+  @override
   Future<void> crateApiQualiaApiCancelDownload({required String id}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(id, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 1, port: port_);
+            funcId: 10, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
-        decodeErrorData: null,
+        decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiQualiaApiCancelDownloadConstMeta,
       argValues: [id],
@@ -230,7 +696,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 2, port: port_);
+            funcId: 11, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_bool,
@@ -249,12 +715,133 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<PrerequisiteStatus> crateApiQualiaApiCheckPrerequisites() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 12, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_prerequisite_status,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiCheckPrerequisitesConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiCheckPrerequisitesConstMeta =>
+      const TaskConstMeta(
+        debugName: "check_prerequisites",
+        argNames: [],
+      );
+
+  @override
+  String crateApiQappApiCheckQappUpdate({required String qappName}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiCheckQappUpdateConstMeta,
+      argValues: [qappName],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiCheckQappUpdateConstMeta =>
+      const TaskConstMeta(
+        debugName: "check_qapp_update",
+        argNames: ["qappName"],
+      );
+
+  @override
+  String crateApiQappApiCheckQappUpdateFromPath(
+      {required String qappName, required String sourcePath}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        sse_encode_String(sourcePath, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiCheckQappUpdateFromPathConstMeta,
+      argValues: [qappName, sourcePath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiCheckQappUpdateFromPathConstMeta =>
+      const TaskConstMeta(
+        debugName: "check_qapp_update_from_path",
+        argNames: ["qappName", "sourcePath"],
+      );
+
+  @override
+  Uint8List crateApiQappApiCompileAnatomyWildcardQuery() {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_prim_u_8_strict,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiCompileAnatomyWildcardQueryConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiCompileAnatomyWildcardQueryConstMeta =>
+      const TaskConstMeta(
+        debugName: "compile_anatomy_wildcard_query",
+        argNames: [],
+      );
+
+  @override
+  Future<bool> crateApiQualiaApiConfigureWebview2Runtime() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 16, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiConfigureWebview2RuntimeConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiConfigureWebview2RuntimeConstMeta =>
+      const TaskConstMeta(
+        debugName: "configure_webview2_runtime",
+        argNames: [],
+      );
+
+  @override
   Future<String> crateApiQualiaApiDaemonStatus() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 3, port: port_);
+            funcId: 17, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -280,7 +867,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(seed, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 4, port: port_);
+            funcId: 18, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -299,12 +886,36 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  int crateApiQappApiDicomIngestStatus({required BigInt jobId}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_64(jobId, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_u_8,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQappApiDicomIngestStatusConstMeta,
+      argValues: [jobId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiDicomIngestStatusConstMeta =>
+      const TaskConstMeta(
+        debugName: "dicom_ingest_status",
+        argNames: ["jobId"],
+      );
+
+  @override
   Future<List<ModelInfo>> crateApiQualiaApiDiscoverModels() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 5, port: port_);
+            funcId: 20, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_model_info,
@@ -323,13 +934,93 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<DispatchResult> crateApiQualiaApiDispatchTaxPayment(
+      {required BigInt grossAmountMicroCents}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_64(grossAmountMicroCents, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 21, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_dispatch_result,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiDispatchTaxPaymentConstMeta,
+      argValues: [grossAmountMicroCents],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiDispatchTaxPaymentConstMeta =>
+      const TaskConstMeta(
+        debugName: "dispatch_tax_payment",
+        argNames: ["grossAmountMicroCents"],
+      );
+
+  @override
+  Future<void> crateApiQualiaApiDownloadAndInstallUpdate(
+      {required String url}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(url, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 22, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiDownloadAndInstallUpdateConstMeta,
+      argValues: [url],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiDownloadAndInstallUpdateConstMeta =>
+      const TaskConstMeta(
+        debugName: "download_and_install_update",
+        argNames: ["url"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiDownloadAndVectorize(
+      {required String url, required String filename, required String itemId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(url, serializer);
+        sse_encode_String(filename, serializer);
+        sse_encode_String(itemId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 23, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiDownloadAndVectorizeConstMeta,
+      argValues: [url, filename, itemId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiDownloadAndVectorizeConstMeta =>
+      const TaskConstMeta(
+        debugName: "download_and_vectorize",
+        argNames: ["url", "filename", "itemId"],
+      );
+
+  @override
   Future<String> crateApiResourceCatalogDownloadLlm({required String id}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(id, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 6, port: port_);
+            funcId: 24, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -359,7 +1050,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         sse_encode_String(filename, serializer);
         sse_encode_String(modelId, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 7, port: port_);
+            funcId: 25, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -378,12 +1069,167 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  String crateApiQappApiEvalComorbidityJsonFromDaemon(
+      {required BigInt patientDidHash, required BigInt targetOrganHash}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_64(patientDidHash, serializer);
+        sse_encode_u_64(targetOrganHash, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiEvalComorbidityJsonFromDaemonConstMeta,
+      argValues: [patientDidHash, targetOrganHash],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiEvalComorbidityJsonFromDaemonConstMeta =>
+      const TaskConstMeta(
+        debugName: "eval_comorbidity_json_from_daemon",
+        argNames: ["patientDidHash", "targetOrganHash"],
+      );
+
+  @override
+  Uint8List crateApiQappApiExecuteDicomVolumeQuery(
+      {required BigInt patientDidHash, required BigInt seriesHash}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_64(patientDidHash, serializer);
+        sse_encode_u_64(seriesHash, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_prim_u_8_strict,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiExecuteDicomVolumeQueryConstMeta,
+      argValues: [patientDidHash, seriesHash],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiExecuteDicomVolumeQueryConstMeta =>
+      const TaskConstMeta(
+        debugName: "execute_dicom_volume_query",
+        argNames: ["patientDidHash", "seriesHash"],
+      );
+
+  @override
+  Float32List crateApiQappApiExecuteQappScopedQuery(
+      {required BigInt appIdHash, required List<int> queryBytecode}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_64(appIdHash, serializer);
+        sse_encode_list_prim_u_8_loose(queryBytecode, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_prim_f_32_strict,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiExecuteQappScopedQueryConstMeta,
+      argValues: [appIdHash, queryBytecode],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiExecuteQappScopedQueryConstMeta =>
+      const TaskConstMeta(
+        debugName: "execute_qapp_scoped_query",
+        argNames: ["appIdHash", "queryBytecode"],
+      );
+
+  @override
+  Float32List crateApiQappApiExecuteQappScopedQueryZeroAlloc(
+      {required BigInt appIdHash, required List<int> queryBytecode}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_64(appIdHash, serializer);
+        sse_encode_list_prim_u_8_loose(queryBytecode, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_prim_f_32_strict,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiExecuteQappScopedQueryZeroAllocConstMeta,
+      argValues: [appIdHash, queryBytecode],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiExecuteQappScopedQueryZeroAllocConstMeta =>
+      const TaskConstMeta(
+        debugName: "execute_qapp_scoped_query_zero_alloc",
+        argNames: ["appIdHash", "queryBytecode"],
+      );
+
+  @override
+  String crateApiQappApiExecutionErrorLabel({required String code}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(code, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQappApiExecutionErrorLabelConstMeta,
+      argValues: [code],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiExecutionErrorLabelConstMeta =>
+      const TaskConstMeta(
+        debugName: "execution_error_label",
+        argNames: ["code"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiExportToSolid(
+      {required String inputQ42Path, required String outputDirPath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(inputQ42Path, serializer);
+        sse_encode_String(outputDirPath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 31, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiExportToSolidConstMeta,
+      argValues: [inputQ42Path, outputDirPath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiExportToSolidConstMeta =>
+      const TaskConstMeta(
+        debugName: "export_to_solid",
+        argNames: ["inputQ42Path", "outputDirPath"],
+      );
+
+  @override
   Future<List<CatalogItem>> crateApiQualiaApiFetchModelCatalog() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 8, port: port_);
+            funcId: 32, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_catalog_item,
@@ -407,7 +1253,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 9, port: port_);
+            funcId: 33, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_catalog_item,
@@ -431,7 +1277,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 10, port: port_);
+            funcId: 34, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_catalog_item,
@@ -455,7 +1301,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 11, port: port_);
+            funcId: 35, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_catalog_item,
@@ -474,29 +1320,76 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
-  Future<String> crateApiQualiaApiGenerateAppCredential(
-      {required String appName}) {
+  Future<String> crateApiQualiaApiFetchRemoteManifest({required String url}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(appName, serializer);
+        sse_encode_String(url, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 12, port: port_);
+            funcId: 36, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
-        decodeErrorData: null,
+        decodeErrorData: sse_decode_String,
       ),
-      constMeta: kCrateApiQualiaApiGenerateAppCredentialConstMeta,
-      argValues: [appName],
+      constMeta: kCrateApiQualiaApiFetchRemoteManifestConstMeta,
+      argValues: [url],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiQualiaApiGenerateAppCredentialConstMeta =>
+  TaskConstMeta get kCrateApiQualiaApiFetchRemoteManifestConstMeta =>
       const TaskConstMeta(
-        debugName: "generate_app_credential",
-        argNames: ["appName"],
+        debugName: "fetch_remote_manifest",
+        argNames: ["url"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiFetchTorrentTelemetry() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 37, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiFetchTorrentTelemetryConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiFetchTorrentTelemetryConstMeta =>
+      const TaskConstMeta(
+        debugName: "fetch_torrent_telemetry",
+        argNames: [],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiFetchWalletPortfolio() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 38, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiFetchWalletPortfolioConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiFetchWalletPortfolioConstMeta =>
+      const TaskConstMeta(
+        debugName: "fetch_wallet_portfolio",
+        argNames: [],
       );
 
   @override
@@ -505,7 +1398,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 13, port: port_);
+            funcId: 39, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -524,12 +1417,88 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<FrontDoorBridge> crateApiQualiaApiGenerateFrontDoor(
+      {required String label}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(label, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 40, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_front_door_bridge,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiGenerateFrontDoorConstMeta,
+      argValues: [label],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGenerateFrontDoorConstMeta =>
+      const TaskConstMeta(
+        debugName: "generate_front_door",
+        argNames: ["label"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiGenerateFrontDoorInvite() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 41, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiGenerateFrontDoorInviteConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGenerateFrontDoorInviteConstMeta =>
+      const TaskConstMeta(
+        debugName: "generate_front_door_invite",
+        argNames: [],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiGenerateQappCredential(
+      {required String qappName}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 42, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiGenerateQappCredentialConstMeta,
+      argValues: [qappName],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGenerateQappCredentialConstMeta =>
+      const TaskConstMeta(
+        debugName: "generate_qapp_credential",
+        argNames: ["qappName"],
+      );
+
+  @override
   Future<List<ProgressPayload>> crateApiQualiaApiGetActiveDownloads() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 14, port: port_);
+            funcId: 43, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_progress_payload,
@@ -553,7 +1522,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 15, port: port_);
+            funcId: 44, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_opt_String,
@@ -577,7 +1546,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 16, port: port_);
+            funcId: 45, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_coin_balance,
@@ -601,7 +1570,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 17, port: port_);
+            funcId: 46, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_agent_config,
@@ -619,12 +1588,84 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<List<DelegationRuleBridge>> crateApiQualiaApiGetDelegationRules() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 47, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_delegation_rule_bridge,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiGetDelegationRulesConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGetDelegationRulesConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_delegation_rules",
+        argNames: [],
+      );
+
+  @override
+  Future<List<ActorBridge>> crateApiQualiaApiGetDirectoryActors() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 48, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_actor_bridge,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiGetDirectoryActorsConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGetDirectoryActorsConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_directory_actors",
+        argNames: [],
+      );
+
+  @override
+  Future<List<FrontDoorBridge>> crateApiQualiaApiGetFrontDoors() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 49, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_front_door_bridge,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiGetFrontDoorsConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGetFrontDoorsConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_front_doors",
+        argNames: [],
+      );
+
+  @override
   Future<HardwareStatus> crateApiQualiaApiGetHardwareStatus() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 18, port: port_);
+            funcId: 50, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_hardware_status,
@@ -643,12 +1684,36 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<HardwareTelemetry> crateApiQualiaApiGetHardwareTelemetry() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 51, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_hardware_telemetry,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiGetHardwareTelemetryConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGetHardwareTelemetryConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_hardware_telemetry",
+        argNames: [],
+      );
+
+  @override
   Future<SpatialPhysicsState> crateApiQualiaApiGetPhysicsState() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 19, port: port_);
+            funcId: 52, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_spatial_physics_state,
@@ -672,7 +1737,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 20, port: port_);
+            funcId: 53, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_f_64,
@@ -696,7 +1761,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 21, port: port_);
+            funcId: 54, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_f_64,
@@ -720,7 +1785,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 22, port: port_);
+            funcId: 55, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_f_64,
@@ -739,12 +1804,36 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<QpuOracleSettings> crateApiQualiaApiGetQpuSettings() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 56, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_qpu_oracle_settings,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiGetQpuSettingsConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGetQpuSettingsConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_qpu_settings",
+        argNames: [],
+      );
+
+  @override
   Future<double> crateApiQualiaApiGetSpatialPressure() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 23, port: port_);
+            funcId: 57, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_f_64,
@@ -768,7 +1857,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 24, port: port_);
+            funcId: 58, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_f_64,
@@ -792,7 +1881,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 25, port: port_);
+            funcId: 59, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_f_64,
@@ -816,7 +1905,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 26, port: port_);
+            funcId: 60, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_tax_recipient_suite,
@@ -835,13 +1924,86 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<List<TokenEntry>> crateApiQualiaApiGetTokens() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 61, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_token_entry,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiGetTokensConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGetTokensConstMeta => const TaskConstMeta(
+        debugName: "get_tokens",
+        argNames: [],
+      );
+
+  @override
+  Future<List<TxRecord>> crateApiQualiaApiGetTransactionHistory(
+      {required String ticker}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(ticker, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 62, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_tx_record,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiGetTransactionHistoryConstMeta,
+      argValues: [ticker],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGetTransactionHistoryConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_transaction_history",
+        argNames: ["ticker"],
+      );
+
+  @override
+  Future<WalletStatus> crateApiQualiaApiGetWalletStatus() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 63, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_wallet_status,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiGetWalletStatusConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiGetWalletStatusConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_wallet_status",
+        argNames: [],
+      );
+
+  @override
   Future<String> crateApiQualiaApiGreet({required String name}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(name, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 27, port: port_);
+            funcId: 64, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -864,7 +2026,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(name, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 65)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -882,6 +2044,58 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<QpuChatCommandResult> crateApiQualiaApiHandleEngineChatCommand(
+      {required String text}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(text, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 66, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_qpu_chat_command_result,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiHandleEngineChatCommandConstMeta,
+      argValues: [text],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiHandleEngineChatCommandConstMeta =>
+      const TaskConstMeta(
+        debugName: "handle_engine_chat_command",
+        argNames: ["text"],
+      );
+
+  @override
+  Future<QpuChatCommandResult> crateApiQualiaApiHandleQpuChatCommand(
+      {required String text}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(text, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 67, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_qpu_chat_command_result,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiHandleQpuChatCommandConstMeta,
+      argValues: [text],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiHandleQpuChatCommandConstMeta =>
+      const TaskConstMeta(
+        debugName: "handle_qpu_chat_command",
+        argNames: ["text"],
+      );
+
+  @override
   Future<String> crateApiQualiaApiImportExternalSeed(
       {required String network, required String seed, required String label}) {
     return handler.executeNormal(NormalTask(
@@ -891,7 +2105,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         sse_encode_String(seed, serializer);
         sse_encode_String(label, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 29, port: port_);
+            funcId: 68, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -916,7 +2130,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(id, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 30, port: port_);
+            funcId: 69, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -935,13 +2149,65 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<String> crateApiQualiaApiIngestImage({required String filePath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(filePath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 70, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiIngestImageConstMeta,
+      argValues: [filePath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiIngestImageConstMeta =>
+      const TaskConstMeta(
+        debugName: "ingest_image",
+        argNames: ["filePath"],
+      );
+
+  @override
+  Future<void> crateApiQualiaApiIngestImageAsync(
+      {required String filePath, required String typology}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(filePath, serializer);
+        sse_encode_String(typology, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 71, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiIngestImageAsyncConstMeta,
+      argValues: [filePath, typology],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiIngestImageAsyncConstMeta =>
+      const TaskConstMeta(
+        debugName: "ingest_image_async",
+        argNames: ["filePath", "typology"],
+      );
+
+  @override
   Future<String> crateApiQualiaApiIngestLiterature({required String filePath}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(filePath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 31, port: port_);
+            funcId: 72, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -960,12 +2226,61 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<String> crateApiQualiaApiIngestOntology({required String fileName}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(fileName, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 73, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiIngestOntologyConstMeta,
+      argValues: [fileName],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiIngestOntologyConstMeta =>
+      const TaskConstMeta(
+        debugName: "ingest_ontology",
+        argNames: ["fileName"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiIngestPdf({required String fileName}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(fileName, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 74, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiIngestPdfConstMeta,
+      argValues: [fileName],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiIngestPdfConstMeta => const TaskConstMeta(
+        debugName: "ingest_pdf",
+        argNames: ["fileName"],
+      );
+
+  @override
   Future<void> crateApiSimpleInitApp() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 32, port: port_);
+            funcId: 75, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -988,7 +2303,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 33, port: port_);
+            funcId: 76, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -1006,52 +2321,262 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
-  Future<String> crateApiQualiaApiLaunchInstalledApp(
-      {required String appName}) {
+  Future<String> crateApiQualiaApiInspectInstalledQappReadiness(
+      {required String qappName}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(appName, serializer);
+        sse_encode_String(qappName, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 34, port: port_);
+            funcId: 77, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
         decodeErrorData: sse_decode_String,
       ),
-      constMeta: kCrateApiQualiaApiLaunchInstalledAppConstMeta,
-      argValues: [appName],
+      constMeta: kCrateApiQualiaApiInspectInstalledQappReadinessConstMeta,
+      argValues: [qappName],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiQualiaApiLaunchInstalledAppConstMeta =>
+  TaskConstMeta get kCrateApiQualiaApiInspectInstalledQappReadinessConstMeta =>
       const TaskConstMeta(
-        debugName: "launch_installed_app",
-        argNames: ["appName"],
+        debugName: "inspect_installed_qapp_readiness",
+        argNames: ["qappName"],
       );
 
   @override
-  Future<List<String>> crateApiQualiaApiListInstalledApps() {
+  Future<void> crateApiQualiaApiInstallPrerequisite({required String kind}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(kind, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 78, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiInstallPrerequisiteConstMeta,
+      argValues: [kind],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiInstallPrerequisiteConstMeta =>
+      const TaskConstMeta(
+        debugName: "install_prerequisite",
+        argNames: ["kind"],
+      );
+
+  @override
+  String? crateApiQappApiInstalledQappVersion({required String qappName}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 79)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_opt_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiInstalledQappVersionConstMeta,
+      argValues: [qappName],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiInstalledQappVersionConstMeta =>
+      const TaskConstMeta(
+        debugName: "installed_qapp_version",
+        argNames: ["qappName"],
+      );
+
+  @override
+  Future<bool> crateApiQualiaApiIsFirstRun() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 35, port: port_);
+            funcId: 80, port: port_);
       },
       codec: SseCodec(
-        decodeSuccessData: sse_decode_list_String,
+        decodeSuccessData: sse_decode_bool,
         decodeErrorData: null,
       ),
-      constMeta: kCrateApiQualiaApiListInstalledAppsConstMeta,
+      constMeta: kCrateApiQualiaApiIsFirstRunConstMeta,
       argValues: [],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiQualiaApiListInstalledAppsConstMeta =>
+  TaskConstMeta get kCrateApiQualiaApiIsFirstRunConstMeta =>
       const TaskConstMeta(
-        debugName: "list_installed_apps",
+        debugName: "is_first_run",
+        argNames: [],
+      );
+
+  @override
+  Future<bool> crateApiQualiaApiIsQpuFeatureUnlocked() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 81, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiIsQpuFeatureUnlockedConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiIsQpuFeatureUnlockedConstMeta =>
+      const TaskConstMeta(
+        debugName: "is_qpu_feature_unlocked",
+        argNames: [],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiLaunchInstalledQapp(
+      {required String qappName}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 82, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiLaunchInstalledQappConstMeta,
+      argValues: [qappName],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiLaunchInstalledQappConstMeta =>
+      const TaskConstMeta(
+        debugName: "launch_installed_qapp",
+        argNames: ["qappName"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiLaunchInstalledQappWithContext(
+      {required String qappName,
+      String? entrypoint,
+      String? surface,
+      String? payloadJson,
+      String? source}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        sse_encode_opt_String(entrypoint, serializer);
+        sse_encode_opt_String(surface, serializer);
+        sse_encode_opt_String(payloadJson, serializer);
+        sse_encode_opt_String(source, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 83, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiLaunchInstalledQappWithContextConstMeta,
+      argValues: [qappName, entrypoint, surface, payloadJson, source],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiLaunchInstalledQappWithContextConstMeta =>
+      const TaskConstMeta(
+        debugName: "launch_installed_qapp_with_context",
+        argNames: [
+          "qappName",
+          "entrypoint",
+          "surface",
+          "payloadJson",
+          "source"
+        ],
+      );
+
+  @override
+  Future<List<String>> crateApiQualiaApiListInstalledOntologyArtifacts() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 84, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_String,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiListInstalledOntologyArtifactsConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiListInstalledOntologyArtifactsConstMeta =>
+      const TaskConstMeta(
+        debugName: "list_installed_ontology_artifacts",
+        argNames: [],
+      );
+
+  @override
+  Future<List<String>> crateApiQualiaApiListInstalledQapps() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 85, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_String,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiListInstalledQappsConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiListInstalledQappsConstMeta =>
+      const TaskConstMeta(
+        debugName: "list_installed_qapps",
+        argNames: [],
+      );
+
+  @override
+  String crateApiQappApiListQappUpdateOffers() {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 86)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiListQappUpdateOffersConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiListQappUpdateOffersConstMeta =>
+      const TaskConstMeta(
+        debugName: "list_qapp_update_offers",
         argNames: [],
       );
 
@@ -1061,7 +2586,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 36, port: port_);
+            funcId: 87, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_opt_String,
@@ -1085,7 +2610,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 37, port: port_);
+            funcId: 88, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -1109,7 +2634,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 38, port: port_);
+            funcId: 89, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_llm_resource,
@@ -1134,7 +2659,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 39, port: port_);
+            funcId: 90, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_ontology_resource,
@@ -1153,6 +2678,337 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<String> crateApiQualiaApiMintSemanticToken({required String assetId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(assetId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 91, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiMintSemanticTokenConstMeta,
+      argValues: [assetId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiMintSemanticTokenConstMeta =>
+      const TaskConstMeta(
+        debugName: "mint_semantic_token",
+        argNames: ["assetId"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiParseDicomMetadataJson(
+      {required String filePath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(filePath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 92, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiParseDicomMetadataJsonConstMeta,
+      argValues: [filePath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiParseDicomMetadataJsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "parse_dicom_metadata_json",
+        argNames: ["filePath"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiProfileEnergyCircumstance() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 93, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiProfileEnergyCircumstanceConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiProfileEnergyCircumstanceConstMeta =>
+      const TaskConstMeta(
+        debugName: "profile_energy_circumstance",
+        argNames: [],
+      );
+
+  @override
+  BigInt crateApiQappApiQappIdHash({required String appId}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(appId, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 94)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_u_64,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQappApiQappIdHashConstMeta,
+      argValues: [appId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiQappIdHashConstMeta => const TaskConstMeta(
+        debugName: "qapp_id_hash",
+        argNames: ["appId"],
+      );
+
+  @override
+  Future<int> crateApiQualiaApiQualiaProtocolPort() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 95, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_u_16,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiQualiaProtocolPortConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiQualiaProtocolPortConstMeta =>
+      const TaskConstMeta(
+        debugName: "qualia_protocol_port",
+        argNames: [],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiReceiveVaultJob(
+      {required String jobId,
+      required String taskType,
+      required List<int> dataBlobCbor}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(jobId, serializer);
+        sse_encode_String(taskType, serializer);
+        sse_encode_list_prim_u_8_loose(dataBlobCbor, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 96, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiReceiveVaultJobConstMeta,
+      argValues: [jobId, taskType, dataBlobCbor],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiReceiveVaultJobConstMeta =>
+      const TaskConstMeta(
+        debugName: "receive_vault_job",
+        argNames: ["jobId", "taskType", "dataBlobCbor"],
+      );
+
+  @override
+  BigInt crateApiQappApiRegisterQappFromInstalledManifest(
+      {required String qappName}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(qappName, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 97)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_u_64,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiRegisterQappFromInstalledManifestConstMeta,
+      argValues: [qappName],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta
+      get kCrateApiQappApiRegisterQappFromInstalledManifestConstMeta =>
+          const TaskConstMeta(
+            debugName: "register_qapp_from_installed_manifest",
+            argNames: ["qappName"],
+          );
+
+  @override
+  BigInt crateApiQappApiRegisterQappManifest({required QappManifest manifest}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+            manifest, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 98)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_u_64,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiRegisterQappManifestConstMeta,
+      argValues: [manifest],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiRegisterQappManifestConstMeta =>
+      const TaskConstMeta(
+        debugName: "register_qapp_manifest",
+        argNames: ["manifest"],
+      );
+
+  @override
+  Future<void> crateApiQualiaApiRegisterQualiaUriHandler(
+      {required String exePath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(exePath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 99, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiRegisterQualiaUriHandlerConstMeta,
+      argValues: [exePath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiRegisterQualiaUriHandlerConstMeta =>
+      const TaskConstMeta(
+        debugName: "register_qualia_uri_handler",
+        argNames: ["exePath"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiRemoveInstalledModel(
+      {required String modelId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(modelId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 100, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiRemoveInstalledModelConstMeta,
+      argValues: [modelId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiRemoveInstalledModelConstMeta =>
+      const TaskConstMeta(
+        debugName: "remove_installed_model",
+        argNames: ["modelId"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiRemoveInstalledOntology(
+      {required String ontologyId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(ontologyId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 101, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiRemoveInstalledOntologyConstMeta,
+      argValues: [ontologyId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiRemoveInstalledOntologyConstMeta =>
+      const TaskConstMeta(
+        debugName: "remove_installed_ontology",
+        argNames: ["ontologyId"],
+      );
+
+  @override
+  Future<void> crateApiQualiaApiRemoveToken({required String id}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(id, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 102, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiRemoveTokenConstMeta,
+      argValues: [id],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiRemoveTokenConstMeta =>
+      const TaskConstMeta(
+        debugName: "remove_token",
+        argNames: ["id"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiRunEngineCommand({required String cmd}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(cmd, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 103, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiRunEngineCommandConstMeta,
+      argValues: [cmd],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiRunEngineCommandConstMeta =>
+      const TaskConstMeta(
+        debugName: "run_engine_command",
+        argNames: ["cmd"],
+      );
+
+  @override
   Future<String> crateApiQualiaApiRunInference(
       {required String prompt, required String modelPath}) {
     return handler.executeNormal(NormalTask(
@@ -1161,7 +3017,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         sse_encode_String(prompt, serializer);
         sse_encode_String(modelPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 40, port: port_);
+            funcId: 104, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -1180,17 +3036,47 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Stream<String> crateApiQualiaApiRunInferenceStream(
+      {required String prompt, required String modelPath}) {
+    final sink = RustStreamSink<String>();
+    unawaited(handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(prompt, serializer);
+        sse_encode_String(modelPath, serializer);
+        sse_encode_StreamSink_String_Sse(sink, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 105, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiRunInferenceStreamConstMeta,
+      argValues: [prompt, modelPath, sink],
+      apiImpl: this,
+    )));
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiRunInferenceStreamConstMeta =>
+      const TaskConstMeta(
+        debugName: "run_inference_stream",
+        argNames: ["prompt", "modelPath", "sink"],
+      );
+
+  @override
   Future<void> crateApiQualiaApiSaveConfig({required AgentConfig newConfig}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_box_autoadd_agent_config(newConfig, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 41, port: port_);
+            funcId: 106, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
-        decodeErrorData: null,
+        decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiQualiaApiSaveConfigConstMeta,
       argValues: [newConfig],
@@ -1211,7 +3097,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(walletsJson, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 42, port: port_);
+            funcId: 107, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -1237,7 +3123,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(accountsJson, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 43, port: port_);
+            funcId: 108, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -1256,17 +3142,69 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<QpuOracleSettings> crateApiQualiaApiSaveQpuSettings(
+      {required QpuOracleSettingsInput input}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_box_autoadd_qpu_oracle_settings_input(input, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 109, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_qpu_oracle_settings,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiSaveQpuSettingsConstMeta,
+      argValues: [input],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiSaveQpuSettingsConstMeta =>
+      const TaskConstMeta(
+        debugName: "save_qpu_settings",
+        argNames: ["input"],
+      );
+
+  @override
+  Future<void> crateApiQualiaApiSaveTaxSuite(
+      {required TaxRecipientSuite suite}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_box_autoadd_tax_recipient_suite(suite, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 110, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiSaveTaxSuiteConstMeta,
+      argValues: [suite],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiSaveTaxSuiteConstMeta =>
+      const TaskConstMeta(
+        debugName: "save_tax_suite",
+        argNames: ["suite"],
+      );
+
+  @override
   Future<void> crateApiQualiaApiSetActiveModel({required String modelName}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(modelName, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 44, port: port_);
+            funcId: 111, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
-        decodeErrorData: null,
+        decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiQualiaApiSetActiveModelConstMeta,
       argValues: [modelName],
@@ -1286,7 +3224,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 45, port: port_);
+            funcId: 112, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -1305,6 +3243,130 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<int> crateApiQualiaApiStartQualiaProtocol() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 113, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_u_16,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiStartQualiaProtocolConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiStartQualiaProtocolConstMeta =>
+      const TaskConstMeta(
+        debugName: "start_qualia_protocol",
+        argNames: [],
+      );
+
+  @override
+  BigInt crateApiQappApiSubmitDicomIngest(
+      {required String filePath, required BigInt patientDidHash}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(filePath, serializer);
+        sse_encode_u_64(patientDidHash, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 114)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_u_64,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQappApiSubmitDicomIngestConstMeta,
+      argValues: [filePath, patientDidHash],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQappApiSubmitDicomIngestConstMeta =>
+      const TaskConstMeta(
+        debugName: "submit_dicom_ingest",
+        argNames: ["filePath", "patientDidHash"],
+      );
+
+  @override
+  Future<String> crateApiQualiaApiTestSparqlEndpoint(
+      {required String endpointOrId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(endpointOrId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 115, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiTestSparqlEndpointConstMeta,
+      argValues: [endpointOrId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiTestSparqlEndpointConstMeta =>
+      const TaskConstMeta(
+        debugName: "test_sparql_endpoint",
+        argNames: ["endpointOrId"],
+      );
+
+  @override
+  Future<bool> crateApiQualiaApiToggleNymRelay() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 116, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiToggleNymRelayConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiToggleNymRelayConstMeta =>
+      const TaskConstMeta(
+        debugName: "toggle_nym_relay",
+        argNames: [],
+      );
+
+  @override
+  Future<bool> crateApiQualiaApiToggleStarkProver() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 117, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiQualiaApiToggleStarkProverConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiToggleStarkProverConstMeta =>
+      const TaskConstMeta(
+        debugName: "toggle_stark_prover",
+        argNames: [],
+      );
+
+  @override
   Future<void> crateApiQualiaApiUpdatePhysicsState(
       {required double temperature,
       required double pressure,
@@ -1316,7 +3378,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         sse_encode_f_64(pressure, serializer);
         sse_encode_f_64(timeDilation, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 46, port: port_);
+            funcId: 118, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -1335,6 +3397,31 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
+  Future<void> crateApiQualiaApiUpdateSolarInput({required int watts}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_32(watts, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 119, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiUpdateSolarInputConstMeta,
+      argValues: [watts],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQualiaApiUpdateSolarInputConstMeta =>
+      const TaskConstMeta(
+        debugName: "update_solar_input",
+        argNames: ["watts"],
+      );
+
+  @override
   Future<String> crateApiQualiaApiUpsertCmldDefinition(
       {required String term, required String contextDid}) {
     return handler.executeNormal(NormalTask(
@@ -1343,7 +3430,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         sse_encode_String(term, serializer);
         sse_encode_String(contextDid, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 47, port: port_);
+            funcId: 120, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -1362,7 +3449,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       );
 
   @override
-  Future<String> crateApiQualiaApiVerifyAndInstallApp(
+  Future<String> crateApiQualiaApiVerifyAndInstallQapp(
       {required String zipPath, required String credentialSig}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
@@ -1370,28 +3457,83 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         sse_encode_String(zipPath, serializer);
         sse_encode_String(credentialSig, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 48, port: port_);
+            funcId: 121, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
         decodeErrorData: null,
       ),
-      constMeta: kCrateApiQualiaApiVerifyAndInstallAppConstMeta,
+      constMeta: kCrateApiQualiaApiVerifyAndInstallQappConstMeta,
       argValues: [zipPath, credentialSig],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiQualiaApiVerifyAndInstallAppConstMeta =>
+  TaskConstMeta get kCrateApiQualiaApiVerifyAndInstallQappConstMeta =>
       const TaskConstMeta(
-        debugName: "verify_and_install_app",
+        debugName: "verify_and_install_qapp",
         argNames: ["zipPath", "credentialSig"],
       );
+
+  RustArcIncrementStrongCountFnType
+      get rust_arc_increment_strong_count_QappManifest => wire
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest;
+
+  RustArcDecrementStrongCountFnType
+      get rust_arc_decrement_strong_count_QappManifest => wire
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest;
+
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AnyhowException(raw as String);
+  }
+
+  @protected
+  QappManifest
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return QappManifestImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  QappManifest
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return QappManifestImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
 
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as String;
+  }
+
+  @protected
+  ActorBridge dco_decode_actor_bridge(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return ActorBridge(
+      id: dco_decode_String(arr[0]),
+      actorType: dco_decode_String(arr[1]),
+      name: dco_decode_String(arr[2]),
+      organization: dco_decode_opt_String(arr[3]),
+      qualifications: dco_decode_list_String(arr[4]),
+      roles: dco_decode_list_String(arr[5]),
+      verificationStatus: dco_decode_String(arr[6]),
+      pairwiseDid: dco_decode_String(arr[7]),
+      rootDidUri: dco_decode_opt_String(arr[8]),
+    );
   }
 
   @protected
@@ -1414,9 +3556,35 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  ActorBridge dco_decode_box_autoadd_actor_bridge(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_actor_bridge(raw);
+  }
+
+  @protected
   AgentConfig dco_decode_box_autoadd_agent_config(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_agent_config(raw);
+  }
+
+  @protected
+  DelegationRuleBridge dco_decode_box_autoadd_delegation_rule_bridge(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_delegation_rule_bridge(raw);
+  }
+
+  @protected
+  QpuOracleSettingsInput dco_decode_box_autoadd_qpu_oracle_settings_input(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_qpu_oracle_settings_input(raw);
+  }
+
+  @protected
+  TaxRecipientSuite dco_decode_box_autoadd_tax_recipient_suite(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_tax_recipient_suite(raw);
   }
 
   @protected
@@ -1463,9 +3631,63 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  DelegationRuleBridge dco_decode_delegation_rule_bridge(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return DelegationRuleBridge(
+      id: dco_decode_String(arr[0]),
+      actorId: dco_decode_String(arr[1]),
+      grantedRoles: dco_decode_list_String(arr[2]),
+      legalBasis: dco_decode_String(arr[3]),
+      privacyModeLimit: dco_decode_String(arr[4]),
+      allowedRecordTypes: dco_decode_list_String(arr[5]),
+      restrictedRecords: dco_decode_list_String(arr[6]),
+      isActive: dco_decode_bool(arr[7]),
+    );
+  }
+
+  @protected
+  DispatchResult dco_decode_dispatch_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return DispatchResult(
+      grossAmountMicroCents: dco_decode_u_64(arr[0]),
+      taxPoolMicroCents: dco_decode_u_64(arr[1]),
+      principalRemainderMicroCents: dco_decode_u_64(arr[2]),
+      totalSent: dco_decode_u_64(arr[3]),
+      totalQueued: dco_decode_u_64(arr[4]),
+      totalFailed: dco_decode_u_64(arr[5]),
+    );
+  }
+
+  @protected
+  double dco_decode_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
   double dco_decode_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
+  }
+
+  @protected
+  FrontDoorBridge dco_decode_front_door_bridge(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return FrontDoorBridge(
+      id: dco_decode_String(arr[0]),
+      didUri: dco_decode_String(arr[1]),
+      label: dco_decode_String(arr[2]),
+      createdAt: dco_decode_String(arr[3]),
+    );
   }
 
   @protected
@@ -1482,9 +3704,29 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  HardwareTelemetry dco_decode_hardware_telemetry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return HardwareTelemetry(
+      cpuPercent: dco_decode_f_64(arr[0]),
+      ramUsedGb: dco_decode_f_64(arr[1]),
+      ramTotalGb: dco_decode_f_64(arr[2]),
+      daemonStatus: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<ActorBridge> dco_decode_list_actor_bridge(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_actor_bridge).toList();
   }
 
   @protected
@@ -1497,6 +3739,21 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   List<CoinBalance> dco_decode_list_coin_balance(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_coin_balance).toList();
+  }
+
+  @protected
+  List<DelegationRuleBridge> dco_decode_list_delegation_rule_bridge(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_delegation_rule_bridge)
+        .toList();
+  }
+
+  @protected
+  List<FrontDoorBridge> dco_decode_list_front_door_bridge(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_front_door_bridge).toList();
   }
 
   @protected
@@ -1518,6 +3775,18 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  Float32List dco_decode_list_prim_f_32_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Float32List;
+  }
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as List<int>;
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
@@ -1533,6 +3802,18 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   List<TaxRecipient> dco_decode_list_tax_recipient(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_tax_recipient).toList();
+  }
+
+  @protected
+  List<TokenEntry> dco_decode_list_token_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_token_entry).toList();
+  }
+
+  @protected
+  List<TxRecord> dco_decode_list_tx_record(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_tx_record).toList();
   }
 
   @protected
@@ -1608,6 +3889,23 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  PrerequisiteStatus dco_decode_prerequisite_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return PrerequisiteStatus(
+      platformRequiresCheck: dco_decode_bool(arr[0]),
+      webview2Ready: dco_decode_bool(arr[1]),
+      webview2Bundled: dco_decode_bool(arr[2]),
+      webview2Evergreen: dco_decode_bool(arr[3]),
+      vcRedistReady: dco_decode_bool(arr[4]),
+      allReady: dco_decode_bool(arr[5]),
+      bundledWebview2Dir: dco_decode_String(arr[6]),
+    );
+  }
+
+  @protected
   ProgressPayload dco_decode_progress_payload(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -1620,6 +3918,56 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       totalBytes: dco_decode_u_64(arr[3]),
       speedKbps: dco_decode_f_64(arr[4]),
       status: dco_decode_String(arr[5]),
+    );
+  }
+
+  @protected
+  QpuChatCommandResult dco_decode_qpu_chat_command_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return QpuChatCommandResult(
+      handled: dco_decode_bool(arr[0]),
+      response: dco_decode_String(arr[1]),
+      featureUnlocked: dco_decode_bool(arr[2]),
+    );
+  }
+
+  @protected
+  QpuOracleSettings dco_decode_qpu_oracle_settings(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return QpuOracleSettings(
+      featureUnlocked: dco_decode_bool(arr[0]),
+      ibmTokenConfigured: dco_decode_bool(arr[1]),
+      dwaveTokenConfigured: dco_decode_bool(arr[2]),
+      maxShotsPerTask: dco_decode_u_32(arr[3]),
+      fallbackToClassical: dco_decode_bool(arr[4]),
+      enableQuboRouting: dco_decode_bool(arr[5]),
+      enableDftGroundState: dco_decode_bool(arr[6]),
+      enableDefeasibleResolution: dco_decode_bool(arr[7]),
+      ibmQuotaMinutesRemaining: dco_decode_f_64(arr[8]),
+      dwaveQuotaMinutesRemaining: dco_decode_f_64(arr[9]),
+    );
+  }
+
+  @protected
+  QpuOracleSettingsInput dco_decode_qpu_oracle_settings_input(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return QpuOracleSettingsInput(
+      maxShotsPerTask: dco_decode_u_32(arr[0]),
+      fallbackToClassical: dco_decode_bool(arr[1]),
+      enableQuboRouting: dco_decode_bool(arr[2]),
+      enableDftGroundState: dco_decode_bool(arr[3]),
+      enableDefeasibleResolution: dco_decode_bool(arr[4]),
+      ibmToken: dco_decode_opt_String(arr[5]),
+      dwaveToken: dco_decode_opt_String(arr[6]),
     );
   }
 
@@ -1645,7 +3993,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     return TaxRecipient(
       label: dco_decode_String(arr[0]),
       ilpAddress: dco_decode_String(arr[1]),
-      sharePercent: dco_decode_f_64(arr[2]),
+      sharePercent: dco_decode_u_64(arr[2]),
       useNym: dco_decode_bool(arr[3]),
     );
   }
@@ -1660,6 +4008,51 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       jurisdictionDid: dco_decode_String(arr[0]),
       recipients: dco_decode_list_tax_recipient(arr[1]),
     );
+  }
+
+  @protected
+  TokenEntry dco_decode_token_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return TokenEntry(
+      id: dco_decode_String(arr[0]),
+      chain: dco_decode_String(arr[1]),
+      tokenType: dco_decode_String(arr[2]),
+      contract: dco_decode_String(arr[3]),
+      symbol: dco_decode_String(arr[4]),
+      name: dco_decode_String(arr[5]),
+      balance: dco_decode_String(arr[6]),
+      decimals: dco_decode_u_8(arr[7]),
+      fiatUsd: dco_decode_f_64(arr[8]),
+    );
+  }
+
+  @protected
+  TxRecord dco_decode_tx_record(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return TxRecord(
+      txid: dco_decode_String(arr[0]),
+      ticker: dco_decode_String(arr[1]),
+      direction: dco_decode_String(arr[2]),
+      amount: dco_decode_String(arr[3]),
+      label: dco_decode_String(arr[4]),
+      timestamp: dco_decode_String(arr[5]),
+      status: dco_decode_String(arr[6]),
+      confirmations: dco_decode_u_32(arr[7]),
+      fee: dco_decode_String(arr[8]),
+      counterparty: dco_decode_String(arr[9]),
+    );
+  }
+
+  @protected
+  int dco_decode_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
   }
 
   @protected
@@ -1687,10 +4080,85 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  WalletStatus dco_decode_wallet_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return WalletStatus(
+      lightningSats: dco_decode_u_64(arr[0]),
+      ilpMicrocents: dco_decode_u_64(arr[1]),
+      nymConnected: dco_decode_bool(arr[2]),
+    );
+  }
+
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_String(deserializer);
+    return AnyhowException(inner);
+  }
+
+  @protected
+  QappManifest
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return QappManifestImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  QappManifest
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return QappManifestImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  RustStreamSink<String> sse_decode_StreamSink_String_Sse(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
     return utf8.decoder.convert(inner);
+  }
+
+  @protected
+  ActorBridge sse_decode_actor_bridge(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_actorType = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_organization = sse_decode_opt_String(deserializer);
+    var var_qualifications = sse_decode_list_String(deserializer);
+    var var_roles = sse_decode_list_String(deserializer);
+    var var_verificationStatus = sse_decode_String(deserializer);
+    var var_pairwiseDid = sse_decode_String(deserializer);
+    var var_rootDidUri = sse_decode_opt_String(deserializer);
+    return ActorBridge(
+        id: var_id,
+        actorType: var_actorType,
+        name: var_name,
+        organization: var_organization,
+        qualifications: var_qualifications,
+        roles: var_roles,
+        verificationStatus: var_verificationStatus,
+        pairwiseDid: var_pairwiseDid,
+        rootDidUri: var_rootDidUri);
   }
 
   @protected
@@ -1712,10 +4180,38 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  ActorBridge sse_decode_box_autoadd_actor_bridge(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_actor_bridge(deserializer));
+  }
+
+  @protected
   AgentConfig sse_decode_box_autoadd_agent_config(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_agent_config(deserializer));
+  }
+
+  @protected
+  DelegationRuleBridge sse_decode_box_autoadd_delegation_rule_bridge(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_delegation_rule_bridge(deserializer));
+  }
+
+  @protected
+  QpuOracleSettingsInput sse_decode_box_autoadd_qpu_oracle_settings_input(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_qpu_oracle_settings_input(deserializer));
+  }
+
+  @protected
+  TaxRecipientSuite sse_decode_box_autoadd_tax_recipient_suite(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_tax_recipient_suite(deserializer));
   }
 
   @protected
@@ -1771,9 +4267,70 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  DelegationRuleBridge sse_decode_delegation_rule_bridge(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_actorId = sse_decode_String(deserializer);
+    var var_grantedRoles = sse_decode_list_String(deserializer);
+    var var_legalBasis = sse_decode_String(deserializer);
+    var var_privacyModeLimit = sse_decode_String(deserializer);
+    var var_allowedRecordTypes = sse_decode_list_String(deserializer);
+    var var_restrictedRecords = sse_decode_list_String(deserializer);
+    var var_isActive = sse_decode_bool(deserializer);
+    return DelegationRuleBridge(
+        id: var_id,
+        actorId: var_actorId,
+        grantedRoles: var_grantedRoles,
+        legalBasis: var_legalBasis,
+        privacyModeLimit: var_privacyModeLimit,
+        allowedRecordTypes: var_allowedRecordTypes,
+        restrictedRecords: var_restrictedRecords,
+        isActive: var_isActive);
+  }
+
+  @protected
+  DispatchResult sse_decode_dispatch_result(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_grossAmountMicroCents = sse_decode_u_64(deserializer);
+    var var_taxPoolMicroCents = sse_decode_u_64(deserializer);
+    var var_principalRemainderMicroCents = sse_decode_u_64(deserializer);
+    var var_totalSent = sse_decode_u_64(deserializer);
+    var var_totalQueued = sse_decode_u_64(deserializer);
+    var var_totalFailed = sse_decode_u_64(deserializer);
+    return DispatchResult(
+        grossAmountMicroCents: var_grossAmountMicroCents,
+        taxPoolMicroCents: var_taxPoolMicroCents,
+        principalRemainderMicroCents: var_principalRemainderMicroCents,
+        totalSent: var_totalSent,
+        totalQueued: var_totalQueued,
+        totalFailed: var_totalFailed);
+  }
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat32();
+  }
+
+  @protected
   double sse_decode_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  FrontDoorBridge sse_decode_front_door_bridge(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_didUri = sse_decode_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    var var_createdAt = sse_decode_String(deserializer);
+    return FrontDoorBridge(
+        id: var_id,
+        didUri: var_didUri,
+        label: var_label,
+        createdAt: var_createdAt);
   }
 
   @protected
@@ -1789,6 +4346,21 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  HardwareTelemetry sse_decode_hardware_telemetry(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_cpuPercent = sse_decode_f_64(deserializer);
+    var var_ramUsedGb = sse_decode_f_64(deserializer);
+    var var_ramTotalGb = sse_decode_f_64(deserializer);
+    var var_daemonStatus = sse_decode_String(deserializer);
+    return HardwareTelemetry(
+        cpuPercent: var_cpuPercent,
+        ramUsedGb: var_ramUsedGb,
+        ramTotalGb: var_ramTotalGb,
+        daemonStatus: var_daemonStatus);
+  }
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1796,6 +4368,18 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ActorBridge> sse_decode_list_actor_bridge(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ActorBridge>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_actor_bridge(deserializer));
     }
     return ans_;
   }
@@ -1820,6 +4404,32 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     var ans_ = <CoinBalance>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_coin_balance(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<DelegationRuleBridge> sse_decode_list_delegation_rule_bridge(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <DelegationRuleBridge>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_delegation_rule_bridge(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FrontDoorBridge> sse_decode_list_front_door_bridge(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FrontDoorBridge>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_front_door_bridge(deserializer));
     }
     return ans_;
   }
@@ -1862,6 +4472,20 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  Float32List sse_decode_list_prim_f_32_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getFloat32List(len_);
+  }
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -1890,6 +4514,30 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     var ans_ = <TaxRecipient>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_tax_recipient(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<TokenEntry> sse_decode_list_token_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TokenEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_token_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<TxRecord> sse_decode_list_tx_record(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TxRecord>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_tx_record(deserializer));
     }
     return ans_;
   }
@@ -1992,6 +4640,27 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  PrerequisiteStatus sse_decode_prerequisite_status(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_platformRequiresCheck = sse_decode_bool(deserializer);
+    var var_webview2Ready = sse_decode_bool(deserializer);
+    var var_webview2Bundled = sse_decode_bool(deserializer);
+    var var_webview2Evergreen = sse_decode_bool(deserializer);
+    var var_vcRedistReady = sse_decode_bool(deserializer);
+    var var_allReady = sse_decode_bool(deserializer);
+    var var_bundledWebview2Dir = sse_decode_String(deserializer);
+    return PrerequisiteStatus(
+        platformRequiresCheck: var_platformRequiresCheck,
+        webview2Ready: var_webview2Ready,
+        webview2Bundled: var_webview2Bundled,
+        webview2Evergreen: var_webview2Evergreen,
+        vcRedistReady: var_vcRedistReady,
+        allReady: var_allReady,
+        bundledWebview2Dir: var_bundledWebview2Dir);
+  }
+
+  @protected
   ProgressPayload sse_decode_progress_payload(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -2007,6 +4676,67 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         totalBytes: var_totalBytes,
         speedKbps: var_speedKbps,
         status: var_status);
+  }
+
+  @protected
+  QpuChatCommandResult sse_decode_qpu_chat_command_result(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_handled = sse_decode_bool(deserializer);
+    var var_response = sse_decode_String(deserializer);
+    var var_featureUnlocked = sse_decode_bool(deserializer);
+    return QpuChatCommandResult(
+        handled: var_handled,
+        response: var_response,
+        featureUnlocked: var_featureUnlocked);
+  }
+
+  @protected
+  QpuOracleSettings sse_decode_qpu_oracle_settings(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_featureUnlocked = sse_decode_bool(deserializer);
+    var var_ibmTokenConfigured = sse_decode_bool(deserializer);
+    var var_dwaveTokenConfigured = sse_decode_bool(deserializer);
+    var var_maxShotsPerTask = sse_decode_u_32(deserializer);
+    var var_fallbackToClassical = sse_decode_bool(deserializer);
+    var var_enableQuboRouting = sse_decode_bool(deserializer);
+    var var_enableDftGroundState = sse_decode_bool(deserializer);
+    var var_enableDefeasibleResolution = sse_decode_bool(deserializer);
+    var var_ibmQuotaMinutesRemaining = sse_decode_f_64(deserializer);
+    var var_dwaveQuotaMinutesRemaining = sse_decode_f_64(deserializer);
+    return QpuOracleSettings(
+        featureUnlocked: var_featureUnlocked,
+        ibmTokenConfigured: var_ibmTokenConfigured,
+        dwaveTokenConfigured: var_dwaveTokenConfigured,
+        maxShotsPerTask: var_maxShotsPerTask,
+        fallbackToClassical: var_fallbackToClassical,
+        enableQuboRouting: var_enableQuboRouting,
+        enableDftGroundState: var_enableDftGroundState,
+        enableDefeasibleResolution: var_enableDefeasibleResolution,
+        ibmQuotaMinutesRemaining: var_ibmQuotaMinutesRemaining,
+        dwaveQuotaMinutesRemaining: var_dwaveQuotaMinutesRemaining);
+  }
+
+  @protected
+  QpuOracleSettingsInput sse_decode_qpu_oracle_settings_input(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_maxShotsPerTask = sse_decode_u_32(deserializer);
+    var var_fallbackToClassical = sse_decode_bool(deserializer);
+    var var_enableQuboRouting = sse_decode_bool(deserializer);
+    var var_enableDftGroundState = sse_decode_bool(deserializer);
+    var var_enableDefeasibleResolution = sse_decode_bool(deserializer);
+    var var_ibmToken = sse_decode_opt_String(deserializer);
+    var var_dwaveToken = sse_decode_opt_String(deserializer);
+    return QpuOracleSettingsInput(
+        maxShotsPerTask: var_maxShotsPerTask,
+        fallbackToClassical: var_fallbackToClassical,
+        enableQuboRouting: var_enableQuboRouting,
+        enableDftGroundState: var_enableDftGroundState,
+        enableDefeasibleResolution: var_enableDefeasibleResolution,
+        ibmToken: var_ibmToken,
+        dwaveToken: var_dwaveToken);
   }
 
   @protected
@@ -2027,7 +4757,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_label = sse_decode_String(deserializer);
     var var_ilpAddress = sse_decode_String(deserializer);
-    var var_sharePercent = sse_decode_f_64(deserializer);
+    var var_sharePercent = sse_decode_u_64(deserializer);
     var var_useNym = sse_decode_bool(deserializer);
     return TaxRecipient(
         label: var_label,
@@ -2044,6 +4774,62 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     var var_recipients = sse_decode_list_tax_recipient(deserializer);
     return TaxRecipientSuite(
         jurisdictionDid: var_jurisdictionDid, recipients: var_recipients);
+  }
+
+  @protected
+  TokenEntry sse_decode_token_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_chain = sse_decode_String(deserializer);
+    var var_tokenType = sse_decode_String(deserializer);
+    var var_contract = sse_decode_String(deserializer);
+    var var_symbol = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_balance = sse_decode_String(deserializer);
+    var var_decimals = sse_decode_u_8(deserializer);
+    var var_fiatUsd = sse_decode_f_64(deserializer);
+    return TokenEntry(
+        id: var_id,
+        chain: var_chain,
+        tokenType: var_tokenType,
+        contract: var_contract,
+        symbol: var_symbol,
+        name: var_name,
+        balance: var_balance,
+        decimals: var_decimals,
+        fiatUsd: var_fiatUsd);
+  }
+
+  @protected
+  TxRecord sse_decode_tx_record(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_txid = sse_decode_String(deserializer);
+    var var_ticker = sse_decode_String(deserializer);
+    var var_direction = sse_decode_String(deserializer);
+    var var_amount = sse_decode_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    var var_timestamp = sse_decode_String(deserializer);
+    var var_status = sse_decode_String(deserializer);
+    var var_confirmations = sse_decode_u_32(deserializer);
+    var var_fee = sse_decode_String(deserializer);
+    var var_counterparty = sse_decode_String(deserializer);
+    return TxRecord(
+        txid: var_txid,
+        ticker: var_ticker,
+        direction: var_direction,
+        amount: var_amount,
+        label: var_label,
+        timestamp: var_timestamp,
+        status: var_status,
+        confirmations: var_confirmations,
+        fee: var_fee,
+        counterparty: var_counterparty);
+  }
+
+  @protected
+  int sse_decode_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint16();
   }
 
   @protected
@@ -2070,15 +4856,87 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  WalletStatus sse_decode_wallet_status(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_lightningSats = sse_decode_u_64(deserializer);
+    var var_ilpMicrocents = sse_decode_u_64(deserializer);
+    var var_nymConnected = sse_decode_bool(deserializer);
+    return WalletStatus(
+        lightningSats: var_lightningSats,
+        ilpMicrocents: var_ilpMicrocents,
+        nymConnected: var_nymConnected);
+  }
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
   }
 
   @protected
+  void sse_encode_AnyhowException(
+      AnyhowException self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          QappManifest self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as QappManifestImpl).frbInternalSseEncode(move: true),
+        serializer);
+  }
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          QappManifest self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as QappManifestImpl).frbInternalSseEncode(move: null),
+        serializer);
+  }
+
+  @protected
+  void sse_encode_StreamSink_String_Sse(
+      RustStreamSink<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+        self.setupAndSerialize(
+            codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        )),
+        serializer);
+  }
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_actor_bridge(ActorBridge self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.actorType, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_opt_String(self.organization, serializer);
+    sse_encode_list_String(self.qualifications, serializer);
+    sse_encode_list_String(self.roles, serializer);
+    sse_encode_String(self.verificationStatus, serializer);
+    sse_encode_String(self.pairwiseDid, serializer);
+    sse_encode_opt_String(self.rootDidUri, serializer);
   }
 
   @protected
@@ -2096,10 +4954,38 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_actor_bridge(
+      ActorBridge self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_actor_bridge(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_agent_config(
       AgentConfig self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_agent_config(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_delegation_rule_bridge(
+      DelegationRuleBridge self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_delegation_rule_bridge(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_qpu_oracle_settings_input(
+      QpuOracleSettingsInput self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_qpu_oracle_settings_input(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_tax_recipient_suite(
+      TaxRecipientSuite self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_tax_recipient_suite(self, serializer);
   }
 
   @protected
@@ -2136,9 +5022,51 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  void sse_encode_delegation_rule_bridge(
+      DelegationRuleBridge self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.actorId, serializer);
+    sse_encode_list_String(self.grantedRoles, serializer);
+    sse_encode_String(self.legalBasis, serializer);
+    sse_encode_String(self.privacyModeLimit, serializer);
+    sse_encode_list_String(self.allowedRecordTypes, serializer);
+    sse_encode_list_String(self.restrictedRecords, serializer);
+    sse_encode_bool(self.isActive, serializer);
+  }
+
+  @protected
+  void sse_encode_dispatch_result(
+      DispatchResult self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.grossAmountMicroCents, serializer);
+    sse_encode_u_64(self.taxPoolMicroCents, serializer);
+    sse_encode_u_64(self.principalRemainderMicroCents, serializer);
+    sse_encode_u_64(self.totalSent, serializer);
+    sse_encode_u_64(self.totalQueued, serializer);
+    sse_encode_u_64(self.totalFailed, serializer);
+  }
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat32(self);
+  }
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_front_door_bridge(
+      FrontDoorBridge self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.didUri, serializer);
+    sse_encode_String(self.label, serializer);
+    sse_encode_String(self.createdAt, serializer);
   }
 
   @protected
@@ -2151,11 +5079,31 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  void sse_encode_hardware_telemetry(
+      HardwareTelemetry self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.cpuPercent, serializer);
+    sse_encode_f_64(self.ramUsedGb, serializer);
+    sse_encode_f_64(self.ramTotalGb, serializer);
+    sse_encode_String(self.daemonStatus, serializer);
+  }
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_actor_bridge(
+      List<ActorBridge> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_actor_bridge(item, serializer);
     }
   }
 
@@ -2176,6 +5124,26 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_coin_balance(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_delegation_rule_bridge(
+      List<DelegationRuleBridge> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_delegation_rule_bridge(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_front_door_bridge(
+      List<FrontDoorBridge> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_front_door_bridge(item, serializer);
     }
   }
 
@@ -2210,6 +5178,23 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  void sse_encode_list_prim_f_32_strict(
+      Float32List self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putFloat32List(self);
+  }
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(
+      List<int> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer
+        .putUint8List(self is Uint8List ? self : Uint8List.fromList(self));
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
       Uint8List self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -2234,6 +5219,26 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_tax_recipient(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_token_entry(
+      List<TokenEntry> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_token_entry(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_tx_record(
+      List<TxRecord> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_tx_record(item, serializer);
     }
   }
 
@@ -2309,6 +5314,19 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  void sse_encode_prerequisite_status(
+      PrerequisiteStatus self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.platformRequiresCheck, serializer);
+    sse_encode_bool(self.webview2Ready, serializer);
+    sse_encode_bool(self.webview2Bundled, serializer);
+    sse_encode_bool(self.webview2Evergreen, serializer);
+    sse_encode_bool(self.vcRedistReady, serializer);
+    sse_encode_bool(self.allReady, serializer);
+    sse_encode_String(self.bundledWebview2Dir, serializer);
+  }
+
+  @protected
   void sse_encode_progress_payload(
       ProgressPayload self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -2318,6 +5336,44 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     sse_encode_u_64(self.totalBytes, serializer);
     sse_encode_f_64(self.speedKbps, serializer);
     sse_encode_String(self.status, serializer);
+  }
+
+  @protected
+  void sse_encode_qpu_chat_command_result(
+      QpuChatCommandResult self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.handled, serializer);
+    sse_encode_String(self.response, serializer);
+    sse_encode_bool(self.featureUnlocked, serializer);
+  }
+
+  @protected
+  void sse_encode_qpu_oracle_settings(
+      QpuOracleSettings self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.featureUnlocked, serializer);
+    sse_encode_bool(self.ibmTokenConfigured, serializer);
+    sse_encode_bool(self.dwaveTokenConfigured, serializer);
+    sse_encode_u_32(self.maxShotsPerTask, serializer);
+    sse_encode_bool(self.fallbackToClassical, serializer);
+    sse_encode_bool(self.enableQuboRouting, serializer);
+    sse_encode_bool(self.enableDftGroundState, serializer);
+    sse_encode_bool(self.enableDefeasibleResolution, serializer);
+    sse_encode_f_64(self.ibmQuotaMinutesRemaining, serializer);
+    sse_encode_f_64(self.dwaveQuotaMinutesRemaining, serializer);
+  }
+
+  @protected
+  void sse_encode_qpu_oracle_settings_input(
+      QpuOracleSettingsInput self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.maxShotsPerTask, serializer);
+    sse_encode_bool(self.fallbackToClassical, serializer);
+    sse_encode_bool(self.enableQuboRouting, serializer);
+    sse_encode_bool(self.enableDftGroundState, serializer);
+    sse_encode_bool(self.enableDefeasibleResolution, serializer);
+    sse_encode_opt_String(self.ibmToken, serializer);
+    sse_encode_opt_String(self.dwaveToken, serializer);
   }
 
   @protected
@@ -2334,7 +5390,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.label, serializer);
     sse_encode_String(self.ilpAddress, serializer);
-    sse_encode_f_64(self.sharePercent, serializer);
+    sse_encode_u_64(self.sharePercent, serializer);
     sse_encode_bool(self.useNym, serializer);
   }
 
@@ -2344,6 +5400,41 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.jurisdictionDid, serializer);
     sse_encode_list_tax_recipient(self.recipients, serializer);
+  }
+
+  @protected
+  void sse_encode_token_entry(TokenEntry self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.chain, serializer);
+    sse_encode_String(self.tokenType, serializer);
+    sse_encode_String(self.contract, serializer);
+    sse_encode_String(self.symbol, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.balance, serializer);
+    sse_encode_u_8(self.decimals, serializer);
+    sse_encode_f_64(self.fiatUsd, serializer);
+  }
+
+  @protected
+  void sse_encode_tx_record(TxRecord self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.txid, serializer);
+    sse_encode_String(self.ticker, serializer);
+    sse_encode_String(self.direction, serializer);
+    sse_encode_String(self.amount, serializer);
+    sse_encode_String(self.label, serializer);
+    sse_encode_String(self.timestamp, serializer);
+    sse_encode_String(self.status, serializer);
+    sse_encode_u_32(self.confirmations, serializer);
+    sse_encode_String(self.fee, serializer);
+    sse_encode_String(self.counterparty, serializer);
+  }
+
+  @protected
+  void sse_encode_u_16(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint16(self);
   }
 
   @protected
@@ -2370,8 +5461,42 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   }
 
   @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
+  void sse_encode_wallet_status(WalletStatus self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.lightningSats, serializer);
+    sse_encode_u_64(self.ilpMicrocents, serializer);
+    sse_encode_bool(self.nymConnected, serializer);
+  }
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putInt32(self);
   }
+}
+
+@sealed
+class QappManifestImpl extends RustOpaque implements QappManifest {
+  // Not to be used by end users
+  QappManifestImpl.frbInternalDcoDecode(List<dynamic> wire)
+      : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  QappManifestImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+      : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustApi.instance.api.rust_arc_increment_strong_count_QappManifest,
+    rustArcDecrementStrongCount:
+        RustApi.instance.api.rust_arc_decrement_strong_count_QappManifest,
+    rustArcDecrementStrongCountPtr:
+        RustApi.instance.api.rust_arc_decrement_strong_count_QappManifestPtr,
+  );
 }

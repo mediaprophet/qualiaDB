@@ -1,6 +1,6 @@
 # Qualia-DB Developer Guide
 
-_Branch: `0.0.6-dev` | Last updated: 2026-06-06_
+_Branch: `0.0.8-dev` | Last updated: 2026-06-07_
 
 Qualia-DB is a bare-metal semantic graph database designed specifically for constrained personal environments (mobile devices, IoT, browsers). It enforces a strict 512 MB RAM floor and operates with absolute zero dynamic heap allocation during execution, making garbage-collection pauses mathematically impossible.
 
@@ -179,7 +179,7 @@ See the full API reference at [flutter-api-reference.md](flutter-api-reference.m
 | Chat | `runInference(prompt, modelPath)` |
 | LLM Hub | `loadLlmResources()`, `downloadLlm(id)`, `downloadModel(url, filename, modelId)` |
 | Ontology Hub | `loadOntologyResources()`, `importOntology(id)` |
-| App Vault | `listInstalledApps()`, `launchInstalledApp(appName)`, `verifyAndInstallApp(zipPath, credentialSig)` |
+| Qapp Vault | `listInstalledQapps()`, `launchInstalledQapp(qappName)`, `verifyAndInstallQapp(zipPath, credentialSig)` |
 | Wallet | `getCoinBalances()`, `deriveWalletsFromSeed(seed)`, `generateBip39Seed()` |
 | Settings | `getConfig()`, `saveConfig(newConfig)` |
 | Dashboard | `getHardwareStatus()`, `daemonStatus()`, `startDaemon()` |

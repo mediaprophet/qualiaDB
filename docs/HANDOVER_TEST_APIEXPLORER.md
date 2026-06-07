@@ -1,6 +1,6 @@
 # Handover: Test Suite & API Explorer
 
-**Branch:** `0.0.6-dev`  
+**Branch:** `0.0.8-dev`  
 **Date:** 2026-06-06  
 **Status:** Complete and verified — 271/271 tests passing with daemon live
 

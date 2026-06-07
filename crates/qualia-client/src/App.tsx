@@ -9,7 +9,7 @@ import LLMHub from './pages/LLMHub';
 import OntologyHub from './pages/OntologyHub';
 import Chat from './pages/Chat';
 import AppSettings from './pages/Settings';
-import AppStore from './pages/AppStore';
+import QappVault from './pages/QappVault';
 import Wallet from './pages/Wallet';
 import SpatialPhysics from './pages/SpatialPhysics';
 import AssetLibrary from './pages/AssetLibrary';
@@ -26,7 +26,7 @@ function Sidebar() {
     { path: '/ontologies', label: 'Ontologies', icon: Database },
     { path: '/assets', label: 'Asset Library', icon: Database },
     { path: '/physics', label: 'Physics Engine', icon: Package },
-    { path: '/apps', label: 'App Manager', icon: Package },
+    { path: '/qapps', label: 'Qapp Vault', icon: Package },
     { path: '/wallet', label: 'Wallets & Routes', icon: WalletIcon },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];
@@ -186,7 +186,7 @@ export default function App() {
             <Route path="/ontologies" element={<OntologyHub />} />
             <Route path="/assets" element={<AssetLibrary />} />
             <Route path="/physics" element={<SpatialPhysics />} />
-            <Route path="/apps" element={<AppStore />} />
+            <Route path="/qapps" element={<QappVault />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/settings" element={<AppSettings />} />
             <Route path="*" element={<div className="glass-panel text-center text-gray-400">Page Under Construction</div>} />

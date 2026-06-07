@@ -329,7 +329,7 @@ async fn stream_download(url: &str, dest: &Path) -> Result<(), String> {
 
     let client = reqwest::Client::new();
     let mut response = client.get(url)
-        .header("User-Agent", "qualiaDB-cli/0.0.7")
+        .header("User-Agent", concat!("qualiaDB-cli/", env!("CARGO_PKG_VERSION")))
         .send()
         .await
         .map_err(|e| e.to_string())?

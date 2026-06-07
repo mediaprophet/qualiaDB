@@ -131,6 +131,8 @@
 //! Cache-line pressure is bounded: the `[u64; MAX_DEFEATER_SLOTS]` buffer fits in
 //! 8 × 64-byte cache lines; each `DeonticVerdict` is 64 bytes (one cache line).
 
+use crate::n3_parser::{Rule, RuleType, Term};
+use crate::q_hash;
 use crate::QualiaQuin;
 
 // ─── Deontic Opcodes ─────────────────────────────────────────────────────────
@@ -160,8 +162,9 @@ pub const MAX_DEFEATER_SLOTS: usize = 64;
 
 /// The result of evaluating a single norm Quin against temporal bounds and defeaters.
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DeonticStatus {
+    #[default]
     /// Norm is temporally valid and has no active defeater.
     Active = 0x00,
     /// A matching `q42:unless` defeater node was found; obligation is overridden.
@@ -179,7 +182,7 @@ pub enum DeonticStatus {
 /// Layout: 48-byte norm Quin + 1-byte status + 1-byte opcode + 6-byte pad = 56 B
 /// aligned to 8, padded by the compiler to the nearest power-of-two boundary.
 #[repr(C, align(8))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct DeonticVerdict {
     /// The original norm Quin that was evaluated.
     pub norm: QualiaQuin,
@@ -227,7 +230,28 @@ pub fn defeater_fingerprint(q: &QualiaQuin) -> u64 {
     q.subject ^ q.context ^ path_bits
 }
 
+/// Harvest `q42:unless` defeater fingerprints from a contract slice (Phase 1 only).
+pub fn harvest_defeater_fingerprints(quins: &[QualiaQuin], out: &mut [u64]) -> usize {
+    let mut count = 0usize;
+    for &q in quins {
+        if q.predicate & DEFEATER_BIT == 0 {
+            continue;
+        }
+        let expected_parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+        if q.parity == expected_parity && count < out.len() {
+            out[count] = defeater_fingerprint(&q);
+            count += 1;
+        }
+    }
+    count
+}
+
 /// Returns `true` if the defeater buffer contains a fingerprint that matches `norm`.
+#[inline]
+pub fn norm_has_active_defeater(norm: &QualiaQuin, defeaters: &[u64]) -> bool {
+    has_defeater(defeaters, norm)
+}
+
 #[inline]
 fn has_defeater(defeaters: &[u64], norm: &QualiaQuin) -> bool {
     let key = defeater_fingerprint(norm);
@@ -363,6 +387,84 @@ pub fn evaluate_deontic_contract(
     }
 
     Ok(verdict_count)
+}
+
+// ─── N3 → deontic norm bridge ───────────────────────────────────────────────
+
+fn term_uri_hash(term: &Term) -> Option<u64> {
+    match term {
+        Term::Uri(uri) => Some(q_hash(uri)),
+        Term::Literal(lit) => Some(q_hash(lit)),
+        Term::Variable(_) => None,
+    }
+}
+
+fn opcode_from_predicate_uri(uri: &str, rule_type: RuleType) -> (u8, bool) {
+    if matches!(rule_type, RuleType::Defeater) {
+        return (OP_PERMIT, true);
+    }
+    let lower = uri.to_lowercase();
+    let is_obligate = lower.contains("obligate")
+        || lower.contains("must")
+        || lower.contains("shall");
+    let is_permit = lower.contains("permit") || lower.contains("may") || lower.contains("can");
+    let is_forbid = lower.contains("forbid")
+        || lower.contains("prohibit")
+        || lower.contains("not");
+
+    match rule_type {
+        RuleType::Strict | RuleType::Linear => {
+            if is_obligate {
+                (OP_OBLIGATE, false)
+            } else if is_forbid {
+                (OP_FORBID, false)
+            } else if is_permit {
+                (OP_PERMIT, false)
+            } else {
+                (OP_OBLIGATE, false)
+            }
+        }
+        RuleType::Defeasible => {
+            if is_permit {
+                (OP_PERMIT, false)
+            } else if is_forbid {
+                (OP_FORBID, false)
+            } else if is_obligate {
+                (OP_OBLIGATE, false)
+            } else {
+                (OP_PERMIT, false)
+            }
+        }
+        RuleType::Defeater => (OP_PERMIT, true),
+    }
+}
+
+/// Compile an N3 [`Rule`] into a norm Quin (or defeater Quin for `^>` rules).
+///
+/// Maps premise triple → party / property / action; `rule_type` → opcode + defeater flag.
+pub fn compile_n3_rule_to_norm(
+    rule: &Rule,
+    contract_hash: u64,
+    expiry_unix32: u32,
+) -> Option<QualiaQuin> {
+    let premise = rule.premise.triples.first()?;
+    let party = term_uri_hash(&premise.subject)?;
+    let property_path = term_uri_hash(&premise.predicate)?;
+    let action_object = term_uri_hash(&premise.object)?;
+    let predicate_uri = match &premise.predicate {
+        Term::Uri(uri) => uri.as_str(),
+        _ => return None,
+    };
+    let (opcode, is_defeater) = opcode_from_predicate_uri(predicate_uri, rule.rule_type);
+    Some(compile_norm_quin(
+        party,
+        opcode,
+        property_path,
+        action_object,
+        contract_hash,
+        expiry_unix32,
+        is_defeater,
+    ))
 }
 
 // ─── compile_norm_quin ────────────────────────────────────────────────────────
@@ -586,5 +688,65 @@ mod tests {
         let q = compile_norm_quin(alice(), OP_FORBID, disclose_path(), conf_data(), nda(), EXPIRY_NDA, false);
         let expected = q.subject ^ q.predicate ^ q.object ^ q.context;
         assert_eq!(q.parity, expected, "parity must be XOR fold of semantic fields");
+    }
+
+    #[test]
+    fn compile_n3_defeater_sets_defeater_bit() {
+        use crate::n3_parser::{Formula, Rule, RuleType, Triple};
+        let rule = Rule {
+            id: None,
+            rule_type: RuleType::Defeater,
+            weight: None,
+            premise: Formula {
+                triples: vec![Triple {
+                    subject: Term::Uri("did:web:alice.example".into()),
+                    predicate: Term::Uri("q42:disclose".into()),
+                    object: Term::Uri("q42:role:certified-auditor".into()),
+                }],
+            },
+            conclusion: Formula {
+                triples: vec![Triple {
+                    subject: Term::Uri("did:web:alice.example".into()),
+                    predicate: Term::Uri("q42:disclose".into()),
+                    object: Term::Uri("true".into()),
+                }],
+            },
+        };
+        let q = compile_n3_rule_to_norm(&rule, nda(), EXPIRY_NDA).unwrap();
+        assert_ne!(q.predicate & DEFEATER_BIT, 0);
+    }
+
+    #[test]
+    fn compile_n3_defeasible_permit_rule() {
+        use crate::n3_parser::{Formula, Rule, RuleType, Triple};
+        let rule = Rule {
+            id: None,
+            rule_type: RuleType::Defeasible,
+            weight: None,
+            premise: Formula {
+                triples: vec![Triple {
+                    subject: Term::Uri("did:web:bob.example".into()),
+                    predicate: Term::Uri("q42:permitAccess".into()),
+                    object: Term::Uri("q42:data:project-x".into()),
+                }],
+            },
+            conclusion: Formula { triples: vec![] },
+        };
+        let q = compile_n3_rule_to_norm(&rule, nda(), 0).unwrap();
+        assert_eq!(extract_deontic_opcode(q.predicate), OP_PERMIT);
+        assert_eq!(q.predicate & DEFEATER_BIT, 0);
+    }
+
+    #[test]
+    fn compile_n3_malformed_rule_returns_none() {
+        use crate::n3_parser::{Formula, Rule, RuleType};
+        let rule = Rule {
+            id: None,
+            rule_type: RuleType::Strict,
+            weight: None,
+            premise: Formula { triples: vec![] },
+            conclusion: Formula { triples: vec![] },
+        };
+        assert!(compile_n3_rule_to_norm(&rule, nda(), 0).is_none());
     }
 }

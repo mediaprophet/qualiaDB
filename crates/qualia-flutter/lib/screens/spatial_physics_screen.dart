@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
+import 'package:webview_flutter/webview_flutter.dart';
 import '../src/rust/api/qualia_api.dart';
 
 class SpatialPhysicsScreen extends StatefulWidget {
@@ -11,19 +11,22 @@ class SpatialPhysicsScreen extends StatefulWidget {
   State<SpatialPhysicsScreen> createState() => _SpatialPhysicsScreenState();
 }
 
-class _SpatialPhysicsScreenState extends State<SpatialPhysicsScreen> with TickerProviderStateMixin {
+class _SpatialPhysicsScreenState extends State<SpatialPhysicsScreen> {
   double _temperature = 50.0;
   double _pressure = 50.0;
   double _timeDilation = 1.0;
   String _daemonStatus = 'stopped';
 
-  late AnimationController _engineController;
   Timer? _stateSyncTimer;
+  WebViewController? _meshController;
 
   @override
   void initState() {
     super.initState();
-    _engineController = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat();
+    _meshController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF0A0A0F))
+      ..loadFlutterAsset('assets/web/spatial_mesh.html');
     _loadState();
     
     // Sync UI state down to rust occasionally if it drifts, or just on change.
@@ -41,7 +44,14 @@ class _SpatialPhysicsScreenState extends State<SpatialPhysicsScreen> with Ticker
         _timeDilation = state.timeDilation;
         _daemonStatus = daemon;
       });
+      _pushPhysicsToMesh();
     }
+  }
+
+  Future<void> _pushPhysicsToMesh() async {
+    await _meshController?.runJavaScript(
+      'window.updatePhysics($_temperature, $_pressure, $_timeDilation);',
+    );
   }
 
   Future<void> _handleStartDaemon() async {
@@ -56,21 +66,17 @@ class _SpatialPhysicsScreenState extends State<SpatialPhysicsScreen> with Ticker
       _timeDilation = timeDil;
     });
     await updatePhysicsState(temperature: temp, pressure: press, timeDilation: timeDil);
+    await _pushPhysicsToMesh();
   }
 
   @override
   void dispose() {
     _stateSyncTimer?.cancel();
-    _engineController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Adjust animation speed based on time dilation
-    _engineController.duration = Duration(milliseconds: (10000 / math.max(0.1, _timeDilation)).round());
-    if (!_engineController.isAnimating) _engineController.repeat();
-
     final isCritical = _temperature > 70;
     final primaryColor = isCritical ? const Color(0xFFFF4444) : const Color(0xFF00F0FF);
 
@@ -168,26 +174,17 @@ class _SpatialPhysicsScreenState extends State<SpatialPhysicsScreen> with Ticker
                             children: [
                               Icon(Icons.view_in_ar, color: Color(0xFFB026FF), size: 20),
                               SizedBox(width: 8),
-                              Text('Spatial Mesh Renderer', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+                              Text('Spatial WebGL Mesh', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
                             ],
                           ),
                         ),
-                        Center(
-                          child: AnimatedBuilder(
-                            animation: _engineController,
-                            builder: (context, child) {
-                              return CustomPaint(
-                                size: const Size(400, 400),
-                                painter: WireframePainter(
-                                  progress: _engineController.value,
-                                  temperature: _temperature,
-                                  pressure: _pressure,
-                                  baseColor: primaryColor,
-                                ),
-                              );
-                            }
+                        if (_meshController != null)
+                          Positioned.fill(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 48),
+                              child: WebViewWidget(controller: _meshController!),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -267,70 +264,4 @@ class _SpatialPhysicsScreenState extends State<SpatialPhysicsScreen> with Ticker
       ),
     );
   }
-}
-
-class WireframePainter extends CustomPainter {
-  final double progress;
-  final double temperature;
-  final double pressure;
-  final Color baseColor;
-
-  WireframePainter({required this.progress, required this.temperature, required this.pressure, required this.baseColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    
-    // Calculate warp and scale based on physics
-    final scale = 1.0 + (pressure / 100) * 0.5;
-    final warp = math.sin(progress * math.pi * 2) * (temperature / 100) * 0.5;
-    
-    final radius = 100.0 * scale;
-    
-    // Rotate the 3D-like shape
-    final angle = progress * math.pi * 2;
-    
-    // Draw an isometric octahedron wireframe
-    final top = Offset(center.dx, center.dy - radius * (1.5 + warp));
-    final bottom = Offset(center.dx, center.dy + radius * (1.5 + warp));
-    
-    final points = <Offset>[];
-    for (int i = 0; i < 4; i++) {
-      final a = angle + (i * math.pi / 2);
-      // Perspective projection simulation
-      final x = math.cos(a) * radius;
-      final y = math.sin(a) * (radius * 0.4); // isometric squish
-      points.add(Offset(center.dx + x, center.dy + y));
-    }
-
-    final paint = Paint()
-      ..color = baseColor
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    final glowPaint = Paint()
-      ..color = baseColor.withOpacity(0.3)
-      ..strokeWidth = 6.0
-      ..style = PaintingStyle.stroke;
-
-    // Draw equator
-    for (int i = 0; i < 4; i++) {
-      final p1 = points[i];
-      final p2 = points[(i + 1) % 4];
-      canvas.drawLine(p1, p2, paint);
-      canvas.drawLine(p1, p2, glowPaint);
-    }
-
-    // Draw lines to top and bottom
-    for (final p in points) {
-      canvas.drawLine(p, top, paint);
-      canvas.drawLine(p, top, glowPaint);
-      
-      canvas.drawLine(p, bottom, paint);
-      canvas.drawLine(p, bottom, glowPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant WireframePainter oldDelegate) => true; // Always repaint for continuous animation
 }

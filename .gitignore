@@ -42,6 +42,7 @@ Local_Libraries/
 Local_LIbraries/
 
 # App development sandbox (wellfair, cooperative-projects — not part of the core release)
+qapp-development/
 app-development/
 
 # Signing keystore — never commit private keys

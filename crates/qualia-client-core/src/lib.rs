@@ -1,7 +1,19 @@
-pub mod app_registry;
+pub mod anatomy_context;
+pub mod bundled_qapps;
+pub mod qapp_version;
+pub mod qapp_paths;
+pub mod qapp_registry;
+pub mod qapps_protocol;
+pub mod qapp_api;
+pub mod qapp_manifest;
 pub mod engine;
 pub mod state;
 pub mod api;
+pub mod update_installer;
+pub mod prerequisites;
+pub mod qpu_oracle;
+pub mod qpu_dispatcher;
+pub mod qpu_pipeline;
 
 pub use state::*;
 pub use api::*;

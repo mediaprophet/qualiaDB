@@ -6,8 +6,9 @@
 use crate::QualiaQuin;
 use wasm_bindgen::prelude::*;
 
+/// WASM edge offload descriptor — distinct from governance [`crate::llm_agent::AgentIntent`].
 #[wasm_bindgen]
-pub struct AgentIntent {
+pub struct WasmOffloadIntent {
     pub opcode: u32,
     pub priority: u32,
     pub payload_size: usize,
@@ -16,7 +17,7 @@ pub struct AgentIntent {
 }
 
 #[wasm_bindgen]
-impl AgentIntent {
+impl WasmOffloadIntent {
     #[wasm_bindgen(constructor)]
     pub fn new(opcode: u32, priority: u32, payload_size: usize) -> Self {
         Self { opcode, priority, payload_size, payload_str: None }
@@ -32,20 +33,20 @@ pub const OP_INFER: u32 = 0x100;
 pub const OP_CALC_KINEMATICS: u32 = 0x101;
 pub const OP_INFER_BINDING_AFFINITY: u32 = 0x102;
 
-/// Intercepts heavy computational opcodes and constructs an AgentIntent to offload them
+/// Intercepts heavy computational opcodes and constructs a WASM offload intent.
 #[wasm_bindgen]
-pub fn intercept_computational_opcode(opcode: u32, payload_size: usize) -> Option<AgentIntent> {
+pub fn intercept_computational_opcode(opcode: u32, payload_size: usize) -> Option<WasmOffloadIntent> {
     if opcode == OP_INFER || opcode == OP_CALC_KINEMATICS {
         // Abort local WASM evaluation and construct an Intent for WebRTC dispatch
-        Some(AgentIntent::new(opcode, 1, payload_size))
+        Some(WasmOffloadIntent::new(opcode, 1, payload_size))
     } else {
         None
     }
 }
 
 #[wasm_bindgen]
-pub fn intercept_pharmacogenomics_intent(smiles: String) -> AgentIntent {
-    AgentIntent::with_string_payload(OP_INFER_BINDING_AFFINITY, 1, smiles)
+pub fn intercept_pharmacogenomics_intent(smiles: String) -> WasmOffloadIntent {
+    WasmOffloadIntent::with_string_payload(OP_INFER_BINDING_AFFINITY, 1, smiles)
 }
 
 /// The Federated Node Manager handles discovery and WebRTC offloading
@@ -74,7 +75,7 @@ impl FederatedNodeManager {
 
     /// Attempts to route a heavy mathematical payload to the native daemon
     #[wasm_bindgen]
-    pub fn offload_intent(&self, intent: &AgentIntent) -> Result<String, JsValue> {
+    pub fn offload_intent(&self, intent: &WasmOffloadIntent) -> Result<String, JsValue> {
         if !self.native_daemon_available {
             return Err(JsValue::from_str(
                 "CRITICAL: Required native compute capabilities (e.g., SIMD, GPU, ODE Solvers) are unavailable in the browser. \

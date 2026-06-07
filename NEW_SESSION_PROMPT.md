@@ -10,7 +10,7 @@ graph engine with in-process LLM inference.  Read `HANDOVER.md` (top section) an
 `CLAUDE.md` before doing anything — CLAUDE.md has hard rules about the inference stack
 that must not be violated.
 
-**Branch:** `0.0.6-dev` (or `main` — same content, pushed together).
+**Branch:** `0.0.8-dev` (or `main` — same content, pushed together).
 
 ## What was done last session (do not redo)
 

@@ -2,7 +2,7 @@ import { Package, ShieldCheck, Play, Key, Copy, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
 
-interface AppEntry {
+interface QappEntry {
   name: string;
   id: string;
   status: string;
@@ -19,23 +19,23 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export default function AppStore() {
-  const [apps, setApps] = useState<AppEntry[]>([]);
+export default function QappVault() {
+  const [qapps, setQapps] = useState<QappEntry[]>([]);
   const [vcInput, setVcInput] = useState('');
   const [generatedVc, setGeneratedVc] = useState('');
   const [vcError, setVcError] = useState('');
   const [launching, setLaunching] = useState<string | null>(null);
 
   useEffect(() => {
-    invoke<string[]>('list_installed_apps')
-      .then(names => setApps(names.map(n => ({ name: n, id: n, status: 'Installed', vc: 'Valid' }))))
+    invoke<string[]>('list_installed_qapps')
+      .then(names => setQapps(names.map(n => ({ name: n, id: n, status: 'Installed', vc: 'Valid' }))))
       .catch(console.error);
   }, []);
 
-  const handleLaunch = async (appName: string) => {
-    setLaunching(appName);
+  const handleLaunch = async (qappName: string) => {
+    setLaunching(qappName);
     try {
-      await invoke('launch_installed_app', { appName });
+      await invoke('launch_installed_qapp', { qappName });
     } catch (e) {
       console.error('Launch failed:', e);
     } finally {
@@ -48,7 +48,7 @@ export default function AppStore() {
     setVcError('');
     setGeneratedVc('');
     try {
-      const vc = await invoke<string>('generate_app_credential', { appName: vcInput.trim() });
+      const vc = await invoke<string>('generate_qapp_credential', { qappName: vcInput.trim() });
       setGeneratedVc(vc);
     } catch (e: any) {
       setVcError(String(e));
@@ -59,31 +59,31 @@ export default function AppStore() {
     <div className="flex flex-col gap-6">
       <div className="glass-panel">
         <h2 className="text-xl font-bold border-b border-white/10 pb-2 mb-4 flex items-center gap-2 text-white">
-          <Package className="text-[#00f0ff]" /> Local App Manager
+          <Package className="text-[#00f0ff]" /> Qapp Vault
         </h2>
-        <p className="text-gray-400 mb-6">Install and manage third-party edge-native web apps. Apps are sandboxed and verified via VCs.</p>
+        <p className="text-gray-400 mb-6">Install and manage third-party edge-native qapps. Qapps are sandboxed and verified via VCs.</p>
 
-        {apps.length === 0 ? (
+        {qapps.length === 0 ? (
           <div className="text-center text-gray-600 text-sm font-mono py-8">
-            No apps installed — place app directories in your <span className="text-gray-400">Apps/</span> data folder.
+            No qapps installed — place qapp directories in your <span className="text-gray-400">Qapps/</span> data folder.
           </div>
         ) : (
           <div className="grid gap-4">
-            {apps.map(app => (
-              <div key={app.id} className="bg-black/40 border border-white/5 rounded-xl p-4 flex items-center justify-between">
+            {qapps.map(qapp => (
+              <div key={qapp.id} className="bg-black/40 border border-white/5 rounded-xl p-4 flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-lg text-white">{app.name}</h3>
+                  <h3 className="font-bold text-lg text-white">{qapp.name}</h3>
                   <div className="text-xs text-gray-500 font-mono mt-1 flex gap-3">
-                    <span className="flex items-center gap-1 text-[#00ff88]"><ShieldCheck className="w-3 h-3"/> VC: {app.vc}</span>
-                    <span>ID: {app.id}</span>
+                    <span className="flex items-center gap-1 text-[#00ff88]"><ShieldCheck className="w-3 h-3"/> VC: {qapp.vc}</span>
+                    <span>ID: {qapp.id}</span>
                   </div>
                 </div>
                 <button
-                  onClick={() => handleLaunch(app.id)}
-                  disabled={launching === app.id}
+                  onClick={() => handleLaunch(qapp.id)}
+                  disabled={launching === qapp.id}
                   className="bg-white/10 text-white hover:bg-[#00f0ff] hover:text-black transition-all px-4 py-2 rounded-lg font-semibold flex items-center gap-2 text-sm disabled:opacity-50"
                 >
-                  <Play className="w-4 h-4" /> {launching === app.id ? 'Launching…' : 'Launch'}
+                  <Play className="w-4 h-4" /> {launching === qapp.id ? 'Launching…' : 'Launch'}
                 </button>
               </div>
             ))}
@@ -95,7 +95,7 @@ export default function AppStore() {
         <h2 className="text-xl font-bold border-b border-white/10 pb-2 mb-4 flex items-center gap-2 text-white">
           <Key className="text-[#ffd700]" /> Developer Credentials
         </h2>
-        <p className="text-sm text-gray-400 mb-4">Generate Verifiable Credentials (VCs) to self-sign your own local applications before loading them into the daemon.</p>
+        <p className="text-sm text-gray-400 mb-4">Generate Verifiable Credentials (VCs) to self-sign your own local qapps before loading them into the daemon.</p>
 
         <div className="flex gap-4 mb-3">
           <input
@@ -103,7 +103,7 @@ export default function AppStore() {
             value={vcInput}
             onChange={e => { setVcInput(e.target.value); setGeneratedVc(''); setVcError(''); }}
             onKeyDown={e => e.key === 'Enter' && handleSignVc()}
-            placeholder="App ID (e.g. com.my.app)"
+            placeholder="Qapp ID (e.g. com.my.qapp)"
             className="flex-1 bg-black/50 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#ffd700] font-mono text-sm"
           />
           <button

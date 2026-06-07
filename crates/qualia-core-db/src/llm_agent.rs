@@ -63,9 +63,14 @@ pub enum AgentBackend {
 }
 
 // ─── AgentIntent ─────────────────────────────────────────────────────────────
+pub use crate::n3_compiler::{AgentIntentFrame, N3OutputMode, MAX_INTENT_SCOPE_SLOTS};
+
 /// Structured intent message from LLM → Webizen. Every call must declare
 /// what it intends to do — the Webizen validates this against the Rights Ontology
 /// BEFORE the LLM ever sees the user's semantic graph.
+///
+/// Cold-path session struct (serde/MCP). For zero-allocation pre-flight use
+/// [`AgentIntentFrame`] via [`AgentIntent::to_frame`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentIntent {
     /// N3Logic predicate hash declaring the class of operation.
@@ -81,9 +86,22 @@ pub struct AgentIntent {
     pub principal_did_hash: u64,
     /// The persistent Intent Frame Hash established by the MCP session.
     pub mcp_intent_frame_hash: u64,
+    /// How the orchestrator should treat model output on the symbolic path.
+    #[serde(default)]
+    pub output_mode: N3OutputMode,
+    /// Maximum sensitivity clearance for this session (bits `[56..63]`).
+    #[serde(default)]
+    pub clearance_ceiling: u8,
+    /// Maximum Sentinel VM depth before `SentinelError::MemoryOverflow`.
+    #[serde(default = "default_max_sentinel_depth")]
+    pub max_sentinel_depth: u8,
     /// The active capability profile, if one is bound to this session.
     #[serde(skip)]
     pub active_profile: Option<crate::profiles::CapabilityProfile>,
+}
+
+fn default_max_sentinel_depth() -> u8 {
+    32
 }
 
 impl AgentIntent {
@@ -91,6 +109,42 @@ impl AgentIntent {
     pub fn is_critical(&self) -> bool {
         // Mock constant for a critical operation (e.g. q_hash("llm:EmergencyIntake"))
         self.intent_predicate == 0xC12171CA1
+    }
+
+    /// Copy into a stack-allocated frame for Core-1 pre-flight validation.
+    pub fn to_frame(&self) -> AgentIntentFrame {
+        let mut graph_scope = [0u64; MAX_INTENT_SCOPE_SLOTS];
+        let scope_count = self
+            .requested_graph_scope
+            .len()
+            .min(MAX_INTENT_SCOPE_SLOTS) as u8;
+        for (i, hash) in self
+            .requested_graph_scope
+            .iter()
+            .take(MAX_INTENT_SCOPE_SLOTS)
+            .enumerate()
+        {
+            graph_scope[i] = *hash;
+        }
+        AgentIntentFrame {
+            intent_predicate: self.intent_predicate,
+            principal_did_hash: self.principal_did_hash,
+            mcp_intent_frame_hash: self.mcp_intent_frame_hash,
+            ilp_offer_micro_cents: self.ilp_offer_micro_cents,
+            scope_count,
+            requires_network: self.requires_network,
+            output_mode: self.output_mode,
+            clearance_ceiling: self.clearance_ceiling,
+            max_sentinel_depth: self.max_sentinel_depth,
+            graph_scope,
+        }
+    }
+}
+
+impl AgentIntentFrame {
+    /// Build a hot-path frame without heap allocation beyond the source intent's scope vec.
+    pub fn from_intent(intent: &AgentIntent) -> Self {
+        intent.to_frame()
     }
 }
 
@@ -381,13 +435,15 @@ impl LocalLlmAgent {
     }
 }
 
-impl AgentRuntime for LocalLlmAgent {
-    fn backend(&self) -> &AgentBackend { &self.backend }
-    fn agent_did(&self) -> &str { &self.agent_did }
+impl LocalLlmAgent {
+    /// Zero-allocation pre-flight path for Core 1 (no `active_profile` heap lookup).
+    pub fn validate_intent_frame(&self, frame: &AgentIntentFrame) -> WebizenVerdict {
+        Self::evaluate_intent_frame(self, frame)
+    }
 
-    fn validate_intent(&self, intent: &AgentIntent) -> WebizenVerdict {
+    fn evaluate_intent_frame(agent: &LocalLlmAgent, frame: &AgentIntentFrame) -> WebizenVerdict {
         // Rule 1: No outbound network calls allowed from a Local backend.
-        if intent.requires_network {
+        if frame.requires_network {
             return WebizenVerdict::Deny {
                 rule_violated: LLM_RULE_NO_OUTBOUND_TELEMETRY,
                 reason: "Local backend: outbound network access violates Rights Ontology.",
@@ -395,8 +451,9 @@ impl AgentRuntime for LocalLlmAgent {
             };
         }
         // Rule 2: Intent must not request access to Sanctuary-flagged graph scopes.
-        // (A real check would query the SLG Arena for SANCTUARY metadata bits.)
-        if intent.requested_graph_scope.iter().any(|&h| h == SANCTUARY_SCOPE_WEBIZEN) {
+        let sanctuary_hit = (0..frame.scope_count as usize)
+            .any(|i| frame.graph_scope[i] == SANCTUARY_SCOPE_WEBIZEN);
+        if sanctuary_hit {
             return WebizenVerdict::Deny {
                 rule_violated: LLM_RULE_NO_SANCTUARY_ACCESS,
                 reason: "Access to Sanctuary-flagged scope blocked.",
@@ -406,21 +463,21 @@ impl AgentRuntime for LocalLlmAgent {
         
         // Rule 5: Cooperative Projects Directive — No adversarial, manipulative, or dishonest conduct.
         // Also tracks anti-human rights and discriminatory behavior for court auditing and liability.
-        let is_adversarial = intent.intent_predicate == q_hash("llm:AdversarialOperation");
-        let is_dishonest = intent.intent_predicate == q_hash("llm:DishonestOperation");
-        let is_discriminatory = intent.intent_predicate == q_hash("llm:DiscriminatoryOperation");
-        let is_anti_human_rights = intent.intent_predicate == q_hash("llm:AntiHumanRightsOperation");
+        let is_adversarial = frame.intent_predicate == q_hash("llm:AdversarialOperation");
+        let is_dishonest = frame.intent_predicate == q_hash("llm:DishonestOperation");
+        let is_discriminatory = frame.intent_predicate == q_hash("llm:DiscriminatoryOperation");
+        let is_anti_human_rights = frame.intent_predicate == q_hash("llm:AntiHumanRightsOperation");
 
         if is_adversarial || is_dishonest || is_discriminatory || is_anti_human_rights {
             let liability_weight: u64 = if is_anti_human_rights { 100 } else if is_discriminatory { 80 } else { 50 };
             let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
             
             let mut conduct_quin = QualiaQuin {
-                subject: q_hash(self.agent_did()),
+                subject: q_hash(agent.agent_did()),
                 predicate: q_hash("q42:conductViolation"),
                 // Inline tag integer (0b001 << 60)
                 object: liability_weight | (0b001u64 << 60),
-                context: intent.principal_did_hash,
+                context: frame.principal_did_hash,
                 // Pack time and flags into metadata
                 metadata: (now_ms & 0xFFFFFFFF) | ((is_anti_human_rights as u64) << 32) | ((is_discriminatory as u64) << 33),
                 parity: 0,
@@ -437,12 +494,38 @@ impl AgentRuntime for LocalLlmAgent {
         }
 
         // Rule 6: The Intent Predicate must align with the MCP Intent Frame.
-        if intent.intent_predicate != intent.mcp_intent_frame_hash && intent.mcp_intent_frame_hash != crate::q_hash("purpose:General") {
+        if frame.intent_predicate != frame.mcp_intent_frame_hash
+            && frame.mcp_intent_frame_hash != crate::q_hash("purpose:General")
+        {
             return WebizenVerdict::DenyWithExplanation {
                 rule_violated: LLM_RULE_INTENT_FRAME_MISMATCH,
                 reason: "Intent Frame Violation".into(),
                 explanation: "The LLM attempted an operation outside the bounds of the active MCP Intent Frame.".into(),
             };
+        }
+
+        // Rule 8: Classified clearance — LLM cannot request above session ceiling.
+        if frame.clearance_ceiling > 2 {
+            return WebizenVerdict::Deny {
+                rule_violated: LLM_RULE_NO_SANCTUARY_ACCESS,
+                reason: "Classified clearance requests require explicit Principal consent.",
+                conduct_record: None,
+            };
+        }
+
+        WebizenVerdict::Permit
+    }
+}
+
+impl AgentRuntime for LocalLlmAgent {
+    fn backend(&self) -> &AgentBackend { &self.backend }
+    fn agent_did(&self) -> &str { &self.agent_did }
+
+    fn validate_intent(&self, intent: &AgentIntent) -> WebizenVerdict {
+        let frame = intent.to_frame();
+        let base = Self::evaluate_intent_frame(self, &frame);
+        if !matches!(base, WebizenVerdict::Permit) {
+            return base;
         }
 
         // Rule 7: Profile Constraints (Intent frames and Engine masking)
@@ -454,8 +537,6 @@ impl AgentRuntime for LocalLlmAgent {
                     explanation: "This capability profile explicitly blocks this intent frame.".into(),
                 };
             }
-            // For actual engine operations, the Orchestrator/Webizen VM would call `allows_engine()` 
-            // when mapping the intent to native opcodes.
         }
 
         WebizenVerdict::Permit
@@ -545,6 +626,9 @@ mod tests {
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
             mcp_intent_frame_hash: 0xAABB,
+            output_mode: N3OutputMode::FreeText,
+            clearance_ceiling: 0,
+            max_sentinel_depth: 32,
             active_profile: None,
         };
         let verdict = agent.validate_intent(&intent);
@@ -561,6 +645,9 @@ mod tests {
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
             mcp_intent_frame_hash: 0xAABB,
+            output_mode: N3OutputMode::FreeText,
+            clearance_ceiling: 0,
+            max_sentinel_depth: 32,
             active_profile: None,
         };
         let verdict = agent.validate_intent(&intent);
@@ -577,6 +664,9 @@ mod tests {
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
             mcp_intent_frame_hash: 0xAABB,
+            output_mode: N3OutputMode::FreeText,
+            clearance_ceiling: 0,
+            max_sentinel_depth: 32,
             active_profile: None,
         };
         assert_eq!(agent.validate_intent(&intent), WebizenVerdict::Permit);
@@ -592,6 +682,9 @@ mod tests {
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
             mcp_intent_frame_hash: 0xAABB,
+            output_mode: N3OutputMode::FreeText,
+            clearance_ceiling: 0,
+            max_sentinel_depth: 32,
             active_profile: None,
         };
         assert_eq!(agent.validate_intent(&intent), WebizenVerdict::Permit);
@@ -629,6 +722,9 @@ mod tests {
             ilp_offer_micro_cents: 0,
             principal_did_hash: crate::q_hash("did:q42:human-rights-test-subject"),
             mcp_intent_frame_hash: crate::q_hash("purpose:General"),
+            output_mode: N3OutputMode::FreeText,
+            clearance_ceiling: 0,
+            max_sentinel_depth: 32,
             active_profile: None,
         };
         

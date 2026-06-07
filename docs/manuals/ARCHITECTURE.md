@@ -1,7 +1,7 @@
 # Qualia-DB Architecture
 
 > The 3-Core Triad, Webizen VM, Rights Ontology, and the Principal-Agent Ecosystem.
-> _Branch: `0.0.6-dev` | Last updated: 2026-06-06_
+> _Branch: `0.0.8-dev` | Last updated: 2026-06-07_
 
 Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favour of a specialised 3-Core Triad built with ruthless mechanical sympathy (512 MB RAM floor). Raw multi-modal data (audio, camera feeds) would immediately breach this floor, so the ecosystem forces an **Orchestration Sieve**: the Primary Agent must coordinate deterministic tools (OpenCV, Audio DSP) to strip noise, extract contours, and build optimised files *before* handing them to the local LLM or the database.
 
@@ -157,7 +157,7 @@ Qualia-DB explicitly rejects the infinite rent-seeking paradigm of the legacy we
 
 Qualia-DB ships with three tightly-bound consumer interfaces:
 
-1. **Qualia Flutter App (`crates/qualia-flutter/`)** — A Flutter desktop app (Windows, macOS, Linux) backed by a flutter_rust_bridge FFI layer. Provides the Chat UI (wired to `runInference` via FRB), LLM Hub (model browser + download), Ontology Hub, App Vault (sandboxed web apps launched in the system browser), Wallet, Address Book, Credential Manager, Asset Library, and Spatial Physics visualiser. See [Flutter API Reference](flutter-api-reference.md) for all exported functions.
+1. **Qualia Flutter App (`crates/qualia-flutter/`)** — A Flutter desktop app (Windows, macOS, Linux) backed by a flutter_rust_bridge FFI layer. Provides the Chat UI (wired to `runInference` via FRB), LLM Hub (model browser + download), Ontology Hub, Qapp Vault (sandboxed qapps launched in an embedded WebView), Wallet, Address Book, Credential Manager, Asset Library, and Spatial Physics visualiser. See [Flutter API Reference](flutter-api-reference.md) for all exported functions.
 
 2. **Qualia CLI (`crates/qualia-cli`)** — The primary toolchain for data ingestion, benchmarking, daemon management, capability profile compilation, and resource catalog operations.
 

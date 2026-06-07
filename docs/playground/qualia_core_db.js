@@ -1,85 +1,3 @@
-export class AgentIntent {
-    static __wrap(ptr) {
-        const obj = Object.create(AgentIntent.prototype);
-        obj.__wbg_ptr = ptr;
-        AgentIntentFinalization.register(obj, obj.__wbg_ptr, obj);
-        return obj;
-    }
-    __destroy_into_raw() {
-        const ptr = this.__wbg_ptr;
-        this.__wbg_ptr = 0;
-        AgentIntentFinalization.unregister(this);
-        return ptr;
-    }
-    free() {
-        const ptr = this.__destroy_into_raw();
-        wasm.__wbg_agentintent_free(ptr, 0);
-    }
-    /**
-     * @param {number} opcode
-     * @param {number} priority
-     * @param {number} payload_size
-     */
-    constructor(opcode, priority, payload_size) {
-        const ret = wasm.agentintent_new(opcode, priority, payload_size);
-        this.__wbg_ptr = ret;
-        AgentIntentFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * @param {number} opcode
-     * @param {number} priority
-     * @param {string} payload
-     * @returns {AgentIntent}
-     */
-    static with_string_payload(opcode, priority, payload) {
-        const ptr0 = passStringToWasm0(payload, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.agentintent_with_string_payload(opcode, priority, ptr0, len0);
-        return AgentIntent.__wrap(ret);
-    }
-    /**
-     * @returns {number}
-     */
-    get opcode() {
-        const ret = wasm.__wbg_get_agentintent_opcode(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get payload_size() {
-        const ret = wasm.__wbg_get_agentintent_payload_size(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @returns {number}
-     */
-    get priority() {
-        const ret = wasm.__wbg_get_agentintent_priority(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-     * @param {number} arg0
-     */
-    set opcode(arg0) {
-        wasm.__wbg_set_agentintent_opcode(this.__wbg_ptr, arg0);
-    }
-    /**
-     * @param {number} arg0
-     */
-    set payload_size(arg0) {
-        wasm.__wbg_set_agentintent_payload_size(this.__wbg_ptr, arg0);
-    }
-    /**
-     * @param {number} arg0
-     */
-    set priority(arg0) {
-        wasm.__wbg_set_agentintent_priority(this.__wbg_ptr, arg0);
-    }
-}
-if (Symbol.dispose) AgentIntent.prototype[Symbol.dispose] = AgentIntent.prototype.free;
-
 /**
  * The Federated Node Manager handles discovery and WebRTC offloading
  */
@@ -110,7 +28,7 @@ export class FederatedNodeManager {
     }
     /**
      * Attempts to route a heavy mathematical payload to the native daemon
-     * @param {AgentIntent} intent
+     * @param {WasmOffloadIntent} intent
      * @returns {string}
      */
     offload_intent(intent) {
@@ -118,7 +36,7 @@ export class FederatedNodeManager {
         let deferred2_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            _assertClass(intent, AgentIntent);
+            _assertClass(intent, WasmOffloadIntent);
             wasm.federatednodemanager_offload_intent(retptr, this.__wbg_ptr, intent.__wbg_ptr);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
@@ -140,6 +58,91 @@ export class FederatedNodeManager {
     }
 }
 if (Symbol.dispose) FederatedNodeManager.prototype[Symbol.dispose] = FederatedNodeManager.prototype.free;
+
+/**
+ * WASM edge offload descriptor — distinct from governance [`crate::llm_agent::AgentIntent`].
+ */
+export class WasmOffloadIntent {
+    static __wrap(ptr) {
+        const obj = Object.create(WasmOffloadIntent.prototype);
+        obj.__wbg_ptr = ptr;
+        WasmOffloadIntentFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmOffloadIntentFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmoffloadintent_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get opcode() {
+        const ret = wasm.__wbg_get_wasmoffloadintent_opcode(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get payload_size() {
+        const ret = wasm.__wbg_get_wasmoffloadintent_payload_size(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get priority() {
+        const ret = wasm.__wbg_get_wasmoffloadintent_priority(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @param {number} arg0
+     */
+    set opcode(arg0) {
+        wasm.__wbg_set_wasmoffloadintent_opcode(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @param {number} arg0
+     */
+    set payload_size(arg0) {
+        wasm.__wbg_set_wasmoffloadintent_payload_size(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @param {number} arg0
+     */
+    set priority(arg0) {
+        wasm.__wbg_set_wasmoffloadintent_priority(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @param {number} opcode
+     * @param {number} priority
+     * @param {number} payload_size
+     */
+    constructor(opcode, priority, payload_size) {
+        const ret = wasm.wasmoffloadintent_new(opcode, priority, payload_size);
+        this.__wbg_ptr = ret;
+        WasmOffloadIntentFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @param {number} opcode
+     * @param {number} priority
+     * @param {string} payload
+     * @returns {WasmOffloadIntent}
+     */
+    static with_string_payload(opcode, priority, payload) {
+        const ptr0 = passStringToWasm0(payload, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmoffloadintent_with_string_payload(opcode, priority, ptr0, len0);
+        return WasmOffloadIntent.__wrap(ret);
+    }
+}
+if (Symbol.dispose) WasmOffloadIntent.prototype[Symbol.dispose] = WasmOffloadIntent.prototype.free;
 
 /**
  * @param {any} val
@@ -365,6 +368,26 @@ export function execute_ntriples_query(query, db_bytes, max_results) {
 }
 
 /**
+ * Structured engine metadata for browser UIs and diagnostics.
+ * @returns {any}
+ */
+export function get_engine_info() {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.get_engine_info(retptr);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
  * Returns the qualia-core-db crate version baked in at compile time (matches daemon `/health`).
  * @returns {string}
  */
@@ -386,25 +409,45 @@ export function get_engine_version() {
 }
 
 /**
- * Intercepts heavy computational opcodes and constructs an AgentIntent to offload them
+ * Intercepts heavy computational opcodes and constructs a WASM offload intent.
  * @param {number} opcode
  * @param {number} payload_size
- * @returns {AgentIntent | undefined}
+ * @returns {WasmOffloadIntent | undefined}
  */
 export function intercept_computational_opcode(opcode, payload_size) {
     const ret = wasm.intercept_computational_opcode(opcode, payload_size);
-    return ret === 0 ? undefined : AgentIntent.__wrap(ret);
+    return ret === 0 ? undefined : WasmOffloadIntent.__wrap(ret);
 }
 
 /**
  * @param {string} smiles
- * @returns {AgentIntent}
+ * @returns {WasmOffloadIntent}
  */
 export function intercept_pharmacogenomics_intent(smiles) {
     const ptr0 = passStringToWasm0(smiles, wasm.__wbindgen_export, wasm.__wbindgen_export2);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.intercept_pharmacogenomics_intent(ptr0, len0);
-    return AgentIntent.__wrap(ret);
+    return WasmOffloadIntent.__wrap(ret);
+}
+
+/**
+ * Capability names available in this WASM build.
+ * @returns {any}
+ */
+export function list_capabilities_wasm() {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.list_capabilities_wasm(retptr);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
 }
 
 /**
@@ -632,6 +675,13 @@ function __wbg_get_imports() {
             const ret = Number(getObject(arg0));
             return ret;
         },
+        __wbg_String_8564e559799eccda: function(arg0, arg1) {
+            const ret = String(getObject(arg1));
+            const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
         __wbg___wbindgen_boolean_get_1a45e2c38d4d41b9: function(arg0) {
             const v = getObject(arg0);
             const ret = typeof(v) === 'boolean' ? v : undefined;
@@ -819,12 +869,12 @@ function __wbg_get_imports() {
     };
 }
 
-const AgentIntentFinalization = (typeof FinalizationRegistry === 'undefined')
-    ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_agentintent_free(ptr, 1));
 const FederatedNodeManagerFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_federatednodemanager_free(ptr, 1));
+const WasmOffloadIntentFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmoffloadintent_free(ptr, 1));
 
 function addHeapObject(obj) {
     if (heap_next === heap.length) heap.push(heap.length + 1);

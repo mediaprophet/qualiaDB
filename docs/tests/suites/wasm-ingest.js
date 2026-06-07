@@ -21,6 +21,13 @@
 import { loadWasm } from '../wasm-loader.js';
 import { q_hash }   from './primitives.js';
 
+/** WordNet manual tests only run in a browser with ?manual=1 or MANUAL_TESTS set. */
+function manualWordNetEnabled() {
+    if (typeof globalThis.window === 'undefined') return false;
+    return !!(globalThis.window.MANUAL_TESTS
+        || new URLSearchParams(globalThis.location.search).get('manual') === '1');
+}
+
 export function register(runner) {
     let mod = null;
 
@@ -233,31 +240,31 @@ export function register(runner) {
         // Activate: ?manual=1 in URL or window.MANUAL_TESTS = true before Run.
 
         runner.it('wordnet.q42 reachable at /playground/wordnet.q42 (manual)', async () => {
-            if (!(window.MANUAL_TESTS || new URLSearchParams(location.search).get('manual') === '1')) return;
+            if (!manualWordNetEnabled()) return;
             const r = await fetch('/playground/wordnet.q42', { method: 'HEAD' });
             runner.expect(r.ok).toBeTruthy();
         });
 
         runner.it('wordnet.q42.lex sidecar reachable (manual)', async () => {
-            if (!(window.MANUAL_TESTS || new URLSearchParams(location.search).get('manual') === '1')) return;
+            if (!manualWordNetEnabled()) return;
             const r = await fetch('/playground/wordnet.q42.lex', { method: 'HEAD' });
             runner.expect(r.ok).toBeTruthy();
         });
 
         runner.it('wordnet.q42.bidx block-range index reachable (manual)', async () => {
-            if (!(window.MANUAL_TESTS || new URLSearchParams(location.search).get('manual') === '1')) return;
+            if (!manualWordNetEnabled()) return;
             const r = await fetch('/playground/wordnet.q42.bidx', { method: 'HEAD' });
             runner.expect(r.ok).toBeTruthy();
         });
 
         runner.it('wordnet.c.q42 compressed variant reachable (manual)', async () => {
-            if (!(window.MANUAL_TESTS || new URLSearchParams(location.search).get('manual') === '1')) return;
+            if (!manualWordNetEnabled()) return;
             const r = await fetch('/playground/wordnet.c.q42', { method: 'HEAD' });
             runner.expect(r.ok).toBeTruthy();
         });
 
         runner.it('wordnet.q42 is > 50 MB and < 100 MB — confirms 85% compression (manual)', async () => {
-            if (!(window.MANUAL_TESTS || new URLSearchParams(location.search).get('manual') === '1')) return;
+            if (!manualWordNetEnabled()) return;
             const r = await fetch('/playground/wordnet.q42', { method: 'HEAD' });
             const size = parseInt(r.headers.get('content-length') || '0');
             runner.expect(size).toBeGreaterThan(50 * 1024 * 1024);
@@ -265,7 +272,7 @@ export function register(runner) {
         });
 
         runner.it('wordnet.c.q42 is smaller than wordnet.q42 (LZ4 compression active) (manual)', async () => {
-            if (!(window.MANUAL_TESTS || new URLSearchParams(location.search).get('manual') === '1')) return;
+            if (!manualWordNetEnabled()) return;
             const [r1, r2] = await Promise.all([
                 fetch('/playground/wordnet.q42',   { method: 'HEAD' }),
                 fetch('/playground/wordnet.c.q42', { method: 'HEAD' }),

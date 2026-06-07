@@ -1,0 +1,150 @@
+//! In-process graph backing store for the loopback daemon `/query` route.
+//!
+//! Phase 1: fixed-capacity `Vec<QualiaQuin>` seeded with Anatomy health demo
+//! triples and optionally extended from `{storage_path}/Index/*.q42` headers.
+
+use crate::{q_hash, QualiaQuin};
+use std::path::Path;
+use std::sync::{OnceLock, RwLock};
+
+const MAX_GRAPH_QUINS: usize = 8_192;
+
+static GRAPH: OnceLock<RwLock<Vec<QualiaQuin>>> = OnceLock::new();
+
+fn graph_lock() -> &'static RwLock<Vec<QualiaQuin>> {
+    GRAPH.get_or_init(|| RwLock::new(Vec::new()))
+}
+
+#[inline]
+fn triple_quin(subject: &str, predicate: &str, object: &str, context: &str) -> QualiaQuin {
+    let subject = q_hash(subject);
+    let predicate = q_hash(predicate);
+    let object = q_hash(object);
+    // Keep sensitivity lane public — q_hash may set bits [56..63].
+    let context = q_hash(context) & 0x00FF_FFFF_FFFF_FFFF;
+    QualiaQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata: 0,
+        parity: subject ^ predicate ^ object ^ context,
+    }
+}
+
+fn push_quin(store: &mut Vec<QualiaQuin>, quin: QualiaQuin) {
+    if store.len() < MAX_GRAPH_QUINS {
+        store.push(quin);
+    }
+}
+
+/// Seed representative health-condition triples for Anatomy app development.
+fn seed_anatomy_health_graph(store: &mut Vec<QualiaQuin>) {
+    const BIO: &str = "https://qualia.anatomy.example/ontology/bio#";
+    const ORGAN: &str = "https://qualia.anatomy.example/ontology/organ#";
+    const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+    const HAS_PRIMARY: &str = "https://qualia.anatomy.example/ontology/impact#hasPrimaryImpactSystem";
+    const IMPACTS: &str = "https://qualia.anatomy.example/ontology/impact#Impacts";
+    const USER_CTX: &str = "did:qualia:user:local-health-graph";
+
+    let seeds: [(&str, &str); 8] = [
+        ("Type2Diabetes", "organ:EndocrineSystem"),
+        ("Hypertension", "organ:CirculatorySystem"),
+        ("ChronicKidneyDisease", "organ:UrinarySystem"),
+        ("HeartFailure", "organ:CirculatorySystem"),
+        ("COPD", "organ:RespiratorySystem"),
+        ("Obesity", "organ:EndocrineSystem"),
+        ("AtrialFibrillation", "organ:CirculatorySystem"),
+        ("Depression", "organ:NervousSystem"),
+    ];
+
+    for (local_name, primary_system) in seeds {
+        let condition = format!("{BIO}{local_name}");
+        push_quin(
+            store,
+            triple_quin(&condition, RDF_TYPE, &format!("{BIO}Condition"), USER_CTX),
+        );
+        push_quin(
+            store,
+            triple_quin(
+                &condition,
+                HAS_PRIMARY,
+                &format!("{ORGAN}{}", primary_system.trim_start_matches("organ:")),
+                USER_CTX,
+            ),
+        );
+        // Secondary impact edge for graph richness (re-use primary system).
+        push_quin(
+            store,
+            triple_quin(
+                &condition,
+                IMPACTS,
+                &format!("{ORGAN}{}", primary_system.trim_start_matches("organ:")),
+                USER_CTX,
+            ),
+        );
+    }
+}
+
+fn try_load_index_dir(_store: &mut Vec<QualiaQuin>, storage_path: &str) {
+    // Future: mmap `{storage_path}/Index/*.q42` and decompress frames into Quins.
+    let _ = Path::new(storage_path).join("Index");
+}
+
+/// Initialise or refresh the daemon graph from storage path.
+pub fn init_daemon_graph(storage_path: &str) {
+    let mut store = Vec::with_capacity(64);
+    seed_anatomy_health_graph(&mut store);
+    try_load_index_dir(&mut store, storage_path);
+    let lock = graph_lock();
+    if let Ok(mut guard) = lock.write() {
+        *guard = store;
+    }
+}
+
+/// Number of Quins currently available to `/query`.
+pub fn graph_quin_count() -> usize {
+    graph_lock()
+        .read()
+        .map(|g| g.len())
+        .unwrap_or(0)
+}
+
+/// Read guard over the live graph (lock is process-static via `OnceLock`).
+pub fn graph_read_guard(
+) -> std::sync::RwLockReadGuard<'static, Vec<QualiaQuin>> {
+    graph_lock().read().expect("daemon graph poisoned")
+}
+
+/// Known condition subject hashes for Anatomy graph → label mapping.
+pub fn condition_label_for_subject_hash(subject: u64) -> Option<&'static str> {
+    const BIO: &str = "https://qualia.anatomy.example/ontology/bio#";
+    const TABLE: [(&str, &str); 8] = [
+        ("Type2Diabetes", "Type 2 Diabetes Mellitus"),
+        ("Hypertension", "Hypertension"),
+        ("ChronicKidneyDisease", "Chronic Kidney Disease (CKD)"),
+        ("HeartFailure", "Heart Failure"),
+        ("COPD", "Chronic Obstructive Pulmonary Disease (COPD)"),
+        ("Obesity", "Obesity"),
+        ("AtrialFibrillation", "Atrial Fibrillation"),
+        ("Depression", "Major Depressive Disorder"),
+    ];
+
+    for (local, label) in TABLE {
+        if q_hash(&format!("{BIO}{local}")) == subject {
+            return Some(label);
+        }
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn seed_graph_has_health_quins() {
+        init_daemon_graph("/tmp/qualia-test-graph");
+        assert!(graph_quin_count() >= 8);
+    }
+}

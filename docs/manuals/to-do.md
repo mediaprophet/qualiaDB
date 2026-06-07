@@ -1,6 +1,6 @@
 # Protocol & Architecture To-Do
 
-_Branch: `0.0.6-dev` | Last updated: 2026-06-06_
+_Branch: `0.0.8-dev` | Last updated: 2026-06-07_
 
 This document tracks foundational architectural components that are pending integration. See `docs/PROJECT_STATE.md` for the full phase completion table.
 
@@ -19,8 +19,8 @@ The following are confirmed by code inspection:
 - [ ] **CogAI `.chk` ingestion pipeline** — `ingest.rs`. The CogAI Cognitive AI Chunks text format (W3C CG chunks-and-rules) ingestion path is not yet wired end-to-end through the `ExternalSorter`. The ACT-R SHACL opcodes (`RetrieveByActivation`, `DecayMetadata`) are compiled but defer to "Core 2 GPU Sieve" (return `None` from `execute_vm_frame`) rather than executing inline. Note: this gap is about CogAI text chunks — not the QCHK binary Capability Profile format, which is a separate system.
 - [ ] **`NullThermalGovernor` always returns `Cool`** — `orchestrator.rs`. Real thermal governor not yet wired.
 - [ ] **WASM profile loading** — `wasm_bridge.rs`. QCHK profiles not yet loadable in browser.
-- [ ] **App Manager Tauri commands not registered** — `crates/qualia-desktop/src/commands/mod.rs` has `generate_handler![]` empty. `list_installed_apps`, `launch_installed_app`, `generate_app_credential` exist in `api.rs` but lack `#[tauri::command]` and are not in the handler.
-- [ ] **`launch_installed_app` not implemented** — No Rust function opens a new Tauri webview at `qualia://localhost/{app_name}/index.html`.
+- [x] **Qapp Vault (Flutter)** — `listInstalledQapps`, `launchInstalledQapp`, `generateQappCredential`, `verifyAndInstallQapp` via FRB; embedded `QualiaQappWebView`.
+- [ ] **Legacy Tauri desktop** — `qualia-desktop` / `qualia-client` not in release CI; freeze or remove when convenient.
 - [ ] **`window.webizen` provider API** — Defined in the Webizen Protocol RFC but not implemented in the desktop shell. Phase 7 work.
 
 ---

@@ -30,6 +30,10 @@ impl KeyVault {
             let mut secret = [0u8; 32];
             secret.copy_from_slice(&result);
             let new_key = SigningKey::from_bytes(&secret);
+            if let Some(parent) = vault_path.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create keystore dir: {e}"))?;
+            }
             fs::write(&vault_path, secret).map_err(|e| format!("Failed to write keystore: {}", e))?;
             new_key
         };
@@ -90,11 +94,11 @@ impl KeyVault {
         Ok((cert_pem, key_pem))
     }
 
-    /// Issues a cryptographically signed Semantic Token for an installed app.
-    /// The token enforces gatekeeper boundary policies (which shapes the app can access).
-    pub fn issue_app_token(&self, app_did: &str, allowed_shapes: Vec<String>) -> Result<String, String> {
-        let payload = AppTokenPayload {
-            app_did: app_did.to_string(),
+    /// Issues a cryptographically signed Semantic Token for an installed qapp.
+    /// The token enforces gatekeeper boundary policies (which shapes the qapp can access).
+    pub fn issue_qapp_token(&self, qapp_did: &str, allowed_shapes: Vec<String>) -> Result<String, String> {
+        let payload = QappTokenPayload {
+            qapp_did: qapp_did.to_string(),
             allowed_shapes,
         };
         let payload_json = serde_json::to_string(&payload).map_err(|e| format!("Serialization error: {}", e))?;
@@ -107,8 +111,8 @@ impl KeyVault {
         Ok(format!("{}.{}", payload_hex, signature_hex))
     }
 
-    /// Verifies an app token's signature using the Master Key, returning the requested payload shapes.
-    pub fn verify_app_token(&self, token: &str) -> Result<AppTokenPayload, String> {
+    /// Verifies a qapp token's signature using the Master Key, returning the requested payload shapes.
+    pub fn verify_qapp_token(&self, token: &str) -> Result<QappTokenPayload, String> {
         let parts: Vec<&str> = token.split('.').collect();
         if parts.len() != 2 {
             return Err("Invalid semantic token format".into());
@@ -128,7 +132,7 @@ impl KeyVault {
         let signature = Signature::from_bytes(&sig_array);
         verifying_key.verify(&payload_bytes, &signature).map_err(|_| "Invalid token signature".to_string())?;
 
-        let payload: AppTokenPayload = serde_json::from_slice(&payload_bytes)
+        let payload: QappTokenPayload = serde_json::from_slice(&payload_bytes)
             .map_err(|e| format!("Failed to parse token payload: {}", e))?;
             
         Ok(payload)
@@ -136,7 +140,7 @@ impl KeyVault {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub struct AppTokenPayload {
-    pub app_did: String,
+pub struct QappTokenPayload {
+    pub qapp_did: String,
     pub allowed_shapes: Vec<String>,
 }

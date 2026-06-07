@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/qapp_api.dart';
 import 'api/qualia_api.dart';
 import 'api/resource_catalog.dart';
 import 'api/simple.dart';
@@ -22,8 +23,31 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
     required super.portManager,
   });
 
+  CrossPlatformFinalizerArg
+      get rust_arc_decrement_strong_count_QappManifestPtr => wire
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest;
+
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  QappManifest
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          dynamic raw);
+
+  @protected
+  QappManifest
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          dynamic raw);
+
+  @protected
+  RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw);
+
   @protected
   String dco_decode_String(dynamic raw);
+
+  @protected
+  ActorBridge dco_decode_actor_bridge(dynamic raw);
 
   @protected
   AgentConfig dco_decode_agent_config(dynamic raw);
@@ -32,7 +56,21 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  ActorBridge dco_decode_box_autoadd_actor_bridge(dynamic raw);
+
+  @protected
   AgentConfig dco_decode_box_autoadd_agent_config(dynamic raw);
+
+  @protected
+  DelegationRuleBridge dco_decode_box_autoadd_delegation_rule_bridge(
+      dynamic raw);
+
+  @protected
+  QpuOracleSettingsInput dco_decode_box_autoadd_qpu_oracle_settings_input(
+      dynamic raw);
+
+  @protected
+  TaxRecipientSuite dco_decode_box_autoadd_tax_recipient_suite(dynamic raw);
 
   @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
@@ -44,19 +82,44 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   CoinBalance dco_decode_coin_balance(dynamic raw);
 
   @protected
+  DelegationRuleBridge dco_decode_delegation_rule_bridge(dynamic raw);
+
+  @protected
+  DispatchResult dco_decode_dispatch_result(dynamic raw);
+
+  @protected
+  double dco_decode_f_32(dynamic raw);
+
+  @protected
   double dco_decode_f_64(dynamic raw);
+
+  @protected
+  FrontDoorBridge dco_decode_front_door_bridge(dynamic raw);
 
   @protected
   HardwareStatus dco_decode_hardware_status(dynamic raw);
 
   @protected
+  HardwareTelemetry dco_decode_hardware_telemetry(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<ActorBridge> dco_decode_list_actor_bridge(dynamic raw);
 
   @protected
   List<CatalogItem> dco_decode_list_catalog_item(dynamic raw);
 
   @protected
   List<CoinBalance> dco_decode_list_coin_balance(dynamic raw);
+
+  @protected
+  List<DelegationRuleBridge> dco_decode_list_delegation_rule_bridge(
+      dynamic raw);
+
+  @protected
+  List<FrontDoorBridge> dco_decode_list_front_door_bridge(dynamic raw);
 
   @protected
   List<LLMResource> dco_decode_list_llm_resource(dynamic raw);
@@ -68,6 +131,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   List<OntologyResource> dco_decode_list_ontology_resource(dynamic raw);
 
   @protected
+  Float32List dco_decode_list_prim_f_32_strict(dynamic raw);
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -75,6 +144,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   List<TaxRecipient> dco_decode_list_tax_recipient(dynamic raw);
+
+  @protected
+  List<TokenEntry> dco_decode_list_token_entry(dynamic raw);
+
+  @protected
+  List<TxRecord> dco_decode_list_tx_record(dynamic raw);
 
   @protected
   LLMResource dco_decode_llm_resource(dynamic raw);
@@ -95,7 +170,19 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   List<String>? dco_decode_opt_list_String(dynamic raw);
 
   @protected
+  PrerequisiteStatus dco_decode_prerequisite_status(dynamic raw);
+
+  @protected
   ProgressPayload dco_decode_progress_payload(dynamic raw);
+
+  @protected
+  QpuChatCommandResult dco_decode_qpu_chat_command_result(dynamic raw);
+
+  @protected
+  QpuOracleSettings dco_decode_qpu_oracle_settings(dynamic raw);
+
+  @protected
+  QpuOracleSettingsInput dco_decode_qpu_oracle_settings_input(dynamic raw);
 
   @protected
   SpatialPhysicsState dco_decode_spatial_physics_state(dynamic raw);
@@ -105,6 +192,15 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   TaxRecipientSuite dco_decode_tax_recipient_suite(dynamic raw);
+
+  @protected
+  TokenEntry dco_decode_token_entry(dynamic raw);
+
+  @protected
+  TxRecord dco_decode_tx_record(dynamic raw);
+
+  @protected
+  int dco_decode_u_16(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -119,7 +215,33 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
+  BigInt dco_decode_usize(dynamic raw);
+
+  @protected
+  WalletStatus dco_decode_wallet_status(dynamic raw);
+
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+
+  @protected
+  QappManifest
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          SseDeserializer deserializer);
+
+  @protected
+  QappManifest
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<String> sse_decode_StreamSink_String_Sse(
+      SseDeserializer deserializer);
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  ActorBridge sse_decode_actor_bridge(SseDeserializer deserializer);
 
   @protected
   AgentConfig sse_decode_agent_config(SseDeserializer deserializer);
@@ -128,7 +250,22 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  ActorBridge sse_decode_box_autoadd_actor_bridge(SseDeserializer deserializer);
+
+  @protected
   AgentConfig sse_decode_box_autoadd_agent_config(SseDeserializer deserializer);
+
+  @protected
+  DelegationRuleBridge sse_decode_box_autoadd_delegation_rule_bridge(
+      SseDeserializer deserializer);
+
+  @protected
+  QpuOracleSettingsInput sse_decode_box_autoadd_qpu_oracle_settings_input(
+      SseDeserializer deserializer);
+
+  @protected
+  TaxRecipientSuite sse_decode_box_autoadd_tax_recipient_suite(
+      SseDeserializer deserializer);
 
   @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
@@ -140,19 +277,46 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   CoinBalance sse_decode_coin_balance(SseDeserializer deserializer);
 
   @protected
+  DelegationRuleBridge sse_decode_delegation_rule_bridge(
+      SseDeserializer deserializer);
+
+  @protected
+  DispatchResult sse_decode_dispatch_result(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer);
+
+  @protected
   double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  FrontDoorBridge sse_decode_front_door_bridge(SseDeserializer deserializer);
 
   @protected
   HardwareStatus sse_decode_hardware_status(SseDeserializer deserializer);
 
   @protected
+  HardwareTelemetry sse_decode_hardware_telemetry(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<ActorBridge> sse_decode_list_actor_bridge(SseDeserializer deserializer);
 
   @protected
   List<CatalogItem> sse_decode_list_catalog_item(SseDeserializer deserializer);
 
   @protected
   List<CoinBalance> sse_decode_list_coin_balance(SseDeserializer deserializer);
+
+  @protected
+  List<DelegationRuleBridge> sse_decode_list_delegation_rule_bridge(
+      SseDeserializer deserializer);
+
+  @protected
+  List<FrontDoorBridge> sse_decode_list_front_door_bridge(
+      SseDeserializer deserializer);
 
   @protected
   List<LLMResource> sse_decode_list_llm_resource(SseDeserializer deserializer);
@@ -165,6 +329,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       SseDeserializer deserializer);
 
   @protected
+  Float32List sse_decode_list_prim_f_32_strict(SseDeserializer deserializer);
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -174,6 +344,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   List<TaxRecipient> sse_decode_list_tax_recipient(
       SseDeserializer deserializer);
+
+  @protected
+  List<TokenEntry> sse_decode_list_token_entry(SseDeserializer deserializer);
+
+  @protected
+  List<TxRecord> sse_decode_list_tx_record(SseDeserializer deserializer);
 
   @protected
   LLMResource sse_decode_llm_resource(SseDeserializer deserializer);
@@ -194,7 +370,23 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
 
   @protected
+  PrerequisiteStatus sse_decode_prerequisite_status(
+      SseDeserializer deserializer);
+
+  @protected
   ProgressPayload sse_decode_progress_payload(SseDeserializer deserializer);
+
+  @protected
+  QpuChatCommandResult sse_decode_qpu_chat_command_result(
+      SseDeserializer deserializer);
+
+  @protected
+  QpuOracleSettings sse_decode_qpu_oracle_settings(
+      SseDeserializer deserializer);
+
+  @protected
+  QpuOracleSettingsInput sse_decode_qpu_oracle_settings_input(
+      SseDeserializer deserializer);
 
   @protected
   SpatialPhysicsState sse_decode_spatial_physics_state(
@@ -206,6 +398,15 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   TaxRecipientSuite sse_decode_tax_recipient_suite(
       SseDeserializer deserializer);
+
+  @protected
+  TokenEntry sse_decode_token_entry(SseDeserializer deserializer);
+
+  @protected
+  TxRecord sse_decode_tx_record(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_u_16(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -220,10 +421,37 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer);
+
+  @protected
+  WalletStatus sse_decode_wallet_status(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
+  void sse_encode_AnyhowException(
+      AnyhowException self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          QappManifest self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          QappManifest self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_String_Sse(
+      RustStreamSink<String> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_actor_bridge(ActorBridge self, SseSerializer serializer);
 
   @protected
   void sse_encode_agent_config(AgentConfig self, SseSerializer serializer);
@@ -232,8 +460,24 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_actor_bridge(
+      ActorBridge self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_agent_config(
       AgentConfig self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_delegation_rule_bridge(
+      DelegationRuleBridge self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_qpu_oracle_settings_input(
+      QpuOracleSettingsInput self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_tax_recipient_suite(
+      TaxRecipientSuite self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
@@ -245,14 +489,37 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void sse_encode_coin_balance(CoinBalance self, SseSerializer serializer);
 
   @protected
+  void sse_encode_delegation_rule_bridge(
+      DelegationRuleBridge self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_dispatch_result(
+      DispatchResult self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer);
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_front_door_bridge(
+      FrontDoorBridge self, SseSerializer serializer);
 
   @protected
   void sse_encode_hardware_status(
       HardwareStatus self, SseSerializer serializer);
 
   @protected
+  void sse_encode_hardware_telemetry(
+      HardwareTelemetry self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_actor_bridge(
+      List<ActorBridge> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_catalog_item(
@@ -261,6 +528,14 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_list_coin_balance(
       List<CoinBalance> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_delegation_rule_bridge(
+      List<DelegationRuleBridge> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_front_door_bridge(
+      List<FrontDoorBridge> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_llm_resource(
@@ -275,6 +550,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       List<OntologyResource> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_prim_f_32_strict(
+      Float32List self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
       Uint8List self, SseSerializer serializer);
 
@@ -285,6 +567,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_list_tax_recipient(
       List<TaxRecipient> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_token_entry(
+      List<TokenEntry> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_tx_record(List<TxRecord> self, SseSerializer serializer);
 
   @protected
   void sse_encode_llm_resource(LLMResource self, SseSerializer serializer);
@@ -306,8 +595,24 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_prerequisite_status(
+      PrerequisiteStatus self, SseSerializer serializer);
+
+  @protected
   void sse_encode_progress_payload(
       ProgressPayload self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_qpu_chat_command_result(
+      QpuChatCommandResult self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_qpu_oracle_settings(
+      QpuOracleSettings self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_qpu_oracle_settings_input(
+      QpuOracleSettingsInput self, SseSerializer serializer);
 
   @protected
   void sse_encode_spatial_physics_state(
@@ -319,6 +624,15 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_tax_recipient_suite(
       TaxRecipientSuite self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_token_entry(TokenEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tx_record(TxRecord self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_16(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
@@ -333,6 +647,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   void sse_encode_unit(void self, SseSerializer serializer);
 
   @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_wallet_status(WalletStatus self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
@@ -340,6 +660,18 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
 class RustApiWire implements BaseWire {
   RustApiWire.fromExternalLibrary(ExternalLibrary lib);
+
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          int ptr) =>
+      wasmModule
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+              ptr);
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          int ptr) =>
+      wasmModule
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+              ptr);
 }
 
 @JS('wasm_bindgen')
@@ -347,4 +679,12 @@ external RustApiWasmModule get wasmModule;
 
 @JS()
 @anonymous
-extension type RustApiWasmModule._(JSObject _) implements JSObject {}
+extension type RustApiWasmModule._(JSObject _) implements JSObject {
+  external void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          int ptr);
+
+  external void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerQappManifest(
+          int ptr);
+}

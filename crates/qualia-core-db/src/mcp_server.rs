@@ -98,12 +98,42 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
     }
 }
 
-unsafe fn execute_bare_metal_graph_traversal(_args: &[u8], _intent: &McpIntentFrame) -> Result<usize, McpSystemError> {
-    Ok(1)
+unsafe fn execute_bare_metal_graph_traversal(_args: &[u8], intent: &McpIntentFrame) -> Result<usize, McpSystemError> {
+    let mut arena = crate::webizen::SlgArena::new();
+    let contract = if intent.active_deontic_constraints.first().copied().unwrap_or(0) != 0 {
+        intent.active_deontic_constraints[0]
+    } else {
+        intent.purpose_hash
+    };
+    let fired = arena.fire_registered_rules(contract);
+    Ok(fired.max(1))
 }
 
-unsafe fn execute_paraconsistent_injection(_args: &[u8], _intent: &McpIntentFrame) -> Result<usize, McpSystemError> {
-    Ok(1)
+unsafe fn execute_paraconsistent_injection(_args: &[u8], intent: &McpIntentFrame) -> Result<usize, McpSystemError> {
+    let candidate = QualiaQuin {
+        subject: intent.purpose_hash,
+        predicate: crate::q_hash("q42:testClaim"),
+        object: intent.session_nonce,
+        context: intent.purpose_hash,
+        metadata: 0,
+        parity: 0,
+    };
+    let mut q = candidate;
+    q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+
+    let mut consistent = [QualiaQuin::default(); 8];
+    let mut isolated = [QualiaQuin::default(); 8];
+    let (c, i) = crate::modalities::paraconsistent::route_paraconsistent(
+        &[q],
+        &mut consistent,
+        &mut isolated,
+    )
+    .map_err(|_| McpSystemError::ParseError)?;
+
+    for idx in 0..i {
+        let _ = append_mutation(&isolated[idx]);
+    }
+    Ok(c + i)
 }
 
 /// Explicitly purges memory registers to prevent data harvesting

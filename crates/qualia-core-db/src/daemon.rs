@@ -41,7 +41,7 @@ pub fn execution_environment_json() -> serde_json::Value {
     };
     json!({
         "runner": "qualia-core-db daemon",
-        "engine_version": env!("CARGO_PKG_VERSION"),
+        "engine_version": crate::ENGINE_VERSION,
         "memory_ceiling_mb": CELL_MEMORY_FLOOR_MB,
         "measurement_path": "daemon_http_query",
         "topology": {
@@ -163,6 +163,14 @@ pub async fn start_local_daemon(port: u16, vault: std::sync::Arc<std::sync::Mute
 
 /// Starts the native loopback daemon with WebSocket and REST handoff routes.
 pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>) {
+    let storage_path = std::env::var("QUALIA_STORAGE_PATH").unwrap_or_else(|_| {
+        std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .map(|h| format!("{h}/.qualia"))
+            .unwrap_or_else(|_| ".qualia".to_string())
+    });
+    crate::daemon_graph::init_daemon_graph(&storage_path);
+
     let security = DaemonSecurity {
         dev,
         token: std::env::var("QUALIA_TOKEN")
@@ -186,7 +194,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
             ws.on_upgrade(move |mut socket| async move {
                 let handshake = json!({
                     "type": "HANDSHAKE_SUCCESS",
-                    "payload": { "mode": "NATIVE", "version": env!("CARGO_PKG_VERSION") }
+                    "payload": { "mode": "NATIVE", "version": crate::ENGINE_VERSION }
                 });
                 if socket
                     .send(warp::ws::Message::text(handshake.to_string()))
@@ -222,7 +230,8 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
             warp::reply::json(&json!({
                 "status": "active",
                 "engine": "qualia-core-db",
-                "version": env!("CARGO_PKG_VERSION"),
+                "version": crate::ENGINE_VERSION,
+                "graph_quin_count": crate::daemon_graph::graph_quin_count(),
                 "execution_environment": execution_environment_json()
             })),
             StatusCode::OK,
@@ -250,7 +259,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                 if !query_security.dev {
                     if let Some(t) = token.as_ref() {
                         let vault = query_security.vault.lock().unwrap();
-                        match vault.verify_app_token(t) {
+                        match vault.verify_qapp_token(t) {
                             Ok(payload) => {
                                 // Semantic token valid!
                                 allowed_shapes = Some(payload.allowed_shapes);
@@ -390,11 +399,8 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                 let mut out_buffer =
                     vec![crate::QualiaQuin::default(); QUERY_OUT_SLOTS];
 
-                // `current_database_state` is the live in-process Quin graph.
-                // The storage layer will populate this once the mmap shard is
-                // wired into the daemon; for now an empty slice is used so that
-                // the full pipeline compiles and the HTTP contract is exercised.
-                let current_database_state: &[crate::QualiaQuin] = &[];
+                let graph_guard = crate::daemon_graph::graph_read_guard();
+                let current_database_state = graph_guard.as_slice();
 
                 let (match_count, vm_cycles) = match crate::webizen_bytecode::execute_program(
                     &program,

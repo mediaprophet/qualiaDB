@@ -1,7 +1,7 @@
 # Cooperative Projects + Qualia Ecosystem — Project State
 
 **Date:** 2026-06-06  
-**Branch:** `0.0.6-dev` / `main` (commit `c5bc564`)  
+**Branch:** `0.0.8-dev` / `main`  
 **Purpose:** Context export for new chat sessions
 
 ---
@@ -126,7 +126,7 @@ Key themes:
 - **Chat screen** — `runInference(prompt, modelPath)` wired via FRB to the full `TaskOrchestrator` governance pipeline (validate intent → Phase 8 GPU loop → validate output). Loading indicator, "no model loaded" banner when `modelPath` is empty. _Pending: `modelPath` state flow from LLM Hub selection into Chat._
 - **LLM Hub** — grid/list view, bulk actions, download state, detail panel. Loads `LLMResource` entries from `resources/llms.yaml` via `loadLlmResources()`.
 - **Ontology Hub** — browse, import, namespace view via `loadOntologyResources()` / `importOntology()`.
-- **App Vault** — install/launch sandboxed web apps via Semantic App Token; FRB-wired (`listInstalledApps`, `launchInstalledApp`, `generateAppCredential`, `verifyAndInstallApp`).
+- **Qapp Vault** — install/launch sandboxed web qapps via qapp session tokens; FRB-wired (`listInstalledQapps`, `launchInstalledQapp`, `generateQappCredential`, `verifyAndInstallQapp`, `inspectInstalledQappReadiness`).
 - **FRB bridge** — 40+ exported functions across `qualia_api.rs` and `resource_catalog.rs`. See [flutter-api-reference.md](manuals/flutter-api-reference.md).
 
 ### Web (docs/)

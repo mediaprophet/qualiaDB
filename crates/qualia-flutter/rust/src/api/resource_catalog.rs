@@ -191,8 +191,20 @@ pub fn import_ontology(id: String) -> Result<String, String> {
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
+fn catalog_file(name: &str) -> std::path::PathBuf {
+    let rel = name.strip_prefix("resources/").unwrap_or(name);
+    let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../resources")
+        .join(rel);
+    if manifest.exists() {
+        return manifest;
+    }
+    std::path::PathBuf::from("resources").join(rel)
+}
+
 fn load_yaml<T: serde::de::DeserializeOwned>(path: &str) -> Vec<T> {
-    match std::fs::read_to_string(path) {
+    let file = catalog_file(path);
+    match std::fs::read_to_string(&file) {
         Ok(s) => serde_yaml::from_str::<Vec<T>>(&s).unwrap_or_default(),
         Err(_) => vec![],
     }
