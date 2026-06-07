@@ -69,6 +69,7 @@
                         <a href="comparative_benchmarks.html" class="hover:text-white transition-colors">Comparative</a>
                         <a href="benchmark.html" class="nav-active font-medium">Live Benchmarks</a>
                         <a href="benchmark_visualizer.html" class="hover:text-white transition-colors">Visualizer</a>
+                        <a href="cost_model.html" class="hover:text-white transition-colors">Cost Model</a>
                         <a href="api.html" class="hover:text-white transition-colors">API Docs</a>
                         <a href="tests/index.html" class="hover:text-white transition-colors">Test Suite</a>
                     </div>
@@ -137,6 +138,9 @@
                                     <span class="font-medium">WASM</span>
                                 </button>
                             </div>
+                            <div class="mt-2 text-right">
+                                <span id="wasm-badge" class="text-xs text-slate-500 font-mono">WASM Loading…</span>
+                            </div>
                         </div>
 
                         <!-- Suite Selection -->
@@ -188,8 +192,6 @@
         </div>
     </div>
 
-<<<<<<< Updated upstream
-=======
     <!-- Load Qualia WASM and expose execute_ntriples_query globally -->
     <script type="module">
         import init, { execute_ntriples_query } from './playground/qualia_core_db.js';
@@ -232,7 +234,6 @@
         }
     </script>
 
->>>>>>> Stashed changes
     <script>
         let currentMode = 'native';
         let daemonOnline = false;
@@ -337,16 +338,6 @@
             status.className = `px-4 py-1.5 text-xs rounded-2xl bg-amber-500/10 text-amber-400 flex items-center gap-2`;
 
             if (currentMode === 'wasm') {
-<<<<<<< Updated upstream
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-center py-12">
-                        <i class="fas fa-puzzle-piece text-4xl text-slate-600 mb-4"></i>
-                        <p class="text-slate-400 mb-2">WASM mode: use the <a href="playground/index.html" class="text-blue-400 underline">Interactive Playground</a> for in-browser queries.</p>
-                        <p class="text-xs text-slate-500">Switch to Native to benchmark via the local daemon.</p>
-                    </div>`;
-                status.innerHTML = `<i class="fas fa-info-circle"></i> <span>See Playground</span>`;
-                status.className = `px-4 py-1.5 text-xs rounded-2xl bg-blue-500/10 text-blue-400 flex items-center gap-2`;
-=======
                 if (!window._qualiaExec) {
                     container.innerHTML = `
                         <div class="flex flex-col items-center justify-center h-full text-center py-12 space-y-3">
@@ -454,7 +445,6 @@
                     status.innerHTML = `<i class="fas fa-times-circle"></i> <span>Error</span>`;
                     status.className = `px-4 py-1.5 text-xs rounded-2xl bg-red-500/10 text-red-400 flex items-center gap-2`;
                 }
->>>>>>> Stashed changes
                 return;
             }
 
@@ -499,15 +489,11 @@
                         <div class="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">${r.label}</div>
                         <div class="grid grid-cols-3 gap-3 text-center">
                             <div>
-<<<<<<< Updated upstream
-                                <div class="text-xl font-semibold font-mono">${r.p50.toFixed(1)}<span class="text-xs text-slate-400 ml-1">ms</span></div>
-=======
                                 <div class="text-xl font-semibold font-mono">${p50Fmt.val}<span class="text-xs text-slate-400 ml-1">${p50Fmt.unit}</span></div>
->>>>>>> Stashed changes
                                 <div class="text-xs text-slate-500">P50</div>
                             </div>
                             <div>
-                                <div class="text-xl font-semibold font-mono text-amber-400">${r.throughput.toLocaleString()}<span class="text-xs text-slate-400 ml-1">ops/s</span></div>
+                                <div class="text-xl font-semibold font-mono text-amber-400">${isFinite(r.throughput) ? r.throughput.toLocaleString() : '> 1B'}<span class="text-xs text-slate-400 ml-1">ops/s</span></div>
                                 <div class="text-xs text-slate-500">Throughput</div>
                             </div>
                             <div>
@@ -530,15 +516,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="glass p-5 rounded-2xl">
                                 <div class="text-xs text-slate-400 mb-1">Avg P50 Latency</div>
-<<<<<<< Updated upstream
-                                <div class="text-3xl font-semibold font-mono">${avgP50.toFixed(1)}<span class="text-base font-normal text-slate-400 ml-1">ms</span></div>
-=======
                                 <div class="text-3xl font-semibold font-mono">${avgP50Fmt.val}<span class="text-base font-normal text-slate-400 ml-1">${avgP50Fmt.unit}</span></div>
->>>>>>> Stashed changes
                             </div>
                             <div class="glass p-5 rounded-2xl">
                                 <div class="text-xs text-slate-400 mb-1">Avg Throughput</div>
-                                <div class="text-3xl font-semibold font-mono">${Math.round(avgTput).toLocaleString()}<span class="text-base font-normal text-slate-400 ml-1">ops/s</span></div>
+                                <div class="text-3xl font-semibold font-mono">${isFinite(Math.round(avgTput)) ? Math.round(avgTput).toLocaleString() : '> 1B'}<span class="text-base font-normal text-slate-400 ml-1">ops/s</span></div>
                             </div>
                             <div class="glass p-5 rounded-2xl">
                                 <div class="text-xs text-slate-400 mb-1">Total VM Cycles</div>
