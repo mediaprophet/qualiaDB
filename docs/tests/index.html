@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QualiaDB — Comprehensive Test Suite</title>
+    <title>QualiaDB — Test Suite (0.0.8)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <style>
@@ -306,6 +306,64 @@
         }
         .legend span { display: flex; align-items: center; gap: 5px; }
 
+        .run-panel {
+            margin-bottom: 14px;
+            padding: 14px 16px;
+            background: rgba(255,255,255,.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .run-panel h2 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+        .run-panel p, .run-panel li {
+            font-size: 12px;
+            color: var(--dim);
+            line-height: 1.55;
+        }
+        .run-panel ul { margin: 6px 0 0 18px; }
+        .run-panel code {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: #cbd5e1;
+            background: rgba(0,0,0,.35);
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+        .suite-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+            margin-top: 8px;
+        }
+        .suite-table th, .suite-table td {
+            text-align: left;
+            padding: 6px 8px;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+        }
+        .suite-table th {
+            color: var(--dim);
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+        .suite-table .cat-logic { color: var(--success); }
+        .suite-table .cat-wasm { color: var(--accent); }
+        .suite-table .cat-native { color: var(--native); }
+        .engine-pill {
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(59,130,246,.35);
+            color: #93c5fd;
+            background: rgba(59,130,246,.08);
+        }
+
         /* ── Mobile tweaks ───────────────────────────────────────────────── */
         @media (max-width: 600px) {
             main { padding: 12px; }
@@ -347,6 +405,7 @@
                 </div>
 
                 <div class="flex items-center gap-4">
+                    <span id="nav-engine-version" class="engine-pill" title="WASM engine from docs/playground/">Engine …</span>
                     <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
                        class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
                         <i class="fab fa-github"></i>
@@ -393,18 +452,74 @@
 </header>
 
 <main>
+    <div class="run-panel">
+        <h2>Run locally</h2>
+        <p>Headless (CI-safe, no browser):</p>
+        <ul>
+            <li><code>node docs/tests/run-headless.mjs --mode logic</code> — <strong>199</strong> JS reference tests</li>
+            <li><code>node docs/tests/run-headless.mjs --mode wasm</code> — <strong>352</strong> logic + WASM export tests (loads <code>docs/playground/</code>)</li>
+            <li><code>node docs/tests/run-headless.mjs --mode native</code> — logic + daemon tests (requires <code>localhost:4242</code>)</li>
+            <li><code>.\docs\tests\run-local.ps1 -Serve</code> — headless then serve at <code>http://localhost:8765/tests/index.html</code></li>
+        </ul>
+        <p style="margin-top:8px">Rebuild WASM after engine changes: <code>wasm-pack build crates/qualia-core-db --target web --out-dir ../../docs/playground --no-typescript</code></p>
+    </div>
+
     <div class="legend">
         <span><span style="color:var(--success)">■</span> Logic — pure JS modality spec (all modes)</span>
         <span><span style="color:var(--accent)">■</span> WASM — in-browser WebAssembly tests</span>
         <span><span style="color:var(--native)">■</span> Native — local daemon at localhost:4242</span>
-        <span style="color:var(--dim)">Suites: primitives, epistemic, LTL, paraconsistent, linear, dialectical, spatio-temporal, DL, ASP, probabilistic, CogAI, <strong>agency</strong>, <strong>comorbidity</strong>, <strong>DICOM</strong>, <strong>deontic</strong>, <strong>ontology alignment</strong> + WASM/native layers</span>
-        <span style="color:var(--dim)">CLI: <code>node docs/tests/run-headless.mjs</code> · WASM version via <code>get_engine_version()</code> / <code>get_engine_info()</code> · Native skips when daemon offline</span>
+    </div>
+
+    <div class="run-panel">
+        <h2>Suite catalog (branch 0.0.8-dev)</h2>
+        <table class="suite-table">
+            <thead>
+                <tr><th>Category</th><th>Suite</th><th>Module</th><th>Modes</th></tr>
+            </thead>
+            <tbody>
+                <tr><td class="cat-logic">Logic</td><td>Core Primitives</td><td><code>primitives.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Epistemic Logic</td><td><code>modality-epistemic.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Temporal LTL</td><td><code>modality-ltl.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Paraconsistent Logic</td><td><code>modality-paraconsistent.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Linear Logic</td><td><code>modality-linear.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Dialectical Logic</td><td><code>modality-dialectical.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Spatio-Temporal (Allen)</td><td><code>modality-spatio-temporal.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Description Logic</td><td><code>modality-dl.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Answer Set Programming</td><td><code>modality-asp.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Probabilistic + Diffusion</td><td><code>modality-probabilistic.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>CogAI Chunks</td><td><code>modality-cogai.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Agency (Principal ≠ Thing)</td><td><code>modality-agency.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Comorbidity risk</td><td><code>modality-comorbidity.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>DICOM split-ingest Quins</td><td><code>modality-dicom.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>Deontic O/P/F + unless</td><td><code>modality-deontic.js</code></td><td>all</td></tr>
+                <tr><td class="cat-logic">Logic</td><td>OWL → SHACL alignment</td><td><code>ontology-alignment.js</code></td><td>all</td></tr>
+                <tr><td class="cat-wasm">WASM</td><td>Query Engine + metadata</td><td><code>wasm-query-engine.js</code></td><td>wasm, both</td></tr>
+                <tr><td class="cat-wasm">WASM</td><td>Bioinformatics</td><td><code>wasm-bioinformatics.js</code></td><td>wasm, both</td></tr>
+                <tr><td class="cat-wasm">WASM</td><td>Clinical Engine</td><td><code>wasm-clinical.js</code></td><td>wasm, both</td></tr>
+                <tr><td class="cat-wasm">WASM</td><td>Organic Chemistry</td><td><code>wasm-chemistry.js</code></td><td>wasm, both</td></tr>
+                <tr><td class="cat-wasm">WASM</td><td>Economics / simulation</td><td><code>wasm-economics.js</code></td><td>wasm, both</td></tr>
+                <tr><td class="cat-wasm">WASM</td><td>SHACL constraints</td><td><code>wasm-shacl.js</code></td><td>wasm, both</td></tr>
+                <tr><td class="cat-wasm">WASM</td><td>Governance &amp; Webizen</td><td><code>wasm-governance.js</code></td><td>wasm, both</td></tr>
+                <tr><td class="cat-wasm">WASM</td><td>Ingest formats</td><td><code>wasm-ingest.js</code></td><td>wasm, both</td></tr>
+                <tr><td class="cat-wasm">WASM</td><td>Capability Profiles (QCHK)</td><td><code>wasm-profiles.js</code></td><td>wasm, both</td></tr>
+                <tr><td class="cat-wasm">WASM</td><td>Resource Catalog</td><td><code>wasm-resources.js</code></td><td>wasm, both</td></tr>
+                <tr><td class="cat-native">Native</td><td>Daemon Health</td><td><code>native-daemon.js</code></td><td>native, both</td></tr>
+                <tr><td class="cat-native">Native</td><td>Query (JSON-LD / N-Triples)</td><td><code>native-query.js</code></td><td>native, both</td></tr>
+                <tr><td class="cat-native">Native</td><td>Live pipeline</td><td><code>native-live.js</code></td><td>native, both</td></tr>
+                <tr><td class="cat-native">Native</td><td>WASM ↔ Native comparison</td><td><code>native-comparison.js</code></td><td>both only</td></tr>
+            </tbody>
+        </table>
+        <p style="margin-top:10px">Manual WordNet ingest tests: enable <strong>Manual</strong> checkbox or <code>?manual=1</code> (requires <code>docs/playground/wordnet.q42</code>).</p>
     </div>
 
     <div class="legend" id="wasm-coverage-note" style="display:none"></div>
     <div id="suite-list"></div>
 </main>
 
+<script type="module">
+    import { bindEngineBadge } from '../js/qualia-wasm-runtime.js';
+    bindEngineBadge('nav-engine-version', { base: '..' }, 'Engine v');
+</script>
 <script type="module" src="runner.js"></script>
 </body>
 </html>
