@@ -54,12 +54,13 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build WASM (qualia-core-db)
-        run: wasm-pack build crates/qualia-core-db --target web --release
-
-      - name: Update playground WASM artifacts
         run: |
-          cp crates/qualia-core-db/pkg/qualia_core_db_bg.wasm docs/playground/
-          cp crates/qualia-core-db/pkg/qualia_core_db.js      docs/playground/
+          wasm-pack build crates/qualia-core-db \
+            --target web \
+            --release \
+            --out-dir ../../docs/playground \
+            --out-name qualia_core_db \
+            --no-typescript
 
       - name: Build WordNet dataset (100 k-triple subset for Pages demo)
         continue-on-error: true   # non-fatal: Pages deploys fine without WordNet data

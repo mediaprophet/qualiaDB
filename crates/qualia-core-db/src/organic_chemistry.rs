@@ -512,7 +512,19 @@ fn count_aromatic_rings(_atoms: &[Atom], bonds: &[Bond]) -> u32 {
     // Simplified: each aromatic bond that closes a ring contributes to one ring
     let ring_bonds = bonds.iter().filter(|b| b.in_ring && b.order == BondOrder::Aromatic).count();
     // Rough: 6-membered ring has 6 aromatic bonds; 5-membered has 5
-    (ring_bonds / 6 + (ring_bonds % 6 > 2) as usize) as u32
+    let estimated_from_bonds = (ring_bonds / 6 + (ring_bonds % 6 > 2) as usize) as u32;
+    if estimated_from_bonds > 0 {
+        return estimated_from_bonds;
+    }
+
+    // Fallback for heteroaromatic systems that parse with aromatic atoms but
+    // without enough explicit aromatic ring bonds to satisfy the coarse rule above.
+    let aromatic_ring_atoms = _atoms.iter().filter(|a| a.is_aromatic).count();
+    if aromatic_ring_atoms >= 5 {
+        1 + ((aromatic_ring_atoms.saturating_sub(10)) / 5) as u32
+    } else {
+        0
+    }
 }
 
 fn count_all_rings(bonds: &[Bond]) -> u32 {
@@ -1056,7 +1068,8 @@ pub fn green_metrics(
     let total_in = reactant_mws.iter().sum::<f64>() + solvent_and_auxiliary_kg;
     let pmi = if product_kg > 0.0 { total_in / product_kg } else { f64::INFINITY };
 
-    let rme = if sum_reactants > 0.0 { 100.0 * product_kg / sum_reactants } else { 0.0 };
+    let effective_product_kg = product_kg * yield_fraction.max(0.0);
+    let rme = if sum_reactants > 0.0 { 100.0 * effective_product_kg / sum_reactants } else { 0.0 };
 
     let ce = if reactant_c_atoms > 0 { 100.0 * product_c_atoms as f64 / reactant_c_atoms as f64 } else { 0.0 };
 
@@ -1205,6 +1218,12 @@ mod tests {
     }
 
     #[test]
+    fn caffeine_has_aromatic_ring_descriptor() {
+        let desc = compute_descriptors(&caffeine());
+        assert!(desc.aromatic_ring_count > 0, "caffeine should report at least one aromatic ring");
+    }
+
+    #[test]
     fn functional_groups_ethanol() {
         let groups = detect_functional_groups(&ethanol());
         assert!(groups.contains(&FunctionalGroup::Hydroxyl), "ethanol should have hydroxyl");
@@ -1214,6 +1233,15 @@ mod tests {
     fn functional_groups_aspirin() {
         let groups = detect_functional_groups(&aspirin());
         assert!(groups.contains(&FunctionalGroup::CarboxylicAcid) || groups.contains(&FunctionalGroup::Ester) || groups.contains(&FunctionalGroup::AromaticRing));
+    }
+
+    #[test]
+    fn green_metrics_rme_tracks_yield() {
+        let reactants = [46.068];
+        let product_mw = 46.068;
+        let high = green_metrics(&reactants, product_mw, &[], 0.99, 5.0, 1.0, 0, 0);
+        let low = green_metrics(&reactants, product_mw, &[], 0.10, 5.0, 1.0, 0, 0);
+        assert!(high.reaction_mass_efficiency_pct > low.reaction_mass_efficiency_pct);
     }
 
     #[test]

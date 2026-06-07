@@ -42,7 +42,7 @@ export function register(runner) {
                 runner.expect(r.value_at_risk).toBeLessThan(100.0);
             });
 
-            runner.it('higher volatility increases VaR loss', () => {
+            runner.it('higher volatility increases VaR loss amount', () => {
                 if (!mod.run_semantic_simulation) return;
                 const low = mod.run_semantic_simulation({
                     initial_price: 100.0, drift: 0.0, volatility: 0.05,
@@ -52,7 +52,7 @@ export function register(runner) {
                     initial_price: 100.0, drift: 0.0, volatility: 0.50,
                     time_horizon: 1, simulation_steps: 252,
                 });
-                runner.expect(high.value_at_risk).toBeLessThan(low.value_at_risk);
+                runner.expect(high.value_at_risk).toBeGreaterThan(low.value_at_risk);
             });
         });
 

@@ -210,3 +210,69 @@ impl<R: BufRead> N3Parser<R> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn collect_events(input: &str) -> Vec<N3Event> {
+        let cursor = std::io::Cursor::new(input.as_bytes());
+        let mut parser = N3Parser::new(cursor);
+        let mut events = Vec::new();
+        parser.parse_all(|event| {
+            events.push(event);
+            Ok(())
+        }).unwrap();
+        events
+    }
+
+    #[test]
+    fn parses_weighted_rule_with_id_and_defeasible_arrow() {
+        let events = collect_events("[r1] (0.8) { ?s a ?t } ~> { ?s a ?t } .");
+        match &events[0] {
+            N3Event::LogicRule(rule) => {
+                assert_eq!(rule.id.as_deref(), Some("r1"));
+                assert_eq!(rule.weight, Some(0.8));
+                assert_eq!(rule.rule_type, RuleType::Defeasible);
+                assert_eq!(rule.premise.triples.len(), 1);
+                assert_eq!(rule.conclusion.triples.len(), 1);
+            }
+            other => panic!("expected logic rule, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parses_defeater_and_linear_rules() {
+        let defeater = collect_events("{ ?x a <http://ex.org/Exc> } ^> { ?x <http://ex.org/applies> false } .");
+        let linear = collect_events("{ ?x <http://ex.org/token> ?t } -o { ?x <http://ex.org/used> true } .");
+
+        match &defeater[0] {
+            N3Event::LogicRule(rule) => assert_eq!(rule.rule_type, RuleType::Defeater),
+            other => panic!("expected defeater rule, got {:?}", other),
+        }
+        match &linear[0] {
+            N3Event::LogicRule(rule) => assert_eq!(rule.rule_type, RuleType::Linear),
+            other => panic!("expected linear rule, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parses_asp_and_diffuse_blocks() {
+        let events = collect_events("#asp {\nanswer_set.\n}\nqualia:diffuse {\nwavefront.\n}\n");
+        assert!(matches!(&events[0], N3Event::AspBlock(body) if body.contains("answer_set.")));
+        assert!(matches!(&events[1], N3Event::DiffuseBlock(body) if body.contains("wavefront.")));
+    }
+
+    #[test]
+    fn static_triple_is_emitted() {
+        let events = collect_events("<http://ex.org/Alice> <http://ex.org/knows> <http://ex.org/Bob> .");
+        match &events[0] {
+            N3Event::StaticTriple(triple) => {
+                assert!(matches!(triple.subject, Term::Uri(_)));
+                assert!(matches!(triple.predicate, Term::Uri(_)));
+                assert!(matches!(triple.object, Term::Uri(_)));
+            }
+            other => panic!("expected static triple, got {:?}", other),
+        }
+    }
+}
