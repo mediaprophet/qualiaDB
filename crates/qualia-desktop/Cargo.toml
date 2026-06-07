@@ -1,6 +1,6 @@
 [package]
 name = "qualia-desktop"
-version = "0.0.5"
+version = "0.0.7"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
@@ -25,7 +25,7 @@ rtrb = "0.3.1"
 byteorder = "1.5"
 bip39 = { version = "2.2.2", features = ["rand"] }
 rand = "0.10.1"
-librqbit = "8"
+binaries = "librqbit"
 ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 hex = "0.4.3"
 
