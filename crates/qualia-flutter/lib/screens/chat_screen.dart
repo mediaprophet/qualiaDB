@@ -28,6 +28,7 @@ import '../src/rust/api/qualia_api.dart' as api;
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
 import '../src/rust/api/resource_catalog.dart' as catalog;
 import '../widgets/chat_citation_chips.dart';
+import '../widgets/super_quin_provenance_chip.dart';
 import '../widgets/chat_environment_bar.dart';
 import '../widgets/latex_math_keyboard.dart';
 import '../widgets/markdown_message.dart';
@@ -1205,10 +1206,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           }
         }
 
+        final semanticQuin = _parseSemanticQuin(data['semantic_quin']);
+        final walCommitted = data['wal_committed'] as bool? ?? false;
+        final sieveTokenCount = data['sieve_token_count'] as int? ?? 0;
+        final isShield = blockReason != null &&
+            blockReason.toLowerCase().contains('shield');
+
         final display = committed
             ? text
             : (blockReason != null && blockReason.isNotEmpty)
-                ? '**Webizen blocked:** $blockReason\n\n$text'
+                ? (isShield
+                    ? '**$blockReason**'
+                    : '**Webizen blocked:** $blockReason\n\n$text')
                 : text;
 
         setState(() {
@@ -1219,6 +1228,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             provenanceCount: prov,
             committed: committed,
             blockReason: blockReason,
+            semanticQuin: semanticQuin,
+            walCommitted: walCommitted,
+            sieveTokenCount: sieveTokenCount,
           );
           _isInferring = false;
         });
@@ -1256,6 +1268,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _stopInference() {
     api.cancelInferenceStream();
     setState(() => _isInferring = false);
+  }
+
+  List<int>? _parseSemanticQuin(dynamic raw) {
+    if (raw is! List) return null;
+    final out = <int>[];
+    for (final v in raw) {
+      if (v is int) {
+        out.add(v);
+      } else if (v is num) {
+        out.add(v.toInt());
+      }
+    }
+    return out.length >= 3 ? out : null;
   }
 
   String _parseLifecycleState(String lifecycleJson) {
@@ -1545,12 +1570,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   onSelectionChanged: (sel, _) =>
                                       _onTextSelected(i, m.lamport ?? BigInt.zero, display, sel),
                                 ))
-                          : SelectableText(
-                              display,
-                              onSelectionChanged: (sel, _) =>
-                                  _onTextSelected(i, m.lamport ?? BigInt.zero, display, sel),
-                            ),
-                      if (!isUser)
+                          : (m.semanticQuin != null && display.trim().isEmpty)
+                              ? const SizedBox.shrink()
+                              : SelectableText(
+                                  display,
+                                  onSelectionChanged: (sel, _) =>
+                                      _onTextSelected(i, m.lamport ?? BigInt.zero, display, sel),
+                                ),
+                      if (!isUser && m.semanticQuin != null)
+                        SuperQuinProvenanceChip(
+                          fields: m.semanticQuin!,
+                          walCommitted: m.walCommitted,
+                          sieveTokenCount: m.sieveTokenCount,
+                        ),
+                      if (!isUser &&
+                          (m.semanticQuin == null || m.citations.isNotEmpty))
                         ChatCitationChips(
                           citations: m.citations,
                           provenanceCount: m.provenanceCount,
@@ -1778,6 +1812,9 @@ class _Message {
   final int provenanceCount;
   final bool committed;
   final String? blockReason;
+  final List<int>? semanticQuin;
+  final bool walCommitted;
+  final int sieveTokenCount;
 
   const _Message({
     required this.role,
@@ -1791,6 +1828,9 @@ class _Message {
     this.provenanceCount = 0,
     this.committed = false,
     this.blockReason,
+    this.semanticQuin,
+    this.walCommitted = false,
+    this.sieveTokenCount = 0,
   });
 
   _Message copyWith({
@@ -1799,6 +1839,9 @@ class _Message {
     int? provenanceCount,
     bool? committed,
     String? blockReason,
+    List<int>? semanticQuin,
+    bool? walCommitted,
+    int? sieveTokenCount,
   }) {
     return _Message(
       role: role,
@@ -1807,6 +1850,9 @@ class _Message {
       provenanceCount: provenanceCount ?? this.provenanceCount,
       committed: committed ?? this.committed,
       blockReason: blockReason ?? this.blockReason,
+      semanticQuin: semanticQuin ?? this.semanticQuin,
+      walCommitted: walCommitted ?? this.walCommitted,
+      sieveTokenCount: sieveTokenCount ?? this.sieveTokenCount,
     );
   }
 }

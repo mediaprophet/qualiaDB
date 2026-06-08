@@ -63,6 +63,8 @@ pub struct ChatEnvironmentConfig {
     pub session_kind: crate::chat_session::SessionKind,
     #[serde(default)]
     pub participants: Vec<crate::chat_session::ChatParticipant>,
+    #[serde(default)]
+    pub graph_mutation: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -186,6 +188,7 @@ pub fn compile_chat_environment(
         daemon_reachable,
         session_kind: config.session_kind,
         participants: config.participants.clone(),
+        graph_mutation: config.graph_mutation,
     };
 
     write_environment_manifest_q42(storage, &config.session_id, &graph_scope_hashes)?;
@@ -206,6 +209,7 @@ pub fn refresh_session_environment(
         prior_session_ids: existing.environment.prior_session_ids,
         session_kind: existing.meta.session_kind,
         participants: existing.meta.participants.clone(),
+        graph_mutation: existing.environment.graph_mutation,
     };
 
     let env = compile_chat_environment(storage, catalog, &config)?;
@@ -578,6 +582,7 @@ mod tests {
             prior_session_ids: vec![],
             session_kind: crate::chat_session::SessionKind::Solo,
             participants: vec![],
+            graph_mutation: false,
         };
         let env = compile_chat_environment(&storage, &catalog, &config).unwrap();
         assert!(env.capability_briefing.contains("test-session"));

@@ -5,6 +5,7 @@ use std::sync::{Arc, OnceLock};
 
 use qualia_core_db::{
     gguf_sharder::GGufSharder,
+    llm_agent::{AgentBackend, LocalLlmAgent},
     orchestrator::{ModelLifecycle, NullThermalGovernor, TaskOrchestrator},
     q_hash,
     resource_catalog::{LLMResource, ResourceCatalog},
@@ -105,6 +106,11 @@ pub struct InstallManifest {
 }
 
 fn orchestrator() -> Arc<TaskOrchestrator> {
+    task_orchestrator()
+}
+
+/// Shared orchestrator for chat inference and model lifecycle transitions.
+pub fn task_orchestrator() -> Arc<TaskOrchestrator> {
     static ORCH: OnceLock<Arc<TaskOrchestrator>> = OnceLock::new();
     ORCH.get_or_init(|| Arc::new(TaskOrchestrator::new(Box::new(NullThermalGovernor))))
         .clone()
@@ -434,8 +440,19 @@ pub fn finalize_local_gguf(
     let json = serde_json::to_string_pretty(&manifest)?;
     std::fs::write(install_manifest_path(&models, &model_id), json)?;
 
+    let agent = LocalLlmAgent::with_local_backend(
+        format!("did:qualia:local-gguf:{profile_id}"),
+        AgentBackend::Local {
+            model_path: path_str.clone(),
+            context_window: 4096,
+            quantization: "local".to_string(),
+            vision_projector_path: None,
+            modality: "text".to_string(),
+            architecture: None,
+        },
+    );
     orchestrator()
-        .load_model(profile_id)
+        .load_model(&agent, profile_id)
         .map_err(|e| ModelError::Activate(e.to_string()))?;
 
     let lifecycle = *orchestrator().current_model_state.lock().unwrap();
@@ -477,8 +494,19 @@ pub fn activate_model_for_id(model_id: &str, storage_root: &Path) -> Result<Acti
         }
     }
 
+    let agent = LocalLlmAgent::with_local_backend(
+        format!("did:qualia:profile:{}", manifest.profile_id),
+        AgentBackend::Local {
+            model_path: manifest.gguf_path.clone(),
+            context_window: manifest.context_window,
+            quantization: manifest.quantization.clone(),
+            vision_projector_path: manifest.mmproj_path.clone(),
+            modality: manifest.modality.clone(),
+            architecture: manifest.architecture.clone(),
+        },
+    );
     orchestrator()
-        .load_model(manifest.profile_id)
+        .load_model(&agent, manifest.profile_id)
         .map_err(|e| ModelError::Activate(e.to_string()))?;
 
     let lifecycle = *orchestrator().current_model_state.lock().unwrap();

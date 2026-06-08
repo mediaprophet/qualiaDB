@@ -126,6 +126,9 @@ pub struct ChatEnvironment {
     pub session_kind: SessionKind,
     #[serde(default)]
     pub participants: Vec<ChatParticipant>,
+    /// When true, chat turns route through the neuro-symbolic sieve + WAL orchestrator path.
+    #[serde(default)]
+    pub graph_mutation: bool,
 }
 
 fn active_model_profile_id() -> u64 {
@@ -152,6 +155,7 @@ impl ChatEnvironment {
                 prior_session_ids: Vec::new(),
                 session_kind: SessionKind::Solo,
                 participants: Vec::new(),
+                graph_mutation: false,
             },
         )
         .unwrap_or_else(|_| {
@@ -174,6 +178,7 @@ impl ChatEnvironment {
                 daemon_reachable: false,
                 session_kind: SessionKind::Solo,
                 participants: Vec::new(),
+                graph_mutation: false,
             }
         })
     }

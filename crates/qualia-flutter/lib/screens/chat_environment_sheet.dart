@@ -46,6 +46,7 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
   final Set<String> _selectedPriorSessions = {};
   List<chat.ChatSessionSummary> _allSessions = [];
   String _briefingPreview = '';
+  bool _graphMutation = false;
 
   @override
   void initState() {
@@ -77,6 +78,7 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
       final priors = (env['prior_session_ids'] as List<dynamic>? ?? const [])
           .map((e) => e.toString())
           .toSet();
+      final graphMutation = env['graph_mutation'] as bool? ?? false;
 
       final models = <_ChatModelOption>[];
       for (final id in installedIds) {
@@ -111,6 +113,7 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
           ..clear()
           ..addAll(priors);
         _briefingPreview = env['capability_briefing'] as String? ?? '';
+        _graphMutation = graphMutation;
         _loading = false;
       });
     } catch (e) {
@@ -191,6 +194,7 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
         sessionId: widget.sessionId,
         ontologyIds: _selectedOntologies.toList(),
         priorSessionIds: _selectedPriorSessions.toList(),
+        graphMutation: _graphMutation,
       );
       final env = jsonDecode(envJson) as Map<String, dynamic>;
       if (!mounted) return;
@@ -329,6 +333,23 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
                                 ),
                               ],
                               const SizedBox(height: 20),
+                              Text(
+                                'Neuro-symbolic output',
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              SwitchListTile(
+                                title: const Text('Graph mutation (sieve + WAL)'),
+                                subtitle: Text(
+                                  'Emit structured Super-Quins through the orchestrator instead of free-text prose.',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: cs.onSurfaceVariant),
+                                ),
+                                value: _graphMutation,
+                                onChanged: (v) => setState(() => _graphMutation = v),
+                              ),
+                              const SizedBox(height: 16),
                               Text(
                                 'Ontologies in scope',
                                 style: Theme.of(context).textTheme.titleSmall,

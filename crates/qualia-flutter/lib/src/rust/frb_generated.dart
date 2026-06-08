@@ -563,7 +563,8 @@ abstract class RustApiApi extends BaseApi {
   Future<String> crateApiChatSessionUpdateSessionEnvironment(
       {required String sessionId,
       required List<String> ontologyIds,
-      required List<String> priorSessionIds});
+      required List<String> priorSessionIds,
+      required bool graphMutation});
 
   Future<void> crateApiQualiaApiUpdateSolarInput({required int watts});
 
@@ -5092,13 +5093,15 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   Future<String> crateApiChatSessionUpdateSessionEnvironment(
       {required String sessionId,
       required List<String> ontologyIds,
-      required List<String> priorSessionIds}) {
+      required List<String> priorSessionIds,
+      required bool graphMutation}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(sessionId, serializer);
         sse_encode_list_String(ontologyIds, serializer);
         sse_encode_list_String(priorSessionIds, serializer);
+        sse_encode_bool(graphMutation, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 175, port: port_);
       },
@@ -5107,7 +5110,7 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiChatSessionUpdateSessionEnvironmentConstMeta,
-      argValues: [sessionId, ontologyIds, priorSessionIds],
+      argValues: [sessionId, ontologyIds, priorSessionIds, graphMutation],
       apiImpl: this,
     ));
   }
@@ -5115,7 +5118,12 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   TaskConstMeta get kCrateApiChatSessionUpdateSessionEnvironmentConstMeta =>
       const TaskConstMeta(
         debugName: "update_session_environment",
-        argNames: ["sessionId", "ontologyIds", "priorSessionIds"],
+        argNames: [
+          "sessionId",
+          "ontologyIds",
+          "priorSessionIds",
+          "graphMutation"
+        ],
       );
 
   @override

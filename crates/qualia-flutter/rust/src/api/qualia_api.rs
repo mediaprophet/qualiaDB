@@ -1142,6 +1142,30 @@ pub fn receive_vault_job(
 
 // ── Inference ─────────────────────────────────────────────────────────────────
 
+/// Zero-copy Super-Quin view (6 × u64) for FRB consumers and block inspector.
+#[derive(Debug, Clone, Copy)]
+pub struct SuperQuinView {
+    pub subject: u64,
+    pub predicate: u64,
+    pub object: u64,
+    pub context: u64,
+    pub metadata: u64,
+    pub parity: u64,
+}
+
+impl From<[u64; 6]> for SuperQuinView {
+    fn from(f: [u64; 6]) -> Self {
+        Self {
+            subject: f[0],
+            predicate: f[1],
+            object: f[2],
+            context: f[3],
+            metadata: f[4],
+            parity: f[5],
+        }
+    }
+}
+
 pub fn run_inference(prompt: String, _model_path: String) -> String {
     let session_id = match core::ensure_chat_session() {
         Ok(id) => id,
@@ -1188,6 +1212,7 @@ pub fn run_inference_stream(
 
         let options = qualia_client_core::chat_inference::ChatInferenceOptions {
             reply_to_fragment_id: reply_to_fragment_id.filter(|s| !s.is_empty()),
+            graph_mutation: false,
         };
         let result = qualia_client_core::chat_inference::run_chat_inference_full(
             &sid,

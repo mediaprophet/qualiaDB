@@ -7,7 +7,7 @@ use std::sync::Arc;
 use qualia_core_db::{
     llm_agent::{AgentError, AgentIntent, AgentOutput, AgentRuntime, LocalLlmAgent, WebizenVerdict},
     n3_compiler::N3OutputMode,
-    orchestrator::ModelLifecycle,
+    orchestrator::{ModelLifecycle, OrchestrationResult},
     q_hash,
     wal::WriteAheadLog,
     QualiaQuin,
@@ -40,6 +40,13 @@ pub struct ChatInferenceResult {
     pub model_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agent_backend: Option<String>,
+    /// Super-Quin fields when the neuro-symbolic sieve completes (6 × u64, zero JSON objects).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantic_quin: Option<[u64; 6]>,
+    #[serde(default)]
+    pub wal_committed: bool,
+    #[serde(default)]
+    pub sieve_token_count: u8,
 }
 
 pub fn request_cancel_inference() {
@@ -57,6 +64,8 @@ pub fn is_inference_cancelled() -> bool {
 #[derive(Debug, Clone, Default)]
 pub struct ChatInferenceOptions {
     pub reply_to_fragment_id: Option<String>,
+    /// Override session environment: route through sieve + orchestrator WAL path.
+    pub graph_mutation: bool,
 }
 
 pub fn run_chat_inference_with_options(
@@ -88,6 +97,9 @@ pub fn run_chat_inference_full(
         agent_did: None,
         model_id: None,
         agent_backend: None,
+        semantic_quin: None,
+        wal_committed: false,
+        sieve_token_count: 0,
     };
 
     let state = match crate::state::APP_STATE.get() {
@@ -142,9 +154,9 @@ pub fn run_chat_inference_full(
         None => return empty("No active model record — activate in LLM Hub."),
     };
 
-    let agent = LocalLlmAgent {
-        agent_did: agent_cfg.sub_agent_did.clone(),
-        backend: qualia_core_db::llm_agent::AgentBackend::Local {
+    let agent = LocalLlmAgent::with_local_backend(
+        agent_cfg.sub_agent_did.clone(),
+        qualia_core_db::llm_agent::AgentBackend::Local {
             model_path: packet.model_path.clone(),
             context_window: active.context_window,
             quantization: active.quantization.clone(),
@@ -152,17 +164,34 @@ pub fn run_chat_inference_full(
             modality: active.modality.clone(),
             architecture: active.architecture.clone(),
         },
-        memory_used_bytes: std::sync::atomic::AtomicU64::new(0),
+    );
+
+    if let Some(lex_path) = resolve_sieve_lex_path(Path::new(&storage), &env, &packet.model_path) {
+        agent.configure_sieve_lex(lex_path);
+    }
+    let _ = crate::model_lifecycle::task_orchestrator()
+        .load_model(&agent, active.profile_id);
+
+    let frame_hash = q_hash(&format!("purpose:ChatSession:{session_id}"));
+    let graph_mutation = options.graph_mutation || env.graph_mutation;
+    let (intent_predicate, mcp_intent_frame_hash, output_mode) = if graph_mutation {
+        (frame_hash, frame_hash, N3OutputMode::GraphMutation)
+    } else {
+        (
+            q_hash("llm:ReadGraph"),
+            q_hash("purpose:General"),
+            N3OutputMode::FreeText,
+        )
     };
 
     let intent = AgentIntent {
-        intent_predicate: q_hash("llm:ReadGraph"),
+        intent_predicate,
         requested_graph_scope: packet.graph_scope_hashes.clone(),
         requires_network: false,
         ilp_offer_micro_cents: 0,
         principal_did_hash: q_hash(&profile.public_did),
-        mcp_intent_frame_hash: q_hash(&format!("purpose:ChatSession:{session_id}")),
-        output_mode: N3OutputMode::FreeText,
+        mcp_intent_frame_hash,
+        output_mode,
         clearance_ceiling: 0,
         max_sentinel_depth: 32,
         active_profile: packet.active_profile.clone(),
@@ -170,6 +199,20 @@ pub fn run_chat_inference_full(
 
     if is_inference_cancelled() {
         return empty("Generation cancelled");
+    }
+
+    if graph_mutation {
+        return run_orchestrated_inference(
+            session_id,
+            &agent,
+            &agent_cfg,
+            &packet,
+            &retrieval,
+            intent,
+            started,
+            Path::new(&storage),
+            empty,
+        );
     }
 
     match agent.validate_intent(&intent) {
@@ -211,25 +254,17 @@ pub fn run_chat_inference_full(
                 o
             }
             Err(AgentError::WebizenDenied { reason, .. }) => return empty(&reason),
+            Err(AgentError::SieveMisaligned) => {
+                return empty(
+                    "Shield — sieve misaligned: model output did not match graph grammar.",
+                );
+            }
             Err(e) => return empty(&format!("{e:?}")),
         }
     };
 
     if is_inference_cancelled() {
-        return ChatInferenceResult {
-            text: output.text,
-            provenance_hashes: vec![],
-            citations: retrieval.citations.clone(),
-            retrieval_triple_count: retrieval.triple_count,
-            tokens_generated: output.tokens_generated,
-            inference_duration_ms: started.elapsed().as_millis() as u64,
-            committed: false,
-            block_reason: Some("Generation cancelled".to_string()),
-            sub_agent_of: None,
-            agent_did: None,
-            model_id: None,
-            agent_backend: None,
-        };
+        return cancelled_result(&output, &retrieval, started);
     }
 
     match agent.validate_output(&output) {
@@ -244,6 +279,81 @@ pub fn run_chat_inference_full(
 
     let _ = persist_citations(session_id, Path::new(&storage), &output, &retrieval);
 
+    finalize_success_result(
+        output,
+        &retrieval,
+        started,
+        &agent_cfg,
+        false,
+        0,
+    )
+}
+
+fn run_orchestrated_inference(
+    session_id: &str,
+    agent: &LocalLlmAgent,
+    agent_cfg: &crate::chat_agents::ParticipantAgentConfig,
+    packet: &InferenceContextPacket,
+    retrieval: &RetrievalBundle,
+    intent: AgentIntent,
+    started: std::time::Instant,
+    storage: &Path,
+    empty: impl Fn(&str) -> ChatInferenceResult,
+) -> ChatInferenceResult {
+    let orch = crate::model_lifecycle::task_orchestrator();
+    let result = orch.orchestrate_inference(
+        agent,
+        &packet.augmented_prompt,
+        &packet.graph_context_json,
+        intent,
+    );
+
+    match result {
+        OrchestrationResult::Committed {
+            text,
+            mut provenance_quins,
+            semantic_quin,
+            wal_committed,
+        } => {
+            provenance_quins.extend(retrieval.provenance_hashes.iter().copied());
+            provenance_quins.sort_unstable();
+            provenance_quins.dedup();
+
+            let sieve_tokens = if semantic_quin.is_some() { 3 } else { 0 };
+            let output = AgentOutput {
+                text,
+                semantic_quin,
+                provenance_quins,
+                tokens_generated: sieve_tokens,
+                inference_duration_ms: started.elapsed().as_millis() as u64,
+                peak_memory_bytes: 0,
+            };
+            let _ = persist_citations(session_id, storage, &output, retrieval);
+            finalize_success_result(
+                output,
+                retrieval,
+                started,
+                agent_cfg,
+                wal_committed,
+                sieve_tokens.min(255) as u8,
+            )
+        }
+        OrchestrationResult::Blocked { reason, .. } => empty(reason),
+        OrchestrationResult::Failed(ref msg) if msg.contains("SieveMisaligned") => empty(
+            "Shield — sieve misaligned: model output did not match graph grammar.",
+        ),
+        OrchestrationResult::Failed(msg) => empty(&msg),
+    }
+}
+
+fn finalize_success_result(
+    output: AgentOutput,
+    retrieval: &RetrievalBundle,
+    started: std::time::Instant,
+    agent_cfg: &crate::chat_agents::ParticipantAgentConfig,
+    wal_committed: bool,
+    sieve_token_count: u8,
+) -> ChatInferenceResult {
     ChatInferenceResult {
         text: output.text,
         provenance_hashes: output
@@ -251,7 +361,7 @@ pub fn run_chat_inference_full(
             .iter()
             .map(|h| format!("0x{h:016x}"))
             .collect(),
-        citations: retrieval.citations,
+        citations: retrieval.citations.clone(),
         retrieval_triple_count: retrieval.triple_count,
         tokens_generated: output.tokens_generated,
         inference_duration_ms: started.elapsed().as_millis() as u64,
@@ -261,7 +371,73 @@ pub fn run_chat_inference_full(
         agent_did: Some(agent_cfg.sub_agent_did.clone()),
         model_id: agent_cfg.model_id.clone(),
         agent_backend: Some(agent_cfg.backend.as_str().to_string()),
+        semantic_quin: output.semantic_quin.map(quin_to_fields),
+        wal_committed,
+        sieve_token_count,
     }
+}
+
+fn cancelled_result(
+    output: &AgentOutput,
+    retrieval: &RetrievalBundle,
+    started: std::time::Instant,
+) -> ChatInferenceResult {
+    ChatInferenceResult {
+        text: output.text.clone(),
+        provenance_hashes: vec![],
+        citations: retrieval.citations.clone(),
+        retrieval_triple_count: retrieval.triple_count,
+        tokens_generated: output.tokens_generated,
+        inference_duration_ms: started.elapsed().as_millis() as u64,
+        committed: false,
+        block_reason: Some("Generation cancelled".to_string()),
+        sub_agent_of: None,
+        agent_did: None,
+        model_id: None,
+        agent_backend: None,
+        semantic_quin: output.semantic_quin.map(quin_to_fields),
+        wal_committed: false,
+        sieve_token_count: 0,
+    }
+}
+
+fn quin_to_fields(q: QualiaQuin) -> [u64; 6] {
+    [q.subject, q.predicate, q.object, q.context, q.metadata, q.parity]
+}
+
+fn resolve_sieve_lex_path(
+    storage: &Path,
+    env: &crate::chat_session::ChatEnvironment,
+    model_path: &str,
+) -> Option<String> {
+    let index = storage.join("Index");
+    for ont_id in &env.ontology_ids {
+        let q42 = index.join(format!("{ont_id}.q42"));
+        if let Some(lex) = crate::chat_ontology::resolve_wordnet_lex(&q42) {
+            return Some(lex.to_string_lossy().into_owned());
+        }
+        let lex_sibling = index.join(format!("{ont_id}.q42.lex"));
+        if lex_sibling.is_file() {
+            return Some(lex_sibling.to_string_lossy().into_owned());
+        }
+    }
+    if let Some(q42) = crate::chat_ontology::resolve_wordnet_q42(storage) {
+        if let Some(lex) = crate::chat_ontology::resolve_wordnet_lex(&q42) {
+            return Some(lex.to_string_lossy().into_owned());
+        }
+    }
+    let schema_lex = "data/schemaorg/30.0/schemaorg-current-https.q42.lex";
+    if Path::new(schema_lex).is_file() {
+        return Some(schema_lex.to_string());
+    }
+    let mut p = Path::new(model_path).to_path_buf();
+    if let Some(stem) = p.file_stem().and_then(|s| s.to_str()).map(str::to_string) {
+        p.set_file_name(format!("{stem}.q42.lex"));
+        if p.is_file() {
+            return Some(p.to_string_lossy().into_owned());
+        }
+    }
+    None
 }
 
 fn blocked_result(
@@ -287,6 +463,9 @@ fn blocked_result(
         agent_did: None,
         model_id: None,
         agent_backend: None,
+        semantic_quin: output.semantic_quin.map(quin_to_fields),
+        wal_committed: false,
+        sieve_token_count: 0,
     }
 }
 

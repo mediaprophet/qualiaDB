@@ -6054,6 +6054,7 @@ fn wire__crate__api__chat_session__update_session_environment_impl(
             let api_session_id = <String>::sse_decode(&mut deserializer);
             let api_ontology_ids = <Vec<String>>::sse_decode(&mut deserializer);
             let api_prior_session_ids = <Vec<String>>::sse_decode(&mut deserializer);
+            let api_graph_mutation = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
@@ -6061,6 +6062,7 @@ fn wire__crate__api__chat_session__update_session_environment_impl(
                         api_session_id,
                         api_ontology_ids,
                         api_prior_session_ids,
+                        api_graph_mutation,
                     )?;
                     Ok(output_ok)
                 })())

@@ -1542,6 +1542,7 @@ pub fn update_session_environment(
     session_id: String,
     ontology_ids: Vec<String>,
     prior_session_ids: Vec<String>,
+    graph_mutation: bool,
 ) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -1554,6 +1555,7 @@ pub fn update_session_environment(
         prior_session_ids,
         session_kind: session.meta.session_kind,
         participants: session.meta.participants.clone(),
+        graph_mutation,
     };
     let env = crate::context_binding::compile_chat_environment(
         Path::new(&storage),

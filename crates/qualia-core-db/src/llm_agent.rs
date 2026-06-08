@@ -340,9 +340,9 @@ pub struct LocalLlmAgent {
 
 impl LocalLlmAgent {
     pub fn new(agent_did: impl Into<String>, model_path: impl Into<String>) -> Self {
-        Self {
-            agent_did: agent_did.into(),
-            backend: AgentBackend::Local {
+        Self::with_local_backend(
+            agent_did,
+            AgentBackend::Local {
                 model_path: model_path.into(),
                 context_window: 4096,
                 quantization: "Q4_K_M".into(),
@@ -350,6 +350,14 @@ impl LocalLlmAgent {
                 modality: default_local_modality(),
                 architecture: None,
             },
+        )
+    }
+
+    /// Construct an agent with a fully specified backend (e.g. catalog multimodal profile).
+    pub fn with_local_backend(agent_did: impl Into<String>, backend: AgentBackend) -> Self {
+        Self {
+            agent_did: agent_did.into(),
+            backend,
             memory_used_bytes: std::sync::atomic::AtomicU64::new(0),
             use_sieve_output: std::sync::atomic::AtomicBool::new(false),
             sieve_lex_path: std::sync::Mutex::new(None),

@@ -64,11 +64,13 @@ Future<String> compileSessionEnvironment({required String sessionId}) =>
 Future<String> updateSessionEnvironment(
         {required String sessionId,
         required List<String> ontologyIds,
-        required List<String> priorSessionIds}) =>
+        required List<String> priorSessionIds,
+        required bool graphMutation}) =>
     RustApi.instance.api.crateApiChatSessionUpdateSessionEnvironment(
         sessionId: sessionId,
         ontologyIds: ontologyIds,
-        priorSessionIds: priorSessionIds);
+        priorSessionIds: priorSessionIds,
+        graphMutation: graphMutation);
 
 Future<String> getSessionEnvironment({required String sessionId}) =>
     RustApi.instance.api
