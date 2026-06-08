@@ -79,6 +79,91 @@ struct GemmGpuParams {
     weight_byte_len: u32,
 }
 
+/// Uniform block passed to `fused_attention.wgsl`.
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct AttentionGpuParams {
+    n_embd: u32,
+    n_head: u32,
+    n_kv_head: u32,
+    head_dim: u32,
+    q_heads_per_kv: u32,
+    token_idx: u32,
+    max_context: u32,
+    layer_idx: u32,
+    layer_stride: u32,
+    slot_kv_elems: u32,
+    weight_ggml_type: u32,
+    weight_row_elems: u32,
+    weight_byte_len: u32,
+    proj_kind: u32,
+}
+
+/// Hard context ceiling — sized to keep KV arena under the 512MB RAM floor (Gemma 42L).
+pub const MAX_CONTEXT_WINDOW: u32 = 1024;
+/// Maximum bytes for the static KV arena (load-time allocation only).
+pub const KV_CACHE_MAX_BYTES: usize = 448 * 1024 * 1024;
+
+/// Static ring-buffer KV layout: `[layer][slot][K | V]` in f32.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KvCacheLayout {
+    pub max_context: u32,
+    pub n_layer: u32,
+    pub n_kv_head: u32,
+    pub head_dim: u32,
+    pub slot_kv_elems: u32,
+    pub layer_stride: u32,
+    pub total_f32_elems: usize,
+}
+
+impl KvCacheLayout {
+    pub fn from_hyperparams(h: &crate::gguf_sharder::GgufHyperparams) -> Option<Self> {
+        let n_layer = h.n_layer;
+        let n_kv_head = h.effective_n_kv_head();
+        let head_dim = h.head_dim();
+        if n_layer == 0 || n_kv_head == 0 || head_dim == 0 {
+            return None;
+        }
+        let slot_kv_elems = n_kv_head * head_dim;
+        let layer_stride = MAX_CONTEXT_WINDOW * slot_kv_elems * 2;
+        let total = (n_layer as usize)
+            .checked_mul(layer_stride as usize)?;
+        let bytes = total.checked_mul(std::mem::size_of::<f32>())?;
+        if bytes > KV_CACHE_MAX_BYTES {
+            return None;
+        }
+        Some(Self {
+            max_context: MAX_CONTEXT_WINDOW,
+            n_layer,
+            n_kv_head,
+            head_dim,
+            slot_kv_elems,
+            layer_stride,
+            total_f32_elems: total,
+        })
+    }
+
+    #[inline]
+    pub fn ring_slot(&self, token_idx: u32) -> u32 {
+        token_idx % self.max_context
+    }
+
+    #[inline]
+    pub fn k_index(&self, layer: u32, slot: u32, kv_head: u32, dim: u32) -> usize {
+        let base = layer as usize * self.layer_stride as usize
+            + slot as usize * self.slot_kv_elems as usize * 2;
+        base + kv_head as usize * self.head_dim as usize + dim as usize
+    }
+
+    #[inline]
+    pub fn v_index(&self, layer: u32, slot: u32, kv_head: u32, dim: u32) -> usize {
+        let k_base = layer as usize * self.layer_stride as usize
+            + slot as usize * self.slot_kv_elems as usize * 2;
+        let v_off = self.n_kv_head as usize * self.head_dim as usize;
+        k_base + v_off + kv_head as usize * self.head_dim as usize + dim as usize
+    }
+}
+
 /// Max GEMM row/column for stack buffers and reusable GPU staging (Gemma 4 FFN = 4×2560).
 const MAX_STACK_GEMM_DIM: usize = 10240;
 const MAX_STACK_GEMM_OUT: usize = MAX_STACK_GEMM_DIM;
@@ -116,6 +201,76 @@ fn update_streaming_argmax(
         if v > *max_logit {
             *max_logit = v;
             *best_token_id = (base + local) as u32;
+        }
+    }
+}
+
+#[inline]
+fn apply_rope_in_head(head: &mut [f32], head_dim: usize, token_pos: u32) {
+    let pairs = head_dim / 2;
+    for p in 0..pairs {
+        let theta = 10000f32.powf(-2.0 * p as f32 / head_dim as f32);
+        let angle = token_pos as f32 * theta;
+        let c = angle.cos();
+        let s = angle.sin();
+        let i0 = p * 2;
+        let i1 = i0 + 1;
+        if i1 >= head_dim {
+            break;
+        }
+        let v0 = head[i0];
+        let v1 = head[i1];
+        head[i0] = v0 * c - v1 * s;
+        head[i1] = v0 * s + v1 * c;
+    }
+}
+
+/// Two-pass streaming softmax attention for one query head (zero score buffer).
+fn attention_head_cpu(
+    q: &[f32],
+    kv: &[f32],
+    layout: &KvCacheLayout,
+    layer: u32,
+    token_idx: u32,
+    kv_head: u32,
+    head_dim: usize,
+    out: &mut [f32],
+) {
+    let max_ctx = layout.max_context;
+    let start = token_idx.saturating_sub(max_ctx - 1);
+    let scale = (head_dim as f32).sqrt().recip();
+    let mut max_score = f32::NEG_INFINITY;
+    for logical in start..=token_idx {
+        let slot = logical % max_ctx;
+        let mut score = 0f32;
+        for d in 0..head_dim {
+            score += q[d] * kv[layout.k_index(layer, slot, kv_head, d as u32)];
+        }
+        score *= scale;
+        if score > max_score {
+            max_score = score;
+        }
+    }
+    let mut sum_exp = 0f32;
+    for d in 0..head_dim {
+        out[d] = 0.0;
+    }
+    for logical in start..=token_idx {
+        let slot = logical % max_ctx;
+        let mut score = 0f32;
+        for d in 0..head_dim {
+            score += q[d] * kv[layout.k_index(layer, slot, kv_head, d as u32)];
+        }
+        score = (score * scale - max_score).exp();
+        sum_exp += score;
+        for d in 0..head_dim {
+            out[d] += score * kv[layout.v_index(layer, slot, kv_head, d as u32)];
+        }
+    }
+    if sum_exp > 0.0 {
+        let inv = sum_exp.recip();
+        for d in 0..head_dim {
+            out[d] *= inv;
         }
     }
 }
@@ -182,6 +337,13 @@ pub struct QTensorEngine {
     gemm_params_buf: Option<wgpu::Buffer>,
     gemm_output_staging: Option<wgpu::Buffer>,
     gemm_max_out_dim: u32,
+    /// Static KV ring-buffer (allocated once at `load_gguf`).
+    kv_layout: Option<KvCacheLayout>,
+    kv_cache_gpu: Option<wgpu::Buffer>,
+    /// CPU mirror for quantized-attention fallback (no growth during decode).
+    kv_cache_cpu: Option<Box<[f32]>>,
+    attention_pipeline: wgpu::ComputePipeline,
+    attention_params_buf: Option<wgpu::Buffer>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -238,12 +400,24 @@ impl QTensorEngine {
             entry_point: "main",
         });
 
+        let attn_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Fused Attention Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/fused_attention.wgsl").into()),
+        });
+        let attention_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Fused Attention Pipeline"),
+            layout: None,
+            module: &attn_shader,
+            entry_point: "main",
+        });
+
         Self {
             device,
             queue,
             pipeline,
             mock_pipeline,
             embedding_pipeline,
+            attention_pipeline,
             is_initialized: true,
             #[cfg(target_os = "windows")]
             dml: crate::directml_bridge::DmlDevice::new().ok(),
@@ -257,6 +431,49 @@ impl QTensorEngine {
             gemm_params_buf: None,
             gemm_output_staging: None,
             gemm_max_out_dim: MAX_STACK_GEMM_OUT as u32,
+            kv_layout: None,
+            kv_cache_gpu: None,
+            kv_cache_cpu: None,
+            attention_params_buf: None,
+        }
+    }
+
+    fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
+        let layout = match KvCacheLayout::from_hyperparams(h) {
+            Some(l) => l,
+            None => return,
+        };
+        let bytes = (layout.total_f32_elems * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+        let gpu = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("StaticKvCacheArena"),
+            size: bytes.max(4),
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let cpu = vec![0f32; layout.total_f32_elems].into_boxed_slice();
+        self.attention_params_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("AttentionParams"),
+            size: std::mem::size_of::<AttentionGpuParams>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        }));
+        self.kv_layout = Some(layout);
+        self.kv_cache_gpu = Some(gpu);
+        self.kv_cache_cpu = Some(cpu);
+        eprintln!(
+            "[gguf_bridge] KV arena {} f32 ({:.1} MiB), context={}",
+            layout.total_f32_elems,
+            bytes as f64 / (1024.0 * 1024.0),
+            layout.max_context,
+        );
+    }
+
+    /// Zero the static KV arena at the start of a new decode context (CPU mirror only; zero heap).
+    pub fn reset_kv_cache(&mut self) {
+        if let (Some(layout), Some(cpu)) = (self.kv_layout.as_ref(), self.kv_cache_cpu.as_mut()) {
+            for v in cpu.iter_mut().take(layout.total_f32_elems) {
+                unsafe { core::ptr::write_volatile(v, 0.0) };
+            }
         }
     }
 
@@ -318,12 +535,15 @@ impl QTensorEngine {
                         .max(4096)
                         .min(MAX_WGPU_WEIGHT_STAGING);
                     self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+                    self.ensure_kv_cache(&index.hyperparams);
                     self.gguf_mmap = Some(mmap);
                     eprintln!(
-                        "[gguf_bridge] Mapped {} — tensor @ {:#x}, {} layers, max tensor {} bytes",
+                        "[gguf_bridge] Mapped {} — tensor @ {:#x}, {} layers, {} heads (kv {}), max tensor {} bytes",
                         path,
                         self.tensor_data_offset,
                         self.hyperparams.n_layer,
+                        self.hyperparams.n_head,
+                        self.hyperparams.effective_n_kv_head(),
                         index.max_tensor_bytes,
                     );
                 }
@@ -788,23 +1008,174 @@ impl QTensorEngine {
         (n_in, n_out)
     }
 
-    /// One transformer block using real mmap tensor offsets (stack buffers only).
-    pub fn dispatch_transformer_layer(
-        &self,
+    /// Q/K/V projections, RoPE, ring-buffer KV write, and GQA attention (CPU path for Q4_K).
+    fn dispatch_attention_layer(
+        &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
         layer: u32,
+        token_idx: u32,
+        hidden: &[f32],
+        emb_dim: usize,
+        tensors: &crate::gguf_sharder::LayerTensors,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+    ) -> Option<usize> {
+        let layout = match self.kv_layout {
+            Some(l) => l,
+            None => return None,
+        };
+        if self.kv_cache_cpu.is_none() {
+            return None;
+        }
+        let q_info = match tensors.attn_q {
+            Some(i) => i,
+            None => return None,
+        };
+        let k_info = match tensors.attn_k {
+            Some(i) => i,
+            None => return None,
+        };
+        let v_info = match tensors.attn_v {
+            Some(i) => i,
+            None => return None,
+        };
+        let h = index.hyperparams;
+        let n_head = h.n_head as usize;
+        let n_kv = h.effective_n_kv_head() as usize;
+        let head_dim = h.head_dim() as usize;
+        let q_per_kv = h.q_heads_per_kv() as usize;
+        if head_dim == 0 || n_head == 0 || n_kv == 0 {
+            return None;
+        }
+        let q_dim = n_head * head_dim;
+        if q_dim > scratch_a.len() || q_dim > scratch_b.len() || emb_dim < h.n_embd as usize {
+            return None;
+        }
+
+        let (q_in, q_out) = Self::matmul_dims(&q_info);
+        let (k_in, k_out) = Self::matmul_dims(&k_info);
+        let (v_in, v_out) = Self::matmul_dims(&v_info);
+        if q_in > emb_dim || k_in > emb_dim || v_in > emb_dim {
+            return None;
+        }
+        if !self.dispatch_gemm_into(index, &q_info, &hidden[..q_in], &mut scratch_a[..q_out], q_in, q_out) {
+            return None;
+        }
+        if !self.dispatch_gemm_into(index, &k_info, &hidden[..k_in], &mut scratch_b[..k_out], k_in, k_out) {
+            return None;
+        }
+        let mut v_proj = [0f32; MAX_STACK_GEMM_DIM];
+        if v_out > v_proj.len()
+            || !self.dispatch_gemm_into(
+                index,
+                &v_info,
+                &hidden[..v_in],
+                &mut v_proj[..v_out],
+                v_in,
+                v_out,
+            )
+        {
+            return None;
+        }
+
+        let slot = layout.ring_slot(token_idx);
+        for qh in 0..n_head {
+            let head_off = qh * head_dim;
+            apply_rope_in_head(&mut scratch_a[head_off..head_off + head_dim], head_dim, token_idx);
+        }
+        for kvh in 0..n_kv {
+            let off = kvh * head_dim;
+            apply_rope_in_head(&mut scratch_b[off..off + head_dim], head_dim, token_idx);
+        }
+        {
+            let kv = self.kv_cache_cpu.as_mut().unwrap();
+            for kvh in 0..n_kv {
+                let off = kvh * head_dim;
+                for d in 0..head_dim {
+                    let ki = layout.k_index(layer, slot, kvh as u32, d as u32);
+                    let vi = layout.v_index(layer, slot, kvh as u32, d as u32);
+                    kv[ki] = scratch_b[off + d];
+                    kv[vi] = v_proj[off + d];
+                }
+            }
+        }
+
+        let mut head_out = [0f32; 512];
+        if head_dim > head_out.len() {
+            return None;
+        }
+        let kv_ro = self.kv_cache_cpu.as_deref().unwrap();
+        for qh in 0..n_head {
+            let kv_head = qh / q_per_kv;
+            let q_off = qh * head_dim;
+            attention_head_cpu(
+                &scratch_a[q_off..q_off + head_dim],
+                kv_ro,
+                &layout,
+                layer,
+                token_idx,
+                kv_head as u32,
+                head_dim,
+                &mut head_out[..head_dim],
+            );
+            for d in 0..head_dim {
+                scratch_b[q_off + d] = head_out[d];
+            }
+        }
+
+        if let Some(out_info) = tensors.attn_output {
+            let (o_in, o_out) = Self::matmul_dims(&out_info);
+            if o_in <= q_dim
+                && self.dispatch_gemm_into(
+                    index,
+                    &out_info,
+                    &scratch_b[..o_in],
+                    &mut scratch_a[..o_out],
+                    o_in,
+                    o_out,
+                )
+            {
+                return Some(o_out.min(emb_dim));
+            }
+        }
+        let n = q_dim.min(emb_dim);
+        scratch_a[..n].copy_from_slice(&scratch_b[..n]);
+        Some(n)
+    }
+
+    /// One transformer block using real mmap tensor offsets (stack buffers only).
+    pub fn dispatch_transformer_layer(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        layer: u32,
+        token_idx: u32,
         hidden: &mut [f32],
         emb_dim: usize,
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> bool {
         let tensors = index.get_layer_tensors(layer);
+        let mut attn_ok = false;
 
-        if let Some(info) = tensors.attn_output {
-            let (n_in, n_out) = Self::matmul_dims(&info);
-            if n_in <= emb_dim && self.dispatch_gemm_into(index, &info, &hidden[..n_in], scratch_a, n_in, n_out) {
-                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n_out], emb_dim.min(n_out));
+        if tensors.attn_q.is_some() && tensors.attn_k.is_some() && tensors.attn_v.is_some() {
+            if let Some(n) = self.dispatch_attention_layer(
+                index, layer, token_idx, &hidden[..emb_dim], emb_dim, &tensors, scratch_a, scratch_b,
+            ) {
+                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n], n);
+                attn_ok = true;
             }
+        } else if let Some(info) = tensors.attn_output {
+            let (n_in, n_out) = Self::matmul_dims(&info);
+            if n_in <= emb_dim
+                && self.dispatch_gemm_into(index, &info, &hidden[..n_in], scratch_a, n_in, n_out)
+            {
+                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n_out], emb_dim.min(n_out));
+                attn_ok = true;
+            }
+        }
+
+        if !attn_ok && tensors.attn_output.is_none() && tensors.ffn_gate.is_none() {
+            return false;
         }
 
         if let Some(info) = tensors.ffn_gate {
@@ -843,12 +1214,13 @@ impl QTensorEngine {
     /// Sequential layer-by-layer forward (one tensor payload in VRAM at a time).
     /// `max_layers`: `0` runs all blocks; otherwise caps how many layers execute.
     pub fn dispatch_transformer_forward(
-        &self,
+        &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
         hidden: &mut [f32],
         emb_dim: usize,
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
+        token_idx: u32,
         max_layers: u32,
     ) -> u32 {
         let n_layer = index.hyperparams.n_layer;
@@ -862,7 +1234,9 @@ impl QTensorEngine {
         };
         let mut ran = 0u32;
         for layer in 0..limit {
-            if self.dispatch_transformer_layer(index, layer, hidden, emb_dim, scratch_a, scratch_b) {
+            if self.dispatch_transformer_layer(
+                index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
+            ) {
                 ran += 1;
             }
         }
@@ -1079,12 +1453,52 @@ mod tests {
 
         let mut engine = QTensorEngine::new();
         engine.load_gguf(path.to_str().unwrap());
+        engine.reset_kv_cache();
         let mut hidden = [0f32; 2560];
         hidden[0] = 1.0;
         let mut scratch_a = [0f32; 10240];
         let mut scratch_b = [0f32; 10240];
-        assert!(engine.dispatch_transformer_layer(&idx, 0, &mut hidden, 2560, &mut scratch_a, &mut scratch_b));
+        assert!(engine.dispatch_transformer_layer(
+            &idx, 0, 0, &mut hidden, 2560, &mut scratch_a, &mut scratch_b,
+        ));
         println!("layer0 hidden[0]={}", hidden[0]);
+    }
+
+    #[test]
+    fn test_attention_qkv_layer0_gemma_if_exists() {
+        let path = Path::new("C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf");
+        if !path.exists() {
+            return;
+        }
+        let file = File::open(path).expect("open");
+        let mmap = unsafe { MmapOptions::new().map(&file).expect("mmap") };
+        let idx = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        assert!(idx.hyperparams.n_head > 0);
+
+        let mut engine = QTensorEngine::new();
+        engine.load_gguf(path.to_str().unwrap());
+        engine.reset_kv_cache();
+
+        let emb_dim = idx.emb_dim();
+        let mut hidden = [0f32; 8192];
+        hidden[0] = 1.0;
+        let mut scratch_a = [0f32; 10240];
+        let mut scratch_b = [0f32; 10240];
+        let layer0 = idx.get_layer_tensors(0);
+        assert!(layer0.attn_q.is_some());
+        assert!(layer0.attn_k.is_some());
+        assert!(layer0.attn_v.is_some());
+
+        let t0 = std::time::Instant::now();
+        assert!(engine.dispatch_transformer_layer(
+            &idx, 0, 0, &mut hidden[..emb_dim], emb_dim, &mut scratch_a, &mut scratch_b,
+        ));
+        println!(
+            "attention layer0 token0 hidden[0]={} elapsed={:?} kv_heads={}",
+            hidden[0],
+            t0.elapsed(),
+            idx.hyperparams.effective_n_kv_head(),
+        );
     }
 
     #[test]

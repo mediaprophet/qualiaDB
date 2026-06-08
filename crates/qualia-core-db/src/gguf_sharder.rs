@@ -62,6 +62,35 @@ pub struct GgufHyperparams {
     pub n_layer: u32,
     pub n_embd: u32,
     pub n_head: u32,
+    /// Grouped-query KV heads; `0` means MHA (`n_kv_head == n_head`).
+    pub n_kv_head: u32,
+}
+
+impl GgufHyperparams {
+    pub fn head_dim(&self) -> u32 {
+        if self.n_head == 0 {
+            0
+        } else {
+            self.n_embd / self.n_head
+        }
+    }
+
+    pub fn effective_n_kv_head(&self) -> u32 {
+        if self.n_kv_head > 0 {
+            self.n_kv_head
+        } else {
+            self.n_head.max(1)
+        }
+    }
+
+    pub fn q_heads_per_kv(&self) -> u32 {
+        let kv = self.effective_n_kv_head();
+        if kv == 0 {
+            1
+        } else {
+            (self.n_head / kv).max(1)
+        }
+    }
 }
 
 /// Per-layer transformer weight metadata (all `Option` — absent tensors skipped).
@@ -179,6 +208,8 @@ impl GgufTensorIndex {
             patch.n_embd = v;
         } else if key.ends_with("attention.head_count") && !key.contains("kv") {
             patch.n_head = v;
+        } else if key.contains("head_count_kv") || key.contains("n_kv_head") {
+            patch.n_kv_head = v;
         }
         patch
     }
@@ -205,6 +236,7 @@ impl GgufTensorIndex {
             if patch.n_layer != 0 { hyperparams.n_layer = patch.n_layer; }
             if patch.n_embd != 0 { hyperparams.n_embd = patch.n_embd; }
             if patch.n_head != 0 { hyperparams.n_head = patch.n_head; }
+            if patch.n_kv_head != 0 { hyperparams.n_kv_head = patch.n_kv_head; }
         }
 
         let mut entries = Vec::with_capacity(tensor_count.min(4096) as usize);

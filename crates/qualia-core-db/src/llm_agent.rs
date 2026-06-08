@@ -412,6 +412,7 @@ impl LocalLlmAgent {
                 let mut scratch_a = [0f32; MAX_FFN_DIM];
                 let mut scratch_b = [0f32; MAX_FFN_DIM];
                 let emb_dim = emb_dim.min(MAX_EMB_DIM);
+                engine.reset_kv_cache();
 
                 let mut out_ids: Vec<u32> = Vec::new();
                 let mut streamed_len = 0usize;
@@ -431,12 +432,14 @@ impl LocalLlmAgent {
 
                     let (top_i, top_v) = if hidden_ok > 0 {
                         if let Some(idx) = tensor_idx.as_ref() {
+                            let token_idx = ctx.len().saturating_sub(1) as u32;
                             let _layers = engine.dispatch_transformer_forward(
                                 idx,
                                 &mut emb_buf[..emb_dim],
                                 emb_dim,
                                 &mut scratch_a,
                                 &mut scratch_b,
+                                token_idx,
                                 TEST_TRANSFORMER_LAYER_CAP,
                             );
                             if let Some(argmax) = engine.dispatch_output_argmax_chunked(
