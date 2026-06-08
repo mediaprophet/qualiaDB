@@ -10,6 +10,7 @@ import '../main.dart' show activeModelPathProvider;
 import '../src/rust/api/qualia_api.dart' as api;
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
 import '../src/rust/api/resource_catalog.dart' as catalog;
+import '../src/rust/frb_generated.dart' show RustApi;
 
 const _accent = Color(0xFF00F0FF);
 
@@ -32,6 +33,9 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   catalog.ResolvedModelPreferenceFrb? _nextMatch;
   Map<String, api.ProgressPayload> _downloads = {};
   Timer? _downloadPollTimer;
+  StreamSubscription<String>? _telemetrySubscription;
+  LlmLoadStatus? _loadStatus;
+  bool _isActivatingModel = false;
 
   bool _isLoading = true;
   bool _prefsDirty = false;
@@ -53,6 +57,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
     _tabs.addListener(() {
       if (mounted) setState(() {});
     });
+    _ensureTelemetryStream();
     _refreshAll();
     _restoreActiveDownloads();
   }
@@ -60,8 +65,56 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   @override
   void dispose() {
     _downloadPollTimer?.cancel();
+    _telemetrySubscription?.cancel();
     _tabs.dispose();
     super.dispose();
+  }
+
+  void _ensureTelemetryStream() {
+    _telemetrySubscription ??=
+        RustApi.instance.api.crateApiQualiaApiInitTelemetryStream().listen(
+      _handleTelemetryLine,
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('LLM Hub telemetry stream error: $error');
+      },
+      cancelOnError: false,
+    );
+  }
+
+  void _beginModelActivation(String message) {
+    setState(() {
+      _isActivatingModel = true;
+      _loadStatus = LlmLoadStatus(
+        stage: 'queued',
+        progress: 0,
+        message: message,
+        rawLine: message,
+      );
+    });
+  }
+
+  void _completeModelActivation(String message) {
+    if (!mounted) return;
+    setState(() {
+      _isActivatingModel = false;
+      if (_loadStatus == null || !_loadStatus!.isTerminal) {
+        _loadStatus = LlmLoadStatus(
+          stage: 'active',
+          progress: 1,
+          message: message,
+          rawLine: message,
+        );
+      }
+    });
+  }
+
+  void _handleTelemetryLine(String line) {
+    final status = LlmLoadStatus.tryParse(line);
+    if (status == null || !mounted) return;
+    setState(() {
+      _loadStatus = status;
+      _isActivatingModel = !status.isTerminal;
+    });
   }
 
   Future<void> _refreshAll() async {
@@ -206,6 +259,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   }
 
   Future<void> _applyAutoSelect() async {
+    _beginModelActivation('Selecting the best installed model…');
     try {
       await catalog.applyModelPreference(task: 'chat');
       final active = await api.getActiveModel();
@@ -213,6 +267,11 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
         ref.read(activeModelPathProvider.notifier).state = active;
       }
       await _refreshAll();
+      _completeModelActivation(
+        _nextMatch != null
+            ? 'Loaded ${_nextMatch!.label}'
+            : 'Applied best matching model',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -225,6 +284,12 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
         );
       }
     } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isActivatingModel = false;
+          _loadStatus = LlmLoadStatus.failed('Auto-load failed: $e');
+        });
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Auto-load failed: $e')),
@@ -348,6 +413,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   }
 
   Future<void> _setActiveModel(LLMModel model) async {
+    _beginModelActivation('Activating ${model.name}…');
     try {
       if (model.localGgufPath != null && model.localGgufPath!.isNotEmpty) {
         await _activateLocalPath(model.localGgufPath!);
@@ -361,12 +427,19 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
             active ?? modelName;
       }
       await _refreshAll();
+      _completeModelActivation('${model.name} is now active');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${model.name} is now active')),
         );
       }
     } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isActivatingModel = false;
+          _loadStatus = LlmLoadStatus.failed('Could not activate ${model.name}: $e');
+        });
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not activate: $e')),
@@ -393,15 +466,23 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
     );
     final path = result?.files.single.path;
     if (path == null || path.isEmpty) return;
+    _beginModelActivation('Activating ${result!.files.single.name}…');
     try {
       await _activateLocalPath(path);
       await _refreshAll();
+      _completeModelActivation('${result!.files.single.name} is now active');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Active: ${result!.files.single.name}')),
         );
       }
     } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isActivatingModel = false;
+          _loadStatus = LlmLoadStatus.failed('Could not activate local GGUF: $e');
+        });
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not activate: $e')),
@@ -666,7 +747,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: _browseLocalGguf,
+                        onPressed: _isActivatingModel ? null : _browseLocalGguf,
                         icon: const Icon(Icons.folder_open),
                         label: const Text('Browse local GGUF'),
                       ),
@@ -674,7 +755,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: _applyAutoSelect,
+                        onPressed: _isActivatingModel ? null : _applyAutoSelect,
                         icon: const Icon(Icons.auto_fix_high),
                         label: const Text('Apply load order'),
                         style: ElevatedButton.styleFrom(
@@ -689,6 +770,10 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
             ),
           ),
         ),
+        if (_loadStatus != null) ...[
+          const SizedBox(height: 16),
+          _buildLoadProgressCard(_loadStatus!),
+        ],
         const SizedBox(height: 16),
         _glassCard(
           child: Padding(
@@ -1061,7 +1146,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
                               icon: const Icon(Icons.delete_outline, size: 20),
                             ),
                             OutlinedButton(
-                              onPressed: () => _setActiveModel(model),
+                              onPressed: _isActivatingModel ? null : () => _setActiveModel(model),
                               child: Text(isActive ? 'Active' : 'Use now'),
                             ),
                           ] else if (downloading)
@@ -1114,6 +1199,68 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
     );
   }
 
+  Widget _buildLoadProgressCard(LlmLoadStatus status) {
+    final barColor = status.isError
+        ? Colors.redAccent
+        : status.isTerminal
+            ? Colors.greenAccent
+            : _accent;
+    final value = status.isError ? 1.0 : status.progress.clamp(0.0, 1.0);
+
+    return _glassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  status.isError
+                      ? Icons.error_outline
+                      : status.isTerminal
+                          ? Icons.check_circle_outline
+                          : Icons.sync,
+                  color: barColor,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  status.isError ? 'Model load failed' : 'Model load pipeline',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${(value * 100).round()}%',
+                  style: TextStyle(color: barColor, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: status.isTerminal && !status.isError ? 1.0 : value,
+              minHeight: 10,
+              color: barColor,
+              backgroundColor: Colors.white12,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              status.message,
+              style: const TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Stage: ${status.stageLabel}',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _glassCard({required Widget child, EdgeInsetsGeometry? margin, Key? key}) {
     return Container(
       key: key,
@@ -1134,6 +1281,46 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
       ),
     );
   }
+}
+
+class LlmLoadStatus {
+  const LlmLoadStatus({
+    required this.stage,
+    required this.progress,
+    required this.message,
+    required this.rawLine,
+  });
+
+  final String stage;
+  final double progress;
+  final String message;
+  final String rawLine;
+
+  bool get isError => stage == 'failed';
+  bool get isTerminal => stage == 'active' || stage == 'failed';
+
+  String get stageLabel => stage.replaceAll('-', ' ');
+
+  static final RegExp _pattern =
+      RegExp(r'LLM_LOAD\|([^|]+)\|([0-9.]+)\|(.*)$');
+
+  static LlmLoadStatus? tryParse(String line) {
+    final match = _pattern.firstMatch(line);
+    if (match == null) return null;
+    return LlmLoadStatus(
+      stage: match.group(1) ?? 'unknown',
+      progress: double.tryParse(match.group(2) ?? '') ?? 0,
+      message: (match.group(3) ?? line).trim(),
+      rawLine: line,
+    );
+  }
+
+  factory LlmLoadStatus.failed(String message) => LlmLoadStatus(
+        stage: 'failed',
+        progress: 1,
+        message: message,
+        rawLine: message,
+      );
 }
 
 class LLMModel {

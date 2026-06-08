@@ -13,6 +13,7 @@
 - Threaded `context_namespaces` through `InferenceContextPacket`, `AgentIntent`, and `AgentIntentFrame`.
 - Updated `orchestrator.rs` so graph-mutation / N3 symbolic gating selects SHACL shapes from routed namespace families (`health`, `legal/guardianship`, `commons`) rather than always using the same default observation shape.
 - Added a bounded single corrective retry in `chat_inference.rs` when deterministic symbolic validation blocks routed N3 output.
+- Added bundled ontology seeding and offline SHACL fallback so essential ontology imports can succeed from packaged local sources before hitting the network.
 
 ### Verification
 - `cargo check -p qualia-core-db -p qualia-client-core`
@@ -242,6 +243,7 @@ add real pubkey, re-enable. Add private key as `TAURI_PRIVATE_KEY` GitHub secret
 | `geometric.rs` | Lorentz vector mapping. Tropical (Min-Plus) distance. `HomologicalSieve::evaluate_topology_tick()`. |
 | `cbor_compiler.rs` | Strict binary gatekeeper (rejects JSON/XML/Turtle). CBOR-LD → Quin parser. Variable-length integer reading. Tested. **Not reachable from any Tauri command.** |
 | `shacl_compiler.rs` | SHACL constraint → `SlgOpcode` compiler. Custom constraints: `qualia:thermoMetropolisStep` → `NativeThermodynamics`, `qualia:solveOdeDynamics` → `NativeOdeSolver`, `qualia:dftGroundState` → `NativeQuantumDft`, `qualia:bioSequenceAlignment` → `NativeBioinformatics`. |
+| `resource_import.rs` + `bundled_ontologies.rs` | Catalog ontology import pipeline with `.q42` compilation, progress reporting, startup seeding, and packaged offline fallback for bundled essentials such as `shacl`. |
 | `wasm_bridge.rs` | `execute_ntriples_query()` — REAL (mini_parser + webizen_bytecode). `QualiaWasmBridge::dispatch_query()` — stub. |
 | `wasm_edge.rs` | `FederatedNodeManager` (WebRTC offloading). `intercept_computational_opcode()`. `webizen_propose_agreement/poll/sign()`. `serialize_float_array/64()` for IEEE-754 safe boundary crossing. All `#[wasm_bindgen]` annotated. |
 | `gguf_bridge.rs` | `QTensor::map_from_pointer()` extracts tensor from Quin 60-bit pointer. `QTensorEngine::decode_lexicon_bound()` — **Lexicon-Bound Decoding**: forces LLM to only output tokens present in `.q42.bidx` lexicon. Logit masking is mocked; interface is correct. |

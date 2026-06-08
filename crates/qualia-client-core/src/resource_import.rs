@@ -340,6 +340,52 @@ pub async fn import_catalog_ontology_with_options(
         .find_ontology(id)
         .ok_or_else(|| ImportError::NotFound(id.to_string()))?;
 
+    if let Some(source_path) = crate::bundled_ontologies::resolve_bundled_ontology_source(id) {
+        if let Some(ctx) = progress {
+            ctx.emit(ProgressPayload {
+                id: ctx.id.clone(),
+                progress: 100.0,
+                downloaded_bytes: 0,
+                total_bytes: 0,
+                speed_kbps: 0.0,
+                status: "processing".to_string(),
+            });
+        }
+
+        let index = index_dir(storage_root);
+        std::fs::create_dir_all(&index)?;
+        let quin_count = ingest_local_rdf(&source_path, id, storage_root, Some(ont))?;
+        let q42_path = index.join(format!("{id}.q42"));
+        let wal_path = index.join("ontologies.wal");
+        let catalog_quins = ont.to_quins().len();
+        let sha256 = sha256_file(&q42_path)?;
+        let imported_at = unix_now();
+
+        if let Some(ctx) = progress {
+            ctx.emit(ProgressPayload {
+                id: ctx.id.clone(),
+                progress: 100.0,
+                downloaded_bytes: 0,
+                total_bytes: 0,
+                speed_kbps: 0.0,
+                status: "complete".to_string(),
+            });
+            ctx.clear();
+        }
+
+        return Ok(OntologyImportResult {
+            ontology_id: id.to_string(),
+            source_path: source_path.to_string_lossy().into_owned(),
+            q42_path: q42_path.to_string_lossy().into_owned(),
+            wal_path: wal_path.to_string_lossy().into_owned(),
+            quin_count,
+            catalog_quins,
+            sha256,
+            imported_at,
+            source_removed: false,
+        });
+    }
+
     let url = ont
         .download
         .resolved_url()

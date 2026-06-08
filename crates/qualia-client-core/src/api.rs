@@ -2182,9 +2182,24 @@ pub fn restore_active_model_on_startup() {
 
     if let Some(record) = load_active_model_record_from_disk() {
         if Path::new(&record.gguf_path).is_file() {
-            let _ = crate::model_lifecycle::activate_model_for_id(&record.model_id, storage_path);
-            *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
-            return;
+            log::info!(
+                "LLM_LOAD|startup|0.00|Restoring active model {}",
+                record.model_id
+            );
+            match crate::model_lifecycle::activate_model_for_id(&record.model_id, storage_path) {
+                Ok(active) => {
+                    *state.active_model.lock().unwrap() = Some(active.gguf_path.clone());
+                    return;
+                }
+                Err(err) => {
+                    log::error!(
+                        "LLM_LOAD|failed|1.00|Startup restore failed for {}: {}",
+                        record.model_id,
+                        err
+                    );
+                    *state.active_model.lock().unwrap() = None;
+                }
+            }
         }
     }
 
@@ -3444,6 +3459,10 @@ pub fn add_delegation_rule(rule: DelegationRule) -> Result<(), String> {
 
 pub fn seed_bundled_qapps() -> Result<Vec<String>, String> {
     crate::bundled_qapps::seed_bundled_qapps()
+}
+
+pub fn seed_bundled_ontologies() -> Result<Vec<String>, String> {
+    crate::bundled_ontologies::seed_bundled_ontologies()
 }
 
 pub fn installed_qapp_version(qapp_name: &str) -> Result<Option<String>, String> {

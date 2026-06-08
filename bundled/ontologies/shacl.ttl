@@ -1,0 +1,86 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+sh: a owl:Ontology ;
+    rdfs:label "SHACL core subset bundled with QualiaDB" ;
+    rdfs:comment "Offline-ready SHACL vocabulary subset for local validation and packaged imports." .
+
+sh:Shape a rdfs:Class ;
+    rdfs:label "Shape" .
+
+sh:NodeShape a rdfs:Class ;
+    rdfs:subClassOf sh:Shape ;
+    rdfs:label "Node shape" .
+
+sh:PropertyShape a rdfs:Class ;
+    rdfs:subClassOf sh:Shape ;
+    rdfs:label "Property shape" .
+
+sh:ValidationResult a rdfs:Class ;
+    rdfs:label "Validation result" .
+
+sh:ValidationReport a rdfs:Class ;
+    rdfs:label "Validation report" .
+
+sh:targetClass a rdf:Property ;
+    rdfs:label "target class" ;
+    rdfs:domain sh:Shape ;
+    rdfs:range rdfs:Class .
+
+sh:targetSubjectsOf a rdf:Property ;
+    rdfs:label "target subjects of" ;
+    rdfs:domain sh:Shape ;
+    rdfs:range rdf:Property .
+
+sh:property a rdf:Property ;
+    rdfs:label "property constraint" ;
+    rdfs:domain sh:Shape ;
+    rdfs:range sh:PropertyShape .
+
+sh:path a rdf:Property ;
+    rdfs:label "path" ;
+    rdfs:domain sh:PropertyShape ;
+    rdfs:range rdf:Property .
+
+sh:datatype a rdf:Property ;
+    rdfs:label "datatype" ;
+    rdfs:domain sh:PropertyShape ;
+    rdfs:range rdfs:Datatype .
+
+sh:class a rdf:Property ;
+    rdfs:label "class" ;
+    rdfs:domain sh:PropertyShape ;
+    rdfs:range rdfs:Class .
+
+sh:minCount a rdf:Property ;
+    rdfs:label "minimum count" ;
+    rdfs:domain sh:PropertyShape ;
+    rdfs:range xsd:integer .
+
+sh:maxCount a rdf:Property ;
+    rdfs:label "maximum count" ;
+    rdfs:domain sh:PropertyShape ;
+    rdfs:range xsd:integer .
+
+sh:message a rdf:Property ;
+    rdfs:label "message" ;
+    rdfs:domain sh:Shape ;
+    rdfs:range xsd:string .
+
+sh:in a rdf:Property ;
+    rdfs:label "in" ;
+    rdfs:domain sh:PropertyShape ;
+    rdfs:range rdf:List .
+
+sh:closed a rdf:Property ;
+    rdfs:label "closed" ;
+    rdfs:domain sh:NodeShape ;
+    rdfs:range xsd:boolean .
+
+sh:ignoredProperties a rdf:Property ;
+    rdfs:label "ignored properties" ;
+    rdfs:domain sh:NodeShape ;
+    rdfs:range rdf:List .

@@ -7,6 +7,7 @@
 //! raw `.q42` layout.
 
 use crate::{q_hash, QualiaQuin};
+use log;
 
 const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
 use crossbeam_channel::{bounded, Receiver, Sender};
@@ -76,6 +77,12 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
                 }
                 _local_count += 1;
             }
+            if _local_count > 0 {
+                log::debug!(
+                    "Ontology Ingest: worker shard finished {} triples",
+                    _local_count
+                );
+            }
         });
         worker_handles.push(handle);
     }
@@ -109,6 +116,11 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
                 // Write payload
                 out_file.write_all(&compressed).unwrap();
 
+                log::info!(
+                    "Ontology Ingest: wrote SuperBlock #{}, streamed {} quins so far",
+                    block_id + 1,
+                    written_count
+                );
                 buffer.clear();
                 block_id += 1;
             }
@@ -125,8 +137,18 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
                 .write_all(&(buffer.len() as u32).to_le_bytes())
                 .unwrap();
             out_file.write_all(&compressed).unwrap();
+            log::info!(
+                "Ontology Ingest: wrote SuperBlock #{} (final block, {} quins total)",
+                block_id + 1,
+                written_count
+            );
         }
 
+        log::debug!(
+            "Ontology Ingest: writer processed {} quins across {} SuperBlocks",
+            written_count,
+            block_id
+        );
         written_count
     });
 
@@ -138,6 +160,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     let mut triples_read = 0;
 
     // Setup a callback that parses Rio triples and sends them to the worker queue
+    log::info!("Ontology Ingest: streaming triples from {}", in_path);
     let mut on_triple = |t: rio_api::model::Triple| -> Result<(), std::io::Error> {
         let subject = t.subject.to_string();
         let predicate = t.predicate.to_string();
@@ -157,21 +180,28 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     let path_lower = in_path.to_lowercase();
     if path_lower.ends_with(".rdf") || path_lower.ends_with(".xml") || path_lower.ends_with(".owl")
     {
+        log::info!("Ontology Ingest: parsing RDF/XML source {}", in_path);
         let mut parser = RdfXmlParser::new(buf_reader, None);
         if let Err(e) = parser.parse_all(&mut on_triple) {
             eprintln!("RDF/XML Parsing Error: {}", e);
         }
+        log::info!("Ontology Ingest: completed RDF/XML parse for {}", in_path);
     } else if path_lower.ends_with(".ttl") {
+        log::info!("Ontology Ingest: parsing Turtle source {}", in_path);
         let mut parser = TurtleParser::new(buf_reader, None);
         if let Err(e) = parser.parse_all(&mut on_triple) {
             eprintln!("Turtle Parsing Error: {}", e);
         }
+        log::info!("Ontology Ingest: completed Turtle parse for {}", in_path);
     } else if path_lower.ends_with(".nt") {
+        log::info!("Ontology Ingest: parsing N-Triples source {}", in_path);
         let mut parser = NTriplesParser::new(buf_reader);
         if let Err(e) = parser.parse_all(&mut on_triple) {
             eprintln!("N-Triples Parsing Error: {}", e);
         }
+        log::info!("Ontology Ingest: completed N-Triples parse for {}", in_path);
     } else if path_lower.ends_with(".n3") {
+        log::info!("Ontology Ingest: parsing N3 source {}", in_path);
         let mut parser = crate::n3_parser::N3Parser::new(buf_reader);
         let mut webizen = crate::webizen::SlgArena::new();
         let mut rules_parsed = 0;
@@ -223,8 +253,18 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
             "Registered {} N3 Logic Rules; fired {} through Core-1 Sentinel VM.",
             rules_parsed, fired
         );
+        log::info!(
+            "Ontology Ingest: completed N3 parse for {} (rules parsed: {}, fired: {})",
+            in_path,
+            rules_parsed,
+            fired
+        );
     } else {
         eprintln!("Unsupported file extension. Expected .rdf, .xml, .ttl, .nt, or .n3");
+        log::warn!(
+            "Ontology Ingest: unsupported file extension for {}",
+            in_path
+        );
     }
 
     // Drop the main sender so workers know to terminate
@@ -240,8 +280,17 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
 
     println!("✅ Import Complete!");
     println!("Parsed {} triples.", triples_read);
+    log::info!("Ontology Ingest: parsed {} triples", triples_read);
     println!("Wrote {} Super-Quins to {}.", total_written, out_path);
     println!("Total Time: {:?}", duration);
+    let total_superblocks =
+        (total_written + (crate::QUINS_PER_BLOCK as u64) - 1) / crate::QUINS_PER_BLOCK as u64;
+    log::info!(
+        "Ontology Ingest: Completed {} SuperBlocks ({} quins) in {:?}",
+        total_superblocks,
+        total_written,
+        duration
+    );
 
     Ok(total_written)
 }

@@ -87,6 +87,10 @@ impl DmlDevice {
             let factory: IDXGIFactory4 = CreateDXGIFactory2(DXGI_CREATE_FACTORY_FLAGS(0))?;
             let adapter = Self::best_adapter(&factory)?;
             let adapter_desc = Self::adapter_name(&adapter);
+            log::info!(
+                "DirectML device initialization: using adapter {}",
+                adapter_desc
+            );
 
             let mut d3d12_opt: Option<ID3D12Device> = None;
             D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_12_0, &mut d3d12_opt)?;
@@ -108,6 +112,7 @@ impl DmlDevice {
             let mut dml_opt: Option<IDMLDevice> = None;
             DMLCreateDevice(&d3d12, dml_flags, &mut dml_opt)?;
             let dml = dml_opt.unwrap();
+            log::info!("DirectML device initialization: device ready");
 
             Ok(Self {
                 d3d12,

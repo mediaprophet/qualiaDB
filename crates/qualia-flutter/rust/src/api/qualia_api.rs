@@ -1,14 +1,18 @@
 //! Flutter Rust Bridge API — delegates to `qualia-client-core` and `qualia-core-db`.
 
 use crate::frb_generated::StreamSink;
+use arrayvec::ArrayString;
+use log::{Level, LevelFilter, Log, Metadata, Record};
 use qualia_client_core::api as core;
 use qualia_client_core::state::{
     self, Actor, AgentConfig as CoreAgentConfig, DelegationRule, FrontDoor,
     ProgressPayload as CoreProgress,
 };
 use qualia_core_db::rpc::TaxRecipientSuite as CoreTaxSuite;
+use std::fmt::Write as _;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
+use std::sync::mpsc::{self, SyncSender, TrySendError};
+use std::sync::{Mutex, OnceLock};
 
 // ── Physics state (UI sliders; not persisted in core) ─────────────────────────
 
@@ -25,6 +29,83 @@ static PHYSICS: Mutex<PhysicsStore> = Mutex::new(PhysicsStore {
 });
 
 static DAEMON_SPAWNED: AtomicBool = AtomicBool::new(false);
+
+struct TelemetryLogBridge {
+    senders: Mutex<Vec<SyncSender<String>>>,
+}
+
+impl TelemetryLogBridge {
+    fn new() -> Self {
+        Self {
+            senders: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn format_record(record: &Record<'_>) -> String {
+        let mut buf: ArrayString<512> = ArrayString::new();
+        let mut truncated = false;
+
+        if write!(&mut buf, "[{}]", record.level()).is_err() {
+            truncated = true;
+        }
+        if let Some(module) = record.module_path() {
+            if write!(&mut buf, " {}", module).is_err() {
+                truncated = true;
+            }
+            if write!(&mut buf, ":").is_err() {
+                truncated = true;
+            }
+        }
+        if write!(&mut buf, "{}", record.args()).is_err() {
+            truncated = true;
+        }
+
+        if truncated {
+            const ELLIPSIS: &str = " …";
+            if buf.capacity() - buf.len() >= ELLIPSIS.len() {
+                let _ = buf.write_str(ELLIPSIS);
+            } else if buf.len() > ELLIPSIS.len() {
+                buf.truncate(buf.len() - ELLIPSIS.len());
+                let _ = buf.write_str(ELLIPSIS);
+            }
+        }
+
+        buf.as_str().to_string()
+    }
+
+    fn add_sender(&self, sender: SyncSender<String>) {
+        self.senders.lock().unwrap().push(sender);
+    }
+}
+
+impl Log for TelemetryLogBridge {
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
+        matches!(metadata.level(), Level::Info | Level::Warn | Level::Error)
+    }
+
+    fn log(&self, record: &Record<'_>) {
+        if !self.enabled(record.metadata()) {
+            return;
+        }
+
+        let message = Self::format_record(record);
+        let mut senders = self.senders.lock().unwrap();
+        senders.retain(|tx| match tx.try_send(message.clone()) {
+            Ok(_) => true,
+            Err(TrySendError::Full(_)) => true,
+            Err(TrySendError::Disconnected(_)) => false,
+        });
+    }
+
+    fn flush(&self) {}
+}
+
+fn telemetry_logger() -> &'static TelemetryLogBridge {
+    static LOGGER: OnceLock<TelemetryLogBridge> = OnceLock::new();
+    LOGGER.get_or_init(TelemetryLogBridge::new)
+}
+
+static TELEMETRY_INIT: OnceLock<()> = OnceLock::new();
 
 fn block_on<F: std::future::Future>(f: F) -> F::Output {
     if let Ok(handle) = tokio::runtime::Handle::try_current() {
@@ -98,12 +179,36 @@ pub fn greet(name: String) -> String {
 pub fn init_core() {
     let _ = core::configure_webview2_runtime();
     state::init_app_state();
+    let _ = core::seed_bundled_ontologies();
     core::restore_active_model_on_startup();
     load_persisted_directory();
     let _ = core::start_qualia_protocol();
     let _ = core::seed_bundled_qapps();
     let _ = spawn_daemon_background();
     core::start_chat_relay_poller();
+}
+
+pub fn init_telemetry_stream(sink: StreamSink<String>) {
+    let logger = telemetry_logger();
+    let (tx, rx) = mpsc::sync_channel::<String>(256);
+    logger.add_sender(tx);
+
+    std::thread::spawn(move || {
+        let sink = sink;
+        while let Ok(message) = rx.recv() {
+            if sink.add(message).is_err() {
+                break;
+            }
+        }
+    });
+
+    if TELEMETRY_INIT.set(()).is_ok() {
+        if log::set_logger(logger).is_ok() {
+            log::set_max_level(LevelFilter::Info);
+        }
+    }
+
+    log::set_max_level(LevelFilter::Info);
 }
 
 // ── Hardware / system ─────────────────────────────────────────────────────────

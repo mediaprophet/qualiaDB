@@ -505,6 +505,8 @@ abstract class RustApiApi extends BaseApi {
       required String sessionId,
       String? replyToFragmentId});
 
+  Stream<String> crateApiQualiaApiInitTelemetryStream();
+
   Future<void> crateApiQualiaApiSaveConfig({required AgentConfig newConfig});
 
   Future<void> crateApiQualiaApiSaveIdentity({required String walletsJson});
@@ -4619,6 +4621,27 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     return sink.stream;
   }
 
+  @override
+  Stream<String> crateApiQualiaApiInitTelemetryStream() {
+    final sink = RustStreamSink<String>();
+    unawaited(handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_StreamSink_String_Sse(sink, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 187, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiQualiaApiInitTelemetryStreamConstMeta,
+      argValues: [sink],
+      apiImpl: this,
+    )));
+    return sink.stream;
+  }
+
   TaskConstMeta get kCrateApiQualiaApiRunInferenceStreamConstMeta =>
       const TaskConstMeta(
         debugName: "run_inference_stream",
@@ -4629,6 +4652,12 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
           "replyToFragmentId",
           "sink"
         ],
+      );
+
+  TaskConstMeta get kCrateApiQualiaApiInitTelemetryStreamConstMeta =>
+      const TaskConstMeta(
+        debugName: "init_telemetry_stream",
+        argNames: ["sink"],
       );
 
   @override

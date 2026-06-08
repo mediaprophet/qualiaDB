@@ -190,7 +190,11 @@ pub fn run_chat_inference_full(
     ) {
         agent.configure_sieve_lex(lex_path);
     }
-    let _ = crate::model_lifecycle::task_orchestrator().load_model(&agent, active.profile_id);
+    if let Err(err) =
+        crate::model_lifecycle::task_orchestrator().load_model(&agent, active.profile_id)
+    {
+        return empty(&format!("Model unavailable: {err}"));
+    }
     crate::model_lifecycle::record_llm_memory_bytes(
         agent
             .memory_used_bytes

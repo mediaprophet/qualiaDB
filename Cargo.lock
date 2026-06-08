@@ -6230,6 +6230,7 @@ dependencies = [
  "hex 0.4.3",
  "image 0.25.10",
  "lazy_static",
+ "log",
  "lz4_flex",
  "pdf-extract 0.10.0",
  "qualia-core-db",
@@ -6273,6 +6274,7 @@ dependencies = [
  "jni 0.21.1",
  "js-sys",
  "libp2p",
+ "log",
  "lz4_flex",
  "memmap2",
  "proptest",
@@ -6352,10 +6354,12 @@ dependencies = [
 name = "qualia_flutter_rust"
 version = "0.0.9"
 dependencies = [
+ "arrayvec",
  "bip39",
  "flutter_rust_bridge",
  "futures-util",
  "lazy_static",
+ "log",
  "qualia-client-core",
  "qualia-core-db",
  "rand 0.10.1",

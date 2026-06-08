@@ -148,6 +148,47 @@ pub fn lifecycle_label(state: ModelLifecycle) -> &'static str {
     }
 }
 
+fn probe_and_activate_model(
+    agent: &LocalLlmAgent,
+    profile_id: u64,
+    model_label: &str,
+    gguf_path: &str,
+) -> Result<(), ModelError> {
+    let orch = orchestrator();
+    {
+        let mut state = orch.current_model_state.lock().unwrap();
+        *state = ModelLifecycle::MappedToDisk;
+        *state = ModelLifecycle::StreamingVRAM;
+    }
+    log::info!("LLM_LOAD|prepare|0.02|Preparing model {}", model_label);
+    match qualia_core_db::gguf_bridge::probe_gguf_runtime(gguf_path) {
+        Ok(report) => {
+            record_llm_memory_bytes(report.kv_cache_bytes);
+            if let Err(err) = orch.load_model(agent, profile_id) {
+                log::error!("LLM_LOAD|failed|1.00|Activation failed: {}", err);
+                return Err(ModelError::Activate(err.to_string()));
+            }
+            log::info!(
+                "LLM_LOAD|active|1.00|Model ready (kv {} MiB, backend {})",
+                report.kv_cache_bytes / (1024 * 1024),
+                if report.directml_enabled {
+                    "DirectML+wgpu"
+                } else {
+                    "wgpu"
+                }
+            );
+        }
+        Err(err) => {
+            record_llm_memory_bytes(0);
+            let mut state = orch.current_model_state.lock().unwrap();
+            *state = ModelLifecycle::MappedToDisk;
+            log::error!("LLM_LOAD|failed|1.00|Activation failed: {}", err);
+            return Err(ModelError::Activate(err));
+        }
+    }
+    Ok(())
+}
+
 fn unix_now() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -470,9 +511,7 @@ pub fn finalize_local_gguf(
             architecture: None,
         },
     );
-    orchestrator()
-        .load_model(&agent, profile_id)
-        .map_err(|e| ModelError::Activate(e.to_string()))?;
+    probe_and_activate_model(&agent, profile_id, &model_id, &path_str)?;
 
     let lifecycle = *orchestrator().current_model_state.lock().unwrap();
     Ok(ActiveModelRecord {
@@ -527,9 +566,12 @@ pub fn activate_model_for_id(
             architecture: manifest.architecture.clone(),
         },
     );
-    orchestrator()
-        .load_model(&agent, manifest.profile_id)
-        .map_err(|e| ModelError::Activate(e.to_string()))?;
+    probe_and_activate_model(
+        &agent,
+        manifest.profile_id,
+        &manifest.model_id,
+        &manifest.gguf_path,
+    )?;
 
     let lifecycle = *orchestrator().current_model_state.lock().unwrap();
     let record = ActiveModelRecord {

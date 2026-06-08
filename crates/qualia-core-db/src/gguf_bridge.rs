@@ -6,6 +6,7 @@
 
 use crate::gguf_sharder::GgufTensorInfo;
 use crate::QualiaQuin;
+use log;
 use memmap2::MmapOptions;
 
 pub use crate::ggml_quants::{fetch_token_embedding, ExecutionError};
@@ -198,6 +199,18 @@ pub struct StreamingArgmaxResult {
     pub max_logit: f32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GgufLoadReport {
+    pub mapped_bytes: u64,
+    pub tensor_data_offset: u64,
+    pub n_layer: u32,
+    pub n_head: u32,
+    pub n_kv_head: u32,
+    pub max_tensor_bytes: usize,
+    pub kv_cache_bytes: u64,
+    pub directml_enabled: bool,
+}
+
 #[inline]
 fn scrub_f32_volatile(buf: &mut [f32], n: usize) {
     for v in buf.iter_mut().take(n) {
@@ -331,20 +344,28 @@ pub struct QTensorEngine {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl QTensorEngine {
-    pub fn new() -> Self {
+    pub fn try_new() -> Result<Self, String> {
+        log::info!("LLM_LOAD|engine-init|0.10|Initializing native GGUF runtime");
         let instance = wgpu::Instance::default();
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
 
         let adapter = rt
             .block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
                 ..Default::default()
             }))
-            .expect("Failed to find wgpu adapter");
+            .ok_or_else(|| "Failed to find wgpu adapter".to_string())?;
+        let adapter_info = adapter.get_info();
+        log::info!(
+            "LLM_LOAD|gpu-adapter|0.20|Using {:?} adapter {}",
+            adapter_info.backend,
+            adapter_info.name
+        );
 
         let (device, queue) = rt
             .block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
-            .expect("Failed to create wgpu device");
+            .map_err(|e| e.to_string())?;
+        log::info!("LLM_LOAD|gpu-device|0.35|Native compute device ready");
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Transformer Shader"),
@@ -395,7 +416,33 @@ impl QTensorEngine {
             entry_point: "main",
         });
 
-        Self {
+        #[cfg(target_os = "windows")]
+        let dml_status = match crate::directml_bridge::DmlDevice::new() {
+            Ok(device) => {
+                log::info!(
+                    "DirectML device initialization: Ok({})",
+                    device.adapter_desc
+                );
+                log::info!(
+                    "LLM_LOAD|gpu-backend|0.45|DirectML ready on {}",
+                    device.adapter_desc
+                );
+                Some(device)
+            }
+            Err(err) => {
+                log::warn!("DirectML device initialization failed: {:?}", err);
+                log::info!("LLM_LOAD|gpu-backend|0.45|DirectML unavailable; using wgpu fallback");
+                None
+            }
+        };
+
+        #[cfg(not(target_os = "windows"))]
+        let dml_status = {
+            log::info!("LLM_LOAD|gpu-backend|0.45|Using wgpu fallback backend for native compute");
+            None::<crate::directml_bridge::DmlDevice>
+        };
+
+        Ok(Self {
             device,
             queue,
             pipeline,
@@ -404,7 +451,7 @@ impl QTensorEngine {
             attention_pipeline,
             is_initialized: true,
             #[cfg(target_os = "windows")]
-            dml: crate::directml_bridge::DmlDevice::new().ok(),
+            dml: dml_status,
             gguf_mmap: None,
             tensor_data_offset: 0,
             hyperparams: crate::gguf_sharder::GgufHyperparams::default(),
@@ -420,7 +467,11 @@ impl QTensorEngine {
             kv_cache_gpu: None,
             kv_cache_cpu: None,
             attention_params_buf: None,
-        }
+        })
+    }
+
+    pub fn new() -> Self {
+        Self::try_new().expect("Failed to initialize native GGUF engine")
     }
 
     fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
@@ -518,6 +569,81 @@ impl QTensorEngine {
         self.max_tensor_bytes = max_weight_bytes;
     }
 
+    pub fn kv_cache_bytes(&self) -> u64 {
+        self.kv_layout
+            .as_ref()
+            .map(|layout| (layout.total_f32_elems * std::mem::size_of::<f32>()) as u64)
+            .unwrap_or(0)
+    }
+
+    pub fn load_gguf_checked(&mut self, path: &str) -> Result<GgufLoadReport, String> {
+        use std::fs::File;
+
+        log::info!("LLM_LOAD|gguf-open|0.52|Opening GGUF file {}", path);
+        let file = File::open(path).map_err(|e| {
+            log::error!("GGUF mmap open failed for {}: {}", path, e);
+            log::error!("LLM_LOAD|failed|1.00|Could not open GGUF: {}", e);
+            e.to_string()
+        })?;
+        log::info!("LLM_LOAD|mmap-start|0.64|Memory-mapping GGUF into virtual memory");
+        let mmap = unsafe { MmapOptions::new().map(&file) }.map_err(|e| {
+            log::error!("GGUF mmap failed for {}: {}", path, e);
+            log::error!("LLM_LOAD|failed|1.00|Memory map failed: {}", e);
+            e.to_string()
+        })?;
+        let file_size = mmap.len();
+        let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        if index.tensor_data_start == 0
+            && index.max_tensor_bytes == 0
+            && index.hyperparams.n_layer == 0
+        {
+            let msg = "GGUF header parse failed or yielded no tensor metadata".to_string();
+            log::error!("LLM_LOAD|failed|1.00|{}", msg);
+            return Err(msg);
+        }
+
+        self.tensor_data_offset = index.tensor_data_start;
+        self.hyperparams = index.hyperparams;
+        let staging = index
+            .max_layer_tensor_bytes
+            .max(4096)
+            .min(MAX_WGPU_WEIGHT_STAGING);
+        self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        self.ensure_kv_cache(&index.hyperparams);
+        self.gguf_mmap = Some(mmap);
+
+        let kv_cache_bytes = self.kv_cache_bytes();
+        log::info!(
+            "LLM_LOAD|gguf-index|0.78|Parsed {} layers, {} attention heads",
+            self.hyperparams.n_layer,
+            self.hyperparams.n_head
+        );
+        log::info!(
+            "LLM_LOAD|gguf-ready|0.92|GGUF indexed and cache arena reserved ({} MiB)",
+            kv_cache_bytes / (1024 * 1024)
+        );
+
+        Ok(GgufLoadReport {
+            mapped_bytes: file_size as u64,
+            tensor_data_offset: self.tensor_data_offset,
+            n_layer: self.hyperparams.n_layer,
+            n_head: self.hyperparams.n_head,
+            n_kv_head: self.hyperparams.effective_n_kv_head(),
+            max_tensor_bytes: index.max_tensor_bytes,
+            kv_cache_bytes,
+            directml_enabled: {
+                #[cfg(target_os = "windows")]
+                {
+                    self.dml.is_some()
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    false
+                }
+            },
+        })
+    }
+
     /// Memory-map a GGUF file so tensor bytes are accessible without heap allocation.
     /// Call this once after `new()`, before the first `dispatch_fused_transformer_block`.
     pub fn load_gguf(&mut self, path: &str) {
@@ -525,6 +651,8 @@ impl QTensorEngine {
         match File::open(path) {
             Ok(f) => match unsafe { MmapOptions::new().map(&f) } {
                 Ok(mmap) => {
+                    let file_size = mmap.len();
+                    log::info!("Attempting to mmap {} bytes from {}", file_size, path);
                     // memmap2 clones the file handle internally (try_clone); dropping `f` is safe.
                     // Tensor payload base must match gguf_sharder::GgufTensorIndex (full KV walk).
                     let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
@@ -537,6 +665,16 @@ impl QTensorEngine {
                     self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
                     self.ensure_kv_cache(&index.hyperparams);
                     self.gguf_mmap = Some(mmap);
+                    log::info!(
+                        "GGUF mmap complete: {} ({} bytes) — tensor @ {:#x}, {} layers, {} heads (kv {}), max tensor {} bytes",
+                        path,
+                        file_size,
+                        self.tensor_data_offset,
+                        self.hyperparams.n_layer,
+                        self.hyperparams.n_head,
+                        self.hyperparams.effective_n_kv_head(),
+                        index.max_tensor_bytes,
+                    );
                     eprintln!(
                         "[gguf_bridge] Mapped {} — tensor @ {:#x}, {} layers, {} heads (kv {}), max tensor {} bytes",
                         path,
@@ -547,9 +685,15 @@ impl QTensorEngine {
                         index.max_tensor_bytes,
                     );
                 }
-                Err(e) => eprintln!("[gguf_bridge] mmap failed for {path}: {e}"),
+                Err(e) => {
+                    log::error!("GGUF mmap failed for {}: {}", path, e);
+                    eprintln!("[gguf_bridge] mmap failed for {path}: {e}")
+                }
             },
-            Err(e) => eprintln!("[gguf_bridge] Could not open {path}: {e}"),
+            Err(e) => {
+                log::error!("GGUF mmap open failed for {}: {}", path, e);
+                eprintln!("[gguf_bridge] Could not open {path}: {e}")
+            }
         }
     }
 
@@ -1832,6 +1976,12 @@ impl QTensorEngine {
             valid_lexicon_ids[0]
         }
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn probe_gguf_runtime(path: &str) -> Result<GgufLoadReport, String> {
+    let mut engine = QTensorEngine::try_new()?;
+    engine.load_gguf_checked(path)
 }
 
 #[cfg(target_arch = "wasm32")]

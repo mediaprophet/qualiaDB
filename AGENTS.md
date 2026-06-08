@@ -691,6 +691,25 @@ bit 61  [AVAILABLE]
 
 ---
 
+### 2026-06-08 - Codex (Bundled ontology fallback + SHACL seeding)
+
+**Completed:**
+- Added `crates/qualia-client-core/src/bundled_ontologies.rs` to resolve repo/packaged ontology sources and seed essential ontology artifacts into `{storage}/Index/` on startup.
+- Added an offline-first fallback in `resource_import.rs::import_catalog_ontology_with_options` so catalog imports prefer bundled local sources before attempting network download.
+- Added tracked `bundled/ontologies/shacl.ttl` and updated the desktop packaging scripts to copy bundled ontology sources into release artifacts alongside `bundled/resources/`.
+- Updated Flutter init (`qualia_api.rs::init_core`) to seed bundled ontologies before app features query readiness.
+
+**Verification:**
+- `cargo check -p qualia-client-core -p qualia_flutter_rust`
+- `cargo test -p qualia-client-core bundled_shacl_source_resolves_when_tracked --lib`
+
+**Notes for future agents:**
+1. `DEFAULT_BUNDLED_ONTOLOGIES` is intentionally small right now (`shacl`) and is the place to extend startup-seeded essentials as more local ontology sources are tracked.
+2. The import fallback is local-source first for bundled IDs, so packaged apps can stay functional even when a catalog URL 404s or the machine is offline.
+3. If a new bundled ontology is added, make sure the packaging scripts continue copying `bundled/ontologies/` into desktop artifacts.
+
+---
+
 ## 8. Quick Reference — Running Tests
 
 ```powershell
