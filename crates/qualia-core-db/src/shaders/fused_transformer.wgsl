@@ -1,4 +1,4 @@
-// Layer-by-layer quantized-weight GEMM: f32 activations × mmap Q6_K weights.
+// Layer-by-layer quantized-weight GEMM: f32 activations × mmap Q4_K/Q6_K weights.
 // Weight bytes are uploaded per-tensor via write_buffer (reused staging buffer).
 
 struct GemmParams {
@@ -16,6 +16,9 @@ struct GemmParams {
 
 const BLOCK_Q6K_BYTES: u32 = 210u;
 const BLOCK_Q6K_ELEMS: u32 = 256u;
+const BLOCK_Q4K_BYTES: u32 = 144u;
+const BLOCK_Q4K_ELEMS: u32 = 256u;
+const GGML_TYPE_Q4_K: u32 = 12u;
 const GGML_TYPE_Q6_K: u32 = 14u;
 
 fn read_u8_weight(abs_byte: u32) -> u32 {
@@ -47,7 +50,50 @@ fn i8_from_u8(b: u32) -> i32 {
 }
 
 fn weight_row_bytes() -> u32 {
+    if params.weight_ggml_type == GGML_TYPE_Q4_K {
+        return (params.weight_row_elems / BLOCK_Q4K_ELEMS) * BLOCK_Q4K_BYTES;
+    }
     return (params.weight_row_elems / BLOCK_Q6K_ELEMS) * BLOCK_Q6K_BYTES;
+}
+
+fn get_scale_min_k4(j: u32, scales_base: u32) -> vec2<u32> {
+    if j < 4u {
+        return vec2<u32>(read_u8_weight(scales_base + j) & 63u, read_u8_weight(scales_base + j + 4u) & 63u);
+    }
+    let sc = (read_u8_weight(scales_base + j + 4u) & 0xFu) | ((read_u8_weight(scales_base + j - 4u) >> 6u) << 4u);
+    let m = (read_u8_weight(scales_base + j + 4u) >> 4u) | ((read_u8_weight(scales_base + j) >> 6u) << 4u);
+    return vec2<u32>(sc, m);
+}
+
+fn dequant_q4_k_elem(block_base: u32, elem: u32) -> f32 {
+    let d = f16_to_f32(read_u8_weight(block_base) | (read_u8_weight(block_base + 1u) << 8u));
+    let dmin = f16_to_f32(read_u8_weight(block_base + 2u) | (read_u8_weight(block_base + 3u) << 8u));
+    let scales_base = block_base + 4u;
+    let qs_base = block_base + 16u;
+    let group = elem / 64u;
+    let is = group * 2u;
+    let local = elem % 64u;
+    let sm0 = get_scale_min_k4(is, scales_base);
+    let sm1 = get_scale_min_k4(is + 1u, scales_base);
+    let d1 = d * f32(sm0.x);
+    let m1 = dmin * f32(sm0.y);
+    let d2 = d * f32(sm1.x);
+    let m2 = dmin * f32(sm1.y);
+    let q_off = group * 32u;
+    if local < 32u {
+        let nib = read_u8_weight(qs_base + q_off + local) & 0xFu;
+        return d1 * f32(nib) - m1;
+    }
+    let nib = read_u8_weight(qs_base + q_off + (local - 32u)) >> 4u;
+    return d2 * f32(nib) - m2;
+}
+
+fn dequant_q4_k_weight(row: u32, col: u32) -> f32 {
+    let row_base = row * weight_row_bytes();
+    let block_in_row = col / BLOCK_Q4K_ELEMS;
+    let block_base = row_base + block_in_row * BLOCK_Q4K_BYTES;
+    let elem = col % BLOCK_Q4K_ELEMS;
+    return dequant_q4_k_elem(block_base, elem);
 }
 
 fn dequant_q6_k_weight(row: u32, col: u32) -> f32 {
@@ -89,6 +135,9 @@ fn dequant_q6_k_weight(row: u32, col: u32) -> f32 {
 }
 
 fn dequant_weight(row: u32, col: u32) -> f32 {
+    if params.weight_ggml_type == GGML_TYPE_Q4_K {
+        return dequant_q4_k_weight(row, col);
+    }
     if params.weight_ggml_type == GGML_TYPE_Q6_K {
         return dequant_q6_k_weight(row, col);
     }
