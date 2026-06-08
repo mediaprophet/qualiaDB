@@ -539,6 +539,38 @@ fn read_messages_jsonl(path: &Path) -> Result<Vec<ChatMessage>, ChatError> {
     Ok(messages)
 }
 
+fn load_environment_or_default(storage_root: &Path, id: &str) -> Result<ChatEnvironment, ChatError> {
+    let env_path = environment_path(storage_root, id);
+    if !env_path.is_file() {
+        return Ok(ChatEnvironment::default_for_session(id, storage_root));
+    }
+
+    let text = fs::read_to_string(&env_path)?;
+    if text.trim().is_empty() {
+        log::warn!(
+            "Chat session {} had an empty environment.json; regenerating default environment",
+            id
+        );
+        let env = ChatEnvironment::default_for_session(id, storage_root);
+        let _ = env.save_to_session_dir(storage_root);
+        return Ok(env);
+    }
+
+    match serde_json::from_str(&text) {
+        Ok(env) => Ok(env),
+        Err(err) => {
+            log::warn!(
+                "Chat session {} had an invalid environment.json ({}); regenerating default environment",
+                id,
+                err
+            );
+            let env = ChatEnvironment::default_for_session(id, storage_root);
+            let _ = env.save_to_session_dir(storage_root);
+            Ok(env)
+        }
+    }
+}
+
 pub fn load_session(storage_root: &Path, id: &str) -> Result<ChatSession, ChatError> {
     let meta_path = session_meta_path(storage_root, id);
     if !meta_path.is_file() {
@@ -546,12 +578,7 @@ pub fn load_session(storage_root: &Path, id: &str) -> Result<ChatSession, ChatEr
     }
     let mut meta: SessionMeta = serde_json::from_str(&fs::read_to_string(&meta_path)?)?;
     persist_session_did_if_needed(storage_root, &mut meta)?;
-    let env_path = environment_path(storage_root, id);
-    let environment = if env_path.is_file() {
-        serde_json::from_str(&fs::read_to_string(env_path)?)?
-    } else {
-        ChatEnvironment::default_for_session(id, storage_root)
-    };
+    let environment = load_environment_or_default(storage_root, id)?;
     let messages = read_messages_jsonl(&messages_path(storage_root, id))?;
     Ok(ChatSession {
         meta,
@@ -836,11 +863,7 @@ fn sync_participants_to_environment(
     meta: &SessionMeta,
 ) -> Result<(), ChatError> {
     let env_path = environment_path(storage_root, id);
-    let mut environment = if env_path.is_file() {
-        serde_json::from_str(&fs::read_to_string(&env_path)?)?
-    } else {
-        ChatEnvironment::default_for_session(id, storage_root)
-    };
+    let mut environment = load_environment_or_default(storage_root, id)?;
     environment.session_kind = meta.session_kind;
     environment.participants = meta.participants.clone();
     fs::write(env_path, serde_json::to_string_pretty(&environment)?)?;

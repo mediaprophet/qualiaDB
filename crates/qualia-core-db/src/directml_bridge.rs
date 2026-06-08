@@ -69,6 +69,33 @@ pub struct DmlDevice {
     pub dml: IDMLDevice,
     pub queue: ID3D12CommandQueue,
     pub adapter_desc: String,
+    pub dedicated_vram_bytes: u64,
+    pub local_budget_bytes: u64,
+    pub local_usage_bytes: u64,
+    pub shared_budget_bytes: u64,
+    pub shared_usage_bytes: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct AdapterMemoryInfo {
+    pub adapter_desc: String,
+    pub dedicated_vram_bytes: u64,
+    pub dedicated_system_memory_bytes: u64,
+    pub shared_system_memory_bytes: u64,
+    pub local_budget_bytes: u64,
+    pub local_usage_bytes: u64,
+    pub shared_budget_bytes: u64,
+    pub shared_usage_bytes: u64,
+}
+
+impl AdapterMemoryInfo {
+    pub fn available_local_bytes(&self) -> u64 {
+        self.local_budget_bytes.saturating_sub(self.local_usage_bytes)
+    }
+
+    pub fn available_shared_bytes(&self) -> u64 {
+        self.shared_budget_bytes.saturating_sub(self.shared_usage_bytes)
+    }
 }
 
 impl DmlDevice {
@@ -86,7 +113,8 @@ impl DmlDevice {
 
             let factory: IDXGIFactory4 = CreateDXGIFactory2(DXGI_CREATE_FACTORY_FLAGS(0))?;
             let adapter = Self::best_adapter(&factory)?;
-            let adapter_desc = Self::adapter_name(&adapter);
+            let memory = Self::adapter_memory(&adapter);
+            let adapter_desc = memory.adapter_desc.clone();
             log::info!(
                 "DirectML device initialization: using adapter {}",
                 adapter_desc
@@ -119,6 +147,11 @@ impl DmlDevice {
                 dml,
                 queue,
                 adapter_desc,
+                dedicated_vram_bytes: memory.dedicated_vram_bytes,
+                local_budget_bytes: memory.local_budget_bytes,
+                local_usage_bytes: memory.local_usage_bytes,
+                shared_budget_bytes: memory.shared_budget_bytes,
+                shared_usage_bytes: memory.shared_usage_bytes,
             })
         }
     }
@@ -155,6 +188,52 @@ impl DmlDevice {
                 .to_string();
         }
         "Unknown GPU".into()
+    }
+
+    unsafe fn adapter_memory(adapter: &IDXGIAdapter1) -> AdapterMemoryInfo {
+        let desc = adapter.GetDesc1().ok();
+        let local = Self::query_video_memory(adapter, DXGI_MEMORY_SEGMENT_GROUP_LOCAL);
+        let shared = Self::query_video_memory(adapter, DXGI_MEMORY_SEGMENT_GROUP_NON_LOCAL);
+        AdapterMemoryInfo {
+            adapter_desc: Self::adapter_name(adapter),
+            dedicated_vram_bytes: desc
+                .as_ref()
+                .map(|d| d.DedicatedVideoMemory as u64)
+                .unwrap_or(0),
+            dedicated_system_memory_bytes: desc
+                .as_ref()
+                .map(|d| d.DedicatedSystemMemory as u64)
+                .unwrap_or(0),
+            shared_system_memory_bytes: desc
+                .as_ref()
+                .map(|d| d.SharedSystemMemory as u64)
+                .unwrap_or(0),
+            local_budget_bytes: local.as_ref().map(|m| m.Budget).unwrap_or(0),
+            local_usage_bytes: local.as_ref().map(|m| m.CurrentUsage).unwrap_or(0),
+            shared_budget_bytes: shared.as_ref().map(|m| m.Budget).unwrap_or(0),
+            shared_usage_bytes: shared.as_ref().map(|m| m.CurrentUsage).unwrap_or(0),
+        }
+    }
+
+    unsafe fn query_video_memory(
+        adapter: &IDXGIAdapter1,
+        group: DXGI_MEMORY_SEGMENT_GROUP,
+    ) -> Option<DXGI_QUERY_VIDEO_MEMORY_INFO> {
+        let adapter3: IDXGIAdapter3 = adapter.cast().ok()?;
+        let mut info = DXGI_QUERY_VIDEO_MEMORY_INFO::default();
+        if adapter3.QueryVideoMemoryInfo(0, group, &mut info).is_ok() {
+            Some(info)
+        } else {
+            None
+        }
+    }
+}
+
+pub fn probe_best_adapter_memory() -> windows::core::Result<AdapterMemoryInfo> {
+    unsafe {
+        let factory: IDXGIFactory4 = CreateDXGIFactory2(DXGI_CREATE_FACTORY_FLAGS(0))?;
+        let adapter = DmlDevice::best_adapter(&factory)?;
+        Ok(DmlDevice::adapter_memory(&adapter))
     }
 }
 

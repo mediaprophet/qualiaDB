@@ -250,8 +250,12 @@ pub fn refresh_session_environment(
     catalog: &ResourceCatalog,
     session_id: &str,
 ) -> Result<ChatEnvironment, BindError> {
-    let existing = crate::chat_session::load_session(storage, session_id)
-        .map_err(|e| BindError::NotFound(e.to_string()))?;
+    let existing = crate::chat_session::load_session(storage, session_id).map_err(|e| match e {
+        crate::chat_session::ChatError::NotFound(id) => BindError::NotFound(id),
+        crate::chat_session::ChatError::Io(err) => BindError::Io(err),
+        crate::chat_session::ChatError::Json(err) => BindError::Json(err),
+        other => BindError::Compile(other.to_string()),
+    })?;
 
     let config = ChatEnvironmentConfig {
         session_id: session_id.to_string(),

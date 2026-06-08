@@ -212,6 +212,11 @@ pub struct GgufLoadReport {
 }
 
 #[inline]
+fn bytes_to_gib(bytes: u64) -> f64 {
+    bytes as f64 / (1024.0 * 1024.0 * 1024.0)
+}
+
+#[inline]
 fn scrub_f32_volatile(buf: &mut [f32], n: usize) {
     for v in buf.iter_mut().take(n) {
         // Prevent logits residue from surviving across decode frames.
@@ -361,6 +366,26 @@ impl QTensorEngine {
             adapter_info.backend,
             adapter_info.name
         );
+        #[cfg(target_os = "windows")]
+        if let Ok(memory) = crate::directml_bridge::probe_best_adapter_memory() {
+            let free_local = memory.available_local_bytes();
+            let total_local = memory
+                .local_budget_bytes
+                .max(memory.dedicated_vram_bytes)
+                .max(free_local);
+            log::info!(
+                "LLM_LOAD|vram-check|0.16|VRAM free {:.1}/{:.1} GiB on {} (usage {:.1} GiB, shared free {:.1} GiB)",
+                bytes_to_gib(free_local),
+                bytes_to_gib(total_local),
+                memory.adapter_desc,
+                bytes_to_gib(memory.local_usage_bytes),
+                bytes_to_gib(memory.available_shared_bytes()),
+            );
+        }
+        #[cfg(not(target_os = "windows"))]
+        log::info!(
+            "LLM_LOAD|vram-check|0.16|Dedicated VRAM telemetry unavailable on this backend"
+        );
 
         let (device, queue) = rt
             .block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
@@ -426,6 +451,14 @@ impl QTensorEngine {
                 log::info!(
                     "LLM_LOAD|gpu-backend|0.45|DirectML ready on {}",
                     device.adapter_desc
+                );
+                log::info!(
+                    "LLM_LOAD|gpu-route|0.48|Streaming weights through DirectML with {:.1} GiB VRAM free",
+                    bytes_to_gib(
+                        device
+                            .local_budget_bytes
+                            .saturating_sub(device.local_usage_bytes)
+                    )
                 );
                 Some(device)
             }
@@ -495,6 +528,11 @@ impl QTensorEngine {
         self.kv_layout = Some(layout);
         self.kv_cache_gpu = Some(gpu);
         self.kv_cache_cpu = Some(cpu);
+        log::info!(
+            "LLM_LOAD|kv-cache|0.86|Reserved {:.1} MiB KV cache (GPU + CPU mirror, context {})",
+            bytes as f64 / (1024.0 * 1024.0),
+            layout.max_context,
+        );
         eprintln!(
             "[gguf_bridge] KV arena {} f32 ({:.1} MiB), context={}",
             layout.total_f32_elems,
@@ -591,6 +629,10 @@ impl QTensorEngine {
             e.to_string()
         })?;
         let file_size = mmap.len();
+        log::info!(
+            "LLM_LOAD|ram-map|0.70|Mapped {:.2} GiB GGUF into system memory",
+            bytes_to_gib(file_size as u64)
+        );
         let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
         if index.tensor_data_start == 0
             && index.max_tensor_bytes == 0
@@ -646,53 +688,8 @@ impl QTensorEngine {
     /// Memory-map a GGUF file so tensor bytes are accessible without heap allocation.
     /// Call this once after `new()`, before the first `dispatch_fused_transformer_block`.
     pub fn load_gguf(&mut self, path: &str) {
-        use std::fs::File;
-        match File::open(path) {
-            Ok(f) => match unsafe { MmapOptions::new().map(&f) } {
-                Ok(mmap) => {
-                    let file_size = mmap.len();
-                    log::info!("Attempting to mmap {} bytes from {}", file_size, path);
-                    // memmap2 clones the file handle internally (try_clone); dropping `f` is safe.
-                    // Tensor payload base must match gguf_sharder::GgufTensorIndex (full KV walk).
-                    let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
-                    self.tensor_data_offset = index.tensor_data_start;
-                    self.hyperparams = index.hyperparams;
-                    let staging = index
-                        .max_layer_tensor_bytes
-                        .max(4096)
-                        .min(MAX_WGPU_WEIGHT_STAGING);
-                    self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
-                    self.ensure_kv_cache(&index.hyperparams);
-                    self.gguf_mmap = Some(mmap);
-                    log::info!(
-                        "GGUF mmap complete: {} ({} bytes) — tensor @ {:#x}, {} layers, {} heads (kv {}), max tensor {} bytes",
-                        path,
-                        file_size,
-                        self.tensor_data_offset,
-                        self.hyperparams.n_layer,
-                        self.hyperparams.n_head,
-                        self.hyperparams.effective_n_kv_head(),
-                        index.max_tensor_bytes,
-                    );
-                    eprintln!(
-                        "[gguf_bridge] Mapped {} — tensor @ {:#x}, {} layers, {} heads (kv {}), max tensor {} bytes",
-                        path,
-                        self.tensor_data_offset,
-                        self.hyperparams.n_layer,
-                        self.hyperparams.n_head,
-                        self.hyperparams.effective_n_kv_head(),
-                        index.max_tensor_bytes,
-                    );
-                }
-                Err(e) => {
-                    log::error!("GGUF mmap failed for {}: {}", path, e);
-                    eprintln!("[gguf_bridge] mmap failed for {path}: {e}")
-                }
-            },
-            Err(e) => {
-                log::error!("GGUF mmap open failed for {}: {}", path, e);
-                eprintln!("[gguf_bridge] Could not open {path}: {e}")
-            }
+        if let Err(e) = self.load_gguf_checked(path) {
+            eprintln!("[gguf_bridge] Could not load {path}: {e}");
         }
     }
 

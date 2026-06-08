@@ -30,6 +30,7 @@ import 'src/rust/api/qualia_api.dart';
 import 'src/rust/frb_generated.dart';
 import 'tray/tray_service.dart';
 import 'services/pending_affirmations_service.dart';
+import 'widgets/DevConsoleOverlay.dart';
 import 'widgets/pending_affirmations_panel.dart';
 import 'widgets/vault_hud_bar.dart';
 
@@ -80,7 +81,7 @@ class QualiaApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const QualiaHomeScreen(),
+      home: const DevConsoleOverlay(child: QualiaHomeScreen()),
     );
   }
 }

@@ -14,7 +14,7 @@ use crate::shacl_compiler::{CompiledShape, ShaclCompiler, ShaclConstraint, Shacl
 use crate::wal::{commit_semantic_mutation, WalHandoffResult, WriteAheadLog};
 use crate::webizen::{SlgArena, SlgOpcode, VmFrame};
 use crate::{q_hash, QualiaQuin};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 
@@ -78,6 +78,8 @@ impl ThermalGovernor for NullThermalGovernor {
 pub struct TaskOrchestrator {
     thermal_governor: Box<dyn ThermalGovernor>,
     pub current_model_state: Arc<std::sync::Mutex<ModelLifecycle>>,
+    pub current_model_id: Arc<std::sync::Mutex<Option<u64>>>,
+    pub resident_memory_bytes: Arc<AtomicU64>,
     pub scrubbing_lock: Arc<AtomicBool>,
 }
 
@@ -148,6 +150,8 @@ impl TaskOrchestrator {
         Self {
             thermal_governor,
             current_model_state: Arc::new(std::sync::Mutex::new(ModelLifecycle::Discovered)),
+            current_model_id: Arc::new(std::sync::Mutex::new(None)),
+            resident_memory_bytes: Arc::new(AtomicU64::new(0)),
             scrubbing_lock: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -160,16 +164,35 @@ impl TaskOrchestrator {
         }
     }
 
+    pub fn resident_model_id(&self) -> Option<u64> {
+        *self.current_model_id.lock().unwrap()
+    }
+
+    pub fn resident_memory_bytes(&self) -> u64 {
+        self.resident_memory_bytes.load(Ordering::Relaxed)
+    }
+
+    pub fn register_resident_model(&self, model_id: u64, bytes: u64) {
+        *self.current_model_id.lock().unwrap() = Some(model_id);
+        self.resident_memory_bytes.store(bytes, Ordering::Relaxed);
+    }
+
     pub fn load_model(&self, agent: &LocalLlmAgent, model_id: u64) -> Result<(), &'static str> {
-        let _ = model_id;
         if self.scrubbing_lock.load(Ordering::Acquire) {
             return Err("Cannot load model: Swarm Worker is actively scrubbing memory arena");
+        }
+        if let Some(active_model) = self.resident_model_id() {
+            if active_model != model_id {
+                return Err("Cannot load model: another model is still resident; evict it first");
+            }
         }
 
         let mut state = self.current_model_state.lock().unwrap();
         *state = ModelLifecycle::MappedToDisk;
         *state = ModelLifecycle::StreamingVRAM;
         *state = ModelLifecycle::Active;
+        drop(state);
+        *self.current_model_id.lock().unwrap() = Some(model_id);
 
         // Wire lex sidecar: prefer schema.org bundle, else model-adjacent `.q42.lex`.
         let schema_lex = "data/schemaorg/30.0/schemaorg-current-https.q42.lex";
@@ -187,33 +210,52 @@ impl TaskOrchestrator {
         Ok(())
     }
 
-    pub fn evict_model(&self, _model_id: u64) {
-        let mut state = self.current_model_state.lock().unwrap();
-        *state = ModelLifecycle::Scrubbing;
+    pub fn evict_model(&self, model_id: u64) {
+        let resident = self.resident_model_id();
+        if resident.is_none() {
+            self.resident_memory_bytes.store(0, Ordering::Relaxed);
+            if let Ok(mut st) = self.current_model_state.lock() {
+                *st = ModelLifecycle::Discovered;
+            }
+            return;
+        }
+        if resident != Some(model_id) {
+            return;
+        }
+
+        if let Ok(mut state) = self.current_model_state.lock() {
+            *state = ModelLifecycle::Scrubbing;
+        }
 
         self.scrubbing_lock.store(true, Ordering::Release);
+        let scrub_bytes = self.resident_memory_bytes.swap(0, Ordering::Relaxed);
 
         let lock_clone = self.scrubbing_lock.clone();
         let state_clone = self.current_model_state.clone();
+        let model_clone = self.current_model_id.clone();
 
-        // Asynchronous scrubbing via Swarm Worker
+        // Asynchronous scrubbing over a fixed stack buffer keeps the sweep deterministic and heap-free.
         thread::spawn(move || {
-            // Mocking a 512MB allocation that needs to be scrubbed
-            let mut mock_memory = vec![0u8; 1024];
-            let ptr = mock_memory.as_mut_ptr();
-
-            unsafe {
-                // Cryptographic flush of the memory boundaries to zero
-                std::ptr::write_volatile(ptr, 0);
+            let mut scrub_block = [0u8; 4096];
+            let mut remaining = scrub_bytes.max(scrub_block.len() as u64);
+            while remaining > 0 {
+                let write_len = remaining.min(scrub_block.len() as u64) as usize;
+                for byte in scrub_block.iter_mut().take(write_len) {
+                    unsafe { std::ptr::write_volatile(byte, 0) };
+                }
+                remaining = remaining.saturating_sub(write_len as u64);
+                if remaining > 0 {
+                    std::thread::yield_now();
+                }
             }
-
-            // Artificial delay to simulate large memory sweep taking 15ms
-            thread::sleep(std::time::Duration::from_millis(15));
 
             // Release the cryptographic lock and revert state
             lock_clone.store(false, Ordering::Release);
+            if let Ok(mut model) = model_clone.lock() {
+                *model = None;
+            }
             if let Ok(mut st) = state_clone.lock() {
-                *st = ModelLifecycle::Discovered; // Ready to be loaded again or remains unloaded
+                *st = ModelLifecycle::Discovered;
             }
         });
     }
@@ -569,6 +611,7 @@ pub mod tests {
             second_load_result.is_ok(),
             "Orchestrator failed to load model after scrubbing lock cleared."
         );
+        assert_eq!(orch.resident_model_id(), Some(456));
 
         // Ensure Webizen VM logic handles yielding
         let mut vm = crate::logic::WebizenVM::with_scrubbing_lock(orch.scrubbing_lock.clone());
@@ -585,7 +628,7 @@ pub mod tests {
         };
 
         // If we trigger evict again, the VM should yield on LoadModel
-        orch.evict_model(999);
+        orch.evict_model(456);
         let exec_result = vm.execute_implication(&quin);
         assert!(exec_result.is_none());
         assert_eq!(
@@ -595,6 +638,7 @@ pub mod tests {
 
         // Wait for scrub to clear
         std::thread::sleep(std::time::Duration::from_millis(50));
+        assert_eq!(orch.resident_model_id(), None);
     }
 
     fn write_fever_lex_bytes() -> Vec<u8> {

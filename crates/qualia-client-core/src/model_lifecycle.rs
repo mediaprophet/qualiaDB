@@ -1,7 +1,7 @@
 //! Catalog LLM download → GGUF shard map → WAL → lifecycle (in-process).
 
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use qualia_core_db::{
@@ -121,13 +121,36 @@ pub fn task_orchestrator() -> Arc<TaskOrchestrator> {
 pub const MEMORY_FLOOR_MB: u32 = 512;
 
 static LLM_MEMORY_BYTES: AtomicU64 = AtomicU64::new(0);
+static KV_CACHE_USED_MB: AtomicU32 = AtomicU32::new(0);
 
 pub fn record_llm_memory_bytes(bytes: u64) {
     LLM_MEMORY_BYTES.store(bytes, Ordering::Relaxed);
 }
 
+pub fn record_llm_memory_sample(bytes: u64) {
+    if bytes == 0 {
+        return;
+    }
+    let mut current = LLM_MEMORY_BYTES.load(Ordering::Relaxed);
+    while bytes > current {
+        match LLM_MEMORY_BYTES.compare_exchange(current, bytes, Ordering::Relaxed, Ordering::Relaxed)
+        {
+            Ok(_) => return,
+            Err(observed) => current = observed,
+        }
+    }
+}
+
 pub fn get_llm_memory_bytes() -> u64 {
     LLM_MEMORY_BYTES.load(Ordering::Relaxed)
+}
+
+pub fn record_kv_cache_used_mb(megabytes: u32) {
+    KV_CACHE_USED_MB.store(megabytes, Ordering::Relaxed);
+}
+
+pub fn get_kv_cache_used_mb() -> u32 {
+    KV_CACHE_USED_MB.load(Ordering::Relaxed)
 }
 
 pub fn get_thermal_state_label() -> &'static str {
@@ -155,22 +178,68 @@ fn probe_and_activate_model(
     gguf_path: &str,
 ) -> Result<(), ModelError> {
     let orch = orchestrator();
+    if let Some(resident) = orch.resident_model_id() {
+        if resident != profile_id {
+            log::info!(
+                "LLM_LOAD|unload-start|0.01|Evicting resident model 0x{resident:016x} before loading {}",
+                model_label
+            );
+            orch.evict_model(resident);
+            let wait_started = std::time::Instant::now();
+            while orch.scrubbing_lock.load(Ordering::Acquire) {
+                if wait_started.elapsed() > std::time::Duration::from_secs(5) {
+                    log::error!(
+                        "LLM_LOAD|failed|1.00|Timed out waiting for prior model eviction"
+                    );
+                    return Err(ModelError::Activate(
+                        "Timed out waiting for prior model eviction".to_string(),
+                    ));
+                }
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+            record_llm_memory_bytes(0);
+            record_kv_cache_used_mb(0);
+            log::info!(
+                "LLM_LOAD|unload-done|0.03|Previous resident model scrubbed from memory"
+            );
+        }
+    }
+    let mut sys = sysinfo::System::new_all();
+    sys.refresh_memory();
+    let ram_total_gib = sys.total_memory() as f64 / 1024.0 / 1024.0 / 1024.0;
+    let ram_used_gib = sys.used_memory() as f64 / 1024.0 / 1024.0 / 1024.0;
+    let ram_free_gib = (ram_total_gib - ram_used_gib).max(0.0);
     {
         let mut state = orch.current_model_state.lock().unwrap();
         *state = ModelLifecycle::MappedToDisk;
         *state = ModelLifecycle::StreamingVRAM;
     }
     log::info!("LLM_LOAD|prepare|0.02|Preparing model {}", model_label);
+    log::info!(
+        "LLM_LOAD|ram-check|0.04|System RAM {:.1}/{:.1} GiB used; {:.1} GiB available",
+        ram_used_gib,
+        ram_total_gib,
+        ram_free_gib
+    );
     match qualia_core_db::gguf_bridge::probe_gguf_runtime(gguf_path) {
         Ok(report) => {
-            record_llm_memory_bytes(report.kv_cache_bytes);
+            let kv_cache_mb = (report.kv_cache_bytes / (1024 * 1024)).min(u32::MAX as u64) as u32;
+            record_llm_memory_bytes(report.mapped_bytes);
+            record_kv_cache_used_mb(kv_cache_mb);
             if let Err(err) = orch.load_model(agent, profile_id) {
                 log::error!("LLM_LOAD|failed|1.00|Activation failed: {}", err);
                 return Err(ModelError::Activate(err.to_string()));
             }
+            orch.register_resident_model(profile_id, report.mapped_bytes + report.kv_cache_bytes);
             log::info!(
-                "LLM_LOAD|active|1.00|Model ready (kv {} MiB, backend {})",
-                report.kv_cache_bytes / (1024 * 1024),
+                "LLM_LOAD|placement|0.96|Model mapped in system RAM ({:.2} GiB) and KV cache reserved in VRAM/system memory ({} MiB)",
+                report.mapped_bytes as f64 / (1024.0 * 1024.0 * 1024.0),
+                kv_cache_mb
+            );
+            log::info!(
+                "LLM_LOAD|active|1.00|Model ready (mapped {:.2} GiB, kv {} MiB, backend {})",
+                report.mapped_bytes as f64 / (1024.0 * 1024.0 * 1024.0),
+                kv_cache_mb,
                 if report.directml_enabled {
                     "DirectML+wgpu"
                 } else {
@@ -180,6 +249,7 @@ fn probe_and_activate_model(
         }
         Err(err) => {
             record_llm_memory_bytes(0);
+            record_kv_cache_used_mb(0);
             let mut state = orch.current_model_state.lock().unwrap();
             *state = ModelLifecycle::MappedToDisk;
             log::error!("LLM_LOAD|failed|1.00|Activation failed: {}", err);
@@ -187,6 +257,28 @@ fn probe_and_activate_model(
         }
     }
     Ok(())
+}
+
+pub fn unload_active_model(profile_id: Option<u64>) {
+    let orch = orchestrator();
+    let resident = profile_id.or_else(|| orch.resident_model_id());
+    if let Some(model_id) = resident {
+        log::info!(
+            "LLM_LOAD|unload-start|0.00|Unloading resident model 0x{model_id:016x}"
+        );
+        orch.evict_model(model_id);
+        let wait_started = std::time::Instant::now();
+        while orch.scrubbing_lock.load(Ordering::Acquire) {
+            if wait_started.elapsed() > std::time::Duration::from_secs(5) {
+                log::warn!("LLM_LOAD|failed|1.00|Timed out waiting for model scrub");
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        log::info!("LLM_LOAD|unload-done|1.00|Model memory scrub complete");
+    }
+    record_llm_memory_bytes(0);
+    record_kv_cache_used_mb(0);
 }
 
 fn unix_now() -> u64 {

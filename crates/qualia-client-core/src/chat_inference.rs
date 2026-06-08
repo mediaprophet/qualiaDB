@@ -195,7 +195,7 @@ pub fn run_chat_inference_full(
     {
         return empty(&format!("Model unavailable: {err}"));
     }
-    crate::model_lifecycle::record_llm_memory_bytes(
+    crate::model_lifecycle::record_llm_memory_sample(
         agent
             .memory_used_bytes
             .load(std::sync::atomic::Ordering::Relaxed),
@@ -309,7 +309,7 @@ pub fn run_chat_inference_full(
 
     let _ = persist_citations(session_id, Path::new(&storage), &output, &retrieval);
 
-    crate::model_lifecycle::record_llm_memory_bytes(
+    crate::model_lifecycle::record_llm_memory_sample(
         agent
             .memory_used_bytes
             .load(std::sync::atomic::Ordering::Relaxed),
@@ -382,7 +382,7 @@ fn run_orchestrated_inference(
                 peak_memory_bytes: 0,
             };
             let _ = persist_citations(session_id, storage, &output, retrieval);
-            crate::model_lifecycle::record_llm_memory_bytes(
+            crate::model_lifecycle::record_llm_memory_sample(
                 agent
                     .memory_used_bytes
                     .load(std::sync::atomic::Ordering::Relaxed),

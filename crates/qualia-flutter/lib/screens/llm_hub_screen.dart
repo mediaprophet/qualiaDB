@@ -35,6 +35,8 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   Timer? _downloadPollTimer;
   StreamSubscription<String>? _telemetrySubscription;
   LlmLoadStatus? _loadStatus;
+  List<LlmLoadStatus> _loadHistory = const [];
+  LlmRuntimeSnapshot _runtimeSnapshot = const LlmRuntimeSnapshot();
   bool _isActivatingModel = false;
 
   bool _isLoading = true;
@@ -82,14 +84,17 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   }
 
   void _beginModelActivation(String message) {
+    final queued = LlmLoadStatus(
+      stage: 'queued',
+      progress: 0,
+      message: message,
+      rawLine: message,
+    );
     setState(() {
       _isActivatingModel = true;
-      _loadStatus = LlmLoadStatus(
-        stage: 'queued',
-        progress: 0,
-        message: message,
-        rawLine: message,
-      );
+      _loadStatus = queued;
+      _loadHistory = [queued];
+      _runtimeSnapshot = const LlmRuntimeSnapshot();
     });
   }
 
@@ -98,12 +103,18 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
     setState(() {
       _isActivatingModel = false;
       if (_loadStatus == null || !_loadStatus!.isTerminal) {
-        _loadStatus = LlmLoadStatus(
+        final completed = LlmLoadStatus(
           stage: 'active',
           progress: 1,
           message: message,
           rawLine: message,
         );
+        final nextHistory = [..._loadHistory, completed];
+        if (nextHistory.length > 8) {
+          nextHistory.removeRange(0, nextHistory.length - 8);
+        }
+        _loadStatus = completed;
+        _loadHistory = nextHistory;
       }
     });
   }
@@ -111,8 +122,17 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   void _handleTelemetryLine(String line) {
     final status = LlmLoadStatus.tryParse(line);
     if (status == null || !mounted) return;
+    final nextHistory = [..._loadHistory];
+    if (nextHistory.isEmpty || nextHistory.last.rawLine != status.rawLine) {
+      nextHistory.add(status);
+      if (nextHistory.length > 8) {
+        nextHistory.removeRange(0, nextHistory.length - 8);
+      }
+    }
     setState(() {
       _loadStatus = status;
+      _loadHistory = nextHistory;
+      _runtimeSnapshot = _runtimeSnapshot.consume(status);
       _isActivatingModel = !status.isTerminal;
     });
   }
@@ -690,6 +710,11 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
     final ramTotal = _hardware?.ramTotalGb ?? 0;
     final ramUsed = _hardware?.ramUsedGb ?? 0;
     final ramPct = ramTotal > 0 ? (ramUsed / ramTotal).clamp(0.0, 1.0) : 0.0;
+    final gpuAvailable = _runtimeSnapshot.availableVramGb ?? _hardware?.vramEstimatedGb;
+    final gpuTelemetryKnown = gpuAvailable != null && gpuAvailable > 0;
+    final engineLabel = _runtimeSnapshot.backendLabel == null
+        ? 'native GGUF + wgpu/DirectML (in-process)'
+        : 'native GGUF + ${_runtimeSnapshot.backendLabel}';
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -725,7 +750,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Engine: native GGUF + wgpu/DirectML (in-process)',
+                  'Engine: $engineLabel',
                   style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
                 ),
                 const SizedBox(height: 12),
@@ -740,6 +765,16 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
                       label: Text('${_installedIds.length} installed'),
                       visualDensity: VisualDensity.compact,
                     ),
+                    if (_runtimeSnapshot.backendLabel != null)
+                      Chip(
+                        label: Text(_runtimeSnapshot.backendLabel!),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    if (_runtimeSnapshot.memoryRouteLabel != null)
+                      Chip(
+                        label: Text(_runtimeSnapshot.memoryRouteLabel!),
+                        visualDensity: VisualDensity.compact,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -798,6 +833,44 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
                   'Models with "respect RAM estimate" skip themselves when your machine is too tight.',
                   style: TextStyle(fontSize: 11, color: Colors.grey),
                 ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _glassCard(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'GPU / VRAM',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  gpuTelemetryKnown
+                      ? '${gpuAvailable!.toStringAsFixed(1)} GB currently available'
+                      : 'Telemetry unavailable on this backend',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _runtimeSnapshot.adapterLabel ??
+                      'Windows + DirectML reports live local VRAM budget; other backends fall back to stream telemetry only.',
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+                if (_runtimeSnapshot.sharedFreeGb != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Shared system memory free: ${_runtimeSnapshot.sharedFreeGb!.toStringAsFixed(1)} GB',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1206,6 +1279,9 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
             ? Colors.greenAccent
             : _accent;
     final value = status.isError ? 1.0 : status.progress.clamp(0.0, 1.0);
+    final recentStages = _loadHistory.length <= 4
+        ? _loadHistory
+        : _loadHistory.sublist(_loadHistory.length - 4);
 
     return _glassCard(
       child: Padding(
@@ -1255,8 +1331,74 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
               'Stage: ${status.stageLabel}',
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
+            if (_runtimeSnapshot.backendLabel != null ||
+                _runtimeSnapshot.availableRamGb != null ||
+                _runtimeSnapshot.availableVramGb != null ||
+                _runtimeSnapshot.mappedModelGb != null ||
+                _runtimeSnapshot.kvCacheMb != null) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (_runtimeSnapshot.backendLabel != null)
+                    _statusChip('Backend ${_runtimeSnapshot.backendLabel!}'),
+                  if (_runtimeSnapshot.memoryRouteLabel != null)
+                    _statusChip(_runtimeSnapshot.memoryRouteLabel!),
+                  if (_runtimeSnapshot.availableRamGb != null &&
+                      _runtimeSnapshot.totalRamGb != null)
+                    _statusChip(
+                      'RAM free ${_runtimeSnapshot.availableRamGb!.toStringAsFixed(1)}/${_runtimeSnapshot.totalRamGb!.toStringAsFixed(1)} GB',
+                    ),
+                  if (_runtimeSnapshot.availableVramGb != null)
+                    _statusChip(
+                      _runtimeSnapshot.totalVramGb != null
+                          ? 'VRAM free ${_runtimeSnapshot.availableVramGb!.toStringAsFixed(1)}/${_runtimeSnapshot.totalVramGb!.toStringAsFixed(1)} GB'
+                          : 'VRAM free ${_runtimeSnapshot.availableVramGb!.toStringAsFixed(1)} GB',
+                    ),
+                  if (_runtimeSnapshot.mappedModelGb != null)
+                    _statusChip(
+                      'Mapped ${_runtimeSnapshot.mappedModelGb!.toStringAsFixed(2)} GB',
+                    ),
+                  if (_runtimeSnapshot.kvCacheMb != null)
+                    _statusChip('KV ${_runtimeSnapshot.kvCacheMb} MiB'),
+                ],
+              ),
+            ],
+            if (recentStages.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              const Text(
+                'Recent stages',
+                style: TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+              const SizedBox(height: 6),
+              ...recentStages.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '${entry.stageLabel}: ${entry.message}',
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _statusChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11, color: Colors.white70),
       ),
     );
   }
@@ -1321,6 +1463,159 @@ class LlmLoadStatus {
         message: message,
         rawLine: message,
       );
+}
+
+class LlmRuntimeSnapshot {
+  const LlmRuntimeSnapshot({
+    this.backendLabel,
+    this.adapterLabel,
+    this.memoryRouteLabel,
+    this.availableRamGb,
+    this.totalRamGb,
+    this.availableVramGb,
+    this.totalVramGb,
+    this.sharedFreeGb,
+    this.mappedModelGb,
+    this.kvCacheMb,
+  });
+
+  final String? backendLabel;
+  final String? adapterLabel;
+  final String? memoryRouteLabel;
+  final double? availableRamGb;
+  final double? totalRamGb;
+  final double? availableVramGb;
+  final double? totalVramGb;
+  final double? sharedFreeGb;
+  final double? mappedModelGb;
+  final int? kvCacheMb;
+
+  static final RegExp _ramPattern = RegExp(
+    r'System RAM ([0-9.]+)/([0-9.]+) GiB used; ([0-9.]+) GiB available',
+  );
+  static final RegExp _vramPattern = RegExp(
+    r'VRAM free ([0-9.]+)/([0-9.]+) GiB on (.+) \(usage ([0-9.]+) GiB, shared free ([0-9.]+) GiB\)',
+  );
+  static final RegExp _ramMapPattern = RegExp(
+    r'Mapped ([0-9.]+) GiB GGUF into system memory',
+  );
+  static final RegExp _placementPattern = RegExp(
+    r'Model mapped in system RAM \(([0-9.]+) GiB\) and KV cache reserved.*\(([0-9]+) MiB\)',
+  );
+  static final RegExp _kvPattern = RegExp(r'KV (?:cache )?(?:reserved )?\(?([0-9]+) MiB');
+  static final RegExp _kvReservePattern = RegExp(
+    r'Reserved ([0-9.]+) MiB KV cache',
+  );
+
+  LlmRuntimeSnapshot consume(LlmLoadStatus status) {
+    final message = status.message;
+    var next = this;
+
+    final ramMatch = _ramPattern.firstMatch(message);
+    if (ramMatch != null) {
+      final used = double.tryParse(ramMatch.group(1) ?? '');
+      final total = double.tryParse(ramMatch.group(2) ?? '');
+      final free = double.tryParse(ramMatch.group(3) ?? '');
+      next = next.copyWith(
+        totalRamGb: total,
+        availableRamGb: free,
+        memoryRouteLabel: 'Loading via system RAM',
+      );
+      if (used != null && total != null && free == null) {
+        next = next.copyWith(
+          availableRamGb: (total - used).clamp(0.0, total).toDouble(),
+        );
+      }
+    }
+
+    final vramMatch = _vramPattern.firstMatch(message);
+    if (vramMatch != null) {
+      next = next.copyWith(
+        availableVramGb: double.tryParse(vramMatch.group(1) ?? ''),
+        totalVramGb: double.tryParse(vramMatch.group(2) ?? ''),
+        adapterLabel: vramMatch.group(3)?.trim(),
+        sharedFreeGb: double.tryParse(vramMatch.group(5) ?? ''),
+      );
+    }
+
+    final mappedMatch = _ramMapPattern.firstMatch(message);
+    if (mappedMatch != null) {
+      next = next.copyWith(
+        mappedModelGb: double.tryParse(mappedMatch.group(1) ?? ''),
+        memoryRouteLabel: 'Mapped in system RAM',
+      );
+    }
+
+    final placementMatch = _placementPattern.firstMatch(message);
+    if (placementMatch != null) {
+      next = next.copyWith(
+        mappedModelGb: double.tryParse(placementMatch.group(1) ?? ''),
+        kvCacheMb: int.tryParse(placementMatch.group(2) ?? ''),
+        memoryRouteLabel: 'System RAM + VRAM cache',
+      );
+    }
+
+    final kvMatch = _kvPattern.firstMatch(message);
+    if (kvMatch != null) {
+      next = next.copyWith(kvCacheMb: int.tryParse(kvMatch.group(1) ?? ''));
+    }
+    final kvReserveMatch = _kvReservePattern.firstMatch(message);
+    if (kvReserveMatch != null) {
+      next = next.copyWith(
+        kvCacheMb: double.tryParse(kvReserveMatch.group(1) ?? '')?.round(),
+      );
+    }
+
+    if (status.stage == 'gpu-backend' || status.stage == 'gpu-route') {
+      if (message.contains('DirectML')) {
+        next = next.copyWith(
+          backendLabel: 'DirectML + wgpu',
+          memoryRouteLabel: 'Streaming to VRAM',
+        );
+      } else if (message.contains('wgpu fallback')) {
+        next = next.copyWith(
+          backendLabel: 'wgpu fallback',
+          memoryRouteLabel: 'Streaming to GPU',
+        );
+      }
+    }
+
+    if (status.stage == 'gpu-adapter' && next.adapterLabel == null) {
+      next = next.copyWith(adapterLabel: message.replaceFirst('Using ', '').trim());
+    }
+
+    if (status.stage == 'active') {
+      next = next.copyWith(memoryRouteLabel: 'Ready');
+    }
+
+    return next;
+  }
+
+  LlmRuntimeSnapshot copyWith({
+    String? backendLabel,
+    String? adapterLabel,
+    String? memoryRouteLabel,
+    double? availableRamGb,
+    double? totalRamGb,
+    double? availableVramGb,
+    double? totalVramGb,
+    double? sharedFreeGb,
+    double? mappedModelGb,
+    int? kvCacheMb,
+  }) {
+    return LlmRuntimeSnapshot(
+      backendLabel: backendLabel ?? this.backendLabel,
+      adapterLabel: adapterLabel ?? this.adapterLabel,
+      memoryRouteLabel: memoryRouteLabel ?? this.memoryRouteLabel,
+      availableRamGb: availableRamGb ?? this.availableRamGb,
+      totalRamGb: totalRamGb ?? this.totalRamGb,
+      availableVramGb: availableVramGb ?? this.availableVramGb,
+      totalVramGb: totalVramGb ?? this.totalVramGb,
+      sharedFreeGb: sharedFreeGb ?? this.sharedFreeGb,
+      mappedModelGb: mappedModelGb ?? this.mappedModelGb,
+      kvCacheMb: kvCacheMb ?? this.kvCacheMb,
+    );
+  }
 }
 
 class LLMModel {

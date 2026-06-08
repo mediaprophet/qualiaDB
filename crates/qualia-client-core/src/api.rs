@@ -347,11 +347,27 @@ pub struct HardwareStatus {
 pub fn get_hardware_status() -> HardwareStatus {
     let mut sys = System::new_all();
     sys.refresh_all();
+    let vram_available_gb = {
+        #[cfg(target_os = "windows")]
+        {
+            qualia_core_db::directml_bridge::probe_best_adapter_memory()
+                .map(|memory| {
+                    let free = memory.available_local_bytes();
+                    let fallback = memory.dedicated_vram_bytes;
+                    let bytes = if free > 0 { free } else { fallback };
+                    bytes as f64 / 1024.0 / 1024.0 / 1024.0
+                })
+                .unwrap_or(0.0)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            0.0
+        }
+    };
     HardwareStatus {
         ram_total_gb: sys.total_memory() as f64 / 1024.0 / 1024.0 / 1024.0,
         ram_used_gb: sys.used_memory() as f64 / 1024.0 / 1024.0 / 1024.0,
-        // Mock 16GB unified memory for M-Series
-        vram_estimated_gb: 16.0,
+        vram_estimated_gb: vram_available_gb,
     }
 }
 
@@ -374,7 +390,7 @@ pub fn get_engine_telemetry_fields() -> EngineTelemetryFields {
             crate::model_lifecycle::get_model_lifecycle_state(),
         )
         .to_string(),
-        kv_cache_used_mb: 0,
+        kv_cache_used_mb: crate::model_lifecycle::get_kv_cache_used_mb(),
     }
 }
 
@@ -2175,6 +2191,11 @@ fn persist_active_model_record(
     std::fs::write(active_model_path(), json).map_err(|e| e.to_string())
 }
 
+fn clear_active_model_record() {
+    let _ = std::fs::remove_file(active_model_path());
+    let _ = std::fs::remove_file(legacy_active_model_path());
+}
+
 pub fn restore_active_model_on_startup() {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -2198,6 +2219,7 @@ pub fn restore_active_model_on_startup() {
                         err
                     );
                     *state.active_model.lock().unwrap() = None;
+                    clear_active_model_record();
                 }
             }
         }
@@ -2249,9 +2271,9 @@ pub fn set_active_model(model_name: String) -> Result<(), String> {
     let storage = state.config.lock().unwrap().storage_path.clone();
     let storage_path = Path::new(&storage);
 
-    let record = if Path::new(&model_name).is_file() {
+    let result = if Path::new(&model_name).is_file() {
         crate::model_lifecycle::finalize_local_gguf(Path::new(&model_name), storage_path)
-            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())
     } else {
         let model_id = model_name
             .trim_end_matches(".gguf")
@@ -2260,7 +2282,15 @@ pub fn set_active_model(model_name: String) -> Result<(), String> {
             .unwrap_or(model_name.as_str())
             .to_string();
         crate::model_lifecycle::activate_model_for_id(&model_id, storage_path)
-            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())
+    };
+    let record = match result {
+        Ok(record) => record,
+        Err(err) => {
+            *state.active_model.lock().unwrap() = None;
+            clear_active_model_record();
+            return Err(err);
+        }
     };
 
     persist_active_model_record(&record)?;
@@ -2306,8 +2336,19 @@ pub fn try_apply_model_preference(task: &str) -> Result<(), String> {
     let catalog = load_workspace_catalog();
     let prefs = get_model_preferences();
     let task = crate::model_preferences::ModelTask::from_str_lossy(task);
-    let record =
-        crate::model_preferences::apply_preference(Path::new(&storage), &catalog, &prefs, task)?;
+    let record = match crate::model_preferences::apply_preference(
+        Path::new(&storage),
+        &catalog,
+        &prefs,
+        task,
+    ) {
+        Ok(record) => record,
+        Err(err) => {
+            *state.active_model.lock().unwrap() = None;
+            clear_active_model_record();
+            return Err(err);
+        }
+    };
     persist_active_model_record(&record)?;
     *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
     Ok(())
@@ -3169,9 +3210,13 @@ pub fn remove_installed_model(model_id: String) -> Result<String, String> {
                 .iter()
                 .any(|name| normalized_current.contains(&normalize_resource_key(name)))
             {
+                if let Some(record) = load_active_model_record_from_disk() {
+                    crate::model_lifecycle::unload_active_model(Some(record.profile_id));
+                } else {
+                    crate::model_lifecycle::unload_active_model(None);
+                }
                 *active_model = None;
-                let _ = std::fs::remove_file(active_model_path());
-                let _ = std::fs::remove_file(legacy_active_model_path());
+                clear_active_model_record();
             }
         }
     }

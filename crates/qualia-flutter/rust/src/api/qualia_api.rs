@@ -10,6 +10,9 @@ use qualia_client_core::state::{
 };
 use qualia_core_db::rpc::TaxRecipientSuite as CoreTaxSuite;
 use std::fmt::Write as _;
+use std::fs::{File, OpenOptions};
+use std::io::Write as IoWrite;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, SyncSender, TrySendError};
 use std::sync::{Mutex, OnceLock};
@@ -32,13 +35,36 @@ static DAEMON_SPAWNED: AtomicBool = AtomicBool::new(false);
 
 struct TelemetryLogBridge {
     senders: Mutex<Vec<SyncSender<String>>>,
+    file: Mutex<Option<File>>,
 }
 
 impl TelemetryLogBridge {
     fn new() -> Self {
         Self {
             senders: Mutex::new(Vec::new()),
+            file: Mutex::new(None),
         }
+    }
+
+    fn open_log_file() -> Option<File> {
+        let mut path: PathBuf = qualia_client_core::state::app_meta_dir();
+        path.push("logs");
+        if std::fs::create_dir_all(&path).is_err() {
+            return None;
+        }
+        path.push("telemetry.log");
+        OpenOptions::new().create(true).append(true).open(path).ok()
+    }
+
+    fn logging_flag_path() -> PathBuf {
+        let mut path: PathBuf = qualia_client_core::state::app_meta_dir();
+        path.push("logs");
+        path.push("logging_enabled.flag");
+        path
+    }
+
+    fn logging_enabled() -> bool {
+        Self::logging_flag_path().is_file()
     }
 
     fn format_record(record: &Record<'_>) -> String {
@@ -89,6 +115,19 @@ impl Log for TelemetryLogBridge {
         }
 
         let message = Self::format_record(record);
+        if let Ok(mut file_guard) = self.file.lock() {
+            if Self::logging_enabled() {
+                if file_guard.is_none() {
+                    *file_guard = Self::open_log_file();
+                }
+                if let Some(file) = file_guard.as_mut() {
+                    let _ = writeln!(file, "{}", message);
+                    let _ = file.flush();
+                }
+            } else if file_guard.is_some() {
+                let _ = file_guard.take();
+            }
+        }
         let mut senders = self.senders.lock().unwrap();
         senders.retain(|tx| match tx.try_send(message.clone()) {
             Ok(_) => true,
@@ -106,6 +145,14 @@ fn telemetry_logger() -> &'static TelemetryLogBridge {
 }
 
 static TELEMETRY_INIT: OnceLock<()> = OnceLock::new();
+
+fn ensure_telemetry_logging() {
+    let logger = telemetry_logger();
+    if TELEMETRY_INIT.set(()).is_ok() {
+        let _ = log::set_logger(logger);
+    }
+    log::set_max_level(LevelFilter::Info);
+}
 
 fn block_on<F: std::future::Future>(f: F) -> F::Output {
     if let Ok(handle) = tokio::runtime::Handle::try_current() {
@@ -179,6 +226,7 @@ pub fn greet(name: String) -> String {
 pub fn init_core() {
     let _ = core::configure_webview2_runtime();
     state::init_app_state();
+    ensure_telemetry_logging();
     let _ = core::seed_bundled_ontologies();
     core::restore_active_model_on_startup();
     load_persisted_directory();
@@ -189,6 +237,7 @@ pub fn init_core() {
 }
 
 pub fn init_telemetry_stream(sink: StreamSink<String>) {
+    ensure_telemetry_logging();
     let logger = telemetry_logger();
     let (tx, rx) = mpsc::sync_channel::<String>(256);
     logger.add_sender(tx);
@@ -202,13 +251,7 @@ pub fn init_telemetry_stream(sink: StreamSink<String>) {
         }
     });
 
-    if TELEMETRY_INIT.set(()).is_ok() {
-        if log::set_logger(logger).is_ok() {
-            log::set_max_level(LevelFilter::Info);
-        }
-    }
-
-    log::set_max_level(LevelFilter::Info);
+    log::info!("Telemetry stream subscriber attached");
 }
 
 // ── Hardware / system ─────────────────────────────────────────────────────────

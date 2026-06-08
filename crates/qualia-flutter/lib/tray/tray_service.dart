@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -15,14 +16,26 @@ class TrayService {
   /// Called when the user picks Settings from the tray menu.
   void Function()? onOpenSettings;
 
+  bool _loggingEnabled = false;
+
   Future<void> init() async {
     await trayManager.setIcon(await _resolveTrayIconPath());
     await _refreshTooltip();
+    _loggingEnabled = await _loadLoggingEnabled();
+    await _applyMenu();
+  }
 
+  Future<void> _applyMenu() async {
     final menu = Menu(
       items: [
         MenuItem(key: 'open', label: 'Open QualiaDB'),
         MenuItem(key: 'settings', label: 'Settings'),
+        MenuItem.separator(),
+        MenuItem.checkbox(
+          key: 'enable_logging',
+          label: 'Enable logging',
+          checked: _loggingEnabled,
+        ),
         MenuItem.separator(),
         MenuItem(key: 'quit', label: 'Quit'),
       ],
@@ -69,6 +82,47 @@ class TrayService {
     return file.path;
   }
 
+  Future<File> _loggingFlagFile() async {
+    final sep = Platform.pathSeparator;
+    late final String base;
+    if (Platform.isWindows) {
+      base = Platform.environment['APPDATA'] ?? r'C:\Users\Default\AppData\Roaming';
+      return File('$base${sep}Qualia${sep}logs${sep}logging_enabled.flag');
+    }
+    if (Platform.isMacOS) {
+      base = Platform.environment['HOME'] ?? '';
+      return File(
+        '$base${sep}Library${sep}Application Support${sep}Qualia${sep}logs${sep}logging_enabled.flag',
+      );
+    }
+    base = Platform.environment['HOME'] ?? '';
+    return File('$base${sep}.config${sep}qualia${sep}logs${sep}logging_enabled.flag');
+  }
+
+  Future<bool> _loadLoggingEnabled() async {
+    try {
+      return await (await _loggingFlagFile()).exists();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _setLoggingEnabled(bool enabled) async {
+    final flag = await _loggingFlagFile();
+    final parent = flag.parent;
+    if (!await parent.exists()) {
+      await parent.create(recursive: true);
+    }
+    if (enabled) {
+      if (!await flag.exists()) {
+        await flag.writeAsString('enabled\n', flush: true);
+      }
+    } else if (await flag.exists()) {
+      await flag.delete();
+    }
+    _loggingEnabled = enabled;
+  }
+
   Future<void> showMainWindow() async {
     await windowManager.show();
     await windowManager.focus();
@@ -87,13 +141,22 @@ class TrayService {
     switch (item.key) {
       case 'open':
         await showMainWindow();
+        return;
       case 'settings':
         onOpenSettings?.call();
         await showMainWindow();
+        return;
+      case 'enable_logging':
+        final next = !(item.checked ?? false);
+        item.checked = next;
+        await _setLoggingEnabled(next);
+        unawaited(_applyMenu());
+        return;
       case 'quit':
         await quitApp();
+        return;
       default:
-        break;
+        return;
     }
   }
 
