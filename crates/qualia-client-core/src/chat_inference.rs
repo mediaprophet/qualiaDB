@@ -181,7 +181,7 @@ pub fn run_chat_inference_full(
 
     let t0 = std::time::Instant::now();
     let output = if let Some(cb) = on_token {
-        let (text, mut prov, tokens) = agent.infer_local_model_streaming(
+        let (text, mut prov, tokens, semantic_quin) = agent.infer_local_model_streaming(
             &packet.augmented_prompt,
             &packet.graph_context_json,
             Some(move |delta: String| {
@@ -195,6 +195,7 @@ pub fn run_chat_inference_full(
         prov.dedup();
         AgentOutput {
             text,
+            semantic_quin,
             provenance_quins: prov,
             tokens_generated: tokens,
             inference_duration_ms: t0.elapsed().as_millis() as u64,

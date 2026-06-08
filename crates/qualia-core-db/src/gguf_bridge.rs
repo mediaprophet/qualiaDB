@@ -211,11 +211,37 @@ fn update_streaming_argmax(
     best_token_id: &mut u32,
     max_logit: &mut f32,
 ) {
+    update_streaming_argmax_sieved(
+        chunk_logits,
+        chunk_rows,
+        chunk_idx,
+        None,
+        best_token_id,
+        max_logit,
+    );
+}
+
+/// Chunked argmax with optional FSM sieve mask (disallowed tokens treated as `-∞`).
+#[inline]
+fn update_streaming_argmax_sieved(
+    chunk_logits: &[f32],
+    chunk_rows: usize,
+    chunk_idx: usize,
+    sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
+    best_token_id: &mut u32,
+    max_logit: &mut f32,
+) {
     let base = chunk_idx * VOCAB_CHUNK_ROWS;
     for (local, &v) in chunk_logits.iter().take(chunk_rows).enumerate() {
-        if v > *max_logit {
-            *max_logit = v;
-            *best_token_id = (base + local) as u32;
+        let abs_id = (base + local) as u32;
+        let score = if sieve_mask.map(|m| m.allows(abs_id)).unwrap_or(true) {
+            v
+        } else {
+            f32::NEG_INFINITY
+        };
+        if score > *max_logit {
+            *max_logit = score;
+            *best_token_id = abs_id;
         }
     }
 }
@@ -896,6 +922,7 @@ impl QTensorEngine {
         emb_dim: usize,
         chunk_logits: &mut [f32],
         max_chunks: u32,
+        sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
     ) -> Option<StreamingArgmaxResult> {
         let info = index.logits_projection_info()?;
         let (n_in, vocab_size) = Self::matmul_dims(info);
@@ -936,10 +963,11 @@ impl QTensorEngine {
             ) {
                 return None;
             }
-            update_streaming_argmax(
+            update_streaming_argmax_sieved(
                 &chunk_logits[..chunk_rows],
                 chunk_rows,
                 chunk_idx,
+                sieve_mask,
                 &mut best_token_id,
                 &mut max_logit,
             );
@@ -1934,6 +1962,53 @@ mod tests {
     }
 
     #[test]
+    fn test_sieved_argmax_masks_disallowed_logits() {
+        let mut logits = [0f32; 8];
+        logits[0] = 1.0;
+        logits[1] = 100.0;
+        let mut mask = crate::neuro_symbolic_sieve::SieveStateMask::EMPTY;
+        mask.slots[0] = crate::neuro_symbolic_sieve::SieveSlot {
+            token_id: 0,
+            lexicon_hash: crate::q_hash("allowed"),
+        };
+        mask.len = 1;
+        let mut best = 99u32;
+        let mut max = f32::NEG_INFINITY;
+        update_streaming_argmax_sieved(&logits, 2, 0, Some(&mask), &mut best, &mut max);
+        assert_eq!(best, 0);
+        assert_eq!(max, 1.0);
+    }
+
+    #[test]
+    fn test_sieve_triple_quin_gemma_if_exists() {
+        let path = Path::new("C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf");
+        if !path.exists() {
+            return;
+        }
+        let file = File::open(path).expect("open");
+        let mmap = unsafe { MmapOptions::new().map(&file).expect("mmap") };
+        let tok = crate::gguf_sharder::GgufTokenizer::from_gguf(&mmap);
+        let mut sieve = crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_gguf_tokenizer(&tok);
+        assert!(sieve.masks_ready(), "sieve masks must resolve from Gemma tokenizer");
+
+        let (sub, pred, obj) = sieve.resolved_token_triple().expect("triple");
+        assert!(sieve.apply_token(sub).is_ok());
+        assert!(sieve.apply_token(pred).is_ok());
+        assert!(sieve.apply_token(obj).is_ok());
+        assert!(sieve.is_complete());
+
+        let quin = sieve.assemble_quin(crate::q_hash("test:context"));
+        assert_ne!(quin.subject, 0);
+        assert_ne!(quin.predicate, 0);
+        assert_ne!(quin.object, 0);
+        assert_eq!(quin.parity, quin.subject ^ quin.predicate ^ quin.object ^ quin.context);
+        println!(
+            "sieve quin sub={:#x} pred={:#x} obj={:#x} tokens=({}, {}, {})",
+            quin.subject, quin.predicate, quin.object, sub, pred, obj
+        );
+    }
+
+    #[test]
     fn test_chunked_output_argmax_gemma_if_exists() {
         let path = Path::new("C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf");
         if !path.exists() {
@@ -1953,7 +2028,7 @@ mod tests {
         let mut chunk = [0f32; VOCAB_CHUNK_ROWS];
         let t0 = std::time::Instant::now();
         let result = engine
-            .dispatch_output_argmax_chunked(&idx, &hidden[..emb_dim], emb_dim, &mut chunk, 2)
+            .dispatch_output_argmax_chunked(&idx, &hidden[..emb_dim], emb_dim, &mut chunk, 2, None)
             .expect("chunked argmax");
         let elapsed = t0.elapsed();
         assert!(result.max_logit > f32::NEG_INFINITY);

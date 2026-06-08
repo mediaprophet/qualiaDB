@@ -14,6 +14,7 @@ pub mod q42_reader;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_lex;
 pub mod llm_agent;
+pub mod neuro_symbolic_sieve;
 pub mod profiles;
 pub mod solid_ldp;
 pub mod wasm_bridge;
