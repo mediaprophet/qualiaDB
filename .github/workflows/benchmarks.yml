@@ -93,7 +93,7 @@ jobs:
 
       # ── Qualia WASM (core-db) ─────────────────────────────────────────────────
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: cargo install wasm-pack --locked --version 0.13.1
 
       - name: Build Qualia WASM for comparative harness
         run: |
@@ -207,7 +207,7 @@ jobs:
 
       - name: Install wasm-pack and build Qualia WASM
         run: |
-          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          cargo install wasm-pack --locked --version 0.13.1
           rustup target add wasm32-unknown-unknown
           wasm-pack build crates/qualia-core-db \
             --target web \
