@@ -168,6 +168,7 @@ pub struct NeuroSymbolicSieve {
 
 impl NeuroSymbolicSieve {
     /// Build masks from a memory-mapped `.q42.lex` view and GGUF tokenizer (load-time only).
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn from_lex_and_tokenizer(
         lex: &crate::q42_lex::Q42LexMmap<'_>,
         tok: &crate::gguf_sharder::GgufTokenizer,
@@ -196,6 +197,7 @@ impl NeuroSymbolicSieve {
     }
 
     /// Tokenizer-only fallback when no `.q42.lex` sidecar is loaded (dev / tests).
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn from_gguf_tokenizer(tok: &crate::gguf_sharder::GgufTokenizer) -> Self {
         let mut sieve = Self::empty_fsm();
         const SUBJECTS: &[(&str, u64)] = &[
@@ -323,6 +325,7 @@ impl NeuroSymbolicSieve {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn fill_mask_literal(
     mask: &mut SieveStateMask,
     tok: &crate::gguf_sharder::GgufTokenizer,
@@ -336,6 +339,7 @@ fn fill_mask_literal(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn fill_mask_from_lex(
     mask: &mut SieveStateMask,
     lex: &crate::q42_lex::Q42LexMmap<'_>,

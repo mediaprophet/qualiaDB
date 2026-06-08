@@ -10,6 +10,7 @@ use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, WebizenVerdict}
 use crate::n3_compiler::{compile_rules_with_shacl_gate, default_observation_shape, N3OutputMode};
 use crate::n3_parser::{N3Event, N3Parser};
 use crate::shacl_compiler::{CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::wal::{commit_semantic_mutation, WalHandoffResult, WriteAheadLog};
 use crate::webizen::{SlgArena, SlgOpcode, VmFrame};
 use crate::{q_hash, QualiaQuin};
