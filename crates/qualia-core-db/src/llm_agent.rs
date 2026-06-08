@@ -406,13 +406,56 @@ impl LocalLlmAgent {
                     .unwrap_or(4096);
 
                 // Stack buffers — zero-heap path (512MB floor safe).
+                use crate::gguf_bridge::{PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS};
+
                 const MAX_EMB_DIM: usize = 8192;
                 const MAX_FFN_DIM: usize = 10240;
                 let mut emb_buf = [0f32; MAX_EMB_DIM];
                 let mut scratch_a = [0f32; MAX_FFN_DIM];
                 let mut scratch_b = [0f32; MAX_FFN_DIM];
+                let mut prefill_chunk = [0f32; PREFILL_CHUNK_STACK_FLOATS];
                 let emb_dim = emb_dim.min(MAX_EMB_DIM);
                 engine.reset_kv_cache();
+
+                // Chunked prefill: populate KV for prompt tokens [0, prompt_len-1).
+                let prompt_len = ctx.len();
+                if prompt_len > 1 {
+                    if let Some(idx) = tensor_idx.as_ref() {
+                        let prefill_tokens = prompt_len - 1;
+                        let chunk_cap = (PREFILL_CHUNK_STACK_FLOATS / emb_dim)
+                            .min(PREFILL_CHUNK_SIZE)
+                            .max(1);
+                        let mut pos = 0usize;
+                        while pos < prefill_tokens {
+                            let n = (prefill_tokens - pos).min(chunk_cap);
+                            let batch_elems = n * emb_dim;
+                            {
+                                let mmap = match engine.gguf_mmap.as_deref() {
+                                    Some(m) => m,
+                                    None => break,
+                                };
+                                for t in 0..n {
+                                    let _ = idx.dequantize_token_embedding_into(
+                                        mmap,
+                                        ctx[pos + t],
+                                        &mut prefill_chunk[t * emb_dim..(t + 1) * emb_dim],
+                                    );
+                                }
+                            }
+                            let _ = engine.dispatch_prefill_chunk(
+                                idx,
+                                &mut prefill_chunk[..batch_elems],
+                                emb_dim,
+                                n as u32,
+                                pos as u32,
+                                &mut scratch_a,
+                                &mut scratch_b,
+                                TEST_TRANSFORMER_LAYER_CAP,
+                            );
+                            pos += n;
+                        }
+                    }
+                }
 
                 let mut out_ids: Vec<u32> = Vec::new();
                 let mut streamed_len = 0usize;

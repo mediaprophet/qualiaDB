@@ -16,7 +16,8 @@ struct AttentionParams {
     weight_byte_len: u32,
     proj_kind: u32, // 0=Q+attn 1=K 2=V
     rope_theta_base: f32,
-    _pad: u32,
+    num_tokens_in_batch: u32, // 1 during decode; >1 during chunked prefill
+    batch_start_token_idx: u32,
 }
 
 @group(0) @binding(0) var<storage, read> hidden: array<f32>;
@@ -153,10 +154,11 @@ fn dequant_weight(row: u32, col: u32) -> f32 {
     return 0.0;
 }
 
-fn gemm_row(row: u32) -> f32 {
+fn gemm_row(row: u32, token_in_batch: u32) -> f32 {
+    let h_base = token_in_batch * params.n_embd;
     var sum = 0.0;
     for (var j = 0u; j < params.n_embd; j = j + 1u) {
-        sum = sum + dequant_weight(row, j) * hidden[j];
+        sum = sum + dequant_weight(row, j) * hidden[h_base + j];
     }
     return sum;
 }
@@ -184,8 +186,9 @@ fn v_cache_idx(slot: u32, kv_head: u32, dim: u32) -> u32 {
 fn online_softmax_attention(qh: u32, kv_head: u32) {
     var q: array<f32, MAX_HEAD_DIM>;
     let row_base = qh * params.head_dim;
+    let token_in_batch = 0u;
     for (var d = 0u; d < params.head_dim; d = d + 1u) {
-        q[d] = gemm_row(row_base + d);
+        q[d] = gemm_row(row_base + d, token_in_batch);
     }
     let pairs = params.head_dim / 2u;
     for (var p = 0u; p < pairs; p = p + 1u) {
@@ -227,21 +230,21 @@ fn online_softmax_attention(qh: u32, kv_head: u32) {
     }
 }
 
-fn write_kv_head(kv_head: u32, apply_rope_k: bool) {
+fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: bool) {
     var vec: array<f32, MAX_HEAD_DIM>;
     let row_base = kv_head * params.head_dim;
     for (var d = 0u; d < params.head_dim; d = d + 1u) {
-        vec[d] = gemm_row(row_base + d);
+        vec[d] = gemm_row(row_base + d, token_in_batch);
     }
     if apply_rope_k {
         let pairs = params.head_dim / 2u;
         for (var p = 0u; p < pairs; p = p + 1u) {
-            let rot = rotate_rope_pair(vec[p * 2u], vec[p * 2u + 1u], params.token_idx, p);
+            let rot = rotate_rope_pair(vec[p * 2u], vec[p * 2u + 1u], abs_pos, p);
             vec[p * 2u] = rot.x;
             vec[p * 2u + 1u] = rot.y;
         }
     }
-    let slot = params.token_idx % params.max_context;
+    let slot = abs_pos % params.max_context;
     for (var d = 0u; d < params.head_dim; d = d + 1u) {
         if params.proj_kind == 1u {
             kv_cache[k_cache_idx(slot, kv_head, d)] = vec[d];
@@ -251,15 +254,19 @@ fn write_kv_head(kv_head: u32, apply_rope_k: bool) {
     }
 }
 
-// One workgroup per Q head (proj_kind=0) or KV head (proj_kind=1|2).
+// Decode: one workgroup per Q head (proj_kind=0) or KV head (proj_kind=1|2).
+// Prefill: one workgroup per (token_in_batch, kv_head) for batched K/V writes.
 @compute @workgroup_size(1)
 fn main(@builtin(workgroup_id) wg_id: vec3<u32>) {
     if params.proj_kind == 1u || params.proj_kind == 2u {
-        let kv_head = wg_id.x;
-        if kv_head >= params.n_kv_head {
+        let pair = wg_id.x;
+        let token_in_batch = pair / params.n_kv_head;
+        let kv_head = pair % params.n_kv_head;
+        if token_in_batch >= params.num_tokens_in_batch || kv_head >= params.n_kv_head {
             return;
         }
-        write_kv_head(kv_head, params.proj_kind == 1u);
+        let abs_pos = params.batch_start_token_idx + token_in_batch;
+        write_kv_head(kv_head, token_in_batch, abs_pos, params.proj_kind == 1u);
         return;
     }
     if params.proj_kind == 0u {

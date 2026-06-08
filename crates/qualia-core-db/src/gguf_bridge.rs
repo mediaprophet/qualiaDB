@@ -98,7 +98,8 @@ struct AttentionGpuParams {
     weight_byte_len: u32,
     proj_kind: u32,
     rope_theta_base: f32,
-    _pad: u32,
+    num_tokens_in_batch: u32,
+    batch_start_token_idx: u32,
 }
 
 #[inline]
@@ -176,6 +177,12 @@ impl KvCacheLayout {
 const MAX_STACK_GEMM_DIM: usize = 10240;
 const MAX_STACK_GEMM_OUT: usize = MAX_STACK_GEMM_DIM;
 const MAX_STACK_GEMM_IN: usize = MAX_STACK_GEMM_DIM;
+/// Prompt tokens per prefill GPU batch (stack + staging footprint = `emb_dim ×` this).
+pub const PREFILL_CHUNK_SIZE: usize = 64;
+/// Max stacked embedding floats in a prefill chunk (`MAX_STACK_GEMM_IN × 64`).
+pub const MAX_PREFILL_BATCH_FLOATS: usize = MAX_STACK_GEMM_IN * PREFILL_CHUNK_SIZE;
+/// `llm_agent` stack chunk buffer (Gemma 2560 × 64).
+pub const PREFILL_CHUNK_STACK_FLOATS: usize = 2560 * PREFILL_CHUNK_SIZE;
 /// wgpu default max buffer size on many drivers (256 MiB).
 const MAX_WGPU_WEIGHT_STAGING: usize = 64 * 1024 * 1024;
 /// Vocabulary projection rows per chunked logits sweep (L2-friendly).
@@ -275,6 +282,7 @@ pub struct QTensorEngine {
     gemm_params_buf: Option<wgpu::Buffer>,
     gemm_output_staging: Option<wgpu::Buffer>,
     gemm_max_out_dim: u32,
+    gemm_max_input_floats: usize,
     /// Static KV ring-buffer (allocated once at `load_gguf`).
     kv_layout: Option<KvCacheLayout>,
     kv_cache_gpu: Option<wgpu::Buffer>,
@@ -369,6 +377,7 @@ impl QTensorEngine {
             gemm_params_buf: None,
             gemm_output_staging: None,
             gemm_max_out_dim: MAX_STACK_GEMM_OUT as u32,
+            gemm_max_input_floats: 0,
             kv_layout: None,
             kv_cache_gpu: None,
             kv_cache_cpu: None,
@@ -421,11 +430,15 @@ impl QTensorEngine {
     }
 
     fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
-        if self.gemm_weight_buf.is_some() && max_weight_bytes <= self.max_tensor_bytes {
+        let need_input = MAX_STACK_GEMM_IN.max(MAX_PREFILL_BATCH_FLOATS);
+        if self.gemm_weight_buf.is_some()
+            && max_weight_bytes <= self.max_tensor_bytes
+            && self.gemm_max_input_floats >= need_input
+        {
             return;
         }
         let w_bytes = max_weight_bytes.max(4) as wgpu::BufferAddress;
-        let in_bytes = (MAX_STACK_GEMM_IN * 4) as wgpu::BufferAddress;
+        let in_bytes = (need_input * 4) as wgpu::BufferAddress;
         let out_bytes = (max_out_dim as usize * 4).max(4) as wgpu::BufferAddress;
         self.gemm_input_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmInput"),
@@ -458,6 +471,7 @@ impl QTensorEngine {
             mapped_at_creation: false,
         }));
         self.gemm_max_out_dim = max_out_dim;
+        self.gemm_max_input_floats = need_input;
         self.max_tensor_bytes = max_weight_bytes;
     }
 
@@ -959,6 +973,8 @@ impl QTensorEngine {
         info: &GgufTensorInfo,
         raw_len: usize,
         proj_kind: u32,
+        num_tokens_in_batch: u32,
+        batch_start_token_idx: u32,
     ) -> AttentionGpuParams {
         AttentionGpuParams {
             n_embd: h.n_embd,
@@ -976,7 +992,8 @@ impl QTensorEngine {
             weight_byte_len: raw_len as u32,
             proj_kind,
             rope_theta_base: 10_000.0,
-            _pad: 0,
+            num_tokens_in_batch,
+            batch_start_token_idx,
         }
     }
 
@@ -985,6 +1002,8 @@ impl QTensorEngine {
         &self,
         hidden: &[f32],
         n_embd: usize,
+        num_tokens_in_batch: u32,
+        batch_start_token_idx: u32,
         layout: &KvCacheLayout,
         layer: u32,
         token_idx: u32,
@@ -998,7 +1017,10 @@ impl QTensorEngine {
         if !ggml_gpu_quant_supported(info.ggml_type) {
             return false;
         }
-        if n_embd > hidden.len()
+        let batch = num_tokens_in_batch.max(1) as usize;
+        let hidden_elems = n_embd.checked_mul(batch).unwrap_or(0);
+        if hidden_elems > hidden.len()
+            || hidden_elems > self.gemm_max_input_floats
             || raw_weights.len() > self.max_tensor_bytes
             || self.gemm_input_buf.is_none()
             || self.kv_cache_gpu.is_none()
@@ -1007,7 +1029,17 @@ impl QTensorEngine {
             return false;
         }
 
-        let params = Self::attention_gpu_params(h, layout, layer, token_idx, info, raw_weights.len(), proj_kind);
+        let params = Self::attention_gpu_params(
+            h,
+            layout,
+            layer,
+            token_idx,
+            info,
+            raw_weights.len(),
+            proj_kind,
+            num_tokens_in_batch.max(1),
+            batch_start_token_idx,
+        );
         let input_buf = self.gemm_input_buf.as_ref().unwrap();
         let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
         let output_buf = self.gemm_output_buf.as_ref().unwrap();
@@ -1015,7 +1047,7 @@ impl QTensorEngine {
         let kv_buf = self.kv_cache_gpu.as_ref().unwrap();
         let staging = self.gemm_output_staging.as_ref().unwrap();
 
-        self.queue.write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..n_embd]));
+        self.queue.write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..hidden_elems]));
         self.write_weight_words(raw_weights, self.max_tensor_bytes);
         self.queue.write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
@@ -1132,18 +1164,44 @@ impl QTensorEngine {
         let n_embd = h.n_embd as usize;
 
         if !self.dispatch_attention_pass(
-            hidden, n_embd, &layout, layer, token_idx, &h, k_info, k_raw, 1, n_kv as u32, None,
-        ) {
-            return None;
-        }
-        if !self.dispatch_attention_pass(
-            hidden, n_embd, &layout, layer, token_idx, &h, v_info, v_raw, 2, n_kv as u32, None,
+            hidden,
+            n_embd,
+            1,
+            token_idx,
+            &layout,
+            layer,
+            token_idx,
+            &h,
+            k_info,
+            k_raw,
+            1,
+            n_kv as u32,
+            None,
         ) {
             return None;
         }
         if !self.dispatch_attention_pass(
             hidden,
             n_embd,
+            1,
+            token_idx,
+            &layout,
+            layer,
+            token_idx,
+            &h,
+            v_info,
+            v_raw,
+            2,
+            n_kv as u32,
+            None,
+        ) {
+            return None;
+        }
+        if !self.dispatch_attention_pass(
+            hidden,
+            n_embd,
+            1,
+            token_idx,
             &layout,
             layer,
             token_idx,
@@ -1175,6 +1233,258 @@ impl QTensorEngine {
         let n = q_dim.min(emb_dim);
         scratch_a[..n].copy_from_slice(&scratch_b[..n]);
         Some(n)
+    }
+
+    /// Q+attn, output projection, and FFN for one token (K/V already in arena).
+    fn dispatch_attention_q_ffn_token(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        layer: u32,
+        token_idx: u32,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        tensors: &crate::gguf_sharder::LayerTensors,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+    ) -> bool {
+        let layout = match self.kv_layout {
+            Some(l) => l,
+            None => return false,
+        };
+        let q_info = match tensors.attn_q.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let h = index.hyperparams;
+        let n_head = h.n_head as usize;
+        let head_dim = h.head_dim() as usize;
+        let q_dim = n_head * head_dim;
+        if q_dim > scratch_a.len() || q_dim > scratch_b.len() || emb_dim < h.n_embd as usize {
+            return false;
+        }
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return false,
+        };
+        let q_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        let n_embd = h.n_embd as usize;
+        if !self.dispatch_attention_pass(
+            &hidden[..emb_dim],
+            n_embd,
+            1,
+            token_idx,
+            &layout,
+            layer,
+            token_idx,
+            &h,
+            q_info,
+            q_raw,
+            0,
+            n_head as u32,
+            Some(&mut scratch_b[..q_dim]),
+        ) {
+            return false;
+        }
+        let mut attn_ok = false;
+        if let Some(out_info) = tensors.attn_output.as_ref() {
+            let (o_in, o_out) = Self::matmul_dims(out_info);
+            if o_in <= q_dim
+                && self.dispatch_gemm_into(
+                    index,
+                    out_info,
+                    &scratch_b[..o_in],
+                    &mut scratch_a[..o_out],
+                    o_in,
+                    o_out,
+                )
+            {
+                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..o_out], emb_dim.min(o_out));
+                attn_ok = true;
+            }
+        } else {
+            let n = q_dim.min(emb_dim);
+            add_residual_inplace(&mut hidden[..emb_dim], &scratch_b[..n], n);
+            attn_ok = true;
+        }
+        if !attn_ok {
+            return false;
+        }
+        if let Some(info) = tensors.ffn_gate.as_ref() {
+            let (n_in, n_out) = Self::matmul_dims(info);
+            if n_in <= emb_dim
+                && self.dispatch_gemm_into(index, info, &hidden[..n_in], scratch_a, n_in, n_out)
+            {
+                relu_inplace(&mut scratch_a[..n_out], n_out);
+                if let Some(up) = tensors.ffn_up.as_ref() {
+                    let (up_in, up_out) = Self::matmul_dims(up);
+                    if up_in <= n_out
+                        && self.dispatch_gemm_into(index, up, &scratch_a[..up_in], scratch_b, up_in, up_out)
+                    {
+                        if let Some(down) = tensors.ffn_down.as_ref() {
+                            let (dn_in, dn_out) = Self::matmul_dims(down);
+                            if dn_in <= up_out
+                                && self.dispatch_gemm_into(
+                                    index, down, &scratch_b[..dn_in], scratch_a, dn_in, dn_out,
+                                )
+                            {
+                                add_residual_inplace(
+                                    &mut hidden[..emb_dim],
+                                    &scratch_a[..dn_out],
+                                    emb_dim.min(dn_out),
+                                );
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        true
+    }
+
+    /// One transformer layer for a batched prefill chunk: batched K/V then per-token Q+FFN.
+    fn dispatch_prefill_layer_batch(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        layer: u32,
+        batch_hidden: &mut [f32],
+        emb_dim: usize,
+        n_tokens: u32,
+        batch_start_token_idx: u32,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+    ) -> bool {
+        if n_tokens == 0 {
+            return false;
+        }
+        let layout = match self.kv_layout {
+            Some(l) => l,
+            None => return false,
+        };
+        let tensors = index.get_layer_tensors(layer);
+        let k_info = match tensors.attn_k.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let v_info = match tensors.attn_v.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        if tensors.attn_q.is_none() {
+            return false;
+        }
+        let h = index.hyperparams;
+        let n_kv = h.effective_n_kv_head();
+        let n_embd = h.n_embd as usize;
+        let batch_elems = n_embd * n_tokens as usize;
+        if batch_elems > batch_hidden.len() {
+            return false;
+        }
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return false,
+        };
+        let k_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        let v_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        let n_kv_wg = n_tokens.saturating_mul(n_kv);
+        if !self.dispatch_attention_pass(
+            &batch_hidden[..batch_elems],
+            n_embd,
+            n_tokens,
+            batch_start_token_idx,
+            &layout,
+            layer,
+            batch_start_token_idx,
+            &h,
+            k_info,
+            k_raw,
+            1,
+            n_kv_wg,
+            None,
+        ) {
+            return false;
+        }
+        if !self.dispatch_attention_pass(
+            &batch_hidden[..batch_elems],
+            n_embd,
+            n_tokens,
+            batch_start_token_idx,
+            &layout,
+            layer,
+            batch_start_token_idx,
+            &h,
+            v_info,
+            v_raw,
+            2,
+            n_kv_wg,
+            None,
+        ) {
+            return false;
+        }
+        for t in 0..n_tokens {
+            let abs = batch_start_token_idx + t;
+            let off = t as usize * emb_dim;
+            if !self.dispatch_attention_q_ffn_token(
+                index,
+                layer,
+                abs,
+                &mut batch_hidden[off..off + emb_dim],
+                emb_dim,
+                &tensors,
+                scratch_a,
+                scratch_b,
+            ) {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Chunked prefill: populate KV arena for `n_tokens` prompt positions starting at `batch_start`.
+    pub fn dispatch_prefill_chunk(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        batch_hidden: &mut [f32],
+        emb_dim: usize,
+        n_tokens: u32,
+        batch_start_token_idx: u32,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+        max_layers: u32,
+    ) -> bool {
+        let n_layer = index.hyperparams.n_layer;
+        if n_layer == 0 || n_tokens == 0 {
+            return false;
+        }
+        let limit = if max_layers == 0 {
+            n_layer
+        } else {
+            max_layers.min(n_layer)
+        };
+        for layer in 0..limit {
+            if !self.dispatch_prefill_layer_batch(
+                index,
+                layer,
+                batch_hidden,
+                emb_dim,
+                n_tokens,
+                batch_start_token_idx,
+                scratch_a,
+                scratch_b,
+            ) {
+                return false;
+            }
+        }
+        true
     }
 
     /// One transformer block using real mmap tensor offsets (stack buffers only).
@@ -1532,6 +1842,94 @@ mod tests {
             hidden[0],
             t0.elapsed(),
             idx.hyperparams.effective_n_kv_head(),
+        );
+    }
+
+    #[test]
+    fn test_prefill_multitoken_gemma_if_exists() {
+        let path = Path::new("C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf");
+        if !path.exists() {
+            return;
+        }
+        let file = File::open(path).expect("open");
+        let mmap = unsafe { MmapOptions::new().map(&file).expect("mmap") };
+        let idx = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        let tok = crate::gguf_sharder::GgufTokenizer::from_gguf(&mmap);
+        let token_ids = tok.encode("Hello world");
+        if token_ids.len() < 2 {
+            println!("prompt too short for prefill test");
+            return;
+        }
+
+        let emb_dim = idx.emb_dim();
+        let mut engine = QTensorEngine::new();
+        engine.load_gguf(path.to_str().unwrap());
+        engine.reset_kv_cache();
+
+        let mut scratch_a = [0f32; 10240];
+        let mut scratch_b = [0f32; 10240];
+        let mut prefill_chunk = [0f32; PREFILL_CHUNK_STACK_FLOATS];
+        let mut hidden_no_prefill = [0f32; 8192];
+        let mut hidden_with_prefill = [0f32; 8192];
+
+        let last = token_ids.len() - 1;
+        let _ = idx.dequantize_token_embedding_into(
+            &mmap,
+            token_ids[last],
+            &mut hidden_no_prefill[..emb_dim],
+        );
+        let _ = idx.dequantize_token_embedding_into(
+            &mmap,
+            token_ids[last],
+            &mut hidden_with_prefill[..emb_dim],
+        );
+
+        // Token 0 only prefill (layer cap 2 in tests).
+        let _ = idx.dequantize_token_embedding_into(
+            &mmap,
+            token_ids[0],
+            &mut prefill_chunk[..emb_dim],
+        );
+        assert!(engine.dispatch_prefill_chunk(
+            &idx,
+            &mut prefill_chunk[..emb_dim],
+            emb_dim,
+            1,
+            0,
+            &mut scratch_a,
+            &mut scratch_b,
+            2,
+        ));
+
+        assert!(engine.dispatch_transformer_forward(
+            &idx,
+            &mut hidden_no_prefill[..emb_dim],
+            emb_dim,
+            &mut scratch_a,
+            &mut scratch_b,
+            last as u32,
+            2,
+        ) > 0);
+        assert!(engine.dispatch_transformer_forward(
+            &idx,
+            &mut hidden_with_prefill[..emb_dim],
+            emb_dim,
+            &mut scratch_a,
+            &mut scratch_b,
+            last as u32,
+            2,
+        ) > 0);
+
+        assert_ne!(
+            hidden_no_prefill[0], hidden_with_prefill[0],
+            "prefill must change attention context for multi-token prompts"
+        );
+
+        println!(
+            "prefill multitoken last={} hidden0 no_pf={} with_pf={}",
+            last,
+            hidden_no_prefill[0],
+            hidden_with_prefill[0],
         );
     }
 
