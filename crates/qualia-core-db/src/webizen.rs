@@ -1214,6 +1214,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_async_retrieve_logic() {
         // Initialize the DHAT profiler to ensure zero heap allocations
         let _profiler = dhat::Profiler::builder().testing().build();

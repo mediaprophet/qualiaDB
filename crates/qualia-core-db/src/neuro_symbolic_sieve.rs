@@ -49,7 +49,7 @@ impl SieveStateMask {
         None
     }
 
-    fn push(&mut self, token_id: u32, lexicon_hash: u64) {
+    pub(crate) fn push(&mut self, token_id: u32, lexicon_hash: u64) {
         let n = self.len as usize;
         if n >= MAX_SIEVE_ALLOW {
             return;
@@ -80,7 +80,75 @@ pub enum SieveError {
     AlreadyComplete,
 }
 
-/// Neuro-symbolic grammar sieve (masks built once from tokenizer — cold path may alloc).
+/// Stack-only IRI hash lists for dynamic `.q42.lex` mask population (cold path).
+#[derive(Debug, Clone, Copy)]
+pub struct SieveLexSpec {
+    pub subjects: [u64; MAX_SIEVE_ALLOW],
+    pub subjects_len: u8,
+    pub predicates: [u64; MAX_SIEVE_ALLOW],
+    pub predicates_len: u8,
+    pub objects: [u64; MAX_SIEVE_ALLOW],
+    pub objects_len: u8,
+}
+
+impl SieveLexSpec {
+    pub const EMPTY: Self = Self {
+        subjects: [0; MAX_SIEVE_ALLOW],
+        subjects_len: 0,
+        predicates: [0; MAX_SIEVE_ALLOW],
+        predicates_len: 0,
+        objects: [0; MAX_SIEVE_ALLOW],
+        objects_len: 0,
+    };
+
+    pub fn push_subject(&mut self, hash: u64) {
+        let n = self.subjects_len as usize;
+        if n < MAX_SIEVE_ALLOW {
+            self.subjects[n] = hash;
+            self.subjects_len += 1;
+        }
+    }
+
+    pub fn push_predicate(&mut self, hash: u64) {
+        let n = self.predicates_len as usize;
+        if n < MAX_SIEVE_ALLOW {
+            self.predicates[n] = hash;
+            self.predicates_len += 1;
+        }
+    }
+
+    pub fn push_object(&mut self, hash: u64) {
+        let n = self.objects_len as usize;
+        if n < MAX_SIEVE_ALLOW {
+            self.objects[n] = hash;
+            self.objects_len += 1;
+        }
+    }
+
+    /// Default graph-mutation triple for clinical / conduct intents.
+    pub fn graph_mutation_default() -> Self {
+        let mut s = Self::EMPTY;
+        s.push_subject(q_hash("schema:Patient"));
+        s.push_subject(q_hash("q42:subject"));
+        s.push_predicate(q_hash("snomed:hasFever"));
+        s.push_predicate(q_hash("q42:conductViolation"));
+        s.push_predicate(q_hash("q42:hasGuardian"));
+        s.push_object(q_hash("xsd:true"));
+        s.push_object(q_hash("q42:entity"));
+        s
+    }
+
+    /// Fever observation triple used by the e2e WAL pipeline test.
+    pub fn fever_observation() -> Self {
+        let mut s = Self::EMPTY;
+        s.push_subject(q_hash("Patient"));
+        s.push_predicate(q_hash("fever"));
+        s.push_object(q_hash("True"));
+        s
+    }
+}
+
+/// Neuro-symbolic grammar sieve (masks built once from tokenizer + lex — cold path may alloc).
 #[derive(Debug, Clone)]
 pub struct NeuroSymbolicSieve {
     masks: [SieveStateMask; 3],
@@ -93,18 +161,27 @@ pub struct NeuroSymbolicSieve {
 }
 
 impl NeuroSymbolicSieve {
-    /// Build hardcoded graph-property masks from a GGUF tokenizer (load-time / thread-start only).
-    pub fn from_gguf_tokenizer(tok: &crate::gguf_sharder::GgufTokenizer) -> Self {
-        let mut sieve = Self {
-            masks: [SieveStateMask::EMPTY; 3],
-            state: SieveState::ExpectSubject,
-            subject_hash: 0,
-            predicate_hash: 0,
-            object_hash: 0,
-            emitted_tokens: [0; 3],
-            emitted_len: 0,
-        };
+    /// Build masks from a memory-mapped `.q42.lex` view and GGUF tokenizer (load-time only).
+    pub fn from_lex_and_tokenizer(
+        lex: &crate::q42_lex::Q42LexMmap<'_>,
+        tok: &crate::gguf_sharder::GgufTokenizer,
+        spec: &SieveLexSpec,
+    ) -> Self {
+        let mut sieve = Self::empty_fsm();
+        fill_mask_from_lex(&mut sieve.masks[0], lex, tok, &spec.subjects[..spec.subjects_len as usize]);
+        fill_mask_from_lex(
+            &mut sieve.masks[1],
+            lex,
+            tok,
+            &spec.predicates[..spec.predicates_len as usize],
+        );
+        fill_mask_from_lex(&mut sieve.masks[2], lex, tok, &spec.objects[..spec.objects_len as usize]);
+        sieve
+    }
 
+    /// Tokenizer-only fallback when no `.q42.lex` sidecar is loaded (dev / tests).
+    pub fn from_gguf_tokenizer(tok: &crate::gguf_sharder::GgufTokenizer) -> Self {
+        let mut sieve = Self::empty_fsm();
         const SUBJECTS: &[(&str, u64)] = &[
             ("Webizen", q_hash("q42:webizenAgent")),
             ("Agent", q_hash("q42:agent")),
@@ -121,11 +198,22 @@ impl NeuroSymbolicSieve {
             ("Entity", q_hash("q42:entity")),
             ("Object", q_hash("q42:object")),
         ];
-
-        fill_mask(&mut sieve.masks[0], tok, SUBJECTS);
-        fill_mask(&mut sieve.masks[1], tok, PREDICATES);
-        fill_mask(&mut sieve.masks[2], tok, OBJECTS);
+        fill_mask_literal(&mut sieve.masks[0], tok, SUBJECTS);
+        fill_mask_literal(&mut sieve.masks[1], tok, PREDICATES);
+        fill_mask_literal(&mut sieve.masks[2], tok, OBJECTS);
         sieve
+    }
+
+    pub(crate) fn empty_fsm() -> Self {
+        Self {
+            masks: [SieveStateMask::EMPTY; 3],
+            state: SieveState::ExpectSubject,
+            subject_hash: 0,
+            predicate_hash: 0,
+            object_hash: 0,
+            emitted_tokens: [0; 3],
+            emitted_len: 0,
+        }
     }
 
     #[inline]
@@ -136,6 +224,11 @@ impl NeuroSymbolicSieve {
     #[inline]
     pub fn is_complete(&self) -> bool {
         self.state == SieveState::Complete
+    }
+
+    #[inline]
+    pub fn emitted_len(&self) -> u8 {
+        self.emitted_len
     }
 
     #[inline]
@@ -212,7 +305,7 @@ impl NeuroSymbolicSieve {
     }
 }
 
-fn fill_mask(mask: &mut SieveStateMask, tok: &crate::gguf_sharder::GgufTokenizer, entries: &[(&str, u64)]) {
+fn fill_mask_literal(mask: &mut SieveStateMask, tok: &crate::gguf_sharder::GgufTokenizer, entries: &[(&str, u64)]) {
     for &(text, hash) in entries {
         let ids = tok.encode(text);
         if let Some(&id) = ids.first() {
@@ -221,9 +314,51 @@ fn fill_mask(mask: &mut SieveStateMask, tok: &crate::gguf_sharder::GgufTokenizer
     }
 }
 
+fn fill_mask_from_lex(
+    mask: &mut SieveStateMask,
+    lex: &crate::q42_lex::Q42LexMmap<'_>,
+    tok: &crate::gguf_sharder::GgufTokenizer,
+    hashes: &[u64],
+) {
+    for &hash in hashes {
+        if let Some(text) = lex.lookup_hash(hash) {
+            let ids = tok.encode(text);
+            if let Some(&id) = ids.first() {
+                mask.push(id, hash);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn write_lex_bytes(entries: &[(u64, &str)]) -> Vec<u8> {
+        let mut sorted: Vec<(u64, &str)> = entries.to_vec();
+        sorted.sort_unstable_by_key(|(h, _)| *h);
+        let entry_count = sorted.len() as u64;
+        let strings_offset = 32 + entry_count * 16;
+        let mut blob = Vec::new();
+        let mut index = Vec::new();
+        for (hash, text) in &sorted {
+            let str_off = blob.len() as u64;
+            let b = text.as_bytes();
+            let len = b.len().min(65535) as u16;
+            blob.extend_from_slice(&len.to_le_bytes());
+            blob.extend_from_slice(&b[..len as usize]);
+            index.extend_from_slice(&hash.to_le_bytes());
+            index.extend_from_slice(&str_off.to_le_bytes());
+        }
+        let mut out = Vec::new();
+        out.extend_from_slice(b"Q42LEX\0\0");
+        out.extend_from_slice(&entry_count.to_le_bytes());
+        out.extend_from_slice(&strings_offset.to_le_bytes());
+        out.extend_from_slice(&1u64.to_le_bytes());
+        out.extend_from_slice(&index);
+        out.extend_from_slice(&blob);
+        out
+    }
 
     #[test]
     fn sieve_mask_allows_linear_scan() {
@@ -237,15 +372,7 @@ mod tests {
 
     #[test]
     fn sieve_fsm_transitions_to_complete() {
-        let mut s = NeuroSymbolicSieve {
-            masks: [SieveStateMask::EMPTY; 3],
-            state: SieveState::ExpectSubject,
-            subject_hash: 0,
-            predicate_hash: 0,
-            object_hash: 0,
-            emitted_tokens: [0; 3],
-            emitted_len: 0,
-        };
+        let mut s = NeuroSymbolicSieve::empty_fsm();
         s.masks[0].push(10, q_hash("sub"));
         s.masks[1].push(20, q_hash("pred"));
         s.masks[2].push(30, q_hash("obj"));
@@ -257,5 +384,18 @@ mod tests {
         assert_eq!(q.subject, q_hash("sub"));
         assert_eq!(q.predicate, q_hash("pred"));
         assert_eq!(q.object, q_hash("obj"));
+    }
+
+    #[test]
+    fn sieve_builds_masks_from_mmap_lex() {
+        let h_sub = q_hash("Patient");
+        let h_pred = q_hash("fever");
+        let h_obj = q_hash("True");
+        let bytes = write_lex_bytes(&[(h_sub, "Patient"), (h_pred, "fever"), (h_obj, "True")]);
+        let lex = crate::q42_lex::Q42LexMmap::from_bytes(&bytes).unwrap();
+        let tok = crate::gguf_sharder::GgufTokenizer::default();
+        let spec = SieveLexSpec::fever_observation();
+        let sieve = NeuroSymbolicSieve::from_lex_and_tokenizer(&lex, &tok, &spec);
+        assert!(sieve.masks_ready());
     }
 }

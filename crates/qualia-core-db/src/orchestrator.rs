@@ -6,7 +6,9 @@
 //! Flow:
 //!   RawInput → [Orchestrator] → validate_intent → [LlmAgent.infer] → validate_output → .q42 commit
 
-use crate::llm_agent::{AgentIntent, AgentRuntime, WebizenVerdict};
+use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, WebizenVerdict};
+use crate::wal::{commit_semantic_mutation, WalHandoffResult, WriteAheadLog};
+use crate::{q_hash, QualiaQuin};
 use crate::n3_compiler::{compile_rules_with_shacl_gate, default_observation_shape, N3OutputMode};
 use crate::n3_parser::{N3Event, N3Parser};
 use crate::webizen::{SlgArena, SlgOpcode, VmFrame};
@@ -27,7 +29,12 @@ pub enum ModelLifecycle {
 #[derive(Debug)]
 pub enum OrchestrationResult {
     /// Output was validated, grounded, and ready to commit to the semantic graph.
-    Committed { text: String, provenance_quins: Vec<u64> },
+    Committed {
+        text: String,
+        provenance_quins: Vec<u64>,
+        semantic_quin: Option<QualiaQuin>,
+        wal_committed: bool,
+    },
     /// Webizen blocked the operation at pre-flight or post-flight.
     Blocked { rule_violated: u64, reason: &'static str },
     /// Inference failed (timeout, backend unavailable, etc.)
@@ -76,7 +83,8 @@ impl TaskOrchestrator {
         }
     }
 
-    pub fn load_model(&self, _model_id: u64) -> Result<(), &'static str> {
+    pub fn load_model(&self, agent: &LocalLlmAgent, model_id: u64) -> Result<(), &'static str> {
+        let _ = model_id;
         if self.scrubbing_lock.load(Ordering::Acquire) {
             return Err("Cannot load model: Swarm Worker is actively scrubbing memory arena");
         }
@@ -85,6 +93,20 @@ impl TaskOrchestrator {
         *state = ModelLifecycle::MappedToDisk;
         *state = ModelLifecycle::StreamingVRAM;
         *state = ModelLifecycle::Active;
+
+        // Wire lex sidecar: prefer schema.org bundle, else model-adjacent `.q42.lex`.
+        let schema_lex = "data/schemaorg/30.0/schemaorg-current-https.q42.lex";
+        if std::path::Path::new(schema_lex).exists() {
+            agent.configure_sieve_lex(schema_lex);
+        } else if let crate::llm_agent::AgentBackend::Local { model_path, .. } = &agent.backend {
+            let mut p = std::path::PathBuf::from(model_path);
+            if let Some(stem) = p.file_stem().and_then(|s| s.to_str()).map(str::to_string) {
+                p.set_file_name(format!("{stem}.q42.lex"));
+                if p.exists() {
+                    agent.configure_sieve_lex(p.to_string_lossy().into_owned());
+                }
+            }
+        }
         Ok(())
     }
 
@@ -241,7 +263,11 @@ impl TaskOrchestrator {
         };
 
         // 2b. Optional CogAI symbolic path: compile LLM-emitted N3 through SHACL → bytecode.
-        if intent.output_mode == N3OutputMode::N3Assertions || intent.output_mode == N3OutputMode::GraphMutation {
+        // Skipped when the neuro-symbolic sieve already emitted a structured Quin.
+        if output.semantic_quin.is_none()
+            && (intent.output_mode == N3OutputMode::N3Assertions
+                || intent.output_mode == N3OutputMode::GraphMutation)
+        {
             if let Err(reason) = Self::gate_llm_n3_output(&output.text, intent.principal_did_hash) {
                 return OrchestrationResult::Blocked {
                     rule_violated: crate::q_hash("q42:N3Compiler"),
@@ -261,18 +287,54 @@ impl TaskOrchestrator {
                 }
                 #[cfg(target_arch = "wasm32")]
                 let _ = conduct_record;
-                OrchestrationResult::Blocked { rule_violated, reason }
+                return OrchestrationResult::Blocked { rule_violated, reason };
             }
             WebizenVerdict::DenyWithExplanation { rule_violated, reason: _, explanation: _ } => {
-                OrchestrationResult::Blocked { rule_violated, reason: "Output blocked due to frame bounds" }
+                return OrchestrationResult::Blocked {
+                    rule_violated,
+                    reason: "Output blocked due to frame bounds",
+                };
             }
             WebizenVerdict::RequireReconfirmation { reason: _ } => {
-                OrchestrationResult::Blocked { rule_violated: 0, reason: "Output requires reconfirmation" }
+                return OrchestrationResult::Blocked {
+                    rule_violated: 0,
+                    reason: "Output requires reconfirmation",
+                };
             }
-            _ => OrchestrationResult::Committed {
-                text: output.text,
-                provenance_quins: output.provenance_quins,
+            _ => {}
+        }
+
+        let mut semantic_quin = output.semantic_quin;
+        let mut wal_written = false;
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(ref mut quin) = semantic_quin {
+            if let Ok(mut wal) = WriteAheadLog::open(".qualia_graph_mutations.wal") {
+                let secret = [42u8; 32];
+                let signing_key = ed25519_dalek::SigningKey::from_bytes(&secret);
+                let mut suspended = crate::crdt::SuspendedTransactionQueue::new();
+                let agent_did_hash = q_hash(agent.agent_did());
+                match commit_semantic_mutation(
+                    &mut wal,
+                    quin,
+                    intent.principal_did_hash,
+                    agent_did_hash,
+                    &signing_key,
+                    &mut suspended,
+                ) {
+                    Ok(WalHandoffResult::Committed) | Ok(WalHandoffResult::Suspended { .. }) => {
+                        wal_written = true;
+                    }
+                    Err(_) => {}
+                }
             }
+        }
+
+        OrchestrationResult::Committed {
+            text: output.text,
+            provenance_quins: output.provenance_quins,
+            semantic_quin,
+            wal_committed: wal_written,
         }
     }
 }
@@ -280,7 +342,7 @@ impl TaskOrchestrator {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::llm_agent::{AgentIntent, LocalLlmAgent, SANCTUARY_SCOPE_WEBIZEN};
+    use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, SANCTUARY_SCOPE_WEBIZEN};
     use crate::n3_compiler::N3OutputMode;
 
     #[test]
@@ -356,22 +418,23 @@ pub mod tests {
     #[test]
     fn test_async_scrub_lock_invariant() {
         let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
-        
+        let agent = LocalLlmAgent::new("did:git:orch-test", "model.gguf");
+
         // 1. Initially it should load fine
-        assert!(orch.load_model(123).is_ok());
+        assert!(orch.load_model(&agent, 123).is_ok());
         
         // 2. Trigger an eviction (spawns background thread to scrub)
         orch.evict_model(123);
         
         // 3. IMMEDIATELY try to load a new model. The lock should reject it.
-        let load_result = orch.load_model(456);
+        let load_result = orch.load_model(&agent, 456);
         assert!(load_result.is_err(), "Orchestrator violated mechanical sympathy! Mapped model while Swarm worker was still scrubbing.");
         
         // 4. Wait for the background Swarm worker to complete its duty of care
         std::thread::sleep(std::time::Duration::from_millis(50));
         
         // 5. Try loading again. The lock should be cleared.
-        let second_load_result = orch.load_model(456);
+        let second_load_result = orch.load_model(&agent, 456);
         assert!(second_load_result.is_ok(), "Orchestrator failed to load model after scrubbing lock cleared.");
         
         // Ensure Webizen VM logic handles yielding
@@ -389,5 +452,147 @@ pub mod tests {
         
         // Wait for scrub to clear
         std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+
+    fn write_fever_lex_bytes() -> Vec<u8> {
+        let h_sub = q_hash("Patient");
+        let h_pred = q_hash("fever");
+        let h_obj = q_hash("True");
+        let entries = [(h_sub, "Patient"), (h_pred, "fever"), (h_obj, "True")];
+        let mut sorted = entries.to_vec();
+        sorted.sort_unstable_by_key(|(h, _)| *h);
+        let entry_count = sorted.len() as u64;
+        let strings_offset = 32 + entry_count * 16;
+        let mut blob = Vec::new();
+        let mut index = Vec::new();
+        for (hash, text) in &sorted {
+            let str_off = blob.len() as u64;
+            let b = text.as_bytes();
+            let len = b.len().min(65535) as u16;
+            blob.extend_from_slice(&len.to_le_bytes());
+            blob.extend_from_slice(&b[..len as usize]);
+            index.extend_from_slice(&hash.to_le_bytes());
+            index.extend_from_slice(&str_off.to_le_bytes());
+        }
+        let mut out = Vec::new();
+        out.extend_from_slice(b"Q42LEX\0\0");
+        out.extend_from_slice(&entry_count.to_le_bytes());
+        out.extend_from_slice(&strings_offset.to_le_bytes());
+        out.extend_from_slice(&1u64.to_le_bytes());
+        out.extend_from_slice(&index);
+        out.extend_from_slice(&blob);
+        out
+    }
+
+    /// End-to-end: mmap lex → FSM sieve (3 tokens) → fiduciary stamp → volatile WAL commit.
+    #[test]
+    #[serial_test::serial]
+    fn test_e2e_llm_to_wal_pipeline() {
+        let _profiler = dhat::Profiler::builder().testing().build();
+
+        let lex_bytes = write_fever_lex_bytes();
+        let lex_mmap = crate::q42_lex::Q42LexMmap::from_bytes(&lex_bytes).expect("lex");
+        let tok = crate::gguf_sharder::GgufTokenizer::default();
+        let spec = crate::neuro_symbolic_sieve::SieveLexSpec::fever_observation();
+        let mut sieve =
+            crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_lex_and_tokenizer(
+                &lex_mmap,
+                &tok,
+                &spec,
+            );
+        assert!(sieve.masks_ready(), "lex must resolve fever triple token IDs");
+        let (sub, pred, obj) = sieve.resolved_token_triple().expect("triple");
+
+        let wal_file = tempfile::NamedTempFile::new().expect("wal temp");
+        let mut wal = WriteAheadLog::open(wal_file.path()).expect("wal open");
+        let secret = [42u8; 32];
+        let signing_key = ed25519_dalek::SigningKey::from_bytes(&secret);
+        let mut suspended = crate::crdt::SuspendedTransactionQueue::new();
+        let principal = q_hash("did:q42:test-principal");
+        let agent_did = q_hash("did:git:orch-test");
+
+        let stats_before = dhat::HeapStats::get();
+
+        assert!(sieve.apply_token(sub).is_ok());
+        assert!(sieve.apply_token(pred).is_ok());
+        assert!(sieve.apply_token(obj).is_ok());
+        assert_eq!(sieve.emitted_len(), 3, "must halt at exactly 3 sieve tokens");
+        assert!(sieve.is_complete());
+
+        let mut quin = sieve.assemble_quin(q_hash("clinical:fever-context"));
+        let handoff = commit_semantic_mutation(
+            &mut wal,
+            &mut quin,
+            principal,
+            agent_did,
+            &signing_key,
+            &mut suspended,
+        )
+        .expect("wal handoff");
+
+        let stats_after = dhat::HeapStats::get();
+        assert_eq!(
+            stats_after.total_blocks - stats_before.total_blocks,
+            0,
+            "sieve decode + WAL write must not heap-allocate"
+        );
+        assert_eq!(
+            stats_after.total_bytes - stats_before.total_bytes,
+            0,
+            "sieve decode + WAL write must not heap-allocate"
+        );
+
+        assert_eq!(handoff, WalHandoffResult::Committed);
+        let recovered = wal.recover().expect("recover");
+        assert_eq!(recovered.len(), 1, "WAL must contain one 48-byte Quin");
+        assert_eq!(recovered[0].subject, q_hash("Patient"));
+        assert_eq!(recovered[0].predicate, q_hash("fever"));
+        assert_eq!(recovered[0].object, q_hash("True"));
+        assert_eq!(recovered[0].context, principal);
+        assert_eq!(
+            recovered[0].parity,
+            recovered[0].subject
+                ^ recovered[0].predicate
+                ^ recovered[0].object
+                ^ recovered[0].context
+                ^ recovered[0].metadata
+        );
+
+        // Optional GPU path: chunked prefill + sieved decode when Gemma GGUF is present.
+        let gemma = std::path::Path::new(
+            "C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf",
+        );
+        if !gemma.exists() {
+            return;
+        }
+        let mut lex_tmp = tempfile::NamedTempFile::new().expect("lex temp");
+        std::io::Write::write_all(&mut lex_tmp, &lex_bytes).expect("lex write");
+        let agent = LocalLlmAgent::new("did:git:e2e-fever", gemma.to_string_lossy());
+        agent.configure_sieve_lex(lex_tmp.path().to_string_lossy().into_owned());
+        let frame_hash = q_hash("intent:fever");
+        let fever_intent = AgentIntent {
+            intent_predicate: frame_hash,
+            requested_graph_scope: vec![q_hash("snomed:hasFever")],
+            requires_network: false,
+            ilp_offer_micro_cents: 0,
+            principal_did_hash: principal,
+            mcp_intent_frame_hash: frame_hash,
+            output_mode: N3OutputMode::GraphMutation,
+            clearance_ceiling: 0,
+            max_sentinel_depth: 32,
+            active_profile: None,
+        };
+        assert_eq!(agent.validate_intent(&fever_intent), WebizenVerdict::Permit);
+        if let Ok(output) = AgentRuntime::infer(&agent, "The user has a fever", "clinical-context")
+        {
+            assert!(
+                output.tokens_generated <= 3,
+                "sieve must cap generation at 3 tokens"
+            );
+            if let Some(q) = output.semantic_quin {
+                assert_ne!(q.subject, 0);
+                assert_ne!(q.predicate, 0);
+            }
+        }
     }
 }

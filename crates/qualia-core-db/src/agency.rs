@@ -66,6 +66,46 @@ pub fn verify_human_agency(
     }
 }
 
+/// Stamp fiduciary metadata and refresh the XOR parity block before WAL commit.
+/// `principal_did_hash` is embedded in `context`; agent identity in metadata low bits.
+pub fn stamp_fiduciary_metadata(
+    quin: &mut QualiaQuin,
+    principal_did_hash: u64,
+    agent_did_hash: u64,
+) {
+    quin.context = principal_did_hash;
+    let agent_lane = agent_did_hash & 0xFFFF;
+    let principal_clock = (principal_did_hash >> 16) & 0x1FFF_FFFF;
+    quin.metadata = agent_lane | (principal_clock << 16);
+    quin.parity = quin.subject
+        ^ quin.predicate
+        ^ quin.object
+        ^ quin.context
+        ^ quin.metadata;
+}
+
+/// Volatile zero of all Quin fields after WAL commit (wipes transient LLM state).
+pub fn scrub_quin_volatile(quin: &mut QualiaQuin) {
+    unsafe {
+        std::ptr::write_volatile(&mut quin.subject, 0);
+        std::ptr::write_volatile(&mut quin.predicate, 0);
+        std::ptr::write_volatile(&mut quin.object, 0);
+        std::ptr::write_volatile(&mut quin.context, 0);
+        std::ptr::write_volatile(&mut quin.metadata, 0);
+        std::ptr::write_volatile(&mut quin.parity, 0);
+    }
+}
+
+/// Sign a single graph-mutation Quin using the author-scoped Merkle sub-root.
+pub fn sign_graph_mutation(
+    signing_key: &SigningKey,
+    quin: &QualiaQuin,
+) -> Signature {
+    let frame = [*quin];
+    let root = compute_scoped_merkle_root(&frame, quin.context);
+    sign_agency_root(signing_key, &root)
+}
+
 /// Derives a 32-byte AES-256-GCM key from the user's PIN for Deniable Encryption (Sanctuary Mode).
 /// By passing different PINs, different keys are derived, which unlocks different DB Lanes.
 /// The decoy lane operates exactly identically to the sanctuary lane.

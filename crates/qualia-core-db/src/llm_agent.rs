@@ -295,6 +295,34 @@ fn cpu_embedding_forward(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn build_sieve(
+    tok: &crate::gguf_sharder::GgufTokenizer,
+    spec: Option<&crate::neuro_symbolic_sieve::SieveLexSpec>,
+    lex_path: Option<&str>,
+) -> Option<crate::neuro_symbolic_sieve::NeuroSymbolicSieve> {
+    let spec = spec?;
+    if let Some(path) = lex_path {
+        if let Ok(lex_file) = crate::q42_lex::Q42LexFile::open(std::path::Path::new(path)) {
+            let s =
+                crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_lex_and_tokenizer(
+                    &lex_file.view(),
+                    tok,
+                    spec,
+                );
+            if s.masks_ready() {
+                return Some(s);
+            }
+        }
+    }
+    let s = crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_gguf_tokenizer(tok);
+    if s.masks_ready() {
+        Some(s)
+    } else {
+        None
+    }
+}
+
 // ─── LocalLlmAgent ───────────────────────────────────────────────────────────
 /// The concrete local inference agent. Uses a mock inference path for now;
 /// swap `infer_local_model` for an actual llama.cpp FFI call.
@@ -304,6 +332,10 @@ pub struct LocalLlmAgent {
     pub memory_used_bytes: std::sync::atomic::AtomicU64,
     /// Set by `validate_intent` when `output_mode` requires graph-structured emission.
     use_sieve_output: std::sync::atomic::AtomicBool,
+    /// Memory-mapped `.q42.lex` sidecar for dynamic sieve masks.
+    sieve_lex_path: std::sync::Mutex<Option<String>>,
+    /// IRI hashes to resolve through the lexicon for Subject / Predicate / Object slots.
+    sieve_spec: std::sync::Mutex<crate::neuro_symbolic_sieve::SieveLexSpec>,
 }
 
 impl LocalLlmAgent {
@@ -320,7 +352,18 @@ impl LocalLlmAgent {
             },
             memory_used_bytes: std::sync::atomic::AtomicU64::new(0),
             use_sieve_output: std::sync::atomic::AtomicBool::new(false),
+            sieve_lex_path: std::sync::Mutex::new(None),
+            sieve_spec: std::sync::Mutex::new(crate::neuro_symbolic_sieve::SieveLexSpec::graph_mutation_default()),
         }
+    }
+
+    /// Wire the `.q42.lex` sidecar used to populate FSM sieve masks at inference time.
+    pub fn configure_sieve_lex(&self, path: impl Into<String>) {
+        *self.sieve_lex_path.lock().unwrap() = Some(path.into());
+    }
+
+    pub fn agent_did_hash(&self) -> u64 {
+        q_hash(&self.agent_did)
     }
 
     /// Phase 8: Bifurcated Compute — SPSC Wait-Free Intercept.
@@ -358,6 +401,16 @@ impl LocalLlmAgent {
         let use_sieve = self
             .use_sieve_output
             .load(std::sync::atomic::Ordering::Relaxed);
+        let sieve_spec = if use_sieve {
+            Some(*self.sieve_spec.lock().unwrap())
+        } else {
+            None
+        };
+        let sieve_lex_path = if use_sieve {
+            self.sieve_lex_path.lock().unwrap().clone()
+        } else {
+            None
+        };
 
         // ── Native GPU path ─────────────────────────────────────────────────
         #[cfg(not(target_arch = "wasm32"))]
@@ -392,6 +445,8 @@ impl LocalLlmAgent {
 
             // ── LLM engine thread ────────────────────────────────────────────
             let h = thread::spawn(move || -> (String, u32, Option<QualiaQuin>, bool) {
+                let sieve_spec = sieve_spec;
+                let sieve_lex_path = sieve_lex_path;
                 // Build the GPU engine and memory-map the GGUF inside the thread to
                 // avoid Send constraints on the DirectML / wgpu device handles.
                 let mut engine = QTensorEngine::new();
@@ -471,8 +526,7 @@ impl LocalLlmAgent {
                 let mut out_ids: Vec<u32> = Vec::new();
                 let mut streamed_len = 0usize;
                 let mut sieve = if use_sieve {
-                    let s = crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_gguf_tokenizer(&tok);
-                    if s.masks_ready() { Some(s) } else { None }
+                    build_sieve(&tok, sieve_spec.as_ref(), sieve_lex_path.as_deref())
                 } else {
                     None
                 };
@@ -790,6 +844,15 @@ impl AgentRuntime for LocalLlmAgent {
         );
         self.use_sieve_output
             .store(sieve_on, std::sync::atomic::Ordering::Relaxed);
+        if sieve_on {
+            let mut spec = crate::neuro_symbolic_sieve::SieveLexSpec::graph_mutation_default();
+            for &scope_hash in &intent.requested_graph_scope {
+                if scope_hash != 0 {
+                    spec.push_predicate(scope_hash);
+                }
+            }
+            *self.sieve_spec.lock().unwrap() = spec;
+        }
 
         let frame = intent.to_frame();
         let base = Self::evaluate_intent_frame(self, &frame);

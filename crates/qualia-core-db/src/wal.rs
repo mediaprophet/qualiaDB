@@ -1,6 +1,13 @@
 use std::fs::{File, OpenOptions};
 use std::io::{self, Write, Read, Seek, SeekFrom};
 use std::path::Path;
+
+use ed25519_dalek::{Signature, SigningKey};
+
+use crate::agency::{scrub_quin_volatile, sign_graph_mutation, stamp_fiduciary_metadata};
+use crate::crdt::SuspendedTransactionQueue;
+use crate::logic::WebizenOpcode;
+use crate::PermissiveRoutingLane;
 use crate::QualiaQuin;
 
 /// The Write-Ahead Log (WAL) ensures mobile fault tolerance by appending all 
@@ -26,18 +33,18 @@ impl WriteAheadLog {
     /// Synchronously appends a QualiaQuin to the log and flushes to disk.
     /// This prevents data loss if the OS kills the process.
     pub fn append_mutation(&mut self, quin: &QualiaQuin) -> io::Result<()> {
-        // Convert the 48-byte Quin into raw bytes safely.
-        // Since QualiaQuin is #[repr(C, align(16))] and contains 6 u64s, it is precisely 48 bytes without padding traps.
-        let bytes = unsafe {
-            std::slice::from_raw_parts(
-                (quin as *const QualiaQuin) as *const u8,
-                std::mem::size_of::<QualiaQuin>()
-            )
-        };
-        
+        let bytes = quin_as_bytes(quin);
         self.file.write_all(bytes)?;
-        // Flush synchronously ensures the flash memory commits the transaction
         self.file.sync_all()?;
+        Ok(())
+    }
+
+    /// Append with volatile field scrub after durable sync (wipes transient reasoning state).
+    pub fn append_mutation_volatile(&mut self, quin: &mut QualiaQuin) -> io::Result<()> {
+        let bytes = quin_as_bytes(quin);
+        self.file.write_all(bytes)?;
+        self.file.sync_all()?;
+        scrub_quin_volatile(quin);
         Ok(())
     }
 
@@ -67,6 +74,60 @@ impl WriteAheadLog {
         self.file.seek(SeekFrom::Start(0))?;
         Ok(())
     }
+}
+
+#[inline]
+fn quin_as_bytes(quin: &QualiaQuin) -> &[u8] {
+    unsafe {
+        std::slice::from_raw_parts(
+            (quin as *const QualiaQuin) as *const u8,
+            std::mem::size_of::<QualiaQuin>(),
+        )
+    }
+}
+
+/// Outcome of routing a sieve-emitted Quin into the ledger pipeline.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WalHandoffResult {
+    Committed,
+    Suspended { agreement_id: u64 },
+}
+
+/// Fiduciary-stamped, signed WAL handoff for neuro-symbolic graph mutations (zero String parse).
+pub fn commit_semantic_mutation(
+    wal: &mut WriteAheadLog,
+    quin: &mut QualiaQuin,
+    principal_did_hash: u64,
+    agent_did_hash: u64,
+    signing_key: &SigningKey,
+    suspended: &mut SuspendedTransactionQueue,
+) -> io::Result<WalHandoffResult> {
+    stamp_fiduciary_metadata(quin, principal_did_hash, agent_did_hash);
+    let _sig: Signature = sign_graph_mutation(signing_key, quin);
+
+    if quin.identify_routing_lane() == PermissiveRoutingLane::EnforceBilateralMicroCommons {
+        let agreement_id = quin.context;
+        let tx = crate::crdt::SuspendedTransaction {
+            agreement_id,
+            threshold: 2,
+            collected_signatures: 1,
+            registers: [None; 16],
+            bytecode_buffer: [None; 64],
+            yielded_op: Some(WebizenOpcode::LoadModel(0)),
+            suspended_quin: *quin,
+        };
+        if suspended.push(tx).is_err() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "suspended transaction queue full",
+            ));
+        }
+        scrub_quin_volatile(quin);
+        return Ok(WalHandoffResult::Suspended { agreement_id });
+    }
+
+    wal.append_mutation_volatile(quin)?;
+    Ok(WalHandoffResult::Committed)
 }
 
 /// Appends a mutation to the global Write-Ahead Log.
