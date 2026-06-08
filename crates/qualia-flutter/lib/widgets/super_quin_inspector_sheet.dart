@@ -5,12 +5,14 @@ class SuperQuinInspectorSheet extends StatelessWidget {
   final List<int> fields;
   final bool walCommitted;
   final int sieveTokenCount;
+  final String? principalLabel;
 
   const SuperQuinInspectorSheet({
     super.key,
     required this.fields,
     this.walCommitted = false,
     this.sieveTokenCount = 0,
+    this.principalLabel,
   });
 
   static const _labels = [
@@ -24,9 +26,19 @@ class SuperQuinInspectorSheet extends StatelessWidget {
 
   String _hex(int v) => '0x${v.toRadixString(16).padLeft(16, '0')}';
 
+  String _sensitivityLabel(int contextField) {
+    final byte = (contextField >> 56) & 0xFF;
+    return switch (byte) {
+      0x01 => 'RESTRICTED',
+      0x02 => 'CLASSIFIED',
+      _ => 'PUBLIC',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final sensitivity = fields.length > 3 ? _sensitivityLabel(fields[3]) : 'PUBLIC';
 
     return SafeArea(
       child: Padding(
@@ -53,6 +65,26 @@ class SuperQuinInspectorSheet extends StatelessWidget {
                 'Sieve tokens: $sieveTokenCount',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                Chip(
+                  label: Text('Sensitivity: $sensitivity'),
+                  visualDensity: VisualDensity.compact,
+                ),
+                if (principalLabel != null && principalLabel!.isNotEmpty)
+                  Chip(
+                    label: Text('Principal: $principalLabel'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                Chip(
+                  label: const Text('Signature: Ed25519 stub'),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             ...List.generate(fields.length.clamp(0, 6), (i) {
               return Padding(

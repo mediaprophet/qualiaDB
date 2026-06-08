@@ -29,7 +29,7 @@ import 'services/update_checker.dart';
 import 'src/rust/api/qualia_api.dart';
 import 'src/rust/frb_generated.dart';
 import 'tray/tray_service.dart';
-import 'widgets/hardware_telemetry_bar.dart';
+import 'widgets/vault_hud_bar.dart';
 
 /// The absolute path to the currently active `.gguf` model file.
 final activeModelPathProvider = StateProvider<String>((ref) => '');
@@ -240,7 +240,7 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
       children: [
         Column(
           children: [
-            if (isDesktopTarget) const HardwareTelemetryBar(),
+            if (isDesktopTarget) const VaultHudBar(),
             Expanded(child: _buildShell()),
           ],
         ),

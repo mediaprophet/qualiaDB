@@ -54,6 +54,44 @@ impl From<serde_json::Error> for BindError {
     }
 }
 
+/// LTL / Allen-interval axiom window bound to a chat session.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AxiomBounds {
+    pub start_year: u16,
+    pub end_year: u16,
+    /// `q_hash` of spatial context label (0 = unset).
+    pub spatial_context_hash: u64,
+    #[serde(default)]
+    pub spatial_context_label: String,
+}
+
+impl Default for AxiomBounds {
+    fn default() -> Self {
+        Self {
+            start_year: 1800,
+            end_year: 2100,
+            spatial_context_hash: 0,
+            spatial_context_label: String::new(),
+        }
+    }
+}
+
+impl AxiomBounds {
+    pub fn label(&self) -> String {
+        format!("[{}–{}]", self.start_year, self.end_year)
+    }
+
+    pub fn with_spatial_label(mut self, label: &str) -> Self {
+        self.spatial_context_label = label.trim().to_string();
+        self.spatial_context_hash = if self.spatial_context_label.is_empty() {
+            0
+        } else {
+            q_hash(&self.spatial_context_label)
+        };
+        self
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatEnvironmentConfig {
     pub session_id: String,
@@ -65,6 +103,8 @@ pub struct ChatEnvironmentConfig {
     pub participants: Vec<crate::chat_session::ChatParticipant>,
     #[serde(default)]
     pub graph_mutation: bool,
+    #[serde(default)]
+    pub axiom_bounds: AxiomBounds,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -83,6 +123,7 @@ pub struct InferenceContextPacket {
     pub graph_scope_hashes: Vec<u64>,
     pub active_profile: Option<CapabilityProfile>,
     pub model_path: String,
+    pub axiom_bounds: AxiomBounds,
 }
 
 pub fn compile_chat_environment(
@@ -189,6 +230,7 @@ pub fn compile_chat_environment(
         session_kind: config.session_kind,
         participants: config.participants.clone(),
         graph_mutation: config.graph_mutation,
+        axiom_bounds: config.axiom_bounds.clone(),
     };
 
     write_environment_manifest_q42(storage, &config.session_id, &graph_scope_hashes)?;
@@ -210,6 +252,7 @@ pub fn refresh_session_environment(
         session_kind: existing.meta.session_kind,
         participants: existing.meta.participants.clone(),
         graph_mutation: existing.environment.graph_mutation,
+        axiom_bounds: existing.environment.axiom_bounds,
     };
 
     let env = compile_chat_environment(storage, catalog, &config)?;
@@ -254,6 +297,7 @@ pub fn build_inference_packet(
         graph_scope_hashes: env.graph_scope_hashes.clone(),
         active_profile,
         model_path: active.gguf_path.clone(),
+        axiom_bounds: env.axiom_bounds.clone(),
     })
 }
 
@@ -583,6 +627,7 @@ mod tests {
             session_kind: crate::chat_session::SessionKind::Solo,
             participants: vec![],
             graph_mutation: false,
+            axiom_bounds: AxiomBounds::default(),
         };
         let env = compile_chat_environment(&storage, &catalog, &config).unwrap();
         assert!(env.capability_briefing.contains("test-session"));

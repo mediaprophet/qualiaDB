@@ -7,12 +7,14 @@ class SuperQuinProvenanceChip extends StatelessWidget {
   final List<int> fields;
   final bool walCommitted;
   final int sieveTokenCount;
+  final String? principalLabel;
 
   const SuperQuinProvenanceChip({
     super.key,
     required this.fields,
     this.walCommitted = false,
     this.sieveTokenCount = 0,
+    this.principalLabel,
   });
 
   String _hex(int v) => '0x${v.toRadixString(16).padLeft(16, '0')}';
@@ -41,6 +43,7 @@ class SuperQuinProvenanceChip extends StatelessWidget {
               fields: fields,
               walCommitted: walCommitted,
               sieveTokenCount: sieveTokenCount,
+              principalLabel: principalLabel,
             ),
           ),
           child: Padding(

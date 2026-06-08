@@ -128,6 +128,11 @@ pub struct HardwareTelemetry {
     pub ram_used_gb: f64,
     pub ram_total_gb: f64,
     pub daemon_status: String,
+    pub thermal_state: String,
+    pub llm_memory_bytes: u64,
+    pub memory_floor_mb: u32,
+    pub model_lifecycle: String,
+    pub kv_cache_used_mb: u32,
 }
 
 pub fn get_hardware_telemetry() -> HardwareTelemetry {
@@ -135,11 +140,17 @@ pub fn get_hardware_telemetry() -> HardwareTelemetry {
     let mut sys = System::new_all();
     sys.refresh_cpu();
     sys.refresh_memory();
+    let engine = core::get_engine_telemetry_fields();
     HardwareTelemetry {
         cpu_percent: sys.global_cpu_info().cpu_usage() as f64,
         ram_used_gb: sys.used_memory() as f64 / 1024.0 / 1024.0 / 1024.0,
         ram_total_gb: sys.total_memory() as f64 / 1024.0 / 1024.0 / 1024.0,
         daemon_status: core::daemon_status(),
+        thermal_state: engine.thermal_state,
+        llm_memory_bytes: engine.llm_memory_bytes,
+        memory_floor_mb: engine.memory_floor_mb,
+        model_lifecycle: engine.model_lifecycle,
+        kv_cache_used_mb: engine.kv_cache_used_mb,
     }
 }
 

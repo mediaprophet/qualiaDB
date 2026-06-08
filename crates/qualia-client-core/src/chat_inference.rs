@@ -47,6 +47,10 @@ pub struct ChatInferenceResult {
     pub wal_committed: bool,
     #[serde(default)]
     pub sieve_token_count: u8,
+    #[serde(default)]
+    pub shield_alert: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub axiom_bounds_label: Option<String>,
 }
 
 pub fn request_cancel_inference() {
@@ -84,34 +88,23 @@ pub fn run_chat_inference_full(
 ) -> ChatInferenceResult {
     clear_cancel_inference();
     let started = std::time::Instant::now();
-    let empty = |reason: &str| ChatInferenceResult {
-        text: String::new(),
-        provenance_hashes: vec![],
-        citations: vec![],
-        retrieval_triple_count: 0,
-        tokens_generated: 0,
-        inference_duration_ms: started.elapsed().as_millis() as u64,
-        committed: false,
-        block_reason: Some(reason.to_string()),
-        sub_agent_of: None,
-        agent_did: None,
-        model_id: None,
-        agent_backend: None,
-        semantic_quin: None,
-        wal_committed: false,
-        sieve_token_count: 0,
-    };
 
     let state = match crate::state::APP_STATE.get() {
         Some(s) => s,
-        None => return empty("Application not initialized"),
+        None => {
+            return empty_result(started, "Application not initialized", None);
+        }
     };
 
     let storage = state.config.lock().unwrap().storage_path.clone();
     let catalog = crate::api::load_workspace_catalog();
 
     if crate::model_lifecycle::get_model_lifecycle_state() != ModelLifecycle::Active {
-        return empty("No active model — download and activate a model in LLM Hub first.");
+        return empty_result(
+            started,
+            "No active model — download and activate a model in LLM Hub first.",
+            None,
+        );
     }
 
     let env = match context_binding::refresh_session_environment(
@@ -120,8 +113,15 @@ pub fn run_chat_inference_full(
         session_id,
     ) {
         Ok(e) => e,
-        Err(e) => return empty(&e.to_string()),
+        Err(e) => return empty_result(started, &e.to_string(), None),
     };
+
+    let bounds_label = env.axiom_bounds.label();
+    let empty = |reason: &str| empty_result(started, reason, Some(&bounds_label));
+
+    if let Err(reason) = validate_axiom_preflight(prompt, &env.axiom_bounds) {
+        return empty_result(started, &reason, Some(&bounds_label));
+    }
 
     let profile = crate::user_profile::load_profile();
     let agent_cfg = match crate::chat_agents::load_local_agent_config(Path::new(&storage), session_id)
@@ -171,6 +171,11 @@ pub fn run_chat_inference_full(
     }
     let _ = crate::model_lifecycle::task_orchestrator()
         .load_model(&agent, active.profile_id);
+    crate::model_lifecycle::record_llm_memory_bytes(
+        agent
+            .memory_used_bytes
+            .load(std::sync::atomic::Ordering::Relaxed),
+    );
 
     let frame_hash = q_hash(&format!("purpose:ChatSession:{session_id}"));
     let graph_mutation = options.graph_mutation || env.graph_mutation;
@@ -279,6 +284,11 @@ pub fn run_chat_inference_full(
 
     let _ = persist_citations(session_id, Path::new(&storage), &output, &retrieval);
 
+    crate::model_lifecycle::record_llm_memory_bytes(
+        agent
+            .memory_used_bytes
+            .load(std::sync::atomic::Ordering::Relaxed),
+    );
     finalize_success_result(
         output,
         &retrieval,
@@ -329,6 +339,11 @@ fn run_orchestrated_inference(
                 peak_memory_bytes: 0,
             };
             let _ = persist_citations(session_id, storage, &output, retrieval);
+            crate::model_lifecycle::record_llm_memory_bytes(
+                agent
+                    .memory_used_bytes
+                    .load(std::sync::atomic::Ordering::Relaxed),
+            );
             finalize_success_result(
                 output,
                 retrieval,
@@ -374,6 +389,8 @@ fn finalize_success_result(
         semantic_quin: output.semantic_quin.map(quin_to_fields),
         wal_committed,
         sieve_token_count,
+        shield_alert: false,
+        axiom_bounds_label: None,
     }
 }
 
@@ -398,6 +415,8 @@ fn cancelled_result(
         semantic_quin: output.semantic_quin.map(quin_to_fields),
         wal_committed: false,
         sieve_token_count: 0,
+        shield_alert: false,
+        axiom_bounds_label: None,
     }
 }
 
@@ -458,7 +477,7 @@ fn blocked_result(
         tokens_generated: output.tokens_generated,
         inference_duration_ms: started.elapsed().as_millis() as u64,
         committed: false,
-        block_reason: Some(reason),
+        block_reason: Some(reason.clone()),
         sub_agent_of: None,
         agent_did: None,
         model_id: None,
@@ -466,7 +485,107 @@ fn blocked_result(
         semantic_quin: output.semantic_quin.map(quin_to_fields),
         wal_committed: false,
         sieve_token_count: 0,
+        shield_alert: reason.contains("Shield"),
+        axiom_bounds_label: None,
     }
+}
+
+fn empty_result(
+    started: std::time::Instant,
+    reason: &str,
+    bounds_label: Option<&str>,
+) -> ChatInferenceResult {
+    let shield = reason.contains("Shield");
+    ChatInferenceResult {
+        text: String::new(),
+        provenance_hashes: vec![],
+        citations: vec![],
+        retrieval_triple_count: 0,
+        tokens_generated: 0,
+        inference_duration_ms: started.elapsed().as_millis() as u64,
+        committed: false,
+        block_reason: Some(reason.to_string()),
+        sub_agent_of: None,
+        agent_did: None,
+        model_id: None,
+        agent_backend: None,
+        semantic_quin: None,
+        wal_committed: false,
+        sieve_token_count: 0,
+        shield_alert: shield,
+        axiom_bounds_label: if shield {
+            bounds_label.map(str::to_string)
+        } else {
+            None
+        },
+    }
+}
+
+const ANACHRONISM_TERMS: &[&str] = &[
+    "internet",
+    "smartphone",
+    "blockchain",
+    "covid",
+    "tiktok",
+    "youtube",
+    "wifi",
+    "email",
+];
+
+/// Pre-flight axiom bounds check before KV prefill / orchestrator dispatch.
+pub fn validate_axiom_preflight(
+    prompt: &str,
+    bounds: &context_binding::AxiomBounds,
+) -> Result<(), String> {
+    if bounds.start_year > bounds.end_year {
+        return Err(
+            "Shield — invalid axiom bounds (start year is after end year)".to_string(),
+        );
+    }
+
+    for year in extract_years(prompt) {
+        if year < bounds.start_year || year > bounds.end_year {
+            return Err(format!(
+                "Shield — Fact clipped — outside axiom bounds [{}–{}]",
+                bounds.start_year, bounds.end_year
+            ));
+        }
+    }
+
+    if bounds.end_year <= 1935 {
+        let lower = prompt.to_ascii_lowercase();
+        for term in ANACHRONISM_TERMS {
+            if lower.contains(term) {
+                return Err(format!(
+                    "Shield — Fact clipped — anachronism detected outside axiom bounds [{}–{}]",
+                    bounds.start_year, bounds.end_year
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn extract_years(text: &str) -> Vec<u16> {
+    let bytes = text.as_bytes();
+    let mut years = Vec::new();
+    let mut i = 0;
+    while i + 4 <= bytes.len() {
+        if bytes[i..i + 4].iter().all(|b| b.is_ascii_digit()) {
+            if let Ok(s) = std::str::from_utf8(&bytes[i..i + 4]) {
+                if let Ok(y) = s.parse::<u16>() {
+                    if (1000..=2999).contains(&y) {
+                        years.push(y);
+                    }
+                }
+            }
+            i += 4;
+        } else {
+            i += 1;
+        }
+    }
+    years
 }
 
 fn build_augmented_packet(
@@ -506,6 +625,13 @@ fn build_augmented_packet(
 
     let enriched_context = serde_json::json!({
         "environment": serde_json::from_str::<serde_json::Value>(&packet.graph_context_json).unwrap_or_default(),
+        "axiom_bounds": {
+            "start_year": env.axiom_bounds.start_year,
+            "end_year": env.axiom_bounds.end_year,
+            "spatial_context_hash": format!("0x{:016x}", env.axiom_bounds.spatial_context_hash),
+            "spatial_context_label": env.axiom_bounds.spatial_context_label,
+            "label": env.axiom_bounds.label(),
+        },
         "retrieval": {
             "triple_count": retrieval.triple_count,
             "daemon_match_count": retrieval.daemon_match_count,

@@ -40,10 +40,13 @@ class TrayService {
   }
 
   Future<void> updateFromTelemetry(api.HardwareTelemetry telemetry) async {
+    final llmMb =
+        (telemetry.llmMemoryBytes.toDouble() / (1024 * 1024)).toStringAsFixed(0);
     await trayManager.setToolTip(
       'QualiaDB — CPU ${telemetry.cpuPercent.toStringAsFixed(0)}% | '
       'RAM ${telemetry.ramUsedGb.toStringAsFixed(1)} GB | '
-      'daemon: ${telemetry.daemonStatus}',
+      'LLM $llmMb MB | ${telemetry.thermalState} | '
+      '${telemetry.modelLifecycle} | daemon: ${telemetry.daemonStatus}',
     );
   }
 

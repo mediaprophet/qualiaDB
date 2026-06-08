@@ -715,12 +715,22 @@ class HardwareTelemetry {
   final double ramUsedGb;
   final double ramTotalGb;
   final String daemonStatus;
+  final String thermalState;
+  final BigInt llmMemoryBytes;
+  final int memoryFloorMb;
+  final String modelLifecycle;
+  final int kvCacheUsedMb;
 
   const HardwareTelemetry({
     required this.cpuPercent,
     required this.ramUsedGb,
     required this.ramTotalGb,
     required this.daemonStatus,
+    required this.thermalState,
+    required this.llmMemoryBytes,
+    required this.memoryFloorMb,
+    required this.modelLifecycle,
+    required this.kvCacheUsedMb,
   });
 
   @override
@@ -728,7 +738,12 @@ class HardwareTelemetry {
       cpuPercent.hashCode ^
       ramUsedGb.hashCode ^
       ramTotalGb.hashCode ^
-      daemonStatus.hashCode;
+      daemonStatus.hashCode ^
+      thermalState.hashCode ^
+      llmMemoryBytes.hashCode ^
+      memoryFloorMb.hashCode ^
+      modelLifecycle.hashCode ^
+      kvCacheUsedMb.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -738,7 +753,12 @@ class HardwareTelemetry {
           cpuPercent == other.cpuPercent &&
           ramUsedGb == other.ramUsedGb &&
           ramTotalGb == other.ramTotalGb &&
-          daemonStatus == other.daemonStatus;
+          daemonStatus == other.daemonStatus &&
+          thermalState == other.thermalState &&
+          llmMemoryBytes == other.llmMemoryBytes &&
+          memoryFloorMb == other.memoryFloorMb &&
+          modelLifecycle == other.modelLifecycle &&
+          kvCacheUsedMb == other.kvCacheUsedMb;
 }
 
 class ModelInfo {

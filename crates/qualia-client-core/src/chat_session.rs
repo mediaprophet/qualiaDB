@@ -129,6 +129,8 @@ pub struct ChatEnvironment {
     /// When true, chat turns route through the neuro-symbolic sieve + WAL orchestrator path.
     #[serde(default)]
     pub graph_mutation: bool,
+    #[serde(default)]
+    pub axiom_bounds: crate::context_binding::AxiomBounds,
 }
 
 fn active_model_profile_id() -> u64 {
@@ -156,6 +158,7 @@ impl ChatEnvironment {
                 session_kind: SessionKind::Solo,
                 participants: Vec::new(),
                 graph_mutation: false,
+                axiom_bounds: crate::context_binding::AxiomBounds::default(),
             },
         )
         .unwrap_or_else(|_| {
@@ -179,6 +182,7 @@ impl ChatEnvironment {
                 session_kind: SessionKind::Solo,
                 participants: Vec::new(),
                 graph_mutation: false,
+                axiom_bounds: crate::context_binding::AxiomBounds::default(),
             }
         })
     }

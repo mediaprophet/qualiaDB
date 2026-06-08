@@ -65,12 +65,18 @@ Future<String> updateSessionEnvironment(
         {required String sessionId,
         required List<String> ontologyIds,
         required List<String> priorSessionIds,
-        required bool graphMutation}) =>
+        required bool graphMutation,
+        required int axiomStartYear,
+        required int axiomEndYear,
+        required String spatialContext}) =>
     RustApi.instance.api.crateApiChatSessionUpdateSessionEnvironment(
         sessionId: sessionId,
         ontologyIds: ontologyIds,
         priorSessionIds: priorSessionIds,
-        graphMutation: graphMutation);
+        graphMutation: graphMutation,
+        axiomStartYear: axiomStartYear,
+        axiomEndYear: axiomEndYear,
+        spatialContext: spatialContext);
 
 Future<String> getSessionEnvironment({required String sessionId}) =>
     RustApi.instance.api

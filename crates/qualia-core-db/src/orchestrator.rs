@@ -83,6 +83,14 @@ impl TaskOrchestrator {
         }
     }
 
+    pub fn thermal_state_label(&self) -> &'static str {
+        match self.thermal_governor.get_thermal_state() {
+            ThermalStatus::Cool => "Cool",
+            ThermalStatus::Warm => "Warm",
+            ThermalStatus::Critical => "Critical",
+        }
+    }
+
     pub fn load_model(&self, agent: &LocalLlmAgent, model_id: u64) -> Result<(), &'static str> {
         let _ = model_id;
         if self.scrubbing_lock.load(Ordering::Acquire) {

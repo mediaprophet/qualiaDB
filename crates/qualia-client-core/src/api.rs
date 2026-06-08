@@ -195,6 +195,29 @@ pub fn get_hardware_status() -> HardwareStatus {
     }
 }
 
+/// Orchestrator + LLM arena signals for the Flutter Vault HUD.
+#[derive(Debug, Clone, Serialize)]
+pub struct EngineTelemetryFields {
+    pub thermal_state: String,
+    pub llm_memory_bytes: u64,
+    pub memory_floor_mb: u32,
+    pub model_lifecycle: String,
+    pub kv_cache_used_mb: u32,
+}
+
+pub fn get_engine_telemetry_fields() -> EngineTelemetryFields {
+    EngineTelemetryFields {
+        thermal_state: crate::model_lifecycle::get_thermal_state_label().to_string(),
+        llm_memory_bytes: crate::model_lifecycle::get_llm_memory_bytes(),
+        memory_floor_mb: crate::model_lifecycle::MEMORY_FLOOR_MB,
+        model_lifecycle: crate::model_lifecycle::lifecycle_label(
+            crate::model_lifecycle::get_model_lifecycle_state(),
+        )
+        .to_string(),
+        kv_cache_used_mb: 0,
+    }
+}
+
 pub async fn download_and_vectorize(
     url: String,
     filename: String,
@@ -1543,12 +1566,23 @@ pub fn update_session_environment(
     ontology_ids: Vec<String>,
     prior_session_ids: Vec<String>,
     graph_mutation: bool,
+    axiom_start_year: u32,
+    axiom_end_year: u32,
+    spatial_context: String,
 ) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
     let catalog = load_workspace_catalog();
     let session = crate::chat_session::load_session(Path::new(&storage), &session_id)
         .map_err(|e| e.to_string())?;
+    let axiom_bounds = crate::context_binding::AxiomBounds {
+        start_year: axiom_start_year.min(u16::MAX as u32) as u16,
+        end_year: axiom_end_year.min(u16::MAX as u32) as u16,
+        spatial_context_hash: 0,
+        spatial_context_label: spatial_context.clone(),
+    }
+    .with_spatial_label(&spatial_context);
+
     let config = crate::context_binding::ChatEnvironmentConfig {
         session_id: session_id.clone(),
         ontology_ids,
@@ -1556,6 +1590,7 @@ pub fn update_session_environment(
         session_kind: session.meta.session_kind,
         participants: session.meta.participants.clone(),
         graph_mutation,
+        axiom_bounds,
     };
     let env = crate::context_binding::compile_chat_environment(
         Path::new(&storage),

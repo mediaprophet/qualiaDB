@@ -6055,6 +6055,9 @@ fn wire__crate__api__chat_session__update_session_environment_impl(
             let api_ontology_ids = <Vec<String>>::sse_decode(&mut deserializer);
             let api_prior_session_ids = <Vec<String>>::sse_decode(&mut deserializer);
             let api_graph_mutation = <bool>::sse_decode(&mut deserializer);
+            let api_axiom_start_year = <u32>::sse_decode(&mut deserializer);
+            let api_axiom_end_year = <u32>::sse_decode(&mut deserializer);
+            let api_spatial_context = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
@@ -6063,6 +6066,9 @@ fn wire__crate__api__chat_session__update_session_environment_impl(
                         api_ontology_ids,
                         api_prior_session_ids,
                         api_graph_mutation,
+                        api_axiom_start_year,
+                        api_axiom_end_year,
+                        api_spatial_context,
                     )?;
                     Ok(output_ok)
                 })())
@@ -6837,11 +6843,21 @@ impl SseDecode for crate::api::qualia_api::HardwareTelemetry {
         let mut var_ramUsedGb = <f64>::sse_decode(deserializer);
         let mut var_ramTotalGb = <f64>::sse_decode(deserializer);
         let mut var_daemonStatus = <String>::sse_decode(deserializer);
+        let mut var_thermalState = <String>::sse_decode(deserializer);
+        let mut var_llmMemoryBytes = <u64>::sse_decode(deserializer);
+        let mut var_memoryFloorMb = <u32>::sse_decode(deserializer);
+        let mut var_modelLifecycle = <String>::sse_decode(deserializer);
+        let mut var_kvCacheUsedMb = <u32>::sse_decode(deserializer);
         return crate::api::qualia_api::HardwareTelemetry {
             cpu_percent: var_cpuPercent,
             ram_used_gb: var_ramUsedGb,
             ram_total_gb: var_ramTotalGb,
             daemon_status: var_daemonStatus,
+            thermal_state: var_thermalState,
+            llm_memory_bytes: var_llmMemoryBytes,
+            memory_floor_mb: var_memoryFloorMb,
+            model_lifecycle: var_modelLifecycle,
+            kv_cache_used_mb: var_kvCacheUsedMb,
         };
     }
 }
@@ -9386,6 +9402,11 @@ impl flutter_rust_bridge::IntoDart for crate::api::qualia_api::HardwareTelemetry
             self.ram_used_gb.into_into_dart().into_dart(),
             self.ram_total_gb.into_into_dart().into_dart(),
             self.daemon_status.into_into_dart().into_dart(),
+            self.thermal_state.into_into_dart().into_dart(),
+            self.llm_memory_bytes.into_into_dart().into_dart(),
+            self.memory_floor_mb.into_into_dart().into_dart(),
+            self.model_lifecycle.into_into_dart().into_dart(),
+            self.kv_cache_used_mb.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -10455,6 +10476,11 @@ impl SseEncode for crate::api::qualia_api::HardwareTelemetry {
         <f64>::sse_encode(self.ram_used_gb, serializer);
         <f64>::sse_encode(self.ram_total_gb, serializer);
         <String>::sse_encode(self.daemon_status, serializer);
+        <String>::sse_encode(self.thermal_state, serializer);
+        <u64>::sse_encode(self.llm_memory_bytes, serializer);
+        <u32>::sse_encode(self.memory_floor_mb, serializer);
+        <String>::sse_encode(self.model_lifecycle, serializer);
+        <u32>::sse_encode(self.kv_cache_used_mb, serializer);
     }
 }
 

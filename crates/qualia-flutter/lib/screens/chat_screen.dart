@@ -29,7 +29,9 @@ import '../src/rust/api/qualia_api_extras.dart' as api_extras;
 import '../src/rust/api/resource_catalog.dart' as catalog;
 import '../widgets/chat_citation_chips.dart';
 import '../widgets/super_quin_provenance_chip.dart';
+import '../widgets/shield_alert.dart';
 import '../widgets/chat_environment_bar.dart';
+import '../widgets/vault_hud_bar.dart';
 import '../widgets/latex_math_keyboard.dart';
 import '../widgets/markdown_message.dart';
 
@@ -1209,16 +1211,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         final semanticQuin = _parseSemanticQuin(data['semantic_quin']);
         final walCommitted = data['wal_committed'] as bool? ?? false;
         final sieveTokenCount = data['sieve_token_count'] as int? ?? 0;
-        final isShield = blockReason != null &&
-            blockReason.toLowerCase().contains('shield');
+        final shieldAlert = data['shield_alert'] as bool? ?? false;
+        final axiomBoundsLabel = data['axiom_bounds_label'] as String?;
+        final isShield = shieldAlert ||
+            (blockReason != null && blockReason.toLowerCase().contains('shield'));
 
         final display = committed
             ? text
-            : (blockReason != null && blockReason.isNotEmpty)
-                ? (isShield
-                    ? '**$blockReason**'
-                    : '**Webizen blocked:** $blockReason\n\n$text')
-                : text;
+            : (isShield)
+                ? ''
+                : (blockReason != null && blockReason.isNotEmpty)
+                    ? '**Webizen blocked:** $blockReason\n\n$text'
+                    : text;
 
         setState(() {
           _messages[agentIndex] = _Message(
@@ -1231,6 +1235,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             semanticQuin: semanticQuin,
             walCommitted: walCommitted,
             sieveTokenCount: sieveTokenCount,
+            shieldAlert: isShield,
+            axiomBoundsLabel: axiomBoundsLabel,
+            shieldMessage: isShield ? (blockReason ?? 'Shield intervention') : null,
           );
           _isInferring = false;
         });
@@ -1444,6 +1451,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           sessionId: _sessionId,
           onTap: _sessionId == null || _isInferring ? null : _openEnvironmentSheet,
         ),
+        const VaultHudBar(dense: true),
 
         if (widget.modelPath.isEmpty)
           MaterialBanner(
@@ -1577,11 +1585,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   onSelectionChanged: (sel, _) =>
                                       _onTextSelected(i, m.lamport ?? BigInt.zero, display, sel),
                                 ),
+                      if (!isUser && m.shieldAlert)
+                        ShieldAlert(
+                          message: m.shieldMessage ?? m.blockReason ?? 'Shield intervention',
+                          boundsLabel: m.axiomBoundsLabel,
+                        ),
                       if (!isUser && m.semanticQuin != null)
                         SuperQuinProvenanceChip(
                           fields: m.semanticQuin!,
                           walCommitted: m.walCommitted,
                           sieveTokenCount: m.sieveTokenCount,
+                          principalLabel: _ownerDid,
                         ),
                       if (!isUser &&
                           (m.semanticQuin == null || m.citations.isNotEmpty))
@@ -1815,6 +1829,9 @@ class _Message {
   final List<int>? semanticQuin;
   final bool walCommitted;
   final int sieveTokenCount;
+  final bool shieldAlert;
+  final String? axiomBoundsLabel;
+  final String? shieldMessage;
 
   const _Message({
     required this.role,
@@ -1831,6 +1848,9 @@ class _Message {
     this.semanticQuin,
     this.walCommitted = false,
     this.sieveTokenCount = 0,
+    this.shieldAlert = false,
+    this.axiomBoundsLabel,
+    this.shieldMessage,
   });
 
   _Message copyWith({
@@ -1842,6 +1862,9 @@ class _Message {
     List<int>? semanticQuin,
     bool? walCommitted,
     int? sieveTokenCount,
+    bool? shieldAlert,
+    String? axiomBoundsLabel,
+    String? shieldMessage,
   }) {
     return _Message(
       role: role,
@@ -1853,6 +1876,9 @@ class _Message {
       semanticQuin: semanticQuin ?? this.semanticQuin,
       walCommitted: walCommitted ?? this.walCommitted,
       sieveTokenCount: sieveTokenCount ?? this.sieveTokenCount,
+      shieldAlert: shieldAlert ?? this.shieldAlert,
+      axiomBoundsLabel: axiomBoundsLabel ?? this.axiomBoundsLabel,
+      shieldMessage: shieldMessage ?? this.shieldMessage,
     );
   }
 }

@@ -185,12 +185,18 @@ pub fn update_session_environment(
     ontology_ids: Vec<String>,
     prior_session_ids: Vec<String>,
     graph_mutation: bool,
+    axiom_start_year: u32,
+    axiom_end_year: u32,
+    spatial_context: String,
 ) -> Result<String, String> {
     let val = core::update_session_environment(
         session_id,
         ontology_ids,
         prior_session_ids,
         graph_mutation,
+        axiom_start_year,
+        axiom_end_year,
+        spatial_context,
     )?;
     serde_json::to_string(&val).map_err(|e| e.to_string())
 }

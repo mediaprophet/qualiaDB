@@ -1,6 +1,7 @@
 //! Catalog LLM download → GGUF shard map → WAL → lifecycle (in-process).
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use qualia_core_db::{
@@ -114,6 +115,23 @@ pub fn task_orchestrator() -> Arc<TaskOrchestrator> {
     static ORCH: OnceLock<Arc<TaskOrchestrator>> = OnceLock::new();
     ORCH.get_or_init(|| Arc::new(TaskOrchestrator::new(Box::new(NullThermalGovernor))))
         .clone()
+}
+
+/// UI RAM ceiling for LLM arena pressure (matches 0.0.9 Flutter plan).
+pub const MEMORY_FLOOR_MB: u32 = 512;
+
+static LLM_MEMORY_BYTES: AtomicU64 = AtomicU64::new(0);
+
+pub fn record_llm_memory_bytes(bytes: u64) {
+    LLM_MEMORY_BYTES.store(bytes, Ordering::Relaxed);
+}
+
+pub fn get_llm_memory_bytes() -> u64 {
+    LLM_MEMORY_BYTES.load(Ordering::Relaxed)
+}
+
+pub fn get_thermal_state_label() -> &'static str {
+    orchestrator().thermal_state_label()
 }
 
 pub fn models_dir(storage_root: &Path) -> PathBuf {

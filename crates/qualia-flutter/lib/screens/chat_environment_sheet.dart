@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../main.dart' show activeModelPathProvider, shellNavIndexProvider;
+import '../services/hardware_telemetry_service.dart';
+import '../widgets/axiom_bounds_sheet.dart';
 import '../src/rust/api/chat_session.dart' as chat;
 import '../src/rust/api/qualia_api.dart' as api;
 import '../src/rust/api/resource_catalog.dart' as catalog;
@@ -47,6 +49,9 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
   List<chat.ChatSessionSummary> _allSessions = [];
   String _briefingPreview = '';
   bool _graphMutation = false;
+  int _axiomStartYear = 1800;
+  int _axiomEndYear = 2100;
+  String _spatialContext = '';
 
   @override
   void initState() {
@@ -79,6 +84,10 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
           .map((e) => e.toString())
           .toSet();
       final graphMutation = env['graph_mutation'] as bool? ?? false;
+      final axiom = env['axiom_bounds'] as Map<String, dynamic>? ?? const {};
+      final axiomStart = axiom['start_year'] as int? ?? 1800;
+      final axiomEnd = axiom['end_year'] as int? ?? 2100;
+      final spatial = axiom['spatial_context_label'] as String? ?? '';
 
       final models = <_ChatModelOption>[];
       for (final id in installedIds) {
@@ -114,6 +123,9 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
           ..addAll(priors);
         _briefingPreview = env['capability_briefing'] as String? ?? '';
         _graphMutation = graphMutation;
+        _axiomStartYear = axiomStart;
+        _axiomEndYear = axiomEnd;
+        _spatialContext = spatial;
         _loading = false;
       });
     } catch (e) {
@@ -132,8 +144,19 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
     return id;
   }
 
+  bool get _modelLoadBlocked {
+    final lifecycle = ref.read(hardwareTelemetryProvider)?.modelLifecycle;
+    return lifecycle == 'Scrubbing';
+  }
+
   Future<void> _activateModel(String modelId) async {
     if (_activatingModel || _activeModelId == modelId) return;
+    if (_modelLoadBlocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Model load paused — memory arena scrubbing in progress')),
+      );
+      return;
+    }
     setState(() => _activatingModel = true);
     try {
       await api.setActiveModel(modelName: modelId);
@@ -160,6 +183,12 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
   }
 
   Future<void> _applyLoadOrder() async {
+    if (_modelLoadBlocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Load order blocked — scrubbing lock active')),
+      );
+      return;
+    }
     setState(() => _activatingModel = true);
     try {
       await catalog.applyModelPreference(task: 'chat');
@@ -188,6 +217,25 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
     Navigator.pop(context, _modelChanged);
   }
 
+  Future<void> _openAxiomBounds() async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AxiomBoundsSheet(
+        startYear: _axiomStartYear,
+        endYear: _axiomEndYear,
+        spatialContext: _spatialContext,
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _axiomStartYear = result['start_year'] as int? ?? _axiomStartYear;
+      _axiomEndYear = result['end_year'] as int? ?? _axiomEndYear;
+      _spatialContext = result['spatial_context'] as String? ?? '';
+    });
+  }
+
   Future<void> _save() async {
     try {
       final envJson = await chat.updateSessionEnvironment(
@@ -195,6 +243,9 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
         ontologyIds: _selectedOntologies.toList(),
         priorSessionIds: _selectedPriorSessions.toList(),
         graphMutation: _graphMutation,
+        axiomStartYear: _axiomStartYear,
+        axiomEndYear: _axiomEndYear,
+        spatialContext: _spatialContext,
       );
       final env = jsonDecode(envJson) as Map<String, dynamic>;
       if (!mounted) return;
@@ -306,7 +357,7 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
                                       subtitle,
                                       style: Theme.of(context).textTheme.bodySmall,
                                     ),
-                                    onChanged: _activatingModel
+                                    onChanged: (_activatingModel || _modelLoadBlocked)
                                         ? null
                                         : (v) {
                                             if (v != null) _activateModel(v);
@@ -319,8 +370,9 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
                                   runSpacing: 4,
                                   children: [
                                     OutlinedButton.icon(
-                                      onPressed:
-                                          _activatingModel ? null : _applyLoadOrder,
+                                      onPressed: (_activatingModel || _modelLoadBlocked)
+                                          ? null
+                                          : _applyLoadOrder,
                                       icon: const Icon(Icons.sort, size: 18),
                                       label: const Text('Apply load order'),
                                     ),
@@ -336,6 +388,16 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
                               Text(
                                 'Neuro-symbolic output',
                                 style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              ListTile(
+                                title: const Text('Axiom bounds'),
+                                subtitle: Text(
+                                  '$_axiomStartYear – $_axiomEndYear'
+                                  '${_spatialContext.isNotEmpty ? ' · $_spatialContext' : ''}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: _openAxiomBounds,
                               ),
                               SwitchListTile(
                                 title: const Text('Graph mutation (sieve + WAL)'),

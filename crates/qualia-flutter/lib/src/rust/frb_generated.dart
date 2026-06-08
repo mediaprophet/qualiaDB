@@ -564,7 +564,10 @@ abstract class RustApiApi extends BaseApi {
       {required String sessionId,
       required List<String> ontologyIds,
       required List<String> priorSessionIds,
-      required bool graphMutation});
+      required bool graphMutation,
+      required int axiomStartYear,
+      required int axiomEndYear,
+      required String spatialContext});
 
   Future<void> crateApiQualiaApiUpdateSolarInput({required int watts});
 
@@ -5094,7 +5097,10 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
       {required String sessionId,
       required List<String> ontologyIds,
       required List<String> priorSessionIds,
-      required bool graphMutation}) {
+      required bool graphMutation,
+      required int axiomStartYear,
+      required int axiomEndYear,
+      required String spatialContext}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
@@ -5102,6 +5108,9 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         sse_encode_list_String(ontologyIds, serializer);
         sse_encode_list_String(priorSessionIds, serializer);
         sse_encode_bool(graphMutation, serializer);
+        sse_encode_u_32(axiomStartYear, serializer);
+        sse_encode_u_32(axiomEndYear, serializer);
+        sse_encode_String(spatialContext, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 175, port: port_);
       },
@@ -5110,7 +5119,15 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
         decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiChatSessionUpdateSessionEnvironmentConstMeta,
-      argValues: [sessionId, ontologyIds, priorSessionIds, graphMutation],
+      argValues: [
+        sessionId,
+        ontologyIds,
+        priorSessionIds,
+        graphMutation,
+        axiomStartYear,
+        axiomEndYear,
+        spatialContext
+      ],
       apiImpl: this,
     ));
   }
@@ -5122,7 +5139,10 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
           "sessionId",
           "ontologyIds",
           "priorSessionIds",
-          "graphMutation"
+          "graphMutation",
+          "axiomStartYear",
+          "axiomEndYear",
+          "spatialContext"
         ],
       );
 
@@ -5811,13 +5831,18 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
   HardwareTelemetry dco_decode_hardware_telemetry(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return HardwareTelemetry(
       cpuPercent: dco_decode_f_64(arr[0]),
       ramUsedGb: dco_decode_f_64(arr[1]),
       ramTotalGb: dco_decode_f_64(arr[2]),
       daemonStatus: dco_decode_String(arr[3]),
+      thermalState: dco_decode_String(arr[4]),
+      llmMemoryBytes: dco_decode_u_64(arr[5]),
+      memoryFloorMb: dco_decode_u_32(arr[6]),
+      modelLifecycle: dco_decode_String(arr[7]),
+      kvCacheUsedMb: dco_decode_u_32(arr[8]),
     );
   }
 
@@ -7142,11 +7167,21 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     var var_ramUsedGb = sse_decode_f_64(deserializer);
     var var_ramTotalGb = sse_decode_f_64(deserializer);
     var var_daemonStatus = sse_decode_String(deserializer);
+    var var_thermalState = sse_decode_String(deserializer);
+    var var_llmMemoryBytes = sse_decode_u_64(deserializer);
+    var var_memoryFloorMb = sse_decode_u_32(deserializer);
+    var var_modelLifecycle = sse_decode_String(deserializer);
+    var var_kvCacheUsedMb = sse_decode_u_32(deserializer);
     return HardwareTelemetry(
         cpuPercent: var_cpuPercent,
         ramUsedGb: var_ramUsedGb,
         ramTotalGb: var_ramTotalGb,
-        daemonStatus: var_daemonStatus);
+        daemonStatus: var_daemonStatus,
+        thermalState: var_thermalState,
+        llmMemoryBytes: var_llmMemoryBytes,
+        memoryFloorMb: var_memoryFloorMb,
+        modelLifecycle: var_modelLifecycle,
+        kvCacheUsedMb: var_kvCacheUsedMb);
   }
 
   @protected
@@ -8582,6 +8617,11 @@ class RustApiApiImpl extends RustApiApiImplPlatform implements RustApiApi {
     sse_encode_f_64(self.ramUsedGb, serializer);
     sse_encode_f_64(self.ramTotalGb, serializer);
     sse_encode_String(self.daemonStatus, serializer);
+    sse_encode_String(self.thermalState, serializer);
+    sse_encode_u_64(self.llmMemoryBytes, serializer);
+    sse_encode_u_32(self.memoryFloorMb, serializer);
+    sse_encode_String(self.modelLifecycle, serializer);
+    sse_encode_u_32(self.kvCacheUsedMb, serializer);
   }
 
   @protected
