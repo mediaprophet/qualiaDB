@@ -437,10 +437,9 @@ impl QTensorEngine {
         };
 
         #[cfg(not(target_os = "windows"))]
-        let dml_status = {
+        {
             log::info!("LLM_LOAD|gpu-backend|0.45|Using wgpu fallback backend for native compute");
-            None::<crate::directml_bridge::DmlDevice>
-        };
+        }
 
         Ok(Self {
             device,
