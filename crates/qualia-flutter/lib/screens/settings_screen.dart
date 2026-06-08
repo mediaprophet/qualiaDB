@@ -37,8 +37,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _superblockLoading = false;
   String _superblockError = '';
 
-  int get _shareTotal =>
-      _editableRecipients.fold(0, (sum, r) => sum + (int.tryParse(r.shareController.text) ?? 0));
+  int get _shareTotal => _editableRecipients.fold(
+      0, (sum, r) => sum + (int.tryParse(r.shareController.text) ?? 0));
 
   bool get _shareValid => _shareTotal == 100;
 
@@ -79,7 +79,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   api.TaxRecipientSuite _buildSuiteFromEditable() {
-    final jurisdiction = _taxSuite?.jurisdictionDid ?? 'did:q42:cooperative-default';
+    final jurisdiction =
+        _taxSuite?.jurisdictionDid ?? 'did:q42:cooperative-default';
     return api.TaxRecipientSuite(
       jurisdictionDid: jurisdiction,
       recipients: _editableRecipients
@@ -87,7 +88,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             (r) => api.TaxRecipient(
               label: r.labelController.text.trim(),
               ilpAddress: r.addressController.text.trim(),
-              sharePercent: BigInt.from(int.tryParse(r.shareController.text) ?? 0),
+              sharePercent:
+                  BigInt.from(int.tryParse(r.shareController.text) ?? 0),
               useNym: r.useNym,
             ),
           )
@@ -131,7 +133,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         });
         _refreshSuperblockArtifacts(config.storagePath);
         if (qpu != null) {
-          ref.read(qpuFeatureUnlockedProvider.notifier).setUnlocked(qpu.featureUnlocked);
+          ref
+              .read(qpuFeatureUnlockedProvider.notifier)
+              .setUnlocked(qpu.featureUnlocked);
         }
       }
     } catch (e) {
@@ -181,7 +185,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _superblockArtifacts = artifacts;
       _superblockError = '';
-      final selectedStillExists = artifacts.any((a) => a.path == _superblockPathController.text);
+      final selectedStillExists =
+          artifacts.any((a) => a.path == _superblockPathController.text);
       if (!selectedStillExists && artifacts.isNotEmpty) {
         _superblockPathController.text = artifacts.first.path;
       }
@@ -194,13 +199,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   BigInt _readU64(Uint8List bytes, int offset) {
-    return ByteData.sublistView(bytes, offset, offset + 8)
+    final value = ByteData.sublistView(bytes, offset, offset + 8)
         .getUint64(0, Endian.little);
+    return BigInt.from(value);
   }
 
   Future<void> _inspectSelectedBlock() async {
     final path = _superblockPathController.text.trim();
-    final blockIndex = int.tryParse(_superblockIndexController.text.trim()) ?? 0;
+    final blockIndex =
+        int.tryParse(_superblockIndexController.text.trim()) ?? 0;
     if (path.isEmpty) {
       setState(() => _superblockError = 'Choose or paste a .q42 path first.');
       return;
@@ -256,7 +263,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           offset,
           offset + 32 > bytes.length ? bytes.length : offset + 32,
         );
-        final hex = chunk.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+        final hex =
+            chunk.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
         rows.add('${offset.toRadixString(16).padLeft(4, '0')}: $hex');
       }
 
@@ -332,7 +340,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _disableQpuFeature() async {
     final result = await api.handleQpuChatCommand(text: '[disable_QPU]');
-    ref.read(qpuFeatureUnlockedProvider.notifier).setUnlocked(result.featureUnlocked);
+    ref
+        .read(qpuFeatureUnlockedProvider.notifier)
+        .setUnlocked(result.featureUnlocked);
     if (mounted) {
       setState(() {
         _qpuSettings = null;
@@ -340,7 +350,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _dwaveTokenController.clear();
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('QPU Oracle hidden. Type [enable_QPU] in Chat to restore.')),
+        const SnackBar(
+            content: Text(
+                'QPU Oracle hidden. Type [enable_QPU] in Chat to restore.')),
       );
     }
   }
@@ -352,7 +364,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
     try {
       if (!_shareValid) {
-        setState(() => _error = 'Recipient shares must sum to 100% (currently $_shareTotal%).');
+        setState(() => _error =
+            'Recipient shares must sum to 100% (currently $_shareTotal%).');
         return;
       }
       await api.saveConfig(
@@ -407,7 +420,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Data Storage Path', style: TextStyle(color: Colors.grey)),
+                const Text('Data Storage Path',
+                    style: TextStyle(color: Colors.grey)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _pathController,
@@ -422,7 +436,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 const SizedBox(height: 24),
-                const Text('Storage Quota (GB)', style: TextStyle(color: Colors.grey)),
+                const Text('Storage Quota (GB)',
+                    style: TextStyle(color: Colors.grey)),
                 Slider(
                   value: _storageQuotaGb,
                   min: 1,
@@ -433,17 +448,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('1 GB', style: TextStyle(color: Color(0xFFFFD700), fontSize: 12)),
+                    const Text('1 GB',
+                        style:
+                            TextStyle(color: Color(0xFFFFD700), fontSize: 12)),
                     Text(
                       '${_storageQuotaGb.toInt()} GB Selected',
-                      style: const TextStyle(color: Color(0xFFFFD700), fontSize: 12),
+                      style: const TextStyle(
+                          color: Color(0xFFFFD700), fontSize: 12),
                     ),
-                    const Text('500 GB', style: TextStyle(color: Color(0xFFFFD700), fontSize: 12)),
+                    const Text('500 GB',
+                        style:
+                            TextStyle(color: Color(0xFFFFD700), fontSize: 12)),
                   ],
                 ),
                 const SizedBox(height: 24),
                 if (_status.isNotEmpty)
-                  Text(_status, style: const TextStyle(color: Colors.greenAccent)),
+                  Text(_status,
+                      style: const TextStyle(color: Colors.greenAccent)),
                 if (_error.isNotEmpty)
                   Text(_error, style: const TextStyle(color: Colors.redAccent)),
                 const SizedBox(height: 16),
@@ -481,7 +502,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Column(
                     children: [
                       for (var i = 0; i < recipients.length; i++) ...[
-                        if (i > 0) const Divider(height: 24, color: Colors.white12),
+                        if (i > 0)
+                          const Divider(height: 24, color: Colors.white12),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -507,7 +529,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   isDense: true,
                                   border: OutlineInputBorder(),
                                 ),
-                                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                                style: const TextStyle(
+                                    fontFamily: 'monospace', fontSize: 12),
                                 onChanged: (_) => setState(() {}),
                               ),
                             ),
@@ -528,17 +551,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             const SizedBox(width: 8),
                             Column(
                               children: [
-                                const Text('NYM (opt)', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                const Text('NYM (opt)',
+                                    style: TextStyle(
+                                        fontSize: 10, color: Colors.grey)),
                                 Switch(
                                   value: recipients[i].useNym,
-                                  onChanged: (v) => setState(() => recipients[i].useNym = v),
+                                  onChanged: (v) =>
+                                      setState(() => recipients[i].useNym = v),
                                 ),
                               ],
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                              icon: const Icon(Icons.delete_outline,
+                                  color: Colors.redAccent),
                               tooltip: 'Remove recipient',
-                              onPressed: recipients.length > 1 ? () => _removeRecipient(i) : null,
+                              onPressed: recipients.length > 1
+                                  ? () => _removeRecipient(i)
+                                  : null,
                             ),
                           ],
                         ),
@@ -558,7 +587,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Text(
                       'Total: $_shareTotal%',
                       style: TextStyle(
-                        color: _shareValid ? const Color(0xFFFFD700) : Colors.redAccent,
+                        color: _shareValid
+                            ? const Color(0xFFFFD700)
+                            : Colors.redAccent,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -577,15 +608,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     try {
-                      final result = await api.dispatchTaxPayment(grossAmountMicroCents: BigInt.from(1000000));
+                      final result = await api.dispatchTaxPayment(
+                          grossAmountMicroCents: BigInt.from(1000000));
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Tax dispatch: sent ${result.totalSent}, queued ${result.totalQueued}')),
+                          SnackBar(
+                              content: Text(
+                                  'Tax dispatch: sent ${result.totalSent}, queued ${result.totalQueued}')),
                         );
                       }
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dispatch failed: $e')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Dispatch failed: $e')));
                       }
                     }
                   },
@@ -631,7 +666,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             obscureText: true,
             decoration: InputDecoration(
               labelText: 'IBM Quantum API Token',
-              hintText: qpu.ibmTokenConfigured ? '••••••••  (configured — enter to replace)' : 'Paste IBM_QUANTUM_TOKEN',
+              hintText: qpu.ibmTokenConfigured
+                  ? '••••••••  (configured — enter to replace)'
+                  : 'Paste IBM_QUANTUM_TOKEN',
               border: const OutlineInputBorder(),
             ),
           ),
@@ -641,12 +678,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             obscureText: true,
             decoration: InputDecoration(
               labelText: 'D-Wave Leap API Token',
-              hintText: qpu.dwaveTokenConfigured ? '••••••••  (configured — enter to replace)' : 'Paste DWAVE_API_TOKEN',
+              hintText: qpu.dwaveTokenConfigured
+                  ? '••••••••  (configured — enter to replace)'
+                  : 'Paste DWAVE_API_TOKEN',
               border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Max shots per task (SHACL limit: 1000)', style: TextStyle(color: Colors.grey)),
+          const Text('Max shots per task (SHACL limit: 1000)',
+              style: TextStyle(color: Colors.grey)),
           Slider(
             value: qpu.maxShotsPerTask.toDouble(),
             min: 1,
@@ -670,14 +710,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             }),
           ),
           SwitchListTile(
-            title: const Text('Fallback to classical approximation when quota exhausted'),
+            title: const Text(
+                'Fallback to classical approximation when quota exhausted'),
             value: qpu.fallbackToClassical,
             onChanged: (v) => setState(() {
               _qpuSettings = _copyQpu(qpu, fallbackToClassical: v);
             }),
           ),
           const Divider(color: Colors.white12),
-          const Text('Prioritized invocations', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Prioritized invocations',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           SwitchListTile(
             title: const Text('QUBO constraint routing (D-Wave)'),
@@ -689,7 +731,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           SwitchListTile(
             title: const Text('DFT ground-state energies (IBM)'),
-            subtitle: const Text('Variational Quantum Eigensolver for molecular states'),
+            subtitle: const Text(
+                'Variational Quantum Eigensolver for molecular states'),
             value: qpu.enableDftGroundState,
             onChanged: (v) => setState(() {
               _qpuSettings = _copyQpu(qpu, enableDftGroundState: v);
@@ -697,7 +740,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           SwitchListTile(
             title: const Text('Defeasible logic conflict resolution (IBM)'),
-            subtitle: const Text('Probabilistic inference for competing obligations'),
+            subtitle:
+                const Text('Probabilistic inference for competing obligations'),
             value: qpu.enableDefeasibleResolution,
             onChanged: (v) => setState(() {
               _qpuSettings = _copyQpu(qpu, enableDefeasibleResolution: v);
@@ -709,17 +753,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ElevatedButton(
                 onPressed: _qpuSaving ? null : _saveQpuSettings,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5D5FEF).withValues(alpha: 0.2),
+                  backgroundColor:
+                      const Color(0xFF5D5FEF).withValues(alpha: 0.2),
                   foregroundColor: const Color(0xFF5D5FEF),
                 ),
                 child: _qpuSaving
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('Save QPU Configuration'),
               ),
               const SizedBox(width: 12),
               TextButton(
                 onPressed: _disableQpuFeature,
-                child: const Text('Hide QPU Oracle', style: TextStyle(color: Colors.redAccent)),
+                child: const Text('Hide QPU Oracle',
+                    style: TextStyle(color: Colors.redAccent)),
               ),
             ],
           ),
@@ -743,7 +792,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       fallbackToClassical: fallbackToClassical ?? qpu.fallbackToClassical,
       enableQuboRouting: enableQuboRouting ?? qpu.enableQuboRouting,
       enableDftGroundState: enableDftGroundState ?? qpu.enableDftGroundState,
-      enableDefeasibleResolution: enableDefeasibleResolution ?? qpu.enableDefeasibleResolution,
+      enableDefeasibleResolution:
+          enableDefeasibleResolution ?? qpu.enableDefeasibleResolution,
       ibmQuotaMinutesRemaining: qpu.ibmQuotaMinutesRemaining,
       dwaveQuotaMinutesRemaining: qpu.dwaveQuotaMinutesRemaining,
     );
@@ -775,7 +825,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _superblockLoading ? null : _refreshSuperblockArtifacts,
+                  onPressed:
+                      _superblockLoading ? null : _refreshSuperblockArtifacts,
                   icon: const Icon(Icons.refresh),
                   label: Text(
                     _superblockArtifacts.isEmpty
@@ -808,9 +859,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 12),
           if (_superblockArtifacts.isNotEmpty) ...[
             DropdownButtonFormField<String>(
-              initialValue: _superblockArtifacts.any((a) => a.path == selectedPath)
-                  ? selectedPath
-                  : null,
+              initialValue:
+                  _superblockArtifacts.any((a) => a.path == selectedPath)
+                      ? selectedPath
+                      : null,
               decoration: const InputDecoration(
                 labelText: 'Discovered .q42 artifact',
                 border: OutlineInputBorder(),
@@ -844,7 +896,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           if (_superblockError.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(_superblockError, style: const TextStyle(color: Colors.redAccent)),
+            Text(_superblockError,
+                style: const TextStyle(color: Colors.redAccent)),
           ],
           if (_superblockLoading) ...[
             const SizedBox(height: 16),
@@ -856,10 +909,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               spacing: 10,
               runSpacing: 10,
               children: [
-                _metricChip('Block', '${view.blockIndex + 1} / ${view.totalBlocks}'),
+                _metricChip(
+                    'Block', '${view.blockIndex + 1} / ${view.totalBlocks}'),
                 _metricChip('Active Quins', '${view.activeQuinCount}'),
                 _metricChip('Sequence', view.blockSequenceId.toString()),
-                _metricChip('Checksum', '0x${view.validationChecksum.toRadixString(16)}'),
+                _metricChip('Checksum',
+                    '0x${view.validationChecksum.toRadixString(16)}'),
               ],
             ),
             const SizedBox(height: 12),
@@ -878,9 +933,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Owner DID hash: 0x${view.storageOwnerDid.toRadixString(16)}'),
-                  Text('Hardware profile: 0x${view.hardwareProfileFlags.toRadixString(16)}'),
-                  Text('FEA mesh index: 0x${view.feaMeshIndexId.toRadixString(16)}'),
+                  Text(
+                      'Owner DID hash: 0x${view.storageOwnerDid.toRadixString(16)}'),
+                  Text(
+                      'Hardware profile: 0x${view.hardwareProfileFlags.toRadixString(16)}'),
+                  Text(
+                      'FEA mesh index: 0x${view.feaMeshIndexId.toRadixString(16)}'),
                 ],
               ),
             ),
@@ -912,10 +970,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           children: [
                             Text(
                               'Quin ${index + 1}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(width: 10),
-                            SensitivityBadge(contextField: quin.context.toInt(), dense: true),
+                            SensitivityBadge(
+                                contextField: quin.context.toInt(),
+                                dense: true),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -926,7 +987,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           'C: 0x${quin.context.toRadixString(16)}\n'
                           'M: 0x${quin.metadata.toRadixString(16)}\n'
                           'X: 0x${quin.parity.toRadixString(16)}',
-                          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                          style: const TextStyle(
+                              fontFamily: 'monospace', fontSize: 12),
                         ),
                       ],
                     ),
@@ -970,7 +1032,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Chip(label: Text('$label: $value'));
   }
 
-  Widget _buildPanel(BuildContext context, {required String title, required Widget child}) {
+  Widget _buildPanel(BuildContext context,
+      {required String title, required Widget child}) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -981,7 +1044,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const Divider(height: 32, color: Colors.white10),
           child,
         ],

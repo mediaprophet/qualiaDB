@@ -36,7 +36,8 @@ class ChatImageAttachment extends StatelessWidget {
             child: SizedBox(
               height: 80,
               child: Center(
-                child: Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.primary),
+                child: Icon(Icons.image_outlined,
+                    color: Theme.of(context).colorScheme.primary),
               ),
             ),
           );
@@ -77,7 +78,6 @@ class ChatImageAttachment extends StatelessWidget {
                 ),
               ],
             ),
-          ),
           ),
         );
       },
