@@ -12,10 +12,7 @@ pub enum AgencyError {
 /// It partitions the 128KB frame by the Author's DID, strictly ignoring claims
 /// authored by other actors in the Bilateral frame.
 /// Uses zero-allocation iteration over the existing memory slice.
-pub fn compute_scoped_merkle_root(
-    frame: &[QualiaQuin],
-    author_did: u64,
-) -> [u8; 32] {
+pub fn compute_scoped_merkle_root(frame: &[QualiaQuin], author_did: u64) -> [u8; 32] {
     let mut hasher = Sha256::new();
 
     // Iterate through the frame without allocating Vectors or Strings
@@ -38,10 +35,7 @@ pub fn compute_scoped_merkle_root(
 
 /// The Human Agency Hook
 /// Generates a 64-byte Ed25519 signature exclusively over the Author-Scoped Merkle Sub-Root.
-pub fn sign_agency_root(
-    signing_key: &SigningKey,
-    sub_root_hash: &[u8; 32],
-) -> Signature {
+pub fn sign_agency_root(signing_key: &SigningKey, sub_root_hash: &[u8; 32]) -> Signature {
     // The Ed25519-dalek library natively signs raw byte arrays.
     signing_key.sign(sub_root_hash)
 }
@@ -77,11 +71,7 @@ pub fn stamp_fiduciary_metadata(
     let agent_lane = agent_did_hash & 0xFFFF;
     let principal_clock = (principal_did_hash >> 16) & 0x1FFF_FFFF;
     quin.metadata = agent_lane | (principal_clock << 16);
-    quin.parity = quin.subject
-        ^ quin.predicate
-        ^ quin.object
-        ^ quin.context
-        ^ quin.metadata;
+    quin.parity = quin.subject ^ quin.predicate ^ quin.object ^ quin.context ^ quin.metadata;
 }
 
 /// Volatile zero of all Quin fields after WAL commit (wipes transient LLM state).
@@ -97,10 +87,7 @@ pub fn scrub_quin_volatile(quin: &mut QualiaQuin) {
 }
 
 /// Sign a single graph-mutation Quin using the author-scoped Merkle sub-root.
-pub fn sign_graph_mutation(
-    signing_key: &SigningKey,
-    quin: &QualiaQuin,
-) -> Signature {
+pub fn sign_graph_mutation(signing_key: &SigningKey, quin: &QualiaQuin) -> Signature {
     let frame = [*quin];
     let root = compute_scoped_merkle_root(&frame, quin.context);
     sign_agency_root(signing_key, &root)
@@ -115,7 +102,7 @@ pub fn derive_lane_key(pin: &str, salt: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(pin.as_bytes());
     hasher.update(salt);
-    
+
     let result = hasher.finalize();
     let mut key = [0u8; 32];
     key.copy_from_slice(&result);
@@ -136,12 +123,19 @@ mod tests {
         let author_did_alice = 1001;
         let author_did_bob = 2002;
 
-        let mut frame = [QualiaQuin { subject: 0, predicate: 0, object: 0, context: 0, metadata: 0, parity: 0 }; 10];
-        
+        let mut frame = [QualiaQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }; 10];
+
         // Alice's claims
         frame[0].context = author_did_alice;
         frame[0].subject = 55;
-        
+
         frame[1].context = author_did_alice;
         frame[1].subject = 66;
 

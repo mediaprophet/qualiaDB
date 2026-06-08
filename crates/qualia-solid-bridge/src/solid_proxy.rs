@@ -24,7 +24,7 @@ pub fn start_proxy_daemon() {
         // Define the WARP routes
         let oidc_routes = crate::oidc_micro_idp::oidc_routes();
         let ldp_routes = crate::ldp_translator::ldp_routes();
-        
+
         let cors = warp::cors()
             .allow_any_origin()
             .allow_headers(vec!["Authorization", "Content-Type", "Accept"])

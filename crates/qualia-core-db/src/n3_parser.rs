@@ -68,7 +68,7 @@ impl<R: BufRead> N3Parser<R> {
 
         while self.reader.read_line(&mut buffer)? > 0 {
             let line = buffer.trim();
-            
+
             if in_asp_block {
                 if line == "}" {
                     in_asp_block = false;
@@ -81,7 +81,7 @@ impl<R: BufRead> N3Parser<R> {
                 buffer.clear();
                 continue;
             }
-            
+
             if in_diffuse_block {
                 if line == "}" {
                     in_diffuse_block = false;
@@ -100,7 +100,7 @@ impl<R: BufRead> N3Parser<R> {
                 buffer.clear();
                 continue;
             }
-            
+
             if line.starts_with("qualia:diffuse {") {
                 in_diffuse_block = true;
                 buffer.clear();
@@ -113,7 +113,11 @@ impl<R: BufRead> N3Parser<R> {
             }
 
             // Heuristic for Rule: contains => or ~> or ^> or -o and braces
-            if line.contains("=>") || line.contains("~>") || line.contains("^>") || line.contains("-o") {
+            if line.contains("=>")
+                || line.contains("~>")
+                || line.contains("^>")
+                || line.contains("-o")
+            {
                 if let Some(rule) = Self::parse_rule(line) {
                     callback(N3Event::LogicRule(rule))?;
                 }
@@ -169,12 +173,26 @@ impl<R: BufRead> N3Parser<R> {
         }
 
         let premise_str = parts[0].trim().trim_matches(|c| c == '{' || c == '}');
-        let conclusion_str = parts[1].trim().trim_end_matches('.').trim().trim_matches(|c| c == '{' || c == '}');
+        let conclusion_str = parts[1]
+            .trim()
+            .trim_end_matches('.')
+            .trim()
+            .trim_matches(|c| c == '{' || c == '}');
 
-        let premise = Formula { triples: Self::parse_formula_triples(premise_str) };
-        let conclusion = Formula { triples: Self::parse_formula_triples(conclusion_str) };
+        let premise = Formula {
+            triples: Self::parse_formula_triples(premise_str),
+        };
+        let conclusion = Formula {
+            triples: Self::parse_formula_triples(conclusion_str),
+        };
 
-        Some(Rule { id, rule_type, weight, premise, conclusion })
+        Some(Rule {
+            id,
+            rule_type,
+            weight,
+            premise,
+            conclusion,
+        })
     }
 
     fn parse_formula_triples(content: &str) -> Vec<Triple> {
@@ -219,10 +237,12 @@ mod tests {
         let cursor = std::io::Cursor::new(input.as_bytes());
         let mut parser = N3Parser::new(cursor);
         let mut events = Vec::new();
-        parser.parse_all(|event| {
-            events.push(event);
-            Ok(())
-        }).unwrap();
+        parser
+            .parse_all(|event| {
+                events.push(event);
+                Ok(())
+            })
+            .unwrap();
         events
     }
 
@@ -243,8 +263,11 @@ mod tests {
 
     #[test]
     fn parses_defeater_and_linear_rules() {
-        let defeater = collect_events("{ ?x a <http://ex.org/Exc> } ^> { ?x <http://ex.org/applies> false } .");
-        let linear = collect_events("{ ?x <http://ex.org/token> ?t } -o { ?x <http://ex.org/used> true } .");
+        let defeater = collect_events(
+            "{ ?x a <http://ex.org/Exc> } ^> { ?x <http://ex.org/applies> false } .",
+        );
+        let linear =
+            collect_events("{ ?x <http://ex.org/token> ?t } -o { ?x <http://ex.org/used> true } .");
 
         match &defeater[0] {
             N3Event::LogicRule(rule) => assert_eq!(rule.rule_type, RuleType::Defeater),
@@ -265,7 +288,8 @@ mod tests {
 
     #[test]
     fn static_triple_is_emitted() {
-        let events = collect_events("<http://ex.org/Alice> <http://ex.org/knows> <http://ex.org/Bob> .");
+        let events =
+            collect_events("<http://ex.org/Alice> <http://ex.org/knows> <http://ex.org/Bob> .");
         match &events[0] {
             N3Event::StaticTriple(triple) => {
                 assert!(matches!(triple.subject, Term::Uri(_)));

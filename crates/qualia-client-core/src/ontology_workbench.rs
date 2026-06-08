@@ -213,7 +213,11 @@ pub fn sha1_file(path: &Path) -> Result<String, String> {
         }
         hasher.update(&buf[..n]);
     }
-    Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect())
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect())
 }
 
 pub fn build_magnet_uri(info_hash_sha1: &str, display_name: &str) -> String {
@@ -225,10 +229,7 @@ pub fn build_magnet_uri(info_hash_sha1: &str, display_name: &str) -> String {
 }
 
 fn daemon_base_url() -> String {
-    format!(
-        "http://127.0.0.1:{}",
-        crate::api::get_active_daemon_port()
-    )
+    format!("http://127.0.0.1:{}", crate::api::get_active_daemon_port())
 }
 
 fn daemon_get(path: &str) -> Result<serde_json::Value, String> {
@@ -328,8 +329,12 @@ fn write_entries(storage_root: &Path, entries: &[OntologyWorkbenchEntry]) -> Res
         .open(path)
         .map_err(|e| e.to_string())?;
     for e in entries {
-        writeln!(file, "{}", serde_json::to_string(e).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+        writeln!(
+            file,
+            "{}",
+            serde_json::to_string(e).map_err(|e| e.to_string())?
+        )
+        .map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -463,9 +468,8 @@ pub async fn import_from_uri(
         .await
         .map_err(|e| e.to_string())?;
 
-    let quin_count =
-        resource_import::ingest_local_rdf(&source_path, &id, storage_root, None)
-            .map_err(|e| e.to_string())?;
+    let quin_count = resource_import::ingest_local_rdf(&source_path, &id, storage_root, None)
+        .map_err(|e| e.to_string())?;
 
     let q42_path = index.join(format!("{id}.q42"));
     let c_q42_path = index.join(format!("{id}.c.q42"));
@@ -629,13 +633,12 @@ pub fn sync_workbench_seeds_to_daemon(storage_root: &Path) -> Result<serde_json:
             registered += 1;
         }
     }
-    daemon_post("/torrent/sync", &serde_json::json!({}))
-        .map(|v| {
-            serde_json::json!({
-                "registered": registered,
-                "daemon": v,
-            })
+    daemon_post("/torrent/sync", &serde_json::json!({})).map(|v| {
+        serde_json::json!({
+            "registered": registered,
+            "daemon": v,
         })
+    })
 }
 
 #[cfg(test)]
@@ -682,7 +685,10 @@ mod tests {
             uploaded_day_epoch: 0,
         };
         assert!(session_eligible_for_share(&entry, did));
-        assert!(!session_eligible_for_share(&entry, "did:qualia:chat:solo:other"));
+        assert!(!session_eligible_for_share(
+            &entry,
+            "did:qualia:chat:solo:other"
+        ));
         entry.torrent.share_enabled = false;
         assert!(!session_eligible_for_share(&entry, did));
     }

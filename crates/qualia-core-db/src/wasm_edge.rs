@@ -19,12 +19,22 @@ pub struct WasmOffloadIntent {
 impl WasmOffloadIntent {
     #[wasm_bindgen(constructor)]
     pub fn new(opcode: u32, priority: u32, payload_size: usize) -> Self {
-        Self { opcode, priority, payload_size, payload_str: None }
+        Self {
+            opcode,
+            priority,
+            payload_size,
+            payload_str: None,
+        }
     }
-    
+
     #[wasm_bindgen]
     pub fn with_string_payload(opcode: u32, priority: u32, payload: String) -> Self {
-        Self { opcode, priority, payload_size: payload.len(), payload_str: Some(payload) }
+        Self {
+            opcode,
+            priority,
+            payload_size: payload.len(),
+            payload_str: Some(payload),
+        }
     }
 }
 
@@ -34,7 +44,10 @@ pub const OP_INFER_BINDING_AFFINITY: u32 = 0x102;
 
 /// Intercepts heavy computational opcodes and constructs a WASM offload intent.
 #[wasm_bindgen]
-pub fn intercept_computational_opcode(opcode: u32, payload_size: usize) -> Option<WasmOffloadIntent> {
+pub fn intercept_computational_opcode(
+    opcode: u32,
+    payload_size: usize,
+) -> Option<WasmOffloadIntent> {
     if opcode == OP_INFER || opcode == OP_CALC_KINEMATICS {
         // Abort local WASM evaluation and construct an Intent for WebRTC dispatch
         Some(WasmOffloadIntent::new(opcode, 1, payload_size))
@@ -83,7 +96,10 @@ impl FederatedNodeManager {
         }
 
         // Mock WebRTC payload routing
-        Ok(format!("Successfully routed intent (opcode: {}) to native Swarm.", intent.opcode))
+        Ok(format!(
+            "Successfully routed intent (opcode: {}) to native Swarm.",
+            intent.opcode
+        ))
     }
 }
 
@@ -120,7 +136,12 @@ pub fn serialize_float64_array(data: &[f64]) -> js_sys::Float64Array {
 
 /// Proposes a new M:N Guardianship agreement to the local WebRTC mesh.
 #[wasm_bindgen]
-pub fn webizen_propose_agreement(_nominated_guardians: js_sys::Array, principal: String, domain: String, threshold: u8) -> u64 {
+pub fn webizen_propose_agreement(
+    _nominated_guardians: js_sys::Array,
+    principal: String,
+    domain: String,
+    threshold: u8,
+) -> u64 {
     // Mock implementation: Mints the DID and broadcasts via WebRTC
     // Returns a deterministic mock agreement_id for testing
     let mut base_id = crate::q_hash(&principal).wrapping_add(crate::q_hash(&domain));
@@ -132,7 +153,8 @@ pub fn webizen_propose_agreement(_nominated_guardians: js_sys::Array, principal:
 #[wasm_bindgen]
 pub fn webizen_poll_agreements() -> String {
     // Returns a mock JSON array representing the `Proposed` states pending in the CRDT engine
-    r#"[{"agreement_id": 12345, "state": "Proposed", "domain": "q42:Financial", "threshold": 2}]"#.to_string()
+    r#"[{"agreement_id": 12345, "state": "Proposed", "domain": "q42:Financial", "threshold": 2}]"#
+        .to_string()
 }
 
 /// Signs a pending agreement, advancing its state machine and triggering WebRTC peer sync.

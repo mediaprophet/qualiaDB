@@ -218,10 +218,23 @@ pub fn disable_qpu_feature() -> Result<QpuOracleSettings, String> {
 /// Intercept hidden chat commands before LLM inference.
 pub fn handle_qpu_chat_command(text: &str) -> QpuChatCommandResult {
     let normalized = text.trim();
-    let enable_cmds = ["[enable_QPU]", "[enable_QPU}", "[enable_qpu]", "[enable_qpu}"];
-    let disable_cmds = ["[disable_QPU]", "[disable_QPU}", "[disable_qpu]", "[disable_qpu}"];
+    let enable_cmds = [
+        "[enable_QPU]",
+        "[enable_QPU}",
+        "[enable_qpu]",
+        "[enable_qpu}",
+    ];
+    let disable_cmds = [
+        "[disable_QPU]",
+        "[disable_QPU}",
+        "[disable_qpu]",
+        "[disable_qpu}",
+    ];
 
-    if enable_cmds.iter().any(|c| normalized.eq_ignore_ascii_case(c)) {
+    if enable_cmds
+        .iter()
+        .any(|c| normalized.eq_ignore_ascii_case(c))
+    {
         match enable_qpu_feature() {
             Ok(settings) => QpuChatCommandResult {
                 handled: true,
@@ -241,7 +254,10 @@ pub fn handle_qpu_chat_command(text: &str) -> QpuChatCommandResult {
                 response: format!("🔴 QPU unlock failed: {e}"),
             },
         }
-    } else if disable_cmds.iter().any(|c| normalized.eq_ignore_ascii_case(c)) {
+    } else if disable_cmds
+        .iter()
+        .any(|c| normalized.eq_ignore_ascii_case(c))
+    {
         match disable_qpu_feature() {
             Ok(settings) => QpuChatCommandResult {
                 handled: true,
@@ -308,5 +324,4 @@ mod tests {
         let r = handle_qpu_chat_command("hello world");
         assert!(!r.handled);
     }
-
 }

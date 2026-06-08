@@ -7,7 +7,10 @@ pub fn compile_to_q42(file_name: &str, _bookmarks: &[SemanticBookmark]) -> Resul
     // 2. Wrap into 128KB QualiaSuperBlocks (Minkowski Sieve compat)
     // 3. Embed HCAI Agreements (ODRL logic) directly into the file header
     // 4. Save to `AgentConfig::storage_path` as `{hash}.q42`
-    
-    println!("Compiled {} to .q42 format with embedded HCAI Agreements.", file_name);
+
+    println!(
+        "Compiled {} to .q42 format with embedded HCAI Agreements.",
+        file_name
+    );
     Ok(())
 }

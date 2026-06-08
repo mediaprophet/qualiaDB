@@ -68,7 +68,10 @@ fn parse_sharing(v: &serde_json::Value) -> SharingPolicy {
 
 fn parse_profile(v: serde_json::Value) -> UserProfile {
     UserProfile {
-        display_name: v["display_name"].as_str().unwrap_or("Qualia User").to_string(),
+        display_name: v["display_name"]
+            .as_str()
+            .unwrap_or("Qualia User")
+            .to_string(),
         bio: v["bio"].as_str().map(|s| s.to_string()),
         public_did: v["public_did"].as_str().unwrap_or_default().to_string(),
         active_front_door_id: v["active_front_door_id"].as_str().map(|s| s.to_string()),
@@ -111,7 +114,9 @@ pub fn save_user_profile(profile: UserProfile) -> Result<UserProfile, String> {
 }
 
 #[frb]
-pub fn generate_connect_invite(front_door_id: Option<String>) -> Result<ConnectInviteSummary, String> {
+pub fn generate_connect_invite(
+    front_door_id: Option<String>,
+) -> Result<ConnectInviteSummary, String> {
     let json = core::generate_connect_invite(front_door_id)?;
     Ok(ConnectInviteSummary {
         code: json["code"].as_str().unwrap_or_default().to_string(),
@@ -127,7 +132,10 @@ pub fn accept_connect_invite(input: String) -> Result<ChatContact, String> {
     let json = core::accept_connect_invite(input)?;
     Ok(ChatContact {
         actor_id: json["actor_id"].as_str().unwrap_or_default().to_string(),
-        display_name: json["display_name"].as_str().unwrap_or_default().to_string(),
+        display_name: json["display_name"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string(),
         did: json["did"].as_str().unwrap_or_default().to_string(),
         source: json["source"].as_str().unwrap_or_default().to_string(),
         added_at: json["added_at"].as_u64().unwrap_or(0),
@@ -150,7 +158,10 @@ pub fn update_chat_contact_categories(
     let json = core::update_chat_contact_categories(contact_did, categories)?;
     Ok(ChatContact {
         actor_id: json["actor_id"].as_str().unwrap_or_default().to_string(),
-        display_name: json["display_name"].as_str().unwrap_or_default().to_string(),
+        display_name: json["display_name"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string(),
         did: json["did"].as_str().unwrap_or_default().to_string(),
         source: json["source"].as_str().unwrap_or_default().to_string(),
         added_at: json["added_at"].as_u64().unwrap_or(0),

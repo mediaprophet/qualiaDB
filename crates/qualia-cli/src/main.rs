@@ -1,16 +1,16 @@
 use clap::{Parser, Subcommand};
 use qualia_core_db::QualiaQuin;
+use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 
-pub mod telemetry_server;
-pub mod ingest;
-pub mod compress;
-pub mod resources;
-mod parsers;
 mod benchmark_env;
+pub mod compress;
+pub mod ingest;
+mod parsers;
+pub mod resources;
+pub mod telemetry_server;
 
 /// The Qualia-DB Block Inspector & Data Ingestion CLI
 #[derive(Parser)]
@@ -30,7 +30,10 @@ enum Commands {
     },
     /// Advanced SHACL (Shapes Constraint Language) operations
     Shacl {
-        #[arg(long, help = "List all available SHACL extensions (e.g. Deontic, Epistemic)")]
+        #[arg(
+            long,
+            help = "List all available SHACL extensions (e.g. Deontic, Epistemic)"
+        )]
         list_extensions: bool,
     },
     /// Vault initialization and management
@@ -234,22 +237,13 @@ enum WebizenAction {
 #[derive(Subcommand, Debug)]
 enum BenchmarkAction {
     /// Simulates querying a percentage of the compressed graph and tracks peak RSS
-    RssScan {
-        path: PathBuf,
-        percent: u8,
-    },
+    RssScan { path: PathBuf, percent: u8 },
     /// Executes a Defeasible N3 logic rule on a specific subtree
-    LazyInference {
-        path: PathBuf,
-    },
+    LazyInference { path: PathBuf },
     /// Simulates streaming ingestion of chunks, logging the memory ceiling
-    Incremental {
-        path: PathBuf,
-    },
+    Incremental { path: PathBuf },
     /// Spins up a mock WebRTC peer and demonstrates on-demand SuperBlock streaming
-    P2pSwarm {
-        path: PathBuf,
-    },
+    P2pSwarm { path: PathBuf },
 }
 
 #[derive(Deserialize)]
@@ -315,8 +309,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Vault { init } => {
             if *init {
                 println!("Initializing Memory-Mapped Vault...");
-                let storage_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());
-                let _vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&storage_dir).expect("Failed to load KeyVault");
+                let storage_dir =
+                    std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());
+                let _vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&storage_dir)
+                    .expect("Failed to load KeyVault");
                 println!("Vault Initialization Complete!");
             }
         }
@@ -331,11 +327,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Inspect { file_path } => {
             println!("Initializing Block Inspector for: {:?}", file_path);
-            
+
             let mut file = File::open(file_path)?;
             let mut buffer = Vec::new();
             file.read_to_end(&mut buffer)?;
-            
+
             if buffer.len() % 48 != 0 {
                 eprintln!("WARNING: File size {} is not a multiple of 48 bytes (QualiaQuin alignment). File may be corrupted.", buffer.len());
             }
@@ -344,33 +340,55 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut count = 0;
 
             for chunk in buffer.chunks_exact(quin_size) {
-                let quin: QualiaQuin = unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const QualiaQuin) };
+                let quin: QualiaQuin =
+                    unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const QualiaQuin) };
                 let lamport_clock = quin.extract_lamport_clock();
                 let geometric_payload = quin.extract_clean_metadata_value();
-                
+
                 println!(
                     "[Quin {}] S: {}, P: {}, O: {}, Ctx: {}, LamportClock: {}, GeoPayload: {}, Parity: {}",
                     count, quin.subject, quin.predicate, quin.object, quin.context, lamport_clock, geometric_payload, quin.parity
                 );
                 count += 1;
             }
-            
+
             println!("Successfully inspected {} Quins.", count);
         }
         Commands::Dump { out_path } => {
             println!("Dumping raw SuperBlock to: {:?}", out_path);
-            
+
             let mut file = OpenOptions::new()
                 .create(true)
                 .write(true)
                 .truncate(true)
                 .open(out_path)?;
 
-            let mut q1 = QualiaQuin { subject: 100, predicate: 200, object: 300, context: 50, metadata: 0, parity: 0 };
+            let mut q1 = QualiaQuin {
+                subject: 100,
+                predicate: 200,
+                object: 300,
+                context: 50,
+                metadata: 0,
+                parity: 0,
+            };
             q1.set_lamport_clock(1);
-            let mut q2 = QualiaQuin { subject: 101, predicate: 201, object: 301, context: 51, metadata: 555, parity: 0 };
+            let mut q2 = QualiaQuin {
+                subject: 101,
+                predicate: 201,
+                object: 301,
+                context: 51,
+                metadata: 555,
+                parity: 0,
+            };
             q2.set_lamport_clock(2);
-            let mut q3 = QualiaQuin { subject: 102, predicate: 202, object: 302, context: 52, metadata: 999, parity: 0 };
+            let mut q3 = QualiaQuin {
+                subject: 102,
+                predicate: 202,
+                object: 302,
+                context: 52,
+                metadata: 999,
+                parity: 0,
+            };
             q3.set_lamport_clock(3);
 
             let quins = [q1, q2, q3];
@@ -379,19 +397,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let bytes = unsafe {
                     std::slice::from_raw_parts(
                         (quin as *const QualiaQuin) as *const u8,
-                        std::mem::size_of::<QualiaQuin>()
+                        std::mem::size_of::<QualiaQuin>(),
                     )
                 };
                 file.write_all(bytes)?;
             }
-            
+
             file.sync_all()?;
             println!("Dumped 3 mocked Quins (144 bytes) to .q42 successfully.");
         }
-        Commands::Daemon { dev, port, net_mode, energy_mode, workers, compute_swarm } => {
+        Commands::Daemon {
+            dev,
+            port,
+            net_mode,
+            energy_mode,
+            workers,
+            compute_swarm,
+        } => {
             let is_dev = *dev;
-            println!("Starting Qualia Native Loopback Server on 127.0.0.1:{}", port);
-            
+            println!(
+                "Starting Qualia Native Loopback Server on 127.0.0.1:{}",
+                port
+            );
+
             println!("============================================================");
             println!("🚀 Qualia-DB Zero-Allocation Native Local Daemon Booting...");
             println!("============================================================");
@@ -401,19 +429,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if *compute_swarm {
                 println!("🧠 Sleep-Cycle Swarm: ENABLED (Waiting for idle state...)");
             }
-            
+
             // Spawn async update checker
             tokio::spawn(async {
-                if let Ok(client) = reqwest::Client::builder().user_agent("qualia-cli-update-checker").build() {
-                    if let Ok(res) = client.get("https://crates.io/api/v1/crates/qualia-cli").send().await {
+                if let Ok(client) = reqwest::Client::builder()
+                    .user_agent("qualia-cli-update-checker")
+                    .build()
+                {
+                    if let Ok(res) = client
+                        .get("https://crates.io/api/v1/crates/qualia-cli")
+                        .send()
+                        .await
+                    {
                         if let Ok(json) = res.json::<serde_json::Value>().await {
                             if let Some(version) = json["crate"]["max_version"].as_str() {
                                 let current_version = env!("CARGO_PKG_VERSION");
                                 if version != current_version {
                                     println!("\n========================================");
-                                    println!("🚀 A new version of qualia-cli (v{}) is available!", version);
+                                    println!(
+                                        "🚀 A new version of qualia-cli (v{}) is available!",
+                                        version
+                                    );
                                     println!("   You are currently running v{}", current_version);
-                                    println!("   Run `cargo install qualia-cli --force` to update.");
+                                    println!(
+                                        "   Run `cargo install qualia-cli --force` to update."
+                                    );
                                     println!("========================================\n");
                                 }
                             }
@@ -429,25 +469,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             let storage_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());
-            let vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&storage_dir).expect("Failed to load KeyVault");
+            let vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&storage_dir)
+                .expect("Failed to load KeyVault");
             let vault_arc = std::sync::Arc::new(std::sync::Mutex::new(vault));
-            qualia_core_db::daemon::configure_daemon_topology(qualia_core_db::daemon::DaemonTopology {
-                worker_cells_configured: *workers,
-                compute_swarm_enabled: *compute_swarm,
-            });
+            qualia_core_db::daemon::configure_daemon_topology(
+                qualia_core_db::daemon::DaemonTopology {
+                    worker_cells_configured: *workers,
+                    compute_swarm_enabled: *compute_swarm,
+                },
+            );
             qualia_core_db::daemon::start_local_daemon_with_options(*port, is_dev, vault_arc).await;
         }
         Commands::ExportSolid { input, output } => {
             println!("============================================================");
             println!("🌐 W3C Solid Exporter Bridge");
             println!("============================================================");
-            
+
             let in_path = input.to_string_lossy().to_string();
             let out_path = output.to_string_lossy().to_string();
-            
-            match qualia_core_db::solid_ldp::SolidExporter::export_to_solid_pod(&in_path, &out_path) {
+
+            match qualia_core_db::solid_ldp::SolidExporter::export_to_solid_pod(&in_path, &out_path)
+            {
                 Ok(_) => {
-                    println!("✅ Export Complete! Your data is now fully portable to any Solid Pod.");
+                    println!(
+                        "✅ Export Complete! Your data is now fully portable to any Solid Pod."
+                    );
                 }
                 Err(e) => {
                     eprintln!("❌ Export Failed: {}", e);
@@ -455,7 +501,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Commands::Ingest { input, output } => {
-            let ext = input.extension()
+            let ext = input
+                .extension()
                 .and_then(|e| e.to_str())
                 .unwrap_or("")
                 .to_lowercase();
@@ -515,10 +562,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("============================================================");
             println!("📥 QualiaDB Native RDF/XML Ingestion Pipeline");
             println!("============================================================");
-            
+
             let in_path = input.to_string_lossy().to_string();
             let out_path = output.to_string_lossy().to_string();
-            
+
             match qualia_core_db::ingest::streaming_import_rdf(&in_path, &out_path) {
                 Ok(quin_count) => {
                     println!("✨ Done! Wrote {quin_count} Super-Quins.");
@@ -539,22 +586,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if results.is_empty() {
                         println!("No records found for subject ID {}.", subject);
                     } else {
-                        println!("Example Record: S:{} P:{} O:{} Ctx:{}", 
-                            results[0].subject, results[0].predicate, results[0].object, results[0].context);
+                        println!(
+                            "Example Record: S:{} P:{} O:{} Ctx:{}",
+                            results[0].subject,
+                            results[0].predicate,
+                            results[0].object,
+                            results[0].context
+                        );
                     }
                 }
                 Err(e) => eprintln!("❌ Query Failed: {}", e),
             }
         }
         Commands::Compress { input, output } => {
-            let ext = input.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+            let ext = input
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
             let is_q42 = ext == "q42";
 
             println!("============================================================");
             println!("QualiaDB LZ4 Block-Stream Compressor");
             println!("  input  : {}", input.display());
             println!("  output : {}", output.display());
-            println!("  mode   : {}", if is_q42 { "SuperBlock → raw Quins" } else { "raw bytes" });
+            println!(
+                "  mode   : {}",
+                if is_q42 {
+                    "SuperBlock → raw Quins"
+                } else {
+                    "raw bytes"
+                }
+            );
             println!("============================================================");
 
             let result = if is_q42 {
@@ -566,8 +629,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match result {
                 Ok(stats) => {
                     println!("Done.");
-                    println!("  Input  : {:.1} MB", stats.input_bytes as f64 / 1_048_576.0);
-                    println!("  Output : {:.1} MB", stats.output_bytes as f64 / 1_048_576.0);
+                    println!(
+                        "  Input  : {:.1} MB",
+                        stats.input_bytes as f64 / 1_048_576.0
+                    );
+                    println!(
+                        "  Output : {:.1} MB",
+                        stats.output_bytes as f64 / 1_048_576.0
+                    );
                     println!("  Blocks : {}", stats.blocks);
                     println!("  Ratio  : {:.2}x", stats.ratio);
                 }
@@ -577,90 +646,117 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Resources { subcommand, arg } => {
             resources::handle(subcommand, arg.as_deref()).await;
         }
-        Commands::Profile { action } => {
-            match action {
-                ProfileAction::Compile { input, out } => {
-                    let out_path = out.clone().unwrap_or_else(|| input.with_extension("qchk"));
-                    println!("============================================================");
-                    println!("⚡ Qualia Capability Profile Compiler");
-                    println!("  input  : {}", input.display());
-                    println!("  output : {}", out_path.display());
-                    println!("============================================================");
-                    match std::fs::read_to_string(input) {
-                        Err(e) => eprintln!("❌ Failed to read profile source: {}", e),
-                        Ok(jsonld_src) => {
-                            let stem = input.file_stem().unwrap_or_default().to_string_lossy();
-                            let profile_id = qualia_core_db::q_hash(&format!("profile:{}", stem));
-                            let mut chk_bytes: Vec<u8> = Vec::new();
-                            chk_bytes.extend_from_slice(b"QCHK");
-                            chk_bytes.extend_from_slice(&profile_id.to_le_bytes());
-                            chk_bytes.extend_from_slice(&(jsonld_src.len() as u32).to_le_bytes());
-                            chk_bytes.extend_from_slice(jsonld_src.as_bytes());
-                            match std::fs::write(&out_path, &chk_bytes) {
-                                Ok(_) => {
-                                    println!("✅ Compiled profile 0x{:016X} ({} bytes)", profile_id, chk_bytes.len());
-                                    println!("   Stem  : {}", stem);
-                                    println!("   Output: {}", out_path.display());
-                                    println!("   Next  : qualia-cli ingest --input data.nt --output out --profile {}", out_path.display());
-                                }
-                                Err(e) => eprintln!("❌ Write failed: {}", e),
+        Commands::Profile { action } => match action {
+            ProfileAction::Compile { input, out } => {
+                let out_path = out.clone().unwrap_or_else(|| input.with_extension("qchk"));
+                println!("============================================================");
+                println!("⚡ Qualia Capability Profile Compiler");
+                println!("  input  : {}", input.display());
+                println!("  output : {}", out_path.display());
+                println!("============================================================");
+                match std::fs::read_to_string(input) {
+                    Err(e) => eprintln!("❌ Failed to read profile source: {}", e),
+                    Ok(jsonld_src) => {
+                        let stem = input.file_stem().unwrap_or_default().to_string_lossy();
+                        let profile_id = qualia_core_db::q_hash(&format!("profile:{}", stem));
+                        let mut chk_bytes: Vec<u8> = Vec::new();
+                        chk_bytes.extend_from_slice(b"QCHK");
+                        chk_bytes.extend_from_slice(&profile_id.to_le_bytes());
+                        chk_bytes.extend_from_slice(&(jsonld_src.len() as u32).to_le_bytes());
+                        chk_bytes.extend_from_slice(jsonld_src.as_bytes());
+                        match std::fs::write(&out_path, &chk_bytes) {
+                            Ok(_) => {
+                                println!(
+                                    "✅ Compiled profile 0x{:016X} ({} bytes)",
+                                    profile_id,
+                                    chk_bytes.len()
+                                );
+                                println!("   Stem  : {}", stem);
+                                println!("   Output: {}", out_path.display());
+                                println!("   Next  : qualia-cli ingest --input data.nt --output out --profile {}", out_path.display());
                             }
-                        }
-                    }
-                }
-                ProfileAction::List => {
-                    println!("============================================================");
-                    println!("📋 Registered Capability Profiles");
-                    println!("============================================================");
-                    println!("  (Profiles are registered when ingested via ExternalSorter)");
-                    println!("  Known profile ID namespaces:");
-                    let known = [
-                        ("profile:general",  "General purpose — no engine restrictions"),
-                        ("profile:health",   "Health/Clinical — NativeClinicalRisk, NativeBioAlignment"),
-                        ("profile:chemistry","Organic Chemistry — NativeChemicalSynthesis, NativeLipinski"),
-                        ("profile:research", "Research — all scientific opcodes, no financial engines"),
-                        ("profile:legal",    "Legal/Deontic — OP_OBLIGATE, OP_FORBID, OP_PERMIT"),
-                        ("profile:financial","Financial — ILP dispatchers, tax schema, audit trail"),
-                    ];
-                    for (name, desc) in &known {
-                        println!("  0x{:016X}  {}  — {}", qualia_core_db::q_hash(name), name, desc);
-                    }
-                }
-                ProfileAction::Inspect { file } => {
-                    println!("============================================================");
-                    println!("🔎 Profile Inspector: {}", file.display());
-                    println!("============================================================");
-                    match std::fs::read(file) {
-                        Err(e) => eprintln!("❌ Cannot read file: {}", e),
-                        Ok(bytes) => {
-                            if bytes.len() < 16 || &bytes[0..4] != b"QCHK" {
-                                eprintln!("❌ Not a valid QCHK profile (.qchk or legacy .chk missing QCHK magic)");
-                            } else {
-                                let profile_id = u64::from_le_bytes(bytes[4..12].try_into().unwrap());
-                                let payload_len = u32::from_le_bytes(bytes[12..16].try_into().unwrap()) as usize;
-                                let payload = &bytes[16..16 + payload_len.min(bytes.len().saturating_sub(16))];
-                                println!("  Profile ID : 0x{:016X}", profile_id);
-                                println!("  Payload    : {} bytes (JSON-LD source)", payload_len);
-                                println!("  Total file : {} bytes", bytes.len());
-                                println!();
-                                println!("--- JSON-LD Source ---");
-                                println!("{}", String::from_utf8_lossy(payload));
-                            }
+                            Err(e) => eprintln!("❌ Write failed: {}", e),
                         }
                     }
                 }
             }
-        }
+            ProfileAction::List => {
+                println!("============================================================");
+                println!("📋 Registered Capability Profiles");
+                println!("============================================================");
+                println!("  (Profiles are registered when ingested via ExternalSorter)");
+                println!("  Known profile ID namespaces:");
+                let known = [
+                    (
+                        "profile:general",
+                        "General purpose — no engine restrictions",
+                    ),
+                    (
+                        "profile:health",
+                        "Health/Clinical — NativeClinicalRisk, NativeBioAlignment",
+                    ),
+                    (
+                        "profile:chemistry",
+                        "Organic Chemistry — NativeChemicalSynthesis, NativeLipinski",
+                    ),
+                    (
+                        "profile:research",
+                        "Research — all scientific opcodes, no financial engines",
+                    ),
+                    (
+                        "profile:legal",
+                        "Legal/Deontic — OP_OBLIGATE, OP_FORBID, OP_PERMIT",
+                    ),
+                    (
+                        "profile:financial",
+                        "Financial — ILP dispatchers, tax schema, audit trail",
+                    ),
+                ];
+                for (name, desc) in &known {
+                    println!(
+                        "  0x{:016X}  {}  — {}",
+                        qualia_core_db::q_hash(name),
+                        name,
+                        desc
+                    );
+                }
+            }
+            ProfileAction::Inspect { file } => {
+                println!("============================================================");
+                println!("🔎 Profile Inspector: {}", file.display());
+                println!("============================================================");
+                match std::fs::read(file) {
+                    Err(e) => eprintln!("❌ Cannot read file: {}", e),
+                    Ok(bytes) => {
+                        if bytes.len() < 16 || &bytes[0..4] != b"QCHK" {
+                            eprintln!("❌ Not a valid QCHK profile (.qchk or legacy .chk missing QCHK magic)");
+                        } else {
+                            let profile_id = u64::from_le_bytes(bytes[4..12].try_into().unwrap());
+                            let payload_len =
+                                u32::from_le_bytes(bytes[12..16].try_into().unwrap()) as usize;
+                            let payload =
+                                &bytes[16..16 + payload_len.min(bytes.len().saturating_sub(16))];
+                            println!("  Profile ID : 0x{:016X}", profile_id);
+                            println!("  Payload    : {} bytes (JSON-LD source)", payload_len);
+                            println!("  Total file : {} bytes", bytes.len());
+                            println!();
+                            println!("--- JSON-LD Source ---");
+                            println!("{}", String::from_utf8_lossy(payload));
+                        }
+                    }
+                }
+            }
+        },
         Commands::Benchmark { action } => {
             let (tx, rx) = tokio::sync::broadcast::channel(16);
-            
+
             // Spawn Telemetry WebSockets Server
             tokio::spawn(async move {
                 telemetry_server::start_telemetry_server(rx).await;
             });
-            
+
             let mut sys = sysinfo::System::new_all();
-            
+
             match action {
                 BenchmarkAction::RssScan { path, percent } => {
                     println!("=======================================================");
@@ -668,7 +764,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("=======================================================\n");
                     println!("Simulating Query against {}% of the graph...", percent);
                     let path_str = path.to_str().unwrap();
-                    
+
                     // Periodically send telemetry to UI
                     let _tx_clone = tx.clone();
                     tokio::spawn(async move {
@@ -676,31 +772,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                         }
                     });
-                    
-                    if let Ok(telemetry) = qualia_core_db::query_engine::lazy_superblock_query(path_str, *percent) {
+
+                    if let Ok(telemetry) =
+                        qualia_core_db::query_engine::lazy_superblock_query(path_str, *percent)
+                    {
                         let rss = telemetry_server::get_peak_rss(&mut sys);
-                        
+
                         let payload = telemetry_server::TelemetryPayload {
                             r#type: "telemetry".into(),
                             rss_mb: rss,
                             blocks_loaded: telemetry.blocks_loaded,
-                            hot_blocks: (0..telemetry.blocks_loaded).map(|i| telemetry_server::HotBlock {
-                                id: i as u64,
-                                source: if i % 5 == 0 { "remote".into() } else { "local".into() }
-                            }).collect(),
+                            hot_blocks: (0..telemetry.blocks_loaded)
+                                .map(|i| telemetry_server::HotBlock {
+                                    id: i as u64,
+                                    source: if i % 5 == 0 {
+                                        "remote".into()
+                                    } else {
+                                        "local".into()
+                                    },
+                                })
+                                .collect(),
                         };
                         let _ = tx.send(payload);
-                        
+
                         println!("✅ RSS Scan Complete. Peak RAM: {:.2} MB", rss);
                     }
                 }
                 BenchmarkAction::LazyInference { path } => {
                     println!("Running Lazy Inference Benchmark on {:?}", path);
                     let start = std::time::Instant::now();
-                    if let Ok(telemetry) = qualia_core_db::query_engine::lazy_superblock_query(path.to_str().unwrap(), 1) {
+                    if let Ok(telemetry) = qualia_core_db::query_engine::lazy_superblock_query(
+                        path.to_str().unwrap(),
+                        1,
+                    ) {
                         let elapsed = start.elapsed();
-                        println!("[Lazy Execution] Fetched {} SuperBlocks in {:.2?}", telemetry.blocks_loaded, elapsed);
-                        println!("Lazy Inference mathematically bypassed unneeded sectors of the file!");
+                        println!(
+                            "[Lazy Execution] Fetched {} SuperBlocks in {:.2?}",
+                            telemetry.blocks_loaded, elapsed
+                        );
+                        println!(
+                            "Lazy Inference mathematically bypassed unneeded sectors of the file!"
+                        );
                     }
                 }
                 BenchmarkAction::Incremental { path } => {
@@ -710,21 +822,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 BenchmarkAction::P2pSwarm { path } => {
                     println!("Running WebRTC P2P Swarm Streaming Benchmark on {:?}", path);
                     let start = std::time::Instant::now();
-                    if let Ok(telemetry) = qualia_core_db::query_engine::lazy_superblock_query(path.to_str().unwrap(), 100) {
+                    if let Ok(telemetry) = qualia_core_db::query_engine::lazy_superblock_query(
+                        path.to_str().unwrap(),
+                        100,
+                    ) {
                         let elapsed = start.elapsed();
                         let rss = telemetry_server::get_peak_rss(&mut sys);
-                        println!("[P2P Swarm Stream] Processed {} SuperBlocks in {:.2?}", telemetry.blocks_loaded, elapsed);
+                        println!(
+                            "[P2P Swarm Stream] Processed {} SuperBlocks in {:.2?}",
+                            telemetry.blocks_loaded, elapsed
+                        );
                         println!("P2P Swarm Peak RAM: {:.2} MB", rss);
                     }
                 }
             }
-            
+
             // Wait briefly to let WebSocket messages flush
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
         Commands::Bench { suite } => {
             println!("=====================================");
-            println!("🚀 QualiaDB Native LLM Benchmark Harness (suite: {})", suite);
+            println!(
+                "🚀 QualiaDB Native LLM Benchmark Harness (suite: {})",
+                suite
+            );
             println!("=====================================\n");
             println!("Running real measurements for Qualia (synthetic deterministic dataset + engine calls)...");
 
@@ -742,8 +863,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 h
             }
 
-            fn build_synth(size: usize) -> (std::collections::HashMap<u64, Vec<(u64, u64)>>, Vec<u64>) {
-                let mut map: std::collections::HashMap<u64, Vec<(u64, u64)>> = std::collections::HashMap::with_capacity(size);
+            fn build_synth(
+                size: usize,
+            ) -> (std::collections::HashMap<u64, Vec<(u64, u64)>>, Vec<u64>) {
+                let mut map: std::collections::HashMap<u64, Vec<(u64, u64)>> =
+                    std::collections::HashMap::with_capacity(size);
                 let mut subjects = Vec::with_capacity(size);
                 let preds: Vec<u64> = (0..5).map(|i| fnv1a(i)).collect();
                 for i in 0..size {
@@ -762,7 +886,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 start.elapsed().as_secs_f64() * 1000.0
             }
 
-            fn latency_stats_with_samples<F: FnMut() -> T, T>(warmup_samples: usize, measured_samples: usize, mut f: F) -> serde_json::Value {
+            fn latency_stats_with_samples<F: FnMut() -> T, T>(
+                warmup_samples: usize,
+                measured_samples: usize,
+                mut f: F,
+            ) -> serde_json::Value {
                 for _ in 0..warmup_samples {
                     black_box(f());
                 }
@@ -813,7 +941,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     while end == start {
                         end = std::time::Instant::now();
                     }
-                    granularity_samples_ns.push(end.duration_since(start).as_secs_f64() * 1_000_000_000.0);
+                    granularity_samples_ns
+                        .push(end.duration_since(start).as_secs_f64() * 1_000_000_000.0);
                 }
 
                 fn summarize(mut samples: Vec<f64>) -> serde_json::Value {
@@ -864,9 +993,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             // 1. Point
-            let qualia_point = time_ms(|| {
-                black_box(synth_map.get(&target))
-            });
+            let qualia_point = time_ms(|| black_box(synth_map.get(&target)));
 
             // 2. Two-hop
             let qualia_twohop = time_ms(|| {
@@ -874,7 +1001,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut res = Vec::new();
                 for &(_, o) in hop1 {
                     if let Some(h2) = synth_map.get(&o) {
-                        for &(_, o2) in h2 { res.push(o2); }
+                        for &(_, o2) in h2 {
+                            res.push(o2);
+                        }
                     }
                 }
                 black_box(res)
@@ -886,7 +1015,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut cnt = 0usize;
                 for v in synth_map.values() {
                     for &(p, _) in v {
-                        if p == target_p { cnt += 1; }
+                        if p == target_p {
+                            cnt += 1;
+                        }
                     }
                 }
                 black_box(cnt)
@@ -910,11 +1041,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // 5. Cyclic / Defeasible simulation via webizen-adjacent (use lazy + small logic)
             // Use existing test file for a "real" engine call if available
-            let cyclic_file = if !test_q42.is_empty() { test_q42 } else { "defeasible.q42" };
+            let cyclic_file = if !test_q42.is_empty() {
+                test_q42
+            } else {
+                "defeasible.q42"
+            };
             let qualia_cyclic = time_ms(|| {
                 let _ = qualia_core_db::query_engine::lazy_superblock_query(cyclic_file, 5);
                 // simulate defeater check cost
-                for _ in 0..1000 { let _ = fnv1a(123); }
+                for _ in 0..1000 {
+                    let _ = fnv1a(123);
+                }
             });
 
             // 6. TTFQ / cold start (use real WordNet from data.rdf import if present)
@@ -932,11 +1069,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // 7. Jitter (multiple small queries, compute variance)
             let mut times = Vec::new();
             for _ in 0..20 {
-                let t = time_ms(|| { let _ = synth_map.get(&fnv1a(7)); });
+                let t = time_ms(|| {
+                    let _ = synth_map.get(&fnv1a(7));
+                });
                 times.push(t);
             }
             let mean: f64 = times.iter().sum::<f64>() / times.len() as f64;
-            let var: f64 = times.iter().map(|&t| (t - mean).powi(2)).sum::<f64>() / times.len() as f64;
+            let var: f64 =
+                times.iter().map(|&t| (t - mean).powi(2)).sum::<f64>() / times.len() as f64;
             let qualia_jitter = format!("+/- {:.2} ms (measured stddev)", var.sqrt());
 
             // 8. Sync (simulated CRDT-ish via map clone + merge simulation)
@@ -953,7 +1093,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut acc = 0u64;
                 for i in 0..5000 {
                     acc = acc.wrapping_add(fnv1a(i) & 0xFF);
-                    if acc % 7 == 0 { acc = fnv1a(acc); }
+                    if acc % 7 == 0 {
+                        acc = fnv1a(acc);
+                    }
                 }
                 black_box(acc)
             });
@@ -964,11 +1106,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let _ = qualia_core_db::query_engine::lazy_superblock_query(cyclic_file, 10);
                 // simulate provenance dag walk
                 let mut dag = std::collections::HashMap::new();
-                for i in 0..200 { dag.insert(fnv1a(i), vec![fnv1a(i+1), fnv1a(i+7)]); }
+                for i in 0..200 {
+                    dag.insert(fnv1a(i), vec![fnv1a(i + 1), fnv1a(i + 7)]);
+                }
                 let mut visited = std::collections::HashSet::new();
-                fn walk(d: &std::collections::HashMap<u64, Vec<u64>>, n: u64, v: &mut std::collections::HashSet<u64>) {
-                    if !v.insert(n) { return; }
-                    if let Some(ch) = d.get(&n) { for &c in ch { walk(d, c, v); } }
+                fn walk(
+                    d: &std::collections::HashMap<u64, Vec<u64>>,
+                    n: u64,
+                    v: &mut std::collections::HashSet<u64>,
+                ) {
+                    if !v.insert(n) {
+                        return;
+                    }
+                    if let Some(ch) = d.get(&n) {
+                        for &c in ch {
+                            walk(d, c, v);
+                        }
+                    }
                 }
                 walk(&dag, fnv1a(0), &mut visited);
                 black_box(visited.len())
@@ -978,14 +1132,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // provenance validation sim + small lazy
                 let _ = qualia_core_db::query_engine::lazy_superblock_query(test_q42, 2);
                 let mut score = 0u64;
-                for i in 0..300 { score = score.wrapping_add(fnv1a(i) >> 3); }
+                for i in 0..300 {
+                    score = score.wrapping_add(fnv1a(i) >> 3);
+                }
                 black_box(score)
             });
 
             let qualia_nym = time_ms(|| {
                 let _ = qualia_core_db::query_engine::lazy_superblock_query(test_q42, 3);
                 // nym partition O(1) style hash
-                let mut parts: std::collections::HashMap<u64, usize> = std::collections::HashMap::new();
+                let mut parts: std::collections::HashMap<u64, usize> =
+                    std::collections::HashMap::new();
                 for i in 0..1000 {
                     let k = fnv1a(i) % 16;
                     *parts.entry(k).or_default() += 1;
@@ -1052,7 +1209,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     black_box(scale_map.get(&scale_target).map(|v| v.len()).unwrap_or(0))
                 });
                 let twohop_stats = latency_stats_with_samples(5, 50, || {
-                    let hop1 = scale_map.get(&scale_start).map(|v| v.as_slice()).unwrap_or(&[]);
+                    let hop1 = scale_map
+                        .get(&scale_start)
+                        .map(|v| v.as_slice())
+                        .unwrap_or(&[]);
                     let mut count = 0usize;
                     for &(_, o) in hop1 {
                         if let Some(h2) = scale_map.get(&o) {
@@ -1065,20 +1225,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let mut cnt = 0usize;
                     for v in scale_map.values() {
                         for &(p, _) in v {
-                            if p == scale_predicate { cnt += 1; }
+                            if p == scale_predicate {
+                                cnt += 1;
+                            }
                         }
                     }
                     black_box(cnt)
                 });
 
-                scaling.insert(size.to_string(), serde_json::json!({
-                    "subjects": size,
-                    "materialized_entries": scale_map.len(),
-                    "rss_after_materialize_mb": rss_after_materialize_mb,
-                    "point": point_stats,
-                    "twohop": twohop_stats,
-                    "filter": filter_stats
-                }));
+                scaling.insert(
+                    size.to_string(),
+                    serde_json::json!({
+                        "subjects": size,
+                        "materialized_entries": scale_map.len(),
+                        "rss_after_materialize_mb": rss_after_materialize_mb,
+                        "point": point_stats,
+                        "twohop": twohop_stats,
+                        "filter": filter_stats
+                    }),
+                );
                 black_box(scale_map.len());
             }
 
@@ -1161,191 +1326,242 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("--- JSON OUTPUT EXPORT ---");
             println!("{}", json_str);
             println!("--------------------------\n");
-            println!("Results saved to '{}' for further LLM parsing. (Qualia side measured live.)", out_path);
+            println!(
+                "Results saved to '{}' for further LLM parsing. (Qualia side measured live.)",
+                out_path
+            );
         }
-        Commands::Webizen { action } => match action {
-            WebizenAction::Init { path } => {
-                println!("========================================");
-                println!("Initializing Webizen Mode at {:?}", path);
-                
-                // 1. Generate Ed25519 Identity
-                use ed25519_dalek::SigningKey;
-                use rand_core::OsRng;
-                let mut csprng = OsRng;
-                let signing_key = SigningKey::generate(&mut csprng);
-                let public_key = signing_key.verifying_key();
-                let pub_hex = public_key.as_bytes().iter().map(|b| format!("{:02x}", b)).collect::<String>();
-                println!("🔑 Generated Webizen Agency Identity: did:git:{}", pub_hex);
-                
-                // 2. Initialize Embedded Git Repo
-                if let Some(parent) = path.parent() {
-                    std::fs::create_dir_all(parent)?;
+        Commands::Webizen { action } => {
+            match action {
+                WebizenAction::Init { path } => {
+                    println!("========================================");
+                    println!("Initializing Webizen Mode at {:?}", path);
+
+                    // 1. Generate Ed25519 Identity
+                    use ed25519_dalek::SigningKey;
+                    use rand_core::OsRng;
+                    let mut csprng = OsRng;
+                    let signing_key = SigningKey::generate(&mut csprng);
+                    let public_key = signing_key.verifying_key();
+                    let pub_hex = public_key
+                        .as_bytes()
+                        .iter()
+                        .map(|b| format!("{:02x}", b))
+                        .collect::<String>();
+                    println!("🔑 Generated Webizen Agency Identity: did:git:{}", pub_hex);
+
+                    // 2. Initialize Embedded Git Repo
+                    if let Some(parent) = path.parent() {
+                        std::fs::create_dir_all(parent)?;
+                    }
+                    let repo = git2::Repository::init(path)?;
+
+                    // 3. Write agnostic DID document as a Git Blob
+                    let did_doc = format!("{{\"id\":\"did:git:{}\"}}", pub_hex);
+                    let oid = repo.blob(did_doc.as_bytes())?;
+                    println!("📦 Embedded agnostic DID Document blob: {}", oid);
+
+                    // 4. Create Genesis Commit
+                    let signature = git2::Signature::now("Webizen Agency", "admin@localhost")?;
+                    let mut tree_builder = repo.treebuilder(None)?;
+                    tree_builder.insert("did.json", oid, 0o100644)?;
+                    let tree_id = tree_builder.write()?;
+                    let tree = repo.find_tree(tree_id)?;
+
+                    let commit_id = repo.commit(
+                        Some("HEAD"),
+                        &signature,
+                        &signature,
+                        "genesis: establish did:git agency identity",
+                        &tree,
+                        &[],
+                    )?;
+                    println!("🔐 Genesis Commit generated: {}", commit_id);
+                    println!("✅ Webizen Mode initialized successfully.");
+                    println!("========================================");
                 }
-                let repo = git2::Repository::init(path)?;
-                
-                // 3. Write agnostic DID document as a Git Blob
-                let did_doc = format!("{{\"id\":\"did:git:{}\"}}", pub_hex);
-                let oid = repo.blob(did_doc.as_bytes())?;
-                println!("📦 Embedded agnostic DID Document blob: {}", oid);
-                
-                // 4. Create Genesis Commit
-                let signature = git2::Signature::now("Webizen Agency", "admin@localhost")?;
-                let mut tree_builder = repo.treebuilder(None)?;
-                tree_builder.insert("did.json", oid, 0o100644)?;
-                let tree_id = tree_builder.write()?;
-                let tree = repo.find_tree(tree_id)?;
-                
-                let commit_id = repo.commit(
-                    Some("HEAD"),
-                    &signature,
-                    &signature,
-                    "genesis: establish did:git agency identity",
-                    &tree,
-                    &[]
-                )?;
-                println!("🔐 Genesis Commit generated: {}", commit_id);
-                println!("✅ Webizen Mode initialized successfully.");
-                println!("========================================");
-            }
-            WebizenAction::Ingest { url, repo, format } => {
-                println!("========================================");
-                println!("🌐 Universal Translator: Stream Ingesting {}", url);
-                
-                use std::hash::{Hash, Hasher};
-                fn hash_str(s: &str) -> u64 {
-                    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-                    s.hash(&mut hasher);
-                    hasher.finish()
+                WebizenAction::Ingest { url, repo, format } => {
+                    println!("========================================");
+                    println!("🌐 Universal Translator: Stream Ingesting {}", url);
+
+                    use std::hash::{Hash, Hasher};
+                    fn hash_str(s: &str) -> u64 {
+                        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                        s.hash(&mut hasher);
+                        hasher.finish()
+                    }
+
+                    let context_hash = hash_str(&url);
+
+                    let temp_dir = repo.join(".qualia_temp");
+                    let mut sorter = crate::parsers::external_sort::ExternalSorter::new(temp_dir);
+
+                    let is_http = url.starts_with("http");
+                    let mut file_bytes: Vec<u8> = Vec::new();
+                    if is_http {
+                        file_bytes = reqwest::get(url.as_str()).await?.bytes().await?.to_vec();
+                    } else {
+                        use std::io::Read;
+                        let mut f = std::fs::File::open(&url)?;
+                        f.read_to_end(&mut file_bytes)?;
+                    }
+
+                    let fmt = format.clone().unwrap_or_else(|| {
+                        let lower = url.to_lowercase();
+                        if lower.ends_with(".cbor") || lower.ends_with(".cbor-ld") {
+                            "cbor-ld".to_string()
+                        } else if lower.ends_with(".json") || lower.ends_with(".jsonld") {
+                            "json-ld".to_string()
+                        } else if lower.ends_with(".ttl")
+                            || lower.ends_with(".n3")
+                            || lower.ends_with(".nt")
+                        {
+                            "turtle-star".to_string()
+                        } else if lower.ends_with(".chk") {
+                            "chk".to_string()
+                        } else {
+                            "unknown".to_string()
+                        }
+                    });
+
+                    let parsed_count = match fmt.as_str() {
+                        "cbor-ld" => {
+                            println!("📡 Stream-parsing CBOR-LD (Zero-allocation path)");
+                            crate::parsers::cbor_parser::parse_cbor_ld_stream(
+                                &file_bytes,
+                                context_hash,
+                                &mut sorter,
+                            )?
+                        }
+                        "json-ld" => {
+                            println!(
+                                "🏢 Stream-parsing JSON-LD via SAX-style State Machine (Zero DOM)"
+                            );
+                            crate::parsers::json_ld_stream::parse_json_ld_stream(
+                                file_bytes.as_slice(),
+                                context_hash,
+                                &mut sorter,
+                            )?
+                        }
+                        "turtle-star" => {
+                            println!("🌿 Stream-parsing Turtle-Star (with MSB XOR folding)");
+                            crate::parsers::turtle_star::parse_turtle_star_stream(
+                                file_bytes.as_slice(),
+                                context_hash,
+                                &mut sorter,
+                            )?
+                        }
+                        "chk" => {
+                            println!("🧠 Stream-parsing Cognitive AI Chunks (.chk format)");
+                            crate::parsers::chk_parser::parse_chk_stream(
+                                file_bytes.as_slice(),
+                                context_hash,
+                                &mut sorter,
+                            )?
+                        }
+                        _ => {
+                            println!("❌ Unknown format. Use --format cbor-ld | json-ld | turtle-star | chk");
+                            return Ok(());
+                        }
+                    };
+
+                    println!(
+                        "⚙️ Transpiled {} raw triples directly into 48-byte QualiaQuins buffer.",
+                        parsed_count
+                    );
+                    println!("📦 Commencing K-Way External Merge Sort into BIDX format...");
+
+                    let out_q42 = repo.join("knowledge.q42");
+                    let out_bidx = repo.join("knowledge.q42.bidx");
+                    let blocks = sorter.merge(&out_q42, &out_bidx)?;
+
+                    println!(
+                        "✅ Perfectly sorted B-Tree dataset generated: {} SuperBlocks written.",
+                        blocks
+                    );
+
+                    // Commit to Git
+                    let git_repo = git2::Repository::open(repo)?;
+                    let binary_payload = std::fs::read(&out_q42)?;
+                    let oid = git_repo.blob(&binary_payload)?;
+                    println!(
+                        "📦 Embedded {} bytes as agnostic .qualia blob: {}",
+                        binary_payload.len(),
+                        oid
+                    );
+
+                    let signature = git2::Signature::now("Webizen Agency", "admin@localhost")?;
+
+                    let head = git_repo.head()?;
+                    let parent_commit = head.peel_to_commit()?;
+                    let mut tree_builder = git_repo.treebuilder(Some(&parent_commit.tree()?))?;
+
+                    // Filename based on hash
+                    let filename = format!("ontology_{}.qualia", context_hash);
+                    tree_builder.insert(&filename, oid, 0o100644)?;
+                    let tree_id = tree_builder.write()?;
+                    let tree = git_repo.find_tree(tree_id)?;
+
+                    let commit_id = git_repo.commit(
+                        Some("HEAD"),
+                        &signature,
+                        &signature,
+                        &format!("ingest: transpiled {}", url),
+                        &tree,
+                        &[&parent_commit],
+                    )?;
+                    println!("🔐 Ingestion Commit generated: {}", commit_id);
+                    println!("✅ Ontology securely committed to human agency repository.");
+                    println!("========================================");
                 }
-                
-                let context_hash = hash_str(&url);
-                
-                let temp_dir = repo.join(".qualia_temp");
-                let mut sorter = crate::parsers::external_sort::ExternalSorter::new(temp_dir);
-                
-                let is_http = url.starts_with("http");
-                let mut file_bytes: Vec<u8> = Vec::new();
-                if is_http {
-                    file_bytes = reqwest::get(url.as_str()).await?.bytes().await?.to_vec();
-                } else {
-                    use std::io::Read;
-                    let mut f = std::fs::File::open(&url)?;
-                    f.read_to_end(&mut file_bytes)?;
-                }
-                
-                let fmt = format.clone().unwrap_or_else(|| {
-                    let lower = url.to_lowercase();
-                    if lower.ends_with(".cbor") || lower.ends_with(".cbor-ld") { "cbor-ld".to_string() }
-                    else if lower.ends_with(".json") || lower.ends_with(".jsonld") { "json-ld".to_string() }
-                    else if lower.ends_with(".ttl") || lower.ends_with(".n3") || lower.ends_with(".nt") { "turtle-star".to_string() }
-                    else if lower.ends_with(".chk") { "chk".to_string() }
-                    else { "unknown".to_string() }
-                });
-                
-                let parsed_count = match fmt.as_str() {
-                    "cbor-ld" => {
-                        println!("📡 Stream-parsing CBOR-LD (Zero-allocation path)");
-                        crate::parsers::cbor_parser::parse_cbor_ld_stream(&file_bytes, context_hash, &mut sorter)?
-                    }
-                    "json-ld" => {
-                        println!("🏢 Stream-parsing JSON-LD via SAX-style State Machine (Zero DOM)");
-                        crate::parsers::json_ld_stream::parse_json_ld_stream(file_bytes.as_slice(), context_hash, &mut sorter)?
-                    }
-                    "turtle-star" => {
-                        println!("🌿 Stream-parsing Turtle-Star (with MSB XOR folding)");
-                        crate::parsers::turtle_star::parse_turtle_star_stream(file_bytes.as_slice(), context_hash, &mut sorter)?
-                    }
-                    "chk" => {
-                        println!("🧠 Stream-parsing Cognitive AI Chunks (.chk format)");
-                        crate::parsers::chk_parser::parse_chk_stream(file_bytes.as_slice(), context_hash, &mut sorter)?
-                    }
-                    _ => {
-                        println!("❌ Unknown format. Use --format cbor-ld | json-ld | turtle-star | chk");
-                        return Ok(());
-                    }
-                };
-                
-                println!("⚙️ Transpiled {} raw triples directly into 48-byte QualiaQuins buffer.", parsed_count);
-                println!("📦 Commencing K-Way External Merge Sort into BIDX format...");
-                
-                let out_q42 = repo.join("knowledge.q42");
-                let out_bidx = repo.join("knowledge.q42.bidx");
-                let blocks = sorter.merge(&out_q42, &out_bidx)?;
-                
-                println!("✅ Perfectly sorted B-Tree dataset generated: {} SuperBlocks written.", blocks);
-                
-                // Commit to Git
-                let git_repo = git2::Repository::open(repo)?;
-                let binary_payload = std::fs::read(&out_q42)?;
-                let oid = git_repo.blob(&binary_payload)?;
-                println!("📦 Embedded {} bytes as agnostic .qualia blob: {}", binary_payload.len(), oid);
-                
-                let signature = git2::Signature::now("Webizen Agency", "admin@localhost")?;
-                
-                let head = git_repo.head()?;
-                let parent_commit = head.peel_to_commit()?;
-                let mut tree_builder = git_repo.treebuilder(Some(&parent_commit.tree()?))?;
-                
-                // Filename based on hash
-                let filename = format!("ontology_{}.qualia", context_hash);
-                tree_builder.insert(&filename, oid, 0o100644)?;
-                let tree_id = tree_builder.write()?;
-                let tree = git_repo.find_tree(tree_id)?;
-                
-                let commit_id = git_repo.commit(
-                    Some("HEAD"),
-                    &signature,
-                    &signature,
-                    &format!("ingest: transpiled {}", url),
-                    &tree,
-                    &[&parent_commit]
-                )?;
-                println!("🔐 Ingestion Commit generated: {}", commit_id);
-                println!("✅ Ontology securely committed to human agency repository.");
-                println!("========================================");
-            }
-            WebizenAction::ValidateGitmark { repo } => {
-                println!("========================================");
-                println!("🛡️ Initializing Gitmark Sybil-Resistance Ledger for: {:?}", repo);
-                
-                let git_repo = git2::Repository::open(repo)?;
-                let mut revwalk = git_repo.revwalk()?;
-                revwalk.push_head()?;
-                
-                let mut commit_count = 0;
-                let mut gitmark_score = 0;
-                
-                for oid_result in revwalk {
-                    if let Ok(oid) = oid_result {
-                        if let Ok(commit) = git_repo.find_commit(oid) {
-                            commit_count += 1;
-                            // Calculate Gitmark weight based on cryptographic hashes and time
-                            let hash_bytes = commit.id().as_bytes().to_vec();
-                            let weight: u64 = hash_bytes.iter().map(|&b| b as u64).sum();
-                            gitmark_score += weight;
+                WebizenAction::ValidateGitmark { repo } => {
+                    println!("========================================");
+                    println!(
+                        "🛡️ Initializing Gitmark Sybil-Resistance Ledger for: {:?}",
+                        repo
+                    );
+
+                    let git_repo = git2::Repository::open(repo)?;
+                    let mut revwalk = git_repo.revwalk()?;
+                    revwalk.push_head()?;
+
+                    let mut commit_count = 0;
+                    let mut gitmark_score = 0;
+
+                    for oid_result in revwalk {
+                        if let Ok(oid) = oid_result {
+                            if let Ok(commit) = git_repo.find_commit(oid) {
+                                commit_count += 1;
+                                // Calculate Gitmark weight based on cryptographic hashes and time
+                                let hash_bytes = commit.id().as_bytes().to_vec();
+                                let weight: u64 = hash_bytes.iter().map(|&b| b as u64).sum();
+                                gitmark_score += weight;
+                            }
                         }
                     }
+
+                    println!("✅ Verified {} historical commits.", commit_count);
+                    println!("💎 Aggregate Gitmark Reputation Score: {}", gitmark_score);
+                    if gitmark_score > 100_000 {
+                        println!("🟢 Access Control: Trusted (Permissive Commons Route Granted)");
+                    } else {
+                        println!("🟡 Access Control: Probationary (Bilateral Micro-Commons Only)");
+                    }
+                    println!("========================================");
                 }
-                
-                println!("✅ Verified {} historical commits.", commit_count);
-                println!("💎 Aggregate Gitmark Reputation Score: {}", gitmark_score);
-                if gitmark_score > 100_000 {
-                    println!("🟢 Access Control: Trusted (Permissive Commons Route Granted)");
-                } else {
-                    println!("🟡 Access Control: Probationary (Bilateral Micro-Commons Only)");
-                }
-                println!("========================================");
-            }
-            WebizenAction::PublishIpfs { file } => {
-                println!("========================================");
-                println!("🪐 IPFS InterPlanetary File System Sync");
-                println!("Reading public `.qualia` payload: {:?}", file);
-                
-                let file_data = std::fs::read(&file)?;
-                println!("📤 Uploading {} bytes to local IPFS Daemon (port 5001)...", file_data.len());
-                
-                let rt = tokio::runtime::Runtime::new()?;
-                rt.block_on(async {
+                WebizenAction::PublishIpfs { file } => {
+                    println!("========================================");
+                    println!("🪐 IPFS InterPlanetary File System Sync");
+                    println!("Reading public `.qualia` payload: {:?}", file);
+
+                    let file_data = std::fs::read(&file)?;
+                    println!(
+                        "📤 Uploading {} bytes to local IPFS Daemon (port 5001)...",
+                        file_data.len()
+                    );
+
+                    let rt = tokio::runtime::Runtime::new()?;
+                    rt.block_on(async {
                     let client = reqwest::Client::new();
                     // Setup multipart form
                     let part = reqwest::multipart::Part::bytes(file_data)
@@ -1371,57 +1587,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 });
-                println!("========================================");
-            }
-            WebizenAction::SeedWebtorrent { file } => {
-                println!("========================================");
-                println!("☍ WebTorrent DHT Sync");
-                println!("Reading binary ledger payload: {:?}", file);
-                
-                use sha1::{Sha1, Digest};
-                use std::io::Read;
-                
-                let mut hasher = Sha1::new();
-                let mut f = std::fs::File::open(&file)?;
-                let mut buffer = [0u8; 8192];
-                let mut total_bytes = 0;
-                
-                println!("📤 Hashing file for WebTorrent Swarm (streaming to avoid memory load)...");
-                
-                loop {
-                    let count = f.read(&mut buffer)?;
-                    if count == 0 {
-                        break;
-                    }
-                    hasher.update(&buffer[..count]);
-                    total_bytes += count;
+                    println!("========================================");
                 }
-                
-                let hash_result = hasher.finalize();
-                let hex_hash = hash_result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
-                let filename = file.file_name().unwrap_or_default().to_string_lossy();
-                
-                println!("✅ Success! {} bytes processed. Torrent Seeded to DHT Swarm.", total_bytes);
-                println!("🧲 Magnet URI: magnet:?xt=urn:btih:{}&dn={}", hex_hash, filename);
-                println!("========================================");
-            }
-            WebizenAction::DnsFrontdoor { domain, repo } => {
-                println!("========================================");
-                println!("🚪 Generating Webizen DNS Frontdoor & did.json");
-                println!("Target Domain: {}", domain);
-                println!("Repository: {:?}", repo);
-                
-                // Try to extract identity from the repo
-                let mut local_did = "did:q42:local-device-key-mock".to_string();
-                if let Ok(git_repo) = git2::Repository::open(&repo) {
-                    if let Ok(tree) = git_repo.head().and_then(|h| h.peel_to_tree()) {
-                        if let Some(entry) = tree.get_name("did.json") {
-                            if let Ok(obj) = entry.to_object(&git_repo) {
-                                if let Some(blob) = obj.as_blob() {
-                                    if let Ok(content) = std::str::from_utf8(blob.content()) {
-                                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(content) {
-                                            if let Some(id) = json["id"].as_str() {
-                                                local_did = id.replace("did:git:", "did:q42:");
+                WebizenAction::SeedWebtorrent { file } => {
+                    println!("========================================");
+                    println!("☍ WebTorrent DHT Sync");
+                    println!("Reading binary ledger payload: {:?}", file);
+
+                    use sha1::{Digest, Sha1};
+                    use std::io::Read;
+
+                    let mut hasher = Sha1::new();
+                    let mut f = std::fs::File::open(&file)?;
+                    let mut buffer = [0u8; 8192];
+                    let mut total_bytes = 0;
+
+                    println!(
+                        "📤 Hashing file for WebTorrent Swarm (streaming to avoid memory load)..."
+                    );
+
+                    loop {
+                        let count = f.read(&mut buffer)?;
+                        if count == 0 {
+                            break;
+                        }
+                        hasher.update(&buffer[..count]);
+                        total_bytes += count;
+                    }
+
+                    let hash_result = hasher.finalize();
+                    let hex_hash = hash_result
+                        .iter()
+                        .map(|b| format!("{:02x}", b))
+                        .collect::<String>();
+                    let filename = file.file_name().unwrap_or_default().to_string_lossy();
+
+                    println!(
+                        "✅ Success! {} bytes processed. Torrent Seeded to DHT Swarm.",
+                        total_bytes
+                    );
+                    println!(
+                        "🧲 Magnet URI: magnet:?xt=urn:btih:{}&dn={}",
+                        hex_hash, filename
+                    );
+                    println!("========================================");
+                }
+                WebizenAction::DnsFrontdoor { domain, repo } => {
+                    println!("========================================");
+                    println!("🚪 Generating Webizen DNS Frontdoor & did.json");
+                    println!("Target Domain: {}", domain);
+                    println!("Repository: {:?}", repo);
+
+                    // Try to extract identity from the repo
+                    let mut local_did = "did:q42:local-device-key-mock".to_string();
+                    if let Ok(git_repo) = git2::Repository::open(&repo) {
+                        if let Ok(tree) = git_repo.head().and_then(|h| h.peel_to_tree()) {
+                            if let Some(entry) = tree.get_name("did.json") {
+                                if let Ok(obj) = entry.to_object(&git_repo) {
+                                    if let Some(blob) = obj.as_blob() {
+                                        if let Ok(content) = std::str::from_utf8(blob.content()) {
+                                            if let Ok(json) =
+                                                serde_json::from_str::<serde_json::Value>(content)
+                                            {
+                                                if let Some(id) = json["id"].as_str() {
+                                                    local_did = id.replace("did:git:", "did:q42:");
+                                                }
                                             }
                                         }
                                     }
@@ -1429,49 +1659,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     }
+
+                    println!("🔑 Extracted Local Identity: {}", local_did);
+                    println!("\n--- DNS TXT RECORD ---");
+                    println!("Add the following to your DNS registrar for '{}':", domain);
+                    println!("Host: _did");
+                    println!("Type: TXT");
+                    println!(
+                        "Value: \"did={}; endpoint=wss://{}:4242/qualia-bridge\"",
+                        local_did, domain
+                    );
+
+                    println!("\n--- did.json (W3C did:web) ---");
+                    println!("Host this file at: https://{}/.well-known/did.json", domain);
+                    let did_doc = serde_json::json!({
+                        "@context": [
+                            "https://www.w3.org/ns/did/v1",
+                            "https://w3id.org/security/suites/ed25519-2020/v1"
+                        ],
+                        "id": format!("did:web:{}", domain),
+                        "alsoKnownAs": [
+                            local_did.clone()
+                        ],
+                        "verificationMethod": [{
+                            "id": format!("did:web:{}#key-1", domain),
+                            "type": "Ed25519VerificationKey2020",
+                            "controller": format!("did:web:{}", domain),
+                            "publicKeyMultibase": local_did.replace("did:q42:", "z")
+                        }],
+                        "authentication": [
+                            format!("did:web:{}#key-1", domain)
+                        ],
+                        "service": [{
+                            "id": format!("did:web:{}#AgreementNegotiation", domain),
+                            "type": "QualiaAgreementNegotiation",
+                            "serviceEndpoint": format!("wss://{}:4242/qualia-bridge", domain),
+                            "description": "Zero-permission endpoint for establishing relationships and negotiating terms (e.g., UDHR). Access requires cryptographic handshake."
+                        }]
+                    });
+
+                    println!("{}", serde_json::to_string_pretty(&did_doc).unwrap());
+                    println!("========================================");
                 }
-                
-                println!("🔑 Extracted Local Identity: {}", local_did);
-                println!("\n--- DNS TXT RECORD ---");
-                println!("Add the following to your DNS registrar for '{}':", domain);
-                println!("Host: _did");
-                println!("Type: TXT");
-                println!("Value: \"did={}; endpoint=wss://{}:4242/qualia-bridge\"", local_did, domain);
-                
-                println!("\n--- did.json (W3C did:web) ---");
-                println!("Host this file at: https://{}/.well-known/did.json", domain);
-                let did_doc = serde_json::json!({
-                    "@context": [
-                        "https://www.w3.org/ns/did/v1",
-                        "https://w3id.org/security/suites/ed25519-2020/v1"
-                    ],
-                    "id": format!("did:web:{}", domain),
-                    "alsoKnownAs": [
-                        local_did.clone()
-                    ],
-                    "verificationMethod": [{
-                        "id": format!("did:web:{}#key-1", domain),
-                        "type": "Ed25519VerificationKey2020",
-                        "controller": format!("did:web:{}", domain),
-                        "publicKeyMultibase": local_did.replace("did:q42:", "z")
-                    }],
-                    "authentication": [
-                        format!("did:web:{}#key-1", domain)
-                    ],
-                    "service": [{
-                        "id": format!("did:web:{}#AgreementNegotiation", domain),
-                        "type": "QualiaAgreementNegotiation",
-                        "serviceEndpoint": format!("wss://{}:4242/qualia-bridge", domain),
-                        "description": "Zero-permission endpoint for establishing relationships and negotiating terms (e.g., UDHR). Access requires cryptographic handshake."
-                    }]
-                });
-                
-                println!("{}", serde_json::to_string_pretty(&did_doc).unwrap());
-                println!("========================================");
             }
         }
     }
-    
+
     Ok(())
 }
-

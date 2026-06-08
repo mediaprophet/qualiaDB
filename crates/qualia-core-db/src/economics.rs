@@ -1,4 +1,4 @@
-use rand_distr::{StandardNormal, Distribution};
+use rand_distr::{Distribution, StandardNormal};
 
 #[cfg(all(not(target_os = "android"), not(target_arch = "wasm32")))]
 use rayon::prelude::*;
@@ -21,7 +21,8 @@ pub fn simulate_gbm_path(
     for _ in 0..steps {
         let z: f64 = StandardNormal.sample(&mut rng);
         // Discrete GBM approximation
-        current_price *= f64::exp((drift - 0.5 * volatility.powi(2)) * dt + volatility * f64::sqrt(dt) * z);
+        current_price *=
+            f64::exp((drift - 0.5 * volatility.powi(2)) * dt + volatility * f64::sqrt(dt) * z);
     }
 
     current_price
@@ -39,7 +40,6 @@ pub fn run_monte_carlo_var(
     steps: usize,
     paths: usize,
 ) -> (f64, f64) {
-    
     // Abstract execution iterator based on OS target
     #[cfg(all(not(target_os = "android"), not(target_arch = "wasm32")))]
     let mut final_prices: Vec<f64> = (0..paths)
@@ -88,10 +88,10 @@ pub fn simulate_macroeconomic_flow(
     let macro_derivative = |_t: f64, y: &[f64]| -> Vec<f64> {
         let current_m = y[0];
         let current_p = y[1];
-        
+
         // M increases slowly due to inflation/printing (e.g. 2% growth)
         let dm_dt = current_m * 0.02;
-        
+
         // P adapts based on P = (M * V) / Q
         // dP/dt nudges P towards the target price level
         let target_p = (current_m * velocity) / real_gdp;
@@ -116,7 +116,11 @@ pub struct SystemContext {
 
 /// Get mock system context
 pub fn get_current_system_context() -> SystemContext {
-    SystemContext { current_battery_level: 0.8, cpu_temperature: 45.0, network_congestion_index: 0.2 }
+    SystemContext {
+        current_battery_level: 0.8,
+        cpu_temperature: 45.0,
+        network_congestion_index: 0.2,
+    }
 }
 
 /// Calculates bandwidth liability in USD based on gb routed and context.
@@ -126,12 +130,12 @@ pub fn calculate_bandwidth_liability(bytes: usize, context: &SystemContext) -> f
 
     // Dynamically adjust based on system context
     base_rate += context.network_congestion_index * 0.05;
-    
+
     // Low battery -> demands higher compensation
     if context.current_battery_level < 0.2 {
         base_rate += 0.05;
     }
-    
+
     // High temperature -> throttling penalty
     if context.cpu_temperature > 70.0 {
         base_rate += 0.02;

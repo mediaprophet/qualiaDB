@@ -1,7 +1,6 @@
 //! Thermodynamics & Statistical Ensembles
 //! Implements pure Rust Markov Chain Monte Carlo (MCMC) sampling for macroscopic properties.
 
-
 /// State of a thermodynamic ensemble
 #[derive(Clone)]
 pub struct EnsembleState {
@@ -29,11 +28,11 @@ impl ThermodynamicSampler {
     /// Performs a Metropolis-Hastings MCMC step
     pub fn metropolis_step(&mut self, proposed_energy: f64, random_uniform: f64) -> bool {
         let delta_e = proposed_energy - self.current_state.total_energy;
-        
+
         // Accept if energy decreases or strictly probabilistically according to Boltzmann distribution
         let k_b = 8.617333262145e-5; // Boltzmann constant in eV/K
         let beta = 1.0 / (k_b * self.current_state.temperature);
-        
+
         let acceptance_probability = if delta_e < 0.0 {
             1.0
         } else {

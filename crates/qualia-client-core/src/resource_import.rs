@@ -357,8 +357,12 @@ pub async fn import_catalog_ontology_with_options(
         ctx.emit(ProgressPayload {
             id: ctx.id.clone(),
             progress: 100.0,
-            downloaded_bytes: std::fs::metadata(&source_path).map(|m| m.len()).unwrap_or(0),
-            total_bytes: std::fs::metadata(&source_path).map(|m| m.len()).unwrap_or(0),
+            downloaded_bytes: std::fs::metadata(&source_path)
+                .map(|m| m.len())
+                .unwrap_or(0),
+            total_bytes: std::fs::metadata(&source_path)
+                .map(|m| m.len())
+                .unwrap_or(0),
             speed_kbps: 0.0,
             status: "processing".to_string(),
         });

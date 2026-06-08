@@ -3,9 +3,9 @@
 // We still need access to standard library for I/O and String during init phase
 extern crate std;
 
-use core::ptr::write_volatile;
-use crate::QualiaQuin;
 use crate::wal::append_mutation;
+use crate::QualiaQuin;
+use core::ptr::write_volatile;
 use std::string::String;
 
 /// Explicit operational states defining the execution boundaries
@@ -70,37 +70,45 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
     payload: RawToolPayload,
     intent_frame: &McpIntentFrame,
 ) -> Result<usize, McpSystemError> {
-    
     // Enforce the zero-allocation lookup using primitive byte matching
     match payload.tool_name {
         b"query_graph" => {
             if intent_frame.sanctuary_override.is_none() {
                 // Instantly generate and sign an immutable conduct violation Quin
                 let violation_quin = QualiaQuin::new_conduct_violation(
-                    b"EgressViolation: Missing Cryptographic Sanctuary Override"
+                    b"EgressViolation: Missing Cryptographic Sanctuary Override",
                 );
                 let _ = append_mutation(&violation_quin);
-                
+
                 return Err(McpSystemError::SanctuaryGateTriggered);
             }
-            
+
             // Route execution frame straight to the Core 1 Prolog Sentinel VM loop
             execute_bare_metal_graph_traversal(payload.arguments_raw, intent_frame)
-        },
-        
+        }
+
         b"inject_test_quin" => {
-            // Enforce paraconsistent isolation logic by routing the inputs 
+            // Enforce paraconsistent isolation logic by routing the inputs
             // directly into the isolated sub-graph lane: q_hash("q42:isolated")
             execute_paraconsistent_injection(payload.arguments_raw, intent_frame)
-        },
-        
-        _ => Err(McpSystemError::ToolNotFound)
+        }
+
+        _ => Err(McpSystemError::ToolNotFound),
     }
 }
 
-unsafe fn execute_bare_metal_graph_traversal(_args: &[u8], intent: &McpIntentFrame) -> Result<usize, McpSystemError> {
+unsafe fn execute_bare_metal_graph_traversal(
+    _args: &[u8],
+    intent: &McpIntentFrame,
+) -> Result<usize, McpSystemError> {
     let mut arena = crate::webizen::SlgArena::new();
-    let contract = if intent.active_deontic_constraints.first().copied().unwrap_or(0) != 0 {
+    let contract = if intent
+        .active_deontic_constraints
+        .first()
+        .copied()
+        .unwrap_or(0)
+        != 0
+    {
         intent.active_deontic_constraints[0]
     } else {
         intent.purpose_hash
@@ -109,7 +117,10 @@ unsafe fn execute_bare_metal_graph_traversal(_args: &[u8], intent: &McpIntentFra
     Ok(fired.max(1))
 }
 
-unsafe fn execute_paraconsistent_injection(_args: &[u8], intent: &McpIntentFrame) -> Result<usize, McpSystemError> {
+unsafe fn execute_paraconsistent_injection(
+    _args: &[u8],
+    intent: &McpIntentFrame,
+) -> Result<usize, McpSystemError> {
     let candidate = QualiaQuin {
         subject: intent.purpose_hash,
         predicate: crate::q_hash("q42:testClaim"),
@@ -151,12 +162,11 @@ pub unsafe fn parse_and_evaluate_mcp_stream(stream_chunk: &[u8]) -> Result<usize
     }
 
     // 2. Extract tool name (raw byte slicing)
-    let tool_name = extract_raw_json_string(stream_chunk, b"\"name\"")
-        .unwrap_or(b"");
-        
+    let tool_name = extract_raw_json_string(stream_chunk, b"\"name\"").unwrap_or(b"");
+
     // 3. Look for "arguments" object (for override token checking)
     let sanctuary_override = extract_raw_json_string(stream_chunk, b"\"sanctuary_override\"");
-    
+
     // Note: The user test specifically sends `"sanctuary_override":"MISSING"`.
     // In our logic, if it's MISSING (as a string) or literally not present, we treat as None.
     let valid_override = match sanctuary_override {
@@ -189,8 +199,8 @@ pub unsafe fn parse_and_evaluate_mcp_stream(stream_chunk: &[u8]) -> Result<usize
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn start_mcp_listener() {
-    use tokio::io::{AsyncBufReadExt, BufReader, AsyncWriteExt};
-    
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
     // Output to stderr to preserve pristine stdout for MCP
     eprintln!("[MCP Server] Starting on stdio transport...");
 
@@ -204,29 +214,35 @@ pub async fn start_mcp_listener() {
             Ok(0) => break, // EOF
             Ok(_) => {
                 let bytes = line.as_bytes();
-                
+
                 // If it's a tools/call, we erect the Allocation Firewall
                 if bytes.windows(12).any(|w| w == b"\"tools/call\"") {
                     let mut buffer = [0u8; 16384];
                     let len = core::cmp::min(bytes.len(), buffer.len());
                     buffer[..len].copy_from_slice(&bytes[..len]);
-                    
+
                     let res = unsafe { parse_and_evaluate_mcp_stream(&buffer[..len]) };
-                    
+
                     // Scrub buffer
-                    unsafe { scrub_transient_mcp_buffers(&mut buffer); }
-                    
+                    unsafe {
+                        scrub_transient_mcp_buffers(&mut buffer);
+                    }
+
                     // Reply minimally (in a full MCP server, we'd echo the JSON-RPC ID)
                     let reply = match res {
-                        Ok(_) => r#"{"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Success"}]}}"#,
-                        Err(_) => r#"{"jsonrpc":"2.0","error":{"code":-32603,"message":"Execution Failed"}}"#,
+                        Ok(_) => {
+                            r#"{"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Success"}]}}"#
+                        }
+                        Err(_) => {
+                            r#"{"jsonrpc":"2.0","error":{"code":-32603,"message":"Execution Failed"}}"#
+                        }
                     };
                     let _ = stdout.write_all(reply.as_bytes()).await;
                     let _ = stdout.write_all(b"\n").await;
                     let _ = stdout.flush().await;
                     continue;
                 }
-                
+
                 // Otherwise handle basic handshake (initialize / tools/list)
                 if bytes.windows(12).any(|w| w == b"\"initialize\"") {
                     let reply = r#"{"jsonrpc":"2.0","result":{"capabilities":{"tools":{}},"serverInfo":{"name":"QualiaDB MCP","version":"1.0.0"}}}"#;

@@ -3,229 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB Hardware UI</title>
+    <title>Qualia Playground • Webizen VM + WASM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        :root {
-            --bg-dark: #0a0a0f;
-            --panel-bg: rgba(25, 25, 35, 0.7);
-            --accent: #00f0ff;
-            --accent-dim: rgba(0, 240, 255, 0.2);
-            --text-main: #e0e0e0;
-            --text-dim: #888;
-            --success: #4ade80;
-            --warning: #ffd700;
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass-panel {
+            background: rgba(17, 23, 31, 0.82);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            box-shadow: 0 16px 60px rgba(2, 6, 23, 0.55);
+            backdrop-filter: blur(28px);
+            border-radius: 24px;
         }
-
-        body {
-            margin: 0;
-            padding: 20px;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: 'Inter', -apple-system, sans-serif;
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
-                radial-gradient(circle at 85% 30%, rgba(255, 215, 0, 0.03) 0%, transparent 50%);
+        .glass-panel.light {
+            background: rgba(17, 23, 31, 0.76);
+            border-color: rgba(148, 163, 184, 0.12);
         }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
+        .status-pill {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.04em;
+            border-radius: 9999px;
+            padding: 0.35rem 0.85rem;
+            display: inline-flex;
             align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            gap: 0.4rem;
         }
-        .new-badge {
-            font-size: 0.7rem; background: rgba(0,240,255,0.1); color: #67e8f9; padding: 2px 8px; border-radius: 999px;
-            border: 1px solid rgba(103,232,249,0.3);
+        .status-pill span.dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 9999px;
+            display: inline-block;
         }
-
-        .split-pane {
+        .metric-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            height: calc(100vh - 120px);
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
         }
-
-        .card {
-            background: var(--panel-bg);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .card-header h2 {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 500;
-            letter-spacing: 1px;
-            color: var(--accent);
-        }
-
+        textarea:focus-visible { outline: none; }
+        textarea::placeholder { color: rgba(226, 232, 240, 0.45); }
         textarea {
-            width: 100%;
-            flex-grow: 1;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            color: #fff;
-            padding: 15px;
-            font-family: 'Fira Code', monospace;
-            font-size: 14px;
-            resize: none;
-            box-sizing: border-box;
+            background: rgba(10, 10, 15, 0.65);
+            border: 1px solid rgba(96, 165, 250, 0.18);
         }
-
-        textarea:focus {
-            outline: none;
-            border-color: var(--accent);
+        .bytecode-container,
+        .json-rpc-container {
+            background: rgba(10, 10, 15, 0.65);
+            border: 1px solid rgba(148, 163, 184, 0.12);
         }
-
-        button {
-            padding: 10px 20px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-
-        .primary-btn {
-            background: var(--accent);
-            color: #000;
-        }
-        
-        .primary-btn:hover {
-            box-shadow: 0 0 15px var(--accent-dim);
-        }
-
-        .secondary-btn {
-            background: transparent;
-            color: var(--text-dim);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .badge {
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 4px;
-            background: var(--accent-dim);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-
-        .badge.green {
-            background: rgba(74, 222, 128, 0.1);
-            color: var(--success);
-            border-color: var(--success);
-        }
-
-        .badge.amber {
-            background: rgba(255, 215, 0, 0.1);
-            color: var(--warning);
-            border-color: var(--warning);
-        }
-
-        #wake-btn {
-            padding: 4px 10px;
-            font-size: 0.75rem;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 215, 0, 0.5);
-            background: transparent;
-            color: var(--warning);
-            cursor: pointer;
-            text-decoration: none;
-            white-space: nowrap;
-        }
-
-        #wake-btn:hover {
-            background: rgba(255, 215, 0, 0.08);
-        }
-
-        .bytecode-container, .json-rpc-container {
-            background: rgba(0,0,0,0.5);
-            padding: 1rem;
-            border-radius: 8px;
-            font-family: monospace;
-            overflow-y: auto;
-            flex-grow: 1;
-        }
-
-        .bytecode-container { color: var(--success); }
-        .json-rpc-container { color: var(--warning); border: 1px solid rgba(255, 215, 0, 0.3); }
-
+        .bytecode-container { color: #34d399; }
+        .json-rpc-container { color: #fbbf24; }
         #quin-output {
-            background: rgba(0,0,0,0.5);
-            padding: 1rem;
-            border-radius: 8px;
-            flex-grow: 1;
-            overflow-y: auto;
+            background: rgba(10, 10, 15, 0.65);
+            border: 1px solid rgba(148, 163, 184, 0.12);
         }
-
         .quin-row {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            padding: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-family: monospace;
-            font-size: 12px;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.08);
         }
-
-        .quin-row:hover {
-            background: rgba(255,255,255,0.02);
-        }
+        .quin-row:last-child { border-bottom: none; }
     </style>
 </head>
-<body>
-    <div class="header">
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <div>
-                <h1 style="margin: 0; color: #fff; font-size: 1.5rem;">Qualia-DB</h1>
-                <span style="color: var(--text-dim); font-size: 0.9rem;">Zero-Allocation Graph Engine</span>
-            </div>
-            <div id="native-status-bar" style="display: flex; align-items: center; gap: 8px;">
-                <span id="conn-badge" class="badge amber">WASM Fallback Mode (Network Streaming)</span>
-                <a id="wake-btn" href="qualia://start" onclick="handleWakeClick(event)">Wake Local Engine</a>
-            </div>
-            <a href="../index.html" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none; border-color: #555; color: #aaa;">← Hub</a>
-            <button id="webtorrent-btn" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; border-color: #bd93f9; color: #bd93f9;" onclick="seedGraphToWebTorrent()">☍ WebTorrent Sync</button>
-            <button id="install-btn-header" class="primary-btn" style="padding: 6px 12px; font-size: 0.85rem;" onclick="document.getElementById('install-modal').style.display='flex'">Install</button>
-            <a href="anatomy.html" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none; color: var(--accent); border-color: var(--accent);">Launch 3D Anatomy</a>
-            <a href="semantics.html" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none; color: #bd93f9; border-color: #bd93f9;">Launch Semantic Drift</a>
-            <a href="../utils.html" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none; color: #00ff66; border-color: #00ff66;">Launch Utilities</a>
-        </div>
-        <span id="wasm-engine-badge" class="new-badge" title="Loaded from qualia_core_db_bg.wasm at compile time">WASM engine…</span>
-        <div class="new-badge" title="Recent epics surfaced in docs & harness">NEW: SHACL→Webizen • Lazy SuperBlocks + WebRTC Telemetry • Defeasible/Omnimodal • Native CLI bench --suite full • LZ4 blocks</div>
-        <div>
-            <button class="secondary-btn" onclick="loadPreset('ambient')">Load Ambient Trace</button>
-            <button class="secondary-btn" onclick="loadPreset('bilateral')">Load N3Logic Rule</button>
-            <button class="secondary-btn" onclick="loadPreset('permissive')">Load Permissive Query</button>
-            <button class="secondary-btn" onclick="loadPreset('spatiotemporal')">Load Spatiotemporal</button>
-            <button class="secondary-btn" style="border-color: var(--accent); color: var(--accent);" onclick="loadPreset('llm_vector')">Load LLM Vector Note</button>
-            <button class="secondary-btn" style="border-color: var(--warning); color: var(--warning);" onclick="loadPreset('hubmap')">Load HuBMAP 3D Ontology</button>
-        </div>
-    </div>
-
-    <div class="split-pane">
-        <!-- Input Pane -->
-        <div class="pane left-pane" style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="card" style="flex: 1;">
-                <div class="card-header">
-                    <h2>Graph Input</h2>
-                    <span class="badge" id="latency-badge">0ns</span>
+<body class="bg-zinc-950 text-slate-200 min-h-screen">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-6 md:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="../index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div class="hidden lg:flex items-center gap-6 text-sm">
+                        <a href="../benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="../comparative_benchmarks.html" class="hover:text-white transition-colors">Comparative</a>
+                        <a href="../analytics.html" class="hover:text-white transition-colors">Analytics</a>
+                        <a href="../library.html" class="hover:text-white transition-colors">Library</a>
+                        <a href="../cooperativeproject/index.html" class="hover:text-white transition-colors">Projects</a>
+                        <a href="index.html" class="text-white font-medium border-b border-cyan-400 pb-px">Playground</a>
+                        <a href="../api.html" class="hover:text-white transition-colors">API Docs</a>
+                        <a href="../api-explorer/" class="hover:text-white transition-colors">API Explorer</a>
+                        <a href="../tests/" class="hover:text-white transition-colors">Test Suite</a>
+                    </div>
                 </div>
-                <textarea id="jsonld-input" placeholder="Enter N3Logic, Turtle-Star, or JSON-LD...">{
+                <div class="flex items-center gap-4">
+                    <span id="wasm-engine-badge" class="status-pill bg-cyan-500/10 text-cyan-300 border border-cyan-500/40" title="Loaded from qualia_core_db_bg.wasm at compile time">
+                        <span class="dot bg-cyan-400"></span>
+                        Engine …
+                    </span>
+                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>Releases</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-screen-2xl mx-auto px-6 md:px-10 pt-12 pb-20 space-y-12">
+        <section class="text-center space-y-6">
+            <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 text-sm">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Interactive Webizen VM • Browser WASM • Native probe</span>
+            </div>
+            <div class="space-y-3">
+                <h1 class="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-[-2px]">Qualia Playground</h1>
+                <p class="text-lg md:text-xl text-white/70 max-w-3xl mx-auto">
+                    Compile N3Logic, Turtle-Star, or JSON-LD into Webizen bytecode, inspect the five-vector Quin output, and stream
+                    compute-cost receipts — all in a glassmorphism shell matched to the core docs aesthetic.
+                </p>
+            </div>
+
+            <div class="glass-panel light px-6 py-4 md:px-8 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-5 text-sm">
+                <div id="native-status-bar" class="flex flex-wrap items-center gap-3 justify-center md:justify-start">
+                    <span id="conn-badge" class="status-pill bg-amber-500/10 text-amber-300 border border-amber-400/30">
+                        <span class="dot bg-amber-400 animate-pulse"></span>
+                        WASM fallback mode
+                    </span>
+                    <a id="wake-btn" href="qualia://start" onclick="handleWakeClick(event)"
+                       class="status-pill border border-amber-300/40 text-amber-200 hover:bg-amber-500/10 transition-colors">
+                        <span class="dot bg-amber-300"></span>
+                        Wake Local Engine
+                    </a>
+                    <button id="webtorrent-btn" onclick="seedGraphToWebTorrent()"
+                            class="status-pill border border-fuchsia-400/40 text-fuchsia-200 hover:bg-fuchsia-500/10 transition-colors">
+                        <span class="dot bg-fuchsia-300"></span>
+                        WebTorrent Sync
+                    </button>
+                    <button id="install-btn-header" onclick="document.getElementById('install-modal').classList.remove('hidden')"
+                            class="status-pill border border-emerald-400/40 text-emerald-200 hover:bg-emerald-500/10 transition-colors">
+                        <span class="dot bg-emerald-300"></span>
+                        Install Native
+                    </button>
+                </div>
+                <div class="flex flex-wrap justify-center gap-3 text-xs uppercase tracking-wide text-slate-400">
+                    <span class="status-pill bg-blue-500/10 text-blue-300 border border-blue-400/30">Defeasible • Omnimodal</span>
+                    <span class="status-pill bg-purple-500/10 text-purple-300 border border-purple-400/30">Lazy SuperBlocks</span>
+                    <span class="status-pill bg-cyan-500/10 text-cyan-300 border border-cyan-400/30">Lightning RPC</span>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-3">
+                <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors" onclick="loadPreset('ambient')">Ambient Trace</button>
+                <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors" onclick="loadPreset('bilateral')">N3Logic Rule</button>
+                <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors" onclick="loadPreset('permissive')">Permissive Query</button>
+                <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors" onclick="loadPreset('spatiotemporal')">Spatiotemporal</button>
+                <button class="status-pill border border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/10 transition-colors" onclick="loadPreset('llm_vector')">LLM Vector Note</button>
+                <button class="status-pill border border-amber-400/40 text-amber-200 hover:bg-amber-500/10 transition-colors" onclick="loadPreset('hubmap')">HuBMAP 3D Ontology</button>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+            <div class="space-y-6">
+                <div class="glass-panel light p-6 md:p-7 h-full flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-semibold text-cyan-300">Graph Input</h2>
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Compile to Webizen bytecode</p>
+                        </div>
+                        <span id="latency-badge" class="status-pill bg-slate-800/80 text-slate-300 border border-slate-600">0ns</span>
+                    </div>
+                    <textarea id="jsonld-input" rows="12" class="w-full text-sm md:text-base text-slate-100 font-mono rounded-2xl px-4 py-4 focus:ring-2 focus:ring-cyan-400/40"
+                              placeholder="Enter N3Logic, Turtle-Star, or JSON-LD...">{
   "@context": "https://mediaprophet.github.io/qualiaDB/qualia-context.jsonld",
   "@graph": [
     {
@@ -237,59 +182,69 @@
     }
   ]
 }</textarea>
-                <div style="margin-top: 1rem; display: flex; gap: 10px;">
-                    <button class="primary-btn" onclick="compileToBytecode()">Compile & Execute</button>
-                    <button class="secondary-btn" onclick="document.getElementById('jsonld-input').value = ''">Clear</button>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="compileToBytecode()" class="px-5 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold transition-colors">Compile & Execute</button>
+                        <button onclick="document.getElementById('jsonld-input').value = ''" class="px-5 py-2.5 rounded-2xl border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors">Clear</button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="card" style="flex: 1;">
-                <div class="card-header">
-                    <h2>Core 1: Webizen Bytecode VM</h2>
-                    <span class="badge green">Live Stack</span>
-                </div>
-                <pre class="bytecode-container" id="bytecode-output">
-// Awaiting Compilation...
-                </pre>
-            </div>
-        </div>
 
-        <!-- Output Pane -->
-        <div class="pane right-pane" style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="card" style="flex: 1;">
-                <div class="card-header">
-                    <h2>Physical 5-Vector Quins (S, P, O, C, M)</h2>
-                    <span class="badge green" id="quin-count">0 Quins</span>
-                </div>
-                <div id="quin-output">
-                    <div style="color: #666; text-align: center; margin-top: 2rem;">Execute a statement to view hardware layout.</div>
+                <div class="glass-panel light p-6 md:p-7 h-full flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-semibold text-emerald-300">Core 1 · Webizen Bytecode VM</h2>
+                            <p class="text-xs uppercase tracking-wide text-slate-500">MSB dispatch • Zero allocation</p>
+                        </div>
+                        <span class="status-pill bg-emerald-500/10 text-emerald-200 border border-emerald-400/30">Live Stack</span>
+                    </div>
+                    <pre id="bytecode-output" class="bytecode-container font-mono text-xs md:text-sm rounded-2xl p-4 h-72 overflow-auto">// Awaiting Compilation…</pre>
                 </div>
             </div>
 
-            <div class="card" style="flex: 1;">
-                <div class="card-header">
-                    <h2 style="color: var(--warning);">Permissive Commons Billing</h2>
-                    <span class="badge" style="background: rgba(255, 215, 0, 0.1); color: #ffd700; border: 1px solid #ffd700;">Lightning RPC</span>
+            <div class="space-y-6">
+                <div class="glass-panel light p-6 md:p-7 h-full flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-semibold text-emerald-300">Physical 5-Vector Quins</h2>
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Subject · Predicate · Object · Context · Metadata</p>
+                        </div>
+                        <span id="quin-count" class="status-pill bg-emerald-500/10 text-emerald-200 border border-emerald-400/30">0 Quins</span>
+                    </div>
+                    <div id="quin-output" class="rounded-2xl p-4 min-h-[18rem] max-h-[26rem] overflow-auto text-slate-200">
+                        <div class="text-slate-500 text-sm text-center py-12">Execute a statement to view hardware layout.</div>
+                    </div>
                 </div>
-                <pre class="json-rpc-container" id="billing-receipt">
-// Execute a query to generate Compute Cost Receipt
-                </pre>
-            </div>
-        </div>
-    </div>
 
-    <!-- Install Modal -->
-    <div id="install-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 1000; justify-content: center; align-items: center;">
-        <div class="card" style="width: 500px; max-width: 90%; position: relative;">
-            <button style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: #fff; font-size: 1.2rem; cursor: pointer;" onclick="document.getElementById('install-modal').style.display='none'">×</button>
-            <h2 style="color: var(--accent); margin-top: 0;">Install Qualia-DB</h2>
-            <p style="color: var(--text-dim);">Run the Webizen VM and GPU Sieve locally natively.</p>
-            
-            <h3 style="margin-bottom: 5px; color: #fff;">1. Install CLI (Native Rust)</h3>
-            <pre style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; color: var(--success); overflow-x: auto;">cargo install --git https://github.com/mediaprophet/qualiaDB.git qualia-cli</pre>
-            
-            <h3 style="margin-top: 20px; margin-bottom: 5px; color: #fff;">2. Start the Zero-Allocation Daemon</h3>
-            <pre style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; color: var(--warning); overflow-x: auto;">qualia-cli daemon --dev</pre>
+                <div class="glass-panel light p-6 md:p-7 h-full flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-semibold text-amber-300">Permissive Commons Billing</h2>
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Lightning RPC receipt</p>
+                        </div>
+                        <span class="status-pill bg-amber-500/10 text-amber-200 border border-amber-400/30">Telemetry Stream</span>
+                    </div>
+                    <pre id="billing-receipt" class="json-rpc-container font-mono text-xs md:text-sm rounded-2xl p-4 h-72 overflow-auto">// Execute a query to generate compute cost receipt</pre>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="install-modal" class="hidden fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div class="glass-panel light w-[92%] max-w-lg relative p-6 md:p-8">
+            <button class="absolute top-4 right-4 text-slate-400 hover:text-white" onclick="document.getElementById('install-modal').classList.add('hidden')">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h2 class="text-2xl font-semibold text-cyan-300 mb-2">Install Qualia-DB</h2>
+            <p class="text-sm text-slate-400 mb-6">Run the Webizen VM, GPU sieve, and cooperative ledger locally for full performance.</p>
+            <div class="space-y-5">
+                <div>
+                    <div class="font-semibold text-slate-200 mb-2">1 · Install CLI (Rust)</div>
+                    <pre class="font-mono text-emerald-300 text-sm bg-black/50 border border-emerald-400/30 rounded-2xl px-4 py-3 overflow-x-auto">cargo install --git https://github.com/mediaprophet/qualiaDB.git qualia-cli</pre>
+                </div>
+                <div>
+                    <div class="font-semibold text-slate-200 mb-2">2 · Start the Zero-Allocation Daemon</div>
+                    <pre class="font-mono text-amber-200 text-sm bg-black/50 border border-amber-400/30 rounded-2xl px-4 py-3 overflow-x-auto">qualia-cli daemon --dev</pre>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -300,25 +255,18 @@
     </script>
     <script src="playground.js"></script>
     <script>
-        // WebTorrent Stub for Phase 52
         function seedGraphToWebTorrent() {
             if (typeof WebTorrent === 'undefined') {
-                alert("WebTorrent failed to load.");
+                alert('WebTorrent failed to load.');
                 return;
             }
             const client = new WebTorrent();
             const graphBlob = new Blob([document.getElementById('jsonld-input').value], { type: 'application/json' });
-            
             client.seed(graphBlob, { name: 'Qualia_Ledger.q42' }, function (torrent) {
                 console.log('Client is seeding:', torrent.infoHash);
                 const rpcBox = document.getElementById('billing-receipt');
-                rpcBox.innerHTML = `[WebTorrent Sync Initiated]
-Magnet URI Generated:
-${torrent.magnetURI}
-
-Seeding Subjective Graph to Permissive Commons via WebRTC...
-`;
-                rpcBox.style.color = 'var(--accent)';
+                rpcBox.innerHTML = `[WebTorrent Sync Initiated]\nMagnet URI Generated:\n${torrent.magnetURI}\n\nSeeding Subjective Graph to Permissive Commons via WebRTC...\n`;
+                rpcBox.style.color = '#22d3ee';
             });
         }
     </script>

@@ -404,13 +404,10 @@ fn opcode_from_predicate_uri(uri: &str, rule_type: RuleType) -> (u8, bool) {
         return (OP_PERMIT, true);
     }
     let lower = uri.to_lowercase();
-    let is_obligate = lower.contains("obligate")
-        || lower.contains("must")
-        || lower.contains("shall");
+    let is_obligate =
+        lower.contains("obligate") || lower.contains("must") || lower.contains("shall");
     let is_permit = lower.contains("permit") || lower.contains("may") || lower.contains("can");
-    let is_forbid = lower.contains("forbid")
-        || lower.contains("prohibit")
-        || lower.contains("not");
+    let is_forbid = lower.contains("forbid") || lower.contains("prohibit") || lower.contains("not");
 
     match rule_type {
         RuleType::Strict | RuleType::Linear => {
@@ -501,10 +498,10 @@ pub fn compile_norm_quin(
     let parity = party_did_hash ^ predicate ^ action_object_hash ^ contract_hash;
 
     QualiaQuin {
-        subject:  party_did_hash,
+        subject: party_did_hash,
         predicate,
-        object:   action_object_hash,
-        context:  contract_hash,
+        object: action_object_hash,
+        context: contract_hash,
         metadata,
         parity,
     }
@@ -517,11 +514,21 @@ mod tests {
     use super::*;
     use crate::q_hash;
 
-    fn alice() -> u64 { q_hash("did:web:alice.example") }
-    fn bob()   -> u64 { q_hash("did:web:bob.example") }
-    fn nda()   -> u64 { q_hash("did:web:nda:contract-001") }
-    fn disclose_path() -> u64 { q_hash("q42:disclose") }
-    fn conf_data()     -> u64 { q_hash("q42:data:project-x:confidential") }
+    fn alice() -> u64 {
+        q_hash("did:web:alice.example")
+    }
+    fn bob() -> u64 {
+        q_hash("did:web:bob.example")
+    }
+    fn nda() -> u64 {
+        q_hash("did:web:nda:contract-001")
+    }
+    fn disclose_path() -> u64 {
+        q_hash("q42:disclose")
+    }
+    fn conf_data() -> u64 {
+        q_hash("q42:data:project-x:confidential")
+    }
 
     const NOW: u32 = 1_717_200_000; // ~2024-06-01 — well before NDA expiry
     const EXPIRY_NDA: u32 = 1_830_297_600; // 2028-01-01
@@ -529,11 +536,35 @@ mod tests {
     fn nda_quins() -> [QualiaQuin; 3] {
         [
             // Quin 0: Alice FORBID disclose (active)
-            compile_norm_quin(alice(), OP_FORBID, disclose_path(), conf_data(), nda(), EXPIRY_NDA, false),
+            compile_norm_quin(
+                alice(),
+                OP_FORBID,
+                disclose_path(),
+                conf_data(),
+                nda(),
+                EXPIRY_NDA,
+                false,
+            ),
             // Quin 1: Bob FORBID disclose (active)
-            compile_norm_quin(bob(), OP_FORBID, disclose_path(), conf_data(), nda(), EXPIRY_NDA, false),
+            compile_norm_quin(
+                bob(),
+                OP_FORBID,
+                disclose_path(),
+                conf_data(),
+                nda(),
+                EXPIRY_NDA,
+                false,
+            ),
             // Quin 2: q42:unless — Alice PERMIT disclose to auditors (defeater for Quin 0)
-            compile_norm_quin(alice(), OP_PERMIT, disclose_path(), q_hash("q42:role:certified-auditor"), nda(), EXPIRY_NDA, true),
+            compile_norm_quin(
+                alice(),
+                OP_PERMIT,
+                disclose_path(),
+                q_hash("q42:role:certified-auditor"),
+                nda(),
+                EXPIRY_NDA,
+                true,
+            ),
         ]
     }
 
@@ -554,18 +585,34 @@ mod tests {
 
         // Alice's prohibition should be defeated by Quin 2.
         let alice_verdict = out[..n].iter().find(|v| v.norm.subject == alice()).unwrap();
-        assert_eq!(alice_verdict.status, DeonticStatus::Defeated, "Alice obligation should be defeated");
+        assert_eq!(
+            alice_verdict.status,
+            DeonticStatus::Defeated,
+            "Alice obligation should be defeated"
+        );
         assert_eq!(alice_verdict.opcode, OP_FORBID);
 
         // Bob has no defeater — should be active.
         let bob_verdict = out[..n].iter().find(|v| v.norm.subject == bob()).unwrap();
-        assert_eq!(bob_verdict.status, DeonticStatus::Active, "Bob obligation should be active");
+        assert_eq!(
+            bob_verdict.status,
+            DeonticStatus::Active,
+            "Bob obligation should be active"
+        );
     }
 
     #[test]
     fn expired_norm_is_detected() {
         let past_expiry: u32 = 1_000_000; // Unix epoch far in the past
-        let norm = compile_norm_quin(alice(), OP_OBLIGATE, disclose_path(), conf_data(), nda(), past_expiry, false);
+        let norm = compile_norm_quin(
+            alice(),
+            OP_OBLIGATE,
+            disclose_path(),
+            conf_data(),
+            nda(),
+            past_expiry,
+            false,
+        );
         let quins = [norm];
         let mut out = [DeonticVerdict {
             norm: QualiaQuin::default(),
@@ -581,7 +628,15 @@ mod tests {
 
     #[test]
     fn no_expiry_zero_is_always_valid() {
-        let norm = compile_norm_quin(alice(), OP_PERMIT, disclose_path(), conf_data(), nda(), 0, false);
+        let norm = compile_norm_quin(
+            alice(),
+            OP_PERMIT,
+            disclose_path(),
+            conf_data(),
+            nda(),
+            0,
+            false,
+        );
         let quins = [norm];
         let mut out = [DeonticVerdict {
             norm: QualiaQuin::default(),
@@ -592,13 +647,24 @@ mod tests {
 
         let n = evaluate_deontic_contract(&quins, u32::MAX, &mut out).unwrap();
         assert_eq!(n, 1);
-        assert_eq!(out[0].status, DeonticStatus::Active, "zero expiry should never expire");
+        assert_eq!(
+            out[0].status,
+            DeonticStatus::Active,
+            "zero expiry should never expire"
+        );
     }
 
     #[test]
     fn non_deontic_quins_are_skipped() {
         // Plain SHACL/data Quin with opcode 0x00 — should produce no verdicts.
-        let plain = QualiaQuin { subject: 1, predicate: 0x00, object: 2, context: 3, metadata: 0, parity: 0 };
+        let plain = QualiaQuin {
+            subject: 1,
+            predicate: 0x00,
+            object: 2,
+            context: 3,
+            metadata: 0,
+            parity: 0,
+        };
         let mut out = [DeonticVerdict {
             norm: QualiaQuin::default(),
             status: DeonticStatus::Malformed,
@@ -641,12 +707,20 @@ mod tests {
     #[test]
     fn guardianship_contract_temporal_expiry() {
         let guardian = q_hash("did:web:guardian.example");
-        let ward     = q_hash("did:web:ward.example");
+        let ward = q_hash("did:web:ward.example");
         let contract = q_hash("did:web:guardianship:contract-002");
-        let path     = q_hash("q42:actInBestInterest");
+        let path = q_hash("q42:actInBestInterest");
         let majority_epoch: u32 = 1_893_456_000; // 2030-01-01
 
-        let obligation = compile_norm_quin(guardian, OP_OBLIGATE, path, ward, contract, majority_epoch, false);
+        let obligation = compile_norm_quin(
+            guardian,
+            OP_OBLIGATE,
+            path,
+            ward,
+            contract,
+            majority_epoch,
+            false,
+        );
         let quins = [obligation];
 
         let mut out = [DeonticVerdict {
@@ -671,10 +745,10 @@ mod tests {
     fn opcode_constants_are_distinct_from_mini_parser_range() {
         // mini_parser uses 0x00–0x04; deontic opcodes must not collide.
         assert!(OP_OBLIGATE > 0x04);
-        assert!(OP_PERMIT   > 0x04);
-        assert!(OP_FORBID   > 0x04);
+        assert!(OP_PERMIT > 0x04);
+        assert!(OP_FORBID > 0x04);
         assert_ne!(OP_OBLIGATE, OP_PERMIT);
-        assert_ne!(OP_PERMIT,   OP_FORBID);
+        assert_ne!(OP_PERMIT, OP_FORBID);
         assert_ne!(OP_OBLIGATE, OP_FORBID);
     }
 
@@ -685,9 +759,20 @@ mod tests {
 
     #[test]
     fn compile_norm_quin_parity_is_xor_fold() {
-        let q = compile_norm_quin(alice(), OP_FORBID, disclose_path(), conf_data(), nda(), EXPIRY_NDA, false);
+        let q = compile_norm_quin(
+            alice(),
+            OP_FORBID,
+            disclose_path(),
+            conf_data(),
+            nda(),
+            EXPIRY_NDA,
+            false,
+        );
         let expected = q.subject ^ q.predicate ^ q.object ^ q.context;
-        assert_eq!(q.parity, expected, "parity must be XOR fold of semantic fields");
+        assert_eq!(
+            q.parity, expected,
+            "parity must be XOR fold of semantic fields"
+        );
     }
 
     #[test]

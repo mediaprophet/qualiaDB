@@ -11,7 +11,13 @@ pub enum TemporalOp {
     Equals,
 }
 
-pub fn evaluate_temporal(op: TemporalOp, t1_start: i64, t1_end: i64, t2_start: i64, t2_end: i64) -> bool {
+pub fn evaluate_temporal(
+    op: TemporalOp,
+    t1_start: i64,
+    t1_end: i64,
+    t2_start: i64,
+    t2_end: i64,
+) -> bool {
     match op {
         TemporalOp::Before => t1_end < t2_start,
         TemporalOp::Meets => t1_end == t2_start,

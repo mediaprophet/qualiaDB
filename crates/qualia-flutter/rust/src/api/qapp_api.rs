@@ -5,10 +5,8 @@ use qualia_client_core::qapp_api::{
     compile_wildcard_graph_query, execute_scoped_query, execute_scoped_query_in_place,
     ExecutionError, SCOPED_QUERY_MAX_FLOATS,
 };
-pub use qualia_client_core::qapp_manifest::{
-    CapabilityClaims, HostMetadata, QappManifest,
-};
 use qualia_client_core::qapp_manifest::{compile_and_register_qapp, qapp_manifest_from_package};
+pub use qualia_client_core::qapp_manifest::{CapabilityClaims, HostMetadata, QappManifest};
 use qualia_core_db::q_hash;
 
 #[frb(sync)]
@@ -36,7 +34,10 @@ pub fn compile_anatomy_wildcard_query() -> Result<Vec<u8>, String> {
 }
 
 #[frb(sync)]
-pub fn execute_qapp_scoped_query(app_id_hash: u64, query_bytecode: Vec<u8>) -> Result<Vec<f32>, String> {
+pub fn execute_qapp_scoped_query(
+    app_id_hash: u64,
+    query_bytecode: Vec<u8>,
+) -> Result<Vec<f32>, String> {
     execute_scoped_query(app_id_hash, query_bytecode).map_err(|e| e.as_str().to_string())
 }
 
@@ -92,7 +93,10 @@ pub fn check_qapp_update(qapp_name: String) -> Result<String, String> {
 }
 
 #[frb(sync)]
-pub fn check_qapp_update_from_path(qapp_name: String, source_path: String) -> Result<String, String> {
+pub fn check_qapp_update_from_path(
+    qapp_name: String,
+    source_path: String,
+) -> Result<String, String> {
     qualia_client_core::api::check_qapp_update_from_path(qapp_name, source_path)
 }
 
@@ -107,7 +111,10 @@ pub fn apply_qapp_update(qapp_name: String) -> Result<String, String> {
 }
 
 #[frb(sync)]
-pub fn apply_qapp_update_from_path(qapp_name: String, source_path: String) -> Result<String, String> {
+pub fn apply_qapp_update_from_path(
+    qapp_name: String,
+    source_path: String,
+) -> Result<String, String> {
     qualia_client_core::api::apply_qapp_update_from_path(qapp_name, source_path)
 }
 
@@ -115,7 +122,9 @@ pub fn apply_qapp_update_from_path(qapp_name: String, source_path: String) -> Re
 pub fn execution_error_label(code: String) -> String {
     match code.as_str() {
         "unregistered_app" => ExecutionError::UnregisteredApp.as_str().to_string(),
-        "sanctuary_override_required" => ExecutionError::SanctuaryOverrideRequired.as_str().to_string(),
+        "sanctuary_override_required" => ExecutionError::SanctuaryOverrideRequired
+            .as_str()
+            .to_string(),
         "output_buffer_full" => ExecutionError::OutputBufferFull.as_str().to_string(),
         "invalid_bytecode" => ExecutionError::InvalidBytecode.as_str().to_string(),
         "clearance_violation" => ExecutionError::ClearanceViolation.as_str().to_string(),

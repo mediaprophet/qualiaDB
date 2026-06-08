@@ -73,7 +73,12 @@ fn build_dataset(size: usize) -> Dataset {
         hash_map.entry(s).or_default().push((p, o));
     }
 
-    Dataset { triples, qualia_map, btree_map, hash_map }
+    Dataset {
+        triples,
+        qualia_map,
+        btree_map,
+        hash_map,
+    }
 }
 
 // ─── 1. Point Lookup ─────────────────────────────────────────────────────────
@@ -91,21 +96,15 @@ fn bench_point_lookup(c: &mut Criterion) {
     group.throughput(Throughput::Elements(1));
 
     group.bench_function("qualiaDB_fnv_hashmap", |b| {
-        b.iter(|| {
-            black_box(dataset.qualia_map.get(black_box(&target_qualia)))
-        })
+        b.iter(|| black_box(dataset.qualia_map.get(black_box(&target_qualia))))
     });
 
     group.bench_function("btree_proxy_oxigraph_class", |b| {
-        b.iter(|| {
-            black_box(dataset.btree_map.get(black_box(&target_btree)))
-        })
+        b.iter(|| black_box(dataset.btree_map.get(black_box(&target_btree))))
     });
 
     group.bench_function("hashmap_proxy_surrealdb_class", |b| {
-        b.iter(|| {
-            black_box(dataset.hash_map.get(black_box(&target_hash)))
-        })
+        b.iter(|| black_box(dataset.hash_map.get(black_box(&target_hash))))
     });
 
     group.finish();
@@ -121,11 +120,17 @@ fn bench_two_hop(c: &mut Criterion) {
 
     group.bench_function("qualiaDB_fnv_hashmap", |b| {
         b.iter(|| {
-            let hop1 = dataset.qualia_map.get(&start).map(|v| v.as_slice()).unwrap_or(&[]);
+            let hop1 = dataset
+                .qualia_map
+                .get(&start)
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
             let mut results: Vec<u64> = Vec::new();
             for (_, obj) in hop1 {
                 if let Some(hop2) = dataset.qualia_map.get(obj) {
-                    for (_, o2) in hop2 { results.push(*o2); }
+                    for (_, o2) in hop2 {
+                        results.push(*o2);
+                    }
                 }
             }
             black_box(results)
@@ -134,11 +139,17 @@ fn bench_two_hop(c: &mut Criterion) {
 
     group.bench_function("btree_proxy_oxigraph_class", |b| {
         b.iter(|| {
-            let hop1 = dataset.btree_map.get(&start).map(|v| v.as_slice()).unwrap_or(&[]);
+            let hop1 = dataset
+                .btree_map
+                .get(&start)
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
             let mut results: Vec<u64> = Vec::new();
             for (_, obj) in hop1 {
                 if let Some(hop2) = dataset.btree_map.get(obj) {
-                    for (_, o2) in hop2 { results.push(*o2); }
+                    for (_, o2) in hop2 {
+                        results.push(*o2);
+                    }
                 }
             }
             black_box(results)
@@ -147,11 +158,17 @@ fn bench_two_hop(c: &mut Criterion) {
 
     group.bench_function("hashmap_proxy_surrealdb_class", |b| {
         b.iter(|| {
-            let hop1 = dataset.hash_map.get(&start).map(|v| v.as_slice()).unwrap_or(&[]);
+            let hop1 = dataset
+                .hash_map
+                .get(&start)
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
             let mut results: Vec<u64> = Vec::new();
             for (_, obj) in hop1 {
                 if let Some(hop2) = dataset.hash_map.get(obj) {
-                    for (_, o2) in hop2 { results.push(*o2); }
+                    for (_, o2) in hop2 {
+                        results.push(*o2);
+                    }
                 }
             }
             black_box(results)
@@ -176,7 +193,9 @@ fn bench_predicate_filter(c: &mut Criterion) {
             let mut count = 0usize;
             for triples in dataset.qualia_map.values() {
                 for (p, _) in triples {
-                    if *p == target_pred { count += 1; }
+                    if *p == target_pred {
+                        count += 1;
+                    }
                 }
             }
             black_box(count)
@@ -188,7 +207,9 @@ fn bench_predicate_filter(c: &mut Criterion) {
             let mut count = 0usize;
             for triples in dataset.btree_map.values() {
                 for (p, _) in triples {
-                    if *p == target_pred { count += 1; }
+                    if *p == target_pred {
+                        count += 1;
+                    }
                 }
             }
             black_box(count)
@@ -200,7 +221,9 @@ fn bench_predicate_filter(c: &mut Criterion) {
             let mut count = 0usize;
             for triples in dataset.hash_map.values() {
                 for (p, _) in triples {
-                    if *p == target_pred { count += 1; }
+                    if *p == target_pred {
+                        count += 1;
+                    }
                 }
             }
             black_box(count)
@@ -264,9 +287,11 @@ fn bench_scaling(c: &mut Criterion) {
 
         group.throughput(Throughput::Elements(size as u64));
 
-        group.bench_with_input(BenchmarkId::new("qualiaDB_fnv_hashmap", size), &size, |b, _| {
-            b.iter(|| black_box(dataset.qualia_map.get(black_box(&target))))
-        });
+        group.bench_with_input(
+            BenchmarkId::new("qualiaDB_fnv_hashmap", size),
+            &size,
+            |b, _| b.iter(|| black_box(dataset.qualia_map.get(black_box(&target)))),
+        );
 
         group.bench_with_input(BenchmarkId::new("btree_proxy", size), &size, |b, _| {
             b.iter(|| black_box(dataset.btree_map.get(black_box(&target))))
@@ -307,8 +332,12 @@ fn bench_ingestion_pipeline(c: &mut Criterion) {
     use qualia_core_db::ingestion::{IngestionPipeline, ZeroCopyStream};
     let mut payload = String::with_capacity(100_000);
     for i in 0..500 {
-        payload.push_str(&format!("<< :Agent_{i} :prescribed :Meds_{i} >> :assertedBy :Doctor_0 .\n"));
-        payload.push_str(&format!("{{ ?x a :Man_{i} }} => {{ ?x a :Mortal_{i} }} .\n"));
+        payload.push_str(&format!(
+            "<< :Agent_{i} :prescribed :Meds_{i} >> :assertedBy :Doctor_0 .\n"
+        ));
+        payload.push_str(&format!(
+            "{{ ?x a :Man_{i} }} => {{ ?x a :Mortal_{i} }} .\n"
+        ));
     }
     c.bench_function("qualia_ingestion_pipeline_1k_lines", |b| {
         b.iter(|| {
@@ -322,7 +351,7 @@ fn bench_ingestion_pipeline(c: &mut Criterion) {
 fn bench_cbor_compiler(c: &mut Criterion) {
     use qualia_core_db::cbor_compiler::parse_cbor_ld_to_quin;
     let cbor_payload: [u8; 13] = [
-        0x84, 0x19, 0x03, 0xE8, 0x19, 0x07, 0xD0, 0x19, 0x0B, 0xB8, 0x19, 0x0F, 0xA0
+        0x84, 0x19, 0x03, 0xE8, 0x19, 0x07, 0xD0, 0x19, 0x0B, 0xB8, 0x19, 0x0F, 0xA0,
     ];
     c.bench_function("qualia_cbor_ld_ingestion", |b| {
         b.iter(|| {

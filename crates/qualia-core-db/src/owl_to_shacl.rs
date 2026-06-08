@@ -136,12 +136,7 @@ fn ingest_owl_triple(model: &mut HealthcareOwlModel, s: String, p: String, o: St
         if o == OWL_CLASS {
             model.classes.entry(s).or_default();
         } else if o == OWL_DATATYPE_PROPERTY || o == OWL_OBJECT_PROPERTY {
-            model
-                .properties
-                .entry(s)
-                .or_default()
-                .kinds
-                .insert(o);
+            model.properties.entry(s).or_default().kinds.insert(o);
         }
     } else if p == RDFS_LABEL {
         if let Some(class) = model.classes.get_mut(&s) {
@@ -226,7 +221,11 @@ pub fn parse_healthcare_owl_lines(path: &Path) -> Result<HealthcareOwlModel, Owl
         if line.starts_with('@') {
             continue;
         }
-        if line.starts_with('<') && line.ends_with('>') && !line.contains(';') && !line.contains(' ') {
+        if line.starts_with('<')
+            && line.ends_with('>')
+            && !line.contains(';')
+            && !line.contains(' ')
+        {
             current_subject = Some(line.trim_matches(|c| c == '<' || c == '>').to_string());
             continue;
         }
@@ -253,7 +252,12 @@ pub fn parse_healthcare_owl_lines(path: &Path) -> Result<HealthcareOwlModel, Owl
             }
         } else if line.contains("owl:equivalentProperty") {
             if let Some(uri) = extract_first_uri(line) {
-                ingest_owl_triple(&mut model, subject, OWL_EQUIVALENT_PROPERTY.to_string(), uri);
+                ingest_owl_triple(
+                    &mut model,
+                    subject,
+                    OWL_EQUIVALENT_PROPERTY.to_string(),
+                    uri,
+                );
             }
         } else if line.contains("rdfs:domain") {
             if let Some(uri) = extract_first_uri(line) {
@@ -338,7 +342,9 @@ pub fn healthcare_owl_to_shacl_ttl(model: &HealthcareOwlModel) -> String {
         }
         let shape = shape_name_for_uri(class_uri);
         let target = curie_for_uri(class_uri);
-        out.push_str(&format!("{shape} a sh:NodeShape ;\n    sh:targetClass {target}"));
+        out.push_str(&format!(
+            "{shape} a sh:NodeShape ;\n    sh:targetClass {target}"
+        ));
         if let Some(label) = class.labels.first() {
             out.push_str(&format!(" ;\n    rdfs:label \"{label}\""));
         }
@@ -379,7 +385,9 @@ pub fn healthcare_owl_to_shacl_ttl(model: &HealthcareOwlModel) -> String {
         }
         let shape = format!("hc:{domain_local}PropertyShape");
         let target = curie_for_uri(&domain_uri);
-        out.push_str(&format!("{shape} a sh:NodeShape ;\n    sh:targetClass {target}"));
+        out.push_str(&format!(
+            "{shape} a sh:NodeShape ;\n    sh:targetClass {target}"
+        ));
         for (prop_uri, prop) in props {
             let path = curie_for_uri(&prop_uri);
             out.push_str(" ;\n    sh:property [");
@@ -463,8 +471,7 @@ pub fn parse_radlex_relations_xml(
                             for attr in e.attributes().flatten() {
                                 let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
                                 if key.ends_with("resource") {
-                                    let object =
-                                        String::from_utf8_lossy(&attr.value).to_string();
+                                    let object = String::from_utf8_lossy(&attr.value).to_string();
                                     relations.push(RadlexRelation {
                                         subject_rid: subject.clone(),
                                         predicate_local: pred_local.to_string(),
@@ -500,10 +507,7 @@ pub fn parse_radlex_relations_xml(
 }
 
 /// Group RadLex relations by subject RID and emit SHACL node shapes.
-pub fn radlex_relations_to_shacl_ttl(
-    relations: &[RadlexRelation],
-    max_shapes: usize,
-) -> String {
+pub fn radlex_relations_to_shacl_ttl(relations: &[RadlexRelation], max_shapes: usize) -> String {
     let mut grouped: BTreeMap<String, Vec<RadlexRelation>> = BTreeMap::new();
     for rel in relations {
         grouped
@@ -513,7 +517,9 @@ pub fn radlex_relations_to_shacl_ttl(
     }
 
     let mut out = String::from(SHAPE_PREFIXES);
-    out.push_str("\n# Generated from RadLex OWL — anatomical possession graph (Things, not Principals)\n\n");
+    out.push_str(
+        "\n# Generated from RadLex OWL — anatomical possession graph (Things, not Principals)\n\n",
+    );
     out.push_str(
         "radlex:AnatomicalEntity a owl:Class ;\n\
     rdfs:subClassOf q42:Thing ;\n\
@@ -660,7 +666,8 @@ mod tests {
 
     #[test]
     fn agency_shape_file_exists() {
-        let p = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("shapes/qualia-agency.shacl.ttl");
+        let p = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("shapes/qualia-agency.shacl.ttl");
         let text = fs::read_to_string(p).unwrap();
         assert!(text.contains("q42:PrincipalShape"));
         assert!(text.contains("sh:not"));

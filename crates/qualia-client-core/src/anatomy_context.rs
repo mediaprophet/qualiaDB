@@ -45,7 +45,9 @@ pub struct AnatomyGraphContext {
 }
 
 fn anatomy_qapp_dir(qapp_name: &str) -> Result<PathBuf, String> {
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
     let data_dir = state.config.lock().unwrap().storage_path.clone();
     let qapp_dir = crate::qapp_paths::qapps_dir(&data_dir).join(qapp_name);
     if !qapp_dir.exists() {
@@ -87,15 +89,31 @@ fn condition_aliases(label: &str) -> Vec<String> {
     let lower = label.to_lowercase();
     let mut aliases = vec![lower.clone()];
     match lower.as_str() {
-        "type 2 diabetes mellitus" => aliases.extend(["diabetes", "type 2 diabetes", "t2dm"].map(str::to_string)),
-        "type 1 diabetes mellitus" => aliases.extend(["type 1 diabetes", "t1dm"].map(str::to_string)),
-        "chronic kidney disease (ckd)" => aliases.extend(["ckd", "chronic kidney disease", "kidney disease"].map(str::to_string)),
-        "chronic obstructive pulmonary disease (copd)" => aliases.extend(["copd", "emphysema"].map(str::to_string)),
-        "non-alcoholic fatty liver disease (nafld)" => aliases.extend(["nafld", "fatty liver"].map(str::to_string)),
-        "major depressive disorder" => aliases.extend(["depression", "depressive"].map(str::to_string)),
+        "type 2 diabetes mellitus" => {
+            aliases.extend(["diabetes", "type 2 diabetes", "t2dm"].map(str::to_string))
+        }
+        "type 1 diabetes mellitus" => {
+            aliases.extend(["type 1 diabetes", "t1dm"].map(str::to_string))
+        }
+        "chronic kidney disease (ckd)" => {
+            aliases.extend(["ckd", "chronic kidney disease", "kidney disease"].map(str::to_string))
+        }
+        "chronic obstructive pulmonary disease (copd)" => {
+            aliases.extend(["copd", "emphysema"].map(str::to_string))
+        }
+        "non-alcoholic fatty liver disease (nafld)" => {
+            aliases.extend(["nafld", "fatty liver"].map(str::to_string))
+        }
+        "major depressive disorder" => {
+            aliases.extend(["depression", "depressive"].map(str::to_string))
+        }
         "obstructive sleep apnea" => aliases.extend(["sleep apnea", "osa"].map(str::to_string)),
-        "atrial fibrillation" => aliases.extend(["afib", "a-fib", "arrhythmia"].map(str::to_string)),
-        "peripheral artery disease" => aliases.extend(["pad", "peripheral arterial"].map(str::to_string)),
+        "atrial fibrillation" => {
+            aliases.extend(["afib", "a-fib", "arrhythmia"].map(str::to_string))
+        }
+        "peripheral artery disease" => {
+            aliases.extend(["pad", "peripheral arterial"].map(str::to_string))
+        }
         "rheumatoid arthritis" => aliases.extend(["ra", "rheumatoid"].map(str::to_string)),
         "coronary artery disease" => aliases.extend(["cad", "coronary"].map(str::to_string)),
         _ => {}
@@ -167,7 +185,10 @@ fn label_for_subject_hash(hash: u64, catalog: &ConditionCatalog) -> Option<Strin
     None
 }
 
-fn conditions_from_daemon_graph(body: &serde_json::Value, catalog: &ConditionCatalog) -> Vec<String> {
+fn conditions_from_daemon_graph(
+    body: &serde_json::Value,
+    catalog: &ConditionCatalog,
+) -> Vec<String> {
     let Some(graph) = body.get("@graph").and_then(|g| g.as_array()) else {
         return Vec::new();
     };
@@ -301,11 +322,7 @@ pub fn build_anatomy_graph_context_with_dicom(
 
     let systems = systems_from_conditions(&catalog, &conditions);
     let condition_impact_map = build_condition_impact_map(&catalog, &conditions);
-    let dicom_overlay = resolve_dicom_overlay(
-        &qapp_name,
-        &combined,
-        dicom_file_path.as_deref(),
-    );
+    let dicom_overlay = resolve_dicom_overlay(&qapp_name, &combined, dicom_file_path.as_deref());
 
     Ok(AnatomyGraphContext {
         conditions,

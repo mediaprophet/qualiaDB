@@ -36,8 +36,8 @@
 //! <<:payment_<id> :recipient_ilp    "$addr">> :tax_cycle "<cycle_id>" .
 //! ```
 
+use crate::rpc::{MicropaymentInstruction, TaxDispatchPlan};
 use serde::{Deserialize, Serialize};
-use crate::rpc::{TaxDispatchPlan, MicropaymentInstruction};
 
 // ─── Receipt ────────────────────────────────────────────────────────────────
 
@@ -54,23 +54,23 @@ pub enum PaymentStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentReceipt {
     pub recipient_label: String,
-    pub ilp_address:     String,
+    pub ilp_address: String,
     pub amount_micro_cents: u64,
-    pub status:          PaymentStatus,
-    pub via_nym:         bool,
-    pub timestamp_ms:    u64,
+    pub status: PaymentStatus,
+    pub via_nym: bool,
+    pub timestamp_ms: u64,
 }
 
 /// The full result of executing a TaxDispatchPlan.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DispatchResult {
-    pub gross_amount_micro_cents:     u64,
-    pub tax_pool_micro_cents:         u64,
+    pub gross_amount_micro_cents: u64,
+    pub tax_pool_micro_cents: u64,
     pub principal_remainder_micro_cents: u64,
-    pub receipts:                     Vec<PaymentReceipt>,
-    pub total_sent:                   u64,
-    pub total_queued:                 u64,
-    pub total_failed:                 u64,
+    pub receipts: Vec<PaymentReceipt>,
+    pub total_sent: u64,
+    pub total_queued: u64,
+    pub total_failed: u64,
 }
 
 // ─── Transport traits ────────────────────────────────────────────────────────
@@ -95,21 +95,29 @@ pub struct HttpIlpTransport {
 }
 
 impl IlpTransport for HttpIlpTransport {
-    fn send(&self, ilp_address: &str, amount_micro_cents: u64, via_nym: bool) -> Result<(), String> {
+    fn send(
+        &self,
+        ilp_address: &str,
+        amount_micro_cents: u64,
+        via_nym: bool,
+    ) -> Result<(), String> {
         let resolved_url = resolve_payment_pointer(ilp_address)?;
 
         // Zero-allocation JSON payload generation
         let mut buf = [0u8; 1024];
         let mut cursor = std::io::Cursor::new(&mut buf[..]);
         let _ = std::io::Write::write_fmt(
-            &mut cursor, 
-            format_args!(r#"{{"destination":"{}","amount_micro_cents":{},"via_nym":{}}}"#, resolved_url, amount_micro_cents, via_nym)
+            &mut cursor,
+            format_args!(
+                r#"{{"destination":"{}","amount_micro_cents":{},"via_nym":{}}}"#,
+                resolved_url, amount_micro_cents, via_nym
+            ),
         );
         let len = cursor.position() as usize;
         let payload = buf[..len].to_vec(); // reqwest requires owned bytes
 
         let connector_url = self.connector_url.clone();
-        
+
         #[cfg(not(target_arch = "wasm32"))]
         {
             std::thread::spawn(move || {
@@ -117,7 +125,8 @@ impl IlpTransport for HttpIlpTransport {
                     rt.block_on(async move {
                         let client = reqwest::Client::new();
                         // Submit to Lightning Network Proxy
-                        let _ = client.post(&format!("{}/v1/lightning/settle", connector_url))
+                        let _ = client
+                            .post(&format!("{}/v1/lightning/settle", connector_url))
                             .header("Content-Type", "application/json")
                             .body(payload)
                             .send()
@@ -126,7 +135,7 @@ impl IlpTransport for HttpIlpTransport {
                 }
             });
         }
-        
+
         eprintln!(
             "[Lightning/ILP] SEND {amount_micro_cents}µ¢ → {resolved_url}{}",
             if via_nym { " [via Nym]" } else { "" }
@@ -167,7 +176,7 @@ impl IlpTransport for MockTransport {
     fn send(&self, _addr: &str, _amount: u64, _nym: bool) -> Result<(), String> {
         match &self.force_result {
             Some(r) => r.clone(),
-            None    => Ok(()),
+            None => Ok(()),
         }
     }
 }
@@ -179,7 +188,9 @@ pub struct IlpDispatcher<T: IlpTransport> {
 }
 
 impl<T: IlpTransport> IlpDispatcher<T> {
-    pub fn new(transport: T) -> Self { Self { transport } }
+    pub fn new(transport: T) -> Self {
+        Self { transport }
+    }
 
     /// Execute every instruction in the plan, collecting receipts.
     pub fn dispatch(&self, plan: &TaxDispatchPlan) -> DispatchResult {
@@ -188,39 +199,41 @@ impl<T: IlpTransport> IlpDispatcher<T> {
         let (mut sent, mut queued, mut failed) = (0u64, 0u64, 0u64);
 
         for inst in &plan.instructions {
-            let status = match self.transport.send(
-                &inst.ilp_address, inst.amount_micro_cents, inst.use_nym
-            ) {
-                Ok(()) => {
-                    sent += inst.amount_micro_cents;
-                    PaymentStatus::Sent
-                }
-                Err(e) if e == "OFFLINE" => {
-                    queued += inst.amount_micro_cents;
-                    PaymentStatus::Queued
-                }
-                Err(e) => {
-                    failed += inst.amount_micro_cents;
-                    PaymentStatus::Failed(e)
-                }
-            };
+            let status =
+                match self
+                    .transport
+                    .send(&inst.ilp_address, inst.amount_micro_cents, inst.use_nym)
+                {
+                    Ok(()) => {
+                        sent += inst.amount_micro_cents;
+                        PaymentStatus::Sent
+                    }
+                    Err(e) if e == "OFFLINE" => {
+                        queued += inst.amount_micro_cents;
+                        PaymentStatus::Queued
+                    }
+                    Err(e) => {
+                        failed += inst.amount_micro_cents;
+                        PaymentStatus::Failed(e)
+                    }
+                };
 
             receipts.push(PaymentReceipt {
                 recipient_label: inst.recipient_label.clone(),
-                ilp_address:     inst.ilp_address.clone(),
+                ilp_address: inst.ilp_address.clone(),
                 amount_micro_cents: inst.amount_micro_cents,
-                via_nym:         inst.use_nym,
+                via_nym: inst.use_nym,
                 status,
-                timestamp_ms:    now_ms,
+                timestamp_ms: now_ms,
             });
         }
 
         DispatchResult {
-            gross_amount_micro_cents:        plan.gross_amount_micro_cents,
-            tax_pool_micro_cents:            plan.tax_pool_micro_cents,
+            gross_amount_micro_cents: plan.gross_amount_micro_cents,
+            tax_pool_micro_cents: plan.tax_pool_micro_cents,
             principal_remainder_micro_cents: plan.principal_remainder_micro_cents,
             receipts,
-            total_sent:   sent,
+            total_sent: sent,
             total_queued: queued,
             total_failed: failed,
         }
@@ -241,7 +254,7 @@ pub fn generate_energy_of_logic_invoice(recipient_ilp: &str) -> MicropaymentInst
     let flops = crate::telemetry::ATOMIC_FLOPS_COUNT.swap(0, std::sync::atomic::Ordering::Relaxed);
     let satoshis = (flops / 10_000) as u64;
     let micro_cents = satoshis * 1000; // Mock conversion
-    
+
     MicropaymentInstruction {
         recipient_label: "Energy of Logic Node".to_string(),
         ilp_address: recipient_ilp.to_string(),
@@ -255,7 +268,7 @@ pub fn generate_energy_of_logic_invoice(recipient_ilp: &str) -> MicropaymentInst
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rpc::{TaxRecipientSuite, route_tax_payment};
+    use crate::rpc::{route_tax_payment, TaxRecipientSuite};
 
     fn make_suite() -> TaxRecipientSuite {
         TaxRecipientSuite::default_cooperative()
@@ -270,32 +283,41 @@ mod tests {
         assert_eq!(result.total_sent, plan.tax_pool_micro_cents);
         assert_eq!(result.total_queued, 0);
         assert_eq!(result.total_failed, 0);
-        assert!(result.receipts.iter().all(|r| r.status == PaymentStatus::Sent));
+        assert!(result
+            .receipts
+            .iter()
+            .all(|r| r.status == PaymentStatus::Sent));
     }
 
     #[test]
     fn test_dispatch_queued_on_offline() {
         let plan = route_tax_payment(10_000, &make_suite()).unwrap();
         let dispatcher = IlpDispatcher::new(MockTransport {
-            force_result: Some(Err("OFFLINE".to_string()))
+            force_result: Some(Err("OFFLINE".to_string())),
         });
         let result = dispatcher.dispatch(&plan);
 
         assert_eq!(result.total_queued, plan.tax_pool_micro_cents);
         assert_eq!(result.total_sent, 0);
-        assert!(result.receipts.iter().all(|r| r.status == PaymentStatus::Queued));
+        assert!(result
+            .receipts
+            .iter()
+            .all(|r| r.status == PaymentStatus::Queued));
     }
 
     #[test]
     fn test_dispatch_hard_failure() {
         let plan = route_tax_payment(10_000, &make_suite()).unwrap();
         let dispatcher = IlpDispatcher::new(MockTransport {
-            force_result: Some(Err("CONNECTOR_REJECTED".to_string()))
+            force_result: Some(Err("CONNECTOR_REJECTED".to_string())),
         });
         let result = dispatcher.dispatch(&plan);
 
         assert_eq!(result.total_failed, plan.tax_pool_micro_cents);
-        assert!(result.receipts.iter().all(|r| matches!(r.status, PaymentStatus::Failed(_))));
+        assert!(result
+            .receipts
+            .iter()
+            .all(|r| matches!(r.status, PaymentStatus::Failed(_))));
     }
 
     #[test]
@@ -342,11 +364,11 @@ mod tests {
         let result = dispatcher.dispatch(&plan);
 
         let nym_receipt = result.receipts.iter().find(|r| r.via_nym);
-        assert!(nym_receipt.is_some(), "Expected one Nym-routed receipt when opted in");
-        assert_eq!(
-            result.receipts.iter().filter(|r| r.via_nym).count(),
-            1
+        assert!(
+            nym_receipt.is_some(),
+            "Expected one Nym-routed receipt when opted in"
         );
+        assert_eq!(result.receipts.iter().filter(|r| r.via_nym).count(), 1);
     }
 
     #[test]
@@ -355,7 +377,10 @@ mod tests {
         // the caller keeps — it must equal 88% of gross.
         let gross = 50_000u64;
         let plan = route_tax_payment(gross, &make_suite()).unwrap();
-        assert_eq!(plan.principal_remainder_micro_cents, gross - plan.tax_pool_micro_cents);
+        assert_eq!(
+            plan.principal_remainder_micro_cents,
+            gross - plan.tax_pool_micro_cents
+        );
         assert_eq!(plan.principal_remainder_micro_cents, 44_000); // 88% of 50k
     }
 }

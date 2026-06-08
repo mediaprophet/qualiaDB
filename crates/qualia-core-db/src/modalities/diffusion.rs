@@ -1,5 +1,5 @@
 // Epic 21: Discrete Diffusion Logic
-// GPU-based graph denoising 
+// GPU-based graph denoising
 
 pub fn trigger_diffusion(graph_id: &str) -> bool {
     // In a real implementation, this pushes a compute payload to the Vulkan Sieve

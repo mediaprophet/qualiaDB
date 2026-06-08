@@ -6,7 +6,7 @@ use qualia_core_db::resource_catalog::ResourceCatalog;
 use serde::{Deserialize, Serialize};
 use sysinfo::System;
 
-use crate::model_lifecycle::{self, models_dir, load_install_manifest, ActiveModelRecord};
+use crate::model_lifecycle::{self, load_install_manifest, models_dir, ActiveModelRecord};
 
 const PREFS_FILE: &str = "model_preferences.json";
 

@@ -23,18 +23,18 @@
 //! | `prov:atPath`            | Local file path hash           |
 //! | `prov:atTimestamp`       | Unix timestamp (inline int)    |
 
-use serde::{Deserialize, Serialize};
-use crate::{QualiaQuin, q_hash};
 use crate::llm_agent::AgentBackend;
 use crate::profiles::CapabilityProfile;
+use crate::{q_hash, QualiaQuin};
+use serde::{Deserialize, Serialize};
 
 // ─── Inline type tag for object field (resolver.rs convention) ───────────────
 const INLINE_TAG_INTEGER: u64 = 0x1u64 << 60;
 
 // ─── Catalog context hashes (compile-time) ───────────────────────────────────
-const CTX_LLM: u64      = q_hash("catalog:llm");
-const CTX_ONT: u64      = q_hash("catalog:ontology");
-const CTX_PROV: u64     = q_hash("catalog:provenance");
+const CTX_LLM: u64 = q_hash("catalog:llm");
+const CTX_ONT: u64 = q_hash("catalog:ontology");
+const CTX_PROV: u64 = q_hash("catalog:provenance");
 
 // ─── Download info ────────────────────────────────────────────────────────────
 
@@ -61,7 +61,10 @@ impl DownloadInfo {
             "huggingface" => {
                 let repo = self.repo.as_deref()?;
                 let file = self.file.as_deref()?;
-                Some(format!("https://huggingface.co/{}/resolve/main/{}", repo, file))
+                Some(format!(
+                    "https://huggingface.co/{}/resolve/main/{}",
+                    repo, file
+                ))
             }
             "github" => {
                 let repo = self.repo.as_deref()?;
@@ -81,7 +84,9 @@ impl DownloadInfo {
         if let Some(ref f) = self.file {
             return Some(f.clone());
         }
-        self.url.as_ref().and_then(|u| u.split('/').last().map(|s| s.to_string()))
+        self.url
+            .as_ref()
+            .and_then(|u| u.split('/').last().map(|s| s.to_string()))
     }
 }
 
@@ -124,7 +129,8 @@ impl LLMResource {
     }
 
     pub fn effective_context_window(&self) -> u32 {
-        self.context_window.unwrap_or(if self.is_multimodal() { 8192 } else { 4096 })
+        self.context_window
+            .unwrap_or(if self.is_multimodal() { 8192 } else { 4096 })
     }
     /// Encode this catalog entry as a set of `QualiaQuin`s.
     ///
@@ -135,49 +141,89 @@ impl LLMResource {
         let mut out = Vec::with_capacity(8);
 
         // Format (always present)
-        out.push(Self::quin(subject, q_hash("llm:hasFormat"), q_hash(&self.format), CTX_LLM));
+        out.push(Self::quin(
+            subject,
+            q_hash("llm:hasFormat"),
+            q_hash(&self.format),
+            CTX_LLM,
+        ));
 
         // Quantization
         if let Some(ref q) = self.quantization {
-            out.push(Self::quin(subject, q_hash("llm:hasQuantization"), q_hash(q), CTX_LLM));
+            out.push(Self::quin(
+                subject,
+                q_hash("llm:hasQuantization"),
+                q_hash(q),
+                CTX_LLM,
+            ));
         }
 
         // File size (inline integer)
         if let Some(sz) = self.size_mb {
-            out.push(Self::quin(subject, q_hash("llm:hasSizeMb"),
-                INLINE_TAG_INTEGER | sz as u64, CTX_LLM));
+            out.push(Self::quin(
+                subject,
+                q_hash("llm:hasSizeMb"),
+                INLINE_TAG_INTEGER | sz as u64,
+                CTX_LLM,
+            ));
         }
 
         // Peak RAM (inline integer)
         if let Some(ram) = self.ram_estimate_mb {
-            out.push(Self::quin(subject, q_hash("llm:hasRamEstimateMb"),
-                INLINE_TAG_INTEGER | ram as u64, CTX_LLM));
+            out.push(Self::quin(
+                subject,
+                q_hash("llm:hasRamEstimateMb"),
+                INLINE_TAG_INTEGER | ram as u64,
+                CTX_LLM,
+            ));
         }
 
         // Source repo
         if let Some(ref repo) = self.download.repo {
-            out.push(Self::quin(subject, q_hash("llm:hasSourceRepo"),
-                q_hash(&format!("hf:{}", repo)), CTX_LLM));
+            out.push(Self::quin(
+                subject,
+                q_hash("llm:hasSourceRepo"),
+                q_hash(&format!("hf:{}", repo)),
+                CTX_LLM,
+            ));
         }
 
         // License
         if let Some(ref lic) = self.license {
-            out.push(Self::quin(subject, q_hash("llm:hasLicense"),
-                q_hash(&format!("license:{}", lic)), CTX_LLM));
+            out.push(Self::quin(
+                subject,
+                q_hash("llm:hasLicense"),
+                q_hash(&format!("license:{}", lic)),
+                CTX_LLM,
+            ));
         }
 
         // Provider
         if let Some(ref prov) = self.provider {
-            out.push(Self::quin(subject, q_hash("llm:hasProvider"),
-                q_hash(prov), CTX_LLM));
+            out.push(Self::quin(
+                subject,
+                q_hash("llm:hasProvider"),
+                q_hash(prov),
+                CTX_LLM,
+            ));
         }
 
         if self.is_multimodal() {
-            out.push(Self::quin(subject, q_hash("llm:hasModality"), q_hash("multimodal"), CTX_LLM));
+            out.push(Self::quin(
+                subject,
+                q_hash("llm:hasModality"),
+                q_hash("multimodal"),
+                CTX_LLM,
+            ));
         }
 
         if let Some(ref arch) = self.architecture {
-            out.push(Self::quin(subject, q_hash("llm:hasArchitecture"), q_hash(arch), CTX_LLM));
+            out.push(Self::quin(
+                subject,
+                q_hash("llm:hasArchitecture"),
+                q_hash(arch),
+                CTX_LLM,
+            ));
         }
 
         out
@@ -187,25 +233,38 @@ impl LLMResource {
     ///
     /// Written to the WAL immediately after the file is saved to disk.
     pub fn provenance_quin(&self, timestamp_unix: u64, local_path: &str) -> QualiaQuin {
-        let subject   = q_hash(&format!("download:{}", self.id));
+        let subject = q_hash(&format!("download:{}", self.id));
         let predicate = q_hash("prov:wasGeneratedBy");
-        let object    = q_hash(local_path);
-        let context   = CTX_PROV;
+        let object = q_hash(local_path);
+        let context = CTX_PROV;
         // Store lower 32 bits of Unix timestamp in metadata
-        let metadata  = timestamp_unix & 0xFFFF_FFFF;
-        let parity    = subject ^ predicate ^ object ^ context ^ metadata;
-        QualiaQuin { subject, predicate, object, context, metadata, parity }
+        let metadata = timestamp_unix & 0xFFFF_FFFF;
+        let parity = subject ^ predicate ^ object ^ context ^ metadata;
+        QualiaQuin {
+            subject,
+            predicate,
+            object,
+            context,
+            metadata,
+            parity,
+        }
     }
 
     /// Generate a supplementary provenance Quin recording the source URL.
     pub fn source_url_quin(&self) -> Option<QualiaQuin> {
         let url = self.download.resolved_url()?;
-        let subject   = q_hash(&format!("download:{}", self.id));
+        let subject = q_hash(&format!("download:{}", self.id));
         let predicate = q_hash("prov:hadPrimarySource");
-        let object    = q_hash(&url);
-        let parity    = subject ^ predicate ^ object ^ CTX_PROV;
-        Some(QualiaQuin { subject, predicate, object, context: CTX_PROV,
-            metadata: 0, parity })
+        let object = q_hash(&url);
+        let parity = subject ^ predicate ^ object ^ CTX_PROV;
+        Some(QualiaQuin {
+            subject,
+            predicate,
+            object,
+            context: CTX_PROV,
+            metadata: 0,
+            parity,
+        })
     }
 
     /// Build a `CapabilityProfile` for this model, bound to its local file path.
@@ -233,7 +292,9 @@ impl LLMResource {
             preferred_backend: AgentBackend::Local {
                 model_path: local_path.to_string(),
                 context_window: self.effective_context_window(),
-                quantization: self.quantization.clone()
+                quantization: self
+                    .quantization
+                    .clone()
                     .unwrap_or_else(|| "Q4_K_M".to_string()),
                 vision_projector_path: vision_projector_path.map(|s| s.to_string()),
                 modality,
@@ -245,7 +306,14 @@ impl LLMResource {
 
     fn quin(subject: u64, predicate: u64, object: u64, context: u64) -> QualiaQuin {
         let parity = subject ^ predicate ^ object ^ context;
-        QualiaQuin { subject, predicate, object, context, metadata: 0, parity }
+        QualiaQuin {
+            subject,
+            predicate,
+            object,
+            context,
+            metadata: 0,
+            parity,
+        }
     }
 }
 
@@ -276,25 +344,48 @@ impl OntologyResource {
         let subject = q_hash(&format!("ont:{}", self.id));
         let mut out = Vec::with_capacity(5);
 
-        out.push(Self::quin(subject, q_hash("ont:hasFormat"), q_hash(&self.format), CTX_ONT));
+        out.push(Self::quin(
+            subject,
+            q_hash("ont:hasFormat"),
+            q_hash(&self.format),
+            CTX_ONT,
+        ));
 
         if let Some(ref domain) = self.domain {
-            out.push(Self::quin(subject, q_hash("ont:hasDomain"), q_hash(domain), CTX_ONT));
+            out.push(Self::quin(
+                subject,
+                q_hash("ont:hasDomain"),
+                q_hash(domain),
+                CTX_ONT,
+            ));
         }
 
         if let Some(sz) = self.size_estimate_mb {
             let mb = sz.ceil().max(0.0) as u64;
-            out.push(Self::quin(subject, q_hash("ont:hasSizeMb"),
-                INLINE_TAG_INTEGER | mb, CTX_ONT));
+            out.push(Self::quin(
+                subject,
+                q_hash("ont:hasSizeMb"),
+                INLINE_TAG_INTEGER | mb,
+                CTX_ONT,
+            ));
         }
 
         if let Some(ref lic) = self.license {
-            out.push(Self::quin(subject, q_hash("ont:hasLicense"),
-                q_hash(&format!("license:{}", lic)), CTX_ONT));
+            out.push(Self::quin(
+                subject,
+                q_hash("ont:hasLicense"),
+                q_hash(&format!("license:{}", lic)),
+                CTX_ONT,
+            ));
         }
 
         if let Some(ref src) = self.source {
-            out.push(Self::quin(subject, q_hash("ont:hasSource"), q_hash(src), CTX_ONT));
+            out.push(Self::quin(
+                subject,
+                q_hash("ont:hasSource"),
+                q_hash(src),
+                CTX_ONT,
+            ));
         }
 
         out
@@ -302,17 +393,31 @@ impl OntologyResource {
 
     /// Provenance Quin for a completed ontology import.
     pub fn provenance_quin(&self, timestamp_unix: u64, local_path: &str) -> QualiaQuin {
-        let subject   = q_hash(&format!("import:{}", self.id));
+        let subject = q_hash(&format!("import:{}", self.id));
         let predicate = q_hash("prov:wasGeneratedBy");
-        let object    = q_hash(local_path);
-        let metadata  = timestamp_unix & 0xFFFF_FFFF;
-        let parity    = subject ^ predicate ^ object ^ CTX_PROV ^ metadata;
-        QualiaQuin { subject, predicate, object, context: CTX_PROV, metadata, parity }
+        let object = q_hash(local_path);
+        let metadata = timestamp_unix & 0xFFFF_FFFF;
+        let parity = subject ^ predicate ^ object ^ CTX_PROV ^ metadata;
+        QualiaQuin {
+            subject,
+            predicate,
+            object,
+            context: CTX_PROV,
+            metadata,
+            parity,
+        }
     }
 
     fn quin(subject: u64, predicate: u64, object: u64, context: u64) -> QualiaQuin {
         let parity = subject ^ predicate ^ object ^ context;
-        QualiaQuin { subject, predicate, object, context, metadata: 0, parity }
+        QualiaQuin {
+            subject,
+            predicate,
+            object,
+            context,
+            metadata: 0,
+            parity,
+        }
     }
 }
 
@@ -352,7 +457,11 @@ pub struct ResourceCatalog {
 
 impl ResourceCatalog {
     pub fn empty() -> Self {
-        Self { llms: vec![], ontologies: vec![], sparql_endpoints: vec![] }
+        Self {
+            llms: vec![],
+            ontologies: vec![],
+            sparql_endpoints: vec![],
+        }
     }
 
     pub fn find_llm(&self, id: &str) -> Option<&LLMResource> {

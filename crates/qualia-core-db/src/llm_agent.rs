@@ -17,9 +17,9 @@
 //   - Webizen validates I/O before touching the semantic graph
 //   - Memory budget hard-capped; default 128MB within 512MB floor
 
+use crate::{q_hash, QualiaQuin};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
-use crate::{q_hash, QualiaQuin};
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 /// Hard memory ceiling for the LLM runtime within the 512MB system floor.
@@ -58,9 +58,9 @@ pub enum AgentBackend {
     /// Quantized local model (llama.cpp WASM / ONNX Runtime / WebLLM + WebGPU).
     /// This is the PREFERRED backend — no outbound traffic.
     Local {
-        model_path: String,     // e.g. "~/.qualia/models/phi3-mini-4bit.gguf"
-        context_window: u32,    // tokens; typically 4096 for Phi-3-mini
-        quantization: String,   // "Q4_K_M", "Q8_0", etc.
+        model_path: String,   // e.g. "~/.qualia/models/phi3-mini-4bit.gguf"
+        context_window: u32,  // tokens; typically 4096 for Phi-3-mini
+        quantization: String, // "Q4_K_M", "Q8_0", etc.
         /// Path to mmproj / vision projector GGUF when `modality` is multimodal.
         #[serde(default)]
         vision_projector_path: Option<String>,
@@ -77,8 +77,8 @@ pub enum AgentBackend {
     ///   - ILP micropayment for every call
     ///   - Full audit trail written to .q42
     Remote {
-        endpoint_did: String,   // did:git of the approved remote provider
-        nym_gateway: String,    // Nym gateway address
+        endpoint_did: String, // did:git of the approved remote provider
+        nym_gateway: String,  // Nym gateway address
         ilp_budget_micro_cents: u64,
     },
     /// Local first; falls back to Remote only with Principal consent.
@@ -94,7 +94,9 @@ fn default_local_modality() -> String {
 }
 
 // ─── AgentIntent ─────────────────────────────────────────────────────────────
-pub use crate::n3_compiler::{AgentIntentFrame, N3OutputMode, MAX_INTENT_SCOPE_SLOTS};
+pub use crate::n3_compiler::{
+    AgentIntentFrame, N3OutputMode, MAX_CONTEXT_NAMESPACE_SLOTS, MAX_INTENT_SCOPE_SLOTS,
+};
 
 /// Structured intent message from LLM → Webizen. Every call must declare
 /// what it intends to do — the Webizen validates this against the Rights Ontology
@@ -109,6 +111,9 @@ pub struct AgentIntent {
     pub intent_predicate: u64,
     /// The sub-graph slice the agent is requesting access to (Quin hash ranges).
     pub requested_graph_scope: Vec<u64>,
+    /// Routed ontology and predicate namespaces relevant to this turn.
+    #[serde(default)]
+    pub context_namespaces: Vec<u64>,
     /// Whether this intent requires outbound network access.
     pub requires_network: bool,
     /// Optional ILP payment offer for the operation (0 for fully local ops).
@@ -145,10 +150,12 @@ impl AgentIntent {
     /// Copy into a stack-allocated frame for Core-1 pre-flight validation.
     pub fn to_frame(&self) -> AgentIntentFrame {
         let mut graph_scope = [0u64; MAX_INTENT_SCOPE_SLOTS];
-        let scope_count = self
-            .requested_graph_scope
+        let mut context_namespaces = [0u64; MAX_CONTEXT_NAMESPACE_SLOTS];
+        let scope_count = self.requested_graph_scope.len().min(MAX_INTENT_SCOPE_SLOTS) as u8;
+        let context_namespace_count = self
+            .context_namespaces
             .len()
-            .min(MAX_INTENT_SCOPE_SLOTS) as u8;
+            .min(MAX_CONTEXT_NAMESPACE_SLOTS) as u8;
         for (i, hash) in self
             .requested_graph_scope
             .iter()
@@ -157,17 +164,27 @@ impl AgentIntent {
         {
             graph_scope[i] = *hash;
         }
+        for (i, hash) in self
+            .context_namespaces
+            .iter()
+            .take(MAX_CONTEXT_NAMESPACE_SLOTS)
+            .enumerate()
+        {
+            context_namespaces[i] = *hash;
+        }
         AgentIntentFrame {
             intent_predicate: self.intent_predicate,
             principal_did_hash: self.principal_did_hash,
             mcp_intent_frame_hash: self.mcp_intent_frame_hash,
             ilp_offer_micro_cents: self.ilp_offer_micro_cents,
             scope_count,
+            context_namespace_count,
             requires_network: self.requires_network,
             output_mode: self.output_mode,
             clearance_ceiling: self.clearance_ceiling,
             max_sentinel_depth: self.max_sentinel_depth,
             graph_scope,
+            context_namespaces,
         }
     }
 }
@@ -187,9 +204,17 @@ pub enum WebizenVerdict {
     Permit,
     /// Block. Reason is an N3Logic rule hash that caused the rejection.
     /// Can optionally carry a 48-byte Quin to write immediately to the immutable ledger.
-    Deny { rule_violated: u64, reason: &'static str, conduct_record: Option<QualiaQuin> },
+    Deny {
+        rule_violated: u64,
+        reason: &'static str,
+        conduct_record: Option<QualiaQuin>,
+    },
     /// Block with a detailed explanation for the user, usually tied to an Intent Frame violation.
-    DenyWithExplanation { rule_violated: u64, reason: String, explanation: String },
+    DenyWithExplanation {
+        rule_violated: u64,
+        reason: String,
+        explanation: String,
+    },
     /// The operation might be valid, but requires explicit reconfirmation from the Principal.
     RequireReconfirmation { reason: String },
     /// The output was modified (sanitised) by the Webizen before passing through.
@@ -304,12 +329,11 @@ fn build_sieve(
     let spec = spec?;
     if let Some(path) = lex_path {
         if let Ok(lex_file) = crate::q42_lex::Q42LexFile::open(std::path::Path::new(path)) {
-            let s =
-                crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_lex_and_tokenizer(
-                    &lex_file.view(),
-                    tok,
-                    spec,
-                );
+            let s = crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_lex_and_tokenizer(
+                &lex_file.view(),
+                tok,
+                spec,
+            );
             if s.masks_ready() {
                 return Some(s);
             }
@@ -361,7 +385,9 @@ impl LocalLlmAgent {
             memory_used_bytes: std::sync::atomic::AtomicU64::new(0),
             use_sieve_output: std::sync::atomic::AtomicBool::new(false),
             sieve_lex_path: std::sync::Mutex::new(None),
-            sieve_spec: std::sync::Mutex::new(crate::neuro_symbolic_sieve::SieveLexSpec::graph_mutation_default()),
+            sieve_spec: std::sync::Mutex::new(
+                crate::neuro_symbolic_sieve::SieveLexSpec::graph_mutation_default(),
+            ),
         }
     }
 
@@ -393,7 +419,11 @@ impl LocalLlmAgent {
         self.infer_local_model_inner(prompt, graph_context, on_token.as_mut())
     }
 
-    fn infer_local_model(&self, prompt: &str, graph_context: &str) -> (String, Vec<u64>, u32, Option<QualiaQuin>) {
+    fn infer_local_model(
+        &self,
+        prompt: &str,
+        graph_context: &str,
+    ) -> (String, Vec<u64>, u32, Option<QualiaQuin>) {
         self.infer_local_model_inner::<fn(String)>(prompt, graph_context, None)
     }
 
@@ -404,7 +434,9 @@ impl LocalLlmAgent {
         graph_context: &str,
         mut on_token: Option<&mut F>,
     ) -> (String, Vec<u64>, u32, Option<QualiaQuin>) {
-        let prov_hash = graph_context.bytes().take(8)
+        let prov_hash = graph_context
+            .bytes()
+            .take(8)
             .fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
         let use_sieve = self
             .use_sieve_output
@@ -430,14 +462,32 @@ impl LocalLlmAgent {
 
             let model_path = match &self.backend {
                 AgentBackend::Local { model_path, .. } => model_path.clone(),
-                _ => return (String::from("[no local model configured]"), vec![prov_hash], 0, None),
+                _ => {
+                    return (
+                        String::from("[no local model configured]"),
+                        vec![prov_hash],
+                        0,
+                        None,
+                    )
+                }
             };
             let prompt_owned = prompt.to_string();
 
             // Fixed-size types keep the hot-path allocation-free in the ring buffer.
-            #[derive(Clone, Copy)] struct LogitSummary { _top_id: u32, anomaly: u8 }
-            #[derive(Clone)]       enum LlmMsg  { Logit(LogitSummary), Eos }
-            #[derive(Clone)]       enum SentMsg { DenyRollback }
+            #[derive(Clone, Copy)]
+            struct LogitSummary {
+                _top_id: u32,
+                anomaly: u8,
+            }
+            #[derive(Clone)]
+            enum LlmMsg {
+                Logit(LogitSummary),
+                Eos,
+            }
+            #[derive(Clone)]
+            enum SentMsg {
+                DenyRollback,
+            }
 
             // LogitStream: LLM engine → Webizen Sentinel
             let (mut lp, mut lc) = RingBuffer::<LlmMsg>::new(1024);
@@ -460,21 +510,28 @@ impl LocalLlmAgent {
                 let mut engine = QTensorEngine::new();
                 engine.load_gguf(&model_path);
 
-                let tok = engine.gguf_mmap.as_ref()
+                let tok = engine
+                    .gguf_mmap
+                    .as_ref()
                     .map(|m| GgufTokenizer::from_gguf(m))
                     .unwrap_or_default();
 
                 // Parse tensor-info section → real embedding lookup.
-                let tensor_idx = engine.gguf_mmap.as_ref()
+                let tensor_idx = engine
+                    .gguf_mmap
+                    .as_ref()
                     .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
 
                 let mut ctx = tok.encode(&prompt_owned);
-                if ctx.is_empty() { ctx.push(tok.bos_token_id); }
-                let eos  = tok.eos_token_id;
+                if ctx.is_empty() {
+                    ctx.push(tok.bos_token_id);
+                }
+                let eos = tok.eos_token_id;
                 let vlen = tok.vocab_len().max(1);
 
                 // Use the real embedding dimension if the tensor was found; fall back to 4096.
-                let emb_dim = tensor_idx.as_ref()
+                let emb_dim = tensor_idx
+                    .as_ref()
                     .map(|idx| idx.emb_dim())
                     .filter(|&d| d > 0)
                     .unwrap_or(4096);
@@ -553,11 +610,14 @@ impl LocalLlmAgent {
                     let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
 
                     // 1) Embedding lookup → hidden state (stack dequant).
-                    let hidden_ok = tensor_idx.as_ref().and_then(|idx| {
-                        engine.gguf_mmap.as_deref().map(|m| {
-                            idx.dequantize_token_embedding_into(m, cur, &mut emb_buf[..emb_dim])
+                    let hidden_ok = tensor_idx
+                        .as_ref()
+                        .and_then(|idx| {
+                            engine.gguf_mmap.as_deref().map(|m| {
+                                idx.dequantize_token_embedding_into(m, cur, &mut emb_buf[..emb_dim])
+                            })
                         })
-                    }).unwrap_or(0);
+                        .unwrap_or(0);
 
                     let (top_i, top_v) = if hidden_ok > 0 {
                         if let Some(idx) = tensor_idx.as_ref() {
@@ -587,21 +647,24 @@ impl LocalLlmAgent {
                                     (0usize, f32::NEG_INFINITY)
                                 }
                             } else {
-                                emb_buf[..emb_dim]
-                                    .iter()
-                                    .enumerate()
-                                    .fold((0usize, f32::NEG_INFINITY), |(bi, bv), (i, &v)| {
-                                        if v > bv { (i, v) } else { (bi, bv) }
-                                    })
+                                emb_buf[..emb_dim].iter().enumerate().fold(
+                                    (0usize, f32::NEG_INFINITY),
+                                    |(bi, bv), (i, &v)| {
+                                        if v > bv {
+                                            (i, v)
+                                        } else {
+                                            (bi, bv)
+                                        }
+                                    },
+                                )
                             }
                         } else {
                             (0usize, 0.0)
                         }
                     } else {
                         let wt = QTensor::new(vec![emb_dim, emb_dim], 0, true);
-                        let logits = pseudo_embedding_forward(
-                            cur, emb_dim, &mut emb_buf[..], &engine, &wt,
-                        );
+                        let logits =
+                            pseudo_embedding_forward(cur, emb_dim, &mut emb_buf[..], &engine, &wt);
                         logits.iter().enumerate().fold(
                             (0usize, f32::NEG_INFINITY),
                             |(bi, bv), (i, &v)| if v > bv { (i, v) } else { (bi, bv) },
@@ -610,10 +673,17 @@ impl LocalLlmAgent {
 
                     // Anomaly flag: 0x99 as the first byte of the top logit's IEEE-754
                     // representation is the sentinel value for an anachronistic token.
-                    let anomaly = if top_v.to_le_bytes()[0] == 0x99 { 0x99u8 } else { 0x01u8 };
+                    let anomaly = if top_v.to_le_bytes()[0] == 0x99 {
+                        0x99u8
+                    } else {
+                        0x01u8
+                    };
 
                     // Push logit summary; non-blocking — drops silently if ring is full.
-                    let _ = lp.push(LlmMsg::Logit(LogitSummary { _top_id: top_i as u32, anomaly }));
+                    let _ = lp.push(LlmMsg::Logit(LogitSummary {
+                        _top_id: top_i as u32,
+                        anomaly,
+                    }));
 
                     // On DenyRollback, substitute a safe neighbour token instead of argmax.
                     if sieve_failed {
@@ -681,9 +751,11 @@ impl LocalLlmAgent {
             loop {
                 drain_tokens();
                 match lc.pop() {
-                    Ok(LlmMsg::Eos)      => break,
+                    Ok(LlmMsg::Eos) => break,
                     Ok(LlmMsg::Logit(s)) => {
-                        if s.anomaly == 0x99 { let _ = cp.push(SentMsg::DenyRollback); }
+                        if s.anomaly == 0x99 {
+                            let _ = cp.push(SentMsg::DenyRollback);
+                        }
                     }
                     Err(_) => std::hint::spin_loop(),
                 }
@@ -716,8 +788,15 @@ impl LocalLlmAgent {
             use std::thread;
             use std::time::Duration;
 
-            #[derive(Clone, Debug)] enum VectorOp  { TokenBytes([u8; 16]), EndOfStream }
-            #[derive(Clone, Debug)] enum WebizenOp { DenyRollback }
+            #[derive(Clone, Debug)]
+            enum VectorOp {
+                TokenBytes([u8; 16]),
+                EndOfStream,
+            }
+            #[derive(Clone, Debug)]
+            enum WebizenOp {
+                DenyRollback,
+            }
 
             let (mut logit_p, mut logit_c) = RingBuffer::<VectorOp>::new(1024);
             let (mut control_p, mut control_c) = RingBuffer::<WebizenOp>::new(16);
@@ -734,7 +813,11 @@ impl LocalLlmAgent {
                         continue;
                     }
                     let mut vector = [0u8; 16];
-                    vector[0] = if word.contains("internet") || word.contains("modern") { 0x99 } else { 0x01 };
+                    vector[0] = if word.contains("internet") || word.contains("modern") {
+                        0x99
+                    } else {
+                        0x01
+                    };
                     let _ = logit_p.push(VectorOp::TokenBytes(vector));
                     final_text.push_str(word);
                     final_text.push(' ');
@@ -747,8 +830,12 @@ impl LocalLlmAgent {
 
             loop {
                 match logit_c.pop() {
-                    Ok(VectorOp::EndOfStream)   => break,
-                    Ok(VectorOp::TokenBytes(b)) => { if b[0] == 0x99 { let _ = control_p.push(WebizenOp::DenyRollback); } }
+                    Ok(VectorOp::EndOfStream) => break,
+                    Ok(VectorOp::TokenBytes(b)) => {
+                        if b[0] == 0x99 {
+                            let _ = control_p.push(WebizenOp::DenyRollback);
+                        }
+                    }
                     Err(_) => {}
                 }
             }
@@ -784,7 +871,7 @@ impl LocalLlmAgent {
                 conduct_record: None,
             };
         }
-        
+
         // Rule 5: Cooperative Projects Directive — No adversarial, manipulative, or dishonest conduct.
         // Also tracks anti-human rights and discriminatory behavior for court auditing and liability.
         let is_adversarial = frame.intent_predicate == q_hash("llm:AdversarialOperation");
@@ -793,9 +880,18 @@ impl LocalLlmAgent {
         let is_anti_human_rights = frame.intent_predicate == q_hash("llm:AntiHumanRightsOperation");
 
         if is_adversarial || is_dishonest || is_discriminatory || is_anti_human_rights {
-            let liability_weight: u64 = if is_anti_human_rights { 100 } else if is_discriminatory { 80 } else { 50 };
-            let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
-            
+            let liability_weight: u64 = if is_anti_human_rights {
+                100
+            } else if is_discriminatory {
+                80
+            } else {
+                50
+            };
+            let now_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64;
+
             let mut conduct_quin = QualiaQuin {
                 subject: q_hash(agent.agent_did()),
                 predicate: q_hash("q42:conductViolation"),
@@ -803,12 +899,17 @@ impl LocalLlmAgent {
                 object: liability_weight | (0b001u64 << 60),
                 context: frame.principal_did_hash,
                 // Pack time and flags into metadata
-                metadata: (now_ms & 0xFFFFFFFF) | ((is_anti_human_rights as u64) << 32) | ((is_discriminatory as u64) << 33),
+                metadata: (now_ms & 0xFFFFFFFF)
+                    | ((is_anti_human_rights as u64) << 32)
+                    | ((is_discriminatory as u64) << 33),
                 parity: 0,
             };
-            
+
             // Calculate parity fold (XOR fold)
-            conduct_quin.parity = conduct_quin.subject ^ conduct_quin.predicate ^ conduct_quin.object ^ conduct_quin.context;
+            conduct_quin.parity = conduct_quin.subject
+                ^ conduct_quin.predicate
+                ^ conduct_quin.object
+                ^ conduct_quin.context;
 
             return WebizenVerdict::Deny {
                 rule_violated: LLM_RULE_NO_ADVERSARIAL_CONDUCT,
@@ -842,8 +943,12 @@ impl LocalLlmAgent {
 }
 
 impl AgentRuntime for LocalLlmAgent {
-    fn backend(&self) -> &AgentBackend { &self.backend }
-    fn agent_did(&self) -> &str { &self.agent_did }
+    fn backend(&self) -> &AgentBackend {
+        &self.backend
+    }
+    fn agent_did(&self) -> &str {
+        &self.agent_did
+    }
 
     fn validate_intent(&self, intent: &AgentIntent) -> WebizenVerdict {
         let sieve_on = matches!(
@@ -857,6 +962,11 @@ impl AgentRuntime for LocalLlmAgent {
             for &scope_hash in &intent.requested_graph_scope {
                 if scope_hash != 0 {
                     spec.push_predicate(scope_hash);
+                }
+            }
+            for &namespace_hash in &intent.context_namespaces {
+                if namespace_hash != 0 {
+                    spec.push_predicate(namespace_hash);
                 }
             }
             *self.sieve_spec.lock().unwrap() = spec;
@@ -874,7 +984,8 @@ impl AgentRuntime for LocalLlmAgent {
                 return WebizenVerdict::DenyWithExplanation {
                     rule_violated: LLM_RULE_PROFILE_VIOLATION,
                     reason: "Profile Violation".into(),
-                    explanation: "This capability profile explicitly blocks this intent frame.".into(),
+                    explanation: "This capability profile explicitly blocks this intent frame."
+                        .into(),
                 };
             }
         }
@@ -886,14 +997,17 @@ impl AgentRuntime for LocalLlmAgent {
         let t0 = Instant::now();
 
         // Memory guard
-        let current = self.memory_used_bytes.load(std::sync::atomic::Ordering::Relaxed);
+        let current = self
+            .memory_used_bytes
+            .load(std::sync::atomic::Ordering::Relaxed);
         if current > LLM_MEMORY_BUDGET_BYTES {
             return Err(AgentError::MemoryBudgetExceeded);
         }
 
         // Timeout guard (production: run in a separate thread with channel)
         let deadline = Duration::from_millis(INFERENCE_TIMEOUT_MS);
-        let (text, provenance, tokens, semantic_quin) = self.infer_local_model(prompt, graph_context);
+        let (text, provenance, tokens, semantic_quin) =
+            self.infer_local_model(prompt, graph_context);
         if t0.elapsed() > deadline {
             return Err(AgentError::Timeout);
         }
@@ -932,7 +1046,9 @@ impl AgentRuntime for LocalLlmAgent {
     }
 
     fn memory_budget_remaining(&self) -> u64 {
-        let used = self.memory_used_bytes.load(std::sync::atomic::Ordering::Relaxed);
+        let used = self
+            .memory_used_bytes
+            .load(std::sync::atomic::Ordering::Relaxed);
         LLM_MEMORY_BUDGET_BYTES.saturating_sub(used)
     }
 }
@@ -940,13 +1056,13 @@ impl AgentRuntime for LocalLlmAgent {
 // ─── N3Logic Rule IDs (FNV-1a hashes of the rule URIs) ───────────────────────
 // These match the corresponding rules in `docs/llm-governance-rules.n3`
 pub const LLM_RULE_NO_OUTBOUND_TELEMETRY: u64 = 0xA1B2C3D4E5F60001;
-pub const LLM_RULE_NO_SANCTUARY_ACCESS:   u64 = 0xA1B2C3D4E5F60002;
-pub const LLM_RULE_PROVENANCE_REQUIRED:   u64 = 0xA1B2C3D4E5F60003;
-pub const LLM_RULE_TOKEN_BUDGET:          u64 = 0xA1B2C3D4E5F60004;
-pub const LLM_RULE_REMOTE_CONSENT:        u64 = 0xA1B2C3D4E5F60005;
-pub const LLM_RULE_NO_ADVERSARIAL_CONDUCT:u64 = 0xA1B2C3D4E5F60006;
+pub const LLM_RULE_NO_SANCTUARY_ACCESS: u64 = 0xA1B2C3D4E5F60002;
+pub const LLM_RULE_PROVENANCE_REQUIRED: u64 = 0xA1B2C3D4E5F60003;
+pub const LLM_RULE_TOKEN_BUDGET: u64 = 0xA1B2C3D4E5F60004;
+pub const LLM_RULE_REMOTE_CONSENT: u64 = 0xA1B2C3D4E5F60005;
+pub const LLM_RULE_NO_ADVERSARIAL_CONDUCT: u64 = 0xA1B2C3D4E5F60006;
 pub const LLM_RULE_INTENT_FRAME_MISMATCH: u64 = 0xA1B2C3D4E5F60007;
-pub const LLM_RULE_PROFILE_VIOLATION:     u64 = 0xA1B2C3D4E5F60008;
+pub const LLM_RULE_PROFILE_VIOLATION: u64 = 0xA1B2C3D4E5F60008;
 
 /// Special webizen hash marking a Sanctuary-flagged graph scope.
 pub const SANCTUARY_SCOPE_WEBIZEN: u64 = 0xDEAD_BABE_CAFE_0042;
@@ -957,7 +1073,10 @@ mod tests {
     use super::*;
 
     fn make_agent() -> LocalLlmAgent {
-        LocalLlmAgent::new("did:git:antigravity-llm-001", "~/.qualia/models/phi3-mini.gguf")
+        LocalLlmAgent::new(
+            "did:git:antigravity-llm-001",
+            "~/.qualia/models/phi3-mini.gguf",
+        )
     }
 
     #[test]
@@ -966,6 +1085,7 @@ mod tests {
         let intent = AgentIntent {
             intent_predicate: 0xAABB,
             requested_graph_scope: vec![],
+            context_namespaces: vec![],
             requires_network: true,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
@@ -976,7 +1096,10 @@ mod tests {
             active_profile: None,
         };
         let verdict = agent.validate_intent(&intent);
-        assert!(matches!(verdict, WebizenVerdict::Deny { .. }), "Webizen must block outbound calls from local backend");
+        assert!(
+            matches!(verdict, WebizenVerdict::Deny { .. }),
+            "Webizen must block outbound calls from local backend"
+        );
     }
 
     #[test]
@@ -985,6 +1108,7 @@ mod tests {
         let intent = AgentIntent {
             intent_predicate: 0xAABB,
             requested_graph_scope: vec![SANCTUARY_SCOPE_WEBIZEN],
+            context_namespaces: vec![],
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
@@ -995,7 +1119,10 @@ mod tests {
             active_profile: None,
         };
         let verdict = agent.validate_intent(&intent);
-        assert!(matches!(verdict, WebizenVerdict::Deny { .. }), "Webizen must block Sanctuary scope access");
+        assert!(
+            matches!(verdict, WebizenVerdict::Deny { .. }),
+            "Webizen must block Sanctuary scope access"
+        );
     }
 
     #[test]
@@ -1004,6 +1131,7 @@ mod tests {
         let intent = AgentIntent {
             intent_predicate: 0xAABB,
             requested_graph_scope: vec![0xDEAD_BEEF],
+            context_namespaces: vec![],
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
@@ -1022,6 +1150,7 @@ mod tests {
         let intent = AgentIntent {
             intent_predicate: 0xAABB,
             requested_graph_scope: vec![0x1234],
+            context_namespaces: vec![],
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
@@ -1033,11 +1162,17 @@ mod tests {
         };
         assert_eq!(agent.validate_intent(&intent), WebizenVerdict::Permit);
 
-        let output = agent.infer("What is my health status?", "graph_context_bytes_here").unwrap();
+        let output = agent
+            .infer("What is my health status?", "graph_context_bytes_here")
+            .unwrap();
         assert!(!output.text.is_empty());
 
         let post_verdict = agent.validate_output(&output);
-        assert_eq!(post_verdict, WebizenVerdict::Permit, "Grounded output should pass post-flight check");
+        assert_eq!(
+            post_verdict,
+            WebizenVerdict::Permit,
+            "Grounded output should pass post-flight check"
+        );
     }
 
     #[test]
@@ -1052,7 +1187,10 @@ mod tests {
             peak_memory_bytes: 0,
         };
         let verdict = agent.validate_output(&ungrounded);
-        assert!(matches!(verdict, WebizenVerdict::Deny { .. }), "Webizen must block ungrounded output");
+        assert!(
+            matches!(verdict, WebizenVerdict::Deny { .. }),
+            "Webizen must block ungrounded output"
+        );
     }
 
     #[test]
@@ -1061,6 +1199,7 @@ mod tests {
         let intent = AgentIntent {
             intent_predicate: 0xAABB,
             requested_graph_scope: vec![0x1234],
+            context_namespaces: vec![],
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: 0,
@@ -1079,11 +1218,12 @@ mod tests {
     #[test]
     fn test_zero_allocation_adversarial_conduct_denial() {
         let _profiler = dhat::Profiler::builder().testing().build();
-        
+
         let agent = make_agent();
         let intent = AgentIntent {
             intent_predicate: crate::q_hash("llm:AdversarialOperation"),
             requested_graph_scope: vec![],
+            context_namespaces: vec![],
             requires_network: false,
             ilp_offer_micro_cents: 0,
             principal_did_hash: crate::q_hash("did:q42:human-rights-test-subject"),
@@ -1093,26 +1233,29 @@ mod tests {
             max_sentinel_depth: 32,
             active_profile: None,
         };
-        
+
         // Warm up any internal system components that might allocate on first use
         let _ = std::time::SystemTime::now();
-        
+
         let stats_before = dhat::HeapStats::get();
-        
+
         // Execute the intent validation (hot path)
         let verdict = agent.validate_intent(&intent);
-        
+
         let stats_after = dhat::HeapStats::get();
-        
+
         // Verify we got the Deny verdict with the QualiaQuin
         if let WebizenVerdict::Deny { conduct_record, .. } = verdict {
-            assert!(conduct_record.is_some(), "Conduct record Quin must be generated");
+            assert!(
+                conduct_record.is_some(),
+                "Conduct record Quin must be generated"
+            );
             let quin = conduct_record.unwrap();
             assert_eq!(quin.predicate, crate::q_hash("q42:conductViolation"));
         } else {
             panic!("Expected Deny verdict for adversarial operation");
         }
-        
+
         // Assert ABSOLUTELY ZERO heap allocations occurred during validate_intent
         assert_eq!(
             stats_after.total_blocks - stats_before.total_blocks,

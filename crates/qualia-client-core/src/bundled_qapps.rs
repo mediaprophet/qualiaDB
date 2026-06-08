@@ -58,7 +58,8 @@ fn has_valid_manifest(dir: &Path) -> bool {
 pub fn read_qapp_version_from_dir(qapp_dir: &Path) -> Option<String> {
     let manifest_path = resolve_package_manifest_path(qapp_dir)?;
     let content = fs::read_to_string(manifest_path).ok()?;
-    let manifest: crate::qapp_registry::QappPackageManifest = serde_json::from_str(&content).ok()?;
+    let manifest: crate::qapp_registry::QappPackageManifest =
+        serde_json::from_str(&content).ok()?;
     Some(normalize_version_label(&manifest.version))
 }
 
@@ -136,7 +137,9 @@ fn build_version_status(
         (Some(inst), Some(off), false) => {
             format!("Installed v{inst}; bundled/external offer v{off} is not newer.")
         }
-        (None, None, false) => format!("{qapp_name} is not installed and no package source was found."),
+        (None, None, false) => {
+            format!("{qapp_name} is not installed and no package source was found.")
+        }
         _ => format!("{qapp_name} version status evaluated."),
     };
 
@@ -155,12 +158,7 @@ fn build_version_status(
 pub fn check_bundled_qapp_update(qapp_name: &str, storage_path: &Path) -> QappVersionStatus {
     let installed_version = installed_qapp_version(storage_path, qapp_name);
     let offered_version = bundled_offered_version(qapp_name);
-    build_version_status(
-        qapp_name,
-        installed_version,
-        offered_version,
-        "bundled",
-    )
+    build_version_status(qapp_name, installed_version, offered_version, "bundled")
 }
 
 /// Compare installed copy against an external directory (manual install / dev tree).
@@ -170,10 +168,7 @@ pub fn check_qapp_update_from_source(
     source_dir: &Path,
 ) -> Result<QappVersionStatus, String> {
     if !has_valid_manifest(source_dir) {
-        return Err(format!(
-            "qapp.json not found in {}",
-            source_dir.display()
-        ));
+        return Err(format!("qapp.json not found in {}", source_dir.display()));
     }
     let offered_version = read_qapp_version_from_dir(source_dir)
         .ok_or_else(|| "Could not read version from source qapp.json".to_string())?;
@@ -212,16 +207,18 @@ pub fn list_bundled_qapp_updates(storage_path: &Path) -> Vec<QappVersionStatus> 
 }
 
 /// Copy bundled qapp into `{storage}/Qapps/{name}` when not already installed.
-pub fn seed_qapp_if_missing(storage_path: impl AsRef<Path>, qapp_name: &str) -> Result<bool, String> {
+pub fn seed_qapp_if_missing(
+    storage_path: impl AsRef<Path>,
+    qapp_name: &str,
+) -> Result<bool, String> {
     let storage = storage_path.as_ref();
     let dest = qapps_dir(storage).join(qapp_name);
     if dest.join(QAPP_PACKAGE_MANIFEST).is_file() {
         return Ok(false);
     }
 
-    let source = resolve_bundled_qapp_source(qapp_name).ok_or_else(|| {
-        format!("Bundled qapp source not found for {qapp_name}")
-    })?;
+    let source = resolve_bundled_qapp_source(qapp_name)
+        .ok_or_else(|| format!("Bundled qapp source not found for {qapp_name}"))?;
 
     if dest.exists() {
         fs::remove_dir_all(&dest).map_err(|e| e.to_string())?;
@@ -237,10 +234,7 @@ pub fn upgrade_qapp_from_source(
     source_dir: &Path,
 ) -> Result<String, String> {
     if !has_valid_manifest(source_dir) {
-        return Err(format!(
-            "qapp.json not found in {}",
-            source_dir.display()
-        ));
+        return Err(format!("qapp.json not found in {}", source_dir.display()));
     }
 
     let manifest = crate::api::load_qapp_package_from_dir(source_dir)
@@ -298,7 +292,12 @@ pub fn seed_bundled_qapps() -> Result<Vec<String>, String> {
     let state = crate::state::APP_STATE
         .get()
         .ok_or("APP_STATE not initialized")?;
-    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    let storage = state
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .storage_path
+        .clone();
     let storage_path = PathBuf::from(&storage);
     let _ = ensure_qapps_dir(&storage_path).map_err(|e| e.to_string())?;
 
@@ -331,8 +330,8 @@ mod tests {
 
     #[test]
     fn tracked_anatomy_source_resolves_when_present() {
-        let tracked = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../bundled/qapps/Anatomy/qapp.json");
+        let tracked =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../bundled/qapps/Anatomy/qapp.json");
         if tracked.is_file() {
             let src = resolve_bundled_qapp_source("Anatomy");
             assert!(src.is_some(), "expected bundled Anatomy path");

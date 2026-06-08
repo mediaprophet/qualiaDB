@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use qualia_core_db::{q_hash, q42_reader::read_q42_quins, QualiaQuin};
+use qualia_core_db::{q42_reader::read_q42_quins, q_hash, QualiaQuin};
 use serde::{Deserialize, Serialize};
 
 use crate::chat_session::ChatEnvironment;
@@ -35,13 +35,20 @@ pub fn retrieve_graph_context(
     storage: &Path,
     env: &ChatEnvironment,
     user_prompt: &str,
+    routed_ontology_ids: &[String],
 ) -> RetrievalBundle {
     let keywords = extract_keywords(user_prompt);
     let mut citations = Vec::new();
     let mut provenance_hashes = Vec::new();
     let mut seen: HashSet<(u64, u64, u64)> = HashSet::new();
 
-    for ont_id in &env.ontology_ids {
+    let ontology_ids = if routed_ontology_ids.is_empty() {
+        &env.ontology_ids
+    } else {
+        routed_ontology_ids
+    };
+
+    for ont_id in ontology_ids {
         let q42_path = resource_import::index_dir(storage).join(format!("{ont_id}.q42"));
         if !q42_path.is_file() {
             continue;
@@ -125,7 +132,9 @@ fn matches_keywords(quin: &QualiaQuin, keywords: &[String]) -> bool {
     let sub = format!("{:016x}", quin.subject);
     let pred = format!("{:016x}", quin.predicate);
     let obj = format!("{:016x}", quin.object);
-    keywords.iter().any(|kw| sub.contains(kw) || pred.contains(kw) || obj.contains(kw))
+    keywords
+        .iter()
+        .any(|kw| sub.contains(kw) || pred.contains(kw) || obj.contains(kw))
 }
 
 fn short_hash(h: u64) -> String {
@@ -143,12 +152,7 @@ fn format_retrieval_block(citations: &[GraphCitation], daemon_matches: u64) -> S
         citations.len()
     )];
     for (i, c) in citations.iter().take(24).enumerate() {
-        lines.push(format!(
-            "  {}. [{}] {}",
-            i + 1,
-            c.ontology_id,
-            c.label
-        ));
+        lines.push(format!("  {}. [{}] {}", i + 1, c.ontology_id, c.label));
     }
     lines.join("\n")
 }
@@ -176,10 +180,7 @@ fn query_daemon_for_prompt(prompt: &str, keywords: &[String]) -> (bool, u64, Str
     let query = if keywords.is_empty() {
         "?subject ?predicate ?object .".to_string()
     } else {
-        format!(
-            "# Scoped chat retrieval for: {}",
-            keywords.join(", ")
-        )
+        format!("# Scoped chat retrieval for: {}", keywords.join(", "))
     };
 
     let response = client

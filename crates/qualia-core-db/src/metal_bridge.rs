@@ -23,7 +23,7 @@
 /// Bytes per Q4_K block: 2 × f16 (scale, min) + 16 nibble bytes = 20 bytes, 32 weights.
 pub const Q4_K_BLOCK_BYTES: usize = 20;
 /// Weights per Q4_K block.
-pub const Q4_K_BLOCK_SIZE:  usize = 32;
+pub const Q4_K_BLOCK_SIZE: usize = 32;
 
 /// Dequantize one Q4_K block into 32 f32 values.
 ///
@@ -31,11 +31,11 @@ pub const Q4_K_BLOCK_SIZE:  usize = 32;
 #[inline]
 pub fn dequantize_q4_k_block(block: &[u8; Q4_K_BLOCK_BYTES], out: &mut [f32; Q4_K_BLOCK_SIZE]) {
     let scale = half::f16::from_le_bytes([block[0], block[1]]).to_f32();
-    let min   = half::f16::from_le_bytes([block[2], block[3]]).to_f32();
+    let min = half::f16::from_le_bytes([block[2], block[3]]).to_f32();
     for i in 0..16 {
         let byte = block[4 + i];
-        out[i * 2]     = (byte & 0x0F) as f32 * scale + min;
-        out[i * 2 + 1] = (byte >> 4)   as f32 * scale + min;
+        out[i * 2] = (byte & 0x0F) as f32 * scale + min;
+        out[i * 2 + 1] = (byte >> 4) as f32 * scale + min;
     }
 }
 
@@ -45,7 +45,8 @@ pub fn dequantize_q4_k_tensor(q4k_bytes: &[u8], num_elements: usize) -> Vec<f32>
     let mut out = vec![0f32; num_blocks * Q4_K_BLOCK_SIZE];
     for b in 0..num_blocks {
         let block: &[u8; Q4_K_BLOCK_BYTES] = q4k_bytes[b * Q4_K_BLOCK_BYTES..][..Q4_K_BLOCK_BYTES]
-            .try_into().unwrap();
+            .try_into()
+            .unwrap();
         let mut deq = [0f32; Q4_K_BLOCK_SIZE];
         dequantize_q4_k_block(block, &mut deq);
         out[b * Q4_K_BLOCK_SIZE..(b + 1) * Q4_K_BLOCK_SIZE].copy_from_slice(&deq);
@@ -68,25 +69,25 @@ pub fn dequantize_q4_k_tensor(q4k_bytes: &[u8], num_elements: usize) -> Vec<f32>
 #[link(name = "Accelerate", kind = "framework")]
 extern "C" {
     fn cblas_sgemm(
-        order:  i32,       // 101 = CblasRowMajor
-        transa: i32,       // 111 = CblasNoTrans
-        transb: i32,       // 111 = CblasNoTrans
-        m:      i32,       // rows of A and C
-        n:      i32,       // cols of B and C
-        k:      i32,       // cols of A / rows of B
-        alpha:  f32,
-        a:      *const f32,
-        lda:    i32,
-        b:      *const f32,
-        ldb:    i32,
-        beta:   f32,
-        c:      *mut f32,
-        ldc:    i32,
+        order: i32,  // 101 = CblasRowMajor
+        transa: i32, // 111 = CblasNoTrans
+        transb: i32, // 111 = CblasNoTrans
+        m: i32,      // rows of A and C
+        n: i32,      // cols of B and C
+        k: i32,      // cols of A / rows of B
+        alpha: f32,
+        a: *const f32,
+        lda: i32,
+        b: *const f32,
+        ldb: i32,
+        beta: f32,
+        c: *mut f32,
+        ldc: i32,
     );
 }
 
 const CBLAS_ROW_MAJOR: i32 = 101;
-const CBLAS_NO_TRANS:  i32 = 111;
+const CBLAS_NO_TRANS: i32 = 111;
 
 /// Execute C = A(m×k) × B(k×n) using Accelerate BLAS.
 ///
@@ -98,13 +99,20 @@ pub fn accelerate_sgemm(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> V
     let mut c = vec![0f32; m * n];
     unsafe {
         cblas_sgemm(
-            CBLAS_ROW_MAJOR, CBLAS_NO_TRANS, CBLAS_NO_TRANS,
-            m as i32, n as i32, k as i32,
+            CBLAS_ROW_MAJOR,
+            CBLAS_NO_TRANS,
+            CBLAS_NO_TRANS,
+            m as i32,
+            n as i32,
+            k as i32,
             1.0,
-            a.as_ptr(), k as i32,
-            b.as_ptr(), n as i32,
+            a.as_ptr(),
+            k as i32,
+            b.as_ptr(),
+            n as i32,
             0.0,
-            c.as_mut_ptr(), n as i32,
+            c.as_mut_ptr(),
+            n as i32,
         );
     }
     c
@@ -120,12 +128,18 @@ mod tests {
     fn dequantize_q4k_midpoint() {
         let mut block = [0u8; Q4_K_BLOCK_BYTES];
         // scale = f16(1.0) = 0x3C00, min = f16(0.0) = 0x0000, all nibbles = 7
-        block[0] = 0x00; block[1] = 0x3C;
-        block[2] = 0x00; block[3] = 0x00;
-        for i in 4..Q4_K_BLOCK_BYTES { block[i] = 0x77; }
+        block[0] = 0x00;
+        block[1] = 0x3C;
+        block[2] = 0x00;
+        block[3] = 0x00;
+        for i in 4..Q4_K_BLOCK_BYTES {
+            block[i] = 0x77;
+        }
         let mut out = [0f32; Q4_K_BLOCK_SIZE];
         dequantize_q4_k_block(&block, &mut out);
-        for v in &out { assert!((v - 7.0).abs() < 1e-3, "got {v}"); }
+        for v in &out {
+            assert!((v - 7.0).abs() < 1e-3, "got {v}");
+        }
     }
 
     #[test]

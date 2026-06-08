@@ -2,6 +2,30 @@
 
 ---
 
+## Session 2026-06-08 — Sprint 4D ontology routing + symbolic gate hydration
+
+**Branch:** `main` (release prep for `0.0.9`)
+
+### Completed this session
+- Added `crates/qualia-client-core/src/ontology_router.rs` to score installed ontologies against the current prompt and derive routed ontology IDs plus stable `context_namespaces`.
+- Extended chat environment summaries with ontology `domain`, `tags`, and `source` metadata so routing uses real catalog/workbench descriptors instead of plain file IDs.
+- Narrowed `chat_retrieval.rs` to the routed ontology subset for each turn.
+- Threaded `context_namespaces` through `InferenceContextPacket`, `AgentIntent`, and `AgentIntentFrame`.
+- Updated `orchestrator.rs` so graph-mutation / N3 symbolic gating selects SHACL shapes from routed namespace families (`health`, `legal/guardianship`, `commons`) rather than always using the same default observation shape.
+- Added a bounded single corrective retry in `chat_inference.rs` when deterministic symbolic validation blocks routed N3 output.
+
+### Verification
+- `cargo check -p qualia-core-db -p qualia-client-core`
+- `cargo test -p qualia-client-core ontology_router -- --nocapture`
+- `cargo test -p qualia-core-db orchestrator::tests::test_orchestrator_full_permit_path --lib -- --exact --nocapture`
+
+### Immediate next tasks
+1. Extend routed SHACL hydration from namespace-family presets to real ontology shape registries or qapp-provided rule bundles.
+2. Surface ontology-routing decisions and corrective retry telemetry in the Flutter chat UI for easier inspection.
+3. Consider adding namespace-aware daemon retrieval so live graph queries use the same router hints as local `.q42` scans.
+
+---
+
 ## Session 2026-06-06 (part 3) — Autoregressive inference + Flutter chat UI wiring
 
 **Branch:** `0.0.8-dev` | **Version:** `0.0.8-dev`

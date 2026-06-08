@@ -114,8 +114,13 @@ pub fn hash_token(token: &str) -> u64 {
         let bytes = token.as_bytes();
         let mut i = 1;
         while i < bytes.len() {
-            if bytes[i] == b'\\' { i += 2; continue; }
-            if bytes[i] == b'"'  { break; }
+            if bytes[i] == b'\\' {
+                i += 2;
+                continue;
+            }
+            if bytes[i] == b'"' {
+                break;
+            }
             i += 1;
         }
         &token[1..i]
@@ -143,11 +148,7 @@ mod tests {
     #[test]
     fn compile_bound_triple() {
         let mut prog = [0u8; 1024];
-        let n = compile_ntriples_to_bytecode(
-            b"<Alice> <knows> <Bob> .",
-            &mut prog,
-        )
-        .unwrap();
+        let n = compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob> .", &mut prog).unwrap();
         // 3 × (9 match + 1 halt) + 1 end = 31 bytes
         assert_eq!(n, 31);
         assert_eq!(prog[0], OP_MATCH_SUBJECT);
@@ -162,11 +163,7 @@ mod tests {
     #[test]
     fn compile_wildcard_subject() {
         let mut prog = [0u8; 1024];
-        let n = compile_ntriples_to_bytecode(
-            b"?who <knows> <Bob> .",
-            &mut prog,
-        )
-        .unwrap();
+        let n = compile_ntriples_to_bytecode(b"?who <knows> <Bob> .", &mut prog).unwrap();
         // Subject is wildcard → 2 × (9 + 1) + 1 = 21 bytes
         assert_eq!(n, 21);
         assert_eq!(prog[0], OP_MATCH_PREDICATE);
@@ -191,11 +188,7 @@ mod tests {
     fn did_q42_sets_msb_in_compiled_bytecode() {
         let mut prog = [0u8; 1024];
         // The subject is a did:q42 coordinate; predicate and object are plain URIs.
-        compile_ntriples_to_bytecode(
-            b"<did:q42:z6MkpTHR8VNs> <knows> <Bob> .",
-            &mut prog,
-        )
-        .unwrap();
+        compile_ntriples_to_bytecode(b"<did:q42:z6MkpTHR8VNs> <knows> <Bob> .", &mut prog).unwrap();
 
         // Subject hash is in bytes 1–8 (immediately after OP_MATCH_SUBJECT).
         let subject_hash = u64::from_le_bytes(prog[1..9].try_into().unwrap());
@@ -210,19 +203,14 @@ mod tests {
         // The contract we verify here is only about the subject's MSB flag;
         // FNV-1a can naturally produce MSB=1 for any input, so we do not assert
         // MSB=0 for plain URI tokens.
-        let subject_expected =
-            crate::q_hash("z6MkpTHR8VNs") | (1u64 << 63);
+        let subject_expected = crate::q_hash("z6MkpTHR8VNs") | (1u64 << 63);
         assert_eq!(subject_hash, subject_expected);
     }
 
     #[test]
     fn did_q42_in_object_position() {
         let mut prog = [0u8; 1024];
-        compile_ntriples_to_bytecode(
-            b"?who <knows> <did:q42:z6MkAbCd> .",
-            &mut prog,
-        )
-        .unwrap();
+        compile_ntriples_to_bytecode(b"?who <knows> <did:q42:z6MkAbCd> .", &mut prog).unwrap();
         // With wildcard subject: OP_MATCH_PREDICATE at 0, object at 10.
         let object_hash = u64::from_le_bytes(prog[11..19].try_into().unwrap());
         assert_eq!(object_hash >> 63, 1, "did:q42 object must have MSB set");

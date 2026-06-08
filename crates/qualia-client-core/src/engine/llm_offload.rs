@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use rtrb::RingBuffer;
 use std::thread;
 use std::time::Duration;
-use rtrb::RingBuffer;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ModelInfo {
@@ -20,8 +20,16 @@ pub struct InferenceTelemetry {
 
 pub async fn discover_local_models() -> Result<Vec<ModelInfo>, String> {
     Ok(vec![
-        ModelInfo { name: "phi3:mini (Q4_K_M)".to_string(), is_active: true, avatar_type: "phi".to_string() },
-        ModelInfo { name: "llama3:8b (Q5_K_M)".to_string(), is_active: false, avatar_type: "llama".to_string() },
+        ModelInfo {
+            name: "phi3:mini (Q4_K_M)".to_string(),
+            is_active: true,
+            avatar_type: "phi".to_string(),
+        },
+        ModelInfo {
+            name: "llama3:8b (Q5_K_M)".to_string(),
+            is_active: false,
+            avatar_type: "llama".to_string(),
+        },
     ])
 }
 
@@ -49,14 +57,14 @@ pub async fn execute_agent_inference(
     intent_layout: Vec<f64>,
 ) -> Result<(), String> {
     let temporal_end = intent_layout.get(1).copied().unwrap_or(2050.0);
-    
+
     // 1. Establish the Dual SPSC Wait-Free Ring Buffers
     // Logit Stream: LLM -> Sentinel (Vector topology)
     let (mut logit_p, mut logit_c) = RingBuffer::<VectorOp>::new(1024);
-    
+
     // Control Stream: Sentinel -> LLM (Rollback commands)
     let (mut control_p, mut control_c) = RingBuffer::<WebizenOp>::new(16);
-    
+
     // 2. Isolate A: Webizen Sentinel Thread (Audits the vector stream natively)
     thread::spawn(move || {
         loop {
@@ -82,10 +90,10 @@ pub async fn execute_agent_inference(
     // 3. Isolate B: LLM Engine Thread (Generates tokens)
     thread::spawn(move || {
         // let _ = app.emit_all("llm-token", "⚡ [Webizen Verified] Wait-free SPSC channel established.\\n\\n");
-        
+
         let output_text = "The rapid development of modern infrastructure... Wait, the internet did not exist in 1930.";
         let words: Vec<&str> = output_text.split_whitespace().collect();
-        
+
         for word in words {
             // Check Control Stream for wait-free intercepts from the Sentinel
             if let Ok(WebizenOp::DenyRollback) = control_c.pop() {
@@ -105,13 +113,13 @@ pub async fn execute_agent_inference(
 
             // Push vector down the Logit Stream
             let _ = logit_p.push(VectorOp::TokenBytes(vector));
-            
+
             // let _ = app.emit_all("llm-token", format!("{} ", word));
             thread::sleep(Duration::from_millis(40)); // Simulating inference latency
         }
-        
+
         let _ = logit_p.push(VectorOp::EndOfStream);
-        
+
         let _telemetry = InferenceTelemetry {
             token_rate: 28.4,
             vram_usage: "8.42 MB".to_string(),

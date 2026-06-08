@@ -12,8 +12,8 @@
 //! Each recipient address is an ILP Payment Pointer ("$...") or a stablecoin
 //! wallet address ("did:..."). Nym mixnet routing is opt-in per recipient (`use_nym`).
 
-use serde::{Deserialize, Serialize};
 use crate::telemetry::get_telemetry_snapshot;
+use serde::{Deserialize, Serialize};
 
 /// A receipt detailing the exact Virtual Compute Cycles burned during a query.
 #[derive(Debug, Serialize, Deserialize)]
@@ -27,18 +27,18 @@ pub struct ComputeCostReceipt {
 
 impl ComputeCostReceipt {
     /// Generates a final billing receipt based on the current telemetry snapshot.
-    /// 
+    ///
     /// Cost Weights (Mock values for Permissive Commons):
     /// 1 SuperBlock IO = 10 micro-sats
     /// 1 Sieve Op = 1 micro-sat
     /// 1 VM Cycle = 5 micro-sats
     pub fn generate(query_id: &str) -> Self {
         let (io, sieve, vm) = get_telemetry_snapshot();
-        
+
         let io_cost = io * 10;
         let sieve_cost = sieve * 1;
         let vm_cost = vm * 5;
-        
+
         let total_micro_sats = io_cost + sieve_cost + vm_cost;
         let total_sats_owed = (total_micro_sats as f64 / 1_000_000.0).ceil() as u64;
 
@@ -50,7 +50,7 @@ impl ComputeCostReceipt {
             total_sats_owed,
         }
     }
-    
+
     /// Serializes the receipt to a JSON string for the external Lightning API.
     pub fn to_json(&self) -> String {
         serde_json::to_string(self).unwrap_or_else(|_| "{}".to_string())
@@ -60,25 +60,27 @@ impl ComputeCostReceipt {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::telemetry::{reset_telemetry, SUPERBLOCK_IO_COUNT, SIEVE_OPS_COUNT, VM_CYCLES_COUNT};
+    use crate::telemetry::{
+        reset_telemetry, SIEVE_OPS_COUNT, SUPERBLOCK_IO_COUNT, VM_CYCLES_COUNT,
+    };
     use std::sync::atomic::Ordering;
 
     #[test]
     fn test_rpc_receipt_generation() {
         reset_telemetry();
-        
+
         // Burn virtual compute cycles
         SUPERBLOCK_IO_COUNT.fetch_add(1500, Ordering::Relaxed);
         SIEVE_OPS_COUNT.fetch_add(0, Ordering::Relaxed);
         VM_CYCLES_COUNT.fetch_add(45000, Ordering::Relaxed);
-        
+
         let receipt = ComputeCostReceipt::generate("test-tx-123");
         let json = receipt.to_json();
-        
+
         assert!(json.contains("test-tx-123"), "JSON missing query ID");
         assert_eq!(receipt.superblock_cost, 1500);
         assert_eq!(receipt.vm_cycles_cost, 45000);
-        
+
         // 1500 * 10 = 15,000
         // 45000 * 5 = 225,000
         // Total Micro Sats = 240,000 => 1 Sat (Ceil)
@@ -122,7 +124,9 @@ impl TaxRecipientSuite {
     pub fn validate(&self) -> Result<(), String> {
         let total: u64 = self.recipients.iter().map(|r| r.share_percent).sum();
         if total != 100 {
-            Err(format!("TaxRecipientSuite shares sum to {total}, must be 100"))
+            Err(format!(
+                "TaxRecipientSuite shares sum to {total}, must be 100"
+            ))
         } else {
             Ok(())
         }
@@ -233,7 +237,7 @@ pub fn route_tax_payment(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProviderTermsRequest {
     pub provider_did: String,
-    pub proposed_ilp_offset: u64, // µ-cents per GB
+    pub proposed_ilp_offset: u64,  // µ-cents per GB
     pub data_usage_intent: String, // N3Logic ruleset hash
     pub tax_jurisdiction_did: String,
 }
@@ -268,7 +272,8 @@ pub fn negotiate_provider_terms(
     if request.proposed_ilp_offset < base_connectivity_cost {
         return NegotiationResponse {
             status: NegotiationStatus::Reject(
-                "INSUFFICIENT_OFFSET: Proposed ILP does not cover intrinsic connectivity costs.".to_string()
+                "INSUFFICIENT_OFFSET: Proposed ILP does not cover intrinsic connectivity costs."
+                    .to_string(),
             ),
             tax_dispatch_plan: None,
             tax_pool_micro_cents: 0,
@@ -280,7 +285,8 @@ pub fn negotiate_provider_terms(
     if request.data_usage_intent == "STRIP_FIDUCIARY_METADATA" {
         return NegotiationResponse {
             status: NegotiationStatus::Reject(
-                "VIOLATION: Data usage intent violates Knowledge Axioms (Fiduciary Supremacy).".to_string()
+                "VIOLATION: Data usage intent violates Knowledge Axioms (Fiduciary Supremacy)."
+                    .to_string(),
             ),
             tax_dispatch_plan: None,
             tax_pool_micro_cents: 0,
@@ -290,13 +296,14 @@ pub fn negotiate_provider_terms(
 
     // 3. Route through 12% Tax Router
     let suite = tax_suite.unwrap_or_else(TaxRecipientSuite::default_cooperative);
-    let plan = route_tax_payment(request.proposed_ilp_offset, &suite)
-        .unwrap_or_else(|_| TaxDispatchPlan {
+    let plan = route_tax_payment(request.proposed_ilp_offset, &suite).unwrap_or_else(|_| {
+        TaxDispatchPlan {
             gross_amount_micro_cents: request.proposed_ilp_offset,
             tax_pool_micro_cents: 0,
             principal_remainder_micro_cents: request.proposed_ilp_offset,
             instructions: vec![],
-        });
+        }
+    });
 
     NegotiationResponse {
         status: NegotiationStatus::Accept,
@@ -384,8 +391,18 @@ mod negotiation_tests {
         let bad_suite = TaxRecipientSuite {
             jurisdiction_did: "did:gov:test".to_string(),
             recipients: vec![
-                TaxRecipient { label: "A".into(), ilp_address: "$a".into(), share_percent: 60, use_nym: false },
-                TaxRecipient { label: "B".into(), ilp_address: "$b".into(), share_percent: 30, use_nym: false },
+                TaxRecipient {
+                    label: "A".into(),
+                    ilp_address: "$a".into(),
+                    share_percent: 60,
+                    use_nym: false,
+                },
+                TaxRecipient {
+                    label: "B".into(),
+                    ilp_address: "$b".into(),
+                    share_percent: 30,
+                    use_nym: false,
+                },
                 // Missing 10% — deliberately wrong
             ],
         };
@@ -397,12 +414,14 @@ mod negotiation_tests {
         // 7 recipients with awkward shares — last one absorbs rounding dust
         let suite = TaxRecipientSuite {
             jurisdiction_did: "did:gov:test:rounding".to_string(),
-            recipients: (0..7).map(|i| TaxRecipient {
-                label: format!("Recipient {i}"),
-                ilp_address: format!("$ilp.test/{i}"),
-                share_percent: if i < 6 { 14 } else { 16 }, // 6*14 + 16 = 100
-                use_nym: false,
-            }).collect(),
+            recipients: (0..7)
+                .map(|i| TaxRecipient {
+                    label: format!("Recipient {i}"),
+                    ilp_address: format!("$ilp.test/{i}"),
+                    share_percent: if i < 6 { 14 } else { 16 }, // 6*14 + 16 = 100
+                    use_nym: false,
+                })
+                .collect(),
         };
         let plan = route_tax_payment(10_007, &suite).unwrap();
         let disbursed: u64 = plan.instructions.iter().map(|i| i.amount_micro_cents).sum();

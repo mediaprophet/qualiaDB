@@ -353,7 +353,9 @@ fn write_thumbnail(dir: &Path, file_id: &str, img: &image::DynamicImage) -> Opti
     let name = format!("{file_id}_thumb.jpg");
     let path = dir.join(&name);
     let thumb = img.thumbnail(320, 320);
-    thumb.save_with_format(&path, image::ImageFormat::Jpeg).ok()?;
+    thumb
+        .save_with_format(&path, image::ImageFormat::Jpeg)
+        .ok()?;
     Some(format!("files/{name}"))
 }
 
@@ -413,7 +415,10 @@ fn parse_pdf_bytes(bytes: &[u8], mime_type: String, ext: String) -> ParsedDocume
     }
 }
 
-fn try_vision_bind(storage_root: &Path, source_path: &Path) -> (Option<String>, Option<String>, String) {
+fn try_vision_bind(
+    storage_root: &Path,
+    source_path: &Path,
+) -> (Option<String>, Option<String>, String) {
     let active = crate::api::load_active_model_record_from_disk();
     match crate::vision_ingest::ingest_image_with_active_record(
         storage_root,
@@ -462,8 +467,7 @@ fn load_all_records(storage_root: &Path, session_id: &str) -> Result<Vec<ChatFil
         if line.trim().is_empty() {
             continue;
         }
-        let mut record: ChatFileRecord =
-            serde_json::from_str(&line).map_err(|e| e.to_string())?;
+        let mut record: ChatFileRecord = serde_json::from_str(&line).map_err(|e| e.to_string())?;
         normalize_chat_file_sensitivity(&mut record);
         out.push(record);
     }
@@ -486,8 +490,12 @@ fn write_all_records(
         .open(path)
         .map_err(|e| e.to_string())?;
     for r in records {
-        writeln!(file, "{}", serde_json::to_string(r).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+        writeln!(
+            file,
+            "{}",
+            serde_json::to_string(r).map_err(|e| e.to_string())?
+        )
+        .map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -509,7 +517,11 @@ pub fn can_view_file(
     viewer_did: &str,
     participant_dids: &[String],
 ) -> bool {
-    if record.sharing.expires_at.is_some_and(|exp| unix_now() > exp) {
+    if record
+        .sharing
+        .expires_at
+        .is_some_and(|exp| unix_now() > exp)
+    {
         return false;
     }
     if record.author_did == viewer_did {
@@ -518,18 +530,17 @@ pub fn can_view_file(
     match record.sharing.visibility {
         FileVisibility::OwnerOnly => false,
         FileVisibility::SessionParticipants | FileVisibility::PublicInSession => {
-            participant_dids.iter().any(|d| d == viewer_did)
-                || participant_dids.is_empty()
+            participant_dids.iter().any(|d| d == viewer_did) || participant_dids.is_empty()
         }
-        FileVisibility::SpecificDids => record
-            .sharing
-            .allowed_dids
-            .iter()
-            .any(|d| d == viewer_did),
+        FileVisibility::SpecificDids => record.sharing.allowed_dids.iter().any(|d| d == viewer_did),
     }
 }
 
-pub fn can_use_in_llm_context(record: &ChatFileRecord, viewer_did: &str, participants: &[String]) -> bool {
+pub fn can_use_in_llm_context(
+    record: &ChatFileRecord,
+    viewer_did: &str,
+    participants: &[String],
+) -> bool {
     record.sharing.allow_llm_context && can_view_file(record, viewer_did, participants)
 }
 
@@ -549,11 +560,7 @@ pub fn attach_chat_file(
             .and_then(|s| s.to_str())
             .unwrap_or(""),
     );
-    if ext != "pdf"
-        && ext != "txt"
-        && ext != "md"
-        && ext != "markdown"
-        && !is_image_extension(&ext)
+    if ext != "pdf" && ext != "txt" && ext != "md" && ext != "markdown" && !is_image_extension(&ext)
     {
         return Err(format!(
             "Unsupported file type '.{ext}' — attach PDF, TXT, Markdown, or image (PNG/JPEG/WebP/GIF)"
@@ -583,7 +590,8 @@ pub fn attach_chat_file(
         }
     }
 
-    let (vision_lexicon_id, vision_facet, vision_status) = if parsed.media_kind == MediaKind::Image {
+    let (vision_lexicon_id, vision_facet, vision_status) = if parsed.media_kind == MediaKind::Image
+    {
         let (lex, facet, status) = try_vision_bind(storage_root, source_path);
         if let Some(ref f) = facet {
             parsed.full_text.push_str(&format!("\nvision_ingest: {f}"));
@@ -843,12 +851,19 @@ pub fn build_chat_files_context_block(
         }
 
         if is_image_record(f) {
-            lines.push("  note: multimodal image — use active VLM mmproj when vision_status=ok".to_string());
+            lines.push(
+                "  note: multimodal image — use active VLM mmproj when vision_status=ok"
+                    .to_string(),
+            );
             continue;
         }
 
-        if let Ok(text) = read_file_text(storage_root, session_id, &f.file_id, Some(&profile.public_did))
-        {
+        if let Ok(text) = read_file_text(
+            storage_root,
+            session_id,
+            &f.file_id,
+            Some(&profile.public_did),
+        ) {
             let budget = max_chars.saturating_sub(used);
             let excerpt = if text.len() <= budget {
                 text
@@ -913,10 +928,7 @@ mod tests {
         assert_eq!(solo.sensitivity_level, QualiaQuin::SENSITIVITY_CLASSIFIED);
         let group = default_sharing_for_session(SessionKind::Group);
         assert_eq!(group.visibility, FileVisibility::SessionParticipants);
-        assert_eq!(
-            group.sensitivity_level,
-            QualiaQuin::SENSITIVITY_RESTRICTED
-        );
+        assert_eq!(group.sensitivity_level, QualiaQuin::SENSITIVITY_RESTRICTED);
     }
 
     #[test]
@@ -985,8 +997,9 @@ mod tests {
     fn attach_and_list_round_trip() {
         let mut storage = env::temp_dir();
         storage.push(format!("qualia-chat-files-{}", rand::random::<u32>()));
-        let session_id = chat_session::create_session(&storage, Some("Files test".to_string()), None)
-            .expect("create session");
+        let session_id =
+            chat_session::create_session(&storage, Some("Files test".to_string()), None)
+                .expect("create session");
 
         let src = storage.join("sample.md");
         fs::write(&src, "# Title\n\nBody text for chat.").unwrap();
@@ -999,7 +1012,10 @@ mod tests {
         let owner_did = attached.file.author_did.clone();
         let listed = list_chat_files(&storage, &session_id, Some(&owner_did)).unwrap();
         assert_eq!(listed.len(), 1);
-        assert_eq!(listed[0].sensitivity_level, QualiaQuin::SENSITIVITY_RESTRICTED);
+        assert_eq!(
+            listed[0].sensitivity_level,
+            QualiaQuin::SENSITIVITY_RESTRICTED
+        );
 
         let updated = set_chat_file_sharing(
             &storage,
@@ -1017,7 +1033,10 @@ mod tests {
         )
         .expect("set sharing");
         assert_eq!(updated.sharing.visibility, FileVisibility::SpecificDids);
-        assert_eq!(updated.sensitivity_level, QualiaQuin::SENSITIVITY_RESTRICTED);
+        assert_eq!(
+            updated.sensitivity_level,
+            QualiaQuin::SENSITIVITY_RESTRICTED
+        );
         assert_eq!(
             updated.sharing.sensitivity_level,
             QualiaQuin::SENSITIVITY_RESTRICTED

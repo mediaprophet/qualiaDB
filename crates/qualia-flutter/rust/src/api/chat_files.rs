@@ -186,9 +186,15 @@ pub fn preview_chat_file(source_path: String) -> Result<ChatFilePreview, String>
         extension: json["extension"].as_str().unwrap_or_default().to_string(),
         page_count: json["page_count"].as_u64().map(|n| n as u32),
         text_preview: preview,
-        parse_status: json["parse_status"].as_str().unwrap_or("unknown").to_string(),
+        parse_status: json["parse_status"]
+            .as_str()
+            .unwrap_or("unknown")
+            .to_string(),
         parse_error: json["parse_error"].as_str().map(|s| s.to_string()),
-        media_kind: json["media_kind"].as_str().unwrap_or("document").to_string(),
+        media_kind: json["media_kind"]
+            .as_str()
+            .unwrap_or("document")
+            .to_string(),
         image_width: json["image_width"].as_u64().map(|n| n as u32),
         image_height: json["image_height"].as_u64().map(|n| n as u32),
     })

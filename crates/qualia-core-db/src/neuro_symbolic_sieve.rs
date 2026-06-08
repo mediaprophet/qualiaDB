@@ -22,7 +22,10 @@ pub struct SieveStateMask {
 
 impl SieveStateMask {
     pub const EMPTY: Self = Self {
-        slots: [SieveSlot { token_id: 0, lexicon_hash: 0 }; MAX_SIEVE_ALLOW],
+        slots: [SieveSlot {
+            token_id: 0,
+            lexicon_hash: 0,
+        }; MAX_SIEVE_ALLOW],
         len: 0,
     };
 
@@ -59,7 +62,10 @@ impl SieveStateMask {
                 return;
             }
         }
-        self.slots[n] = SieveSlot { token_id, lexicon_hash };
+        self.slots[n] = SieveSlot {
+            token_id,
+            lexicon_hash,
+        };
         self.len += 1;
     }
 }
@@ -168,14 +174,24 @@ impl NeuroSymbolicSieve {
         spec: &SieveLexSpec,
     ) -> Self {
         let mut sieve = Self::empty_fsm();
-        fill_mask_from_lex(&mut sieve.masks[0], lex, tok, &spec.subjects[..spec.subjects_len as usize]);
+        fill_mask_from_lex(
+            &mut sieve.masks[0],
+            lex,
+            tok,
+            &spec.subjects[..spec.subjects_len as usize],
+        );
         fill_mask_from_lex(
             &mut sieve.masks[1],
             lex,
             tok,
             &spec.predicates[..spec.predicates_len as usize],
         );
-        fill_mask_from_lex(&mut sieve.masks[2], lex, tok, &spec.objects[..spec.objects_len as usize]);
+        fill_mask_from_lex(
+            &mut sieve.masks[2],
+            lex,
+            tok,
+            &spec.objects[..spec.objects_len as usize],
+        );
         sieve
     }
 
@@ -250,7 +266,9 @@ impl NeuroSymbolicSieve {
         if mask.len == 0 {
             return Err(SieveError::Misaligned);
         }
-        let hash = mask.lexicon_hash_for(token_id).ok_or(SieveError::Misaligned)?;
+        let hash = mask
+            .lexicon_hash_for(token_id)
+            .ok_or(SieveError::Misaligned)?;
         match self.state {
             SieveState::ExpectSubject => {
                 self.subject_hash = hash;
@@ -305,7 +323,11 @@ impl NeuroSymbolicSieve {
     }
 }
 
-fn fill_mask_literal(mask: &mut SieveStateMask, tok: &crate::gguf_sharder::GgufTokenizer, entries: &[(&str, u64)]) {
+fn fill_mask_literal(
+    mask: &mut SieveStateMask,
+    tok: &crate::gguf_sharder::GgufTokenizer,
+    entries: &[(&str, u64)],
+) {
     for &(text, hash) in entries {
         let ids = tok.encode(text);
         if let Some(&id) = ids.first() {

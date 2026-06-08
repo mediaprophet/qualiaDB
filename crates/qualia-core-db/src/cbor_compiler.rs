@@ -48,7 +48,7 @@ pub fn parse_cbor_ld_to_quin(payload: &[u8]) -> Result<QualiaQuin, ParseError> {
     let valid_payload = ingest_network_payload(payload)?;
 
     let mut cursor = 1; // Skip the root map/array byte
-    
+
     // Helper closure to safely read variable-length CBOR integers
     let mut read_cbor_int = || -> Result<u64, ParseError> {
         if cursor >= valid_payload.len() {
@@ -69,33 +69,41 @@ pub fn parse_cbor_ld_to_quin(payload: &[u8]) -> Result<QualiaQuin, ParseError> {
         match additional_info {
             0..=23 => Ok(additional_info as u64),
             24 => {
-                if cursor + 1 > valid_payload.len() { return Err(ParseError::BufferOverflow); }
+                if cursor + 1 > valid_payload.len() {
+                    return Err(ParseError::BufferOverflow);
+                }
                 let val = valid_payload[cursor] as u64;
                 cursor += 1;
                 Ok(val)
-            },
+            }
             25 => {
-                if cursor + 2 > valid_payload.len() { return Err(ParseError::BufferOverflow); }
+                if cursor + 2 > valid_payload.len() {
+                    return Err(ParseError::BufferOverflow);
+                }
                 let mut bytes = [0u8; 2];
-                bytes.copy_from_slice(&valid_payload[cursor..cursor+2]);
+                bytes.copy_from_slice(&valid_payload[cursor..cursor + 2]);
                 cursor += 2;
                 Ok(u16::from_be_bytes(bytes) as u64)
-            },
+            }
             26 => {
-                if cursor + 4 > valid_payload.len() { return Err(ParseError::BufferOverflow); }
+                if cursor + 4 > valid_payload.len() {
+                    return Err(ParseError::BufferOverflow);
+                }
                 let mut bytes = [0u8; 4];
-                bytes.copy_from_slice(&valid_payload[cursor..cursor+4]);
+                bytes.copy_from_slice(&valid_payload[cursor..cursor + 4]);
                 cursor += 4;
                 Ok(u32::from_be_bytes(bytes) as u64)
-            },
+            }
             27 => {
-                if cursor + 8 > valid_payload.len() { return Err(ParseError::BufferOverflow); }
+                if cursor + 8 > valid_payload.len() {
+                    return Err(ParseError::BufferOverflow);
+                }
                 let mut bytes = [0u8; 8];
-                bytes.copy_from_slice(&valid_payload[cursor..cursor+8]);
+                bytes.copy_from_slice(&valid_payload[cursor..cursor + 8]);
                 cursor += 8;
                 Ok(u64::from_be_bytes(bytes))
-            },
-            _ => Err(ParseError::MalformedPayload)
+            }
+            _ => Err(ParseError::MalformedPayload),
         }
     };
 
@@ -105,7 +113,7 @@ pub fn parse_cbor_ld_to_quin(payload: &[u8]) -> Result<QualiaQuin, ParseError> {
     let predicate = read_cbor_int()?;
     let object = read_cbor_int()?;
     let context = read_cbor_int()?;
-    
+
     // Hardcode metadata to Passthrough for this base compilation layer
     let metadata = 0b00 << 61;
 
@@ -150,15 +158,11 @@ mod tests {
         // 3000 = 0x19 0x0B 0xB8
         // 4000 = 0x19 0x0F 0xA0
         let cbor_payload: [u8; 13] = [
-            0x84, 
-            0x19, 0x03, 0xE8, 
-            0x19, 0x07, 0xD0, 
-            0x19, 0x0B, 0xB8, 
-            0x19, 0x0F, 0xA0
+            0x84, 0x19, 0x03, 0xE8, 0x19, 0x07, 0xD0, 0x19, 0x0B, 0xB8, 0x19, 0x0F, 0xA0,
         ];
 
         let quin = parse_cbor_ld_to_quin(&cbor_payload).unwrap();
-        
+
         assert_eq!(quin.subject, 1000);
         assert_eq!(quin.predicate, 2000);
         assert_eq!(quin.object, 3000);

@@ -102,7 +102,9 @@ pub fn parse_clearance(raw: &str) -> u8 {
 }
 
 /// Compile manifest strings into a fixed `CompiledCapability` record.
-pub fn compile_capability_record(manifest: &QappManifest) -> Result<CompiledCapability, QappInstallError> {
+pub fn compile_capability_record(
+    manifest: &QappManifest,
+) -> Result<CompiledCapability, QappInstallError> {
     if manifest.app_id.is_empty() {
         return Err(QappInstallError::EmptyAppId);
     }
@@ -162,7 +164,9 @@ fn register_compiled_capability(cap: CompiledCapability) -> Result<(), QappInsta
     let slots = registry_slots();
     let len_lock = registry_len();
     let mut slots = slots.write().map_err(|_| QappInstallError::RegistryFull)?;
-    let mut len = len_lock.write().map_err(|_| QappInstallError::RegistryFull)?;
+    let mut len = len_lock
+        .write()
+        .map_err(|_| QappInstallError::RegistryFull)?;
 
     for slot in slots.iter_mut().take(*len) {
         if slot.app_id_hash == cap.app_id_hash {
@@ -196,7 +200,12 @@ pub fn qapp_manifest_from_package(manifest: &QappPackageManifest) -> QappManifes
     let x = manifest.x_qualia.as_ref();
     let app_id = x
         .and_then(|x| (!x.app_id.is_empty()).then_some(x.app_id.clone()))
-        .unwrap_or_else(|| format!("did:qualia:qapp:{}", manifest.name.to_lowercase().replace(' ', "-")));
+        .unwrap_or_else(|| {
+            format!(
+                "did:qualia:qapp:{}",
+                manifest.name.to_lowercase().replace(' ', "-")
+            )
+        });
 
     let host_metadata = HostMetadata {
         display_name: x
@@ -213,9 +222,7 @@ pub fn qapp_manifest_from_package(manifest: &QappPackageManifest) -> QappManifes
         surface_requirements: x.map(|x| x.ui_surfaces.clone()).unwrap_or_default(),
     };
 
-    let mut required_ontologies = x
-        .map(|x| x.required_ontologies.clone())
-        .unwrap_or_default();
+    let mut required_ontologies = x.map(|x| x.required_ontologies.clone()).unwrap_or_default();
     for shape in &manifest.required_shapes {
         if required_ontologies.len() < MAX_PERMITTED_DOMAINS {
             required_ontologies.push(shape.clone());

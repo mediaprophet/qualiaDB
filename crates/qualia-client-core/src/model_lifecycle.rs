@@ -169,7 +169,8 @@ fn install_manifest_path(models_dir: &Path, model_id: &str) -> PathBuf {
 fn projector_filename(model: &LLMResource) -> Option<String> {
     model.vision_projector.as_ref().and_then(|d| {
         d.local_filename().or_else(|| {
-            d.resolved_url().and_then(|u| u.rsplit('/').next().map(|s| s.to_string()))
+            d.resolved_url()
+                .and_then(|u| u.rsplit('/').next().map(|s| s.to_string()))
         })
     })
 }
@@ -277,17 +278,16 @@ pub fn finalize_llm_install(
     }
 
     let mmproj_str = mmproj_path.map(|p| p.to_string_lossy().into_owned());
-    let profile = model.to_capability_profile_with_projector(
-        &path_str,
-        mmproj_str.as_deref(),
-    );
+    let profile = model.to_capability_profile_with_projector(&path_str, mmproj_str.as_deref());
     write_install_manifest(
         &models,
         model,
         gguf_path,
         mmproj_path,
         profile.profile_id,
-        pointer_quins.len().saturating_sub(vision_pointer_quin_count),
+        pointer_quins
+            .len()
+            .saturating_sub(vision_pointer_quin_count),
         vision_pointer_quin_count,
         &wal_path,
     )?;
@@ -308,7 +308,9 @@ pub fn finalize_llm_install(
         model_id: model.id.clone(),
         gguf_path: path_str,
         profile_id: profile.profile_id,
-        pointer_quin_count: pointer_quins.len().saturating_sub(vision_pointer_quin_count),
+        pointer_quin_count: pointer_quins
+            .len()
+            .saturating_sub(vision_pointer_quin_count),
         vision_pointer_quin_count,
         lifecycle_state: lifecycle_label(ModelLifecycle::MappedToDisk).to_string(),
         wal_path: wal_path.to_string_lossy().into_owned(),
@@ -341,9 +343,13 @@ pub async fn install_catalog_llm(
         .await
         .map_err(ModelError::Download)?;
 
-    let mmproj_path = if let (Some(ref vp), Some(vp_url)) =
-        (model.vision_projector.as_ref(), model.vision_projector.as_ref().and_then(|d| d.resolved_url()))
-    {
+    let mmproj_path = if let (Some(ref vp), Some(vp_url)) = (
+        model.vision_projector.as_ref(),
+        model
+            .vision_projector
+            .as_ref()
+            .and_then(|d| d.resolved_url()),
+    ) {
         let vp_name = projector_filename(model).unwrap_or_else(|| "mmproj.gguf".to_string());
         let vp_path = models.join(&vp_name);
         crate::resource_import::stream_download(&vp_url, &vp_path)
@@ -355,12 +361,7 @@ pub async fn install_catalog_llm(
         None
     };
 
-    finalize_llm_install(
-        model,
-        &local_path,
-        mmproj_path.as_deref(),
-        storage_root,
-    )
+    finalize_llm_install(model, &local_path, mmproj_path.as_deref(), storage_root)
 }
 
 pub fn load_install_manifest(storage_root: &Path, model_id: &str) -> Option<InstallManifest> {
@@ -487,7 +488,10 @@ pub fn finalize_local_gguf(
     })
 }
 
-pub fn activate_model_for_id(model_id: &str, storage_root: &Path) -> Result<ActiveModelRecord, ModelError> {
+pub fn activate_model_for_id(
+    model_id: &str,
+    storage_root: &Path,
+) -> Result<ActiveModelRecord, ModelError> {
     let manifest = load_install_manifest(storage_root, model_id).ok_or_else(|| {
         ModelError::Activate(format!(
             "No install manifest for `{model_id}` — download the model in LLM Hub first"
@@ -543,7 +547,10 @@ pub fn activate_model_for_id(model_id: &str, storage_root: &Path) -> Result<Acti
     Ok(record)
 }
 
-pub fn activate_model(profile_id: u64, storage_root: &Path) -> Result<ActiveModelRecord, ModelError> {
+pub fn activate_model(
+    profile_id: u64,
+    storage_root: &Path,
+) -> Result<ActiveModelRecord, ModelError> {
     let models = models_dir(storage_root);
     let entries = std::fs::read_dir(&models).map_err(ModelError::Io)?;
     for entry in entries.filter_map(Result::ok) {

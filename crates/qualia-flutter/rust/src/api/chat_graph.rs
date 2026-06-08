@@ -81,8 +81,14 @@ pub fn get_chat_graph(session_id: String) -> Result<ChatGraphView, String> {
         .unwrap_or_default()
         .into_iter()
         .map(|e| ChatGraphEdge {
-            child_fragment_id: e["child_fragment_id"].as_str().unwrap_or_default().to_string(),
-            parent_fragment_id: e["parent_fragment_id"].as_str().unwrap_or_default().to_string(),
+            child_fragment_id: e["child_fragment_id"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
+            parent_fragment_id: e["parent_fragment_id"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
             reply_message_lamport: e["reply_message_lamport"].as_u64().unwrap_or(0),
             created_at: e["created_at"].as_u64().unwrap_or(0),
             branch_type_id: e["branch_type_id"].as_str().map(|s| s.to_string()),

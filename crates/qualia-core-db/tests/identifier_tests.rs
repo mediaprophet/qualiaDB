@@ -37,10 +37,7 @@ fn test_http_uri_rejected() {
 
 #[test]
 fn test_empty_slice_rejected() {
-    assert_eq!(
-        parse_did_q42(b""),
-        Err(IdentifierError::InvalidPrefix)
-    );
+    assert_eq!(parse_did_q42(b""), Err(IdentifierError::InvalidPrefix));
 }
 
 #[test]

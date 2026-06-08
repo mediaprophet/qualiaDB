@@ -14,9 +14,9 @@ pub fn derive_webizen_ipv6(public_key: &VerifyingKey) -> Ipv6Addr {
     // ULA addresses start with fd (1111 1101)
     let mut ipv6_bytes = [0u8; 16];
     ipv6_bytes[0] = 0xfd;
-    
+
     // Copy 15 bytes of the hash into the remaining 15 bytes of the IPv6 address
     ipv6_bytes[1..16].copy_from_slice(&result[0..15]);
-    
+
     Ipv6Addr::from(ipv6_bytes)
 }

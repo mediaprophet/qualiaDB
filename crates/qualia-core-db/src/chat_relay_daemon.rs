@@ -54,7 +54,11 @@ fn append_inbox(storage_path: &str, envelope: &RelayEnvelope) -> Result<(), Stri
     writeln!(file, "{line}").map_err(|e| e.to_string())
 }
 
-fn read_inbox(storage_path: &str, session_id: &str, since_lamport: u64) -> Result<RelayPullResponse, String> {
+fn read_inbox(
+    storage_path: &str,
+    session_id: &str,
+    since_lamport: u64,
+) -> Result<RelayPullResponse, String> {
     let path = inbox_path(storage_path, session_id);
     if !path.is_file() {
         return Ok(RelayPullResponse {
@@ -100,7 +104,9 @@ pub fn chat_relay_routes(
         .and(warp::any().map(move || storage_publish.clone()))
         .and(warp::any().map(move || vault_publish.clone()))
         .and_then(
-            |envelope: RelayEnvelope, storage: String, vault: Arc<Mutex<crate::key_vault::KeyVault>>| async move {
+            |envelope: RelayEnvelope,
+             storage: String,
+             vault: Arc<Mutex<crate::key_vault::KeyVault>>| async move {
                 if envelope.content.is_empty() || envelope.session_id.is_empty() {
                     return Ok::<_, std::convert::Infallible>(warp::reply::with_status(
                         warp::reply::json(&serde_json::json!({"error": "invalid envelope"})),
@@ -123,7 +129,8 @@ pub fn chat_relay_routes(
                             });
                             if let Ok(payload_str) = serde_json::to_string(&payload) {
                                 let vault = vault.lock().unwrap();
-                                let key = vault.derive_key(&format!("relay:{}", envelope.author_did));
+                                let key =
+                                    vault.derive_key(&format!("relay:{}", envelope.author_did));
                                 let pk = ed25519_dalek::VerifyingKey::from(&key);
                                 let mut sig_arr = [0u8; 64];
                                 sig_arr.copy_from_slice(&sig_bytes);
@@ -135,7 +142,9 @@ pub fn chat_relay_routes(
                                 .is_err()
                                 {
                                     return Ok(warp::reply::with_status(
-                                        warp::reply::json(&serde_json::json!({"error": "signature invalid"})),
+                                        warp::reply::json(
+                                            &serde_json::json!({"error": "signature invalid"}),
+                                        ),
                                         StatusCode::UNAUTHORIZED,
                                     ));
                                 }
@@ -146,7 +155,9 @@ pub fn chat_relay_routes(
 
                 match append_inbox(&storage, &envelope) {
                     Ok(()) => Ok(warp::reply::with_status(
-                        warp::reply::json(&serde_json::json!({"ok": true, "lamport": envelope.lamport})),
+                        warp::reply::json(
+                            &serde_json::json!({"ok": true, "lamport": envelope.lamport}),
+                        ),
                         StatusCode::OK,
                     )),
                     Err(e) => Ok(warp::reply::with_status(

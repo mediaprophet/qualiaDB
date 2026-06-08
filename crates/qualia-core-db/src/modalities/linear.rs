@@ -17,7 +17,14 @@ mod tests {
 
     #[test]
     fn test_consume_quin() {
-        let mut q = QualiaQuin { subject: 0, predicate: 0, object: 0, context: 0, metadata: 0, parity: 0 };
+        let mut q = QualiaQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         assert!(!is_consumed(&q));
         consume_quin(&mut q);
         assert!(is_consumed(&q));

@@ -1,6 +1,6 @@
-use std::io::Read;
-use std::hash::{Hash, Hasher};
 use qualia_core_db::QualiaQuin;
+use std::hash::{Hash, Hasher};
+use std::io::Read;
 
 fn hash_str(s: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -14,24 +14,24 @@ pub fn parse_json_ld_stream<R: Read>(
     sorter: &mut super::external_sort::ExternalSorter,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     let mut count = 0;
-    
+
     // We use a custom SAX-style stack machine to avoid `serde_json::Value` unbounded DOM
     // Stack tracks: (Subject Hash, Current Key Hash)
     let mut stack: Vec<(u64, u64)> = Vec::with_capacity(32);
-    
+
     let mut buf = [0u8; 8192];
     let mut state = ParseState::Scan;
     let mut current_string = String::new();
     let mut current_subject = 0;
     let mut current_key = 0;
-    
+
     // We only need to track the first object's ID if we are doing single pass,
     // but in a truly dynamic stream, we might see the properties before the @id.
     // To strictly avoid buffering properties, we generate a blank node ID for the object
-    // immediately upon entering, and if we encounter @id later, we emit an equivalence quin 
+    // immediately upon entering, and if we encounter @id later, we emit an equivalence quin
     // or we just accept the blank node ID as the true ID for those properties.
     // For simplicity, we just use a blank node ID and replace it if @id appears first.
-    
+
     let mut is_escaped = false;
 
     loop {
@@ -42,7 +42,7 @@ pub fn parse_json_ld_stream<R: Read>(
 
         for &b in &buf[..n] {
             let ch = b as char;
-            
+
             match state {
                 ParseState::Scan => {
                     if ch == '{' {
@@ -63,7 +63,7 @@ pub fn parse_json_ld_stream<R: Read>(
                                     object: current_subject,
                                     context: context_hash,
                                     metadata: 0b10 << 61,
-                                    parity: 0
+                                    parity: 0,
                                 })?;
                                 count += 1;
                             }
@@ -109,7 +109,7 @@ pub fn parse_json_ld_stream<R: Read>(
                                 object: hash_str(&current_string),
                                 context: context_hash,
                                 metadata: 0b10 << 61,
-                                parity: 0
+                                parity: 0,
                             })?;
                             count += 1;
                         }
@@ -122,7 +122,7 @@ pub fn parse_json_ld_stream<R: Read>(
                                         object: current_subject,
                                         context: context_hash,
                                         metadata: 0b10 << 61,
-                                        parity: 0
+                                        parity: 0,
                                     })?;
                                     count += 1;
                                 }

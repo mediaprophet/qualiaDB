@@ -32,9 +32,15 @@ fn main() {
             // Falls back to DIRECTML_LIB_PATH env var for CI environments that
             // supply their own SDK copy.
             let manifest = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
-            let vendor   = std::path::PathBuf::from(&manifest)
-                .join("..").join("..").join("vendor").join("directml").join("bin").join("x64-win");
-            let env_path = std::env::var("DIRECTML_LIB_PATH").ok()
+            let vendor = std::path::PathBuf::from(&manifest)
+                .join("..")
+                .join("..")
+                .join("vendor")
+                .join("directml")
+                .join("bin")
+                .join("x64-win");
+            let env_path = std::env::var("DIRECTML_LIB_PATH")
+                .ok()
                 .map(std::path::PathBuf::from);
 
             let lib_dir = if vendor.join("DirectML.lib").exists() {
@@ -47,7 +53,10 @@ fn main() {
                 println!("cargo:rustc-link-search=native={}", dir.display());
                 println!("cargo:rustc-link-lib=dylib=DirectML");
                 println!("cargo:rustc-cfg=feature=\"directml\"");
-                println!("cargo:warning=Qualia-DB: DirectML 1.15 linked from {}.", dir.display());
+                println!(
+                    "cargo:warning=Qualia-DB: DirectML 1.15 linked from {}.",
+                    dir.display()
+                );
             } else {
                 println!("cargo:warning=Qualia-DB: vendor/directml not found and DIRECTML_LIB_PATH unset. \
                           GPU inference will fall back to wgpu-only path.");
@@ -67,10 +76,14 @@ fn main() {
             // and add `cudarc = "0.11"` to Cargo.toml.
             if std::env::var("QUALIA_CUDA").is_ok() {
                 println!("cargo:rustc-cfg=feature=\"cuda\"");
-                println!("cargo:warning=Qualia-DB Linux: QUALIA_CUDA set — stub ready for cudarc GEMM.");
+                println!(
+                    "cargo:warning=Qualia-DB Linux: QUALIA_CUDA set — stub ready for cudarc GEMM."
+                );
             } else {
-                println!("cargo:warning=Qualia-DB Linux: Vulkan via wgpu (covers NVIDIA/AMD/Intel). \
-                          Set QUALIA_CUDA=1 for explicit cuBLAS path.");
+                println!(
+                    "cargo:warning=Qualia-DB Linux: Vulkan via wgpu (covers NVIDIA/AMD/Intel). \
+                          Set QUALIA_CUDA=1 for explicit cuBLAS path."
+                );
             }
         }
         _ => {

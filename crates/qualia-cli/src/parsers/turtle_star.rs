@@ -1,6 +1,6 @@
-use std::io::{BufRead, BufReader, Read};
-use std::hash::{Hash, Hasher};
 use qualia_core_db::QualiaQuin;
+use std::hash::{Hash, Hasher};
+use std::io::{BufRead, BufReader, Read};
 
 fn hash_str(s: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -20,7 +20,9 @@ pub fn parse_turtle_star_stream<R: Read>(
     for line in buf_reader.lines() {
         let line = line?;
         let l = line.trim();
-        if l.is_empty() || l.starts_with('#') || l.starts_with('@') { continue; }
+        if l.is_empty() || l.starts_with('#') || l.starts_with('@') {
+            continue;
+        }
 
         // Tokenize line respecting << and >>
         let mut tokens = Vec::new();
@@ -67,11 +69,11 @@ pub fn parse_turtle_star_stream<R: Read>(
 
         if i < tokens.len() && tokens[i] == "<<" {
             // Nested claim as subject
-            if i + 4 < tokens.len() && tokens[i+4] == ">>" {
-                let ns = hash_str(&tokens[i+1]);
-                let np = hash_str(&tokens[i+2]);
-                let no = hash_str(&tokens[i+3]);
-                
+            if i + 4 < tokens.len() && tokens[i + 4] == ">>" {
+                let ns = hash_str(&tokens[i + 1]);
+                let np = hash_str(&tokens[i + 2]);
+                let no = hash_str(&tokens[i + 3]);
+
                 // Emitting the nested claim itself
                 sorter.push(QualiaQuin {
                     subject: ns,
@@ -79,7 +81,7 @@ pub fn parse_turtle_star_stream<R: Read>(
                     object: no,
                     context: context_hash,
                     metadata: 0b10 << 61,
-                    parity: 0
+                    parity: 0,
                 })?;
                 count += 1;
 
@@ -95,27 +97,27 @@ pub fn parse_turtle_star_stream<R: Read>(
         if i + 1 < tokens.len() {
             let predicate = hash_str(&tokens[i]);
             i += 1;
-            
+
             let mut object = 0;
             if tokens[i] == "<<" {
-                 // Nested claim as object
-                 if i + 4 < tokens.len() && tokens[i+4] == ">>" {
-                    let ns = hash_str(&tokens[i+1]);
-                    let np = hash_str(&tokens[i+2]);
-                    let no = hash_str(&tokens[i+3]);
-                    
+                // Nested claim as object
+                if i + 4 < tokens.len() && tokens[i + 4] == ">>" {
+                    let ns = hash_str(&tokens[i + 1]);
+                    let np = hash_str(&tokens[i + 2]);
+                    let no = hash_str(&tokens[i + 3]);
+
                     sorter.push(QualiaQuin {
                         subject: ns,
                         predicate: np,
                         object: no,
                         context: context_hash,
                         metadata: 0b10 << 61,
-                        parity: 0
+                        parity: 0,
                     })?;
                     count += 1;
-    
+
                     object = (ns ^ np ^ no) | (1u64 << 63); // Set MSB
-                 }
+                }
             } else {
                 object = hash_str(&tokens[i]);
             }
@@ -127,7 +129,7 @@ pub fn parse_turtle_star_stream<R: Read>(
                     object,
                     context: context_hash,
                     metadata: 0b10 << 61,
-                    parity: 0
+                    parity: 0,
                 })?;
                 count += 1;
             }

@@ -110,10 +110,7 @@ pub fn get_chat_session_did(session_id: String) -> Result<String, String> {
 #[frb]
 pub fn load_chat_session_messages(id: String) -> Result<Vec<ChatMessage>, String> {
     let json = core::load_chat_session(id)?;
-    let messages = json["messages"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
+    let messages = json["messages"].as_array().cloned().unwrap_or_default();
     messages
         .into_iter()
         .map(|m| {
@@ -137,14 +134,15 @@ pub fn load_chat_session_messages(id: String) -> Result<Vec<ChatMessage>, String
 #[frb]
 pub fn load_chat_session_title(id: String) -> Result<String, String> {
     let json = core::load_chat_session(id)?;
-    Ok(json["meta"]["title"]
-        .as_str()
-        .unwrap_or("Chat")
-        .to_string())
+    Ok(json["meta"]["title"].as_str().unwrap_or("Chat").to_string())
 }
 
 #[frb]
-pub fn append_chat_message(session_id: String, role: String, content: String) -> Result<u64, String> {
+pub fn append_chat_message(
+    session_id: String,
+    role: String,
+    content: String,
+) -> Result<u64, String> {
     core::append_chat_message(session_id, role, content)
 }
 
@@ -237,7 +235,10 @@ pub fn get_chat_participants(session_id: String) -> Result<Vec<ChatParticipant>,
 }
 
 #[frb]
-pub fn add_chat_participant(session_id: String, participant_did: String) -> Result<Vec<ChatParticipant>, String> {
+pub fn add_chat_participant(
+    session_id: String,
+    participant_did: String,
+) -> Result<Vec<ChatParticipant>, String> {
     let json = core::add_chat_participant(session_id, participant_did)?;
     let arr = json.as_array().cloned().unwrap_or_default();
     Ok(arr
@@ -253,7 +254,10 @@ pub fn add_chat_participant(session_id: String, participant_did: String) -> Resu
 }
 
 #[frb]
-pub fn remove_chat_participant(session_id: String, participant_did: String) -> Result<Vec<ChatParticipant>, String> {
+pub fn remove_chat_participant(
+    session_id: String,
+    participant_did: String,
+) -> Result<Vec<ChatParticipant>, String> {
     let json = core::remove_chat_participant(session_id, participant_did)?;
     let arr = json.as_array().cloned().unwrap_or_default();
     Ok(arr

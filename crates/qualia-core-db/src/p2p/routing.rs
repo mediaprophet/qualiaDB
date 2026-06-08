@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use dashmap::DashMap;
-use ed25519_dalek::{VerifyingKey, Signature, Verifier};
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+use std::sync::Arc;
 
 pub struct CivicsRoutingTable {
     // Maps the 8-byte hash of the Group DID to its 32-byte Ed25519 Public Key
@@ -21,9 +21,13 @@ impl CivicsRoutingTable {
         if crate::mini_parser::compile_ntriples_to_bytecode(
             b"?group <q42:isTrustedGroup> ?key .",
             &mut program,
-        ).is_ok() {
+        )
+        .is_ok()
+        {
             let mut out = vec![crate::QualiaQuin::default(); 128]; // Stack allocation alternative for demo, bounded
-            if let Ok((match_count, _)) = crate::webizen_bytecode::execute_program(&program, db, &mut out) {
+            if let Ok((match_count, _)) =
+                crate::webizen_bytecode::execute_program(&program, db, &mut out)
+            {
                 for quin in &out[..match_count] {
                     let group_hash = quin.subject.to_le_bytes();
                     // Derive a dummy 32-byte VerifyingKey from the object hash since QualiaQuin is 64-bit bounded
@@ -45,7 +49,12 @@ impl CivicsRoutingTable {
 
     /// Verifies if a semantic route is authorized by a Trusted Group Verifiable Credential.
     /// Operates in O(1) memory lookup time. Instantly drops if group is unknown.
-    pub fn is_authorized(&self, group_hash: &[u8; 8], quin_bytes: &[u8], signature_bytes: &[u8; 64]) -> bool {
+    pub fn is_authorized(
+        &self,
+        group_hash: &[u8; 8],
+        quin_bytes: &[u8],
+        signature_bytes: &[u8; 64],
+    ) -> bool {
         if let Some(public_key) = self.trusted_groups.get(group_hash) {
             // Fast-path cryptographic verification
             if let Ok(sig) = Signature::from_slice(signature_bytes) {

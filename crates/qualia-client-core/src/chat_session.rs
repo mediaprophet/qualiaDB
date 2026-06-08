@@ -94,6 +94,12 @@ pub struct OntologyScopeSummary {
     pub name: String,
     pub quin_count: u64,
     pub q42_path: String,
+    #[serde(default)]
+    pub domain: Option<String>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+    #[serde(default)]
+    pub source: Option<String>,
 }
 
 /// Snapshot of chat inference scope and LLM-visible capabilities.
@@ -240,7 +246,10 @@ fn ensure_session_did(meta: &mut SessionMeta) -> String {
     meta.session_did.clone()
 }
 
-fn persist_session_did_if_needed(storage_root: &Path, meta: &mut SessionMeta) -> Result<(), ChatError> {
+fn persist_session_did_if_needed(
+    storage_root: &Path,
+    meta: &mut SessionMeta,
+) -> Result<(), ChatError> {
     let before = meta.session_did.clone();
     let _ = ensure_session_did(meta);
     if meta.session_did != before {
@@ -441,7 +450,8 @@ pub fn create_session(
 
     let now = unix_now();
     let title = title.unwrap_or_else(|| "New chat".to_string());
-    let environment = env.unwrap_or_else(|| ChatEnvironment::default_for_session(&id, storage_root));
+    let environment =
+        env.unwrap_or_else(|| ChatEnvironment::default_for_session(&id, storage_root));
 
     let profile = crate::user_profile::load_profile();
     let owner_did = profile.public_did.clone();
@@ -461,7 +471,10 @@ pub fn create_session(
         session_did,
     };
 
-    fs::write(session_meta_path(storage_root, &id), serde_json::to_string_pretty(&meta)?)?;
+    fs::write(
+        session_meta_path(storage_root, &id),
+        serde_json::to_string_pretty(&meta)?,
+    )?;
     fs::write(
         environment_path(storage_root, &id),
         serde_json::to_string_pretty(&environment)?,
@@ -609,19 +622,19 @@ pub fn append_message_with_author(
 
     let (author_did, author_name) =
         if override_author_did.is_some() || override_author_name.is_some() {
-        (override_author_did, override_author_name)
-    } else if meta.session_kind == SessionKind::Group && role == Role::User {
-        let profile = crate::user_profile::load_profile();
-        (
-            Some(profile.public_did),
-            profile
-                .sharing
-                .share_display_name
-                .then(|| profile.display_name),
-        )
-    } else {
-        (None, None)
-    };
+            (override_author_did, override_author_name)
+        } else if meta.session_kind == SessionKind::Group && role == Role::User {
+            let profile = crate::user_profile::load_profile();
+            (
+                Some(profile.public_did),
+                profile
+                    .sharing
+                    .share_display_name
+                    .then(|| profile.display_name),
+            )
+        } else {
+            (None, None)
+        };
 
     let relay_ingest = source.as_ref().is_some_and(|s| s.starts_with("relay:"));
 
@@ -673,7 +686,9 @@ pub fn append_message_with_author(
     }
 
     if meta.session_kind == SessionKind::Group && !relay_ingest {
-        if role != Role::Agent || crate::chat_agents::can_relay_agent_outcome(&msg, &meta.participants) {
+        if role != Role::Agent
+            || crate::chat_agents::can_relay_agent_outcome(&msg, &meta.participants)
+        {
             let _ = crate::chat_relay::publish_session_message(storage_root, id, lamport);
         }
     }
@@ -801,13 +816,16 @@ fn contacts_for_dids(dids: &[String]) -> Vec<ChatParticipant> {
     let now = unix_now();
     dids.iter()
         .filter_map(|did| {
-            contacts.iter().find(|c| c.did == *did).map(|c| ChatParticipant {
-                did: c.did.clone(),
-                display_name: c.display_name.clone(),
-                actor_id: c.actor_id.clone(),
-                role: "member".to_string(),
-                joined_at: now,
-            })
+            contacts
+                .iter()
+                .find(|c| c.did == *did)
+                .map(|c| ChatParticipant {
+                    did: c.did.clone(),
+                    display_name: c.display_name.clone(),
+                    actor_id: c.actor_id.clone(),
+                    role: "member".to_string(),
+                    joined_at: now,
+                })
         })
         .collect()
 }
@@ -889,7 +907,10 @@ pub fn create_group_session(
         session_did,
     };
 
-    fs::write(session_meta_path(storage_root, &id), serde_json::to_string_pretty(&meta)?)?;
+    fs::write(
+        session_meta_path(storage_root, &id),
+        serde_json::to_string_pretty(&meta)?,
+    )?;
     fs::write(
         environment_path(storage_root, &id),
         serde_json::to_string_pretty(&environment)?,
@@ -966,7 +987,9 @@ pub fn get_participants(storage_root: &Path, id: &str) -> Result<Vec<ChatPartici
 }
 
 /// Sessions and groups that can be selected as share targets (each has a stable `session_did`).
-pub fn list_session_share_targets(storage_root: &Path) -> Result<Vec<ChatSessionShareTarget>, ChatError> {
+pub fn list_session_share_targets(
+    storage_root: &Path,
+) -> Result<Vec<ChatSessionShareTarget>, ChatError> {
     let summaries = list_sessions(storage_root)?;
     Ok(summaries
         .into_iter()
@@ -1037,5 +1060,4 @@ mod tests {
         assert!(load_session(&storage, &id).is_err());
         let _ = fs::remove_dir_all(&storage);
     }
-
 }

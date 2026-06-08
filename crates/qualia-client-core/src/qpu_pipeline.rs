@@ -84,11 +84,7 @@ pub fn execute_quantum_pipeline(
                  - Remote QPU: {}\n\
                  - Re-hydrated assertions: {}\n\n\
                  Ephemeral index map wiped. No semantic context left the device.",
-                dispatch.backend,
-                dispatch.num_vars,
-                dispatch.energy,
-                dispatch.used_remote,
-                n
+                dispatch.backend, dispatch.num_vars, dispatch.energy, dispatch.used_remote, n
             );
             Ok(QuantumPipelineResult {
                 task,
@@ -186,7 +182,11 @@ pub fn handle_engine_chat_command(text: &str) -> QpuChatCommandResult {
             };
         }
         let quins: Vec<QualiaQuin> = vec![];
-        let latex = if text.contains(r"$$") { Some(text) } else { None };
+        let latex = if text.contains(r"$$") {
+            Some(text)
+        } else {
+            None
+        };
         match execute_quantum_pipeline(kind, &quins, latex) {
             Ok(result) => QpuChatCommandResult {
                 handled: true,

@@ -139,8 +139,8 @@ pub fn publish_session_message(
     session_id: &str,
     lamport: u64,
 ) -> Result<(), String> {
-    let session = crate::chat_session::load_session(storage_root, session_id)
-        .map_err(|e| e.to_string())?;
+    let session =
+        crate::chat_session::load_session(storage_root, session_id).map_err(|e| e.to_string())?;
     let msg = session
         .messages
         .iter()
@@ -199,7 +199,11 @@ pub struct PullResponse {
     latest_lamport: u64,
 }
 
-pub fn pull_from_relay(base_url: &str, session_id: &str, since_lamport: u64) -> Result<PullResponse, String> {
+pub fn pull_from_relay(
+    base_url: &str,
+    session_id: &str,
+    since_lamport: u64,
+) -> Result<PullResponse, String> {
     let url = format!(
         "{}/chat/pull?session_id={}&since_lamport={}",
         base_url.trim_end_matches('/'),
@@ -296,8 +300,8 @@ fn ingest_remote_message(
 }
 
 pub fn sync_session_relay(storage_root: &Path, session_id: &str) -> Result<usize, String> {
-    let session = crate::chat_session::load_session(storage_root, session_id)
-        .map_err(|e| e.to_string())?;
+    let session =
+        crate::chat_session::load_session(storage_root, session_id).map_err(|e| e.to_string())?;
 
     let mut cursors = load_cursors();
     let since = *cursors.per_session.get(session_id).unwrap_or(&0);
@@ -337,7 +341,9 @@ pub fn sync_session_relay(storage_root: &Path, session_id: &str) -> Result<usize
 }
 
 pub fn sync_all_group_sessions() -> Result<usize, String> {
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
     let storage = state.config.lock().unwrap().storage_path.clone();
     let storage_path = Path::new(&storage);
 
@@ -357,17 +363,16 @@ pub fn start_relay_poller() {
         return;
     }
 
-    std::thread::spawn(|| {
-        loop {
-            if let Err(e) = sync_all_group_sessions() {
-                eprintln!("[chat_relay] poller: {e}");
-            }
-            std::thread::sleep(Duration::from_secs(4));
+    std::thread::spawn(|| loop {
+        if let Err(e) = sync_all_group_sessions() {
+            eprintln!("[chat_relay] poller: {e}");
         }
+        std::thread::sleep(Duration::from_secs(4));
     });
 }
 
-static RELAY_NOTIFY: OnceLock<std::sync::Mutex<Option<tokio::sync::broadcast::Sender<String>>>> = OnceLock::new();
+static RELAY_NOTIFY: OnceLock<std::sync::Mutex<Option<tokio::sync::broadcast::Sender<String>>>> =
+    OnceLock::new();
 
 pub fn relay_notify_channel() -> tokio::sync::broadcast::Sender<String> {
     RELAY_NOTIFY

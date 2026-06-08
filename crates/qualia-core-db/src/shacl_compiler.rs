@@ -43,15 +43,15 @@ pub enum ShaclSeverity {
 pub enum ProteinScoringMatrix {
     Blosum62 = 0,
     Blosum80 = 1,
-    Pam250   = 2,
+    Pam250 = 2,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClinicalRiskModel {
-    Framingham  = 0,
+    Framingham = 0,
     Cha2ds2Vasc = 1,
-    Score2      = 2,
-    Ndis        = 3,
+    Score2 = 2,
+    Ndis = 3,
 }
 
 // ─── ShaclConstraint (typed) ──────────────────────────────────────────────────
@@ -103,24 +103,48 @@ pub enum ShaclConstraint {
         fallback_to_classical: bool,
     },
     /// `q42:hasLinearBias` — QUBO node bias.
-    QuboLinearBias { var_index: u8, bias: f32 },
+    QuboLinearBias {
+        var_index: u8,
+        bias: f32,
+    },
     /// `q42:hasCouplerWeight` — QUBO quadratic coupler.
-    QuboCouplerWeight { var_a: u8, var_b: u8, weight: f32 },
+    QuboCouplerWeight {
+        var_a: u8,
+        var_b: u8,
+        weight: f32,
+    },
     // ── Qualia native: biosciences ───────────────────────────────────────────
     /// Legacy form (routes to NucleotideAlignment).
     BioSequenceAlignment,
-    AlignNucleotideSequence { gap_open: f32, gap_extend: f32 },
-    AlignProteinSequence { matrix: ProteinScoringMatrix },
-    ComputeKmerFrequency { k: u8 },
-    ComputeMetaboliteSimilarity { min_tanimoto: f32 },
+    AlignNucleotideSequence {
+        gap_open: f32,
+        gap_extend: f32,
+    },
+    AlignProteinSequence {
+        matrix: ProteinScoringMatrix,
+    },
+    ComputeKmerFrequency {
+        k: u8,
+    },
+    ComputeMetaboliteSimilarity {
+        min_tanimoto: f32,
+    },
     ValidateFastaRecord,
-    EvaluateGeneExpression { fold_change_threshold: f32 },
+    EvaluateGeneExpression {
+        fold_change_threshold: f32,
+    },
     // ── Qualia native: biomedical ────────────────────────────────────────────
-    ComputeRiskScore { model: ClinicalRiskModel },
-    EvaluateLongitudinalTrend { window_days: u32 },
+    ComputeRiskScore {
+        model: ClinicalRiskModel,
+    },
+    EvaluateLongitudinalTrend {
+        window_days: u32,
+    },
     EvaluateDrugInteraction,
     CheckContraindication,
-    ValidateFhirObservation { loinc_code: String },
+    ValidateFhirObservation {
+        loinc_code: String,
+    },
     // ── Qualia native: economics ─────────────────────────────────────────────
     MonteCarloVar,
     SolveGeometricBrownianMotion,
@@ -129,11 +153,17 @@ pub enum ShaclConstraint {
     ValidateSmiles,
     ValidateInchi,
     /// Max allowed molecular weight in Da.
-    ComputeMolecularWeight { max_da: f64 },
+    ComputeMolecularWeight {
+        max_da: f64,
+    },
     /// Max allowed LogP value.
-    ComputeLogP { max_logp: f64 },
+    ComputeLogP {
+        max_logp: f64,
+    },
     /// Max allowed TPSA in Å².
-    ComputeTPSA { max_tpsa: f64 },
+    ComputeTPSA {
+        max_tpsa: f64,
+    },
     EvaluateLipinski,
     EvaluateVeber,
     EvaluateGhose,
@@ -141,8 +171,12 @@ pub enum ShaclConstraint {
     DetectFunctionalGroups,
     ComputePka,
     ComputeChiralCenters,
-    GenerateCircularFingerprint { radius: u8 },
-    ComputeArrheniusRate { temp_k: f64 },
+    GenerateCircularFingerprint {
+        radius: u8,
+    },
+    ComputeArrheniusRate {
+        temp_k: f64,
+    },
     ComputeGibbsEnergy,
     ComputeEquilibrium,
     ComputeHendersonHasselbalch,
@@ -168,9 +202,15 @@ pub enum ShaclConstraint {
     DeonticObligate,
     DeonticPermit,
     DeonticForbid,
-    DeonticNotExpired { now_unix: u32 },
-    EpistemicKnowledge { min_certainty: u8 },
-    EpistemicBelief { min_certainty: u8 },
+    DeonticNotExpired {
+        now_unix: u32,
+    },
+    EpistemicKnowledge {
+        min_certainty: u8,
+    },
+    EpistemicBelief {
+        min_certainty: u8,
+    },
     CommonKnowledge,
 
     // ── Qualia native: advanced logics ───────────────────────────────────────
@@ -238,7 +278,9 @@ impl CompiledShape {
 pub struct ShaclCompiler;
 
 impl ShaclCompiler {
-    pub fn new() -> Self { ShaclCompiler }
+    pub fn new() -> Self {
+        ShaclCompiler
+    }
 
     /// Typed compile — preferred API.
     pub fn compile(
@@ -268,19 +310,30 @@ impl ShaclCompiler {
         value: f32,
     ) -> Vec<SlgOpcode> {
         let constraint = Self::parse_str(constraint_type, value);
-        let shape = self.compile(target_class, property_path, constraint, ShaclSeverity::Violation);
+        let shape = self.compile(
+            target_class,
+            property_path,
+            constraint,
+            ShaclSeverity::Violation,
+        );
         shape.opcodes
     }
 
     /// Compiles a JSON-LD shape node into a QualiaQuin with embedded sensitivity byte.
-    pub fn compile_json_node(&self, shape_json: &serde_json::Value) -> Result<crate::QualiaQuin, String> {
+    pub fn compile_json_node(
+        &self,
+        shape_json: &serde_json::Value,
+    ) -> Result<crate::QualiaQuin, String> {
         let mut quin = crate::QualiaQuin::default();
 
         // ── Sensitivity label ────────────────────────────────────────────────
-        let sensitivity = match shape_json.get("webizen:SensitivityLabel").and_then(|v| v.as_str()) {
+        let sensitivity = match shape_json
+            .get("webizen:SensitivityLabel")
+            .and_then(|v| v.as_str())
+        {
             Some("Restricted") => crate::QualiaQuin::SENSITIVITY_RESTRICTED,
-            Some("Classified")  => crate::QualiaQuin::SENSITIVITY_CLASSIFIED,
-            _                   => crate::QualiaQuin::SENSITIVITY_PUBLIC,
+            Some("Classified") => crate::QualiaQuin::SENSITIVITY_CLASSIFIED,
+            _ => crate::QualiaQuin::SENSITIVITY_PUBLIC,
         };
         quin.set_sensitivity_byte(sensitivity);
 
@@ -298,10 +351,10 @@ impl ShaclCompiler {
         // ── Routing lane from sh:severity ────────────────────────────────────
         if let Some(sev) = shape_json.get("sh:severity").and_then(|v| v.as_str()) {
             let lane_bits: u64 = match sev {
-                "sh:Warning"   => 0b01,
+                "sh:Warning" => 0b01,
                 "sh:Violation" => 0b10,
-                "sh:Info"      => 0b00,
-                _              => 0b00,
+                "sh:Info" => 0b00,
+                _ => 0b00,
             };
             quin.metadata |= lane_bits << 61;
         }
@@ -325,17 +378,21 @@ impl ShaclCompiler {
         let mut shapes = Vec::new();
         for (key, val) in constraints {
             let constraint_opt = match key.as_str() {
-                "sh:minInclusive"  => val.as_f64().map(ShaclConstraint::MinInclusive),
-                "sh:maxInclusive"  => val.as_f64().map(ShaclConstraint::MaxInclusive),
-                "sh:minExclusive"  => val.as_f64().map(ShaclConstraint::MinExclusive),
-                "sh:maxExclusive"  => val.as_f64().map(ShaclConstraint::MaxExclusive),
-                "sh:minCount"      => val.as_u64().map(|n| ShaclConstraint::MinCount(n as u32)),
-                "sh:maxCount"      => val.as_u64().map(|n| ShaclConstraint::MaxCount(n as u32)),
-                "sh:minLength"     => val.as_u64().map(|n| ShaclConstraint::MinLength(n as u32)),
-                "sh:maxLength"     => val.as_u64().map(|n| ShaclConstraint::MaxLength(n as u32)),
-                "sh:pattern"       => val.as_str().map(|s| ShaclConstraint::Pattern(s.to_string())),
-                "sh:hasValue"      => val.as_str().map(|s| ShaclConstraint::HasValue(s.to_string())),
-                "sh:node"          => val.as_str().map(|s| ShaclConstraint::Node(s.to_string())),
+                "sh:minInclusive" => val.as_f64().map(ShaclConstraint::MinInclusive),
+                "sh:maxInclusive" => val.as_f64().map(ShaclConstraint::MaxInclusive),
+                "sh:minExclusive" => val.as_f64().map(ShaclConstraint::MinExclusive),
+                "sh:maxExclusive" => val.as_f64().map(ShaclConstraint::MaxExclusive),
+                "sh:minCount" => val.as_u64().map(|n| ShaclConstraint::MinCount(n as u32)),
+                "sh:maxCount" => val.as_u64().map(|n| ShaclConstraint::MaxCount(n as u32)),
+                "sh:minLength" => val.as_u64().map(|n| ShaclConstraint::MinLength(n as u32)),
+                "sh:maxLength" => val.as_u64().map(|n| ShaclConstraint::MaxLength(n as u32)),
+                "sh:pattern" => val
+                    .as_str()
+                    .map(|s| ShaclConstraint::Pattern(s.to_string())),
+                "sh:hasValue" => val
+                    .as_str()
+                    .map(|s| ShaclConstraint::HasValue(s.to_string())),
+                "sh:node" => val.as_str().map(|s| ShaclConstraint::Node(s.to_string())),
                 _ => None,
             };
             let severity = ShaclSeverity::Violation; // default; override per shape
@@ -351,43 +408,51 @@ impl ShaclCompiler {
     fn push_constraint(c: &ShaclConstraint, ops: &mut Vec<SlgOpcode>) {
         match c {
             // Standard numeric
-            ShaclConstraint::MinInclusive(v)   => ops.push(SlgOpcode::CheckMinInclusive(*v)),
-            ShaclConstraint::MaxInclusive(v)   => ops.push(SlgOpcode::CheckMaxInclusive(*v)),
-            ShaclConstraint::MinExclusive(v)   => ops.push(SlgOpcode::CheckMinExclusive(*v)),
-            ShaclConstraint::MaxExclusive(v)   => ops.push(SlgOpcode::CheckMaxExclusive(*v)),
+            ShaclConstraint::MinInclusive(v) => ops.push(SlgOpcode::CheckMinInclusive(*v)),
+            ShaclConstraint::MaxInclusive(v) => ops.push(SlgOpcode::CheckMaxInclusive(*v)),
+            ShaclConstraint::MinExclusive(v) => ops.push(SlgOpcode::CheckMinExclusive(*v)),
+            ShaclConstraint::MaxExclusive(v) => ops.push(SlgOpcode::CheckMaxExclusive(*v)),
             // Cardinality
-            ShaclConstraint::MinCount(n)       => ops.push(SlgOpcode::CheckMinCount(*n)),
-            ShaclConstraint::MaxCount(n)       => ops.push(SlgOpcode::CheckMaxCount(*n)),
+            ShaclConstraint::MinCount(n) => ops.push(SlgOpcode::CheckMinCount(*n)),
+            ShaclConstraint::MaxCount(n) => ops.push(SlgOpcode::CheckMaxCount(*n)),
             // String
-            ShaclConstraint::MinLength(n)      => ops.push(SlgOpcode::CheckMinLength(*n)),
-            ShaclConstraint::MaxLength(n)      => ops.push(SlgOpcode::CheckMaxLength(*n)),
-            ShaclConstraint::Pattern(re)       => ops.push(SlgOpcode::CheckPattern(crate::q_hash(re))),
+            ShaclConstraint::MinLength(n) => ops.push(SlgOpcode::CheckMinLength(*n)),
+            ShaclConstraint::MaxLength(n) => ops.push(SlgOpcode::CheckMaxLength(*n)),
+            ShaclConstraint::Pattern(re) => ops.push(SlgOpcode::CheckPattern(crate::q_hash(re))),
             // Values
-            ShaclConstraint::DataType(_)       => ops.push(SlgOpcode::Unify),
-            ShaclConstraint::NodeKind(_)       => ops.push(SlgOpcode::CheckSubsumption),
-            ShaclConstraint::HasValue(v)       => ops.push(SlgOpcode::CheckHasValue(crate::q_hash(v))),
+            ShaclConstraint::DataType(_) => ops.push(SlgOpcode::Unify),
+            ShaclConstraint::NodeKind(_) => ops.push(SlgOpcode::CheckSubsumption),
+            ShaclConstraint::HasValue(v) => ops.push(SlgOpcode::CheckHasValue(crate::q_hash(v))),
             // Shape composition
-            ShaclConstraint::Node(s)           => ops.push(SlgOpcode::CheckNodeShape(crate::q_hash(s))),
-            ShaclConstraint::Not(s)            => ops.push(SlgOpcode::CheckNotShape(crate::q_hash(s))),
+            ShaclConstraint::Node(s) => ops.push(SlgOpcode::CheckNodeShape(crate::q_hash(s))),
+            ShaclConstraint::Not(s) => ops.push(SlgOpcode::CheckNotShape(crate::q_hash(s))),
             ShaclConstraint::And(shapes) => {
-                for s in shapes { ops.push(SlgOpcode::CheckNodeShape(crate::q_hash(s))); }
+                for s in shapes {
+                    ops.push(SlgOpcode::CheckNodeShape(crate::q_hash(s)));
+                }
             }
             ShaclConstraint::Or(shapes) => {
                 // OR: only the first match needed — emit CheckNodeShape for each; VM evaluates lazily
-                for s in shapes { ops.push(SlgOpcode::CheckNodeShape(crate::q_hash(s))); }
+                for s in shapes {
+                    ops.push(SlgOpcode::CheckNodeShape(crate::q_hash(s)));
+                }
             }
             ShaclConstraint::Xone(shapes) => {
-                for s in shapes { ops.push(SlgOpcode::CheckNodeShape(crate::q_hash(s))); }
+                for s in shapes {
+                    ops.push(SlgOpcode::CheckNodeShape(crate::q_hash(s)));
+                }
             }
             ShaclConstraint::In(values) => {
                 // Emit one CheckHasValue per allowed value; VM passes if any match
-                for v in values { ops.push(SlgOpcode::CheckHasValue(crate::q_hash(v))); }
+                for v in values {
+                    ops.push(SlgOpcode::CheckHasValue(crate::q_hash(v)));
+                }
             }
             // Physics
-            ShaclConstraint::ThermoMetropolisStep     => ops.push(SlgOpcode::NativeThermodynamics),
-            ShaclConstraint::SolveOdeDynamics         => ops.push(SlgOpcode::NativeOdeSolver),
-            ShaclConstraint::DftGroundState           => ops.push(SlgOpcode::NativeQuantumDft),
-            ShaclConstraint::PredictReceptorBinding   => ops.push(SlgOpcode::NativeReceptorBinding),
+            ShaclConstraint::ThermoMetropolisStep => ops.push(SlgOpcode::NativeThermodynamics),
+            ShaclConstraint::SolveOdeDynamics => ops.push(SlgOpcode::NativeOdeSolver),
+            ShaclConstraint::DftGroundState => ops.push(SlgOpcode::NativeQuantumDft),
+            ShaclConstraint::PredictReceptorBinding => ops.push(SlgOpcode::NativeReceptorBinding),
             ShaclConstraint::QuantumTask { architecture, .. } => {
                 ops.push(SlgOpcode::NativeQuboCompile);
                 ops.push(SlgOpcode::NativeQuantumEgress(*architecture));
@@ -396,50 +461,85 @@ impl ShaclCompiler {
             ShaclConstraint::QuboLinearBias { var_index, bias } => {
                 ops.push(SlgOpcode::NativeQuboEmitLinear(*var_index, bias.to_bits()));
             }
-            ShaclConstraint::QuboCouplerWeight { var_a, var_b, weight } => {
-                ops.push(SlgOpcode::NativeQuboEmitCoupler(*var_a, *var_b, weight.to_bits()));
+            ShaclConstraint::QuboCouplerWeight {
+                var_a,
+                var_b,
+                weight,
+            } => {
+                ops.push(SlgOpcode::NativeQuboEmitCoupler(
+                    *var_a,
+                    *var_b,
+                    weight.to_bits(),
+                ));
             }
             // Biosciences
             ShaclConstraint::BioSequenceAlignment
-            | ShaclConstraint::AlignNucleotideSequence { .. } => ops.push(SlgOpcode::NativeNucleotideAlign),
-            ShaclConstraint::AlignProteinSequence { matrix } => ops.push(SlgOpcode::NativeProteinAlign(*matrix as u8)),
-            ShaclConstraint::ComputeKmerFrequency { k }  => ops.push(SlgOpcode::NativeKmerFrequency(*k)),
-            ShaclConstraint::ComputeMetaboliteSimilarity { .. } => ops.push(SlgOpcode::NativeMetaboliteSimilarity),
-            ShaclConstraint::ValidateFastaRecord         => ops.push(SlgOpcode::NativeFastaValidation),
-            ShaclConstraint::EvaluateGeneExpression { .. } => ops.push(SlgOpcode::NativeGeneExpression),
+            | ShaclConstraint::AlignNucleotideSequence { .. } => {
+                ops.push(SlgOpcode::NativeNucleotideAlign)
+            }
+            ShaclConstraint::AlignProteinSequence { matrix } => {
+                ops.push(SlgOpcode::NativeProteinAlign(*matrix as u8))
+            }
+            ShaclConstraint::ComputeKmerFrequency { k } => {
+                ops.push(SlgOpcode::NativeKmerFrequency(*k))
+            }
+            ShaclConstraint::ComputeMetaboliteSimilarity { .. } => {
+                ops.push(SlgOpcode::NativeMetaboliteSimilarity)
+            }
+            ShaclConstraint::ValidateFastaRecord => ops.push(SlgOpcode::NativeFastaValidation),
+            ShaclConstraint::EvaluateGeneExpression { .. } => {
+                ops.push(SlgOpcode::NativeGeneExpression)
+            }
             // Biomedical
-            ShaclConstraint::ComputeRiskScore { model }  => ops.push(SlgOpcode::NativeClinicalRisk(*model as u8)),
-            ShaclConstraint::EvaluateLongitudinalTrend { window_days } => ops.push(SlgOpcode::NativeLongitudinalTrend(*window_days)),
-            ShaclConstraint::EvaluateDrugInteraction     => ops.push(SlgOpcode::NativeDrugInteraction),
-            ShaclConstraint::CheckContraindication       => ops.push(SlgOpcode::NativeContraindication),
+            ShaclConstraint::ComputeRiskScore { model } => {
+                ops.push(SlgOpcode::NativeClinicalRisk(*model as u8))
+            }
+            ShaclConstraint::EvaluateLongitudinalTrend { window_days } => {
+                ops.push(SlgOpcode::NativeLongitudinalTrend(*window_days))
+            }
+            ShaclConstraint::EvaluateDrugInteraction => ops.push(SlgOpcode::NativeDrugInteraction),
+            ShaclConstraint::CheckContraindication => ops.push(SlgOpcode::NativeContraindication),
             ShaclConstraint::ValidateFhirObservation { loinc_code } => {
                 ops.push(SlgOpcode::NativeFhirObservation(crate::q_hash(loinc_code)));
             }
             // Economics
-            ShaclConstraint::MonteCarloVar
-            | ShaclConstraint::SolveGeometricBrownianMotion => ops.push(SlgOpcode::NativeEconomics),
+            ShaclConstraint::MonteCarloVar | ShaclConstraint::SolveGeometricBrownianMotion => {
+                ops.push(SlgOpcode::NativeEconomics)
+            }
 
             // Organic chemistry
-            ShaclConstraint::ValidateSmiles                     => ops.push(SlgOpcode::NativeSmilesValidation),
-            ShaclConstraint::ValidateInchi                      => ops.push(SlgOpcode::NativeInchiValidation),
-            ShaclConstraint::ComputeMolecularWeight { max_da }  => ops.push(SlgOpcode::NativeMolecularWeight(max_da.to_bits())),
-            ShaclConstraint::ComputeLogP { max_logp }           => ops.push(SlgOpcode::NativeLogP((max_logp * 100.0) as u32)),
-            ShaclConstraint::ComputeTPSA { max_tpsa }           => ops.push(SlgOpcode::NativeTPSA(*max_tpsa as u32)),
-            ShaclConstraint::EvaluateLipinski                   => ops.push(SlgOpcode::NativeLipinskiFilter),
-            ShaclConstraint::EvaluateVeber                      => ops.push(SlgOpcode::NativeVeberFilter),
-            ShaclConstraint::EvaluateGhose                      => ops.push(SlgOpcode::NativeGhoseFilter),
-            ShaclConstraint::EvaluateEgan                       => ops.push(SlgOpcode::NativeEganFilter),
-            ShaclConstraint::DetectFunctionalGroups             => ops.push(SlgOpcode::NativeFunctionalGroups),
-            ShaclConstraint::ComputePka                         => ops.push(SlgOpcode::NativePkaEstimate),
-            ShaclConstraint::ComputeChiralCenters               => ops.push(SlgOpcode::NativeChiralCenters),
-            ShaclConstraint::GenerateCircularFingerprint { radius } => ops.push(SlgOpcode::NativeCircularFingerprint(*radius)),
-            ShaclConstraint::ComputeArrheniusRate { temp_k }    => ops.push(SlgOpcode::NativeArrhenius(*temp_k as u32)),
-            ShaclConstraint::ComputeGibbsEnergy                 => ops.push(SlgOpcode::NativeGibbsEnergy),
-            ShaclConstraint::ComputeEquilibrium                 => ops.push(SlgOpcode::NativeEquilibrium),
-            ShaclConstraint::ComputeHendersonHasselbalch        => ops.push(SlgOpcode::NativeHendersonHasselbalch),
-            ShaclConstraint::ComputeAtomEconomy                 => ops.push(SlgOpcode::NativeAtomEconomy),
-            ShaclConstraint::ComputeEFactor                     => ops.push(SlgOpcode::NativeEFactor),
-            ShaclConstraint::ComputeGreenMetrics                => ops.push(SlgOpcode::NativeGreenMetrics),
+            ShaclConstraint::ValidateSmiles => ops.push(SlgOpcode::NativeSmilesValidation),
+            ShaclConstraint::ValidateInchi => ops.push(SlgOpcode::NativeInchiValidation),
+            ShaclConstraint::ComputeMolecularWeight { max_da } => {
+                ops.push(SlgOpcode::NativeMolecularWeight(max_da.to_bits()))
+            }
+            ShaclConstraint::ComputeLogP { max_logp } => {
+                ops.push(SlgOpcode::NativeLogP((max_logp * 100.0) as u32))
+            }
+            ShaclConstraint::ComputeTPSA { max_tpsa } => {
+                ops.push(SlgOpcode::NativeTPSA(*max_tpsa as u32))
+            }
+            ShaclConstraint::EvaluateLipinski => ops.push(SlgOpcode::NativeLipinskiFilter),
+            ShaclConstraint::EvaluateVeber => ops.push(SlgOpcode::NativeVeberFilter),
+            ShaclConstraint::EvaluateGhose => ops.push(SlgOpcode::NativeGhoseFilter),
+            ShaclConstraint::EvaluateEgan => ops.push(SlgOpcode::NativeEganFilter),
+            ShaclConstraint::DetectFunctionalGroups => ops.push(SlgOpcode::NativeFunctionalGroups),
+            ShaclConstraint::ComputePka => ops.push(SlgOpcode::NativePkaEstimate),
+            ShaclConstraint::ComputeChiralCenters => ops.push(SlgOpcode::NativeChiralCenters),
+            ShaclConstraint::GenerateCircularFingerprint { radius } => {
+                ops.push(SlgOpcode::NativeCircularFingerprint(*radius))
+            }
+            ShaclConstraint::ComputeArrheniusRate { temp_k } => {
+                ops.push(SlgOpcode::NativeArrhenius(*temp_k as u32))
+            }
+            ShaclConstraint::ComputeGibbsEnergy => ops.push(SlgOpcode::NativeGibbsEnergy),
+            ShaclConstraint::ComputeEquilibrium => ops.push(SlgOpcode::NativeEquilibrium),
+            ShaclConstraint::ComputeHendersonHasselbalch => {
+                ops.push(SlgOpcode::NativeHendersonHasselbalch)
+            }
+            ShaclConstraint::ComputeAtomEconomy => ops.push(SlgOpcode::NativeAtomEconomy),
+            ShaclConstraint::ComputeEFactor => ops.push(SlgOpcode::NativeEFactor),
+            ShaclConstraint::ComputeGreenMetrics => ops.push(SlgOpcode::NativeGreenMetrics),
 
             // Phase 5 Scientific
             ShaclConstraint::ComputeCrcl => ops.push(SlgOpcode::NativeComputeCrcl),
@@ -450,27 +550,41 @@ impl ShaclCompiler {
             ShaclConstraint::ComputeIsoelectricPoint => ops.push(SlgOpcode::NativeIsoelectricPoint),
             ShaclConstraint::PredictPeptideCleavage => ops.push(SlgOpcode::NativePeptideCleavage),
             ShaclConstraint::PredictBbbPermeation => ops.push(SlgOpcode::NativeBbbPermeation),
-            ShaclConstraint::EvaluateLigandEfficiency => ops.push(SlgOpcode::NativeLigandEfficiency),
+            ShaclConstraint::EvaluateLigandEfficiency => {
+                ops.push(SlgOpcode::NativeLigandEfficiency)
+            }
             ShaclConstraint::EvaluateLipophilicLigandEfficiency => ops.push(SlgOpcode::NativeLLE),
-            ShaclConstraint::ComputeIsotopeDistribution => ops.push(SlgOpcode::NativeIsotopeDistribution),
+            ShaclConstraint::ComputeIsotopeDistribution => {
+                ops.push(SlgOpcode::NativeIsotopeDistribution)
+            }
 
             // Deontic and Epistemic
             ShaclConstraint::DeonticObligate
             | ShaclConstraint::DeonticPermit
             | ShaclConstraint::DeonticForbid
             | ShaclConstraint::DeonticNotExpired { .. } => ops.push(SlgOpcode::NativeDeonticEval),
-            ShaclConstraint::EpistemicKnowledge { min_certainty } => ops.push(SlgOpcode::NativeEpistemicEval(*min_certainty)),
-            ShaclConstraint::EpistemicBelief { min_certainty } => ops.push(SlgOpcode::NativeEpistemicEval(*min_certainty)),
+            ShaclConstraint::EpistemicKnowledge { min_certainty } => {
+                ops.push(SlgOpcode::NativeEpistemicEval(*min_certainty))
+            }
+            ShaclConstraint::EpistemicBelief { min_certainty } => {
+                ops.push(SlgOpcode::NativeEpistemicEval(*min_certainty))
+            }
             ShaclConstraint::CommonKnowledge => ops.push(SlgOpcode::NativeEpistemicEval(0)),
 
             // Advanced Logics
             ShaclConstraint::LinearConsume => ops.push(SlgOpcode::NativeLinearConsume),
             ShaclConstraint::AspStableModels => ops.push(SlgOpcode::NativeAspStableModels),
-            ShaclConstraint::ParaconsistentIsolate => ops.push(SlgOpcode::NativeParaconsistentIsolate),
-            ShaclConstraint::DialecticalSynthesis => ops.push(SlgOpcode::NativeDialecticalSynthesis),
+            ShaclConstraint::ParaconsistentIsolate => {
+                ops.push(SlgOpcode::NativeParaconsistentIsolate)
+            }
+            ShaclConstraint::DialecticalSynthesis => {
+                ops.push(SlgOpcode::NativeDialecticalSynthesis)
+            }
 
             // Cognitive AI (ACT-R)
-            ShaclConstraint::RetrieveByActivation => ops.push(SlgOpcode::NativeRetrieveByActivation),
+            ShaclConstraint::RetrieveByActivation => {
+                ops.push(SlgOpcode::NativeRetrieveByActivation)
+            }
             ShaclConstraint::DecayMetadata => ops.push(SlgOpcode::NativeDecayMetadata),
             ShaclConstraint::Unless => ops.push(SlgOpcode::NativeUnless),
 
@@ -493,15 +607,17 @@ impl ShaclCompiler {
             // Geometric & Spatial Topology
             ShaclConstraint::LorentzDistanceMax => ops.push(SlgOpcode::NativeLorentzDistance),
             ShaclConstraint::TropicalDistanceMax => ops.push(SlgOpcode::NativeTropicalDistance),
-            ShaclConstraint::VerifyProofOfLocation => ops.push(SlgOpcode::NativeVerifyProofOfLocation),
+            ShaclConstraint::VerifyProofOfLocation => {
+                ops.push(SlgOpcode::NativeVerifyProofOfLocation)
+            }
         }
     }
 
     fn push_terminal(severity: ShaclSeverity, ops: &mut Vec<SlgOpcode>) {
         match severity {
             ShaclSeverity::Violation => ops.push(SlgOpcode::Halt),
-            ShaclSeverity::Warning   => ops.push(SlgOpcode::WarnOnly),
-            ShaclSeverity::Info      => {}
+            ShaclSeverity::Warning => ops.push(SlgOpcode::WarnOnly),
+            ShaclSeverity::Info => {}
         }
     }
 
@@ -513,18 +629,18 @@ impl ShaclCompiler {
     /// Parses a constraint from the legacy string + f32 API.
     fn parse_str(constraint_type: &str, value: f32) -> ShaclConstraint {
         match constraint_type {
-            "minInclusive"  | "sh:minInclusive"  => ShaclConstraint::MinInclusive(value as f64),
-            "maxInclusive"  | "sh:maxInclusive"  => ShaclConstraint::MaxInclusive(value as f64),
-            "minExclusive"  | "sh:minExclusive"  => ShaclConstraint::MinExclusive(value as f64),
-            "maxExclusive"  | "sh:maxExclusive"  => ShaclConstraint::MaxExclusive(value as f64),
-            "minCount"      | "sh:minCount"      => ShaclConstraint::MinCount(value as u32),
-            "maxCount"      | "sh:maxCount"      => ShaclConstraint::MaxCount(value as u32),
-            "minLength"     | "sh:minLength"     => ShaclConstraint::MinLength(value as u32),
-            "maxLength"     | "sh:maxLength"     => ShaclConstraint::MaxLength(value as u32),
-            "datatype"      | "sh:datatype"      => ShaclConstraint::DataType(String::new()),
-            "qualia:thermoMetropolisStep"         => ShaclConstraint::ThermoMetropolisStep,
-            "qualia:solveOdeDynamics"             => ShaclConstraint::SolveOdeDynamics,
-            "qualia:dftGroundState"               => ShaclConstraint::DftGroundState,
+            "minInclusive" | "sh:minInclusive" => ShaclConstraint::MinInclusive(value as f64),
+            "maxInclusive" | "sh:maxInclusive" => ShaclConstraint::MaxInclusive(value as f64),
+            "minExclusive" | "sh:minExclusive" => ShaclConstraint::MinExclusive(value as f64),
+            "maxExclusive" | "sh:maxExclusive" => ShaclConstraint::MaxExclusive(value as f64),
+            "minCount" | "sh:minCount" => ShaclConstraint::MinCount(value as u32),
+            "maxCount" | "sh:maxCount" => ShaclConstraint::MaxCount(value as u32),
+            "minLength" | "sh:minLength" => ShaclConstraint::MinLength(value as u32),
+            "maxLength" | "sh:maxLength" => ShaclConstraint::MaxLength(value as u32),
+            "datatype" | "sh:datatype" => ShaclConstraint::DataType(String::new()),
+            "qualia:thermoMetropolisStep" => ShaclConstraint::ThermoMetropolisStep,
+            "qualia:solveOdeDynamics" => ShaclConstraint::SolveOdeDynamics,
+            "qualia:dftGroundState" => ShaclConstraint::DftGroundState,
             "qualia:quantumTask" | "q42:quantumTask" => ShaclConstraint::QuantumTask {
                 max_shots: value as u32,
                 architecture: 0,
@@ -534,91 +650,132 @@ impl ShaclCompiler {
                 var_index: 0,
                 bias: value,
             },
-            "qualia:hasCouplerWeight" | "q42:hasCouplerWeight" => ShaclConstraint::QuboCouplerWeight {
-                var_a: 0,
-                var_b: 1,
-                weight: value,
+            "qualia:hasCouplerWeight" | "q42:hasCouplerWeight" => {
+                ShaclConstraint::QuboCouplerWeight {
+                    var_a: 0,
+                    var_b: 1,
+                    weight: value,
+                }
+            }
+            "qualia:bioSequenceAlignment" => ShaclConstraint::BioSequenceAlignment,
+            "qualia:alignNucleotideSequence" => ShaclConstraint::AlignNucleotideSequence {
+                gap_open: value,
+                gap_extend: value * 0.5,
             },
-            "qualia:bioSequenceAlignment"         => ShaclConstraint::BioSequenceAlignment,
-            "qualia:alignNucleotideSequence"      => ShaclConstraint::AlignNucleotideSequence { gap_open: value, gap_extend: value * 0.5 },
-            "qualia:alignProteinSequence"         => ShaclConstraint::AlignProteinSequence { matrix: ProteinScoringMatrix::Blosum62 },
-            "qualia:computeKmerFrequency"         => ShaclConstraint::ComputeKmerFrequency { k: value as u8 },
-            "qualia:computeMetaboliteSimilarity"  => ShaclConstraint::ComputeMetaboliteSimilarity { min_tanimoto: value },
-            "qualia:validateFastaRecord"          => ShaclConstraint::ValidateFastaRecord,
-            "qualia:evaluateGeneExpression"       => ShaclConstraint::EvaluateGeneExpression { fold_change_threshold: value },
-            "qualia:predictReceptorBinding"       => ShaclConstraint::PredictReceptorBinding,
-            "qualia:computeRiskScore:framingham"  => ShaclConstraint::ComputeRiskScore { model: ClinicalRiskModel::Framingham },
-            "qualia:computeRiskScore:cha2ds2"     => ShaclConstraint::ComputeRiskScore { model: ClinicalRiskModel::Cha2ds2Vasc },
-            "qualia:computeRiskScore:score2"      => ShaclConstraint::ComputeRiskScore { model: ClinicalRiskModel::Score2 },
-            "qualia:evaluateLongitudinalTrend"    => ShaclConstraint::EvaluateLongitudinalTrend { window_days: value as u32 },
-            "qualia:evaluateDrugInteraction"      => ShaclConstraint::EvaluateDrugInteraction,
-            "qualia:checkContraindication"        => ShaclConstraint::CheckContraindication,
-            "qualia:validateFhirObservation"      => ShaclConstraint::ValidateFhirObservation { loinc_code: String::new() },
-            "qualia:monteCarloVaR" | "qualia:solveGeometricBrownianMotion" => ShaclConstraint::MonteCarloVar,
+            "qualia:alignProteinSequence" => ShaclConstraint::AlignProteinSequence {
+                matrix: ProteinScoringMatrix::Blosum62,
+            },
+            "qualia:computeKmerFrequency" => {
+                ShaclConstraint::ComputeKmerFrequency { k: value as u8 }
+            }
+            "qualia:computeMetaboliteSimilarity" => ShaclConstraint::ComputeMetaboliteSimilarity {
+                min_tanimoto: value,
+            },
+            "qualia:validateFastaRecord" => ShaclConstraint::ValidateFastaRecord,
+            "qualia:evaluateGeneExpression" => ShaclConstraint::EvaluateGeneExpression {
+                fold_change_threshold: value,
+            },
+            "qualia:predictReceptorBinding" => ShaclConstraint::PredictReceptorBinding,
+            "qualia:computeRiskScore:framingham" => ShaclConstraint::ComputeRiskScore {
+                model: ClinicalRiskModel::Framingham,
+            },
+            "qualia:computeRiskScore:cha2ds2" => ShaclConstraint::ComputeRiskScore {
+                model: ClinicalRiskModel::Cha2ds2Vasc,
+            },
+            "qualia:computeRiskScore:score2" => ShaclConstraint::ComputeRiskScore {
+                model: ClinicalRiskModel::Score2,
+            },
+            "qualia:evaluateLongitudinalTrend" => ShaclConstraint::EvaluateLongitudinalTrend {
+                window_days: value as u32,
+            },
+            "qualia:evaluateDrugInteraction" => ShaclConstraint::EvaluateDrugInteraction,
+            "qualia:checkContraindication" => ShaclConstraint::CheckContraindication,
+            "qualia:validateFhirObservation" => ShaclConstraint::ValidateFhirObservation {
+                loinc_code: String::new(),
+            },
+            "qualia:monteCarloVaR" | "qualia:solveGeometricBrownianMotion" => {
+                ShaclConstraint::MonteCarloVar
+            }
             // Organic chemistry
-            "qualia:validateSmiles"              => ShaclConstraint::ValidateSmiles,
-            "qualia:validateInchi"               => ShaclConstraint::ValidateInchi,
-            "qualia:computeMolecularWeight"      => ShaclConstraint::ComputeMolecularWeight { max_da: value as f64 },
-            "qualia:computeLogP"                 => ShaclConstraint::ComputeLogP { max_logp: value as f64 },
-            "qualia:computeTPSA"                 => ShaclConstraint::ComputeTPSA { max_tpsa: value as f64 },
-            "qualia:evaluateLipinski"            => ShaclConstraint::EvaluateLipinski,
-            "qualia:evaluateVeber"               => ShaclConstraint::EvaluateVeber,
-            "qualia:evaluateGhose"               => ShaclConstraint::EvaluateGhose,
-            "qualia:evaluateEgan"                => ShaclConstraint::EvaluateEgan,
-            "qualia:detectFunctionalGroups"      => ShaclConstraint::DetectFunctionalGroups,
-            "qualia:computePka"                  => ShaclConstraint::ComputePka,
-            "qualia:computeChiralCenters"        => ShaclConstraint::ComputeChiralCenters,
-            "qualia:generateCircularFingerprint" => ShaclConstraint::GenerateCircularFingerprint { radius: value as u8 },
-            "qualia:computeArrheniusRate"        => ShaclConstraint::ComputeArrheniusRate { temp_k: value as f64 },
-            "qualia:computeGibbsEnergy"          => ShaclConstraint::ComputeGibbsEnergy,
-            "qualia:computeEquilibrium"          => ShaclConstraint::ComputeEquilibrium,
+            "qualia:validateSmiles" => ShaclConstraint::ValidateSmiles,
+            "qualia:validateInchi" => ShaclConstraint::ValidateInchi,
+            "qualia:computeMolecularWeight" => ShaclConstraint::ComputeMolecularWeight {
+                max_da: value as f64,
+            },
+            "qualia:computeLogP" => ShaclConstraint::ComputeLogP {
+                max_logp: value as f64,
+            },
+            "qualia:computeTPSA" => ShaclConstraint::ComputeTPSA {
+                max_tpsa: value as f64,
+            },
+            "qualia:evaluateLipinski" => ShaclConstraint::EvaluateLipinski,
+            "qualia:evaluateVeber" => ShaclConstraint::EvaluateVeber,
+            "qualia:evaluateGhose" => ShaclConstraint::EvaluateGhose,
+            "qualia:evaluateEgan" => ShaclConstraint::EvaluateEgan,
+            "qualia:detectFunctionalGroups" => ShaclConstraint::DetectFunctionalGroups,
+            "qualia:computePka" => ShaclConstraint::ComputePka,
+            "qualia:computeChiralCenters" => ShaclConstraint::ComputeChiralCenters,
+            "qualia:generateCircularFingerprint" => ShaclConstraint::GenerateCircularFingerprint {
+                radius: value as u8,
+            },
+            "qualia:computeArrheniusRate" => ShaclConstraint::ComputeArrheniusRate {
+                temp_k: value as f64,
+            },
+            "qualia:computeGibbsEnergy" => ShaclConstraint::ComputeGibbsEnergy,
+            "qualia:computeEquilibrium" => ShaclConstraint::ComputeEquilibrium,
             "qualia:computeHendersonHasselbalch" => ShaclConstraint::ComputeHendersonHasselbalch,
-            "qualia:computeAtomEconomy"          => ShaclConstraint::ComputeAtomEconomy,
-            "qualia:computeEFactor"              => ShaclConstraint::ComputeEFactor,
-            "qualia:computeGreenMetrics"         => ShaclConstraint::ComputeGreenMetrics,
+            "qualia:computeAtomEconomy" => ShaclConstraint::ComputeAtomEconomy,
+            "qualia:computeEFactor" => ShaclConstraint::ComputeEFactor,
+            "qualia:computeGreenMetrics" => ShaclConstraint::ComputeGreenMetrics,
 
             // Phase 5 Scientific
-            "qualia:computeCrcl"                 => ShaclConstraint::ComputeCrcl,
-            "qualia:computeEgfr"                 => ShaclConstraint::ComputeEgfr,
-            "qualia:evaluatePkModel"             => ShaclConstraint::EvaluatePkModel,
-            "qualia:computeSofaScore"            => ShaclConstraint::ComputeSofaScore,
-            "qualia:translateDnaToProtein"       => ShaclConstraint::TranslateDnaToProtein,
-            "qualia:computeIsoelectricPoint"     => ShaclConstraint::ComputeIsoelectricPoint,
-            "qualia:predictPeptideCleavage"      => ShaclConstraint::PredictPeptideCleavage,
-            "qualia:predictBbbPermeation"        => ShaclConstraint::PredictBbbPermeation,
-            "qualia:evaluateLigandEfficiency"    => ShaclConstraint::EvaluateLigandEfficiency,
-            "qualia:evaluateLLE"                 => ShaclConstraint::EvaluateLipophilicLigandEfficiency,
-            "qualia:computeIsotopeDistribution"  => ShaclConstraint::ComputeIsotopeDistribution,
+            "qualia:computeCrcl" => ShaclConstraint::ComputeCrcl,
+            "qualia:computeEgfr" => ShaclConstraint::ComputeEgfr,
+            "qualia:evaluatePkModel" => ShaclConstraint::EvaluatePkModel,
+            "qualia:computeSofaScore" => ShaclConstraint::ComputeSofaScore,
+            "qualia:translateDnaToProtein" => ShaclConstraint::TranslateDnaToProtein,
+            "qualia:computeIsoelectricPoint" => ShaclConstraint::ComputeIsoelectricPoint,
+            "qualia:predictPeptideCleavage" => ShaclConstraint::PredictPeptideCleavage,
+            "qualia:predictBbbPermeation" => ShaclConstraint::PredictBbbPermeation,
+            "qualia:evaluateLigandEfficiency" => ShaclConstraint::EvaluateLigandEfficiency,
+            "qualia:evaluateLLE" => ShaclConstraint::EvaluateLipophilicLigandEfficiency,
+            "qualia:computeIsotopeDistribution" => ShaclConstraint::ComputeIsotopeDistribution,
 
-            "qualia:deonticObligate"             => ShaclConstraint::DeonticObligate,
-            "qualia:deonticPermit"               => ShaclConstraint::DeonticPermit,
-            "qualia:deonticForbid"               => ShaclConstraint::DeonticForbid,
-            "qualia:deonticNotExpired"           => ShaclConstraint::DeonticNotExpired { now_unix: value as u32 },
-            "qualia:epistemicKnowledge"          => ShaclConstraint::EpistemicKnowledge { min_certainty: value as u8 },
-            "qualia:epistemicBelief"             => ShaclConstraint::EpistemicBelief { min_certainty: value as u8 },
-            "qualia:commonKnowledge"             => ShaclConstraint::CommonKnowledge,
-            "qualia:linearConsume"               => ShaclConstraint::LinearConsume,
-            "qualia:evaluateStableModels"        => ShaclConstraint::AspStableModels,
-            "qualia:paraconsistentIsolate"       => ShaclConstraint::ParaconsistentIsolate,
-            "qualia:dialecticalSynthesis"        => ShaclConstraint::DialecticalSynthesis,
-            "qualia:retrieveByActivation"        => ShaclConstraint::RetrieveByActivation,
-            "qualia:decayMetadata"               => ShaclConstraint::DecayMetadata,
-            "qualia:unless"                      => ShaclConstraint::Unless,
-            "qualia:ltlGlobally"                 => ShaclConstraint::LtlGlobally,
-            "qualia:ltlFinally"                  => ShaclConstraint::LtlFinally,
-            "qualia:ltlNext"                     => ShaclConstraint::LtlNext,
-            "qualia:ltlUntil"                    => ShaclConstraint::LtlUntil,
-            "qualia:ltlRelease"                  => ShaclConstraint::LtlRelease,
-            "qualia:allenBefore"                 => ShaclConstraint::AllenBefore,
-            "qualia:allenMeets"                  => ShaclConstraint::AllenMeets,
-            "qualia:allenOverlaps"               => ShaclConstraint::AllenOverlaps,
-            "qualia:allenStarts"                 => ShaclConstraint::AllenStarts,
-            "qualia:allenDuring"                 => ShaclConstraint::AllenDuring,
-            "qualia:allenFinishes"               => ShaclConstraint::AllenFinishes,
-            "qualia:allenEquals"                 => ShaclConstraint::AllenEquals,
-            "qualia:lorentzDistanceMax"          => ShaclConstraint::LorentzDistanceMax,
-            "qualia:tropicalDistanceMax"         => ShaclConstraint::TropicalDistanceMax,
-            "qualia:verifyProofOfLocation"       => ShaclConstraint::VerifyProofOfLocation,
+            "qualia:deonticObligate" => ShaclConstraint::DeonticObligate,
+            "qualia:deonticPermit" => ShaclConstraint::DeonticPermit,
+            "qualia:deonticForbid" => ShaclConstraint::DeonticForbid,
+            "qualia:deonticNotExpired" => ShaclConstraint::DeonticNotExpired {
+                now_unix: value as u32,
+            },
+            "qualia:epistemicKnowledge" => ShaclConstraint::EpistemicKnowledge {
+                min_certainty: value as u8,
+            },
+            "qualia:epistemicBelief" => ShaclConstraint::EpistemicBelief {
+                min_certainty: value as u8,
+            },
+            "qualia:commonKnowledge" => ShaclConstraint::CommonKnowledge,
+            "qualia:linearConsume" => ShaclConstraint::LinearConsume,
+            "qualia:evaluateStableModels" => ShaclConstraint::AspStableModels,
+            "qualia:paraconsistentIsolate" => ShaclConstraint::ParaconsistentIsolate,
+            "qualia:dialecticalSynthesis" => ShaclConstraint::DialecticalSynthesis,
+            "qualia:retrieveByActivation" => ShaclConstraint::RetrieveByActivation,
+            "qualia:decayMetadata" => ShaclConstraint::DecayMetadata,
+            "qualia:unless" => ShaclConstraint::Unless,
+            "qualia:ltlGlobally" => ShaclConstraint::LtlGlobally,
+            "qualia:ltlFinally" => ShaclConstraint::LtlFinally,
+            "qualia:ltlNext" => ShaclConstraint::LtlNext,
+            "qualia:ltlUntil" => ShaclConstraint::LtlUntil,
+            "qualia:ltlRelease" => ShaclConstraint::LtlRelease,
+            "qualia:allenBefore" => ShaclConstraint::AllenBefore,
+            "qualia:allenMeets" => ShaclConstraint::AllenMeets,
+            "qualia:allenOverlaps" => ShaclConstraint::AllenOverlaps,
+            "qualia:allenStarts" => ShaclConstraint::AllenStarts,
+            "qualia:allenDuring" => ShaclConstraint::AllenDuring,
+            "qualia:allenFinishes" => ShaclConstraint::AllenFinishes,
+            "qualia:allenEquals" => ShaclConstraint::AllenEquals,
+            "qualia:lorentzDistanceMax" => ShaclConstraint::LorentzDistanceMax,
+            "qualia:tropicalDistanceMax" => ShaclConstraint::TropicalDistanceMax,
+            "qualia:verifyProofOfLocation" => ShaclConstraint::VerifyProofOfLocation,
             other => {
                 eprintln!("[ShaclCompiler] unknown constraint: {other}");
                 ShaclConstraint::DataType(other.to_string())
@@ -633,18 +790,30 @@ impl ShaclCompiler {
 mod tests {
     use super::*;
 
-    fn compiler() -> ShaclCompiler { ShaclCompiler::new() }
+    fn compiler() -> ShaclCompiler {
+        ShaclCompiler::new()
+    }
 
     #[test]
     fn min_inclusive_passes_value_through() {
-        let shape = compiler().compile("fhir:Observation", "health:heartRate", ShaclConstraint::MinInclusive(20.0), ShaclSeverity::Violation);
+        let shape = compiler().compile(
+            "fhir:Observation",
+            "health:heartRate",
+            ShaclConstraint::MinInclusive(20.0),
+            ShaclSeverity::Violation,
+        );
         assert!(shape.evaluate_numeric(60.0), "60 bpm should pass min 20");
         assert!(!shape.evaluate_numeric(10.0), "10 bpm should fail min 20");
     }
 
     #[test]
     fn max_inclusive_blocks_high_value() {
-        let shape = compiler().compile("fhir:Observation", "health:heartRate", ShaclConstraint::MaxInclusive(300.0), ShaclSeverity::Violation);
+        let shape = compiler().compile(
+            "fhir:Observation",
+            "health:heartRate",
+            ShaclConstraint::MaxInclusive(300.0),
+            ShaclSeverity::Violation,
+        );
         assert!(shape.evaluate_numeric(100.0));
         assert!(!shape.evaluate_numeric(301.0));
     }
@@ -657,32 +826,68 @@ mod tests {
 
     #[test]
     fn severity_warning_emits_warn_only() {
-        let shape = compiler().compile("a", "b", ShaclConstraint::MinInclusive(0.0), ShaclSeverity::Warning);
+        let shape = compiler().compile(
+            "a",
+            "b",
+            ShaclConstraint::MinInclusive(0.0),
+            ShaclSeverity::Warning,
+        );
         assert!(shape.opcodes.contains(&SlgOpcode::WarnOnly));
         assert!(!shape.opcodes.contains(&SlgOpcode::Halt));
     }
 
     #[test]
     fn bioscience_constraints_produce_correct_opcodes() {
-        let nc = compiler().compile("bio:Sequence", "bio:query", ShaclConstraint::AlignNucleotideSequence { gap_open: -11.0, gap_extend: -1.0 }, ShaclSeverity::Violation);
+        let nc = compiler().compile(
+            "bio:Sequence",
+            "bio:query",
+            ShaclConstraint::AlignNucleotideSequence {
+                gap_open: -11.0,
+                gap_extend: -1.0,
+            },
+            ShaclSeverity::Violation,
+        );
         assert!(nc.opcodes.contains(&SlgOpcode::NativeNucleotideAlign));
 
-        let pc = compiler().compile("bio:Protein", "bio:seq", ShaclConstraint::AlignProteinSequence { matrix: ProteinScoringMatrix::Blosum62 }, ShaclSeverity::Violation);
+        let pc = compiler().compile(
+            "bio:Protein",
+            "bio:seq",
+            ShaclConstraint::AlignProteinSequence {
+                matrix: ProteinScoringMatrix::Blosum62,
+            },
+            ShaclSeverity::Violation,
+        );
         assert!(pc.opcodes.contains(&SlgOpcode::NativeProteinAlign(0)));
     }
 
     #[test]
     fn biomedical_risk_opcode_correct_model_id() {
-        let s = compiler().compile("health:Patient", "health:cvdRisk", ShaclConstraint::ComputeRiskScore { model: ClinicalRiskModel::Cha2ds2Vasc }, ShaclSeverity::Warning);
+        let s = compiler().compile(
+            "health:Patient",
+            "health:cvdRisk",
+            ShaclConstraint::ComputeRiskScore {
+                model: ClinicalRiskModel::Cha2ds2Vasc,
+            },
+            ShaclSeverity::Warning,
+        );
         assert!(s.opcodes.contains(&SlgOpcode::NativeClinicalRisk(1)));
         assert!(s.opcodes.contains(&SlgOpcode::WarnOnly));
     }
 
     #[test]
     fn fhir_observation_opcode_encodes_loinc() {
-        let s = compiler().compile("fhir:Obs", "fhir:value", ShaclConstraint::ValidateFhirObservation { loinc_code: "4548-4".into() }, ShaclSeverity::Violation);
+        let s = compiler().compile(
+            "fhir:Obs",
+            "fhir:value",
+            ShaclConstraint::ValidateFhirObservation {
+                loinc_code: "4548-4".into(),
+            },
+            ShaclSeverity::Violation,
+        );
         let expected_hash = crate::q_hash("4548-4");
-        assert!(s.opcodes.contains(&SlgOpcode::NativeFhirObservation(expected_hash)));
+        assert!(s
+            .opcodes
+            .contains(&SlgOpcode::NativeFhirObservation(expected_hash)));
     }
 
     #[test]
@@ -695,19 +900,37 @@ mod tests {
             "sh:severity": "sh:Warning",
         });
         let quin = compiler().compile_json_node(&json).unwrap();
-        assert_eq!(quin.get_sensitivity_byte(), crate::QualiaQuin::SENSITIVITY_RESTRICTED);
+        assert_eq!(
+            quin.get_sensitivity_byte(),
+            crate::QualiaQuin::SENSITIVITY_RESTRICTED
+        );
     }
 
     #[test]
     fn test_cognitive_ai_opcodes_compile() {
         let mut comp = compiler();
-        let s1 = comp.compile("cog:Memory", "cog:activate", ShaclConstraint::RetrieveByActivation, ShaclSeverity::Violation);
+        let s1 = comp.compile(
+            "cog:Memory",
+            "cog:activate",
+            ShaclConstraint::RetrieveByActivation,
+            ShaclSeverity::Violation,
+        );
         assert!(s1.opcodes.contains(&SlgOpcode::NativeRetrieveByActivation));
 
-        let s2 = comp.compile("cog:Memory", "cog:decay", ShaclConstraint::DecayMetadata, ShaclSeverity::Violation);
+        let s2 = comp.compile(
+            "cog:Memory",
+            "cog:decay",
+            ShaclConstraint::DecayMetadata,
+            ShaclSeverity::Violation,
+        );
         assert!(s2.opcodes.contains(&SlgOpcode::NativeDecayMetadata));
 
-        let s3 = comp.compile("cog:Rule", "cog:unless", ShaclConstraint::Unless, ShaclSeverity::Violation);
+        let s3 = comp.compile(
+            "cog:Rule",
+            "cog:unless",
+            ShaclConstraint::Unless,
+            ShaclSeverity::Violation,
+        );
         assert!(s3.opcodes.contains(&SlgOpcode::NativeUnless));
     }
 }

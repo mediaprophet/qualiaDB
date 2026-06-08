@@ -18,11 +18,16 @@ impl LorentzVector {
         let v1 = (quin.subject % 1000) as f32 / 100.0;
         let v2 = (quin.predicate % 1000) as f32 / 100.0;
         let v3 = (quin.object % 1000) as f32 / 100.0;
-        
+
         // Compute x0 to ensure it sits on the upper sheet of the hyperboloid (x0^2 - x1^2 - x2^2 - x3^2 = 1)
         let x0 = (1.0 + v1 * v1 + v2 * v2 + v3 * v3).sqrt();
-        
-        Self { x0, x1: v1, x2: v2, x3: v3 }
+
+        Self {
+            x0,
+            x1: v1,
+            x2: v2,
+            x3: v3,
+        }
     }
 
     /// Computes the Minkowski inner product (Lorentz distance).
@@ -50,7 +55,7 @@ impl MinPlusVoronoiCell {
         let d1 = self.centroid.x1 + query.x1;
         let d2 = self.centroid.x2 + query.x2;
         let d3 = self.centroid.x3 + query.x3;
-        
+
         // ⊕ = min (Tropical Addition)
         d0.min(d1).min(d2).min(d3)
     }
@@ -97,11 +102,7 @@ pub struct HomologicalSieve;
 
 impl HomologicalSieve {
     /// Evaluates if the semantic topology has stabilized (Topological Compression)
-    pub fn evaluate_topology_tick(
-        active_bitmask: *const u64,
-        quins: &[QualiaQuin],
-        tier_mask: u8,
-    ) {
+    pub fn evaluate_topology_tick(active_bitmask: *const u64, quins: &[QualiaQuin], tier_mask: u8) {
         if quins.is_empty() {
             return;
         }
@@ -110,7 +111,7 @@ impl HomologicalSieve {
         // Note: active_bitmask is a pointer to the GPU Sieve's bitmask output.
         // We simulate reading the bitmask for the active nodes.
         let active_nodes_count = unsafe { (*active_bitmask).count_ones() } as usize;
-        
+
         if active_nodes_count == 0 {
             return;
         }
@@ -120,7 +121,7 @@ impl HomologicalSieve {
         let mut sum_x1 = 0.0;
         let mut sum_x2 = 0.0;
         let mut sum_x3 = 0.0;
-        
+
         // In real hardware, we'd use the bitmask to select exactly the active quins via PEXT.
         // Here we just average the first `active_nodes_count` for heuristic demonstration.
         let limit = active_nodes_count.min(quins.len());
@@ -131,7 +132,7 @@ impl HomologicalSieve {
             sum_x2 += l_vec.x2;
             sum_x3 += l_vec.x3;
         }
-        
+
         let inv_count = 1.0 / limit as f32;
         let new_centroid = LorentzVector {
             x0: sum_x0 * inv_count,
@@ -146,7 +147,7 @@ impl HomologicalSieve {
         let curr_x1 = (CURRENT_CENTROID_X1.load(Ordering::Relaxed) as f32) / scale;
         let curr_x2 = (CURRENT_CENTROID_X2.load(Ordering::Relaxed) as f32) / scale;
         let curr_x3 = (CURRENT_CENTROID_X3.load(Ordering::Relaxed) as f32) / scale;
-        
+
         let curr_centroid = LorentzVector {
             x0: curr_x0,
             x1: curr_x1,
@@ -156,7 +157,7 @@ impl HomologicalSieve {
 
         // 3. Calculate Centroid Drift (Lorentz Minkowski Distance)
         let drift = new_centroid.lorentz_distance(&curr_centroid).abs();
-        
+
         let epsilon = 0.005; // Convergence tolerance
 
         // 4. Update the state and Halting Condition

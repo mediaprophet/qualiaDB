@@ -1,8 +1,9 @@
 use qualia_core_db::{
-    resolver::{resolve_hash, format_ntriples_to},
-    webizen_bytecode::execute_program,
     mini_parser::compile_ntriples_to_bytecode,
-    QualiaQuin, q_hash,
+    q_hash,
+    resolver::{format_ntriples_to, resolve_hash},
+    webizen_bytecode::execute_program,
+    QualiaQuin,
 };
 
 // ---------------------------------------------------------------------------
@@ -31,8 +32,8 @@ fn unknown_hash_returns_none() {
 
 #[test]
 fn topological_pointer_not_in_lexicon() {
-    let ptr = qualia_core_db::identifier::parse_did_q42(b"did:q42:z6TestHash")
-        .expect("valid did:q42");
+    let ptr =
+        qualia_core_db::identifier::parse_did_q42(b"did:q42:z6TestHash").expect("valid did:q42");
     assert!(
         resolve_hash(ptr).is_none(),
         "topological pointers must not be resolved through the lexicon"
@@ -46,18 +47,29 @@ fn topological_pointer_not_in_lexicon() {
 #[test]
 fn unknown_hash_fallback_is_hex_format() {
     let q = QualiaQuin {
-        subject:   0x00_00_00_00_00_00_00_01,
+        subject: 0x00_00_00_00_00_00_00_01,
         predicate: 0x00_00_00_00_00_00_00_02,
-        object:    0x00_00_00_00_00_00_00_03,
-        context: 0, metadata: 0, parity: 0,
+        object: 0x00_00_00_00_00_00_00_03,
+        context: 0,
+        metadata: 0,
+        parity: 0,
     };
     let mut buf = Vec::new();
     format_ntriples_to(&[q], &mut buf).unwrap();
     let s = String::from_utf8(buf).unwrap();
 
-    assert!(s.contains("<quin:hash/0000000000000001>"), "subject fallback wrong: {s}");
-    assert!(s.contains("<quin:hash/0000000000000002>"), "predicate fallback wrong: {s}");
-    assert!(s.contains("<quin:hash/0000000000000003>"), "object fallback wrong: {s}");
+    assert!(
+        s.contains("<quin:hash/0000000000000001>"),
+        "subject fallback wrong: {s}"
+    );
+    assert!(
+        s.contains("<quin:hash/0000000000000002>"),
+        "predicate fallback wrong: {s}"
+    );
+    assert!(
+        s.contains("<quin:hash/0000000000000003>"),
+        "object fallback wrong: {s}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -67,19 +79,33 @@ fn unknown_hash_fallback_is_hex_format() {
 #[test]
 fn known_terms_produce_full_iri_ntriples_line() {
     let q = QualiaQuin {
-        subject:   q_hash("Alice"),
+        subject: q_hash("Alice"),
         predicate: q_hash("knows"),
-        object:    q_hash("Bob"),
-        context: 0, metadata: 0, parity: 0,
+        object: q_hash("Bob"),
+        context: 0,
+        metadata: 0,
+        parity: 0,
     };
     let mut buf = Vec::new();
     format_ntriples_to(&[q], &mut buf).unwrap();
     let s = String::from_utf8(buf).unwrap();
 
-    assert!(s.contains("<http://qualia-db.org/demo/Alice>"), "subject IRI missing: {s}");
-    assert!(s.contains("<http://schema.org/knows>"),         "predicate IRI missing: {s}");
-    assert!(s.contains("<http://qualia-db.org/demo/Bob>"),   "object IRI missing: {s}");
-    assert!(s.ends_with(" .\n"), "N-Triples line must end with ` .\\n`: {s}");
+    assert!(
+        s.contains("<http://qualia-db.org/demo/Alice>"),
+        "subject IRI missing: {s}"
+    );
+    assert!(
+        s.contains("<http://schema.org/knows>"),
+        "predicate IRI missing: {s}"
+    );
+    assert!(
+        s.contains("<http://qualia-db.org/demo/Bob>"),
+        "object IRI missing: {s}"
+    );
+    assert!(
+        s.ends_with(" .\n"),
+        "N-Triples line must end with ` .\\n`: {s}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -89,10 +115,12 @@ fn known_terms_produce_full_iri_ntriples_line() {
 #[test]
 fn execute_program_returns_cycle_count() {
     let q = QualiaQuin {
-        subject:   q_hash("Alice"),
+        subject: q_hash("Alice"),
         predicate: q_hash("knows"),
-        object:    q_hash("Bob"),
-        context: 0, metadata: 0, parity: 0,
+        object: q_hash("Bob"),
+        context: 0,
+        metadata: 0,
+        parity: 0,
     };
     let mut prog = [0u8; 1024];
     compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
@@ -119,10 +147,12 @@ fn compute_cost_header_format_is_matches_plus_cycles() {
 fn zero_match_still_reports_cycles_for_scanned_rows() {
     // A query that matches nothing should still burn cycles while scanning.
     let q = QualiaQuin {
-        subject:   q_hash("Alice"),
+        subject: q_hash("Alice"),
         predicate: q_hash("knows"),
-        object:    q_hash("Bob"),
-        context: 0, metadata: 0, parity: 0,
+        object: q_hash("Bob"),
+        context: 0,
+        metadata: 0,
+        parity: 0,
     };
     let mut prog = [0u8; 1024];
     // Query for Carol — not in the db above.
@@ -132,5 +162,8 @@ fn zero_match_still_reports_cycles_for_scanned_rows() {
     let (n, cycles) = execute_program(&prog, &[q], &mut out).unwrap();
 
     assert_eq!(n, 0, "Carol should not match");
-    assert!(cycles > 0, "cycles must be non-zero even when nothing matches — the subject check was still executed");
+    assert!(
+        cycles > 0,
+        "cycles must be non-zero even when nothing matches — the subject check was still executed"
+    );
 }

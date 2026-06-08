@@ -5,7 +5,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use qualia_core_db::{
-    llm_agent::{AgentError, AgentIntent, AgentOutput, AgentRuntime, LocalLlmAgent, WebizenVerdict},
+    llm_agent::{
+        AgentError, AgentIntent, AgentOutput, AgentRuntime, LocalLlmAgent, WebizenVerdict,
+    },
     n3_compiler::N3OutputMode,
     orchestrator::{ModelLifecycle, OrchestrationResult},
     q_hash,
@@ -17,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::chat_retrieval::{GraphCitation, RetrievalBundle};
 use crate::chat_session;
 use crate::context_binding::{self, InferenceContextPacket};
+use crate::ontology_router::OntologyRoutingDecision;
 
 const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
 
@@ -82,7 +85,12 @@ pub fn run_chat_inference_with_options(
     prompt: &str,
     on_token: Option<Arc<dyn Fn(String) + Send + Sync>>,
 ) -> ChatInferenceResult {
-    run_chat_inference_full(session_id, prompt, on_token, ChatInferenceOptions::default())
+    run_chat_inference_full(
+        session_id,
+        prompt,
+        on_token,
+        ChatInferenceOptions::default(),
+    )
 }
 
 pub fn run_chat_inference_full(
@@ -129,16 +137,18 @@ pub fn run_chat_inference_full(
     }
 
     let profile = crate::user_profile::load_profile();
-    let agent_cfg = match crate::chat_agents::load_local_agent_config(Path::new(&storage), session_id)
-    {
-        Ok(c) => c,
-        Err(e) => return empty(&e),
-    };
+    let agent_cfg =
+        match crate::chat_agents::load_local_agent_config(Path::new(&storage), session_id) {
+            Ok(c) => c,
+            Err(e) => return empty(&e),
+        };
 
+    let routing = crate::ontology_router::route_prompt_to_ontologies(&env, prompt);
     let retrieval = crate::chat_retrieval::retrieve_graph_context(
         Path::new(&storage),
         &env,
         prompt,
+        &routing.ontology_ids,
     );
 
     let packet = match build_augmented_packet(
@@ -148,6 +158,7 @@ pub fn run_chat_inference_full(
         prompt,
         &retrieval,
         &catalog,
+        &routing,
         options.reply_to_fragment_id.as_deref(),
     ) {
         Ok(p) => p,
@@ -171,11 +182,15 @@ pub fn run_chat_inference_full(
         },
     );
 
-    if let Some(lex_path) = resolve_sieve_lex_path(Path::new(&storage), &env, &packet.model_path) {
+    if let Some(lex_path) = resolve_sieve_lex_path(
+        Path::new(&storage),
+        &env,
+        &packet.model_path,
+        &routing.ontology_ids,
+    ) {
         agent.configure_sieve_lex(lex_path);
     }
-    let _ = crate::model_lifecycle::task_orchestrator()
-        .load_model(&agent, active.profile_id);
+    let _ = crate::model_lifecycle::task_orchestrator().load_model(&agent, active.profile_id);
     crate::model_lifecycle::record_llm_memory_bytes(
         agent
             .memory_used_bytes
@@ -197,6 +212,7 @@ pub fn run_chat_inference_full(
     let intent = AgentIntent {
         intent_predicate,
         requested_graph_scope: packet.graph_scope_hashes.clone(),
+        context_namespaces: packet.context_namespaces.clone(),
         requires_network: false,
         ilp_offer_micro_cents: 0,
         principal_did_hash: q_hash(&profile.public_did),
@@ -295,14 +311,7 @@ pub fn run_chat_inference_full(
             .load(std::sync::atomic::Ordering::Relaxed),
     );
     finalize_success_result(
-        output,
-        &retrieval,
-        started,
-        &agent_cfg,
-        false,
-        0,
-        false,
-        None,
+        output, &retrieval, started, &agent_cfg, false, 0, false, None,
     )
 }
 
@@ -321,13 +330,30 @@ fn run_orchestrated_inference(
     let mut suspended = crate::guardianship::suspended_queue()
         .lock()
         .expect("suspended_queue");
-    let result = orch.orchestrate_inference(
+    let mut result = orch.orchestrate_inference(
         agent,
         &packet.augmented_prompt,
         &packet.graph_context_json,
-        intent,
+        intent.clone(),
         Some(&mut *suspended),
     );
+
+    if let OrchestrationResult::Blocked {
+        rule_violated,
+        reason,
+    } = &result
+    {
+        if should_retry_symbolic_block(*rule_violated, reason) {
+            let corrective_prompt = build_corrective_retry_prompt(packet, reason);
+            result = orch.orchestrate_inference(
+                agent,
+                &corrective_prompt,
+                &packet.graph_context_json,
+                intent,
+                Some(&mut *suspended),
+            );
+        }
+    }
 
     match result {
         OrchestrationResult::Committed {
@@ -369,11 +395,47 @@ fn run_orchestrated_inference(
             )
         }
         OrchestrationResult::Blocked { reason, .. } => empty(reason),
-        OrchestrationResult::Failed(ref msg) if msg.contains("SieveMisaligned") => empty(
-            "Shield — sieve misaligned: model output did not match graph grammar.",
-        ),
+        OrchestrationResult::Failed(ref msg) if msg.contains("SieveMisaligned") => {
+            empty("Shield — sieve misaligned: model output did not match graph grammar.")
+        }
         OrchestrationResult::Failed(msg) => empty(&msg),
     }
+}
+
+fn should_retry_symbolic_block(rule_violated: u64, reason: &str) -> bool {
+    rule_violated == q_hash("q42:N3Compiler")
+        || reason.contains("SHACL")
+        || reason.contains("parseable N3")
+}
+
+fn build_corrective_retry_prompt(packet: &InferenceContextPacket, reason: &str) -> String {
+    let mut lines = vec![packet.augmented_prompt.clone()];
+    lines.push("[Symbolic corrective prompt]".to_string());
+    lines.push(format!(
+        "Your previous structured output was blocked by the deterministic SHACL/N3 gate: {reason}"
+    ));
+    if !packet.routed_ontology_ids.is_empty() {
+        lines.push(format!(
+            "Routed ontologies for this turn: {}",
+            packet.routed_ontology_ids.join(", ")
+        ));
+    }
+    if !packet.context_namespaces.is_empty() {
+        lines.push(format!(
+            "Context namespaces: {}",
+            packet
+                .context_namespaces
+                .iter()
+                .map(|h| format!("0x{h:016x}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    lines.push(
+        "Emit only grounded N3 assertions or graph-mutation output that stays within the routed ontology predicates and shape expectations."
+            .to_string(),
+    );
+    lines.join("\n")
 }
 
 fn finalize_success_result(
@@ -442,16 +504,35 @@ fn cancelled_result(
 }
 
 fn quin_to_fields(q: QualiaQuin) -> [u64; 6] {
-    [q.subject, q.predicate, q.object, q.context, q.metadata, q.parity]
+    [
+        q.subject,
+        q.predicate,
+        q.object,
+        q.context,
+        q.metadata,
+        q.parity,
+    ]
 }
 
 fn resolve_sieve_lex_path(
     storage: &Path,
     env: &crate::chat_session::ChatEnvironment,
     model_path: &str,
+    preferred_ontology_ids: &[String],
 ) -> Option<String> {
     let index = storage.join("Index");
-    for ont_id in &env.ontology_ids {
+    let ordered_ids = if preferred_ontology_ids.is_empty() {
+        env.ontology_ids.clone()
+    } else {
+        let mut ids = preferred_ontology_ids.to_vec();
+        for ont_id in &env.ontology_ids {
+            if !ids.contains(ont_id) {
+                ids.push(ont_id.clone());
+            }
+        }
+        ids
+    };
+    for ont_id in &ordered_ids {
         let q42 = index.join(format!("{ont_id}.q42"));
         if let Some(lex) = crate::chat_ontology::resolve_wordnet_lex(&q42) {
             return Some(lex.to_string_lossy().into_owned());
@@ -563,9 +644,7 @@ pub fn validate_axiom_preflight(
     bounds: &context_binding::AxiomBounds,
 ) -> Result<(), String> {
     if bounds.start_year > bounds.end_year {
-        return Err(
-            "Shield — invalid axiom bounds (start year is after end year)".to_string(),
-        );
+        return Err("Shield — invalid axiom bounds (start year is after end year)".to_string());
     }
 
     for year in extract_years(prompt) {
@@ -620,10 +699,14 @@ fn build_augmented_packet(
     user_prompt: &str,
     retrieval: &RetrievalBundle,
     catalog: &qualia_core_db::resource_catalog::ResourceCatalog,
+    routing: &OntologyRoutingDecision,
     reply_to_fragment_id: Option<&str>,
 ) -> Result<InferenceContextPacket, String> {
     let mut packet = context_binding::build_inference_packet(env, user_prompt, catalog)
         .map_err(|e| e.to_string())?;
+    packet.context_namespaces = routing.context_namespaces.clone();
+    packet.routed_ontology_ids = routing.ontology_ids.clone();
+    packet.routing_brief = routing.routing_brief.clone();
 
     let thread_block = if let Some(fragment_id) = reply_to_fragment_id {
         crate::chat_graph::build_thread_context_block(storage, session_id, fragment_id, 6)
@@ -663,16 +746,24 @@ fn build_augmented_packet(
             "citations": retrieval.citations,
             "provenance_hashes": retrieval.provenance_hashes.iter().map(|h| format!("0x{h:016x}")).collect::<Vec<_>>(),
         },
+        "ontology_routing": {
+            "ontology_ids": routing.ontology_ids.clone(),
+            "matched_terms": routing.matched_terms.clone(),
+            "context_namespaces": routing.context_namespaces.iter().map(|h| format!("0x{h:016x}")).collect::<Vec<_>>(),
+            "brief": routing.routing_brief.clone(),
+        },
         "chat_graph_thread": thread_block,
         "chat_files": files_block,
         "cooperative_agents": cooperative_block,
     });
-    packet.graph_context_json = serde_json::to_string(&enriched_context).unwrap_or(packet.graph_context_json);
+    packet.graph_context_json =
+        serde_json::to_string(&enriched_context).unwrap_or(packet.graph_context_json);
 
     if thread_block.is_empty() {
         packet.augmented_prompt = format!(
-            "{}\n\n{}\n\n{}\n\n{}\n\n---\nUser: {}\n---",
+            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser: {}\n---",
             env.capability_briefing,
+            routing.routing_brief,
             cooperative_block,
             files_block,
             retrieval.context_block,
@@ -680,8 +771,9 @@ fn build_augmented_packet(
         );
     } else {
         packet.augmented_prompt = format!(
-            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser (replying to graph fragment): {}\n---",
+            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser (replying to graph fragment): {}\n---",
             env.capability_briefing,
+            routing.routing_brief,
             cooperative_block,
             thread_block,
             files_block,
@@ -724,8 +816,11 @@ fn persist_citations(
         "citations": retrieval.citations,
         "tokens": output.tokens_generated,
     });
-    std::fs::write(meta_path, serde_json::to_string_pretty(&meta).unwrap_or_default())
-        .map_err(|e| e.to_string())?;
+    std::fs::write(
+        meta_path,
+        serde_json::to_string_pretty(&meta).unwrap_or_default(),
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 

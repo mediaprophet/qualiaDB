@@ -49,7 +49,10 @@ pub struct GapPenalty {
 
 impl Default for GapPenalty {
     fn default() -> Self {
-        Self { open: -11, extend: -1 }
+        Self {
+            open: -11,
+            extend: -1,
+        }
     }
 }
 
@@ -62,7 +65,10 @@ pub struct NucleotideMatrix {
 
 impl Default for NucleotideMatrix {
     fn default() -> Self {
-        Self { match_score: 2, mismatch_score: -3 }
+        Self {
+            match_score: 2,
+            mismatch_score: -3,
+        }
     }
 }
 
@@ -98,7 +104,9 @@ static BLOSUM62: [[i8; 20]; 20] = [
 
 #[inline]
 fn blosum62_idx(aa: u8) -> Option<usize> {
-    BLOSUM62_ORDER.iter().position(|&c| c == aa.to_ascii_uppercase())
+    BLOSUM62_ORDER
+        .iter()
+        .position(|&c| c == aa.to_ascii_uppercase())
 }
 
 /// BLOSUM62 score for two amino acid bytes.  Unknown residues → -4.
@@ -154,10 +162,15 @@ pub fn smith_waterman(
             let cell = diag.max(e[i][j]).max(f[i][j]).max(0);
             h[i][j] = cell;
 
-            tb[i][j] = if cell == 0 { 0 }
-                else if cell == diag { 1 }
-                else if cell == e[i][j] { 2 }
-                else { 3 };
+            tb[i][j] = if cell == 0 {
+                0
+            } else if cell == diag {
+                1
+            } else if cell == e[i][j] {
+                2
+            } else {
+                3
+            };
 
             if cell > best_score {
                 best_score = cell;
@@ -186,17 +199,40 @@ fn traceback_local(
 
     while i > 0 && j > 0 && h[i][j] > 0 {
         match tb[i][j] {
-            1 => { aq.push(query[i-1]); at.push(target[j-1]); if query[i-1].eq_ignore_ascii_case(&target[j-1]) { matches += 1; } i -= 1; j -= 1; }
-            2 => { aq.push(b'-'); at.push(target[j-1]); gaps += 1; j -= 1; }
-            3 => { aq.push(query[i-1]); at.push(b'-'); gaps += 1; i -= 1; }
+            1 => {
+                aq.push(query[i - 1]);
+                at.push(target[j - 1]);
+                if query[i - 1].eq_ignore_ascii_case(&target[j - 1]) {
+                    matches += 1;
+                }
+                i -= 1;
+                j -= 1;
+            }
+            2 => {
+                aq.push(b'-');
+                at.push(target[j - 1]);
+                gaps += 1;
+                j -= 1;
+            }
+            3 => {
+                aq.push(query[i - 1]);
+                at.push(b'-');
+                gaps += 1;
+                i -= 1;
+            }
             _ => break,
         }
     }
-    aq.reverse(); at.reverse();
+    aq.reverse();
+    at.reverse();
     let aln_len = aq.len();
     AlignmentResult {
         score,
-        identity_pct: if aln_len > 0 { 100.0 * matches as f32 / aln_len as f32 } else { 0.0 },
+        identity_pct: if aln_len > 0 {
+            100.0 * matches as f32 / aln_len as f32
+        } else {
+            0.0
+        },
         aligned_query: aq,
         aligned_target: at,
         num_matches: matches,
@@ -205,7 +241,14 @@ fn traceback_local(
 }
 
 fn empty_result() -> AlignmentResult {
-    AlignmentResult { score: 0, aligned_query: vec![], aligned_target: vec![], identity_pct: 0.0, num_matches: 0, num_gaps: 0 }
+    AlignmentResult {
+        score: 0,
+        aligned_query: vec![],
+        aligned_target: vec![],
+        identity_pct: 0.0,
+        num_matches: 0,
+        num_gaps: 0,
+    }
 }
 
 // ─── Needleman-Wunsch (linear gap) ───────────────────────────────────────────
@@ -224,14 +267,18 @@ pub fn needleman_wunsch(
     }
     let g = gap.open + gap.extend;
     let mut dp = vec![vec![0i32; n + 1]; m + 1];
-    for i in 0..=m { dp[i][0] = i as i32 * g; }
-    for j in 0..=n { dp[0][j] = j as i32 * g; }
+    for i in 0..=m {
+        dp[i][0] = i as i32 * g;
+    }
+    for j in 0..=n {
+        dp[0][j] = j as i32 * g;
+    }
 
     for i in 1..=m {
         for j in 1..=n {
-            let sub  = dp[i-1][j-1] + score_fn(query[i-1], target[j-1]);
-            let del  = dp[i-1][j]   + g;
-            let ins  = dp[i][j-1]   + g;
+            let sub = dp[i - 1][j - 1] + score_fn(query[i - 1], target[j - 1]);
+            let del = dp[i - 1][j] + g;
+            let ins = dp[i][j - 1] + g;
             dp[i][j] = sub.max(del).max(ins);
         }
     }
@@ -243,21 +290,36 @@ pub fn needleman_wunsch(
     let (mut i, mut j) = (m, n);
 
     while i > 0 || j > 0 {
-        if i > 0 && j > 0 && dp[i][j] == dp[i-1][j-1] + score_fn(query[i-1], target[j-1]) {
-            aq.push(query[i-1]); at.push(target[j-1]);
-            if query[i-1].eq_ignore_ascii_case(&target[j-1]) { matches += 1; }
-            i -= 1; j -= 1;
-        } else if i > 0 && (j == 0 || dp[i][j] == dp[i-1][j] + g) {
-            aq.push(query[i-1]); at.push(b'-'); gaps += 1; i -= 1;
+        if i > 0 && j > 0 && dp[i][j] == dp[i - 1][j - 1] + score_fn(query[i - 1], target[j - 1]) {
+            aq.push(query[i - 1]);
+            at.push(target[j - 1]);
+            if query[i - 1].eq_ignore_ascii_case(&target[j - 1]) {
+                matches += 1;
+            }
+            i -= 1;
+            j -= 1;
+        } else if i > 0 && (j == 0 || dp[i][j] == dp[i - 1][j] + g) {
+            aq.push(query[i - 1]);
+            at.push(b'-');
+            gaps += 1;
+            i -= 1;
         } else {
-            aq.push(b'-'); at.push(target[j-1]); gaps += 1; j -= 1;
+            aq.push(b'-');
+            at.push(target[j - 1]);
+            gaps += 1;
+            j -= 1;
         }
     }
-    aq.reverse(); at.reverse();
+    aq.reverse();
+    at.reverse();
     let aln_len = aq.len();
     AlignmentResult {
         score: dp[m][n],
-        identity_pct: if aln_len > 0 { 100.0 * matches as f32 / aln_len as f32 } else { 0.0 },
+        identity_pct: if aln_len > 0 {
+            100.0 * matches as f32 / aln_len as f32
+        } else {
+            0.0
+        },
         aligned_query: aq,
         aligned_target: at,
         num_matches: matches,
@@ -271,7 +333,11 @@ pub fn needleman_wunsch(
 pub fn align_nucleotide(query: &[u8], target: &[u8]) -> AlignmentResult {
     let mat = NucleotideMatrix::default();
     smith_waterman(query, target, GapPenalty::default(), move |a, b| {
-        if a.to_ascii_uppercase() == b.to_ascii_uppercase() { mat.match_score } else { mat.mismatch_score }
+        if a.to_ascii_uppercase() == b.to_ascii_uppercase() {
+            mat.match_score
+        } else {
+            mat.mismatch_score
+        }
     })
 }
 
@@ -283,19 +349,27 @@ pub fn align_protein(query: &[u8], target: &[u8]) -> AlignmentResult {
 /// Backward-compatible entry point returning the legacy `AlignmentScore`.
 pub fn align_sequences(query: &[u8], target: &[u8]) -> AlignmentScore {
     #[cfg(all(feature = "neon_simd_unroll", target_arch = "x86_64"))]
-    { return simd_align_x86_64(query, target); }
+    {
+        return simd_align_x86_64(query, target);
+    }
 
     #[cfg(all(feature = "neon_simd_unroll", target_arch = "aarch64"))]
-    { return simd_align_aarch64(query, target); }
+    {
+        return simd_align_aarch64(query, target);
+    }
 
-    AlignmentScore { score: align_nucleotide(query, target).score }
+    AlignmentScore {
+        score: align_nucleotide(query, target).score,
+    }
 }
 
 // ─── K-mer analysis ───────────────────────────────────────────────────────────
 
 /// Counts all k-mer occurrences; returns (kmer_fnv1a_hash, count) sorted by hash.
 pub fn kmer_frequencies(sequence: &[u8], k: usize) -> Vec<(u64, u32)> {
-    if k == 0 || k > sequence.len() { return vec![]; }
+    if k == 0 || k > sequence.len() {
+        return vec![];
+    }
     let mut counts = std::collections::HashMap::<u64, u32>::new();
     for window in sequence.windows(k) {
         let hash = window.iter().fold(0xcbf29ce484222325u64, |h, &b| {
@@ -310,7 +384,10 @@ pub fn kmer_frequencies(sequence: &[u8], k: usize) -> Vec<(u64, u32)> {
 
 /// MinHash sketch: the `sketch_size` smallest k-mer hashes.
 pub fn minhash_sketch(sequence: &[u8], k: usize, sketch_size: usize) -> Vec<u64> {
-    let mut hashes: Vec<u64> = kmer_frequencies(sequence, k).into_iter().map(|(h, _)| h).collect();
+    let mut hashes: Vec<u64> = kmer_frequencies(sequence, k)
+        .into_iter()
+        .map(|(h, _)| h)
+        .collect();
     hashes.sort_unstable();
     hashes.truncate(sketch_size);
     hashes
@@ -318,10 +395,16 @@ pub fn minhash_sketch(sequence: &[u8], k: usize, sketch_size: usize) -> Vec<u64>
 
 /// Jaccard similarity (0.0–1.0) between two MinHash sketches.
 pub fn jaccard_similarity(a: &[u64], b: &[u64]) -> f32 {
-    if a.is_empty() && b.is_empty() { return 1.0; }
+    if a.is_empty() && b.is_empty() {
+        return 1.0;
+    }
     let intersection = a.iter().filter(|&&x| b.binary_search(&x).is_ok()).count();
     let union = a.len() + b.len() - intersection;
-    if union == 0 { 1.0 } else { intersection as f32 / union as f32 }
+    if union == 0 {
+        1.0
+    } else {
+        intersection as f32 / union as f32
+    }
 }
 
 // ─── FASTA validation ─────────────────────────────────────────────────────────
@@ -345,24 +428,30 @@ pub struct FastaRecord {
 
 /// Validates and classifies a FASTA record.
 pub fn validate_fasta_record(header: &str, sequence: &[u8]) -> FastaRecord {
-    let dna_alphabet:     &[u8] = b"ACGTNacgtn-";
-    let rna_alphabet:     &[u8] = b"ACGUNacgun-";
+    let dna_alphabet: &[u8] = b"ACGTNacgtn-";
+    let rna_alphabet: &[u8] = b"ACGUNacgun-";
     let protein_alphabet: &[u8] = b"ACDEFGHIKLMNPQRSTVWYXacdefghiklmnpqrstvwyx*-";
 
     let is_dna = sequence.iter().all(|c| dna_alphabet.contains(c));
     let is_rna = sequence.iter().all(|c| rna_alphabet.contains(c));
     let is_protein = sequence.iter().all(|c| protein_alphabet.contains(c));
 
-    let mut invalid: Vec<char> = sequence.iter()
+    let mut invalid: Vec<char> = sequence
+        .iter()
         .filter(|c| !protein_alphabet.contains(c))
         .map(|&c| c as char)
         .collect();
     invalid.dedup();
 
-    let alphabet = if is_dna       { SequenceAlphabet::DNA }
-        else if is_rna             { SequenceAlphabet::RNA }
-        else if is_protein         { SequenceAlphabet::Protein }
-        else                       { SequenceAlphabet::Unknown };
+    let alphabet = if is_dna {
+        SequenceAlphabet::DNA
+    } else if is_rna {
+        SequenceAlphabet::RNA
+    } else if is_protein {
+        SequenceAlphabet::Protein
+    } else {
+        SequenceAlphabet::Unknown
+    };
 
     FastaRecord {
         header: header.to_string(),
@@ -380,19 +469,39 @@ pub fn validate_fasta_record(header: &str, sequence: &[u8]) -> FastaRecord {
 #[inline]
 pub fn tanimoto_similarity(fp_a: &[u64], fp_b: &[u64]) -> f32 {
     assert_eq!(fp_a.len(), fp_b.len(), "fingerprint lengths must match");
-    let intersection: u32 = fp_a.iter().zip(fp_b).map(|(a, b)| (a & b).count_ones()).sum();
-    let union: u32       = fp_a.iter().zip(fp_b).map(|(a, b)| (a | b).count_ones()).sum();
-    if union == 0 { 1.0 } else { intersection as f32 / union as f32 }
+    let intersection: u32 = fp_a
+        .iter()
+        .zip(fp_b)
+        .map(|(a, b)| (a & b).count_ones())
+        .sum();
+    let union: u32 = fp_a
+        .iter()
+        .zip(fp_b)
+        .map(|(a, b)| (a | b).count_ones())
+        .sum();
+    if union == 0 {
+        1.0
+    } else {
+        intersection as f32 / union as f32
+    }
 }
 
 /// Dice coefficient between two binary fingerprints.
 #[inline]
 pub fn dice_similarity(fp_a: &[u64], fp_b: &[u64]) -> f32 {
     assert_eq!(fp_a.len(), fp_b.len());
-    let intersection: u32 = fp_a.iter().zip(fp_b).map(|(a, b)| (a & b).count_ones()).sum();
+    let intersection: u32 = fp_a
+        .iter()
+        .zip(fp_b)
+        .map(|(a, b)| (a & b).count_ones())
+        .sum();
     let sum_a: u32 = fp_a.iter().map(|a| a.count_ones()).sum();
     let sum_b: u32 = fp_b.iter().map(|b| b.count_ones()).sum();
-    if sum_a + sum_b == 0 { 1.0 } else { 2.0 * intersection as f32 / (sum_a + sum_b) as f32 }
+    if sum_a + sum_b == 0 {
+        1.0
+    } else {
+        2.0 * intersection as f32 / (sum_a + sum_b) as f32
+    }
 }
 
 // ─── SIMD fast-paths (feature-gated) ───────────────────────────────────
@@ -405,7 +514,7 @@ pub fn simd_align_x86_64(query: &[u8], target: &[u8]) -> AlignmentScore {
         let min_len = query.len().min(target.len());
         let mut score = 0i32;
         let mut i = 0;
-        
+
         // Exact match fast-path using AVX2 (256-bit / 32-byte chunks)
         while i + 32 <= min_len {
             let q_vec = _mm256_loadu_si256(query.as_ptr().add(i) as *const __m256i);
@@ -414,20 +523,22 @@ pub fn simd_align_x86_64(query: &[u8], target: &[u8]) -> AlignmentScore {
             let mask = _mm256_movemask_epi8(cmp);
             let matches = mask.count_ones() as i32;
             let mismatches = 32 - matches;
-            
+
             score += matches * 2; // match score
             score -= mismatches * 3; // mismatch score
             i += 32;
         }
-        
+
         if i < min_len {
             score += align_nucleotide(&query[i..], &target[i..]).score;
         }
         return AlignmentScore { score };
     }
-    
+
     #[cfg(not(target_feature = "avx2"))]
-    AlignmentScore { score: align_nucleotide(query, target).score }
+    AlignmentScore {
+        score: align_nucleotide(query, target).score,
+    }
 }
 
 #[cfg(all(feature = "neon_simd_unroll", target_arch = "aarch64"))]
@@ -438,34 +549,38 @@ pub fn simd_align_aarch64(query: &[u8], target: &[u8]) -> AlignmentScore {
         let min_len = query.len().min(target.len());
         let mut score = 0i32;
         let mut i = 0;
-        
+
         // Exact match fast-path using NEON (128-bit / 16-byte chunks)
         while i + 16 <= min_len {
             let q_vec = vld1q_u8(query.as_ptr().add(i));
             let t_vec = vld1q_u8(target.as_ptr().add(i));
             let cmp = vceqq_u8(q_vec, t_vec);
-            
+
             let mut v = [0u8; 16];
             vst1q_u8(v.as_mut_ptr(), cmp);
             let mut matches = 0;
             for &b in &v {
-                if b == 0xFF { matches += 1; }
+                if b == 0xFF {
+                    matches += 1;
+                }
             }
             let mismatches = 16 - matches;
-            
+
             score += matches * 2;
             score -= mismatches * 3;
             i += 16;
         }
-        
+
         if i < min_len {
             score += align_nucleotide(&query[i..], &target[i..]).score;
         }
         return AlignmentScore { score };
     }
-    
+
     #[cfg(not(target_feature = "neon"))]
-    AlignmentScore { score: align_nucleotide(query, target).score }
+    AlignmentScore {
+        score: align_nucleotide(query, target).score,
+    }
 }
 
 // ─── DNA to Protein Translation ──────────────────────────────────────────────
@@ -476,33 +591,41 @@ pub fn simd_align_aarch64(query: &[u8], target: &[u8]) -> AlignmentScore {
 pub fn translate_dna_to_protein(dna: &[u8], out: &mut [u8]) -> usize {
     let mut written = 0;
     for i in (0..dna.len()).step_by(3) {
-        if i + 2 >= dna.len() { break; }
-        if written >= out.len() { break; }
-        
-        let codon = (dna[i].to_ascii_uppercase(), dna[i+1].to_ascii_uppercase(), dna[i+2].to_ascii_uppercase());
+        if i + 2 >= dna.len() {
+            break;
+        }
+        if written >= out.len() {
+            break;
+        }
+
+        let codon = (
+            dna[i].to_ascii_uppercase(),
+            dna[i + 1].to_ascii_uppercase(),
+            dna[i + 2].to_ascii_uppercase(),
+        );
         let aa = match codon {
-            (b'G', b'C', _) => b'A', // Alanine
+            (b'G', b'C', _) => b'A',                         // Alanine
             (b'T', b'G', b'C') | (b'T', b'G', b'T') => b'C', // Cysteine
             (b'G', b'A', b'C') | (b'G', b'A', b'T') => b'D', // Aspartic Acid
             (b'G', b'A', b'A') | (b'G', b'A', b'G') => b'E', // Glutamic Acid
             (b'T', b'T', b'C') | (b'T', b'T', b'T') => b'F', // Phenylalanine
-            (b'G', b'G', _) => b'G', // Glycine
+            (b'G', b'G', _) => b'G',                         // Glycine
             (b'C', b'A', b'C') | (b'C', b'A', b'T') => b'H', // Histidine
             (b'A', b'T', b'C') | (b'A', b'T', b'T') | (b'A', b'T', b'A') => b'I', // Isoleucine
             (b'A', b'A', b'A') | (b'A', b'A', b'G') => b'K', // Lysine
             (b'C', b'T', _) | (b'T', b'T', b'A') | (b'T', b'T', b'G') => b'L', // Leucine
-            (b'A', b'T', b'G') => b'M', // Methionine (Start)
+            (b'A', b'T', b'G') => b'M',                      // Methionine (Start)
             (b'A', b'A', b'C') | (b'A', b'A', b'T') => b'N', // Asparagine
-            (b'C', b'C', _) => b'P', // Proline
+            (b'C', b'C', _) => b'P',                         // Proline
             (b'C', b'A', b'A') | (b'C', b'A', b'G') => b'Q', // Glutamine
             (b'C', b'G', _) | (b'A', b'G', b'A') | (b'A', b'G', b'G') => b'R', // Arginine
             (b'T', b'C', _) | (b'A', b'G', b'C') | (b'A', b'G', b'T') => b'S', // Serine
-            (b'A', b'C', _) => b'T', // Threonine
-            (b'G', b'T', _) => b'V', // Valine
-            (b'T', b'G', b'G') => b'W', // Tryptophan
+            (b'A', b'C', _) => b'T',                         // Threonine
+            (b'G', b'T', _) => b'V',                         // Valine
+            (b'T', b'G', b'G') => b'W',                      // Tryptophan
             (b'T', b'A', b'C') | (b'T', b'A', b'T') => b'Y', // Tyrosine
             (b'T', b'A', b'A') | (b'T', b'A', b'G') | (b'T', b'G', b'A') => b'*', // Stop
-            _ => b'X', // Unknown
+            _ => b'X',                                       // Unknown
         };
         out[written] = aa;
         written += 1;
@@ -544,7 +667,7 @@ pub fn calculate_isoelectric_point(protein: &[u8]) -> f64 {
     let pka_e = 4.07;
     let pka_c = 8.18;
     let pka_y = 10.46;
-    
+
     let pka_n_term = 8.20;
     let pka_h = 6.04;
     let pka_k = 10.53;
@@ -556,12 +679,12 @@ pub fn calculate_isoelectric_point(protein: &[u8]) -> f64 {
             + (e as f64) / (1.0 + 10.0_f64.powf(pka_e - ph))
             + (c as f64) / (1.0 + 10.0_f64.powf(pka_c - ph))
             + (y as f64) / (1.0 + 10.0_f64.powf(pka_y - ph));
-        
+
         let pos = (n_term as f64) / (1.0 + 10.0_f64.powf(ph - pka_n_term))
             + (h as f64) / (1.0 + 10.0_f64.powf(ph - pka_h))
             + (k as f64) / (1.0 + 10.0_f64.powf(ph - pka_k))
             + (r as f64) / (1.0 + 10.0_f64.powf(ph - pka_r));
-            
+
         pos - neg
     };
 
@@ -571,7 +694,11 @@ pub fn calculate_isoelectric_point(protein: &[u8]) -> f64 {
     for _ in 0..50 {
         let mid = (low + high) / 2.0;
         let charge = net_charge(mid);
-        if charge > 0.0 { low = mid; } else { high = mid; }
+        if charge > 0.0 {
+            low = mid;
+        } else {
+            high = mid;
+        }
     }
     (low + high) / 2.0
 }
@@ -584,7 +711,9 @@ pub fn calculate_isoelectric_point(protein: &[u8]) -> f64 {
 pub fn predict_peptide_cleavage(protein: &[u8], out_indices: &mut [usize]) -> usize {
     let mut count = 0;
     for i in 0..protein.len() {
-        if count >= out_indices.len() { break; }
+        if count >= out_indices.len() {
+            break;
+        }
         let aa = protein[i].to_ascii_uppercase();
         if aa == b'K' || aa == b'R' {
             if i + 1 < protein.len() && protein[i + 1].to_ascii_uppercase() == b'P' {
@@ -620,7 +749,11 @@ mod tests {
     #[test]
     fn blosum62_diagonal_positive() {
         for aa in b"ACDEFGHIKLMNPQRSTVWY" {
-            assert!(blosum62_score(*aa, *aa) > 0, "diagonal should be positive for {}", *aa as char);
+            assert!(
+                blosum62_score(*aa, *aa) > 0,
+                "diagonal should be positive for {}",
+                *aa as char
+            );
         }
     }
 
@@ -640,7 +773,11 @@ mod tests {
     fn nw_global_fills_gaps() {
         let mat = NucleotideMatrix::default();
         let r = needleman_wunsch(b"ACGT", b"ACGTTTT", GapPenalty::default(), move |a, b| {
-            if a.to_ascii_uppercase() == b.to_ascii_uppercase() { mat.match_score } else { mat.mismatch_score }
+            if a.to_ascii_uppercase() == b.to_ascii_uppercase() {
+                mat.match_score
+            } else {
+                mat.mismatch_score
+            }
         });
         assert_eq!(r.aligned_query.len(), r.aligned_target.len());
     }

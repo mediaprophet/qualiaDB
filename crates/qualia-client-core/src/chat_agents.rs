@@ -173,8 +173,8 @@ pub fn load_local_agent_config(
     }
 
     let profile = crate::user_profile::load_profile();
-    let session = chat_session::load_session(storage_root, session_id)
-        .map_err(|e| e.to_string())?;
+    let session =
+        chat_session::load_session(storage_root, session_id).map_err(|e| e.to_string())?;
     let active = crate::context_binding::load_active_model_record();
     Ok(fresh_local_agent_config(
         &profile.public_did,
@@ -297,11 +297,7 @@ pub fn can_relay_agent_outcome(
     if !is_participant(principal, participants) {
         return false;
     }
-    let policy = msg
-        .outcome_sharing
-        .as_ref()
-        .cloned()
-        .unwrap_or_default();
+    let policy = msg.outcome_sharing.as_ref().cloned().unwrap_or_default();
     match policy.visibility {
         OutcomeVisibility::OwnerOnly => false,
         OutcomeVisibility::SessionParticipants => true,
@@ -321,11 +317,7 @@ pub fn can_view_agent_outcome(
     if msg.sub_agent_of.as_deref() == Some(viewer_did) {
         return true;
     }
-    let policy = msg
-        .outcome_sharing
-        .as_ref()
-        .cloned()
-        .unwrap_or_default();
+    let policy = msg.outcome_sharing.as_ref().cloned().unwrap_or_default();
     match policy.visibility {
         OutcomeVisibility::OwnerOnly => false,
         OutcomeVisibility::SessionParticipants => is_participant(viewer_did, participants),
@@ -439,7 +431,10 @@ pub fn build_cooperative_agents_block(
             let model = p.model_id.as_deref().unwrap_or("hidden");
             lines.push(format!(
                 "  - {label} → sub_agent={} backend={} model={} shares_outcomes={}",
-                p.sub_agent_did, p.backend.as_str(), model, p.shares_outcomes
+                p.sub_agent_did,
+                p.backend.as_str(),
+                model,
+                p.shares_outcomes
             ));
         }
     }
@@ -493,10 +488,7 @@ mod tests {
     use crate::chat_session::ChatParticipant;
 
     fn tmp_storage() -> std::path::PathBuf {
-        let path = std::env::temp_dir().join(format!(
-            "qualia-chat-agents-test-{}",
-            unix_now()
-        ));
+        let path = std::env::temp_dir().join(format!("qualia-chat-agents-test-{}", unix_now()));
         let _ = fs::create_dir_all(&path);
         path
     }

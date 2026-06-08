@@ -14,6 +14,7 @@ use crate::QualiaQuin;
 pub const MAX_COMPILED_OPCODES: usize = 256;
 pub const MAX_COMPILED_QUINS: usize = 64;
 pub const MAX_INTENT_SCOPE_SLOTS: usize = 16;
+pub const MAX_CONTEXT_NAMESPACE_SLOTS: usize = 16;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum N3OutputMode {
@@ -59,11 +60,13 @@ pub struct AgentIntentFrame {
     pub mcp_intent_frame_hash: u64,
     pub ilp_offer_micro_cents: u64,
     pub scope_count: u8,
+    pub context_namespace_count: u8,
     pub requires_network: bool,
     pub output_mode: N3OutputMode,
     pub clearance_ceiling: u8,
     pub max_sentinel_depth: u8,
     pub graph_scope: [u64; MAX_INTENT_SCOPE_SLOTS],
+    pub context_namespaces: [u64; MAX_CONTEXT_NAMESPACE_SLOTS],
 }
 
 fn term_hash(term: &Term) -> Result<u64, N3CompileError> {
@@ -92,7 +95,10 @@ fn first_triple(formula: &Formula) -> Result<&Triple, N3CompileError> {
 }
 
 /// Returns true when every conclusion triple property path matches a compiled SHACL shape.
-pub fn validate_rule_against_shapes(rule: &Rule, shapes: &[&CompiledShape]) -> Result<(), N3CompileError> {
+pub fn validate_rule_against_shapes(
+    rule: &Rule,
+    shapes: &[&CompiledShape],
+) -> Result<(), N3CompileError> {
     if shapes.is_empty() {
         return Ok(());
     }
@@ -118,7 +124,11 @@ pub fn validate_rule_against_shapes(rule: &Rule, shapes: &[&CompiledShape]) -> R
     }
 }
 
-fn push_opcode(out: &mut [SlgOpcode], count: &mut usize, opcode: SlgOpcode) -> Result<(), N3CompileError> {
+fn push_opcode(
+    out: &mut [SlgOpcode],
+    count: &mut usize,
+    opcode: SlgOpcode,
+) -> Result<(), N3CompileError> {
     if *count >= out.len() {
         return Err(N3CompileError::OpcodeBufferFull);
     }
@@ -128,7 +138,10 @@ fn push_opcode(out: &mut [SlgOpcode], count: &mut usize, opcode: SlgOpcode) -> R
 }
 
 /// Lower one N3 rule into Sentinel opcodes (reuses SHACL terminal semantics).
-pub fn compile_rule_to_opcodes(rule: &Rule, out: &mut [SlgOpcode]) -> Result<usize, N3CompileError> {
+pub fn compile_rule_to_opcodes(
+    rule: &Rule,
+    out: &mut [SlgOpcode],
+) -> Result<usize, N3CompileError> {
     let mut count = 0usize;
     match rule.rule_type {
         RuleType::Strict => {
@@ -202,7 +215,8 @@ pub fn compile_rules_with_shacl_gate(
         let written = compile_rule_to_opcodes(rule, &mut opcodes_out[opcode_offset..])?;
         opcode_offset += written;
 
-        let quins_written = compile_rule_to_quin(rule, contract_hash, &mut quins_out[quin_offset..])?;
+        let quins_written =
+            compile_rule_to_quin(rule, contract_hash, &mut quins_out[quin_offset..])?;
         quin_offset += quins_written;
     }
 
@@ -304,7 +318,10 @@ mod tests {
         assert!(result.unwrap().opcode_count > 0);
 
         let stats = dhat::HeapStats::get();
-        assert_eq!(stats.curr_blocks, 0, "compile_rules_with_shacl_gate must not allocate");
+        assert_eq!(
+            stats.curr_blocks, 0,
+            "compile_rules_with_shacl_gate must not allocate"
+        );
         assert_eq!(stats.curr_bytes, 0);
     }
 }

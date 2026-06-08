@@ -1,7 +1,6 @@
 // QualiaDB Trusted Execution Environment (TEE) Bindings
-// Handles Cryptographic signatures (Bilateral Guardianship/DID) natively within the 
+// Handles Cryptographic signatures (Bilateral Guardianship/DID) natively within the
 // Secure Enclave, guaranteeing private keys never leak into the Rust RAM boundaries.
-
 
 #[cfg(target_os = "android")]
 pub mod android_keystore {
@@ -40,17 +39,17 @@ pub mod apple_secure_enclave {
         // CoreFoundation & Security framework native bindings for the Apple Secure Enclave
         // `dataToSign` points to the CFDataRef wrapper of the 48-byte QualiaQuin
         pub fn SecKeyCreateSignature(
-            key: *mut c_void, // SecKeyRef
-            algorithm: *mut c_void, // SecKeyAlgorithm
+            key: *mut c_void,        // SecKeyRef
+            algorithm: *mut c_void,  // SecKeyAlgorithm
             dataToSign: *mut c_void, // CFDataRef
             error: *mut *mut c_void, // CFErrorRef
         ) -> *mut c_void; // Returns CFDataRef signature
 
         pub fn SecKeyVerifySignature(
-            key: *mut c_void, // SecKeyRef
-            algorithm: *mut c_void, // SecKeyAlgorithm
+            key: *mut c_void,        // SecKeyRef
+            algorithm: *mut c_void,  // SecKeyAlgorithm
             signedData: *mut c_void, // CFDataRef
-            signature: *mut c_void, // CFDataRef
+            signature: *mut c_void,  // CFDataRef
             error: *mut *mut c_void, // CFErrorRef
         ) -> bool;
     }

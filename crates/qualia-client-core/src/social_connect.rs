@@ -105,13 +105,19 @@ fn resolve_front_door_did(profile: &crate::user_profile::UserProfile) -> String 
         .unwrap_or_else(|| profile.public_did.clone())
 }
 
-pub fn generate_connect_invite(front_door_id: Option<String>) -> Result<ConnectInviteSummary, String> {
+pub fn generate_connect_invite(
+    front_door_id: Option<String>,
+) -> Result<ConnectInviteSummary, String> {
     let profile = load_profile();
     if !profile.sharing.allow_group_chat_invites {
-        return Err("Group chat invites are disabled in your profile sharing settings.".to_string());
+        return Err(
+            "Group chat invites are disabled in your profile sharing settings.".to_string(),
+        );
     }
 
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
 
     let mut profile = profile;
     if let Some(id) = front_door_id {
@@ -126,7 +132,8 @@ pub fn generate_connect_invite(front_door_id: Option<String>) -> Result<ConnectI
 
     let vault = state.key_vault.lock().unwrap();
     let signing_key = vault.derive_key("connect-invite");
-    let inviter_pubkey_hex = hex::encode(ed25519_dalek::VerifyingKey::from(&signing_key).as_bytes());
+    let inviter_pubkey_hex =
+        hex::encode(ed25519_dalek::VerifyingKey::from(&signing_key).as_bytes());
 
     let relay_endpoint = profile
         .relay_base_url
@@ -311,7 +318,10 @@ pub fn find_contact_by_did(did: &str) -> Option<ChatContact> {
     list_chat_contacts().into_iter().find(|c| c.did == did)
 }
 
-pub fn update_contact_categories(did: &str, categories: Vec<String>) -> Result<ChatContact, String> {
+pub fn update_contact_categories(
+    did: &str,
+    categories: Vec<String>,
+) -> Result<ChatContact, String> {
     let mut contacts = load_contacts();
     let idx = contacts
         .iter()
@@ -332,7 +342,9 @@ pub fn list_chat_contacts() -> Vec<ChatContact> {
         if let Ok(actors) = crate::api::get_directory_actors() {
             contacts = actors
                 .into_iter()
-                .filter(|a| a.actor_type == "FRIEND" || a.roles.iter().any(|r| r == "chat_participant"))
+                .filter(|a| {
+                    a.actor_type == "FRIEND" || a.roles.iter().any(|r| r == "chat_participant")
+                })
                 .map(|a| ChatContact {
                     actor_id: a.id,
                     display_name: a.name,

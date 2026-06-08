@@ -1,36 +1,36 @@
+use futures_core::Stream;
 use std::fs::File;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use futures_core::Stream;
 use zeroize::Zeroize;
 
-pub mod query_engine;
-pub mod n3_parser;
-pub mod n3_compiler;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod ingest;
+pub mod chat_relay_daemon;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod q42_reader;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod q42_lex;
-pub mod llm_agent;
-pub mod neuro_symbolic_sieve;
-pub mod profiles;
-pub mod solid_ldp;
-pub mod wasm_bridge;
-pub mod modalities;
+pub mod comorbidity_eval;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod dicom;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod dicom_ingest;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod chat_relay_daemon;
+pub mod ingest;
+pub mod llm_agent;
+pub mod modalities;
+pub mod n3_compiler;
+pub mod n3_parser;
+pub mod neuro_symbolic_sieve;
+pub mod profiles;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod webtorrent_seeder;
+pub mod q42_lex;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod q42_reader;
+pub mod query_engine;
+pub mod solid_ldp;
+pub mod wasm_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod webtorrent_routes;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod comorbidity_eval;
+pub mod webtorrent_seeder;
 
 /// The Global Capability Registry exposes which features are compiled into the
 /// current qualia-core-db binary. This allows the CLI to dynamically self-document
@@ -60,8 +60,21 @@ pub const CAPABILITY_REGISTRY: &[&str] = &[
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
 /// Fully optimized for zero-copy memory operations on post-2020 architectures.
 #[repr(C, align(16))]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Zeroize, bytemuck::Pod, bytemuck::Zeroable)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Default,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Zeroize,
+    bytemuck::Pod,
+    bytemuck::Zeroable,
+    serde::Serialize,
+    serde::Deserialize,
+)]
 pub struct QualiaQuin {
     /// Subject identifier code reference index
     pub subject: u64,
@@ -97,9 +110,9 @@ impl QualiaQuin {
     #[inline(always)]
     pub fn identify_routing_lane(&self) -> PermissiveRoutingLane {
         // Since it's packed, taking reference to field might be unsafe in some contexts,
-        // but passing self by reference and copying the field is usually fine, 
-        // though `self.metadata` directly copies if it's Copy. 
-        // Let's use `let metadata = { self.metadata };` to safely copy if needed, 
+        // but passing self by reference and copying the field is usually fine,
+        // though `self.metadata` directly copies if it's Copy.
+        // Let's use `let metadata = { self.metadata };` to safely copy if needed,
         // but `self.metadata` usually works if we don't take a reference to it.
         let metadata = self.metadata;
         let lane_bits = (metadata & Self::LANE_MASK) >> Self::SHIFT_LANE;
@@ -107,7 +120,7 @@ impl QualiaQuin {
             0x01 => PermissiveRoutingLane::EnforcePermissiveCommons,
             0x02 => PermissiveRoutingLane::EnforceBilateralMicroCommons,
             0x03 => PermissiveRoutingLane::SpatiotemporalAmbiguous,
-            _    => PermissiveRoutingLane::PassthroughStandard,
+            _ => PermissiveRoutingLane::PassthroughStandard,
         }
     }
 
@@ -161,7 +174,7 @@ impl QualiaQuin {
     pub fn new_conduct_violation(reason: &[u8]) -> Self {
         let mut quin = Self::default();
         quin.predicate = 0x42_0000_0000_0000; // Fake hash for q42:conductViolation
-        // Truncate reason to 8 bytes for object for simplicity
+                                              // Truncate reason to 8 bytes for object for simplicity
         let mut obj_bytes = [0u8; 8];
         let len = core::cmp::min(reason.len(), 8);
         obj_bytes[..len].copy_from_slice(&reason[..len]);
@@ -209,7 +222,7 @@ pub struct QualiaSuperBlock {
     pub hardware_profile_flags: u32,
     /// Identifier for attached 3D voxel/tetrahedra FEA structural mesh layer
     pub fea_mesh_index_id: u64,
-    /// Fixed trailing block buffer space to force page-header normalization 
+    /// Fixed trailing block buffer space to force page-header normalization
     pub layout_padding: [u8; 120], // Adjusted padding to maintain exactly 160 bytes header
     /// Contiguous un-padded sequential database array zones
     pub quin_ledger: [QualiaQuin; QUINS_PER_BLOCK],
@@ -235,14 +248,14 @@ pub enum PermissiveRoutingLane {
 
 // Bitwise parameters checked for targeted DID tracks
 pub const MASK_AUTHENTICATED_NATURAL_PERSON: u16 = 0b0000_0001;
-pub const MASK_BILATERAL_IDENTITY_LOCKED:   u16 = 0b0000_0010;
-pub const MASK_COMMERCIAL_BILLABLE_GATE:    u16 = 0b0000_0100;
-pub const MASK_WORK_OBLIGATION_SATISFIED:   u16 = 0b0000_1000;
+pub const MASK_BILATERAL_IDENTITY_LOCKED: u16 = 0b0000_0010;
+pub const MASK_COMMERCIAL_BILLABLE_GATE: u16 = 0b0000_0100;
+pub const MASK_WORK_OBLIGATION_SATISFIED: u16 = 0b0000_1000;
 
 #[inline(always)]
 pub fn evaluate_permissive_runtime_gate(
-    entry_policy_mask: u16, 
-    requesting_agent_signature_flags: u16
+    entry_policy_mask: u16,
+    requesting_agent_signature_flags: u16,
 ) -> bool {
     // If permissive commons work metrics or cost recoupments are met, data opens at zero cost
     if (entry_policy_mask & MASK_WORK_OBLIGATION_SATISFIED) != 0 {
@@ -250,15 +263,15 @@ pub fn evaluate_permissive_runtime_gate(
     }
 
     // Halt corporate analytics data mining if programmatic micro-payment ticks fail
-    if (requesting_agent_signature_flags & MASK_COMMERCIAL_BILLABLE_GATE) != 0 
-        && (entry_policy_mask & MASK_COMMERCIAL_BILLABLE_GATE) != 0 
+    if (requesting_agent_signature_flags & MASK_COMMERCIAL_BILLABLE_GATE) != 0
+        && (entry_policy_mask & MASK_COMMERCIAL_BILLABLE_GATE) != 0
     {
-        return false; 
+        return false;
     }
 
     // Multi-signatory guardian/ward validation constraints check
-    if (entry_policy_mask & MASK_BILATERAL_IDENTITY_LOCKED) != 0 
-        && (requesting_agent_signature_flags & MASK_AUTHENTICATED_NATURAL_PERSON) == 0 
+    if (entry_policy_mask & MASK_BILATERAL_IDENTITY_LOCKED) != 0
+        && (requesting_agent_signature_flags & MASK_AUTHENTICATED_NATURAL_PERSON) == 0
     {
         return false;
     }
@@ -284,15 +297,18 @@ impl<'a> Stream for QuinIncrementalScanner<'a> {
         }
 
         let file_offset = self.block_sector_offsets[self.current_cursor];
-        if file_offset == 0 { return Poll::Ready(None); }
+        if file_offset == 0 {
+            return Poll::Ready(None);
+        }
 
         #[cfg(target_family = "unix")]
         {
             use std::os::unix::fs::FileExt;
-            
+
             // Unpack layout buffer straight into register space via raw block copy paths
             let destination_ptr = &mut self.allocated_working_buffer as *mut _ as *mut u8;
-            let byte_slice = unsafe { std::slice::from_raw_parts_mut(destination_ptr, BLOCK_MULTIPLIER_SIZE) };
+            let byte_slice =
+                unsafe { std::slice::from_raw_parts_mut(destination_ptr, BLOCK_MULTIPLIER_SIZE) };
 
             if let Err(e) = self.file_descriptor.read_exact_at(byte_slice, file_offset) {
                 return Poll::Ready(Some(Err(e)));
@@ -302,14 +318,23 @@ impl<'a> Stream for QuinIncrementalScanner<'a> {
         #[cfg(target_family = "windows")]
         {
             use std::os::windows::fs::FileExt;
-            
+
             let destination_ptr = &mut self.allocated_working_buffer as *mut _ as *mut u8;
-            let byte_slice = unsafe { std::slice::from_raw_parts_mut(destination_ptr, BLOCK_MULTIPLIER_SIZE) };
+            let byte_slice =
+                unsafe { std::slice::from_raw_parts_mut(destination_ptr, BLOCK_MULTIPLIER_SIZE) };
 
             let mut bytes_read = 0;
             while bytes_read < BLOCK_MULTIPLIER_SIZE {
-                match self.file_descriptor.seek_read(&mut byte_slice[bytes_read..], file_offset + bytes_read as u64) {
-                    Ok(0) => return Poll::Ready(Some(Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "failed to fill whole buffer")))),
+                match self.file_descriptor.seek_read(
+                    &mut byte_slice[bytes_read..],
+                    file_offset + bytes_read as u64,
+                ) {
+                    Ok(0) => {
+                        return Poll::Ready(Some(Err(std::io::Error::new(
+                            std::io::ErrorKind::UnexpectedEof,
+                            "failed to fill whole buffer",
+                        ))))
+                    }
                     Ok(n) => bytes_read += n,
                     Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => {}
                     Err(e) => return Poll::Ready(Some(Err(e))),
@@ -322,7 +347,7 @@ impl<'a> Stream for QuinIncrementalScanner<'a> {
         // Using `std::ptr::addr_of!` or just making a local copy is safe.
         // `self.allocated_working_buffer.quin_ledger[0]` copies the 40-byte struct because it implements Copy.
         let sampling_quin = self.allocated_working_buffer.quin_ledger[0];
-        
+
         if !sampling_quin.verify_ecc_parity() {
             return Poll::Ready(Some(Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
@@ -339,7 +364,7 @@ impl<'a> Stream for QuinIncrementalScanner<'a> {
                         "Target resource permissive commons access criteria unfulfilled",
                     ))));
                 }
-            },
+            }
             PermissiveRoutingLane::EnforceBilateralMicroCommons => {
                 let _relation_token = sampling_quin.extract_clean_metadata_value();
                 // Core evaluation checks require signature presence before output emission
@@ -349,10 +374,10 @@ impl<'a> Stream for QuinIncrementalScanner<'a> {
                         "Protected Bilateral Micro-Commons authorization token missing",
                     ))));
                 }
-            },
+            }
             PermissiveRoutingLane::PassthroughStandard => {
                 // Directly bypasses permission check matrices for regular local database paths
-            },
+            }
             PermissiveRoutingLane::SpatiotemporalAmbiguous => {
                 // Routed to the Geometric Pruning Pipeline and Agent Orchestrator
             }
@@ -360,7 +385,7 @@ impl<'a> Stream for QuinIncrementalScanner<'a> {
 
         self.current_cursor += 1;
         let elements_in_frame = self.allocated_working_buffer.active_quin_count as usize;
-        
+
         // Cannot take a slice of an unaligned array. However, `QualiaQuin` is 40 bytes, which is a multiple of 8.
         // But `#[repr(C, packed)]` causes the elements in `quin_ledger` to be tightly packed with 1-byte alignment.
         // But since it's 40 bytes (multiple of 8), they end up exactly where they would be if aligned to 8!
@@ -384,80 +409,79 @@ impl Drop for QualiaSuperBlock {
     }
 }
 
-pub mod geometric;
-pub mod indexing;
-pub mod logic;
-pub mod orchestrator;
-pub mod resolver;
-pub mod spatial;
-pub mod rules;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod npu_ffi;
+pub mod agency;
+pub mod cbor_compiler;
+pub mod crdt;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon_graph;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon_query;
-pub mod tee_ffi;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod wal;
-pub mod crdt;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod sync;
-pub mod cbor_compiler;
-pub mod git_bridge;
-pub mod tax_schema;
-pub mod spatial_sieve;
-pub mod webizen;
-pub mod shacl_compiler;
-pub mod owl_to_shacl;
-pub mod agency;
-pub mod query_compiler;
 pub mod fuzz_testing;
-pub mod ingestion;
-pub mod lexicon;
-pub mod storage;
-pub mod telemetry;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod rpc;
+pub mod geometric;
+pub mod git_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
+pub mod indexing;
+pub mod ingestion;
+pub mod lexicon;
+pub mod logic;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod npu_ffi;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod nym_adapter;
+pub mod orchestrator;
+pub mod owl_to_shacl;
+pub mod query_compiler;
+pub mod resolver;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod rpc;
+pub mod rules;
+pub mod shacl_compiler;
+pub mod spatial;
+pub mod spatial_sieve;
+pub mod storage;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod sync;
+pub mod tax_schema;
+pub mod tee_ffi;
+pub mod telemetry;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod wal;
+pub mod webizen;
 
-pub mod mini_parser;
-pub mod webizen_bytecode;
-pub mod identifier;
 pub mod bioinformatics;
 pub mod clinical_engine;
-pub mod organic_chemistry;
-pub mod ode_solver;
-pub mod quantum_dft;
-pub mod qubo_compiler;
-pub mod qpu_ingress;
-pub mod thermodynamics;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon_swarm;
+#[cfg(target_os = "windows")]
+pub mod directml_bridge;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ggml_quants;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gguf_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gguf_sharder;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ggml_quants;
-#[cfg(target_os = "windows")]
-pub mod directml_bridge;
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-pub mod metal_bridge;
-pub mod resource_catalog;
+pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub mod metal_bridge;
+pub mod mini_parser;
+pub mod ode_solver;
+pub mod organic_chemistry;
+pub mod qpu_ingress;
+pub mod quantum_dft;
+pub mod qubo_compiler;
+pub mod resource_catalog;
+pub mod thermodynamics;
+pub mod webizen_bytecode;
 
 #[cfg(target_os = "android")]
 pub mod jni_bridge;
 
 #[cfg(target_arch = "wasm32")]
-
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_edge;
 
@@ -476,7 +500,7 @@ pub const fn q_hash(s: &str) -> u64 {
 }
 
 /// Advanced 2026 Q-Turtle Macro
-/// Translates terse semantic triples into physical 48-byte hardware Quins 
+/// Translates terse semantic triples into physical 48-byte hardware Quins
 /// strictly at compile time. Eliminates runtime string allocations entirely.
 #[macro_export]
 macro_rules! q_turtle {
@@ -499,61 +523,95 @@ mod tests {
 
     #[test]
     fn qualia_spatial_val() {
-        use crate::spatial::{SpatiotemporalQuadTree, embed_h3_context};
-        
+        use crate::spatial::{embed_h3_context, SpatiotemporalQuadTree};
+
         let h3_index = 0x8a2a1072b59ffff; // Mock H3 cell index
         let context_val = embed_h3_context(h3_index);
-        assert_eq!(context_val, h3_index, "Failed to embed H3 index into context");
+        assert_eq!(
+            context_val, h3_index,
+            "Failed to embed H3 index into context"
+        );
 
         let quad_tree = SpatiotemporalQuadTree {
             root_bounds: (0.0, 0.0, 100.0, 100.0),
         };
-        
+
         let results = quad_tree.query_region(10.0, 10.0, 20.0, 20.0);
         // We expect it to be empty since it's a structural mock
-        assert_eq!(results.len(), 0, "SpatiotemporalQuadTree placeholder query failed");
+        assert_eq!(
+            results.len(),
+            0,
+            "SpatiotemporalQuadTree placeholder query failed"
+        );
     }
 
     #[test]
     fn qualia_logic_val() {
-        use crate::logic::{WebizenVM, WebizenOpcode, WebizenCompiler};
-        let q = QualiaQuin { subject: 0, predicate: 100, object: 18, context: 0, metadata: 0, parity: 0 };
-        
+        use crate::logic::{WebizenCompiler, WebizenOpcode, WebizenVM};
+        let q = QualiaQuin {
+            subject: 0,
+            predicate: 100,
+            object: 18,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+
         let mut vm = WebizenVM::new();
-        // Use the Compiler mock to generate bytecode for the constraint: 
+        // Use the Compiler mock to generate bytecode for the constraint:
         // Must have predicate 100 and object 18.
         let bytecode = WebizenCompiler::compile_mock_constraint();
         vm.load_bytecode(&bytecode);
-        
+
         let result = vm.execute_constraint(&q);
-        assert_eq!(result, true, "Webizen VM failed to validate constraint byte-code");
+        assert_eq!(
+            result, true,
+            "Webizen VM failed to validate constraint byte-code"
+        );
     }
 
     #[test]
     fn qualia_webizen_guardianship() {
-        use crate::logic::{WebizenVM, WebizenOpcode};
-        
+        use crate::logic::{WebizenOpcode, WebizenVM};
+
         // 0b11 << 61 signals SpatiotemporalAmbiguous for bounding logic
-        let q = QualiaQuin { subject: 0, predicate: 0, object: 0, context: 0, metadata: 0b11 << 61 | 500, parity: 0 };
-        
+        let q = QualiaQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0b11 << 61 | 500,
+            parity: 0,
+        };
+
         let mut vm = WebizenVM::new();
         let bytecode = vec![
             WebizenOpcode::EvalMetadataMask(499), // Try to match exactly 499 on the lower 16 bits
             WebizenOpcode::HaltIfFalse,
         ];
         vm.load_bytecode(&bytecode);
-        
+
         let result = vm.execute_constraint(&q);
-        assert_eq!(result, false, "Webizen VM failed to deny mismatched EvalMetadataMask");
+        assert_eq!(
+            result, false,
+            "Webizen VM failed to deny mismatched EvalMetadataMask"
+        );
     }
 
     #[test]
     fn qualia_ldp_rdf_star_mapping() {
         use crate::solid_ldp::SolidLdpFacade;
-        let q = QualiaQuin { subject: 1, predicate: 2, object: 3, context: 4, metadata: 0b11 << 61 | 555, parity: 0 };
-        
+        let q = QualiaQuin {
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 4,
+            metadata: 0b11 << 61 | 555,
+            parity: 0,
+        };
+
         let rdf_output = SolidLdpFacade::serialize_to_rdf_star(&q);
-        
+
         // Ensure it mapped to RDF quads with context
         assert!(rdf_output.contains("GRAPH <urn:qualia:context:4>"));
         // Ensure RDF-star reification with GeoSPARQL WKT is present because it's SpatiotemporalAmbiguous
@@ -563,15 +621,36 @@ mod tests {
 
     #[test]
     fn qualia_vector_density() {
-        use crate::geometric::{VectorSectorMap, BoundingHull, extract_spatial_projection};
-        let q = QualiaQuin { subject: 0, predicate: 0, object: 0, context: 0, metadata: 42, parity: 0 };
+        use crate::geometric::{extract_spatial_projection, BoundingHull, VectorSectorMap};
+        let q = QualiaQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 42,
+            parity: 0,
+        };
         let projection = extract_spatial_projection(&q);
-        
-        let sector_map = VectorSectorMap { sector_id: 2, active: true }; // 42 % 10 = 2
-        assert_eq!(sector_map.contains(projection), true, "VectorSectorMap failed to include point within bounding hull");
-        
-        let out_of_bounds_map = VectorSectorMap { sector_id: 3, active: true };
-        assert_eq!(out_of_bounds_map.contains(projection), false, "VectorSectorMap failed to prune out-of-bounds point");
+
+        let sector_map = VectorSectorMap {
+            sector_id: 2,
+            active: true,
+        }; // 42 % 10 = 2
+        assert_eq!(
+            sector_map.contains(projection),
+            true,
+            "VectorSectorMap failed to include point within bounding hull"
+        );
+
+        let out_of_bounds_map = VectorSectorMap {
+            sector_id: 3,
+            active: true,
+        };
+        assert_eq!(
+            out_of_bounds_map.contains(projection),
+            false,
+            "VectorSectorMap failed to prune out-of-bounds point"
+        );
     }
 
     #[test]
@@ -584,56 +663,107 @@ mod tests {
 
     #[test]
     fn qualia_validate_quin() {
-        assert_eq!(std::mem::size_of::<QualiaQuin>(), 48, "QualiaQuin must be exactly 48 bytes");
+        assert_eq!(
+            std::mem::size_of::<QualiaQuin>(),
+            48,
+            "QualiaQuin must be exactly 48 bytes"
+        );
     }
 
     #[test]
     fn qualia_validate_ecc() {
-        let mut q = QualiaQuin { subject: 0, predicate: 0, object: 0, context: 0, metadata: 0, parity: 0 };
+        let mut q = QualiaQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         assert_eq!(q.verify_ecc_parity(), true, "Valid ECC parity should pass");
-        
+
         q.parity = u64::MAX;
-        assert_eq!(q.verify_ecc_parity(), false, "Corrupted ECC parity should fail");
+        assert_eq!(
+            q.verify_ecc_parity(),
+            false,
+            "Corrupted ECC parity should fail"
+        );
     }
 
     #[test]
     fn qualia_validate_alignment() {
-        assert_eq!(std::mem::size_of::<QualiaSuperBlock>(), 40960, "QualiaSuperBlock must be exactly 40960 bytes (10 sectors)");
-        assert_eq!(std::mem::align_of::<QualiaSuperBlock>(), 4096, "QualiaSuperBlock must be page aligned (4096 bytes)");
+        assert_eq!(
+            std::mem::size_of::<QualiaSuperBlock>(),
+            40960,
+            "QualiaSuperBlock must be exactly 40960 bytes (10 sectors)"
+        );
+        assert_eq!(
+            std::mem::align_of::<QualiaSuperBlock>(),
+            4096,
+            "QualiaSuperBlock must be page aligned (4096 bytes)"
+        );
     }
 
     #[test]
     fn qualia_validate_routing() {
         // Test 1: Passthrough Standard
         let q1 = QualiaQuin {
-            subject: 0, predicate: 0, object: 0, context: 0,
-            metadata: 0b00 << 61 | 12345, parity: 0
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0b00 << 61 | 12345,
+            parity: 0,
         };
-        assert_eq!(q1.identify_routing_lane(), PermissiveRoutingLane::PassthroughStandard);
+        assert_eq!(
+            q1.identify_routing_lane(),
+            PermissiveRoutingLane::PassthroughStandard
+        );
         assert_eq!(q1.extract_clean_metadata_value(), 12345);
 
         // Test 2: Permissive Commons
         let q2 = QualiaQuin {
-            subject: 0, predicate: 0, object: 0, context: 0,
-            metadata: 0b01 << 61 | 67890, parity: 0
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0b01 << 61 | 67890,
+            parity: 0,
         };
-        assert_eq!(q2.identify_routing_lane(), PermissiveRoutingLane::EnforcePermissiveCommons);
+        assert_eq!(
+            q2.identify_routing_lane(),
+            PermissiveRoutingLane::EnforcePermissiveCommons
+        );
         assert_eq!(q2.extract_clean_metadata_value(), 67890);
 
         // Test 3: Bilateral Micro Commons
         let q3 = QualiaQuin {
-            subject: 0, predicate: 0, object: 0, context: 0,
-            metadata: 0b10 << 61 | 42, parity: 0
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0b10 << 61 | 42,
+            parity: 0,
         };
-        assert_eq!(q3.identify_routing_lane(), PermissiveRoutingLane::EnforceBilateralMicroCommons);
+        assert_eq!(
+            q3.identify_routing_lane(),
+            PermissiveRoutingLane::EnforceBilateralMicroCommons
+        );
         assert_eq!(q3.extract_clean_metadata_value(), 42);
 
         // Test 4: Spatiotemporal Ambiguous
         let q4 = QualiaQuin {
-            subject: 0, predicate: 0, object: 0, context: 0,
-            metadata: 0b11 << 61 | 999, parity: 0
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0b11 << 61 | 999,
+            parity: 0,
         };
-        assert_eq!(q4.identify_routing_lane(), PermissiveRoutingLane::SpatiotemporalAmbiguous);
+        assert_eq!(
+            q4.identify_routing_lane(),
+            PermissiveRoutingLane::SpatiotemporalAmbiguous
+        );
         assert_eq!(q4.extract_clean_metadata_value(), 999);
     }
 
@@ -656,5 +786,5 @@ pub mod webizen_sync;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod web_civics;
 
-pub mod economics;
 pub mod deontic_logic;
+pub mod economics;

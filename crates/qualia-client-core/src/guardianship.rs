@@ -140,7 +140,12 @@ pub fn build_consent_token(agreement_id: u64, principal_hash: u64) -> [u64; 6] {
         parity: 0,
     };
     [
-        q.subject, q.predicate, q.object, q.context, q.metadata, q.parity,
+        q.subject,
+        q.predicate,
+        q.object,
+        q.context,
+        q.metadata,
+        q.parity,
     ]
 }
 

@@ -33,20 +33,27 @@ const QUIN_SIZE: usize = 48;
 const QUIN_DATA_PER_BLOCK: usize = QUINS_PER_BLOCK * QUIN_SIZE; // 40 800 bytes
 
 pub struct CompressStats {
-    pub input_bytes:  u64,
+    pub input_bytes: u64,
     pub output_bytes: u64,
-    pub blocks:       u64,
-    pub ratio:        f64,
+    pub blocks: u64,
+    pub ratio: f64,
 }
 
 /// Compress a `.q42` SuperBlock file: strip 160-byte headers, emit raw Quins
 /// chunked and LZ4-compressed.
-pub fn compress_q42(input: &Path, output: &Path) -> Result<CompressStats, Box<dyn std::error::Error>> {
+pub fn compress_q42(
+    input: &Path,
+    output: &Path,
+) -> Result<CompressStats, Box<dyn std::error::Error>> {
     let meta = std::fs::metadata(input)?;
     let input_bytes = meta.len();
 
     let mut reader = BufReader::new(File::open(input)?);
-    let out_file = OpenOptions::new().create(true).write(true).truncate(true).open(output)?;
+    let out_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(output)?;
     let mut writer = BufWriter::new(out_file);
 
     let mut chunk: Vec<u8> = Vec::with_capacity(CHUNK_SIZE);
@@ -55,11 +62,16 @@ pub fn compress_q42(input: &Path, output: &Path) -> Result<CompressStats, Box<dy
 
     loop {
         let n = read_exact_or_eof(&mut reader, &mut sb_buf)?;
-        if n == 0 { break; }
-        if n < SUPERBLOCK_SIZE { break; } // partial final block — skip
+        if n == 0 {
+            break;
+        }
+        if n < SUPERBLOCK_SIZE {
+            break;
+        } // partial final block — skip
 
         // Skip the 160-byte header, take only Quin data.
-        chunk.extend_from_slice(&sb_buf[SUPERBLOCK_HEADER..SUPERBLOCK_HEADER + QUIN_DATA_PER_BLOCK]);
+        chunk
+            .extend_from_slice(&sb_buf[SUPERBLOCK_HEADER..SUPERBLOCK_HEADER + QUIN_DATA_PER_BLOCK]);
 
         if chunk.len() >= CHUNK_SIZE {
             block_id = write_lz4_block(&mut writer, block_id, &chunk[..CHUNK_SIZE])?;
@@ -84,12 +96,19 @@ pub fn compress_q42(input: &Path, output: &Path) -> Result<CompressStats, Box<dy
 }
 
 /// Compress any binary file (e.g. `.lex`) as raw bytes.
-pub fn compress_raw(input: &Path, output: &Path) -> Result<CompressStats, Box<dyn std::error::Error>> {
+pub fn compress_raw(
+    input: &Path,
+    output: &Path,
+) -> Result<CompressStats, Box<dyn std::error::Error>> {
     let meta = std::fs::metadata(input)?;
     let input_bytes = meta.len();
 
     let mut reader = BufReader::new(File::open(input)?);
-    let out_file = OpenOptions::new().create(true).write(true).truncate(true).open(output)?;
+    let out_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(output)?;
     let mut writer = BufWriter::new(out_file);
 
     let mut buf = vec![0u8; CHUNK_SIZE];
@@ -97,7 +116,9 @@ pub fn compress_raw(input: &Path, output: &Path) -> Result<CompressStats, Box<dy
 
     loop {
         let n = read_exact_or_eof(&mut reader, &mut buf)?;
-        if n == 0 { break; }
+        if n == 0 {
+            break;
+        }
         block_id = write_lz4_block(&mut writer, block_id, &buf[..n])?;
     }
 
@@ -118,11 +139,7 @@ pub fn compress_raw(input: &Path, output: &Path) -> Result<CompressStats, Box<dy
 
 /// Write one LZ4 block (16-byte header + lz4_flex payload).
 /// Returns the next block_id.
-fn write_lz4_block(
-    w: &mut impl Write,
-    block_id: u64,
-    data: &[u8],
-) -> std::io::Result<u64> {
+fn write_lz4_block(w: &mut impl Write, block_id: u64, data: &[u8]) -> std::io::Result<u64> {
     let compressed = lz4_flex::compress_prepend_size(data);
     w.write_all(&block_id.to_le_bytes())?;
     w.write_all(&(compressed.len() as u32).to_le_bytes())?;

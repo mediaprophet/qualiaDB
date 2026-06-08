@@ -70,7 +70,8 @@ mod tests {
             .collect();
         let compressed = lz4_flex::compress_prepend_size(&bytes);
         file.write_all(&0u64.to_le_bytes()).unwrap();
-        file.write_all(&(compressed.len() as u32).to_le_bytes()).unwrap();
+        file.write_all(&(compressed.len() as u32).to_le_bytes())
+            .unwrap();
         file.write_all(&(bytes.len() as u32).to_le_bytes()).unwrap();
         file.write_all(&compressed).unwrap();
     }

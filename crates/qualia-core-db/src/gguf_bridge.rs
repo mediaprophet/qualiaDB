@@ -4,11 +4,11 @@
 //!   - All platforms: wgpu / WGSL fallback (Vulkan / Metal / WebGPU)
 //! GGUF tensor bytes are memory-mapped via `memmap2` — zero heap copy.
 
-use crate::QualiaQuin;
 use crate::gguf_sharder::GgufTensorInfo;
+use crate::QualiaQuin;
 use memmap2::MmapOptions;
 
-pub use crate::ggml_quants::{ExecutionError, fetch_token_embedding};
+pub use crate::ggml_quants::{fetch_token_embedding, ExecutionError};
 
 /// Dequantize a mmap embedding row into caller-supplied `out` (no heap allocation).
 pub fn dequantize_token_embedding_into(
@@ -20,12 +20,12 @@ pub fn dequantize_token_embedding_into(
     if out.len() < n_embd {
         return Err(ExecutionError::MmapBounds);
     }
-    crate::ggml_quants::dequantize_row_into(raw, tensor.ggml_type, n_embd, out)
-        .map_err(|e| match e {
-            crate::ggml_quants::GgmlDequantError::UnsupportedType => ExecutionError::UnsupportedType,
-            crate::ggml_quants::GgmlDequantError::BufferTooSmall
-            | crate::ggml_quants::GgmlDequantError::TruncatedInput => ExecutionError::MmapBounds,
-        })
+    crate::ggml_quants::dequantize_row_into(raw, tensor.ggml_type, n_embd, out).map_err(|e| match e
+    {
+        crate::ggml_quants::GgmlDequantError::UnsupportedType => ExecutionError::UnsupportedType,
+        crate::ggml_quants::GgmlDequantError::BufferTooSmall
+        | crate::ggml_quants::GgmlDequantError::TruncatedInput => ExecutionError::MmapBounds,
+    })
 }
 
 /// Represents a Q4_K Quantized or standard float Tensor mapped from a monolithic GGUF file.
@@ -38,20 +38,24 @@ pub struct QTensor {
 
 impl QTensor {
     pub fn new(shape: Vec<usize>, byte_offset: u64, is_quantized_q4_k: bool) -> Self {
-        Self { shape, byte_offset, is_quantized_q4_k }
+        Self {
+            shape,
+            byte_offset,
+            is_quantized_q4_k,
+        }
     }
 
     /// Maps the exact bytes from the GGUF using the 60-bit pointer.
     pub fn map_from_pointer(quin: &QualiaQuin) -> Option<Self> {
         use crate::QuinPointerExt;
-        
+
         let flag = quin.extract_modality_flag();
         if flag != crate::MODALITY_FLAG_LLM_TENSOR {
             return None; // Not an LLM tensor
         }
 
         let offset = quin.extract_byte_offset();
-        
+
         // Mock parsing the GGUF header at the offset to find shape and quantization
         // For demonstration, we assume a Q4_K tensor representation.
         Some(Self::new(vec![4096, 4096], offset, true))
@@ -135,8 +139,7 @@ impl KvCacheLayout {
         }
         let slot_kv_elems = n_kv_head * head_dim;
         let layer_stride = MAX_CONTEXT_WINDOW * slot_kv_elems * 2;
-        let total = (n_layer as usize)
-            .checked_mul(layer_stride as usize)?;
+        let total = (n_layer as usize).checked_mul(layer_stride as usize)?;
         let bytes = total.checked_mul(std::mem::size_of::<f32>())?;
         if bytes > KV_CACHE_MAX_BYTES {
             return None;
@@ -249,7 +252,9 @@ fn update_streaming_argmax_sieved(
 #[inline]
 fn relu_inplace(buf: &mut [f32], n: usize) {
     for v in buf.iter_mut().take(n) {
-        if *v < 0.0 { *v = 0.0; }
+        if *v < 0.0 {
+            *v = 0.0;
+        }
     }
 }
 
@@ -274,10 +279,16 @@ fn stack_gemm_quant(
     }
     let mut row = [0f32; MAX_STACK_GEMM_IN];
     for i in 0..n_out {
-        if crate::ggml_quants::dequant_matrix_row_into(raw, info, i, &mut row[..n_in]).unwrap_or(0) < n_in {
+        if crate::ggml_quants::dequant_matrix_row_into(raw, info, i, &mut row[..n_in]).unwrap_or(0)
+            < n_in
+        {
             return false;
         }
-        out[i] = row[..n_in].iter().zip(&input[..n_in]).map(|(w, x)| w * x).sum();
+        out[i] = row[..n_in]
+            .iter()
+            .zip(&input[..n_in])
+            .map(|(w, x)| w * x)
+            .sum();
     }
     true
 }
@@ -323,16 +334,17 @@ impl QTensorEngine {
     pub fn new() -> Self {
         let instance = wgpu::Instance::default();
         let rt = tokio::runtime::Runtime::new().unwrap();
-        
-        let adapter = rt.block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            ..Default::default()
-        })).expect("Failed to find wgpu adapter");
 
-        let (device, queue) = rt.block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor::default(),
-            None,
-        )).expect("Failed to create wgpu device");
+        let adapter = rt
+            .block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
+                ..Default::default()
+            }))
+            .expect("Failed to find wgpu adapter");
+
+        let (device, queue) = rt
+            .block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
+            .expect("Failed to create wgpu device");
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Transformer Shader"),
@@ -448,8 +460,13 @@ impl QTensorEngine {
                 unsafe { core::ptr::write_volatile(v, 0.0) };
             }
             if let Some(gpu) = self.kv_cache_gpu.as_ref() {
-                let bytes = (layout.total_f32_elems * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
-                self.queue.write_buffer(gpu, 0, bytemuck::cast_slice(&cpu[..layout.total_f32_elems]));
+                let bytes =
+                    (layout.total_f32_elems * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+                self.queue.write_buffer(
+                    gpu,
+                    0,
+                    bytemuck::cast_slice(&cpu[..layout.total_f32_elems]),
+                );
                 let _ = bytes;
             }
         }
@@ -549,7 +566,11 @@ impl QTensorEngine {
             return None;
         }
 
-        let n_output = weight_tensor.shape.first().copied().unwrap_or(n_embd as usize) as u32;
+        let n_output = weight_tensor
+            .shape
+            .first()
+            .copied()
+            .unwrap_or(n_embd as usize) as u32;
         let n_embd_u = n_embd;
         let weights_elems = (n_output as usize).saturating_mul(n_embd as usize);
 
@@ -586,7 +607,8 @@ impl QTensorEngine {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.queue.write_buffer(&params_buf, 0, bytemuck::bytes_of(&params));
+        self.queue
+            .write_buffer(&params_buf, 0, bytemuck::bytes_of(&params));
 
         let weights_size = (weights_elems * 4).max(4) as wgpu::BufferAddress;
         let weights_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -616,16 +638,30 @@ impl QTensorEngine {
             label: Some("QuantizedEmbeddingBindGroup"),
             layout: &bind_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: embd_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: params_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: weights_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: embd_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: params_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: weights_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: output_buf.as_entire_binding(),
+                },
             ],
         });
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("QuantizedEmbeddingEncoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("QuantizedEmbeddingEncoder"),
+            });
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("QuantizedEmbeddingPass"),
@@ -662,14 +698,16 @@ impl QTensorEngine {
         drop(data);
         staging_buf.unmap();
 
-        crate::telemetry::SIEVE_OPS_COUNT.fetch_add(
-            weights_elems,
-            std::sync::atomic::Ordering::Relaxed,
-        );
+        crate::telemetry::SIEVE_OPS_COUNT
+            .fetch_add(weights_elems, std::sync::atomic::Ordering::Relaxed);
         Some(result)
     }
 
-    pub fn dispatch_fused_transformer_block(&self, tensor: &QTensor, input_activations: &[f32]) -> Vec<f32> {
+    pub fn dispatch_fused_transformer_block(
+        &self,
+        tensor: &QTensor,
+        input_activations: &[f32],
+    ) -> Vec<f32> {
         let rows = tensor.shape.get(0).copied().unwrap_or(4096);
         let cols = tensor.shape.get(1).copied().unwrap_or(4096);
 
@@ -682,17 +720,16 @@ impl QTensorEngine {
                     * crate::directml_bridge::Q4_K_BLOCK_BYTES;
                 if (offset as usize + q4_bytes_needed) <= mmap.len() {
                     let q4_slice = &mmap[offset as usize..offset as usize + q4_bytes_needed];
-                    let weights_f32 = crate::directml_bridge::dequantize_q4_k_tensor(q4_slice, rows * cols);
+                    let weights_f32 =
+                        crate::directml_bridge::dequantize_q4_k_tensor(q4_slice, rows * cols);
                     let op = crate::directml_bridge::DmlGemmOp {
                         m: input_activations.len() as u32 / cols as u32,
                         k: cols as u32,
                         n: rows as u32,
                     };
                     if let Ok(result) = op.execute(dml, input_activations, &weights_f32) {
-                        crate::telemetry::SIEVE_OPS_COUNT.fetch_add(
-                            rows * cols,
-                            std::sync::atomic::Ordering::Relaxed,
-                        );
+                        crate::telemetry::SIEVE_OPS_COUNT
+                            .fetch_add(rows * cols, std::sync::atomic::Ordering::Relaxed);
                         return result;
                     }
                 }
@@ -707,14 +744,18 @@ impl QTensorEngine {
                 * crate::metal_bridge::Q4_K_BLOCK_BYTES;
             if offset + q4_bytes_needed <= mmap.len() {
                 let q4_slice = &mmap[offset..offset + q4_bytes_needed];
-                let weights_f32 = crate::metal_bridge::dequantize_q4_k_tensor(q4_slice, rows * cols);
+                let weights_f32 =
+                    crate::metal_bridge::dequantize_q4_k_tensor(q4_slice, rows * cols);
                 let input_rows = (input_activations.len() / cols).max(1);
                 let result = crate::metal_bridge::accelerate_sgemm(
-                    input_rows, cols, rows, input_activations, &weights_f32
+                    input_rows,
+                    cols,
+                    rows,
+                    input_activations,
+                    &weights_f32,
                 );
-                crate::telemetry::SIEVE_OPS_COUNT.fetch_add(
-                    rows * cols, std::sync::atomic::Ordering::Relaxed,
-                );
+                crate::telemetry::SIEVE_OPS_COUNT
+                    .fetch_add(rows * cols, std::sync::atomic::Ordering::Relaxed);
                 return result;
             }
         }
@@ -740,7 +781,7 @@ impl QTensorEngine {
         });
         if let Some(mmap) = &self.gguf_mmap {
             let offset = (self.tensor_data_offset + tensor.byte_offset) as usize;
-            let end    = (offset + rows * cols * 4).min(mmap.len());
+            let end = (offset + rows * cols * 4).min(mmap.len());
             if end > offset {
                 let f32_bytes = &mmap[offset..end];
                 self.queue.write_buffer(&weights_buf, 0, f32_bytes);
@@ -760,15 +801,29 @@ impl QTensorEngine {
             label: None,
             layout: &bind_group_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: weights_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: output_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: input_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: weights_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: output_buf.as_entire_binding(),
+                },
             ],
         });
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
-            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes: None });
+            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
             cpass.set_pipeline(&self.mock_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
             cpass.dispatch_workgroups(4096 / 64, 1, 1);
@@ -787,7 +842,7 @@ impl QTensorEngine {
         let (sender, receiver) = futures_channel::oneshot::channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
         self.device.poll(wgpu::Maintain::Wait);
-        
+
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(receiver).unwrap().unwrap();
 
@@ -796,13 +851,18 @@ impl QTensorEngine {
         drop(data);
         staging_buf.unmap();
 
-        crate::telemetry::SIEVE_OPS_COUNT.fetch_add(4096 * 4096, std::sync::atomic::Ordering::Relaxed);
+        crate::telemetry::SIEVE_OPS_COUNT
+            .fetch_add(4096 * 4096, std::sync::atomic::Ordering::Relaxed);
         result
     }
 
     fn write_weight_words(&self, raw: &[u8], max_bytes: usize) {
         let weight_buf = self.gemm_weight_buf.as_ref().expect("gemm weight buf");
-        let upload = if raw.len() <= max_bytes { raw } else { &raw[..max_bytes] };
+        let upload = if raw.len() <= max_bytes {
+            raw
+        } else {
+            &raw[..max_bytes]
+        };
         self.queue.write_buffer(weight_buf, 0, upload);
     }
 
@@ -840,25 +900,41 @@ impl QTensorEngine {
             let params_buf = self.gemm_params_buf.as_ref().unwrap();
             let staging = self.gemm_output_staging.as_ref().unwrap();
 
-            self.queue.write_buffer(input_buf, 0, bytemuck::cast_slice(&input[..n_in]));
+            self.queue
+                .write_buffer(input_buf, 0, bytemuck::cast_slice(&input[..n_in]));
             self.write_weight_words(raw, self.max_tensor_bytes);
-            self.queue.write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
+            self.queue
+                .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
             let bind_layout = self.pipeline.get_bind_group_layout(0);
             let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("LayerGemmBindGroup"),
                 layout: &bind_layout,
                 entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: weight_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 2, resource: params_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weight_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: params_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: output_buf.as_entire_binding(),
+                    },
                 ],
             });
 
-            let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("LayerGemmEncoder"),
-            });
+            let mut encoder = self
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("LayerGemmEncoder"),
+                });
             {
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: None,
@@ -874,7 +950,9 @@ impl QTensorEngine {
 
             let slice = staging.slice(..out_bytes);
             let (tx, rx) = futures_channel::oneshot::channel();
-            slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
+            slice.map_async(wgpu::MapMode::Read, move |r| {
+                let _ = tx.send(r);
+            });
             self.device.poll(wgpu::Maintain::Wait);
             if let Ok(rt) = tokio::runtime::Runtime::new() {
                 if rt.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
@@ -906,7 +984,8 @@ impl QTensorEngine {
             Some(m) => m,
             None => return false,
         };
-        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info) {
+        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info)
+        {
             Ok(s) => s,
             Err(_) => return false,
         };
@@ -1075,9 +1154,11 @@ impl QTensorEngine {
         let kv_buf = self.kv_cache_gpu.as_ref().unwrap();
         let staging = self.gemm_output_staging.as_ref().unwrap();
 
-        self.queue.write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..hidden_elems]));
+        self.queue
+            .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..hidden_elems]));
         self.write_weight_words(raw_weights, self.max_tensor_bytes);
-        self.queue.write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
+        self.queue
+            .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
         // Bind one layer slice of the KV arena (full arena exceeds 128 MiB wgpu binding cap).
         let layer_f32s = layout.layer_stride as usize;
@@ -1095,20 +1176,34 @@ impl QTensorEngine {
             label: Some("FusedAttentionBindGroup"),
             layout: &bind_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: weight_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: params_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: input_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: weight_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: params_buf.as_entire_binding(),
+                },
                 wgpu::BindGroupEntry {
                     binding: 3,
                     resource: wgpu::BindingResource::Buffer(kv_binding),
                 },
-                wgpu::BindGroupEntry { binding: 4, resource: output_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: output_buf.as_entire_binding(),
+                },
             ],
         });
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("FusedAttentionEncoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("FusedAttentionEncoder"),
+            });
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("FusedAttentionPass"),
@@ -1133,7 +1228,9 @@ impl QTensorEngine {
         let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
         let slice = staging.slice(..out_bytes);
         let (tx, rx) = futures_channel::oneshot::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
+        slice.map_async(wgpu::MapMode::Read, move |r| {
+            let _ = tx.send(r);
+        });
         self.device.poll(wgpu::Maintain::Wait);
         if let Ok(rt) = tokio::runtime::Runtime::new() {
             if rt.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
@@ -1186,9 +1283,12 @@ impl QTensorEngine {
         }
 
         let mmap = self.gguf_mmap.as_deref()?;
-        let k_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &k_info).ok()?;
-        let v_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &v_info).ok()?;
-        let q_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &q_info).ok()?;
+        let k_raw =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &k_info).ok()?;
+        let v_raw =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &v_info).ok()?;
+        let q_raw =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &q_info).ok()?;
         let n_embd = h.n_embd as usize;
 
         if !self.dispatch_attention_pass(
@@ -1294,10 +1394,11 @@ impl QTensorEngine {
             Some(m) => m,
             None => return false,
         };
-        let q_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
+        let q_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
         let n_embd = h.n_embd as usize;
         if !self.dispatch_attention_pass(
             &hidden[..emb_dim],
@@ -1329,7 +1430,11 @@ impl QTensorEngine {
                     o_out,
                 )
             {
-                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..o_out], emb_dim.min(o_out));
+                add_residual_inplace(
+                    &mut hidden[..emb_dim],
+                    &scratch_a[..o_out],
+                    emb_dim.min(o_out),
+                );
                 attn_ok = true;
             }
         } else {
@@ -1349,13 +1454,25 @@ impl QTensorEngine {
                 if let Some(up) = tensors.ffn_up.as_ref() {
                     let (up_in, up_out) = Self::matmul_dims(up);
                     if up_in <= n_out
-                        && self.dispatch_gemm_into(index, up, &scratch_a[..up_in], scratch_b, up_in, up_out)
+                        && self.dispatch_gemm_into(
+                            index,
+                            up,
+                            &scratch_a[..up_in],
+                            scratch_b,
+                            up_in,
+                            up_out,
+                        )
                     {
                         if let Some(down) = tensors.ffn_down.as_ref() {
                             let (dn_in, dn_out) = Self::matmul_dims(down);
                             if dn_in <= up_out
                                 && self.dispatch_gemm_into(
-                                    index, down, &scratch_b[..dn_in], scratch_a, dn_in, dn_out,
+                                    index,
+                                    down,
+                                    &scratch_b[..dn_in],
+                                    scratch_a,
+                                    dn_in,
+                                    dn_out,
                                 )
                             {
                                 add_residual_inplace(
@@ -1415,14 +1532,16 @@ impl QTensorEngine {
             Some(m) => m,
             None => return false,
         };
-        let k_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
-        let v_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
+        let k_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
+        let v_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info) {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
         let n_kv_wg = n_tokens.saturating_mul(n_kv);
         if !self.dispatch_attention_pass(
             &batch_hidden[..batch_elems],
@@ -1531,7 +1650,14 @@ impl QTensorEngine {
 
         if tensors.attn_q.is_some() && tensors.attn_k.is_some() && tensors.attn_v.is_some() {
             if let Some(n) = self.dispatch_attention_layer(
-                index, layer, token_idx, &hidden[..emb_dim], emb_dim, &tensors, scratch_a, scratch_b,
+                index,
+                layer,
+                token_idx,
+                &hidden[..emb_dim],
+                emb_dim,
+                &tensors,
+                scratch_a,
+                scratch_b,
             ) {
                 add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n], n);
                 attn_ok = true;
@@ -1541,7 +1667,11 @@ impl QTensorEngine {
             if n_in <= emb_dim
                 && self.dispatch_gemm_into(index, &info, &hidden[..n_in], scratch_a, n_in, n_out)
             {
-                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n_out], emb_dim.min(n_out));
+                add_residual_inplace(
+                    &mut hidden[..emb_dim],
+                    &scratch_a[..n_out],
+                    emb_dim.min(n_out),
+                );
                 attn_ok = true;
             }
         }
@@ -1559,13 +1689,25 @@ impl QTensorEngine {
                 if let Some(up) = tensors.ffn_up {
                     let (up_in, up_out) = Self::matmul_dims(&up);
                     if up_in <= n_out
-                        && self.dispatch_gemm_into(index, &up, &scratch_a[..up_in], scratch_b, up_in, up_out)
+                        && self.dispatch_gemm_into(
+                            index,
+                            &up,
+                            &scratch_a[..up_in],
+                            scratch_b,
+                            up_in,
+                            up_out,
+                        )
                     {
                         if let Some(down) = tensors.ffn_down {
                             let (dn_in, dn_out) = Self::matmul_dims(&down);
                             if dn_in <= up_out
                                 && self.dispatch_gemm_into(
-                                    index, &down, &scratch_b[..dn_in], scratch_a, dn_in, dn_out,
+                                    index,
+                                    &down,
+                                    &scratch_b[..dn_in],
+                                    scratch_a,
+                                    dn_in,
+                                    dn_out,
                                 )
                             {
                                 add_residual_inplace(
@@ -1684,7 +1826,11 @@ impl QTensorEngine {
     }
 
     pub fn decode_lexicon_bound(&self, _logits: &[f32], valid_lexicon_ids: &[u64]) -> u64 {
-        if valid_lexicon_ids.is_empty() { 0 } else { valid_lexicon_ids[0] }
+        if valid_lexicon_ids.is_empty() {
+            0
+        } else {
+            valid_lexicon_ids[0]
+        }
     }
 }
 
@@ -1696,22 +1842,32 @@ pub struct QTensorEngine {
 #[cfg(target_arch = "wasm32")]
 impl QTensorEngine {
     pub fn new() -> Self {
-        Self { is_initialized: true }
+        Self {
+            is_initialized: true,
+        }
     }
-    pub fn dispatch_fused_transformer_block(&self, _tensor: &QTensor, _input_activations: &[f32]) -> Vec<f32> {
+    pub fn dispatch_fused_transformer_block(
+        &self,
+        _tensor: &QTensor,
+        _input_activations: &[f32],
+    ) -> Vec<f32> {
         crate::telemetry::SIEVE_OPS_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         vec![0.0; 4096]
     }
     pub fn decode_lexicon_bound(&self, _logits: &[f32], valid_lexicon_ids: &[u64]) -> u64 {
-        if valid_lexicon_ids.is_empty() { 0 } else { valid_lexicon_ids[0] }
+        if valid_lexicon_ids.is_empty() {
+            0
+        } else {
+            valid_lexicon_ids[0]
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
     use memmap2::MmapOptions;
+    use std::fs::File;
     use std::path::Path;
 
     #[test]
@@ -1726,11 +1882,17 @@ mod tests {
             parity: 0,
         };
 
-        let q_tensor = QTensor::map_from_pointer(&quin)
-            .expect("Failed to map QTensor from pointer");
-        
-        assert_eq!(q_tensor.byte_offset, 0x0000_1234, "Extracted byte offset incorrectly");
-        assert_eq!(q_tensor.is_quantized_q4_k, true, "Did not identify Q4_K quantization");
+        let q_tensor =
+            QTensor::map_from_pointer(&quin).expect("Failed to map QTensor from pointer");
+
+        assert_eq!(
+            q_tensor.byte_offset, 0x0000_1234,
+            "Extracted byte offset incorrectly"
+        );
+        assert_eq!(
+            q_tensor.is_quantized_q4_k, true,
+            "Did not identify Q4_K quantization"
+        );
     }
 
     #[test]
@@ -1741,7 +1903,10 @@ mod tests {
 
         // Should return a valid u64 semantic ID, not a string
         let decoded = engine.decode_lexicon_bound(&logits, &valid_ids);
-        assert_eq!(decoded, valid_ids[0], "Failed to bind decoding to logic lexicon");
+        assert_eq!(
+            decoded, valid_ids[0],
+            "Failed to bind decoding to logic lexicon"
+        );
     }
 
     #[test]
@@ -1760,18 +1925,20 @@ mod tests {
             info.ggml_type, info.dims[0], info.dims[1], info.byte_offset
         );
 
-        let raw = fetch_token_embedding(&mmap, idx.tensor_data_start, info, 0)
-            .expect("fetch token 0");
+        let raw =
+            fetch_token_embedding(&mmap, idx.tensor_data_start, info, 0).expect("fetch token 0");
         assert!(!raw.is_empty(), "empty embedding slice");
 
         let n_embd = info.dims[0] as usize;
         let mut emb = vec![0f32; n_embd];
-        let n = dequantize_token_embedding_into(raw, info, &mut emb)
-            .expect("dequantize token 0");
+        let n = dequantize_token_embedding_into(raw, info, &mut emb).expect("dequantize token 0");
         assert_eq!(n, n_embd);
 
         let norm: f32 = emb.iter().map(|x| x * x).sum::<f32>().sqrt();
-        assert!(norm > 0.01 && norm < 1000.0, "embedding L2 norm suspicious: {norm}");
+        assert!(
+            norm > 0.01 && norm < 1000.0,
+            "embedding L2 norm suspicious: {norm}"
+        );
         println!("token 0 embedding L2 norm = {norm:.4}");
     }
 
@@ -1831,7 +1998,13 @@ mod tests {
         let mut scratch_a = [0f32; 10240];
         let mut scratch_b = [0f32; 10240];
         assert!(engine.dispatch_transformer_layer(
-            &idx, 0, 0, &mut hidden, 2560, &mut scratch_a, &mut scratch_b,
+            &idx,
+            0,
+            0,
+            &mut hidden,
+            2560,
+            &mut scratch_a,
+            &mut scratch_b,
         ));
         println!("layer0 hidden[0]={}", hidden[0]);
     }
@@ -1863,7 +2036,13 @@ mod tests {
 
         let t0 = std::time::Instant::now();
         assert!(engine.dispatch_transformer_layer(
-            &idx, 0, 0, &mut hidden[..emb_dim], emb_dim, &mut scratch_a, &mut scratch_b,
+            &idx,
+            0,
+            0,
+            &mut hidden[..emb_dim],
+            emb_dim,
+            &mut scratch_a,
+            &mut scratch_b,
         ));
         println!(
             "attention layer0 token0 hidden[0]={} elapsed={:?} kv_heads={}",
@@ -1913,11 +2092,8 @@ mod tests {
         );
 
         // Token 0 only prefill (layer cap 2 in tests).
-        let _ = idx.dequantize_token_embedding_into(
-            &mmap,
-            token_ids[0],
-            &mut prefill_chunk[..emb_dim],
-        );
+        let _ =
+            idx.dequantize_token_embedding_into(&mmap, token_ids[0], &mut prefill_chunk[..emb_dim]);
         assert!(engine.dispatch_prefill_chunk(
             &idx,
             &mut prefill_chunk[..emb_dim],
@@ -1929,24 +2105,28 @@ mod tests {
             2,
         ));
 
-        assert!(engine.dispatch_transformer_forward(
-            &idx,
-            &mut hidden_no_prefill[..emb_dim],
-            emb_dim,
-            &mut scratch_a,
-            &mut scratch_b,
-            last as u32,
-            2,
-        ) > 0);
-        assert!(engine.dispatch_transformer_forward(
-            &idx,
-            &mut hidden_with_prefill[..emb_dim],
-            emb_dim,
-            &mut scratch_a,
-            &mut scratch_b,
-            last as u32,
-            2,
-        ) > 0);
+        assert!(
+            engine.dispatch_transformer_forward(
+                &idx,
+                &mut hidden_no_prefill[..emb_dim],
+                emb_dim,
+                &mut scratch_a,
+                &mut scratch_b,
+                last as u32,
+                2,
+            ) > 0
+        );
+        assert!(
+            engine.dispatch_transformer_forward(
+                &idx,
+                &mut hidden_with_prefill[..emb_dim],
+                emb_dim,
+                &mut scratch_a,
+                &mut scratch_b,
+                last as u32,
+                2,
+            ) > 0
+        );
 
         assert_ne!(
             hidden_no_prefill[0], hidden_with_prefill[0],
@@ -1955,9 +2135,7 @@ mod tests {
 
         println!(
             "prefill multitoken last={} hidden0 no_pf={} with_pf={}",
-            last,
-            hidden_no_prefill[0],
-            hidden_with_prefill[0],
+            last, hidden_no_prefill[0], hidden_with_prefill[0],
         );
     }
 
@@ -1989,7 +2167,10 @@ mod tests {
         let mmap = unsafe { MmapOptions::new().map(&file).expect("mmap") };
         let tok = crate::gguf_sharder::GgufTokenizer::from_gguf(&mmap);
         let mut sieve = crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_gguf_tokenizer(&tok);
-        assert!(sieve.masks_ready(), "sieve masks must resolve from Gemma tokenizer");
+        assert!(
+            sieve.masks_ready(),
+            "sieve masks must resolve from Gemma tokenizer"
+        );
 
         let (sub, pred, obj) = sieve.resolved_token_triple().expect("triple");
         assert!(sieve.apply_token(sub).is_ok());
@@ -2001,7 +2182,10 @@ mod tests {
         assert_ne!(quin.subject, 0);
         assert_ne!(quin.predicate, 0);
         assert_ne!(quin.object, 0);
-        assert_eq!(quin.parity, quin.subject ^ quin.predicate ^ quin.object ^ quin.context);
+        assert_eq!(
+            quin.parity,
+            quin.subject ^ quin.predicate ^ quin.object ^ quin.context
+        );
         println!(
             "sieve quin sub={:#x} pred={:#x} obj={:#x} tokens=({}, {}, {})",
             quin.subject, quin.predicate, quin.object, sub, pred, obj
@@ -2045,10 +2229,17 @@ mod tests {
         let path = Path::new("C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf");
         if path.exists() {
             let file = File::open(path).expect("Failed to open GGUF file");
-            let mmap = unsafe { MmapOptions::new().map(&file).expect("Failed to memory map GGUF file") };
-            
+            let mmap = unsafe {
+                MmapOptions::new()
+                    .map(&file)
+                    .expect("Failed to memory map GGUF file")
+            };
+
             // Just asserting that we successfully mapped a massive file into virtual memory
-            assert!(mmap.len() > 1024 * 1024, "Memory map size is suspiciously small");
+            assert!(
+                mmap.len() > 1024 * 1024,
+                "Memory map size is suspiciously small"
+            );
             println!("Successfully mapped Gemma GGUF! Size: {} bytes", mmap.len());
         } else {
             println!("Gemma GGUF file not found locally. Skipping mmap test.");

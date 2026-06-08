@@ -27,10 +27,10 @@
 //! - **MSB = 0** → operand is a plain FNV-1a dictionary hash.  The VM takes the
 //!   *lexicon lookup* path: standard equality against the stored Quin field.
 
-use crate::QualiaQuin;
 use crate::mini_parser::{
     OP_END, OP_HALT_IF_FALSE, OP_MATCH_OBJECT, OP_MATCH_PREDICATE, OP_MATCH_SUBJECT,
 };
+use crate::QualiaQuin;
 
 const MSB: u64 = 1u64 << 63;
 
@@ -121,9 +121,9 @@ pub fn execute_program_with_stats(
                     let operand = u64::from_le_bytes(hash_bytes);
 
                     let field = match opcode {
-                        OP_MATCH_SUBJECT   => quin.subject,
+                        OP_MATCH_SUBJECT => quin.subject,
                         OP_MATCH_PREDICATE => quin.predicate,
-                        _                  => quin.object,
+                        _ => quin.object,
                     };
 
                     // MSB dispatch: bit 63 of the operand signals the evaluation path.
@@ -241,9 +241,9 @@ pub fn execute_program_simd(
                     // zero-copy field access (the compiler sees through the
                     // _reg_a/_reg_b/_reg_c loads and the quin.field reads).
                     condition = match opcode {
-                        OP_MATCH_SUBJECT   => quin.subject   == operand,
+                        OP_MATCH_SUBJECT => quin.subject == operand,
                         OP_MATCH_PREDICATE => quin.predicate == operand,
-                        _                  => quin.object    == operand,
+                        _ => quin.object == operand,
                     };
                     ip += 9;
                 }
@@ -278,7 +278,10 @@ mod tests {
 
     #[test]
     fn full_match() {
-        let db = [make_quin("Alice", "knows", "Bob"), make_quin("Alice", "knows", "Carol")];
+        let db = [
+            make_quin("Alice", "knows", "Bob"),
+            make_quin("Alice", "knows", "Carol"),
+        ];
         let mut prog = [0u8; 1024];
         compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
 
@@ -334,7 +337,10 @@ mod tests {
         let mut out = [QualiaQuin::default(); 10];
         let (n, cycles) = execute_program(&prog, &db, &mut out).unwrap();
         assert_eq!(n, 1);
-        assert!(cycles > 0, "VM must report non-zero cycles for a non-empty database");
+        assert!(
+            cycles > 0,
+            "VM must report non-zero cycles for a non-empty database"
+        );
     }
 
     #[test]
@@ -349,6 +355,10 @@ mod tests {
 
         let (_, c1) = execute_program(&prog, &db1, &mut out).unwrap();
         let (_, c2) = execute_program(&prog, &db2, &mut out).unwrap();
-        assert_eq!(c2, c1 * 2, "cycle count must scale linearly with matching db rows");
+        assert_eq!(
+            c2,
+            c1 * 2,
+            "cycle count must scale linearly with matching db rows"
+        );
     }
 }

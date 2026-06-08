@@ -385,7 +385,8 @@ fn parse_meta_information(data: &[u8], offset: usize) -> Result<(String, usize),
     let mut cursor = offset;
 
     loop {
-        let Some(header) = read_element_header(data, cursor, TransferSyntax::ExplicitVrLittleEndian, true)?
+        let Some(header) =
+            read_element_header(data, cursor, TransferSyntax::ExplicitVrLittleEndian, true)?
         else {
             break;
         };
@@ -400,7 +401,13 @@ fn parse_meta_information(data: &[u8], offset: usize) -> Result<(String, usize),
         if (header.tag >> 16) as u16 > 0x0002 {
             break;
         }
-        cursor = skip_element(data, cursor, &header, TransferSyntax::ExplicitVrLittleEndian, true)?;
+        cursor = skip_element(
+            data,
+            cursor,
+            &header,
+            TransferSyntax::ExplicitVrLittleEndian,
+            true,
+        )?;
     }
 
     Ok((transfer_syntax, cursor))
@@ -610,7 +617,12 @@ pub fn normalize_dicom_token(value: &str) -> String {
 pub fn default_organ_matchers() -> Vec<DicomTagMatcher> {
     vec![
         DicomTagMatcher {
-            tokens: vec!["heart".into(), "cardiac".into(), "coronary".into(), "aorta".into()],
+            tokens: vec![
+                "heart".into(),
+                "cardiac".into(),
+                "coronary".into(),
+                "aorta".into(),
+            ],
             organ: Some("Heart".into()),
         },
         DicomTagMatcher {
@@ -627,7 +639,12 @@ pub fn default_organ_matchers() -> Vec<DicomTagMatcher> {
             organ: Some("Liver".into()),
         },
         DicomTagMatcher {
-            tokens: vec!["brain".into(), "cerebral".into(), "cranial".into(), "head".into()],
+            tokens: vec![
+                "brain".into(),
+                "cerebral".into(),
+                "cranial".into(),
+                "head".into(),
+            ],
             organ: Some("Brain (Allen)".into()),
         },
         DicomTagMatcher {
@@ -665,17 +682,19 @@ pub fn infer_organ_from_metadata(
     meta: &DicomMetadata,
     matchers: &[DicomTagMatcher],
 ) -> Option<String> {
-    let haystack = normalize_dicom_token(&[
-        meta.body_part_examined.as_str(),
-        meta.series_description.as_str(),
-        meta.study_description.as_str(),
-        meta.protocol_name.as_str(),
-    ]
-    .iter()
-    .filter(|s| !s.is_empty())
-    .copied()
-    .collect::<Vec<_>>()
-    .join(" "));
+    let haystack = normalize_dicom_token(
+        &[
+            meta.body_part_examined.as_str(),
+            meta.series_description.as_str(),
+            meta.study_description.as_str(),
+            meta.protocol_name.as_str(),
+        ]
+        .iter()
+        .filter(|s| !s.is_empty())
+        .copied()
+        .collect::<Vec<_>>()
+        .join(" "),
+    );
 
     infer_organ_from_haystack(&haystack, matchers)
 }
@@ -887,11 +906,7 @@ pub fn resolve_local_dicom_dir() -> Option<PathBuf> {
     }
     if let Ok(cwd) = std::env::current_dir() {
         candidates.push(cwd.join(DEFAULT_LOCAL_DICOM_DIR));
-        candidates.push(
-            cwd.join("..")
-                .join("..")
-                .join(DEFAULT_LOCAL_DICOM_DIR),
-        );
+        candidates.push(cwd.join("..").join("..").join(DEFAULT_LOCAL_DICOM_DIR));
     }
 
     for path in candidates {
@@ -934,7 +949,10 @@ pub fn collect_dicom_image_paths_under(root: &Path, max_files: usize) -> Vec<Pat
         .collect();
     images.sort_by_key(|p| {
         let name = p.file_name().and_then(|s| s.to_str()).unwrap_or("");
-        (!(name.starts_with("IM") || name.starts_with("im")), name.to_string())
+        (
+            !(name.starts_with("IM") || name.starts_with("im")),
+            name.to_string(),
+        )
     });
     images.truncate(max_files);
     images
@@ -969,60 +987,60 @@ fn collect_dicom_paths_recursive(dir: &Path, max_files: usize, out: &mut Vec<Pat
 pub(crate) mod test_fixtures {
     use super::*;
 
-/// Minimal Part-10 bytes for unit tests (explicit VR, single 2×2 pixel frame).
-pub fn test_fixture_split_bytes() -> Vec<u8> {
-    let mut bytes = build_explicit_meta_file(TS_EXPLICIT_VR_LITTLE_ENDIAN);
-    push_explicit_lo(TAG_MODALITY, "CT", &mut bytes);
-    push_explicit_lo(TAG_BODY_PART_EXAMINED, "CHEST", &mut bytes);
-    push_explicit_lo(TAG_SERIES_DESCRIPTION, "CORONARY CTA", &mut bytes);
-    push_explicit_us(TAG_ROWS, 2, &mut bytes);
-    push_explicit_us(TAG_COLUMNS, 2, &mut bytes);
-    push_explicit_string(TAG_SERIES_INSTANCE_UID, "1.2.3", &mut bytes);
-    let pixels = [10u8, 20, 30, 40];
-    bytes.extend_from_slice(&[0xE0, 0x7F, 0x10, 0x00, b'O', b'B', 0x00, 0x00]);
-    bytes.extend_from_slice(&(pixels.len() as u32).to_le_bytes());
-    bytes.extend_from_slice(&pixels);
-    bytes
-}
+    /// Minimal Part-10 bytes for unit tests (explicit VR, single 2×2 pixel frame).
+    pub fn test_fixture_split_bytes() -> Vec<u8> {
+        let mut bytes = build_explicit_meta_file(TS_EXPLICIT_VR_LITTLE_ENDIAN);
+        push_explicit_lo(TAG_MODALITY, "CT", &mut bytes);
+        push_explicit_lo(TAG_BODY_PART_EXAMINED, "CHEST", &mut bytes);
+        push_explicit_lo(TAG_SERIES_DESCRIPTION, "CORONARY CTA", &mut bytes);
+        push_explicit_us(TAG_ROWS, 2, &mut bytes);
+        push_explicit_us(TAG_COLUMNS, 2, &mut bytes);
+        push_explicit_string(TAG_SERIES_INSTANCE_UID, "1.2.3", &mut bytes);
+        let pixels = [10u8, 20, 30, 40];
+        bytes.extend_from_slice(&[0xE0, 0x7F, 0x10, 0x00, b'O', b'B', 0x00, 0x00]);
+        bytes.extend_from_slice(&(pixels.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&pixels);
+        bytes
+    }
 
-fn build_explicit_meta_file(transfer_syntax: &str) -> Vec<u8> {
-    let mut out = vec![0u8; 128];
-    out.extend_from_slice(b"DICM");
-    push_explicit_string(TAG_TRANSFER_SYNTAX_UID, transfer_syntax, &mut out);
-    out
-}
+    fn build_explicit_meta_file(transfer_syntax: &str) -> Vec<u8> {
+        let mut out = vec![0u8; 128];
+        out.extend_from_slice(b"DICM");
+        push_explicit_string(TAG_TRANSFER_SYNTAX_UID, transfer_syntax, &mut out);
+        out
+    }
 
-fn push_explicit_string(tag: u32, value: &str, out: &mut Vec<u8>) {
-    let group = (tag >> 16) as u16;
-    let element = tag as u16;
-    let bytes = value.as_bytes();
-    out.extend_from_slice(&group.to_le_bytes());
-    out.extend_from_slice(&element.to_le_bytes());
-    out.extend_from_slice(b"UI");
-    out.extend_from_slice(&(bytes.len() as u16).to_le_bytes());
-    out.extend_from_slice(bytes);
-}
+    fn push_explicit_string(tag: u32, value: &str, out: &mut Vec<u8>) {
+        let group = (tag >> 16) as u16;
+        let element = tag as u16;
+        let bytes = value.as_bytes();
+        out.extend_from_slice(&group.to_le_bytes());
+        out.extend_from_slice(&element.to_le_bytes());
+        out.extend_from_slice(b"UI");
+        out.extend_from_slice(&(bytes.len() as u16).to_le_bytes());
+        out.extend_from_slice(bytes);
+    }
 
-fn push_explicit_lo(tag: u32, value: &str, out: &mut Vec<u8>) {
-    let group = (tag >> 16) as u16;
-    let element = tag as u16;
-    let bytes = value.as_bytes();
-    out.extend_from_slice(&group.to_le_bytes());
-    out.extend_from_slice(&element.to_le_bytes());
-    out.extend_from_slice(b"LO");
-    out.extend_from_slice(&(bytes.len() as u16).to_le_bytes());
-    out.extend_from_slice(bytes);
-}
+    fn push_explicit_lo(tag: u32, value: &str, out: &mut Vec<u8>) {
+        let group = (tag >> 16) as u16;
+        let element = tag as u16;
+        let bytes = value.as_bytes();
+        out.extend_from_slice(&group.to_le_bytes());
+        out.extend_from_slice(&element.to_le_bytes());
+        out.extend_from_slice(b"LO");
+        out.extend_from_slice(&(bytes.len() as u16).to_le_bytes());
+        out.extend_from_slice(bytes);
+    }
 
-fn push_explicit_us(tag: u32, value: u16, out: &mut Vec<u8>) {
-    let group = (tag >> 16) as u16;
-    let element = tag as u16;
-    out.extend_from_slice(&group.to_le_bytes());
-    out.extend_from_slice(&element.to_le_bytes());
-    out.extend_from_slice(b"US");
-    out.extend_from_slice(&2u16.to_le_bytes());
-    out.extend_from_slice(&value.to_le_bytes());
-}
+    fn push_explicit_us(tag: u32, value: u16, out: &mut Vec<u8>) {
+        let group = (tag >> 16) as u16;
+        let element = tag as u16;
+        out.extend_from_slice(&group.to_le_bytes());
+        out.extend_from_slice(&element.to_le_bytes());
+        out.extend_from_slice(b"US");
+        out.extend_from_slice(&2u16.to_le_bytes());
+        out.extend_from_slice(&value.to_le_bytes());
+    }
 }
 
 #[cfg(test)]
@@ -1087,10 +1105,18 @@ mod tests {
             return;
         };
         let all = super::collect_dicom_paths_under(&root, 8);
-        assert!(!all.is_empty(), "no Part-10 DICOM files under {}", root.display());
+        assert!(
+            !all.is_empty(),
+            "no Part-10 DICOM files under {}",
+            root.display()
+        );
         for path in &all {
             let meta = super::parse_dicom_file(path).expect("metadata parse");
-            assert!(!meta.modality.is_empty(), "modality missing in {}", path.display());
+            assert!(
+                !meta.modality.is_empty(),
+                "modality missing in {}",
+                path.display()
+            );
         }
 
         let images = super::collect_dicom_image_paths_under(&root, 4);
@@ -1102,7 +1128,11 @@ mod tests {
         for path in &images {
             let bytes = std::fs::read(path).unwrap();
             let split = super::split_dicom_payload(&bytes).expect("split ingest");
-            assert!(split.pixels.length > 0, "pixel payload empty in {}", path.display());
+            assert!(
+                split.pixels.length > 0,
+                "pixel payload empty in {}",
+                path.display()
+            );
             assert!(split.meta.rows > 0 && split.meta.columns > 0);
         }
     }

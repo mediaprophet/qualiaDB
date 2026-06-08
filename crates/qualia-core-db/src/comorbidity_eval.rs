@@ -96,8 +96,10 @@ pub fn compile_exacerbation_quins(
     severity_quin.predicate = PRED_HAS_SEVERITY;
     severity_quin.object = encode_severity_object(severity);
     severity_quin.context = patient_context;
-    severity_quin.parity =
-        severity_quin.subject ^ severity_quin.predicate ^ severity_quin.object ^ severity_quin.context;
+    severity_quin.parity = severity_quin.subject
+        ^ severity_quin.predicate
+        ^ severity_quin.object
+        ^ severity_quin.context;
     out[1] = severity_quin;
 
     2
@@ -138,9 +140,8 @@ pub fn eval_comorbidity(
     let mut consistent_buf = [QualiaQuin::default(); 128];
     let mut isolated_buf = [QualiaQuin::default(); 32];
     let (consistent_count, isolated_count) =
-        route_paraconsistent(quins, &mut consistent_buf, &mut isolated_buf).map_err(|_| {
-            ComorbidityError::OutputBufferFull
-        })?;
+        route_paraconsistent(quins, &mut consistent_buf, &mut isolated_buf)
+            .map_err(|_| ComorbidityError::OutputBufferFull)?;
     let graph = &consistent_buf[..consistent_count];
 
     let mut conditions = [0u64; MAX_CONDITION_SLOTS];
@@ -185,8 +186,7 @@ pub fn eval_comorbidity(
             if quin.subject != condition && quin.object != condition {
                 continue;
             }
-            let nested_fp =
-                nested_claim_fingerprint(quin.subject, quin.predicate, quin.object);
+            let nested_fp = nested_claim_fingerprint(quin.subject, quin.predicate, quin.object);
             let mut matched_severity = 0u32;
             for j in 0..severity_count {
                 if severities[j].0 == nested_fp {
@@ -254,8 +254,10 @@ mod tests {
         has_diabetes.predicate = PRED_HAS_CONDITION;
         has_diabetes.object = diabetes;
         has_diabetes.context = patient;
-        has_diabetes.parity =
-            has_diabetes.subject ^ has_diabetes.predicate ^ has_diabetes.object ^ has_diabetes.context;
+        has_diabetes.parity = has_diabetes.subject
+            ^ has_diabetes.predicate
+            ^ has_diabetes.object
+            ^ has_diabetes.context;
         out[idx] = has_diabetes;
         idx += 1;
 
@@ -281,8 +283,7 @@ mod tests {
         cardio.predicate = PRED_HAS_CONDITION;
         cardio.object = heart;
         cardio.context = patient;
-        cardio.parity =
-            cardio.subject ^ cardio.predicate ^ cardio.object ^ cardio.context;
+        cardio.parity = cardio.subject ^ cardio.predicate ^ cardio.object ^ cardio.context;
         out[idx] = cardio;
         idx += 1;
 
@@ -308,13 +309,7 @@ mod tests {
             _pad: [0; 3],
         }; 8];
 
-        let count = eval_comorbidity(
-            patient,
-            q_hash("Heart"),
-            &graph[..n],
-            &mut verdicts,
-        )
-        .unwrap();
+        let count = eval_comorbidity(patient, q_hash("Heart"), &graph[..n], &mut verdicts).unwrap();
         assert!(count >= 2);
         assert!(verdicts[0].compounded_risk_milli > 400);
     }

@@ -16,27 +16,40 @@ pub enum LtlFormula {
     Release { trigger: u64, invariant: u64 },
 }
 
-pub fn evaluate_ltl_trace(
-    trace: &[QualiaQuin],
-    formula: &LtlFormula,
-) -> bool {
+pub fn evaluate_ltl_trace(trace: &[QualiaQuin], formula: &LtlFormula) -> bool {
     match formula {
         LtlFormula::Globally(p) => {
-            if trace.is_empty() { return false; }
-            for quin in trace { if quin.predicate != *p { return false; } }
+            if trace.is_empty() {
+                return false;
+            }
+            for quin in trace {
+                if quin.predicate != *p {
+                    return false;
+                }
+            }
             true
         }
         LtlFormula::Finally(p) => {
-            if trace.is_empty() { return false; }
-            for quin in trace { if quin.predicate == *p { return true; } }
+            if trace.is_empty() {
+                return false;
+            }
+            for quin in trace {
+                if quin.predicate == *p {
+                    return true;
+                }
+            }
             false
         }
         LtlFormula::Next(p) => {
-            if trace.len() < 2 { return false; }
+            if trace.len() < 2 {
+                return false;
+            }
             trace[1].predicate == *p
         }
         LtlFormula::Until { ante, consequent } => {
-            if trace.is_empty() { return false; }
+            if trace.is_empty() {
+                return false;
+            }
             for (i, quin) in trace.iter().enumerate() {
                 if quin.predicate == *consequent {
                     let mut ante_held = true;
@@ -46,13 +59,17 @@ pub fn evaluate_ltl_trace(
                             break;
                         }
                     }
-                    if ante_held { return true; }
+                    if ante_held {
+                        return true;
+                    }
                 }
             }
             false
         }
         LtlFormula::Release { trigger, invariant } => {
-            if trace.is_empty() { return true; }
+            if trace.is_empty() {
+                return true;
+            }
             for (i, quin) in trace.iter().enumerate() {
                 if quin.predicate != *invariant {
                     let mut triggered = false;
@@ -62,7 +79,9 @@ pub fn evaluate_ltl_trace(
                             break;
                         }
                     }
-                    if !triggered { return false; }
+                    if !triggered {
+                        return false;
+                    }
                 }
             }
             true
@@ -76,7 +95,14 @@ mod tests {
     use crate::QualiaQuin;
 
     fn make_quin(predicate: u64) -> QualiaQuin {
-        QualiaQuin { subject: 0, predicate, object: 0, context: 0, metadata: 0, parity: 0 }
+        QualiaQuin {
+            subject: 0,
+            predicate,
+            object: 0,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }
     }
 
     #[test]
@@ -85,8 +111,14 @@ mod tests {
         let q_p = make_quin(p);
         let q_not_p = make_quin(99);
 
-        assert!(evaluate_ltl_trace(&[q_p, q_p, q_p], &LtlFormula::Globally(p)));
-        assert!(!evaluate_ltl_trace(&[q_p, q_not_p, q_p], &LtlFormula::Globally(p)));
+        assert!(evaluate_ltl_trace(
+            &[q_p, q_p, q_p],
+            &LtlFormula::Globally(p)
+        ));
+        assert!(!evaluate_ltl_trace(
+            &[q_p, q_not_p, q_p],
+            &LtlFormula::Globally(p)
+        ));
         assert!(!evaluate_ltl_trace(&[], &LtlFormula::Globally(p)));
     }
 
@@ -96,8 +128,14 @@ mod tests {
         let q_p = make_quin(p);
         let q_not_p = make_quin(99);
 
-        assert!(evaluate_ltl_trace(&[q_not_p, q_not_p, q_p], &LtlFormula::Finally(p)));
-        assert!(!evaluate_ltl_trace(&[q_not_p, q_not_p], &LtlFormula::Finally(p)));
+        assert!(evaluate_ltl_trace(
+            &[q_not_p, q_not_p, q_p],
+            &LtlFormula::Finally(p)
+        ));
+        assert!(!evaluate_ltl_trace(
+            &[q_not_p, q_not_p],
+            &LtlFormula::Finally(p)
+        ));
         assert!(!evaluate_ltl_trace(&[], &LtlFormula::Finally(p)));
     }
 
@@ -121,11 +159,41 @@ mod tests {
         let q_q = make_quin(q);
         let q_other = make_quin(99);
 
-        assert!(evaluate_ltl_trace(&[q_p, q_p, q_q], &LtlFormula::Until { ante: p, consequent: q }));
-        assert!(evaluate_ltl_trace(&[q_q], &LtlFormula::Until { ante: p, consequent: q }));
-        assert!(!evaluate_ltl_trace(&[q_p, q_p, q_p], &LtlFormula::Until { ante: p, consequent: q }));
-        assert!(!evaluate_ltl_trace(&[q_p, q_other, q_q], &LtlFormula::Until { ante: p, consequent: q }));
-        assert!(!evaluate_ltl_trace(&[], &LtlFormula::Until { ante: p, consequent: q }));
+        assert!(evaluate_ltl_trace(
+            &[q_p, q_p, q_q],
+            &LtlFormula::Until {
+                ante: p,
+                consequent: q
+            }
+        ));
+        assert!(evaluate_ltl_trace(
+            &[q_q],
+            &LtlFormula::Until {
+                ante: p,
+                consequent: q
+            }
+        ));
+        assert!(!evaluate_ltl_trace(
+            &[q_p, q_p, q_p],
+            &LtlFormula::Until {
+                ante: p,
+                consequent: q
+            }
+        ));
+        assert!(!evaluate_ltl_trace(
+            &[q_p, q_other, q_q],
+            &LtlFormula::Until {
+                ante: p,
+                consequent: q
+            }
+        ));
+        assert!(!evaluate_ltl_trace(
+            &[],
+            &LtlFormula::Until {
+                ante: p,
+                consequent: q
+            }
+        ));
     }
 
     #[test]
@@ -136,10 +204,21 @@ mod tests {
         let q_i = make_quin(invariant);
         let q_other = make_quin(99);
 
-        assert!(evaluate_ltl_trace(&[q_i, q_i, q_i], &LtlFormula::Release { trigger, invariant }));
-        assert!(evaluate_ltl_trace(&[q_i, q_t, q_other], &LtlFormula::Release { trigger, invariant }));
-        assert!(!evaluate_ltl_trace(&[q_i, q_other, q_t], &LtlFormula::Release { trigger, invariant }));
-        assert!(evaluate_ltl_trace(&[], &LtlFormula::Release { trigger, invariant }));
+        assert!(evaluate_ltl_trace(
+            &[q_i, q_i, q_i],
+            &LtlFormula::Release { trigger, invariant }
+        ));
+        assert!(evaluate_ltl_trace(
+            &[q_i, q_t, q_other],
+            &LtlFormula::Release { trigger, invariant }
+        ));
+        assert!(!evaluate_ltl_trace(
+            &[q_i, q_other, q_t],
+            &LtlFormula::Release { trigger, invariant }
+        ));
+        assert!(evaluate_ltl_trace(
+            &[],
+            &LtlFormula::Release { trigger, invariant }
+        ));
     }
 }
-

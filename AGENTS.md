@@ -610,6 +610,28 @@ At the end of your session:
 
 ## 7. Session Notes
 
+### 2026-06-08 — Codex (Sprint 4D ontology routing + symbolic hydration)
+
+**Completed:**
+- Added `crates/qualia-client-core/src/ontology_router.rs` to route chat turns toward the most relevant installed ontologies using `id`, `name`, `domain`, and `tags`.
+- Extended `OntologyScopeSummary` / chat environment compilation so installed ontologies carry `domain`, `tags`, and `source` metadata into the inference layer.
+- Threaded routed `context_namespaces` through `InferenceContextPacket` and `AgentIntent`, and mirrored them into `AgentIntentFrame`.
+- Narrowed chat retrieval to the routed ontology subset instead of scanning every installed ontology equally on each turn.
+- Updated `orchestrator.rs` so N3 / graph-mutation gating now selects SHACL shapes from routed namespace families (`health`, `legal/guardianship`, `commons`) instead of always using the same default observation shape.
+- Added a bounded corrective retry loop in `chat_inference.rs` for deterministic symbolic blocks (`q42:N3Compiler` / SHACL parse failures).
+
+**Verification:**
+- `cargo check -p qualia-core-db -p qualia-client-core`
+- `cargo test -p qualia-client-core ontology_router -- --nocapture`
+- `cargo test -p qualia-core-db orchestrator::tests::test_orchestrator_full_permit_path --lib -- --exact --nocapture`
+
+**Notes for future agents:**
+1. `context_namespaces` are now the main bridge between ontology routing and symbolic enforcement. If you extend routing, keep the hashes stable and feed the same family names into orchestrator shape selection.
+2. The routed SHACL hydration is deliberately conservative: it uses namespace families to choose the relevant shape set, not full ontology parsing at runtime.
+3. The corrective retry loop is single-retry only by design; if you expand it, preserve the bounded behavior so chat turns stay predictable on edge devices.
+
+---
+
 ### 2026-06-05 — Claude Sonnet 4.6 (Session 2 — full audit)
 
 **Completed:**

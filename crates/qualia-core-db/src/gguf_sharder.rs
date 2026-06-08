@@ -11,7 +11,10 @@ use crate::{QualiaQuin, QualiaSuperBlock};
 /// byte slices parsed at runtime (e.g. tensor names from the binary header).
 fn gguf_name_hash(bytes: &[u8]) -> u64 {
     let mut h: u64 = 0xcbf29ce484222325;
-    for &b in bytes { h ^= b as u64; h = h.wrapping_mul(0x100000001b3); }
+    for &b in bytes {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x100000001b3);
+    }
     h
 }
 
@@ -20,22 +23,52 @@ fn gguf_name_hash(bytes: &[u8]) -> u64 {
 /// Used by both `GgufTokenizer` and `GgufTensorIndex`.
 fn gguf_skip_value(mmap: &[u8], pos: &mut usize, vtype: u32) -> Option<()> {
     match vtype {
-        0|1|7    => { if *pos+1 > mmap.len() { return None; } *pos += 1; }
-        2|3      => { if *pos+2 > mmap.len() { return None; } *pos += 2; }
-        4|5|6    => { if *pos+4 > mmap.len() { return None; } *pos += 4; }
-        10|11|12 => { if *pos+8 > mmap.len() { return None; } *pos += 8; }
-        8 => {
-            if *pos+8 > mmap.len() { return None; }
-            let slen = u64::from_le_bytes(mmap[*pos..*pos+8].try_into().ok()?) as usize;
+        0 | 1 | 7 => {
+            if *pos + 1 > mmap.len() {
+                return None;
+            }
+            *pos += 1;
+        }
+        2 | 3 => {
+            if *pos + 2 > mmap.len() {
+                return None;
+            }
+            *pos += 2;
+        }
+        4 | 5 | 6 => {
+            if *pos + 4 > mmap.len() {
+                return None;
+            }
+            *pos += 4;
+        }
+        10 | 11 | 12 => {
+            if *pos + 8 > mmap.len() {
+                return None;
+            }
             *pos += 8;
-            if *pos+slen > mmap.len() { return None; }
+        }
+        8 => {
+            if *pos + 8 > mmap.len() {
+                return None;
+            }
+            let slen = u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().ok()?) as usize;
+            *pos += 8;
+            if *pos + slen > mmap.len() {
+                return None;
+            }
             *pos += slen;
         }
         9 => {
-            if *pos+12 > mmap.len() { return None; }
-            let etype = u32::from_le_bytes(mmap[*pos..*pos+4].try_into().ok()?); *pos += 4;
-            let cnt   = u64::from_le_bytes(mmap[*pos..*pos+8].try_into().ok()?) as usize; *pos += 8;
-            for _ in 0..cnt { gguf_skip_value(mmap, pos, etype)?; }
+            if *pos + 12 > mmap.len() {
+                return None;
+            }
+            let etype = u32::from_le_bytes(mmap[*pos..*pos + 4].try_into().ok()?);
+            *pos += 4;
+            let cnt = u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().ok()?) as usize;
+            *pos += 8;
+            for _ in 0..cnt {
+                gguf_skip_value(mmap, pos, etype)?;
+            }
         }
         _ => return None,
     }
@@ -191,7 +224,12 @@ impl GgufTensorIndex {
         })
     }
 
-    fn parse_kv_hyperparams(key: &str, vtype: u32, mmap: &[u8], pos: &mut usize) -> GgufHyperparams {
+    fn parse_kv_hyperparams(
+        key: &str,
+        vtype: u32,
+        mmap: &[u8],
+        pos: &mut usize,
+    ) -> GgufHyperparams {
         let mut patch = GgufHyperparams::default();
         if vtype != 4 {
             let _ = gguf_skip_value(mmap, pos, vtype);
@@ -215,60 +253,90 @@ impl GgufTensorIndex {
     }
 
     fn try_build(mmap: &[u8]) -> Option<Self> {
-        if mmap.len() < 24 || &mmap[0..4] != b"GGUF" { return None; }
-        let version      = u32::from_le_bytes(mmap[4..8].try_into().ok()?);
-        if version < 2 { return None; }
+        if mmap.len() < 24 || &mmap[0..4] != b"GGUF" {
+            return None;
+        }
+        let version = u32::from_le_bytes(mmap[4..8].try_into().ok()?);
+        if version < 2 {
+            return None;
+        }
         let tensor_count = u64::from_le_bytes(mmap[8..16].try_into().ok()?);
-        let kv_count     = u64::from_le_bytes(mmap[16..24].try_into().ok()?);
+        let kv_count = u64::from_le_bytes(mmap[16..24].try_into().ok()?);
 
         let mut hyperparams = GgufHyperparams::default();
         let mut pos = 24usize;
         for _ in 0..kv_count {
-            if pos + 8 > mmap.len() { return None; }
-            let klen = u64::from_le_bytes(mmap[pos..pos+8].try_into().ok()?) as usize;
+            if pos + 8 > mmap.len() {
+                return None;
+            }
+            let klen = u64::from_le_bytes(mmap[pos..pos + 8].try_into().ok()?) as usize;
             pos += 8;
-            if pos + klen + 4 > mmap.len() { return None; }
+            if pos + klen + 4 > mmap.len() {
+                return None;
+            }
             let key = std::str::from_utf8(&mmap[pos..pos + klen]).unwrap_or("");
             pos += klen;
-            let vtype = u32::from_le_bytes(mmap[pos..pos+4].try_into().ok()?);
+            let vtype = u32::from_le_bytes(mmap[pos..pos + 4].try_into().ok()?);
             pos += 4;
             let patch = Self::parse_kv_hyperparams(key, vtype, mmap, &mut pos);
-            if patch.n_layer != 0 { hyperparams.n_layer = patch.n_layer; }
-            if patch.n_embd != 0 { hyperparams.n_embd = patch.n_embd; }
-            if patch.n_head != 0 { hyperparams.n_head = patch.n_head; }
-            if patch.n_kv_head != 0 { hyperparams.n_kv_head = patch.n_kv_head; }
+            if patch.n_layer != 0 {
+                hyperparams.n_layer = patch.n_layer;
+            }
+            if patch.n_embd != 0 {
+                hyperparams.n_embd = patch.n_embd;
+            }
+            if patch.n_head != 0 {
+                hyperparams.n_head = patch.n_head;
+            }
+            if patch.n_kv_head != 0 {
+                hyperparams.n_kv_head = patch.n_kv_head;
+            }
         }
 
         let mut entries = Vec::with_capacity(tensor_count.min(4096) as usize);
         let mut max_tensor_bytes = 0usize;
         let mut max_layer_tensor_bytes = 0usize;
         for _ in 0..tensor_count {
-            if pos + 8 > mmap.len() { break; }
-            let nlen = u64::from_le_bytes(mmap[pos..pos+8].try_into().ok()?) as usize;
+            if pos + 8 > mmap.len() {
+                break;
+            }
+            let nlen = u64::from_le_bytes(mmap[pos..pos + 8].try_into().ok()?) as usize;
             pos += 8;
-            if pos + nlen > mmap.len() { break; }
+            if pos + nlen > mmap.len() {
+                break;
+            }
             let name = &mmap[pos..pos + nlen];
             let name_hash = gguf_name_hash(name);
             pos += nlen;
 
             // n_dims
-            if pos + 4 > mmap.len() { break; }
-            let n_dims_raw = u32::from_le_bytes(mmap[pos..pos+4].try_into().ok()?) as usize;
+            if pos + 4 > mmap.len() {
+                break;
+            }
+            let n_dims_raw = u32::from_le_bytes(mmap[pos..pos + 4].try_into().ok()?) as usize;
             pos += 4;
 
             // Shape (up to 4 dims stored; rest skipped)
             let mut dims = [0u64; 4];
             for d in 0..n_dims_raw {
-                if pos + 8 > mmap.len() { break; }
-                let v = u64::from_le_bytes(mmap[pos..pos+8].try_into().ok()?);
+                if pos + 8 > mmap.len() {
+                    break;
+                }
+                let v = u64::from_le_bytes(mmap[pos..pos + 8].try_into().ok()?);
                 pos += 8;
-                if d < 4 { dims[d] = v; }
+                if d < 4 {
+                    dims[d] = v;
+                }
             }
 
             // ggml_type + offset
-            if pos + 12 > mmap.len() { break; }
-            let ggml_type   = u32::from_le_bytes(mmap[pos..pos+4].try_into().ok()?); pos += 4;
-            let byte_offset = u64::from_le_bytes(mmap[pos..pos+8].try_into().ok()?); pos += 8;
+            if pos + 12 > mmap.len() {
+                break;
+            }
+            let ggml_type = u32::from_le_bytes(mmap[pos..pos + 4].try_into().ok()?);
+            pos += 4;
+            let byte_offset = u64::from_le_bytes(mmap[pos..pos + 8].try_into().ok()?);
+            pos += 8;
 
             let info = GgufTensorInfo {
                 dims,
@@ -288,8 +356,14 @@ impl GgufTensorIndex {
         let tensor_data_start = ((pos as u64 + 31) & !31) as u64;
         let emb_hash = gguf_name_hash(b"token_embd.weight");
         let out_hash = gguf_name_hash(b"output.weight");
-        let token_embd = entries.iter().find(|(h, _)| *h == emb_hash).map(|(_, i)| *i);
-        let output_weight = entries.iter().find(|(h, _)| *h == out_hash).map(|(_, i)| *i);
+        let token_embd = entries
+            .iter()
+            .find(|(h, _)| *h == emb_hash)
+            .map(|(_, i)| *i);
+        let output_weight = entries
+            .iter()
+            .find(|(h, _)| *h == out_hash)
+            .map(|(_, i)| *i);
         if hyperparams.n_embd == 0 {
             hyperparams.n_embd = token_embd.map(|t| t.dims[0] as u32).unwrap_or(0);
         }
@@ -306,7 +380,10 @@ impl GgufTensorIndex {
 
     fn find(&self, name: &[u8]) -> Option<GgufTensorInfo> {
         let h = gguf_name_hash(name);
-        self.entries.iter().find(|(eh, _)| *eh == h).map(|(_, i)| *i)
+        self.entries
+            .iter()
+            .find(|(eh, _)| *eh == h)
+            .map(|(_, i)| *i)
     }
 
     fn find_layer_tensor(&self, layer: u32, suffix: &[u8]) -> Option<GgufTensorInfo> {
@@ -349,12 +426,16 @@ impl GgufTensorIndex {
 
     /// Return the embedding dimension (n_embd) from `token_embd.weight`, or 0 if unknown.
     pub fn emb_dim(&self) -> usize {
-        self.token_embd_info().map(|i| i.dims[0] as usize).unwrap_or(0)
+        self.token_embd_info()
+            .map(|i| i.dims[0] as usize)
+            .unwrap_or(0)
     }
 
     /// Vocabulary size from `token_embd.weight` shape `[n_embd, n_vocab]`.
     pub fn vocab_dim(&self) -> usize {
-        self.token_embd_info().map(|i| i.dims[1] as usize).unwrap_or(0)
+        self.token_embd_info()
+            .map(|i| i.dims[1] as usize)
+            .unwrap_or(0)
     }
 
     /// Dequantize one token embedding into caller-supplied `out` (zero heap in hot path).
@@ -382,8 +463,7 @@ impl GgufTensorIndex {
             Ok(s) => s,
             Err(_) => return 0,
         };
-        crate::ggml_quants::dequantize_row_into(raw, info.ggml_type, n_embd, out)
-            .unwrap_or(0)
+        crate::ggml_quants::dequantize_row_into(raw, info.ggml_type, n_embd, out).unwrap_or(0)
     }
 
     /// Slice and dequantize a token embedding (test / legacy path; allocates `Vec`).
@@ -417,18 +497,25 @@ impl GGufSharder {
     /// Parses the GGUF header to extract vocabulary and metadata into a `.q42` SuperBlock.
     pub fn extract_ontology_to_superblock(&self) -> QualiaSuperBlock {
         // Mocks reading the GGUF header and vocabulary
-        println!("Extracting vocabulary and metadata from {}...", self.source_gguf_path);
-        
+        println!(
+            "Extracting vocabulary and metadata from {}...",
+            self.source_gguf_path
+        );
+
         // This superblock is extremely lightweight because it only holds logic and strings,
         // leaving the multi-gigabyte tensors on disk.
         unsafe { std::mem::zeroed::<QualiaSuperBlock>() }
     }
 
     /// Step 2: The Pointer-Quin Map (.q42.bidx)
-    /// Generates the Master Record map connecting N3 logic semantic rules to the exact 
+    /// Generates the Master Record map connecting N3 logic semantic rules to the exact
     /// 60-bit byte offsets in the massive GGUF tensor payload.
     pub fn generate_bidx_pointer_map(&self) -> Vec<QualiaQuin> {
-        let flag = if self.source_gguf_path.to_ascii_lowercase().contains("mmproj") {
+        let flag = if self
+            .source_gguf_path
+            .to_ascii_lowercase()
+            .contains("mmproj")
+        {
             crate::MODALITY_FLAG_VISION_TENSOR
         } else {
             crate::MODALITY_FLAG_LLM_TENSOR
@@ -447,20 +534,21 @@ impl GGufSharder {
                 let mut version_bytes = [0u8; 4];
                 let mut tensor_count_bytes = [0u8; 8];
                 let mut kv_count_bytes = [0u8; 8];
-                
+
                 if file.read_exact(&mut version_bytes).is_ok()
                     && file.read_exact(&mut tensor_count_bytes).is_ok()
-                    && file.read_exact(&mut kv_count_bytes).is_ok() {
-                    
+                    && file.read_exact(&mut kv_count_bytes).is_ok()
+                {
                     let _version = u32::from_le_bytes(version_bytes);
                     let tensor_count = u64::from_le_bytes(tensor_count_bytes);
                     let _kv_count = u64::from_le_bytes(kv_count_bytes);
-                    
+
                     // Iterate over the parsed tensor counts and create mapping pointers
-                    for i in 0..tensor_count.min(100) { // Limit for safety
+                    for i in 0..tensor_count.min(100) {
+                        // Limit for safety
                         let byte_offset: u64 = 0x1000 + (i * 0x4000); // Compute relative physical offset
                         let tensor_name = format!("tensor_{}", i);
-                        
+
                         let q_tensor = QualiaQuin {
                             subject: crate::q_hash(&tensor_name),
                             predicate: crate::q_hash("has_tensor_offset"),
@@ -477,7 +565,7 @@ impl GGufSharder {
         }
 
         // Fallback for tests when no GGUF file is actually on disk
-        let mock_byte_offset: u64 = 0x00000ABC; 
+        let mock_byte_offset: u64 = 0x00000ABC;
         let q_tensor = QualiaQuin {
             subject: crate::q_hash("blk.0.attn_q.weight"),
             predicate: crate::q_hash("has_tensor_offset"),
@@ -505,9 +593,12 @@ impl GGufSharder {
     }
 
     /// Step 4: Zero-Copy Memory Mapping
-    /// Maps a massive GGUF model directly into the OS virtual address space, shifting 
+    /// Maps a massive GGUF model directly into the OS virtual address space, shifting
     /// caching logic from the heap to the OS page cache (Zero Allocation).
-    pub fn map_model_to_virtual_memory(&self, file_path: &str) -> Result<memmap2::Mmap, std::io::Error> {
+    pub fn map_model_to_virtual_memory(
+        &self,
+        file_path: &str,
+    ) -> Result<memmap2::Mmap, std::io::Error> {
         let file = std::fs::File::open(file_path)?;
         unsafe { memmap2::MmapOptions::new().map(&file) }
     }
@@ -532,14 +623,25 @@ impl Default for GgufTokenizer {
         let vocab: Vec<String> = (0u32..256)
             .map(|b| {
                 let c = b as u8;
-                if c.is_ascii_graphic() || c == b' ' { (c as char).to_string() }
-                else { format!("<0x{:02X}>", b) }
+                if c.is_ascii_graphic() || c == b' ' {
+                    (c as char).to_string()
+                } else {
+                    format!("<0x{:02X}>", b)
+                }
             })
             .collect();
-        let mut t2id: Vec<(String, u32)> = vocab.iter().enumerate()
-            .map(|(i, s)| (s.clone(), i as u32)).collect();
+        let mut t2id: Vec<(String, u32)> = vocab
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (s.clone(), i as u32))
+            .collect();
         t2id.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
-        Self { vocab, bos_token_id: 1, eos_token_id: 2, token_to_id: t2id }
+        Self {
+            vocab,
+            bos_token_id: 1,
+            eos_token_id: 2,
+            token_to_id: t2id,
+        }
     }
 }
 
@@ -551,9 +653,13 @@ impl GgufTokenizer {
     }
 
     fn try_parse(mmap: &[u8]) -> Option<Self> {
-        if mmap.len() < 24 || &mmap[0..4] != b"GGUF" { return None; }
+        if mmap.len() < 24 || &mmap[0..4] != b"GGUF" {
+            return None;
+        }
         let version = u32::from_le_bytes(mmap[4..8].try_into().ok()?);
-        if version < 2 { return None; } // only v2/v3 have u64 string lengths
+        if version < 2 {
+            return None;
+        } // only v2/v3 have u64 string lengths
         let kv_count = u64::from_le_bytes(mmap[16..24].try_into().ok()?);
         let mut pos = 24usize;
         let mut vocab: Option<Vec<String>> = None;
@@ -561,31 +667,57 @@ impl GgufTokenizer {
         let mut eos_id: Option<u32> = None;
 
         for _ in 0..kv_count {
-            if pos + 8 > mmap.len() { break; }
-            let klen = u64::from_le_bytes(mmap[pos..pos+8].try_into().ok()?) as usize;
+            if pos + 8 > mmap.len() {
+                break;
+            }
+            let klen = u64::from_le_bytes(mmap[pos..pos + 8].try_into().ok()?) as usize;
             pos += 8;
-            if pos + klen > mmap.len() { break; }
-            let key = std::str::from_utf8(&mmap[pos..pos+klen]).unwrap_or("");
+            if pos + klen > mmap.len() {
+                break;
+            }
+            let key = std::str::from_utf8(&mmap[pos..pos + klen]).unwrap_or("");
             pos += klen;
-            if pos + 4 > mmap.len() { break; }
-            let vtype = u32::from_le_bytes(mmap[pos..pos+4].try_into().ok()?);
+            if pos + 4 > mmap.len() {
+                break;
+            }
+            let vtype = u32::from_le_bytes(mmap[pos..pos + 4].try_into().ok()?);
             pos += 4;
             match key {
-                "tokenizer.ggml.tokens"       => { vocab  = Self::read_string_array(mmap, &mut pos, vtype); }
-                "tokenizer.ggml.bos_token_id" => { bos_id = Self::read_u32_val(mmap, &mut pos, vtype); }
-                "tokenizer.ggml.eos_token_id" => { eos_id = Self::read_u32_val(mmap, &mut pos, vtype); }
-                _ => { if Self::skip_value(mmap, &mut pos, vtype).is_none() { break; } }
+                "tokenizer.ggml.tokens" => {
+                    vocab = Self::read_string_array(mmap, &mut pos, vtype);
+                }
+                "tokenizer.ggml.bos_token_id" => {
+                    bos_id = Self::read_u32_val(mmap, &mut pos, vtype);
+                }
+                "tokenizer.ggml.eos_token_id" => {
+                    eos_id = Self::read_u32_val(mmap, &mut pos, vtype);
+                }
+                _ => {
+                    if Self::skip_value(mmap, &mut pos, vtype).is_none() {
+                        break;
+                    }
+                }
             }
-            if vocab.is_some() && bos_id.is_some() && eos_id.is_some() { break; }
+            if vocab.is_some() && bos_id.is_some() && eos_id.is_some() {
+                break;
+            }
         }
 
         let v = vocab?;
         let bos = bos_id.unwrap_or(1);
         let eos = eos_id.unwrap_or(2);
-        let mut t2id: Vec<(String, u32)> = v.iter().enumerate()
-            .map(|(i, s)| (s.clone(), i as u32)).collect();
+        let mut t2id: Vec<(String, u32)> = v
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (s.clone(), i as u32))
+            .collect();
         t2id.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
-        Some(Self { vocab: v, bos_token_id: bos, eos_token_id: eos, token_to_id: t2id })
+        Some(Self {
+            vocab: v,
+            bos_token_id: bos,
+            eos_token_id: eos,
+            token_to_id: t2id,
+        })
     }
 
     /// Greedy longest-match tokenisation; falls back to single-byte encoding.
@@ -617,12 +749,18 @@ impl GgufTokenizer {
     pub fn decode(&self, ids: &[u32]) -> String {
         let mut out = String::new();
         for &id in ids {
-            let s = self.vocab.get(id as usize).map(|s| s.as_str()).unwrap_or("");
+            let s = self
+                .vocab
+                .get(id as usize)
+                .map(|s| s.as_str())
+                .unwrap_or("");
             if s.starts_with('\u{2581}') {
                 out.push(' ');
                 out.push_str(&s['\u{2581}'.len_utf8()..]);
             } else if s.len() == 6 && s.starts_with("<0x") && s.ends_with('>') {
-                if let Ok(b) = u8::from_str_radix(&s[3..5], 16) { out.push(b as char); }
+                if let Ok(b) = u8::from_str_radix(&s[3..5], 16) {
+                    out.push(b as char);
+                }
             } else {
                 out.push_str(s);
             }
@@ -630,22 +768,40 @@ impl GgufTokenizer {
         out
     }
 
-    pub fn vocab_len(&self) -> u32 { self.vocab.len() as u32 }
+    pub fn vocab_len(&self) -> u32 {
+        self.vocab.len() as u32
+    }
 
     // ── internal KV parsers ──────────────────────────────────────────────────
 
     fn read_string_array(mmap: &[u8], pos: &mut usize, vtype: u32) -> Option<Vec<String>> {
-        if vtype != 9 { Self::skip_value(mmap, pos, vtype)?; return None; }
-        if *pos + 12 > mmap.len() { return None; }
-        let etype = u32::from_le_bytes(mmap[*pos..*pos+4].try_into().ok()?); *pos += 4;
-        let count = u64::from_le_bytes(mmap[*pos..*pos+8].try_into().ok()?) as usize; *pos += 8;
-        if etype != 8 { return None; } // must be STRING array
+        if vtype != 9 {
+            Self::skip_value(mmap, pos, vtype)?;
+            return None;
+        }
+        if *pos + 12 > mmap.len() {
+            return None;
+        }
+        let etype = u32::from_le_bytes(mmap[*pos..*pos + 4].try_into().ok()?);
+        *pos += 4;
+        let count = u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().ok()?) as usize;
+        *pos += 8;
+        if etype != 8 {
+            return None;
+        } // must be STRING array
         let mut result = Vec::with_capacity(count.min(256_000));
         for _ in 0..count {
-            if *pos + 8 > mmap.len() { break; }
-            let slen = u64::from_le_bytes(mmap[*pos..*pos+8].try_into().ok()?) as usize; *pos += 8;
-            if *pos + slen > mmap.len() { break; }
-            let s = std::str::from_utf8(&mmap[*pos..*pos+slen]).unwrap_or("<?>").to_string();
+            if *pos + 8 > mmap.len() {
+                break;
+            }
+            let slen = u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().ok()?) as usize;
+            *pos += 8;
+            if *pos + slen > mmap.len() {
+                break;
+            }
+            let s = std::str::from_utf8(&mmap[*pos..*pos + slen])
+                .unwrap_or("<?>")
+                .to_string();
             *pos += slen;
             result.push(s);
         }
@@ -654,9 +810,16 @@ impl GgufTokenizer {
 
     fn read_u32_val(mmap: &[u8], pos: &mut usize, vtype: u32) -> Option<u32> {
         if vtype == 4 {
-            if *pos + 4 > mmap.len() { return None; }
-            let v = u32::from_le_bytes(mmap[*pos..*pos+4].try_into().ok()?); *pos += 4; Some(v)
-        } else { Self::skip_value(mmap, pos, vtype)?; None }
+            if *pos + 4 > mmap.len() {
+                return None;
+            }
+            let v = u32::from_le_bytes(mmap[*pos..*pos + 4].try_into().ok()?);
+            *pos += 4;
+            Some(v)
+        } else {
+            Self::skip_value(mmap, pos, vtype)?;
+            None
+        }
     }
 
     fn skip_value(mmap: &[u8], pos: &mut usize, vtype: u32) -> Option<()> {
@@ -670,15 +833,17 @@ mod tests {
 
     #[test]
     fn probe_gguf_layer_names_if_exists() {
-        use std::fs::File;
         use memmap2::MmapOptions;
+        use std::fs::File;
         let path = "C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf";
         if !std::path::Path::new(path).exists() {
             return;
         }
         let f = File::open(path).unwrap();
         let mmap = unsafe { MmapOptions::new().map(&f).unwrap() };
-        if mmap.len() < 24 || &mmap[0..4] != b"GGUF" { return; }
+        if mmap.len() < 24 || &mmap[0..4] != b"GGUF" {
+            return;
+        }
         let tensor_count = u64::from_le_bytes(mmap[8..16].try_into().unwrap()) as usize;
         let kv_count = u64::from_le_bytes(mmap[16..24].try_into().unwrap()) as usize;
         let mut pos = 24usize;
@@ -689,7 +854,11 @@ mod tests {
             pos += klen;
             let vtype = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
             pos += 4;
-            if key.contains("block") || key.contains("layer") || key.contains("embedding") || key.contains("head") {
+            if key.contains("block")
+                || key.contains("layer")
+                || key.contains("embedding")
+                || key.contains("head")
+            {
                 if vtype == 4 && pos + 4 <= mmap.len() {
                     let v = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
                     println!("KV {key} = {v}");
@@ -713,7 +882,8 @@ mod tests {
             let ggml_type = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
             let byte_off = u64::from_le_bytes(mmap[pos + 4..pos + 12].try_into().unwrap());
             pos += 12;
-            if name.starts_with("blk.0.") && (name.contains("attn_q") || name.contains("ffn_down")) {
+            if name.starts_with("blk.0.") && (name.contains("attn_q") || name.contains("ffn_down"))
+            {
                 println!("tensor: {name} type={ggml_type} dims={dims:?} off={byte_off:#x}");
                 blk_samples += 1;
             }
@@ -722,11 +892,16 @@ mod tests {
 
     #[test]
     fn test_gguf_ontology_extraction() {
-        let sharder = GGufSharder::new("C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf".to_string());
-        
+        let sharder = GGufSharder::new(
+            "C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf".to_string(),
+        );
+
         let superblock = sharder.extract_ontology_to_superblock();
         // Just verify it yields a superblock structural scaffold
-        assert_eq!(superblock.active_quin_count, 0, "SuperBlock should be freshly initialized");
+        assert_eq!(
+            superblock.active_quin_count, 0,
+            "SuperBlock should be freshly initialized"
+        );
     }
 
     #[test]
@@ -735,25 +910,37 @@ mod tests {
 
         let sharder = GGufSharder::new("mock_model.gguf".to_string());
         let pointers = sharder.generate_bidx_pointer_map();
-        
+
         assert_eq!(pointers.len(), 1, "Failed to generate pointer map");
 
         let quin = pointers[0];
-        assert_eq!(quin.extract_modality_flag(), crate::MODALITY_FLAG_LLM_TENSOR, "Pointer Modality Flag was not LLM");
-        assert_eq!(quin.extract_byte_offset(), 0x00000ABC, "Pointer byte offset extracted incorrectly");
+        assert_eq!(
+            quin.extract_modality_flag(),
+            crate::MODALITY_FLAG_LLM_TENSOR,
+            "Pointer Modality Flag was not LLM"
+        );
+        assert_eq!(
+            quin.extract_byte_offset(),
+            0x00000ABC,
+            "Pointer byte offset extracted incorrectly"
+        );
     }
 
     #[test]
     fn test_wordnet_lexicon_mapping() {
         use crate::QuinPointerExt;
         let sharder = GGufSharder::new("mock.gguf".to_string());
-        
+
         // Mock WordNet Synset ID for "Dog"
         let synset_dog = 0x8a2a1072b;
         let quin = sharder.map_wordnet_synset(synset_dog, 0x1000);
-        
+
         assert_eq!(quin.subject, synset_dog);
-        assert_eq!(quin.extract_modality_flag(), crate::MODALITY_FLAG_DENSE_PHYSICS, "Modality Flag should be Dense Physics");
+        assert_eq!(
+            quin.extract_modality_flag(),
+            crate::MODALITY_FLAG_DENSE_PHYSICS,
+            "Modality Flag should be Dense Physics"
+        );
         assert_eq!(quin.extract_byte_offset(), 0x1000);
     }
 }

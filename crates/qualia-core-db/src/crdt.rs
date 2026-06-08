@@ -42,14 +42,18 @@ impl CrdtResolver {
     /// Validates a Role-Based Delegation.
     /// Ensures that a delegate (e.g., social worker) has cryptographic authority
     /// to mutate or read the principal's (e.g., homeless individual) state.
-    pub fn verify_delegation(access: &DelegatedAccess, target_context: u64, current_timestamp: u64) -> bool {
+    pub fn verify_delegation(
+        access: &DelegatedAccess,
+        target_context: u64,
+        current_timestamp: u64,
+    ) -> bool {
         if access.expiration_timestamp < current_timestamp {
             return false; // Expired
         }
         if access.context_bound != target_context && access.context_bound != 0 {
             return false; // Out of bounds
         }
-        
+
         // In production, we verify `cryptographic_proof` against `principal_did` public key.
         true
     }
@@ -61,23 +65,50 @@ mod tests {
 
     #[test]
     fn qualia_crdt_resolution() {
-        let mut q_local = QualiaQuin { subject: 1, predicate: 2, object: 100, context: 5, metadata: 0, parity: 0 };
+        let mut q_local = QualiaQuin {
+            subject: 1,
+            predicate: 2,
+            object: 100,
+            context: 5,
+            metadata: 0,
+            parity: 0,
+        };
         q_local.set_lamport_clock(5);
-        
-        let mut q_remote = QualiaQuin { subject: 1, predicate: 2, object: 200, context: 5, metadata: 0, parity: 0 };
+
+        let mut q_remote = QualiaQuin {
+            subject: 1,
+            predicate: 2,
+            object: 200,
+            context: 5,
+            metadata: 0,
+            parity: 0,
+        };
         q_remote.set_lamport_clock(8); // Remote occurred later
-        
+
         // Remote wins due to clock
         let winner_clock = CrdtResolver::resolve_lww(&q_local, &q_remote);
-        assert_eq!(winner_clock.object, 200, "CRDT failed to resolve higher lamport clock");
-        
+        assert_eq!(
+            winner_clock.object, 200,
+            "CRDT failed to resolve higher lamport clock"
+        );
+
         // Concurrent mutations (same clock)
-        let mut q_concurrent = QualiaQuin { subject: 1, predicate: 2, object: 50, context: 5, metadata: 0, parity: 0 };
+        let mut q_concurrent = QualiaQuin {
+            subject: 1,
+            predicate: 2,
+            object: 50,
+            context: 5,
+            metadata: 0,
+            parity: 0,
+        };
         q_concurrent.set_lamport_clock(5);
-        
+
         // Tie-breaker falls to magnitude
         let winner_tie = CrdtResolver::resolve_lww(&q_local, &q_concurrent);
-        assert_eq!(winner_tie.object, 100, "CRDT failed deterministic tie-breaker");
+        assert_eq!(
+            winner_tie.object, 100,
+            "CRDT failed deterministic tie-breaker"
+        );
     }
 }
 
@@ -117,7 +148,10 @@ impl SuspendedTransactionQueue {
     }
 
     /// Asynchronously wakes up a suspended transaction if the signature threshold is met by an incoming WebRTC token.
-    pub fn apply_consensus_token(&mut self, token_quin: &QualiaQuin) -> Option<SuspendedTransaction> {
+    pub fn apply_consensus_token(
+        &mut self,
+        token_quin: &QualiaQuin,
+    ) -> Option<SuspendedTransaction> {
         for slot in self.queue.iter_mut() {
             if let Some(tx) = slot {
                 if tx.agreement_id == token_quin.context {

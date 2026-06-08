@@ -67,20 +67,13 @@ impl<'a> Q42LexMmap<'a> {
         while lo < hi {
             let mid = lo + (hi - lo) / 2;
             let off = HEADER_SIZE + mid * INDEX_ENTRY_SIZE;
-            let entry_hash = u64::from_le_bytes(
-                self.data[off..off + 8]
-                    .try_into()
-                    .ok()?,
-            );
+            let entry_hash = u64::from_le_bytes(self.data[off..off + 8].try_into().ok()?);
             match entry_hash.cmp(&hash) {
                 std::cmp::Ordering::Less => lo = mid + 1,
                 std::cmp::Ordering::Greater => hi = mid,
                 std::cmp::Ordering::Equal => {
-                    let str_off = u64::from_le_bytes(
-                        self.data[off + 8..off + 16]
-                            .try_into()
-                            .ok()?,
-                    ) as usize;
+                    let str_off =
+                        u64::from_le_bytes(self.data[off + 8..off + 16].try_into().ok()?) as usize;
                     return Self::read_string_at(self.data, self.strings_offset, str_off);
                 }
             }
@@ -111,9 +104,8 @@ impl Q42LexFile {
     pub fn open(path: &Path) -> std::io::Result<Self> {
         let file = File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };
-        Q42LexMmap::from_bytes(&mmap).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}"))
-        })?;
+        Q42LexMmap::from_bytes(&mmap)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}")))?;
         Ok(Self { mmap })
     }
 
@@ -148,7 +140,8 @@ impl Q42Lexicon {
         for i in 0..entry_count {
             let off = i * 16;
             let hash = u64::from_le_bytes(index_buf[off..off + 8].try_into().unwrap());
-            let str_off = u64::from_le_bytes(index_buf[off + 8..off + 16].try_into().unwrap()) as usize;
+            let str_off =
+                u64::from_le_bytes(index_buf[off + 8..off + 16].try_into().unwrap()) as usize;
             if str_off + 2 > blob.len() {
                 continue;
             }

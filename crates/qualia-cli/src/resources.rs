@@ -21,8 +21,8 @@
 //!                  └─ WriteAheadLog::append_mutation()             ← provenance Quin
 //! ```
 
-use std::path::{Path, PathBuf};
 use qualia_core_db::resource_catalog::{self, ResourceCatalog};
+use std::path::{Path, PathBuf};
 
 /// Load the full `ResourceCatalog` from the YAML files under `catalog_dir`.
 pub fn load_catalog(catalog_dir: &Path) -> Result<ResourceCatalog, String> {
@@ -35,7 +35,10 @@ pub async fn handle(subcommand: &str, arg: Option<&str>) {
     let catalog_dir = resource_catalog::resolve_resources_dir();
     let catalog = match load_catalog(&catalog_dir) {
         Ok(c) => c,
-        Err(e) => { eprintln!("Error loading catalog: {}", e); return; }
+        Err(e) => {
+            eprintln!("Error loading catalog: {}", e);
+            return;
+        }
     };
 
     match subcommand {
@@ -77,22 +80,26 @@ fn cmd_list(catalog: &ResourceCatalog, filter: Option<&str>) {
 fn list_llms(catalog: &ResourceCatalog) {
     println!("\nLLMs ({}):", catalog.llms.len());
     for m in &catalog.llms {
-        println!("  {:40} {:8}  {:7}  {}MB",
+        println!(
+            "  {:40} {:8}  {:7}  {}MB",
             m.id,
             m.format,
             m.quantization.as_deref().unwrap_or("—"),
-            m.size_mb.unwrap_or(0));
+            m.size_mb.unwrap_or(0)
+        );
     }
 }
 
 fn list_ontologies(catalog: &ResourceCatalog) {
     println!("\nOntologies ({}):", catalog.ontologies.len());
     for o in &catalog.ontologies {
-        println!("  {:40} {:6}  ~{}MB  {}",
+        println!(
+            "  {:40} {:6}  ~{}MB  {}",
             o.id,
             o.format,
             o.size_estimate_mb.unwrap_or(0.0),
-            o.domain.as_deref().unwrap_or("—"));
+            o.domain.as_deref().unwrap_or("—")
+        );
     }
 }
 
@@ -106,13 +113,22 @@ fn list_sparql(catalog: &ResourceCatalog) {
 // ─── show ─────────────────────────────────────────────────────────────────────
 
 fn cmd_show(catalog: &ResourceCatalog, id: Option<&str>) {
-    let id = match id { Some(i) => i, None => { eprintln!("Usage: qualia resources show <id>"); return; } };
+    let id = match id {
+        Some(i) => i,
+        None => {
+            eprintln!("Usage: qualia resources show <id>");
+            return;
+        }
+    };
 
     if let Some(m) = catalog.find_llm(id) {
         println!("LLM: {}", m.name);
         println!("  id           : {}", m.id);
         println!("  format       : {}", m.format);
-        println!("  quantization : {}", m.quantization.as_deref().unwrap_or("—"));
+        println!(
+            "  quantization : {}",
+            m.quantization.as_deref().unwrap_or("—")
+        );
         println!("  size         : {}MB", m.size_mb.unwrap_or(0));
         println!("  RAM estimate : {}MB", m.ram_estimate_mb.unwrap_or(0));
         println!("  license      : {}", m.license.as_deref().unwrap_or("—"));
@@ -122,8 +138,11 @@ fn cmd_show(catalog: &ResourceCatalog, id: Option<&str>) {
         if let Some(ref notes) = m.notes {
             println!("  notes        : {}", notes);
         }
-        println!("  profile_id   : 0x{:016x}  (q_hash(\"profile:{}\"))",
-            qualia_core_db::q_hash(&format!("profile:{}", m.id)), m.id);
+        println!(
+            "  profile_id   : 0x{:016x}  (q_hash(\"profile:{}\"))",
+            qualia_core_db::q_hash(&format!("profile:{}", m.id)),
+            m.id
+        );
         return;
     }
 
@@ -143,8 +162,14 @@ fn cmd_show(catalog: &ResourceCatalog, id: Option<&str>) {
     if let Some(s) = catalog.find_sparql(id) {
         println!("SPARQL: {}", s.name);
         println!("  endpoint     : {}", s.endpoint);
-        println!("  maintainer   : {}", s.maintainer.as_deref().unwrap_or("—"));
-        println!("  reliability  : {}", s.reliability.as_deref().unwrap_or("—"));
+        println!(
+            "  maintainer   : {}",
+            s.maintainer.as_deref().unwrap_or("—")
+        );
+        println!(
+            "  reliability  : {}",
+            s.reliability.as_deref().unwrap_or("—")
+        );
         return;
     }
 
@@ -175,7 +200,10 @@ async fn cmd_download(catalog: &ResourceCatalog, id: &str) {
             println!("  pointers   : {}", result.pointer_quin_count);
             println!("  WAL        : {}", result.wal_path);
             println!("  lifecycle  : {}", result.lifecycle_state);
-            println!("\nActivate in LLM Hub, then chat with profile_id 0x{:016x}", result.profile_id);
+            println!(
+                "\nActivate in LLM Hub, then chat with profile_id 0x{:016x}",
+                result.profile_id
+            );
         }
         Err(e) => eprintln!("Download failed: {e}"),
     }

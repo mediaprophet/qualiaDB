@@ -47,14 +47,26 @@ pub const R_J_MOL_K: f64 = 8.314_462_618;
 
 /// Monoisotopic / standard atomic weights (IUPAC 2021).
 const ATOMIC_WEIGHTS: &[(&str, f64)] = &[
-    ("H",  1.00794), ("B",  10.811),  ("C",  12.011),  ("N",  14.007),
-    ("O",  15.999),  ("F",  18.998),  ("P",  30.974),  ("S",  32.06),
-    ("Cl", 35.45),   ("Br", 79.904),  ("I",  126.904), ("Si", 28.085),
-    ("As", 74.922),  ("Se", 78.971),  ("Te", 127.6),
+    ("H", 1.00794),
+    ("B", 10.811),
+    ("C", 12.011),
+    ("N", 14.007),
+    ("O", 15.999),
+    ("F", 18.998),
+    ("P", 30.974),
+    ("S", 32.06),
+    ("Cl", 35.45),
+    ("Br", 79.904),
+    ("I", 126.904),
+    ("Si", 28.085),
+    ("As", 74.922),
+    ("Se", 78.971),
+    ("Te", 127.6),
 ];
 
 fn atomic_weight(symbol: &str) -> f64 {
-    ATOMIC_WEIGHTS.iter()
+    ATOMIC_WEIGHTS
+        .iter()
         .find(|(s, _)| *s == symbol)
         .map(|(_, w)| *w)
         .unwrap_or(12.0) // default C
@@ -62,13 +74,30 @@ fn atomic_weight(symbol: &str) -> f64 {
 
 /// Default valences for the organic-subset elements.
 const VALENCES: &[(&str, u8)] = &[
-    ("C", 4), ("N", 3), ("O", 2), ("S", 2), ("S", 4), ("S", 6),
-    ("P", 3), ("P", 5), ("F", 1), ("Cl", 1), ("Br", 1), ("I", 1),
-    ("B", 3), ("Si", 4), ("Se", 2), ("As", 3),
+    ("C", 4),
+    ("N", 3),
+    ("O", 2),
+    ("S", 2),
+    ("S", 4),
+    ("S", 6),
+    ("P", 3),
+    ("P", 5),
+    ("F", 1),
+    ("Cl", 1),
+    ("Br", 1),
+    ("I", 1),
+    ("B", 3),
+    ("Si", 4),
+    ("Se", 2),
+    ("As", 3),
 ];
 
 fn default_valence(symbol: &str) -> u8 {
-    VALENCES.iter().find(|(s, _)| *s == symbol).map(|(_, v)| *v).unwrap_or(4)
+    VALENCES
+        .iter()
+        .find(|(s, _)| *s == symbol)
+        .map(|(_, v)| *v)
+        .unwrap_or(4)
 }
 
 // ─── Molecule representation ──────────────────────────────────────────────────
@@ -121,7 +150,8 @@ pub fn parse_smiles(smiles: &str) -> Molecule {
     let mut atoms: Vec<Atom> = Vec::new();
     let mut bonds: Vec<Bond> = Vec::new();
     let mut branch_stack: Vec<usize> = Vec::new();
-    let mut ring_map: std::collections::HashMap<u16, (usize, Option<BondOrder>)> = std::collections::HashMap::new();
+    let mut ring_map: std::collections::HashMap<u16, (usize, Option<BondOrder>)> =
+        std::collections::HashMap::new();
     let mut current_atom: Option<usize> = None;
     let mut pending_bond: Option<BondOrder> = None;
     let mut pos = 0;
@@ -143,9 +173,18 @@ pub fn parse_smiles(smiles: &str) -> Molecule {
             atoms.push(atom);
             if let Some(from) = current_atom {
                 let bond_order = pending_bond.take().unwrap_or_else(|| {
-                    if atoms[from].is_aromatic && $aromatic { BondOrder::Aromatic } else { BondOrder::Single }
+                    if atoms[from].is_aromatic && $aromatic {
+                        BondOrder::Aromatic
+                    } else {
+                        BondOrder::Single
+                    }
                 });
-                bonds.push(Bond { atom_a: from, atom_b: idx, order: bond_order, in_ring: false });
+                bonds.push(Bond {
+                    atom_a: from,
+                    atom_b: idx,
+                    order: bond_order,
+                    in_ring: false,
+                });
                 atoms[from].degree += 1;
                 atoms[idx].degree += 1;
             } else {
@@ -160,7 +199,9 @@ pub fn parse_smiles(smiles: &str) -> Molecule {
         match c {
             // ── Branch open/close ─────────────────────────────────────────
             '(' => {
-                if let Some(idx) = current_atom { branch_stack.push(idx); }
+                if let Some(idx) = current_atom {
+                    branch_stack.push(idx);
+                }
                 pos += 1;
             }
             ')' => {
@@ -169,60 +210,141 @@ pub fn parse_smiles(smiles: &str) -> Molecule {
                 pos += 1;
             }
             // ── Explicit bond tokens ──────────────────────────────────────
-            '-' => { pending_bond = Some(BondOrder::Single);   pos += 1; }
-            '=' => { pending_bond = Some(BondOrder::Double);   pos += 1; }
-            '#' => { pending_bond = Some(BondOrder::Triple);   pos += 1; }
-            ':' => { pending_bond = Some(BondOrder::Aromatic); pos += 1; }
+            '-' => {
+                pending_bond = Some(BondOrder::Single);
+                pos += 1;
+            }
+            '=' => {
+                pending_bond = Some(BondOrder::Double);
+                pos += 1;
+            }
+            '#' => {
+                pending_bond = Some(BondOrder::Triple);
+                pos += 1;
+            }
+            ':' => {
+                pending_bond = Some(BondOrder::Aromatic);
+                pos += 1;
+            }
             // ── Disconnected structure ────────────────────────────────────
-            '.' => { current_atom = None; pending_bond = None; pos += 1; }
+            '.' => {
+                current_atom = None;
+                pending_bond = None;
+                pos += 1;
+            }
             // ── Ring closures: single digit ───────────────────────────────
             '0'..='9' => {
                 let rn = c as u16 - b'0' as u16;
-                close_or_open_ring(&mut ring_map, &mut bonds, &mut atoms, rn, current_atom, &mut pending_bond);
+                close_or_open_ring(
+                    &mut ring_map,
+                    &mut bonds,
+                    &mut atoms,
+                    rn,
+                    current_atom,
+                    &mut pending_bond,
+                );
                 pos += 1;
             }
             // ── Ring closures: %nn ────────────────────────────────────────
             '%' if pos + 2 < n => {
-                if let (Some(d1), Some(d2)) = (chars[pos+1].to_digit(10), chars[pos+2].to_digit(10)) {
+                if let (Some(d1), Some(d2)) =
+                    (chars[pos + 1].to_digit(10), chars[pos + 2].to_digit(10))
+                {
                     let rn = (d1 * 10 + d2) as u16;
-                    close_or_open_ring(&mut ring_map, &mut bonds, &mut atoms, rn, current_atom, &mut pending_bond);
+                    close_or_open_ring(
+                        &mut ring_map,
+                        &mut bonds,
+                        &mut atoms,
+                        rn,
+                        current_atom,
+                        &mut pending_bond,
+                    );
                     pos += 3;
-                } else { pos += 1; }
+                } else {
+                    pos += 1;
+                }
             }
             // ── Bracketed atom [isotope?Symbol charge? Hn?] ──────────────
             '[' => {
-                let (atom_elem, aromatic, charge, isotope, expl_h, advance) = parse_bracket_atom(&chars, pos);
+                let (atom_elem, aromatic, charge, isotope, expl_h, advance) =
+                    parse_bracket_atom(&chars, pos);
                 add_atom!(atom_elem, aromatic, charge, isotope, expl_h);
                 pos += advance;
             }
             // ── Two-letter organic-subset atoms ───────────────────────────
-            'C' if pos + 1 < n && chars[pos+1] == 'l' => {
-                add_atom!("Cl", false, 0, None, 0); pos += 2;
+            'C' if pos + 1 < n && chars[pos + 1] == 'l' => {
+                add_atom!("Cl", false, 0, None, 0);
+                pos += 2;
             }
-            'B' if pos + 1 < n && chars[pos+1] == 'r' => {
-                add_atom!("Br", false, 0, None, 0); pos += 2;
+            'B' if pos + 1 < n && chars[pos + 1] == 'r' => {
+                add_atom!("Br", false, 0, None, 0);
+                pos += 2;
             }
             // ── Single-letter organic subset ──────────────────────────────
-            'C' => { add_atom!("C", false, 0, None, 0); pos += 1; }
-            'c' => { add_atom!("C", true,  0, None, 0); pos += 1; }
-            'N' => { add_atom!("N", false, 0, None, 0); pos += 1; }
-            'n' => { add_atom!("N", true,  0, None, 0); pos += 1; }
-            'O' => { add_atom!("O", false, 0, None, 0); pos += 1; }
-            'o' => { add_atom!("O", true,  0, None, 0); pos += 1; }
-            'S' => { add_atom!("S", false, 0, None, 0); pos += 1; }
-            's' => { add_atom!("S", true,  0, None, 0); pos += 1; }
-            'P' => { add_atom!("P", false, 0, None, 0); pos += 1; }
-            'p' => { add_atom!("P", true,  0, None, 0); pos += 1; }
-            'F' => { add_atom!("F", false, 0, None, 0); pos += 1; }
-            'B' => { add_atom!("B", false, 0, None, 0); pos += 1; }
-            'I' => { add_atom!("I", false, 0, None, 0); pos += 1; }
-            _ => { pos += 1; }
+            'C' => {
+                add_atom!("C", false, 0, None, 0);
+                pos += 1;
+            }
+            'c' => {
+                add_atom!("C", true, 0, None, 0);
+                pos += 1;
+            }
+            'N' => {
+                add_atom!("N", false, 0, None, 0);
+                pos += 1;
+            }
+            'n' => {
+                add_atom!("N", true, 0, None, 0);
+                pos += 1;
+            }
+            'O' => {
+                add_atom!("O", false, 0, None, 0);
+                pos += 1;
+            }
+            'o' => {
+                add_atom!("O", true, 0, None, 0);
+                pos += 1;
+            }
+            'S' => {
+                add_atom!("S", false, 0, None, 0);
+                pos += 1;
+            }
+            's' => {
+                add_atom!("S", true, 0, None, 0);
+                pos += 1;
+            }
+            'P' => {
+                add_atom!("P", false, 0, None, 0);
+                pos += 1;
+            }
+            'p' => {
+                add_atom!("P", true, 0, None, 0);
+                pos += 1;
+            }
+            'F' => {
+                add_atom!("F", false, 0, None, 0);
+                pos += 1;
+            }
+            'B' => {
+                add_atom!("B", false, 0, None, 0);
+                pos += 1;
+            }
+            'I' => {
+                add_atom!("I", false, 0, None, 0);
+                pos += 1;
+            }
+            _ => {
+                pos += 1;
+            }
         }
     }
 
     // Validate unclosed rings
     if !ring_map.is_empty() {
-        error = Some(format!("Unclosed ring bonds: {:?}", ring_map.keys().collect::<Vec<_>>()));
+        error = Some(format!(
+            "Unclosed ring bonds: {:?}",
+            ring_map.keys().collect::<Vec<_>>()
+        ));
     }
 
     // Compute implicit hydrogens and adjacency
@@ -247,10 +369,21 @@ fn close_or_open_ring(
     current_atom: Option<usize>,
     pending_bond: &mut Option<BondOrder>,
 ) {
-    let from_atom = match current_atom { Some(i) => i, None => return };
+    let from_atom = match current_atom {
+        Some(i) => i,
+        None => return,
+    };
     if let Some((open_idx, open_bond)) = ring_map.remove(&ring_num) {
-        let order = pending_bond.take().or(open_bond).unwrap_or(BondOrder::Single);
-        bonds.push(Bond { atom_a: open_idx, atom_b: from_atom, order, in_ring: true });
+        let order = pending_bond
+            .take()
+            .or(open_bond)
+            .unwrap_or(BondOrder::Single);
+        bonds.push(Bond {
+            atom_a: open_idx,
+            atom_b: from_atom,
+            order,
+            in_ring: true,
+        });
         atoms[open_idx].degree += 1;
         atoms[from_atom].degree += 1;
     } else {
@@ -259,21 +392,29 @@ fn close_or_open_ring(
 }
 
 /// Parse a bracketed atom [isotope?Symbol charge? Hn?]. Returns (elem, aromatic, charge, isotope, explicit_h, chars_consumed).
-fn parse_bracket_atom(chars: &[char], start: usize) -> (&'static str, bool, i8, Option<u16>, u8, usize) {
+fn parse_bracket_atom(
+    chars: &[char],
+    start: usize,
+) -> (&'static str, bool, i8, Option<u16>, u8, usize) {
     let mut pos = start + 1; // skip '['
     let end = chars.len();
 
     // Isotope
     let mut isotope_str = String::new();
     while pos < end && chars[pos].is_ascii_digit() {
-        isotope_str.push(chars[pos]); pos += 1;
+        isotope_str.push(chars[pos]);
+        pos += 1;
     }
     let isotope: Option<u16> = isotope_str.parse().ok();
 
     // Element symbol (1-2 chars, first uppercase)
     let sym_start = pos;
-    if pos < end { pos += 1; }
-    if pos < end && chars[pos].is_ascii_lowercase() && chars[pos] != 'h' { pos += 1; }
+    if pos < end {
+        pos += 1;
+    }
+    if pos < end && chars[pos].is_ascii_lowercase() && chars[pos] != 'h' {
+        pos += 1;
+    }
     let sym: String = chars[sym_start..pos].iter().collect();
 
     // Aromaticity: if symbol is lowercase that's already handled by aromatic atoms above;
@@ -285,7 +426,8 @@ fn parse_bracket_atom(chars: &[char], start: usize) -> (&'static str, bool, i8, 
     if pos < end && chars[pos] == 'H' {
         pos += 1;
         if pos < end && chars[pos].is_ascii_digit() {
-            explicit_h = chars[pos] as u8 - b'0'; pos += 1;
+            explicit_h = chars[pos] as u8 - b'0';
+            pos += 1;
         } else {
             explicit_h = 1;
         }
@@ -297,24 +439,40 @@ fn parse_bracket_atom(chars: &[char], start: usize) -> (&'static str, bool, i8, 
         let sign: i8 = if chars[pos] == '+' { 1 } else { -1 };
         pos += 1;
         if pos < end && chars[pos].is_ascii_digit() {
-            charge = sign * (chars[pos] as i8 - b'0' as i8); pos += 1;
+            charge = sign * (chars[pos] as i8 - b'0' as i8);
+            pos += 1;
         } else if pos < end && (chars[pos] == '+' || chars[pos] == '-') {
-            charge = sign * 2; pos += 1; // e.g. ++ or --
+            charge = sign * 2;
+            pos += 1; // e.g. ++ or --
         } else {
             charge = sign;
         }
     }
 
     // Skip to closing ']'
-    while pos < end && chars[pos] != ']' { pos += 1; }
+    while pos < end && chars[pos] != ']' {
+        pos += 1;
+    }
     let advance = pos - start + 1; // +1 for ']'
 
     // Map symbol to &'static str
     let elem: &'static str = match sym.to_uppercase().as_str() {
-        "C" => "C", "N" => "N", "O" => "O", "S" => "S", "P" => "P",
-        "F" => "F", "CL" => "Cl", "BR" => "Br", "I" => "I", "B" => "B",
-        "SI" => "Si", "AS" => "As", "SE" => "Se", "TE" => "Te",
-        "H" => "H", _ => "C",
+        "C" => "C",
+        "N" => "N",
+        "O" => "O",
+        "S" => "S",
+        "P" => "P",
+        "F" => "F",
+        "CL" => "Cl",
+        "BR" => "Br",
+        "I" => "I",
+        "B" => "B",
+        "SI" => "Si",
+        "AS" => "As",
+        "SE" => "Se",
+        "TE" => "Te",
+        "H" => "H",
+        _ => "C",
     };
 
     (elem, is_aromatic, charge, isotope, explicit_h, advance)
@@ -328,8 +486,8 @@ fn fill_implicit_hydrogens(atoms: &mut Vec<Atom>, bonds: &[Bond]) {
 
     for b in bonds {
         let order: i16 = match b.order {
-            BondOrder::Double   => 2,
-            BondOrder::Triple   => 3,
+            BondOrder::Double => 2,
+            BondOrder::Triple => 3,
             BondOrder::Single | BondOrder::Aromatic => 1,
         };
         valence_used[b.atom_a] += order;
@@ -339,7 +497,11 @@ fn fill_implicit_hydrogens(atoms: &mut Vec<Atom>, bonds: &[Bond]) {
     }
 
     for atom in atoms.iter_mut() {
-        if atom.element == "H" { atom.n_implicit_h = 0; atom.degree = connectivity[atom.idx]; continue; }
+        if atom.element == "H" {
+            atom.n_implicit_h = 0;
+            atom.degree = connectivity[atom.idx];
+            continue;
+        }
         let valence = default_valence(&atom.element) as i16;
         let charge_adj = atom.charge as i16;
         // Aromatic atoms: the delocalized pi electron occupies one valence slot.
@@ -371,7 +533,14 @@ fn mark_ring_bonds(atoms: &[Atom], bonds: &mut Vec<Bond>) {
     }
 }
 
-fn dfs_mark_rings(adj: &[Vec<(usize, usize)>], bonds: &mut Vec<Bond>, visited: &mut Vec<bool>, parent: &mut Vec<usize>, u: usize, par: usize) {
+fn dfs_mark_rings(
+    adj: &[Vec<(usize, usize)>],
+    bonds: &mut Vec<Bond>,
+    visited: &mut Vec<bool>,
+    parent: &mut Vec<usize>,
+    u: usize,
+    par: usize,
+) {
     visited[u] = true;
     parent[u] = par;
     for &(v, bi) in &adj[u] {
@@ -391,7 +560,8 @@ pub fn molecular_formula(mol: &Molecule) -> std::collections::HashMap<String, u3
     for atom in &mol.atoms {
         *counts.entry(atom.element.clone()).or_insert(0) += 1;
         if atom.n_implicit_h + atom.explicit_h > 0 {
-            *counts.entry("H".to_string()).or_insert(0) += (atom.n_implicit_h + atom.explicit_h) as u32;
+            *counts.entry("H".to_string()).or_insert(0) +=
+                (atom.n_implicit_h + atom.explicit_h) as u32;
         }
     }
     counts
@@ -401,16 +571,30 @@ pub fn molecular_formula(mol: &Molecule) -> std::collections::HashMap<String, u3
 pub fn formula_string(mol: &Molecule) -> String {
     let counts = molecular_formula(mol);
     let mut parts: Vec<(String, u32)> = counts.into_iter().collect();
-    parts.sort_by_key(|(e, _)| {
-        match e.as_str() { "C" => 0, "H" => 1, _ => 2 }
+    parts.sort_by_key(|(e, _)| match e.as_str() {
+        "C" => 0,
+        "H" => 1,
+        _ => 2,
     });
-    parts.iter().map(|(e, n)| if *n == 1 { e.clone() } else { format!("{}{}", e, n) }).collect()
+    parts
+        .iter()
+        .map(|(e, n)| {
+            if *n == 1 {
+                e.clone()
+            } else {
+                format!("{}{}", e, n)
+            }
+        })
+        .collect()
 }
 
 /// Exact monoisotopic molecular weight (Da).
 pub fn exact_molecular_weight(mol: &Molecule) -> f64 {
     let counts = molecular_formula(mol);
-    counts.iter().map(|(e, &n)| atomic_weight(e) * n as f64).sum()
+    counts
+        .iter()
+        .map(|(e, &n)| atomic_weight(e) * n as f64)
+        .sum()
 }
 
 // ─── Lipinski / drug-likeness descriptors ────────────────────────────────────
@@ -438,23 +622,33 @@ pub fn compute_descriptors(mol: &Molecule) -> MolecularDescriptors {
     let heavy = mol.atoms.iter().filter(|a| a.element != "H").count();
 
     // H-bond donors: NH and OH groups
-    let hbd = mol.atoms.iter().filter(|a| {
-        (a.element == "N" || a.element == "O") && (a.n_implicit_h + a.explicit_h) > 0
-    }).count() as u32;
+    let hbd = mol
+        .atoms
+        .iter()
+        .filter(|a| (a.element == "N" || a.element == "O") && (a.n_implicit_h + a.explicit_h) > 0)
+        .count() as u32;
 
     // H-bond acceptors: all N and O (Lipinski: just N+O count)
-    let hba = mol.atoms.iter().filter(|a| a.element == "N" || a.element == "O").count() as u32;
+    let hba = mol
+        .atoms
+        .iter()
+        .filter(|a| a.element == "N" || a.element == "O")
+        .count() as u32;
 
     // Rotatable bonds: single, non-ring, both atoms have degree ≥ 2, not amide/ester
     let adj = build_adj(mol);
-    let rot = mol.bonds.iter().filter(|b| {
-        b.order == BondOrder::Single
-            && !b.in_ring
-            && mol.atoms[b.atom_a].element != "H"
-            && mol.atoms[b.atom_b].element != "H"
-            && mol.atoms[b.atom_a].degree >= 2
-            && mol.atoms[b.atom_b].degree >= 2
-    }).count() as u32;
+    let rot = mol
+        .bonds
+        .iter()
+        .filter(|b| {
+            b.order == BondOrder::Single
+                && !b.in_ring
+                && mol.atoms[b.atom_a].element != "H"
+                && mol.atoms[b.atom_b].element != "H"
+                && mol.atoms[b.atom_a].degree >= 2
+                && mol.atoms[b.atom_b].degree >= 2
+        })
+        .count() as u32;
 
     // Aromatic rings (simplified: number of aromatic-atom-containing SSSR cycles)
     let aro_ring = count_aromatic_rings(&mol.atoms, &mol.bonds);
@@ -471,10 +665,16 @@ pub fn compute_descriptors(mol: &Molecule) -> MolecularDescriptors {
 
     // Fraction of sp3 carbons
     let n_c = mol.atoms.iter().filter(|a| a.element == "C").count();
-    let n_csp3 = mol.atoms.iter().filter(|a| {
-        a.element == "C" && !a.is_aromatic && !is_sp2_carbon(a, &adj, mol)
-    }).count();
-    let fsp3 = if n_c > 0 { n_csp3 as f64 / n_c as f64 } else { 0.0 };
+    let n_csp3 = mol
+        .atoms
+        .iter()
+        .filter(|a| a.element == "C" && !a.is_aromatic && !is_sp2_carbon(a, &adj, mol))
+        .count();
+    let fsp3 = if n_c > 0 {
+        n_csp3 as f64 / n_c as f64
+    } else {
+        0.0
+    };
 
     MolecularDescriptors {
         molecular_weight: mw,
@@ -510,7 +710,10 @@ fn is_sp2_carbon(a: &Atom, _adj: &[Vec<usize>], mol: &Molecule) -> bool {
 
 fn count_aromatic_rings(_atoms: &[Atom], bonds: &[Bond]) -> u32 {
     // Simplified: each aromatic bond that closes a ring contributes to one ring
-    let ring_bonds = bonds.iter().filter(|b| b.in_ring && b.order == BondOrder::Aromatic).count();
+    let ring_bonds = bonds
+        .iter()
+        .filter(|b| b.in_ring && b.order == BondOrder::Aromatic)
+        .count();
     // Rough: 6-membered ring has 6 aromatic bonds; 5-membered has 5
     let estimated_from_bonds = (ring_bonds / 6 + (ring_bonds % 6 > 2) as usize) as u32;
     if estimated_from_bonds > 0 {
@@ -540,25 +743,35 @@ pub fn compute_logp(mol: &Molecule) -> f64 {
     let mut total = 0.0_f64;
 
     for atom in &mol.atoms {
-        if atom.element == "H" { continue; }
-        let neighbours: Vec<&Atom> = adj[atom.idx].iter()
-            .map(|&i| &mol.atoms[i]).collect();
+        if atom.element == "H" {
+            continue;
+        }
+        let neighbours: Vec<&Atom> = adj[atom.idx].iter().map(|&i| &mol.atoms[i]).collect();
         let has_polar_nbr = neighbours.iter().any(|n| {
-            matches!(n.element.as_str(), "N" | "O" | "S" | "P" | "F" | "Cl" | "Br" | "I")
+            matches!(
+                n.element.as_str(),
+                "N" | "O" | "S" | "P" | "F" | "Cl" | "Br" | "I"
+            )
         });
         let is_carbonyl = mol.bonds.iter().any(|b| {
-            (b.atom_a == atom.idx || b.atom_b == atom.idx)
-                && b.order == BondOrder::Double
-                && {
-                    let other = if b.atom_a == atom.idx { b.atom_b } else { b.atom_a };
-                    mol.atoms[other].element == "O"
-                }
+            (b.atom_a == atom.idx || b.atom_b == atom.idx) && b.order == BondOrder::Double && {
+                let other = if b.atom_a == atom.idx {
+                    b.atom_b
+                } else {
+                    b.atom_a
+                };
+                mol.atoms[other].element == "O"
+            }
         });
 
         let contrib = match atom.element.as_str() {
             "C" => {
                 if atom.is_aromatic {
-                    if has_polar_nbr { 0.0782 } else { 0.2140 }
+                    if has_polar_nbr {
+                        0.0782
+                    } else {
+                        0.2140
+                    }
                 } else if is_carbonyl {
                     0.0000
                 } else if atom.charge != 0 {
@@ -570,26 +783,42 @@ pub fn compute_logp(mol: &Molecule) -> f64 {
                 }
             }
             "N" => {
-                if atom.charge > 0       { -1.9513 }
-                else if atom.is_aromatic { -0.7096 }
-                else if is_adjacent_amide(atom, mol) { -1.0280 }
-                else                     { -1.0190 }
+                if atom.charge > 0 {
+                    -1.9513
+                } else if atom.is_aromatic {
+                    -0.7096
+                } else if is_adjacent_amide(atom, mol) {
+                    -1.0280
+                } else {
+                    -1.0190
+                }
             }
             "O" => {
-                if atom.charge < 0       { -1.0810 }
-                else if is_carbonyl_oxygen(atom, mol) { 0.1421 }
-                else if atom.is_aromatic { -0.0582 }
-                else                     { -0.4670 }
+                if atom.charge < 0 {
+                    -1.0810
+                } else if is_carbonyl_oxygen(atom, mol) {
+                    0.1421
+                } else if atom.is_aromatic {
+                    -0.0582
+                } else {
+                    -0.4670
+                }
             }
-            "S" => if atom.is_aromatic { 0.4880 } else { 0.5620 },
+            "S" => {
+                if atom.is_aromatic {
+                    0.4880
+                } else {
+                    0.5620
+                }
+            }
             "P" => 0.8760,
             "F" => 0.1480,
             "Cl" => 0.3010,
             "Br" => 0.6130,
-            "I"  => 1.2570,
-            "B"  => 0.1758,
+            "I" => 1.2570,
+            "B" => 0.1758,
             "Si" => 0.2756,
-            _    => 0.0,
+            _ => 0.0,
         };
         total += contrib;
     }
@@ -605,24 +834,33 @@ pub fn compute_logp(mol: &Molecule) -> f64 {
 fn is_adjacent_amide(atom: &Atom, mol: &Molecule) -> bool {
     mol.bonds.iter().any(|b| {
         (b.atom_a == atom.idx || b.atom_b == atom.idx) && {
-            let other_idx = if b.atom_a == atom.idx { b.atom_b } else { b.atom_a };
+            let other_idx = if b.atom_a == atom.idx {
+                b.atom_b
+            } else {
+                b.atom_a
+            };
             let other = &mol.atoms[other_idx];
-            other.element == "C" && mol.bonds.iter().any(|b2| {
-                (b2.atom_a == other_idx || b2.atom_b == other_idx)
-                    && b2.order == BondOrder::Double
-                    && {
-                        let o = if b2.atom_a == other_idx { b2.atom_b } else { b2.atom_a };
-                        mol.atoms[o].element == "O"
-                    }
-            })
+            other.element == "C"
+                && mol.bonds.iter().any(|b2| {
+                    (b2.atom_a == other_idx || b2.atom_b == other_idx)
+                        && b2.order == BondOrder::Double
+                        && {
+                            let o = if b2.atom_a == other_idx {
+                                b2.atom_b
+                            } else {
+                                b2.atom_a
+                            };
+                            mol.atoms[o].element == "O"
+                        }
+                })
         }
     })
 }
 
 fn is_carbonyl_oxygen(atom: &Atom, mol: &Molecule) -> bool {
-    mol.bonds.iter().any(|b| {
-        (b.atom_a == atom.idx || b.atom_b == atom.idx) && b.order == BondOrder::Double
-    })
+    mol.bonds
+        .iter()
+        .any(|b| (b.atom_a == atom.idx || b.atom_b == atom.idx) && b.order == BondOrder::Double)
 }
 
 // ─── TPSA (Ertl 2000 atomic contributions) ───────────────────────────────────
@@ -634,24 +872,49 @@ pub fn compute_tpsa(mol: &Molecule) -> f64 {
         let total_h = (atom.n_implicit_h + atom.explicit_h) as f64;
         let contrib = match atom.element.as_str() {
             "N" => {
-                if atom.charge > 0 { 0.0 }
-                else if atom.is_aromatic { 12.89 }
-                else if total_h >= 2.0  { 26.02 }  // NH2
-                else if total_h >= 1.0  { 16.61 }  // NH
-                else if is_adjacent_amide(atom, mol) { 29.42 }
-                else                    { 11.49 }  // tertiary N
+                if atom.charge > 0 {
+                    0.0
+                } else if atom.is_aromatic {
+                    12.89
+                } else if total_h >= 2.0 {
+                    26.02
+                }
+                // NH2
+                else if total_h >= 1.0 {
+                    16.61
+                }
+                // NH
+                else if is_adjacent_amide(atom, mol) {
+                    29.42
+                } else {
+                    11.49
+                } // tertiary N
             }
             "O" => {
-                if atom.charge != 0    { 23.06 }
-                else if atom.is_aromatic { 13.14 }
-                else if total_h >= 1.0 { 20.23 }  // OH
-                else if is_carbonyl_oxygen(atom, mol) { 17.07 }
-                else                   { 9.23 }   // ether O
+                if atom.charge != 0 {
+                    23.06
+                } else if atom.is_aromatic {
+                    13.14
+                } else if total_h >= 1.0 {
+                    20.23
+                }
+                // OH
+                else if is_carbonyl_oxygen(atom, mol) {
+                    17.07
+                } else {
+                    9.23
+                } // ether O
             }
             "S" => {
-                if atom.is_aromatic { 0.0 }
-                else if total_h >= 1.0 { 38.80 } // SH
-                else { 32.09 } // sulfoxide / sulfone
+                if atom.is_aromatic {
+                    0.0
+                } else if total_h >= 1.0 {
+                    38.80
+                }
+                // SH
+                else {
+                    32.09
+                } // sulfoxide / sulfone
             }
             "P" => 34.14,
             _ => 0.0,
@@ -679,12 +942,19 @@ pub struct LipinskiResult {
 }
 
 pub fn evaluate_lipinski(desc: &MolecularDescriptors) -> LipinskiResult {
-    let mw_ok   = desc.molecular_weight <= 500.0;
-    let logp_ok = desc.logp_crippen     <= 5.0;
-    let hbd_ok  = desc.hb_donors        <= 5;
-    let hba_ok  = desc.hb_acceptors     <= 10;
+    let mw_ok = desc.molecular_weight <= 500.0;
+    let logp_ok = desc.logp_crippen <= 5.0;
+    let hbd_ok = desc.hb_donors <= 5;
+    let hba_ok = desc.hb_acceptors <= 10;
     let violations = (!mw_ok as u8) + (!logp_ok as u8) + (!hbd_ok as u8) + (!hba_ok as u8);
-    LipinskiResult { mw_ok, logp_ok, hbd_ok, hba_ok, violations, passes: violations <= 1 }
+    LipinskiResult {
+        mw_ok,
+        logp_ok,
+        hbd_ok,
+        hba_ok,
+        violations,
+        passes: violations <= 1,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -698,8 +968,12 @@ pub struct VeberResult {
 
 pub fn evaluate_veber(desc: &MolecularDescriptors) -> VeberResult {
     let rot_bonds_ok = desc.rotatable_bonds <= 10;
-    let tpsa_ok      = desc.tpsa_ertl       <= 140.0;
-    VeberResult { rot_bonds_ok, tpsa_ok, passes: rot_bonds_ok && tpsa_ok }
+    let tpsa_ok = desc.tpsa_ertl <= 140.0;
+    VeberResult {
+        rot_bonds_ok,
+        tpsa_ok,
+        passes: rot_bonds_ok && tpsa_ok,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -716,14 +990,20 @@ pub struct GhoseResult {
 }
 
 pub fn evaluate_ghose(desc: &MolecularDescriptors) -> GhoseResult {
-    let mw_ok    = desc.molecular_weight >= 160.0 && desc.molecular_weight <= 480.0;
-    let logp_ok  = desc.logp_crippen     >= -0.4  && desc.logp_crippen     <= 5.6;
-    let atoms_ok = desc.heavy_atom_count >= 20     && desc.heavy_atom_count <= 70;
+    let mw_ok = desc.molecular_weight >= 160.0 && desc.molecular_weight <= 480.0;
+    let logp_ok = desc.logp_crippen >= -0.4 && desc.logp_crippen <= 5.6;
+    let atoms_ok = desc.heavy_atom_count >= 20 && desc.heavy_atom_count <= 70;
     // MR ≈ 0.3285 × MW + 0.08 × logP + 1.0 (approximation)
     let mr = 0.3285 * desc.molecular_weight + 0.08 * desc.logp_crippen + 1.0;
     let mr_ok = mr >= 40.0 && mr <= 130.0;
     let violations = (!mw_ok as u8) + (!logp_ok as u8) + (!atoms_ok as u8) + (!mr_ok as u8);
-    GhoseResult { mw_ok, logp_ok, atoms_ok, mr_ok, passes: violations == 0 }
+    GhoseResult {
+        mw_ok,
+        logp_ok,
+        atoms_ok,
+        mr_ok,
+        passes: violations == 0,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -736,34 +1016,38 @@ pub struct EganResult {
 }
 
 pub fn evaluate_egan(desc: &MolecularDescriptors) -> EganResult {
-    let tpsa_ok = desc.tpsa_ertl    <= 131.6;
+    let tpsa_ok = desc.tpsa_ertl <= 131.6;
     let logp_ok = desc.logp_crippen <= 5.88;
-    EganResult { tpsa_ok, logp_ok, passes: tpsa_ok && logp_ok }
+    EganResult {
+        tpsa_ok,
+        logp_ok,
+        passes: tpsa_ok && logp_ok,
+    }
 }
 
 // ─── Functional group detection ───────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FunctionalGroup {
-    Hydroxyl,          // -OH
-    PrimaryAmine,      // -NH2
-    SecondaryAmine,    // -NH-
-    TertiaryAmine,     // -N<
-    AromaticAmine,     // Ar-NH2
-    Amide,             // -C(=O)N-
-    CarboxylicAcid,    // -C(=O)OH
-    Ester,             // -C(=O)O-
-    Ketone,            // -C(=O)-
-    Aldehyde,          // -CHO
-    Ether,             // -O-
-    Thiol,             // -SH
-    Sulfide,           // -S-
-    Sulfonamide,       // -S(=O)2NH-
-    Halide,            // -F, -Cl, -Br, -I
+    Hydroxyl,       // -OH
+    PrimaryAmine,   // -NH2
+    SecondaryAmine, // -NH-
+    TertiaryAmine,  // -N<
+    AromaticAmine,  // Ar-NH2
+    Amide,          // -C(=O)N-
+    CarboxylicAcid, // -C(=O)OH
+    Ester,          // -C(=O)O-
+    Ketone,         // -C(=O)-
+    Aldehyde,       // -CHO
+    Ether,          // -O-
+    Thiol,          // -SH
+    Sulfide,        // -S-
+    Sulfonamide,    // -S(=O)2NH-
+    Halide,         // -F, -Cl, -Br, -I
     AromaticRing,
-    Nitrile,           // -C≡N
-    Nitro,             // -NO2
-    Phosphate,         // -P(=O)(O)2
+    Nitrile,   // -C≡N
+    Nitro,     // -NO2
+    Phosphate, // -P(=O)(O)2
     Imidazole,
     GuanidiniumLike,
 }
@@ -776,31 +1060,51 @@ pub fn detect_functional_groups(mol: &Molecule) -> Vec<FunctionalGroup> {
 
     for atom in &mol.atoms {
         let nbrs: Vec<&Atom> = adj[atom.idx].iter().map(|&i| &mol.atoms[i]).collect();
-        let has_double_O = || mol.bonds.iter().any(|b| {
-            (b.atom_a == atom.idx || b.atom_b == atom.idx) && b.order == BondOrder::Double && {
-                let o = if b.atom_a == atom.idx { b.atom_b } else { b.atom_a };
-                mol.atoms[o].element == "O"
-            }
-        });
-        let _has_double_N = || mol.bonds.iter().any(|b| {
-            (b.atom_a == atom.idx || b.atom_b == atom.idx) && b.order == BondOrder::Double && {
-                let o = if b.atom_a == atom.idx { b.atom_b } else { b.atom_a };
-                mol.atoms[o].element == "N"
-            }
-        });
-        let has_triple_N = || mol.bonds.iter().any(|b| {
-            (b.atom_a == atom.idx || b.atom_b == atom.idx) && b.order == BondOrder::Triple && {
-                let o = if b.atom_a == atom.idx { b.atom_b } else { b.atom_a };
-                mol.atoms[o].element == "N"
-            }
-        });
+        let has_double_O = || {
+            mol.bonds.iter().any(|b| {
+                (b.atom_a == atom.idx || b.atom_b == atom.idx) && b.order == BondOrder::Double && {
+                    let o = if b.atom_a == atom.idx {
+                        b.atom_b
+                    } else {
+                        b.atom_a
+                    };
+                    mol.atoms[o].element == "O"
+                }
+            })
+        };
+        let _has_double_N = || {
+            mol.bonds.iter().any(|b| {
+                (b.atom_a == atom.idx || b.atom_b == atom.idx) && b.order == BondOrder::Double && {
+                    let o = if b.atom_a == atom.idx {
+                        b.atom_b
+                    } else {
+                        b.atom_a
+                    };
+                    mol.atoms[o].element == "N"
+                }
+            })
+        };
+        let has_triple_N = || {
+            mol.bonds.iter().any(|b| {
+                (b.atom_a == atom.idx || b.atom_b == atom.idx) && b.order == BondOrder::Triple && {
+                    let o = if b.atom_a == atom.idx {
+                        b.atom_b
+                    } else {
+                        b.atom_a
+                    };
+                    mol.atoms[o].element == "N"
+                }
+            })
+        };
 
         match atom.element.as_str() {
             "O" => {
                 let h = atom.n_implicit_h + atom.explicit_h;
                 let c_nbr = nbrs.iter().any(|n| n.element == "C");
                 if h > 0 {
-                    if c_nbr && !is_carbonyl_oxygen(atom, mol) { found.insert(FunctionalGroup::Hydroxyl); }
+                    if c_nbr && !is_carbonyl_oxygen(atom, mol) {
+                        found.insert(FunctionalGroup::Hydroxyl);
+                    }
                 } else if c_nbr && !is_carbonyl_oxygen(atom, mol) {
                     found.insert(FunctionalGroup::Ether);
                 }
@@ -817,13 +1121,19 @@ pub fn detect_functional_groups(mol: &Molecule) -> Vec<FunctionalGroup> {
                     found.insert(FunctionalGroup::TertiaryAmine);
                 }
                 // Amide N: bonded to a C=O
-                if is_adjacent_amide(atom, mol) { found.insert(FunctionalGroup::Amide); }
+                if is_adjacent_amide(atom, mol) {
+                    found.insert(FunctionalGroup::Amide);
+                }
                 // Sulfonamide: bonded to S
-                if nbrs.iter().any(|n| n.element == "S") { found.insert(FunctionalGroup::Sulfonamide); }
+                if nbrs.iter().any(|n| n.element == "S") {
+                    found.insert(FunctionalGroup::Sulfonamide);
+                }
                 // Nitro group: non-aromatic N bonded to ≥2 oxygens
                 if !atom.is_aromatic {
                     let o_nbrs: Vec<_> = nbrs.iter().filter(|n| n.element == "O").collect();
-                    if o_nbrs.len() >= 2 { found.insert(FunctionalGroup::Nitro); }
+                    if o_nbrs.len() >= 2 {
+                        found.insert(FunctionalGroup::Nitro);
+                    }
                 }
             }
             "C" => {
@@ -834,8 +1144,9 @@ pub fn detect_functional_groups(mol: &Molecule) -> Vec<FunctionalGroup> {
                         found.insert(FunctionalGroup::CarboxylicAcid);
                     } else {
                         let n_nbr = nbrs.iter().any(|n| n.element == "N");
-                        if n_nbr { found.insert(FunctionalGroup::Amide); }
-                        else {
+                        if n_nbr {
+                            found.insert(FunctionalGroup::Amide);
+                        } else {
                             let is_terminal = atom.degree == 1;
                             if is_terminal || atom.n_implicit_h > 0 {
                                 found.insert(FunctionalGroup::Aldehyde);
@@ -844,21 +1155,36 @@ pub fn detect_functional_groups(mol: &Molecule) -> Vec<FunctionalGroup> {
                             }
                         }
                     }
-                    let ether_o = o_nbrs.iter().any(|o| o.n_implicit_h == 0 && !is_carbonyl_oxygen(o, mol));
-                    if ether_o { found.insert(FunctionalGroup::Ester); }
+                    let ether_o = o_nbrs
+                        .iter()
+                        .any(|o| o.n_implicit_h == 0 && !is_carbonyl_oxygen(o, mol));
+                    if ether_o {
+                        found.insert(FunctionalGroup::Ester);
+                    }
                 }
-                if has_triple_N() { found.insert(FunctionalGroup::Nitrile); }
+                if has_triple_N() {
+                    found.insert(FunctionalGroup::Nitrile);
+                }
             }
             "S" => {
                 let h = atom.n_implicit_h + atom.explicit_h;
-                if h > 0 { found.insert(FunctionalGroup::Thiol); }
-                else { found.insert(FunctionalGroup::Sulfide); }
+                if h > 0 {
+                    found.insert(FunctionalGroup::Thiol);
+                } else {
+                    found.insert(FunctionalGroup::Sulfide);
+                }
             }
-            "P" => { found.insert(FunctionalGroup::Phosphate); }
-            "F" | "Cl" | "Br" | "I" => { found.insert(FunctionalGroup::Halide); }
+            "P" => {
+                found.insert(FunctionalGroup::Phosphate);
+            }
+            "F" | "Cl" | "Br" | "I" => {
+                found.insert(FunctionalGroup::Halide);
+            }
             _ => {}
         }
-        if atom.is_aromatic { found.insert(FunctionalGroup::AromaticRing); }
+        if atom.is_aromatic {
+            found.insert(FunctionalGroup::AromaticRing);
+        }
     }
     let mut result: Vec<FunctionalGroup> = found.into_iter().collect();
     result.sort_by_key(|g| format!("{:?}", g));
@@ -870,12 +1196,12 @@ pub fn detect_functional_groups(mol: &Molecule) -> Vec<FunctionalGroup> {
 /// Count sp3 carbon atoms with 4 distinct substituents (simplified: sp3 C with degree 4).
 pub fn count_chiral_centers(mol: &Molecule) -> u32 {
     let adj = build_adj(mol);
-    mol.atoms.iter().filter(|a| {
-        a.element == "C"
-            && !a.is_aromatic
-            && !is_sp2_carbon(a, &adj, mol)
-            && a.degree >= 4
-    }).count() as u32
+    mol.atoms
+        .iter()
+        .filter(|a| {
+            a.element == "C" && !a.is_aromatic && !is_sp2_carbon(a, &adj, mol) && a.degree >= 4
+        })
+        .count() as u32
 }
 
 // ─── Morgan circular fingerprint ─────────────────────────────────────────────
@@ -883,23 +1209,29 @@ pub fn count_chiral_centers(mol: &Molecule) -> u32 {
 /// Morgan algorithm: radius-`r` circular fingerprint as sorted Vec<u64> identifiers.
 pub fn circular_fingerprint(mol: &Molecule, radius: usize) -> Vec<u64> {
     let n = mol.atoms.len();
-    if n == 0 { return vec![]; }
+    if n == 0 {
+        return vec![];
+    }
     let adj = build_adj(mol);
 
     // Initial atom invariants (element + charge + degree)
-    let mut ids: Vec<u64> = mol.atoms.iter().map(|a| {
-        crate::q_hash(&format!("{}{}{}", a.element, a.charge, a.degree))
-    }).collect();
+    let mut ids: Vec<u64> = mol
+        .atoms
+        .iter()
+        .map(|a| crate::q_hash(&format!("{}{}{}", a.element, a.charge, a.degree)))
+        .collect();
 
     let mut all_ids = ids.clone();
 
     for _ in 0..radius {
-        let new_ids: Vec<u64> = (0..n).map(|i| {
-            let mut nbr_ids: Vec<u64> = adj[i].iter().map(|&j| ids[j]).collect();
-            nbr_ids.sort_unstable();
-            let combined = format!("{}{:?}", ids[i], nbr_ids);
-            crate::q_hash(&combined)
-        }).collect();
+        let new_ids: Vec<u64> = (0..n)
+            .map(|i| {
+                let mut nbr_ids: Vec<u64> = adj[i].iter().map(|&j| ids[j]).collect();
+                nbr_ids.sort_unstable();
+                let combined = format!("{}{:?}", ids[i], nbr_ids);
+                crate::q_hash(&combined)
+            })
+            .collect();
         all_ids.extend_from_slice(&new_ids);
         ids = new_ids;
     }
@@ -924,22 +1256,26 @@ pub fn estimate_pka(mol: &Molecule) -> Vec<PkaEstimate> {
     let mut estimates = Vec::new();
     for group in groups {
         let (pka, is_acid) = match &group {
-            FunctionalGroup::CarboxylicAcid  => (4.8, true),
-            FunctionalGroup::Hydroxyl        => (10.0, true),
-            FunctionalGroup::Thiol           => (8.3, true),
-            FunctionalGroup::Amide           => (25.0, true),
-            FunctionalGroup::Nitrile         => (25.0, true),
-            FunctionalGroup::PrimaryAmine    => (10.5, false),
-            FunctionalGroup::SecondaryAmine  => (10.0, false),
-            FunctionalGroup::TertiaryAmine   => (9.5, false),
-            FunctionalGroup::AromaticAmine   => (4.6, false),
-            FunctionalGroup::Imidazole       => (6.0, false),
+            FunctionalGroup::CarboxylicAcid => (4.8, true),
+            FunctionalGroup::Hydroxyl => (10.0, true),
+            FunctionalGroup::Thiol => (8.3, true),
+            FunctionalGroup::Amide => (25.0, true),
+            FunctionalGroup::Nitrile => (25.0, true),
+            FunctionalGroup::PrimaryAmine => (10.5, false),
+            FunctionalGroup::SecondaryAmine => (10.0, false),
+            FunctionalGroup::TertiaryAmine => (9.5, false),
+            FunctionalGroup::AromaticAmine => (4.6, false),
+            FunctionalGroup::Imidazole => (6.0, false),
             FunctionalGroup::GuanidiniumLike => (12.5, false),
-            FunctionalGroup::Phosphate       => (2.1, true),
-            FunctionalGroup::Sulfonamide     => (10.0, true),
+            FunctionalGroup::Phosphate => (2.1, true),
+            FunctionalGroup::Sulfonamide => (10.0, true),
             _ => continue,
         };
-        estimates.push(PkaEstimate { group, pka, is_acid });
+        estimates.push(PkaEstimate {
+            group,
+            pka,
+            is_acid,
+        });
     }
     estimates
 }
@@ -955,10 +1291,18 @@ pub struct SmilesValidation {
 
 pub fn validate_smiles(smiles: &str) -> SmilesValidation {
     if smiles.trim().is_empty() {
-        return SmilesValidation { is_valid: false, atom_count: 0, error: Some("Empty SMILES".into()) };
+        return SmilesValidation {
+            is_valid: false,
+            atom_count: 0,
+            error: Some("Empty SMILES".into()),
+        };
     }
     let mol = parse_smiles(smiles);
-    SmilesValidation { is_valid: mol.is_valid, atom_count: mol.atoms.len(), error: mol.error }
+    SmilesValidation {
+        is_valid: mol.is_valid,
+        atom_count: mol.atoms.len(),
+        error: mol.error,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -972,9 +1316,19 @@ pub fn validate_inchi(inchi: &str) -> InchiValidation {
     // Standard InChI: starts with "InChI=1S/" followed by formula and layers
     // InChIKey: 27-character hash XXXXXXXXXXXXXX-XXXXXXXXXX-N
     let is_inchi = inchi.starts_with("InChI=1S/") || inchi.starts_with("InChI=1/");
-    let is_inchikey = inchi.len() == 27 && inchi.chars().nth(14) == Some('-') && inchi.chars().nth(25) == Some('-');
-    let layers = if is_inchi { inchi.split('/').count().saturating_sub(2) } else { 0 };
-    InchiValidation { is_valid: is_inchi || is_inchikey, has_inchikey: is_inchikey, layer_count: layers }
+    let is_inchikey = inchi.len() == 27
+        && inchi.chars().nth(14) == Some('-')
+        && inchi.chars().nth(25) == Some('-');
+    let layers = if is_inchi {
+        inchi.split('/').count().saturating_sub(2)
+    } else {
+        0
+    };
+    InchiValidation {
+        is_valid: is_inchi || is_inchikey,
+        has_inchikey: is_inchikey,
+        layer_count: layers,
+    }
 }
 
 // ─── Thermochemistry ─────────────────────────────────────────────────────────
@@ -1052,26 +1406,49 @@ pub fn green_metrics(
     reactant_mws: &[f64],
     product_mw: f64,
     byproduct_mws: &[f64],
-    yield_fraction: f64,        // 0.0–1.0
+    yield_fraction: f64, // 0.0–1.0
     solvent_and_auxiliary_kg: f64,
     product_kg: f64,
     reactant_c_atoms: u32,
     product_c_atoms: u32,
 ) -> GreenMetrics {
     let sum_reactants: f64 = reactant_mws.iter().sum();
-    let ae = if sum_reactants > 0.0 { 100.0 * product_mw / sum_reactants } else { 0.0 };
+    let ae = if sum_reactants > 0.0 {
+        100.0 * product_mw / sum_reactants
+    } else {
+        0.0
+    };
     let yaae = ae * yield_fraction;
 
-    let waste_kg = reactant_mws.iter().sum::<f64>() + byproduct_mws.iter().sum::<f64>() + solvent_and_auxiliary_kg - product_kg;
-    let ef = if product_kg > 0.0 { waste_kg.max(0.0) / product_kg } else { f64::INFINITY };
+    let waste_kg = reactant_mws.iter().sum::<f64>()
+        + byproduct_mws.iter().sum::<f64>()
+        + solvent_and_auxiliary_kg
+        - product_kg;
+    let ef = if product_kg > 0.0 {
+        waste_kg.max(0.0) / product_kg
+    } else {
+        f64::INFINITY
+    };
 
     let total_in = reactant_mws.iter().sum::<f64>() + solvent_and_auxiliary_kg;
-    let pmi = if product_kg > 0.0 { total_in / product_kg } else { f64::INFINITY };
+    let pmi = if product_kg > 0.0 {
+        total_in / product_kg
+    } else {
+        f64::INFINITY
+    };
 
     let effective_product_kg = product_kg * yield_fraction.max(0.0);
-    let rme = if sum_reactants > 0.0 { 100.0 * effective_product_kg / sum_reactants } else { 0.0 };
+    let rme = if sum_reactants > 0.0 {
+        100.0 * effective_product_kg / sum_reactants
+    } else {
+        0.0
+    };
 
-    let ce = if reactant_c_atoms > 0 { 100.0 * product_c_atoms as f64 / reactant_c_atoms as f64 } else { 0.0 };
+    let ce = if reactant_c_atoms > 0 {
+        100.0 * product_c_atoms as f64 / reactant_c_atoms as f64
+    } else {
+        0.0
+    };
 
     GreenMetrics {
         atom_economy_pct: ae,
@@ -1086,12 +1463,20 @@ pub fn green_metrics(
 /// Simplified atom economy (Trost): single product vs all reactants.
 pub fn atom_economy(reactant_mws: &[f64], desired_product_mw: f64) -> f64 {
     let sum: f64 = reactant_mws.iter().sum();
-    if sum == 0.0 { 0.0 } else { 100.0 * desired_product_mw / sum }
+    if sum == 0.0 {
+        0.0
+    } else {
+        100.0 * desired_product_mw / sum
+    }
 }
 
 /// E-factor (Sheldon): waste_kg / product_kg.  Fine chemicals < 50; bulk < 5; pharma 25–100.
 pub fn e_factor(waste_kg: f64, product_kg: f64) -> f64 {
-    if product_kg <= 0.0 { f64::INFINITY } else { waste_kg / product_kg }
+    if product_kg <= 0.0 {
+        f64::INFINITY
+    } else {
+        waste_kg / product_kg
+    }
 }
 
 // ─── ADMET & Lead Optimization Metrics ───────────────────────────────────────
@@ -1106,10 +1491,18 @@ pub struct BbbPermeationResult {
 /// rules (Molecular Weight, LogP, PSA, HBD).
 pub fn predict_bbb_permeation(mw: f64, log_p: f64, psa: f64, hbd: u32) -> BbbPermeationResult {
     let mut clark_score = 0;
-    if mw <= 400.0 { clark_score += 1; }
-    if log_p >= 2.0 && log_p <= 5.0 { clark_score += 1; }
-    if psa <= 90.0 { clark_score += 1; }
-    if hbd <= 3 { clark_score += 1; }
+    if mw <= 400.0 {
+        clark_score += 1;
+    }
+    if log_p >= 2.0 && log_p <= 5.0 {
+        clark_score += 1;
+    }
+    if psa <= 90.0 {
+        clark_score += 1;
+    }
+    if hbd <= 3 {
+        clark_score += 1;
+    }
 
     BbbPermeationResult {
         clark_score,
@@ -1120,7 +1513,11 @@ pub fn predict_bbb_permeation(mw: f64, log_p: f64, psa: f64, hbd: u32) -> BbbPer
 /// Computes Ligand Efficiency (LE): pIC50 / Heavy Atom Count (HAC).
 /// Standard target is LE >= 0.3.
 pub fn ligand_efficiency(pic50: f64, hac: u32) -> f64 {
-    if hac == 0 { 0.0 } else { (pic50 * 1.37) / (hac as f64) }
+    if hac == 0 {
+        0.0
+    } else {
+        (pic50 * 1.37) / (hac as f64)
+    }
 }
 
 /// Computes Lipophilic Ligand Efficiency (LLE): pIC50 - LogP.
@@ -1133,15 +1530,20 @@ pub fn lipophilic_ligand_efficiency(pic50: f64, log_p: f64) -> f64 {
 
 #[derive(Debug, Clone, Copy)]
 pub struct IsotopeDistribution {
-    pub m_peak: f64,    // 100% (normalized)
-    pub m1_peak: f64,   // M+1 relative intensity
-    pub m2_peak: f64,   // M+2 relative intensity
+    pub m_peak: f64,  // 100% (normalized)
+    pub m1_peak: f64, // M+1 relative intensity
+    pub m2_peak: f64, // M+2 relative intensity
 }
 
 /// Computes the theoretical M, M+1, M+2 isotopic distribution based on the number
 /// of Carbon, Nitrogen, Oxygen, Sulfur, Chlorine, and Bromine atoms.
 pub fn isotope_mass_distribution(
-    c: u32, n: u32, o: u32, s: u32, cl: u32, br: u32
+    c: u32,
+    n: u32,
+    o: u32,
+    s: u32,
+    cl: u32,
+    br: u32,
 ) -> IsotopeDistribution {
     // Relative abundance approximations (natural)
     let c13 = 0.0107;
@@ -1157,10 +1559,10 @@ pub fn isotope_mass_distribution(
 
     // M+2 contributions
     let m2 = ((c as f64) * c13).powi(2) / 2.0
-           + (o as f64) * o18 
-           + (s as f64) * s34
-           + (cl as f64) * cl37
-           + (br as f64) * br81;
+        + (o as f64) * o18
+        + (s as f64) * s34
+        + (cl as f64) * cl37
+        + (br as f64) * br81;
 
     IsotopeDistribution {
         m_peak: 100.0,
@@ -1175,11 +1577,21 @@ pub fn isotope_mass_distribution(
 mod tests {
     use super::*;
 
-    fn aspirin() -> Molecule { parse_smiles("CC(=O)Oc1ccccc1C(=O)O") }
-    fn paracetamol() -> Molecule { parse_smiles("CC(=O)Nc1ccc(O)cc1") }
-    fn ethanol() -> Molecule { parse_smiles("CCO") }
-    fn caffeine() -> Molecule { parse_smiles("Cn1cnc2c1c(=O)n(c(=O)n2C)C") }
-    fn methane() -> Molecule { parse_smiles("C") }
+    fn aspirin() -> Molecule {
+        parse_smiles("CC(=O)Oc1ccccc1C(=O)O")
+    }
+    fn paracetamol() -> Molecule {
+        parse_smiles("CC(=O)Nc1ccc(O)cc1")
+    }
+    fn ethanol() -> Molecule {
+        parse_smiles("CCO")
+    }
+    fn caffeine() -> Molecule {
+        parse_smiles("Cn1cnc2c1c(=O)n(c(=O)n2C)C")
+    }
+    fn methane() -> Molecule {
+        parse_smiles("C")
+    }
 
     #[test]
     fn smiles_parse_ethanol_atoms() {
@@ -1193,7 +1605,11 @@ mod tests {
     fn molecular_weight_ethanol() {
         let mol = ethanol();
         let mw = exact_molecular_weight(&mol);
-        assert!((mw - 46.068).abs() < 1.0, "ethanol MW ~ 46.07, got {:.3}", mw);
+        assert!(
+            (mw - 46.068).abs() < 1.0,
+            "ethanol MW ~ 46.07, got {:.3}",
+            mw
+        );
     }
 
     #[test]
@@ -1220,19 +1636,29 @@ mod tests {
     #[test]
     fn caffeine_has_aromatic_ring_descriptor() {
         let desc = compute_descriptors(&caffeine());
-        assert!(desc.aromatic_ring_count > 0, "caffeine should report at least one aromatic ring");
+        assert!(
+            desc.aromatic_ring_count > 0,
+            "caffeine should report at least one aromatic ring"
+        );
     }
 
     #[test]
     fn functional_groups_ethanol() {
         let groups = detect_functional_groups(&ethanol());
-        assert!(groups.contains(&FunctionalGroup::Hydroxyl), "ethanol should have hydroxyl");
+        assert!(
+            groups.contains(&FunctionalGroup::Hydroxyl),
+            "ethanol should have hydroxyl"
+        );
     }
 
     #[test]
     fn functional_groups_aspirin() {
         let groups = detect_functional_groups(&aspirin());
-        assert!(groups.contains(&FunctionalGroup::CarboxylicAcid) || groups.contains(&FunctionalGroup::Ester) || groups.contains(&FunctionalGroup::AromaticRing));
+        assert!(
+            groups.contains(&FunctionalGroup::CarboxylicAcid)
+                || groups.contains(&FunctionalGroup::Ester)
+                || groups.contains(&FunctionalGroup::AromaticRing)
+        );
     }
 
     #[test]
@@ -1248,7 +1674,11 @@ mod tests {
     fn tpsa_ethanol_reasonable() {
         let mol = ethanol();
         let tpsa = compute_tpsa(&mol);
-        assert!(tpsa > 10.0 && tpsa < 40.0, "ethanol TPSA ~ 20 Å², got {:.1}", tpsa);
+        assert!(
+            tpsa > 10.0 && tpsa < 40.0,
+            "ethanol TPSA ~ 20 Å², got {:.1}",
+            tpsa
+        );
     }
 
     #[test]
@@ -1276,8 +1706,11 @@ mod tests {
         let r = isotope_mass_distribution(6, 0, 0, 0, 0, 1);
         assert!((r.m_peak - 100.0).abs() < 0.1);
         assert!((r.m1_peak - 6.42).abs() < 0.1);
-        assert!((r.m2_peak - 97.49).abs() < 0.5,
-            "M+2 for bromobenzene expected ~97.49%, got {}", r.m2_peak);
+        assert!(
+            (r.m2_peak - 97.49).abs() < 0.5,
+            "M+2 for bromobenzene expected ~97.49%, got {}",
+            r.m2_peak
+        );
     }
 
     #[test]
@@ -1358,7 +1791,9 @@ mod tests {
     fn pka_carboxylic_acid() {
         let mol = parse_smiles("CC(=O)O"); // acetic acid
         let pkas = estimate_pka(&mol);
-        assert!(pkas.iter().any(|p| p.group == FunctionalGroup::CarboxylicAcid));
+        assert!(pkas
+            .iter()
+            .any(|p| p.group == FunctionalGroup::CarboxylicAcid));
     }
 
     #[test]

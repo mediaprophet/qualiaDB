@@ -3,12 +3,7 @@
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use qualia_core_db::{
-    gguf_sharder::GGufSharder,
-    q_hash,
-    wal::WriteAheadLog,
-    QualiaQuin,
-};
+use qualia_core_db::{gguf_sharder::GGufSharder, q_hash, wal::WriteAheadLog, QualiaQuin};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
@@ -29,12 +24,20 @@ impl std::fmt::Display for VisionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             VisionError::NoActiveModel => {
-                write!(f, "No active model — activate a multimodal model in LLM Hub")
+                write!(
+                    f,
+                    "No active model — activate a multimodal model in LLM Hub"
+                )
             }
             VisionError::NotMultimodal => write!(f, "Active model is text-only; install a VLM"),
-            VisionError::MissingProjector => write!(f, "Active model is missing mmproj projector path"),
+            VisionError::MissingProjector => {
+                write!(f, "Active model is missing mmproj projector path")
+            }
             VisionError::InactiveLifecycle => {
-                write!(f, "Model lifecycle is not Active — activate model before image ingest")
+                write!(
+                    f,
+                    "Model lifecycle is not Active — activate model before image ingest"
+                )
             }
             VisionError::Io(e) => write!(f, "IO error: {e}"),
             VisionError::Wal(e) => write!(f, "WAL error: {e}"),
@@ -87,15 +90,13 @@ fn sha256_file(path: &Path) -> Result<String, std::io::Error> {
 fn facet_for_typology(typology: &str, image_hash: &str, arch: Option<&str>) -> String {
     let arch_label = arch.unwrap_or("vlm");
     match typology {
-        "Meme" => format!(
-            "{arch_label} meme tensor | irony-bound | sha256:{image_hash}"
-        ),
-        "Heraldry" => format!(
-            "{arch_label} heraldry charge tensor | tincture-bound | sha256:{image_hash}"
-        ),
-        "Clinical" | "DICOM" => format!(
-            "{arch_label} clinical imaging facet | sha256:{image_hash}"
-        ),
+        "Meme" => format!("{arch_label} meme tensor | irony-bound | sha256:{image_hash}"),
+        "Heraldry" => {
+            format!("{arch_label} heraldry charge tensor | tincture-bound | sha256:{image_hash}")
+        }
+        "Clinical" | "DICOM" => {
+            format!("{arch_label} clinical imaging facet | sha256:{image_hash}")
+        }
         _ => format!("{arch_label} asset facet | typology:{typology} | sha256:{image_hash}"),
     }
 }

@@ -11,11 +11,11 @@
 //! 4. VM cycle counters are non-zero and scale with dataset size.
 
 use qualia_core_db::{
-    q_hash,
-    QualiaQuin,
     identifier::parse_did_q42,
     mini_parser::compile_ntriples_to_bytecode,
+    q_hash,
     webizen_bytecode::{execute_program, execute_program_simd, execute_program_with_stats},
+    QualiaQuin,
 };
 use std::time::Instant;
 
@@ -54,13 +54,13 @@ fn did_q42_quin(subject_did: &[u8], predicate: &str, object: &str) -> QualiaQuin
 fn build_mixed_dataset() -> [QualiaQuin; 6] {
     [
         // Standard URI records (MSB=0 on subject).
-        standard_uri_quin("Alice",   "knows",  "Bob"),
-        standard_uri_quin("Bob",     "knows",  "Carol"),
-        standard_uri_quin("Carol",   "likes",  "Alice"),
+        standard_uri_quin("Alice", "knows", "Bob"),
+        standard_uri_quin("Bob", "knows", "Carol"),
+        standard_uri_quin("Carol", "likes", "Alice"),
         // did:q42 records (MSB=1 on subject).
         did_q42_quin(b"did:q42:z6MkpTHR8VNs", "locatedAt", "Node42"),
-        did_q42_quin(b"did:q42:z6MkAbCd1234", "links",     "Node99"),
-        did_q42_quin(b"did:q42:QUALIA_ROOT",  "type",      "Topology"),
+        did_q42_quin(b"did:q42:z6MkAbCd1234", "links", "Node99"),
+        did_q42_quin(b"did:q42:QUALIA_ROOT", "type", "Topology"),
     ]
 }
 
@@ -87,9 +87,9 @@ fn standard_uri_query_triggers_lexicon_path() {
     // Tokens whose hash has MSB=0 increment lexicon_lookup_ops;
     // those whose hash happens to have MSB=1 increment direct_jump_ops.
     // We verify the dispatch is consistent: the operand MSB drives the counter.
-    let alice_msb  = (q_hash("Alice") >> 63) == 1;
-    let knows_msb  = (q_hash("knows") >> 63) == 1;
-    let bob_msb    = (q_hash("Bob")   >> 63) == 1;
+    let alice_msb = (q_hash("Alice") >> 63) == 1;
+    let knows_msb = (q_hash("knows") >> 63) == 1;
+    let bob_msb = (q_hash("Bob") >> 63) == 1;
     // The three bound-term operands contribute to one of the two counters each.
     // Because of HALT_IF_FALSE short-circuiting the exact count can vary by Quin;
     // the sum across all Quins must be at least 6 (one subject eval per DB row).
@@ -105,11 +105,8 @@ fn did_q42_query_triggers_direct_jump_path() {
     let db = build_mixed_dataset();
     let mut prog = [0u8; 1024];
     // Subject is a did:q42 coordinate → parse_did_q42 sets MSB=1 in the compiled bytecode.
-    compile_ntriples_to_bytecode(
-        b"<did:q42:z6MkpTHR8VNs> <locatedAt> <Node42>",
-        &mut prog,
-    )
-    .unwrap();
+    compile_ntriples_to_bytecode(b"<did:q42:z6MkpTHR8VNs> <locatedAt> <Node42>", &mut prog)
+        .unwrap();
 
     let mut out = [QualiaQuin::default(); 10];
     let stats = execute_program_with_stats(&prog, &db, &mut out).unwrap();
@@ -143,15 +140,14 @@ fn mixed_query_exercises_both_dispatch_paths() {
         db.len() as u64,
         "one match-opcode evaluation per DB row (subject is wildcard, predicate is bound)"
     );
-    assert_eq!(stats_std.match_count, 2, "Alice→knows→Bob and Bob→knows→Carol");
+    assert_eq!(
+        stats_std.match_count, 2,
+        "Alice→knows→Bob and Bob→knows→Carol"
+    );
 
     // --- did:q42 subject query: MSB=1 is unconditionally set by parse_did_q42 ---
     let mut prog_did = [0u8; 1024];
-    compile_ntriples_to_bytecode(
-        b"<did:q42:z6MkAbCd1234> <links> ?o",
-        &mut prog_did,
-    )
-    .unwrap();
+    compile_ntriples_to_bytecode(b"<did:q42:z6MkAbCd1234> <links> ?o", &mut prog_did).unwrap();
     let mut out_did = [QualiaQuin::default(); 10];
     let stats_did = execute_program_with_stats(&prog_did, &db, &mut out_did).unwrap();
 
@@ -159,7 +155,10 @@ fn mixed_query_exercises_both_dispatch_paths() {
         stats_did.direct_jump_ops > 0,
         "did:q42 subject operand MUST exercise the direct-jump path (MSB=1 is guaranteed)"
     );
-    assert_eq!(stats_did.match_count, 1, "must match exactly the z6MkAbCd1234 Quin");
+    assert_eq!(
+        stats_did.match_count, 1,
+        "must match exactly the z6MkAbCd1234 Quin"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -173,12 +172,15 @@ fn simd_matches_scalar_on_standard_uri_query() {
     compile_ntriples_to_bytecode(b"?s <knows> ?o", &mut prog).unwrap();
 
     let mut out_scalar = [QualiaQuin::default(); 10];
-    let mut out_simd   = [QualiaQuin::default(); 10];
+    let mut out_simd = [QualiaQuin::default(); 10];
 
     let (n_scalar, _) = execute_program(&prog, &db, &mut out_scalar).unwrap();
-    let (n_simd, _)   = execute_program_simd(&prog, &db, &mut out_simd).unwrap();
+    let (n_simd, _) = execute_program_simd(&prog, &db, &mut out_simd).unwrap();
 
-    assert_eq!(n_scalar, n_simd, "SIMD and scalar must produce identical match counts");
+    assert_eq!(
+        n_scalar, n_simd,
+        "SIMD and scalar must produce identical match counts"
+    );
     assert_eq!(
         &out_scalar[..n_scalar],
         &out_simd[..n_simd],
@@ -190,17 +192,13 @@ fn simd_matches_scalar_on_standard_uri_query() {
 fn simd_matches_scalar_on_did_q42_query() {
     let db = build_mixed_dataset();
     let mut prog = [0u8; 1024];
-    compile_ntriples_to_bytecode(
-        b"<did:q42:QUALIA_ROOT> <type> <Topology>",
-        &mut prog,
-    )
-    .unwrap();
+    compile_ntriples_to_bytecode(b"<did:q42:QUALIA_ROOT> <type> <Topology>", &mut prog).unwrap();
 
     let mut out_scalar = [QualiaQuin::default(); 10];
-    let mut out_simd   = [QualiaQuin::default(); 10];
+    let mut out_simd = [QualiaQuin::default(); 10];
 
     let (n_scalar, _) = execute_program(&prog, &db, &mut out_scalar).unwrap();
-    let (n_simd, _)   = execute_program_simd(&prog, &db, &mut out_simd).unwrap();
+    let (n_simd, _) = execute_program_simd(&prog, &db, &mut out_simd).unwrap();
 
     assert_eq!(n_scalar, n_simd, "SIMD result must equal scalar");
     assert_eq!(n_scalar, 1, "must match exactly the QUALIA_ROOT Quin");
@@ -216,7 +214,9 @@ fn large_dataset(target: usize) -> Vec<QualiaQuin> {
     let mut v = Vec::with_capacity(target);
     while v.len() < target {
         for &q in &base {
-            if v.len() >= target { break; }
+            if v.len() >= target {
+                break;
+            }
             v.push(q);
         }
     }
@@ -232,30 +232,32 @@ fn benchmark_scalar_vs_simd_cycle_counters() {
     compile_ntriples_to_bytecode(b"?s <knows> ?o", &mut prog).unwrap();
 
     let mut out_scalar = vec![QualiaQuin::default(); N];
-    let mut out_simd   = vec![QualiaQuin::default(); N];
+    let mut out_simd = vec![QualiaQuin::default(); N];
 
     // Scalar timing.
     let t_scalar = Instant::now();
-    let (n_scalar, cycles_scalar) =
-        execute_program(&prog, &db, &mut out_scalar).unwrap();
+    let (n_scalar, cycles_scalar) = execute_program(&prog, &db, &mut out_scalar).unwrap();
     let elapsed_scalar = t_scalar.elapsed();
 
     // SIMD timing (falls back to scalar on non-wasm32 targets).
     let t_simd = Instant::now();
-    let (n_simd, cycles_simd) =
-        execute_program_simd(&prog, &db, &mut out_simd).unwrap();
+    let (n_simd, cycles_simd) = execute_program_simd(&prog, &db, &mut out_simd).unwrap();
     let elapsed_simd = t_simd.elapsed();
 
     // Correctness.
-    assert_eq!(n_scalar, n_simd, "cycle-counter benchmark: match counts must agree");
+    assert_eq!(
+        n_scalar, n_simd,
+        "cycle-counter benchmark: match counts must agree"
+    );
     assert!(cycles_scalar > 0, "scalar must report non-zero VM cycles");
-    assert!(cycles_simd > 0,   "simd path must report non-zero VM cycles");
+    assert!(cycles_simd > 0, "simd path must report non-zero VM cycles");
 
     // Cycles should scale linearly with dataset size: at least one cycle per record.
     assert!(
         cycles_scalar >= N as u64,
         "scalar cycle count ({}) must be ≥ dataset size ({})",
-        cycles_scalar, N
+        cycles_scalar,
+        N
     );
 
     eprintln!(
@@ -273,8 +275,8 @@ fn cycle_count_scales_linearly_with_dataset_size() {
     let mut prog = [0u8; 1024];
     compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
 
-    let db1 = large_dataset(6);    // one repetition of the base set
-    let db2 = large_dataset(12);   // two repetitions
+    let db1 = large_dataset(6); // one repetition of the base set
+    let db2 = large_dataset(12); // two repetitions
 
     let mut out1 = vec![QualiaQuin::default(); 20];
     let mut out2 = vec![QualiaQuin::default(); 20];
@@ -282,7 +284,11 @@ fn cycle_count_scales_linearly_with_dataset_size() {
     let (_, c1) = execute_program(&prog, &db1, &mut out1).unwrap();
     let (_, c2) = execute_program(&prog, &db2, &mut out2).unwrap();
 
-    assert_eq!(c2, c1 * 2, "VM cycles must scale linearly with dataset size");
+    assert_eq!(
+        c2,
+        c1 * 2,
+        "VM cycles must scale linearly with dataset size"
+    );
 }
 
 // ---------------------------------------------------------------------------

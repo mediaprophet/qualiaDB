@@ -1,10 +1,10 @@
 use crate::state::*;
 
-use crate::qapp_paths::{qapps_dir, resolve_package_manifest_path};
-use crate::qapp_registry;
 use crate::engine::ingestion;
 use crate::engine::llm_offload;
 use crate::engine::q42_compiler;
+use crate::qapp_paths::{qapps_dir, resolve_package_manifest_path};
+use crate::qapp_registry;
 use futures_util::StreamExt;
 use qualia_core_db::ilp_dispatcher::{DispatchResult, HttpIlpTransport, IlpDispatcher};
 use qualia_core_db::rpc::{route_tax_payment, TaxRecipientSuite};
@@ -100,11 +100,18 @@ pub fn list_superblock_artifacts() -> Result<Vec<SuperBlockArtifact>, String> {
     let storage = state.config.lock().unwrap().storage_path.clone();
     let mut out = Vec::new();
     scan_q42_artifacts(Path::new(&storage), &mut out)?;
-    out.sort_by(|a, b| a.display_name.cmp(&b.display_name).then_with(|| a.path.cmp(&b.path)));
+    out.sort_by(|a, b| {
+        a.display_name
+            .cmp(&b.display_name)
+            .then_with(|| a.path.cmp(&b.path))
+    });
     Ok(out)
 }
 
-pub fn get_superblock_view(source_path: String, block_index: u64) -> Result<SuperBlockView, String> {
+pub fn get_superblock_view(
+    source_path: String,
+    block_index: u64,
+) -> Result<SuperBlockView, String> {
     let path = PathBuf::from(&source_path);
     if !path.is_file() {
         return Err(format!("SuperBlock source not found: {}", path.display()));
@@ -129,14 +136,14 @@ pub fn get_superblock_view(source_path: String, block_index: u64) -> Result<Supe
     let offset = block_index * block_size;
     use std::io::Seek;
     use std::io::SeekFrom;
-    file.seek(SeekFrom::Start(offset)).map_err(|e| e.to_string())?;
+    file.seek(SeekFrom::Start(offset))
+        .map_err(|e| e.to_string())?;
     let mut raw_bytes = vec![0u8; qualia_core_db::BLOCK_MULTIPLIER_SIZE];
     file.read_exact(&mut raw_bytes).map_err(|e| e.to_string())?;
 
     let block_sequence_id = decode_u64(&raw_bytes, 0)?;
     let storage_owner_did = decode_u64(&raw_bytes, 8)?;
-    let active_quin_count = decode_u64(&raw_bytes, 16)?
-        .min(qualia_core_db::QUINS_PER_BLOCK as u64);
+    let active_quin_count = decode_u64(&raw_bytes, 16)?.min(qualia_core_db::QUINS_PER_BLOCK as u64);
     let validation_checksum = decode_u32(&raw_bytes, 24)?;
     let hardware_profile_flags = decode_u32(&raw_bytes, 28)?;
     let fea_mesh_index_id = decode_u64(&raw_bytes, 32)?;
@@ -197,8 +204,8 @@ pub fn verify_and_install_qapp(target_path: String) -> Result<String, String> {
         .ok_or_else(|| "qapp.json not found in directory".to_string())?;
 
     let content = std::fs::read_to_string(&manifest_path).map_err(|e| e.to_string())?;
-    let manifest: qapp_registry::QappPackageManifest =
-        serde_json::from_str(&content).map_err(|e| format!("Invalid qapp package manifest: {e}"))?;
+    let manifest: qapp_registry::QappPackageManifest = serde_json::from_str(&content)
+        .map_err(|e| format!("Invalid qapp package manifest: {e}"))?;
 
     let qapp_did = format!(
         "did:qualia:qapp:{}",
@@ -1469,7 +1476,9 @@ pub fn update_solar_input(watts: u32) {
 pub async fn fetch_torrent_telemetry() -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    Ok(crate::ontology_workbench::torrent_telemetry(Path::new(&storage)))
+    Ok(crate::ontology_workbench::torrent_telemetry(Path::new(
+        &storage,
+    )))
 }
 
 pub fn sync_workbench_torrent_seeds(storage_path: &str) -> Result<serde_json::Value, String> {
@@ -1510,11 +1519,8 @@ pub fn set_workbench_torrent_policy(
     let storage = state.config.lock().unwrap().storage_path.clone();
     let policy: crate::ontology_workbench::OntologyTorrentPolicy =
         serde_json::from_value(policy_json).map_err(|e| e.to_string())?;
-    let updated = crate::ontology_workbench::set_torrent_policy(
-        Path::new(&storage),
-        &ontology_id,
-        policy,
-    )?;
+    let updated =
+        crate::ontology_workbench::set_torrent_policy(Path::new(&storage), &ontology_id, policy)?;
     serde_json::to_value(updated).map_err(|e| e.to_string())
 }
 
@@ -1531,7 +1537,9 @@ pub fn get_torrent_bandwidth_policy() -> Result<serde_json::Value, String> {
     serde_json::to_value(policy).map_err(|e| e.to_string())
 }
 
-pub fn set_torrent_bandwidth_policy(policy_json: serde_json::Value) -> Result<serde_json::Value, String> {
+pub fn set_torrent_bandwidth_policy(
+    policy_json: serde_json::Value,
+) -> Result<serde_json::Value, String> {
     let policy: crate::ontology_workbench::TorrentBandwidthGlobal =
         serde_json::from_value(policy_json).map_err(|e| e.to_string())?;
     crate::ontology_workbench::save_bandwidth_policy(&policy)?;
@@ -1541,20 +1549,16 @@ pub fn set_torrent_bandwidth_policy(policy_json: serde_json::Value) -> Result<se
 pub fn list_ontology_shares_for_contact(contact_did: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    let cards = crate::ontology_workbench::list_share_cards_for_contact(
-        Path::new(&storage),
-        &contact_did,
-    )?;
+    let cards =
+        crate::ontology_workbench::list_share_cards_for_contact(Path::new(&storage), &contact_did)?;
     serde_json::to_value(cards).map_err(|e| e.to_string())
 }
 
 pub fn list_ontology_shares_for_session(session_did: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    let cards = crate::ontology_workbench::list_share_cards_for_session(
-        Path::new(&storage),
-        &session_did,
-    )?;
+    let cards =
+        crate::ontology_workbench::list_share_cards_for_session(Path::new(&storage), &session_did)?;
     serde_json::to_value(cards).map_err(|e| e.to_string())
 }
 
@@ -1623,27 +1627,30 @@ pub async fn run_agent_inference(
 pub fn create_chat_session(title: Option<String>) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    crate::chat_session::create_session(Path::new(&storage), title, None)
-        .map_err(|e| e.to_string())
+    crate::chat_session::create_session(Path::new(&storage), title, None).map_err(|e| e.to_string())
 }
 
 pub fn list_chat_sessions() -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    let sessions = crate::chat_session::list_sessions(Path::new(&storage))
-        .map_err(|e| e.to_string())?;
+    let sessions =
+        crate::chat_session::list_sessions(Path::new(&storage)).map_err(|e| e.to_string())?;
     serde_json::to_value(sessions).map_err(|e| e.to_string())
 }
 
 pub fn load_chat_session(id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    let session = crate::chat_session::load_session(Path::new(&storage), &id)
-        .map_err(|e| e.to_string())?;
+    let session =
+        crate::chat_session::load_session(Path::new(&storage), &id).map_err(|e| e.to_string())?;
     serde_json::to_value(session).map_err(|e| e.to_string())
 }
 
-pub fn append_chat_message(session_id: String, role: String, content: String) -> Result<u64, String> {
+pub fn append_chat_message(
+    session_id: String,
+    role: String,
+    content: String,
+) -> Result<u64, String> {
     append_chat_message_reply(session_id, role, content, None, None)
 }
 
@@ -1682,8 +1689,7 @@ pub fn compact_chat_session(session_id: String) -> Result<String, String> {
 pub fn delete_chat_session(session_id: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    crate::chat_session::delete_session(Path::new(&storage), &session_id)
-        .map_err(|e| e.to_string())
+    crate::chat_session::delete_session(Path::new(&storage), &session_id).map_err(|e| e.to_string())
 }
 
 pub fn rename_chat_session(session_id: String, title: String) -> Result<(), String> {
@@ -1745,12 +1751,9 @@ pub fn update_session_environment(
         graph_mutation,
         axiom_bounds,
     };
-    let env = crate::context_binding::compile_chat_environment(
-        Path::new(&storage),
-        &catalog,
-        &config,
-    )
-    .map_err(|e| e.to_string())?;
+    let env =
+        crate::context_binding::compile_chat_environment(Path::new(&storage), &catalog, &config)
+            .map_err(|e| e.to_string())?;
     env.save_to_session_dir(Path::new(&storage))
         .map_err(|e| e.to_string())?;
     serde_json::to_value(env).map_err(|e| e.to_string())
@@ -1814,36 +1817,35 @@ pub fn create_group_chat_session(
         .map_err(|e| e.to_string())
 }
 
-pub fn add_chat_participant(session_id: String, participant_did: String) -> Result<serde_json::Value, String> {
+pub fn add_chat_participant(
+    session_id: String,
+    participant_did: String,
+) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    let participants = crate::chat_session::add_participant(
-        Path::new(&storage),
-        &session_id,
-        &participant_did,
-    )
-    .map_err(|e| e.to_string())?;
+    let participants =
+        crate::chat_session::add_participant(Path::new(&storage), &session_id, &participant_did)
+            .map_err(|e| e.to_string())?;
     serde_json::to_value(participants).map_err(|e| e.to_string())
 }
 
-pub fn remove_chat_participant(session_id: String, participant_did: String) -> Result<serde_json::Value, String> {
+pub fn remove_chat_participant(
+    session_id: String,
+    participant_did: String,
+) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    let participants = crate::chat_session::remove_participant(
-        Path::new(&storage),
-        &session_id,
-        &participant_did,
-    )
-    .map_err(|e| e.to_string())?;
+    let participants =
+        crate::chat_session::remove_participant(Path::new(&storage), &session_id, &participant_did)
+            .map_err(|e| e.to_string())?;
     serde_json::to_value(participants).map_err(|e| e.to_string())
 }
 
 pub fn get_chat_participants(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    let participants =
-        crate::chat_session::get_participants(Path::new(&storage), &session_id)
-            .map_err(|e| e.to_string())?;
+    let participants = crate::chat_session::get_participants(Path::new(&storage), &session_id)
+        .map_err(|e| e.to_string())?;
     serde_json::to_value(participants).map_err(|e| e.to_string())
 }
 
@@ -1862,11 +1864,7 @@ pub fn update_agent_outcome_sharing(
         serde_json::from_str(&policy_json).map_err(|e| e.to_string())?;
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
-    let cfg = crate::chat_agents::update_outcome_sharing(
-        Path::new(&storage),
-        &session_id,
-        policy,
-    )?;
+    let cfg = crate::chat_agents::update_outcome_sharing(Path::new(&storage), &session_id, policy)?;
     serde_json::to_value(cfg).map_err(|e| e.to_string())
 }
 
@@ -2101,10 +2099,7 @@ pub fn parse_chat_file_preview(source_path: String) -> Result<serde_json::Value,
     std::fs::File::open(path)
         .and_then(|mut f| std::io::Read::read_to_end(&mut f, &mut bytes))
         .map_err(|e| e.to_string())?;
-    let name = path
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or("file");
+    let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("file");
     let parsed = crate::chat_files::parse_document_bytes(name, &bytes);
     serde_json::to_value(parsed).map_err(|e| e.to_string())
 }
@@ -2209,25 +2204,26 @@ pub fn get_model_lifecycle_status() -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let path = state.active_model.lock().unwrap().clone();
     let active = load_active_model_record_from_disk().or_else(|| {
-        path.as_ref().map(|gguf| crate::model_lifecycle::ActiveModelRecord {
-            model_id: gguf
-                .rsplit(['/', '\\'])
-                .next()
-                .unwrap_or(gguf)
-                .trim_end_matches(".gguf")
+        path.as_ref()
+            .map(|gguf| crate::model_lifecycle::ActiveModelRecord {
+                model_id: gguf
+                    .rsplit(['/', '\\'])
+                    .next()
+                    .unwrap_or(gguf)
+                    .trim_end_matches(".gguf")
+                    .to_string(),
+                gguf_path: gguf.clone(),
+                profile_id: 0,
+                quantization: String::new(),
+                lifecycle_state: crate::model_lifecycle::lifecycle_label(
+                    crate::model_lifecycle::get_model_lifecycle_state(),
+                )
                 .to_string(),
-            gguf_path: gguf.clone(),
-            profile_id: 0,
-            quantization: String::new(),
-            lifecycle_state: crate::model_lifecycle::lifecycle_label(
-                crate::model_lifecycle::get_model_lifecycle_state(),
-            )
-            .to_string(),
-            modality: "text".to_string(),
-            architecture: None,
-            mmproj_path: None,
-            context_window: 4096,
-        })
+                modality: "text".to_string(),
+                architecture: None,
+                mmproj_path: None,
+                context_window: 4096,
+            })
     });
     let status = crate::model_lifecycle::get_model_status(active);
     serde_json::to_value(status).map_err(|e| e.to_string())
@@ -2286,12 +2282,7 @@ pub fn resolve_model_preference(
     let catalog = load_workspace_catalog();
     let prefs = get_model_preferences();
     let task = crate::model_preferences::ModelTask::from_str_lossy(task);
-    crate::model_preferences::resolve_preference(
-        Path::new(&storage),
-        &catalog,
-        &prefs,
-        task,
-    )
+    crate::model_preferences::resolve_preference(Path::new(&storage), &catalog, &prefs, task)
 }
 
 pub fn try_apply_model_preference(task: &str) -> Result<(), String> {
@@ -2300,12 +2291,8 @@ pub fn try_apply_model_preference(task: &str) -> Result<(), String> {
     let catalog = load_workspace_catalog();
     let prefs = get_model_preferences();
     let task = crate::model_preferences::ModelTask::from_str_lossy(task);
-    let record = crate::model_preferences::apply_preference(
-        Path::new(&storage),
-        &catalog,
-        &prefs,
-        task,
-    )?;
+    let record =
+        crate::model_preferences::apply_preference(Path::new(&storage), &catalog, &prefs, task)?;
     persist_active_model_record(&record)?;
     *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
     Ok(())
@@ -2335,7 +2322,10 @@ pub async fn install_catalog_llm(id: String) -> Result<serde_json::Value, String
     let dest_path = models_dir.join(&filename);
 
     let cancelled = Arc::new(AtomicBool::new(false));
-    handles.lock().unwrap().insert(id.clone(), cancelled.clone());
+    handles
+        .lock()
+        .unwrap()
+        .insert(id.clone(), cancelled.clone());
 
     let client = reqwest::Client::new();
     let response = client.get(&url).send().await.map_err(|e| {
@@ -2417,7 +2407,10 @@ pub async fn install_catalog_llm(id: String) -> Result<serde_json::Value, String
         status: "processing".to_string(),
     };
     let _ = state.download_events.send(processing_payload.clone());
-    active_dl.lock().unwrap().insert(id.clone(), processing_payload);
+    active_dl
+        .lock()
+        .unwrap()
+        .insert(id.clone(), processing_payload);
 
     let mut mmproj_path: Option<PathBuf> = None;
     if model.is_multimodal() {
@@ -2446,8 +2439,7 @@ pub async fn install_catalog_llm(id: String) -> Result<serde_json::Value, String
     .map_err(|e| e.to_string())?;
 
     // New installs should be immediately usable in chat (not left at MappedToDisk).
-    if let Ok(record) =
-        crate::model_lifecycle::activate_model_for_id(&id, Path::new(&storage_path))
+    if let Ok(record) = crate::model_lifecycle::activate_model_for_id(&id, Path::new(&storage_path))
     {
         let _ = persist_active_model_record(&record);
         *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
@@ -2601,14 +2593,20 @@ pub fn issue_qapp_session_token(qapp_name: &str) -> Result<String, String> {
 // ── Qapp launcher ─────────────────────────────────────────────────────────────
 
 /// Load `qapp.json` for an installed qapp.
-pub fn load_installed_qapp_package(qapp_name: &str) -> Result<qapp_registry::QappPackageManifest, String> {
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+pub fn load_installed_qapp_package(
+    qapp_name: &str,
+) -> Result<qapp_registry::QappPackageManifest, String> {
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
     let data_dir = state.config.lock().unwrap().storage_path.clone();
     let qapp_dir = qapps_dir(&data_dir).join(qapp_name);
     load_qapp_package_from_dir(&qapp_dir)
 }
 
-pub(crate) fn load_qapp_package_from_dir(qapp_dir: &Path) -> Result<qapp_registry::QappPackageManifest, String> {
+pub(crate) fn load_qapp_package_from_dir(
+    qapp_dir: &Path,
+) -> Result<qapp_registry::QappPackageManifest, String> {
     let manifest_path = resolve_package_manifest_path(qapp_dir)
         .ok_or_else(|| format!("qapp.json not found in {}", qapp_dir.display()))?;
     let content = std::fs::read_to_string(&manifest_path).map_err(|e| e.to_string())?;
@@ -2694,10 +2692,7 @@ fn append_launch_context(
 
     if let Some(qapp_name) = qapp_name.filter(|value| !value.trim().is_empty()) {
         if let Ok(token) = issue_qapp_session_token(qapp_name.trim()) {
-            params.push(format!(
-                "qualia_token={}",
-                encode_query_component(&token)
-            ));
+            params.push(format!("qualia_token={}", encode_query_component(&token)));
         }
         let port = get_active_daemon_port();
         if port > 0 {
@@ -2785,9 +2780,10 @@ fn catalog_has_ontology(
         return true;
     }
     let target = normalize_resource_key(ontology);
-    catalog.ontologies.iter().any(|entry| {
-        normalize_resource_key(&entry.id) == target
-    })
+    catalog
+        .ontologies
+        .iter()
+        .any(|entry| normalize_resource_key(&entry.id) == target)
 }
 
 fn normalize_resource_key(value: &str) -> String {
@@ -2986,14 +2982,12 @@ pub fn inspect_installed_qapp_readiness(qapp_name: String) -> Result<String, Str
     }
 
     for endpoint in &extension.optional_remote_endpoints {
-        let match_entry = catalog
-            .find_sparql(endpoint)
-            .or_else(|| {
-                catalog.sparql_endpoints.iter().find(|entry| {
-                    entry.endpoint == *endpoint
-                        || normalize_resource_key(&entry.id) == normalize_resource_key(endpoint)
-                })
-            });
+        let match_entry = catalog.find_sparql(endpoint).or_else(|| {
+            catalog.sparql_endpoints.iter().find(|entry| {
+                entry.endpoint == *endpoint
+                    || normalize_resource_key(&entry.id) == normalize_resource_key(endpoint)
+            })
+        });
         let (status, detail) = if let Some(entry) = match_entry {
             let federation_note = match entry.federation_supported {
                 Some(true) => " Federation is advertised as supported.",
@@ -3175,8 +3169,7 @@ pub fn remove_installed_model(model_id: String) -> Result<String, String> {
 }
 
 pub fn test_sparql_endpoint(endpoint_or_id: String) -> Result<String, String> {
-    let (endpoint, federation_supported) =
-        resolve_sparql_endpoint_from_catalog(&endpoint_or_id)?;
+    let (endpoint, federation_supported) = resolve_sparql_endpoint_from_catalog(&endpoint_or_id)?;
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(8))
         .build()
@@ -3184,7 +3177,10 @@ pub fn test_sparql_endpoint(endpoint_or_id: String) -> Result<String, String> {
 
     let response = client
         .get(&endpoint)
-        .header("Accept", "application/sparql-results+json, application/json;q=0.9, */*;q=0.1")
+        .header(
+            "Accept",
+            "application/sparql-results+json, application/json;q=0.9, */*;q=0.1",
+        )
         .send();
 
     let probe = match response {
@@ -3250,7 +3246,11 @@ pub fn launch_installed_qapp_with_context(
         }
     } else {
         if !asset_file.exists() {
-            return Err(format!("{} not found in {}", asset_path, qapp_dir.display()));
+            return Err(format!(
+                "{} not found in {}",
+                asset_path,
+                qapp_dir.display()
+            ));
         }
 
         if crate::qapps_protocol::qualia_protocol_port() != 0 {
@@ -3447,8 +3447,15 @@ pub fn seed_bundled_qapps() -> Result<Vec<String>, String> {
 }
 
 pub fn installed_qapp_version(qapp_name: &str) -> Result<Option<String>, String> {
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
-    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
+    let storage = state
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .storage_path
+        .clone();
     Ok(crate::bundled_qapps::installed_qapp_version(
         Path::new(&storage),
         qapp_name,
@@ -3456,15 +3463,32 @@ pub fn installed_qapp_version(qapp_name: &str) -> Result<Option<String>, String>
 }
 
 pub fn check_qapp_update(qapp_name: String) -> Result<String, String> {
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
-    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
+    let storage = state
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .storage_path
+        .clone();
     let status = crate::bundled_qapps::check_bundled_qapp_update(&qapp_name, Path::new(&storage));
     serde_json::to_string(&status).map_err(|e| e.to_string())
 }
 
-pub fn check_qapp_update_from_path(qapp_name: String, source_path: String) -> Result<String, String> {
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
-    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+pub fn check_qapp_update_from_path(
+    qapp_name: String,
+    source_path: String,
+) -> Result<String, String> {
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
+    let storage = state
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .storage_path
+        .clone();
     let status = crate::bundled_qapps::check_qapp_update_from_source(
         &qapp_name,
         Path::new(&storage),
@@ -3474,21 +3498,45 @@ pub fn check_qapp_update_from_path(qapp_name: String, source_path: String) -> Re
 }
 
 pub fn list_qapp_update_offers() -> Result<String, String> {
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
-    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
+    let storage = state
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .storage_path
+        .clone();
     let offers = crate::bundled_qapps::list_bundled_qapp_updates(Path::new(&storage));
     serde_json::to_string(&offers).map_err(|e| e.to_string())
 }
 
 pub fn apply_qapp_update(qapp_name: String) -> Result<String, String> {
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
-    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
+    let storage = state
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .storage_path
+        .clone();
     crate::bundled_qapps::apply_bundled_qapp_update(Path::new(&storage), &qapp_name)
 }
 
-pub fn apply_qapp_update_from_path(qapp_name: String, source_path: String) -> Result<String, String> {
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
-    let storage = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+pub fn apply_qapp_update_from_path(
+    qapp_name: String,
+    source_path: String,
+) -> Result<String, String> {
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
+    let storage = state
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .storage_path
+        .clone();
     crate::bundled_qapps::upgrade_qapp_from_source(
         Path::new(&storage),
         &qapp_name,

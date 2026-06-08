@@ -883,10 +883,7 @@ fn parse_ontology_manifest_items(json: &str) -> Vec<CatalogItem> {
                     .unwrap_or("Unknown")
                     .into(),
                 tag: "ontology".into(),
-                params: item
-                    .get("url")
-                    .and_then(|u| u.as_str())
-                    .map(String::from),
+                params: item.get("url").and_then(|u| u.as_str()).map(String::from),
                 format: item
                     .get("type")
                     .and_then(|f| f.as_str())
@@ -1282,7 +1279,9 @@ pub fn run_inference_stream(
 
         let tx_token = tx.clone();
         let on_token = std::sync::Arc::new(move |delta: String| {
-            let _ = tx_token.send(qualia_client_core::chat_inference::stream_event_token(&delta));
+            let _ = tx_token.send(qualia_client_core::chat_inference::stream_event_token(
+                &delta,
+            ));
         });
 
         let options = qualia_client_core::chat_inference::ChatInferenceOptions {
@@ -1296,7 +1295,9 @@ pub fn run_inference_stream(
             options,
         );
 
-        let _ = tx.send(qualia_client_core::chat_inference::stream_event_done(&result));
+        let _ = tx.send(qualia_client_core::chat_inference::stream_event_done(
+            &result,
+        ));
     });
 }
 

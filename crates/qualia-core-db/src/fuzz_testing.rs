@@ -1,12 +1,12 @@
 // Qualia-DB Fuzz Testing & Property Verification
-// Utilizes randomized property generation to guarantee the Zero-Allocation 
+// Utilizes randomized property generation to guarantee the Zero-Allocation
 // Query Compiler never panics or overflows memory boundaries on malformed edge inputs.
 
 #[cfg(test)]
 mod tests {
-    use proptest::prelude::*;
     use crate::query_compiler::QueryCompiler;
     use crate::QualiaQuin;
+    use proptest::prelude::*;
 
     proptest! {
         // Generates 10,000 completely randomized string mutations
@@ -33,7 +33,7 @@ mod tests {
         // Ensures that Bilateral Guardianship strictness is met by
         // testing the `zeroize` memory scrubbing capability.
         use zeroize::Zeroize;
-        
+
         let mut quin = QualiaQuin {
             subject: 999,
             predicate: 888,

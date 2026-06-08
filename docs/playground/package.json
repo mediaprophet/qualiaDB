@@ -1,0 +1,16 @@
+{
+  "name": "qualia-core-db",
+  "type": "module",
+  "collaborators": [
+    "Timothy Charles Holborn <timothy.holborn@gmail.com>"
+  ],
+  "version": "0.0.9",
+  "files": [
+    "qualia_core_db_bg.wasm",
+    "qualia_core_db.js"
+  ],
+  "main": "qualia_core_db.js",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

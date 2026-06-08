@@ -26,7 +26,7 @@ pub fn parse_cbor_ld_stream(
 
     // Typically CBOR-LD is an array of objects or a single object.
     // Let's assume an array of objects for this implementation.
-    
+
     // Check if it's an array
     if let Ok(Some(len)) = decoder.array() {
         for _ in 0..len {
@@ -50,12 +50,12 @@ fn parse_cbor_object(
     // Read the map
     let map_len = decoder.map()?;
     let mut subject_hash = 0;
-    
+
     // We might need a tiny buffer for properties since we need the @id first if it's not the first key.
-    // But in a strict zero-alloc streaming pull parser, we can parse it in one pass if we enforce 
+    // But in a strict zero-alloc streaming pull parser, we can parse it in one pass if we enforce
     // @id is first, OR we can just use a temporary struct or Vec for the properties of ONE object.
     // Since it's ONE object, it's fine to store its properties temporarily (very small).
-    
+
     let mut properties = Vec::new();
 
     // Iterate map entries
@@ -75,17 +75,19 @@ fn parse_cbor_object(
         // Value
         let dt = decoder.datatype()?;
         let obj_hash = match dt {
-            minicbor::data::Type::String => {
-                hash_bytes(decoder.bytes()?)
-            }
-            minicbor::data::Type::Bytes => {
-                hash_bytes(decoder.bytes()?)
-            }
-            minicbor::data::Type::U8 | minicbor::data::Type::U16 | minicbor::data::Type::U32 | minicbor::data::Type::U64 => {
+            minicbor::data::Type::String => hash_bytes(decoder.bytes()?),
+            minicbor::data::Type::Bytes => hash_bytes(decoder.bytes()?),
+            minicbor::data::Type::U8
+            | minicbor::data::Type::U16
+            | minicbor::data::Type::U32
+            | minicbor::data::Type::U64 => {
                 let val = decoder.u64()?;
                 hash_bytes(&val.to_le_bytes())
             }
-            minicbor::data::Type::I8 | minicbor::data::Type::I16 | minicbor::data::Type::I32 | minicbor::data::Type::I64 => {
+            minicbor::data::Type::I8
+            | minicbor::data::Type::I16
+            | minicbor::data::Type::I32
+            | minicbor::data::Type::I64 => {
                 let val = decoder.i64()?;
                 hash_bytes(&val.to_le_bytes())
             }

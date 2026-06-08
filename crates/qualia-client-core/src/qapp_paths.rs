@@ -1,6 +1,6 @@
 //! Storage path helpers for installed Qualia qapps.
 
-use crate::qapp_registry::{QAPP_PACKAGE_MANIFEST, QAPPS_DIR};
+use crate::qapp_registry::{QAPPS_DIR, QAPP_PACKAGE_MANIFEST};
 use std::path::{Path, PathBuf};
 
 /// `{storage}/Qapps/`

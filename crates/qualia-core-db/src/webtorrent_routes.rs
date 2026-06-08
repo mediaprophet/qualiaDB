@@ -46,8 +46,8 @@ pub fn webtorrent_routes(
     let register = warp::path!("torrent" / "seed")
         .and(warp::post())
         .and(warp::body::json())
-        .map(|req: RegisterSeedRequest| {
-            match webtorrent_seeder::register_seed(req) {
+        .map(
+            |req: RegisterSeedRequest| match webtorrent_seeder::register_seed(req) {
                 Ok(rec) => json_response(
                     StatusCode::OK,
                     &json!({
@@ -60,8 +60,8 @@ pub fn webtorrent_routes(
                     StatusCode::BAD_REQUEST,
                     &json!({ "status": "error", "message": e }),
                 ),
-            }
-        });
+            },
+        );
 
     let unseed = warp::path!("torrent" / "unseed")
         .and(warp::post())
@@ -113,10 +113,7 @@ pub fn webtorrent_routes(
         .and(warp::header::optional::<String>("range"))
         .map(|info_hash: String, range: Option<String>| {
             let Some(seed) = webtorrent_seeder::lookup_seed(&info_hash) else {
-                return json_response(
-                    StatusCode::NOT_FOUND,
-                    &json!({ "error": "seed not found" }),
-                );
+                return json_response(StatusCode::NOT_FOUND, &json!({ "error": "seed not found" }));
             };
 
             let path = Path::new(&seed.file_path);

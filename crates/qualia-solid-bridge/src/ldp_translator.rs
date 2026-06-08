@@ -1,6 +1,6 @@
-use warp::Filter;
-use qualia_core_db::{QualiaQuin, q_hash};
 use qualia_core_db::logic::WebizenOpcode;
+use qualia_core_db::{q_hash, QualiaQuin};
+use warp::Filter;
 
 pub fn ldp_routes() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let get_public = warp::path!("public" / String)
@@ -29,14 +29,14 @@ pub fn ldp_routes() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rej
 pub fn ldp_to_quins(payload: &[u8]) -> Vec<QualiaQuin> {
     // For test_allocation_firewall verification, we perform zero allocations of Strings inside the loop
     let mut quins = Vec::new();
-    
+
     // Simulate simple boundary tokenization by iterating chunks instead of allocating strings
     // If we receive a 5MB payload, we only construct native primitives (u64s)
     let chunks = payload.chunks(128); // mock property chunks
     for chunk in chunks {
         // Hash the raw bytes natively without converting to String
         let subject = fast_hash_bytes(chunk);
-        
+
         let quin = QualiaQuin {
             subject,
             predicate: q_hash("solid:contains"),
@@ -47,7 +47,7 @@ pub fn ldp_to_quins(payload: &[u8]) -> Vec<QualiaQuin> {
         };
         quins.push(quin);
     }
-    
+
     quins
 }
 
@@ -83,13 +83,13 @@ mod tests {
     fn test_allocation_firewall() {
         // We will test utilizing dhat-rs to ensure the LDP parser does not
         // permanently allocate heap memory on the core database side.
-        
+
         #[cfg(feature = "dhat-heap")]
         let _profiler = dhat::Profiler::new_heap();
 
         // 1. Generate a mock 5MB payload
-        let payload = vec![0x41; 5 * 1024 * 1024]; 
-        
+        let payload = vec![0x41; 5 * 1024 * 1024];
+
         #[cfg(feature = "dhat-heap")]
         let stats_before = dhat::HeapStats::get();
 
@@ -101,16 +101,20 @@ mod tests {
 
         // 3. Assertions
         assert_eq!(quins.len(), 40960);
-        assert_eq!(quins[0].metadata, 0x4000_0000_0000_0000); 
-        
+        assert_eq!(quins[0].metadata, 0x4000_0000_0000_0000);
+
         #[cfg(feature = "dhat-heap")]
         {
             let current_diff = stats_after.curr_bytes - stats_before.curr_bytes;
             println!("Heap grew by {} bytes", current_diff);
-            assert!(current_diff < 3 * 1024 * 1024, "Heap allocation firewall failed: {:?} bytes allocated", current_diff);
+            assert!(
+                current_diff < 3 * 1024 * 1024,
+                "Heap allocation firewall failed: {:?} bytes allocated",
+                current_diff
+            );
         }
     }
-    
+
     #[test]
     fn test_acl_compilation() {
         let acl = "

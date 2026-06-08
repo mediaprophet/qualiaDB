@@ -1,9 +1,9 @@
 use qualia_core_db::{QualiaQuin, QUINS_PER_BLOCK};
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
-use std::collections::BinaryHeap;
-use std::cmp::Ordering;
 
 // 50MB buffer limit: ~1 million Quins (48 bytes each -> 48MB)
 const CHUNK_SIZE_LIMIT: usize = 1_000_000;
@@ -45,7 +45,9 @@ impl ExternalSorter {
         self.buffer.sort_unstable_by_key(|q| q.object);
 
         // 2. Flush to disk as a temporary file
-        let chunk_path = self.temp_dir.join(format!("chunk_{}.tmp", self.chunk_files.len()));
+        let chunk_path = self
+            .temp_dir
+            .join(format!("chunk_{}.tmp", self.chunk_files.len()));
         let mut file = BufWriter::new(File::create(&chunk_path)?);
 
         for q in &self.buffer {
@@ -75,7 +77,7 @@ impl ExternalSorter {
             .truncate(true)
             .open(final_bidx)?;
         let mut bidx_out = BufWriter::new(bidx_file);
-        
+
         let mut block_ranges: Vec<(u64, u64)> = Vec::new();
 
         // If nothing was written
@@ -120,7 +122,10 @@ impl ExternalSorter {
         // Initialize heap with first quin from each file
         for (idx, reader) in readers.iter_mut().enumerate() {
             if let Some(quin) = Self::read_quin(reader)? {
-                heap.push(HeapItem { quin, reader_idx: idx });
+                heap.push(HeapItem {
+                    quin,
+                    reader_idx: idx,
+                });
             }
         }
 
@@ -133,7 +138,10 @@ impl ExternalSorter {
             // Fetch next from the same reader
             let idx = item.reader_idx;
             if let Some(next_quin) = Self::read_quin(&mut readers[idx])? {
-                heap.push(HeapItem { quin: next_quin, reader_idx: idx });
+                heap.push(HeapItem {
+                    quin: next_quin,
+                    reader_idx: idx,
+                });
             }
 
             if block_buffer.len() == QUINS_PER_BLOCK {
@@ -158,7 +166,7 @@ impl ExternalSorter {
         }
 
         q42_out.flush()?;
-        
+
         // Write the .bidx sidecar
         Self::write_bidx_file(&mut bidx_out, &block_ranges)?;
 
@@ -180,9 +188,9 @@ impl ExternalSorter {
     }
 
     fn write_superblock(
-        writer:  &mut impl Write,
-        seq_id:  u64,
-        quins:   &[QualiaQuin],
+        writer: &mut impl Write,
+        seq_id: u64,
+        quins: &[QualiaQuin],
     ) -> std::io::Result<()> {
         writer.write_all(&seq_id.to_le_bytes())?;
         writer.write_all(&0u64.to_le_bytes())?;
@@ -201,10 +209,7 @@ impl ExternalSorter {
         Ok(())
     }
 
-    fn write_bidx_file(
-        w: &mut BufWriter<File>,
-        ranges: &[(u64, u64)],
-    ) -> std::io::Result<()> {
+    fn write_bidx_file(w: &mut BufWriter<File>, ranges: &[(u64, u64)]) -> std::io::Result<()> {
         w.write_all(b"BIDX")?;
         w.write_all(&1u32.to_le_bytes())?;
         w.write_all(&(ranges.len() as u32).to_le_bytes())?;

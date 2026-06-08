@@ -1,3 +1,4 @@
+use crate::p2p::protocol::QualiaSyncCodec;
 use libp2p::{
     kad::{store::MemoryStore, Behaviour as Kademlia},
     mdns::tokio::Behaviour as Mdns,
@@ -5,7 +6,6 @@ use libp2p::{
     swarm::NetworkBehaviour,
     StreamProtocol,
 };
-use crate::p2p::protocol::QualiaSyncCodec;
 
 #[derive(NetworkBehaviour)]
 pub struct QualiaBehaviour {

@@ -49,9 +49,9 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 
-use qualia_core_db::{QualiaQuin, QUINS_PER_BLOCK};
 use crate::parsers::external_sort::ExternalSorter;
 use qualia_core_db::mini_parser::hash_token;
+use qualia_core_db::{QualiaQuin, QUINS_PER_BLOCK};
 use rio_api::parser::TriplesParser;
 use rio_xml::RdfXmlParser;
 
@@ -63,10 +63,10 @@ use rio_xml::RdfXmlParser;
 #[derive(Debug)]
 pub struct IngestStats {
     pub triples_ingested: u64,
-    pub blocks_written:   u64,
-    pub lex_entries:      u64,
-    pub lines_skipped:    u64,
-    pub bidx_written:     bool,
+    pub blocks_written: u64,
+    pub lex_entries: u64,
+    pub lines_skipped: u64,
+    pub bidx_written: bool,
 }
 
 /// Ingest an N-Triples file at `input` and write `.q42`, `.q42.lex`, and
@@ -75,7 +75,7 @@ pub struct IngestStats {
 /// All records are buffered in RAM, sorted by **object hash**, then written
 /// to disk so the BIDX ranges are non-overlapping and binary-searchable.
 pub fn ingest_ntriples(
-    input:  &Path,
+    input: &Path,
     output: &Path,
 ) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let reader = BufReader::new(File::open(input)?);
@@ -105,12 +105,12 @@ pub fn ingest_ntriples(
         lex.entry(oh).or_insert_with(|| os);
 
         all_quins.push(QualiaQuin {
-            subject:   sh,
+            subject: sh,
             predicate: ph,
-            object:    oh,
-            context:   0,
-            metadata:  0,
-            parity:    0,
+            object: oh,
+            context: 0,
+            metadata: 0,
+            parity: 0,
         });
     }
 
@@ -124,12 +124,14 @@ pub fn ingest_ntriples(
 
     // ── Phase 3: write SuperBlocks, recording min/max per block ─────────
     let q42_file = OpenOptions::new()
-        .create(true).write(true).truncate(true)
+        .create(true)
+        .write(true)
+        .truncate(true)
         .open(output)?;
     let mut q42 = BufWriter::new(q42_file);
 
     let mut block_ranges: Vec<(u64, u64)> = Vec::new();
-    let mut block_seq:    u64 = 0;
+    let mut block_seq: u64 = 0;
 
     for chunk in all_quins.chunks(QUINS_PER_BLOCK) {
         let min_hash = chunk.iter().map(|q| q.object).min().unwrap_or(0);
@@ -150,16 +152,16 @@ pub fn ingest_ntriples(
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written:   block_seq,
+        blocks_written: block_seq,
         lex_entries,
-        lines_skipped:    skipped,
-        bidx_written:     true,
+        lines_skipped: skipped,
+        bidx_written: true,
     })
 }
 
 /// Ingest an RDF/XML file at `input` — same output format as [`ingest_ntriples`].
 pub fn ingest_rdf_xml(
-    input:  &Path,
+    input: &Path,
     output: &Path,
 ) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let reader = BufReader::new(File::open(input)?);
@@ -169,29 +171,31 @@ pub fn ingest_rdf_xml(
     let mut io_err: Option<std::io::Error> = None;
 
     let mut parser = RdfXmlParser::new(reader, None);
-    let _ = parser.parse_all(&mut |t: rio_api::model::Triple| -> Result<(), std::io::Error> {
-        let s = t.subject.to_string();
-        let p = t.predicate.to_string();
-        let o = t.object.to_string();
+    let _ = parser.parse_all(
+        &mut |t: rio_api::model::Triple| -> Result<(), std::io::Error> {
+            let s = t.subject.to_string();
+            let p = t.predicate.to_string();
+            let o = t.object.to_string();
 
-        let (sh, ss) = hash_and_strip(&s);
-        let (ph, ps) = hash_and_strip(&p);
-        let (oh, os) = hash_and_strip(&o);
+            let (sh, ss) = hash_and_strip(&s);
+            let (ph, ps) = hash_and_strip(&p);
+            let (oh, os) = hash_and_strip(&o);
 
-        lex.entry(sh).or_insert(ss);
-        lex.entry(ph).or_insert(ps);
-        lex.entry(oh).or_insert(os);
+            lex.entry(sh).or_insert(ss);
+            lex.entry(ph).or_insert(ps);
+            lex.entry(oh).or_insert(os);
 
-        all_quins.push(QualiaQuin {
-            subject:   sh,
-            predicate: ph,
-            object:    oh,
-            context:   0,
-            metadata:  0,
-            parity:    0,
-        });
-        Ok(())
-    });
+            all_quins.push(QualiaQuin {
+                subject: sh,
+                predicate: ph,
+                object: oh,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            });
+            Ok(())
+        },
+    );
 
     if let Some(e) = io_err {
         return Err(e.into());
@@ -202,7 +206,9 @@ pub fn ingest_rdf_xml(
     all_quins.sort_unstable_by_key(|q| q.object);
 
     let q42_file = OpenOptions::new()
-        .create(true).write(true).truncate(true)
+        .create(true)
+        .write(true)
+        .truncate(true)
         .open(output)?;
     let mut q42 = BufWriter::new(q42_file);
 
@@ -234,10 +240,10 @@ pub fn ingest_rdf_xml(
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written:   block_seq,
+        blocks_written: block_seq,
         lex_entries,
-        lines_skipped:    0,
-        bidx_written:     true,
+        lines_skipped: 0,
+        bidx_written: true,
     })
 }
 
@@ -261,8 +267,13 @@ fn hash_and_strip(token: &str) -> (u64, String) {
         let rest = &token[1..];
         let mut i = 0;
         while i < rest.len() {
-            if rest.as_bytes()[i] == b'\\' { i += 2; continue; }
-            if rest.as_bytes()[i] == b'"'  { break; }
+            if rest.as_bytes()[i] == b'\\' {
+                i += 2;
+                continue;
+            }
+            if rest.as_bytes()[i] == b'"' {
+                break;
+            }
             i += 1;
         }
         &rest[..i]
@@ -277,9 +288,9 @@ fn hash_and_strip(token: &str) -> (u64, String) {
 // ---------------------------------------------------------------------------
 
 fn write_superblock(
-    writer:  &mut impl Write,
-    seq_id:  u64,
-    quins:   &[QualiaQuin],
+    writer: &mut impl Write,
+    seq_id: u64,
+    quins: &[QualiaQuin],
 ) -> std::io::Result<()> {
     debug_assert!(quins.len() <= QUINS_PER_BLOCK);
 
@@ -325,18 +336,17 @@ const BIDX_MAGIC: &[u8; 4] = b"BIDX";
 /// [12..16] reserved:    u32 LE = 0
 /// [16..]   [min_obj_hash: u64 LE, max_obj_hash: u64 LE] × block_count
 /// ```
-fn write_bidx_file(
-    path:   &Path,
-    ranges: &[(u64, u64)],
-) -> Result<(), Box<dyn std::error::Error>> {
+fn write_bidx_file(path: &Path, ranges: &[(u64, u64)]) -> Result<(), Box<dyn std::error::Error>> {
     let f = OpenOptions::new()
-        .create(true).write(true).truncate(true)
+        .create(true)
+        .write(true)
+        .truncate(true)
         .open(path)?;
     let mut w = BufWriter::new(f);
     w.write_all(BIDX_MAGIC)?;
-    w.write_all(&1u32.to_le_bytes())?;                     // version
-    w.write_all(&(ranges.len() as u32).to_le_bytes())?;    // block_count
-    w.write_all(&0u32.to_le_bytes())?;                     // reserved
+    w.write_all(&1u32.to_le_bytes())?; // version
+    w.write_all(&(ranges.len() as u32).to_le_bytes())?; // block_count
+    w.write_all(&0u32.to_le_bytes())?; // reserved
     for (min, max) in ranges {
         w.write_all(&min.to_le_bytes())?;
         w.write_all(&max.to_le_bytes())?;
@@ -360,26 +370,28 @@ const LEX_MAGIC: &[u8; 8] = b"Q42LEX\0\0";
 
 fn write_lex_file(
     path: &Path,
-    lex:  &HashMap<u64, String>,
+    lex: &HashMap<u64, String>,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     let mut entries: Vec<(u64, &str)> = lex.iter().map(|(&h, s)| (h, s.as_str())).collect();
     entries.sort_unstable_by_key(|&(h, _)| h);
 
-    let entry_count    = entries.len() as u64;
+    let entry_count = entries.len() as u64;
     let strings_offset = 32 + entry_count * 16;
 
     let mut string_blob: Vec<u8> = Vec::new();
     let mut str_offsets: Vec<u64> = Vec::with_capacity(entries.len());
     for (_, s) in &entries {
         str_offsets.push(string_blob.len() as u64);
-        let b   = s.as_bytes();
+        let b = s.as_bytes();
         let len = b.len().min(65535) as u16;
         string_blob.extend_from_slice(&len.to_le_bytes());
         string_blob.extend_from_slice(&b[..len as usize]);
     }
 
     let lex_file = OpenOptions::new()
-        .create(true).write(true).truncate(true)
+        .create(true)
+        .write(true)
+        .truncate(true)
         .open(path)?;
     let mut w = BufWriter::new(lex_file);
 
@@ -404,15 +416,19 @@ fn write_lex_file(
 const BLOCK_SIZE: u64 = 40_960;
 
 fn verify_q42_structure(
-    path:            &Path,
+    path: &Path,
     expected_blocks: u64,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let file_size = std::fs::metadata(path)?.len();
     if file_size != expected_blocks * BLOCK_SIZE {
         return Err(format!(
             "Structural mismatch: file is {} bytes but expected {} blocks × {} = {} bytes",
-            file_size, expected_blocks, BLOCK_SIZE, expected_blocks * BLOCK_SIZE
-        ).into());
+            file_size,
+            expected_blocks,
+            BLOCK_SIZE,
+            expected_blocks * BLOCK_SIZE
+        )
+        .into());
     }
     if expected_blocks > 0 {
         use std::io::Read;
@@ -424,16 +440,14 @@ fn verify_q42_structure(
             return Err(format!(
                 "Block 0 active_quin_count {} exceeds QUINS_PER_BLOCK {}",
                 active, QUINS_PER_BLOCK
-            ).into());
+            )
+            .into());
         }
     }
     Ok(())
 }
 
-pub fn ingest_chk(
-    input:  &Path,
-    output: &Path,
-) -> Result<IngestStats, Box<dyn std::error::Error>> {
+pub fn ingest_chk(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let reader = File::open(input)?;
     let temp_dir = std::env::temp_dir().join("qualia_sort_chk");
     let mut sorter = ExternalSorter::new(temp_dir);
@@ -443,30 +457,27 @@ pub fn ingest_chk(
 
     let bidx_p = bidx_path(output);
     let block_seq = sorter.merge(output, &bidx_p)?;
-    
+
     // Write empty lex file to satisfy downstream dependencies
     let lex: HashMap<u64, String> = HashMap::new();
     let lex_entries = write_lex_file(&lex_path(output), &lex)?;
-    
+
     verify_q42_structure(output, block_seq)?;
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written:   block_seq,
+        blocks_written: block_seq,
         lex_entries,
-        lines_skipped:    0,
-        bidx_written:     true,
+        lines_skipped: 0,
+        bidx_written: true,
     })
 }
 
-pub fn ingest_cbor(
-    input:  &Path,
-    output: &Path,
-) -> Result<IngestStats, Box<dyn std::error::Error>> {
+pub fn ingest_cbor(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let mut file = File::open(input)?;
     let mut buffer = Vec::new();
     std::io::Read::read_to_end(&mut file, &mut buffer)?;
-    
+
     let temp_dir = std::env::temp_dir().join("qualia_sort_cbor");
     let mut sorter = ExternalSorter::new(temp_dir);
 
@@ -475,17 +486,17 @@ pub fn ingest_cbor(
 
     let bidx_p = bidx_path(output);
     let block_seq = sorter.merge(output, &bidx_p)?;
-    
+
     let lex: HashMap<u64, String> = HashMap::new();
     let lex_entries = write_lex_file(&lex_path(output), &lex)?;
-    
+
     verify_q42_structure(output, block_seq)?;
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written:   block_seq,
+        blocks_written: block_seq,
         lex_entries,
-        lines_skipped:    0,
-        bidx_written:     true,
+        lines_skipped: 0,
+        bidx_written: true,
     })
 }

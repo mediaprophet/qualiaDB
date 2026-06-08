@@ -80,7 +80,12 @@ pub fn build_magnet_uri(info_hash_sha1: &str, display_name: &str, daemon_port: u
     format!("magnet:?xt=urn:btih:{hash}&dn={dn}&ws={ws}")
 }
 
-pub fn ensure_magnet_webseed(magnet: &str, info_hash: &str, display_name: &str, port: u16) -> String {
+pub fn ensure_magnet_webseed(
+    magnet: &str,
+    info_hash: &str,
+    display_name: &str,
+    port: u16,
+) -> String {
     if magnet.contains("&ws=") || magnet.contains("?ws=") {
         return magnet.to_string();
     }
@@ -99,7 +104,11 @@ fn sha1_file(path: &Path) -> Result<String, String> {
         }
         hasher.update(&buf[..n]);
     }
-    Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect())
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect())
 }
 
 pub fn set_bandwidth_policy(policy: SeederBandwidthPolicy) {
@@ -151,7 +160,11 @@ pub fn list_active_seeds() -> Vec<SeedRecord> {
 }
 
 pub fn lookup_seed(info_hash: &str) -> Option<SeedRecord> {
-    registry().read().unwrap().get(&normalize_info_hash(info_hash)).cloned()
+    registry()
+        .read()
+        .unwrap()
+        .get(&normalize_info_hash(info_hash))
+        .cloned()
 }
 
 pub fn record_bytes_served(info_hash: &str, bytes: u64) {
@@ -244,12 +257,12 @@ pub fn sync_from_workbench(storage_path: &str, daemon_port: u16) {
             file_path: file_path.to_string(),
             display_name: format!("{title}.c.q42"),
             ontology_id: ontology_id.to_string(),
-            bandwidth_limit_kbps: v["torrent"]["bandwidth_limit_kbps"]
-                .as_u64()
-                .unwrap_or(512) as u32,
+            bandwidth_limit_kbps: v["torrent"]["bandwidth_limit_kbps"].as_u64().unwrap_or(512)
+                as u32,
         });
         if let Some(magnet) = v["magnet_uri"].as_str() {
-            let updated = ensure_magnet_webseed(magnet, info_hash, &format!("{title}.c.q42"), daemon_port);
+            let updated =
+                ensure_magnet_webseed(magnet, info_hash, &format!("{title}.c.q42"), daemon_port);
             if updated != magnet {
                 // Magnet refresh is persisted by the client on next policy save.
                 let _ = updated;

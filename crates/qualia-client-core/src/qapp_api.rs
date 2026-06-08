@@ -142,12 +142,12 @@ pub fn execute_scoped_query_in_place(
 
     let mut result_buffer = [QualiaQuin::default(); MAX_QUERY_RESULTS];
     let (match_count, _vm_cycles) =
-        webizen_bytecode::execute_program(query_bytecode, db, &mut result_buffer).map_err(
-            |e| match e {
+        webizen_bytecode::execute_program(query_bytecode, db, &mut result_buffer).map_err(|e| {
+            match e {
                 webizen_bytecode::VmError::OutputBufferFull => ExecutionError::OutputBufferFull,
                 webizen_bytecode::VmError::InvalidProgram => ExecutionError::InvalidBytecode,
-            },
-        )?;
+            }
+        })?;
 
     let mut float_offset = 0usize;
     for quin in &result_buffer[..match_count] {
@@ -184,7 +184,9 @@ pub fn compile_wildcard_graph_query(program: &mut [u8; 1024]) -> Result<usize, E
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::qapp_manifest::{compile_and_register_qapp, CapabilityClaims, HostMetadata, QappManifest};
+    use crate::qapp_manifest::{
+        compile_and_register_qapp, CapabilityClaims, HostMetadata, QappManifest,
+    };
     use qualia_core_db::daemon_graph;
 
     fn register_anatomy_app() -> u64 {
@@ -248,9 +250,16 @@ mod tests {
 // ── DICOM split-ingest (Core 3) + volume query (FRB boundary) ─────────────────
 
 fn storage_root() -> Result<std::path::PathBuf, String> {
-    let state = crate::state::APP_STATE.get().ok_or("APP_STATE not initialized")?;
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("APP_STATE not initialized")?;
     Ok(std::path::PathBuf::from(
-        state.config.lock().map_err(|e| e.to_string())?.storage_path.clone(),
+        state
+            .config
+            .lock()
+            .map_err(|e| e.to_string())?
+            .storage_path
+            .clone(),
     ))
 }
 
@@ -297,7 +306,9 @@ pub fn eval_comorbidity_json(
     target_organ_hash: u64,
     graph_quins: &[qualia_core_db::QualiaQuin],
 ) -> Result<String, String> {
-    use qualia_core_db::comorbidity_eval::{eval_comorbidity, ComorbidityVerdict, MAX_COMORBIDITY_VERDICTS};
+    use qualia_core_db::comorbidity_eval::{
+        eval_comorbidity, ComorbidityVerdict, MAX_COMORBIDITY_VERDICTS,
+    };
 
     let mut out = [ComorbidityVerdict {
         condition_hash: 0,

@@ -121,6 +121,9 @@ pub struct InferenceContextPacket {
     pub augmented_prompt: String,
     pub graph_context_json: String,
     pub graph_scope_hashes: Vec<u64>,
+    pub context_namespaces: Vec<u64>,
+    pub routed_ontology_ids: Vec<String>,
+    pub routing_brief: String,
     pub active_profile: Option<CapabilityProfile>,
     pub model_path: String,
     pub axiom_bounds: AxiomBounds,
@@ -167,7 +170,9 @@ pub fn compile_chat_environment(
 
     for ont_id in &ontology_ids {
         graph_scope_hashes.push(q_hash(&format!("ont:{ont_id}")));
-        if let Some(summary) = compile_ontology_scope(storage, catalog, ont_id, &mut lexicon_prefixes)? {
+        if let Some(summary) =
+            compile_ontology_scope(storage, catalog, ont_id, &mut lexicon_prefixes)?
+        {
             ontology_summaries.push(summary);
         }
     }
@@ -187,7 +192,10 @@ pub fn compile_chat_environment(
 
     let installed_qapps = list_qapp_names(storage);
     let daemon_reachable = daemon_is_running();
-    let engine_capabilities: Vec<String> = CAPABILITY_REGISTRY.iter().map(|s| (*s).to_string()).collect();
+    let engine_capabilities: Vec<String> = CAPABILITY_REGISTRY
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect();
 
     let model_id = active.as_ref().map(|r| r.model_id.clone());
     let model_modality = active
@@ -279,10 +287,7 @@ pub fn build_inference_packet(
 
     let llm = catalog.find_llm(&active.model_id);
     let active_profile = llm.map(|m| {
-        m.to_capability_profile_with_projector(
-            &active.gguf_path,
-            active.mmproj_path.as_deref(),
-        )
+        m.to_capability_profile_with_projector(&active.gguf_path, active.mmproj_path.as_deref())
     });
 
     let graph_context_json = serde_json::to_string(env)?;
@@ -295,6 +300,9 @@ pub fn build_inference_packet(
         augmented_prompt,
         graph_context_json,
         graph_scope_hashes: env.graph_scope_hashes.clone(),
+        context_namespaces: Vec::new(),
+        routed_ontology_ids: Vec::new(),
+        routing_brief: String::new(),
         active_profile,
         model_path: active.gguf_path.clone(),
         axiom_bounds: env.axiom_bounds.clone(),
@@ -376,12 +384,12 @@ fn compile_ontology_scope(
         .map(|m| m.quin_count)
         .unwrap_or_else(|| count_q42_quins(&q42_path).unwrap_or(0));
 
-        if let Ok(quins) = qualia_core_db::q42_reader::read_q42_quins(&q42_path) {
+    if let Ok(quins) = qualia_core_db::q42_reader::read_q42_quins(&q42_path) {
         collect_lexicon_prefixes(&quins, lexicon_out);
     }
 
-    let name = catalog
-        .find_ontology(ont_id)
+    let entry = catalog.find_ontology(ont_id);
+    let name = entry
         .map(|o: &OntologyResource| o.name.clone())
         .unwrap_or_else(|| ont_id.to_string());
 
@@ -390,6 +398,9 @@ fn compile_ontology_scope(
         name,
         quin_count,
         q42_path: q42_path.to_string_lossy().into_owned(),
+        domain: entry.and_then(|o| o.domain.clone()),
+        tags: entry.and_then(|o| o.tags.clone()),
+        source: entry.and_then(|o| o.source.clone()),
     }))
 }
 
@@ -578,7 +589,9 @@ fn build_capability_briefing(
                     o.name, o.id, o.quin_count, o.q42_path
                 ));
             }
-            lines.push(format!("lexicon_prefixes_sampled: {lexicon_count} predicate/subject hashes"));
+            lines.push(format!(
+                "lexicon_prefixes_sampled: {lexicon_count} predicate/subject hashes"
+            ));
         }
     } else {
         lines.push("installed_ontologies: [hidden by sharing policy]".to_string());
@@ -596,10 +609,7 @@ fn build_capability_briefing(
         }
     }
 
-    lines.push(format!(
-        "native_engines: {}",
-        engines.join(", ")
-    ));
+    lines.push(format!("native_engines: {}", engines.join(", ")));
 
     lines.push(
         "instructions: Ground factual claims in installed ontology quins. Cite graph scope hashes when asserting domain facts. Use Anatomy qapp handoff for spatial/clinical visualization. Refuse ungrounded speculation when ontologies are available.".to_string(),

@@ -57,7 +57,10 @@ fn ip_is_restricted(ip: std::net::IpAddr) -> bool {
     }
 }
 
-fn proxy_fetch_error(status: StatusCode, message: impl Into<String>) -> warp::http::Response<warp::hyper::Body> {
+fn proxy_fetch_error(
+    status: StatusCode,
+    message: impl Into<String>,
+) -> warp::http::Response<warp::hyper::Body> {
     let body = json!({
         "status": "error",
         "message": message.into()
@@ -119,7 +122,10 @@ fn decode_bench_load_b64(b64: &str) -> Result<Vec<u8>, &'static str> {
         if ch == b'=' {
             break;
         }
-        let val = table.iter().position(|&t| t == ch).ok_or("invalid base64")? as u32;
+        let val = table
+            .iter()
+            .position(|&t| t == ch)
+            .ok_or("invalid base64")? as u32;
         buf = (buf << 6) | val;
         bits += 6;
         if bits >= 8 {
@@ -218,7 +224,10 @@ enum OutputFormat {
 /// Resolve the desired output format from the JSON payload `"format"` key
 /// (higher priority) or the HTTP `Accept` header.  Returns `Err(())` when
 /// the client explicitly names a format the daemon cannot produce.
-fn negotiate_format(payload_format: Option<&str>, accept: Option<&str>) -> Result<OutputFormat, ()> {
+fn negotiate_format(
+    payload_format: Option<&str>,
+    accept: Option<&str>,
+) -> Result<OutputFormat, ()> {
     if let Some(fmt) = payload_format {
         return match fmt {
             "json-ld" | "application/ld+json" => Ok(OutputFormat::JsonLd),
@@ -277,7 +286,10 @@ fn make_query_response(
     warp::http::Response::builder()
         .status(status)
         .header("content-type", content_type)
-        .header("X-Qualia-Compute-Cost", format!("{match_count}+{vm_cycles}"))
+        .header(
+            "X-Qualia-Compute-Cost",
+            format!("{match_count}+{vm_cycles}"),
+        )
         .body(body)
         .expect("infallible query response builder")
 }
@@ -287,12 +299,19 @@ fn make_query_response(
 // ---------------------------------------------------------------------------
 
 /// Starts the native loopback daemon on 127.0.0.1 with strict token checks.
-pub async fn start_local_daemon(port: u16, vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>) {
+pub async fn start_local_daemon(
+    port: u16,
+    vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>,
+) {
     start_local_daemon_with_options(port, false, vault).await;
 }
 
 /// Starts the native loopback daemon with WebSocket and REST handoff routes.
-pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>) {
+pub async fn start_local_daemon_with_options(
+    port: u16,
+    dev: bool,
+    vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>,
+) {
     let storage_path = std::env::var("QUALIA_STORAGE_PATH").unwrap_or_else(|_| {
         std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
@@ -770,8 +789,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         .and(warp::body::content_length_limit(QUERY_PAYLOAD_LIMIT_BYTES))
         .and(warp::body::bytes())
         .map(
-            |qs: std::collections::HashMap<String, String>,
-             body: warp::hyper::body::Bytes| {
+            |qs: std::collections::HashMap<String, String>, body: warp::hyper::body::Bytes| {
                 let filename = qs
                     .get("filename")
                     .cloned()
@@ -799,100 +817,96 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     let proxy_fetch = warp::path!("proxy" / "fetch")
         .and(warp::get())
         .and(warp::query::<std::collections::HashMap<String, String>>())
-        .and_then(
-            |qs: std::collections::HashMap<String, String>| async move {
-                let target = qs.get("url").cloned().unwrap_or_default();
-                if target.is_empty() {
+        .and_then(|qs: std::collections::HashMap<String, String>| async move {
+            let target = qs.get("url").cloned().unwrap_or_default();
+            if target.is_empty() {
+                return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                    StatusCode::BAD_REQUEST,
+                    "missing url query parameter",
+                ));
+            }
+
+            let parsed = match reqwest::Url::parse(&target) {
+                Ok(url) => url,
+                Err(_) => {
                     return Ok::<_, warp::Rejection>(proxy_fetch_error(
                         StatusCode::BAD_REQUEST,
-                        "missing url query parameter",
+                        "invalid url",
                     ));
                 }
+            };
 
-                let parsed = match reqwest::Url::parse(&target) {
-                    Ok(url) => url,
-                    Err(_) => {
-                        return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                            StatusCode::BAD_REQUEST,
-                            "invalid url",
-                        ));
-                    }
-                };
+            if !proxy_target_allowed(&parsed) {
+                return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                    StatusCode::FORBIDDEN,
+                    "target host is not allowed",
+                ));
+            }
 
-                if !proxy_target_allowed(&parsed) {
+            let client = match reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .redirect(reqwest::redirect::Policy::limited(5))
+                .build()
+            {
+                Ok(c) => c,
+                Err(_) => {
                     return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                        StatusCode::FORBIDDEN,
-                        "target host is not allowed",
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "proxy client init failed",
                     ));
                 }
+            };
 
-                let client = match reqwest::Client::builder()
-                    .timeout(std::time::Duration::from_secs(120))
-                    .redirect(reqwest::redirect::Policy::limited(5))
-                    .build()
-                {
-                    Ok(c) => c,
-                    Err(_) => {
-                        return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            "proxy client init failed",
-                        ));
-                    }
-                };
-
-                let response = match client.get(parsed).send().await {
-                    Ok(r) => r,
-                    Err(e) => {
-                        return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                            StatusCode::BAD_GATEWAY,
-                            format!("upstream fetch failed: {e}"),
-                        ));
-                    }
-                };
-
-                if !response.status().is_success() {
+            let response = match client.get(parsed).send().await {
+                Ok(r) => r,
+                Err(e) => {
                     return Ok::<_, warp::Rejection>(proxy_fetch_error(
                         StatusCode::BAD_GATEWAY,
-                        format!("upstream HTTP {}", response.status()),
+                        format!("upstream fetch failed: {e}"),
                     ));
                 }
+            };
 
-                let content_type = response
-                    .headers()
-                    .get(reqwest::header::CONTENT_TYPE)
-                    .and_then(|v| v.to_str().ok())
-                    .unwrap_or("application/octet-stream")
-                    .to_string();
+            if !response.status().is_success() {
+                return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                    StatusCode::BAD_GATEWAY,
+                    format!("upstream HTTP {}", response.status()),
+                ));
+            }
 
-                let bytes = match response.bytes().await {
-                    Ok(b) => b,
-                    Err(e) => {
-                        return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                            StatusCode::BAD_GATEWAY,
-                            format!("upstream body read failed: {e}"),
-                        ));
-                    }
-                };
+            let content_type = response
+                .headers()
+                .get(reqwest::header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("application/octet-stream")
+                .to_string();
 
-                if bytes.len() > PROXY_FETCH_MAX_BYTES {
+            let bytes = match response.bytes().await {
+                Ok(b) => b,
+                Err(e) => {
                     return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                        StatusCode::PAYLOAD_TOO_LARGE,
-                        "upstream payload exceeds 64 MiB proxy limit",
+                        StatusCode::BAD_GATEWAY,
+                        format!("upstream body read failed: {e}"),
                     ));
                 }
+            };
 
-                Ok::<_, warp::Rejection>(proxy_fetch_ok(&content_type, bytes.to_vec()))
-            },
-        );
+            if bytes.len() > PROXY_FETCH_MAX_BYTES {
+                return Ok::<_, warp::Rejection>(proxy_fetch_error(
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                    "upstream payload exceeds 64 MiB proxy limit",
+                ));
+            }
 
-    let proxy_preflight = warp::path!("proxy" / "fetch")
-        .and(warp::options())
-        .map(|| {
-            warp::reply::with_status(
-                warp::reply::json(&json!({ "status": "ok" })),
-                StatusCode::OK,
-            )
+            Ok::<_, warp::Rejection>(proxy_fetch_ok(&content_type, bytes.to_vec()))
         });
+
+    let proxy_preflight = warp::path!("proxy" / "fetch").and(warp::options()).map(|| {
+        warp::reply::with_status(
+            warp::reply::json(&json!({ "status": "ok" })),
+            StatusCode::OK,
+        )
+    });
 
     // -----------------------------------------------------------------------
     // OPTIONS preflight
@@ -914,9 +928,13 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     // apps can connect without being blocked by same-origin policy.
     // -----------------------------------------------------------------------
     let allowed_origins: Vec<&str> = if dev {
-        vec!["http://localhost:8788", "http://127.0.0.1:8788",
-             "http://localhost:5173", "http://127.0.0.1:5173",
-             OFFICIAL_WEB_HUB_ORIGIN]
+        vec![
+            "http://localhost:8788",
+            "http://127.0.0.1:8788",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            OFFICIAL_WEB_HUB_ORIGIN,
+        ]
     } else {
         vec![OFFICIAL_WEB_HUB_ORIGIN]
     };
@@ -933,10 +951,8 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         ])
         .expose_headers(vec!["x-qualia-compute-cost"]);
 
-    let relay_routes = crate::chat_relay_daemon::chat_relay_routes(
-        storage_path.clone(),
-        security.vault.clone(),
-    );
+    let relay_routes =
+        crate::chat_relay_daemon::chat_relay_routes(storage_path.clone(), security.vault.clone());
 
     crate::webtorrent_seeder::sync_from_workbench(&storage_path, port);
 
@@ -968,7 +984,11 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     println!("  WebTorrent: http://127.0.0.1:{port}/torrent/webseed/{{hash}} | /torrent/seed");
     println!(
         "  Mode:      {}",
-        if security.dev { "dev token bypass" } else { "token required" }
+        if security.dev {
+            "dev token bypass"
+        } else {
+            "token required"
+        }
     );
     println!("============================================================");
 
@@ -1012,34 +1032,43 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
             let v = p2p_vault.lock().unwrap();
             v.get_master_key_bytes()
         };
-        
+
         let mut ed25519_bytes = master_key_bytes;
         let local_key = libp2p::identity::Keypair::ed25519_from_bytes(&mut ed25519_bytes)
             .expect("Valid Ed25519 Key Vault Master Key");
-            
+
         let local_peer_id = libp2p::PeerId::from(local_key.public());
-        println!("[Qualia Daemon] P2P Identity Active. PeerId: {}", local_peer_id);
+        println!(
+            "[Qualia Daemon] P2P Identity Active. PeerId: {}",
+            local_peer_id
+        );
 
         let behaviour = crate::p2p::swarm::build_behaviour(local_peer_id);
-        
+
         let routing_table = std::sync::Arc::new(crate::p2p::routing::CivicsRoutingTable::new());
         let local_db_slice: &[crate::QualiaQuin] = &[]; // Mock of memory mapped DB slice
         routing_table.hydrate_from_db(local_db_slice);
-        
+
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
             .with_tcp(
                 libp2p::tcp::Config::default(),
                 libp2p::noise::Config::new,
                 libp2p::yamux::Config::default,
-            ).unwrap()
-            .with_behaviour(|_| behaviour).unwrap()
-            .with_swarm_config(|c| c.with_idle_connection_timeout(std::time::Duration::from_secs(60)))
+            )
+            .unwrap()
+            .with_behaviour(|_| behaviour)
+            .unwrap()
+            .with_swarm_config(|c| {
+                c.with_idle_connection_timeout(std::time::Duration::from_secs(60))
+            })
             .build();
 
         // Bind to all IPv6 interfaces
-        swarm.listen_on("/ip6/::/tcp/4243".parse().unwrap()).expect("P2P Swarm Socket bind failed");
-        
+        swarm
+            .listen_on("/ip6/::/tcp/4243".parse().unwrap())
+            .expect("P2P Swarm Socket bind failed");
+
         loop {
             tokio::select! {
                 event = swarm.select_next_some() => match event {
@@ -1059,13 +1088,13 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                                         for i in 0..vcs_count {
                                             let offset = i * 112;
                                             if compressed_vcs.len() < offset + 112 { break; }
-                                            
+
                                             // Zero-allocation cast for the 48-byte Quin
                                             let quin_bytes = &compressed_vcs[offset..offset+48];
                                             let quin: &crate::p2p::protocol::QualiaQuin = unsafe {
                                                 &*(quin_bytes.as_ptr() as *const crate::p2p::protocol::QualiaQuin)
                                             };
-                                            
+
                                             let signature_bytes: &[u8; 64] = compressed_vcs[offset+48..offset+112].try_into().unwrap();
 
                                             // Mock ORG_MEMBER_HASH for demonstration
@@ -1082,27 +1111,27 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                                         if !route_authorized {
                                             println!("[Qualia Daemon] Dropping Handshake from {}: Unauthorized Group DID.", peer);
                                             let _ = swarm.behaviour_mut().request_response.send_response(
-                                                channel, 
+                                                channel,
                                                 crate::p2p::protocol::QualiaResponse::HandshakeAck { success: false }
                                             );
                                             let _ = swarm.disconnect_peer_id(peer);
                                         } else {
                                             println!("[Qualia Daemon] Handshake approved for {}. Upgrading trust.", peer);
                                             let _ = swarm.behaviour_mut().request_response.send_response(
-                                                channel, 
+                                                channel,
                                                 crate::p2p::protocol::QualiaResponse::HandshakeAck { success: true }
                                             );
                                         }
                                     },
                                     crate::p2p::protocol::QualiaRequest::Sync { hop_count, gatekeeper_token, target_shapes } => {
                                         let mut is_authorized = false;
-                                        
+
                                         // Strict 2-Hop Limit for the Web Civics Mesh
                                         if hop_count > 2 {
                                             println!("[Qualia Daemon] Dropping Sync from {}: Exceeded 2-hop trust horizon.", peer);
                                         } else {
                                             if gatekeeper_token.is_some() {
-                                                is_authorized = true; 
+                                                is_authorized = true;
                                             } else {
                                                 if target_shapes.contains(&"foaf:Person".to_string()) {
                                                     is_authorized = true;
@@ -1162,9 +1191,11 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
     // Web Civics SOCKS5 Userspace Proxy
     // -----------------------------------------------------------------------
     tokio::spawn(async move {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:1080").await.expect("Failed to bind SOCKS5 proxy");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:1080")
+            .await
+            .expect("Failed to bind SOCKS5 proxy");
         println!("[Web Civics] Userspace WireGuard Proxy Listening on 127.0.0.1:1080");
-        
+
         loop {
             if let Ok((_socket, _addr)) = listener.accept().await {
                 tokio::task::yield_now().await;
@@ -1180,18 +1211,20 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
         loop {
             interval.tick().await;
-            
+
             // In a real implementation, we would query the CRDT graph here:
             // SELECT ?task WHERE { ?task rdf:type qualia:MonteCarloSimulation . ?task status "Pending" }
-            
+
             // Mocking a detected task for the walkthrough:
             let task_detected = false; // Set to true to test
             if task_detected {
                 println!("[Semantic Task Engine] Detected MonteCarloSimulation Task.");
-                let (mean, var) = crate::economics::run_monte_carlo_var(
-                    100.0, 0.05, 0.20, 1.0, 252, 100_000
+                let (mean, var) =
+                    crate::economics::run_monte_carlo_var(100.0, 0.05, 0.20, 1.0, 252, 100_000);
+                println!(
+                    "[Semantic Task Engine] Simulation Complete. Mean: {:.2}, 95% VaR: {:.2}",
+                    mean, var
                 );
-                println!("[Semantic Task Engine] Simulation Complete. Mean: {:.2}, 95% VaR: {:.2}", mean, var);
                 // We would then write the result back into the graph as a qualia:SimulationResult
             }
         }
@@ -1206,7 +1239,7 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
         loop {
             interval.tick().await;
-            
+
             let context = crate::economics::get_current_system_context();
 
             // Iterate over the DashMap without blocking the main router
@@ -1214,29 +1247,39 @@ pub async fn start_local_daemon_with_options(port: u16, dev: bool, vault: std::s
                 let peer_id = entry.key().clone();
                 let ledger = entry.value_mut();
 
-                let liability = crate::economics::calculate_bandwidth_liability(ledger.unbilled_bytes, &context);
+                let liability = crate::economics::calculate_bandwidth_liability(
+                    ledger.unbilled_bytes,
+                    &context,
+                );
 
-                if liability >= 0.015 { // HARD LIMIT
-                    println!("[Micropayment Engine] {} hit Hard Limit (${:.4}). Disconnecting.", peer_id, liability);
+                if liability >= 0.015 {
+                    // HARD LIMIT
+                    println!(
+                        "[Micropayment Engine] {} hit Hard Limit (${:.4}). Disconnecting.",
+                        peer_id, liability
+                    );
                     // Disconnect peer immediately
                     // network::disconnect_and_block(&peer_id);
-                    ledger.unbilled_bytes = 0; 
+                    ledger.unbilled_bytes = 0;
                     ledger.warning_issued_at = None;
-                } 
-                else if liability >= 0.010 && ledger.warning_issued_at.is_none() { // SOFT LIMIT
+                } else if liability >= 0.010 && ledger.warning_issued_at.is_none() {
+                    // SOFT LIMIT
                     println!("[Micropayment Engine] {} hit Soft Limit (${:.4}). Emitting DebtQuin. Grace Period started.", peer_id, liability);
                     // 1. Emit DebtQuin to local graph
                     // query_engine.insert_debt_quin(&peer_id, liability);
-                    
+
                     // 2. Send warning over libp2p
                     // network::send_payment_warning(&peer_id, liability);
-                    
+
                     // 3. Start the grace period clock
                     ledger.warning_issued_at = Some(std::time::Instant::now());
-                }
-                else if let Some(issued_at) = ledger.warning_issued_at {
-                    if issued_at.elapsed() > std::time::Duration::from_secs(300) { // 5 Minute Grace Period
-                        println!("[Micropayment Engine] {} Grace Period EXPIRED. Disconnecting.", peer_id);
+                } else if let Some(issued_at) = ledger.warning_issued_at {
+                    if issued_at.elapsed() > std::time::Duration::from_secs(300) {
+                        // 5 Minute Grace Period
+                        println!(
+                            "[Micropayment Engine] {} Grace Period EXPIRED. Disconnecting.",
+                            peer_id
+                        );
                         // Disconnect peer immediately
                         // network::disconnect_and_block(&peer_id);
                         ledger.unbilled_bytes = 0;

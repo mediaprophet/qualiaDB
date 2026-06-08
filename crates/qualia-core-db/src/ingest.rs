@@ -10,11 +10,11 @@ use crate::{q_hash, QualiaQuin};
 
 const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
 use crossbeam_channel::{bounded, Receiver, Sender};
+use rio_api::parser::TriplesParser;
+use rio_turtle::{NTriplesParser, TurtleParser};
+use rio_xml::RdfXmlParser;
 use std::fs::File;
 use std::io::{BufReader, Write};
-use rio_api::parser::TriplesParser;
-use rio_xml::RdfXmlParser;
-use rio_turtle::{TurtleParser, NTriplesParser};
 use std::thread;
 use std::time::Instant;
 use sysinfo::System;
@@ -35,7 +35,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     let mut sys = System::new_all();
     sys.refresh_all();
     let logical_cores = sys.cpus().len();
-    
+
     // Constraint: Use no more than 80% of available CPU resources
     let target_workers = std::cmp::max(1, (logical_cores as f32 * 0.8).floor() as usize);
     println!("Hardware Sieve: Detected {} logical cores. Spinning up {} parallel hasher shards (capped at 80%).", logical_cores, target_workers);
@@ -50,7 +50,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     for _worker_id in 0..target_workers {
         let rx = rx_raw.clone();
         let tx = tx_bin.clone();
-        
+
         let handle = thread::spawn(move || {
             let mut _local_count = 0u64;
             for triple in rx {
@@ -90,35 +90,43 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
         let mut written_count = 0;
         let mut block_id: u64 = 0;
         let mut buffer = Vec::with_capacity(393_216);
-        
+
         for quin in rx_bin {
             let bytes = bytemuck::bytes_of(&quin);
             buffer.extend_from_slice(bytes);
             written_count += 1;
-            
+
             if buffer.len() >= 393_216 {
                 let compressed = lz4_flex::compress_prepend_size(&buffer);
                 // Write Header: block_id (8), compressed_len (4), uncompressed_len (4)
                 out_file.write_all(&block_id.to_le_bytes()).unwrap();
-                out_file.write_all(&(compressed.len() as u32).to_le_bytes()).unwrap();
-                out_file.write_all(&(buffer.len() as u32).to_le_bytes()).unwrap();
+                out_file
+                    .write_all(&(compressed.len() as u32).to_le_bytes())
+                    .unwrap();
+                out_file
+                    .write_all(&(buffer.len() as u32).to_le_bytes())
+                    .unwrap();
                 // Write payload
                 out_file.write_all(&compressed).unwrap();
-                
+
                 buffer.clear();
                 block_id += 1;
             }
         }
-        
+
         // Flush remaining
         if !buffer.is_empty() {
             let compressed = lz4_flex::compress_prepend_size(&buffer);
             out_file.write_all(&block_id.to_le_bytes()).unwrap();
-            out_file.write_all(&(compressed.len() as u32).to_le_bytes()).unwrap();
-            out_file.write_all(&(buffer.len() as u32).to_le_bytes()).unwrap();
+            out_file
+                .write_all(&(compressed.len() as u32).to_le_bytes())
+                .unwrap();
+            out_file
+                .write_all(&(buffer.len() as u32).to_le_bytes())
+                .unwrap();
             out_file.write_all(&compressed).unwrap();
         }
-        
+
         written_count
     });
 
@@ -128,14 +136,18 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     let buf_reader = BufReader::new(in_file);
 
     let mut triples_read = 0;
-    
+
     // Setup a callback that parses Rio triples and sends them to the worker queue
     let mut on_triple = |t: rio_api::model::Triple| -> Result<(), std::io::Error> {
         let subject = t.subject.to_string();
         let predicate = t.predicate.to_string();
         let object = t.object.to_string();
-        
-        let raw = RawTriple { subject, predicate, object };
+
+        let raw = RawTriple {
+            subject,
+            predicate,
+            object,
+        };
         if tx_raw.send(raw).is_ok() {
             triples_read += 1;
         }
@@ -143,9 +155,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     };
 
     let path_lower = in_path.to_lowercase();
-    if path_lower.ends_with(".rdf")
-        || path_lower.ends_with(".xml")
-        || path_lower.ends_with(".owl")
+    if path_lower.ends_with(".rdf") || path_lower.ends_with(".xml") || path_lower.ends_with(".owl")
     {
         let mut parser = RdfXmlParser::new(buf_reader, None);
         if let Err(e) = parser.parse_all(&mut on_triple) {
@@ -165,20 +175,30 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
         let mut parser = crate::n3_parser::N3Parser::new(buf_reader);
         let mut webizen = crate::webizen::SlgArena::new();
         let mut rules_parsed = 0;
-        
+
         let on_n3_event = |event: crate::n3_parser::N3Event| -> Result<(), std::io::Error> {
             match event {
                 crate::n3_parser::N3Event::StaticTriple(triple) => {
                     let subject = match triple.subject {
-                        crate::n3_parser::Term::Uri(s) | crate::n3_parser::Term::Variable(s) | crate::n3_parser::Term::Literal(s) => s,
+                        crate::n3_parser::Term::Uri(s)
+                        | crate::n3_parser::Term::Variable(s)
+                        | crate::n3_parser::Term::Literal(s) => s,
                     };
                     let predicate = match triple.predicate {
-                        crate::n3_parser::Term::Uri(s) | crate::n3_parser::Term::Variable(s) | crate::n3_parser::Term::Literal(s) => s,
+                        crate::n3_parser::Term::Uri(s)
+                        | crate::n3_parser::Term::Variable(s)
+                        | crate::n3_parser::Term::Literal(s) => s,
                     };
                     let object = match triple.object {
-                        crate::n3_parser::Term::Uri(s) | crate::n3_parser::Term::Variable(s) | crate::n3_parser::Term::Literal(s) => s,
+                        crate::n3_parser::Term::Uri(s)
+                        | crate::n3_parser::Term::Variable(s)
+                        | crate::n3_parser::Term::Literal(s) => s,
                     };
-                    let raw = RawTriple { subject, predicate, object };
+                    let raw = RawTriple {
+                        subject,
+                        predicate,
+                        object,
+                    };
                     if tx_raw.send(raw).is_ok() {
                         triples_read += 1;
                     }
@@ -187,7 +207,8 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
                     webizen.register_rule(rule);
                     rules_parsed += 1;
                 }
-                crate::n3_parser::N3Event::AspBlock(_) | crate::n3_parser::N3Event::DiffuseBlock(_) => {
+                crate::n3_parser::N3Event::AspBlock(_)
+                | crate::n3_parser::N3Event::DiffuseBlock(_) => {
                     // Pass these modalities to the Webizen
                 }
             }
@@ -213,7 +234,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     for handle in worker_handles {
         handle.join().unwrap();
     }
-    
+
     let total_written = writer_handle.join().unwrap();
     let duration = start_time.elapsed();
 

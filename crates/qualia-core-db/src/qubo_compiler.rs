@@ -40,7 +40,11 @@ impl Default for QuboMatrix {
         Self {
             num_vars: 0,
             linear: [0.0; MAX_QUBO_VARS],
-            couplers: [QuboWeightEmit { var_a: 0, var_b: 0, weight: 0.0 }; MAX_COUPLERS],
+            couplers: [QuboWeightEmit {
+                var_a: 0,
+                var_b: 0,
+                weight: 0.0,
+            }; MAX_COUPLERS],
             coupler_count: 0,
             index_map: [(0, 0); MAX_QUBO_VARS],
             index_count: 0,
@@ -79,7 +83,11 @@ impl QuboMatrix {
         if self.coupler_count >= MAX_COUPLERS {
             return Err(QuboCompileError::CouplerBufferFull);
         }
-        self.couplers[self.coupler_count] = QuboWeightEmit { var_a: a, var_b: b, weight };
+        self.couplers[self.coupler_count] = QuboWeightEmit {
+            var_a: a,
+            var_b: b,
+            weight,
+        };
         self.coupler_count += 1;
         Ok(())
     }
@@ -95,7 +103,10 @@ impl QuboMatrix {
 }
 
 /// Walk constraint Quins and compile a blind QUBO matrix.
-pub fn compile_quins_to_qubo(quins: &[QualiaQuin], out: &mut QuboMatrix) -> Result<(), QuboCompileError> {
+pub fn compile_quins_to_qubo(
+    quins: &[QualiaQuin],
+    out: &mut QuboMatrix,
+) -> Result<(), QuboCompileError> {
     *out = QuboMatrix::default();
     for q in quins {
         if q.get_sensitivity_byte() == QualiaQuin::SENSITIVITY_CLASSIFIED {
@@ -121,7 +132,10 @@ pub fn compile_quins_to_qubo(quins: &[QualiaQuin], out: &mut QuboMatrix) -> Resu
 }
 
 /// VM opcode handler: push a float weight from the object register.
-pub fn emit_weight_from_quin(quin: &QualiaQuin, matrix: &mut QuboMatrix) -> Result<(), QuboCompileError> {
+pub fn emit_weight_from_quin(
+    quin: &QualiaQuin,
+    matrix: &mut QuboMatrix,
+) -> Result<(), QuboCompileError> {
     let subj = matrix.map_var(quin.subject)?;
     let obj = matrix.map_var(quin.object)?;
     let w = decode_inline_weight(quin.object);
@@ -272,7 +286,11 @@ mod tests {
         m.num_vars = 2;
         m.linear[0] = -1.0;
         m.linear[1] = -1.0;
-        m.couplers[0] = QuboWeightEmit { var_a: 0, var_b: 1, weight: 2.0 };
+        m.couplers[0] = QuboWeightEmit {
+            var_a: 0,
+            var_b: 1,
+            weight: 2.0,
+        };
         m.coupler_count = 1;
         let mut assign = [0u8; MAX_QUBO_VARS];
         let e = solve_classical(&m, &mut assign);

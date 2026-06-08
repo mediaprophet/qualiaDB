@@ -13,11 +13,11 @@ use crate::wal::WriteAheadLog;
 use crate::QualiaQuin;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use memmap2::Mmap;
+use std::cell::UnsafeCell;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
-use std::cell::UnsafeCell;
-use std::sync::atomic::{AtomicU32, AtomicU8, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::OnceLock;
 use std::thread;
 
@@ -67,8 +67,7 @@ impl JobSlot {
 
 static IO_TX: OnceLock<Sender<IngestJob>> = OnceLock::new();
 static NEXT_JOB_ID: AtomicU64 = AtomicU64::new(1);
-static JOB_SLOTS: [JobSlot; MAX_SERIES_RECORDS] =
-    [const { JobSlot::new() }; MAX_SERIES_RECORDS];
+static JOB_SLOTS: [JobSlot; MAX_SERIES_RECORDS] = [const { JobSlot::new() }; MAX_SERIES_RECORDS];
 const EMPTY_SERIES_RECORD: DicomSeriesRecord = DicomSeriesRecord {
     patient_did_hash: 0,
     series_hash: 0,
@@ -83,9 +82,8 @@ struct SyncSeriesRegistry([UnsafeCell<DicomSeriesRecord>; MAX_SERIES_RECORDS]);
 // SAFETY: Core 3 is the sole writer; readers bound indices via SERIES_COUNT Acquire.
 unsafe impl Sync for SyncSeriesRegistry {}
 
-static SERIES_RECORDS: SyncSeriesRegistry = SyncSeriesRegistry(
-    [const { UnsafeCell::new(EMPTY_SERIES_RECORD) }; MAX_SERIES_RECORDS],
-);
+static SERIES_RECORDS: SyncSeriesRegistry =
+    SyncSeriesRegistry([const { UnsafeCell::new(EMPTY_SERIES_RECORD) }; MAX_SERIES_RECORDS]);
 static SERIES_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Debug, PartialEq, Eq)]
@@ -192,7 +190,8 @@ fn hash_series_uid(uid: &str) -> u64 {
 }
 
 fn infer_organ_hash(meta: &DicomMetadata) -> u64 {
-    if let Some(organ) = crate::dicom::infer_organ_from_metadata(meta, &crate::dicom::default_organ_matchers())
+    if let Some(organ) =
+        crate::dicom::infer_organ_from_metadata(meta, &crate::dicom::default_organ_matchers())
     {
         q_hash(&organ)
     } else {
@@ -387,14 +386,18 @@ pub fn submit_dicom_ingest(
     init_core3_dicom_worker(storage_root.to_path_buf());
     let job_id = NEXT_JOB_ID.fetch_add(1, Ordering::Relaxed);
     let slot_idx = ((job_id as usize) - 1) % MAX_SERIES_RECORDS;
-    JOB_SLOTS[slot_idx].status.store(JOB_PENDING, Ordering::Release);
+    JOB_SLOTS[slot_idx]
+        .status
+        .store(JOB_PENDING, Ordering::Release);
 
-    job_sender()?.send(IngestJob {
-        job_id,
-        source_path: source_path.to_path_buf(),
-        patient_did_hash,
-        storage_root: storage_root.to_path_buf(),
-    }).map_err(|e| DicomIngestError::Io(e.to_string()))?;
+    job_sender()?
+        .send(IngestJob {
+            job_id,
+            source_path: source_path.to_path_buf(),
+            patient_did_hash,
+            storage_root: storage_root.to_path_buf(),
+        })
+        .map_err(|e| DicomIngestError::Io(e.to_string()))?;
 
     Ok(job_id)
 }
@@ -507,10 +510,7 @@ pub fn series_records_snapshot(out: &mut [DicomSeriesRecord]) -> usize {
     count
 }
 
-pub fn find_series_record(
-    patient_did_hash: u64,
-    series_hash: u64,
-) -> Option<DicomSeriesRecord> {
+pub fn find_series_record(patient_did_hash: u64, series_hash: u64) -> Option<DicomSeriesRecord> {
     let count = SERIES_COUNT.load(Ordering::Acquire);
     for i in 0..count.min(MAX_SERIES_RECORDS) {
         let record = unsafe { *SERIES_RECORDS.0[i].get() };
@@ -553,7 +553,11 @@ mod tests {
             return;
         };
         let paths = crate::dicom::collect_dicom_image_paths_under(&root, 2);
-        assert!(!paths.is_empty(), "no image slices under {}", root.display());
+        assert!(
+            !paths.is_empty(),
+            "no image slices under {}",
+            root.display()
+        );
 
         reset_ingest_registry_for_tests();
         let tmp = TempDir::new().unwrap();

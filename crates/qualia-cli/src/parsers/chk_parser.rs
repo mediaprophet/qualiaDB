@@ -1,6 +1,6 @@
-use std::io::{BufRead, BufReader, Read};
-use std::hash::{Hash, Hasher};
 use qualia_core_db::QualiaQuin;
+use std::hash::{Hash, Hasher};
+use std::io::{BufRead, BufReader, Read};
 
 fn hash_str(s: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -19,12 +19,12 @@ pub fn parse_chk_stream<R: Read>(
     let buf_reader = BufReader::new(reader);
 
     // .chk format relies on defining "chunks" with properties like:
-    // chunk_id { 
-    //   @condition: ... 
-    //   @action: ... 
-    //   weight: 0.9 
+    // chunk_id {
+    //   @condition: ...
+    //   @action: ...
+    //   weight: 0.9
     // }
-    
+
     let mut current_subject = 0;
     let mut current_weight: f32 = 0.0;
 
@@ -92,7 +92,7 @@ pub fn parse_chk_stream<R: Read>(
             if let (Some(ante), Some(cons)) = (parts.next(), parts.next()) {
                 let a = ante.trim();
                 let c = cons.trim();
-                
+
                 let subject = hash_str(a);
                 let predicate = hash_str("=>");
                 let object = hash_str(c);
@@ -102,7 +102,7 @@ pub fn parse_chk_stream<R: Read>(
                     predicate,
                     object,
                     context: context_hash,
-                    metadata: 0, 
+                    metadata: 0,
                     parity: 0,
                 })?;
                 count += 1;

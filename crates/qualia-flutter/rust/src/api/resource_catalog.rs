@@ -158,7 +158,9 @@ pub struct ResolvedModelPreferenceFrb {
     pub task: String,
 }
 
-fn map_condition(c: qualia_client_core::model_preferences::ModelLoadCondition) -> ModelLoadConditionFrb {
+fn map_condition(
+    c: qualia_client_core::model_preferences::ModelLoadCondition,
+) -> ModelLoadConditionFrb {
     ModelLoadConditionFrb {
         require_installed: c.require_installed,
         task: c.task.as_str().to_string(),
@@ -168,7 +170,9 @@ fn map_condition(c: qualia_client_core::model_preferences::ModelLoadCondition) -
     }
 }
 
-fn map_entry(e: qualia_client_core::model_preferences::ModelPreferenceEntry) -> ModelPreferenceEntryFrb {
+fn map_entry(
+    e: qualia_client_core::model_preferences::ModelPreferenceEntry,
+) -> ModelPreferenceEntryFrb {
     ModelPreferenceEntryFrb {
         model_id: e.model_id,
         label: e.label,
@@ -177,7 +181,9 @@ fn map_entry(e: qualia_client_core::model_preferences::ModelPreferenceEntry) -> 
     }
 }
 
-fn unmap_condition(c: ModelLoadConditionFrb) -> qualia_client_core::model_preferences::ModelLoadCondition {
+fn unmap_condition(
+    c: ModelLoadConditionFrb,
+) -> qualia_client_core::model_preferences::ModelLoadCondition {
     qualia_client_core::model_preferences::ModelLoadCondition {
         require_installed: c.require_installed,
         task: qualia_client_core::model_preferences::ModelTask::from_str_lossy(&c.task),
@@ -187,7 +193,9 @@ fn unmap_condition(c: ModelLoadConditionFrb) -> qualia_client_core::model_prefer
     }
 }
 
-fn unmap_entry(e: ModelPreferenceEntryFrb) -> qualia_client_core::model_preferences::ModelPreferenceEntry {
+fn unmap_entry(
+    e: ModelPreferenceEntryFrb,
+) -> qualia_client_core::model_preferences::ModelPreferenceEntry {
     qualia_client_core::model_preferences::ModelPreferenceEntry {
         model_id: e.model_id,
         label: e.label,
@@ -207,10 +215,12 @@ pub fn get_model_preferences() -> ModelPreferencesFrb {
 
 #[frb]
 pub fn save_model_preferences(prefs: ModelPreferencesFrb) -> Result<(), String> {
-    qualia_client_core::save_model_preferences(qualia_client_core::model_preferences::ModelPreferences {
-        auto_select: prefs.auto_select,
-        entries: prefs.entries.into_iter().map(unmap_entry).collect(),
-    })
+    qualia_client_core::save_model_preferences(
+        qualia_client_core::model_preferences::ModelPreferences {
+            auto_select: prefs.auto_select,
+            entries: prefs.entries.into_iter().map(unmap_entry).collect(),
+        },
+    )
 }
 
 #[frb]

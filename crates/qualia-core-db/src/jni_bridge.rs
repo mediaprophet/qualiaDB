@@ -1,12 +1,12 @@
 #![allow(non_snake_case)]
 
-use jni::JNIEnv;
-use jni::objects::{JClass, JString, JByteArray, JByteBuffer};
-use jni::sys::{jstring, jboolean, jdouble, jbyteArray};
 use crate::cbor_compiler::parse_cbor_ld_to_quin;
 use crate::git_bridge;
 use crate::spatial_sieve;
 use crate::QualiaQuin;
+use jni::objects::{JByteArray, JByteBuffer, JClass, JString};
+use jni::sys::{jboolean, jbyteArray, jdouble, jstring};
+use jni::JNIEnv;
 
 #[no_mangle]
 pub extern "system" fn Java_com_example_qualia_QualiaCore_queryLedgerTransactions(
@@ -30,11 +30,13 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_queryLedgerTransaction
             context: 0,
             metadata: 0,
             parity: 0,
-        }
+        },
     ];
 
     let bytes = bytemuck::cast_slice(&quins);
-    let byte_array = env.byte_array_from_slice(bytes).expect("Failed to create byte array");
+    let byte_array = env
+        .byte_array_from_slice(bytes)
+        .expect("Failed to create byte array");
     byte_array.into_raw()
 }
 
@@ -45,14 +47,14 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_insertLedgerTransactio
     quin_bytes: JByteArray,
 ) -> jboolean {
     let bytes = env.convert_byte_array(&quin_bytes).unwrap_or_default();
-    
+
     // Strict 48-byte enforcement
     if bytes.len() % 48 != 0 {
         return 0; // false
     }
-    
+
     let _quins: &[QualiaQuin] = bytemuck::cast_slice(&bytes);
-    
+
     // Native insertion logic without JSON parsing overhead
     1 // true
 }
@@ -64,7 +66,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_insertCborQuin(
     cbor_bytes: JByteArray,
 ) -> jboolean {
     let bytes = env.convert_byte_array(&cbor_bytes).unwrap_or_default();
-    
+
     match parse_cbor_ld_to_quin(&bytes) {
         Ok(_quin) => 1,
         Err(_) => 0,
@@ -77,7 +79,8 @@ pub extern "system" fn Java_com_example_qualia_ontology_OntologyManager_loadQ42O
     _class: JClass,
     file_path: JString,
 ) -> jboolean {
-    let _path: String = env.get_string(&file_path)
+    let _path: String = env
+        .get_string(&file_path)
         .expect("Couldn't get java string!")
         .into();
     1
@@ -100,12 +103,14 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_generateGitExport(
     _class: JClass,
     project_id: JString,
 ) -> jstring {
-    let pid: String = env.get_string(&project_id)
+    let pid: String = env
+        .get_string(&project_id)
         .expect("Couldn't get java string!")
         .into();
-    
+
     let git_stream = git_bridge::generate_fast_export_stream(&pid);
-    let output = env.new_string(git_stream)
+    let output = env
+        .new_string(git_stream)
         .expect("Couldn't create java string!");
     output.into_raw()
 }
@@ -116,10 +121,11 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_evaluateTaxLiability(
     _class: JClass,
     identity_nym: JString,
 ) -> jbyteArray {
-    let _nym: String = env.get_string(&identity_nym)
+    let _nym: String = env
+        .get_string(&identity_nym)
         .expect("Couldn't get java string!")
         .into();
-    
+
     // Evaluate via Webizen VM and return 48-byte norm quins natively
     let liability_quin = QualiaQuin {
         subject: crate::q_hash("tax_liability_result"),
@@ -129,9 +135,11 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_evaluateTaxLiability(
         metadata: 0,
         parity: 0,
     };
-    
+
     let bytes = bytemuck::bytes_of(&liability_quin);
-    let byte_array = env.byte_array_from_slice(bytes).expect("Failed to create byte array");
+    let byte_array = env
+        .byte_array_from_slice(bytes)
+        .expect("Failed to create byte array");
     byte_array.into_raw()
 }
 
@@ -142,7 +150,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_insertSpatialLog(
     spatial_bytes: JByteArray,
 ) -> jboolean {
     let _bytes = env.convert_byte_array(&spatial_bytes).unwrap_or_default();
-    
+
     // Process strictly binary spatial Quins directly into the GPU sieve
     spatial_sieve::log_spatial_coordinate(0.0, 0.0, 0);
     1
@@ -154,10 +162,11 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_calculateAssetApportio
     _class: JClass,
     asset_id: JString,
 ) -> jdouble {
-    let _id: String = env.get_string(&asset_id)
+    let _id: String = env
+        .get_string(&asset_id)
         .expect("Couldn't get java string!")
         .into();
-    
+
     let mock_apportionment = 0.85; // 85% Business Use
     mock_apportionment as jdouble
 }

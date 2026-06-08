@@ -21,7 +21,14 @@ mod tests {
 
     #[test]
     fn test_enumerate_stable_models() {
-        let base = QualiaQuin { subject: 0, predicate: 0, object: 0, context: 42, metadata: 0, parity: 0 };
+        let base = QualiaQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 42,
+            metadata: 0,
+            parity: 0,
+        };
         let mut out_worlds = [0; MAX_STABLE_MODELS];
         let count = enumerate_stable_models(&base, &[], &mut out_worlds);
         assert_eq!(count, 2);

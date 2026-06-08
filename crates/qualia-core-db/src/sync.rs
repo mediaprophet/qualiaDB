@@ -35,7 +35,10 @@ impl MerkleCrdtSynchronizer {
         let mut diff_count = 0;
 
         // $O(N)$ linear scan comparing Virtual Chunk IDs (Merkle Hashes)
-        while local_idx < local_table.len() && remote_idx < remote_table.len() && diff_count < diff_buffer.len() {
+        while local_idx < local_table.len()
+            && remote_idx < remote_table.len()
+            && diff_count < diff_buffer.len()
+        {
             let local_chunk = local_table[local_idx].chunk_id;
             let remote_chunk = remote_table[remote_idx].chunk_id;
 
@@ -98,10 +101,12 @@ impl MerkleCrdtSynchronizer {
                     // Regular merge logic via Lamport clock comparison
                     // Find empty slot or matching subject/predicate
                     for local in local_frame.iter_mut() {
-                        if local.subject == incoming.subject && local.predicate == incoming.predicate {
+                        if local.subject == incoming.subject
+                            && local.predicate == incoming.predicate
+                        {
                             let local_time = Self::extract_lamport_time(local);
                             let incoming_time = Self::extract_lamport_time(incoming);
-                            
+
                             // Keep the Quin with the higher Lamport clock
                             if incoming_time > local_time {
                                 *local = *incoming;
@@ -120,7 +125,8 @@ impl MerkleCrdtSynchronizer {
             for incoming in incoming_frame.iter() {
                 // Find empty slot in local frame to append to
                 for local in local_frame.iter_mut() {
-                    if local.subject == 0 { // 0 denotes empty slot
+                    if local.subject == 0 {
+                        // 0 denotes empty slot
                         *local = *incoming;
                         break;
                     }

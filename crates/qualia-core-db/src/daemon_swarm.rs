@@ -3,11 +3,11 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod swarm {
-    use crate::QualiaSuperBlock;
     use crate::QualiaQuin;
+    use crate::QualiaSuperBlock;
+    use crossbeam_channel::{bounded, Receiver, Sender};
     use std::sync::{Arc, Mutex};
     use std::thread;
-    use crossbeam_channel::{bounded, Sender, Receiver};
 
     /// Ring buffer capacity for SPSC lock-free communication between Isolates
     const SPSC_BUFFER_CAPACITY: usize = 1024;
@@ -29,11 +29,17 @@ pub mod swarm {
             }
         }
 
-        pub fn execute_tensor_contraction(&self, matrix_a: &[f32], matrix_b: &[f32], result: &mut [f32], size: usize) {
+        pub fn execute_tensor_contraction(
+            &self,
+            matrix_a: &[f32],
+            matrix_b: &[f32],
+            result: &mut [f32],
+            size: usize,
+        ) {
             // Dense Linear Algebra Swarm
             // Simulates dividing matrices into 128KB chunks and running SIMD tensor contractions
             // on the CPU.
-            
+
             #[cfg(target_arch = "x86_64")]
             if std::is_x86_feature_detected!("avx2") {
                 unsafe {
@@ -50,13 +56,17 @@ pub mod swarm {
                                 j += 8;
                             }
                             while j < size {
-                                result[i * size + j] += matrix_a[i * size + k] * matrix_b[k * size + j];
+                                result[i * size + j] +=
+                                    matrix_a[i * size + k] * matrix_b[k * size + j];
                                 j += 1;
                             }
                         }
                     }
                 }
-                crate::telemetry::SIEVE_OPS_COUNT.fetch_add((size * size * size) as usize, std::sync::atomic::Ordering::Relaxed);
+                crate::telemetry::SIEVE_OPS_COUNT.fetch_add(
+                    (size * size * size) as usize,
+                    std::sync::atomic::Ordering::Relaxed,
+                );
                 return;
             }
 
@@ -73,17 +83,18 @@ pub mod swarm {
         pub fn execute_quantum_chemistry(&self, smiles: &str) -> Option<crate::QualiaQuin> {
             let mol = crate::organic_chemistry::parse_smiles(smiles);
             let mut dft = crate::quantum_dft::ElectronDensity::new(mol.atoms.len().max(1));
-            
+
             let mut quins = Vec::new();
             for _ in 0..mol.atoms.len() {
                 let mut q = crate::QualiaQuin::default();
                 q.predicate = crate::q_hash("HAS_ELECTRON");
                 quins.push(q);
             }
-            
+
             let energy = dft.calculate_ground_state_energy(&quins);
-            crate::telemetry::ATOMIC_FLOPS_COUNT.fetch_add(50000, std::sync::atomic::Ordering::Relaxed);
-            
+            crate::telemetry::ATOMIC_FLOPS_COUNT
+                .fetch_add(50000, std::sync::atomic::Ordering::Relaxed);
+
             let mut out_quin = crate::QualiaQuin::default();
             out_quin.subject = crate::q_hash(smiles);
             out_quin.predicate = crate::q_hash("has_ground_state_energy");
@@ -120,7 +131,12 @@ pub mod swarm {
                 let mut locked_cells = cells.lock().unwrap();
                 if let Some(cell) = locked_cells.iter_mut().find(|c| c.cell_id == cell_id) {
                     let mut res = vec![0.0; 4];
-                    cell.execute_tensor_contraction(&[1.0, 2.0, 3.0, 4.0], &[1.0, 0.0, 0.0, 1.0], &mut res, 2);
+                    cell.execute_tensor_contraction(
+                        &[1.0, 2.0, 3.0, 4.0],
+                        &[1.0, 0.0, 0.0, 1.0],
+                        &mut res,
+                        2,
+                    );
                 }
             });
         }
@@ -140,8 +156,9 @@ pub mod swarm {
                 while let Ok(prompt_quin) = rx_ab.recv() {
                     // Extract 60-bit pointer, map GGUF, run Q-Tensor execution
                     // For now, mock return of a deterministic consequence
-                    crate::telemetry::SIEVE_OPS_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                    
+                    crate::telemetry::SIEVE_OPS_COUNT
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
                     let result_quin = QualiaQuin {
                         subject: prompt_quin.subject,
                         predicate: 999, // 'Calculated' mock predicate

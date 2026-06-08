@@ -37,10 +37,22 @@ pub struct GgmlBlockLayout {
 /// Return block layout for a GGML type, or `None` if unsupported.
 pub fn ggml_block_layout(ggml_type: u32) -> Option<GgmlBlockLayout> {
     match ggml_type {
-        GGML_TYPE_Q4_0 => Some(GgmlBlockLayout { block_elems: 32, block_bytes: 18 }),
-        GGML_TYPE_Q8_0 => Some(GgmlBlockLayout { block_elems: 32, block_bytes: 34 }),
-        GGML_TYPE_Q4_K => Some(GgmlBlockLayout { block_elems: 256, block_bytes: 144 }),
-        GGML_TYPE_Q6_K => Some(GgmlBlockLayout { block_elems: 256, block_bytes: 210 }),
+        GGML_TYPE_Q4_0 => Some(GgmlBlockLayout {
+            block_elems: 32,
+            block_bytes: 18,
+        }),
+        GGML_TYPE_Q8_0 => Some(GgmlBlockLayout {
+            block_elems: 32,
+            block_bytes: 34,
+        }),
+        GGML_TYPE_Q4_K => Some(GgmlBlockLayout {
+            block_elems: 256,
+            block_bytes: 144,
+        }),
+        GGML_TYPE_Q6_K => Some(GgmlBlockLayout {
+            block_elems: 256,
+            block_bytes: 210,
+        }),
         _ => None,
     }
 }
@@ -91,10 +103,10 @@ pub fn fetch_token_embedding<'a>(
     if token_id as usize >= n_vocab {
         return Err(ExecutionError::TokenOutOfRange);
     }
-    let bytes_per_token = ggml_row_bytes(tensor.ggml_type, n_embd)
-        .ok_or(ExecutionError::UnsupportedType)?;
-    let start = (tensor_data_start + tensor.byte_offset) as usize
-        + token_id as usize * bytes_per_token;
+    let bytes_per_token =
+        ggml_row_bytes(tensor.ggml_type, n_embd).ok_or(ExecutionError::UnsupportedType)?;
+    let start =
+        (tensor_data_start + tensor.byte_offset) as usize + token_id as usize * bytes_per_token;
     let end = start + bytes_per_token;
     if end > mmap.len() {
         return Err(ExecutionError::MmapBounds);
@@ -175,7 +187,9 @@ pub fn dequant_matrix_row_into(
 ) -> Result<usize, GgmlDequantError> {
     let n0 = info.dims[0] as usize;
     let row_bytes = ggml_row_bytes(info.ggml_type, n0).ok_or(GgmlDequantError::UnsupportedType)?;
-    let start = row.checked_mul(row_bytes).ok_or(GgmlDequantError::TruncatedInput)?;
+    let start = row
+        .checked_mul(row_bytes)
+        .ok_or(GgmlDequantError::TruncatedInput)?;
     if start + row_bytes > raw.len() {
         return Err(GgmlDequantError::TruncatedInput);
     }
@@ -221,7 +235,8 @@ fn dequant_f16(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Ggm
         return Err(GgmlDequantError::TruncatedInput);
     }
     for i in 0..n_elems {
-        out[i] = half::f16::from_le_bytes(raw[i * 2..i * 2 + 2].try_into().unwrap_or([0; 2])).to_f32();
+        out[i] =
+            half::f16::from_le_bytes(raw[i * 2..i * 2 + 2].try_into().unwrap_or([0; 2])).to_f32();
     }
     Ok(n_elems)
 }
@@ -348,9 +363,11 @@ fn dequant_q6_k_block(block: &[u8; 210], out: &mut [f32]) {
         for l in 0..32 {
             let is = l / 16;
             let q1 = ((block[ql_off + l] & 0xF) | (((block[qh_off + l] >> 0) & 3) << 4)) as i8 - 32;
-            let q2 = ((block[ql_off + l + 32] & 0xF) | (((block[qh_off + l] >> 2) & 3) << 4)) as i8 - 32;
+            let q2 =
+                ((block[ql_off + l + 32] & 0xF) | (((block[qh_off + l] >> 2) & 3) << 4)) as i8 - 32;
             let q3 = ((block[ql_off + l] >> 4) | (((block[qh_off + l] >> 4) & 3) << 4)) as i8 - 32;
-            let q4 = ((block[ql_off + l + 32] >> 4) | (((block[qh_off + l] >> 6) & 3) << 4)) as i8 - 32;
+            let q4 =
+                ((block[ql_off + l + 32] >> 4) | (((block[qh_off + l] >> 6) & 3) << 4)) as i8 - 32;
             out[y_off + l] = d * block[sc_off + is] as f32 * q1 as f32;
             out[y_off + l + 32] = d * block[sc_off + is + 2] as f32 * q2 as f32;
             out[y_off + l + 64] = d * block[sc_off + is + 4] as f32 * q3 as f32;

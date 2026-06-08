@@ -22,7 +22,7 @@ pub fn process_pdf(file_name: &str) -> Result<IngestionResult, String> {
     // 4. Mapping entities against HCAI and UN Rights Ontologies
 
     println!("Edge VLM parsing document: {}", file_name);
-    
+
     let simulated_bookmarks = vec![
         SemanticBookmark {
             entity: format!("Document Root: {}", file_name),
@@ -30,17 +30,27 @@ pub fn process_pdf(file_name: &str) -> Result<IngestionResult, String> {
         },
         SemanticBookmark {
             entity: "Article 12: Right to Privacy".to_string(),
-            tags: vec!["UN-HR".to_string(), "HCAI:Agency".to_string(), "Protection-Mandate".to_string()],
+            tags: vec![
+                "UN-HR".to_string(),
+                "HCAI:Agency".to_string(),
+                "Protection-Mandate".to_string(),
+            ],
         },
         SemanticBookmark {
             entity: "Informed Consent Schema".to_string(),
-            tags: vec!["HCAI:Agreements".to_string(), "ODRL".to_string(), "Proxy-Consent".to_string()],
+            tags: vec![
+                "HCAI:Agreements".to_string(),
+                "ODRL".to_string(),
+                "Proxy-Consent".to_string(),
+            ],
         },
     ];
 
     Ok(IngestionResult {
-        message: format!("Successfully mapped {} to dynamic ontology registry.", file_name),
+        message: format!(
+            "Successfully mapped {} to dynamic ontology registry.",
+            file_name
+        ),
         bookmarks: simulated_bookmarks,
     })
 }
-

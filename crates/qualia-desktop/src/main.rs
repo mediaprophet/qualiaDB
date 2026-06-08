@@ -3,17 +3,15 @@
     windows_subsystem = "windows"
 )]
 
-use tauri::Manager;
 use std::path::PathBuf;
-
-
+use tauri::Manager;
 
 pub mod commands;
 pub use commands::*;
 
-use qualia_client_core::qapp_registry::QAPPS_DIR;
-use qualia_client_core::state::{init_app_state, dirs_default_path, AppState};
 pub use commands::*;
+use qualia_client_core::qapp_registry::QAPPS_DIR;
+use qualia_client_core::state::{dirs_default_path, init_app_state, AppState};
 
 fn main() {
     let app_state = init_app_state();
@@ -25,13 +23,18 @@ fn main() {
 
     tauri::Builder::default()
         .register_uri_scheme_protocol("qualia", move |_app, request| {
-            let path = request.uri().strip_prefix("qualia://localhost/").unwrap_or("");
+            let path = request
+                .uri()
+                .strip_prefix("qualia://localhost/")
+                .unwrap_or("");
             let safe_path: PathBuf = PathBuf::from(path)
                 .components()
                 .filter(|c| matches!(c, std::path::Component::Normal(_)))
                 .collect();
-            let full_path = PathBuf::from(dirs_default_path()).join(QAPPS_DIR).join(safe_path);
-            
+            let full_path = PathBuf::from(dirs_default_path())
+                .join(QAPPS_DIR)
+                .join(safe_path);
+
             match std::fs::read(&full_path) {
                 Ok(data) => {
                     let mime = mime_guess::from_path(&full_path).first_or_octet_stream();
@@ -40,9 +43,9 @@ fn main() {
                         .status(200)
                         .body(data)
                 }
-                Err(_) => {
-                    tauri::http::ResponseBuilder::new().status(404).body(Vec::new())
-                }
+                Err(_) => tauri::http::ResponseBuilder::new()
+                    .status(404)
+                    .body(Vec::new()),
             }
         })
         .manage(app_state)
@@ -67,24 +70,27 @@ fn main() {
                 loop {
                     sys.refresh_cpu();
                     sys.refresh_memory();
-                    
+
                     let cpu_usage = sys.global_cpu_info().cpu_usage();
                     let mem_used = sys.used_memory() as f64 / 1024.0 / 1024.0 / 1024.0;
-                    
-                    let _ = telemetry_handle.emit_all("hardware-telemetry", serde_json::json!({
-                        "cpu": format!("{:.1}%", cpu_usage),
-                        "ram": format!("{:.2} GB", mem_used)
-                    }));
-                    
+
+                    let _ = telemetry_handle.emit_all(
+                        "hardware-telemetry",
+                        serde_json::json!({
+                            "cpu": format!("{:.1}%", cpu_usage),
+                            "ram": format!("{:.2} GB", mem_used)
+                        }),
+                    );
+
                     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                 }
             });
 
             // ── Start daemon ──────────────────────────────────────────────────
             // ── Start daemon ──────────────────────────────────────────────────────────
-            let flag   = daemon_flag.clone();
+            let flag = daemon_flag.clone();
             let tray_h = handle.clone();
-            
+
             // Extract port and host from config, cloning them for the background thread
             let config_clone = default_config.clone();
             let host = config_clone.daemon_host;
@@ -95,7 +101,11 @@ fn main() {
                 if std::net::TcpListener::bind((host.as_str(), target_port)).is_ok() {
                     break;
                 }
-                eprintln!("Port {} is in use, trying {}...", target_port, target_port + 1);
+                eprintln!(
+                    "Port {} is in use, trying {}...",
+                    target_port,
+                    target_port + 1
+                );
                 target_port += 1;
                 if target_port > 4300 {
                     eprintln!("Could not find an open port for the daemon! Falling back to 4242.");
@@ -149,7 +159,7 @@ mod tests {
     fn test_generate_qapp_credential() {
         let qapp_name = "com.qualia.testqapp".to_string();
         let credential = generate_qapp_credential(qapp_name);
-        
+
         println!("Generated Credential: {}", credential);
         assert_eq!(credential, "did:qualia:qapp:com.qualia.testqapp:signed_vc");
     }

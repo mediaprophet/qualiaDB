@@ -1,8 +1,8 @@
-use tokio::net::TcpListener;
-use tokio::sync::broadcast;
 use futures_util::sink::SinkExt;
 use serde::Serialize;
 use sysinfo::System;
+use tokio::net::TcpListener;
+use tokio::sync::broadcast;
 
 #[derive(Serialize, Clone)]
 pub struct TelemetryPayload {
@@ -19,18 +19,26 @@ pub struct HotBlock {
 }
 
 pub async fn start_telemetry_server(rx: broadcast::Receiver<TelemetryPayload>) {
-    let listener = TcpListener::bind("127.0.0.1:9090").await.expect("Failed to bind telemetry port");
+    let listener = TcpListener::bind("127.0.0.1:9090")
+        .await
+        .expect("Failed to bind telemetry port");
     println!("📡 Telemetry WebSocket server running on ws://127.0.0.1:9090");
 
     while let Ok((stream, _)) = listener.accept().await {
         let mut rx_clone = rx.resubscribe();
-        
+
         tokio::spawn(async move {
-            let mut ws_stream = tokio_tungstenite::accept_async(stream).await.expect("Error during websocket handshake");
-            
+            let mut ws_stream = tokio_tungstenite::accept_async(stream)
+                .await
+                .expect("Error during websocket handshake");
+
             while let Ok(payload) = rx_clone.recv().await {
                 let json = serde_json::to_string(&payload).unwrap();
-                if ws_stream.send(tokio_tungstenite::tungstenite::Message::Text(json)).await.is_err() {
+                if ws_stream
+                    .send(tokio_tungstenite::tungstenite::Message::Text(json))
+                    .await
+                    .is_err()
+                {
                     break;
                 }
             }

@@ -22,24 +22,27 @@ impl ElectronDensity {
         // In a real implementation, this would iteratively solve Kohn-Sham equations
         // using the dense linear algebra swarm. For now, we mock the convergence.
         let mut mock_energy = 0.0;
-        
+
         for q in quins {
             if q.predicate == crate::q_hash("HAS_ELECTRON") {
                 mock_energy -= 13.6; // Mock Hydrogen ground state (eV)
             }
         }
-        
+
         mock_energy
     }
 }
 
 /// Predicts physical states natively using a bounded Physics-Informed Neural Network (PINN) abstraction.
-pub fn pinn_predict_receptor_binding(molecule_quins: &[QualiaQuin], receptor_quins: &[QualiaQuin]) -> f64 {
+pub fn pinn_predict_receptor_binding(
+    molecule_quins: &[QualiaQuin],
+    receptor_quins: &[QualiaQuin],
+) -> f64 {
     // Pure Rust semantic graph evaluation simulating a trained localized model binding affinity
     if molecule_quins.is_empty() || receptor_quins.is_empty() {
         return 0.0;
     }
-    
+
     // Mock binding affinity calculation
     let mut affinity = -5.0; // kcal/mol base
     for mq in molecule_quins {

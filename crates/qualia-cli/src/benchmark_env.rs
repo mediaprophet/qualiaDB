@@ -13,7 +13,10 @@ fn host_class() -> &'static str {
     {
         return "ARM64_MOBILE";
     }
-    #[cfg(all(target_arch = "aarch64", not(any(target_os = "macos", target_os = "android", target_os = "ios"))))]
+    #[cfg(all(
+        target_arch = "aarch64",
+        not(any(target_os = "macos", target_os = "android", target_os = "ios"))
+    ))]
     {
         return "ARM64_SERVER";
     }
@@ -28,7 +31,10 @@ fn host_class() -> &'static str {
     #[cfg(not(any(
         all(target_arch = "aarch64", target_os = "macos"),
         all(target_arch = "aarch64", any(target_os = "android", target_os = "ios")),
-        all(target_arch = "aarch64", not(any(target_os = "macos", target_os = "android", target_os = "ios"))),
+        all(
+            target_arch = "aarch64",
+            not(any(target_os = "macos", target_os = "android", target_os = "ios"))
+        ),
         target_arch = "x86_64",
         target_arch = "wasm32",
     )))]

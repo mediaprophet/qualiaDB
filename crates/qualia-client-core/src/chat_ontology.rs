@@ -57,7 +57,14 @@ const DISCOURSE_TYPES: &[(&str, &str, &str, &str, &[&str], &[&str])] = &[
         "✏️",
         "Fixes or amends prior content",
         &["correction", "amendment", "rectification"],
-        &["actually", "incorrect", "mistake", "fix", "wrong", "should be"],
+        &[
+            "actually",
+            "incorrect",
+            "mistake",
+            "fix",
+            "wrong",
+            "should be",
+        ],
     ),
     (
         "inquiry",
@@ -65,7 +72,16 @@ const DISCOURSE_TYPES: &[(&str, &str, &str, &str, &[&str], &[&str])] = &[
         "❓",
         "Question or request for information",
         &["question", "inquiry", "query"],
-        &["?", "how", "why", "what", "when", "where", "could you", "can you"],
+        &[
+            "?",
+            "how",
+            "why",
+            "what",
+            "when",
+            "where",
+            "could you",
+            "can you",
+        ],
     ),
     (
         "agreement",
@@ -97,7 +113,14 @@ const DISCOURSE_TYPES: &[(&str, &str, &str, &str, &[&str], &[&str])] = &[
         "📎",
         "Cites sources or supporting facts",
         &["evidence", "proof", "citation"],
-        &["source", "cite", "according to", "study", "data shows", "provenance"],
+        &[
+            "source",
+            "cite",
+            "according to",
+            "study",
+            "data shows",
+            "provenance",
+        ],
     ),
     (
         "suggestion",
@@ -280,10 +303,7 @@ pub fn build_chat_ontology_briefing(storage: &Path) -> String {
     }
     lines.push("branch_types:".to_string());
     for t in types {
-        let wn = t
-            .wordnet_grounding_hash
-            .as_deref()
-            .unwrap_or("builtin");
+        let wn = t.wordnet_grounding_hash.as_deref().unwrap_or("builtin");
         lines.push(format!(
             "  - {} {} ({}) wordnet={}",
             t.emoji, t.label, t.id, wn
@@ -359,8 +379,12 @@ pub fn add_reaction(
         .map_err(|e| e.to_string())?;
     for r in &reactions {
         use std::io::Write;
-        writeln!(file, "{}", serde_json::to_string(r).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+        writeln!(
+            file,
+            "{}",
+            serde_json::to_string(r).map_err(|e| e.to_string())?
+        )
+        .map_err(|e| e.to_string())?;
     }
 
     // WAL quin: chat:hasReaction
@@ -396,7 +420,9 @@ pub fn toggle_reaction(
 ) -> Result<Vec<ChatReaction>, String> {
     let profile = crate::user_profile::load_profile();
     let existing: Vec<_> = list_reactions_for_message(storage_root, session_id, message_lamport)?;
-    let already = existing.iter().any(|r| r.author_did == profile.public_did && r.emoji == emoji);
+    let already = existing
+        .iter()
+        .any(|r| r.author_did == profile.public_did && r.emoji == emoji);
     if already {
         remove_reaction(storage_root, session_id, message_lamport, emoji)
     } else {
@@ -426,8 +452,12 @@ fn remove_reaction(
         .map_err(|e| e.to_string())?;
     for r in &reactions {
         use std::io::Write;
-        writeln!(file, "{}", serde_json::to_string(r).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+        writeln!(
+            file,
+            "{}",
+            serde_json::to_string(r).map_err(|e| e.to_string())?
+        )
+        .map_err(|e| e.to_string())?;
     }
     Ok(reactions)
 }

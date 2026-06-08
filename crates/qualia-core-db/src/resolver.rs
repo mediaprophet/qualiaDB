@@ -24,20 +24,20 @@
 //! `format_ntriples_to` writes directly to any `impl io::Write` sink and
 //! never touches the heap.  Callers own the output buffer.
 
-use std::io;
 use crate::QualiaQuin;
+use std::io;
 
 // ---------------------------------------------------------------------------
 // Bit-layout constants
 // ---------------------------------------------------------------------------
 
-const MSB_FLAG: u64         = 1u64 << 63;
-const INLINE_TAG_MASK: u64  = 0b111u64 << 60; // bits 60-62 (only when MSB=0)
+const MSB_FLAG: u64 = 1u64 << 63;
+const INLINE_TAG_MASK: u64 = 0b111u64 << 60; // bits 60-62 (only when MSB=0)
 const INLINE_TAG_INTEGER: u64 = 0b001u64 << 60;
 const INLINE_TAG_DECIMAL: u64 = 0b010u64 << 60;
 const INLINE_TAG_BOOLEAN: u64 = 0b011u64 << 60;
 /// Mask over bits 0-59 — the value payload when an inline tag is present.
-const INLINE_VALUE_MASK: u64  = !(MSB_FLAG | INLINE_TAG_MASK);
+const INLINE_VALUE_MASK: u64 = !(MSB_FLAG | INLINE_TAG_MASK);
 
 // ---------------------------------------------------------------------------
 // Demo lexicon
@@ -50,21 +50,39 @@ const INLINE_VALUE_MASK: u64  = !(MSB_FLAG | INLINE_TAG_MASK);
 // via `q_hash`, which is `const fn`.
 
 static DEMO_LEXICON: &[(u64, &[u8])] = &[
-    (crate::q_hash("Alice"),       b"http://qualia-db.org/demo/Alice"),
-    (crate::q_hash("Bob"),         b"http://qualia-db.org/demo/Bob"),
-    (crate::q_hash("Carol"),       b"http://qualia-db.org/demo/Carol"),
-    (crate::q_hash("knows"),       b"http://schema.org/knows"),
-    (crate::q_hash("likes"),       b"http://schema.org/likes"),
-    (crate::q_hash("type"),        b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-    (crate::q_hash("label"),       b"http://www.w3.org/2000/01/rdf-schema#label"),
-    (crate::q_hash("Person"),      b"http://schema.org/Person"),
-    (crate::q_hash("name"),        b"http://schema.org/name"),
-    (crate::q_hash("guardian"),    b"http://qualia-db.org/vocab#guardian"),
-    (crate::q_hash("ward"),        b"http://qualia-db.org/vocab#ward"),
-    (crate::q_hash("has_symptom"), b"http://qualia-db.org/medical#hasSymptom"),
-    (crate::q_hash("Fever"),       b"http://snomed.info/id/386661006"),
-    (crate::q_hash("income"),      b"http://qualia-db.org/finance#income"),
-    (crate::q_hash("balance"),     b"http://qualia-db.org/finance#balance"),
+    (crate::q_hash("Alice"), b"http://qualia-db.org/demo/Alice"),
+    (crate::q_hash("Bob"), b"http://qualia-db.org/demo/Bob"),
+    (crate::q_hash("Carol"), b"http://qualia-db.org/demo/Carol"),
+    (crate::q_hash("knows"), b"http://schema.org/knows"),
+    (crate::q_hash("likes"), b"http://schema.org/likes"),
+    (
+        crate::q_hash("type"),
+        b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+    ),
+    (
+        crate::q_hash("label"),
+        b"http://www.w3.org/2000/01/rdf-schema#label",
+    ),
+    (crate::q_hash("Person"), b"http://schema.org/Person"),
+    (crate::q_hash("name"), b"http://schema.org/name"),
+    (
+        crate::q_hash("guardian"),
+        b"http://qualia-db.org/vocab#guardian",
+    ),
+    (crate::q_hash("ward"), b"http://qualia-db.org/vocab#ward"),
+    (
+        crate::q_hash("has_symptom"),
+        b"http://qualia-db.org/medical#hasSymptom",
+    ),
+    (crate::q_hash("Fever"), b"http://snomed.info/id/386661006"),
+    (
+        crate::q_hash("income"),
+        b"http://qualia-db.org/finance#income",
+    ),
+    (
+        crate::q_hash("balance"),
+        b"http://qualia-db.org/finance#balance",
+    ),
 ];
 
 // ---------------------------------------------------------------------------
@@ -84,7 +102,9 @@ pub struct Lexicon {
 
 impl Lexicon {
     pub const fn new() -> Self {
-        Self { entries: DEMO_LEXICON }
+        Self {
+            entries: DEMO_LEXICON,
+        }
     }
 
     /// Look up `hash` in the dictionary.
@@ -189,8 +209,11 @@ fn write_object_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
             // Fixed-point: lower 60 bits encode value × 10⁶.
             let raw = val & INLINE_VALUE_MASK;
             let whole = raw / 1_000_000;
-            let frac  = raw % 1_000_000;
-            write!(out, "\"{whole}.{frac:06}\"^^<http://www.w3.org/2001/XMLSchema#decimal>")
+            let frac = raw % 1_000_000;
+            write!(
+                out,
+                "\"{whole}.{frac:06}\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
+            )
         }
         INLINE_TAG_BOOLEAN => {
             let lit = if (val & 1) != 0 { "true" } else { "false" };
@@ -236,7 +259,14 @@ mod tests {
     use super::*;
 
     fn quin(s: u64, p: u64, o: u64) -> QualiaQuin {
-        QualiaQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 }
+        QualiaQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }
     }
 
     fn render(quins: &[QualiaQuin]) -> String {
@@ -305,7 +335,10 @@ mod tests {
         let val = INLINE_TAG_BOOLEAN | 1;
         let mut buf = Vec::new();
         write_object_term(val, &mut buf).unwrap();
-        assert_eq!(String::from_utf8(buf).unwrap(), "\"true\"^^<http://www.w3.org/2001/XMLSchema#boolean>");
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"true\"^^<http://www.w3.org/2001/XMLSchema#boolean>"
+        );
     }
 
     #[test]
@@ -313,7 +346,10 @@ mod tests {
         let val = INLINE_TAG_BOOLEAN | 0;
         let mut buf = Vec::new();
         write_object_term(val, &mut buf).unwrap();
-        assert_eq!(String::from_utf8(buf).unwrap(), "\"false\"^^<http://www.w3.org/2001/XMLSchema#boolean>");
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"false\"^^<http://www.w3.org/2001/XMLSchema#boolean>"
+        );
     }
 
     #[test]
@@ -337,11 +373,21 @@ mod tests {
 
     #[test]
     fn known_terms_resolve_to_iris() {
-        let q = quin(crate::q_hash("Alice"), crate::q_hash("knows"), crate::q_hash("Bob"));
+        let q = quin(
+            crate::q_hash("Alice"),
+            crate::q_hash("knows"),
+            crate::q_hash("Bob"),
+        );
         let out = render(&[q]);
-        assert!(out.contains("<http://qualia-db.org/demo/Alice>"), "got: {out}");
-        assert!(out.contains("<http://schema.org/knows>"),         "got: {out}");
-        assert!(out.contains("<http://qualia-db.org/demo/Bob>"),   "got: {out}");
+        assert!(
+            out.contains("<http://qualia-db.org/demo/Alice>"),
+            "got: {out}"
+        );
+        assert!(out.contains("<http://schema.org/knows>"), "got: {out}");
+        assert!(
+            out.contains("<http://qualia-db.org/demo/Bob>"),
+            "got: {out}"
+        );
         assert!(out.ends_with(" .\n"));
     }
 

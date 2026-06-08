@@ -180,7 +180,9 @@ pub fn get_torrent_bandwidth_policy() -> Result<TorrentBandwidthPolicy, String> 
 
 #[frb]
 #[frb]
-pub fn list_ontology_shares_for_session(session_did: String) -> Result<Vec<OntologyShareCard>, String> {
+pub fn list_ontology_shares_for_session(
+    session_did: String,
+) -> Result<Vec<OntologyShareCard>, String> {
     let json = core::list_ontology_shares_for_session(session_did)?;
     let arr = json.as_array().cloned().unwrap_or_default();
     Ok(arr

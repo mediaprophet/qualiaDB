@@ -44,7 +44,8 @@ fn seed_anatomy_health_graph(store: &mut Vec<QualiaQuin>) {
     const BIO: &str = "https://qualia.anatomy.example/ontology/bio#";
     const ORGAN: &str = "https://qualia.anatomy.example/ontology/organ#";
     const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
-    const HAS_PRIMARY: &str = "https://qualia.anatomy.example/ontology/impact#hasPrimaryImpactSystem";
+    const HAS_PRIMARY: &str =
+        "https://qualia.anatomy.example/ontology/impact#hasPrimaryImpactSystem";
     const IMPACTS: &str = "https://qualia.anatomy.example/ontology/impact#Impacts";
     const USER_CTX: &str = "did:qualia:user:local-health-graph";
 
@@ -127,15 +128,11 @@ pub fn init_daemon_graph(storage_path: &str) {
 
 /// Number of Quins currently available to `/query`.
 pub fn graph_quin_count() -> usize {
-    graph_lock()
-        .read()
-        .map(|g| g.len())
-        .unwrap_or(0)
+    graph_lock().read().map(|g| g.len()).unwrap_or(0)
 }
 
 /// Read guard over the live graph (lock is process-static via `OnceLock`).
-pub fn graph_read_guard(
-) -> std::sync::RwLockReadGuard<'static, Vec<QualiaQuin>> {
+pub fn graph_read_guard() -> std::sync::RwLockReadGuard<'static, Vec<QualiaQuin>> {
     graph_lock().read().expect("daemon graph poisoned")
 }
 

@@ -42,8 +42,12 @@ fn main() {
 
     // ── Allocate synthetic shard ─────────────────────────────────────────────
     let shard_bytes = SYNTHETIC_QUIN_COUNT * QUIN_SIZE;
-    println!("Shard size      {:>7} MB  ({} quins × {} B)",
-        shard_bytes / (1024 * 1024), SYNTHETIC_QUIN_COUNT, QUIN_SIZE);
+    println!(
+        "Shard size      {:>7} MB  ({} quins × {} B)",
+        shard_bytes / (1024 * 1024),
+        SYNTHETIC_QUIN_COUNT,
+        QUIN_SIZE
+    );
 
     let t_start = Instant::now();
 
@@ -54,9 +58,11 @@ fn main() {
         .collect();
 
     let rss_after_alloc = rss_bytes(&mut sys, pid);
-    println!("RSS after alloc {:>7} MB  (Δ +{} MB)",
+    println!(
+        "RSS after alloc {:>7} MB  (Δ +{} MB)",
         rss_after_alloc / (1024 * 1024),
-        rss_after_alloc.saturating_sub(rss_base) / (1024 * 1024));
+        rss_after_alloc.saturating_sub(rss_base) / (1024 * 1024)
+    );
 
     // ── Scan: read every Quin record, accumulate checksum ────────────────────
     // This mirrors the hot path in webizen_bytecode::execute_program —
@@ -74,11 +80,15 @@ fn main() {
     let elapsed = t_start.elapsed();
     let rss_peak = rss_bytes(&mut sys, pid);
 
-    println!("RSS after scan  {:>7} MB  (Δ +{} MB)  ← peak",
+    println!(
+        "RSS after scan  {:>7} MB  (Δ +{} MB)  ← peak",
         rss_peak / (1024 * 1024),
-        rss_peak.saturating_sub(rss_base) / (1024 * 1024));
-    println!("Throughput      {:.1} MB/s",
-        shard_bytes as f64 / elapsed.as_secs_f64() / (1024.0 * 1024.0));
+        rss_peak.saturating_sub(rss_base) / (1024 * 1024)
+    );
+    println!(
+        "Throughput      {:.1} MB/s",
+        shard_bytes as f64 / elapsed.as_secs_f64() / (1024.0 * 1024.0)
+    );
     println!("Elapsed         {:.3} s", elapsed.as_secs_f64());
     println!("Checksum        0x{checksum:016x}  (non-zero ⇒ scan was real)");
 
@@ -90,15 +100,17 @@ fn main() {
 
     // ── Constraint verdict ───────────────────────────────────────────────────
     let ceiling_mb = RSS_CEILING_BYTES / (1024 * 1024);
-    let peak_mb    = rss_peak / (1024 * 1024);
+    let peak_mb = rss_peak / (1024 * 1024);
 
     if rss_peak <= RSS_CEILING_BYTES {
         println!("PASS  peak {peak_mb} MB ≤ {ceiling_mb} MB ceiling");
         std::process::exit(0);
     } else {
-        eprintln!("FAIL  peak {peak_mb} MB EXCEEDS {ceiling_mb} MB ceiling  \
+        eprintln!(
+            "FAIL  peak {peak_mb} MB EXCEEDS {ceiling_mb} MB ceiling  \
                    (overshoot: {} MB)",
-            peak_mb - ceiling_mb);
+            peak_mb - ceiling_mb
+        );
         std::process::exit(1);
     }
 }

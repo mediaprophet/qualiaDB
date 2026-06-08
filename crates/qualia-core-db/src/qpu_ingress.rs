@@ -11,8 +11,13 @@ pub enum QpuIngressError {
 }
 
 /// D-Wave sample: binary assignment per variable.
-pub fn parse_dwave_samples(json: &str, out_bits: &mut [u8; MAX_QPU_SAMPLES], out_len: &mut usize) -> Result<(), QpuIngressError> {
-    let v: serde_json::Value = serde_json::from_str(json).map_err(|_| QpuIngressError::InvalidPayload)?;
+pub fn parse_dwave_samples(
+    json: &str,
+    out_bits: &mut [u8; MAX_QPU_SAMPLES],
+    out_len: &mut usize,
+) -> Result<(), QpuIngressError> {
+    let v: serde_json::Value =
+        serde_json::from_str(json).map_err(|_| QpuIngressError::InvalidPayload)?;
     let samples = v
         .pointer("/solutions/0/solutions")
         .or_else(|| v.pointer("/samples"))
@@ -48,8 +53,13 @@ pub fn parse_dwave_samples(json: &str, out_bits: &mut [u8; MAX_QPU_SAMPLES], out
 }
 
 /// IBM job result: quasi-probability bitstrings or counts.
-pub fn parse_ibm_counts(json: &str, out_bits: &mut [u8; MAX_QPU_SAMPLES], out_len: &mut usize) -> Result<(), QpuIngressError> {
-    let v: serde_json::Value = serde_json::from_str(json).map_err(|_| QpuIngressError::InvalidPayload)?;
+pub fn parse_ibm_counts(
+    json: &str,
+    out_bits: &mut [u8; MAX_QPU_SAMPLES],
+    out_len: &mut usize,
+) -> Result<(), QpuIngressError> {
+    let v: serde_json::Value =
+        serde_json::from_str(json).map_err(|_| QpuIngressError::InvalidPayload)?;
     let counts = v
         .pointer("/results/0/data/counts")
         .or_else(|| v.pointer("/counts"))

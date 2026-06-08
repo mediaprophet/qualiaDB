@@ -9,7 +9,10 @@ pub const ISOLATED_CONTEXT_PREFIX: u64 = q_hash("q42:isolated");
 #[derive(Debug, PartialEq, Eq)]
 pub enum ContradictionStatus {
     Consistent,
-    Isolated { severity: u8, isolation_context: u64 },
+    Isolated {
+        severity: u8,
+        isolation_context: u64,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -30,7 +33,10 @@ pub fn route_paraconsistent(
 
         for i in 0..num_consistent {
             let c = &out_consistent[i];
-            if c.context == quin.context && c.subject == quin.subject && c.predicate == quin.predicate {
+            if c.context == quin.context
+                && c.subject == quin.subject
+                && c.predicate == quin.predicate
+            {
                 if c.object != quin.object {
                     is_contradiction = true;
                     break;
@@ -43,21 +49,21 @@ pub fn route_paraconsistent(
                 return Err(ParaconsistentError::BufferOverflow);
             }
             let mut isolated_quin = quin;
-            
+
             // Passes through without re-isolation if the context is already an isolated one.
             // For testing, we assume an already isolated context has ISOLATED_CONTEXT_PREFIX
             // directly or is logically marked by the prefix.
             if quin.context != ISOLATED_CONTEXT_PREFIX {
                 isolated_quin.context ^= ISOLATED_CONTEXT_PREFIX;
             }
-            
+
             out_isolated[num_isolated] = isolated_quin;
             num_isolated += 1;
         } else {
             if num_consistent >= out_consistent.len() {
                 return Err(ParaconsistentError::BufferOverflow);
             }
-            
+
             // If it's already an isolated quin that doesn't contradict anything,
             // it passes through to out_consistent without being isolated again.
             out_consistent[num_consistent] = quin;
@@ -129,7 +135,7 @@ mod tests {
         assert_eq!(i, 1);
         assert_eq!(out_cons[0].object, 1);
         assert_eq!(out_cons[1].object, 2); // q3
-        assert_eq!(out_iso[0].object, 2);  // q2
+        assert_eq!(out_iso[0].object, 2); // q2
     }
 
     #[test]
@@ -151,7 +157,7 @@ mod tests {
     fn test_isolation_context_is_deterministic() {
         let q1 = dummy_quin(1, 1, 1, 100);
         let q2 = dummy_quin(1, 1, 2, 100);
-        
+
         let q3 = dummy_quin(5, 5, 5, 100);
         let q4 = dummy_quin(5, 5, 6, 100);
 
@@ -161,7 +167,7 @@ mod tests {
         let mut out_iso = [QualiaQuin::default(); 4];
 
         let (_, i) = route_paraconsistent(&quins, &mut out_cons, &mut out_iso).unwrap();
-        
+
         assert_eq!(i, 2);
         // Both isolated quins came from context 100, so they should have the same isolation context.
         assert_eq!(out_iso[0].context, out_iso[1].context);

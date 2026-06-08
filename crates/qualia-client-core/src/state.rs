@@ -1,10 +1,10 @@
-use std::sync::{Arc, Mutex, OnceLock};
-use std::sync::atomic::{AtomicBool, AtomicU32};
+use crate::qapp_registry;
+use qualia_core_db::rpc::TaxRecipientSuite;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
-use qualia_core_db::rpc::TaxRecipientSuite;
-use crate::qapp_registry;
+use std::sync::atomic::{AtomicBool, AtomicU32};
+use std::sync::{Arc, Mutex, OnceLock};
 
 pub static APP_STATE: OnceLock<Arc<AppState>> = OnceLock::new();
 
@@ -80,27 +80,51 @@ impl Default for AgentConfig {
 
 pub fn dirs_default_path() -> String {
     #[cfg(target_os = "windows")]
-    { std::env::var("APPDATA").map(|d| format!("{}\\QualiaData", d))
-        .unwrap_or_else(|_| "C:\\QualiaData".to_string()) }
+    {
+        std::env::var("APPDATA")
+            .map(|d| format!("{}\\QualiaData", d))
+            .unwrap_or_else(|_| "C:\\QualiaData".to_string())
+    }
     #[cfg(target_os = "macos")]
-    { std::env::var("HOME").map(|h| format!("{}/Library/Application Support/QualiaData", h))
-        .unwrap_or_else(|_| "/tmp/QualiaData".to_string()) }
+    {
+        std::env::var("HOME")
+            .map(|h| format!("{}/Library/Application Support/QualiaData", h))
+            .unwrap_or_else(|_| "/tmp/QualiaData".to_string())
+    }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    { std::env::var("HOME").map(|h| format!("{}/.local/share/QualiaData", h))
-        .unwrap_or_else(|_| "/tmp/QualiaData".to_string()) }
+    {
+        std::env::var("HOME")
+            .map(|h| format!("{}/.local/share/QualiaData", h))
+            .unwrap_or_else(|_| "/tmp/QualiaData".to_string())
+    }
 }
 
 pub fn app_meta_dir() -> PathBuf {
     #[cfg(target_os = "windows")]
-    { PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| "C:\\Users\\Default\\AppData\\Roaming".to_string())).join("Qualia") }
+    {
+        PathBuf::from(
+            std::env::var("APPDATA")
+                .unwrap_or_else(|_| "C:\\Users\\Default\\AppData\\Roaming".to_string()),
+        )
+        .join("Qualia")
+    }
     #[cfg(target_os = "macos")]
-    { PathBuf::from(std::env::var("HOME").unwrap_or_default()).join("Library/Application Support/Qualia") }
+    {
+        PathBuf::from(std::env::var("HOME").unwrap_or_default())
+            .join("Library/Application Support/Qualia")
+    }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    { PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".config/qualia") }
+    {
+        PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".config/qualia")
+    }
 }
 
-pub fn config_file_path() -> PathBuf { app_meta_dir().join("config.json") }
-pub fn identity_file_path() -> PathBuf { app_meta_dir().join("identity.json") }
+pub fn config_file_path() -> PathBuf {
+    app_meta_dir().join("config.json")
+}
+pub fn identity_file_path() -> PathBuf {
+    app_meta_dir().join("identity.json")
+}
 
 pub fn load_config_from_disk() -> AgentConfig {
     std::fs::read_to_string(config_file_path())
@@ -111,7 +135,14 @@ pub fn load_config_from_disk() -> AgentConfig {
 
 pub fn init_data_directories(storage_path: &str) {
     let base = PathBuf::from(storage_path);
-    for sub in &["Models", "Index", "Qapps", "SemanticLibrary", "Identity", "Chats"] {
+    for sub in &[
+        "Models",
+        "Index",
+        "Qapps",
+        "SemanticLibrary",
+        "Identity",
+        "Chats",
+    ] {
         let _ = std::fs::create_dir_all(base.join(sub));
     }
 }

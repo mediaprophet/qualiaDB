@@ -4,9 +4,9 @@
 //! the browser/OPFS build.  Native desktop builds use direct Rust FFI.
 
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
-use serde::{Serialize, Deserialize};
+use wasm_bindgen::prelude::*;
 
 // ─── Economics: Monte Carlo VaR ──────────────────────────────────────────────
 
@@ -33,8 +33,14 @@ pub fn run_semantic_simulation(val: JsValue) -> Result<JsValue, JsValue> {
         252,
     );
     #[derive(Serialize)]
-    struct SimResult { mean: f64, value_at_risk: f64 }
-    Ok(serde_wasm_bindgen::to_value(&SimResult { mean, value_at_risk })?)
+    struct SimResult {
+        mean: f64,
+        value_at_risk: f64,
+    }
+    Ok(serde_wasm_bindgen::to_value(&SimResult {
+        mean,
+        value_at_risk,
+    })?)
 }
 
 // ─── Bioinformatics: sequence alignment ──────────────────────────────────────
@@ -89,10 +95,8 @@ pub struct FastaParams {
 #[wasm_bindgen]
 pub fn validate_fasta_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let params: FastaParams = serde_wasm_bindgen::from_value(val)?;
-    let record = crate::bioinformatics::validate_fasta_record(
-        &params.header,
-        params.sequence.as_bytes(),
-    );
+    let record =
+        crate::bioinformatics::validate_fasta_record(&params.header, params.sequence.as_bytes());
     #[derive(Serialize)]
     struct FastaResult {
         is_valid: bool,
@@ -125,18 +129,22 @@ pub struct FraminghamParams {
 #[wasm_bindgen]
 pub fn compute_framingham_risk_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: FraminghamParams = serde_wasm_bindgen::from_value(val)?;
-    let result = crate::clinical_engine::framingham_10yr_risk(&crate::clinical_engine::FraminghamInput {
-        age: p.age,
-        sex_male: p.sex_male,
-        total_cholesterol_mmol: p.total_cholesterol_mmol,
-        hdl_cholesterol_mmol: p.hdl_cholesterol_mmol,
-        systolic_bp: p.systolic_bp,
-        bp_treated: p.bp_treated,
-        current_smoker: p.current_smoker,
-        diabetic: p.diabetic,
-    });
+    let result =
+        crate::clinical_engine::framingham_10yr_risk(&crate::clinical_engine::FraminghamInput {
+            age: p.age,
+            sex_male: p.sex_male,
+            total_cholesterol_mmol: p.total_cholesterol_mmol,
+            hdl_cholesterol_mmol: p.hdl_cholesterol_mmol,
+            systolic_bp: p.systolic_bp,
+            bp_treated: p.bp_treated,
+            current_smoker: p.current_smoker,
+            diabetic: p.diabetic,
+        });
     #[derive(Serialize)]
-    struct RiskResult { risk_10yr_pct: f64, category: String }
+    struct RiskResult {
+        risk_10yr_pct: f64,
+        category: String,
+    }
     Ok(serde_wasm_bindgen::to_value(&RiskResult {
         risk_10yr_pct: result.risk_10yr * 100.0,
         category: format!("{:?}", result.category),
@@ -159,15 +167,21 @@ pub struct FhirObsParams {
 #[wasm_bindgen]
 pub fn validate_fhir_observation_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: FhirObsParams = serde_wasm_bindgen::from_value(val)?;
-    let result = crate::clinical_engine::validate_fhir_observation(&crate::clinical_engine::FhirObservation {
-        loinc_code: p.loinc_code,
-        value: p.value,
-        unit_ucum: p.unit_ucum,
-        reference_low: p.reference_low,
-        reference_high: p.reference_high,
-    });
+    let result = crate::clinical_engine::validate_fhir_observation(
+        &crate::clinical_engine::FhirObservation {
+            loinc_code: p.loinc_code,
+            value: p.value,
+            unit_ucum: p.unit_ucum,
+            reference_low: p.reference_low,
+            reference_high: p.reference_high,
+        },
+    );
     #[derive(Serialize)]
-    struct ValidationResult { is_valid: bool, status: String, interpretation_code: String }
+    struct ValidationResult {
+        is_valid: bool,
+        status: String,
+        interpretation_code: String,
+    }
     Ok(serde_wasm_bindgen::to_value(&ValidationResult {
         is_valid: result.is_valid,
         status: format!("{:?}", result.status),
@@ -188,14 +202,24 @@ pub struct DrugInteractionParams {
 #[wasm_bindgen]
 pub fn check_drug_interactions_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: DrugInteractionParams = serde_wasm_bindgen::from_value(val)?;
-    let hashes: Vec<u64> = p.medications.iter().map(|m| crate::q_hash(m.to_lowercase().as_str())).collect();
+    let hashes: Vec<u64> = p
+        .medications
+        .iter()
+        .map(|m| crate::q_hash(m.to_lowercase().as_str()))
+        .collect();
     let interactions = crate::clinical_engine::check_drug_interactions(&hashes);
     #[derive(Serialize)]
-    struct Interaction { mechanism: String, severity: String }
-    let result: Vec<Interaction> = interactions.iter().map(|i| Interaction {
-        mechanism: i.mechanism.to_string(),
-        severity: format!("{:?}", i.severity),
-    }).collect();
+    struct Interaction {
+        mechanism: String,
+        severity: String,
+    }
+    let result: Vec<Interaction> = interactions
+        .iter()
+        .map(|i| Interaction {
+            mechanism: i.mechanism.to_string(),
+            severity: format!("{:?}", i.severity),
+        })
+        .collect();
     Ok(serde_wasm_bindgen::to_value(&result)?)
 }
 
@@ -209,17 +233,20 @@ pub fn predict_receptor_binding_wasm() -> f64 {
     let demo_molecule = crate::QualiaQuin {
         subject: crate::q_hash("demo:ligand"),
         predicate: crate::q_hash("HAS_ELECTRON"),
-        object: 0, context: 0, metadata: 0, parity: 0,
+        object: 0,
+        context: 0,
+        metadata: 0,
+        parity: 0,
     };
     let demo_receptor = crate::QualiaQuin {
         subject: crate::q_hash("demo:receptor"),
         predicate: crate::q_hash("HAS_ELECTRON"),
-        object: 0, context: 0, metadata: 0, parity: 0,
+        object: 0,
+        context: 0,
+        metadata: 0,
+        parity: 0,
     };
-    crate::quantum_dft::pinn_predict_receptor_binding(
-        &[demo_molecule],
-        &[demo_receptor],
-    )
+    crate::quantum_dft::pinn_predict_receptor_binding(&[demo_molecule], &[demo_receptor])
 }
 
 // ─── Organic chemistry ────────────────────────────────────────────────────────
@@ -236,24 +263,39 @@ pub fn compute_molecular_descriptors_wasm(val: JsValue) -> Result<JsValue, JsVal
     let p: SmilesParams = serde_wasm_bindgen::from_value(val)?;
     let mol = crate::organic_chemistry::parse_smiles(&p.smiles);
     if !mol.is_valid {
-        return Err(JsValue::from_str(&mol.error.unwrap_or_else(|| "Invalid SMILES".into())));
+        return Err(JsValue::from_str(
+            &mol.error.unwrap_or_else(|| "Invalid SMILES".into()),
+        ));
     }
     let d = crate::organic_chemistry::compute_descriptors(&mol);
     #[derive(Serialize)]
     struct Desc {
-        molecular_weight: f64, formula: String, heavy_atom_count: usize,
-        hb_donors: u32, hb_acceptors: u32, rotatable_bonds: u32,
-        aromatic_ring_count: u32, ring_count: u32,
-        logp_crippen: f64, tpsa_ertl: f64,
-        chiral_centers: u32, fraction_csp3: f64,
+        molecular_weight: f64,
+        formula: String,
+        heavy_atom_count: usize,
+        hb_donors: u32,
+        hb_acceptors: u32,
+        rotatable_bonds: u32,
+        aromatic_ring_count: u32,
+        ring_count: u32,
+        logp_crippen: f64,
+        tpsa_ertl: f64,
+        chiral_centers: u32,
+        fraction_csp3: f64,
     }
     Ok(serde_wasm_bindgen::to_value(&Desc {
-        molecular_weight: d.molecular_weight, formula: d.formula,
-        heavy_atom_count: d.heavy_atom_count, hb_donors: d.hb_donors,
-        hb_acceptors: d.hb_acceptors, rotatable_bonds: d.rotatable_bonds,
-        aromatic_ring_count: d.aromatic_ring_count, ring_count: d.ring_count,
-        logp_crippen: d.logp_crippen, tpsa_ertl: d.tpsa_ertl,
-        chiral_centers: d.chiral_centers, fraction_csp3: d.fraction_csp3,
+        molecular_weight: d.molecular_weight,
+        formula: d.formula,
+        heavy_atom_count: d.heavy_atom_count,
+        hb_donors: d.hb_donors,
+        hb_acceptors: d.hb_acceptors,
+        rotatable_bonds: d.rotatable_bonds,
+        aromatic_ring_count: d.aromatic_ring_count,
+        ring_count: d.ring_count,
+        logp_crippen: d.logp_crippen,
+        tpsa_ertl: d.tpsa_ertl,
+        chiral_centers: d.chiral_centers,
+        fraction_csp3: d.fraction_csp3,
     })?)
 }
 
@@ -269,15 +311,30 @@ pub fn evaluate_lipinski_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let ega = crate::organic_chemistry::evaluate_egan(&desc);
     #[derive(Serialize)]
     struct Filters {
-        lipinski_passes: bool, lipinski_violations: u8,
-        veber_passes: bool, ghose_passes: bool, egan_passes: bool,
-        mw: f64, logp: f64, tpsa: f64, hbd: u32, hba: u32, rot_bonds: u32,
+        lipinski_passes: bool,
+        lipinski_violations: u8,
+        veber_passes: bool,
+        ghose_passes: bool,
+        egan_passes: bool,
+        mw: f64,
+        logp: f64,
+        tpsa: f64,
+        hbd: u32,
+        hba: u32,
+        rot_bonds: u32,
     }
     Ok(serde_wasm_bindgen::to_value(&Filters {
-        lipinski_passes: lip.passes, lipinski_violations: lip.violations,
-        veber_passes: veb.passes, ghose_passes: gho.passes, egan_passes: ega.passes,
-        mw: desc.molecular_weight, logp: desc.logp_crippen, tpsa: desc.tpsa_ertl,
-        hbd: desc.hb_donors, hba: desc.hb_acceptors, rot_bonds: desc.rotatable_bonds,
+        lipinski_passes: lip.passes,
+        lipinski_violations: lip.violations,
+        veber_passes: veb.passes,
+        ghose_passes: gho.passes,
+        egan_passes: ega.passes,
+        mw: desc.molecular_weight,
+        logp: desc.logp_crippen,
+        tpsa: desc.tpsa_ertl,
+        hbd: desc.hb_donors,
+        hba: desc.hb_acceptors,
+        rot_bonds: desc.rotatable_bonds,
     })?)
 }
 
@@ -287,12 +344,22 @@ pub fn detect_functional_groups_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: SmilesParams = serde_wasm_bindgen::from_value(val)?;
     let mol = crate::organic_chemistry::parse_smiles(&p.smiles);
     let groups: Vec<String> = crate::organic_chemistry::detect_functional_groups(&mol)
-        .iter().map(|g| format!("{:?}", g)).collect();
+        .iter()
+        .map(|g| format!("{:?}", g))
+        .collect();
     let pkas: Vec<(String, f64, bool)> = crate::organic_chemistry::estimate_pka(&mol)
-        .iter().map(|p| (format!("{:?}", p.group), p.pka, p.is_acid)).collect();
+        .iter()
+        .map(|p| (format!("{:?}", p.group), p.pka, p.is_acid))
+        .collect();
     #[derive(Serialize)]
-    struct GroupResult { functional_groups: Vec<String>, pka_estimates: Vec<(String, f64, bool)> }
-    Ok(serde_wasm_bindgen::to_value(&GroupResult { functional_groups: groups, pka_estimates: pkas })?)
+    struct GroupResult {
+        functional_groups: Vec<String>,
+        pka_estimates: Vec<(String, f64, bool)>,
+    }
+    Ok(serde_wasm_bindgen::to_value(&GroupResult {
+        functional_groups: groups,
+        pka_estimates: pkas,
+    })?)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -314,10 +381,14 @@ pub struct ReactionMetricsParams {
 #[wasm_bindgen]
 pub fn compute_reaction_metrics_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: ReactionMetricsParams = serde_wasm_bindgen::from_value(val)?;
-    let reactant_mws: Vec<f64> = p.reactant_smiles.iter().map(|s| {
-        let mol = crate::organic_chemistry::parse_smiles(s);
-        crate::organic_chemistry::exact_molecular_weight(&mol)
-    }).collect();
+    let reactant_mws: Vec<f64> = p
+        .reactant_smiles
+        .iter()
+        .map(|s| {
+            let mol = crate::organic_chemistry::parse_smiles(s);
+            crate::organic_chemistry::exact_molecular_weight(&mol)
+        })
+        .collect();
     let product_mol = crate::organic_chemistry::parse_smiles(&p.product_smiles);
     let product_mw = crate::organic_chemistry::exact_molecular_weight(&product_mol);
     let ae = crate::organic_chemistry::atom_economy(&reactant_mws, product_mw);
@@ -326,16 +397,26 @@ pub fn compute_reaction_metrics_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         p.product_kg,
     );
     let gm = crate::organic_chemistry::green_metrics(
-        &reactant_mws, product_mw, &[], p.yield_fraction, p.solvent_kg, p.product_kg, 0, 0,
+        &reactant_mws,
+        product_mw,
+        &[],
+        p.yield_fraction,
+        p.solvent_kg,
+        p.product_kg,
+        0,
+        0,
     );
     #[derive(Serialize)]
     struct RxnResult {
-        atom_economy_pct: f64, e_factor: f64,
-        process_mass_intensity: f64, reaction_mass_efficiency_pct: f64,
+        atom_economy_pct: f64,
+        e_factor: f64,
+        process_mass_intensity: f64,
+        reaction_mass_efficiency_pct: f64,
         yield_corrected_ae_pct: f64,
     }
     Ok(serde_wasm_bindgen::to_value(&RxnResult {
-        atom_economy_pct: ae, e_factor: ef,
+        atom_economy_pct: ae,
+        e_factor: ef,
         process_mass_intensity: gm.process_mass_intensity,
         reaction_mass_efficiency_pct: gm.reaction_mass_efficiency_pct,
         yield_corrected_ae_pct: gm.yield_corrected_ae_pct,
@@ -359,24 +440,31 @@ pub struct ThermochemParams {
 #[wasm_bindgen]
 pub fn compute_thermochemistry_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: ThermochemParams = serde_wasm_bindgen::from_value(val)?;
-    let dg = crate::organic_chemistry::gibbs_free_energy(p.delta_h_j_mol, p.delta_s_j_mol_k, p.temp_k);
+    let dg =
+        crate::organic_chemistry::gibbs_free_energy(p.delta_h_j_mol, p.delta_s_j_mol_k, p.temp_k);
     let k_eq = crate::organic_chemistry::equilibrium_constant(dg, p.temp_k);
-    let ph = p.pka.map(|pka| crate::organic_chemistry::henderson_hasselbalch(
-        pka,
-        p.conc_base.unwrap_or(1.0),
-        p.conc_acid.unwrap_or(1.0),
-    ));
-    let k_rate = p.activation_energy_j_mol.map(|ea| crate::organic_chemistry::arrhenius_rate(
-        p.pre_exponential_a.unwrap_or(1e13), ea, p.temp_k,
-    ));
+    let ph = p.pka.map(|pka| {
+        crate::organic_chemistry::henderson_hasselbalch(
+            pka,
+            p.conc_base.unwrap_or(1.0),
+            p.conc_acid.unwrap_or(1.0),
+        )
+    });
+    let k_rate = p.activation_energy_j_mol.map(|ea| {
+        crate::organic_chemistry::arrhenius_rate(p.pre_exponential_a.unwrap_or(1e13), ea, p.temp_k)
+    });
     #[derive(Serialize)]
     struct ThermResult {
-        gibbs_energy_j_mol: f64, equilibrium_constant: f64,
-        ph: Option<f64>, rate_constant: Option<f64>,
+        gibbs_energy_j_mol: f64,
+        equilibrium_constant: f64,
+        ph: Option<f64>,
+        rate_constant: Option<f64>,
     }
     Ok(serde_wasm_bindgen::to_value(&ThermResult {
-        gibbs_energy_j_mol: dg, equilibrium_constant: k_eq,
-        ph, rate_constant: k_rate,
+        gibbs_energy_j_mol: dg,
+        equilibrium_constant: k_eq,
+        ph,
+        rate_constant: k_rate,
     })?)
 }
 
@@ -398,12 +486,20 @@ pub fn validate_shacl_constraint_wasm(val: JsValue) -> Result<JsValue, JsValue> 
     let shape = compiler.compile(
         "wasm:target",
         "wasm:property",
-        crate::shacl_compiler::ShaclCompiler::parse_constraint_pub(&p.constraint_type, p.value as f32),
+        crate::shacl_compiler::ShaclCompiler::parse_constraint_pub(
+            &p.constraint_type,
+            p.value as f32,
+        ),
         crate::shacl_compiler::ShaclSeverity::Violation,
     );
     let passes = shape.evaluate_numeric(p.target_value);
     #[derive(Serialize)]
-    struct ValidationOut { passes: bool, constraint_type: String, value: f64, target_value: f64 }
+    struct ValidationOut {
+        passes: bool,
+        constraint_type: String,
+        value: f64,
+        target_value: f64,
+    }
     Ok(serde_wasm_bindgen::to_value(&ValidationOut {
         passes,
         constraint_type: p.constraint_type,
@@ -421,19 +517,28 @@ pub fn execute_ntriples_query(query: &str, db_bytes: &[u8], max_results: usize) 
     if crate::mini_parser::compile_ntriples_to_bytecode(query.as_bytes(), &mut program).is_err() {
         return r#"{"error": "Malformed query or program too large"}"#.to_string();
     }
-    
+
     if db_bytes.len() % 48 != 0 {
         return r#"{"error": "db_bytes length must be a multiple of 48"}"#.to_string();
     }
     let quins = unsafe {
-        std::slice::from_raw_parts(db_bytes.as_ptr() as *const crate::QualiaQuin, db_bytes.len() / 48)
+        std::slice::from_raw_parts(
+            db_bytes.as_ptr() as *const crate::QualiaQuin,
+            db_bytes.len() / 48,
+        )
     };
-    
+
     let mut out = vec![crate::QualiaQuin::default(); max_results];
     match crate::webizen_bytecode::execute_program_with_stats(&program, quins, &mut out) {
         Ok(stats) => {
             #[derive(Serialize)]
-            struct MatchOut { s: String, p: String, o: String, c: String, m: String }
+            struct MatchOut {
+                s: String,
+                p: String,
+                o: String,
+                c: String,
+                m: String,
+            }
             let mut matches = Vec::new();
             for i in 0..stats.match_count {
                 matches.push(MatchOut {
@@ -445,14 +550,20 @@ pub fn execute_ntriples_query(query: &str, db_bytes: &[u8], max_results: usize) 
                 });
             }
             #[derive(Serialize)]
-            struct Res { matches: Vec<MatchOut>, vm_cycles: u64, direct_jump_ops: u64, lexicon_lookup_ops: u64 }
-            
-            serde_json::to_string(&Res { 
-                matches, 
-                vm_cycles: stats.vm_cycles, 
-                direct_jump_ops: stats.direct_jump_ops, 
-                lexicon_lookup_ops: stats.lexicon_lookup_ops 
-            }).unwrap_or_else(|_| "{}".to_string())
+            struct Res {
+                matches: Vec<MatchOut>,
+                vm_cycles: u64,
+                direct_jump_ops: u64,
+                lexicon_lookup_ops: u64,
+            }
+
+            serde_json::to_string(&Res {
+                matches,
+                vm_cycles: stats.vm_cycles,
+                direct_jump_ops: stats.direct_jump_ops,
+                lexicon_lookup_ops: stats.lexicon_lookup_ops,
+            })
+            .unwrap_or_else(|_| "{}".to_string())
         }
         Err(_) => r#"{"error": "VM execution error"}"#.to_string(),
     }
@@ -467,30 +578,51 @@ pub fn compile_query_to_json(query: &str) -> String {
     use crate::query_compiler::QueryCompiler;
 
     #[derive(Serialize)]
-    struct InstructionOut { op: String }
+    struct InstructionOut {
+        op: String,
+    }
     #[derive(Serialize)]
-    struct ProgramOut { source: &'static str, compiled_len: usize, instructions: Vec<InstructionOut> }
+    struct ProgramOut {
+        source: &'static str,
+        compiled_len: usize,
+        instructions: Vec<InstructionOut>,
+    }
 
     // Try SPARQL / JSON-LD / N3 path first (has WHERE { } block)
     let bytecode = QueryCompiler::compile_to_bytecode(query);
     if !bytecode.is_empty() {
-        let instructions: Vec<InstructionOut> = bytecode.iter()
-            .map(|op| InstructionOut { op: format!("{:?}", op) })
+        let instructions: Vec<InstructionOut> = bytecode
+            .iter()
+            .map(|op| InstructionOut {
+                op: format!("{:?}", op),
+            })
             .collect();
         let compiled_len = instructions.len();
-        return serde_json::to_string(&ProgramOut { source: "query_compiler", compiled_len, instructions })
-            .unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string());
+        return serde_json::to_string(&ProgramOut {
+            source: "query_compiler",
+            compiled_len,
+            instructions,
+        })
+        .unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string());
     }
 
     // Fall back to N-Triples mini_parser pattern
     let mut program = [0u8; 1024];
     match crate::mini_parser::compile_ntriples_to_bytecode(query.as_bytes(), &mut program) {
         Ok(len) => {
-            let instructions: Vec<InstructionOut> = program[..len].iter().enumerate()
-                .map(|(i, &b)| InstructionOut { op: format!("byte[{}]={:#04x}", i, b) })
+            let instructions: Vec<InstructionOut> = program[..len]
+                .iter()
+                .enumerate()
+                .map(|(i, &b)| InstructionOut {
+                    op: format!("byte[{}]={:#04x}", i, b),
+                })
                 .collect();
-            serde_json::to_string(&ProgramOut { source: "mini_parser", compiled_len: len, instructions })
-                .unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string())
+            serde_json::to_string(&ProgramOut {
+                source: "mini_parser",
+                compiled_len: len,
+                instructions,
+            })
+            .unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string())
         }
         Err(e) => format!(r#"{{"error":"compilation failed: {:?}"}}"#, e),
     }
@@ -501,7 +633,11 @@ pub fn compile_query_to_json(query: &str) -> String {
 pub fn parse_turtle_wasm(payload: &str) -> JsValue {
     use rio_api::parser::TriplesParser;
     #[derive(Serialize)]
-    struct QOut { subject: String, predicate: String, object: String }
+    struct QOut {
+        subject: String,
+        predicate: String,
+        object: String,
+    }
 
     let cursor = std::io::Cursor::new(payload.as_bytes());
     let mut parser = rio_turtle::TurtleParser::new(cursor, None);
@@ -525,22 +661,32 @@ pub fn parse_turtle_wasm(payload: &str) -> JsValue {
 #[wasm_bindgen]
 pub fn parse_n3logic_wasm(payload: &str) -> JsValue {
     #[derive(Serialize)]
-    struct QOut { subject: String, predicate: String, object: String }
+    struct QOut {
+        subject: String,
+        predicate: String,
+        object: String,
+    }
 
     let cursor = std::io::Cursor::new(payload.as_bytes());
     let mut parser = crate::n3_parser::N3Parser::new(cursor);
     let mut triples = Vec::new();
-    
+
     let on_n3_event = |event: crate::n3_parser::N3Event| -> Result<(), std::io::Error> {
         if let crate::n3_parser::N3Event::StaticTriple(triple) = event {
             let s = match triple.subject {
-                crate::n3_parser::Term::Uri(s) | crate::n3_parser::Term::Variable(s) | crate::n3_parser::Term::Literal(s) => s,
+                crate::n3_parser::Term::Uri(s)
+                | crate::n3_parser::Term::Variable(s)
+                | crate::n3_parser::Term::Literal(s) => s,
             };
             let p = match triple.predicate {
-                crate::n3_parser::Term::Uri(s) | crate::n3_parser::Term::Variable(s) | crate::n3_parser::Term::Literal(s) => s,
+                crate::n3_parser::Term::Uri(s)
+                | crate::n3_parser::Term::Variable(s)
+                | crate::n3_parser::Term::Literal(s) => s,
             };
             let o = match triple.object {
-                crate::n3_parser::Term::Uri(s) | crate::n3_parser::Term::Variable(s) | crate::n3_parser::Term::Literal(s) => s,
+                crate::n3_parser::Term::Uri(s)
+                | crate::n3_parser::Term::Variable(s)
+                | crate::n3_parser::Term::Literal(s) => s,
             };
             triples.push(QOut {
                 subject: s,
@@ -550,7 +696,7 @@ pub fn parse_n3logic_wasm(payload: &str) -> JsValue {
         }
         Ok(())
     };
-    
+
     if parser.parse_all(on_n3_event).is_err() {
         return JsValue::NULL;
     }
@@ -564,7 +710,12 @@ pub fn parse_cbor_ld_wasm(payload: &[u8]) -> JsValue {
     match crate::cbor_compiler::parse_cbor_ld_to_quin(payload) {
         Ok(q) => {
             #[derive(Serialize)]
-            struct QOut { subject: String, predicate: String, object: String, context: String }
+            struct QOut {
+                subject: String,
+                predicate: String,
+                object: String,
+                context: String,
+            }
             let out = QOut {
                 subject: q.subject.to_string(),
                 predicate: q.predicate.to_string(),
@@ -573,7 +724,7 @@ pub fn parse_cbor_ld_wasm(payload: &[u8]) -> JsValue {
             };
             serde_wasm_bindgen::to_value(&out).unwrap_or(JsValue::NULL)
         }
-        Err(_) => JsValue::NULL
+        Err(_) => JsValue::NULL,
     }
 }
 
@@ -590,7 +741,11 @@ pub struct JsonLdFlatTriple {
 pub fn parse_json_wasm(payload: &str) -> JsValue {
     if let Ok(triples) = serde_json::from_str::<Vec<JsonLdFlatTriple>>(payload) {
         #[derive(Serialize)]
-        struct QOut { subject: String, predicate: String, object: String }
+        struct QOut {
+            subject: String,
+            predicate: String,
+            object: String,
+        }
 
         let mut out = Vec::new();
         for t in triples {
@@ -662,5 +817,6 @@ pub fn get_engine_info() -> Result<JsValue, JsValue> {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn list_capabilities_wasm() -> Result<JsValue, JsValue> {
-    serde_wasm_bindgen::to_value(WASM_CAPABILITY_REGISTRY).map_err(|e| JsValue::from_str(&e.to_string()))
+    serde_wasm_bindgen::to_value(WASM_CAPABILITY_REGISTRY)
+        .map_err(|e| JsValue::from_str(&e.to_string()))
 }

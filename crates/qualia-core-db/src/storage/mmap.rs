@@ -1,6 +1,6 @@
+use crate::QualiaQuin;
 use memmap2::MmapMut;
 use std::fs::OpenOptions;
-use crate::QualiaQuin;
 
 pub struct MmapStore {
     mmap: MmapMut,
@@ -73,7 +73,7 @@ mod tests {
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path().to_str().unwrap();
         let mut store = MmapStore::open(path, 10).unwrap();
-        
+
         let quin = QualiaQuin {
             subject: 1,
             predicate: 2,

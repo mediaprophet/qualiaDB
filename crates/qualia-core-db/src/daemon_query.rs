@@ -26,7 +26,8 @@ pub fn execute_ntriples_pattern_on_graph(
     }
 
     let mut program = [0u8; 1024];
-    if let Err(parse_err) = crate::mini_parser::compile_ntriples_to_bytecode(trimmed.as_bytes(), &mut program)
+    if let Err(parse_err) =
+        crate::mini_parser::compile_ntriples_to_bytecode(trimmed.as_bytes(), &mut program)
     {
         return Err(QueryExecError::ParseError(format!("{parse_err:?}")));
     }
@@ -49,14 +50,18 @@ pub fn execute_ntriples_pattern_on_graph(
 }
 
 /// Metrics-only path for WebSocket benchmarks (no result serialisation).
-pub fn execute_ntriples_metrics(query: &str, graph: &[QualiaQuin]) -> Result<ExecutionStats, QueryExecError> {
+pub fn execute_ntriples_metrics(
+    query: &str,
+    graph: &[QualiaQuin],
+) -> Result<ExecutionStats, QueryExecError> {
     let trimmed = query.trim();
     if trimmed.is_empty() {
         return Err(QueryExecError::EmptyQuery);
     }
 
     let mut program = [0u8; 1024];
-    if let Err(parse_err) = crate::mini_parser::compile_ntriples_to_bytecode(trimmed.as_bytes(), &mut program)
+    if let Err(parse_err) =
+        crate::mini_parser::compile_ntriples_to_bytecode(trimmed.as_bytes(), &mut program)
     {
         return Err(QueryExecError::ParseError(format!("{parse_err:?}")));
     }

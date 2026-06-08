@@ -176,7 +176,9 @@ pub fn create_fragment_from_selection(
 ) -> Result<ChatFragment, ChatError> {
     let start = anchor_start.min(message_content.len() as u32);
     let end = anchor_end.max(start).min(message_content.len() as u32);
-    let anchor_text = message_content[start as usize..end as usize].trim().to_string();
+    let anchor_text = message_content[start as usize..end as usize]
+        .trim()
+        .to_string();
     if anchor_text.is_empty() {
         return Err(ChatError::InvalidSession(
             "Selected fragment is empty.".to_string(),
@@ -191,7 +193,10 @@ pub fn create_fragment_from_selection(
         anchor_start: start,
         anchor_end: end,
         anchor_text,
-        author_did: profile.sharing.share_public_did.then(|| profile.public_did.clone()),
+        author_did: profile
+            .sharing
+            .share_public_did
+            .then(|| profile.public_did.clone()),
         author_name: profile
             .sharing
             .share_display_name
@@ -260,7 +265,12 @@ pub fn link_reply_to_fragment(
     append_jsonl(&edges_path(storage_root, session_id), &edge)?;
 
     let wal_path = storage_root.join("Chats").join(session_id).join("chat.wal");
-    let quin = build_reply_edge_quin(session_id, &child_id, parent_fragment_id, reply_message_lamport);
+    let quin = build_reply_edge_quin(
+        session_id,
+        &child_id,
+        parent_fragment_id,
+        reply_message_lamport,
+    );
     let mut wal = WriteAheadLog::open(&wal_path)
         .map_err(|e| ChatError::Wal(format!("Cannot open chat.wal: {e}")))?;
     wal.append_mutation(&quin)
@@ -283,31 +293,26 @@ pub fn build_thread_context_block(
     let mut depth = 0;
 
     while depth < max_depth {
-        let fragment = graph
-            .fragments
-            .iter()
-            .find(|f| f.fragment_id == current);
+        let fragment = graph.fragments.iter().find(|f| f.fragment_id == current);
         if let Some(f) = fragment {
             lines.push(format!(
                 "fragment {} (msg #{}) anchor=\"{}\"",
                 f.fragment_id, f.message_lamport, f.anchor_text
             ));
-            if let Some(msg) = session.messages.iter().find(|m| m.lamport == f.message_lamport) {
-                let author = msg
-                    .author_name
-                    .as_deref()
-                    .unwrap_or(match msg.role {
-                        Role::User => "user",
-                        Role::Agent => "agent",
-                    });
+            if let Some(msg) = session
+                .messages
+                .iter()
+                .find(|m| m.lamport == f.message_lamport)
+            {
+                let author = msg.author_name.as_deref().unwrap_or(match msg.role {
+                    Role::User => "user",
+                    Role::Agent => "agent",
+                });
                 lines.push(format!("  full_message[{author}]: {}", msg.content));
             }
         }
 
-        let parent_edge = graph
-            .edges
-            .iter()
-            .find(|e| e.child_fragment_id == current);
+        let parent_edge = graph.edges.iter().find(|e| e.child_fragment_id == current);
         match parent_edge {
             Some(e) => {
                 current = e.parent_fragment_id.clone();
@@ -330,10 +335,7 @@ pub fn build_thread_context_block(
                 .iter()
                 .find(|m| m.lamport == e.reply_message_lamport)
             {
-                let branch = e
-                    .branch_emoji
-                    .as_deref()
-                    .unwrap_or("💬");
+                let branch = e.branch_emoji.as_deref().unwrap_or("💬");
                 let label = e.branch_label.as_deref().unwrap_or("Comment");
                 lines.push(format!(
                     "  → {branch} {label} msg #{}: {}",

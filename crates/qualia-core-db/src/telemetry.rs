@@ -1,5 +1,5 @@
 //! Deterministic Compute Metering (Permissive Commons)
-//! Tracks implicit hardware cycles entirely without heap allocation 
+//! Tracks implicit hardware cycles entirely without heap allocation
 //! or high-latency OS-level hardware sensors.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -43,25 +43,40 @@ pub fn export_prometheus_metrics<W: std::io::Write>(mut writer: W) -> std::io::R
     let vm = VM_CYCLES_COUNT.load(Ordering::Relaxed);
     let flops = ATOMIC_FLOPS_COUNT.load(Ordering::Relaxed);
     let steps = ATOMIC_INTEGRATION_STEPS.load(Ordering::Relaxed);
-    
+
     // Write out Prometheus metrics in text format directly (zero heap allocation)
-    write!(writer, "# HELP qualia_superblock_io_total Total NVMe SuperBlock flushes\n")?;
+    write!(
+        writer,
+        "# HELP qualia_superblock_io_total Total NVMe SuperBlock flushes\n"
+    )?;
     write!(writer, "# TYPE qualia_superblock_io_total counter\n")?;
     write!(writer, "qualia_superblock_io_total {}\n", io)?;
 
-    write!(writer, "# HELP qualia_sieve_ops_total GPU/NPU mask operations\n")?;
+    write!(
+        writer,
+        "# HELP qualia_sieve_ops_total GPU/NPU mask operations\n"
+    )?;
     write!(writer, "# TYPE qualia_sieve_ops_total counter\n")?;
     write!(writer, "qualia_sieve_ops_total {}\n", sieve)?;
 
-    write!(writer, "# HELP qualia_vm_cycles_total Webizen VM opcodes evaluated\n")?;
+    write!(
+        writer,
+        "# HELP qualia_vm_cycles_total Webizen VM opcodes evaluated\n"
+    )?;
     write!(writer, "# TYPE qualia_vm_cycles_total counter\n")?;
     write!(writer, "qualia_vm_cycles_total {}\n", vm)?;
 
-    write!(writer, "# HELP qualia_atomic_flops_total Atomic integration float ops\n")?;
+    write!(
+        writer,
+        "# HELP qualia_atomic_flops_total Atomic integration float ops\n"
+    )?;
     write!(writer, "# TYPE qualia_atomic_flops_total counter\n")?;
     write!(writer, "qualia_atomic_flops_total {}\n", flops)?;
 
-    write!(writer, "# HELP qualia_atomic_steps_total Total integration steps\n")?;
+    write!(
+        writer,
+        "# HELP qualia_atomic_steps_total Total integration steps\n"
+    )?;
     write!(writer, "# TYPE qualia_atomic_steps_total counter\n")?;
     write!(writer, "qualia_atomic_steps_total {}\n", steps)?;
 
@@ -89,11 +104,11 @@ mod tests {
     #[test]
     fn test_telemetry_atomics() {
         reset_telemetry();
-        
+
         SUPERBLOCK_IO_COUNT.fetch_add(1, Ordering::Relaxed);
         SIEVE_OPS_COUNT.fetch_add(5, Ordering::Relaxed);
         VM_CYCLES_COUNT.fetch_add(100, Ordering::Relaxed);
-        
+
         let (io, sieve, vm) = get_telemetry_snapshot();
         assert_eq!(io, 1);
         assert_eq!(sieve, 5);
