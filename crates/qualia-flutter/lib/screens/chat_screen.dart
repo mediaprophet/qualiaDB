@@ -48,7 +48,6 @@ class ChatScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
-
   final TextEditingController _promptController = TextEditingController();
 
   final ScrollController _scrollController = ScrollController();
@@ -82,26 +81,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   StreamSubscription<String>? _streamSub;
 
-
-
   @override
-
   void initState() {
-
     super.initState();
 
     ChatSpeechService.instance.init().then((ok) {
-
       if (mounted) setState(() => _speechReady = ok);
-
     });
 
     _initSession();
-    _relayTimer = Timer.periodic(const Duration(seconds: 4), (_) => _pullRelay());
+    _relayTimer =
+        Timer.periodic(const Duration(seconds: 4), (_) => _pullRelay());
     _loadBranchTypes();
     _loadOwnerDid();
     _syncActiveModelFromRust();
-
   }
 
   Future<void> _syncActiveModelFromRust({bool force = false}) async {
@@ -152,11 +145,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     for (var i = 0; i < _messages.length; i++) {
       final m = _messages[i];
       final agreementId = m.suspendedAgreementId;
-      if (!m.walSuspended || agreementId == null || m.guardianRatified) continue;
+      if (!m.walSuspended || agreementId == null || m.guardianRatified)
+        continue;
       try {
-        final ratified = await api.isAgreementRatified(agreementId: agreementId);
+        final ratified = await api.isAgreementRatified(
+          agreementId: BigInt.from(agreementId),
+        );
         if (ratified) {
-          _messages[i] = m.copyWith(guardianRatified: true, walSuspended: false);
+          _messages[i] =
+              m.copyWith(guardianRatified: true, walSuspended: false);
           changed = true;
         }
       } catch (_) {}
@@ -383,14 +380,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           branchTypeId: branchTypeId,
         );
       } else {
-        await chat.appendChatMessage(sessionId: id, role: role, content: content);
+        await chat.appendChatMessage(
+            sessionId: id, role: role, content: content);
       }
     } catch (e) {
       debugPrint('Failed to persist chat message: $e');
     }
   }
 
-  void _onTextSelected(int messageIndex, BigInt lamport, String content, TextSelection selection) {
+  void _onTextSelected(int messageIndex, BigInt lamport, String content,
+      TextSelection selection) {
     if (selection.start == selection.end) return;
     final start = selection.start.clamp(0, content.length);
     final end = selection.end.clamp(start, content.length);
@@ -450,12 +449,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
-
-
   @override
-
   void dispose() {
-
     _streamSub?.cancel();
     _relayTimer?.cancel();
 
@@ -464,10 +459,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _scrollController.dispose();
 
     super.dispose();
-
   }
-
-
 
   Future<void> _attachChatFile() async {
     final sessionId = _sessionId;
@@ -475,7 +467,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['txt', 'md', 'pdf', 'png', 'jpg', 'jpeg', 'webp', 'gif'],
+      allowedExtensions: [
+        'txt',
+        'md',
+        'pdf',
+        'png',
+        'jpg',
+        'jpeg',
+        'webp',
+        'gif'
+      ],
       dialogTitle: 'Attach file or image to chat',
     );
     if (result == null || result.files.single.path == null) return;
@@ -630,7 +631,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   const Expanded(
                     child: Text(
                       'Chat files',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                   ),
                   IconButton(
@@ -657,8 +659,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
     );
   }
-
-
 
   _Message? _latestMessageForRole(String role) {
     for (final message in _messages.reversed) {
@@ -937,8 +937,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (dicomFilePath != null && dicomFilePath.isNotEmpty) {
       try {
         final patientHash = qappIdHash(appId: 'did:qualia:patient:local');
-        dicomIngestJobId =
-            submitDicomIngest(filePath: dicomFilePath, patientDidHash: patientHash);
+        dicomIngestJobId = submitDicomIngest(
+            filePath: dicomFilePath, patientDidHash: patientHash);
       } catch (e) {
         debugPrint('DICOM Core-3 ingest skipped: $e');
       }
@@ -952,7 +952,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       'prompt': userPrompt.isEmpty ? null : userPrompt,
       'summary': agentReply,
       'conditions': conditions,
-      if (conditionImpactMap.isNotEmpty) 'conditionImpactMap': conditionImpactMap,
+      if (conditionImpactMap.isNotEmpty)
+        'conditionImpactMap': conditionImpactMap,
       'graphSummary': {
         'representation': 'anatomy-model',
         'complexityMode': graphSource,
@@ -969,7 +970,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         'relatedSystems': systems,
       },
       if (dicomOverlay != null) 'dicomOverlay': dicomOverlay,
-      if (dicomIngestJobId != null) 'dicomIngestJobId': dicomIngestJobId.toString(),
+      if (dicomIngestJobId != null)
+        'dicomIngestJobId': dicomIngestJobId.toString(),
       if (dicomFilePath != null) 'dicomFilePath': dicomFilePath,
       'explanationCard': {
         'title': 'Local Qualia chat handoff',
@@ -1023,7 +1025,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (path == null || path.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not read the selected DICOM path.')),
+          const SnackBar(
+              content: Text('Could not read the selected DICOM path.')),
         );
       }
       return;
@@ -1033,61 +1036,42 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _toggleMic() async {
-
     await ChatSpeechService.instance.toggleListening(
-
       onResult: (text) {
-
         if (!mounted) return;
 
         setState(() {
-
           _isListening = false;
 
           _promptController.text = text;
-
         });
 
         _sendMessage();
-
       },
-
       onError: (e) {
-
         if (mounted) {
-
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e)));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(e)));
 
           setState(() => _isListening = false);
-
         }
-
       },
-
     );
 
     setState(() => _isListening = ChatSpeechService.instance.isListening);
-
   }
 
-
-
   Future<void> _sendMessage() async {
-
     final text = _promptController.text.trim();
 
     if (text.isEmpty || _isInferring) return;
 
-
-
     setState(() {
-
       _messages.add(_Message(role: 'user', content: text));
 
       _messages.add(const _Message(role: 'agent', content: ''));
 
       _isInferring = true;
-
     });
 
     if (_pendingSelection != null && _replyToFragmentId == null) {
@@ -1109,16 +1093,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     _scrollToBottom();
 
-
-
     final agentIndex = _messages.length - 1;
 
     try {
       final qpuCmd = await api.handleEngineChatCommand(text: text);
       if (qpuCmd.handled) {
-        ref.read(qpuFeatureUnlockedProvider.notifier).setUnlocked(qpuCmd.featureUnlocked);
+        ref
+            .read(qpuFeatureUnlockedProvider.notifier)
+            .setUnlocked(qpuCmd.featureUnlocked);
         setState(() {
-          _messages[agentIndex] = _Message(role: 'agent', content: qpuCmd.response);
+          _messages[agentIndex] =
+              _Message(role: 'agent', content: qpuCmd.response);
           _isInferring = false;
         });
         unawaited(_persistMessage('agent', qpuCmd.response));
@@ -1176,22 +1161,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           }
         },
       );
-
     } catch (e) {
-
       setState(() {
-
         _messages[agentIndex] = _Message(role: 'agent', content: '[Error: $e]');
 
         _isInferring = false;
-
       });
-
     }
-
   }
-
-
 
   void _handleInferenceEvent(String line, int agentIndex) {
     try {
@@ -1225,8 +1202,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         final text = data['text'] as String? ?? _messages[agentIndex].content;
         final committed = data['committed'] as bool? ?? false;
         final blockReason = data['block_reason'] as String?;
-        final prov = (data['provenance_hashes'] as List<dynamic>? ?? const [])
-            .length;
+        final prov =
+            (data['provenance_hashes'] as List<dynamic>? ?? const []).length;
         final citations = <ChatCitation>[];
         for (final c in data['citations'] as List<dynamic>? ?? const []) {
           if (c is Map<String, dynamic>) {
@@ -1245,7 +1222,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         final shieldAlert = data['shield_alert'] as bool? ?? false;
         final axiomBoundsLabel = data['axiom_bounds_label'] as String?;
         final isShield = shieldAlert ||
-            (blockReason != null && blockReason.toLowerCase().contains('shield'));
+            (blockReason != null &&
+                blockReason.toLowerCase().contains('shield'));
 
         final display = committed
             ? text
@@ -1270,7 +1248,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             sieveTokenCount: sieveTokenCount,
             shieldAlert: isShield,
             axiomBoundsLabel: axiomBoundsLabel,
-            shieldMessage: isShield ? (blockReason ?? 'Shield intervention') : null,
+            shieldMessage:
+                isShield ? (blockReason ?? 'Shield intervention') : null,
           );
           _isInferring = false;
         });
@@ -1337,31 +1316,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _scrollToBottom() {
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-
       if (_scrollController.hasClients) {
-
         _scrollController.animateTo(
-
           _scrollController.position.maxScrollExtent,
-
           duration: const Duration(milliseconds: 200),
-
           curve: Curves.easeOut,
-
         );
-
       }
-
     });
-
   }
 
-
-
   @override
-
   Widget build(BuildContext context) {
     ref.listen<List<api.SuspendedTxView>>(pendingAffirmationsProvider, (_, __) {
       unawaited(_refreshGuardianStatuses());
@@ -1382,487 +1348,456 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         onGroupCreated: _switchSession,
       ),
       body: Column(
-
-      children: [
-
-        Material(
-          color: cs.surfaceContainerLow,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.history),
-                  tooltip: 'Chat history',
-                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                ),
-                Expanded(
-                  child: Text(
-                    _sessionTitle,
-                    style: Theme.of(context).textTheme.titleMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.share_outlined),
-                  tooltip: 'Shared ontologies (session DID)',
-                  onPressed: _sessionId == null ? null : _showSessionShares,
-                ),
-                IconButton(
-                  icon: Badge(
-                    isLabelVisible: _chatFiles.isNotEmpty,
-                    label: Text('${_chatFiles.length}'),
-                    child: const Icon(Icons.folder_open_outlined),
-                  ),
-                  tooltip: 'Chat files',
-                  onPressed: _sessionId == null ? null : _showChatFilesPanel,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.account_tree_outlined),
-                  tooltip: 'Chat graph',
-                  onPressed: _sessionId == null
-                      ? null
-                      : () => showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            builder: (_) => SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.55,
-                              child: ChatGraphPanel(sessionId: _sessionId!),
-                            ),
-                          ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.tune),
-                  tooltip: 'Chat environment',
-                  onPressed: _sessionId == null || _isInferring
-                      ? null
-                      : _openEnvironmentSheet,
-                ),
-                if (_isGroup)
-                  IconButton(
-                    icon: const Icon(Icons.smart_toy_outlined),
-                    tooltip: 'Sub-agent outcome sharing',
-                    onPressed: _isInferring || _sessionId == null
-                        ? null
-                        : _showAgentOutcomeSharing,
-                  ),
-                IconButton(
-                  icon: const Icon(Icons.group_add_outlined),
-                  tooltip: _isGroup ? 'Add friend' : 'Start group chat',
-                  onPressed: _isInferring || _sessionId == null
-                      ? null
-                      : () => _openAddFriends(createGroup: !_isGroup),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add_comment_outlined),
-                  tooltip: 'New chat',
-                  onPressed: _isInferring ? null : _startNewChat,
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        if (_participants.isNotEmpty)
+        children: [
           Material(
-            color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-            child: SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                itemCount: _participants.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 6),
-                itemBuilder: (context, i) {
-                  final p = _participants[i];
-                  return Chip(
-                    label: Text(p.displayName, style: const TextStyle(fontSize: 12)),
-                    visualDensity: VisualDensity.compact,
-                    avatar: p.role == 'owner'
-                        ? const Icon(Icons.star, size: 14)
-                        : const Icon(Icons.person_outline, size: 14),
-                  );
-                },
-              ),
-            ),
-          ),
-
-        ChatEnvironmentBar(
-          sessionId: _sessionId,
-          onTap: _sessionId == null || _isInferring ? null : _openEnvironmentSheet,
-        ),
-        const VaultHudBar(dense: true),
-
-        if (widget.modelPath.isEmpty)
-          MaterialBanner(
-            content: const Text(
-              'No active model — open Chat environment to pick an installed model, or LLM Hub to download.',
-            ),
-            leading: const Icon(Icons.memory_outlined),
-            actions: [
-              TextButton(
-                onPressed: _sessionId == null ? null : _openEnvironmentSheet,
-                child: const Text('Choose model'),
-              ),
-              TextButton(
-                onPressed: () =>
-                    ref.read(shellNavIndexProvider.notifier).state = 7,
-                child: const Text('LLM Hub'),
-              ),
-            ],
-          ),
-
-        Expanded(
-
-          child: ListView.builder(
-
-            controller: _scrollController,
-
-            padding: const EdgeInsets.all(16),
-
-            itemCount: _messages.length,
-
-            itemBuilder: (context, i) {
-
-              final m = _messages[i];
-
-              final isUser = m.role == 'user';
-
-              final display = m.content.isEmpty && _isInferring && !isUser ? '…' : m.content;
-              final authorLabel = m.authorName;
-              final replyTag = m.replyToFragment;
-              final semanticContextField =
-                  !isUser && m.semanticQuin != null && m.semanticQuin!.length > 3
-                      ? m.semanticQuin![3]
-                      : null;
-              final sensitivityStyle =
-                  resolveSensitivityStyle(context, semanticContextField);
-              final bubbleColor = isUser
-                  ? cs.primary.withValues(alpha: 0.18)
-                  : semanticContextField != null
-                      ? sensitivityStyle.background
-                      : cs.surfaceContainerHighest;
-
-              return Align(
-
-                alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-
-                child: Container(
-
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-
-                  decoration: BoxDecoration(
-
-                    color: bubbleColor,
-
-                    borderRadius: BorderRadius.circular(12),
-                    border: semanticContextField != null
-                        ? Border.all(color: sensitivityStyle.border)
-                        : null,
-
-                  ),
-
-                  child: Column(
-                    crossAxisAlignment:
-                        isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                    children: [
-                      if (authorLabel != null && authorLabel.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(
-                            authorLabel,
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: cs.secondary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ),
-                      if (!isUser && m.subAgentOf != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(
-                            m.modelId != null
-                                ? 'Sub-agent · ${m.modelId}'
-                                : 'Sub-agent of participant',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: cs.tertiary,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                          ),
-                        ),
-                      if (replyTag != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Chip(
-                            label: Text('↳ fragment ${replyTag.length > 8 ? replyTag.substring(0, 8) : replyTag}…', style: const TextStyle(fontSize: 11)),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      if (!isUser && semanticContextField != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: SensitivityBadge(
-                            contextField: semanticContextField,
-                            dense: true,
-                          ),
-                        ),
-                      if (_sessionId != null && m.lamport != null)
-                        ChatReactionBar(
-                          sessionId: _sessionId!,
-                          messageLamport: m.lamport!,
-                          reactions: _reactions[m.lamport] ?? const [],
-                          onChanged: _loadReactions,
-                        ),
-                      if (_sessionId != null)
-                        Builder(builder: (context) {
-                          final attached = _fileForLamport(m.lamport);
-                          if (attached == null || attached.mediaKind != 'image') {
-                            return const SizedBox.shrink();
-                          }
-                          return ChatImageAttachment(
-                            sessionId: _sessionId!,
-                            file: attached,
-                          );
-                        }),
-                      isUser
-                          ? (display.contains(r'$')
-                              ? MarkdownMessage(
-                                  content: display,
-                                  style: TextStyle(color: cs.onSurface),
-                                )
-                              : SelectableText(
-                                  display,
-                                  onSelectionChanged: (sel, _) =>
-                                      _onTextSelected(i, m.lamport ?? BigInt.zero, display, sel),
-                                ))
-                          : (m.semanticQuin != null && display.trim().isEmpty)
-                              ? const SizedBox.shrink()
-                              : SelectableText(
-                                  display,
-                                  onSelectionChanged: (sel, _) =>
-                                      _onTextSelected(i, m.lamport ?? BigInt.zero, display, sel),
-                                ),
-                      if (!isUser && m.shieldAlert)
-                        ShieldAlert(
-                          message: m.shieldMessage ?? m.blockReason ?? 'Shield intervention',
-                          boundsLabel: m.axiomBoundsLabel,
-                        ),
-                      if (!isUser && (m.walSuspended || m.guardianRatified))
-                        GuardianAffirmationChip(
-                          walSuspended: m.walSuspended,
-                          ratified: m.guardianRatified,
-                          agreementId: m.suspendedAgreementId,
-                        ),
-                      if (!isUser && m.semanticQuin != null)
-                        SuperQuinProvenanceChip(
-                          fields: m.semanticQuin!,
-                          walCommitted: m.walCommitted,
-                          sieveTokenCount: m.sieveTokenCount,
-                          principalLabel: _ownerDid,
-                        ),
-                      if (!isUser &&
-                          (m.semanticQuin == null || m.citations.isNotEmpty))
-                        ChatCitationChips(
-                          citations: m.citations,
-                          provenanceCount: m.provenanceCount,
-                          committed: m.committed,
-                        ),
-                    ],
-                  ),
-
-                ),
-
-              );
-
-            },
-
-          ),
-
-        ),
-
-        if (_isInferring) const LinearProgressIndicator(),
-        if (_replyAnchorPreview != null || _pendingSelection != null)
-          Material(
-            color: cs.primaryContainer.withValues(alpha: 0.35),
+            color: cs.surfaceContainerLow,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Row(
                 children: [
-                  const Icon(Icons.reply, size: 18),
-                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.history),
+                    tooltip: 'Chat history',
+                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                  ),
                   Expanded(
                     child: Text(
-                      'Reply to: ${_replyAnchorPreview ?? _pendingSelection?.text ?? ''}',
-                      maxLines: 2,
+                      _sessionTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
-                  if (_pendingSelection != null && _replyToFragmentId == null)
-                    TextButton(onPressed: _prepareReplyFragment, child: const Text('Pin')),
-                  if (_branchTypes.isNotEmpty)
-                    PopupMenuButton<String>(
-                      tooltip: 'Branch type',
-                      initialValue: _selectedBranchTypeId,
-                      onSelected: (v) => setState(() => _selectedBranchTypeId = v),
-                      itemBuilder: (_) => _branchTypes
-                          .map(
-                            (t) => PopupMenuItem(
-                              value: t.id,
-                              child: Text('${t.emoji} ${t.label}'),
+                  IconButton(
+                    icon: const Icon(Icons.share_outlined),
+                    tooltip: 'Shared ontologies (session DID)',
+                    onPressed: _sessionId == null ? null : _showSessionShares,
+                  ),
+                  IconButton(
+                    icon: Badge(
+                      isLabelVisible: _chatFiles.isNotEmpty,
+                      label: Text('${_chatFiles.length}'),
+                      child: const Icon(Icons.folder_open_outlined),
+                    ),
+                    tooltip: 'Chat files',
+                    onPressed: _sessionId == null ? null : _showChatFilesPanel,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.account_tree_outlined),
+                    tooltip: 'Chat graph',
+                    onPressed: _sessionId == null
+                        ? null
+                        : () => showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (_) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.55,
+                                child: ChatGraphPanel(sessionId: _sessionId!),
+                              ),
                             ),
-                          )
-                          .toList(),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          _branchTypeLabel(_selectedBranchTypeId),
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.tune),
+                    tooltip: 'Chat environment',
+                    onPressed: _sessionId == null || _isInferring
+                        ? null
+                        : _openEnvironmentSheet,
+                  ),
+                  if (_isGroup)
+                    IconButton(
+                      icon: const Icon(Icons.smart_toy_outlined),
+                      tooltip: 'Sub-agent outcome sharing',
+                      onPressed: _isInferring || _sessionId == null
+                          ? null
+                          : _showAgentOutcomeSharing,
                     ),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: _clearReplyTarget,
+                    icon: const Icon(Icons.group_add_outlined),
+                    tooltip: _isGroup ? 'Add friend' : 'Start group chat',
+                    onPressed: _isInferring || _sessionId == null
+                        ? null
+                        : () => _openAddFriends(createGroup: !_isGroup),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_comment_outlined),
+                    tooltip: 'New chat',
+                    onPressed: _isInferring ? null : _startNewChat,
                   ),
                 ],
               ),
             ),
           ),
-        if (_showMathKeyboard)
-          LatexMathKeyboard(
-            onInsert: (s) => insertAtCursor(_promptController, s),
-            onClose: () => setState(() => _showMathKeyboard = false),
+          if (_participants.isNotEmpty)
+            Material(
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+              child: SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  itemCount: _participants.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, i) {
+                    final p = _participants[i];
+                    return Chip(
+                      label: Text(p.displayName,
+                          style: const TextStyle(fontSize: 12)),
+                      visualDensity: VisualDensity.compact,
+                      avatar: p.role == 'owner'
+                          ? const Icon(Icons.star, size: 14)
+                          : const Icon(Icons.person_outline, size: 14),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ChatEnvironmentBar(
+            sessionId: _sessionId,
+            onTap: _sessionId == null || _isInferring
+                ? null
+                : _openEnvironmentSheet,
           ),
-        Container(
-          padding: const EdgeInsets.all(8),
-          color: cs.surface,
-          child: Row(
-            children: [
-              IconButton(
-                icon: Icon(_showMathKeyboard ? Icons.functions : Icons.calculate_outlined),
-                color: _showMathKeyboard ? cs.primary : cs.secondary,
-                tooltip: 'Math / LaTeX keyboard',
-                onPressed: _isInferring
-                    ? null
-                    : () => setState(() => _showMathKeyboard = !_showMathKeyboard),
+          const VaultHudBar(dense: true),
+          if (widget.modelPath.isEmpty)
+            MaterialBanner(
+              content: const Text(
+                'No active model — open Chat environment to pick an installed model, or LLM Hub to download.',
               ),
-              IconButton(
-                icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+              leading: const Icon(Icons.memory_outlined),
+              actions: [
+                TextButton(
+                  onPressed: _sessionId == null ? null : _openEnvironmentSheet,
+                  child: const Text('Choose model'),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      ref.read(shellNavIndexProvider.notifier).state = 7,
+                  child: const Text('LLM Hub'),
+                ),
+              ],
+            ),
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length,
+              itemBuilder: (context, i) {
+                final m = _messages[i];
 
-                color: _isListening ? Colors.redAccent : cs.secondary,
+                final isUser = m.role == 'user';
 
-                tooltip: _speechReady ? 'Voice input' : 'Speech unavailable',
+                final display = m.content.isEmpty && _isInferring && !isUser
+                    ? '…'
+                    : m.content;
+                final authorLabel = m.authorName;
+                final replyTag = m.replyToFragment;
+                final semanticContextField = !isUser &&
+                        m.semanticQuin != null &&
+                        m.semanticQuin!.length > 3
+                    ? m.semanticQuin![3]
+                    : null;
+                final sensitivityStyle =
+                    resolveSensitivityStyle(context, semanticContextField);
+                final bubbleColor = isUser
+                    ? cs.primary.withValues(alpha: 0.18)
+                    : semanticContextField != null
+                        ? sensitivityStyle.background
+                        : cs.surfaceContainerHighest;
 
-                onPressed: _speechReady && !_isInferring ? _toggleMic : null,
-
-              ),
-
-              IconButton(
-
-                icon: Icon(_ttsEnabled ? Icons.volume_up : Icons.volume_off),
-
-                tooltip: 'Toggle TTS',
-
-                onPressed: () {
-
-                  setState(() => _ttsEnabled = !_ttsEnabled);
-
-                  if (!_ttsEnabled) ChatSpeechService.instance.stopSpeaking();
-
-                },
-
-              ),
-
-              IconButton(
-                icon: const Icon(Icons.attach_file),
-                tooltip: 'Attach file or image',
-                onPressed: _isInferring ? null : _attachChatFile,
-              ),
-
-              IconButton(
-
-                icon: const Icon(Icons.biotech_outlined),
-
-                tooltip: 'Open latest reply in Anatomy',
-
-                onPressed: _isInferring ? null : () => _openLatestInAnatomy(),
-
-              ),
-
-              IconButton(
-
-                icon: const Icon(Icons.medical_services_outlined),
-
-                tooltip: 'Open in Anatomy with DICOM overlay',
-
-                onPressed: _isInferring ? null : _openLatestInAnatomyWithDicom,
-
-              ),
-
-              Expanded(
-
-                child: TextField(
-
-                  controller: _promptController,
-
-                  enabled: !_isInferring,
-
-                  decoration: const InputDecoration(
-                    hintText: 'Prompt, LaTeX (\$\$…\$\$), or [qpu:qubo]…',
-                    border: OutlineInputBorder(),
+                return Align(
+                  alignment:
+                      isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.75),
+                    decoration: BoxDecoration(
+                      color: bubbleColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: semanticContextField != null
+                          ? Border.all(color: sensitivityStyle.border)
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: isUser
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        if (authorLabel != null && authorLabel.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              authorLabel,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: cs.secondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                        if (!isUser && m.subAgentOf != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              m.modelId != null
+                                  ? 'Sub-agent · ${m.modelId}'
+                                  : 'Sub-agent of participant',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: cs.tertiary,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                            ),
+                          ),
+                        if (replyTag != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Chip(
+                              label: Text(
+                                  '↳ fragment ${replyTag.length > 8 ? replyTag.substring(0, 8) : replyTag}…',
+                                  style: const TextStyle(fontSize: 11)),
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                        if (!isUser && semanticContextField != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: SensitivityBadge(
+                              contextField: semanticContextField,
+                              dense: true,
+                            ),
+                          ),
+                        if (_sessionId != null && m.lamport != null)
+                          ChatReactionBar(
+                            sessionId: _sessionId!,
+                            messageLamport: m.lamport!,
+                            reactions: _reactions[m.lamport] ?? const [],
+                            onChanged: _loadReactions,
+                          ),
+                        if (_sessionId != null)
+                          Builder(builder: (context) {
+                            final attached = _fileForLamport(m.lamport);
+                            if (attached == null ||
+                                attached.mediaKind != 'image') {
+                              return const SizedBox.shrink();
+                            }
+                            return ChatImageAttachment(
+                              sessionId: _sessionId!,
+                              file: attached,
+                            );
+                          }),
+                        isUser
+                            ? (display.contains(r'$')
+                                ? MarkdownMessage(
+                                    content: display,
+                                    style: TextStyle(color: cs.onSurface),
+                                  )
+                                : SelectableText(
+                                    display,
+                                    onSelectionChanged: (sel, _) =>
+                                        _onTextSelected(
+                                            i,
+                                            m.lamport ?? BigInt.zero,
+                                            display,
+                                            sel),
+                                  ))
+                            : (m.semanticQuin != null && display.trim().isEmpty)
+                                ? const SizedBox.shrink()
+                                : SelectableText(
+                                    display,
+                                    onSelectionChanged: (sel, _) =>
+                                        _onTextSelected(
+                                            i,
+                                            m.lamport ?? BigInt.zero,
+                                            display,
+                                            sel),
+                                  ),
+                        if (!isUser && m.shieldAlert)
+                          ShieldAlert(
+                            message: m.shieldMessage ??
+                                m.blockReason ??
+                                'Shield intervention',
+                            boundsLabel: m.axiomBoundsLabel,
+                          ),
+                        if (!isUser && (m.walSuspended || m.guardianRatified))
+                          GuardianAffirmationChip(
+                            walSuspended: m.walSuspended,
+                            ratified: m.guardianRatified,
+                            agreementId: m.suspendedAgreementId,
+                          ),
+                        if (!isUser && m.semanticQuin != null)
+                          SuperQuinProvenanceChip(
+                            fields: m.semanticQuin!,
+                            walCommitted: m.walCommitted,
+                            sieveTokenCount: m.sieveTokenCount,
+                            principalLabel: _ownerDid,
+                          ),
+                        if (!isUser &&
+                            (m.semanticQuin == null || m.citations.isNotEmpty))
+                          ChatCitationChips(
+                            citations: m.citations,
+                            provenanceCount: m.provenanceCount,
+                            committed: m.committed,
+                          ),
+                      ],
+                    ),
                   ),
-                  maxLines: _showMathKeyboard ? 3 : 1,
-
-                  onSubmitted: (_) => _sendMessage(),
-
-                ),
-
-              ),
-
-              const SizedBox(width: 8),
-
-              if (_isInferring)
-                IconButton(
-                  icon: const Icon(Icons.stop_circle_outlined),
-                  color: cs.error,
-                  tooltip: 'Stop generation',
-                  onPressed: _stopInference,
-                ),
-
-              IconButton(
-                icon: _isInferring
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.send),
-                color: cs.primary,
-                onPressed: _isInferring ? null : _sendMessage,
-              ),
-
-            ],
-
+                );
+              },
+            ),
           ),
+          if (_isInferring) const LinearProgressIndicator(),
+          if (_replyAnchorPreview != null || _pendingSelection != null)
+            Material(
+              color: cs.primaryContainer.withValues(alpha: 0.35),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.reply, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Reply to: ${_replyAnchorPreview ?? _pendingSelection?.text ?? ''}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    if (_pendingSelection != null && _replyToFragmentId == null)
+                      TextButton(
+                          onPressed: _prepareReplyFragment,
+                          child: const Text('Pin')),
+                    if (_branchTypes.isNotEmpty)
+                      PopupMenuButton<String>(
+                        tooltip: 'Branch type',
+                        initialValue: _selectedBranchTypeId,
+                        onSelected: (v) =>
+                            setState(() => _selectedBranchTypeId = v),
+                        itemBuilder: (_) => _branchTypes
+                            .map(
+                              (t) => PopupMenuItem(
+                                value: t.id,
+                                child: Text('${t.emoji} ${t.label}'),
+                              ),
+                            )
+                            .toList(),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            _branchTypeLabel(_selectedBranchTypeId),
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ),
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: _clearReplyTarget,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_showMathKeyboard)
+            LatexMathKeyboard(
+              onInsert: (s) => insertAtCursor(_promptController, s),
+              onClose: () => setState(() => _showMathKeyboard = false),
+            ),
+          Container(
+            padding: const EdgeInsets.all(8),
+            color: cs.surface,
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(_showMathKeyboard
+                      ? Icons.functions
+                      : Icons.calculate_outlined),
+                  color: _showMathKeyboard ? cs.primary : cs.secondary,
+                  tooltip: 'Math / LaTeX keyboard',
+                  onPressed: _isInferring
+                      ? null
+                      : () => setState(
+                          () => _showMathKeyboard = !_showMathKeyboard),
+                ),
+                IconButton(
+                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                  color: _isListening ? Colors.redAccent : cs.secondary,
+                  tooltip: _speechReady ? 'Voice input' : 'Speech unavailable',
+                  onPressed: _speechReady && !_isInferring ? _toggleMic : null,
+                ),
+                IconButton(
+                  icon: Icon(_ttsEnabled ? Icons.volume_up : Icons.volume_off),
+                  tooltip: 'Toggle TTS',
+                  onPressed: () {
+                    setState(() => _ttsEnabled = !_ttsEnabled);
 
-        ),
-
-      ],
-
-    ),
+                    if (!_ttsEnabled) ChatSpeechService.instance.stopSpeaking();
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.attach_file),
+                  tooltip: 'Attach file or image',
+                  onPressed: _isInferring ? null : _attachChatFile,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.biotech_outlined),
+                  tooltip: 'Open latest reply in Anatomy',
+                  onPressed: _isInferring ? null : () => _openLatestInAnatomy(),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.medical_services_outlined),
+                  tooltip: 'Open in Anatomy with DICOM overlay',
+                  onPressed:
+                      _isInferring ? null : _openLatestInAnatomyWithDicom,
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _promptController,
+                    enabled: !_isInferring,
+                    decoration: const InputDecoration(
+                      hintText: 'Prompt, LaTeX (\$\$…\$\$), or [qpu:qubo]…',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: _showMathKeyboard ? 3 : 1,
+                    onSubmitted: (_) => _sendMessage(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_isInferring)
+                  IconButton(
+                    icon: const Icon(Icons.stop_circle_outlined),
+                    color: cs.error,
+                    tooltip: 'Stop generation',
+                    onPressed: _stopInference,
+                  ),
+                IconButton(
+                  icon: _isInferring
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send),
+                  color: cs.primary,
+                  onPressed: _isInferring ? null : _sendMessage,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
-
   }
-
 }
-
-
 
 class _PendingSelection {
   final int messageIndex;
@@ -1962,4 +1897,3 @@ class _Message {
     );
   }
 }
-
