@@ -10,6 +10,7 @@ pub struct ChatFileSharing {
     pub allow_download: bool,
     pub allow_llm_context: bool,
     pub allow_relay_sync: bool,
+    pub sensitivity_level: u8,
     pub allowed_dids: Vec<String>,
     pub expires_at: Option<u64>,
 }
@@ -32,6 +33,7 @@ pub struct ChatFileRecord {
     pub sharing: ChatFileSharing,
     pub parse_status: String,
     pub parse_error: Option<String>,
+    pub sensitivity_level: u8,
     pub media_kind: String,
     pub image_width: Option<u32>,
     pub image_height: Option<u32>,
@@ -63,11 +65,20 @@ pub struct ChatFilePreview {
 }
 
 fn parse_sharing(v: &serde_json::Value) -> ChatFileSharing {
+    let visibility = v["visibility"].as_str().unwrap_or("session_participants");
+    let inferred_sensitivity = match visibility {
+        "owner_only" => 2,
+        "session_participants" | "specific_dids" => 1,
+        _ => 0,
+    };
     ChatFileSharing {
-        visibility: v["visibility"].as_str().unwrap_or("session_participants").to_string(),
+        visibility: visibility.to_string(),
         allow_download: v["allow_download"].as_bool().unwrap_or(true),
         allow_llm_context: v["allow_llm_context"].as_bool().unwrap_or(true),
         allow_relay_sync: v["allow_relay_sync"].as_bool().unwrap_or(false),
+        sensitivity_level: v["sensitivity_level"]
+            .as_u64()
+            .unwrap_or(inferred_sensitivity) as u8,
         allowed_dids: v["allowed_dids"]
             .as_array()
             .map(|a| {
@@ -97,6 +108,7 @@ fn parse_file_record(v: &serde_json::Value) -> ChatFileRecord {
         sharing: parse_sharing(&v["sharing"]),
         parse_status: v["parse_status"].as_str().unwrap_or("unknown").to_string(),
         parse_error: v["parse_error"].as_str().map(|s| s.to_string()),
+        sensitivity_level: v["sensitivity_level"].as_u64().unwrap_or(0) as u8,
         media_kind: v["media_kind"].as_str().unwrap_or("document").to_string(),
         image_width: v["image_width"].as_u64().map(|n| n as u32),
         image_height: v["image_height"].as_u64().map(|n| n as u32),
@@ -113,6 +125,7 @@ fn sharing_to_json(s: &ChatFileSharing) -> serde_json::Value {
         "allow_download": s.allow_download,
         "allow_llm_context": s.allow_llm_context,
         "allow_relay_sync": s.allow_relay_sync,
+        "sensitivity_level": s.sensitivity_level,
         "allowed_dids": s.allowed_dids,
         "expires_at": s.expires_at,
     })

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../src/rust/api/chat_files.dart' as files;
 import 'chat_image_attachment.dart';
+import 'sensitivity_badge.dart';
 
 /// Lists files attached to the current chat session.
 class ChatFilesPanel extends StatelessWidget {
@@ -70,51 +71,69 @@ class ChatFilesPanel extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: chatFiles.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, __) => const SizedBox(height: 2),
       itemBuilder: (context, i) {
         final file = chatFiles[i];
         final isOwner = ownerDid != null && file.authorDid == ownerDid;
-        return ListTile(
-          dense: true,
-          leading: _isImage(file) && sessionId != null
-              ? SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: ChatImageAttachment(
-                    sessionId: sessionId!,
-                    file: file,
-                    maxHeight: 44,
-                  ),
-                )
-              : Icon(_iconFor(file), color: cs.primary),
-          title: Text(file.originalName, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${_visibilityLabel(file.sharing.visibility)}'
-                '${file.pageCount != null ? ' · ${file.pageCount} pg' : ''}'
-                ' · ${file.parseStatus}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              if (file.textPreview.isNotEmpty)
-                Text(
-                  file.textPreview,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                ),
-            ],
+        final sensitivityStyle =
+            resolveSensitivityStyleFromLevel(context, file.sensitivityLevel);
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: sensitivityStyle.background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: sensitivityStyle.border),
           ),
-          trailing: isOwner && onEditSharing != null
-              ? IconButton(
-                  icon: const Icon(Icons.lock_outline, size: 20),
-                  tooltip: 'Sharing permissions',
-                  onPressed: () => onEditSharing!(file),
-                )
-              : null,
+          child: ListTile(
+            dense: true,
+            leading: _isImage(file) && sessionId != null
+                ? SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: ChatImageAttachment(
+                      sessionId: sessionId!,
+                      file: file,
+                      maxHeight: 44,
+                    ),
+                  )
+                : Icon(_iconFor(file), color: sensitivityStyle.foreground),
+            title:
+                Text(file.originalName, maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                SensitivityBadge(
+                  sensitivityLevel: file.sensitivityLevel,
+                  dense: true,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${_visibilityLabel(file.sharing.visibility)}'
+                  '${file.pageCount != null ? ' · ${file.pageCount} pg' : ''}'
+                  ' · ${file.parseStatus}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (file.textPreview.isNotEmpty)
+                  Text(
+                    file.textPreview,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                  ),
+              ],
+            ),
+            trailing: isOwner && onEditSharing != null
+                ? IconButton(
+                    icon: const Icon(Icons.lock_outline, size: 20),
+                    tooltip: 'Sharing permissions',
+                    onPressed: () => onEditSharing!(file),
+                  )
+                : null,
+          ),
         );
       },
     );

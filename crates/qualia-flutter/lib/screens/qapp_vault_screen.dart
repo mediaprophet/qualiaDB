@@ -232,7 +232,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
             title: Text('Upgrade $qappName?'),
             content: Text(
               installed == null
-                  ? 'Install v$offered from the selected package.'
+                  ? 'Acquire v$offered from the selected package.'
                   : 'Replace v$installed with v$offered from the selected package.',
             ),
             actions: [
@@ -242,14 +242,14 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: Text(installed == null ? 'Install' : 'Upgrade'),
+                child: Text(installed == null ? 'Acquire' : 'Upgrade'),
               ),
             ],
           ),
         );
         if (proceed != true || !mounted) return;
 
-        setState(() => _installStatus = 'Installing...');
+        setState(() => _installStatus = 'Acquiring...');
         final result = applyQappUpdateFromPath(
           qappName: qappName,
           sourcePath: dir,
@@ -279,7 +279,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
       debugPrint('Install path version check skipped: $e');
     }
 
-    setState(() => _installStatus = 'Installing...');
+    setState(() => _installStatus = 'Acquiring...');
     try {
       final credential = await generateQappCredential(qappName: qappName);
       final result = await verifyAndInstallQapp(
@@ -289,7 +289,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
       if (mounted) {
         setState(() => _installStatus = result);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Installed: $qappName')),
+          SnackBar(content: Text('Acquired: $qappName')),
         );
         await _loadInstalledQapps();
       }
@@ -297,7 +297,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
       if (mounted) {
         setState(() => _installStatus = 'Error: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Install failed: $e')),
+          SnackBar(content: Text('Acquire failed: $e')),
         );
       }
     }
@@ -411,7 +411,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      '$qappName readiness',
+                      '$qappName capability readiness',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                   ),
@@ -566,7 +566,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
                           ),
                           const SizedBox(width: 12),
                           const Text(
-                            'Qapp Vault',
+                            'Capability Foundry',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 20,
@@ -579,7 +579,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
                       ElevatedButton.icon(
                         onPressed: _handleInstallQapp,
                         icon: const Icon(Icons.add_box, size: 16),
-                        label: const Text('Install Package'),
+                        label: const Text('Acquire Package'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               const Color(0xFF00F0FF).withOpacity(0.1),
@@ -593,7 +593,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Install and manage third-party edge-native qapps. Qapps are sandboxed and verified via VCs.',
+                    'Acquire and steward edge-native capability dimensions. Each qapp is sandboxed and checked against verifiable claims before launch.',
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                   const SizedBox(height: 24),
@@ -602,7 +602,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
                       child: Padding(
                         padding: EdgeInsets.symmetric(vertical: 32),
                         child: Text(
-                          'No qapps installed — place qapp directories in your Qapps/ data folder.',
+                          'No capability dimensions acquired yet — place qapp directories in your Qapps/ data folder.',
                           style: TextStyle(
                             color: Colors.grey,
                             fontFamily: 'monospace',
@@ -815,7 +815,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
                       ),
                       const SizedBox(width: 12),
                       const Text(
-                        'Developer Credentials',
+                        'Capability Claims',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -827,7 +827,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Generate Verifiable Credentials (VCs) to self-sign your own local qapps before loading them into the daemon.',
+                    'Generate verifiable claims to attest your local qapps before loading them into the daemon.',
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                   const SizedBox(height: 24),
@@ -842,7 +842,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
                             fontSize: 14,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Qapp ID (e.g. com.my.qapp)',
+                            hintText: 'Capability ID (e.g. com.my.qapp)',
                             hintStyle: const TextStyle(color: Colors.grey),
                             filled: true,
                             fillColor: Colors.black.withOpacity(0.5),
@@ -866,7 +866,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
                           ),
                         ),
                         child: const Text(
-                          'Sign & Generate VC',
+                          'Sign & Generate Claim',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -908,7 +908,7 @@ class _QappVaultScreenState extends State<QappVaultScreen> {
                               );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('VC copied to clipboard'),
+                                  content: Text('Verifiable claim copied to clipboard'),
                                 ),
                               );
                             },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/hardware_telemetry_service.dart';
+import '../services/pending_affirmations_service.dart';
 import '../src/rust/api/qualia_api.dart' as api;
 
 /// Mechanical sympathy HUD: RAM floor, thermal state, model lifecycle, daemon.
@@ -16,6 +17,7 @@ class VaultHudBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final telemetry = ref.watch(hardwareTelemetryProvider);
+    final pendingCount = ref.watch(pendingAffirmationCountProvider);
     final cs = Theme.of(context).colorScheme;
 
     final llmMb = _llmMemoryMb(telemetry?.llmMemoryBytes);
@@ -46,8 +48,8 @@ class VaultHudBar extends ConsumerWidget {
         ),
       ),
       child: dense
-          ? _denseRow(context, telemetry, llmMb, ramPressure, thermal, lifecycle, isScrubbing)
-          : _fullRow(context, telemetry, llmMb, ramPressure, thermal, lifecycle, isScrubbing),
+          ? _denseRow(context, telemetry, llmMb, ramPressure, thermal, lifecycle, isScrubbing, pendingCount, ref)
+          : _fullRow(context, telemetry, llmMb, ramPressure, thermal, lifecycle, isScrubbing, pendingCount, ref),
     );
   }
 
@@ -59,6 +61,8 @@ class VaultHudBar extends ConsumerWidget {
     String thermal,
     String lifecycle,
     bool isScrubbing,
+    int pendingCount,
+    WidgetRef ref,
   ) {
     return Row(
       children: [
@@ -73,6 +77,8 @@ class VaultHudBar extends ConsumerWidget {
         _thermalBadge(thermal),
         const SizedBox(width: 12),
         _daemonDot(telemetry?.daemonStatus ?? '…'),
+        const SizedBox(width: 12),
+        _pendingAffirmationsButton(context, pendingCount, ref),
         const Spacer(),
         if (telemetry != null && telemetry.kvCacheUsedMb > 0)
           Text(
@@ -91,6 +97,8 @@ class VaultHudBar extends ConsumerWidget {
     String thermal,
     String lifecycle,
     bool isScrubbing,
+    int pendingCount,
+    WidgetRef ref,
   ) {
     return Row(
       children: [
@@ -101,7 +109,37 @@ class VaultHudBar extends ConsumerWidget {
         _thermalBadge(thermal, small: true),
         const SizedBox(width: 8),
         _daemonDot(telemetry?.daemonStatus ?? '…', small: true),
+        if (pendingCount > 0) ...[
+          const SizedBox(width: 8),
+          _pendingAffirmationsButton(context, pendingCount, ref, small: true),
+        ],
       ],
+    );
+  }
+
+  Widget _pendingAffirmationsButton(
+    BuildContext context,
+    int count,
+    WidgetRef ref, {
+    bool small = false,
+  }) {
+    return Badge(
+      isLabelVisible: count > 0,
+      label: Text('$count'),
+      backgroundColor: Colors.amber,
+      child: IconButton(
+        visualDensity: VisualDensity.compact,
+        iconSize: small ? 16 : 20,
+        tooltip: count > 0 ? '$count pending affirmation(s)' : 'Pending affirmations',
+        onPressed: () {
+          ref.read(showPendingPanelProvider.notifier).state = true;
+        },
+        icon: Icon(
+          Icons.family_restroom,
+          size: small ? 16 : 20,
+          color: count > 0 ? Colors.amber : Colors.grey,
+        ),
+      ),
     );
   }
 

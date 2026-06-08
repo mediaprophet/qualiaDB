@@ -34,6 +34,8 @@ pub enum OrchestrationResult {
         provenance_quins: Vec<u64>,
         semantic_quin: Option<QualiaQuin>,
         wal_committed: bool,
+        wal_suspended: bool,
+        suspended_agreement_id: Option<u64>,
     },
     /// Webizen blocked the operation at pre-flight or post-flight.
     Blocked { rule_violated: u64, reason: &'static str },
@@ -198,6 +200,7 @@ impl TaskOrchestrator {
         prompt: &str,
         graph_context: &str,
         intent: AgentIntent,
+        suspended: Option<&mut crate::crdt::SuspendedTransactionQueue>,
     ) -> OrchestrationResult {
         let thermal_state = self.thermal_governor.get_thermal_state();
         
@@ -314,13 +317,16 @@ impl TaskOrchestrator {
 
         let mut semantic_quin = output.semantic_quin;
         let mut wal_written = false;
+        let mut wal_suspended = false;
+        let mut suspended_agreement_id = None;
 
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(ref mut quin) = semantic_quin {
             if let Ok(mut wal) = WriteAheadLog::open(".qualia_graph_mutations.wal") {
                 let secret = [42u8; 32];
                 let signing_key = ed25519_dalek::SigningKey::from_bytes(&secret);
-                let mut suspended = crate::crdt::SuspendedTransactionQueue::new();
+                let mut local_suspended = crate::crdt::SuspendedTransactionQueue::new();
+                let queue = suspended.unwrap_or(&mut local_suspended);
                 let agent_did_hash = q_hash(agent.agent_did());
                 match commit_semantic_mutation(
                     &mut wal,
@@ -328,10 +334,15 @@ impl TaskOrchestrator {
                     intent.principal_did_hash,
                     agent_did_hash,
                     &signing_key,
-                    &mut suspended,
+                    queue,
                 ) {
-                    Ok(WalHandoffResult::Committed) | Ok(WalHandoffResult::Suspended { .. }) => {
+                    Ok(WalHandoffResult::Committed) => {
                         wal_written = true;
+                    }
+                    Ok(WalHandoffResult::Suspended { agreement_id }) => {
+                        wal_written = true;
+                        wal_suspended = true;
+                        suspended_agreement_id = Some(agreement_id);
                     }
                     Err(_) => {}
                 }
@@ -343,6 +354,8 @@ impl TaskOrchestrator {
             provenance_quins: output.provenance_quins,
             semantic_quin,
             wal_committed: wal_written,
+            wal_suspended,
+            suspended_agreement_id,
         }
     }
 }
@@ -372,7 +385,7 @@ pub mod tests {
             active_profile: None,
         };
         let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
-        let result = orch.orchestrate_inference(&agent, "Summarise my health graph.", "some_graph_bytes", intent);
+        let result = orch.orchestrate_inference(&agent, "Summarise my health graph.", "some_graph_bytes", intent, None);
         assert!(matches!(result, OrchestrationResult::Committed { .. }));
     }
 
@@ -392,7 +405,7 @@ pub mod tests {
             active_profile: None,
         };
         let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
-        let result = orch.orchestrate_inference(&agent, "Show me sanctuary data.", "ctx", intent);
+        let result = orch.orchestrate_inference(&agent, "Show me sanctuary data.", "ctx", intent, None);
         assert!(matches!(result, OrchestrationResult::Blocked { .. }));
     }
 
@@ -419,7 +432,7 @@ pub mod tests {
             active_profile: None,
         };
         let orch = TaskOrchestrator::new(Box::new(MockCriticalThermalGovernor));
-        let result = orch.orchestrate_inference(&agent, "Query", "ctx", intent);
+        let result = orch.orchestrate_inference(&agent, "Query", "ctx", intent, None);
         assert!(matches!(result, OrchestrationResult::Blocked { rule_violated: 0xDEADBEEF, .. }));
     }
 

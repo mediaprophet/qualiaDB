@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../src/rust/api/chat_files.dart' as files;
+import 'sensitivity_badge.dart';
 
 /// Configure sharing permissions before attaching a file to a chat session.
 class ChatFilePermissionsSheet extends StatefulWidget {
@@ -31,6 +32,7 @@ class _ChatFilePermissionsSheetState extends State<ChatFilePermissionsSheet> {
   late bool _allowDownload;
   late bool _allowLlmContext;
   late bool _allowRelaySync;
+  late int _sensitivityLevel;
   final _allowedController = TextEditingController();
 
   @override
@@ -40,6 +42,10 @@ class _ChatFilePermissionsSheetState extends State<ChatFilePermissionsSheet> {
     _allowDownload = widget.initialSharing.allowDownload;
     _allowLlmContext = widget.initialSharing.allowLlmContext;
     _allowRelaySync = widget.initialSharing.allowRelaySync;
+    _sensitivityLevel = _normalizedSensitivity(
+      widget.initialSharing.sensitivityLevel,
+      widget.initialSharing.visibility,
+    );
     if (widget.initialSharing.allowedDids.isNotEmpty) {
       _allowedController.text = widget.initialSharing.allowedDids.join(', ');
     }
@@ -60,6 +66,39 @@ class _ChatFilePermissionsSheetState extends State<ChatFilePermissionsSheet> {
         lower.endsWith('.gif');
   }
 
+  int _minimumSensitivityForVisibility(String visibility) {
+    switch (visibility) {
+      case 'owner_only':
+        return 0x02;
+      case 'session_participants':
+      case 'specific_dids':
+        return 0x01;
+      default:
+        return 0x00;
+    }
+  }
+
+  int _normalizedSensitivity(int level, String visibility) {
+    final clamped = level.clamp(0, 2) as int;
+    final minimum = _minimumSensitivityForVisibility(visibility);
+    return clamped < minimum ? minimum : clamped;
+  }
+
+  String _sensitivityHelperText() {
+    final minimum = _minimumSensitivityForVisibility(_visibility);
+    if (_sensitivityLevel == minimum) {
+      if (_visibility == 'owner_only') {
+        return 'Only-me access keeps this classified in Sanctuary mode.';
+      }
+      if (_visibility == 'session_participants' ||
+          _visibility == 'specific_dids') {
+        return 'Participant-limited sharing keeps this at least restricted.';
+      }
+      return 'Sensitivity stays aligned with the current access lane.';
+    }
+    return 'You can raise sensitivity above the visibility floor when the material needs stronger handling.';
+  }
+
   files.ChatFileSharing _buildSharing() {
     final allowed = _allowedController.text
         .split(RegExp(r'[,\s]+'))
@@ -71,6 +110,7 @@ class _ChatFilePermissionsSheetState extends State<ChatFilePermissionsSheet> {
       allowDownload: _allowDownload,
       allowLlmContext: _allowLlmContext,
       allowRelaySync: _allowRelaySync,
+      sensitivityLevel: _normalizedSensitivity(_sensitivityLevel, _visibility),
       allowedDids: allowed,
       expiresAt: widget.initialSharing.expiresAt,
     );
@@ -170,7 +210,11 @@ class _ChatFilePermissionsSheetState extends State<ChatFilePermissionsSheet> {
                   child: Text('Anyone with session access'),
                 ),
               ],
-              onChanged: (v) => setState(() => _visibility = v ?? _visibility),
+              onChanged: (v) => setState(() {
+                _visibility = v ?? _visibility;
+                _sensitivityLevel =
+                    _normalizedSensitivity(_sensitivityLevel, _visibility);
+              }),
             ),
             if (_visibility == 'specific_dids') ...[
               const SizedBox(height: 8),
@@ -187,6 +231,48 @@ class _ChatFilePermissionsSheetState extends State<ChatFilePermissionsSheet> {
                 maxLines: 2,
               ),
             ],
+            const SizedBox(height: 12),
+            Text(
+              'Sensitivity class',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4),
+            DropdownButtonFormField<int>(
+              initialValue: _sensitivityLevel,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: 0,
+                  child: Text('PUBLIC'),
+                ),
+                DropdownMenuItem(
+                  value: 1,
+                  child: Text('RESTRICTED'),
+                ),
+                DropdownMenuItem(
+                  value: 2,
+                  child: Text('CLASSIFIED - Sanctuary'),
+                ),
+              ],
+              onChanged: (v) => setState(() {
+                _sensitivityLevel =
+                    _normalizedSensitivity(v ?? _sensitivityLevel, _visibility);
+              }),
+            ),
+            const SizedBox(height: 8),
+            SensitivityBadge(
+              sensitivityLevel: _sensitivityLevel,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _sensitivityHelperText(),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+            ),
             const SizedBox(height: 12),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,

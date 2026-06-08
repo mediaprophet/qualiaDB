@@ -1239,3 +1239,87 @@ pub fn run_inference_stream(
 pub fn cancel_inference_stream() {
     core::cancel_chat_inference();
 }
+
+// ── Guardianship (bilateral co-signature) ─────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub struct SuspendedTxView {
+    pub agreement_id: u64,
+    pub threshold: u8,
+    pub collected_signatures: u8,
+    pub subject: u64,
+    pub predicate: u64,
+    pub object: u64,
+    pub context: u64,
+    pub metadata: u64,
+    pub label: String,
+}
+
+impl From<qualia_client_core::guardianship::SuspendedTxView> for SuspendedTxView {
+    fn from(v: qualia_client_core::guardianship::SuspendedTxView) -> Self {
+        Self {
+            agreement_id: v.agreement_id,
+            threshold: v.threshold,
+            collected_signatures: v.collected_signatures,
+            subject: v.subject,
+            predicate: v.predicate,
+            object: v.object,
+            context: v.context,
+            metadata: v.metadata,
+            label: v.label,
+        }
+    }
+}
+
+pub fn list_pending_affirmations() -> Vec<SuspendedTxView> {
+    core::list_pending_affirmations()
+        .into_iter()
+        .map(SuspendedTxView::from)
+        .collect()
+}
+
+pub fn pending_affirmation_count() -> usize {
+    core::pending_affirmation_count()
+}
+
+/// Outcome: `ratified`, `pending`, `denied`, `not_found`.
+pub fn apply_guardian_token(agreement_id: u64, token_quin: SuperQuinView) -> String {
+    let fields = [
+        token_quin.subject,
+        token_quin.predicate,
+        token_quin.object,
+        token_quin.context,
+        token_quin.metadata,
+        token_quin.parity,
+    ];
+    match core::apply_guardian_token(agreement_id, fields) {
+        qualia_client_core::guardianship::GuardianTokenOutcome::Ratified => "ratified".into(),
+        qualia_client_core::guardianship::GuardianTokenOutcome::Pending => "pending".into(),
+        qualia_client_core::guardianship::GuardianTokenOutcome::Denied => "denied".into(),
+        qualia_client_core::guardianship::GuardianTokenOutcome::NotFound => "not_found".into(),
+    }
+}
+
+pub fn cosign_pending_affirmation(agreement_id: u64, principal_did: String) -> String {
+    let principal_hash = qualia_core_db::q_hash(&principal_did);
+    let token = core::build_consent_token(agreement_id, principal_hash);
+    apply_guardian_token(
+        agreement_id,
+        SuperQuinView {
+            subject: token[0],
+            predicate: token[1],
+            object: token[2],
+            context: token[3],
+            metadata: token[4],
+            parity: token[5],
+        },
+    )
+}
+
+pub fn deny_guardian_affirmation(agreement_id: u64) -> bool {
+    core::deny_guardian_affirmation(agreement_id)
+}
+
+pub fn is_agreement_ratified(agreement_id: u64) -> bool {
+    core::is_agreement_ratified(agreement_id)
+}

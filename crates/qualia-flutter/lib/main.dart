@@ -29,6 +29,8 @@ import 'services/update_checker.dart';
 import 'src/rust/api/qualia_api.dart';
 import 'src/rust/frb_generated.dart';
 import 'tray/tray_service.dart';
+import 'services/pending_affirmations_service.dart';
+import 'widgets/pending_affirmations_panel.dart';
 import 'widgets/vault_hud_bar.dart';
 
 /// The absolute path to the currently active `.gguf` model file.
@@ -236,6 +238,8 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final showPendingPanel = ref.watch(showPendingPanelProvider);
+
     return Stack(
       children: [
         Column(
@@ -244,6 +248,16 @@ class _QualiaHomeScreenState extends ConsumerState<QualiaHomeScreen>
             Expanded(child: _buildShell()),
           ],
         ),
+        if (showPendingPanel)
+          Positioned(
+            top: isDesktopTarget ? 48 : 0,
+            right: 0,
+            bottom: 0,
+            child: PendingAffirmationsPanel(
+              onClose: () =>
+                  ref.read(showPendingPanelProvider.notifier).state = false,
+            ),
+          ),
         if (_showPrerequisites)
           PrerequisitesOverlay(
             onComplete: () {

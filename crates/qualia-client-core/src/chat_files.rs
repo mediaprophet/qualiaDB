@@ -50,6 +50,8 @@ pub struct ChatFileSharing {
     pub allow_download: bool,
     pub allow_llm_context: bool,
     pub allow_relay_sync: bool,
+    #[serde(default = "default_chat_file_sensitivity")]
+    pub sensitivity_level: u8,
     #[serde(default)]
     pub allowed_dids: Vec<String>,
     #[serde(default)]
@@ -63,6 +65,7 @@ impl Default for ChatFileSharing {
             allow_download: true,
             allow_llm_context: true,
             allow_relay_sync: false,
+            sensitivity_level: QualiaQuin::SENSITIVITY_RESTRICTED,
             allowed_dids: vec![],
             expires_at: None,
         }
@@ -76,6 +79,7 @@ pub fn default_sharing_for_session(kind: SessionKind) -> ChatFileSharing {
             allow_download: true,
             allow_llm_context: true,
             allow_relay_sync: false,
+            sensitivity_level: QualiaQuin::SENSITIVITY_CLASSIFIED,
             allowed_dids: vec![],
             expires_at: None,
         },
@@ -132,6 +136,8 @@ pub struct ChatFileRecord {
     pub sharing: ChatFileSharing,
     pub parse_status: String,
     pub parse_error: Option<String>,
+    #[serde(default = "default_chat_file_sensitivity")]
+    pub sensitivity_level: u8,
     #[serde(default)]
     pub media_kind: MediaKind,
     #[serde(default)]
@@ -146,6 +152,39 @@ pub struct ChatFileRecord {
     pub vision_facet: Option<String>,
     #[serde(default)]
     pub vision_status: Option<String>,
+}
+
+fn default_chat_file_sensitivity() -> u8 {
+    QualiaQuin::SENSITIVITY_PUBLIC
+}
+
+fn infer_sensitivity_from_sharing(sharing: &ChatFileSharing) -> u8 {
+    match sharing.visibility {
+        FileVisibility::PublicInSession => QualiaQuin::SENSITIVITY_PUBLIC,
+        FileVisibility::SessionParticipants | FileVisibility::SpecificDids => {
+            QualiaQuin::SENSITIVITY_RESTRICTED
+        }
+        FileVisibility::OwnerOnly => QualiaQuin::SENSITIVITY_CLASSIFIED,
+    }
+}
+
+fn clamp_sensitivity_level(level: u8) -> u8 {
+    level.min(QualiaQuin::SENSITIVITY_CLASSIFIED)
+}
+
+fn effective_sensitivity_from_sharing(sharing: &ChatFileSharing) -> u8 {
+    let inferred = infer_sensitivity_from_sharing(sharing);
+    clamp_sensitivity_level(sharing.sensitivity_level).max(inferred)
+}
+
+fn normalize_chat_file_sensitivity(record: &mut ChatFileRecord) {
+    let effective = effective_sensitivity_from_sharing(&record.sharing);
+    record.sharing.sensitivity_level = effective;
+    if record.sensitivity_level > QualiaQuin::SENSITIVITY_CLASSIFIED {
+        record.sensitivity_level = effective;
+        return;
+    }
+    record.sensitivity_level = clamp_sensitivity_level(record.sensitivity_level).max(effective);
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -423,7 +462,10 @@ fn load_all_records(storage_root: &Path, session_id: &str) -> Result<Vec<ChatFil
         if line.trim().is_empty() {
             continue;
         }
-        out.push(serde_json::from_str(&line).map_err(|e| e.to_string())?);
+        let mut record: ChatFileRecord =
+            serde_json::from_str(&line).map_err(|e| e.to_string())?;
+        normalize_chat_file_sensitivity(&mut record);
+        out.push(record);
     }
     Ok(out)
 }
@@ -571,6 +613,9 @@ pub fn attach_chat_file(
         preview_text(&parsed.full_text)
     };
 
+    let mut sharing = sharing;
+    let sensitivity_level = effective_sensitivity_from_sharing(&sharing);
+    sharing.sensitivity_level = sensitivity_level;
     let record = ChatFileRecord {
         file_id: file_id.clone(),
         original_name: original_name.clone(),
@@ -589,6 +634,7 @@ pub fn attach_chat_file(
         sharing,
         parse_status: parsed.parse_status,
         parse_error: parsed.parse_error,
+        sensitivity_level,
         media_kind: parsed.media_kind,
         image_width: parsed.image_width,
         image_height: parsed.image_height,
@@ -672,7 +718,7 @@ fn append_file_wal_quin(
     let context = q_hash(&record.author_did);
     let metadata = (record.byte_size.min(0x1FFF_FFFF)) << 32;
     let parity = subject ^ predicate ^ object ^ context ^ metadata;
-    let quin = QualiaQuin {
+    let mut quin = QualiaQuin {
         subject,
         predicate,
         object,
@@ -680,6 +726,7 @@ fn append_file_wal_quin(
         metadata,
         parity,
     };
+    quin.set_sensitivity_byte(record.sensitivity_level);
     if let Ok(mut wal) = WriteAheadLog::open(&wal_path) {
         wal.append_mutation(&quin).map_err(|e| e.to_string())?;
     }
@@ -701,7 +748,11 @@ pub fn set_chat_file_sharing(
     if records[idx].author_did != profile.public_did {
         return Err("Only the file owner can change sharing permissions".to_string());
     }
+    let mut sharing = sharing;
+    let sensitivity_level = effective_sensitivity_from_sharing(&sharing);
+    sharing.sensitivity_level = sensitivity_level;
     records[idx].sharing = sharing;
+    records[idx].sensitivity_level = sensitivity_level;
     let updated = records[idx].clone();
     write_all_records(storage_root, session_id, &records)?;
     Ok(updated)
@@ -859,8 +910,13 @@ mod tests {
     fn default_sharing_differs_by_session_kind() {
         let solo = default_sharing_for_session(SessionKind::Solo);
         assert_eq!(solo.visibility, FileVisibility::OwnerOnly);
+        assert_eq!(solo.sensitivity_level, QualiaQuin::SENSITIVITY_CLASSIFIED);
         let group = default_sharing_for_session(SessionKind::Group);
         assert_eq!(group.visibility, FileVisibility::SessionParticipants);
+        assert_eq!(
+            group.sensitivity_level,
+            QualiaQuin::SENSITIVITY_RESTRICTED
+        );
     }
 
     #[test]
@@ -906,11 +962,13 @@ mod tests {
                 allow_download: false,
                 allow_llm_context: true,
                 allow_relay_sync: false,
+                sensitivity_level: QualiaQuin::SENSITIVITY_CLASSIFIED,
                 allowed_dids: vec![],
                 expires_at: None,
             },
             parse_status: "ok".to_string(),
             parse_error: None,
+            sensitivity_level: QualiaQuin::SENSITIVITY_CLASSIFIED,
             media_kind: MediaKind::Document,
             image_width: None,
             image_height: None,
@@ -941,6 +999,7 @@ mod tests {
         let owner_did = attached.file.author_did.clone();
         let listed = list_chat_files(&storage, &session_id, Some(&owner_did)).unwrap();
         assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].sensitivity_level, QualiaQuin::SENSITIVITY_RESTRICTED);
 
         let updated = set_chat_file_sharing(
             &storage,
@@ -951,11 +1010,48 @@ mod tests {
                 allow_download: true,
                 allow_llm_context: false,
                 allow_relay_sync: false,
+                sensitivity_level: QualiaQuin::SENSITIVITY_PUBLIC,
                 allowed_dids: vec!["did:friend".to_string()],
                 expires_at: None,
             },
         )
         .expect("set sharing");
         assert_eq!(updated.sharing.visibility, FileVisibility::SpecificDids);
+        assert_eq!(updated.sensitivity_level, QualiaQuin::SENSITIVITY_RESTRICTED);
+        assert_eq!(
+            updated.sharing.sensitivity_level,
+            QualiaQuin::SENSITIVITY_RESTRICTED
+        );
+    }
+
+    #[test]
+    fn explicit_sensitivity_can_raise_but_not_lower_visibility_floor() {
+        let restricted = ChatFileSharing {
+            visibility: FileVisibility::SessionParticipants,
+            allow_download: true,
+            allow_llm_context: true,
+            allow_relay_sync: false,
+            sensitivity_level: QualiaQuin::SENSITIVITY_CLASSIFIED,
+            allowed_dids: vec![],
+            expires_at: None,
+        };
+        assert_eq!(
+            effective_sensitivity_from_sharing(&restricted),
+            QualiaQuin::SENSITIVITY_CLASSIFIED
+        );
+
+        let owner_only = ChatFileSharing {
+            visibility: FileVisibility::OwnerOnly,
+            allow_download: true,
+            allow_llm_context: true,
+            allow_relay_sync: false,
+            sensitivity_level: QualiaQuin::SENSITIVITY_PUBLIC,
+            allowed_dids: vec![],
+            expires_at: None,
+        };
+        assert_eq!(
+            effective_sensitivity_from_sharing(&owner_only),
+            QualiaQuin::SENSITIVITY_CLASSIFIED
+        );
     }
 }

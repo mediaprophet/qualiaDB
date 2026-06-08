@@ -137,7 +137,7 @@ class _SetupWizardOverlayState extends State<SetupWizardOverlay> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'After setup, open Identifiers & Credentials to generate your DID root.',
+                    'After setup, open Principal Identifiers & Verifiable Claims to generate your principal identifier root.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 11, color: Colors.grey),
                   ),

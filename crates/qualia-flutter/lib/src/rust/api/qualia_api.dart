@@ -7,8 +7,8 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `block_on`, `find_open_port`, `load_persisted_directory`, `map_actor`, `map_front_door`, `map_progress`, `map_qpu_chat_result`, `map_rule`, `map_tax_suite`, `map_token`, `parse_manifest_items`, `parse_ontology_manifest_items`, `spawn_daemon_background`, `to_actor`, `to_core_tax_suite`, `to_rule`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PaymentReceipt`, `PhysicsStore`, `SuperQuinView`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `from`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PaymentReceipt`, `PhysicsStore`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `from`, `from`
 
 Future<String> greet({required String name}) =>
     RustApi.instance.api.crateApiQualiaApiGreet(name: name);
@@ -394,6 +394,31 @@ Stream<String> runInferenceStream(
 
 Future<void> cancelInferenceStream() =>
     RustApi.instance.api.crateApiQualiaApiCancelInferenceStream();
+
+Future<List<SuspendedTxView>> listPendingAffirmations() =>
+    RustApi.instance.api.crateApiQualiaApiListPendingAffirmations();
+
+Future<BigInt> pendingAffirmationCount() =>
+    RustApi.instance.api.crateApiQualiaApiPendingAffirmationCount();
+
+/// Outcome: `ratified`, `pending`, `denied`, `not_found`.
+Future<String> applyGuardianToken(
+        {required BigInt agreementId, required SuperQuinView tokenQuin}) =>
+    RustApi.instance.api.crateApiQualiaApiApplyGuardianToken(
+        agreementId: agreementId, tokenQuin: tokenQuin);
+
+Future<String> cosignPendingAffirmation(
+        {required BigInt agreementId, required String principalDid}) =>
+    RustApi.instance.api.crateApiQualiaApiCosignPendingAffirmation(
+        agreementId: agreementId, principalDid: principalDid);
+
+Future<bool> denyGuardianAffirmation({required BigInt agreementId}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiDenyGuardianAffirmation(agreementId: agreementId);
+
+Future<bool> isAgreementRatified({required BigInt agreementId}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiIsAgreementRatified(agreementId: agreementId);
 
 class ActorBridge {
   final String id;
@@ -1013,6 +1038,97 @@ class SpatialPhysicsState {
           temperature == other.temperature &&
           pressure == other.pressure &&
           timeDilation == other.timeDilation;
+}
+
+/// Zero-copy Super-Quin view (6 × u64) for FRB consumers and block inspector.
+class SuperQuinView {
+  final BigInt subject;
+  final BigInt predicate;
+  final BigInt object;
+  final BigInt context;
+  final BigInt metadata;
+  final BigInt parity;
+
+  const SuperQuinView({
+    required this.subject,
+    required this.predicate,
+    required this.object,
+    required this.context,
+    required this.metadata,
+    required this.parity,
+  });
+
+  @override
+  int get hashCode =>
+      subject.hashCode ^
+      predicate.hashCode ^
+      object.hashCode ^
+      context.hashCode ^
+      metadata.hashCode ^
+      parity.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SuperQuinView &&
+          runtimeType == other.runtimeType &&
+          subject == other.subject &&
+          predicate == other.predicate &&
+          object == other.object &&
+          context == other.context &&
+          metadata == other.metadata &&
+          parity == other.parity;
+}
+
+class SuspendedTxView {
+  final BigInt agreementId;
+  final int threshold;
+  final int collectedSignatures;
+  final BigInt subject;
+  final BigInt predicate;
+  final BigInt object;
+  final BigInt context;
+  final BigInt metadata;
+  final String label;
+
+  const SuspendedTxView({
+    required this.agreementId,
+    required this.threshold,
+    required this.collectedSignatures,
+    required this.subject,
+    required this.predicate,
+    required this.object,
+    required this.context,
+    required this.metadata,
+    required this.label,
+  });
+
+  @override
+  int get hashCode =>
+      agreementId.hashCode ^
+      threshold.hashCode ^
+      collectedSignatures.hashCode ^
+      subject.hashCode ^
+      predicate.hashCode ^
+      object.hashCode ^
+      context.hashCode ^
+      metadata.hashCode ^
+      label.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SuspendedTxView &&
+          runtimeType == other.runtimeType &&
+          agreementId == other.agreementId &&
+          threshold == other.threshold &&
+          collectedSignatures == other.collectedSignatures &&
+          subject == other.subject &&
+          predicate == other.predicate &&
+          object == other.object &&
+          context == other.context &&
+          metadata == other.metadata &&
+          label == other.label;
 }
 
 class TaxRecipient {

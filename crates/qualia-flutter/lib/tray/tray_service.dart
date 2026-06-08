@@ -39,14 +39,21 @@ class TrayService {
     }
   }
 
+  int _pendingAffirmations = 0;
+
+  Future<void> updatePendingCount(int count) async {
+    _pendingAffirmations = count;
+  }
+
   Future<void> updateFromTelemetry(api.HardwareTelemetry telemetry) async {
     final llmMb =
         (telemetry.llmMemoryBytes.toDouble() / (1024 * 1024)).toStringAsFixed(0);
+    final pending = _pendingAffirmations > 0 ? ' | Pending: $_pendingAffirmations' : '';
     await trayManager.setToolTip(
       'QualiaDB — CPU ${telemetry.cpuPercent.toStringAsFixed(0)}% | '
       'RAM ${telemetry.ramUsedGb.toStringAsFixed(1)} GB | '
       'LLM $llmMb MB | ${telemetry.thermalState} | '
-      '${telemetry.modelLifecycle} | daemon: ${telemetry.daemonStatus}',
+      '${telemetry.modelLifecycle} | daemon: ${telemetry.daemonStatus}$pending',
     );
   }
 

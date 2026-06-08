@@ -98,6 +98,9 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       dco_decode_box_autoadd_resolved_model_preference_frb(dynamic raw);
 
   @protected
+  SuperQuinView dco_decode_box_autoadd_super_quin_view(dynamic raw);
+
+  @protected
   TaxRecipientSuite dco_decode_box_autoadd_tax_recipient_suite(dynamic raw);
 
   @protected
@@ -261,6 +264,9 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   List<ProgressPayload> dco_decode_list_progress_payload(dynamic raw);
 
   @protected
+  List<SuspendedTxView> dco_decode_list_suspended_tx_view(dynamic raw);
+
+  @protected
   List<TaxRecipient> dco_decode_list_tax_recipient(dynamic raw);
 
   @protected
@@ -345,6 +351,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   SpatialPhysicsState dco_decode_spatial_physics_state(dynamic raw);
+
+  @protected
+  SuperQuinView dco_decode_super_quin_view(dynamic raw);
+
+  @protected
+  SuspendedTxView dco_decode_suspended_tx_view(dynamic raw);
 
   @protected
   TaxRecipient dco_decode_tax_recipient(dynamic raw);
@@ -461,6 +473,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   ResolvedModelPreferenceFrb
       sse_decode_box_autoadd_resolved_model_preference_frb(
           SseDeserializer deserializer);
+
+  @protected
+  SuperQuinView sse_decode_box_autoadd_super_quin_view(
+      SseDeserializer deserializer);
 
   @protected
   TaxRecipientSuite sse_decode_box_autoadd_tax_recipient_suite(
@@ -642,6 +658,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<SuspendedTxView> sse_decode_list_suspended_tx_view(
+      SseDeserializer deserializer);
+
+  @protected
   List<TaxRecipient> sse_decode_list_tax_recipient(
       SseDeserializer deserializer);
 
@@ -741,6 +761,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   SpatialPhysicsState sse_decode_spatial_physics_state(
       SseDeserializer deserializer);
+
+  @protected
+  SuperQuinView sse_decode_super_quin_view(SseDeserializer deserializer);
+
+  @protected
+  SuspendedTxView sse_decode_suspended_tx_view(SseDeserializer deserializer);
 
   @protected
   TaxRecipient sse_decode_tax_recipient(SseDeserializer deserializer);
@@ -865,6 +891,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_box_autoadd_resolved_model_preference_frb(
       ResolvedModelPreferenceFrb self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_super_quin_view(
+      SuperQuinView self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_tax_recipient_suite(
@@ -1065,6 +1095,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       List<ProgressPayload> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_suspended_tx_view(
+      List<SuspendedTxView> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_tax_recipient(
       List<TaxRecipient> self, SseSerializer serializer);
 
@@ -1166,6 +1200,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_spatial_physics_state(
       SpatialPhysicsState self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_super_quin_view(SuperQuinView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_suspended_tx_view(
+      SuspendedTxView self, SseSerializer serializer);
 
   @protected
   void sse_encode_tax_recipient(TaxRecipient self, SseSerializer serializer);

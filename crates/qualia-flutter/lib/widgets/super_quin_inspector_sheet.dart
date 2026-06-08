@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'sensitivity_badge.dart';
+
 /// Six-field Super-Quin inspector (power-user / provenance drill-down).
 class SuperQuinInspectorSheet extends StatelessWidget {
   final List<int> fields;
@@ -26,19 +28,10 @@ class SuperQuinInspectorSheet extends StatelessWidget {
 
   String _hex(int v) => '0x${v.toRadixString(16).padLeft(16, '0')}';
 
-  String _sensitivityLabel(int contextField) {
-    final byte = (contextField >> 56) & 0xFF;
-    return switch (byte) {
-      0x01 => 'RESTRICTED',
-      0x02 => 'CLASSIFIED',
-      _ => 'PUBLIC',
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final sensitivity = fields.length > 3 ? _sensitivityLabel(fields[3]) : 'PUBLIC';
+    final contextField = fields.length > 3 ? fields[3] : null;
 
     return SafeArea(
       child: Padding(
@@ -70,10 +63,7 @@ class SuperQuinInspectorSheet extends StatelessWidget {
               spacing: 6,
               runSpacing: 4,
               children: [
-                Chip(
-                  label: Text('Sensitivity: $sensitivity'),
-                  visualDensity: VisualDensity.compact,
-                ),
+                SensitivityBadge(contextField: contextField),
                 if (principalLabel != null && principalLabel!.isNotEmpty)
                   Chip(
                     label: Text('Principal: $principalLabel'),

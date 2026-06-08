@@ -51,6 +51,11 @@ pub struct ChatInferenceResult {
     pub shield_alert: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub axiom_bounds_label: Option<String>,
+    /// Bilateral micro-commons mutation awaiting guardian co-signature.
+    #[serde(default)]
+    pub wal_suspended: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub suspended_agreement_id: Option<u64>,
 }
 
 pub fn request_cancel_inference() {
@@ -296,6 +301,8 @@ pub fn run_chat_inference_full(
         &agent_cfg,
         false,
         0,
+        false,
+        None,
     )
 }
 
@@ -311,11 +318,15 @@ fn run_orchestrated_inference(
     empty: impl Fn(&str) -> ChatInferenceResult,
 ) -> ChatInferenceResult {
     let orch = crate::model_lifecycle::task_orchestrator();
+    let mut suspended = crate::guardianship::suspended_queue()
+        .lock()
+        .expect("suspended_queue");
     let result = orch.orchestrate_inference(
         agent,
         &packet.augmented_prompt,
         &packet.graph_context_json,
         intent,
+        Some(&mut *suspended),
     );
 
     match result {
@@ -324,6 +335,8 @@ fn run_orchestrated_inference(
             mut provenance_quins,
             semantic_quin,
             wal_committed,
+            wal_suspended,
+            suspended_agreement_id,
         } => {
             provenance_quins.extend(retrieval.provenance_hashes.iter().copied());
             provenance_quins.sort_unstable();
@@ -351,6 +364,8 @@ fn run_orchestrated_inference(
                 agent_cfg,
                 wal_committed,
                 sieve_tokens.min(255) as u8,
+                wal_suspended,
+                suspended_agreement_id,
             )
         }
         OrchestrationResult::Blocked { reason, .. } => empty(reason),
@@ -368,6 +383,8 @@ fn finalize_success_result(
     agent_cfg: &crate::chat_agents::ParticipantAgentConfig,
     wal_committed: bool,
     sieve_token_count: u8,
+    wal_suspended: bool,
+    suspended_agreement_id: Option<u64>,
 ) -> ChatInferenceResult {
     ChatInferenceResult {
         text: output.text,
@@ -391,6 +408,8 @@ fn finalize_success_result(
         sieve_token_count,
         shield_alert: false,
         axiom_bounds_label: None,
+        wal_suspended,
+        suspended_agreement_id,
     }
 }
 
@@ -417,6 +436,8 @@ fn cancelled_result(
         sieve_token_count: 0,
         shield_alert: false,
         axiom_bounds_label: None,
+        wal_suspended: false,
+        suspended_agreement_id: None,
     }
 }
 
@@ -487,6 +508,8 @@ fn blocked_result(
         sieve_token_count: 0,
         shield_alert: reason.contains("Shield"),
         axiom_bounds_label: None,
+        wal_suspended: false,
+        suspended_agreement_id: None,
     }
 }
 
@@ -518,6 +541,8 @@ fn empty_result(
         } else {
             None
         },
+        wal_suspended: false,
+        suspended_agreement_id: None,
     }
 }
 

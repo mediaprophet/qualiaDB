@@ -29,6 +29,7 @@ pub mod chat_relay;
 pub mod chat_ontology;
 pub mod chat_files;
 pub mod chat_agents;
+pub mod guardianship;
 pub mod q42_compress;
 pub mod ontology_workbench;
 

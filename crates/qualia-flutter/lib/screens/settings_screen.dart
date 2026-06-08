@@ -448,7 +448,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildQpuOraclePanel(BuildContext context, api.QpuOracleSettings qpu) {
     return _buildPanel(
       context,
-      title: 'QPU ORACLE — SOVEREIGN REMOTE COMPUTE',
+      title: 'QPU ORACLE — AGENCY-GUIDED REMOTE COMPUTE',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

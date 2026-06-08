@@ -28,8 +28,11 @@ import '../src/rust/api/qualia_api.dart' as api;
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
 import '../src/rust/api/resource_catalog.dart' as catalog;
 import '../widgets/chat_citation_chips.dart';
+import '../widgets/sensitivity_badge.dart';
 import '../widgets/super_quin_provenance_chip.dart';
 import '../widgets/shield_alert.dart';
+import '../widgets/guardian_affirmation_chip.dart';
+import '../services/pending_affirmations_service.dart';
 import '../widgets/chat_environment_bar.dart';
 import '../widgets/vault_hud_bar.dart';
 import '../widgets/latex_math_keyboard.dart';
@@ -142,6 +145,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final profile = await social.getUserProfile();
       if (mounted) setState(() => _ownerDid = profile.publicDid);
     } catch (_) {}
+  }
+
+  Future<void> _refreshGuardianStatuses() async {
+    bool changed = false;
+    for (var i = 0; i < _messages.length; i++) {
+      final m = _messages[i];
+      final agreementId = m.suspendedAgreementId;
+      if (!m.walSuspended || agreementId == null || m.guardianRatified) continue;
+      try {
+        final ratified = await api.isAgreementRatified(agreementId: agreementId);
+        if (ratified) {
+          _messages[i] = m.copyWith(guardianRatified: true, walSuspended: false);
+          changed = true;
+        }
+      } catch (_) {}
+    }
+    if (changed && mounted) setState(() {});
   }
 
   chat_files.ChatFileRecord? _fileForLamport(BigInt? lamport) {
@@ -477,6 +497,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         allowDownload: true,
         allowLlmContext: true,
         allowRelaySync: false,
+        sensitivityLevel: _isGroup ? 1 : 2,
         allowedDids: [],
         expiresAt: null,
       );
@@ -547,7 +568,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           imageWidth: file.imageWidth,
           imageHeight: file.imageHeight,
         ),
-        initialSharing: file.sharing,
+        initialSharing: chat_files.ChatFileSharing(
+          visibility: file.sharing.visibility,
+          allowDownload: file.sharing.allowDownload,
+          allowLlmContext: file.sharing.allowLlmContext,
+          allowRelaySync: file.sharing.allowRelaySync,
+          sensitivityLevel: file.sensitivityLevel,
+          allowedDids: file.sharing.allowedDids,
+          expiresAt: file.sharing.expiresAt,
+        ),
         participantDids: _participants.map((p) => p.did).toList(),
       ),
     );
@@ -1210,6 +1239,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
         final semanticQuin = _parseSemanticQuin(data['semantic_quin']);
         final walCommitted = data['wal_committed'] as bool? ?? false;
+        final walSuspended = data['wal_suspended'] as bool? ?? false;
+        final suspendedAgreementId = data['suspended_agreement_id'] as int?;
         final sieveTokenCount = data['sieve_token_count'] as int? ?? 0;
         final shieldAlert = data['shield_alert'] as bool? ?? false;
         final axiomBoundsLabel = data['axiom_bounds_label'] as String?;
@@ -1234,6 +1265,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             blockReason: blockReason,
             semanticQuin: semanticQuin,
             walCommitted: walCommitted,
+            walSuspended: walSuspended,
+            suspendedAgreementId: suspendedAgreementId,
             sieveTokenCount: sieveTokenCount,
             shieldAlert: isShield,
             axiomBoundsLabel: axiomBoundsLabel,
@@ -1241,6 +1274,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           );
           _isInferring = false;
         });
+
+        if (walSuspended) {
+          ref.read(pendingAffirmationsProvider.notifier).poll();
+        }
 
         if (committed) {
           unawaited(_persistMessage('agent', text));
@@ -1326,6 +1363,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
 
   Widget build(BuildContext context) {
+    ref.listen<List<api.SuspendedTxView>>(pendingAffirmationsProvider, (_, __) {
+      unawaited(_refreshGuardianStatuses());
+    });
 
     final cs = Theme.of(context).colorScheme;
 
@@ -1491,6 +1531,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               final display = m.content.isEmpty && _isInferring && !isUser ? '…' : m.content;
               final authorLabel = m.authorName;
               final replyTag = m.replyToFragment;
+              final semanticContextField =
+                  !isUser && m.semanticQuin != null && m.semanticQuin!.length > 3
+                      ? m.semanticQuin![3]
+                      : null;
+              final sensitivityStyle =
+                  resolveSensitivityStyle(context, semanticContextField);
+              final bubbleColor = isUser
+                  ? cs.primary.withValues(alpha: 0.18)
+                  : semanticContextField != null
+                      ? sensitivityStyle.background
+                      : cs.surfaceContainerHighest;
 
               return Align(
 
@@ -1506,9 +1557,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                   decoration: BoxDecoration(
 
-                    color: isUser ? cs.primary.withValues(alpha: 0.18) : cs.surfaceContainerHighest,
+                    color: bubbleColor,
 
                     borderRadius: BorderRadius.circular(12),
+                    border: semanticContextField != null
+                        ? Border.all(color: sensitivityStyle.border)
+                        : null,
 
                   ),
 
@@ -1547,6 +1601,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             label: Text('↳ fragment ${replyTag.length > 8 ? replyTag.substring(0, 8) : replyTag}…', style: const TextStyle(fontSize: 11)),
                             visualDensity: VisualDensity.compact,
                             padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      if (!isUser && semanticContextField != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: SensitivityBadge(
+                            contextField: semanticContextField,
+                            dense: true,
                           ),
                         ),
                       if (_sessionId != null && m.lamport != null)
@@ -1589,6 +1651,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ShieldAlert(
                           message: m.shieldMessage ?? m.blockReason ?? 'Shield intervention',
                           boundsLabel: m.axiomBoundsLabel,
+                        ),
+                      if (!isUser && (m.walSuspended || m.guardianRatified))
+                        GuardianAffirmationChip(
+                          walSuspended: m.walSuspended,
+                          ratified: m.guardianRatified,
+                          agreementId: m.suspendedAgreementId,
                         ),
                       if (!isUser && m.semanticQuin != null)
                         SuperQuinProvenanceChip(
@@ -1828,6 +1896,9 @@ class _Message {
   final String? blockReason;
   final List<int>? semanticQuin;
   final bool walCommitted;
+  final bool walSuspended;
+  final int? suspendedAgreementId;
+  final bool guardianRatified;
   final int sieveTokenCount;
   final bool shieldAlert;
   final String? axiomBoundsLabel;
@@ -1847,6 +1918,9 @@ class _Message {
     this.blockReason,
     this.semanticQuin,
     this.walCommitted = false,
+    this.walSuspended = false,
+    this.suspendedAgreementId,
+    this.guardianRatified = false,
     this.sieveTokenCount = 0,
     this.shieldAlert = false,
     this.axiomBoundsLabel,
@@ -1861,6 +1935,9 @@ class _Message {
     String? blockReason,
     List<int>? semanticQuin,
     bool? walCommitted,
+    bool? walSuspended,
+    int? suspendedAgreementId,
+    bool? guardianRatified,
     int? sieveTokenCount,
     bool? shieldAlert,
     String? axiomBoundsLabel,
@@ -1875,6 +1952,9 @@ class _Message {
       blockReason: blockReason ?? this.blockReason,
       semanticQuin: semanticQuin ?? this.semanticQuin,
       walCommitted: walCommitted ?? this.walCommitted,
+      walSuspended: walSuspended ?? this.walSuspended,
+      suspendedAgreementId: suspendedAgreementId ?? this.suspendedAgreementId,
+      guardianRatified: guardianRatified ?? this.guardianRatified,
       sieveTokenCount: sieveTokenCount ?? this.sieveTokenCount,
       shieldAlert: shieldAlert ?? this.shieldAlert,
       axiomBoundsLabel: axiomBoundsLabel ?? this.axiomBoundsLabel,

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../src/rust/api/chat_files.dart' as chat_files;
+import 'sensitivity_badge.dart';
 
 /// Inline image preview for a chat-attached image file.
 class ChatImageAttachment extends StatelessWidget {
@@ -19,6 +20,9 @@ class ChatImageAttachment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sensitivityStyle =
+        resolveSensitivityStyleFromLevel(context, file.sensitivityLevel);
+
     return FutureBuilder<String>(
       future: chat_files.getChatFileLocalPath(
         sessionId: sessionId,
@@ -43,16 +47,37 @@ class ChatImageAttachment extends StatelessWidget {
         }
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxHeight),
-              child: Image.file(
-                File(path),
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined),
-              ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: sensitivityStyle.border),
+              color: sensitivityStyle.background,
             ),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: maxHeight),
+                    child: Image.file(
+                      File(path),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.broken_image_outlined),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: SensitivityBadge(
+                    sensitivityLevel: file.sensitivityLevel,
+                    dense: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
           ),
         );
       },

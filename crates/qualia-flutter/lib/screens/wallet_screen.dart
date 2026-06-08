@@ -76,7 +76,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   }
 
   String _shortAddress(String address) {
-    if (address.isEmpty) return 'No address — create identity first';
+    if (address.isEmpty) return 'No address — create your principal identifier first';
     if (address.length <= 24) return address;
     return '${address.substring(0, 12)}…${address.substring(address.length - 8)}';
   }
@@ -89,7 +89,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     if (coin.address.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Generate your identity in Credentials before sending.'),
+          content: Text('Generate your principal identifier in Identifiers before sending.'),
         ),
       );
       return;
@@ -218,7 +218,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
             children: [
               const Icon(Icons.account_balance_wallet, color: Color(0xFF00F0FF), size: 28),
               const SizedBox(width: 12),
-              const Text('Decentralized Wallet', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+              const Text('Principal Identifiers & Assets', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
               const Spacer(),
               IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAll),
               IconButton(
@@ -232,23 +232,23 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
           if (!_hasIdentity)
             MaterialBanner(
               content: const Text(
-                'No wallet identity yet. Open Credentials (key icon) to generate '
+                'No principal identifier yet. Open Identifiers (key icon) to generate '
                 'a seed phrase and derive BTC, XMR, and other receive addresses.',
               ),
               leading: const Icon(Icons.key_outlined),
               actions: [
-                TextButton(onPressed: _openCredentials, child: const Text('Credentials')),
+                TextButton(onPressed: _openCredentials, child: const Text('Identifiers')),
               ],
             )
           else
             MaterialBanner(
               content: const Text(
-                'Receive addresses are derived from your identity. '
+                'Receive addresses are derived from your principal identifier. '
                 'On-chain balance sync and send are not connected yet.',
               ),
               leading: const Icon(Icons.info_outline),
               actions: [
-                TextButton(onPressed: _openCredentials, child: const Text('View keys')),
+                TextButton(onPressed: _openCredentials, child: const Text('View signing material')),
               ],
             ),
           const SizedBox(height: 12),
@@ -264,7 +264,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                   Text('\$${totalUsd.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text(
-                    _hasIdentity ? 'Balances show 0 until chain sync ships' : 'Create identity to show addresses',
+                    _hasIdentity ? 'Balances show 0 until chain sync ships' : 'Create your principal identifier to show addresses',
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],

@@ -129,6 +129,7 @@ class ChatFileRecord {
   final ChatFileSharing sharing;
   final String parseStatus;
   final String? parseError;
+  final int sensitivityLevel;
   final String mediaKind;
   final int? imageWidth;
   final int? imageHeight;
@@ -153,6 +154,7 @@ class ChatFileRecord {
     required this.sharing,
     required this.parseStatus,
     this.parseError,
+    required this.sensitivityLevel,
     required this.mediaKind,
     this.imageWidth,
     this.imageHeight,
@@ -179,6 +181,7 @@ class ChatFileRecord {
       sharing.hashCode ^
       parseStatus.hashCode ^
       parseError.hashCode ^
+      sensitivityLevel.hashCode ^
       mediaKind.hashCode ^
       imageWidth.hashCode ^
       imageHeight.hashCode ^
@@ -207,6 +210,7 @@ class ChatFileRecord {
           sharing == other.sharing &&
           parseStatus == other.parseStatus &&
           parseError == other.parseError &&
+          sensitivityLevel == other.sensitivityLevel &&
           mediaKind == other.mediaKind &&
           imageWidth == other.imageWidth &&
           imageHeight == other.imageHeight &&
@@ -221,6 +225,7 @@ class ChatFileSharing {
   final bool allowDownload;
   final bool allowLlmContext;
   final bool allowRelaySync;
+  final int sensitivityLevel;
   final List<String> allowedDids;
   final BigInt? expiresAt;
 
@@ -229,6 +234,7 @@ class ChatFileSharing {
     required this.allowDownload,
     required this.allowLlmContext,
     required this.allowRelaySync,
+    required this.sensitivityLevel,
     required this.allowedDids,
     this.expiresAt,
   });
@@ -239,6 +245,7 @@ class ChatFileSharing {
       allowDownload.hashCode ^
       allowLlmContext.hashCode ^
       allowRelaySync.hashCode ^
+      sensitivityLevel.hashCode ^
       allowedDids.hashCode ^
       expiresAt.hashCode;
 
@@ -251,6 +258,7 @@ class ChatFileSharing {
           allowDownload == other.allowDownload &&
           allowLlmContext == other.allowLlmContext &&
           allowRelaySync == other.allowRelaySync &&
+          sensitivityLevel == other.sensitivityLevel &&
           allowedDids == other.allowedDids &&
           expiresAt == other.expiresAt;
 }

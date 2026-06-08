@@ -122,13 +122,13 @@ class _CredentialManagerScreenState extends State<CredentialManagerScreen> with 
                     children: [
                       Icon(Icons.key, color: Color(0xFFB026FF), size: 28),
                       SizedBox(width: 12),
-                      Text('Identifiers & Credentials', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+                      Text('Principal Identifiers & Verifiable Claims', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
                     ],
                   ),
                   ElevatedButton.icon(
                     onPressed: () => setState(() => _showImportModal = true),
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add External Account'),
+                    label: const Text('Add External Identifier'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00F0FF).withOpacity(0.1),
                       foregroundColor: const Color(0xFF00F0FF),
@@ -139,7 +139,7 @@ class _CredentialManagerScreenState extends State<CredentialManagerScreen> with 
               ),
               const SizedBox(height: 24),
               
-              // Master DID Root
+              // Principal identifier root
               _buildGlassContainer(
                 child: Container(
                   decoration: BoxDecoration(border: Border.all(color: const Color(0xFFB026FF).withOpacity(0.3)), borderRadius: BorderRadius.circular(16)),
@@ -147,9 +147,9 @@ class _CredentialManagerScreenState extends State<CredentialManagerScreen> with 
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Master DID Root (BIP39 Credentials)', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text('Principal Identifier Root (BIP39 Material)', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      const Text('Your 12-word seed phrase is the cryptographic root of your identity. It deterministically derives your default decentralized identifiers (DIDs) across the Webizen topology.', style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'monospace')),
+                      const Text('Your 12-word seed phrase is the cryptographic root of your principal identifier material. It deterministically derives your default decentralized identifiers (DIDs) across the Webizen topology while preserving human agency beyond any single identifier.', style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'monospace')),
                       const SizedBox(height: 24),
                       
                       if (_identityLoaded && _seedPhrase.isEmpty)
@@ -168,8 +168,8 @@ class _CredentialManagerScreenState extends State<CredentialManagerScreen> with 
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Identity Active', style: TextStyle(color: Color(0xFF00FF88), fontWeight: FontWeight.bold, fontSize: 14)),
-                                    Text('Seed phrase was shown at creation — back it up offline. Derived addresses are restored below.', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                                    Text('Principal Identifier Active', style: TextStyle(color: Color(0xFF00FF88), fontWeight: FontWeight.bold, fontSize: 14)),
+                                    Text('Seed phrase was shown at creation — back it up offline. Derived addresses and identifier material are restored below.', style: TextStyle(color: Colors.grey, fontSize: 10)),
                                   ],
                                 ),
                               ),
@@ -190,7 +190,7 @@ class _CredentialManagerScreenState extends State<CredentialManagerScreen> with 
                             side: const BorderSide(color: Color(0xFF00F0FF)),
                             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                           ),
-                          child: const Text('Generate 12-Word Seed (BIP39)'),
+                          child: const Text('Generate 12-Word Seed'),
                         )
                       else
                         Container(
@@ -253,7 +253,7 @@ class _CredentialManagerScreenState extends State<CredentialManagerScreen> with 
                 
               if (_importedAccounts.isNotEmpty) ...[
                 const SizedBox(height: 24),
-                const Text('Imported External Accounts', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Imported External Identifiers', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 GridView.count(
                   crossAxisCount: 2,
@@ -295,7 +295,7 @@ class _CredentialManagerScreenState extends State<CredentialManagerScreen> with 
                         children: [
                           Icon(Icons.download, color: Color(0xFF00F0FF)),
                           SizedBox(width: 12),
-                          Text('Import External Seed Phrase', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text('Import External Identifier Material', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -341,7 +341,7 @@ class _CredentialManagerScreenState extends State<CredentialManagerScreen> with 
                           ElevatedButton(
                             onPressed: _handleImportAccount,
                             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00F0FF).withOpacity(0.2), foregroundColor: const Color(0xFF00F0FF)),
-                            child: const Text('Import Account'),
+                            child: const Text('Import Identifier'),
                           ),
                         ],
                       ),
