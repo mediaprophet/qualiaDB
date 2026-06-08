@@ -303,6 +303,13 @@ impl GgufTensorIndex {
         self.output_weight.as_ref()
     }
 
+    /// Output projection weights: `output.weight` when present, else tied `token_embd.weight`.
+    pub fn logits_projection_info(&self) -> Option<&GgufTensorInfo> {
+        self.output_weight
+            .as_ref()
+            .or_else(|| self.token_embd.as_ref())
+    }
+
     /// Cached `token_embd.weight` tensor metadata.
     pub fn token_embd_info(&self) -> Option<&GgufTensorInfo> {
         self.token_embd.as_ref()

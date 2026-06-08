@@ -42,6 +42,12 @@ const TEST_TRANSFORMER_LAYER_CAP: u32 = 2;
 #[cfg(not(test))]
 const TEST_TRANSFORMER_LAYER_CAP: u32 = 0;
 
+/// Vocab chunk cap during unit tests (full sweep in release).
+#[cfg(test)]
+const TEST_VOCAB_CHUNK_CAP: u32 = 4;
+#[cfg(not(test))]
+const TEST_VOCAB_CHUNK_CAP: u32 = 0;
+
 /// Maximum milliseconds for a local inference call before timeout.
 pub const INFERENCE_TIMEOUT_MS: u64 = 30_000;
 
@@ -405,7 +411,6 @@ impl LocalLlmAgent {
                 let mut emb_buf = [0f32; MAX_EMB_DIM];
                 let mut scratch_a = [0f32; MAX_FFN_DIM];
                 let mut scratch_b = [0f32; MAX_FFN_DIM];
-                let mut logits_buf = [0f32; MAX_EMB_DIM];
                 let emb_dim = emb_dim.min(MAX_EMB_DIM);
 
                 let mut out_ids: Vec<u32> = Vec::new();
@@ -424,7 +429,7 @@ impl LocalLlmAgent {
                         })
                     }).unwrap_or(0);
 
-                    let logits_len = if hidden_ok > 0 {
+                    let (top_i, top_v) = if hidden_ok > 0 {
                         if let Some(idx) = tensor_idx.as_ref() {
                             let _layers = engine.dispatch_transformer_forward(
                                 idx,
@@ -434,37 +439,35 @@ impl LocalLlmAgent {
                                 &mut scratch_b,
                                 TEST_TRANSFORMER_LAYER_CAP,
                             );
-                            // Full vocab projection is O(vocab×embd) — skip in unit tests.
-                            #[cfg(test)]
-                            {
-                                logits_buf[..emb_dim].copy_from_slice(&emb_buf[..emb_dim]);
-                                emb_dim
-                            }
-                            #[cfg(not(test))]
-                            {
-                                engine.dispatch_output_logits_into(
-                                    idx,
-                                    &emb_buf[..emb_dim],
-                                    emb_dim,
-                                    &mut logits_buf,
-                                )
+                            if let Some(argmax) = engine.dispatch_output_argmax_chunked(
+                                idx,
+                                &emb_buf[..emb_dim],
+                                emb_dim,
+                                &mut scratch_a[..],
+                                TEST_VOCAB_CHUNK_CAP,
+                            ) {
+                                (argmax.best_token_id as usize, argmax.max_logit)
+                            } else {
+                                emb_buf[..emb_dim]
+                                    .iter()
+                                    .enumerate()
+                                    .fold((0usize, f32::NEG_INFINITY), |(bi, bv), (i, &v)| {
+                                        if v > bv { (i, v) } else { (bi, bv) }
+                                    })
                             }
                         } else {
-                            emb_dim
+                            (0usize, 0.0)
                         }
                     } else {
                         let wt = QTensor::new(vec![emb_dim, emb_dim], 0, true);
-                        pseudo_embedding_forward(
+                        let logits = pseudo_embedding_forward(
                             cur, emb_dim, &mut emb_buf[..], &engine, &wt,
                         );
-                        emb_dim.min(logits_buf.len())
+                        logits.iter().enumerate().fold(
+                            (0usize, f32::NEG_INFINITY),
+                            |(bi, bv), (i, &v)| if v > bv { (i, v) } else { (bi, bv) },
+                        )
                     };
-
-                    // Argmax over stack logits (no Vec allocation).
-                    let (top_i, top_v) = logits_buf[..logits_len].iter().enumerate()
-                        .fold((0usize, f32::NEG_INFINITY), |(bi, bv), (i, &v)| {
-                            if v > bv { (i, v) } else { (bi, bv) }
-                        });
 
                     // Anomaly flag: 0x99 as the first byte of the top logit's IEEE-754
                     // representation is the sentinel value for an anachronistic token.

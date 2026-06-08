@@ -131,6 +131,41 @@ pub fn fetch_tensor_bytes<'a>(
     Ok(&mmap[start..end])
 }
 
+/// Packed byte width of one logical matrix row (`dims[0]` elements).
+pub fn tensor_row_byte_len(tensor: &GgufTensorInfo) -> Result<usize, ExecutionError> {
+    let n0 = tensor.dims[0] as usize;
+    if n0 == 0 {
+        return Err(ExecutionError::TensorNotFound);
+    }
+    ggml_row_bytes(tensor.ggml_type, n0).ok_or(ExecutionError::UnsupportedType)
+}
+
+/// Zero-copy slice covering vocabulary rows `[row_start, row_start + row_count)`.
+pub fn fetch_tensor_row_range_bytes<'a>(
+    mmap: &'a [u8],
+    tensor_data_start: u64,
+    tensor: &GgufTensorInfo,
+    row_start: usize,
+    row_count: usize,
+) -> Result<&'a [u8], ExecutionError> {
+    let row_bytes = tensor_row_byte_len(tensor)?;
+    let n_rows = if tensor.n_dims > 1 && tensor.dims[1] > 0 {
+        tensor.dims[1] as usize
+    } else {
+        1
+    };
+    if row_start >= n_rows || row_count == 0 {
+        return Err(ExecutionError::TokenOutOfRange);
+    }
+    let rows = row_count.min(n_rows - row_start);
+    let start = (tensor_data_start + tensor.byte_offset) as usize + row_start * row_bytes;
+    let end = start + rows * row_bytes;
+    if end > mmap.len() {
+        return Err(ExecutionError::MmapBounds);
+    }
+    Ok(&mmap[start..end])
+}
+
 /// Dequantize one matrix row (`row` index along `dims[1]`) into `out`.
 pub fn dequant_matrix_row_into(
     raw: &[u8],
@@ -376,6 +411,23 @@ mod tests {
     fn block_q6k_layout_matches_ggml() {
         assert_eq!(std::mem::size_of::<BlockQ6K>(), BLOCK_Q6K_BYTES);
         assert_eq!(std::mem::align_of::<BlockQ6K>(), 2);
+    }
+
+    #[test]
+    fn fetch_row_range_bounds() {
+        use crate::gguf_sharder::GgufTensorInfo;
+        let info = GgufTensorInfo {
+            dims: [2560, 100, 0, 0],
+            n_dims: 2,
+            ggml_type: GGML_TYPE_Q6_K,
+            byte_offset: 0,
+        };
+        let row = tensor_row_byte_len(&info).unwrap();
+        let total = tensor_byte_len(&info).unwrap();
+        assert_eq!(total, row * 100);
+        let fake = vec![0u8; total];
+        let chunk = fetch_tensor_row_range_bytes(&fake, 0, &info, 10, 8).unwrap();
+        assert_eq!(chunk.len(), row * 8);
     }
 
     #[test]

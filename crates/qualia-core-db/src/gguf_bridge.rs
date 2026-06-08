@@ -85,6 +85,40 @@ const MAX_STACK_GEMM_OUT: usize = MAX_STACK_GEMM_DIM;
 const MAX_STACK_GEMM_IN: usize = MAX_STACK_GEMM_DIM;
 /// wgpu default max buffer size on many drivers (256 MiB).
 const MAX_WGPU_WEIGHT_STAGING: usize = 64 * 1024 * 1024;
+/// Vocabulary projection rows per chunked logits sweep (L2-friendly).
+pub const VOCAB_CHUNK_ROWS: usize = 8192;
+
+/// Streaming argmax result across chunked vocabulary projection.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StreamingArgmaxResult {
+    pub best_token_id: u32,
+    pub max_logit: f32,
+}
+
+#[inline]
+fn scrub_f32_volatile(buf: &mut [f32], n: usize) {
+    for v in buf.iter_mut().take(n) {
+        // Prevent logits residue from surviving across decode frames.
+        unsafe { core::ptr::write_volatile(v, 0.0) };
+    }
+}
+
+#[inline]
+fn update_streaming_argmax(
+    chunk_logits: &[f32],
+    chunk_rows: usize,
+    chunk_idx: usize,
+    best_token_id: &mut u32,
+    max_logit: &mut f32,
+) {
+    let base = chunk_idx * VOCAB_CHUNK_ROWS;
+    for (local, &v) in chunk_logits.iter().take(chunk_rows).enumerate() {
+        if v > *max_logit {
+            *max_logit = v;
+            *best_token_id = (base + local) as u32;
+        }
+    }
+}
 
 #[inline]
 fn relu_inplace(buf: &mut [f32], n: usize) {
@@ -569,24 +603,16 @@ impl QTensorEngine {
         self.queue.write_buffer(weight_buf, 0, upload);
     }
 
-    /// Quantized GEMM into caller `out` using reused GPU buffers (Q6_K) or CPU dequant fallback.
-    pub fn dispatch_gemm_into(
+    /// Quantized GEMM from a pre-sliced weight byte range (chunk-local row indices).
+    fn dispatch_gemm_raw_into(
         &self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
         info: &GgufTensorInfo,
+        raw: &[u8],
         input: &[f32],
         out: &mut [f32],
         n_in: usize,
         n_out: usize,
     ) -> bool {
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return false,
-        };
-        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
         if n_in > input.len() || n_out > out.len() {
             return false;
         }
@@ -661,6 +687,95 @@ impl QTensorEngine {
         }
 
         stack_gemm_quant(raw, info, input, out, n_in, n_out)
+    }
+
+    /// Quantized GEMM into caller `out` using reused GPU buffers (Q6_K) or CPU dequant fallback.
+    pub fn dispatch_gemm_into(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        info: &GgufTensorInfo,
+        input: &[f32],
+        out: &mut [f32],
+        n_in: usize,
+        n_out: usize,
+    ) -> bool {
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return false,
+        };
+        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        self.dispatch_gemm_raw_into(info, raw, input, out, n_in, n_out)
+    }
+
+    /// Chunked vocabulary projection with streaming argmax (zero heap, stack chunk buffer only).
+    /// `max_chunks`: `0` sweeps the full vocabulary; otherwise caps chunk iterations (tests).
+    pub fn dispatch_output_argmax_chunked(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &[f32],
+        emb_dim: usize,
+        chunk_logits: &mut [f32],
+        max_chunks: u32,
+    ) -> Option<StreamingArgmaxResult> {
+        let info = index.logits_projection_info()?;
+        let (n_in, vocab_size) = Self::matmul_dims(info);
+        if n_in == 0 || vocab_size == 0 || n_in > emb_dim || n_in > hidden.len() {
+            return None;
+        }
+        if chunk_logits.len() < VOCAB_CHUNK_ROWS {
+            return None;
+        }
+        let mmap = self.gguf_mmap.as_deref()?;
+        let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
+        let n_chunks = if max_chunks == 0 {
+            full_chunks
+        } else {
+            (max_chunks as usize).min(full_chunks)
+        };
+        let mut best_token_id = 0u32;
+        let mut max_logit = f32::NEG_INFINITY;
+
+        for chunk_idx in 0..n_chunks {
+            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+            let raw = crate::ggml_quants::fetch_tensor_row_range_bytes(
+                mmap,
+                index.tensor_data_start,
+                info,
+                row_start,
+                chunk_rows,
+            )
+            .ok()?;
+            if !self.dispatch_gemm_raw_into(
+                info,
+                raw,
+                &hidden[..n_in],
+                &mut chunk_logits[..chunk_rows],
+                n_in,
+                chunk_rows,
+            ) {
+                return None;
+            }
+            update_streaming_argmax(
+                &chunk_logits[..chunk_rows],
+                chunk_rows,
+                chunk_idx,
+                &mut best_token_id,
+                &mut max_logit,
+            );
+            scrub_f32_volatile(&mut chunk_logits[..chunk_rows], chunk_rows);
+        }
+
+        if max_logit == f32::NEG_INFINITY {
+            return None;
+        }
+        Some(StreamingArgmaxResult {
+            best_token_id,
+            max_logit,
+        })
     }
 
     fn matmul_dims(info: &GgufTensorInfo) -> (usize, usize) {
@@ -754,7 +869,7 @@ impl QTensorEngine {
         ran
     }
 
-    /// Final logits via `output.weight` into stack `logits_out`.
+    /// Final logits via chunked projection into `logits_out` (fills min(vocab, buf) rows).
     pub fn dispatch_output_logits_into(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -762,16 +877,64 @@ impl QTensorEngine {
         emb_dim: usize,
         logits_out: &mut [f32],
     ) -> usize {
-        if let Some(info) = index.output_weight_info() {
-            let (n_in, n_out) = Self::matmul_dims(info);
-            let n = n_out.min(logits_out.len());
-            if n_in <= emb_dim && n > 0 && self.dispatch_gemm_into(index, info, &hidden[..n_in], logits_out, n_in, n) {
+        let Some(info) = index.logits_projection_info() else {
+            let n = emb_dim.min(logits_out.len());
+            logits_out[..n].copy_from_slice(&hidden[..n]);
+            return n;
+        };
+        let (n_in, vocab_size) = Self::matmul_dims(info);
+        let fill = vocab_size.min(logits_out.len());
+        if n_in > emb_dim || fill == 0 {
+            let n = emb_dim.min(logits_out.len());
+            logits_out[..n].copy_from_slice(&hidden[..n]);
+            return n;
+        }
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => {
+                let n = emb_dim.min(logits_out.len());
+                logits_out[..n].copy_from_slice(&hidden[..n]);
                 return n;
             }
+        };
+        let mut written = 0usize;
+        let n_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
+        for chunk_idx in 0..n_chunks {
+            if written >= fill {
+                break;
+            }
+            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+            let raw = match crate::ggml_quants::fetch_tensor_row_range_bytes(
+                mmap,
+                index.tensor_data_start,
+                info,
+                row_start,
+                chunk_rows,
+            ) {
+                Ok(s) => s,
+                Err(_) => break,
+            };
+            let out_rows = chunk_rows.min(fill - written);
+            if !self.dispatch_gemm_raw_into(
+                info,
+                raw,
+                &hidden[..n_in],
+                &mut logits_out[written..written + out_rows],
+                n_in,
+                out_rows,
+            ) {
+                break;
+            }
+            written += out_rows;
         }
-        let n = emb_dim.min(logits_out.len());
-        logits_out[..n].copy_from_slice(&hidden[..n]);
-        n
+        if written > 0 {
+            written
+        } else {
+            let n = emb_dim.min(logits_out.len());
+            logits_out[..n].copy_from_slice(&hidden[..n]);
+            n
+        }
     }
 
     pub fn decode_lexicon_bound(&self, _logits: &[f32], valid_lexicon_ids: &[u64]) -> u64 {
@@ -922,6 +1085,37 @@ mod tests {
         let mut scratch_b = [0f32; 10240];
         assert!(engine.dispatch_transformer_layer(&idx, 0, &mut hidden, 2560, &mut scratch_a, &mut scratch_b));
         println!("layer0 hidden[0]={}", hidden[0]);
+    }
+
+    #[test]
+    fn test_chunked_output_argmax_gemma_if_exists() {
+        let path = Path::new("C:/Projects/qualiaDB/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf");
+        if !path.exists() {
+            return;
+        }
+        let file = File::open(path).expect("open");
+        let mmap = unsafe { MmapOptions::new().map(&file).expect("mmap") };
+        let idx = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        let vocab = idx.vocab_dim();
+        assert!(vocab > VOCAB_CHUNK_ROWS);
+
+        let mut engine = QTensorEngine::new();
+        engine.load_gguf(path.to_str().unwrap());
+        let emb_dim = idx.emb_dim();
+        let mut hidden = [0f32; 8192];
+        hidden[0] = 1.0;
+        let mut chunk = [0f32; VOCAB_CHUNK_ROWS];
+        let t0 = std::time::Instant::now();
+        let result = engine
+            .dispatch_output_argmax_chunked(&idx, &hidden[..emb_dim], emb_dim, &mut chunk, 2)
+            .expect("chunked argmax");
+        let elapsed = t0.elapsed();
+        assert!(result.max_logit > f32::NEG_INFINITY);
+        assert!(result.best_token_id < (2 * VOCAB_CHUNK_ROWS) as u32);
+        println!(
+            "chunked argmax token={} logit={} vocab={} elapsed={:?}",
+            result.best_token_id, result.max_logit, vocab, elapsed
+        );
     }
 
     #[test]
