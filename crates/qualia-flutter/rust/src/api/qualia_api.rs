@@ -1177,6 +1177,70 @@ impl From<[u64; 6]> for SuperQuinView {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SuperBlockArtifactView {
+    pub path: String,
+    pub display_name: String,
+    pub byte_size: u64,
+    pub block_count: u64,
+}
+
+impl From<core::SuperBlockArtifact> for SuperBlockArtifactView {
+    fn from(v: core::SuperBlockArtifact) -> Self {
+        Self {
+            path: v.path,
+            display_name: v.display_name,
+            byte_size: v.byte_size,
+            block_count: v.block_count,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SuperBlockViewBridge {
+    pub source_path: String,
+    pub block_index: u64,
+    pub total_blocks: u64,
+    pub block_sequence_id: u64,
+    pub storage_owner_did: u64,
+    pub active_quin_count: u64,
+    pub validation_checksum: u32,
+    pub hardware_profile_flags: u32,
+    pub fea_mesh_index_id: u64,
+    pub raw_bytes: Vec<u8>,
+    pub quins: Vec<SuperQuinView>,
+}
+
+impl From<core::SuperBlockView> for SuperBlockViewBridge {
+    fn from(v: core::SuperBlockView) -> Self {
+        Self {
+            source_path: v.source_path,
+            block_index: v.block_index,
+            total_blocks: v.total_blocks,
+            block_sequence_id: v.block_sequence_id,
+            storage_owner_did: v.storage_owner_did,
+            active_quin_count: v.active_quin_count,
+            validation_checksum: v.validation_checksum,
+            hardware_profile_flags: v.hardware_profile_flags,
+            fea_mesh_index_id: v.fea_mesh_index_id,
+            raw_bytes: v.raw_bytes,
+            quins: v.quins.into_iter().map(SuperQuinView::from).collect(),
+        }
+    }
+}
+
+pub fn list_superblock_artifacts() -> Result<Vec<SuperBlockArtifactView>, String> {
+    core::list_superblock_artifacts()
+        .map(|v| v.into_iter().map(SuperBlockArtifactView::from).collect())
+}
+
+pub fn get_superblock_view(
+    source_path: String,
+    block_index: u64,
+) -> Result<SuperBlockViewBridge, String> {
+    core::get_superblock_view(source_path, block_index).map(SuperBlockViewBridge::from)
+}
+
 pub fn run_inference(prompt: String, _model_path: String) -> String {
     let session_id = match core::ensure_chat_session() {
         Ok(id) => id,

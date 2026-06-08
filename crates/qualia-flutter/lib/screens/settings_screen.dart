@@ -1,8 +1,12 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/qpu_feature_service.dart';
 import '../src/rust/api/qualia_api.dart' as api;
+import '../widgets/sensitivity_badge.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -26,6 +30,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _ibmTokenController = TextEditingController();
   final _dwaveTokenController = TextEditingController();
   bool _qpuSaving = false;
+  final _superblockPathController = TextEditingController();
+  final _superblockIndexController = TextEditingController(text: '0');
+  List<_SuperBlockArtifactEntry> _superblockArtifacts = [];
+  _SuperBlockDecodedView? _superblockView;
+  bool _superblockLoading = false;
+  String _superblockError = '';
 
   int get _shareTotal =>
       _editableRecipients.fold(0, (sum, r) => sum + (int.tryParse(r.shareController.text) ?? 0));
@@ -51,6 +61,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _pathController.dispose();
     _ibmTokenController.dispose();
     _dwaveTokenController.dispose();
+    _superblockPathController.dispose();
+    _superblockIndexController.dispose();
     for (final r in _editableRecipients) {
       r.dispose();
     }
@@ -107,6 +119,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         setState(() {
           _pathController.text = config.storagePath;
+          if (_superblockPathController.text.isEmpty) {
+            _superblockPathController.text = config.storagePath;
+          }
           _storageQuotaGb = config.storageQuotaGb.toInt().toDouble();
           _baseConnectivityCostIlp = config.baseConnectivityCostIlp;
           _taxSuite = suite;
@@ -114,6 +129,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _qpuSettings = qpu;
           _loading = false;
         });
+        _refreshSuperblockArtifacts(config.storagePath);
         if (qpu != null) {
           ref.read(qpuFeatureUnlockedProvider.notifier).setUnlocked(qpu.featureUnlocked);
         }
@@ -125,6 +141,148 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _loading = false;
         });
       }
+    }
+  }
+
+  Future<void> _refreshSuperblockArtifacts([String? rootOverride]) async {
+    final root = (rootOverride ?? _pathController.text.trim()).trim();
+    if (root.isEmpty) return;
+    final dir = Directory(root);
+    if (!await dir.exists()) {
+      if (mounted) {
+        setState(() {
+          _superblockArtifacts = [];
+          _superblockError = 'Storage path not found for block inspector.';
+        });
+      }
+      return;
+    }
+
+    final artifacts = <_SuperBlockArtifactEntry>[];
+    await for (final entity in dir.list(recursive: true, followLinks: false)) {
+      if (entity is! File) continue;
+      final path = entity.path.toLowerCase();
+      if (!path.endsWith('.q42') || path.endsWith('.c.q42')) continue;
+      final stat = await entity.stat();
+      if (stat.size < 40960) continue;
+      artifacts.add(
+        _SuperBlockArtifactEntry(
+          path: entity.path,
+          displayName: entity.uri.pathSegments.isEmpty
+              ? entity.path
+              : entity.uri.pathSegments.last,
+          byteSize: stat.size,
+          blockCount: stat.size ~/ 40960,
+        ),
+      );
+    }
+    artifacts.sort((a, b) => a.displayName.compareTo(b.displayName));
+    if (!mounted) return;
+    setState(() {
+      _superblockArtifacts = artifacts;
+      _superblockError = '';
+      final selectedStillExists = artifacts.any((a) => a.path == _superblockPathController.text);
+      if (!selectedStillExists && artifacts.isNotEmpty) {
+        _superblockPathController.text = artifacts.first.path;
+      }
+    });
+  }
+
+  int _readU32(Uint8List bytes, int offset) {
+    return ByteData.sublistView(bytes, offset, offset + 4)
+        .getUint32(0, Endian.little);
+  }
+
+  BigInt _readU64(Uint8List bytes, int offset) {
+    return ByteData.sublistView(bytes, offset, offset + 8)
+        .getUint64(0, Endian.little);
+  }
+
+  Future<void> _inspectSelectedBlock() async {
+    final path = _superblockPathController.text.trim();
+    final blockIndex = int.tryParse(_superblockIndexController.text.trim()) ?? 0;
+    if (path.isEmpty) {
+      setState(() => _superblockError = 'Choose or paste a .q42 path first.');
+      return;
+    }
+    final file = File(path);
+    if (!await file.exists()) {
+      setState(() => _superblockError = 'Selected .q42 file does not exist.');
+      return;
+    }
+
+    setState(() {
+      _superblockLoading = true;
+      _superblockError = '';
+    });
+
+    try {
+      final stat = await file.stat();
+      final totalBlocks = stat.size ~/ 40960;
+      if (totalBlocks == 0) {
+        throw 'Artifact does not contain a full 40 KB SuperBlock.';
+      }
+      if (blockIndex < 0 || blockIndex >= totalBlocks) {
+        throw 'Block index $blockIndex is out of range for $totalBlocks blocks.';
+      }
+
+      final raf = await file.open();
+      await raf.setPosition(blockIndex * 40960);
+      final bytes = await raf.read(40960);
+      await raf.close();
+      if (bytes.length != 40960) {
+        throw 'Could not read a complete 40 KB SuperBlock.';
+      }
+
+      final activeCount = _readU64(bytes, 16).toInt().clamp(0, 850);
+      final quins = <api.SuperQuinView>[];
+      for (var i = 0; i < activeCount; i++) {
+        final start = 160 + (i * 48);
+        quins.add(
+          api.SuperQuinView(
+            subject: _readU64(bytes, start),
+            predicate: _readU64(bytes, start + 8),
+            object: _readU64(bytes, start + 16),
+            context: _readU64(bytes, start + 24),
+            metadata: _readU64(bytes, start + 32),
+            parity: _readU64(bytes, start + 40),
+          ),
+        );
+      }
+
+      final rows = <String>[];
+      for (var offset = 0; offset < bytes.length; offset += 32) {
+        final chunk = bytes.sublist(
+          offset,
+          offset + 32 > bytes.length ? bytes.length : offset + 32,
+        );
+        final hex = chunk.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+        rows.add('${offset.toRadixString(16).padLeft(4, '0')}: $hex');
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _superblockView = _SuperBlockDecodedView(
+          sourcePath: path,
+          blockIndex: blockIndex,
+          totalBlocks: totalBlocks,
+          blockSequenceId: _readU64(bytes, 0),
+          storageOwnerDid: _readU64(bytes, 8),
+          activeQuinCount: activeCount,
+          validationChecksum: _readU32(bytes, 24),
+          hardwareProfileFlags: _readU32(bytes, 28),
+          feaMeshIndexId: _readU64(bytes, 32),
+          quins: quins,
+          rawHexRows: rows,
+        );
+        _superblockLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _superblockLoading = false;
+        _superblockError = '$e';
+      });
     }
   }
 
@@ -440,6 +598,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 24),
             _buildQpuOraclePanel(context, qpu),
           ],
+          const SizedBox(height: 24),
+          _buildSuperBlockInspectorPanel(context),
         ],
       ),
     );
@@ -596,6 +756,220 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _buildSuperBlockInspectorPanel(BuildContext context) {
+    final view = _superblockView;
+    final selectedPath = _superblockPathController.text.trim();
+
+    return _buildPanel(
+      context,
+      title: 'Developer - SuperBlock Inspector',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Inspect raw 40 KB `.q42` SuperBlocks directly from disk. This is a developer surface for validating physical layout, header fields, and decoded Quin slots.',
+            style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _superblockLoading ? null : _refreshSuperblockArtifacts,
+                  icon: const Icon(Icons.refresh),
+                  label: Text(
+                    _superblockArtifacts.isEmpty
+                        ? 'Scan storage for .q42 artifacts'
+                        : 'Refresh artifact list (${_superblockArtifacts.length})',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 140,
+                child: TextField(
+                  controller: _superblockIndexController,
+                  decoration: const InputDecoration(
+                    labelText: 'Block index',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                onPressed: _superblockLoading ? null : _inspectSelectedBlock,
+                icon: const Icon(Icons.search),
+                label: const Text('Inspect'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_superblockArtifacts.isNotEmpty) ...[
+            DropdownButtonFormField<String>(
+              initialValue: _superblockArtifacts.any((a) => a.path == selectedPath)
+                  ? selectedPath
+                  : null,
+              decoration: const InputDecoration(
+                labelText: 'Discovered .q42 artifact',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: _superblockArtifacts
+                  .map(
+                    (artifact) => DropdownMenuItem(
+                      value: artifact.path,
+                      child: Text(
+                        '${artifact.displayName} (${artifact.blockCount} blocks)',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _superblockPathController.text = v);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+          TextField(
+            controller: _superblockPathController,
+            decoration: const InputDecoration(
+              labelText: '.q42 path',
+              border: OutlineInputBorder(),
+            ),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+          if (_superblockError.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(_superblockError, style: const TextStyle(color: Colors.redAccent)),
+          ],
+          if (_superblockLoading) ...[
+            const SizedBox(height: 16),
+            const LinearProgressIndicator(),
+          ],
+          if (view != null) ...[
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _metricChip('Block', '${view.blockIndex + 1} / ${view.totalBlocks}'),
+                _metricChip('Active Quins', '${view.activeQuinCount}'),
+                _metricChip('Sequence', view.blockSequenceId.toString()),
+                _metricChip('Checksum', '0x${view.validationChecksum.toRadixString(16)}'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SelectableText(
+              view.sourcePath,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Owner DID hash: 0x${view.storageOwnerDid.toRadixString(16)}'),
+                  Text('Hardware profile: 0x${view.hardwareProfileFlags.toRadixString(16)}'),
+                  Text('FEA mesh index: 0x${view.feaMeshIndexId.toRadixString(16)}'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Decoded Quin slots',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: view.quins.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final quin = view.quins[index];
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Quin ${index + 1}',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 10),
+                            SensitivityBadge(contextField: quin.context.toInt(), dense: true),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        SelectableText(
+                          'S: 0x${quin.subject.toRadixString(16)}\n'
+                          'P: 0x${quin.predicate.toRadixString(16)}\n'
+                          'O: 0x${quin.object.toRadixString(16)}\n'
+                          'C: 0x${quin.context.toRadixString(16)}\n'
+                          'M: 0x${quin.metadata.toRadixString(16)}\n'
+                          'X: 0x${quin.parity.toRadixString(16)}',
+                          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Raw 40 KB bytes',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 320),
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  view.rawHexRows.join('\n'),
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _metricChip(String label, String value) {
+    return Chip(label: Text('$label: $value'));
+  }
+
   Widget _buildPanel(BuildContext context, {required String title, required Widget child}) {
     return Container(
       decoration: BoxDecoration(
@@ -652,4 +1026,46 @@ class _EditableRecipient {
     addressController.dispose();
     shareController.dispose();
   }
+}
+
+class _SuperBlockArtifactEntry {
+  final String path;
+  final String displayName;
+  final int byteSize;
+  final int blockCount;
+
+  const _SuperBlockArtifactEntry({
+    required this.path,
+    required this.displayName,
+    required this.byteSize,
+    required this.blockCount,
+  });
+}
+
+class _SuperBlockDecodedView {
+  final String sourcePath;
+  final int blockIndex;
+  final int totalBlocks;
+  final BigInt blockSequenceId;
+  final BigInt storageOwnerDid;
+  final int activeQuinCount;
+  final int validationChecksum;
+  final int hardwareProfileFlags;
+  final BigInt feaMeshIndexId;
+  final List<api.SuperQuinView> quins;
+  final List<String> rawHexRows;
+
+  const _SuperBlockDecodedView({
+    required this.sourcePath,
+    required this.blockIndex,
+    required this.totalBlocks,
+    required this.blockSequenceId,
+    required this.storageOwnerDid,
+    required this.activeQuinCount,
+    required this.validationChecksum,
+    required this.hardwareProfileFlags,
+    required this.feaMeshIndexId,
+    required this.quins,
+    required this.rawHexRows,
+  });
 }
