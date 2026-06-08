@@ -410,20 +410,19 @@
 
                     let db = new Uint8Array(0);
                     let index = null;
-                    let datasetLabel = 'empty pipeline';
+                    const manifest = await window._benchFetchManifest(profileId);
+                    const querySet = window._benchQueriesForManifest(manifest);
+                    let datasetLabel = manifest?.label || 'empty pipeline';
                     let loadMs = 0;
                     let quinCount = 0;
-                    let querySet = QUERIES;
 
                     if (storageFormat !== 'pipeline') {
-                        const manifest = await window._benchFetchManifest(profileId);
                         const loaded = await window._benchLoadDataset(manifest, storageFormat);
                         db = loaded.db;
                         index = loaded.index || window._benchBuildIndex(db);
                         datasetLabel = loaded.label;
                         loadMs = loaded.loadMs;
                         quinCount = loaded.quinCount;
-                        querySet = window._benchQueriesForManifest(manifest);
                     }
 
                     const suite = document.getElementById('benchmarkSuite').value;
