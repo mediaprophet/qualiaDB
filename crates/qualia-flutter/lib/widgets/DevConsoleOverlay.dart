@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../rust/frb_generated.dart';
+import '../src/rust/frb_generated.dart';
 
 /// DevConsoleOverlay wraps a [child] with a developer console that can be
 /// toggled via the `~` key or a hidden triple-tap gesture. When visible it
