@@ -66,14 +66,9 @@ jobs:
         continue-on-error: true   # non-fatal: Pages deploys fine without WordNet data
         run: bash scripts/fetch_wordnet.sh --subset 100000
 
-      - name: Stage benchmark datasets for Pages
+      - name: Prepare Schema.org benchmark artifacts for Pages
         run: |
-          mkdir -p docs/data/schemaorg/30.0
-          cp data/schemaorg/30.0/schemaorg-current-https.nt docs/data/schemaorg/30.0/
-          cp data/schemaorg/30.0/schemaorg-current-https.q42 docs/data/schemaorg/30.0/
-          cp data/schemaorg/30.0/schemaorg-current-https.c.q42 docs/data/schemaorg/30.0/
-          cp data/schemaorg/30.0/schemaorg-current-https.q42.bidx docs/data/schemaorg/30.0/
-          cp data/schemaorg/30.0/schemaorg-current-https.q42.lex docs/data/schemaorg/30.0/
+          bash scripts/prepare_schemaorg_benchmark.sh 30.0 current-https
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
