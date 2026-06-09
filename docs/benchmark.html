@@ -562,6 +562,18 @@
                 return;
             }
 
+            if (health.dev_mode === false) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-center py-12 space-y-3">
+                        <i class="fas fa-shield-halved text-4xl text-amber-500/50 mb-2"></i>
+                        <p class="text-slate-300 font-medium">Daemon is running, but native benchmark dataset uploads need dev mode.</p>
+                        <p class="text-sm text-slate-500">Restart with: <span class="font-mono text-blue-400">cargo run --release -p qualia-cli -- daemon --dev --port 4242</span></p>
+                    </div>`;
+                status.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>Dev Mode Required</span>`;
+                status.className = `px-4 py-1.5 text-xs rounded-2xl bg-amber-500/10 text-amber-300 flex items-center gap-2`;
+                return;
+            }
+
             if (!window._qualiaWsClient) {
                 container.innerHTML = `<div class="text-red-400 py-8 text-center text-sm">WebSocket client not loaded</div>`;
                 return;
@@ -659,6 +671,17 @@
                 status.innerHTML = `<i class="fas fa-check-circle"></i> <span>Complete</span>`;
                 status.className = `px-4 py-1.5 text-xs rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center gap-2`;
             } catch(e) {
+                if (String(e?.message || '').includes('bench_load requires daemon --dev')) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-center py-12 space-y-3">
+                            <i class="fas fa-shield-halved text-4xl text-amber-500/50 mb-2"></i>
+                            <p class="text-slate-300 font-medium">Native benchmark uploads are disabled unless the daemon is started in dev mode.</p>
+                            <p class="text-sm text-slate-500">Restart with: <span class="font-mono text-blue-400">cargo run --release -p qualia-cli -- daemon --dev --port 4242</span></p>
+                        </div>`;
+                    status.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>Dev Mode Required</span>`;
+                    status.className = `px-4 py-1.5 text-xs rounded-2xl bg-amber-500/10 text-amber-300 flex items-center gap-2`;
+                    return;
+                }
                 container.innerHTML = `<div class="text-red-400 py-8 text-center text-sm">${e.message}</div>`;
                 status.innerHTML = `<i class="fas fa-times-circle"></i> <span>Error</span>`;
                 status.className = `px-4 py-1.5 text-xs rounded-2xl bg-red-500/10 text-red-400 flex items-center gap-2`;

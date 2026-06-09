@@ -98,7 +98,7 @@ jobs:
           restore-keys: wasm-cargo-
 
       - name: Install wasm-pack
-        run: cargo install wasm-pack --locked --version 0.13.1
+        run: cargo install wasm-pack --locked --version 0.13.1 --force
 
       - name: Build WASM package
         run: |

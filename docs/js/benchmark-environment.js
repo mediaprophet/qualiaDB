@@ -118,13 +118,19 @@ export function formatDeviceSummary(env) {
 export function formatDaemonBadgeText(health) {
     if (!health) return 'Daemon Offline';
     const ver = health.version ? `v${health.version}` : '';
+    const mode = health.dev_mode === true
+        ? 'dev'
+        : health.dev_mode === false
+            ? 'standard'
+            : null;
     const topo = health.execution_environment?.topology;
     if (topo) {
         const cells = topo.worker_cells_configured ?? 1;
         if (cells > 1 || topo.compute_swarm_enabled) {
             const swarm = topo.compute_swarm_enabled ? ' · swarm' : '';
-            return `Daemon ${ver} · ${cells} cells${swarm}`.trim();
+            const modeLabel = mode ? ` · ${mode}` : '';
+            return `Daemon ${ver}${modeLabel} · ${cells} cells${swarm}`.trim();
         }
     }
-    return `Daemon ${ver}`.trim();
+    return `Daemon ${ver}${mode ? ` · ${mode}` : ''}`.trim();
 }

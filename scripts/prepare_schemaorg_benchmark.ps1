@@ -10,6 +10,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $releaseDir = Join-Path $repoRoot (Join-Path $DataRoot $Release)
+$docsReleaseDir = Join-Path $repoRoot (Join-Path "docs/data/schemaorg" $Release)
 $baseName = "schemaorg-$Variant"
 $ntPath = Join-Path $releaseDir "$baseName.nt"
 $q42Base = Join-Path $releaseDir $baseName
@@ -18,6 +19,7 @@ $compressedQ42Path = "$q42Base.c.q42"
 $rawUrl = "https://raw.githubusercontent.com/schemaorg/schemaorg/main/data/releases/$Release/$baseName.nt"
 
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+New-Item -ItemType Directory -Force -Path $docsReleaseDir | Out-Null
 
 Write-Host "Schema.org benchmark preparation" -ForegroundColor Cyan
 Write-Host "  Source URL : $rawUrl"
@@ -50,6 +52,19 @@ if (Test-Path $q42Path) {
 if (Test-Path $compressedQ42Path) {
     $cMb = [math]::Round((Get-Item $compressedQ42Path).Length / 1MB, 2)
     Write-Host "  .c.q42 size: $cMb MB (LZ4 distribution artifact)" -ForegroundColor DarkGray
+}
+
+Write-Host "Syncing benchmark artifacts into docs/data for GitHub Pages and local site testing..." -ForegroundColor Yellow
+Copy-Item -Force $ntPath $docsReleaseDir
+Copy-Item -Force $q42Path $docsReleaseDir
+if (Test-Path $compressedQ42Path) {
+    Copy-Item -Force $compressedQ42Path $docsReleaseDir
+}
+if (Test-Path "$q42Path.bidx") {
+    Copy-Item -Force "$q42Path.bidx" $docsReleaseDir
+}
+if (Test-Path "$q42Path.lex") {
+    Copy-Item -Force "$q42Path.lex" $docsReleaseDir
 }
 
 Write-Host ""

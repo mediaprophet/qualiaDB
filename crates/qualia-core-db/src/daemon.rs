@@ -497,12 +497,14 @@ pub async fn start_local_daemon_with_options(
     // -----------------------------------------------------------------------
     // GET /health
     // -----------------------------------------------------------------------
-    let health = warp::path("health").and(warp::get()).map(|| {
+    let health_dev = dev;
+    let health = warp::path("health").and(warp::get()).map(move || {
         warp::reply::with_status(
             warp::reply::json(&json!({
                 "status": "active",
                 "engine": "qualia-core-db",
                 "version": crate::ENGINE_VERSION,
+                "dev_mode": health_dev,
                 "graph_quin_count": crate::daemon_graph::graph_quin_count(),
                 "webtorrent": crate::webtorrent_seeder::telemetry(),
                 "execution_environment": execution_environment_json()

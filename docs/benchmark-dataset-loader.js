@@ -203,7 +203,9 @@ export function buildSubjectIndex(db) {
 export async function fetchManifest(profileId) {
     const res = await fetch(`./benchmark-datasets/${profileId}.json`);
     if (!res.ok) throw new Error(`Dataset manifest not found: ${profileId}`);
-    return res.json();
+    const manifest = await res.json();
+    manifest._manifestUrl = res.url;
+    return manifest;
 }
 
 export async function loadDataset(manifest, storageFormat) {
@@ -228,7 +230,8 @@ export async function loadDataset(manifest, storageFormat) {
         throw new Error(`No path for storage format ${storageFormat} — run scripts/prepare_schemaorg_benchmark.ps1`);
     }
 
-    const res = await fetch(url);
+    const assetUrl = new URL(url, manifest._manifestUrl || window.location.href).toString();
+    const res = await fetch(assetUrl);
     if (!res.ok) {
         throw new Error(
             `Failed to fetch ${url} (${res.status}). Run scripts/prepare_schemaorg_benchmark.ps1 first.`
