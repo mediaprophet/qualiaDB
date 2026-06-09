@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
-use std::sync::Arc;
 use std::time::Duration;
 use sysinfo::{Disks, System};
 use tokio::time::sleep;
@@ -379,9 +379,12 @@ pub struct EngineTelemetryFields {
     pub memory_floor_mb: u32,
     pub model_lifecycle: String,
     pub kv_cache_used_mb: u32,
+    pub vram_used_mb: u32,
+    pub vram_total_mb: u32,
 }
 
 pub fn get_engine_telemetry_fields() -> EngineTelemetryFields {
+    let (vram_used_mb, vram_total_mb) = probe_vram_usage_mb();
     EngineTelemetryFields {
         thermal_state: crate::model_lifecycle::get_thermal_state_label().to_string(),
         llm_memory_bytes: crate::model_lifecycle::get_llm_memory_bytes(),
@@ -391,7 +394,21 @@ pub fn get_engine_telemetry_fields() -> EngineTelemetryFields {
         )
         .to_string(),
         kv_cache_used_mb: crate::model_lifecycle::get_kv_cache_used_mb(),
+        vram_used_mb,
+        vram_total_mb,
     }
+}
+
+fn probe_vram_usage_mb() -> (u32, u32) {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(memory) = qualia_core_db::directml_bridge::probe_best_adapter_memory() {
+            let used = memory.local_usage_bytes / (1024 * 1024);
+            let total = memory.local_budget_bytes / (1024 * 1024);
+            return (used as u32, total as u32);
+        }
+    }
+    (0, 0)
 }
 
 pub async fn download_and_vectorize(
@@ -1602,29 +1619,96 @@ pub fn update_chat_contact_categories(
 }
 
 pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
+    use std::collections::HashSet;
+
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
     let models_dir = PathBuf::from(&storage_path).join("Models");
+    let active_path = load_active_model_from_disk();
     let mut models = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+
+    let mut push_model = |path: &Path| {
+        if !path.is_file() {
+            return;
+        }
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        if !path.extension().map(|e| e == "gguf").unwrap_or(false)
+            || name.to_ascii_lowercase().contains("mmproj")
+        {
+            return;
+        }
+        let key = path.to_string_lossy().to_ascii_lowercase();
+        if !seen.insert(key) {
+            return;
+        }
+        let display_name = if path.starts_with(&models_dir) {
+            name
+        } else {
+            path.to_string_lossy().into_owned()
+        };
+        let is_active = active_path
+            .as_ref()
+            .map(|active| paths_refer_to_same_file(active, path))
+            .unwrap_or(false);
+        models.push(llm_offload::ModelInfo {
+            name: display_name,
+            is_active,
+            avatar_type: if path.starts_with(&models_dir) {
+                "installed".to_string()
+            } else {
+                "local".to_string()
+            },
+        });
+    };
+
     if let Ok(entries) = std::fs::read_dir(&models_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
-            let name = path
-                .file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_default();
-            if path.extension().map(|e| e == "gguf").unwrap_or(false)
-                && !name.to_ascii_lowercase().contains("mmproj")
+            if path.extension().map(|e| e == "gguf").unwrap_or(false) {
+                push_model(&path);
+            } else if path
+                .extension()
+                .map(|e| e == "json")
+                .unwrap_or(false)
+                && path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|n| n.ends_with(".install.json"))
+                    .unwrap_or(false)
             {
-                models.push(llm_offload::ModelInfo {
-                    name,
-                    is_active: false,
-                    avatar_type: "local".to_string(),
-                });
+                if let Ok(text) = std::fs::read_to_string(&path) {
+                    if let Ok(manifest) =
+                        serde_json::from_str::<crate::model_lifecycle::InstallManifest>(&text)
+                    {
+                        push_model(Path::new(&manifest.gguf_path));
+                    }
+                }
             }
         }
     }
+
+    if let Some(active) = active_path.as_ref() {
+        push_model(Path::new(active));
+    }
+
+    models.sort_by(|a, b| a.name.to_ascii_lowercase().cmp(&b.name.to_ascii_lowercase()));
     Ok(models)
+}
+
+fn paths_refer_to_same_file(left: &str, right: &Path) -> bool {
+    let left_path = Path::new(left);
+    if left_path == right {
+        return true;
+    }
+    left_path
+        .file_name()
+        .is_some_and(|left_name| right.file_name() == Some(left_name))
+        && left.replace('\\', "/").to_ascii_lowercase()
+            == right.to_string_lossy().replace('\\', "/").to_ascii_lowercase()
 }
 
 pub async fn run_agent_inference(
@@ -2296,6 +2380,73 @@ pub fn set_active_model(model_name: String) -> Result<(), String> {
     persist_active_model_record(&record)?;
     *state.active_model.lock().unwrap() = Some(record.gguf_path.clone());
     Ok(())
+}
+
+/// Evict the resident model from memory without deleting on-disk GGUF files.
+pub fn unload_active_model() -> Result<(), String> {
+    let state = crate::state::APP_STATE.get().unwrap();
+    if let Some(record) = load_active_model_record_from_disk() {
+        crate::model_lifecycle::unload_active_model(Some(record.profile_id));
+    } else {
+        crate::model_lifecycle::unload_active_model(None);
+    }
+    *state.active_model.lock().unwrap() = None;
+    clear_active_model_record();
+    Ok(())
+}
+
+static MODEL_ACTIVATION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
+static MODEL_ACTIVATION_ERROR: Mutex<Option<String>> = Mutex::new(None);
+
+/// Activate a model on a background thread so the Flutter FRB caller is not blocked.
+pub fn set_active_model_async(model_name: String) -> Result<(), String> {
+    spawn_model_activation(move || set_active_model(model_name))
+}
+
+pub fn try_apply_model_preference_async(task: &str) -> Result<(), String> {
+    let task = task.to_string();
+    spawn_model_activation(move || try_apply_model_preference(&task))
+}
+
+fn spawn_model_activation(work: impl FnOnce() -> Result<(), String> + Send + 'static) -> Result<(), String> {
+    if MODEL_ACTIVATION_IN_PROGRESS.load(Ordering::Acquire) {
+        return Err("Model activation already in progress".to_string());
+    }
+    MODEL_ACTIVATION_IN_PROGRESS.store(true, Ordering::Release);
+    if let Ok(mut slot) = MODEL_ACTIVATION_ERROR.lock() {
+        *slot = None;
+    }
+    std::thread::Builder::new()
+        .name("qualia-model-activate".into())
+        .spawn(move || {
+            let result = work();
+            if let Err(err) = result {
+                if let Ok(mut slot) = MODEL_ACTIVATION_ERROR.lock() {
+                    *slot = Some(err);
+                }
+            }
+            MODEL_ACTIVATION_IN_PROGRESS.store(false, Ordering::Release);
+        })
+        .map_err(|e| format!("Failed to spawn model activation thread: {e}"))?;
+    Ok(())
+}
+
+pub fn is_model_activation_in_progress() -> bool {
+    MODEL_ACTIVATION_IN_PROGRESS.load(Ordering::Acquire)
+}
+
+pub fn take_model_activation_error() -> Option<String> {
+    MODEL_ACTIVATION_ERROR.lock().ok()?.take()
+}
+
+pub fn get_inference_backend_settings() -> crate::inference_backend::InferenceBackendSettings {
+    crate::inference_backend::load_inference_backend_settings()
+}
+
+pub fn save_inference_backend_settings(
+    settings: crate::inference_backend::InferenceBackendSettings,
+) -> Result<(), String> {
+    crate::inference_backend::save_inference_backend_settings(&settings)
 }
 
 pub fn get_model_preferences() -> crate::model_preferences::ModelPreferences {

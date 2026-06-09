@@ -22,6 +22,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _status = '';
   String _error = '';
   bool _loading = true;
+  bool _loggingEnabled = false;
+  bool _loggingSaving = false;
+  api.InferenceBackendSettingsFrb? _inferenceBackend;
+  final _remoteEndpointController = TextEditingController();
+  bool _inferenceSaving = false;
   api.TaxRecipientSuite? _taxSuite;
   List<_EditableRecipient> _editableRecipients = [];
 
@@ -63,6 +68,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _dwaveTokenController.dispose();
     _superblockPathController.dispose();
     _superblockIndexController.dispose();
+    _remoteEndpointController.dispose();
     for (final r in _editableRecipients) {
       r.dispose();
     }
@@ -114,6 +120,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final config = await api.getConfig();
       final suite = await api.getTaxSuite();
+      final loggingEnabled = await api.isTelemetryFileLoggingEnabled();
+      final inferenceBackend = await api.getInferenceBackendSettings();
       api.QpuOracleSettings? qpu;
       if (await api.isQpuFeatureUnlocked()) {
         qpu = await api.getQpuSettings();
@@ -129,6 +137,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _taxSuite = suite;
           _syncEditableFromSuite(suite);
           _qpuSettings = qpu;
+          _loggingEnabled = loggingEnabled;
+          _inferenceBackend = inferenceBackend;
+          _remoteEndpointController.text = inferenceBackend.remoteEndpoint;
           _loading = false;
         });
         _refreshSuperblockArtifacts(config.storagePath);
@@ -391,6 +402,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _saveLoggingPreference(bool enabled) async {
+    setState(() => _loggingSaving = true);
+    try {
+      await api.setTelemetryFileLoggingEnabled(enabled: enabled);
+      if (mounted) {
+        setState(() {
+          _loggingEnabled = enabled;
+          _status = enabled ? 'Engine file logging enabled.' : 'Engine file logging disabled.';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = '$e');
+    } finally {
+      if (mounted) setState(() => _loggingSaving = false);
+    }
+  }
+
+  Future<void> _saveInferenceBackend() async {
+    setState(() => _inferenceSaving = true);
+    try {
+      await api.saveInferenceBackendSettings(
+        settings: api.InferenceBackendSettingsFrb(
+          backend: _inferenceBackend?.backend ?? 'local',
+          remoteEndpoint: _remoteEndpointController.text.trim(),
+        ),
+      );
+      if (mounted) {
+        setState(() {
+          _status = 'Inference backend preference saved.';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = '$e');
+    } finally {
+      if (mounted) setState(() => _inferenceSaving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -414,6 +463,66 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildPanel(
+            context,
+            title: 'Engine Diagnostics',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SwitchListTile(
+                  title: const Text('Write telemetry to disk'),
+                  subtitle: FutureBuilder<String>(
+                    future: api.getTelemetryLogPath(),
+                    builder: (context, snapshot) => Text(
+                      snapshot.data ?? '…',
+                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                    ),
+                  ),
+                  value: _loggingEnabled,
+                  onChanged: _loggingSaving ? null : _saveLoggingPreference,
+                ),
+                const Divider(height: 24),
+                const Text('Inference backend', style: TextStyle(color: Colors.grey)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _inferenceBackend?.backend ?? 'local',
+                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                  items: const [
+                    DropdownMenuItem(value: 'local', child: Text('Local GGUF (in-process)')),
+                    DropdownMenuItem(value: 'hybrid', child: Text('Hybrid (local first)')),
+                    DropdownMenuItem(value: 'remote', child: Text('Remote (consent required)')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _inferenceBackend = api.InferenceBackendSettingsFrb(
+                        backend: value,
+                        remoteEndpoint: _remoteEndpointController.text.trim(),
+                      );
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _remoteEndpointController,
+                  decoration: const InputDecoration(
+                    labelText: 'Remote endpoint (optional)',
+                    border: OutlineInputBorder(),
+                    hintText: 'https://…',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton(
+                    onPressed: _inferenceSaving ? null : _saveInferenceBackend,
+                    child: Text(_inferenceSaving ? 'Saving…' : 'Save backend preference'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           _buildPanel(
             context,
             title: 'System Configuration',

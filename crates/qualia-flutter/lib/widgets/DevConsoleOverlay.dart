@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../src/rust/frb_generated.dart';
+import '../src/rust/api/qualia_api.dart' as api;
 
 /// DevConsoleOverlay wraps a [child] with a developer console that can be
 /// toggled via the `~` key or a hidden triple-tap gesture. When visible it
@@ -25,6 +25,8 @@ class _DevConsoleOverlayState extends State<DevConsoleOverlay> {
   final ScrollController _scrollController = ScrollController();
   final ListQueue<String> _logBuffer = ListQueue();
   StreamSubscription<String>? _logSubscription;
+  String? _telemetryLogPath;
+  bool _fileLoggingEnabled = false;
 
   bool _advancedMode = false;
   bool _pendingAutoScroll = false;
@@ -38,6 +40,7 @@ class _DevConsoleOverlayState extends State<DevConsoleOverlay> {
       if (mounted && !_focusNode.hasFocus) {
         _focusNode.requestFocus();
       }
+      _loadTelemetryLogInfo();
     });
   }
 
@@ -58,13 +61,38 @@ class _DevConsoleOverlayState extends State<DevConsoleOverlay> {
     }
   }
 
+  Future<void> _toggleFileLogging(bool enabled) async {
+    setState(() {
+      _fileLoggingEnabled = enabled;
+    });
+    try {
+      await api.setTelemetryFileLoggingEnabled(enabled: enabled);
+    } catch (err) {
+      if (!mounted) return;
+      setState(() => _fileLoggingEnabled = !enabled);
+      _handleLogLine('[error] DevConsoleOverlay: failed to toggle file logging: $err');
+    }
+  }
+
+  Future<void> _loadTelemetryLogInfo() async {
+    try {
+      final path = await api.getTelemetryLogPath();
+      final enabled = await api.isTelemetryFileLoggingEnabled();
+      if (!mounted) return;
+      setState(() {
+        _telemetryLogPath = path;
+        _fileLoggingEnabled = enabled;
+      });
+    } catch (_) {}
+  }
+
   void _ensureTelemetryStream() {
     if (_logSubscription != null) {
       return;
     }
 
     try {
-      final stream = RustApi.instance.api.crateApiQualiaApiInitTelemetryStream();
+      final stream = api.initTelemetryStream();
       _logSubscription = stream.listen(
         _handleLogLine,
         onError: (error, stack) {
@@ -158,13 +186,28 @@ class _DevConsoleOverlayState extends State<DevConsoleOverlay> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '${_logBuffer.length} entries',
+                        _telemetryLogPath == null
+                            ? '${_logBuffer.length} entries'
+                            : '${_logBuffer.length} entries · log: $_telemetryLogPath'
+                                '${_fileLoggingEnabled ? '' : ' (file logging off — enable via tray)'}',
                         style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     FilledButton.tonal(
                       onPressed: _toggleAdvancedMode,
                       child: const Text('Exit Advanced Mode'),
+                    ),
+                    IconButton(
+                      tooltip: _fileLoggingEnabled
+                          ? 'Disable disk logging'
+                          : 'Enable disk logging',
+                      onPressed: () => _toggleFileLogging(!_fileLoggingEnabled),
+                      icon: Icon(
+                        _fileLoggingEnabled ? Icons.save_alt : Icons.save_outlined,
+                        size: 18,
+                      ),
                     ),
                   ],
                 ),

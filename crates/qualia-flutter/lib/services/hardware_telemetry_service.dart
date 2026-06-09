@@ -5,8 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../src/rust/api/qualia_api.dart' as api;
 import '../tray/tray_service.dart';
 
-/// Live CPU/RAM/daemon stats polled every 2 seconds (matches Tauri telemetry loop).
-class HardwareTelemetryNotifier extends StateNotifier<api.HardwareTelemetry?> {
+/// Live CPU/RAM/VRAM/daemon stats polled every 2 seconds.
+class HardwareTelemetrySnapshot {
+  const HardwareTelemetrySnapshot({
+    required this.engine,
+    this.vramAvailableGb,
+  });
+
+  final api.HardwareTelemetry engine;
+  final double? vramAvailableGb;
+}
+
+class HardwareTelemetryNotifier extends StateNotifier<HardwareTelemetrySnapshot?> {
   HardwareTelemetryNotifier() : super(null);
 
   Timer? _timer;
@@ -20,7 +30,18 @@ class HardwareTelemetryNotifier extends StateNotifier<api.HardwareTelemetry?> {
   Future<void> poll() async {
     try {
       final telemetry = await api.getHardwareTelemetry();
-      state = telemetry;
+      double? vramGb;
+      try {
+        final status = await api.getHardwareStatus();
+        if (status.vramEstimatedGb > 0) {
+          vramGb = status.vramEstimatedGb;
+        }
+      } catch (_) {}
+      final snapshot = HardwareTelemetrySnapshot(
+        engine: telemetry,
+        vramAvailableGb: vramGb,
+      );
+      state = snapshot;
       await TrayService.instance.updateFromTelemetry(telemetry);
     } catch (_) {}
   }
@@ -33,7 +54,7 @@ class HardwareTelemetryNotifier extends StateNotifier<api.HardwareTelemetry?> {
 }
 
 final hardwareTelemetryProvider =
-    StateNotifierProvider<HardwareTelemetryNotifier, api.HardwareTelemetry?>(
+    StateNotifierProvider<HardwareTelemetryNotifier, HardwareTelemetrySnapshot?>(
   (ref) {
     final notifier = HardwareTelemetryNotifier();
     notifier.start();

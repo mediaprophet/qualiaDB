@@ -79,6 +79,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
+  InferenceBackendSettingsFrb
+      dco_decode_box_autoadd_inference_backend_settings_frb(dynamic raw);
+
+  @protected
   ModelPreferencesFrb dco_decode_box_autoadd_model_preferences_frb(dynamic raw);
 
   @protected
@@ -186,6 +190,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   HardwareTelemetry dco_decode_hardware_telemetry(dynamic raw);
 
   @protected
+  InferenceBackendSettingsFrb dco_decode_inference_backend_settings_frb(
+      dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
@@ -262,6 +270,13 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   List<ProgressPayload> dco_decode_list_progress_payload(dynamic raw);
+
+  @protected
+  List<SuperBlockArtifactView> dco_decode_list_super_block_artifact_view(
+      dynamic raw);
+
+  @protected
+  List<SuperQuinView> dco_decode_list_super_quin_view(dynamic raw);
 
   @protected
   List<SuspendedTxView> dco_decode_list_suspended_tx_view(dynamic raw);
@@ -351,6 +366,12 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   SpatialPhysicsState dco_decode_spatial_physics_state(dynamic raw);
+
+  @protected
+  SuperBlockArtifactView dco_decode_super_block_artifact_view(dynamic raw);
+
+  @protected
+  SuperBlockViewBridge dco_decode_super_block_view_bridge(dynamic raw);
 
   @protected
   SuperQuinView dco_decode_super_quin_view(dynamic raw);
@@ -452,6 +473,11 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  InferenceBackendSettingsFrb
+      sse_decode_box_autoadd_inference_backend_settings_frb(
+          SseDeserializer deserializer);
 
   @protected
   ModelPreferencesFrb sse_decode_box_autoadd_model_preferences_frb(
@@ -569,6 +595,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   HardwareTelemetry sse_decode_hardware_telemetry(SseDeserializer deserializer);
 
   @protected
+  InferenceBackendSettingsFrb sse_decode_inference_backend_settings_frb(
+      SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
@@ -655,6 +685,14 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   List<ProgressPayload> sse_decode_list_progress_payload(
+      SseDeserializer deserializer);
+
+  @protected
+  List<SuperBlockArtifactView> sse_decode_list_super_block_artifact_view(
+      SseDeserializer deserializer);
+
+  @protected
+  List<SuperQuinView> sse_decode_list_super_quin_view(
       SseDeserializer deserializer);
 
   @protected
@@ -760,6 +798,14 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   SpatialPhysicsState sse_decode_spatial_physics_state(
+      SseDeserializer deserializer);
+
+  @protected
+  SuperBlockArtifactView sse_decode_super_block_artifact_view(
+      SseDeserializer deserializer);
+
+  @protected
+  SuperBlockViewBridge sse_decode_super_block_view_bridge(
       SseDeserializer deserializer);
 
   @protected
@@ -871,6 +917,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
 
   @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_inference_backend_settings_frb(
+      InferenceBackendSettingsFrb self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_model_preferences_frb(
@@ -997,6 +1047,10 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
       HardwareTelemetry self, SseSerializer serializer);
 
   @protected
+  void sse_encode_inference_backend_settings_frb(
+      InferenceBackendSettingsFrb self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
@@ -1093,6 +1147,14 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_list_progress_payload(
       List<ProgressPayload> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_super_block_artifact_view(
+      List<SuperBlockArtifactView> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_super_quin_view(
+      List<SuperQuinView> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_suspended_tx_view(
@@ -1200,6 +1262,14 @@ abstract class RustApiApiImplPlatform extends BaseApiImpl<RustApiWire> {
   @protected
   void sse_encode_spatial_physics_state(
       SpatialPhysicsState self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_super_block_artifact_view(
+      SuperBlockArtifactView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_super_block_view_bridge(
+      SuperBlockViewBridge self, SseSerializer serializer);
 
   @protected
   void sse_encode_super_quin_view(SuperQuinView self, SseSerializer serializer);

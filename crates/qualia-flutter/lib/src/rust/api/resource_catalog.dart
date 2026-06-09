@@ -46,6 +46,10 @@ Future<void> applyModelPreference({required String task}) =>
     RustApi.instance.api
         .crateApiResourceCatalogApplyModelPreference(task: task);
 
+Future<void> applyModelPreferenceAsync({required String task}) =>
+    RustApi.instance.api
+        .crateApiResourceCatalogApplyModelPreferenceAsync(task: task);
+
 class LLMResource {
   final String id;
   final String name;

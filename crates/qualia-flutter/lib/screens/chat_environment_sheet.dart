@@ -7,6 +7,7 @@ import '../main.dart' show activeModelPathProvider, shellNavIndexProvider;
 import '../services/hardware_telemetry_service.dart';
 import '../widgets/axiom_bounds_sheet.dart';
 import '../src/rust/api/chat_session.dart' as chat;
+import '../services/model_activation_service.dart';
 import '../src/rust/api/qualia_api.dart' as api;
 import '../src/rust/api/resource_catalog.dart' as catalog;
 
@@ -145,7 +146,7 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
   }
 
   bool get _modelLoadBlocked {
-    final lifecycle = ref.read(hardwareTelemetryProvider)?.modelLifecycle;
+    final lifecycle = ref.read(hardwareTelemetryProvider)?.engine.modelLifecycle;
     return lifecycle == 'Scrubbing';
   }
 
@@ -159,7 +160,7 @@ class _ChatEnvironmentSheetState extends ConsumerState<ChatEnvironmentSheet> {
     }
     setState(() => _activatingModel = true);
     try {
-      await api.setActiveModel(modelName: modelId);
+      await activateModelAsync(modelId);
       final path = await api.getActiveModel();
       if (path != null && path.isNotEmpty) {
         ref.read(activeModelPathProvider.notifier).state = path;

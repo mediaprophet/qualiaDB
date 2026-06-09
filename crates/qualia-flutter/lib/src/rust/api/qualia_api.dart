@@ -6,20 +6,27 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `block_on`, `find_open_port`, `load_persisted_directory`, `map_actor`, `map_front_door`, `map_progress`, `map_qpu_chat_result`, `map_rule`, `map_tax_suite`, `map_token`, `parse_manifest_items`, `parse_ontology_manifest_items`, `spawn_daemon_background`, `to_actor`, `to_core_tax_suite`, `to_rule`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PaymentReceipt`, `PhysicsStore`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `from`, `from`
+// These functions are ignored because they are not marked as `pub`: `add_sender`, `block_on`, `ensure_telemetry_logging`, `find_open_port`, `format_record`, `load_persisted_directory`, `logging_enabled`, `logging_flag_path`, `map_actor`, `map_front_door`, `map_progress`, `map_qpu_chat_result`, `map_rule`, `map_tax_suite`, `map_token`, `new`, `open_log_file`, `parse_manifest_items`, `parse_ontology_manifest_items`, `spawn_daemon_background`, `telemetry_logger`, `to_actor`, `to_core_tax_suite`, `to_rule`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PaymentReceipt`, `PhysicsStore`, `TelemetryLogBridge`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `enabled`, `flush`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `log`
 
 Future<String> greet({required String name}) =>
     RustApi.instance.api.crateApiQualiaApiGreet(name: name);
 
 Future<void> initCore() => RustApi.instance.api.crateApiQualiaApiInitCore();
 
+Stream<String> initTelemetryStream() =>
+    RustApi.instance.api.crateApiQualiaApiInitTelemetryStream();
+
 Future<HardwareStatus> getHardwareStatus() =>
     RustApi.instance.api.crateApiQualiaApiGetHardwareStatus();
 
 Future<HardwareTelemetry> getHardwareTelemetry() =>
     RustApi.instance.api.crateApiQualiaApiGetHardwareTelemetry();
+
+Future<void> setTelemetryFileLoggingEnabled({required bool enabled}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiSetTelemetryFileLoggingEnabled(enabled: enabled);
 
 Future<String> profileEnergyCircumstance() =>
     RustApi.instance.api.crateApiQualiaApiProfileEnergyCircumstance();
@@ -298,6 +305,33 @@ Future<String?> getActiveModel() =>
 Future<void> setActiveModel({required String modelName}) =>
     RustApi.instance.api.crateApiQualiaApiSetActiveModel(modelName: modelName);
 
+Future<void> setActiveModelAsync({required String modelName}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiSetActiveModelAsync(modelName: modelName);
+
+Future<bool> isModelActivationInProgress() =>
+    RustApi.instance.api.crateApiQualiaApiIsModelActivationInProgress();
+
+Future<String?> takeModelActivationError() =>
+    RustApi.instance.api.crateApiQualiaApiTakeModelActivationError();
+
+Future<void> unloadActiveModel() =>
+    RustApi.instance.api.crateApiQualiaApiUnloadActiveModel();
+
+Future<InferenceBackendSettingsFrb> getInferenceBackendSettings() =>
+    RustApi.instance.api.crateApiQualiaApiGetInferenceBackendSettings();
+
+Future<void> saveInferenceBackendSettings(
+        {required InferenceBackendSettingsFrb settings}) =>
+    RustApi.instance.api
+        .crateApiQualiaApiSaveInferenceBackendSettings(settings: settings);
+
+Future<String> getTelemetryLogPath() =>
+    RustApi.instance.api.crateApiQualiaApiGetTelemetryLogPath();
+
+Future<bool> isTelemetryFileLoggingEnabled() =>
+    RustApi.instance.api.crateApiQualiaApiIsTelemetryFileLoggingEnabled();
+
 Future<String> fetchRemoteManifest({required String url}) =>
     RustApi.instance.api.crateApiQualiaApiFetchRemoteManifest(url: url);
 
@@ -374,6 +408,14 @@ Future<String> receiveVaultJob(
         required List<int> dataBlobCborLd}) =>
     RustApi.instance.api.crateApiQualiaApiReceiveVaultJob(
         jobId: jobId, taskType: taskType, dataBlobCborLd: dataBlobCborLd);
+
+Future<List<SuperBlockArtifactView>> listSuperblockArtifacts() =>
+    RustApi.instance.api.crateApiQualiaApiListSuperblockArtifacts();
+
+Future<SuperBlockViewBridge> getSuperblockView(
+        {required String sourcePath, required BigInt blockIndex}) =>
+    RustApi.instance.api.crateApiQualiaApiGetSuperblockView(
+        sourcePath: sourcePath, blockIndex: blockIndex);
 
 Future<String> runInference(
         {required String prompt, required String modelPath}) =>
@@ -745,6 +787,8 @@ class HardwareTelemetry {
   final int memoryFloorMb;
   final String modelLifecycle;
   final int kvCacheUsedMb;
+  final int vramUsedMb;
+  final int vramTotalMb;
 
   const HardwareTelemetry({
     required this.cpuPercent,
@@ -756,6 +800,8 @@ class HardwareTelemetry {
     required this.memoryFloorMb,
     required this.modelLifecycle,
     required this.kvCacheUsedMb,
+    required this.vramUsedMb,
+    required this.vramTotalMb,
   });
 
   @override
@@ -768,7 +814,9 @@ class HardwareTelemetry {
       llmMemoryBytes.hashCode ^
       memoryFloorMb.hashCode ^
       modelLifecycle.hashCode ^
-      kvCacheUsedMb.hashCode;
+      kvCacheUsedMb.hashCode ^
+      vramUsedMb.hashCode ^
+      vramTotalMb.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -783,7 +831,30 @@ class HardwareTelemetry {
           llmMemoryBytes == other.llmMemoryBytes &&
           memoryFloorMb == other.memoryFloorMb &&
           modelLifecycle == other.modelLifecycle &&
-          kvCacheUsedMb == other.kvCacheUsedMb;
+          kvCacheUsedMb == other.kvCacheUsedMb &&
+          vramUsedMb == other.vramUsedMb &&
+          vramTotalMb == other.vramTotalMb;
+}
+
+class InferenceBackendSettingsFrb {
+  final String backend;
+  final String remoteEndpoint;
+
+  const InferenceBackendSettingsFrb({
+    required this.backend,
+    required this.remoteEndpoint,
+  });
+
+  @override
+  int get hashCode => backend.hashCode ^ remoteEndpoint.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is InferenceBackendSettingsFrb &&
+          runtimeType == other.runtimeType &&
+          backend == other.backend &&
+          remoteEndpoint == other.remoteEndpoint;
 }
 
 class ModelInfo {
@@ -1038,6 +1109,96 @@ class SpatialPhysicsState {
           temperature == other.temperature &&
           pressure == other.pressure &&
           timeDilation == other.timeDilation;
+}
+
+class SuperBlockArtifactView {
+  final String path;
+  final String displayName;
+  final BigInt byteSize;
+  final BigInt blockCount;
+
+  const SuperBlockArtifactView({
+    required this.path,
+    required this.displayName,
+    required this.byteSize,
+    required this.blockCount,
+  });
+
+  @override
+  int get hashCode =>
+      path.hashCode ^
+      displayName.hashCode ^
+      byteSize.hashCode ^
+      blockCount.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SuperBlockArtifactView &&
+          runtimeType == other.runtimeType &&
+          path == other.path &&
+          displayName == other.displayName &&
+          byteSize == other.byteSize &&
+          blockCount == other.blockCount;
+}
+
+class SuperBlockViewBridge {
+  final String sourcePath;
+  final BigInt blockIndex;
+  final BigInt totalBlocks;
+  final BigInt blockSequenceId;
+  final BigInt storageOwnerDid;
+  final BigInt activeQuinCount;
+  final int validationChecksum;
+  final int hardwareProfileFlags;
+  final BigInt feaMeshIndexId;
+  final Uint8List rawBytes;
+  final List<SuperQuinView> quins;
+
+  const SuperBlockViewBridge({
+    required this.sourcePath,
+    required this.blockIndex,
+    required this.totalBlocks,
+    required this.blockSequenceId,
+    required this.storageOwnerDid,
+    required this.activeQuinCount,
+    required this.validationChecksum,
+    required this.hardwareProfileFlags,
+    required this.feaMeshIndexId,
+    required this.rawBytes,
+    required this.quins,
+  });
+
+  @override
+  int get hashCode =>
+      sourcePath.hashCode ^
+      blockIndex.hashCode ^
+      totalBlocks.hashCode ^
+      blockSequenceId.hashCode ^
+      storageOwnerDid.hashCode ^
+      activeQuinCount.hashCode ^
+      validationChecksum.hashCode ^
+      hardwareProfileFlags.hashCode ^
+      feaMeshIndexId.hashCode ^
+      rawBytes.hashCode ^
+      quins.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SuperBlockViewBridge &&
+          runtimeType == other.runtimeType &&
+          sourcePath == other.sourcePath &&
+          blockIndex == other.blockIndex &&
+          totalBlocks == other.totalBlocks &&
+          blockSequenceId == other.blockSequenceId &&
+          storageOwnerDid == other.storageOwnerDid &&
+          activeQuinCount == other.activeQuinCount &&
+          validationChecksum == other.validationChecksum &&
+          hardwareProfileFlags == other.hardwareProfileFlags &&
+          feaMeshIndexId == other.feaMeshIndexId &&
+          rawBytes == other.rawBytes &&
+          quins == other.quins;
 }
 
 /// Zero-copy Super-Quin view (6 × u64) for FRB consumers and block inspector.

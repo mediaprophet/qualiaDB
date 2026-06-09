@@ -1,7 +1,7 @@
 name: qualia_flutter
 description: "A new Flutter project for QualiaDB desktop application."
 publish_to: 'none'
-version: 0.0.9+1
+version: 0.0.10+1
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

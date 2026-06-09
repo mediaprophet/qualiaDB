@@ -12,6 +12,7 @@ pub mod chat_retrieval;
 pub mod chat_session;
 pub mod context_binding;
 pub mod engine;
+pub mod inference_backend;
 pub mod guardianship;
 pub mod model_lifecycle;
 pub mod model_preferences;

@@ -7,10 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../main.dart' show activeModelPathProvider;
+import '../services/model_activation_service.dart';
 import '../src/rust/api/qualia_api.dart' as api;
 import '../src/rust/api/qualia_api_extras.dart' as api_extras;
 import '../src/rust/api/resource_catalog.dart' as catalog;
-import '../src/rust/frb_generated.dart' show RustApi;
 
 const _accent = Color(0xFF00F0FF);
 
@@ -38,6 +38,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   List<LlmLoadStatus> _loadHistory = const [];
   LlmRuntimeSnapshot _runtimeSnapshot = const LlmRuntimeSnapshot();
   bool _isActivatingModel = false;
+  api.InferenceBackendSettingsFrb? _inferenceBackend;
 
   bool _isLoading = true;
   bool _prefsDirty = false;
@@ -73,8 +74,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   }
 
   void _ensureTelemetryStream() {
-    _telemetrySubscription ??=
-        RustApi.instance.api.crateApiQualiaApiInitTelemetryStream().listen(
+    _telemetrySubscription ??= api.initTelemetryStream().listen(
       _handleTelemetryLine,
       onError: (Object error, StackTrace stackTrace) {
         debugPrint('LLM Hub telemetry stream error: $error');
@@ -143,6 +143,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
       final resources = await catalog.loadLlmResources();
       final local = await api.discoverModels();
       final activeModel = await api.getActiveModel();
+      final inferenceBackend = await api.getInferenceBackendSettings();
       if (activeModel != null && activeModel.isNotEmpty) {
         ref.read(activeModelPathProvider.notifier).state = activeModel;
       }
@@ -183,7 +184,13 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
       }).toList();
 
       for (final entry in local) {
-        _ensureLocalModelEntry(fileName: entry.name, fullPath: null);
+        final isFullPath = entry.name.contains(RegExp(r'[\\/]'));
+        _ensureLocalModelEntry(
+          fileName: isFullPath
+              ? entry.name.split(RegExp(r'[\\/]')).last
+              : entry.name,
+          fullPath: isFullPath ? entry.name : null,
+        );
       }
       if (activeModel != null && activeModel.isNotEmpty) {
         _ensureLocalModelEntry(
@@ -194,6 +201,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
 
       _applyFilters();
       _prefsDirty = false;
+      _inferenceBackend = inferenceBackend;
     } catch (e) {
       debugPrint('LLM Hub load failed: $e');
     }
@@ -281,7 +289,8 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   Future<void> _applyAutoSelect() async {
     _beginModelActivation('Selecting the best installed model…');
     try {
-      await catalog.applyModelPreference(task: 'chat');
+      await catalog.applyModelPreferenceAsync(task: 'chat');
+      await waitForModelActivation();
       final active = await api.getActiveModel();
       if (active != null) {
         ref.read(activeModelPathProvider.notifier).state = active;
@@ -436,12 +445,18 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
     _beginModelActivation('Activating ${model.name}…');
     try {
       if (model.localGgufPath != null && model.localGgufPath!.isNotEmpty) {
-        await _activateLocalPath(model.localGgufPath!);
+        await activateModelAsync(model.localGgufPath!);
+        ref.read(activeModelPathProvider.notifier).state = model.localGgufPath!;
+        _ensureLocalModelEntry(
+          fileName: model.localGgufPath!.split(RegExp(r'[\\/]')).last,
+          fullPath: model.localGgufPath,
+        );
+        _applyFilters();
       } else {
         final modelName = model.id.startsWith('local-')
             ? '${model.name}.gguf'
             : '${model.id}.gguf';
-        await api.setActiveModel(modelName: modelName);
+        await activateModelAsync(modelName);
         final active = await api.getActiveModel();
         ref.read(activeModelPathProvider.notifier).state =
             active ?? modelName;
@@ -469,7 +484,7 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
   }
 
   Future<void> _activateLocalPath(String path) async {
-    await api.setActiveModel(modelName: path);
+    await activateModelAsync(path);
     ref.read(activeModelPathProvider.notifier).state = path;
     _ensureLocalModelEntry(
       fileName: path.split(RegExp(r'[\\/]')).last,
@@ -546,6 +561,40 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
       });
     } finally {
       _maybeStopDownloadPolling();
+    }
+  }
+
+  Future<void> _unloadActiveModel() async {
+    final active = ref.read(activeModelPathProvider);
+    if (active.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No model is currently loaded')),
+        );
+      }
+      return;
+    }
+    _beginModelActivation('Unloading resident model…');
+    try {
+      await api.unloadActiveModel();
+      ref.read(activeModelPathProvider.notifier).state = '';
+      await _refreshAll();
+      _completeModelActivation('Model memory released');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Model unloaded from memory')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isActivatingModel = false;
+          _loadStatus = LlmLoadStatus.failed('Unload failed: $e');
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unload failed: $e')),
+        );
+      }
     }
   }
 
@@ -753,6 +802,15 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
                   'Engine: $engineLabel',
                   style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
                 ),
+                if (_inferenceBackend != null &&
+                    _inferenceBackend!.backend != 'local') ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Backend preference: ${_inferenceBackend!.backend}'
+                    '${_inferenceBackend!.remoteEndpoint.isNotEmpty ? ' → ${_inferenceBackend!.remoteEndpoint}' : ''}',
+                    style: TextStyle(color: Colors.amber.shade200, fontSize: 11),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
@@ -788,6 +846,20 @@ class _LLMHubScreenState extends ConsumerState<LLMHubScreen>
                       ),
                     ),
                     const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: activeModel.isEmpty || _isActivatingModel
+                            ? null
+                            : _unloadActiveModel,
+                        icon: const Icon(Icons.eject),
+                        label: const Text('Unload model'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: _isActivatingModel ? null : _applyAutoSelect,

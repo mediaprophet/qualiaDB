@@ -70,6 +70,10 @@ Future<String> removeInstalledOntology({
   );
 }
 
+Future<void> unloadActiveModel() {
+  return RustApi.instance.api.crateApiQualiaApiUnloadActiveModel();
+}
+
 Future<String> removeInstalledModel({
   required String modelId,
 }) {

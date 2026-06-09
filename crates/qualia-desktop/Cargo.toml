@@ -1,6 +1,6 @@
 [package]
 name = "qualia-desktop"
-version = "0.0.9"
+version = "0.0.10"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 

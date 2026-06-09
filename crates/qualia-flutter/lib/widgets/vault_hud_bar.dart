@@ -16,7 +16,9 @@ class VaultHudBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final telemetry = ref.watch(hardwareTelemetryProvider);
+    final snapshot = ref.watch(hardwareTelemetryProvider);
+    final telemetry = snapshot?.engine;
+    final vramGb = snapshot?.vramAvailableGb;
     final pendingCount = ref.watch(pendingAffirmationCountProvider);
     final cs = Theme.of(context).colorScheme;
 
@@ -48,14 +50,15 @@ class VaultHudBar extends ConsumerWidget {
         ),
       ),
       child: dense
-          ? _denseRow(context, telemetry, llmMb, ramPressure, thermal, lifecycle, isScrubbing, pendingCount, ref)
-          : _fullRow(context, telemetry, llmMb, ramPressure, thermal, lifecycle, isScrubbing, pendingCount, ref),
+          ? _denseRow(context, telemetry, vramGb, llmMb, ramPressure, thermal, lifecycle, isScrubbing, pendingCount, ref)
+          : _fullRow(context, telemetry, vramGb, llmMb, ramPressure, thermal, lifecycle, isScrubbing, pendingCount, ref),
     );
   }
 
   Widget _fullRow(
     BuildContext context,
     api.HardwareTelemetry? telemetry,
+    double? vramGb,
     double llmMb,
     _RamPressure ramPressure,
     String thermal,
@@ -85,6 +88,19 @@ class VaultHudBar extends ConsumerWidget {
             'KV ${telemetry.kvCacheUsedMb} MB',
             style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace'),
           ),
+        if (telemetry != null && telemetry.vramTotalMb > 0) ...[
+          const SizedBox(width: 12),
+          Text(
+            'VRAM ${telemetry.vramUsedMb}/${telemetry.vramTotalMb} MB',
+            style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace'),
+          ),
+        ] else if (vramGb != null && vramGb > 0) ...[
+          const SizedBox(width: 12),
+          Text(
+            'VRAM ${vramGb.toStringAsFixed(1)} GB free',
+            style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace'),
+          ),
+        ],
       ],
     );
   }
@@ -92,6 +108,7 @@ class VaultHudBar extends ConsumerWidget {
   Widget _denseRow(
     BuildContext context,
     api.HardwareTelemetry? telemetry,
+    double? vramGb,
     double llmMb,
     _RamPressure ramPressure,
     String thermal,
@@ -105,6 +122,15 @@ class VaultHudBar extends ConsumerWidget {
         _lifecycleChip(lifecycle, isScrubbing, small: true),
         const SizedBox(width: 8),
         Expanded(child: _ramSegment(llmMb, ramPressure, telemetry?.memoryFloorMb ?? _criticalMb, small: true)),
+        if (vramGb != null && vramGb > 0) ...[
+          const SizedBox(width: 8),
+          Text(
+            telemetry != null && telemetry.vramTotalMb > 0
+                ? 'VRAM ${telemetry.vramUsedMb}/${telemetry.vramTotalMb}M'
+                : 'VRAM ${vramGb.toStringAsFixed(0)}G',
+            style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace'),
+          ),
+        ],
         const SizedBox(width: 8),
         _thermalBadge(thermal, small: true),
         const SizedBox(width: 8),

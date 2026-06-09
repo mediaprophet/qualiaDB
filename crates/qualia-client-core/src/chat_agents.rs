@@ -196,7 +196,7 @@ pub fn fresh_local_agent_config(
         principal_did: principal_did.to_string(),
         sub_agent_did: compile_sub_agent_did(principal_did, session_id),
         model_id: model_id.map(|s| s.to_string()),
-        backend: AgentBackendKind::Local,
+        backend: crate::inference_backend::load_inference_backend_settings().backend,
         outcome_sharing: default_outcome_sharing_for_profile(kind, profile),
         updated_at: unix_now(),
     }

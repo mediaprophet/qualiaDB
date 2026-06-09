@@ -70,6 +70,19 @@ class TrayService {
     );
   }
 
+  Future<bool> _loadLoggingEnabled() async {
+    try {
+      return await api.isTelemetryFileLoggingEnabled();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _setLoggingEnabled(bool enabled) async {
+    await api.setTelemetryFileLoggingEnabled(enabled: enabled);
+    _loggingEnabled = enabled;
+  }
+
   Future<String> _resolveTrayIconPath() async {
     final asset = Platform.isWindows
         ? 'assets/icons/tray_icon.ico'
@@ -80,47 +93,6 @@ class TrayService {
     final file = File('${dir.path}/qualia_tray.$ext');
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
-  }
-
-  Future<File> _loggingFlagFile() async {
-    final sep = Platform.pathSeparator;
-    late final String base;
-    if (Platform.isWindows) {
-      base = Platform.environment['APPDATA'] ?? r'C:\Users\Default\AppData\Roaming';
-      return File('$base${sep}Qualia${sep}logs${sep}logging_enabled.flag');
-    }
-    if (Platform.isMacOS) {
-      base = Platform.environment['HOME'] ?? '';
-      return File(
-        '$base${sep}Library${sep}Application Support${sep}Qualia${sep}logs${sep}logging_enabled.flag',
-      );
-    }
-    base = Platform.environment['HOME'] ?? '';
-    return File('$base${sep}.config${sep}qualia${sep}logs${sep}logging_enabled.flag');
-  }
-
-  Future<bool> _loadLoggingEnabled() async {
-    try {
-      return await (await _loggingFlagFile()).exists();
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<void> _setLoggingEnabled(bool enabled) async {
-    final flag = await _loggingFlagFile();
-    final parent = flag.parent;
-    if (!await parent.exists()) {
-      await parent.create(recursive: true);
-    }
-    if (enabled) {
-      if (!await flag.exists()) {
-        await flag.writeAsString('enabled\n', flush: true);
-      }
-    } else if (await flag.exists()) {
-      await flag.delete();
-    }
-    _loggingEnabled = enabled;
   }
 
   Future<void> showMainWindow() async {

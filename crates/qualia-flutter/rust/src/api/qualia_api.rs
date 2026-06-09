@@ -281,6 +281,8 @@ pub struct HardwareTelemetry {
     pub memory_floor_mb: u32,
     pub model_lifecycle: String,
     pub kv_cache_used_mb: u32,
+    pub vram_used_mb: u32,
+    pub vram_total_mb: u32,
 }
 
 pub fn get_hardware_telemetry() -> HardwareTelemetry {
@@ -299,7 +301,22 @@ pub fn get_hardware_telemetry() -> HardwareTelemetry {
         memory_floor_mb: engine.memory_floor_mb,
         model_lifecycle: engine.model_lifecycle,
         kv_cache_used_mb: engine.kv_cache_used_mb,
+        vram_used_mb: engine.vram_used_mb,
+        vram_total_mb: engine.vram_total_mb,
     }
+}
+
+pub fn set_telemetry_file_logging_enabled(enabled: bool) -> Result<(), String> {
+    let flag_path = TelemetryLogBridge::logging_flag_path();
+    if let Some(parent) = flag_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    if enabled {
+        std::fs::write(&flag_path, "enabled\n").map_err(|e| e.to_string())?;
+    } else if flag_path.is_file() {
+        std::fs::remove_file(flag_path).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 pub fn profile_energy_circumstance() -> String {
@@ -971,6 +988,55 @@ pub fn get_active_model() -> Option<String> {
 
 pub fn set_active_model(model_name: String) -> Result<(), String> {
     core::set_active_model(model_name)
+}
+
+pub fn set_active_model_async(model_name: String) -> Result<(), String> {
+    core::set_active_model_async(model_name)
+}
+
+pub fn is_model_activation_in_progress() -> bool {
+    core::is_model_activation_in_progress()
+}
+
+pub fn take_model_activation_error() -> Option<String> {
+    core::take_model_activation_error()
+}
+
+pub fn unload_active_model() -> Result<(), String> {
+    core::unload_active_model()
+}
+
+pub struct InferenceBackendSettingsFrb {
+    pub backend: String,
+    pub remote_endpoint: String,
+}
+
+pub fn get_inference_backend_settings() -> InferenceBackendSettingsFrb {
+    let settings = core::get_inference_backend_settings();
+    InferenceBackendSettingsFrb {
+        backend: settings.backend.as_str().to_string(),
+        remote_endpoint: settings.remote_endpoint,
+    }
+}
+
+pub fn save_inference_backend_settings(settings: InferenceBackendSettingsFrb) -> Result<(), String> {
+    use qualia_client_core::chat_agents::AgentBackendKind;
+    let backend = AgentBackendKind::from_str(&settings.backend);
+    core::save_inference_backend_settings(qualia_client_core::inference_backend::InferenceBackendSettings {
+        backend,
+        remote_endpoint: settings.remote_endpoint,
+    })
+}
+
+pub fn get_telemetry_log_path() -> String {
+    let mut path: PathBuf = qualia_client_core::state::app_meta_dir();
+    path.push("logs");
+    path.push("telemetry.log");
+    path.to_string_lossy().into_owned()
+}
+
+pub fn is_telemetry_file_logging_enabled() -> bool {
+    TelemetryLogBridge::logging_enabled()
 }
 
 pub struct CatalogItem {

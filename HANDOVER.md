@@ -2,6 +2,21 @@
 
 ---
 
+## Session 2026-06-09 — Flutter 0.0.10 LLM lifecycle & telemetry
+
+**Branch:** `0.0.10-dev` | **Version:** `0.0.10`
+
+### Completed
+- Non-blocking GGUF activation on background thread; Flutter waits via `model_activation_service.dart`
+- Explicit model unload without deleting on-disk files
+- External/local GGUF discovery via install manifests
+- VRAM used/total in desktop HUD; unified file logging toggle
+- Inference backend preference persisted to `inference_backend.json`
+
+See `docs/manuals/0.0.10-flutter-plan.md` for phase breakdown.
+
+---
+
 ## Session 2026-06-08 — Sprint 4D ontology routing + symbolic gate hydration
 
 **Branch:** `main` (release prep for `0.0.9`)

@@ -1,5 +1,5 @@
 # QualiaDB — Multi-Agent Collaboration Ecosystem
-_Branch: `0.0.8-dev` | Last updated: 2026-06-07_
+_Branch: `0.0.10-dev` | Last updated: 2026-06-09_
 
 This document is the coordination layer for concurrent or sequential AI-agent sessions
 working on the QualiaDB engine. Read it before writing a single line of code.
@@ -602,13 +602,32 @@ At the end of your session:
 1. **Run tests:** `cargo test -p qualia-core-db --lib` — all tests must pass.
 2. **Update this file (AGENTS.md):** move your completed task from §3 to §2 with status ✅.
 3. **Update HANDOVER.md §3 (Engine Capability Inventory):** add your module to Tier 1 or Tier 2.
-4. **Commit + push** to `0.0.8-dev` with prefix `feat(modality):` or `fix(modality):`.
+4. **Commit + push** to `0.0.10-dev` with prefix `feat(modality):` or `fix(modality):`.
 5. **Leave a session note** at the bottom of this doc (§7) describing what you did,
    what you left incomplete, and any architectural decisions future agents should know.
 
 ---
 
 ## 7. Session Notes
+
+### 2026-06-09 — Flutter 0.0.10 LLM lifecycle + telemetry
+
+**Completed:**
+- Async model activation (`set_active_model_async`, `apply_model_preference_async`) — no FFI thread blocking
+- `unload_active_model` FRB + LLM Hub unload button
+- `discover_models` scans install manifests and external GGUF paths
+- Live VRAM used/total in `HardwareTelemetry` + VaultHudBar (DirectML on Windows)
+- In-app + Dev Console + tray file logging via `set_telemetry_file_logging_enabled`
+- Inference backend preference (`local` / `hybrid` / `remote`) in Settings + chat agent defaults
+- Plan doc: `docs/manuals/0.0.10-flutter-plan.md`
+- Version bump to `0.0.10`; branches `0.0.10` and `0.0.10-dev`
+
+**Verification:**
+- `cargo check -p qualia-client-core -p qualia_flutter_rust`
+- `flutter_rust_bridge_codegen generate`
+- `flutter analyze lib/`
+
+---
 
 ### 2026-06-08 — Codex (Sprint 4D ontology routing + symbolic hydration)
 

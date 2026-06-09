@@ -244,3 +244,8 @@ pub fn resolve_model_preference(task: String) -> Option<ResolvedModelPreferenceF
 pub fn apply_model_preference(task: String) -> Result<(), String> {
     qualia_client_core::try_apply_model_preference(&task)
 }
+
+#[frb]
+pub fn apply_model_preference_async(task: String) -> Result<(), String> {
+    qualia_client_core::try_apply_model_preference_async(&task)
+}

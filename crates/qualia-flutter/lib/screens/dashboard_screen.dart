@@ -37,7 +37,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final telemetry = ref.watch(hardwareTelemetryProvider);    return Padding(
+    final telemetry = ref.watch(hardwareTelemetryProvider)?.engine;
+    return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
