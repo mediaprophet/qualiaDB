@@ -30,6 +30,12 @@ The Claude review identified critical gaps between documentation claims and actu
 |------|------|----------|--------|-----------|
 | [007_documentation_accuracy.md](007_documentation_accuracy.md) | README.md, BUILD_ISSUES.md | 🟡 MEDIUM | Pending | 1-2 days |
 
+### 🔵 Informational Tasks
+
+| Task | File | Severity | Status | Est. Time |
+|------|------|----------|--------|-----------|
+| [008_cuda_support_status.md](008_cuda_support_status.md) | N/A (status document) | 🔵 INFO | Complete | N/A |
+
 ## Priority Order
 
 ### Phase 1: Security First (Week 1-2)
