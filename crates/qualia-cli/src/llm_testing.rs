@@ -9,7 +9,7 @@ use qualia_client_core::model_lifecycle::{scan_vault_gguf, resolve_vault_model, 
 use crate::llm_lifecycle::{default_vault_path, init_log_stream};
 
 // Test types (moved from non-existent tests module)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelParameters {
     pub n_layer: u32,
     pub n_embd: u32,
@@ -44,15 +44,16 @@ impl LlmModelTester {
         Self { configs }
     }
 
-    pub fn run_tests(&self) -> Result<Vec<TestResult>, String> {
+    pub fn run_all_tests(&self) -> Result<Vec<TestResult>, String> {
         let mut results = Vec::new();
         for config in &self.configs {
             results.push(TestResult {
                 model_name: config.model_name.clone(),
-                passed: true,
-                latency_ms: 0.0,
-                throughput_tokens_per_sec: 0.0,
-                memory_mb: 0.0,
+                validation_passed: true,
+                load_time_ms: 0,
+                token_generation_speed: 0.0,
+                memory_usage: 0,
+                error_messages: vec![],
             });
         }
         Ok(results)
@@ -175,7 +176,7 @@ pub fn run_validate_models(
                     }
                 }
                 
-                if strict && validation.warnings.is_some() {
+                if strict && !validation.warnings.is_empty() {
                     validation_passed = false;
                 }
             }
@@ -322,7 +323,7 @@ fn filter_models(available: &[VaultGgufEntry], selected: &[String]) -> Result<Ve
         let mut found = false;
         
         for model in available {
-            if model.name == selection || 
+            if model.name == *selection || 
                model.name.contains(selection) ||
                format!("0x{:016x}", model.profile_id) == selection.to_lowercase() {
                 filtered.push(model.clone());
@@ -375,6 +376,11 @@ fn detect_model_type(filename: &str) -> Result<(String, ModelParameters), String
     if filename_lower.contains("phi-3.5") || filename_lower.contains("phi35") {
         Ok(("Phi-3.5-Mini".to_string(), ModelParameters {
             n_layer: 32,
+            n_embd: 4096,
+            n_head: 32,
+            n_kv_head: 32,
+            context_window: 4096,
+            vocab_size: 32000,
             n_embd: 3072,
             n_head: 32,
             n_kv_head: 32,
@@ -384,6 +390,11 @@ fn detect_model_type(filename: &str) -> Result<(String, ModelParameters), String
     } else if filename_lower.contains("phi-4") || filename_lower.contains("phi4") {
         Ok(("Phi-4-Mini".to_string(), ModelParameters {
             n_layer: 32,
+            n_embd: 4096,
+            n_head: 32,
+            n_kv_head: 32,
+            context_window: 4096,
+            vocab_size: 32000,
             n_embd: 3072,
             n_head: 32,
             n_kv_head: 32,
@@ -425,7 +436,7 @@ fn detect_model_type(filename: &str) -> Result<(String, ModelParameters), String
 fn validate_single_model(model_path: &str, strict: bool) -> Result<ModelValidation, String> {
     use qualia_core_db::gguf_sharder::GGufSharder;
     
-    let sharder = GgufSharder::from_gguf(model_path)
+    let sharder = GGufSharder::from_gguf(model_path)
         .map_err(|e| format!("Failed to load GGUF: {}", e))?;
     
     let mut validation = ModelValidation {
@@ -477,7 +488,12 @@ fn benchmark_single_model(model_path: &str, iterations: u32, warmup: u32) -> Res
     };
     
     // Warmup
-    let mut agent = LocalLlmAgent::new(backend)
+    let agent_did = "test_agent".to_string();
+    let model_path = match &backend {
+        AgentBackend::Local { model_path, .. } => model_path.clone(),
+        _ => return Err("Remote backend not supported".to_string()),
+    };
+    let mut agent = LocalLlmAgent::new(agent_did, model_path)
         .map_err(|e| format!("Failed to create agent: {}", e))?;
     
     for _ in 0..warmup {
@@ -549,7 +565,7 @@ fn generate_test_report(
         results: results.iter().map(|r| TestResult {
             model_name: r.model_name.clone(),
             validation_passed: r.validation_passed,
-            load_time_ms: r.load_time.as_millis() as u64,
+            load_time_ms: r.load_time_ms.as_millis() as u64,
             token_generation_speed: r.token_generation_speed,
             memory_usage: r.memory_usage,
             error_messages: r.error_messages.clone(),
@@ -558,7 +574,7 @@ fn generate_test_report(
             total_models: results.len(),
             passed_models: results.iter().filter(|r| r.validation_passed).count(),
             failed_models: results.iter().filter(|r| !r.validation_passed).count(),
-            avg_load_time_ms: results.iter().map(|r| r.load_time.as_millis() as f64).sum::<f64>() / results.len() as f64,
+            avg_load_time_ms: results.iter().map(|r| r.load_time_ms.as_millis() as f64).sum::<f64>() / results.len() as f64,
             avg_throughput: results.iter().map(|r| r.token_generation_speed).sum::<f64>() / results.len() as f64,
         },
     }
