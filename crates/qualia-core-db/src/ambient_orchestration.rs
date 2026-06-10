@@ -773,7 +773,7 @@ impl PowerManager {
         let battery_level = self.battery_monitor.current_level;
         let thermal_state = &self.thermal_monitor.thermal_state;
         
-        battery_level > 20.0 && thermal_state != ThermalState::Critical
+        battery_level > 20.0 && *thermal_state != ThermalState::Critical
     }
 
     /// Update power consumption
