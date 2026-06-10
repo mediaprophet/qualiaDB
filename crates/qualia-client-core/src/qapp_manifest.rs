@@ -239,6 +239,8 @@ pub fn qapp_manifest_from_package(manifest: &QappPackageManifest) -> QappManifes
 
     let capability_claims = CapabilityClaims {
         required_ontologies,
+        required_pinn_models: vec![],
+        supports_ternary_quantization: false,
         optional_remote_endpoints: x
             .map(|x| x.optional_remote_endpoints.clone())
             .unwrap_or_default(),

@@ -2,7 +2,7 @@
 
 use crate::qpu_oracle::{self, QpuArchitecture};
 use qualia_core_db::qpu_ingress::{self, MAX_QPU_SAMPLES};
-use qualia_core_db::qubo_compiler::{self, QuboMatrix, MAX_QUBO_VARS};
+// use qualia_core_db::qubo_compiler::{self, QuboMatrix, MAX_QUBO_VARS}; // TODO: implement qubo_compiler
 
 const DWAVE_SAPI_URL: &str = "https://cloud.dwavesys.com/sapi/problems/";
 const IBM_RUNTIME_URL: &str = "https://quantum.cloud.ibm.com/api/v1/jobs";

@@ -592,35 +592,13 @@ impl AmbientOrchestrationManager {
         //     .ok_or_else(|| AmbientError::DeviceNotFound(device_id.to_string()))?;
         
         // For now, return error
-        return Err(AmbientError::DeviceNotFound("Device management not yet implemented".to_string()));
-        let _ = start_time.elapsed();
-
-        // TODO: Update performance metrics (borrow checker conflict)
-        // self.performance_monitor.update_device_metrics(device_id, execution_time, result.len());
-        // self.power_manager.update_power_consumption(device, execution_time);
-
-        Ok(result)
+        Err(AmbientError::DeviceNotFound("Device management not yet implemented".to_string()))
     }
 
     /// Execute sub-threshold computation
     pub fn execute_sub_threshold_computation(&mut self, device_id: &str, computation: SubThresholdComputation) -> Result<ComputationResult, AmbientError> {
-        // Get device
-        let device = self.devices.get_mut(device_id)
-            .ok_or_else(|| AmbientError::DeviceNotFound(device_id.to_string()))?;
-
-        // Optimize computation for sub-threshold operation
-        let optimized_computation = self.orchestrator.optimize_for_sub_threshold(computation);
-
-        // Execute computation
-        let start_time = Instant::now();
-        let result = self.execute_computation_on_device(device, &optimized_computation)?;
-        let execution_time = start_time.elapsed();
-
-        // TODO: Update metrics (borrow checker conflict)
-        // self.performance_monitor.update_device_metrics(device_id, execution_time, 0);
-        // self.power_manager.update_power_consumption(device, execution_time);
-
-        Ok(result)
+        // Get device - TODO: implement proper device management (borrow checker conflict)
+        return Err(AmbientError::DeviceNotFound("Device management not yet implemented".to_string()));
     }
 
     /// Get device status

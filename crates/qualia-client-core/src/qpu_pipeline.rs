@@ -2,7 +2,7 @@
 
 use crate::qpu_dispatcher::{self, QpuDispatchResult};
 use crate::qpu_oracle::{self, QpuChatCommandResult};
-use qualia_core_db::qubo_compiler::{self, QuboMatrix};
+// use qualia_core_db::qubo_compiler::{self, QuboMatrix}; // TODO: implement qubo_compiler
 use qualia_core_db::QualiaQuin;
 
 pub const MAX_REHYDRATED: usize = 64;

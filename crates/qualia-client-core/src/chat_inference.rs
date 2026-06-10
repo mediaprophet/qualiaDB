@@ -8,7 +8,7 @@ use qualia_core_db::{
     llm_agent::{
         AgentError, AgentIntent, AgentOutput, AgentRuntime, LocalLlmAgent, WebizenVerdict,
     },
-    n3_compiler::N3OutputMode,
+    modalities::logic::n3_compiler::N3OutputMode,
     orchestrator::{ModelLifecycle, OrchestrationResult},
     q_hash,
     wal::WriteAheadLog,

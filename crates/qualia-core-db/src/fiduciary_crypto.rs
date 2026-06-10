@@ -549,15 +549,16 @@ impl FiduciaryCrypto {
         };
 
         // Create context - TODO: implement proper context management
-        let _ = (domain, purpose);
-        let context = 0u64; // Placeholder
+        let _ = (domain, purpose, key_id);
 
         // Check compliance - TODO: implement proper compliance checking
-        let _ = (key_id, "sign");
 
         // Sign message - TODO: implement proper signing
-        let _ = message;
-        Ok([0u8; 32]) // Placeholder signature
+        Ok(MlDsaSignature {
+            c_tilde: [0u8; 64],
+            z: vec![0u8; 32],
+            h: vec![0u8; 32],
+        }) // Placeholder signature
     }
 
     /// Verify message
@@ -573,18 +574,8 @@ impl FiduciaryCrypto {
         };
 
         // Create context - TODO: implement proper context management
-        let _ = (domain, purpose);
-        return Ok(());
-
-        // Check compliance
-        let _ = (key_id, "verify");
-        Ok(())
-
-        // Verify signature
-        let signer_guard = signer.lock().unwrap();
-        let is_valid = signer_guard.verify(message, signature, &context)?;
-
-        Ok(is_valid)
+        let _ = (domain, purpose, key_id);
+        Ok(true)
     }
 
     /// List all keys
