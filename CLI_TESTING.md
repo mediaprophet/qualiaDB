@@ -115,16 +115,14 @@ TEST SUMMARY
 ⚠️  Inference: Requires orchestration setup (structure validated)
 ```
 
-**Note:** Full inference testing requires orchestration setup with Webizen intent validation and Phase 8 bifurcated compute. The test structure is validated and ready for inference.
+**Note:** Full inference testing requires fixing the tokio runtime in the Phase 8 bifurcated compute architecture. The LLM inference spawns its own thread (for the LLM compute loop + Sentinel thread), and this spawned thread needs a tokio runtime for wgpu async operations. The metrics framework is complete and ready to collect real performance data once the internal thread spawning is fixed.
 
-**Metrics Collected:**
-- TTFT (Time to First Token) - Currently simulated (50ms)
-- Total Generation Time - Simulated based on prompt length
-- Tokens Generated - Simulated
-- TPS (Tokens Per Second) - Calculated from simulated data
-- Summary metrics: Average TTFT, Average TPS
-
-The metrics framework is fully implemented and ready to collect real performance data once the orchestration pipeline is connected.
+**Current Status:**
+- ✅ Model loading: Working (1.5s load time, 5.2GB GGUF)
+- ✅ Agent creation: Working
+- ✅ Metrics framework: Complete and ready
+- ⚠️ Actual inference: Blocked by tokio runtime in spawned LLM thread
+- 📝 Next step: Initialize tokio runtime in the spawned LLM thread (llm_agent.rs::infer_local_model_inner)
 ```bash
 .\target\release\qualia-cli.exe llm report --format json
 ```
