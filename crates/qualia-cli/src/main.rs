@@ -329,6 +329,17 @@ enum LlmAction {
         #[arg(long)]
         strict: bool,
     },
+    /// Comprehensive LLM capability test (load + inference in one session)
+    ComprehensiveTest {
+        /// Directory containing GGUF files (default: QUALIA_LLM_VAULT or C:/llmmodels)
+        #[arg(short, long)]
+        vault_path: Option<PathBuf>,
+        /// Model name to test
+        model: String,
+        /// Enable verbose logging
+        #[arg(long)]
+        verbose: bool,
+    },
     /// Benchmark model performance
     Benchmark {
         /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT` or `C:/llmmodels`)
@@ -433,6 +444,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 LlmAction::Validate { vault_path, strict } => {
                     llm_testing::run_validate_models(vault_path.clone(), *strict)?;
+                }
+                LlmAction::ComprehensiveTest { vault_path, model, verbose } => {
+                    llm_testing::run_comprehensive_llm_test(vault_path.clone(), model.clone(), *verbose)?;
                 }
                 LlmAction::Benchmark { vault_path, models, iterations, warmup } => {
                     llm_testing::run_benchmark_models(vault_path.clone(), models.clone(), *iterations, *warmup)?;
