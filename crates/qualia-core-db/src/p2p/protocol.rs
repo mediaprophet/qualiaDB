@@ -59,7 +59,7 @@ impl QualiaRequest {
     /// Convert semantic payload to QualiaRequest
     pub fn from_semantic_payload(payload: SemanticPayload) -> Self {
         let did_q42 = match payload.did_q42 {
-            Some(d) => crate::q_hash(d),
+            Some(d) => crate::q_hash(&d),
             None => 0,
         };
         

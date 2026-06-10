@@ -220,7 +220,7 @@ pub mod swarm {
                 };
                 
                 let did_q42 = match semantic_payload.did_q42 {
-                    Some(d) => crate::q_hash(d),
+                    Some(d) => crate::q_hash(&d),
                     None => 0,
                 };
                 

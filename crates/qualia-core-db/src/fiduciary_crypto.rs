@@ -531,7 +531,7 @@ impl FiduciaryCrypto {
     }
 
     /// Generate new key
-    pub fn generate_key(&self, key_id: String) -> Result<(), MlDsaError> {
+    pub fn generate_key(&mut self, key_id: String) -> Result<(), MlDsaError> {
         let mut key_manager = self.key_manager.lock().unwrap();
         key_manager.generate_key(key_id)
     }

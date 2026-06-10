@@ -475,11 +475,11 @@ impl ZkProofSystem {
     pub fn verify_semantic_proof(&mut self, semantic_proof: &mut SemanticProof) -> Result<(), ZkError> {
         let result = self.verify_proof(&semantic_proof.proof)?;
         
-        semantic_proof.verification_result = Some(result);
-        
-        if !result.clone().is_valid {
+        if !result.is_valid {
             return Err(ZkError::VerificationFailed("Proof verification failed".to_string()));
         }
+        
+        semantic_proof.verification_result = Some(result);
         
         Ok(())
     }
@@ -629,16 +629,18 @@ impl CircuitBuilder {
         let circuit = self.circuits.get_mut(circuit_id)
             .ok_or_else(|| ZkError::CircuitNotFound(circuit_id.to_string()))?;
 
+        let is_public = matches!(variable_type, VariableType::Public);
+        
         let variable = CircuitVariable {
             variable_id: variable_id.clone(),
             variable_type: variable_type.clone(),
             value: None,
-            is_public: matches!(variable_type, VariableType::Public),
+            is_public,
         };
 
         circuit.variables.insert(variable_id.clone(), variable);
         
-        if variable.is_public {
+        if is_public {
             circuit.public_inputs.push(variable_id);
         } else {
             circuit.private_inputs.push(variable_id);
