@@ -1,4 +1,5 @@
 //! Read `.q42.lex` reverse-lexicon sidecars (Q42LEX format from qualia-cli ingest).
+use crate::lexicon::TAG_EMBEDDED;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -12,6 +13,30 @@ pub const LEX_MAGIC: [u8; 8] = *b"Q42LEX\0\0";
 const MAGIC: &[u8; 8] = &LEX_MAGIC;
 const HEADER_SIZE: usize = 32;
 const INDEX_ENTRY_SIZE: usize = 16;
+
+/// Type tags for lexicon entries (1-byte prefix in payload)
+const LEX_TAG_STRING: u8 = 0x01;      // UTF-8 string
+const LEX_TAG_EMBEDDED: u8 = 0x02;    // Embedded triple [u64; 3]
+const LEX_TAG_WEBIZEN: u8 = 0x03;     // Authoritative Webizen identity
+
+/// Zero-allocation lexicon key for in-memory lookups
+pub enum LexiconKey<'a> {
+    /// UTF-8 string reference
+    Str(&'a str),
+    /// Embedded triple reference
+    Triple(&'a [u64; 3]),
+}
+
+/// Lexicon entry payload for serialization
+#[derive(Debug, Clone)]
+pub enum LexiconEntry {
+    /// UTF-8 string
+    String(String),
+    /// Embedded triple [subject, predicate, object]
+    EmbeddedTriple([u64; 3]),
+    /// Webizen identity (future implementation)
+    Webizen(String),
+}
 
 /// In-memory hash → UTF-8 string map from a `.q42.lex` file (cold-path loader).
 #[derive(Debug, Default)]
@@ -84,13 +109,39 @@ impl<'a> Q42LexMmap<'a> {
 
     fn read_string_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&str> {
         let start = blob_base.saturating_add(rel_off);
-        if start + 2 > data.len() {
+        if start + 3 > data.len() {
             return None;
         }
-        let len = u16::from_le_bytes(data[start..start + 2].try_into().ok()?) as usize;
-        let text_start = start + 2;
+        // Check type tag
+        if data[start] != LEX_TAG_STRING {
+            return None;
+        }
+        let len = u16::from_le_bytes(data[start + 1..start + 3].try_into().ok()?) as usize;
+        let text_start = start + 3;
         let text_end = text_start.saturating_add(len).min(data.len());
         std::str::from_utf8(&data[text_start..text_end]).ok()
+    }
+
+    /// Reads a 24-byte embedded triple [u64; 3] at the given offset.
+    /// 
+    /// Format: [TAG_EMBEDDED (1 byte)] + [24-byte triple]
+    /// This is used for SPARQL-Star embedded triples where the lexicon stores
+    /// the three component IDs (subject, predicate, object) as a fixed-size
+    /// binary tuple instead of a UTF-8 string.
+    fn read_embedded_triple_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&[u64; 3]> {
+        let start = blob_base.saturating_add(rel_off);
+        if start + 1 + 24 > data.len() {
+            return None;
+        }
+        // Check type tag
+        if data[start] != LEX_TAG_EMBEDDED {
+            return None;
+        }
+        // Skip type tag and read 24-byte triple
+        let triple_start = start + 1;
+        let bytes = &data[triple_start..triple_start + 24];
+        let ptr = bytes.as_ptr() as *const [u64; 3];
+        unsafe { Some(&*ptr) }
     }
 }
 
@@ -239,6 +290,8 @@ mod tests {
         let mut index = Vec::new();
         for (hash, text) in &sorted {
             let str_off = blob.len() as u64;
+            // Write type tag
+            blob.push(LEX_TAG_STRING);
             let b = text.as_bytes();
             let len = b.len().min(65535) as u16;
             blob.extend_from_slice(&len.to_le_bytes());

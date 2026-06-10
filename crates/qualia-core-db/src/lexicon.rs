@@ -2,6 +2,9 @@
 //! Maps multi-modal semantic concepts (Text, Audio, Visual) into the deterministic 60-bit integers
 //! required by the QualiaQuin data structure.
 
+// Re-export the embedded triple tag from resolver for SPARQL-Star support
+pub use crate::resolver::{TAG_EMBEDDED, TAG_WEBIZEN};
+
 /// Represents the pluralistic forms that a semantic concept can take.
 /// We explicitly reject the assumption that knowledge is exclusively bound to Unicode strings.
 pub enum SemanticModality<'a> {
@@ -23,6 +26,32 @@ pub fn generate_60bit_token(bytes: &[u8]) -> u64 {
     // Truncate to 60 bits (the top 4 bits are reserved for datatype tags in the O vector)
     hash & 0x0FFF_FFFF_FFFF_FFFF
 }
+
+/// Generates a Virtual ID for a SPARQL-Star embedded triple <<s p o>>.
+/// 
+/// This function serializes the three u64 component IDs into a 24-byte array
+/// and hashes them using FNV-1a, then tags the result with TAG_EMBEDDED.
+/// 
+/// # Arguments
+/// * subject - The subject u64 ID
+/// * predicate - The predicate u64 ID  
+/// * object - The object u64 ID
+/// 
+/// # Returns
+/// A 64-bit Virtual ID with the TAG_EMBEDDED bit set, suitable for
+/// storage in the Subject or Object position of a QualiaQuin.
+#[inline(always)]
+pub fn generate_embedded_triple_id(subject: u64, predicate: u64, object: u64) -> u64 {
+    // Serialize the three u64 IDs into a 24-byte array
+    let mut bytes = [0u8; 24];
+    bytes[0..8].copy_from_slice(&subject.to_le_bytes());
+    bytes[8..16].copy_from_slice(&predicate.to_le_bytes());
+    bytes[16..24].copy_from_slice(&object.to_le_bytes());
+    
+    // Hash the bytes and tag with EMBEDDED marker
+    generate_60bit_token(&bytes) | TAG_EMBEDDED
+}
+
 
 /// In-memory Lexicon manager to handle reverse lookups in the future.
 /// For now, ingestion purely maps forward (Bytes -> u64) via the hash.

@@ -165,6 +165,145 @@ pub fn parse_json_ld_stream<R: Read>(
     Ok(count)
 }
 
+/// Parse JSON-LD stream with RDF-Star support via @annotation
+/// 
+/// NOTE: This function is currently rejected by the strict binary gatekeeper.
+/// Use the gatekeeper_bypass parameter only for testing or with explicit approval.
+pub fn parse_json_ld_star_stream<R: Read>(
+    mut reader: R,
+    context_hash: u64,
+    sorter: &mut super::external_sort::ExternalSorter,
+    gatekeeper_bypass: bool,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    if !gatekeeper_bypass {
+        return Err("JSON-LD RDF-Star is rejected by strict binary gatekeeper. Set gatekeeper_bypass=true only with explicit approval.".into());
+    }
+    
+    let mut count = 0;
+    let mut stack: Vec<(u64, u64)> = Vec::with_capacity(32);
+    let mut buf = [0u8; 8192];
+    let mut state = ParseStateStar::Scan;
+    let mut current_string = String::new();
+    let mut current_subject = 0;
+    let mut current_key = 0;
+    let mut embedded_triples: Vec<(u64, u64)> = Vec::new(); // (virtual_id, predicate)
+    let mut is_escaped = false;
+
+    loop {
+        let n = reader.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+
+        for &b in &buf[..n] {
+            let ch = b as char;
+
+            match state {
+                ParseStateStar::Scan => {
+                    if ch == '{' {
+                        let new_subject = hash_str(&format!("blank_{}", count));
+                        stack.push((current_subject, current_key));
+                        current_subject = new_subject;
+                    } else if ch == '}' {
+                        // Emit embedded triple assertions if any
+                        for (virtual_id, pred) in &embedded_triples {
+                            sorter.push(QualiaQuin {
+                                subject: current_subject,
+                                predicate: *pred,
+                                object: *virtual_id,
+                                context: context_hash,
+                                metadata: 0b10 << 61,
+                                parity: 0,
+                            })?;
+                            count += 1;
+                        }
+                        embedded_triples.clear();
+                        
+                        if let Some((prev_subject, prev_key)) = stack.pop() {
+                            current_subject = prev_subject;
+                            current_key = prev_key;
+                        }
+                    } else if ch == '"' {
+                        current_string.clear();
+                        is_escaped = false;
+                        state = ParseStateStar::InString;
+                    } else if ch == '@' {
+                        // Check for @annotation
+                        current_string.clear();
+                        state = ParseStateStar::InAnnotationKey;
+                    }
+                }
+                ParseStateStar::InString => {
+                    if is_escaped {
+                        current_string.push(ch);
+                        is_escaped = false;
+                    } else if ch == '\\' {
+                        is_escaped = true;
+                    } else if ch == '"' {
+                        let hash = hash_str(&current_string);
+                        if current_key == 0 {
+                            current_subject = hash;
+                        } else {
+                            sorter.push(QualiaQuin {
+                                subject: current_subject,
+                                predicate: current_key,
+                                object: hash,
+                                context: context_hash,
+                                metadata: 0b10 << 61,
+                                parity: 0,
+                            })?;
+                            count += 1;
+                        }
+                        current_key = 0;
+                        state = ParseStateStar::AfterString;
+                    } else {
+                        current_string.push(ch);
+                    }
+                }
+                ParseStateStar::AfterString => {
+                    if ch == ':' {
+                        current_key = hash_str(&current_string);
+                        current_string.clear();
+                    } else if ch == '"' {
+                        current_string.clear();
+                        is_escaped = false;
+                        state = ParseStateStar::InString;
+                    } else if ch == '}' || ch == ',' {
+                        state = ParseStateStar::Scan;
+                    }
+                }
+                ParseStateStar::InAnnotationKey => {
+                    if ch == '"' {
+                        state = ParseStateStar::InAnnotationValue;
+                    }
+                }
+                ParseStateStar::InAnnotationValue => {
+                    if is_escaped {
+                        current_string.push(ch);
+                        is_escaped = false;
+                    } else if ch == '\\' {
+                        is_escaped = true;
+                    } else if ch == '"' {
+                        // The annotation value is an embedded triple
+                        // For now, we'll generate a Virtual ID placeholder
+                        let virtual_id = qualia_core_db::lexicon::generate_embedded_triple_id(
+                            current_subject,
+                            current_key,
+                            hash_str(&current_string)
+                        );
+                        embedded_triples.push((virtual_id, current_key));
+                        state = ParseStateStar::AfterString;
+                    } else {
+                        current_string.push(ch);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(count)
+}
+
 #[derive(PartialEq)]
 enum ParseState {
     Scan,
@@ -172,4 +311,13 @@ enum ParseState {
     AfterString,
     ExpectIdValue,
     InIdString,
+}
+
+#[derive(PartialEq)]
+enum ParseStateStar {
+    Scan,
+    InString,
+    AfterString,
+    InAnnotationKey,
+    InAnnotationValue,
 }

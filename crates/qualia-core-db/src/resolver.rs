@@ -6,14 +6,16 @@
 //! # Bit layout of a Quin field value
 //!
 //! ```text
-//! Bit 63  │ Bits 60-62   │ Bits 0-59     │ Interpretation
+//! Bit 63  │ Bits 60-63   │ Bits 0-59     │ Interpretation
 //! ────────┼──────────────┼───────────────┼──────────────────────────────────────
 //!   1     │ any          │ payload       │ did:q42 topological pointer (identifier module)
-//!   0     │ 0b000        │ FNV-1a hash   │ IRI / blank-node → lexicon lookup
-//!   0     │ 0b001        │ integer       │ Inline xsd:integer literal
-//!   0     │ 0b010        │ scaled × 10⁶  │ Inline xsd:decimal literal
-//!   0     │ 0b011        │ 0 or 1        │ Inline xsd:boolean literal
-//!   0     │ 0b100–0b111  │ reserved      │ Treated as IRI hash (future use)
+//!   0     │ 0b0000       │ FNV-1a hash   │ IRI / blank-node → lexicon lookup
+//!   0     │ 0b0001       │ integer       │ Inline xsd:integer literal
+//!   0     │ 0b0010       │ scaled × 10⁶  │ Inline xsd:decimal literal
+//!   0     │ 0b0011       │ 0 or 1        │ Inline xsd:boolean literal
+//!   0     │ 0b001        │ embedded hash │ SPARQL-Star embedded triple <<s p o>>
+   0     │ 0b1000       │ webizen id    │ Sovereign WebID agent identifier
+//!   0     │ 0b0101–0b0111│ reserved      │ Treated as IRI hash (future use)
 //! ```
 //!
 //! The inline-type encoding is applied by the ingest layer, which masks
@@ -36,6 +38,11 @@ const INLINE_TAG_MASK: u64 = 0b111u64 << 60; // bits 60-62 (only when MSB=0)
 const INLINE_TAG_INTEGER: u64 = 0b001u64 << 60;
 const INLINE_TAG_DECIMAL: u64 = 0b010u64 << 60;
 const INLINE_TAG_BOOLEAN: u64 = 0b011u64 << 60;
+/// SPARQL-Star embedded triple tag: indicates the value is a Virtual ID for <<s p o>>
+pub const TAG_EMBEDDED: u64 = 0b001u64 << 60;
+/// Webizen identity tag: indicates the value is a sovereign WebID agent identifier
+/// Uses 0x8 prefix for instant identification without dictionary lookup
+pub const TAG_WEBIZEN: u64 = 0b1000u64 << 60;
 /// Mask over bits 0-59 — the value payload when an inline tag is present.
 const INLINE_VALUE_MASK: u64 = !(MSB_FLAG | INLINE_TAG_MASK);
 

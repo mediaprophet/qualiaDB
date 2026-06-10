@@ -19,7 +19,7 @@ use std::path::Path;
 
 use memmap2::{Mmap, MmapOptions};
 
-use crate::q42_lex::{LexError, Q42LexMmap, LEX_MAGIC};
+use crate::q42_lex::{LexError, Q42LexMmap, LEX_MAGIC, LexiconEntry};
 use crate::{QualiaQuin, QUINS_PER_BLOCK};
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
@@ -117,6 +117,57 @@ pub fn encode_lex(lex: &HashMap<u64, String>) -> Vec<u8> {
     out
 }
 
+/// Encode Q42LEX bytes from a hash → LexiconEntry map (supports embedded triples).
+pub fn encode_lex_with_entries(lex: &HashMap<u64, LexiconEntry>) -> Vec<u8> {
+    let mut entries: Vec<(u64, &LexiconEntry)> = lex.iter().map(|(&h, e)| (h, e)).collect();
+    entries.sort_unstable_by_key(|&(h, _)| h);
+
+    let entry_count = entries.len() as u64;
+    let strings_offset = 32 + entry_count * 16;
+
+    let mut string_blob: Vec<u8> = Vec::new();
+    let mut index = Vec::with_capacity(entries.len() * 16);
+    for (hash, entry) in &entries {
+        let str_off = string_blob.len() as u64;
+        match entry {
+            LexiconEntry::String(text) => {
+                // Write type tag
+                string_blob.push(0x01);
+                let b = text.as_bytes();
+                let len = b.len().min(65535) as u16;
+                string_blob.extend_from_slice(&len.to_le_bytes());
+                string_blob.extend_from_slice(&b[..len as usize]);
+            }
+            LexiconEntry::EmbeddedTriple(triple) => {
+                // Write type tag
+                string_blob.push(0x02);
+                for &id in triple {
+                    string_blob.extend_from_slice(&id.to_le_bytes());
+                }
+            }
+            LexiconEntry::Webizen(webid) => {
+                // Write type tag
+                string_blob.push(0x03);
+                let b = webid.as_bytes();
+                let len = b.len().min(65535) as u16;
+                string_blob.extend_from_slice(&len.to_le_bytes());
+                string_blob.extend_from_slice(&b[..len as usize]);
+            }
+        }
+        index.extend_from_slice(&hash.to_le_bytes());
+        index.extend_from_slice(&str_off.to_le_bytes());
+    }
+
+    let mut out = Vec::with_capacity(strings_offset as usize + string_blob.len());
+    out.extend_from_slice(&LEX_MAGIC);
+    out.extend_from_slice(&entry_count.to_le_bytes());
+    out.extend_from_slice(&strings_offset.to_le_bytes());
+    out.extend_from_slice(&1u64.to_le_bytes());
+    out.extend_from_slice(&index);
+    out.extend_from_slice(&string_blob);
+    out
+}
+
 /// Encode BIDX bytes from per-block min/max object hashes.
 pub fn encode_bidx(ranges: &[(u64, u64)]) -> Vec<u8> {
     let block_count = ranges.len() as u32;
@@ -132,7 +183,7 @@ pub fn encode_bidx(ranges: &[(u64, u64)]) -> Vec<u8> {
     out
 }
 
-/// Serialize one raw SuperBlock (40_960 bytes).
+/// Encode Q42LEX bytes from a hash → LexiconEntry map (supports embedded triples).
 pub fn encode_superblock(seq_id: u64, quins: &[QualiaQuin]) -> [u8; SUPERBLOCK_SIZE] {
     debug_assert!(quins.len() <= QUINS_PER_BLOCK);
     let mut block = [0u8; SUPERBLOCK_SIZE];
@@ -223,6 +274,29 @@ pub fn write_unified_volume(
     builder.finish(path)
 }
 
+/// Write a unified v2 .q42 volume with embedded triple support.
+/// 
+/// This version accepts HashMap<u64, LexiconEntry> to support SPARQL-Star
+/// embedded triples in addition to regular string lexicon entries.
+pub fn write_unified_volume_with_entries(
+    path: &Path,
+    lex: &HashMap<u64, LexiconEntry>,
+    block_ranges: &[(u64, u64)],
+    blocks: &[Vec<QualiaQuin>],
+) -> io::Result<()> {
+    if blocks.len() != block_ranges.len() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "block count mismatch",
+        ));
+    }
+    let mut builder = UnifiedVolumeBuilder::with_lex_entries(lex);
+    for (seq, quins) in blocks.iter().enumerate() {
+        builder.push_block(seq as u64, quins);
+    }
+    builder.finish(path)
+}
+
 /// Incremental builder for large external-sort merges (one SuperBlock at a time).
 pub struct UnifiedVolumeBuilder {
     lex_bytes: Vec<u8>,
@@ -235,6 +309,16 @@ impl UnifiedVolumeBuilder {
     pub fn with_lex_map(lex: &HashMap<u64, String>) -> Self {
         Self {
             lex_bytes: encode_lex(lex),
+            block_ranges: Vec::new(),
+            dir_entries: Vec::new(),
+            data_blob: Vec::new(),
+        }
+    }
+
+    /// Create a builder with a lexicon that supports embedded triples (LexiconEntry).
+    pub fn with_lex_entries(lex: &HashMap<u64, LexiconEntry>) -> Self {
+        Self {
+            lex_bytes: encode_lex_with_entries(lex),
             block_ranges: Vec::new(),
             dir_entries: Vec::new(),
             data_blob: Vec::new(),

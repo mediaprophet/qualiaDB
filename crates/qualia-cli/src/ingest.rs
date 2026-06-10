@@ -14,6 +14,7 @@ use std::path::Path;
 use crate::parsers::external_sort::ExternalSorter;
 use qualia_core_db::mini_parser::hash_token;
 use qualia_core_db::{QualiaQuin, QUINS_PER_BLOCK};
+use qualia_core_db::q42_lex::LexiconEntry;
 use rio_api::parser::TriplesParser;
 use rio_xml::RdfXmlParser;
 
@@ -248,3 +249,111 @@ pub fn ingest_cbor(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn s
         bidx_written: true,
     })
 }
+
+/// Ingest a Turtle-Star file with SPARQL-Star embedded triples.
+/// 
+/// This function uses the new LexiconEntry type to support embedded triples
+/// in addition to regular string lexicon entries.
+pub fn ingest_turtle_star(
+    input: &Path,
+    output: &Path,
+) -> Result<IngestStats, Box<dyn std::error::Error>> {
+    use std::io::{BufRead, BufReader};
+    
+    let reader = BufReader::new(File::open(input)?);
+    let mut lex: HashMap<u64, LexiconEntry> = HashMap::new();
+    let mut all_quins: Vec<QualiaQuin> = Vec::new();
+    let mut skipped: u64 = 0;
+
+    // ── Phase 1: parse all triples into memory ───────────────────────────
+    for raw_line in reader.lines() {
+        let line = raw_line?;
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') || line.starts_with('@') {
+            skipped += 1;
+            continue;
+        }
+        
+        // Use the Turtle-Star parser
+        let mut parser = crate::parsers::turtle_star::TurtleStarParser::new(0);
+        
+        // Check if line contains embedded triple marker
+        if line.contains("<<") {
+            // Parse embedded triple
+            if let Ok((virtual_id, components)) = parser.parse_embedded_triple(line.as_bytes()) {
+                // Add embedded triple to lexicon
+                lex.entry(virtual_id).or_insert_with(|| LexiconEntry::EmbeddedTriple(components));
+                
+                // Emit the embedded triple as a Quin (for indexing)
+                all_quins.push(QualiaQuin {
+                    subject: components[0],
+                    predicate: components[1],
+                    object: components[2],
+                    context: 0,
+                    metadata: 0,
+                    parity: 0,
+                });
+            } else {
+                skipped += 1;
+            }
+        } else {
+            // Parse regular triple - extract string values for lexicon
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 3 {
+                let subject_str = parts[0];
+                let predicate_str = parts[1];
+                let object_str = parts[2];
+                
+                if let Ok((subject, predicate, object)) = parser.parse_triple(line.as_bytes()) {
+                    // Add string entries to lexicon
+                    lex.entry(subject).or_insert_with(|| LexiconEntry::String(subject_str.to_string()));
+                    lex.entry(predicate).or_insert_with(|| LexiconEntry::String(predicate_str.to_string()));
+                    lex.entry(object).or_insert_with(|| LexiconEntry::String(object_str.to_string()));
+                    
+                    all_quins.push(QualiaQuin {
+                    subject,
+                    predicate,
+                    object,
+                    context: 0,
+                    metadata: 0,
+                    parity: 0,
+                });
+            } else {
+                skipped += 1;
+            }
+        }
+    }
+
+    let triples = all_quins.len() as u64;
+
+    // ── Phase 2: sort by object hash ────────────────────────────────────
+    all_quins.sort_unstable_by_key(|q| q.object);
+
+    // ── Phase 3: build SuperBlock chunks ─────────────────────────────────
+    let mut blocks: Vec<Vec<QualiaQuin>> = Vec::new();
+    let mut block_ranges: Vec<(u64, u64)> = Vec::new();
+
+    for chunk in all_quins.chunks(QUINS_PER_BLOCK) {
+        let min_hash = chunk.iter().map(|q| q.object).min().unwrap_or(0);
+        let max_hash = chunk.iter().map(|q| q.object).max().unwrap_or(0);
+        block_ranges.push((min_hash, max_hash));
+        blocks.push(chunk.to_vec());
+    }
+
+    let block_seq = blocks.len() as u64;
+    let lex_entries = lex.len() as u64;
+    drop(all_quins);
+
+    // ── Phase 4: write unified v2 volume with embedded triple support ────────
+    qualia_core_db::q42_volume::write_unified_volume_with_entries(output, &lex, &block_ranges, &blocks)?;
+
+    Ok(IngestStats {
+        triples_ingested: triples,
+        blocks_written: block_seq,
+        lex_entries,
+        lines_skipped: skipped,
+        bidx_written: true,
+    })
+}
+
+

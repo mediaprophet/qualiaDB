@@ -1,6 +1,6 @@
 # QualiaDB Architecture
 
-_Branch: `0.0.8-dev` | Last updated: 2026-06-07_
+_Branch: `0.0.10-dev` | Last updated: 2026-06-10_
 
 QualiaDB is a zero-allocation, mechanically sympathetic semantic database and multi-agent collaboration ecosystem. It bridges the string-heavy reality of the Semantic Web with hardware-aligned execution paths, enforcing strict constraints to ensure bounded memory and deterministic performance.
 

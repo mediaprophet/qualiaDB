@@ -6,6 +6,67 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.10] — 2026-06-10
+
+### Summary
+
+v0.0.10 resolves all build errors (82 → 0), fixes tokio runtime nesting issues, and documents critical implementation gaps including security stubs and the wgpu/Vulkan mock pipeline issue.
+
+### Fixed — Build System
+
+- **All 82 build errors resolved**: Project now compiles successfully with 0 errors
+- **Tokio runtime fixes**: Fixed Handle::current() calls with try_current fallback for wgpu async operations
+- **Module reorganization**: Completed all path references and imports
+- **Test count**: 539 test functions in qualia-core-db (updated from incorrect 271 count)
+
+### Added — Documentation
+
+- **Claude review analysis**: Comprehensive validation of 2026-06-10 code review findings
+- **Mock pipeline documentation**: Detailed analysis of wgpu/Vulkan placeholder shader issue
+- **CUDA support status**: Documented CUDA GPUDirect Storage (for calculus only, not LLM)
+- **Implementation task files**: 9 detailed task files for security, functionality, and documentation fixes
+- **BUILD_ISSUES.md**: Updated to reflect resolved build status
+
+### Known Limitations (Documented)
+
+- **Security stubs**: zk_proofs, fiduciary_crypto, ML-DSA, ECC parity require real implementation
+- **Query layer**: mmap_query_subject, lazy_superblock_query, indexing need real implementation
+- **Linux LLM inference**: wgpu/Vulkan path uses mock_pipeline (placeholder shader)
+
+
+### Added � SPARQL Engine (7,074 lines across 16 modules)
+
+- **Complete SPARQL 1.1/1.2 implementation**: Zero-allocation architecture with index-based AST
+- **Core features**: SELECT, ASK, CONSTRUCT, DESCRIBE, FILTER, aggregates, GROUP BY, HAVING, DISTINCT, LIMIT/OFFSET, ORDER BY
+- **Advanced patterns**: OPTIONAL, UNION, GRAPH, Property Paths (7 types), Subqueries
+- **SPARQL-Star**: Embedded triples with provenance tracking, Virtual ID Hash strategy
+- **W3C Extensions**: SPARQL Update, SHACL-SPARQL, GeoSPARQL, SPARQL-MM, C2PA
+- **DID Integration**: SPARQL-DID specification, federated queries with DID authentication, CORS handling
+- **Zero-allocation**: Fixed-size arrays, no Vec/String/Box in hot paths, ~35KB per query
+- **Testing**: 45+ comprehensive tests covering all modules
+- **Documentation**: SPARQL-DID Integration Specification (399-line respec document)
+
+---
+
+## [0.0.9] — 2026-06-09
+
+### Summary
+
+v0.0.9 addressed initial build error fixing phase, resolving 38 of 82 errors through straightforward corrections and module reorganization.
+
+### Fixed — Build Errors (Partial)
+
+- **38 build errors fixed**: Type mismatches, API usage, module imports
+- **qualia-extensions rewired**: Now uses native Qualia LLM pipeline instead of Candle
+- **q42_lexicon.rs**: Implemented properly with all required types and methods
+- **Module reorganization**: Fixed imports across webizen.rs and related files
+
+### Remaining (Resolved in v0.0.10)
+
+- 44 build errors required architectural fixes (all resolved in v0.0.10)
+
+---
+
 ## [0.0.8] — 2026-06-07
 
 ### Summary

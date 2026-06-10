@@ -110,3 +110,119 @@ pub fn lazy_superblock_query(
 
     Ok(telemetry)
 }
+
+/// Filter a slice of QualiaQuin by context hash
+pub fn filter_by_context(quins: &[QualiaQuin], context_hash: u64) -> Vec<QualiaQuin> {
+    if context_hash == 0 {
+        return quins.to_vec();
+    }
+    quins.iter().filter(|q| q.context == context_hash).copied().collect()
+}
+
+/// Filter a slice of QualiaQuin by multiple context hashes
+pub fn filter_by_contexts(quins: &[QualiaQuin], context_hashes: &[u64]) -> Vec<QualiaQuin> {
+    if context_hashes.is_empty() {
+        return quins.to_vec();
+    }
+    let context_set: std::collections::HashSet<u64> = context_hashes.iter().copied().collect();
+    quins.iter().filter(|q| context_set.contains(&q.context)).copied().collect()
+}
+
+/// Count Quins per context hash
+pub fn count_by_context(quins: &[QualiaQuin]) -> std::collections::HashMap<u64, usize> {
+    let mut counts = std::collections::HashMap::new();
+    for quin in quins {
+        *counts.entry(quin.context).or_insert(0) += 1;
+    }
+    counts
+}
+
+/// Get unique context hashes from a slice of QualiaQuin
+pub fn unique_contexts(quins: &[QualiaQuin]) -> Vec<u64> {
+    let mut contexts = std::collections::HashSet::new();
+    for quin in quins {
+        contexts.insert(quin.context);
+    }
+    contexts.into_iter().collect()
+}
+
+/// Filter Quins by context and subject
+pub fn filter_by_context_and_subject(quins: &[QualiaQuin], context_hash: u64, subject: u64) -> Vec<QualiaQuin> {
+    quins.iter()
+        .filter(|q| (context_hash == 0 || q.context == context_hash) && q.subject == subject)
+        .copied()
+        .collect()
+}
+
+/// Filter Quins by context and predicate
+pub fn filter_by_context_and_predicate(quins: &[QualiaQuin], context_hash: u64, predicate: u64) -> Vec<QualiaQuin> {
+    quins.iter()
+        .filter(|q| (context_hash == 0 || q.context == context_hash) && q.predicate == predicate)
+        .copied()
+        .collect()
+}
+
+/// Filter Quins by context and object
+pub fn filter_by_context_and_object(quins: &[QualiaQuin], context_hash: u64, object: u64) -> Vec<QualiaQuin> {
+    quins.iter()
+        .filter(|q| (context_hash == 0 || q.context == context_hash) && q.object == object)
+        .copied()
+        .collect()
+}
+
+#[cfg(test)]
+mod context_tests {
+    use super::*;
+
+    #[test]
+    fn test_filter_by_context() {
+        let quins = vec![
+            QualiaQuin { subject: 1, predicate: 2, object: 3, context: 100, metadata: 0, parity: 0 },
+            QualiaQuin { subject: 4, predicate: 5, object: 6, context: 200, metadata: 0, parity: 0 },
+            QualiaQuin { subject: 7, predicate: 8, object: 9, context: 100, metadata: 0, parity: 0 },
+        ];
+        
+        let filtered = filter_by_context(&quins, 100);
+        assert_eq!(filtered.len(), 2);
+        assert_eq!(filtered[0].context, 100);
+        assert_eq!(filtered[1].context, 100);
+    }
+
+    #[test]
+    fn test_filter_by_context_wildcard() {
+        let quins = vec![
+            QualiaQuin { subject: 1, predicate: 2, object: 3, context: 100, metadata: 0, parity: 0 },
+            QualiaQuin { subject: 4, predicate: 5, object: 6, context: 200, metadata: 0, parity: 0 },
+        ];
+        
+        let filtered = filter_by_context(&quins, 0);
+        assert_eq!(filtered.len(), 2);
+    }
+
+    #[test]
+    fn test_count_by_context() {
+        let quins = vec![
+            QualiaQuin { subject: 1, predicate: 2, object: 3, context: 100, metadata: 0, parity: 0 },
+            QualiaQuin { subject: 4, predicate: 5, object: 6, context: 200, metadata: 0, parity: 0 },
+            QualiaQuin { subject: 7, predicate: 8, object: 9, context: 100, metadata: 0, parity: 0 },
+        ];
+        
+        let counts = count_by_context(&quins);
+        assert_eq!(counts.get(&100), Some(&2));
+        assert_eq!(counts.get(&200), Some(&1));
+    }
+
+    #[test]
+    fn test_filter_by_context_and_subject() {
+        let quins = vec![
+            QualiaQuin { subject: 1, predicate: 2, object: 3, context: 100, metadata: 0, parity: 0 },
+            QualiaQuin { subject: 1, predicate: 5, object: 6, context: 200, metadata: 0, parity: 0 },
+            QualiaQuin { subject: 7, predicate: 8, object: 9, context: 100, metadata: 0, parity: 0 },
+        ];
+        
+        let filtered = filter_by_context_and_subject(&quins, 100, 1);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].subject, 1);
+        assert_eq!(filtered[0].context, 100);
+    }
+}
