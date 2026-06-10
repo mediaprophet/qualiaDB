@@ -2,7 +2,21 @@
 
 ## Problem Identified
 
-The wgpu/WGSL fallback path (used when DirectML or Accelerate BLAS are not available) uses `mock_pipeline` instead of the real `fused_transformer.wgsl` shader.
+The wgpu/WGSL fallback path uses `mock_pipeline` with a placeholder shader instead of the real quantized GEMM shader.
+
+## Critical Finding: Two Different Shaders
+
+### Real Pipeline (lines 395-405)
+- **Shader**: `fused_transformer.wgsl`
+- **Features**: Real quantized GEMM with Q4_K/Q6_K dequantization
+- **Dimensions**: Dynamic via GemmParams struct
+- **Status**: ✅ Real implementation
+
+### Mock Pipeline (lines 407-416)
+- **Shader**: `fused_tensor_contraction.wgsl`
+- **Features**: Hardcoded 4096 dimensions, simple matmul, ReLU
+- **Comment in shader**: "Very simplified placeholder for a fused attention + FFN block"
+- **Status**: ⚠️ Placeholder/mock implementation
 
 ## Platform-Specific Behavior
 
@@ -71,3 +85,38 @@ cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
 - Tokio runtime fixes: ✅ Committed (cff37440)
 - Mock pipeline fix: ⚠️ Requires careful implementation
 - Orchestrator integration: ⏳ Pending
+
+## Other Mock Implementations Found
+
+During codebase search, identified other mock implementations:
+
+### pinn_extension.rs (Physics-Informed Neural Networks)
+- `mock_neural_forward()` - Placeholder neural network computation
+- Fallback when native backend unavailable
+- Used in test with "mock_fluid_model"
+
+### quantum_dft.rs (Quantum DFT)
+- `calculate_ground_state_energy()` - Mock DFT convergence
+- Returns mock Hydrogen ground state (-13.6 eV)
+- Comment: "In a real implementation, this would iteratively solve Kohn-Sham equations"
+
+### webizen.rs (Webizen VM)
+- Line 521: Mock tax schema evaluation
+- Lines 1236, 1252: Mock continuous grid for calculus operations
+- Lines 1518-1521: Test mock VM for CRDT queue
+
+### gguf_sharder.rs (GGUF Parser)
+- Lines 568-572: Mock tensor byte offsets for tests
+- Lines 911, 932: Mock model names in tests
+
+### Shader Files
+- `fused_tensor_contraction.wgsl`: Contains "ReLU mock" comment, hardcoded 4096 dims
+- `fluid_dynamics.wgsl`: "Placeholder Navier-Stokes mock update"
+- `kinematics.wgsl`: "Gravitational/Electrostatic Force mock", "mock Euler step"
+
+## Priority
+
+1. **HIGH**: gguf_bridge.rs mock_pipeline - Blocks real LLM inference on Linux/wgpu path
+2. **MEDIUM**: pinn_extension.rs mock - Affects physics simulations
+3. **LOW**: quantum_dft.rs mock - Affects quantum calculations (experimental feature)
+4. **LOW**: webizen.rs mocks - Mostly for tests/demonstrations
