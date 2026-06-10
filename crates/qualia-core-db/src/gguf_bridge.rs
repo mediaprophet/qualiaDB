@@ -503,9 +503,10 @@ impl QTensorEngine {
     }
 
     pub fn new() -> Self {
+        let handle = tokio::runtime::Handle::try_current()
+            .unwrap_or_else(|_| tokio::runtime::Runtime::new().unwrap().handle());
         tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current()
-                .block_on(Self::try_new())
+            handle.block_on(Self::try_new())
                 .expect("Failed to initialize native GGUF engine")
         })
     }
@@ -880,7 +881,7 @@ impl QTensorEngine {
         });
         self.device.poll(wgpu::Maintain::Wait);
 
-        let handle = tokio::runtime::Handle::current();;
+        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| tokio::runtime::Runtime::new().unwrap().handle());
         if handle.block_on(receiver).ok()?.is_err() {
             return None;
         }
@@ -1035,7 +1036,7 @@ impl QTensorEngine {
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
         self.device.poll(wgpu::Maintain::Wait);
 
-        let handle = tokio::runtime::Handle::current();
+        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| tokio::runtime::Runtime::new().unwrap().handle());
         handle.block_on(receiver).unwrap().unwrap();
 
         let data = buffer_slice.get_mapped_range();
@@ -2029,7 +2030,7 @@ impl QTensorEngine {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn probe_gguf_runtime(path: &str) -> Result<GgufLoadReport, String> {
     let mut engine = tokio::task::block_in_place(|| {
-        tokio::runtime::Handle::current()
+        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| tokio::runtime::Runtime::new().unwrap().handle());
             .block_on(QTensorEngine::try_new())
     })?;
     engine.load_gguf_checked(path)
