@@ -36,6 +36,12 @@ The Claude review identified critical gaps between documentation claims and actu
 |------|------|----------|--------|-----------|
 | [008_cuda_support_status.md](008_cuda_support_status.md) | N/A (status document) | 🔵 INFO | Complete | N/A |
 
+### 🟠 Documentation Tasks (In Progress)
+
+| Task | File | Severity | Status | Est. Time |
+|------|------|----------|--------|-----------|
+| [009_documentation_audit.md](009_documentation_audit.md) | All .md files (66 total) | 🟠 MEDIUM | In Progress | 5 days |
+
 ## Priority Order
 
 ### Phase 1: Security First (Week 1-2)
