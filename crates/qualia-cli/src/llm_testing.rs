@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 use qualia_client_core::model_lifecycle::{scan_vault_gguf, resolve_vault_model, VaultGgufEntry};
-use qualia_core_db::tests::llm_model_testing::{LlmModelTester, ModelTestConfig, ModelParameters};
+// use qualia_core_db::tests::llm_model_testing::{LlmModelTester, ModelTestConfig, ModelParameters}; // TODO: implement tests module
 use crate::llm_lifecycle::{default_vault_path, init_log_stream};
 
 /// CLI command to run comprehensive LLM model tests
@@ -372,7 +372,7 @@ fn detect_model_type(filename: &str) -> Result<(String, ModelParameters), String
 
 /// Validate a single model
 fn validate_single_model(model_path: &str, strict: bool) -> Result<ModelValidation, String> {
-    use qualia_core_db::gguf_sharder::GgufSharder;
+    use qualia_core_db::gguf_sharder::GGufSharder;
     
     let sharder = GgufSharder::from_gguf(model_path)
         .map_err(|e| format!("Failed to load GGUF: {}", e))?;

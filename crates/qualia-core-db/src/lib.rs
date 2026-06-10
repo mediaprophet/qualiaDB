@@ -30,6 +30,7 @@ pub mod q42_reader;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_volume;
 pub mod query_engine;
+pub mod qubo_compiler;
 pub mod solid_ldp;
 pub mod vault_manifest;
 pub mod wasm_bridge;

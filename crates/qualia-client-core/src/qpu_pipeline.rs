@@ -2,7 +2,7 @@
 
 use crate::qpu_dispatcher::{self, QpuDispatchResult};
 use crate::qpu_oracle::{self, QpuChatCommandResult};
-// use qualia_core_db::qubo_compiler::{self, QuboMatrix}; // TODO: implement qubo_compiler
+use qualia_core_db::qubo_compiler::{QuboMatrix, compile_quins_to_qubo, rehydrate_solution};
 use qualia_core_db::QualiaQuin;
 
 pub const MAX_REHYDRATED: usize = 64;
@@ -62,7 +62,7 @@ pub fn execute_quantum_pipeline(
     match task {
         QuantumTaskKind::QuboRouting => {
             let mut matrix = QuboMatrix::default();
-            qubo_compiler::compile_quins_to_qubo(quins, &mut matrix)
+            compile_quins_to_qubo(quins, &mut matrix)
                 .map_err(|e| format!("QUBO compile blocked: {e:?}"))?;
             if matrix.num_vars == 0 {
                 build_demo_qubo(&mut matrix, latex_hint);
@@ -76,7 +76,7 @@ pub fn execute_quantum_pipeline(
                 metadata: 0,
                 parity: 0,
             }; MAX_REHYDRATED];
-            let n = qubo_compiler::rehydrate_solution(&mut matrix, &dispatch.assignment, &mut out);
+            let n = rehydrate_solution(&mut matrix, &dispatch.assignment, &mut out);
             let summary = format!(
                 "⚛️ **QUBO routing complete** ({})\n\n\
                  - Variables: {}\n\
@@ -116,7 +116,7 @@ pub fn execute_quantum_pipeline(
         }
         QuantumTaskKind::DefeasibleResolution => {
             let mut matrix = QuboMatrix::default();
-            qubo_compiler::compile_quins_to_qubo(quins, &mut matrix)
+            compile_quins_to_qubo(quins, &mut matrix)
                 .map_err(|e| format!("Defeasible QUBO blocked: {e:?}"))?;
             if matrix.num_vars == 0 {
                 build_defeasible_demo(&mut matrix);

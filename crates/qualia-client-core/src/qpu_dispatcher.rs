@@ -2,7 +2,7 @@
 
 use crate::qpu_oracle::{self, QpuArchitecture};
 use qualia_core_db::qpu_ingress::{self, MAX_QPU_SAMPLES};
-// use qualia_core_db::qubo_compiler::{self, QuboMatrix, MAX_QUBO_VARS}; // TODO: implement qubo_compiler
+use qualia_core_db::qubo_compiler::{QuboMatrix, MAX_QUBO_VARS, solve_classical};
 
 const DWAVE_SAPI_URL: &str = "https://cloud.dwavesys.com/sapi/problems/";
 const IBM_RUNTIME_URL: &str = "https://quantum.cloud.ibm.com/api/v1/jobs";
@@ -41,13 +41,13 @@ pub fn dispatch_qubo(matrix: &QuboMatrix, shots: u32) -> Result<QpuDispatchResul
                             assignment[i] = bits[i];
                         }
                         record_dwave_usage(shots)?;
-                        let energy = qubo_compiler::solve_classical(matrix, &mut assignment);
+                        let energy = solve_classical(matrix, &mut assignment);
                         return Ok(QpuDispatchResult {
                             backend,
                             used_remote,
                             energy,
                             assignment,
-                            num_vars: matrix.num_vars,
+                            num_vars: matrix.num_vars as u8,
                             provenance_json,
                         });
                     }
@@ -62,13 +62,13 @@ pub fn dispatch_qubo(matrix: &QuboMatrix, shots: u32) -> Result<QpuDispatchResul
         return Err("No QPU token configured and classical fallback disabled".into());
     }
 
-    let energy = qubo_compiler::solve_classical(matrix, &mut assignment);
+    let energy = solve_classical(matrix, &mut assignment);
     Ok(QpuDispatchResult {
         backend: "classical_simulated_annealing".to_string(),
         used_remote: false,
         energy,
         assignment,
-        num_vars: matrix.num_vars,
+        num_vars: matrix.num_vars as u8,
         provenance_json,
     })
 }
@@ -138,7 +138,7 @@ fn submit_dwave_qubo(token: &str, matrix: &QuboMatrix, shots: u32) -> Result<Str
     }
     let mut quadratic: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
     for c in 0..matrix.coupler_count {
-        let cw = matrix.couplers[c];
+        let cw = matrix.couplers[c].clone();
         let key = format!("[{},{}]", cw.var_a, cw.var_b);
         quadratic.insert(key, serde_json::json!(cw.weight));
     }

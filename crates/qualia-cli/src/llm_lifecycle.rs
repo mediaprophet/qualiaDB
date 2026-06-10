@@ -15,7 +15,7 @@ use qualia_client_core::model_lifecycle::{
 };
 use qualia_client_core::system_telemetry::SystemTelemetryEvent;
 use qualia_core_db::llm_agent::{AgentBackend, AgentIntent, AgentRuntime, LocalLlmAgent};
-use qualia_core_db::n3_compiler::N3OutputMode;
+use qualia_core_db::modalities::logic::n3_compiler::N3OutputMode;
 use qualia_core_db::orchestrator::OrchestrationResult;
 use qualia_core_db::q_hash;
 
