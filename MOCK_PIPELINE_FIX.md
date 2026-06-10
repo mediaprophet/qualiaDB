@@ -1,8 +1,28 @@
-# Mock Pipeline Issue - wgpu/Vulkan Path
+# Mock Pipeline Issue - wgpu/WGSL Fallback Path
 
 ## Problem Identified
 
-The wgpu/Vulkan path (advertised in README as the Linux inference route) uses `mock_pipeline` instead of the real `fused_transformer.wgsl` shader.
+The wgpu/WGSL fallback path (used when DirectML or Accelerate BLAS are not available) uses `mock_pipeline` instead of the real `fused_transformer.wgsl` shader.
+
+## Platform-Specific Behavior
+
+### Windows (DirectML)
+- **Primary path**: DirectML (D3D12) - ✅ Uses real GPU kernels
+- **Fallback**: wgpu/Vulkan - ⚠️ Uses mock_pipeline (affected)
+
+### macOS (Apple Silicon)
+- **Primary path**: Accelerate BLAS (AMX) - ✅ Uses real Apple framework
+- **Fallback**: wgpu/Metal - ⚠️ Uses mock_pipeline (affected when mmap not loaded)
+
+### Linux
+- **Primary path**: wgpu/Vulkan - ⚠️ Uses mock_pipeline (affected)
+- **No DirectML**: Not available on Linux
+
+## Impact
+
+- **Linux**: Entirely affected - only wgpu/Vulkan path available
+- **macOS**: Partially affected - only when mmap not loaded (Accelerate BLAS works)
+- **Windows**: Minimally affected - DirectML is primary and works correctly
 
 ## Location
 
