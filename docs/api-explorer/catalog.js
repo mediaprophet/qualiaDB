@@ -999,7 +999,7 @@ GET http://127.0.0.1:4242/health
             js(`
 const r    = await fetch('http://127.0.0.1:4242/health');
 const body = await r.json();
-// { status: "active", engine: "qualia-core-db", version: "0.0.8", webtorrent: { … } }
+// { status: "active", engine: "qualia-core-db", version: "0.0.10-dev", webtorrent: { … } }
 `),
             cli(`
 # Start the daemon (dev mode — no token required)
@@ -1111,7 +1111,7 @@ ws.onmessage = (e) => {
             cli(`
 # WebSocket test with websocat (install: cargo install websocat)
 websocat ws://127.0.0.1:4242/qualia-bridge
-# Immediately receives: {"type":"HANDSHAKE_SUCCESS","payload":{"mode":"NATIVE","version":"0.0.8"}}
+# Immediately receives: {"type":"HANDSHAKE_SUCCESS","payload":{"mode":"NATIVE","version":"0.0.10-dev"}}
 `),
         ],
         live: async (_wasm, native) => {

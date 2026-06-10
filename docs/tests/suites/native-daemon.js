@@ -1,6 +1,6 @@
 // Native Daemon tests — exercises the Qualia daemon at localhost:4242.
 // All tests skip automatically when the daemon is offline.
-// Assertions verified against qualia-cli v0.0.5 running --dev on port 4242.
+// Assertions verified against qualia-cli v0.0.10-dev running --dev on port 4242.
 
 import { TestRunner } from '../test-runner.js';
 import { NativeClient } from '../native-client.js';

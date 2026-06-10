@@ -12,7 +12,7 @@ $TestsDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Root = (Resolve-Path (Join-Path $TestsDir "..\..")).Path
 Set-Location $Root
 
-Write-Host "=== QualiaDB test runner (0.0.8-dev) ===" -ForegroundColor Cyan
+Write-Host "=== QualiaDB test runner (0.0.10-dev) ===" -ForegroundColor Cyan
 Write-Host ""
 
 Write-Host "[1/2] Logic suites (199 tests expected)..." -ForegroundColor Yellow
