@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
-import { listen } from '@tauri-apps/api/event';
+import { invoke, listen } from '../lib/tauri-compat';
+
 
 function timestamp(): string {
   const now = new Date();

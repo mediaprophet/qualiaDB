@@ -1,7 +1,0 @@
-# flutter_rust_bridge configuration
-# Run: flutter_rust_bridge_codegen generate
-
-rust_input: "crate::api"
-rust_root: rust/
-dart_output: lib/src/rust/
-dart_entrypoint_class_name: RustApi

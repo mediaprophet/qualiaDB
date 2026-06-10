@@ -2416,6 +2416,7 @@ fn spawn_model_activation(work: impl FnOnce() -> Result<(), String> + Send + 'st
     if let Ok(mut slot) = MODEL_ACTIVATION_ERROR.lock() {
         *slot = None;
     }
+    crate::system_telemetry::start_activation_telemetry("Loading model");
     std::thread::Builder::new()
         .name("qualia-model-activate".into())
         .spawn(move || {
@@ -2425,6 +2426,7 @@ fn spawn_model_activation(work: impl FnOnce() -> Result<(), String> + Send + 'st
                     *slot = Some(err);
                 }
             }
+            crate::system_telemetry::stop_activation_telemetry();
             MODEL_ACTIVATION_IN_PROGRESS.store(false, Ordering::Release);
         })
         .map_err(|e| format!("Failed to spawn model activation thread: {e}"))?;

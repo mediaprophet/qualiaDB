@@ -1,8 +1,9 @@
+use qualia_core_db::q42_volume::UnifiedVolumeBuilder;
 use qualia_core_db::{QualiaQuin, QUINS_PER_BLOCK};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
-use std::fs::{File, OpenOptions};
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::fs::File;
+use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 
 // 50MB buffer limit: ~1 million Quins (48 bytes each -> 48MB)
@@ -48,7 +49,7 @@ impl ExternalSorter {
         let chunk_path = self
             .temp_dir
             .join(format!("chunk_{}.tmp", self.chunk_files.len()));
-        let mut file = BufWriter::new(File::create(&chunk_path)?);
+        let mut file = std::io::BufWriter::new(File::create(&chunk_path)?);
 
         for q in &self.buffer {
             file.write_all(bytemuck::bytes_of(q))?;
@@ -60,29 +61,15 @@ impl ExternalSorter {
         Ok(())
     }
 
-    pub fn merge(mut self, final_q42: &Path, final_bidx: &Path) -> std::io::Result<u64> {
+    /// K-way merge sorted chunks into a unified v2 `.q42` volume.
+    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<u64> {
         // Flush any remaining quins
         self.flush_chunk()?;
 
-        let q42_file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(final_q42)?;
-        let mut q42_out = BufWriter::new(q42_file);
+        let mut builder = UnifiedVolumeBuilder::with_empty_lex();
 
-        let bidx_file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(final_bidx)?;
-        let mut bidx_out = BufWriter::new(bidx_file);
-
-        let mut block_ranges: Vec<(u64, u64)> = Vec::new();
-
-        // If nothing was written
         if self.chunk_files.is_empty() {
-            Self::write_bidx_file(&mut bidx_out, &block_ranges)?;
+            builder.finish(final_q42)?;
             return Ok(0);
         }
 
@@ -130,7 +117,7 @@ impl ExternalSorter {
         }
 
         let mut block_buffer = Vec::with_capacity(QUINS_PER_BLOCK);
-        let mut block_seq = 0;
+        let mut block_seq = 0u64;
 
         while let Some(item) = heap.pop() {
             block_buffer.push(item.quin);
@@ -145,11 +132,7 @@ impl ExternalSorter {
             }
 
             if block_buffer.len() == QUINS_PER_BLOCK {
-                let min_hash = block_buffer.first().unwrap().object;
-                let max_hash = block_buffer.last().unwrap().object;
-                block_ranges.push((min_hash, max_hash));
-
-                Self::write_superblock(&mut q42_out, block_seq, &block_buffer)?;
+                builder.push_block(block_seq, &block_buffer);
                 block_buffer.clear();
                 block_seq += 1;
             }
@@ -157,25 +140,18 @@ impl ExternalSorter {
 
         // Flush remaining in block buffer
         if !block_buffer.is_empty() {
-            let min_hash = block_buffer.first().unwrap().object;
-            let max_hash = block_buffer.last().unwrap().object;
-            block_ranges.push((min_hash, max_hash));
-
-            Self::write_superblock(&mut q42_out, block_seq, &block_buffer)?;
+            builder.push_block(block_seq, &block_buffer);
             block_seq += 1;
         }
 
-        q42_out.flush()?;
-
-        // Write the .bidx sidecar
-        Self::write_bidx_file(&mut bidx_out, &block_ranges)?;
+        builder.finish(final_q42)?;
 
         // Cleanup temp files
         for chunk_path in &self.chunk_files {
             let _ = std::fs::remove_file(chunk_path);
         }
 
-        Ok(block_seq as u64)
+        Ok(block_seq)
     }
 
     fn read_quin(reader: &mut BufReader<File>) -> std::io::Result<Option<QualiaQuin>> {
@@ -185,40 +161,5 @@ impl ExternalSorter {
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => Ok(None),
             Err(e) => Err(e),
         }
-    }
-
-    fn write_superblock(
-        writer: &mut impl Write,
-        seq_id: u64,
-        quins: &[QualiaQuin],
-    ) -> std::io::Result<()> {
-        writer.write_all(&seq_id.to_le_bytes())?;
-        writer.write_all(&0u64.to_le_bytes())?;
-        writer.write_all(&(quins.len() as u64).to_le_bytes())?;
-        writer.write_all(&0u32.to_le_bytes())?;
-        writer.write_all(&0u32.to_le_bytes())?;
-        writer.write_all(&[0u8; 128])?;
-
-        let zero = [0u8; 48];
-        for q in quins {
-            writer.write_all(bytemuck::bytes_of(q))?;
-        }
-        for _ in quins.len()..QUINS_PER_BLOCK {
-            writer.write_all(&zero)?;
-        }
-        Ok(())
-    }
-
-    fn write_bidx_file(w: &mut BufWriter<File>, ranges: &[(u64, u64)]) -> std::io::Result<()> {
-        w.write_all(b"BIDX")?;
-        w.write_all(&1u32.to_le_bytes())?;
-        w.write_all(&(ranges.len() as u32).to_le_bytes())?;
-        w.write_all(&0u32.to_le_bytes())?;
-        for (min, max) in ranges {
-            w.write_all(&min.to_le_bytes())?;
-            w.write_all(&max.to_le_bytes())?;
-        }
-        w.flush()?;
-        Ok(())
     }
 }

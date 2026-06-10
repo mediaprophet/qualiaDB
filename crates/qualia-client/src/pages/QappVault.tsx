@@ -1,6 +1,6 @@
 import { Package, ShieldCheck, Play, Key, Copy, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '../lib/tauri-compat';
 
 interface QappEntry {
   name: string;

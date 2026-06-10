@@ -92,8 +92,12 @@ pub mod qualia_integration {
         // Pack multivector coefficients into QualiaQuin
         // This is a simplified packing - full implementation would handle all grades
         
-        let scalar_hash = q_hash(&mv.get_scalar().to_le_bytes());
-        let vector_hash = q_hash(&mv.to_vector().map(|f| f.to_le_bytes()).concat());
+        let scalar_bytes = mv.get_scalar().to_le_bytes();
+        let scalar_hex = format!("{:02x}{:02x}{:02x}{:02x}", scalar_bytes[0], scalar_bytes[1], scalar_bytes[2], scalar_bytes[3]);
+        let scalar_hash = q_hash(&scalar_hex);
+        let vector_bytes: Vec<u8> = mv.to_vector().iter().flat_map(|f| f.to_le_bytes().to_vec()).collect();
+        let vector_hex: String = vector_bytes.iter().map(|b| format!("{:02x}", b)).collect();
+        let vector_hash = q_hash(&vector_hex);
         
         // Combine hashes for multivector representation
         let combined_hash = scalar_hash.wrapping_mul(31).wrapping_add(vector_hash);

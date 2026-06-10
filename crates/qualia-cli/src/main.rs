@@ -6,6 +6,8 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 
 mod benchmark_env;
+mod llm_lifecycle;
+mod llm_testing;
 pub mod compress;
 pub mod ingest;
 mod parsers;
@@ -17,12 +19,21 @@ pub mod telemetry_server;
 #[command(name = "qualia-cli")]
 #[command(about = "Tooling for inspecting raw 40KB SuperBlocks, .q42 distributions, and Native Loopback Server", long_about = None)]
 struct Cli {
+    /// Stream engine log lines and 100 ms telemetry samples to stderr
+    #[arg(long, global = true)]
+    log_stream: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Native GGUF lifecycle: discover, mmap, infer, evict (wgpu / Phase 8)
+    Llm {
+        #[command(subcommand)]
+        action: LlmAction,
+    },
     /// Dynamically lists features and capabilities compiled into the engine
     Capabilities {
         #[arg(long, help = "List all registered capabilities")]
@@ -117,13 +128,13 @@ enum Commands {
         /// The output .q42 file
         output: PathBuf,
     },
-    /// Ingest N-Triples into a .q42 SuperBlock file + .q42.lex reverse-lexicon side-car.
+    /// Ingest N-Triples into a unified v2 `.q42` volume (embedded lex + bidx + LZ4 blocks).
     /// Suitable for building browser-deployable datasets (e.g. WordNet for the GH Pages demo).
     Ingest {
         /// Input N-Triples file (.nt or .nt.gz pre-decompressed)
         #[arg(long)]
         input: PathBuf,
-        /// Output base path — writes <path>.q42 and <path>.q42.lex
+        /// Output base path — writes `<path>.q42` only (no sidecars)
         #[arg(long)]
         output: PathBuf,
     },
@@ -171,6 +182,13 @@ enum Commands {
         #[command(subcommand)]
         action: ProfileAction,
     },
+    /// QPU internal functionality (undocumented, private)
+    /// Only available when compiled with --features qpu_internal
+    #[cfg(feature = "qpu_internal")]
+    Qpu {
+        #[command(subcommand)]
+        action: QpuAction,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -190,6 +208,26 @@ enum ProfileAction {
     Inspect {
         /// Path to the .qchk file (legacy `.chk` also accepted)
         file: PathBuf,
+    },
+}
+
+#[cfg(feature = "qpu_internal")]
+#[derive(Subcommand, Debug)]
+enum QpuAction {
+    /// Passthrough to internal QPU solver
+    Solve {
+        /// Input problem file
+        #[arg(long)]
+        input: PathBuf,
+        /// Output solution file
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Dispatch job to QPU
+    Dispatch {
+        /// Job configuration file
+        #[arg(long)]
+        config: PathBuf,
     },
 }
 
@@ -235,6 +273,92 @@ enum WebizenAction {
 }
 
 #[derive(Subcommand, Debug)]
+enum LlmAction {
+    /// Scan a vault directory for `.gguf` models
+    List {
+        /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT` or `C:/llmmodels`)
+        #[arg(short, long)]
+        vault_path: Option<PathBuf>,
+    },
+    /// Memory-map a GGUF via `memmap2` and transition lifecycle → Active
+    Load {
+        /// GGUF filename, stem, or path under the vault
+        model: String,
+        #[arg(short, long)]
+        vault_path: Option<PathBuf>,
+    },
+    /// Print resident model, lifecycle state, and memory counters
+    Status,
+    /// Run inference against the loaded model
+    Eval {
+        /// Prompt text (wrap in quotes)
+        prompt: String,
+        /// Use Webizen-gated `orchestrate_inference` (default: direct `agent.infer`)
+        #[arg(long)]
+        orchestrated: bool,
+        /// Stream decoded token deltas to stdout (direct path only)
+        #[arg(long)]
+        stream: bool,
+    },
+    /// Evict resident model, scrub buffers, and release mmap
+    Evict {
+        /// Profile id (`0x…` hex), decimal id, or loaded model stem
+        model_id: String,
+    },
+    /// Run comprehensive tests on available models
+    Test {
+        /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT` or `C:/llmmodels`)
+        #[arg(short, long)]
+        vault_path: Option<PathBuf>,
+        /// Specific models to test (comma-separated)
+        #[arg(long, value_delimiter = ',')]
+        models: Option<Vec<String>>,
+        /// Quantization level (q4 or q8)
+        #[arg(long)]
+        quantization: Option<String>,
+        /// Enable verbose logging
+        #[arg(long)]
+        verbose: bool,
+    },
+    /// Validate model compatibility and format
+    Validate {
+        /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT` or `C:/llmmodels`)
+        #[arg(short, long)]
+        vault_path: Option<PathBuf>,
+        /// Treat warnings as errors
+        #[arg(long)]
+        strict: bool,
+    },
+    /// Benchmark model performance
+    Benchmark {
+        /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT` or `C:/llmmodels`)
+        #[arg(short, long)]
+        vault_path: Option<PathBuf>,
+        /// Specific models to benchmark (comma-separated)
+        #[arg(long, value_delimiter = ',')]
+        models: Option<Vec<String>>,
+        /// Number of benchmark iterations
+        #[arg(long)]
+        iterations: Option<u32>,
+        /// Number of warmup iterations
+        #[arg(long)]
+        warmup: Option<u32>,
+    },
+    /// Generate comprehensive test report
+    Report {
+        /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT` or `C:/llmmodels`)
+        #[arg(short, long)]
+        vault_path: Option<PathBuf>,
+        /// Output file path
+        #[arg(long)]
+        output: Option<PathBuf>,
+        /// Report format (json or yaml)
+        #[arg(long)]
+        format: Option<String>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
 enum BenchmarkAction {
     /// Simulates querying a percentage of the compressed graph and tracks peak RSS
     RssScan { path: PathBuf, percent: u8 },
@@ -274,8 +398,50 @@ struct RpcResponse {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+    if cli.log_stream {
+        llm_lifecycle::init_log_stream(true);
+    }
 
     match &cli.command {
+        Commands::Llm { action } => {
+            let vault = |opt: &Option<PathBuf>| {
+                opt.clone()
+                    .unwrap_or_else(llm_lifecycle::default_vault_path)
+            };
+            match action {
+                LlmAction::List { vault_path } => {
+                    llm_lifecycle::run_list(&vault(vault_path))?;
+                }
+                LlmAction::Load { model, vault_path } => {
+                    llm_lifecycle::run_load(&vault(vault_path), model)?;
+                }
+                LlmAction::Status => {
+                    llm_lifecycle::run_status()?;
+                }
+                LlmAction::Eval {
+                    prompt,
+                    orchestrated,
+                    stream,
+                } => {
+                    llm_lifecycle::run_eval(prompt, *orchestrated, *stream)?;
+                }
+                LlmAction::Evict { model_id } => {
+                    llm_lifecycle::run_evict(model_id)?;
+                }
+                LlmAction::Test { vault_path, models, quantization, verbose } => {
+                    llm_testing::run_test_models(vault_path.clone(), models.clone(), quantization.clone(), *verbose)?;
+                }
+                LlmAction::Validate { vault_path, strict } => {
+                    llm_testing::run_validate_models(vault_path.clone(), *strict)?;
+                }
+                LlmAction::Benchmark { vault_path, models, iterations, warmup } => {
+                    llm_testing::run_benchmark_models(vault_path.clone(), models.clone(), *iterations, *warmup)?;
+                }
+                LlmAction::Report { vault_path, output, format } => {
+                    llm_testing::run_generate_report(vault_path.clone(), output.clone(), format.clone())?;
+                }
+            }
+        }
         Commands::Capabilities { list } => {
             if *list {
                 println!("============================================================");
@@ -1472,8 +1638,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("📦 Commencing K-Way External Merge Sort into BIDX format...");
 
                     let out_q42 = repo.join("knowledge.q42");
-                    let out_bidx = repo.join("knowledge.q42.bidx");
-                    let blocks = sorter.merge(&out_q42, &out_bidx)?;
+                    let blocks = sorter.merge(&out_q42)?;
 
                     println!(
                         "✅ Perfectly sorted B-Tree dataset generated: {} SuperBlocks written.",
@@ -1700,6 +1865,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     println!("{}", serde_json::to_string_pretty(&did_doc).unwrap());
                     println!("========================================");
+                }
+            }
+        }
+        #[cfg(feature = "qpu_internal")]
+        Commands::Qpu { action } => {
+            match action {
+                QpuAction::Solve { input, output } => {
+                    println!("========================================");
+                    println!("QPU Internal Solver (undocumented, private)");
+                    println!("Input: {:?}", input);
+                    println!("Output: {:?}", output);
+                    println!("========================================");
+                    // Passthrough to internal QPU solver
+                    // This is a stub - actual implementation would call QPU internal modules
+                    println!("QPU solver passthrough - not implemented");
+                }
+                QpuAction::Dispatch { config } => {
+                    println!("========================================");
+                    println!("QPU Internal Dispatcher (undocumented, private)");
+                    println!("Config: {:?}", config);
+                    println!("========================================");
+                    // Passthrough to internal QPU dispatcher
+                    // This is a stub - actual implementation would call QPU internal modules
+                    println!("QPU dispatcher passthrough - not implemented");
                 }
             }
         }

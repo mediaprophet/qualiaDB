@@ -1,0 +1,27 @@
+# QPU Internal Configuration
+# 
+# This file controls the qpu_internal feature gate for internal QPU functionality.
+# The qpu_internal feature is NOT enabled by default and must be explicitly enabled
+# via: cargo build --features qpu_internal
+#
+# WARNING: QPU internal modules are undocumented and private. Do not publish publicly.
+#
+# Feature: qpu_internal
+# Purpose: Enables internal QPU modules that are not publicly documented
+# Scope: Internal development and testing only
+# Publication: DO NOT PUBLISH PUBLICLY
+
+[feature]
+name = "qpu_internal"
+enabled = false
+description = "Enables internal QPU modules (undocumented, private)"
+
+[modules]
+# List of internal QPU modules gated by this feature
+# These modules are conditionally compiled with #[cfg(feature = "qpu_internal")]
+pre_solver = { path = "qpu/src/pre_solver.rs", enabled = false }
+dispatcher = { path = "qpu/src/dispatcher.rs", enabled = false }
+
+[publication]
+public = false
+reason = "Internal QPU functionality is undocumented and private"

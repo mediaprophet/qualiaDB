@@ -57,6 +57,93 @@ pub struct QappRepresentationContract {
     pub accepts: Vec<String>,
 }
 
+/// Configuration for 1.58-bit ternary quantized PINN models
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct QappPinnModelConfig {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub model_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub model_path: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub model_type: String,
+    /// Quantization precision in bits (e.g., "1.58")
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub quantization_bits: String,
+    /// Compression ratio achieved through ternary quantization
+    #[serde(default)]
+    pub compression_ratio: f32,
+    /// SMX format version for model serialization
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub smx_version: String,
+    /// Physics domain for the PINN model
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub physics_domain: String,
+    /// Input dimensions for the model
+    #[serde(default)]
+    pub input_dim: usize,
+    /// Output dimensions for the model
+    #[serde(default)]
+    pub output_dim: usize,
+    /// Whether the model uses ternary quantization
+    #[serde(default)]
+    pub uses_ternary_quantization: bool,
+    /// Memory requirements in MB
+    #[serde(default)]
+    pub memory_requirement_mb: u32,
+    /// VRAM requirements in MB
+    #[serde(default)]
+    pub vram_requirement_mb: Option<u32>,
+    /// Supported operations for this model
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supported_operations: Vec<String>,
+    /// Model metadata including training information
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub training_metadata: Option<QappPinnTrainingMetadata>,
+    /// Performance characteristics
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub performance_metrics: Option<QappPinnPerformanceMetrics>,
+}
+
+/// Training metadata for PINN models
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct QappPinnTrainingMetadata {
+    #[serde(default)]
+    pub epochs: u32,
+    #[serde(default)]
+    pub final_loss: f64,
+    #[serde(default)]
+    pub convergence_rate: f64,
+    #[serde(default)]
+    pub validation_accuracy: f64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub training_dataset: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub training_date: String,
+}
+
+/// Performance metrics for PINN models
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct QappPinnPerformanceMetrics {
+    /// Inference speedup from ternary quantization
+    #[serde(default)]
+    pub inference_speedup: f32,
+    /// Memory savings percentage
+    #[serde(default)]
+    pub memory_savings: f32,
+    /// Quantization error rate
+    #[serde(default)]
+    pub quantization_error: f64,
+    /// Sparsity ratio (percentage of zero weights)
+    #[serde(default)]
+    pub sparsity_ratio: f32,
+    /// Average inference time in milliseconds
+    #[serde(default)]
+    pub avg_inference_time_ms: f32,
+    /// Throughput in operations per second
+    #[serde(default)]
+    pub throughput_ops_per_sec: f64,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct QappHostExtension {
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -91,6 +178,8 @@ pub struct QappHostExtension {
     pub chat_integration: Option<QappChatIntegrationConfig>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub representation_contract: Option<QappRepresentationContract>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pinn_model: Option<QappPinnModelConfig>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ui_surfaces: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

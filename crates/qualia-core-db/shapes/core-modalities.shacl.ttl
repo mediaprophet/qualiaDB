@@ -1,0 +1,639 @@
+@prefix q42: <https://qualia.network/q42#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ── Core Modalities SHACL Shapes ───────────────────────────────────────────────────
+# This file defines SHACL shapes for all core modalities including:
+# - Epistemic Logic
+# - Paraconsistent Logic
+# - Temporal LTL
+# - Spatio-Temporal Reasoning
+# - Graph Theory
+# - Calculus
+# - Argumentation Theory
+# - Dialectical Logic
+# - ASP (Answer Set Programming)
+# - Probabilistic Reasoning
+# - Description Logic
+# - Diffusion
+# - Linear Logic
+# - Control Feedback
+# - Interval Reasoning
+
+# ── Epistemic Logic Shapes ─────────────────────────────────────────────────────
+
+q42:EpistemicConfigurationShape a sh:NodeShape ;
+    rdfs:label "Epistemic Configuration Shape" ;
+    rdfs:comment "Validates epistemic reasoning parameters" ;
+    sh:targetClass q42:EpistemicConfiguration ;
+    sh:property [
+        sh:path q42:maxCertainty ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 255 ;
+        sh:message "Certainty must be between 0 and 255" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxNestingDepth ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 10 ;
+        sh:message "Nesting depth must be ≤ 10 for RDF-Star" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxAgentContexts ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000 ;
+        sh:message "Agent contexts must be between 1 and 1000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:commonKnowledgeBufferSize ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Buffer size must be between 1 and 100,000" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:EpistemicQueryShape a sh:NodeShape ;
+    rdfs:label "Epistemic Query Shape" ;
+    rdfs:comment "Validates epistemic query parameters" ;
+    sh:targetClass q42:EpistemicQuery ;
+    sh:property [
+        sh:path q42:queryType ;
+        sh:in ("knows" "believes" "common_knowledge") ;
+        sh:message "Query type must be a valid epistemic operator" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minCertaintyThreshold ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 255 ;
+        sh:message "Certainty threshold must be ≤ 255" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireAgentDid ;
+        sh:datatype xsd:boolean ;
+        sh:message "Agent DID requirement flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+# ── Paraconsistent Logic Shapes ─────────────────────────────────────────
+
+q42:ParaconsistentConfigurationShape a sh:NodeShape ;
+    rdfs:label "Paraconsistent Configuration Shape" ;
+    rdfs:comment "Validates paraconsistent reasoning parameters" ;
+    sh:targetClass q42:ParaconsistentConfiguration ;
+    sh:property [
+        sh:path q42:maxIsolationSeverity ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 255 ;
+        sh:message "Isolation severity must be ≤ 255" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:isolationBufferSize ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Buffer size must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:mergeThreshold ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Merge threshold must be between 0.0 and 1.0" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:ContradictionHandlingShape a sh:NodeShape ;
+    rdfs:label "Contradiction Handling Shape" ;
+    rdfs:comment "Validates contradiction handling parameters" ;
+    sh:targetClass q42:ContradictionHandling ;
+    sh:property [
+        sh:path q42:allowedHandlingModes ;
+        sh:in ("isolate" "merge" "reject") ;
+        sh:message "Handling mode must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxContradictionsPerContext ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000 ;
+        sh:message "Contradictions per context must be between 1 and 1000" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Temporal LTL Shapes ───────────────────────────────────────────────────
+
+q42:LTLConfigurationShape a sh:NodeShape ;
+    rdfs:label "LTL Configuration Shape" ;
+    rdfs:comment "Validates temporal LTL formula parameters" ;
+    sh:targetClass q42:LTLConfiguration ;
+    sh:property [
+        sh:path q42:maxTraceLength ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000 ;
+        sh:message "Trace length must be between 1 and 1,000,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxFormulaDepth ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 20 ;
+        sh:message "Formula depth must be ≤ 20" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedOperators ;
+        sh:in ("G" "F" "X" "U" "R") ;
+        sh:message "LTL operator must be valid" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:TemporalTraceShape a sh:NodeShape ;
+    rdfs:label "Temporal Trace Shape" ;
+    rdfs:comment "Validates temporal trace parameters" ;
+    sh:targetClass q42:TemporalTrace ;
+    sh:property [
+        sh:path q42:minTraceLength ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "Minimum trace length must be ≥ 1" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxTraceLength ;
+        sh:datatype xsd:integer ;
+        sh:maxInclusive 1000000 ;
+        sh:message "Maximum trace length must be ≤ 1,000,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedTemporalGranularity ;
+        sh:in ("seconds" "milliseconds" "nanoseconds") ;
+        sh:message "Temporal granularity must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Spatio-Temporal Shapes ─────────────────────────────────────────────
+
+q42:SpatioTemporalConfigurationShape a sh:NodeShape ;
+    rdfs:label "Spatio-Temporal Configuration Shape" ;
+    rdfs:comment "Validates spatio-temporal reasoning parameters" ;
+    sh:targetClass q42:SpatioTemporalConfiguration ;
+    sh:property [
+        sh:path q42:maxSpatialRegions ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000 ;
+        sh:message "Spatial regions must be between 1 and 1000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxTemporalIntervals ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000 ;
+        sh:message "Temporal intervals must be between 1 and 1000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedSpatialRelations ;
+        sh:in ("disconnected" "externally_connected" "partially_overlapping" "tangentially_proper_part" "non_tangential_proper_part" "equal") ;
+        sh:message "Spatial relation must be valid RCC8 relation" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:AllenIntervalConfigurationShape a sh:NodeShape ;
+    rdfs:label "Allen Interval Configuration Shape" ;
+    rdfs:comment "Validates Allen interval algebra parameters" ;
+    sh:targetClass q42:AllenIntervalConfiguration ;
+    sh:property [
+        sh:path q42:maxIntervalOverlap ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Interval overlap must be between 0.0 and 1.0" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedTemporalRelations ;
+        sh:in ("before" "meets" "overlaps" "starts" "during" "finishes" "equals") ;
+        sh:message "Temporal relation must be valid Allen relation" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:SpatialRegionConfigurationShape a sh:NodeShape ;
+    rdfs:label "Spatial Region Configuration Shape" ;
+    rdfs:comment "Validates spatial region parameters" ;
+    sh:targetClass q42:SpatialRegionConfiguration ;
+    sh:property [
+        sh:path q42:maxBoundaryPoints ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 3 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Boundary points must be between 3 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minRegionArea ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:message "Minimum region area must be ≥ 0.0" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:maxRegionArea ;
+        sh:datatype xsd:float ;
+        sh:message "Maximum region area must be reasonable" ;
+        sh:severity sh:Warning ;
+    ] .
+
+# ── Graph Theory Shapes ─────────────────────────────────────────────────
+
+q42:GraphConfigurationShape a sh:NodeShape ;
+    rdfs:label "Graph Configuration Shape" ;
+    rdfs:comment "Validates graph structure parameters" ;
+    sh:targetClass q42:GraphConfiguration ;
+    sh:property [
+        sh:path q42:maxNodes ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000000 ;
+        sh:message "Graph nodes must be between 1 and 10 million" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxEdges ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 100000000 ;
+        sh:message "Graph edges must be between 0 and 100 million" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxNodeDegree ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Node degree must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:GraphAnalysisConfigurationShape a sh:NodeShape ;
+    rdfs:label "Graph Analysis Configuration Shape" ;
+    rdfs:comment "Validates graph analysis parameters" ;
+    sh:targetClass q42:GraphAnalysisConfiguration ;
+    sh:property [
+        sh:path q42:allowedCentralityMeasures ;
+        sh:in ("degree" "betweenness" "closeness" "eigenvector" "pagerank") ;
+        sh:message "Centrality measure must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxCommunityCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Community count must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:GraphAlgorithmConfigurationShape a sh:NodeShape ;
+    rdfs:label "Graph Algorithm Configuration Shape" ;
+    rdfs:comment "Validates graph algorithm parameters" ;
+    sh:targetClass q42:GraphAlgorithmConfiguration ;
+    sh:property [
+        sh:path q42:maxIterations ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000 ;
+        sh:message "Iterations must be between 1 and 1 million" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedAlgorithms ;
+        sh:in ("pagerank" "dijkstra" "floyd_warshall" "prim" "kruskal") ;
+        sh:message "Algorithm must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Calculus Shapes ─────────────────────────────────────────────────────
+
+q42:CalculusConfigurationShape a sh:NodeShape ;
+    rdfs:label "Calculus Configuration Shape" ;
+    rdfs:comment "Validates numerical integration parameters" ;
+    sh:targetClass q42:CalculusConfiguration ;
+    sh:property [
+        sh:path q42:maxGridPoints ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000000 ;
+        sh:message "Grid points must be between 1 and 1 billion" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxIntegrationSteps ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000000 ;
+        sh:message "Integration steps must be between 1 and 100 million" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedIntegrators ;
+        sh:in ("simpsons" "trapezoidal" "rk4" "adaptive" "gpu") ;
+        sh:message "Integrator must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:ODEConfigurationShape a sh:NodeShape ;
+    rdfs:label "ODE Configuration Shape" ;
+    rdfs:comment "Validates ODE solver parameters" ;
+    sh:targetClass q42:ODEConfiguration ;
+    sh:property [
+        sh:path q42:maxOdeOrder ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 10 ;
+        sh:message "ODE order must be ≤ 10" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxStepSize ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1e-15 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Step size must be reasonable" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minStepSize ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1e-15 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Step size must be reasonable" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:TensorProvenanceConfigurationShape a sh:NodeShape ;
+    rdfs:label "Tensor Provenance Configuration Shape" ;
+    rdfs:comment "Validates tensor provenance tracking parameters" ;
+    sh:targetClass q42:TensorProvenanceConfiguration ;
+    sh:property [
+        sh:path q42:maxTensorRank ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 8 ;
+        sh:message "Tensor rank must be ≤ 8" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxTensorDimensions ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 16 ;
+        sh:message "Tensor dimensions must be ≤ 16" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Argumentation Theory Shapes ───────────────────────────────────────
+
+q42:ArgumentationConfigurationShape a sh:NodeShape ;
+    rdfs:label "Argumentation Configuration Shape" ;
+    rdfs:comment "Validates argumentation framework parameters" ;
+    sh:targetClass q42:ArgumentationConfiguration ;
+    sh:property [
+        sh:path q42:maxArguments ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000 ;
+        sh:message "Arguments must be between 1 and 1000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxAttackDepth ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 20 ;
+        sh:message "Attack depth must be ≤ 20" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxDefenseDepth ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 20 ;
+        sh:message "Defense depth must be ≤ 20" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:ArgumentEvaluationConfigurationShape a sh:NodeShape ;
+    rdfs:label "Argument Evaluation Configuration Shape" ;
+    rdfs:comment "Validates argument evaluation parameters" ;
+    sh:targetClass q42:ArgumentEvaluationConfiguration ;
+    sh:property [
+        sh:path q42:maxEvaluationSteps ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Evaluation steps must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedEvaluators ;
+        sh:in ("grounded" "abstract" "probabilistic") ;
+        sh:message "Evaluator must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxConfidenceInterval ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Confidence interval must be between 0.0 and 1.0" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Dialectical Logic Shapes ─────────────────────────────────────────────
+
+q42:DialecticalConfigurationShape a sh:NodeShape ;
+    rdfs:label "Dialectical Configuration Shape" ;
+    rdfs:comment "Validates dialectical synthesis parameters" ;
+    sh:targetClass q42:DialecticalConfiguration ;
+    sh:property [
+        sh:path q42:maxThesisCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100 ;
+        sh:message "Theses must be between 1 and 100" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxSynthesisRounds ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000 ;
+        sh:message "Synthesis rounds must be between 1 and 1000" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:SynthesisConfigurationShape a sh:NodeShape ;
+    rdfs:label "Synthesis Configuration Shape" ;
+    rdfs:comment "Validates dialectical synthesis parameters" ;
+    sh:targetClass q42:SynthesisConfiguration ;
+    sh:property [
+        sh:path q42:maxSynthesisDepth ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 10 ;
+        sh:message "Synthesis depth must be ≤ 10" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minCoherenceScore ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Coherence score must be between 0.0 and 1.0" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── ASP Shapes ─────────────────────────────────────────────────────────
+
+q42:ASPConfigurationShape a sh:NodeShape ;
+    rdfs:label "ASP Configuration Shape" ;
+    rdfs:comment "Validates ASP solver parameters" ;
+    sh:targetClass q42:ASPConfiguration ;
+    sh:property [
+        sh:path q42:maxVariables ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Variables must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxClauses ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000 ;
+        sh:message "Clauses must be between 1 and 1 million" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedSolvers ;
+        sh:in ("clingo" "dlv" "aspino") ;
+        sh:message "Solver must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Probabilistic Reasoning Shapes ─────────────────────────────────────
+
+q42:ProbabilisticConfigurationShape a sh:NodeShape ;
+    rdfs:label "Probabilistic Configuration Shape" ;
+    rdfs:comment "Validates probabilistic reasoning parameters" ;
+    sh:targetClass q42:ProbabilisticConfiguration ;
+    sh:property [
+        sh:path q42:maxRandomVariables ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Random variables must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxProbabilityPrecision ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 64 ;
+        sh:message "Probability precision must be ≤ 64 bits" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:BayesianInferenceConfigurationShape a sh:NodeShape ;
+    rdfs:label "Bayesian Inference Configuration Shape" ;
+    rdfs:comment "Validates Bayesian inference parameters" ;
+    sh:targetClass q42:BayesianInferenceConfiguration ;
+    sh:property [
+        sh:path q42:maxHypothesisCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Hypotheses must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedInferenceMethods ;
+        sh:in ("mcmc" "variational" "exact") ;
+        sh:message "Inference method must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── DL Shapes ─────────────────────────────────────────────────────────
+
+q42:DLConfigurationShape a sh:NodeShape ;
+    rdfs:label "DL Configuration Shape" ;
+    rdfs:comment "Validates description logic parameters" ;
+    sh:targetClass q42:DLConfiguration ;
+    sh:property [
+        sh:path q42:maxPredicates ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Predicates must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxClauses ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Clauses must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Diffusion Shapes ─────────────────────────────────────────────────
+
+q42:DiffusionConfigurationShape a sh:NodeShape ;
+    rdfs:label "Diffusion Configuration Shape" ;
+    rdfs:comment "Validates diffusion process parameters" ;
+    sh:targetClass q42:DiffusionConfiguration ;
+    sh:property [
+        sh:path q42:maxParticles ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000000 ;
+        sh:message "Particles must be between 1 and 1 billion" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedSchemes ;
+        sh:in ("brownian" "geometric" "levy") ;
+        sh:message "Diffusion scheme must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:DiffusionGridConfigurationShape a sh:NodeShape ;
+    rdfs:label "Diffusion Grid Configuration Shape" ;
+    rdfs:comment "Validates diffusion grid parameters" ;
+    sh:targetClass q42:DiffusionGridConfiguration ;
+    sh:property [
+        sh:path q42:maxGridDimensions ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 4 ;
+        sh:message "Grid dimensions must be between 1 and 4" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxGridSizePerDim ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Grid size per dimension must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] .

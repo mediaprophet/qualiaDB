@@ -1,0 +1,502 @@
+@prefix q42: <https://qualia.network/q42#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ── Infrastructure SHACL Shapes ───────────────────────────────────────────────────
+# This file defines SHACL shapes for:
+# - Domain-specific engines (biological, chemical, physical, financial, mathematical, geospatial)
+# - Data obfuscation and semantic stripping
+# - Zero-allocation solver library
+# - Geometric algebra
+
+# ── Domain-Specific Shapes ─────────────────────────────────────────────────────
+
+q42:BiologicalDomainConfigurationShape a sh:NodeShape ;
+    rdfs:label "Biological Domain Configuration Shape" ;
+    rdfs:comment "Validates biological domain parameters" ;
+    sh:targetClass q42:BiologicalDomainConfiguration ;
+    sh:property [
+        sh:path q42:maxSequenceLength ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000 ;
+        sh:message "Sequence length must be between 1 and 1,000,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxGeneCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Gene count must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedSequenceTypes ;
+        sh:in ("dna" "rna" "protein") ;
+        sh:message "Sequence type must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireQualityScore ;
+        sh:datatype xsd:boolean ;
+        sh:message "Quality score requirement flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:ChemicalDomainConfigurationShape a sh:NodeShape ;
+    rdfs:label "Chemical Domain Configuration Shape" ;
+    rdfs:comment "Validates chemical domain parameters" ;
+    sh:targetClass q42:ChemicalDomainConfiguration ;
+    sh:property [
+        sh:path q42:maxMolecularWeight ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1.0 ;
+        sh:maxInclusive 1000000.0 ;
+        sh:message "Molecular weight must be between 1 and 1,000,000 Da" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxAtomCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Atom count must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedElementTypes ;
+        sh:message "Element types must be valid periodic table symbols" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireValenceValidation ;
+        sh:datatype xsd:boolean ;
+        sh:message "Valence validation flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:PhysicalDomainConfigurationShape a sh:NodeShape ;
+    rdfs:label "Physical Domain Configuration Shape" ;
+    rdfs:comment "Validates physical domain parameters" ;
+    sh:targetClass q42:PhysicalDomainConfiguration ;
+    sh:property [
+        sh:path q42:maxTemperatureKelvin ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1e6 ;
+        sh:message "Temperature must be between 0K and 1,000,000K" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxPressurePascal ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1e12 ;
+        sh:message "Pressure must be reasonable" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedEnergyUnits ;
+        sh:in ("joule" "electron_volt" "calorie" "btu") ;
+        sh:message "Energy unit must be valid" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:FinancialDomainConfigurationShape a sh:NodeShape ;
+    rdfs:label "Financial Domain Configuration Shape" ;
+    rdfs:comment "Validates financial domain parameters" ;
+    sh:targetClass q42:FinancialDomainConfiguration ;
+    sh:property [
+        sh:path q42:maxTransactionValue ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1e15 ;
+        sh:message "Transaction value must be reasonable" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxPortfolioSize ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1e15 ;
+        sh:message "Portfolio size must be reasonable" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedCurrencies ;
+        sh:message "Currency must be valid ISO 4217 code" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireComplianceCheck ;
+        sh:datatype xsd:boolean ;
+        sh:message "Compliance check flag must be boolean" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:MathematicalDomainConfigurationShape a sh:NodeShape ;
+    rdfs:label "Mathematical Domain Configuration Shape" ;
+    rdfs:comment "Validates mathematical domain parameters" ;
+    sh:targetClass q42:MathematicalDomainConfiguration ;
+    sh:property [
+        sh:path q42:maxPrecisionBits ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 128 ;
+        sh:message "Precision must be ≤ 128 bits" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxExpressionDepth ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 50 ;
+        sh:message "Expression depth must be ≤ 50" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedNumberTypes ;
+        sh:in ("integer" "float" "complex" "rational") ;
+        sh:message "Number type must be valid" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:GeospatialDomainConfigurationShape a sh:NodeShape ;
+    rdfs:label "Geospatial Domain Configuration Shape" ;
+    rdfs:comment "Validates geospatial domain parameters" ;
+    sh:targetClass q42:GeospatialDomainConfiguration ;
+    sh:property [
+        sh:path q42:maxCoordinatePrecision ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 15 ;
+        sh:message "Coordinate precision must be ≤ 15 decimal places" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedCoordinateSystems ;
+        sh:in ("wgs84" "utm" "mercator" "geographic") ;
+        sh:message "Coordinate system must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxAreaSqKm ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 510100000.0 ;
+        sh:message "Area must be ≤ Earth's surface area" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Obfuscation Shapes ─────────────────────────────────────────
+
+q42:ObfuscationConfigurationShape a sh:NodeShape ;
+    rdfs:label "Obfuscation Configuration Shape" ;
+    rdfs:comment "Validates obfuscation parameters" ;
+    sh:targetClass q42:ObfuscationConfiguration ;
+    sh:property [
+        sh:path q42:maxObfuscationDepth ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 10 ;
+        sh:message "Obfuscation depth must be ≤ 10" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedObfuscationMethods ;
+        sh:in ("polynomial" "semantic" "domain") ;
+        sh:message "Obfuscation method must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minEntropyBits ;
+        sh:datatype xsd:unsignedByte ;
+        sh:minInclusive 64 ;
+        sh:message "Entropy must be ≥ 64 bits" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:PolynomialObfuscationConfigurationShape a sh:NodeShape ;
+    rdfs:label "Polynomial Obfuscation Configuration Shape" ;
+    rdfs:comment "Validates polynomial obfuscation parameters" ;
+    sh:targetClass q42:PolynomialObfuscationConfiguration ;
+    sh:property [
+        sh:path q42:maxPolynomialDegree ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 20 ;
+        sh:message "Polynomial degree must be ≤ 20" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedCoefficientTypes ;
+        sh:in ("integer" "float" "rational") ;
+        sh:message "Coefficient type must be valid" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:SemanticStripperConfigurationShape a sh:NodeShape ;
+    rdfs:label "Semantic Stripper Configuration Shape" ;
+    rdfs:comment "Validates semantic stripping parameters" ;
+    sh:targetClass q42:SemanticStripperConfiguration ;
+    sh:property [
+        sh:path q42:maxContextDepth ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 10 ;
+        sh:message "Context depth must be ≤ 10" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedContextTypes ;
+        sh:in ("clinical" "financial" "personal" "legal") ;
+        sh:message "Context type must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireAnonymity ;
+        sh:datatype xsd:boolean ;
+        sh:message "Anonymity requirement flag must be boolean" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:DomainTransformerConfigurationShape a sh:NodeShape ;
+    rdfs:label "Domain Transformer Configuration Shape" ;
+    rdfs:comment "Validates domain transformation parameters" ;
+    sh:targetClass q42:DomainTransformerConfiguration ;
+    sh:property [
+        sh:path q42:allowedTargetDomains ;
+        sh:message "Target domain must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxTransformationChainLength ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 10 ;
+        sh:message "Transformation chain length must be ≤ 10" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requirePreservation ;
+        sh:datatype xsd:boolean ;
+        sh:message "Preservation requirement flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:HybridStateConfigurationShape a sh:NodeShape ;
+    rdfs:label "Hybrid State Configuration Shape" ;
+    rdfs:comment "Validates hybrid state management parameters" ;
+    sh:targetClass q42:HybridStateConfiguration ;
+    sh:property [
+        sh:path q42:maxStateSizeBytes ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1048576 ;
+        sh:message "State size must be between 1 and 1MB" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedStateDomains ;
+        sh:in ("classical" "quantum" "hybrid") ;
+        sh:message "State domain must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireSynchronization ;
+        sh:datatype xsd:boolean ;
+        sh:message "Synchronization requirement flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+# ── Solver Shapes ─────────────────────────────────────────────────
+
+q42:SolverConfigurationShape a sh:NodeShape ;
+    rdfs:label "Solver Configuration Shape" ;
+    rdfs:comment "Validates general solver parameters" ;
+    sh:targetClass q42:SolverConfiguration ;
+    sh:property [
+        sh:path q42:maxIterations ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000 ;
+        sh:message "Iterations must be between 1 and 1,000,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:convergenceTolerance ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1e-15 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Tolerance must be reasonable" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxStepSize ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1e-15 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Step size must be reasonable" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minStepSize ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1e-15 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Step size must be reasonable" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedSolverTypes ;
+        sh:in ("calculus" "linear_algebra" "optimization" "quantum" "symbolic_logic") ;
+        sh:message "Solver type must be valid" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:CalculusSolverConfigurationShape a sh:NodeShape ;
+    rdfs:label "Calculus Solver Configuration Shape" ;
+    rdfs:comment "Validates calculus solver parameters" ;
+    sh:targetClass q42:CalculusSolverConfiguration ;
+    sh:property [
+        sh:path q42:maxOdeOrder ;
+        sh:datatype xsd:unsignedByte ;
+        sh:maxInclusive 10 ;
+        sh:message "ODE order must be ≤ 10" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedIntegrators ;
+        sh:in ("runge_kutta" "simpsons" "shooting" "adaptive") ;
+        sh:message "Integrator must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireStabilityCheck ;
+        sh:datatype xsd:boolean ;
+        sh:message "Stability check flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:LinearAlgebraSolverConfigurationShape a sh:NodeShape ;
+    rdfs:label "Linear Algebra Solver Configuration Shape" ;
+    rdfs:comment "Validates linear algebra solver parameters" ;
+    sh:targetClass q42:LinearAlgebraSolverConfiguration ;
+    sh:property [
+        sh:path q42:maxMatrixDimension ;
+        sh:datatype xsd:unsignedShort ;
+        sh:maxInclusive 1000 ;
+        sh:message "Matrix dimension must be ≤ 1000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedDecompositions ;
+        sh:in ("lu" "qr" "svd" "eigen" "cholesky") ;
+        sh:message "Decomposition type must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireConditionNumberCheck ;
+        sh:datatype xsd:boolean ;
+        sh:message "Condition number check flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:OptimizationSolverConfigurationShape a sh:NodeShape ;
+    rdfs:label "Optimization Solver Configuration Shape" ;
+    rdfs:comment "Validates optimization solver parameters" ;
+    sh:targetClass q42:OptimizationSolverConfiguration ;
+    sh:property [
+        sh:path q42:maxVariables ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Variables must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedAlgorithms ;
+        sh:in ("nelder_mead" "newton_raphson" "levenberg_marquardt" "gradient_descent") ;
+        sh:message "Algorithm must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireConvexityCheck ;
+        sh:datatype xsd:boolean ;
+        sh:message "Convexity check flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:QuantumOptimizerConfigurationShape a sh:NodeShape ;
+    rdfs:label "Quantum Optimizer Configuration Shape" ;
+    rdfs:comment "Validates quantum optimizer parameters" ;
+    sh:targetClass q42:QuantumOptimizerConfiguration ;
+    sh:property [
+        sh:path q42:maxQubits ;
+        sh:datatype xsd:unsignedShort ;
+        sh:maxInclusive 1000 ;
+        sh:message "Qubits must be ≤ 1000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedAlgorithms ;
+        sh:in ("qaoa" "spsa" "variational" "qubo") ;
+        sh:message "Algorithm must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireErrorCorrection ;
+        sh:datatype xsd:boolean ;
+        sh:message "Error correction flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:SymbolicLogicSolverConfigurationShape a sh:NodeShape ;
+    rdfs:label "Symbolic Logic Solver Configuration Shape" ;
+    rdfs:comment "Validates symbolic logic solver parameters" ;
+    sh:targetClass q42:SymbolicLogicSolverConfiguration ;
+    sh:property [
+        sh:path q42:maxClauseCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000 ;
+        sh:message "Clauses must be between 1 and 1,000,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxVariableCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Variables must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedLogicTypes ;
+        sh:in ("defeasible" "classical" "modal" "temporal") ;
+        sh:message "Logic type must be valid" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Geometric Algebra Shapes ─────────────────────────────────────────
+
+q42:GeometricAlgebraConfigurationShape a sh:NodeShape ;
+    rdfs:label "Geometric Algebra Configuration Shape" ;
+    rdfs:comment "Validates geometric algebra parameters" ;
+    sh:targetClass q42:GeometricAlgebraConfiguration ;
+    sh:property [
+        sh:path q42:maxDimension ;
+        sh:datatype xsd:unsignedByte ;
+        sh:minInclusive 2 ;
+        sh:maxInclusive 8 ;
+        sh:message "Dimension must be between 2 and 8" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedAlgebras ;
+        sh:in ("pga" "cga" "conformal" "projective") ;
+        sh:message "Algebra type must be valid" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireNormalization ;
+        sh:datatype xsd:boolean ;
+        sh:message "Normalization requirement flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .

@@ -1,4 +1,27 @@
-# React + TypeScript + Vite
+# Qualia Client
+
+React + TypeScript + Vite application with dual-mode web/desktop support.
+
+## Quick Start
+
+**IMPORTANT:** This project requires dependencies to be installed. The `node_modules` directory was excluded during migration to keep the repository lightweight.
+
+```bash
+npm install
+```
+
+After installing dependencies, you can run:
+- `npm run dev` - Web mode development
+- `npm run dev:desktop` - Desktop mode development
+
+## TypeScript Configuration
+
+The TypeScript configuration files (`tsconfig.app.json` and `tsconfig.node.json`) have been temporarily configured with empty `types` arrays to prevent linting errors before `npm install` is run. Once dependencies are installed, you may want to restore the original type definitions:
+
+**tsconfig.app.json:** Change `"types": []` back to `"types": ["vite/client"]`
+**tsconfig.node.json:** Change `"types": []` back to `"types": ["node"]`
+
+## React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

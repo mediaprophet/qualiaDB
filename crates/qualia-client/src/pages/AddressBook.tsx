@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, ShieldCheck, FileSignature, RefreshCw, Key, Share2, Shield, PlusCircle, AlertTriangle } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '../lib/tauri-compat';
 
 // Types matching Tauri Backend
 interface FrontDoor {

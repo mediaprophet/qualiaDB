@@ -115,7 +115,7 @@ pub struct CsdScheduler {
 }
 
 /// CSD operation request to be executed
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CsdOperationRequest {
     pub operation_id: u64,
     pub function_id: String,
@@ -127,7 +127,7 @@ pub struct CsdOperationRequest {
 }
 
 /// Operation input
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationInput {
     pub name: String,
     pub data: Vec<u8>,
@@ -135,7 +135,7 @@ pub struct OperationInput {
 }
 
 /// Operation output
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationOutput {
     pub name: String,
     pub size: u64,

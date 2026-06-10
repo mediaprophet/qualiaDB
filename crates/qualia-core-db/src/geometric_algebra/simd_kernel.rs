@@ -539,7 +539,12 @@ impl Add for Multivector {
     type Output = Self;
     
     fn add(self, other: Self) -> Self {
-        self.add(&other)
+        let mut result = self;
+        for (i, coeff) in result.coeffs.iter_mut().enumerate() {
+            *coeff += other.coeffs[i];
+        }
+        result.grade_mask |= other.grade_mask;
+        result
     }
 }
 
@@ -547,7 +552,12 @@ impl Sub for Multivector {
     type Output = Self;
     
     fn sub(self, other: Self) -> Self {
-        self.sub(&other)
+        let mut result = self;
+        for (i, coeff) in result.coeffs.iter_mut().enumerate() {
+            *coeff -= other.coeffs[i];
+        }
+        result.grade_mask |= other.grade_mask;
+        result
     }
 }
 

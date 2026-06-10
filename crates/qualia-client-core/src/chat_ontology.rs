@@ -148,12 +148,26 @@ const DISCOURSE_TYPES: &[(&str, &str, &str, &str, &[&str], &[&str])] = &[
     ),
 ];
 
+pub fn local_wordnet_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("QUALIA_WORDNET_DIR") {
+        let trimmed = dir.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed);
+        }
+    }
+    PathBuf::from("Local_LIbraries/wordnet")
+}
+
 pub fn resolve_wordnet_q42(storage: &Path) -> Option<PathBuf> {
     let index = resource_import::index_dir(storage);
+    let local = local_wordnet_dir();
     let candidates = [
         index.join("wordnet.q42"),
         index.join("wordnet-rdf.q42"),
         index.join("english-wordnet.q42"),
+        local.join("wordnet.q42"),
+        local.join("wordnet.c.q42"),
+        local.join("wordnet_compressed.q42"),
         PathBuf::from("docs/playground/wordnet.q42"),
         PathBuf::from("wordnet.q42"),
     ];
@@ -161,6 +175,9 @@ pub fn resolve_wordnet_q42(storage: &Path) -> Option<PathBuf> {
 }
 
 pub fn resolve_wordnet_lex(q42_path: &Path) -> Option<PathBuf> {
+    if qualia_core_db::q42_volume::is_v2_volume(q42_path).ok() == Some(true) {
+        return Some(q42_path.to_path_buf());
+    }
     let lex = q42_path.with_extension("q42.lex");
     if lex.is_file() {
         return Some(lex);
@@ -185,8 +202,12 @@ fn wordnet_lexicon() -> Option<&'static qualia_core_db::q42_lex::Q42Lexicon> {
             let state = crate::state::APP_STATE.get()?;
             let storage = state.config.lock().ok()?.storage_path.clone();
             let q42 = resolve_wordnet_q42(Path::new(&storage))?;
-            let lex_path = resolve_wordnet_lex(&q42)?;
-            qualia_core_db::q42_lex::Q42Lexicon::load(&lex_path).ok()
+            qualia_core_db::q42_lex::Q42Lexicon::load_for_q42(&q42)
+                .ok()
+                .or_else(|| {
+                    resolve_wordnet_lex(&q42)
+                        .and_then(|lex_path| qualia_core_db::q42_lex::Q42Lexicon::load(&lex_path).ok())
+                })
         })
         .as_ref()
 }
@@ -297,7 +318,7 @@ pub fn build_chat_ontology_briefing(storage: &Path) -> String {
         ));
     } else {
         lines.push(
-            "wordnet_grounding: not installed — import WordNet in Ontology Hub or run scripts/fetch_wordnet.sh"
+            "wordnet_grounding: not installed — place artefacts under Local_LIbraries/wordnet/, import via Ontology Hub, or run scripts/fetch_wordnet.sh"
                 .to_string(),
         );
     }

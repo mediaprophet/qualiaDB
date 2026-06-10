@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Database, Download, Network, DatabaseZap, Box, ShieldCheck, Activity, Cpu, X, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/tauri';
-import { listen } from '@tauri-apps/api/event';
+import { invoke, listen } from '../lib/tauri-compat';
+
 
 const ONTOLOGIES_MANIFEST_URL =
   'https://raw.githubusercontent.com/mediaprophet/qualiaDB/refs/heads/main/manifests/ontologies.json';

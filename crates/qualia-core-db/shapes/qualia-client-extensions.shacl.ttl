@@ -1,0 +1,402 @@
+@prefix q42: <https://qualia.network/q42#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ── Qualia Client Extensions SHACL Shapes ───────────────────────────────────────
+# This file defines SHACL shapes for the new Qualia Client functionality including
+# comprehensive logging, system tray integration, and enhanced settings.
+
+# ── Logging System Shapes ─────────────────────────────────────────────────────
+
+q42:LogConfigurationShape a sh:NodeShape ;
+    rdfs:label "Log Configuration Shape" ;
+    rdfs:comment "Validates logging system configuration parameters" ;
+    sh:targetClass q42:LogConfiguration ;
+    sh:property [
+        sh:path q42:maxMemoryLogs ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Maximum memory logs must be between 1 and 100000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxDiskLogs ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000 ;
+        sh:message "Maximum disk logs must be between 1 and 1000000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:flushIntervalMs ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 100 ;
+        sh:maxInclusive 60000 ;
+        sh:message "Flush interval must be between 100ms and 60000ms" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:LogLevelShape a sh:NodeShape ;
+    rdfs:label "Log Level Shape" ;
+    rdfs:comment "Validates log level enumeration values" ;
+    sh:targetClass q42:LogLevel ;
+    sh:property [
+        sh:path q42:level ;
+        sh:datatype xsd:string ;
+        sh:in ("DEBUG" "INFO" "WARN" "ERROR" "CRITICAL") ;
+        sh:message "Log level must be one of: DEBUG, INFO, WARN, ERROR, CRITICAL" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:LogEntryShape a sh:NodeShape ;
+    rdfs:label "Log Entry Shape" ;
+    rdfs:comment "Validates individual log entry structure" ;
+    sh:targetClass q42:LogEntry ;
+    sh:property [
+        sh:path q42:timestamp ;
+        sh:datatype xsd:dateTime ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "Log entry must have exactly one timestamp" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:level ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "Log entry must have exactly one level" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:message ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxLength 10000 ;
+        sh:message "Log message is required and must not exceed 10000 characters" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:context ;
+        sh:datatype xsd:string ;
+        sh:maxLength 100 ;
+        sh:message "Log context must not exceed 100 characters" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:data ;
+        sh:message "Log data payload must be serializable" ;
+        sh:severity sh:Info ;
+    ] .
+
+q42:LogRetentionShape a sh:NodeShape ;
+    rdfs:label "Log Retention Shape" ;
+    rdfs:comment "Validates log retention policy configuration" ;
+    sh:targetClass q42:LogRetention ;
+    sh:property [
+        sh:path q42:maxAgeDays ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 365 ;
+        sh:message "Log retention age must be between 1 and 365 days" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxSizeMb ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10240 ;
+        sh:message "Log retention size must be between 1MB and 10GB" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:backupBeforeCleanup ;
+        sh:datatype xsd:boolean ;
+        sh:message "Backup flag must be a boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:LogExportFormatShape a sh:NodeShape ;
+    rdfs:label "Log Export Format Shape" ;
+    rdfs:comment "Validates log export format configuration" ;
+    sh:targetClass q42:LogExportFormat ;
+    sh:property [
+        sh:path q42:format ;
+        sh:datatype xsd:string ;
+        sh:in ("json" "txt" "csv") ;
+        sh:message "Export format must be one of: json, txt, csv" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxExportSizeMb ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100 ;
+        sh:message "Export size must be between 1MB and 100MB" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── System Tray Shapes ─────────────────────────────────────────────────────────
+
+q42:SystemTrayConfigurationShape a sh:NodeShape ;
+    rdfs:label "System Tray Configuration Shape" ;
+    rdfs:comment "Validates system tray menu configuration" ;
+    sh:targetClass q42:SystemTrayConfiguration ;
+    sh:property [
+        sh:path q42:maxMenuItems ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 20 ;
+        sh:message "System tray can have at most 20 menu items" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireSeparatorLogic ;
+        sh:datatype xsd:boolean ;
+        sh:message "Separator logic flag must be a boolean" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:allowNestedMenus ;
+        sh:datatype xsd:boolean ;
+        sh:message "Nested menu flag must be a boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:TrayMenuItemShape a sh:NodeShape ;
+    rdfs:label "Tray Menu Item Shape" ;
+    rdfs:comment "Validates individual system tray menu items" ;
+    sh:targetClass q42:TrayMenuItem ;
+    sh:property [
+        sh:path q42:id ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxLength 50 ;
+        sh:message "Menu item ID is required and must not exceed 50 characters" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:label ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxLength 50 ;
+        sh:message "Menu item label is required and must not exceed 50 characters" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:action ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "Menu item action is required" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:icon ;
+        sh:datatype xsd:string ;
+        sh:message "Menu item icon must be a valid icon identifier" ;
+        sh:severity sh:Info ;
+    ] .
+
+q42:TrayStatusIndicatorShape a sh:NodeShape ;
+    rdfs:label "Tray Status Indicator Shape" ;
+    rdfs:comment "Validates system tray status indicators" ;
+    sh:targetClass q42:TrayStatusIndicator ;
+    sh:property [
+        sh:path q42:statusText ;
+        sh:datatype xsd:string ;
+        sh:maxLength 100 ;
+        sh:message "Status text must not exceed 100 characters" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:updateIntervalMs ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 100 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Update interval must be between 100ms and 10000ms" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowLiveUpdates ;
+        sh:datatype xsd:boolean ;
+        sh:message "Live updates flag must be a boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:TrayActionShape a sh:NodeShape ;
+    rdfs:label "Tray Action Shape" ;
+    rdfs:comment "Validates system tray action handlers" ;
+    sh:targetClass q42:TrayAction ;
+    sh:property [
+        sh:path q42:requireWindowContext ;
+        sh:datatype xsd:boolean ;
+        sh:message "Window context flag must be a boolean" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:allowAsyncActions ;
+        sh:datatype xsd:boolean ;
+        sh:message "Async action flag must be a boolean" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:timeoutMs ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 30000 ;
+        sh:message "Action timeout must be between 0ms and 30000ms" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Enhanced Settings Shapes ─────────────────────────────────────────────────────
+
+q42:StorageConfigurationShape a sh:NodeShape ;
+    rdfs:label "Storage Configuration Shape" ;
+    rdfs:comment "Validates storage path and quota settings" ;
+    sh:targetClass q42:StorageConfiguration ;
+    sh:property [
+        sh:path q42:storagePath ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:pattern "^[/\\\\]" ;
+        sh:message "Storage path must be an absolute path (starting with / or \\)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:storageQuotaGb ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000 ;
+        sh:message "Storage quota must be between 1GB and 1000GB" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minQuotaGb ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "Minimum quota must be at least 1GB" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:maxQuotaGb ;
+        sh:datatype xsd:integer ;
+        sh:maxInclusive 1000 ;
+        sh:message "Maximum quota must not exceed 1000GB" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:NetworkConfigurationShape a sh:NodeShape ;
+    rdfs:label "Network Configuration Shape" ;
+    rdfs:comment "Validates daemon network settings" ;
+    sh:targetClass q42:NetworkConfiguration ;
+    sh:property [
+        sh:path q42:daemonPort ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1024 ;
+        sh:maxInclusive 65535 ;
+        sh:message "Daemon port must be between 1024 and 65535" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:daemonHost ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:pattern "^(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1)$" ;
+        sh:message "Daemon host must be localhost, 127.0.0.1, 0.0.0.0, or ::1" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requirePortConflictCheck ;
+        sh:datatype xsd:boolean ;
+        sh:message "Port conflict check flag must be a boolean" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:defaultHost ;
+        sh:datatype xsd:string ;
+        sh:message "Default host must be a valid hostname" ;
+        sh:severity sh:Info ;
+    ] .
+
+q42:TaxRecipientConfigurationShape a sh:NodeShape ;
+    rdfs:label "Tax Recipient Configuration Shape" ;
+    rdfs:comment "Validates ILP tax recipient configuration" ;
+    sh:targetClass q42:TaxRecipientConfiguration ;
+    sh:property [
+        sh:path q42:label ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxLength 100 ;
+        sh:message "Recipient label is required and must not exceed 100 characters" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:ilpAddress ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:pattern "^\\$ilp\\." ;
+        sh:message "ILP address must start with $ilp." ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:sharePercent ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 100 ;
+        sh:message "Share percent must be between 0 and 100" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minSharePercent ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "Minimum share percent must be non-negative" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:maxSharePercent ;
+        sh:datatype xsd:integer ;
+        sh:maxInclusive 100 ;
+        sh:message "Maximum share percent must not exceed 100" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:allowNymRouting ;
+        sh:datatype xsd:boolean ;
+        sh:message "NYM routing flag must be a boolean" ;
+        sh:severity sh:Info ;
+    ] ;
+    sh:property [
+        sh:path q42:totalShareValidation ;
+        sh:datatype xsd:boolean ;
+        sh:message "Total share validation flag must be a boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:SecurityConfigurationShape a sh:NodeShape ;
+    rdfs:label "Security Configuration Shape" ;
+    rdfs:comment "Validates security-related settings" ;
+    sh:targetClass q42:SecurityConfiguration ;
+    sh:property [
+        sh:path q42:requireEncryption ;
+        sh:datatype xsd:boolean ;
+        sh:message "Encryption requirement flag must be a boolean" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minKeyLengthBits ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 128 ;
+        sh:maxInclusive 4096 ;
+        sh:message "Key length must be between 128 and 4096 bits" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedCipherSuites ;
+        sh:datatype xsd:string ;
+        sh:message "Cipher suite must be a valid identifier" ;
+        sh:severity sh:Warning ;
+    ] .

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Image as ImageIcon, Search, Filter, Hash, Network, Upload, ShieldCheck, Share2, Activity, BrainCircuit } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/tauri';
-import { listen } from '@tauri-apps/api/event';
+import { invoke, listen } from '../lib/tauri-compat';
+
 
 export default function AssetLibrary() {
   const [pipelineState, setPipelineState] = useState<'idle' | 'analyzing'>('idle');

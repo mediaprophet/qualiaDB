@@ -221,7 +221,7 @@ fn probe_and_activate_model(
         ram_total_gib,
         ram_free_gib
     );
-    match qualia_core_db::gguf_bridge::probe_gguf_runtime(gguf_path) {
+    match qualia_core_db::resident_model::mount_resident_gguf(profile_id, gguf_path) {
         Ok(report) => {
             let kv_cache_mb = (report.kv_cache_bytes / (1024 * 1024)).min(u32::MAX as u64) as u32;
             record_llm_memory_bytes(report.mapped_bytes);
@@ -519,6 +519,150 @@ fn sanitize_local_model_id(stem: &str) -> String {
     } else {
         cleaned
     }
+}
+
+/// Discovered GGUF in a vault directory (CLI / lifecycle tooling).
+#[derive(Debug, Clone, Serialize)]
+pub struct VaultGgufEntry {
+    pub name: String,
+    pub path: String,
+    pub profile_id: u64,
+    pub size_bytes: u64,
+}
+
+/// Recursively scan `vault_dir` for `.gguf` files.
+pub fn scan_vault_gguf(vault_dir: &Path) -> Result<Vec<VaultGgufEntry>, std::io::Error> {
+    if !vault_dir.is_dir() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("Vault directory not found: {}", vault_dir.display()),
+        ));
+    }
+    let mut out = Vec::new();
+    collect_vault_gguf(vault_dir, &mut out)?;
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(out)
+}
+
+fn collect_vault_gguf(dir: &Path, out: &mut Vec<VaultGgufEntry>) -> Result<(), std::io::Error> {
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            collect_vault_gguf(&path, out)?;
+            continue;
+        }
+        if path.extension().and_then(|e| e.to_str()) != Some("gguf") {
+            continue;
+        }
+        let stem = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("model");
+        let model_id = sanitize_local_model_id(stem);
+        let size_bytes = entry.metadata()?.len();
+        out.push(VaultGgufEntry {
+            name: path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| model_id.clone()),
+            path: path.to_string_lossy().into_owned(),
+            profile_id: q_hash(&format!("profile:local:{model_id}")),
+            size_bytes,
+        });
+    }
+    Ok(())
+}
+
+/// Resolve a model reference (filename, stem, or path) inside `vault_dir`.
+pub fn resolve_vault_model(vault_dir: &Path, model_ref: &str) -> Result<PathBuf, ModelError> {
+    let direct = PathBuf::from(model_ref);
+    if direct.is_file() {
+        return Ok(direct);
+    }
+    let in_vault = vault_dir.join(model_ref);
+    if in_vault.is_file() {
+        return Ok(in_vault);
+    }
+    if !model_ref.ends_with(".gguf") {
+        let with_ext = vault_dir.join(format!("{model_ref}.gguf"));
+        if with_ext.is_file() {
+            return Ok(with_ext);
+        }
+    }
+    for entry in scan_vault_gguf(vault_dir).map_err(ModelError::Io)? {
+        let stem = PathBuf::from(&entry.path)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_string();
+        if entry.name == model_ref
+            || stem == model_ref
+            || format!("0x{:016x}", entry.profile_id) == model_ref.to_lowercase()
+        {
+            return Ok(PathBuf::from(entry.path));
+        }
+    }
+    Err(ModelError::NotFound(format!(
+        "No GGUF matching `{model_ref}` under {}",
+        vault_dir.display()
+    )))
+}
+
+/// Map and activate a GGUF from disk without catalog install (CLI lifecycle tests).
+pub fn activate_vault_gguf(gguf_path: &Path) -> Result<ActiveModelRecord, ModelError> {
+    if !gguf_path.is_file() {
+        return Err(ModelError::Io(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("GGUF not found: {}", gguf_path.display()),
+        )));
+    }
+    let stem = gguf_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("local-model");
+    let model_id = sanitize_local_model_id(stem);
+    let path_str = gguf_path.to_string_lossy().into_owned();
+    let profile_id = q_hash(&format!("profile:local:{model_id}"));
+
+    let agent = LocalLlmAgent::with_local_backend(
+        format!("did:qualia:cli-vault:{profile_id}"),
+        AgentBackend::Local {
+            model_path: path_str.clone(),
+            context_window: 4096,
+            quantization: "vault".to_string(),
+            vision_projector_path: None,
+            modality: "text".to_string(),
+            architecture: None,
+        },
+    );
+    probe_and_activate_model(&agent, profile_id, &model_id, &path_str)?;
+
+    let lifecycle = *orchestrator().current_model_state.lock().unwrap();
+    Ok(ActiveModelRecord {
+        model_id,
+        gguf_path: path_str,
+        profile_id,
+        quantization: "vault".to_string(),
+        lifecycle_state: lifecycle_label(lifecycle).to_string(),
+        modality: "text".to_string(),
+        architecture: None,
+        mmproj_path: None,
+        context_window: 4096,
+    })
+}
+
+/// Block until eviction scrub completes or `timeout` elapses.
+pub fn wait_for_eviction_scrub(timeout: std::time::Duration) -> bool {
+    let orch = orchestrator();
+    let started = std::time::Instant::now();
+    while orch.scrubbing_lock.load(Ordering::Acquire) {
+        if started.elapsed() > timeout {
+            return false;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    true
 }
 
 /// Register and activate a user-selected `.gguf` file at an arbitrary path.

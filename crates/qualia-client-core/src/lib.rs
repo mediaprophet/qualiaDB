@@ -32,6 +32,7 @@ pub mod qpu_pipeline;
 pub mod resource_import;
 pub mod social_connect;
 pub mod state;
+pub mod system_telemetry;
 pub mod update_installer;
 pub mod user_profile;
 pub mod vision_ingest;

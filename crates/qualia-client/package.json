@@ -1,13 +1,19 @@
 {
   "name": "qualia-client",
   "private": true,
-  "version": "0.0.5",
+  "version": "0.0.10",
   "type": "module",
+  "description": "Qualia Client - Dual-mode web/desktop application with comprehensive logging and system tray integration",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "vite --mode web",
+    "dev:desktop": "vite --mode desktop",
+    "build": "vite build --mode web",
+    "build:desktop": "vite build --mode desktop",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

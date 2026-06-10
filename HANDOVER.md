@@ -2,6 +2,16 @@
 
 ---
 
+## Session 2026-06-09 — Workspace decoupling (Flutter → EXPORTS)
+
+**Local staging:** UI and legacy crates moved to `Local_LIbraries/EXPORTS/` (gitignored).
+Engine repo now: `qualia-core-db`, `qualia-client-core`, `qualia-cli`, `qualia-solid-bridge`.
+Flutter CI removed from `release.yml`; publish to [WebizenAI](https://github.com/WebizenAI/) next.
+
+See `Local_LIbraries/EXPORTS/README.md` for repo bootstrap steps.
+
+---
+
 ## Session 2026-06-09 — Flutter 0.0.10 LLM lifecycle & telemetry
 
 **Branch:** `0.0.10-dev` | **Version:** `0.0.10`
@@ -12,6 +22,9 @@
 - External/local GGUF discovery via install manifests
 - VRAM used/total in desktop HUD; unified file logging toggle
 - Inference backend preference persisted to `inference_backend.json`
+- **Resident GGUF mmap** (`resident_model.rs`) — activation mounts mmap once; inference reuses via `adopt_resident_mmap`; eviction clears mmap
+- **Structured system telemetry** (`system_telemetry.rs`) — 100 ms ticker during activation; FRB stream to Flutter HUD (`SystemTelemetryHub`, `VaultHudBar`)
+- **Real embedding lookup** — `GgufTensorIndex::from_gguf` + `dequantize_token_embedding_into` wired in `infer_local_model` (no pseudo-embedding path on host)
 
 See `docs/manuals/0.0.10-flutter-plan.md` for phase breakdown.
 
@@ -56,7 +69,7 @@ See `docs/manuals/0.0.10-flutter-plan.md` for phase breakdown.
 
 #### Autoregressive decode loop (`llm_agent.rs::infer_local_model`)
 - `QTensorEngine` + `load_gguf` initialised **inside** the spawned LLM thread (avoids `Send` requirement on DirectML/wgpu device handles).
-- Per-step: pseudo-embedding (sin-based from token ID) → `dispatch_fused_transformer_block` (DirectML/Accelerate/wgpu) → argmax logits → SPSC `LogitSummary` to Sentinel.
+- Per-step: `GgufTensorIndex::dequantize_token_embedding_into` (real `token_embd.weight`) → `dispatch_fused_transformer_block` (DirectML/Accelerate/wgpu) → argmax logits → SPSC `LogitSummary` to Sentinel.
 - Sentinel (calling thread): injects `DenyRollback` on `0x99` anomaly byte in top-logit IEEE-754 representation. On rollback, LLM thread substitutes `cur_tok + 1 mod vocab_len`.
 - Stops at EOS token or `MAX_OUTPUT_TOKENS`; decoded via `GgufTokenizer::decode`.
 - WASM mock path preserved unchanged.
@@ -76,7 +89,7 @@ See `docs/manuals/0.0.10-flutter-plan.md` for phase breakdown.
 `crates/qualia-flutter/lib/src/rust/frb_generated.dart`
 
 ### Immediate next tasks (priority order)
-1. **Real embedding lookup** — `GgufTokenizer` parses the KV section (vocab, BOS/EOS) but the tensor-info section (tensor names + byte offsets) is not yet parsed. Implement a `GgufTensorIndex::from_gguf(mmap)` that walks the tensor-info section after the KV section ends, builds a `HashMap<String, (u64, Vec<u64>, u32)>` (name → offset, shape, ggml_type). Use it in `infer_local_model` to look up `token_embd.weight` and slice the real embedding for each token.
+1. ~~**Real embedding lookup**~~ — ✅ `GgufTensorIndex::from_gguf` + `dequantize_token_embedding_into` in `gguf_sharder.rs`, wired in `infer_local_model`.
 2. **modelPath threading in Flutter** — `QualiaHomeScreen._screens` is a static list; `ChatScreen` gets `modelPath = ''`. Convert to a stateful approach where `LLMHubScreen` can set `_activeModelPath` on the parent, which is then passed to `ChatScreen`.
 3. **DirectML.dll in release artifact** — add `DirectML.dll` copy step to `.github/workflows/release.yml` Windows Flutter job.
 4. **WASM rebuild** — push a tag to trigger CI rebuild of `qualia_core_db_bg.wasm` with `compile_query_to_json`.

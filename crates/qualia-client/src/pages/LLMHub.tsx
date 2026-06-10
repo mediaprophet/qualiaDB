@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Download, Cpu, HardDrive, X, CheckCircle, AlertCircle, Zap, Play, RefreshCw } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/tauri';
-import { listen } from '@tauri-apps/api/event';
+import { invoke, listen } from '../lib/tauri-compat';
+
 
 const MODELS_MANIFEST_URL =
   'https://raw.githubusercontent.com/mediaprophet/qualiaDB/refs/heads/main/manifests/models.json';

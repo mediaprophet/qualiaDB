@@ -384,6 +384,28 @@ pub fn add_delegation_rule(rule: DelegationRule) -> Result<(), String> {
     api::add_delegation_rule(rule)
 }
 
+
+// -- QPU Oracle ----------------------------------------------------------------
+
+#[command]
+pub fn get_qpu_settings() -> Result<qualia_client_core::qpu_oracle::QpuOracleSettings, String> {
+    Ok(qualia_client_core::qpu_oracle::get_qpu_settings())
+}
+
+#[command]
+pub fn save_qpu_settings(input: qualia_client_core::qpu_oracle::QpuOracleSettingsInput) -> Result<qualia_client_core::qpu_oracle::QpuOracleSettings, String> {
+    qualia_client_core::qpu_oracle::save_qpu_settings(input)
+}
+
+#[command]
+pub fn enable_qpu_feature() -> Result<qualia_client_core::qpu_oracle::QpuOracleSettings, String> {
+    qualia_client_core::qpu_oracle::enable_qpu_feature()
+}
+
+#[command]
+pub fn disable_qpu_feature() -> Result<qualia_client_core::qpu_oracle::QpuOracleSettings, String> {
+    qualia_client_core::qpu_oracle::disable_qpu_feature()
+}
 // ── Handler registration ──────────────────────────────────────────────────────
 
 pub fn get_invoke_handler() -> impl Fn(tauri::Invoke) {
@@ -448,5 +470,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::Invoke) {
         add_directory_actor,
         get_delegation_rules,
         add_delegation_rule,
+        get_qpu_settings,
+        save_qpu_settings,
+        enable_qpu_feature,
+        disable_qpu_feature,
     ]
 }

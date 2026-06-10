@@ -1,5 +1,0 @@
-
-thread '<unnamed>' (17604) panicked at crates\qualia-client-core\src\state.rs:27:105:
-called `Result::unwrap()` on an `Err` value: "Failed to write keystore: The system cannot find the path specified. (os error 3)"
-stack backtrace:
-note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.

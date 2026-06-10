@@ -1,6 +1,6 @@
 import { Key, Lock, Plus, Network, Download, ShieldCheck } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '../lib/tauri-compat';
 
 interface ImportedAccount {
   network: string;

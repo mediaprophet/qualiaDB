@@ -58,3 +58,9 @@ scratch/
 
 # QPU internal functionality (undocumented, private)
 qpu/
+
+# Private research documents (not for public repository)
+private/
+
+# Local development files (completed planning, temporary docs, etc.)
+local/

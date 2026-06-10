@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
-import { LayoutDashboard, Settings, MessageSquare, Database, Library, BrainCircuit, Package, Wallet as WalletIcon, Cpu, MemoryStick, Users, Fingerprint, FolderOpen } from 'lucide-react';
+import { LayoutDashboard, Settings, MessageSquare, Database, Library, BrainCircuit, Package, Wallet as WalletIcon, Cpu, MemoryStick, Users, Fingerprint, FolderOpen, BookOpen } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { listen } from '@tauri-apps/api/event';
-import { invoke } from '@tauri-apps/api/tauri';
+import { listen, invoke } from './lib/tauri-compat';
+
 
 import Dashboard from './pages/Dashboard';
 import LLMHub from './pages/LLMHub';
@@ -15,6 +15,7 @@ import SpatialPhysics from './pages/SpatialPhysics';
 import AssetLibrary from './pages/AssetLibrary';
 import AddressBook from './pages/AddressBook';
 import CredentialManager from './pages/CredentialManager';
+import Examples from './pages/Examples';
 
 function Sidebar() {
   const navItems = [
@@ -29,6 +30,7 @@ function Sidebar() {
     { path: '/qapps', label: 'Qapp Vault', icon: Package },
     { path: '/wallet', label: 'Wallets & Routes', icon: WalletIcon },
     { path: '/settings', label: 'Settings', icon: Settings },
+    { path: '/examples', label: 'Examples', icon: BookOpen },
   ];
 
   return (
@@ -189,6 +191,7 @@ export default function App() {
             <Route path="/qapps" element={<QappVault />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/settings" element={<AppSettings />} />
+            <Route path="/examples" element={<Examples />} />
             <Route path="*" element={<div className="glass-panel text-center text-gray-400">Page Under Construction</div>} />
           </Routes>
         </main>

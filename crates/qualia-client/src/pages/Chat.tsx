@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
-import { listen } from '@tauri-apps/api/event';
-import { appWindow } from '@tauri-apps/api/window';
+import { invoke, listen, window } from '../lib/tauri-compat';
+
+
 import { Cpu, Database, Activity, Terminal, ShieldAlert, ShieldCheck, FileUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';

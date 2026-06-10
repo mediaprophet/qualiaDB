@@ -19,6 +19,10 @@ wasm_simd = []
 # This is an opt-in feature for edge nodes with NVIDIA hardware
 cuda_gds = []
 
+# QPU internal functionality (undocumented, private)
+# This feature gate enables internal QPU modules that are not publicly documented
+qpu_internal = []
+
 # Feature dependencies
 alloc_buffers = []
 neon_simd_unroll = []
@@ -32,6 +36,7 @@ zeroize = { version = "1.8.2", features = ["zeroize_derive"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
+serde_bytes = "0.11"
 bytemuck = { version = "1.14", features = ["derive"] }
 half = "2.4"
 memmap2 = "0.9"
@@ -111,6 +116,13 @@ libp2p = { version = "0.56.0", features = ["tcp", "dns", "noise", "yamux", "requ
 reqwest = { version = "0.13.4", features = ["json", "rustls"] }
 boringtun = "0.7.1"
 rcgen = "0.14.8"
+# DNSSEC and WireGuard dependencies for SocialWireGuard bootstrapping
+trust-dns = { version = "0.23.2", features = ["dnssec", "dns-over-rustls"] }
+trust-dns-resolver = "0.23.2"
+# wireguard-rs = "0.1.1" # Currently unavailable - commented out
+base64 = "0.22"
+sha3 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
 
 
 getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Zap, Shield, Send, ArrowDownLeft, Layers, Activity, Hexagon, Cpu, Server, Sun, Database, Copy, Check, X, TrendingUp, TrendingDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/tauri';
-import { listen } from '@tauri-apps/api/event';
+import { invoke, listen } from '../lib/tauri-compat';
+
 
 interface CoinBalance {
   coin: string; ticker: string; address: string;

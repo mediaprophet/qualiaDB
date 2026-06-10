@@ -1,7 +1,7 @@
 # q42 Format Internal Draft
 
-**Status:** Internal draft  
-**Date:** 2026-06-08  
+**Status:** Internal draft (implementation converged on v2 unified volume, 2026-06-09)  
+**Date:** 2026-06-09 (revised from 2026-06-08)  
 **Purpose:** Freeze the current implementation reality of the `q42` container
 family before any external standardization work begins.
 
@@ -15,55 +15,56 @@ family before any external standardization work begins.
 6. Terminology
 7. Canonical Physical Layout
 8. Canonical Artifact Set
-9. Contradictions To Remove From The Codebase
-10. Proposed Canonical Rules
-11. Open Questions
-12. Immediate Cleanup Mandate
+9. Legacy Profiles (read-only compatibility)
+10. Contradictions Resolved or Remaining
+11. Proposed Canonical Rules
+12. Open Questions
+13. Remaining Cleanup Mandate
 
 ## 1. Block Architecture Mandate
 
-The `q42` family is hereby defined as a hierarchically indexed,
-block-oriented format, not as a continuous stream-compressed archive.
-
-This is the architectural direction the repo should converge on.
+The `q42` family is defined as a hierarchically indexed,
+block-oriented format, not as a single continuous stream-compressed archive.
 
 ### 1.1 What is deprecated
 
-The following model is deprecated:
+The following models are deprecated for **new writes**:
 
-- treating `.q42` as if it were a single continuous compressed stream
-- treating block compression and file identity as the same concern
-- allowing multiple incompatible readers to all claim they read canonical
-  `.q42`
+- treating `.q42` as a raw concatenation of uncompressed SuperBlocks with
+  mandatory `.q42.lex` and `.q42.bidx` sidecars
+- treating `.q42` as if it were a single continuous framed LZ4 stream (the
+  profile read by `q42_reader.rs`)
+- emitting a separate `.c.q42` as the primary distribution artifact when a
+  unified v2 volume already embeds block-local LZ4
 
 ### 1.2 What is mandated
 
-The target storage model is:
+The storage model is:
 
 1. A `q42` dataset is partitioned into independently addressable 40,960-byte
    SuperBlocks.
 2. Each SuperBlock is the fundamental physical I/O unit.
 3. Index lookup determines which block to read before any block payload is
    decompressed.
-4. Compression, when used, is block-local rather than whole-file stream-based.
+4. Compression, when used, is **block-local** (per SuperBlock), not
+   whole-file stream-based.
 
-### 1.3 Current vs target index placement
+### 1.3 Index placement (v2 — implemented)
 
-The current implementation stores the block index in a sidecar:
+As of 2026-06-09, **new ingest writes a single unified v2 `.q42` volume**:
 
-- `.q42.bidx`
+- 256-byte file header (`Q42\0`, version 2)
+- embedded Q42LEX blob (uncompressed)
+- embedded BIDX blob (uncompressed)
+- block directory (16 bytes per block: relative offset, compressed length,
+  uncompressed length)
+- concatenated LZ4-compressed SuperBlock payloads
 
-The long-term architecture may inline a header and index map at the front of
-the file, but that is not the current on-disk reality.
+Implementation: `crates/qualia-core-db/src/q42_volume.rs`
 
-Therefore this internal draft distinguishes:
-
-- current canonicalization target for cleanup: raw `.q42` plus `.q42.bidx`
-  sidecar
-- possible future revision: single-file `q42` with embedded header and index
-
-The codebase cleanup should first converge on the current sidecar-based model
-before attempting a file-level v2 redesign.
+Legacy v1 sidecars (`.q42.lex`, `.q42.bidx`) and raw SuperBlock streams remain
+**readable** via `Q42Lexicon::load_for_q42()` and related fallbacks, but are no
+longer emitted by `qualia-cli ingest`.
 
 ## 2. Capability Envelope Migration
 
@@ -105,10 +106,10 @@ identifier be Qualia-specific.
 
 This draft covers the Layer 0 data artifacts currently exposed by QualiaDB:
 
-- raw `.q42` SuperBlock files
-- compressed `.c.q42` transport files
-- `.q42.lex` reverse-lexicon sidecars
-- `.q42.bidx` block-range sidecars
+- unified v2 `.q42` volumes (canonical for new ingest)
+- legacy v1 raw SuperBlock `.q42` streams (read compatibility)
+- legacy `.q42.lex` and `.q42.bidx` sidecars (read compatibility)
+- deprecated `.c.q42` transport alias / framed LZ4 profile
 - companion `.qualia` vault-manifest semantics as they relate to the artifact
   family entry point
 - related capability-envelope migration decisions required to avoid namespace
@@ -123,30 +124,45 @@ This draft does not define:
 
 ## 4. Current Conclusion
 
-This draft adopts the following target model:
+This draft adopts the following model as of 2026-06-09:
 
-1. Raw `.q42` is the canonical on-disk container.
-2. `.c.q42` is a separate compressed transport profile derived from `.q42`.
-3. `.q42.lex` and `.q42.bidx` are sidecars attached to the raw `.q42`
-   artifact.
-4. The framed compressed `.q42` reader path currently implemented in
-   `q42_reader.rs` is treated as a legacy implementation profile to deprecate
-   or rename.
-5. QCHK capability envelopes should migrate from `.chk` to `.qchk`.
+1. **Unified v2 `.q42`** is the canonical on-disk container for new datasets.
+2. **Embedded Q42LEX and BIDX** replace sidecars for new writes.
+3. **Block-local LZ4** compresses each SuperBlock inside the volume; there is
+   no separate mandatory compressed transport file.
+4. **`.c.q42`** is a deprecated alias only — `finalize_c_q42()` copies a v2
+   volume unchanged for backward-compatible distribution paths.
+5. **`q42_reader.rs`** reads the legacy framed LZ4 transport profile only; it
+   does not read v2 unified volumes.
+6. **QCHK capability envelopes** should migrate from `.chk` to `.qchk`.
 
 ## 5. Current Implementation Reality
 
-Before cleanup, the repo currently exhibits all of the following at once:
+The repo now converges on one primary write path and several read fallbacks:
 
-- raw fixed-stride `.q42` SuperBlock writers
-- compressed framed `.q42` readers
-- `.c.q42` transport artifacts that strip SuperBlock headers and compress quin
-  payload chunks
-- `.q42.bidx` sidecars instead of embedded block-index headers
-- QCHK capability files still documented under `.chk`
+| Path | Role | Module |
+|------|------|--------|
+| v2 unified volume write | canonical ingest output | `q42_volume.rs`, `qualia-cli/src/ingest.rs` |
+| v2 unified volume read | mmap open, lex view, BIDX search, block decompress | `Q42Volume` |
+| v1 sidecar lex read | legacy WordNet / Index trees | `Q42Lexicon::load`, `load_for_q42` |
+| v1 raw SuperBlock read | legacy aligned streams | `storage.rs`, browser VFS (not yet v2-aware) |
+| framed LZ4 transport read | legacy `.c.q42` / old ingest | `q42_reader.rs` |
+| compress CLI | v2 → copy as-is; v1 raw → framed transport | `qualia-cli/src/compress.rs` |
 
-This section is descriptive, not normative. The mandate is to converge away
-from this mixed state.
+Writers:
+
+- `ingest_ntriples`, `ingest_rdf_xml` → `write_unified_volume()`
+- external sort (`ingest_chk`, `ingest_cbor`, import merge) →
+  `UnifiedVolumeBuilder`
+
+Readers:
+
+- `chat_ontology`, neuro-symbolic sieve → `Q42Lexicon::load_for_q42()` (v2
+  embedded lex or v1 sidecar)
+- daemon / graph hot paths → still evolving toward `Q42Volume` where needed
+
+**Not yet migrated:** WASM playground VFS (`docs/playground/vfs.js`) still
+expects legacy framed transport or raw SuperBlock layouts.
 
 ## 6. Terminology
 
@@ -156,13 +172,7 @@ The atomic record unit is `QualiaQuin`.
 
 - Size: 48 bytes
 - Layout: six little-endian `u64` fields
-- Fields:
-  - `subject`
-  - `predicate`
-  - `object`
-  - `context`
-  - `metadata`
-  - `parity`
+- Fields: `subject`, `predicate`, `object`, `context`, `metadata`, `parity`
 
 Important clarification:
 
@@ -174,32 +184,36 @@ Important clarification:
 The canonical physical storage page is `QualiaSuperBlock`.
 
 - Size: 40,960 bytes
-- Alignment: 4,096 bytes
-- Structure:
-  - 160-byte header
-  - 40,800-byte quin ledger
+- Alignment: 4,096 bytes (logical page; v2 stores LZ4-compressed payloads)
+- Structure: 160-byte header + 40,800-byte quin ledger (850 × 48 bytes)
 
-### Sidecars
+### Unified v2 volume
 
-- `.q42.lex`: reverse hash-to-string dictionary
-- `.q42.bidx`: block-range index
+- Single `.q42` file with file magic `Q42\0`, version `2`
+- Flags: `0x0001` = blocks LZ4-compressed, `0x0002` = object-sorted ingest
 
-### Transport profile
+### Embedded sections (v2)
 
-- `.c.q42`: compressed browser or network delivery artifact
+- **Q42LEX**: same binary layout as legacy `.q42.lex` sidecar
+- **BIDX**: same binary layout as legacy `.q42.bidx` sidecar
+
+### Legacy sidecars (v1, read-only for new ingest)
+
+- `.q42.lex`: reverse hash-to-string dictionary (standalone file)
+- `.q42.bidx`: block-range index (standalone file)
+
+### Transport profile (deprecated)
+
+- `.c.q42`: legacy framed LZ4 quin stream or verbatim copy of v2 volume
 
 ### Vault manifest
 
 - `.qualia`: high-level vault or collection descriptor
-- not a raw quin container
-- not a capability envelope
-- expected to point at one or more `.q42` artifacts and related metadata
+- expected to reference one or more `.q42` artifacts (v2 preferred)
 
 ## 7. Canonical Physical Layout
 
 ### `QualiaQuin`
-
-The canonical record layout is:
 
 ```text
 Offset  Size  Field
@@ -211,21 +225,12 @@ Offset  Size  Field
 40      8     parity
 ```
 
-All fields are encoded little-endian.
+All fields are little-endian.
 
-The codebase currently uses `parity` in two related but not identical ways:
-
-- many producers set `parity = subject ^ predicate ^ object ^ context`
-- `QualiaQuin::verify_ecc_parity()` is currently a mock corruption check that
-  only rejects `u64::MAX`
-
-This draft treats the XOR fold as the intended structural parity convention for
-artifact production, while noting that validation behavior is not fully unified
-yet.
+Producers commonly set `parity = subject ^ predicate ^ object ^ context`.
+`QualiaQuin::verify_ecc_parity()` is currently a stub that rejects `u64::MAX`.
 
 ### `QualiaSuperBlock`
-
-The canonical block layout is:
 
 ```text
 Offset  Size   Field
@@ -241,52 +246,118 @@ Offset  Size   Field
 
 Properties:
 
-- `std::mem::size_of::<QualiaSuperBlock>() == 40960`
-- `std::mem::align_of::<QualiaSuperBlock>() == 4096`
-- `QUINS_PER_BLOCK == 850`
-- each quin slot is 48 bytes
+- `size == 40960`, `QUINS_PER_BLOCK == 850`
+- remaining ledger slots are zero-filled
 
-The raw `.q42` profile is therefore:
+### Unified v2 volume layout
 
 ```text
-.q42 file = N x QualiaSuperBlock
+[0..256)                  Q42VolumeHeader
+[lex_offset ..)           Q42LEX blob (see §8)
+[bidx_offset ..)          BIDX blob (see §8)
+[block_dir_offset ..)     block_count × BlockDirectoryEntry (16 bytes each)
+[data_offset ..)          concatenated LZ4 payloads (lz4_flex prepend_size)
+
+BlockDirectoryEntry:
+  [0..8]   rel_offset   u64 LE   — byte offset from data_offset
+  [8..12]  comp_len     u32 LE
+  [12..16] uncomp_len   u32 LE   — always 40960 for current ingest
 ```
 
-No whole-file compression is implied by this profile.
+Header fields (little-endian):
 
-### Active quin semantics
+```text
+[0..4]    magic           "Q42\0"
+[4..6]    version         u16 = 2
+[6..8]    flags           u16
+[8..16]   lex_offset      u64
+[16..24]  lex_length      u64
+[24..32]  bidx_offset     u64
+[32..40]  bidx_length     u64
+[40..48]  block_dir_offset u64
+[48..56]  block_dir_length u64
+[56..64]  data_offset     u64
+[64..72]  data_length     u64
+[72..80]  block_count     u64
+[80..84]  block_size      u32 = 40960
+[84..88]  quins_per_block u32 = 850
+[88..256] reserved
+```
 
-- `active_quin_count` indicates how many ledger entries are semantically active
-  in the current block
-- remaining ledger slots are zero-filled padding
+Detection: `is_v2_volume()` checks for magic `Q42\0` at offset 0.
+
+Ingest sorts all quins by **object hash** before chunking so BIDX ranges are
+ascending and binary-searchable.
 
 ## 8. Canonical Artifact Set
 
-### Raw `.q42`
+### Unified v2 `.q42` (canonical)
 
-Recommended canonical meaning:
+Recommended meaning for all new datasets:
 
-- concatenated raw `QualiaSuperBlock` records
-- exact block stride: 40,960 bytes
-- suitable for memory-mapped reads and block-range fetches
+- single self-contained file
+- embedded lexicon and block index
+- LZ4-compressed SuperBlocks
+- memory-mapped via `Q42Volume::open()`
 
-This matches:
+Matches:
 
-- `crates/qualia-core-db/src/lib.rs`
-- `crates/qualia-core-db/src/storage.rs`
+- `crates/qualia-core-db/src/q42_volume.rs`
 - `crates/qualia-cli/src/ingest.rs`
-- browser VFS assumptions in `docs/playground/vfs.js`
+- `scripts/fetch_wordnet.sh` (outputs `wordnet.q42` only)
 
-### `.c.q42`
+### Embedded Q42LEX layout
 
-Recommended canonical meaning:
+Same as legacy `.q42.lex`:
 
-- derived transport artifact for browser or network delivery
-- created by stripping the 160-byte SuperBlock headers from raw `.q42`
-- compressing concatenated quin payload chunks with LZ4
-- framing each compressed chunk with a 16-byte block header
+```text
+Header (32 bytes)
+  [0..8]   magic          "Q42LEX\0\0"
+  [8..16]  entry_count    u64 LE
+  [16..24] strings_offset u64 LE
+  [24..32] version        u64 LE
 
-Current chunk frame:
+Index (entry_count × 16 bytes, sorted by hash)
+  [0..8]   hash           u64 LE
+  [8..16]  str_off        u64 LE
+
+String blob
+  repeated: u16 LE length + UTF-8 bytes
+```
+
+### Embedded BIDX layout
+
+Same as legacy `.q42.bidx`:
+
+```text
+Header (16 bytes)
+  [0..4]   magic          "BIDX"
+  [4..8]   version        u32 LE = 1
+  [8..12]  block_count    u32 LE
+  [12..16] reserved       u32 LE = 0
+
+Index (block_count × 16 bytes)
+  [0..8]   min_hash       u64 LE   — min object hash in block
+  [8..16]  max_hash       u64 LE   — max object hash in block
+```
+
+BIDX indexes **object-hash ranges** (not subject-hash). This matches ingest,
+`Q42Volume::bidx_blocks_for_hash()`, and the intended literal lookup pattern
+`?s ?p "literal"`.
+
+### Legacy raw v1 `.q42`
+
+Historical profile still readable:
+
+```text
+.q42 file = N × QualiaSuperBlock   (40,960-byte stride, uncompressed)
+```
+
+Requires separate `.q42.lex` and `.q42.bidx` sidecars for full retrieval.
+
+### Legacy `.c.q42` transport
+
+Historical framed profile for browser delivery:
 
 ```text
 Per chunk:
@@ -296,184 +367,111 @@ Per chunk:
   [16..]   payload       lz4_flex::compress_prepend_size output
 ```
 
-This matches:
-
-- `crates/qualia-cli/src/compress.rs`
-- `docs/playground/vfs.js`
-
-Important semantic point:
-
-- `.c.q42` is not the same artifact as raw `.q42`
-- `.c.q42` is a transport profile, not the canonical storage container
-
-### `.q42.lex`
-
-Current implemented binary layout:
-
-```text
-Header (32 bytes)
-  [0..8]   magic          "Q42LEX\0\0"
-  [8..16]  entry_count    u64 LE
-  [16..24] strings_offset u64 LE
-  [24..32] version        u64 LE
-
-Index (entry_count x 16 bytes)
-  [0..8]   hash           u64 LE
-  [8..16]  str_off        u64 LE
-
-String blob
-  repeated:
-    [0..2]  length        u16 LE
-    [2..]   UTF-8 bytes
-```
-
-### `.q42.bidx`
-
-Current implemented binary layout:
-
-```text
-Header (16 bytes)
-  [0..4]   magic          "BIDX"
-  [4..8]   version        u32 LE
-  [8..12]  block_count    u32 LE
-  [12..16] reserved       u32 LE
-
-Index (block_count x 16 bytes)
-  [0..8]   min_hash       u64 LE
-  [8..16]  max_hash       u64 LE
-```
+For v2 volumes, `compress_q42()` and `finalize_c_q42()` copy the file
+unchanged — the extension is retained only for older distribution pipelines.
 
 ### `.qualia`
 
-Recommended canonical meaning:
+Vault or collection manifest — references `.q42` data files. For v2 volumes,
+lexicon and block index are embedded; manifest sidecar pointers are optional
+legacy hints only.
 
-- human-facing vault or collection manifest
-- entry point that binds together lower-level artifacts
-- expected to reference:
-  - one or more `.q42` data files
-  - optional `.q42.lex` and `.q42.bidx` sidecars
-  - optional `.qchk` capability envelopes
-  - optional qapp or shell entry metadata
+## 9. Legacy Profiles (read-only compatibility)
 
-This draft does not freeze the manifest schema yet, but it does freeze the
-artifact role:
+The engine retains read paths for:
 
-- `.qualia` is the orchestration layer
-- `.q42` remains the raw data layer
-- `.qchk` remains the capability layer
+1. **v1 raw SuperBlock stream** + `.q42.lex` + `.q42.bidx`
+2. **Framed LZ4 transport** (`.c.q42` or mislabeled `.q42`) via `q42_reader.rs`
+3. **Pre-v2 WordNet trees** under `Local_LIbraries/wordnet/` until re-ingested
 
-## 9. Contradictions To Remove From The Codebase
+New ingest MUST NOT emit v1 sidecars. Re-ingest with `qualia-cli ingest` or
+`scripts/fetch_wordnet.sh` to upgrade.
 
-### 9.1 Raw `.q42` vs framed compressed `.q42`
+## 10. Contradictions Resolved or Remaining
 
-The repo currently uses `.q42` for at least two incompatible artifact forms:
+### 10.1 Resolved: single-file vs sidecar index
 
-1. raw fixed-stride SuperBlocks
-2. framed compressed block-stream data read by `q42_reader.rs`
+**Resolved (2026-06-09):** v2 embeds lex + BIDX. Sidecars are legacy read-only.
 
-This draft recommends:
+### 10.2 Resolved: file-level magic
 
-- keep raw SuperBlocks as `.q42`
-- keep compressed transport as `.c.q42`
-- deprecate or rename the framed compressed `.q42` reader profile
+**Resolved:** v2 uses magic `Q42\0` and version `2` at offset 0.
 
-### 9.2 BIDX dimension mismatch
+### 10.3 Resolved: compression model
 
-There is a documented mismatch between implementation and some prose docs:
+**Resolved:** block-local LZ4 inside the volume. Whole-file stream compression
+is legacy transport only.
 
-- `crates/qualia-cli/src/ingest.rs` sorts by object hash and writes min/max
-  object hash ranges
-- browser VFS lookup logic also uses object-hash semantics
-- some architecture docs describe BIDX in terms of subject hash
+### 10.4 Remaining: browser VFS
 
-This draft follows the current implementation:
+`docs/playground/vfs.js` does not yet read v2 unified volumes. Playground
+WordNet must be re-ingested and the VFS updated separately.
 
-- `BIDX` currently indexes object-hash ranges
+### 10.5 Remaining: BIDX dimension prose drift
 
-If the project wants subject-hash indexing instead, that must be a deliberate
-format revision rather than an undocumented prose correction.
+Some older architecture docs describe BIDX in terms of subject hash. The
+implementation and this draft use **object-hash ranges** exclusively unless a
+future versioned revision changes the index dimension.
 
-### 9.3 Naming drift: `.q42` vs `.qla`
+### 10.6 Remaining: QCHK extension collision
 
-Older storage comments still refer to `.qla`. The artifact family should be
-normalized to `.q42` terminology in future cleanups.
+QCHK capability envelopes are still named `.chk` in parts of the repo.
+Migration to `.qchk` is not yet complete.
 
-### 9.4 Compression wording drift
+### 10.7 Remaining: naming drift `.q42` vs `.qla`
 
-Some docs say `.q42` itself is LZ4-compressed. The codebase instead supports a
-cleaner model:
+Older storage comments still refer to `.qla`. Normalize to `.q42` in future
+doc sweeps.
 
-- raw `.q42` for aligned storage
-- `.c.q42` for compressed transport
+## 11. Proposed Canonical Rules
 
-This draft recommends aligning all docs and tooling to that distinction.
+1. **New writes** produce unified v2 `.q42` only (magic `Q42\0`, version 2).
+2. Q42LEX and BIDX blobs inside a v2 volume use the same layouts as legacy
+   sidecars.
+3. SuperBlocks inside v2 are LZ4-compressed individually; uncompressed size is
+   always 40,960 bytes per block entry.
+4. Ingest sorts quins by object hash before block assignment.
+5. BIDX indexes object-hash min/max ranges per block.
+6. `.q42.lex` and `.q42.bidx` sidecars are legacy; readers must fall back to
+   them when opening non-v2 files.
+7. `.c.q42` is deprecated; when present it is either a legacy framed transport
+   file or a byte-identical copy of a v2 volume.
+8. `q42_reader.rs` is legacy transport only — not a canonical v2 reader.
+9. `.qchk` is the target canonical capability-envelope extension.
+10. `.qualia` is the vault-manifest extension.
+11. SlgArena / hot-path memory budget remains **42 MB**, not whole-file mmap
+    of multi-gigabyte volumes; block fetch decompresses one SuperBlock at a
+    time into caller-supplied buffers.
 
-### 9.5 QCHK extension collision
-
-QCHK capability envelopes are still named as `.chk` in multiple parts of the
-repo even though the extension space is already overloaded.
-
-This draft recommends:
-
-- `.qchk` becomes the canonical extension
-- `.chk` remains legacy compatibility only during migration
-- parser, docs, fixtures, and UI labels must converge on `.qchk`
-
-## 10. Proposed Canonical Rules
-
-1. `.q42` means raw aligned SuperBlock container.
-2. `.c.q42` means LZ4-framed transport artifact derived from raw quin payloads.
-3. `.q42.lex` is the canonical reverse lexicon sidecar.
-4. `.q42.bidx` is the canonical block-range sidecar.
-5. `.qchk` is the canonical capability-envelope extension.
-6. `.qualia` is the canonical vault-manifest or collection-descriptor
-   extension.
-7. Raw `.q42` readers and writers must agree on:
-   - little-endian integer encoding
-   - 40,960-byte block size
-   - 160-byte header size
-   - 850 quin slots per block
-8. Legacy framed compressed `.q42` handling must be renamed, version-gated, or
-   deprecated.
-9. Legacy `.chk` handling for QCHK must be renamed, version-gated, or
-   deprecated.
-
-## 11. Open Questions
+## 12. Open Questions
 
 1. Should `validation_checksum` remain a real field if `parity` already exists?
-2. Should `BIDX` continue indexing object-hash ranges, or move to subject-hash
-   ranges in a versioned revision?
-3. Do we need a file-level magic for raw `.q42`, or is fixed-stride structure
-   sufficient?
-4. Should the compressed transport profile keep the `.c.q42` extension or move
-   to content negotiation only?
-5. Should raw `.q42` receive an explicit version header in a future v2 block
-   format?
-6. Should a future v2 embed the block index into the file header instead of
-   using `.q42.bidx` as a sidecar?
-7. Which public media type should be chosen for `.qchk`?
-8. Should `.qualia` be JSON-LD, N3, or another manifest syntax?
-9. Should file association be wired first in the Flutter shell, with Tauri
+2. Should BIDX move to subject-hash ranges in a future v3, or stay
+   object-indexed permanently?
+3. Should v2 receive an explicit media type (e.g.
+   `application/vnd.qualia.q42+v2`) before IETF submission?
+4. Should the playground VFS adopt v2 natively or continue translating v2 →
+   framed transport at build time?
+5. Which public media type should be chosen for `.qchk`?
+6. Should `.qualia` be Turtle-only, or also allow N3 / CBOR-LD projections?
+7. Should file association be wired first in the Flutter shell, with Tauri
    treated as secondary or legacy?
 
-## 12. Immediate Cleanup Mandate
+## 13. Remaining Cleanup Mandate
 
-1. Align docs to raw `.q42` vs transport `.c.q42`.
-2. Scan the codebase for stream-style `.q42` assumptions and mark them legacy.
-3. Decide whether `q42_reader.rs` is renamed or replaced.
-4. Decide whether `BIDX` is officially object-indexed.
-5. Rename QCHK public references from `.chk` to `.qchk`.
-6. Update parser, fixtures, and UI labels to treat `.qchk` as canonical.
-7. Define a minimal `.qualia` manifest schema:
-   - `qualia:vaultName`
-   - `qualia:includesDataFile`
-   - `qualia:entryPointQapp`
-8. Document Flutter-first file association strategy for `.qualia`, with Tauri
-   noted as in-tree but not the primary shipped shell.
-9. Add one canonical media-type proposal section for future IETF drafting.
-10. Add test vectors:
-   - one single-block raw `.q42`
-   - one matching `.c.q42`
-   - one `.q42.lex`
-   - one `.q42.bidx`
+1. [x] Converge ingest on unified v2 volume (`q42_volume.rs`).
+2. [x] Embed lex + BIDX; stop emitting sidecars from `qualia-cli ingest`.
+3. [x] Wire `Q42Lexicon::load_for_q42()` and sieve lex paths for embedded lex.
+4. [x] Simplify `fetch_wordnet.sh` to output single `wordnet.q42`.
+5. [ ] Update WASM playground VFS for v2 unified volumes.
+6. [ ] Rename QCHK public references from `.chk` to `.qchk`.
+7. [ ] Add canonical test vectors:
+   - one single-block v2 `.q42`
+   - one multi-block v2 `.q42` with lex entries
+   - one legacy v1 raw + sidecar set (compatibility)
+   - one legacy framed `.c.q42`
    - one `.qchk`
+8. [ ] Propose media types for IETF drafting (`application/vnd.qualia.q42+v2`,
+   etc.).
+9. [ ] Finalize minimal `.qualia` manifest schema for v2 (sidecar terms
+   optional).

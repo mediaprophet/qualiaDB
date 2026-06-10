@@ -1,23 +1,18 @@
 //! LZ4 block-stream compressor for browser-deployable dataset artifacts.
 //!
-//! Produces the format the browser VFS expects:
+//! Unified v2 `.q42` volumes already embed LZ4-compressed SuperBlocks; the
+//! compress command copies them unchanged. Legacy v1 raw SuperBlock streams are
+//! still converted to the framed transport format for the browser VFS:
 //!
 //! ```text
 //! Per block:
-//!   [block_id:   u64 LE]   — monotonically increasing
-//!   [comp_len:   u32 LE]   — byte length of the lz4_flex payload that follows
-//!   [uncomp_len: u32 LE]   — byte length of the original chunk
+//!   [block_id:   u64 LE]
+//!   [comp_len:   u32 LE]
+//!   [uncomp_len: u32 LE]
 //!   [payload:    comp_len bytes]   — lz4_flex::compress_prepend_size output
-//!                                    (first 4 bytes = uncomp_len LE, then LZ4 block)
 //! ```
-//!
-//! For `.q42` SuperBlock input, the 160-byte block headers are stripped so the
-//! decompressed output is a flat sequence of 48-byte Quins — no header offsets
-//! needed in the browser scanner.
-//!
-//! For any other input (e.g. `.lex`) the raw bytes are chunked and compressed.
 
-use std::fs::{File, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
@@ -39,13 +34,25 @@ pub struct CompressStats {
     pub ratio: f64,
 }
 
-/// Compress a `.q42` SuperBlock file: strip 160-byte headers, emit raw Quins
-/// chunked and LZ4-compressed.
+/// Compress a `.q42` file. Unified v2 volumes are copied as-is; legacy v1
+/// SuperBlock streams are stripped and re-framed for the browser VFS.
 pub fn compress_q42(
     input: &Path,
     output: &Path,
 ) -> Result<CompressStats, Box<dyn std::error::Error>> {
-    let meta = std::fs::metadata(input)?;
+    if qualia_core_db::q42_volume::is_v2_volume(input)? {
+        fs::copy(input, output)?;
+        let input_bytes = fs::metadata(input)?.len();
+        let output_bytes = fs::metadata(output)?.len();
+        return Ok(CompressStats {
+            input_bytes,
+            output_bytes,
+            blocks: qualia_core_db::q42_volume::Q42Volume::open(input)?.block_count(),
+            ratio: 1.0,
+        });
+    }
+
+    let meta = fs::metadata(input)?;
     let input_bytes = meta.len();
 
     let mut reader = BufReader::new(File::open(input)?);
@@ -67,9 +74,8 @@ pub fn compress_q42(
         }
         if n < SUPERBLOCK_SIZE {
             break;
-        } // partial final block — skip
+        }
 
-        // Skip the 160-byte header, take only Quin data.
         chunk
             .extend_from_slice(&sb_buf[SUPERBLOCK_HEADER..SUPERBLOCK_HEADER + QUIN_DATA_PER_BLOCK]);
 
@@ -79,13 +85,12 @@ pub fn compress_q42(
         }
     }
 
-    // Flush remaining Quins (last partial chunk).
     if !chunk.is_empty() {
         block_id = write_lz4_block(&mut writer, block_id, &chunk)?;
     }
 
     writer.flush()?;
-    let output_bytes = std::fs::metadata(output)?.len();
+    let output_bytes = fs::metadata(output)?.len();
 
     Ok(CompressStats {
         input_bytes,
@@ -95,12 +100,12 @@ pub fn compress_q42(
     })
 }
 
-/// Compress any binary file (e.g. `.lex`) as raw bytes.
+/// Compress any binary file (e.g. legacy `.lex` sidecar) as raw bytes.
 pub fn compress_raw(
     input: &Path,
     output: &Path,
 ) -> Result<CompressStats, Box<dyn std::error::Error>> {
-    let meta = std::fs::metadata(input)?;
+    let meta = fs::metadata(input)?;
     let input_bytes = meta.len();
 
     let mut reader = BufReader::new(File::open(input)?);
@@ -123,7 +128,7 @@ pub fn compress_raw(
     }
 
     writer.flush()?;
-    let output_bytes = std::fs::metadata(output)?.len();
+    let output_bytes = fs::metadata(output)?.len();
 
     Ok(CompressStats {
         input_bytes,
@@ -133,12 +138,6 @@ pub fn compress_raw(
     })
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/// Write one LZ4 block (16-byte header + lz4_flex payload).
-/// Returns the next block_id.
 fn write_lz4_block(w: &mut impl Write, block_id: u64, data: &[u8]) -> std::io::Result<u64> {
     let compressed = lz4_flex::compress_prepend_size(data);
     w.write_all(&block_id.to_le_bytes())?;
@@ -148,7 +147,6 @@ fn write_lz4_block(w: &mut impl Write, block_id: u64, data: &[u8]) -> std::io::R
     Ok(block_id + 1)
 }
 
-/// Read exactly `buf.len()` bytes, or return the number of bytes read if EOF.
 fn read_exact_or_eof(r: &mut impl Read, buf: &mut [u8]) -> std::io::Result<usize> {
     let mut total = 0;
     while total < buf.len() {

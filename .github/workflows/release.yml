@@ -74,7 +74,91 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# ── Job 2: qualia-core-db WASM ────────────────────────────────────────────────
+# ── Job 2: qualia-desktop ───────────────────────────────────────────────────
+  build-desktop:
+    name: Desktop (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: qualia-desktop
+            asset_name: qualia-desktop-windows-setup.exe
+          - os: macos-14
+            artifact: qualia-desktop
+            asset_name: qualia-desktop-macos.dmg
+          - os: ubuntu-22.04
+            artifact: qualia-desktop
+            asset_name: qualia-desktop-linux.AppImage
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-desktop-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-desktop-
+
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          path: crates/qualia-client/node_modules
+          key: ${{ runner.os }}-node-desktop-${{ hashFiles('crates/qualia-client/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-desktop-
+
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Build desktop application
+        run: |
+          cd crates/qualia-client
+          npm install
+          npm run build
+          cd ../qualia-desktop
+          cargo tauri build
+
+      - name: Upload Windows installer
+        if: matrix.os == 'windows-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: crates/qualia-desktop/target/release/bundle/msi/*.msi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS disk image
+        if: matrix.os == 'macos-14'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: crates/qualia-desktop/target/release/bundle/dmg/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux AppImage
+        if: matrix.os == 'ubuntu-22.04'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: crates/qualia-desktop/target/release/bundle/appimage/*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ── Job 3: qualia-core-db WASM ────────────────────────────────────────────────
   build-wasm:
     name: WASM (qualia-core-db)
     runs-on: ubuntu-22.04
@@ -130,201 +214,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# ── Job 3: Flutter desktop — Windows x64 installer + portable zip ─────────────
-  build-flutter-windows:
-    name: Flutter Windows x64 (installer)
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: windows-cargo-flutter-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: windows-cargo-flutter-
-
-      - name: Install NuGet + Inno Setup
-        run: |
-          choco install nuget.commandline innosetup -y --no-progress
-
-      - name: Install Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Package portable bundle (Flutter + Rust FFI + DirectML)
-        shell: pwsh
-        run: .\scripts\package-flutter-windows.ps1
-
-      - name: Build Inno Setup installer
-        shell: pwsh
-        env:
-          APP_VERSION: ${{ github.ref_name }}
-        run: |
-          $v = $env:APP_VERSION -replace '^v',''
-          .\scripts\installer\build-windows-installer.ps1 -AppVersion $v
-
-      - name: Create portable zip
-        shell: pwsh
-        run: |
-          Compress-Archive -Path "dist\qualia-flutter-windows-x64\*" `
-            -DestinationPath "qualia-flutter-windows-x64.zip" -Force
-
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/QualiaDB-Setup-*-x64.exe
-            qualia-flutter-windows-x64.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# ── Job 4: Flutter desktop — macOS Apple Silicon (.dmg) ───────────────────────
-  build-flutter-macos:
-    name: Flutter macOS arm64 (DMG)
-    runs-on: macos-14
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: macos-cargo-flutter-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: macos-cargo-flutter-
-
-      - name: Install Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Package .app bundle
-        run: |
-          chmod +x scripts/*.sh scripts/installer/*.sh
-          ./scripts/package-flutter-macos.sh
-
-      - name: Build DMG installer
-        env:
-          APP_VERSION: ${{ github.ref_name }}
-        run: |
-          export APP_VERSION="${APP_VERSION#v}"
-          ./scripts/installer/build-macos-dmg.sh
-
-      - name: Create portable tar.gz
-        run: |
-          tar -czf qualia-flutter-macos-arm64.tar.gz \
-            -C dist/qualia-flutter-macos-arm64 qualia_flutter.app
-
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/QualiaDB-*-macos-arm64.dmg
-            qualia-flutter-macos-arm64.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# ── Job 5: Flutter desktop — Linux x64 (.deb + portable tar.gz) ───────────────
-  build-flutter-linux:
-    name: Flutter Linux x64 (deb)
-    runs-on: ubuntu-22.04
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: linux-cargo-flutter-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: linux-cargo-flutter-
-
-      - name: Linux build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-dev libblkid-dev liblzma-dev ninja-build \
-            libssl-dev pkg-config clang cmake libsecret-1-dev libjsoncpp-dev \
-            libayatana-appindicator3-dev dpkg-dev
-
-      - name: Install Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Package portable bundle
-        run: |
-          chmod +x scripts/*.sh scripts/installer/*.sh
-          ./scripts/package-flutter-linux.sh
-
-      - name: Build .deb installer
-        env:
-          APP_VERSION: ${{ github.ref_name }}
-        run: |
-          export APP_VERSION="${APP_VERSION#v}"
-          ./scripts/installer/build-linux-deb.sh
-
-      - name: Create portable tar.gz
-        run: |
-          tar -czf qualia-flutter-linux-x64.tar.gz \
-            -C dist/qualia-flutter-linux-x64 .
-
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/QualiaDB-*-linux-x64.deb
-            qualia-flutter-linux-x64.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# ── Job 6: Updater manifest (latest.json) ─────────────────────────────────────
-  publish-updater-manifest:
-    name: Publish latest.json
-    needs:
-      - build-flutter-windows
-      - build-flutter-macos
-      - build-flutter-linux
-    runs-on: ubuntu-22.04
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Generate latest.json
-        env:
-          APP_VERSION: ${{ github.ref_name }}
-        run: |
-          chmod +x scripts/installer/generate-latest-json.sh
-          VERSION="${APP_VERSION#v}"
-          ./scripts/installer/generate-latest-json.sh "$VERSION" latest.json
-
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: latest.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+# Flutter desktop packaging moved to WebizenAI repo — see Local_LIbraries/EXPORTS/qualia-flutter-desktop/

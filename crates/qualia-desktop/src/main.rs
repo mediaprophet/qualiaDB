@@ -4,7 +4,7 @@
 )]
 
 use std::path::PathBuf;
-use tauri::Manager;
+use tauri::{Manager, SystemTray, SystemTrayMenu, SystemTrayMenuItem, CustomMenuItem, SystemTrayEvent};
 
 pub mod commands;
 pub use commands::*;
@@ -21,7 +21,79 @@ fn main() {
 
     let vault_for_daemon = app_state.key_vault.clone();
 
+    // Create system tray menu
+    let show = CustomMenuItem::new("show".to_string(), "Show Window");
+    let hide = CustomMenuItem::new("hide".to_string(), "Hide Window");
+    let settings = CustomMenuItem::new("settings".to_string(), "Settings");
+    let logs = CustomMenuItem::new("logs".to_string(), "View Logs");
+    let daemon_status = CustomMenuItem::new("daemon_status".to_string(), "Daemon Status");
+    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
+
+    let tray_menu = SystemTrayMenu::new()
+        .add_item(show)
+        .add_item(hide)
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(settings)
+        .add_item(logs)
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(daemon_status)
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(quit);
+
+    let system_tray = SystemTray::new().with_menu(tray_menu);
+
     tauri::Builder::default()
+        .system_tray(system_tray)
+        .on_system_tray_event(|app, event| match event {
+            SystemTrayEvent::LeftClick {
+                position: _,
+                size: _,
+                ..
+            } => {
+                let window = app.get_window("main").unwrap();
+                if window.is_visible().unwrap() {
+                    let _ = window.hide();
+                } else {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            SystemTrayEvent::MenuItemClick { id, .. } => {
+                let window = app.get_window("main").unwrap();
+                match id.as_str() {
+                    "show" => {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                    "hide" => {
+                        let _ = window.hide();
+                    }
+                    "settings" => {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                        // Navigate to settings page
+                        let _ = window.eval("window.location.href = '/settings'");
+                    }
+                    "logs" => {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                        // Navigate to settings page and show logs
+                        let _ = window.eval("window.location.href = '/settings'; setTimeout(() => { document.querySelector('button:nth-child(2)')?.click(); }, 100)");
+                    }
+                    "daemon_status" => {
+                        // Show daemon status in a simple alert
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                        let _ = window.eval("alert('Daemon Status: Running on port 4242\\n\\nThis feature will show detailed daemon health information in a future update.')");
+                    }
+                    "quit" => {
+                        std::process::exit(0);
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        })
         .register_uri_scheme_protocol("qualia", move |_app, request| {
             let path = request
                 .uri()
@@ -121,13 +193,12 @@ fn main() {
             tauri::async_runtime::spawn(async move {
                 *flag.lock().unwrap() = true;
                 // Update tray item to show daemon is live
-                if let Some(item) = tray_h.tray_handle().try_get_item("health") {
+                if let Some(item) = tray_h.tray_handle().try_get_item("daemon_status") {
                     let _ = item.set_title(&format!("Daemon: running (:{})", final_port));
-                    let _ = item.set_enabled(false);
                 }
                 qualia_core_db::daemon::start_local_daemon(final_port, vault_clone).await;
                 *flag.lock().unwrap() = false;
-                if let Some(item) = tray_h.tray_handle().try_get_item("health") {
+                if let Some(item) = tray_h.tray_handle().try_get_item("daemon_status") {
                     let _ = item.set_title("Daemon: stopped");
                 }
             });

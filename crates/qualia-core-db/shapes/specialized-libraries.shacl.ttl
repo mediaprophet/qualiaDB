@@ -1,0 +1,758 @@
+@prefix q42: <https://qualia.network/q42#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ── Specialized Libraries SHACL Shapes ───────────────────────────────────────────
+# This file defines SHACL shapes for all specialized libraries including:
+# - Linear Algebra
+# - Machine Learning
+# - Physics Simulation
+# - Chemistry Modeling
+# - Medical Computing
+# - Financial Modeling
+# - Engineering Analysis
+# - Statistical Computing
+# - Cryptographic Library
+# - QPU Bridge
+# - Quantum Biology
+
+# ── Linear Algebra Shapes ─────────────────────────────────────────────────────
+
+q42:MatrixConfigurationShape a sh:NodeShape ;
+    rdfs:label "Matrix Configuration Shape" ;
+    rdfs:comment "Validates matrix storage and computation configuration" ;
+    sh:targetClass q42:MatrixConfiguration ;
+    sh:property [
+        sh:path q42:maxMatrixSize ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000 ;
+        sh:message "Matrix size must be between 1 and 1,000,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxZoneCapacity ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1024 ;
+        sh:maxInclusive 1099511627776 ;
+        sh:message "Zone capacity must be between 1KB and 1TB" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedZoneTypes ;
+        sh:in ("Dense" "Sparse" "Structured" "Temporary") ;
+        sh:message "Zone type must be one of: Dense, Sparse, Structured, Temporary" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireZeroCopy ;
+        sh:datatype xsd:boolean ;
+        sh:message "Zero-copy flag must be a boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:MatrixOperationShape a sh:NodeShape ;
+    rdfs:label "Matrix Operation Shape" ;
+    rdfs:comment "Validates matrix operation parameters" ;
+    sh:targetClass q42:MatrixOperation ;
+    sh:property [
+        sh:path q42:operationType ;
+        sh:datatype xsd:string ;
+        sh:in ("multiply" "add" "subtract" "invert" "transpose" "decompose" "eigendecomposition") ;
+        sh:message "Operation type must be a valid matrix operation" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxConditionNumber ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1.0 ;
+        sh:maxInclusive 1e15 ;
+        sh:message "Condition number must be reasonable for numerical stability" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:precisionMode ;
+        sh:datatype xsd:string ;
+        sh:in ("f32" "f64" "f128") ;
+        sh:message "Precision mode must be f32, f64, or f128" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:EigenDecompositionShape a sh:NodeShape ;
+    rdfs:label "Eigen Decomposition Shape" ;
+    rdfs:comment "Validates eigenvalue decomposition parameters" ;
+    sh:targetClass q42:EigenDecomposition ;
+    sh:property [
+        sh:path q42:maxIterations ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Maximum iterations must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:convergenceTolerance ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1e-15 ;
+        sh:maxInclusive 1e-6 ;
+        sh:message "Convergence tolerance must be between 1e-15 and 1e-6" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:algorithmType ;
+        sh:in ("qr" "power" "jacobi" "lanczos") ;
+        sh:message "Algorithm type must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Machine Learning Shapes ─────────────────────────────────────────────────────
+
+q42:ModelConfigurationShape a sh:NodeShape ;
+    rdfs:label "Model Configuration Shape" ;
+    rdfs:comment "Validates ML model configuration" ;
+    sh:targetClass q42:ModelConfiguration ;
+    sh:property [
+        sh:path q42:maxModelSizeMb ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Model size must be between 1MB and 100GB" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxParameters ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000000000 ;
+        sh:message "Parameter count must be between 1 and 10 billion" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedModelTypes ;
+        sh:in ("neural_network" "decision_tree" "svm" "random_forest" "knn" "gradient_boosting") ;
+        sh:message "Model type must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:TrainingConfigurationShape a sh:NodeShape ;
+    rdfs:label "Training Configuration Shape" ;
+    rdfs:comment "Validates training hyperparameters" ;
+    sh:targetClass q42:TrainingConfiguration ;
+    sh:property [
+        sh:path q42:maxEpochs ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Training epochs must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:batchSizeRange ;
+        sh:message "Batch size range must be valid (min ≤ max)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:learningRateRange ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Learning rate must be between 0 and 1" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedOptimizers ;
+        sh:in ("adam" "sgd" "rmsprop" "adagrad" "adamw") ;
+        sh:message "Optimizer must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:InferenceConfigurationShape a sh:NodeShape ;
+    rdfs:label "Inference Configuration Shape" ;
+    rdfs:comment "Validates inference parameters" ;
+    sh:targetClass q42:InferenceConfiguration ;
+    sh:property [
+        sh:path q42:maxBatchSize ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Batch size must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxLatencyMs ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 60000 ;
+        sh:message "Latency must be between 1ms and 60s" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedPrecisionModes ;
+        sh:in ("fp32" "fp16" "int8" "int4") ;
+        sh:message "Precision mode must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Physics Simulation Shapes ─────────────────────────────────────────────────
+
+q42:SimulationConfigurationShape a sh:NodeShape ;
+    rdfs:label "Simulation Configuration Shape" ;
+    rdfs:comment "Validates physics simulation configuration" ;
+    sh:targetClass q42:SimulationConfiguration ;
+    sh:property [
+        sh:path q42:maxTimeSteps ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000000 ;
+        sh:message "Time steps must be between 1 and 1 billion" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxSpatialResolution ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Spatial resolution must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxCflNumber ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "CFL number must be ≤ 1.0 for numerical stability" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:BoundaryConditionsShape a sh:NodeShape ;
+    rdfs:label "Boundary Conditions Shape" ;
+    rdfs:comment "Validates boundary condition parameters" ;
+    sh:targetClass q42:BoundaryConditions ;
+    sh:property [
+        sh:path q42:allowedBoundaryTypes ;
+        sh:in ("dirichlet" "neumann" "periodic" "mixed" "robin") ;
+        sh:message "Boundary type must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxGradient ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1e6 ;
+        sh:message "Gradient must be reasonable" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:MeshConfigurationShape a sh:NodeShape ;
+    rdfs:label "Mesh Configuration Shape" ;
+    rdfs:comment "Validates mesh generation parameters" ;
+    sh:targetClass q42:MeshConfiguration ;
+    sh:property [
+        sh:path q42:maxElements ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000000 ;
+        sh:message "Mesh elements must be between 1 and 100 million" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minElementQuality ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.1 ;
+        sh:maxInclusive 1.0 ;
+        sh:message "Element quality must be between 0.1 and 1.0" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedElementTypes ;
+        sh:in ("triangle" "quad" "tetrahedron" "hexahedron" "prism") ;
+        sh:message "Element type must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Chemistry Modeling Shapes ─────────────────────────────────────────────────
+
+q42:MoleculeConfigurationShape a sh:NodeShape ;
+    rdfs:label "Molecule Configuration Shape" ;
+    rdfs:comment "Validates molecular structure configuration" ;
+    sh:targetClass q42:MoleculeConfiguration ;
+    sh:property [
+        sh:path q42:maxAtoms ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Molecule must have between 1 and 10,000 atoms" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedElementTypes ;
+        sh:message "Element types must be valid periodic table symbols" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:ReactionConfigurationShape a sh:NodeShape ;
+    rdfs:label "Reaction Configuration Shape" ;
+    rdfs:comment "Validates chemical reaction parameters" ;
+    sh:targetClass q42:ReactionConfiguration ;
+    sh:property [
+        sh:path q42:maxReactants ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100 ;
+        sh:message "Reactants must be between 1 and 100" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireMassBalance ;
+        sh:datatype xsd:boolean ;
+        sh:message "Mass balance flag must be boolean" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireChargeBalance ;
+        sh:datatype xsd:boolean ;
+        sh:message "Charge balance flag must be boolean" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:QuantumCalculationShape a sh:NodeShape ;
+    rdfs:label "Quantum Calculation Shape" ;
+    rdfs:comment "Validates quantum chemistry calculation parameters" ;
+    sh:targetClass q42:QuantumCalculation ;
+    sh:property [
+        sh:path q42:maxBasisFunctions ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Basis functions must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedMethods ;
+        sh:in ("dft" "hf" "mp2" "ccsd" "ccsdt") ;
+        sh:message "Quantum method must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:convergenceThreshold ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1e-12 ;
+        sh:maxInclusive 1e-6 ;
+        sh:message "Convergence threshold must be reasonable" ;
+        sh:severity sh:Warning ;
+    ] .
+
+# ── Medical Computing Shapes ─────────────────────────────────────────────────
+
+q42:MedicalDataConfigurationShape a sh:NodeShape ;
+    rdfs:label "Medical Data Configuration Shape" ;
+    rdfs:comment "Validates medical data parameters" ;
+    sh:targetClass q42:MedicalDataConfiguration ;
+    sh:property [
+        sh:path q42:requireHipaaCompliance ;
+        sh:datatype xsd:boolean ;
+        sh:message "HIPAA compliance flag must be boolean" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireDeIdentification ;
+        sh:datatype xsd:boolean ;
+        sh:message "De-identification flag must be boolean" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedDataTypes ;
+        sh:in ("fhir" "dicom" "hl7" "cda" "openehr") ;
+        sh:message "Data type must be a supported medical format" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxPatientRecords ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000000 ;
+        sh:message "Patient records must be between 1 and 10 million" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:ClinicalDecisionConfigurationShape a sh:NodeShape ;
+    rdfs:label "Clinical Decision Configuration Shape" ;
+    rdfs:comment "Validates clinical decision support parameters" ;
+    sh:targetClass q42:ClinicalDecisionConfiguration ;
+    sh:property [
+        sh:path q42:requireEvidenceBased ;
+        sh:datatype xsd:boolean ;
+        sh:message "Evidence-based flag must be boolean" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxConfidenceInterval ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.5 ;
+        sh:maxInclusive 0.999 ;
+        sh:message "Confidence interval must be reasonable" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:requirePhysicianReview ;
+        sh:datatype xsd:boolean ;
+        sh:message "Physician review flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:MedicalImagingConfigurationShape a sh:NodeShape ;
+    rdfs:label "Medical Imaging Configuration Shape" ;
+    rdfs:comment "Validates medical imaging parameters" ;
+    sh:targetClass q42:MedicalImagingConfiguration ;
+    sh:property [
+        sh:path q42:allowedModalities ;
+        sh:in ("mri" "ct" "xray" "ultrasound" "pet" "spect") ;
+        sh:message "Imaging modality must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireDicomCompliance ;
+        sh:datatype xsd:boolean ;
+        sh:message "DICOM compliance flag must be boolean" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxFileSizeMb ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000 ;
+        sh:message "File size must be between 1MB and 1GB" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Financial Modeling Shapes ─────────────────────────────────────────────────
+
+q42:FinancialModelConfigurationShape a sh:NodeShape ;
+    rdfs:label "Financial Model Configuration Shape" ;
+    rdfs:comment "Validates financial model parameters" ;
+    sh:targetClass q42:FinancialModelConfiguration ;
+    sh:property [
+        sh:path q42:maxTimeHorizonDays ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 36500 ;
+        sh:message "Time horizon must be between 1 day and 100 years" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedAssetClasses ;
+        sh:in ("equity" "fixed_income" "derivative" "crypto" "commodity" "forex") ;
+        sh:message "Asset class must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxLeverageRatio ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 100.0 ;
+        sh:message "Leverage ratio must be between 0 and 100" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:RiskCalculationShape a sh:NodeShape ;
+    rdfs:label "Risk Calculation Shape" ;
+    rdfs:comment "Validates risk calculation parameters" ;
+    sh:targetClass q42:RiskCalculation ;
+    sh:property [
+        sh:path q42:allowedRiskModels ;
+        sh:in ("var" "cvar" "expected_shortfall" "beta" "volatility") ;
+        sh:message "Risk model must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:confidenceLevelRange ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.9 ;
+        sh:maxInclusive 0.999 ;
+        sh:message "Confidence level must be between 0.9 and 0.999" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxLookbackDays ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 3650 ;
+        sh:message "Lookback period must be between 1 day and 10 years" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:TradingConfigurationShape a sh:NodeShape ;
+    rdfs:label "Trading Configuration Shape" ;
+    rdfs:comment "Validates trading strategy parameters" ;
+    sh:targetClass q42:TradingConfiguration ;
+    sh:property [
+        sh:path q42:maxPositionSize ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1e12 ;
+        sh:message "Position size must be reasonable" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedOrderTypes ;
+        sh:in ("market" "limit" "stop" "stop_limit" "trailing_stop") ;
+        sh:message "Order type must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxDailyTrades ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "Daily trades must be between 1 and 10,000" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Engineering Analysis Shapes ───────────────────────────────────────────────
+
+q42:EngineeringSimulationConfigurationShape a sh:NodeShape ;
+    rdfs:label "Engineering Simulation Configuration Shape" ;
+    rdfs:comment "Validates engineering simulation parameters" ;
+    sh:targetClass q42:EngineeringSimulationConfiguration ;
+    sh:property [
+        sh:path q42:maxMeshElements ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000000 ;
+        sh:message "Mesh elements must be between 1 and 100 million" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedAnalysisTypes ;
+        sh:in ("structural" "thermal" "fluid" "electromagnetic" "acoustic") ;
+        sh:message "Analysis type must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxSimulationTimeHours ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.01 ;
+        sh:maxInclusive 168.0 ;
+        sh:message "Simulation time must be between 0.01h and 168h (1 week)" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:MaterialPropertiesShape a sh:NodeShape ;
+    rdfs:label "Material Properties Shape" ;
+    rdfs:comment "Validates material property parameters" ;
+    sh:targetClass q42:MaterialProperties ;
+    sh:property [
+        sh:path q42:allowedMaterialTypes ;
+        sh:in ("metal" "polymer" "ceramic" "composite" "semiconductor") ;
+        sh:message "Material type must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireStandardCompliance ;
+        sh:datatype xsd:boolean ;
+        sh:message "Standard compliance flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:maxTemperatureKelvin ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 5000.0 ;
+        sh:message "Temperature must be between 0K and 5000K" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:minSafetyFactor ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1.0 ;
+        sh:maxInclusive 10.0 ;
+        sh:message "Safety factor must be between 1.0 and 10.0" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Statistical Computing Shapes ─────────────────────────────────────────────
+
+q42:StatisticalAnalysisConfigurationShape a sh:NodeShape ;
+    rdfs:label "Statistical Analysis Configuration Shape" ;
+    rdfs:comment "Validates statistical analysis parameters" ;
+    sh:targetClass q42:StatisticalAnalysisConfiguration ;
+    sh:property [
+        sh:path q42:maxSampleSize ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000000 ;
+        sh:message "Sample size must be between 1 and 1 billion" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedTestTypes ;
+        sh:in ("t_test" "anova" "chi_square" "regression" "correlation") ;
+        sh:message "Test type must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:significanceLevelRange ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.001 ;
+        sh:maxInclusive 0.1 ;
+        sh:message "Significance level must be between 0.001 and 0.1" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:DistributionConfigurationShape a sh:NodeShape ;
+    rdfs:label "Distribution Configuration Shape" ;
+    rdfs:comment "Validates probability distribution parameters" ;
+    sh:targetClass q42:DistributionConfiguration ;
+    sh:property [
+        sh:path q42:allowedDistributions ;
+        sh:in ("normal" "binomial" "poisson" "exponential" "gamma" "beta") ;
+        sh:message "Distribution must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxMixtureComponents ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100 ;
+        sh:message "Mixture components must be between 1 and 100" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Cryptographic Library Shapes ─────────────────────────────────────────────
+
+q42:CryptographicConfigurationShape a sh:NodeShape ;
+    rdfs:label "Cryptographic Configuration Shape" ;
+    rdfs:comment "Validates cryptographic operation parameters" ;
+    sh:targetClass q42:CryptographicConfiguration ;
+    sh:property [
+        sh:path q42:minKeyLengthBits ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 128 ;
+        sh:maxInclusive 4096 ;
+        sh:message "Key length must be between 128 and 4096 bits" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedAlgorithms ;
+        sh:in ("aes" "rsa" "ecc" "sha256" "sha512" "ed25519" "chacha20") ;
+        sh:message "Algorithm must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:requireFipsCompliance ;
+        sh:datatype xsd:boolean ;
+        sh:message "FIPS compliance flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] .
+
+q42:KeyManagementConfigurationShape a sh:NodeShape ;
+    rdfs:label "Key Management Configuration Shape" ;
+    rdfs:comment "Validates key management parameters" ;
+    sh:targetClass q42:KeyManagementConfiguration ;
+    sh:property [
+        sh:path q42:requireHsm ;
+        sh:datatype xsd:boolean ;
+        sh:message "HSM requirement flag must be boolean" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedKeyTypes ;
+        sh:in ("symmetric" "asymmetric" "hash" "hmac") ;
+        sh:message "Key type must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxKeyLifetimeDays ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 3650 ;
+        sh:message "Key lifetime must be between 1 day and 10 years" ;
+        sh:severity sh:Warning ;
+    ] .
+
+# ── QPU Bridge Shapes ─────────────────────────────────────────────────────────
+
+q42:QPUConfigurationShape a sh:NodeShape ;
+    rdfs:label "QPU Configuration Shape" ;
+    rdfs:comment "Validates quantum processing unit parameters" ;
+    sh:targetClass q42:QPUConfiguration ;
+    sh:property [
+        sh:path q42:maxQubits ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 10000 ;
+        sh:message "QPU must support between 1 and 10,000 qubits" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedQpuTypes ;
+        sh:in ("dwave" "ibm" "google" "rigetti" "ionq" "xanadu") ;
+        sh:message "QPU type must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxCircuitDepth ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Circuit depth must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:QuantumCircuitConfigurationShape a sh:NodeShape ;
+    rdfs:label "Quantum Circuit Configuration Shape" ;
+    rdfs:comment "Validates quantum circuit parameters" ;
+    sh:targetClass q42:QuantumCircuitConfiguration ;
+    sh:property [
+        sh:path q42:maxGates ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1000000 ;
+        sh:message "Gate count must be between 1 and 1 million" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedGateTypes ;
+        sh:in ("hadamard" "cnot" "phase" "measurement" "rotation" "toffoli") ;
+        sh:message "Gate type must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxExecutionTimeMs ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 300000 ;
+        sh:message "Execution time must be between 1ms and 5 minutes" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Quantum Biology Shapes ───────────────────────────────────────────────────
+
+q42:BiomolecularConfigurationShape a sh:NodeShape ;
+    rdfs:label "Biomolecular Configuration Shape" ;
+    rdfs:comment "Validates biomolecular simulation parameters" ;
+    sh:targetClass q42:BiomolecularConfiguration ;
+    sh:property [
+        sh:path q42:maxAtoms ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Biomolecule must have between 1 and 100,000 atoms" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedForceFields ;
+        sh:in ("amber" "charmm" "opls" "gromos" "martini") ;
+        sh:message "Force field must be supported" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxSimulationTimeNs ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.001 ;
+        sh:maxInclusive 1000000.0 ;
+        sh:message "Simulation time must be between 1ns and 1ms" ;
+        sh:severity sh:Violation ;
+    ] .

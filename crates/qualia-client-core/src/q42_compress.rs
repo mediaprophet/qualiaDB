@@ -1,10 +1,7 @@
-//! LZ4 distribution artifacts — `.c.q42` for browser / WebTorrent deploy.
+//! LZ4 distribution artifacts — legacy `.c.q42` alias for browser / WebTorrent deploy.
 //!
-//! This module currently preserves a transitional compatibility path where some
-//! ingest outputs are already framed as LZ4 transport blocks. That behavior
-//! should not be confused with the canonical raw `.q42` SuperBlock container.
-//! Long term, `.c.q42` should be derived from raw `.q42`, not treated as the
-//! same artifact under a different filename.
+//! Unified v2 `.q42` volumes are self-contained (embedded lex, bidx, LZ4 blocks).
+//! `finalize_c_q42` copies v2 files unchanged; legacy v1 inputs keep the old shim.
 
 use std::fs;
 use std::io::{Read, Write};
@@ -22,12 +19,7 @@ pub struct CompressStats {
     pub ratio: f64,
 }
 
-/// Finalize `{ontology_id}.q42` as `{ontology_id}.c.q42` for sharing.
-///
-/// Transitional note: this currently assumes the input is already a legacy
-/// framed LZ4 transport artifact. It is therefore a compatibility shim, not
-/// the canonical raw-`.q42` to `.c.q42` conversion path described by the new
-/// internal format draft.
+/// Finalize `{ontology_id}.c.q42` for sharing (deprecated alias of unified v2 `.q42`).
 pub fn finalize_c_q42(q42_path: &Path, c_q42_path: &Path) -> Result<CompressStats, String> {
     if !q42_path.is_file() {
         return Err(format!("Missing .q42 artifact: {}", q42_path.display()));
@@ -38,7 +30,13 @@ pub fn finalize_c_q42(q42_path: &Path, c_q42_path: &Path) -> Result<CompressStat
     fs::copy(q42_path, c_q42_path).map_err(|e| e.to_string())?;
     let input_bytes = fs::metadata(q42_path).map_err(|e| e.to_string())?.len();
     let output_bytes = fs::metadata(c_q42_path).map_err(|e| e.to_string())?.len();
-    let blocks = output_bytes.saturating_div(CHUNK_SIZE as u64).max(1);
+    let blocks = if qualia_core_db::q42_volume::is_v2_volume(q42_path).unwrap_or(false) {
+        qualia_core_db::q42_volume::Q42Volume::open(q42_path)
+            .map(|v| v.block_count())
+            .unwrap_or(1)
+    } else {
+        output_bytes.saturating_div(CHUNK_SIZE as u64).max(1)
+    };
     Ok(CompressStats {
         input_bytes,
         output_bytes,
