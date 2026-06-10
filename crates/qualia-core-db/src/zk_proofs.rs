@@ -477,7 +477,7 @@ impl ZkProofSystem {
         
         semantic_proof.verification_result = Some(result);
         
-        if !result.is_valid {
+        if !result.clone().is_valid {
             return Err(ZkError::VerificationFailed("Proof verification failed".to_string()));
         }
         

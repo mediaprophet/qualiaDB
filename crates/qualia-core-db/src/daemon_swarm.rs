@@ -206,12 +206,35 @@ pub mod swarm {
                     .map_err(|_| "CBOR-LD parsing failed")?;
                 
                 // Convert SemanticPayload to DnssecSemanticPayload
+                // Note: This is a simplified conversion - production code would need proper parsing
+                let wireguard_pubkey = match semantic_payload.wireguard_pubkey {
+                    Some(k) => {
+                        let mut key = [0u8; 32];
+                        if k.len() >= 32 {
+                            key.copy_from_slice(&k.as_bytes()[0..32]);
+                        }
+                        key
+                    }
+                    None => [0u8; 32],
+                };
+                
+                let did_q42 = match semantic_payload.did_q42 {
+                    Some(d) => crate::q_hash(d),
+                    None => 0,
+                };
+                
+                let routing_constraints = if !semantic_payload.routing_constraints.is_empty() {
+                    0b10 // Default to Bilateral
+                } else {
+                    0b01 // Default to Commons
+                };
+                
                 return Ok(DnssecSemanticPayload {
-                    wireguard_pubkey: semantic_payload.wireguard_pubkey,
-                    did_q42: semantic_payload.did_q42,
-                    routing_constraints: semantic_payload.routing_constraints,
-                    peer_capabilities: semantic_payload.peer_capabilities,
-                    semantic_context: semantic_payload.semantic_context,
+                    wireguard_pubkey,
+                    did_q42,
+                    routing_constraints,
+                    peer_capabilities: 0, // TODO: parse from HashMap
+                    semantic_context: 0, // TODO: parse from HashMap
                 });
             }
             
