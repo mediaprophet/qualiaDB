@@ -14,6 +14,8 @@ pub mod dicom;
 pub mod dicom_ingest;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod local_scheduler;
 pub mod llm_agent;
 pub mod modalities;
 pub mod n3_compiler;
@@ -24,6 +26,8 @@ pub mod profiles;
 pub mod q42_lex;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_reader;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod q42_volume;
 pub mod query_engine;
 pub mod solid_ldp;
 pub mod wasm_bridge;
@@ -55,6 +59,7 @@ pub const CAPABILITY_REGISTRY: &[&str] = &[
     "ComorbidityEval",
     "CogAI",
     "N3Compiler",
+    "Calculus",
 ];
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
@@ -435,6 +440,7 @@ pub mod orchestrator;
 pub mod owl_to_shacl;
 pub mod query_compiler;
 pub mod resolver;
+pub mod resident_model;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rpc;
 pub mod rules;
