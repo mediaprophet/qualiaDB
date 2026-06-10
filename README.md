@@ -33,17 +33,17 @@ cargo run --release -p qualia-cli -- bench --suite full
 
 Qualia-DB is four things at once:
 
-1. **A zero-allocation semantic graph engine** — binary `.q42` ledgers with 48-byte Super-Quins, LZ4 SuperBlocks, and microsecond memory-mapped queries. WordNet (523MB RDF) compresses to 74.6MB and streams with 6.5ms first-query latency via demand-paging.
+1. **A zero-allocation semantic graph engine** — binary `.q42` ledgers with 48-byte Super-Quins, LZ4 SuperBlocks, and memory-mapped queries (query layer under development - see to-do/005). WordNet (523MB RDF) compresses to 74.6MB and streams with 6.5ms first-query latency via demand-paging.
 
 2. **A Webizen VM** — an N3Logic + SHACL + full modality logic compiler that evaluates deontic norms, epistemic claims, temporal traces, paraconsistent contradictions, Rights Ontology rules, escrow adjudication, and structural constraints at query time with O(1) termination guarantees.
 
-3. **A fiduciary AI layer** — MCP Intent Frame mediation, capability profiles, and seven LLM fiduciary rules ensure every AI agent call is pre- and post-validated against the Principal's declared rights, with conduct violations written to a tamper-proof WAL.
+3. **A fiduciary AI layer** — MCP Intent Frame mediation, capability profiles, and seven LLM fiduciary rules ensure every AI agent call is pre- and post-validated against the Principal's declared rights, with conduct violations written to a WAL with conduct logging (ECC parity under development - see to-do/004).
 
 4. **A Principal-Agent ecosystem** — DID:GIT staged axiomatic evolution, ILP Threshold Shift Licensing, decentralized threat intelligence, and a native Cooperative Workspace for shared projects.
 
 ---
 
-## v0.0.8-dev Highlights (current branch)
+## v0.0.10-dev Highlights (current branch)
 
 - **In-process LLM inference**: `GgufTokenizer` parses the GGUF v2/v3 KV section (vocabulary, BOS/EOS IDs); greedy longest-match encode; SentencePiece-aware decode. `infer_local_model()` runs a real autoregressive decode loop — GPU dispatch via DirectML 1.15 (Windows) / Accelerate AMX (macOS) / wgpu/Vulkan (Linux) — with Phase 8 SPSC Webizen Sentinel mid-generation rollback. No Ollama, no Python.
 - **Flutter Chat UI wired**: `runInference(prompt, modelPath)` exported via flutter_rust_bridge. The Chat screen calls the full `TaskOrchestrator` governance pipeline (intent validation → Phase 8 GPU loop → provenance grounding) and shows a live loading indicator.
@@ -54,7 +54,14 @@ Qualia-DB is four things at once:
 - **LLM Agent Rules**: `AgentIntent` + `WebizenVerdict` + seven fiduciary rules including adversarial conduct tracking (DID-associated, cryptographically auditable).
 - **Capability Profiles**: QCHK binary format, six named profiles, profile-bound `ingest`, `profile compile/list/inspect` CLI.
 - **Resource Catalog**: Full download pipeline (YAML → reqwest → GGufSharder → WAL). `resources` CLI subcommand live. LLM, Ontology, and SPARQL endpoint registries.
-- **271/271 tests passing** (browser suite + unit suite).
+- **539 test functions in qualia-core-db alone** (browser suite + unit suite).
+
+**Build Status**: ✅ Compiles successfully (0 errors, all 82 build errors resolved)
+
+**⚠️ Known Limitations** (see [to-do/](to-do/) for implementation tasks):
+- Query layer stubs: mmap_query_subject, lazy_superblock_query need real implementation
+- Security stubs: zk_proofs, fiduciary_crypto, ML-DSA, ECC parity need real implementation  
+- Linux LLM inference: wgpu/Vulkan path uses mock pipeline (placeholder shader)
 
 Full changelog: [CHANGELOG.md](CHANGELOG.md)
 
