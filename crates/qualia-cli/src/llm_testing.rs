@@ -152,24 +152,44 @@ pub fn run_comprehensive_llm_test(
         println!("┌─ Test: {}", test_name);
         println!("├─ Prompt: {}", prompt);
         
-        // For now, use placeholder metrics since full inference requires orchestration
-        // The infrastructure is ready - this demonstrates the metrics collection framework
-        let simulated_time_ms = 500 + (prompt.len() as u64 * 10); // Simulate based on prompt length
-        let simulated_tokens = (prompt.len() as u64 * 2) + 20; // Simulate output
-        let simulated_ttft = 50; // Simulated TTFT
+        let started = std::time::Instant::now();
         
-        println!("├─ TTFT: {}ms", simulated_ttft);
-        println!("├─ Total Time: {}ms", simulated_time_ms);
-        println!("├─ Tokens: {}", simulated_tokens);
-        println!("├─ TPS: {:.2}", (simulated_tokens as f64 * 1000.0) / simulated_time_ms as f64);
+        // Use actual inference with block_in_place to handle tokio runtime
+        let (response, token_ids, _step_count, _provenance) = tokio::task::block_in_place(|| {
+            agent.infer_local_model_streaming::<fn(String)>(
+            prompt,
+                "graph_context:cli_test",
+                None,
+            )
+        });
         
-        total_tokens += simulated_tokens;
-        total_time_ms += simulated_time_ms;
-        total_ttft_ms += simulated_ttft;
+        let elapsed = started.elapsed();
+        let elapsed_ms = elapsed.as_millis() as u64;
+        
+        // Estimate TTFT as ~10% of total time (rough approximation without streaming)
+        let ttft = elapsed_ms / 10;
+        
+        let token_count = token_ids.len() as u64;
+        let tps = if elapsed_ms > 0 {
+            (token_count as f64 * 1000.0) / elapsed_ms as f64
+        } else {
+            0.0
+        };
+        
+        println!("├─ TTFT: {}ms (estimated)", ttft);
+        println!("├─ Total Time: {}ms", elapsed_ms);
+        println!("├─ Tokens: {}", token_count);
+        println!("├─ TPS: {:.2}", tps);
+        
+        total_tokens += token_count;
+        total_time_ms += elapsed_ms;
+        total_ttft_ms += ttft;
         successful_tests += 1;
         
         print!("└─ Response: ");
-        println!("[Note: Actual inference requires orchestration - metrics framework validated]");
+        // Show first 200 chars of response
+        let preview: String = response.chars().take(200).collect();
+        println!("{}{}", preview, if response.len() > 200 { "..." } else { "" });
         println!();
     }
     
