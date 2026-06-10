@@ -496,7 +496,7 @@ impl ZkProofSystem {
 
     /// Get circuit information
     pub fn get_circuit_info(&self, circuit_id: &str) -> Option<ArithmeticCircuit> {
-        self.circuit_builder.get_circuit(circuit_id).ok()
+        self.circuit_builder.get_circuit(circuit_id).ok().flatten()
     }
 
     // Internal methods
@@ -631,7 +631,7 @@ impl CircuitBuilder {
 
         let variable = CircuitVariable {
             variable_id: variable_id.clone(),
-            variable_type,
+            variable_type: variable_type.clone(),
             value: None,
             is_public: matches!(variable_type, VariableType::Public),
         };

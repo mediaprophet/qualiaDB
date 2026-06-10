@@ -139,9 +139,10 @@ pub mod swarm {
             
             // Perform DNSSEC lookup
             let cbor_ld_payload = self.perform_dnssec_lookup(domain)?;
+            let cbor_ld_payload_clone = cbor_ld_payload.clone();
             
             // Parse CBOR-LD payload directly into Super-Quin structure
-            let semantic_payload = self.parse_cbor_ld_to_quin(&cbor_ld_payload)?;
+            let semantic_payload = self.parse_cbor_ld_to_quin(&cbor_ld_payload_clone)?;
             
             // Cache the result
             resolver.cache.insert(domain.to_string(), semantic_payload.clone());

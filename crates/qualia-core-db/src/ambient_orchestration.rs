@@ -604,10 +604,11 @@ impl AmbientOrchestrationManager {
         // Execute inference
         let start_time = Instant::now();
         let result = self.execute_inference_on_device(device, model_data, input_data)?;
+        let result_len = result.len();
         let execution_time = start_time.elapsed();
 
         // Update performance metrics
-        self.performance_monitor.update_device_metrics(device_id, execution_time, result.len());
+        self.performance_monitor.update_device_metrics(device_id, execution_time, result_len);
         self.power_manager.update_power_consumption(device, execution_time);
 
         Ok(result)
@@ -770,7 +771,7 @@ impl PowerManager {
     /// Check if device can execute task
     pub fn can_execute(&self, device: &AmbientDevice) -> bool {
         let battery_level = self.battery_monitor.current_level;
-        let thermal_state = self.thermal_monitor.thermal_state;
+        let thermal_state = &self.thermal_monitor.thermal_state;
         
         battery_level > 20.0 && thermal_state != ThermalState::Critical
     }

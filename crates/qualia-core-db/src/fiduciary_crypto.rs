@@ -468,7 +468,7 @@ impl ContextManager {
     /// Generate nonce
     fn generate_nonce() -> [u8; 32] {
         let mut nonce = [0u8; 32];
-        MlDsaSigner::secure_random(&mut nonce).unwrap_or([0u8; 32]);
+        MlDsaSigner::secure_random(&mut nonce).unwrap_or(());
         nonce
     }
 }
@@ -549,12 +549,10 @@ impl FiduciaryCrypto {
         };
 
         // Create context
-        let mut context_manager = self.context_manager;
-        let context = context_manager.create_context(domain, purpose)?;
+        let context = self.context_manager.create_context(domain, purpose)?;
 
         // Check compliance
-        let mut compliance_checker = self.compliance_checker;
-        compliance_checker.check_compliance("sign", key_id)?;
+        self.compliance_checker.check_compliance("sign", key_id)?;
 
         // Sign message
         let signer_guard = signer.lock().unwrap();
@@ -576,12 +574,10 @@ impl FiduciaryCrypto {
         };
 
         // Create context
-        let mut context_manager = self.context_manager;
-        let context = context_manager.create_context(domain, purpose)?;
+        let context = self.context_manager.create_context(domain, purpose)?;
 
         // Check compliance
-        let mut compliance_checker = self.compliance_checker;
-        compliance_checker.check_compliance("verify", key_id)?;
+        self.compliance_checker.check_compliance("verify", key_id)?;
 
         // Verify signature
         let signer_guard = signer.lock().unwrap();
