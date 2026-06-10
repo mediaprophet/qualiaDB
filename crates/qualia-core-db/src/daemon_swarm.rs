@@ -599,11 +599,8 @@ pub mod swarm {
                 .ok_or("Worker cell not found")?;
             
             // Note: This would need to be mutable in practice
-            // For now, we'll create a temporary mutable reference
-            let mut temp_cell = cell.clone();
-            let result = temp_cell.bootstrap_social_wireguard(domain, endpoint_ip, endpoint_port);
-            
-            result
+            // For now, return an error
+            Err("Worker cell bootstrap not yet implemented")
         }
 
         pub fn spawn_fractal_shard(&self, cell_id: usize) {

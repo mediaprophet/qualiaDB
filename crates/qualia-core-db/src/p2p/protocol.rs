@@ -113,12 +113,22 @@ pub enum QualiaResponse {
 impl QualiaResponse {
     /// Convert semantic payload to QualiaResponse
     pub fn from_semantic_payload(payload: SemanticPayload) -> Self {
+        let did_q42 = match payload.did_q42 {
+            Some(d) => crate::q_hash(&d),
+            None => 0,
+        };
+        
+        let semantic_context = payload.semantic_context
+            .get("context")
+            .map(|s| crate::q_hash(s))
+            .unwrap_or(0);
+        
         Self::HandshakeAck {
             context: "https://qualia.org/ld/context/v1".to_string(),
             response_type: "HandshakeAck".to_string(),
             success: true,
-            did_q42: payload.did_q42,
-            semantic_context: payload.semantic_context,
+            did_q42,
+            semantic_context,
         }
     }
 }
