@@ -457,7 +457,7 @@ pub async fn start_mcp_listener() {
 
                     let reply = match res {
                         Ok(_) => {
-                            r#"{"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Success"}]}}"#
+                            r#"{"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"Success"}]}}"#.to_string()
                         }
                         Err(e) => {
                             let error_msg = match e {

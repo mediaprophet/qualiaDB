@@ -496,7 +496,7 @@ impl ZkProofSystem {
 
     /// Get circuit information
     pub fn get_circuit_info(&self, circuit_id: &str) -> Option<ArithmeticCircuit> {
-        self.circuit_builder.get_circuit(circuit_id).ok().copied()
+        self.circuit_builder.get_circuit(circuit_id).ok().and_then(|c| Some(c.clone()))
     }
 
     // Internal methods

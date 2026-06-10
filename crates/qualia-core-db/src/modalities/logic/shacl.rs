@@ -1059,6 +1059,8 @@ impl ShaclCompiler {
                 };
                 ops.push(opcode);
             }
+            // TODO: implement remaining SHACL constraint variants
+            _ => {}
         }
     }
 
