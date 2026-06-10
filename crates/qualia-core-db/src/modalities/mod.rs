@@ -1,9 +1,15 @@
+pub mod argumentation;
 pub mod asp;
+pub mod calculus;
+pub mod control_feedback;
 pub mod dialectical;
 pub mod diffusion;
 pub mod dl;
 pub mod epistemic;
+pub mod graph_theory;
+pub mod interval_reasoning;
 pub mod linear;
+pub mod logic;
 pub mod paraconsistent;
 pub mod probabilistic;
 pub mod spatio_temporal;
