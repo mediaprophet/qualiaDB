@@ -28,7 +28,10 @@ fn slot() -> &'static Arc<Mutex<Option<ResidentModelSlot>>> {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn mount_resident_gguf(model_id: u64, path: &str) -> Result<GgufLoadReport, String> {
     clear_resident_model();
-    let mut engine = QTensorEngine::try_new()?;
+    let mut engine = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current()
+            .block_on(QTensorEngine::try_new())
+    })?;
     let report = engine.load_gguf_checked(path)?;
     let mmap = engine
         .gguf_mmap

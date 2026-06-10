@@ -294,11 +294,11 @@ impl GpuIntegrator for WebGpuIntegrator {
         // we'd use a thread pool or async executor
         let result = self.execute_compute(&buffer, step_size);
         
-        // For now, we'll block on the async result
+        // For now, we'll block on the async result using the current runtime
         // In production, this should be properly integrated with the async runtime
-        let runtime = tokio::runtime::Runtime::new()
-            .map_err(|e| GpuError::WebGPUUnavailable(format!("Tokio runtime failed: {e}")))?;
-        runtime.block_on(result)
+        let handle = tokio::runtime::Handle::try_current()
+            .map_err(|e| GpuError::WebGPUUnavailable(format!("Tokio handle failed: {e}")))?;
+        handle.block_on(result)
     }
     
     fn rk4_step_gpu(

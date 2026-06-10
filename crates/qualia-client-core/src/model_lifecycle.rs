@@ -610,7 +610,7 @@ pub fn resolve_vault_model(vault_dir: &Path, model_ref: &str) -> Result<PathBuf,
 }
 
 /// Map and activate a GGUF from disk without catalog install (CLI lifecycle tests).
-pub fn activate_vault_gguf(gguf_path: &Path) -> Result<ActiveModelRecord, ModelError> {
+pub async fn activate_vault_gguf(gguf_path: &Path) -> Result<ActiveModelRecord, ModelError> {
     if !gguf_path.is_file() {
         return Err(ModelError::Io(std::io::Error::new(
             std::io::ErrorKind::NotFound,

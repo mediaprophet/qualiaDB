@@ -1277,9 +1277,8 @@ pub fn execute_vm_frame(
                     use std::path::Path;
                     
                     // Use tokio runtime to block on async GPU initialization
-                    let runtime = tokio::runtime::Runtime::new();
-                    if let Ok(runtime) = runtime {
-                        let gpu_result = runtime.block_on(async {
+                    if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                        let gpu_result = handle.block_on(async {
                             PlatformGpuIntegrator::new().await
                         });
                         

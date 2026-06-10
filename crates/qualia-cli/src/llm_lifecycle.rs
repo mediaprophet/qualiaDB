@@ -132,7 +132,10 @@ pub fn run_load(vault_path: &Path, model_ref: &str) -> Result<(), String> {
     println!("Loading {} …", gguf.display());
     qualia_client_core::system_telemetry::start_activation_telemetry("CLI load");
 
-    let record = model_lifecycle::activate_vault_gguf(&gguf).map_err(|e| {
+    let record = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current()
+            .block_on(model_lifecycle::activate_vault_gguf(&gguf))
+    }).map_err(|e| {
         qualia_client_core::system_telemetry::stop_activation_telemetry();
         e.to_string()
     })?;
