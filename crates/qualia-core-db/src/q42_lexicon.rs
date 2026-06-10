@@ -166,6 +166,8 @@ impl Q42Lexicon {
         terms.insert("qualia:guardian".to_string(), q_hash("qualia:guardian"));
         reverse.insert(q_hash("qualia:guardian"), "qualia:guardian".to_string());
 
+        let vocabulary = Self::new().vocabulary;
+
         Ok(Self {
             terms,
             reverse,

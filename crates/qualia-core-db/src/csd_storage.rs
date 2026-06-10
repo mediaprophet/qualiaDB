@@ -37,7 +37,7 @@ pub struct CsdDevice {
 pub struct CsdCapabilities {
     pub max_concurrent_operations: u32,
     pub max_data_size: u64,
-    pub supported_operations: Vec<CsdOperationRequest>,
+    pub supported_operations: Vec<CsdOperationType>,
     pub memory_size: u64,
     pub compute_units: u32,
     pub clock_speed: f64,
@@ -143,7 +143,7 @@ pub struct OperationOutput {
 }
 
 /// Data location for operations
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DataLocation {
     HostMemory,
     DeviceMemory,
@@ -400,7 +400,7 @@ impl CsdManager {
             outputs: vec![
                 OperationOutput {
                     name: "result".to_string(),
-                    size: (dimensions.0 * dimensions.2) * 4, // 4 bytes per f32
+                    size: ((dimensions.0 * dimensions.2) * 4) as u64, // 4 bytes per f32
                     location: DataLocation::HostMemory,
                 },
             ],
@@ -493,7 +493,7 @@ impl CsdManager {
             outputs: vec![
                 OperationOutput {
                     name: "result".to_string(),
-                    size: dimensions.0 * dimensions.1 * 4, // 4 bytes per f32
+                    size: (dimensions.0 * dimensions.1 * 4) as u64, // 4 bytes per f32
                     location: DataLocation::HostMemory,
                 },
             ],
@@ -748,7 +748,7 @@ impl MathComputationBuilder {
             outputs: vec![
                 OperationOutput {
                     name: format!("result_{}", operation_id),
-                    size: (dimensions.0 * dimensions.2) * 4,
+                    size: ((dimensions.0 * dimensions.2) * 4) as u64,
                     location: DataLocation::HostMemory,
                 },
             ],
@@ -810,7 +810,7 @@ impl MathComputationBuilder {
 
             for operation in &self.operations {
                 if !processed_operations.contains(&operation.function_id) {
-                    let dependencies = self.data_dependencies.get(&operation.function_id).unwrap_or(&Vec::new());
+                    let dependencies = self.data_dependencies.get(&operation.function_id).cloned().unwrap_or_default();
                     
                     // Check if all dependencies are processed
                     let can_execute = dependencies.iter().all(|dep| processed_operations.contains(dep));

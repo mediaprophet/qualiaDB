@@ -117,8 +117,10 @@ impl VaultManifestProcessor {
         enhanced_manifest.context = "https://qualia.org/ld/vault/v1".to_string();
         
         // Serialize to CBOR-LD
-        ciborium::into_writer(&enhanced_manifest, Vec::new())
-            .map_err(|_| CborLdError::InvalidValueType)
+        let mut buffer = Vec::new();
+        ciborium::into_writer(&enhanced_manifest, &mut buffer)
+            .map_err(|_| CborLdError::InvalidValueType)?;
+        Ok(buffer)
     }
     
     /// Convert CBOR-LD binary to vault manifest
@@ -140,8 +142,10 @@ impl VaultManifestProcessor {
         // Create compact version with only essential fields
         let compact_manifest = CompactVaultManifest::from_full(manifest);
         
-        ciborium::into_writer(&compact_manifest, Vec::new())
-            .map_err(|_| CborLdError::InvalidValueType)
+        let mut buffer = Vec::new();
+        ciborium::into_writer(&compact_manifest, &mut buffer)
+            .map_err(|_| CborLdError::InvalidValueType)?;
+        Ok(buffer)
     }
     
     /// Convert from compact CBOR-LD projection
