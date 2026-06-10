@@ -54,6 +54,19 @@ pub enum ClinicalRiskModel {
     Ndis = 3,
 }
 
+// ─── Calculus modality ───────────────────────────────────────────────────────
+
+/// Compute target for calculus operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CalcComputeTarget {
+    /// CPU-based Simpson's rule integration (OP_SIMPSONS_INTEGRATION)
+    CpuSimpsons = 0,
+    /// CPU-based trapezoidal rule integration (OP_TRAPEZOIDAL_INTEGRATION)
+    CpuTrapezoidal = 1,
+    /// GPU-accelerated integration via WebGPU (OP_GPU_INTEGRATION)
+    Gpu = 2,
+}
+
 // ─── ShaclConstraint (typed) ──────────────────────────────────────────────────
 
 /// Full vocabulary of constraints the compiler understands.
@@ -93,6 +106,13 @@ pub enum ShaclConstraint {
     // ── Qualia native: physics ───────────────────────────────────────────────
     ThermoMetropolisStep,
     SolveOdeDynamics,
+    /// RK4 ODE time-stepper with chaining support
+    OdeTimeStepper {
+        step_size: f64,
+        num_steps: u32,
+        system_type: String, // e.g., "exponential_decay", "harmonic_oscillator"
+        residual_threshold: f64, // For convergence validation
+    },
     DftGroundState,
     PredictReceptorBinding,
     // ── Qualia native: quantum oracle ─────────────────────────────────────────
@@ -242,6 +262,19 @@ pub enum ShaclConstraint {
 
     // ── Qualia native: geometric and spatial topology ────────────────────────
     LorentzDistanceMax,
+
+    // ── Qualia native: calculus modality ────────────────────────────────────
+    /// `calc:IntegrationOperation` — numerical integration over continuous data
+    CalcIntegrationOperation {
+        /// Target: CPU (Simpson's/Trapezoidal) or GPU (WebGPU compute shader)
+        compute_target: CalcComputeTarget,
+        /// Integration domain boundaries (start, end)
+        integration_boundary: (f64, f64),
+        /// Step size (h) for numerical integration
+        step_size: f32,
+        /// Initial Kahan compensation variable for precision
+        kahan_compensation: f32,
+    },
     TropicalDistanceMax,
     VerifyProofOfLocation,
 }
@@ -451,6 +484,19 @@ impl ShaclCompiler {
             // Physics
             ShaclConstraint::ThermoMetropolisStep => ops.push(SlgOpcode::NativeThermodynamics),
             ShaclConstraint::SolveOdeDynamics => ops.push(SlgOpcode::NativeOdeSolver),
+            ShaclConstraint::OdeTimeStepper { step_size, num_steps, system_type, residual_threshold } => {
+                // Pack parameters into opcode metadata
+                // step_size in lower 32 bits, num_steps in upper 32 bits
+                let step_bits = (step_size.to_bits() as u64) & 0xFFFFFFFF;
+                let steps_bits = (*num_steps as u64) << 32;
+                let packed_params = step_bits | steps_bits;
+                
+                ops.push(SlgOpcode::NativeRk4Step(packed_params));
+                
+                // System type and residual threshold stored in subsequent opcodes
+                ops.push(SlgOpcode::CheckHasValue(crate::q_hash(system_type)));
+                ops.push(SlgOpcode::CheckMaxInclusive(*residual_threshold));
+            }
             ShaclConstraint::DftGroundState => ops.push(SlgOpcode::NativeQuantumDft),
             ShaclConstraint::PredictReceptorBinding => ops.push(SlgOpcode::NativeReceptorBinding),
             ShaclConstraint::QuantumTask { architecture, .. } => {
@@ -609,6 +655,37 @@ impl ShaclCompiler {
             ShaclConstraint::TropicalDistanceMax => ops.push(SlgOpcode::NativeTropicalDistance),
             ShaclConstraint::VerifyProofOfLocation => {
                 ops.push(SlgOpcode::NativeVerifyProofOfLocation)
+            }
+
+            // ── Calculus modality ─────────────────────────────────────────────────────
+            ShaclConstraint::CalcIntegrationOperation {
+                compute_target,
+                integration_boundary,
+                step_size,
+                kahan_compensation,
+            } => {
+                // Pack parameters into opcode variants
+                let opcode = match compute_target {
+                    CalcComputeTarget::CpuSimpsons => SlgOpcode::NativeCalcSimpsons(
+                        integration_boundary.0.to_bits(),
+                        integration_boundary.1.to_bits(),
+                        step_size.to_bits(),
+                        kahan_compensation.to_bits(),
+                    ),
+                    CalcComputeTarget::CpuTrapezoidal => SlgOpcode::NativeCalcTrapezoidal(
+                        integration_boundary.0.to_bits(),
+                        integration_boundary.1.to_bits(),
+                        step_size.to_bits(),
+                        kahan_compensation.to_bits(),
+                    ),
+                    CalcComputeTarget::Gpu => SlgOpcode::NativeCalcGpu(
+                        integration_boundary.0.to_bits(),
+                        integration_boundary.1.to_bits(),
+                        step_size.to_bits(),
+                        kahan_compensation.to_bits(),
+                    ),
+                };
+                ops.push(opcode);
             }
         }
     }
@@ -776,6 +853,12 @@ impl ShaclCompiler {
             "qualia:lorentzDistanceMax" => ShaclConstraint::LorentzDistanceMax,
             "qualia:tropicalDistanceMax" => ShaclConstraint::TropicalDistanceMax,
             "qualia:verifyProofOfLocation" => ShaclConstraint::VerifyProofOfLocation,
+            "calc:integrationOperation" => ShaclConstraint::CalcIntegrationOperation {
+                compute_target: CalcComputeTarget::CpuSimpsons,
+                integration_boundary: (0.0, 1.0),
+                step_size: 0.001,
+                kahan_compensation: 0.0,
+            },
             other => {
                 eprintln!("[ShaclCompiler] unknown constraint: {other}");
                 ShaclConstraint::DataType(other.to_string())
@@ -888,6 +971,55 @@ mod tests {
         assert!(s
             .opcodes
             .contains(&SlgOpcode::NativeFhirObservation(expected_hash)));
+    }
+
+    #[test]
+    fn calc_integration_operation_compiles_to_correct_opcode() {
+        let shape = compiler().compile(
+            "calc:IntegrationJob",
+            "calc:computeTarget",
+            ShaclConstraint::CalcIntegrationOperation {
+                compute_target: CalcComputeTarget::CpuSimpsons,
+                integration_boundary: (0.0, 100.0),
+                step_size: 0.01,
+                kahan_compensation: 0.0,
+            },
+            ShaclSeverity::Violation,
+        );
+        
+        // Should contain NativeCalcSimpsons opcode
+        assert!(shape.opcodes.iter().any(|op| matches!(op, SlgOpcode::NativeCalcSimpsons(_, _, _, _))));
+    }
+
+    #[test]
+    fn calc_gpu_integration_compiles_to_gpu_opcode() {
+        let shape = compiler().compile(
+            "calc:IntegrationJob",
+            "calc:computeTarget",
+            ShaclConstraint::CalcIntegrationOperation {
+                compute_target: CalcComputeTarget::Gpu,
+                integration_boundary: (0.0, 1000.0),
+                step_size: 0.001,
+                kahan_compensation: 0.0,
+            },
+            ShaclSeverity::Violation,
+        );
+        
+        // Should contain NativeCalcGpu opcode
+        assert!(shape.opcodes.iter().any(|op| matches!(op, SlgOpcode::NativeCalcGpu(_, _, _, _))));
+    }
+
+    #[test]
+    fn parse_str_calc_integration_operation() {
+        let opcodes = compiler().compile_shape(
+            "calc:IntegrationJob",
+            "calc:computeTarget",
+            "calc:integrationOperation",
+            0.0,
+        );
+        
+        // Should parse and emit an opcode
+        assert!(!opcodes.is_empty());
     }
 
     #[test]

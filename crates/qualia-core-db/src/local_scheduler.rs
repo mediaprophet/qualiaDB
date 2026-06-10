@@ -910,4 +910,49 @@ mod tests {
         
         queue.shutdown();
     }
+
+    #[test]
+    fn test_iterative_ode_workload() {
+        use crate::modalities::calculus::ode_solver::{ExponentialDecay, Rk4Solver};
+        
+        let queue = ProductionQueue::new();
+        
+        // Create ODE solver
+        let decay = ExponentialDecay::new(0.5);
+        let mut solver = Rk4Solver::new(decay, 0.01);
+        
+        // Simulate iterative workload by submitting multiple jobs
+        let num_steps = 10;
+        let mut y: f64 = 1.0;
+        let mut t: f64 = 0.0;
+        
+        for step in 0..num_steps {
+            let mut quin = QualiaQuin::default();
+            quin.object = y.to_bits() as u64;
+            quin.metadata = t.to_bits();
+            
+            let job = Job::with_target(quin, 1000, ComputeTarget::Cpu);
+            queue.submit_job(job).unwrap();
+            
+            // Advance solver state
+            y = solver.step(t, y, 0.01);
+            t += 0.01;
+            
+            log::debug!("Step {}: t={}, y={}", step, t, y);
+        }
+        
+        // Wait for jobs to complete
+        std::thread::sleep(Duration::from_secs(2));
+        
+        // Collect results
+        let results = queue.collect_results();
+        assert!(results.len() > 0, "At least one job should complete");
+        
+        // Verify results were processed
+        for result in &results {
+            assert_eq!(result.status, JobStatus::Completed);
+        }
+        
+        queue.shutdown();
+    }
 }

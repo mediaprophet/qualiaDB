@@ -39,12 +39,18 @@ const RECENT_SLOT_RING: usize = 512;
 
 pub struct SlgArena {
     // We will use a safe Vec wrapper here since it is allocated strictly once and never grown.
+    #[cfg(feature = "alloc_buffers")]
     buffer: alloc::vec::Vec<QualiaQuin>,
+    #[cfg(not(feature = "alloc_buffers"))]
+    buffer: std::vec::Vec<QualiaQuin>,
     head_pointer: usize,
     recent_slots: [usize; RECENT_SLOT_RING],
     recent_slot_head: usize,
     // Native Rule Registry to hold N3 Logical Implications
+    #[cfg(feature = "alloc_buffers")]
     rule_registry: alloc::vec::Vec<Rule>,
+    #[cfg(not(feature = "alloc_buffers"))]
+    rule_registry: std::vec::Vec<Rule>,
 }
 
 #[cfg(feature = "alloc_buffers")]
@@ -52,10 +58,14 @@ extern crate alloc;
 
 impl SlgArena {
     pub fn new() -> Self {
-        #[cfg(not(feature = "alloc_buffers"))]
+        #[cfg(feature = "alloc_buffers")]
         extern crate alloc;
 
+        #[cfg(feature = "alloc_buffers")]
         let mut buffer = alloc::vec::Vec::with_capacity(MAX_SLOTS);
+        #[cfg(not(feature = "alloc_buffers"))]
+        let mut buffer = std::vec::Vec::with_capacity(MAX_SLOTS);
+        
         // Pre-fill the ring buffer with empty Quins
         for _ in 0..MAX_SLOTS {
             buffer.push(QualiaQuin {
@@ -68,12 +78,17 @@ impl SlgArena {
             });
         }
 
+        #[cfg(feature = "alloc_buffers")]
+        let rule_registry = alloc::vec::Vec::new();
+        #[cfg(not(feature = "alloc_buffers"))]
+        let rule_registry = std::vec::Vec::new();
+
         Self {
             buffer,
             head_pointer: 0,
             recent_slots: [0; RECENT_SLOT_RING],
             recent_slot_head: 0,
-            rule_registry: alloc::vec::Vec::new(),
+            rule_registry,
         }
     }
 
@@ -226,6 +241,9 @@ pub enum SlgOpcode {
     // ── Native: physics ───────────────────────────────────────────────────────
     NativeThermodynamics,
     NativeOdeSolver,
+    /// RK4 ODE time-stepper with chaining support
+    /// Parameters packed: step_size (lower 32 bits) | num_steps (upper 32 bits)
+    NativeRk4Step(u64),
     NativeQuantumDft,
     /// `qualia:predictReceptorBinding` — PINN binding affinity.
     NativeReceptorBinding,
@@ -355,6 +373,14 @@ pub enum SlgOpcode {
     NativeLorentzDistance,
     NativeTropicalDistance,
     NativeVerifyProofOfLocation,
+
+    // ── Native: calculus modality ──────────────────────────────────────────────
+    /// `calc:SimpsonsIntegration` — CPU-based Simpson's rule (start_bits, end_bits, step_size_bits, kahan_bits)
+    NativeCalcSimpsons(u64, u64, u32, u32),
+    /// `calc:TrapezoidalIntegration` — CPU-based trapezoidal rule (start_bits, end_bits, step_size_bits, kahan_bits)
+    NativeCalcTrapezoidal(u64, u64, u32, u32),
+    /// `calc:GpuIntegration` — GPU-accelerated integration via WebGPU (start_bits, end_bits, step_size_bits, kahan_bits)
+    NativeCalcGpu(u64, u64, u32, u32),
 }
 
 /// The Execution Frame tracking variable bindings without touching the heap
@@ -512,15 +538,61 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeOdeSolver => {
                 // Mock execution of continuous dynamics via RK4
+                #[cfg(feature = "alloc_buffers")]
                 let initial = crate::ode_solver::PhysicalState {
                     time: 0.0,
                     values: alloc::vec![1.0],
+                };
+                #[cfg(not(feature = "alloc_buffers"))]
+                let initial = crate::ode_solver::PhysicalState {
+                    time: 0.0,
+                    values: std::vec![1.0],
                 };
                 let final_state = crate::ode_solver::evaluate_continuous_dynamics(initial, 10, 0.1);
                 vm_log!(
                     "📈 Webizen executed NativeOdeSolver. Final state: {:?}",
                     final_state.values
                 );
+            }
+            SlgOpcode::NativeRk4Step(packed_params) => {
+                // Unpack parameters: step_size (lower 32 bits) | num_steps (upper 32 bits)
+                let step_size_bits = (packed_params & 0xFFFFFFFF) as u32;
+                let num_steps = (packed_params >> 32) as u32;
+                let step_size = f32::from_bits(step_size_bits) as f64;
+                
+                vm_log!(
+                    "🔄 Webizen executing NativeRk4Step: step_size={}, num_steps={}",
+                    step_size, num_steps
+                );
+                
+                // Use the new ode_solver module for RK4 integration
+                #[cfg(feature = "calculus")]
+                {
+                    use crate::modalities::calculus::ode_solver::{ExponentialDecay, Rk4Solver};
+                    
+                    let system = ExponentialDecay::new(0.5);
+                    let mut solver = Rk4Solver::new(system, step_size);
+                    
+                    // Execute chained RK4 steps
+                    let mut quin = frame.current_quin.clone();
+                    for _ in 0..num_steps {
+                        quin = solver.step_quin(quin, step_size);
+                    }
+                    
+                    frame.current_quin = quin;
+                    
+                    vm_log!(
+                        "✅ Webizen completed {} RK4 steps. Final state: t={}, y={}",
+                        num_steps,
+                        f64::from_bits(frame.current_quin.metadata),
+                        f64::from_bits(frame.current_quin.object)
+                    );
+                }
+                
+                #[cfg(not(feature = "calculus"))]
+                {
+                    vm_log!("⚠️  Calculus feature not enabled, RK4 step skipped");
+                }
             }
             SlgOpcode::NativeQuantumDft => {
                 // Mock execution of Kohn-Sham density functional approximation
@@ -1153,8 +1225,125 @@ pub fn execute_vm_frame(
                 // CORE 2 ISOLATION RULE:
                 // Do not block Core 1. Push 64-bit parameters to async Sieve (Core 2 / GPU).
                 // Suspend the Sentinel rule frame.
-                vm_log!("[Webizen] CORE 2 YIELD: Suspending frame and pushing geometric ops to async GPU Sieve.");
-                return None;
+            }
+            SlgOpcode::NativeCalcSimpsons(start_bits, end_bits, step_size_bits, kahan_bits) => {
+                let start = f64::from_bits(start_bits);
+                let end = f64::from_bits(end_bits);
+                let step_size = f64::from_bits(step_size_bits as u64);
+                let kahan_compensation = f32::from_bits(kahan_bits);
+                
+                // Create a mock continuous grid for demonstration (as bytes)
+                let grid_data: Vec<u8> = vec![0u8; 1000 * 8]; // 1000 f64 values
+                let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+                
+                let result = crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size);
+                vm_log!(
+                    "[Webizen] NativeCalcSimpsons: [{}, {}] h={:.4} result={:.6}",
+                    start, end, step_size, result
+                );
+            }
+            SlgOpcode::NativeCalcTrapezoidal(start_bits, end_bits, step_size_bits, kahan_bits) => {
+                let start = f64::from_bits(start_bits);
+                let end = f64::from_bits(end_bits);
+                let step_size = f64::from_bits(step_size_bits as u64);
+                let kahan_compensation = f32::from_bits(kahan_bits);
+                
+                // Create a mock continuous grid for demonstration (as bytes)
+                let grid_data: Vec<u8> = vec![0u8; 1000 * 8]; // 1000 f64 values
+                let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+                
+                let result = crate::modalities::calculus::integrate_trapezoidal_chunked(&grid, step_size);
+                vm_log!(
+                    "[Webizen] NativeCalcTrapezoidal: [{}, {}] h={:.4} result={:.6}",
+                    start, end, step_size, result
+                );
+            }
+            SlgOpcode::NativeCalcGpu(start_bits, end_bits, step_size_bits, kahan_bits) => {
+                let start = f64::from_bits(start_bits);
+                let end = f64::from_bits(end_bits);
+                let step_size = f32::from_bits(step_size_bits);
+                let _kahan_compensation = f32::from_bits(kahan_bits);
+                
+                vm_log!(
+                    "[Webizen] NativeCalcGpu: GPU integration requested for [{}, {}] h={:.4}",
+                    start, end, step_size
+                );
+                
+                // Create GPU integrator and attempt async execution
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    use crate::modalities::calculus::gpu::{GpuIntegrator, PlatformGpuIntegrator};
+                    use std::path::Path;
+                    
+                    // Use tokio runtime to block on async GPU initialization
+                    let runtime = tokio::runtime::Runtime::new();
+                    if let Ok(runtime) = runtime {
+                        let gpu_result = runtime.block_on(async {
+                            PlatformGpuIntegrator::new().await
+                        });
+                        
+                        match gpu_result {
+                            Ok(mut gpu_integrator) => {
+                                // Calculate size from boundaries (assuming f64 grid)
+                                let num_points = ((end - start) / step_size as f64) as usize;
+                                let size = (num_points * 8) as u64; // bytes
+                                
+                                // Use alignment resolver to get DMA-safe offset
+                                let (aligned_offset, _remainder) = crate::modalities::calculus::resolve_aligned_byte_offset(0);
+                                
+                                // For demo, use a temp file path - in production this would come from Quin context
+                                let temp_path = Path::new("calculus_grid.dat");
+                                
+                                match gpu_integrator.integrate_simpsons_gpu(temp_path, aligned_offset, size, step_size) {
+                                    Ok(result) => {
+                                        vm_log!(
+                                            "[Webizen] NativeCalcGpu: GPU integration complete result={:.6}",
+                                            result
+                                        );
+                                        // In production, would pack result into quin.metadata and resuspend
+                                    }
+                                    Err(e) => {
+                                        vm_log!(
+                                            "[Webizen] NativeCalcGpu: GPU integration failed, falling back to CPU: {:?}",
+                                            e
+                                        );
+                                        // Fallback to CPU Simpson's
+                                        let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
+                                        let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+                                        let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size as f64);
+                                        vm_log!("[Webizen] NativeCalcGpu: CPU fallback result={:.6}", cpu_result);
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                vm_log!(
+                                    "[Webizen] NativeCalcGpu: GPU initialization failed, falling back to CPU: {:?}",
+                                    e
+                                );
+                                // Fallback to CPU Simpson's
+                                let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
+                                let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+                                let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size as f64);
+                                vm_log!("[Webizen] NativeCalcGpu: CPU fallback result={:.6}", cpu_result);
+                            }
+                        }
+                    } else {
+                        vm_log!("[Webizen] NativeCalcGpu: Tokio runtime failed, using CPU fallback");
+                        let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
+                        let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+                        let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size as f64);
+                        vm_log!("[Webizen] NativeCalcGpu: CPU fallback result={:.6}", cpu_result);
+                    }
+                }
+                
+                #[cfg(target_arch = "wasm32")]
+                {
+                    vm_log!("[Webizen] NativeCalcGpu: GPU not available on WASM, using CPU fallback");
+                    let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
+                    let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+                    let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size as f64);
+                    vm_log!("[Webizen] NativeCalcGpu: CPU fallback result={:.6}", cpu_result);
+                }
             }
             SlgOpcode::NativeQuboCompile => {
                 vm_log!(
@@ -1204,7 +1393,10 @@ pub enum AgreementState {
 
 #[derive(Debug, Clone)]
 pub struct AgreementDomain {
+    #[cfg(feature = "alloc_buffers")]
     pub name: alloc::string::String,
+    #[cfg(not(feature = "alloc_buffers"))]
+    pub name: std::string::String,
     pub domain_id: u64,
 }
 

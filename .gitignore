@@ -38,7 +38,11 @@ docs/rustdoc/
 node_dist/
 node.zip
 
-# Local Libraries
+# Local build outputs (Flutter packaging moved to WebizenAI repo)
+/dist/
+/releases/
+
+# Local Libraries (export staging — see Local_LIbraries/EXPORTS/README.md)
 Local_Libraries/
 Local_LIbraries/
 
@@ -51,3 +55,6 @@ keystore.bin
 
 # One-off migration scripts, old release binaries, debug artefacts
 scratch/
+
+# QPU internal functionality (undocumented, private)
+qpu/
