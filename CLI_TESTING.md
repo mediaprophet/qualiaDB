@@ -116,6 +116,15 @@ TEST SUMMARY
 ```
 
 **Note:** Full inference testing requires orchestration setup with Webizen intent validation and Phase 8 bifurcated compute. The test structure is validated and ready for inference.
+
+**Metrics Collected:**
+- TTFT (Time to First Token) - Currently simulated (50ms)
+- Total Generation Time - Simulated based on prompt length
+- Tokens Generated - Simulated
+- TPS (Tokens Per Second) - Calculated from simulated data
+- Summary metrics: Average TTFT, Average TPS
+
+The metrics framework is fully implemented and ready to collect real performance data once the orchestration pipeline is connected.
 ```bash
 .\target\release\qualia-cli.exe llm report --format json
 ```
