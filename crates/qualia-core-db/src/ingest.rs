@@ -202,27 +202,27 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
         log::info!("Ontology Ingest: completed N-Triples parse for {}", in_path);
     } else if path_lower.ends_with(".n3") {
         log::info!("Ontology Ingest: parsing N3 source {}", in_path);
-        let mut parser = crate::n3_parser::N3Parser::new(buf_reader);
+        let mut parser = crate::modalities::logic::n3_parser::N3Parser::new(buf_reader);
         let mut webizen = crate::webizen::SlgArena::new();
         let mut rules_parsed = 0;
 
-        let on_n3_event = |event: crate::n3_parser::N3Event| -> Result<(), std::io::Error> {
+        let on_n3_event = |event: crate::modalities::logic::n3_parser::N3Event| -> Result<(), std::io::Error> {
             match event {
-                crate::n3_parser::N3Event::StaticTriple(triple) => {
+                crate::modalities::logic::n3_parser::N3Event::StaticTriple(triple) => {
                     let subject = match triple.subject {
-                        crate::n3_parser::Term::Uri(s)
-                        | crate::n3_parser::Term::Variable(s)
-                        | crate::n3_parser::Term::Literal(s) => s,
+                        crate::modalities::logic::n3_parser::Term::Uri(s)
+                        | crate::modalities::logic::n3_parser::Term::Variable(s)
+                        | crate::modalities::logic::n3_parser::Term::Literal(s) => s,
                     };
                     let predicate = match triple.predicate {
-                        crate::n3_parser::Term::Uri(s)
-                        | crate::n3_parser::Term::Variable(s)
-                        | crate::n3_parser::Term::Literal(s) => s,
+                        crate::modalities::logic::n3_parser::Term::Uri(s)
+                        | crate::modalities::logic::n3_parser::Term::Variable(s)
+                        | crate::modalities::logic::n3_parser::Term::Literal(s) => s,
                     };
                     let object = match triple.object {
-                        crate::n3_parser::Term::Uri(s)
-                        | crate::n3_parser::Term::Variable(s)
-                        | crate::n3_parser::Term::Literal(s) => s,
+                        crate::modalities::logic::n3_parser::Term::Uri(s)
+                        | crate::modalities::logic::n3_parser::Term::Variable(s)
+                        | crate::modalities::logic::n3_parser::Term::Literal(s) => s,
                     };
                     let raw = RawTriple {
                         subject,
@@ -233,12 +233,12 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
                         triples_read += 1;
                     }
                 }
-                crate::n3_parser::N3Event::LogicRule(rule) => {
+                crate::modalities::logic::n3_parser::N3Event::LogicRule(rule) => {
                     webizen.register_rule(rule);
                     rules_parsed += 1;
                 }
-                crate::n3_parser::N3Event::AspBlock(_)
-                | crate::n3_parser::N3Event::DiffuseBlock(_) => {
+                crate::modalities::logic::n3_parser::N3Event::AspBlock(_)
+                | crate::modalities::logic::n3_parser::N3Event::DiffuseBlock(_) => {
                     // Pass these modalities to the Webizen
                 }
             }

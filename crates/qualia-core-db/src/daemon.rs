@@ -1083,21 +1083,21 @@ pub async fn start_local_daemon_with_options(
                         match message {
                             libp2p::request_response::Message::Request { request, channel, .. } => {
                                 match request {
-                                    crate::p2p::protocol::QualiaRequest::Handshake { compressed_vcs } => {
+                                    crate::p2p::protocol::QualiaRequest::Handshake { credentials, .. } => {
                                         let mut route_authorized = false;
-                                        let vcs_count = compressed_vcs.len() / 112;
+                                        let vcs_count = credentials.len() / 112;
 
                                         for i in 0..vcs_count {
                                             let offset = i * 112;
-                                            if compressed_vcs.len() < offset + 112 { break; }
+                                            if credentials.len() < offset + 112 { break; }
 
                                             // Zero-allocation cast for the 48-byte Quin
-                                            let quin_bytes = &compressed_vcs[offset..offset+48];
+                                            let quin_bytes = &credentials[offset..offset+48];
                                             let quin: &crate::p2p::protocol::QualiaQuin = unsafe {
                                                 &*(quin_bytes.as_ptr() as *const crate::p2p::protocol::QualiaQuin)
                                             };
 
-                                            let signature_bytes: &[u8; 64] = compressed_vcs[offset+48..offset+112].try_into().unwrap();
+                                            let signature_bytes: &[u8; 64] = credentials[offset+48..offset+112].try_into().unwrap();
 
                                             // Mock ORG_MEMBER_HASH for demonstration
                                             let org_member_hash = [1u8, 2, 3, 4, 5, 6, 7, 8];
@@ -1114,18 +1114,18 @@ pub async fn start_local_daemon_with_options(
                                             println!("[Qualia Daemon] Dropping Handshake from {}: Unauthorized Group DID.", peer);
                                             let _ = swarm.behaviour_mut().request_response.send_response(
                                                 channel,
-                                                crate::p2p::protocol::QualiaResponse::HandshakeAck { success: false }
+                                                crate::p2p::protocol::QualiaResponse::HandshakeAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "HandshakeAck".to_string(), success: false, did_q42: 0, semantic_context: 0 }
                                             );
                                             let _ = swarm.disconnect_peer_id(peer);
                                         } else {
                                             println!("[Qualia Daemon] Handshake approved for {}. Upgrading trust.", peer);
                                             let _ = swarm.behaviour_mut().request_response.send_response(
                                                 channel,
-                                                crate::p2p::protocol::QualiaResponse::HandshakeAck { success: true }
+                                                crate::p2p::protocol::QualiaResponse::HandshakeAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "HandshakeAck".to_string(), success: true, did_q42: 0, semantic_context: 0 }
                                             );
                                         }
                                     },
-                                    crate::p2p::protocol::QualiaRequest::Sync { hop_count, gatekeeper_token, target_shapes } => {
+                                    crate::p2p::protocol::QualiaRequest::Sync { hop_count, gatekeeper_token, target_shapes, .. } => {
                                         let mut is_authorized = false;
 
                                         // Strict 2-Hop Limit for the Web Civics Mesh
@@ -1142,13 +1142,13 @@ pub async fn start_local_daemon_with_options(
                                         }
 
                                         let response = if is_authorized {
-                                            crate::p2p::protocol::QualiaResponse::SyncAck {
+                                            crate::p2p::protocol::QualiaResponse::SyncAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "SyncAck".to_string(), did_q42: 0, routing_constraints: 0, 
                                                 success: true,
                                                 message: "Sync Approved".to_string(),
                                                 blocks_sent: 42,
                                             }
                                         } else {
-                                            crate::p2p::protocol::QualiaResponse::SyncAck {
+                                            crate::p2p::protocol::QualiaResponse::SyncAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "SyncAck".to_string(), did_q42: 0, routing_constraints: 0, 
                                                 success: false,
                                                 message: "RequiresGatekeeperChallenge".to_string(),
                                                 blocks_sent: 0,
@@ -1160,7 +1160,7 @@ pub async fn start_local_daemon_with_options(
                             },
                             libp2p::request_response::Message::Response { response, .. } => {
                                 match response {
-                                    crate::p2p::protocol::QualiaResponse::HandshakeAck { success } => {
+                                    crate::p2p::protocol::QualiaResponse::HandshakeAck { success, .. } => {
                                         println!("[Qualia Daemon] Received Handshake Ack from {}: success={}", peer, success);
                                     },
                                     crate::p2p::protocol::QualiaResponse::SyncAck { success, blocks_sent, .. } => {
@@ -1222,7 +1222,7 @@ pub async fn start_local_daemon_with_options(
             if task_detected {
                 println!("[Semantic Task Engine] Detected MonteCarloSimulation Task.");
                 let (mean, var) =
-                    crate::economics::run_monte_carlo_var(100.0, 0.05, 0.20, 1.0, 252, 100_000);
+                    crate::domains::financial::economics::run_monte_carlo_var(100.0, 0.05, 0.20, 1.0, 252, 100_000);
                 println!(
                     "[Semantic Task Engine] Simulation Complete. Mean: {:.2}, 95% VaR: {:.2}",
                     mean, var
@@ -1242,14 +1242,14 @@ pub async fn start_local_daemon_with_options(
         loop {
             interval.tick().await;
 
-            let context = crate::economics::get_current_system_context();
+            let context = crate::domains::financial::economics::get_current_system_context();
 
             // Iterate over the DashMap without blocking the main router
             for mut entry in payment_meter.iter_mut() {
                 let peer_id = entry.key().clone();
                 let ledger = entry.value_mut();
 
-                let liability = crate::economics::calculate_bandwidth_liability(
+                let liability = crate::domains::financial::economics::calculate_bandwidth_liability(
                     ledger.unbilled_bytes,
                     &context,
                 );

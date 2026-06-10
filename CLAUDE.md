@@ -127,5 +127,5 @@ These break things if violated:
 - `ARCHITECTURE.md §5` previously said "llama.cpp" — **corrected** 2026-06-06. The backend is `wgpu`, not llama.cpp.
 - `logic.rs::Always/Eventually/Next` opcodes are **not** real LTL operators — they compare a float threshold on a single Quin. Use `temporal_ltl.rs::evaluate_ltl_trace` instead. See `AGENTS.md §4-B`.
 - `logic.rs::extract_float` uses `0b001 << 60` as an f32 tag, conflicting with `resolver.rs` which uses the same bits for `xsd:integer`. See `AGENTS.md §4-D`. Do not "fix" this unilaterally.
-- `infer_local_model()` in `llm_agent.rs` is **no longer mocked** as of 2026-06-06. It runs a real Phase 8 autoregressive loop through the GPU layer. The remaining limitation is pseudo-embeddings (sin-based from token ID) — real embedding lookup requires the GGUF tensor-info section parser (not yet implemented). See `HANDOVER.md` next-task #1.
+- `infer_local_model()` in `llm_agent.rs` runs a real Phase 8 autoregressive loop through the GPU layer with real `token_embd.weight` lookup via `GgufTensorIndex::dequantize_token_embedding_into` (host targets). WASM still uses the mock ring-buffer path.
 - The `qualia_api.rs` comment on `check_ollama_status()` is a legacy stub. Qualia does not use Ollama. The function always returns `false`.

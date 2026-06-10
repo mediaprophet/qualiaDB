@@ -6,7 +6,7 @@ use ed25519_dalek::{Signature, SigningKey};
 
 use crate::agency::{scrub_quin_volatile, sign_graph_mutation, stamp_fiduciary_metadata};
 use crate::crdt::SuspendedTransactionQueue;
-use crate::logic::WebizenOpcode;
+use crate::modalities::logic::core::WebizenOpcode;
 use crate::PermissiveRoutingLane;
 use crate::QualiaQuin;
 

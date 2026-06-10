@@ -63,7 +63,7 @@ impl QueryCompiler {
 
     /// Compiles a basic SPARQL `SELECT` query into an array of WebizenVM bytecode instructions.
     /// Example input: `SELECT ?s WHERE { ?s knows Bob }`
-    pub fn compile_to_bytecode(query: &str) -> Vec<crate::logic::WebizenOpcode> {
+    pub fn compile_to_bytecode(query: &str) -> Vec<crate::modalities::logic::core::WebizenOpcode> {
         let mut ops = Vec::new();
         let query_clean = query.replace('\n', " ").replace('\t', " ");
 
@@ -81,37 +81,37 @@ impl QueryCompiler {
 
                         // Parse Subject
                         if s.starts_with('?') {
-                            ops.push(crate::logic::WebizenOpcode::BindRegister {
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::BindRegister {
                                 vector_id: 0,
                                 register_index: 0,
                             });
                         } else {
-                            ops.push(crate::logic::WebizenOpcode::MatchSubject(crate::q_hash(s)));
-                            ops.push(crate::logic::WebizenOpcode::HaltIfFalse);
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::MatchSubject(crate::q_hash(s)));
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::HaltIfFalse);
                         }
 
                         // Parse Predicate
                         if p.starts_with('?') {
-                            ops.push(crate::logic::WebizenOpcode::BindRegister {
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::BindRegister {
                                 vector_id: 1,
                                 register_index: 1,
                             });
                         } else {
-                            ops.push(crate::logic::WebizenOpcode::MatchPredicate(crate::q_hash(
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::MatchPredicate(crate::q_hash(
                                 p,
                             )));
-                            ops.push(crate::logic::WebizenOpcode::HaltIfFalse);
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::HaltIfFalse);
                         }
 
                         // Parse Object
                         if o.starts_with('?') {
-                            ops.push(crate::logic::WebizenOpcode::BindRegister {
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::BindRegister {
                                 vector_id: 2,
                                 register_index: 2,
                             });
                         } else {
-                            ops.push(crate::logic::WebizenOpcode::MatchObject(crate::q_hash(o)));
-                            ops.push(crate::logic::WebizenOpcode::HaltIfFalse);
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::MatchObject(crate::q_hash(o)));
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::HaltIfFalse);
                         }
                     }
                 }
@@ -161,7 +161,7 @@ mod tests {
         let ops = QueryCompiler::compile_to_bytecode(query);
 
         // Expected: Bind ?s (0), Match Predicate (knows), Halt, Match Object (Bob), Halt
-        use crate::logic::WebizenOpcode;
+        use crate::modalities::logic::core::WebizenOpcode;
         assert_eq!(ops.len(), 5);
 
         match ops[0] {

@@ -186,6 +186,11 @@ the full vocabulary (`tokenizer.ggml.tokens`), `bos_token_id`, and `eos_token_id
 - `decode(ids)` — SentencePiece `▁` → space; `<0x##>` → raw byte.
 - `Default` — 256-entry byte-level tokeniser (used when no GGUF file is loaded).
 
+`GgufTensorIndex` (same file): parses tensor-info section; `dequantize_token_embedding_into`
+reads real `token_embd.weight` rows into caller buffers.
+
+`resident_model.rs`: process-wide resident GGUF `Arc<Mmap>`; mounted on activation, cleared on eviction; reused by inference via `QTensorEngine::adopt_resident_mmap`.
+
 ### `llm_agent.rs::infer_local_model` — Real Autoregressive Loop (no longer mocked)
 
 **As of 2026-06-06 this function runs a real Phase 8 decode loop.** It is no longer
@@ -193,11 +198,11 @@ the hardcoded-string mock. Key points:
 
 - `QTensorEngine` is initialised **inside** the spawned LLM thread to avoid `Send` issues
   with DirectML COM pointers and wgpu device handles.
-- Per step: deterministic pseudo-embedding (sin-based from token ID) →
+- Per step: `GgufTensorIndex::dequantize_token_embedding_into` (real `token_embd.weight`) →
   `dispatch_fused_transformer_block` → argmax → `LogitSummary` via SPSC ring → Sentinel
   `DenyRollback` check → sample next token.
-- **Pseudo-embedding is the current limitation.** Reading `token_embd.weight` from the
-  GGUF tensor-info section is the next milestone (requires a `GgufTensorIndex` parser).
+- **`GgufTensorIndex`** (in `gguf_sharder.rs`) parses the GGUF tensor-info section and
+  dequantizes per-token embeddings into a caller-supplied buffer (zero-heap hot path).
 - WASM path still uses the original mock ring-buffer (GPU not accessible from WASM).
 
 ---
@@ -621,11 +626,15 @@ At the end of your session:
 - Inference backend preference (`local` / `hybrid` / `remote`) in Settings + chat agent defaults
 - Plan doc: `docs/manuals/0.0.10-flutter-plan.md`
 - Version bump to `0.0.10`; branches `0.0.10` and `0.0.10-dev`
+- Resident GGUF mmap (`resident_model.rs`) + eviction clears mmap; inference reuses via `adopt_resident_mmap`
+- Structured system telemetry bus (`system_telemetry.rs`) + FRB stream + `SystemTelemetryHub` / live HUD during activation
+- Doc correction: real embedding lookup via `GgufTensorIndex` (not pseudo-embeddings)
 
 **Verification:**
-- `cargo check -p qualia-client-core -p qualia_flutter_rust`
+- `cargo check -p qualia-core-db -p qualia-client-core -p qualia_flutter_rust`
 - `flutter_rust_bridge_codegen generate`
 - `flutter analyze lib/`
+- `.\scripts\package-flutter-windows.ps1` → `dist\qualia-flutter-windows-x64\qualia_flutter.exe`
 
 ---
 

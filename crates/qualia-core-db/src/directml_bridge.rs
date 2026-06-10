@@ -100,6 +100,57 @@ pub unsafe extern "C" fn destroy_d3d12_device_ffi(device_ptr: *mut core::ffi::c_
     drop(device);
 }
 
+// ─── IOCP FFI Firewall for Host Module ─────────────────────────────────────────────
+
+/// Opaque handle for IOCP grid manager (type-erased to avoid Windows type imports in host.rs)
+#[repr(C)]
+pub struct IocpHandle {
+    _private: [u8; 0],
+}
+
+/// FFI-safe wrapper for creating an IOCP grid manager.
+///
+/// NOTE: This is a stub implementation. The full IOCP implementation requires
+/// resolving DirectX API version conflicts between different windows crate versions.
+/// For now, this returns an error to prevent use until the conflicts are resolved.
+#[no_mangle]
+pub unsafe extern "C" fn iocp_create_ffi(
+    _file_path: *const u8,
+    _file_path_len: usize,
+) -> Result<*mut IocpHandle, DmlError> {
+    // Stub implementation - returns error until DirectX version conflicts are resolved
+    Err(DmlError::DirectStorageFailed(
+        "IOCP implementation stubbed due to DirectX API version conflicts. Use MmapGridManager instead.".to_string()
+    ))
+}
+
+/// FFI-safe wrapper for destroying an IOCP grid manager.
+#[no_mangle]
+pub unsafe extern "C" fn iocp_destroy_ffi(_handle: *mut IocpHandle) {
+    // Stub - no-op
+}
+
+/// FFI-safe wrapper for async read chunk.
+#[no_mangle]
+pub unsafe extern "C" fn iocp_async_read_ffi(
+    _handle: *mut IocpHandle,
+    _offset: u64,
+) -> Result<(), DmlError> {
+    // Stub - returns error
+    Err(DmlError::DirectStorageFailed("IOCP stubbed".to_string()))
+}
+
+/// FFI-safe wrapper for polling completion.
+#[no_mangle]
+pub unsafe extern "C" fn iocp_poll_completion_ffi(
+    _handle: *mut IocpHandle,
+    _out_buffer: *mut *const u8,
+    _out_size: *mut usize,
+) -> bool {
+    // Stub - always returns false (not ready)
+    false
+}
+
 #[derive(Debug)]
 pub enum DmlError {
     DeviceCreationFailed(String),

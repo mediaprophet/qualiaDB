@@ -183,21 +183,21 @@ pub mod gpu_sieve {
 pub unsafe extern "C" fn nets_map_lorentz(
     quins_ptr: *const crate::QualiaQuin,
     quins_len: usize,
-    out_lorentz_ptr: *mut crate::geometric::LorentzVector,
+    out_lorentz_ptr: *mut crate::domains::mathematical::geometric::LorentzVector,
 ) {
     let quins = std::slice::from_raw_parts(quins_ptr, quins_len);
     let out_lorentz = std::slice::from_raw_parts_mut(out_lorentz_ptr, quins_len);
 
     for i in 0..quins_len {
-        out_lorentz[i] = crate::geometric::LorentzVector::from_quin(&quins[i]);
+        out_lorentz[i] = crate::domains::mathematical::geometric::LorentzVector::from_quin(&quins[i]);
     }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn nets_tropical_voronoi_route(
-    queries_ptr: *const crate::geometric::LorentzVector,
+    queries_ptr: *const crate::domains::mathematical::geometric::LorentzVector,
     queries_len: usize,
-    centroids_ptr: *const crate::geometric::MinPlusVoronoiCell,
+    centroids_ptr: *const crate::domains::mathematical::geometric::MinPlusVoronoiCell,
     centroids_len: usize,
     out_cell_ids_ptr: *mut u32,
 ) {

@@ -8,6 +8,7 @@ use crate::gguf_sharder::GgufTensorInfo;
 use crate::QualiaQuin;
 use log;
 use memmap2::MmapOptions;
+use std::sync::Arc;
 
 pub use crate::ggml_quants::{fetch_token_embedding, ExecutionError};
 
@@ -325,7 +326,7 @@ pub struct QTensorEngine {
     #[cfg(target_os = "windows")]
     pub dml: Option<crate::directml_bridge::DmlDevice>,
     /// Memory-mapped GGUF file (set after `load_gguf`).
-    pub gguf_mmap: Option<memmap2::Mmap>,
+    pub gguf_mmap: Option<Arc<memmap2::Mmap>>,
     /// Byte offset into the mmap where tensor data begins.
     pub tensor_data_offset: u64,
     pub hyperparams: crate::gguf_sharder::GgufHyperparams,
@@ -651,7 +652,7 @@ impl QTensorEngine {
             .min(MAX_WGPU_WEIGHT_STAGING);
         self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         self.ensure_kv_cache(&index.hyperparams);
-        self.gguf_mmap = Some(mmap);
+        self.gguf_mmap = Some(Arc::new(mmap));
 
         let kv_cache_bytes = self.kv_cache_bytes();
         log::info!(
@@ -691,6 +692,54 @@ impl QTensorEngine {
         if let Err(e) = self.load_gguf_checked(path) {
             eprintln!("[gguf_bridge] Could not load {path}: {e}");
         }
+    }
+
+    /// Attach an already-mapped resident GGUF (shared with orchestrator slot).
+    pub fn adopt_resident_mmap(&mut self, mmap: Arc<memmap2::Mmap>) -> Result<GgufLoadReport, String> {
+        let file_size = mmap.len();
+        if file_size == 0 {
+            return Err("Empty GGUF mmap".to_string());
+        }
+        log::info!(
+            "LLM_LOAD|resident-mmap|0.68|Reusing resident GGUF mapping ({:.2} GiB)",
+            bytes_to_gib(file_size as u64)
+        );
+        let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(mmap.as_ref());
+        if index.tensor_data_start == 0
+            && index.max_tensor_bytes == 0
+            && index.hyperparams.n_layer == 0
+        {
+            return Err("GGUF header parse failed or yielded no tensor metadata".to_string());
+        }
+        self.tensor_data_offset = index.tensor_data_start;
+        self.hyperparams = index.hyperparams;
+        let staging = index
+            .max_layer_tensor_bytes
+            .max(4096)
+            .min(MAX_WGPU_WEIGHT_STAGING);
+        self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        self.ensure_kv_cache(&index.hyperparams);
+        self.gguf_mmap = Some(mmap);
+        let kv_cache_bytes = self.kv_cache_bytes();
+        Ok(GgufLoadReport {
+            mapped_bytes: file_size as u64,
+            tensor_data_offset: self.tensor_data_offset,
+            n_layer: self.hyperparams.n_layer,
+            n_head: self.hyperparams.n_head,
+            n_kv_head: self.hyperparams.effective_n_kv_head(),
+            max_tensor_bytes: index.max_tensor_bytes,
+            kv_cache_bytes,
+            directml_enabled: {
+                #[cfg(target_os = "windows")]
+                {
+                    self.dml.is_some()
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    false
+                }
+            },
+        })
     }
 
     /// Upload raw quantized embedding bytes to the GPU and matmul without CPU dequant.

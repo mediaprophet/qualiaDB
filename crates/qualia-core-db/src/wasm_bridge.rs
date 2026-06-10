@@ -482,15 +482,15 @@ pub struct ShaclValidateParams {
 #[wasm_bindgen]
 pub fn validate_shacl_constraint_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: ShaclValidateParams = serde_wasm_bindgen::from_value(val)?;
-    let compiler = crate::shacl_compiler::ShaclCompiler::new();
+    let compiler = crate::modalities::logic::shacl::ShaclCompiler::new();
     let shape = compiler.compile(
         "wasm:target",
         "wasm:property",
-        crate::shacl_compiler::ShaclCompiler::parse_constraint_pub(
+        crate::modalities::logic::shacl::ShaclCompiler::parse_constraint_pub(
             &p.constraint_type,
             p.value as f32,
         ),
-        crate::shacl_compiler::ShaclSeverity::Violation,
+        crate::modalities::logic::shacl::ShaclSeverity::Violation,
     );
     let passes = shape.evaluate_numeric(p.target_value);
     #[derive(Serialize)]
@@ -668,25 +668,25 @@ pub fn parse_n3logic_wasm(payload: &str) -> JsValue {
     }
 
     let cursor = std::io::Cursor::new(payload.as_bytes());
-    let mut parser = crate::n3_parser::N3Parser::new(cursor);
+    let mut parser = crate::modalities::logic::n3_parser::N3Parser::new(cursor);
     let mut triples = Vec::new();
 
-    let on_n3_event = |event: crate::n3_parser::N3Event| -> Result<(), std::io::Error> {
-        if let crate::n3_parser::N3Event::StaticTriple(triple) = event {
+    let on_n3_event = |event: crate::modalities::logic::n3_parser::N3Event| -> Result<(), std::io::Error> {
+        if let crate::modalities::logic::n3_parser::N3Event::StaticTriple(triple) = event {
             let s = match triple.subject {
-                crate::n3_parser::Term::Uri(s)
-                | crate::n3_parser::Term::Variable(s)
-                | crate::n3_parser::Term::Literal(s) => s,
+                crate::modalities::logic::n3_parser::Term::Uri(s)
+                | crate::modalities::logic::n3_parser::Term::Variable(s)
+                | crate::modalities::logic::n3_parser::Term::Literal(s) => s,
             };
             let p = match triple.predicate {
-                crate::n3_parser::Term::Uri(s)
-                | crate::n3_parser::Term::Variable(s)
-                | crate::n3_parser::Term::Literal(s) => s,
+                crate::modalities::logic::n3_parser::Term::Uri(s)
+                | crate::modalities::logic::n3_parser::Term::Variable(s)
+                | crate::modalities::logic::n3_parser::Term::Literal(s) => s,
             };
             let o = match triple.object {
-                crate::n3_parser::Term::Uri(s)
-                | crate::n3_parser::Term::Variable(s)
-                | crate::n3_parser::Term::Literal(s) => s,
+                crate::modalities::logic::n3_parser::Term::Uri(s)
+                | crate::modalities::logic::n3_parser::Term::Variable(s)
+                | crate::modalities::logic::n3_parser::Term::Literal(s) => s,
             };
             triples.push(QOut {
                 subject: s,

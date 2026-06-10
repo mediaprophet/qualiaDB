@@ -132,7 +132,7 @@ fn trapezoidal_integration(@builtin(global_invocation_id) global_id: vec3<u32>, 
 @compute @workgroup_size(64, 1, 1)
 fn rk4_step(@builtin(global_invocation_id) global_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>, @builtin(workgroup_id) workgroup_id: vec3<u32>) {
     // TODO: Implement Runge-Kutta 4th order ODE step
-    // This will handle coupled differential equations for Werbos's
+    // This will handle coupled differential equations for
     // Boltzmann equation integration
     // Will use similar tree-reduction pattern for precision
 }

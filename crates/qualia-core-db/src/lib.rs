@@ -18,19 +18,59 @@ pub mod ingest;
 pub mod local_scheduler;
 pub mod llm_agent;
 pub mod modalities;
-pub mod n3_compiler;
-pub mod n3_parser;
 pub mod neuro_symbolic_sieve;
 pub mod profiles;
+pub mod geometric_algebra;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_lex;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod q42_lexicon;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_reader;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_volume;
 pub mod query_engine;
 pub mod solid_ldp;
+pub mod vault_manifest;
 pub mod wasm_bridge;
+#[cfg(not(target_arch = "wasm32"))]
+// pub mod zns_storage;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod fiduciary_crypto;
+#[cfg(not(target_arch = "wasm32"))]
+// pub mod ebpf_firewall;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod csd_storage;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod zk_proofs;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ambient_orchestration;
+#[cfg(not(target_arch = "wasm32"))]
+// pub mod acoustic_ble_mesh; // Temporarily disabled due to type errors
+#[cfg(not(target_arch = "wasm32"))]
+pub mod clinical_engine; // Temporarily disabled
+#[cfg(not(target_arch = "wasm32"))]
+pub mod specialized_libs;
+
+#[cfg(not(target_arch = "wasm32"))]
+// pub use specialized_libs::linear_algebra;
+#[cfg(not(target_arch = "wasm32"))]
+// pub use specialized_libs::statistical_computing;
+#[cfg(not(target_arch = "wasm32"))]
+// pub use specialized_libs::cryptographic_library;
+#[cfg(not(target_arch = "wasm32"))]
+// pub use specialized_libs::physics_simulation;
+#[cfg(not(target_arch = "wasm32"))]
+// pub use specialized_libs::machine_learning;
+#[cfg(not(target_arch = "wasm32"))]
+// pub use specialized_libs::financial_modeling;
+#[cfg(not(target_arch = "wasm32"))]
+// pub use specialized_libs::chemistry_modeling;
+#[cfg(not(target_arch = "wasm32"))]
+// // pub use specialized_libs::medical_computing; // Temporarily disabled
+#[cfg(not(target_arch = "wasm32"))]
+// pub use specialized_libs::engineering_analysis;
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod webtorrent_routes;
 #[cfg(not(target_arch = "wasm32"))]
@@ -60,6 +100,8 @@ pub const CAPABILITY_REGISTRY: &[&str] = &[
     "CogAI",
     "N3Compiler",
     "Calculus",
+    "GeometricAlgebra",
+    "SIMDKernel",
 ];
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
@@ -424,41 +466,33 @@ pub mod daemon_graph;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon_query;
 pub mod fuzz_testing;
-pub mod geometric;
 pub mod git_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
 pub mod indexing;
 pub mod ingestion;
 pub mod lexicon;
-pub mod logic;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod npu_ffi;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod nym_adapter;
 pub mod orchestrator;
-pub mod owl_to_shacl;
 pub mod query_compiler;
 pub mod resolver;
 pub mod resident_model;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rpc;
-pub mod rules;
-pub mod shacl_compiler;
-pub mod spatial;
 pub mod spatial_sieve;
 pub mod storage;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sync;
-pub mod tax_schema;
 pub mod tee_ffi;
 pub mod telemetry;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod wal;
 pub mod webizen;
 
-pub mod bioinformatics;
-pub mod clinical_engine;
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon_swarm;
 #[cfg(target_os = "windows")]
@@ -476,12 +510,9 @@ pub mod mcp_server;
 pub mod metal_bridge;
 pub mod mini_parser;
 pub mod ode_solver;
-pub mod organic_chemistry;
 pub mod qpu_ingress;
 pub mod quantum_dft;
-pub mod qubo_compiler;
 pub mod resource_catalog;
-pub mod thermodynamics;
 pub mod webizen_bytecode;
 
 #[cfg(target_os = "android")]
@@ -553,7 +584,7 @@ mod tests {
 
     #[test]
     fn qualia_logic_val() {
-        use crate::logic::{WebizenCompiler, WebizenOpcode, WebizenVM};
+        use crate::modalities::logic::core::{WebizenCompiler, WebizenOpcode, WebizenVM};
         let q = QualiaQuin {
             subject: 0,
             predicate: 100,
@@ -578,7 +609,7 @@ mod tests {
 
     #[test]
     fn qualia_webizen_guardianship() {
-        use crate::logic::{WebizenOpcode, WebizenVM};
+        use crate::modalities::logic::core::{WebizenOpcode, WebizenVM};
 
         // 0b11 << 61 signals SpatiotemporalAmbiguous for bounding logic
         let q = QualiaQuin {
@@ -792,5 +823,4 @@ pub mod webizen_sync;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod web_civics;
 
-pub mod deontic_logic;
-pub mod economics;
+pub mod domains;

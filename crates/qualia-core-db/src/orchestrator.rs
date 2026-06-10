@@ -7,9 +7,9 @@
 //!   RawInput → [Orchestrator] → validate_intent → [LlmAgent.infer] → validate_output → .q42 commit
 
 use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, WebizenVerdict};
-use crate::n3_compiler::{compile_rules_with_shacl_gate, default_observation_shape, N3OutputMode};
-use crate::n3_parser::{N3Event, N3Parser};
-use crate::shacl_compiler::{CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity};
+use crate::modalities::logic::n3_compiler::{compile_rules_with_shacl_gate, default_observation_shape, N3OutputMode};
+use crate::modalities::logic::n3_parser::{N3Event, N3Parser};
+use crate::modalities::logic::shacl::{CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::wal::{commit_semantic_mutation, WalHandoffResult, WriteAheadLog};
 use crate::webizen::{SlgArena, SlgOpcode, VmFrame};
@@ -99,7 +99,7 @@ impl TaskOrchestrator {
             "health", "medical", "clinical", "fhir", "loinc", "snomed", "anatomy",
         ]) {
             shapes.push(default_observation_shape());
-            shapes.push(compiler.compile(
+            shapes.push(compiler.compile_class(
                 "fhir:Observation",
                 "health:heartRate",
                 ShaclConstraint::MinInclusive(20.0),
@@ -117,13 +117,13 @@ impl TaskOrchestrator {
             "agreement",
             "consent",
         ]) {
-            shapes.push(compiler.compile(
+            shapes.push(compiler.compile_class(
                 "q42:Agreement",
                 "q42:hasGuardian",
                 ShaclConstraint::MinCount(1),
                 ShaclSeverity::Violation,
             ));
-            shapes.push(compiler.compile(
+            shapes.push(compiler.compile_class(
                 "q42:Agreement",
                 "q42:requiresConsensus",
                 ShaclConstraint::MinCount(1),
@@ -132,7 +132,7 @@ impl TaskOrchestrator {
         }
 
         if has_namespace(&["commons", "governance", "community"]) {
-            shapes.push(compiler.compile(
+            shapes.push(compiler.compile_class(
                 "q42:CommonsAgreement",
                 "q42:hasDomainScope",
                 ShaclConstraint::MinCount(1),
@@ -257,6 +257,7 @@ impl TaskOrchestrator {
             if let Ok(mut st) = state_clone.lock() {
                 *st = ModelLifecycle::Discovered;
             }
+            crate::resident_model::clear_resident_model();
         });
     }
 
@@ -291,7 +292,7 @@ impl TaskOrchestrator {
 
         let mut arena = SlgArena::new();
         let mut frame = VmFrame::default();
-        let _ = crate::n3_compiler::execute_compiled_program(
+        let _ = crate::modalities::logic::n3_compiler::execute_compiled_program(
             &mut arena,
             &opcodes[..program.opcode_count],
             &mut frame,
@@ -382,7 +383,7 @@ impl TaskOrchestrator {
         }
 
         // 1b. Quantum egress gate — block classified prompts from remote QPU
-        if let Some(reason) = crate::qubo_compiler::quantum_prompt_gate(prompt) {
+        if let Some(reason) = crate::modalities::logic::qubo::quantum_prompt_gate(prompt) {
             return OrchestrationResult::Blocked {
                 rule_violated: crate::q_hash("q42:QuantumTaskShape"),
                 reason,
@@ -499,7 +500,7 @@ impl TaskOrchestrator {
 pub mod tests {
     use super::*;
     use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, SANCTUARY_SCOPE_WEBIZEN};
-    use crate::n3_compiler::N3OutputMode;
+    use crate::modalities::logic::n3_compiler::N3OutputMode;
 
     #[test]
     pub fn qualia_validate_ring_buffer() {}
@@ -614,8 +615,8 @@ pub mod tests {
         assert_eq!(orch.resident_model_id(), Some(456));
 
         // Ensure Webizen VM logic handles yielding
-        let mut vm = crate::logic::WebizenVM::with_scrubbing_lock(orch.scrubbing_lock.clone());
-        let bytecode = vec![crate::logic::WebizenOpcode::LoadModel(999)];
+        let mut vm = crate::modalities::logic::core::WebizenVM::with_scrubbing_lock(orch.scrubbing_lock.clone());
+        let bytecode = vec![crate::modalities::logic::core::WebizenOpcode::LoadModel(999)];
         vm.load_bytecode(&bytecode);
 
         let quin = crate::QualiaQuin {
@@ -633,7 +634,7 @@ pub mod tests {
         assert!(exec_result.is_none());
         assert_eq!(
             vm.yielded_op,
-            Some(crate::logic::WebizenOpcode::LoadModel(999))
+            Some(crate::modalities::logic::core::WebizenOpcode::LoadModel(999))
         );
 
         // Wait for scrub to clear

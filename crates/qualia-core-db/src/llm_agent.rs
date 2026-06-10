@@ -94,7 +94,7 @@ fn default_local_modality() -> String {
 }
 
 // ─── AgentIntent ─────────────────────────────────────────────────────────────
-pub use crate::n3_compiler::{
+pub use crate::modalities::logic::n3_compiler::{
     AgentIntentFrame, N3OutputMode, MAX_CONTEXT_NAMESPACE_SLOTS, MAX_INTENT_SCOPE_SLOTS,
 };
 
@@ -328,7 +328,19 @@ fn build_sieve(
 ) -> Option<crate::neuro_symbolic_sieve::NeuroSymbolicSieve> {
     let spec = spec?;
     if let Some(path) = lex_path {
-        if let Ok(lex_file) = crate::q42_lex::Q42LexFile::open(std::path::Path::new(path)) {
+        let p = std::path::Path::new(path);
+        if crate::q42_volume::is_v2_volume(p).unwrap_or(false) {
+            if let Ok(vol) = crate::q42_volume::Q42Volume::open(p) {
+                if let Ok(view) = vol.lex_view() {
+                    let s = crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_lex_and_tokenizer(
+                        &view, tok, spec,
+                    );
+                    if s.masks_ready() {
+                        return Some(s);
+                    }
+                }
+            }
+        } else if let Ok(lex_file) = crate::q42_lex::Q42LexFile::open(p) {
             let s = crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_lex_and_tokenizer(
                 &lex_file.view(),
                 tok,
@@ -508,7 +520,15 @@ impl LocalLlmAgent {
                 // Build the GPU engine and memory-map the GGUF inside the thread to
                 // avoid Send constraints on the DirectML / wgpu device handles.
                 let mut engine = QTensorEngine::new();
-                engine.load_gguf(&model_path);
+                if let Some(mmap) =
+                    crate::resident_model::resident_mmap_for_path(model_path.as_str())
+                {
+                    if engine.adopt_resident_mmap(mmap).is_err() {
+                        engine.load_gguf(&model_path);
+                    }
+                } else {
+                    engine.load_gguf(&model_path);
+                }
 
                 let tok = engine
                     .gguf_mmap

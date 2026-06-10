@@ -8,7 +8,8 @@ use std::path::Path;
 #[cfg(not(target_arch = "wasm32"))]
 use memmap2::Mmap;
 
-const MAGIC: &[u8; 8] = b"Q42LEX\0\0";
+pub const LEX_MAGIC: [u8; 8] = *b"Q42LEX\0\0";
+const MAGIC: &[u8; 8] = &LEX_MAGIC;
 const HEADER_SIZE: usize = 32;
 const INDEX_ENTRY_SIZE: usize = 16;
 
@@ -116,6 +117,42 @@ impl Q42LexFile {
 }
 
 impl Q42Lexicon {
+    /// Load lexicon embedded in a unified v2 `.q42` volume or a legacy `.q42.lex` sidecar.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn load_for_q42(q42_path: &Path) -> std::io::Result<Self> {
+        if crate::q42_volume::is_v2_volume(q42_path)? {
+            let vol = crate::q42_volume::Q42Volume::open(q42_path)?;
+            return Self::load_from_lex_bytes(vol.lex_bytes());
+        }
+        let sidecar = q42_path.with_extension("q42.lex");
+        if sidecar.is_file() {
+            return Self::load(&sidecar);
+        }
+        Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("no lexicon in {} or sidecar {}", q42_path.display(), sidecar.display()),
+        ))
+    }
+
+    /// Build an in-memory lexicon from a Q42LEX byte slice (embedded or sidecar).
+    pub fn load_from_lex_bytes(data: &[u8]) -> std::io::Result<Self> {
+        let view = Q42LexMmap::from_bytes(data).map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}"))
+        })?;
+        let mut entries = HashMap::with_capacity(view.entry_count());
+        for i in 0..view.entry_count() {
+            let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
+            if off + INDEX_ENTRY_SIZE > data.len() {
+                break;
+            }
+            let hash = u64::from_le_bytes(data[off..off + 8].try_into().unwrap());
+            if let Some(text) = view.lookup_hash(hash) {
+                entries.insert(hash, text.to_string());
+            }
+        }
+        Ok(Self { entries })
+    }
+
     pub fn load(path: &Path) -> std::io::Result<Self> {
         let mut file = File::open(path)?;
         let mut header = [0u8; 32];

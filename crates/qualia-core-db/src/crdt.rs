@@ -120,8 +120,8 @@ pub struct SuspendedTransaction {
     pub threshold: u8,
     pub collected_signatures: u8,
     pub registers: [Option<u64>; 16],
-    pub bytecode_buffer: [Option<crate::logic::WebizenOpcode>; 64],
-    pub yielded_op: Option<crate::logic::WebizenOpcode>,
+    pub bytecode_buffer: [Option<crate::modalities::logic::core::WebizenOpcode>; 64],
+    pub yielded_op: Option<crate::modalities::logic::core::WebizenOpcode>,
     pub suspended_quin: QualiaQuin,
 }
 

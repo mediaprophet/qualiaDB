@@ -39,17 +39,15 @@ use crate::QualiaQuin;
 use std::arch::x86_64::_MM_HINT_T0;
 
 // Re-export host and GPU modules
-// Host module temporarily disabled due to persistent DirectX API version conflicts
-// FFI firewall approach implemented in directml_bridge.rs but host.rs still requires
-// comprehensive refactoring to avoid Windows type imports entirely.
-// This requires deeper architectural changes beyond the current scope.
-// #[cfg(not(target_arch = "wasm32"))]
-// pub mod host;
+// Host module now uses FFI firewall to avoid Windows type imports
+#[cfg(not(target_arch = "wasm32"))]
+pub mod host;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gpu;
 
 pub mod ode_solver;
+pub mod tensor_provenance;
 
 // ─── Opcodes ─────────────────────────────────────────────────────────────────────
 //

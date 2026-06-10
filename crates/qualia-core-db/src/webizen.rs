@@ -1,10 +1,10 @@
-use crate::deontic_logic::{
+use crate::modalities::logic::deontic::{
     compile_norm_quin, evaluate_deontic_contract, harvest_defeater_fingerprints,
     norm_has_active_defeater, DeonticStatus, DeonticVerdict, DEFEATER_BIT, MAX_DEFEATER_SLOTS,
     OP_PERMIT,
 };
 use crate::modalities::{asp, dialectical, dl, epistemic, linear, paraconsistent, probabilistic};
-use crate::tax_schema::TaxRuleSchema;
+use crate::domains::financial::tax_schema::TaxRuleSchema;
 use crate::QualiaQuin;
 
 macro_rules! vm_log {
@@ -31,7 +31,7 @@ const SLG_ARENA_SIZE: usize = 42 * 1024 * 1024;
 const QUIN_SIZE: usize = 48;
 const MAX_SLOTS: usize = SLG_ARENA_SIZE / QUIN_SIZE; // 917,504 slots
 
-use crate::n3_parser::Rule;
+use crate::modalities::logic::n3_parser::Rule;
 
 /// The 42MB Static Tabling Arena for SLG Resolution
 /// Implemented as a Zero-Allocation Static Ring-Buffer Arena
@@ -131,12 +131,12 @@ impl SlgArena {
         let mut fired = 0usize;
         for rule in &rules {
             if let Some(norm) =
-                crate::deontic_logic::compile_n3_rule_to_norm(rule, contract_hash, 0)
+                crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0)
             {
                 self.write_table(norm);
             }
             let mut opcodes = [SlgOpcode::Halt; 64];
-            if let Ok(count) = crate::n3_compiler::compile_rule_to_opcodes(rule, &mut opcodes) {
+            if let Ok(count) = crate::modalities::logic::n3_compiler::compile_rule_to_opcodes(rule, &mut opcodes) {
                 let mut frame = VmFrame::default();
                 if execute_vm_frame(self, &opcodes[..count], &mut frame).is_some() {
                     fired += 1;
@@ -441,6 +441,7 @@ fn unify_frame(arena: &SlgArena, frame: &mut VmFrame) -> bool {
 }
 
 /// The Bytecode Evaluator for the Prolog Webizen
+#[allow(non_exhaustive_omitted_patterns)]
 pub fn execute_vm_frame(
     arena: &mut SlgArena,
     bytecode: &[SlgOpcode],
@@ -529,7 +530,7 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeThermodynamics => {
                 // Mock execution of a thermodynamic state MCMC sampler
-                let mut sampler = crate::thermodynamics::ThermodynamicSampler::new(298.0, 100);
+                let mut sampler = crate::domains::physical::thermodynamics::ThermodynamicSampler::new(298.0, 100);
                 sampler.metropolis_step(50.0, 0.5);
                 vm_log!(
                     "🧪 Webizen executed NativeThermodynamics step. Current Energy: {}",
@@ -605,7 +606,7 @@ pub fn execute_vm_frame(
             }
             // ── Legacy / compat ───────────────────────────────────────────
             SlgOpcode::NativeBioinformatics => {
-                let score = crate::bioinformatics::align_sequences(b"ATCG", b"ATCC");
+                let score = crate::domains::biological::bioinformatics::align_sequences(b"ATCG", b"ATCC");
                 vm_log!(
                     "[Webizen] NativeBioinformatics (legacy). SW score: {}",
                     score.score
@@ -613,7 +614,7 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeEconomics => {
                 let (mean, var) =
-                    crate::economics::run_monte_carlo_var(100.0, 0.05, 0.2, 1.0, 1000, 252);
+                    crate::domains::financial::economics::run_monte_carlo_var(100.0, 0.05, 0.2, 1.0, 1000, 252);
                 vm_log!(
                     "[Webizen] NativeEconomics. Mean: {:.2}, VaR95: {:.2}",
                     mean,
@@ -696,7 +697,7 @@ pub fn execute_vm_frame(
             }
             // ── Biosciences ───────────────────────────────────────────────
             SlgOpcode::NativeNucleotideAlign => {
-                let demo_result = crate::bioinformatics::align_nucleotide(b"ACGTACGT", b"ACGTCCGT");
+                let demo_result = crate::domains::biological::bioinformatics::align_nucleotide(b"ACGTACGT", b"ACGTCCGT");
                 vm_log!(
                     "[Webizen] NativeNucleotideAlign. SW score: {}, identity: {:.1}%",
                     demo_result.score,
@@ -707,7 +708,7 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeProteinAlign(matrix_id) => {
-                let result = crate::bioinformatics::align_protein(b"ACDEFGHIK", b"ACDEFGHIK");
+                let result = crate::domains::biological::bioinformatics::align_protein(b"ACDEFGHIK", b"ACDEFGHIK");
                 vm_log!(
                     "[Webizen] NativeProteinAlign(matrix={}) score: {}, id: {:.1}%",
                     matrix_id,
@@ -719,7 +720,7 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeKmerFrequency(k) => {
-                let freqs = crate::bioinformatics::kmer_frequencies(b"ACGTACGTACGT", k as usize);
+                let freqs = crate::domains::biological::bioinformatics::kmer_frequencies(b"ACGTACGTACGT", k as usize);
                 vm_log!(
                     "[Webizen] NativeKmerFrequency(k={}) distinct k-mers: {}",
                     k,
@@ -727,7 +728,7 @@ pub fn execute_vm_frame(
                 );
             }
             SlgOpcode::NativeFastaValidation => {
-                let record = crate::bioinformatics::validate_fasta_record(">test", b"ATCGATCG");
+                let record = crate::domains::biological::bioinformatics::validate_fasta_record(">test", b"ATCGATCG");
                 if !record.is_valid {
                     return None;
                 }
@@ -753,7 +754,7 @@ pub fn execute_vm_frame(
             SlgOpcode::NativeMetaboliteSimilarity => {
                 let fp_a = vec![frame.subject_reg];
                 let fp_b = vec![frame.object_reg];
-                let sim = crate::bioinformatics::tanimoto_similarity(&fp_a, &fp_b);
+                let sim = crate::domains::biological::bioinformatics::tanimoto_similarity(&fp_a, &fp_b);
                 vm_log!("[Webizen] NativeMetaboliteSimilarity: Tanimoto={:.3}", sim);
                 if sim < 0.4 {
                     return None;
@@ -874,7 +875,7 @@ pub fn execute_vm_frame(
                 // In production the SMILES string is retrieved from the lexicon by object_reg hash.
                 // Demo path: validate a demonstration SMILES.
                 let demo = "CC(=O)Oc1ccccc1C(=O)O"; // aspirin
-                let r = crate::organic_chemistry::validate_smiles(demo);
+                let r = crate::domains::chemical::organic_chemistry::validate_smiles(demo);
                 vm_log!(
                     "[Webizen] NativeSmilesValidation: valid={} atoms={}",
                     r.is_valid,
@@ -886,7 +887,7 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeInchiValidation => {
                 let demo = "InChI=1S/C9H8O4/c1-6(10)13-8-5-3-2-4-7(8)9(11)12/h2-5H,1H3,(H,11,12)";
-                let r = crate::organic_chemistry::validate_inchi(demo);
+                let r = crate::domains::chemical::organic_chemistry::validate_inchi(demo);
                 vm_log!(
                     "[Webizen] NativeInchiValidation: valid={} layers={}",
                     r.is_valid,
@@ -898,8 +899,8 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeMolecularWeight(max_mw_bits) => {
                 let max_mw = f64::from_bits(max_mw_bits);
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let mw = crate::organic_chemistry::exact_molecular_weight(&mol);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let mw = crate::domains::chemical::organic_chemistry::exact_molecular_weight(&mol);
                 vm_log!(
                     "[Webizen] NativeMolecularWeight: {:.2} Da (max allowed {:.1})",
                     mw,
@@ -911,25 +912,25 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeLogP(max_bits) => {
                 let max_logp = max_bits as f64 / 100.0;
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let logp = crate::organic_chemistry::compute_logp(&mol);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let logp = crate::domains::chemical::organic_chemistry::compute_logp(&mol);
                 vm_log!("[Webizen] NativeLogP: {:.2} (max {:.2})", logp, max_logp);
                 if max_logp > 0.0 && logp > max_logp {
                     return None;
                 }
             }
             SlgOpcode::NativeTPSA(max_tpsa) => {
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let tpsa = crate::organic_chemistry::compute_tpsa(&mol);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let tpsa = crate::domains::chemical::organic_chemistry::compute_tpsa(&mol);
                 vm_log!("[Webizen] NativeTPSA: {:.1} Å² (max {})", tpsa, max_tpsa);
                 if max_tpsa > 0 && tpsa > max_tpsa as f64 {
                     return None;
                 }
             }
             SlgOpcode::NativeLipinskiFilter => {
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let desc = crate::organic_chemistry::compute_descriptors(&mol);
-                let r = crate::organic_chemistry::evaluate_lipinski(&desc);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let desc = crate::domains::chemical::organic_chemistry::compute_descriptors(&mol);
+                let r = crate::domains::chemical::organic_chemistry::evaluate_lipinski(&desc);
                 vm_log!(
                     "[Webizen] NativeLipinskiFilter: passes={} violations={}",
                     r.passes,
@@ -940,34 +941,34 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeVeberFilter => {
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let desc = crate::organic_chemistry::compute_descriptors(&mol);
-                let r = crate::organic_chemistry::evaluate_veber(&desc);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let desc = crate::domains::chemical::organic_chemistry::compute_descriptors(&mol);
+                let r = crate::domains::chemical::organic_chemistry::evaluate_veber(&desc);
                 vm_log!("[Webizen] NativeVeberFilter: passes={}", r.passes);
                 if !r.passes {
                     return None;
                 }
             }
             SlgOpcode::NativeGhoseFilter => {
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let desc = crate::organic_chemistry::compute_descriptors(&mol);
-                let r = crate::organic_chemistry::evaluate_ghose(&desc);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let desc = crate::domains::chemical::organic_chemistry::compute_descriptors(&mol);
+                let r = crate::domains::chemical::organic_chemistry::evaluate_ghose(&desc);
                 vm_log!("[Webizen] NativeGhoseFilter: passes={}", r.passes);
             }
             SlgOpcode::NativeEganFilter => {
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let desc = crate::organic_chemistry::compute_descriptors(&mol);
-                let r = crate::organic_chemistry::evaluate_egan(&desc);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let desc = crate::domains::chemical::organic_chemistry::compute_descriptors(&mol);
+                let r = crate::domains::chemical::organic_chemistry::evaluate_egan(&desc);
                 vm_log!("[Webizen] NativeEganFilter: passes={}", r.passes);
             }
             SlgOpcode::NativeFunctionalGroups => {
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let groups = crate::organic_chemistry::detect_functional_groups(&mol);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let groups = crate::domains::chemical::organic_chemistry::detect_functional_groups(&mol);
                 vm_log!("[Webizen] NativeFunctionalGroups: {:?}", groups);
             }
             SlgOpcode::NativePkaEstimate => {
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)O"); // acetic acid
-                let pkas = crate::organic_chemistry::estimate_pka(&mol);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)O"); // acetic acid
+                let pkas = crate::domains::chemical::organic_chemistry::estimate_pka(&mol);
                 for p in &pkas {
                     vm_log!(
                         "[Webizen] NativePka: {:?} pKa={:.1} acid={}",
@@ -978,13 +979,13 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeChiralCenters => {
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let n = crate::organic_chemistry::count_chiral_centers(&mol);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let n = crate::domains::chemical::organic_chemistry::count_chiral_centers(&mol);
                 vm_log!("[Webizen] NativeChiralCenters: {}", n);
             }
             SlgOpcode::NativeCircularFingerprint(radius) => {
-                let mol = crate::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let fp = crate::organic_chemistry::circular_fingerprint(&mol, radius as usize);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let fp = crate::domains::chemical::organic_chemistry::circular_fingerprint(&mol, radius as usize);
                 vm_log!(
                     "[Webizen] NativeCircularFingerprint(r={}): {} features",
                     radius,
@@ -992,11 +993,11 @@ pub fn execute_vm_frame(
                 );
             }
             SlgOpcode::NativeArrhenius(temp_k) => {
-                let k = crate::organic_chemistry::arrhenius_rate(1e13, 80_000.0, temp_k as f64);
+                let k = crate::domains::chemical::organic_chemistry::arrhenius_rate(1e13, 80_000.0, temp_k as f64);
                 vm_log!("[Webizen] NativeArrhenius(T={}K): k={:.3e}", temp_k, k);
             }
             SlgOpcode::NativeGibbsEnergy => {
-                let dg = crate::organic_chemistry::gibbs_free_energy(
+                let dg = crate::domains::chemical::organic_chemistry::gibbs_free_energy(
                     f64::from_bits(frame.subject_reg),
                     f64::from_bits(frame.predicate_reg),
                     f64::from_bits(frame.object_reg),
@@ -1004,14 +1005,14 @@ pub fn execute_vm_frame(
                 vm_log!("[Webizen] NativeGibbsEnergy: ΔG={:.2} J/mol", dg);
             }
             SlgOpcode::NativeEquilibrium => {
-                let k_eq = crate::organic_chemistry::equilibrium_constant(
+                let k_eq = crate::domains::chemical::organic_chemistry::equilibrium_constant(
                     f64::from_bits(frame.subject_reg),
                     f64::from_bits(frame.object_reg),
                 );
                 vm_log!("[Webizen] NativeEquilibrium: K={:.4e}", k_eq);
             }
             SlgOpcode::NativeHendersonHasselbalch => {
-                let ph = crate::organic_chemistry::henderson_hasselbalch(
+                let ph = crate::domains::chemical::organic_chemistry::henderson_hasselbalch(
                     f64::from_bits(frame.subject_reg),
                     f64::from_bits(frame.predicate_reg),
                     f64::from_bits(frame.object_reg),
@@ -1020,18 +1021,18 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeAtomEconomy => {
                 let reactants = vec![180.0, 60.0]; // demo
-                let ae = crate::organic_chemistry::atom_economy(&reactants, 180.0);
+                let ae = crate::domains::chemical::organic_chemistry::atom_economy(&reactants, 180.0);
                 vm_log!("[Webizen] NativeAtomEconomy: {:.1}%", ae);
             }
             SlgOpcode::NativeEFactor => {
-                let ef = crate::organic_chemistry::e_factor(
+                let ef = crate::domains::chemical::organic_chemistry::e_factor(
                     f64::from_bits(frame.subject_reg),
                     f64::from_bits(frame.object_reg),
                 );
                 vm_log!("[Webizen] NativeEFactor: {:.2} kg waste/kg product", ef);
             }
             SlgOpcode::NativeGreenMetrics => {
-                let gm = crate::organic_chemistry::green_metrics(
+                let gm = crate::domains::chemical::organic_chemistry::green_metrics(
                     &[180.0, 60.0],
                     180.0,
                     &[60.0],
@@ -1562,18 +1563,18 @@ mod tests {
         let disclose = crate::q_hash("q42:disclose");
         let data = crate::q_hash("q42:data:project-x:confidential");
 
-        let forbid = crate::deontic_logic::compile_norm_quin(
+        let forbid = crate::modalities::logic::deontic::compile_norm_quin(
             alice,
-            crate::deontic_logic::OP_FORBID,
+            crate::modalities::logic::deontic::OP_FORBID,
             disclose,
             data,
             contract,
             0,
             false,
         );
-        let defeater = crate::deontic_logic::compile_norm_quin(
+        let defeater = crate::modalities::logic::deontic::compile_norm_quin(
             alice,
-            crate::deontic_logic::OP_PERMIT,
+            crate::modalities::logic::deontic::OP_PERMIT,
             disclose,
             crate::q_hash("q42:role:certified-auditor"),
             contract,
