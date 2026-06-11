@@ -5,6 +5,6 @@ members = [
     "crates/qualia-solid-bridge",
     "crates/qualia-client-core",
     "crates/qualia-extensions",
-    "crates/qualia-desktop",
+    "crates/webizen-desktop", "crates/webizen-component-harvester", "crates/qualia-studio", "crates/qualia-mobile-harness",
 ]
 resolver = "2"

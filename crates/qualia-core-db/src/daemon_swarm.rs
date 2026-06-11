@@ -1,6 +1,6 @@
 //! The Swarm (Native 64-bit Daemon)
 //! Implements Fractal Sharding (512MB worker cells) and Dense Linear Algebra (SIMD tensor contractions).
-//! DNSSEC to SocialWireGuard bootstrapping pipeline for zero-allocation decentralized networking.
+//! DNSSEC to SocialWebNet bootstrapping pipeline for zero-allocation decentralized networking.
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod swarm {
@@ -42,9 +42,9 @@ pub mod swarm {
         pub semantic_context: u64,
     }
     
-    /// SocialWireGuard peer configuration
+    /// SocialWebNet peer configuration
     #[derive(Debug, Clone)]
-    pub struct SocialWireGuardPeer {
+    pub struct SocialWebNetPeer {
         pub peer_id: u64,
         pub endpoint: IpAddr,
         pub port: u16,
@@ -60,11 +60,11 @@ pub mod swarm {
         pub validation_enabled: bool,
     }
     
-    /// SocialWireGuard interface manager
-    pub struct SocialWireGuardInterface {
+    /// SocialWebNet interface manager
+    pub struct SocialWebNetInterface {
         pub interface_name: String,
         pub local_port: u16,
-        pub active_peers: HashMap<u64, SocialWireGuardPeer>,
+        pub active_peers: HashMap<u64, SocialWebNetPeer>,
         pub routing_table: HashMap<String, u64>,
     }
     
@@ -75,7 +75,7 @@ pub mod swarm {
         pub memory_boundary: usize, // Strictly 512MB
         pub attached_blocks: Vec<QualiaSuperBlock>,
         pub dnssec_resolver: Option<DnssecResolver>,
-        pub wireguard_interface: Option<SocialWireGuardInterface>,
+        pub wireguard_interface: Option<SocialWebNetInterface>,
         #[cfg(not(target_arch = "wasm32"))]
         pub q42_context: Option<Arc<Q42Context>>,
         #[cfg(not(target_arch = "wasm32"))]
@@ -106,9 +106,9 @@ pub mod swarm {
             });
         }
         
-        /// Initialize SocialWireGuard interface
+        /// Initialize SocialWebNet interface
         pub fn init_wireguard_interface(&mut self, interface_name: String, local_port: u16) {
-            self.wireguard_interface = Some(SocialWireGuardInterface {
+            self.wireguard_interface = Some(SocialWebNetInterface {
                 interface_name,
                 local_port,
                 active_peers: HashMap::new(),
@@ -362,14 +362,14 @@ pub mod swarm {
             Ok((key, value, current_offset))
         }
         
-        /// Establish SocialWireGuard tunnel with peer
+        /// Establish SocialWebNet tunnel with peer
         pub fn establish_wireguard_tunnel(&mut self, peer_payload: &DnssecSemanticPayload, endpoint: IpAddr, port: u16) -> Result<u64, &'static str> {
             let wireguard_interface = self.wireguard_interface.as_mut()
                 .ok_or("WireGuard interface not initialized")?;
             
             // Create peer configuration
             let peer_id = peer_payload.did_q42;
-            let peer = SocialWireGuardPeer {
+            let peer = SocialWebNetPeer {
                 peer_id,
                 endpoint,
                 port,
@@ -407,7 +407,7 @@ pub mod swarm {
             Ok(peer_id)
         }
         
-        /// Bootstrap SocialWireGuard tunnel using DNSSEC CBOR-LD resolution
+        /// Bootstrap SocialWebNet tunnel using DNSSEC CBOR-LD resolution
         pub fn bootstrap_social_wireguard(&mut self, domain: &str, endpoint_ip: IpAddr, endpoint_port: u16) -> Result<u64, &'static str> {
             // Step 1: Resolve peer via DNSSEC CBOR-LD
             let peer_payload = self.resolve_peer_dnssec(domain)?;
@@ -421,7 +421,7 @@ pub mod swarm {
             let peer_id = self.establish_wireguard_tunnel(&peer_payload, endpoint_ip, endpoint_port)?;
             
             // Step 4: Log successful bootstrap
-            println!("[SocialWireGuard] Bootstrapped peer {} (did:q42:{}) on {}:{}", 
+            println!("[SocialWebNet] Bootstrapped peer {} (did:q42:{}) on {}:{}", 
                 domain, peer_payload.did_q42, endpoint_ip, endpoint_port);
             
             Ok(peer_id)
@@ -591,7 +591,7 @@ pub mod swarm {
             }
         }
         
-        /// Bootstrap a SocialWireGuard peer connection for a specific worker cell.
+        /// Bootstrap a SocialWebNet peer connection for a specific worker cell.
         ///
         /// Resolves the peer via DNSSEC, verifies routing constraints, then
         /// registers the WireGuard peer inside the named worker cell.
@@ -602,6 +602,29 @@ pub mod swarm {
             // Step 2: Verify routing constraints
             if !self.verify_routing_constraints(&payload)? {
                 return Err("Routing constraints not authorized");
+            }
+
+            // Step 2b: Sentinel VM Fiduciary Gatekeeper
+            let mut intent = crate::NQuin::default();
+            intent.subject = crate::q_hash("did:q42:local");
+            intent.predicate = crate::q_hash("q42:TrustGroup");
+            intent.object = payload.did_q42;
+
+            let db = [intent];
+            let mut prog = [0u8; 1024];
+            prog[0] = crate::mini_parser::OP_EVAL_PERMIT;
+            prog[1] = crate::mini_parser::OP_END;
+
+            let mut out = [crate::NQuin::default(); 1];
+            let context = crate::webizen_bytecode::GuardianshipContext {
+                principal_did: crate::q_hash("did:q42:local"),
+                guardian_did: Some(crate::q_hash("did:q42:guardian_mock")), 
+            };
+
+            let is_authorized = crate::webizen_bytecode::execute_program(&prog, &db, &mut out, Some(&context)).is_ok();
+            
+            if !is_authorized {
+                return Err("Sentinel VM Gatekeeper: Peer relationship not authorized");
             }
 
             // Step 3: Generate ephemeral WireGuard keypair and register peer
@@ -627,7 +650,7 @@ pub mod swarm {
                 let cell = cells.iter_mut().find(|c| c.cell_id == cell_id)
                     .ok_or("Worker cell not found")?;
                 if let Some(ref mut wg) = cell.wireguard_interface {
-                    let peer = SocialWireGuardPeer {
+                    let peer = SocialWebNetPeer {
                         peer_id,
                         endpoint: endpoint_ip,
                         port: endpoint_port,
@@ -640,7 +663,7 @@ pub mod swarm {
                 }
             }
 
-            println!("[SocialWireGuard] Cell {} bootstrapped peer {} (did:q42:{}) at {}:{}",
+            println!("[SocialWebNet] Cell {} bootstrapped peer {} (did:q42:{}) at {}:{}",
                 cell_id, domain, payload.did_q42, endpoint_ip, endpoint_port);
 
             Ok(peer_id)
@@ -668,7 +691,7 @@ pub mod swarm {
             });
         }
 
-        /// Bootstrap SocialWireGuard tunnel using DNSSEC CBOR-LD resolution
+        /// Bootstrap SocialWebNet tunnel using DNSSEC CBOR-LD resolution
         pub fn bootstrap_social_wireguard(&mut self, domain: &str, endpoint_ip: IpAddr, endpoint_port: u16) -> Result<u64, &'static str> {
             // Step 1: Resolve peer via DNSSEC CBOR-LD
             let peer_payload = self.resolve_peer_dnssec(domain)?;
@@ -682,7 +705,7 @@ pub mod swarm {
             let peer_id = self.establish_wireguard_tunnel(&peer_payload, endpoint_ip, endpoint_port)?;
             
             // Step 4: Log successful bootstrap
-            println!("[SocialWireGuard] Bootstrapped peer {} (did:q42:{}) on {}:{}", 
+            println!("[SocialWebNet] Bootstrapped peer {} (did:q42:{}) on {}:{}", 
                 domain, peer_payload.did_q42, endpoint_ip, endpoint_port);
             
             Ok(peer_id)
@@ -873,7 +896,7 @@ pub mod swarm {
             Err("No valid Qualia semantic payload in DNS TXT records")
         }
 
-        /// Establish a SocialWireGuard tunnel to a peer described by `payload`.
+        /// Establish a SocialWebNet tunnel to a peer described by `payload`.
         ///
         /// Generates an ephemeral local WireGuard keypair via boringtun, validates the
         /// peer's public key, registers the peer in the first cell that has a WireGuard
@@ -907,7 +930,7 @@ pub mod swarm {
             if let Ok(mut cells) = self.active_cells.lock() {
                 for cell in cells.iter_mut() {
                     if let Some(ref mut wg) = cell.wireguard_interface {
-                        let peer = SocialWireGuardPeer {
+                        let peer = SocialWebNetPeer {
                             peer_id,
                             endpoint: ip,
                             port,

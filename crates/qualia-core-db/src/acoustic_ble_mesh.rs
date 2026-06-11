@@ -163,6 +163,15 @@ pub enum FilterType {
     Adaptive,
 }
 
+/// Packet handler
+pub struct PacketHandler {}
+
+/// Flow control
+pub struct FlowControl {}
+
+/// Error handling
+pub struct ErrorHandling {}
+
 /// Acoustic protocol handler
 pub struct AcousticProtocolHandler {
     protocol_stack: AcousticProtocolStack,
@@ -1003,7 +1012,7 @@ pub struct StoredMessage {
 }
 
 /// Message priorities
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MessagePriority {
     Critical,
     High,
@@ -2088,6 +2097,7 @@ impl std::error::Error for MeshError {}
 // Bit type aliases for compact representation
 pub type u4 = u8;
 pub type u3 = u8;
+pub type u5 = u8;
 pub type u12 = u16;
 
 #[cfg(test)]

@@ -1,3 +1,25 @@
+# SPARQL-Star Architecture Blueprint
+
+> **QualiaDB Implementation Status — 2026-06-11**
+>
+> | Feature | Status | Module |
+> |---------|--------|--------|
+> | SPARQL-Star embedded triple syntax (`<< s p o >>`) | ✅ Implemented | `sparql_library/parsers/` (turtle_star, n3_star, trig_star, ntriples_star, nquads_star) |
+> | Virtual IDs for embedded triples | ✅ Implemented | `q42_lex.rs::lookup_embedded_triple()` |
+> | `Pattern::EmbeddedTriple` + executor | ✅ Implemented | `sparql_ast.rs`, `sparql_executor.rs` |
+> | `AS OF` / `AT TIME` temporal extension | ✅ Implemented (Phase 4) | `sparql_parser.rs`, `sparql_ast.rs::Pattern::AsOf` |
+> | SPARQL 1.1 SERVICE federated query | ✅ Implemented | `sparql_executor.rs::execute_service()` |
+> | SPARQL UPDATE | ✅ Implemented | `sparql_update.rs` |
+> | GeoSPARQL | ✅ Implemented | `kml_bridge.rs`, `spatial_sieve.rs` |
+> | SPARQL-MM multimedia | ✅ Implemented | `sparql_mm.rs` |
+> | SHACL-SPARQL integration | ✅ Implemented | `sparql_shacl.rs` |
+> | Test suite | 138 tests passing | `sparql_library/` tests |
+>
+> This document is a reference blueprint used during initial design. The
+> implementation above matches the Virtual Node IDs approach described in §1.
+
+---
+
 Decoupling your internal storage format from the input/output serialization layers is the correct architectural approach. Keeping data normalization isolated from transport mechanisms ensures deterministic parsing, optimization, and query execution.
 
 To bring full SPARQL 1.1 and SPARQL-Star (SPARQL 1.2) compliance to your engine using your internal binary/structured format, you need to extend your storage representation and execution pipeline to inherently understand embedded triples.

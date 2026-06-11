@@ -5,7 +5,7 @@
 //! environment of Qualia-DB.
 
 use crate::solvers::{SolverConfig, SolverState, SolverResult};
-use crate::ggml_quants::ExecutionError;
+use crate::solvers::SolversError as ExecutionError;
 use core::f64::consts;
 
 /// Runge-Kutta 4th order ODE solver with fixed memory footprint
@@ -121,7 +121,7 @@ pub trait IntegrandFunction {
 
 impl RungeKutta4Static {
     /// Create new RK4 solver
-    pub const fn new(dt: f64, config: SolverConfig) -> Self {
+    pub fn new(dt: f64, config: SolverConfig) -> Self {
         Self {
             state: [0.0; 4],
             dt,
@@ -212,7 +212,7 @@ impl RungeKutta4Static {
 
     /// Estimate error from RK4 coefficients
     fn estimate_error(&self, k1: &[f64; 4], k2: &[f64; 4], k3: &[f64; 4], k4: &[f64; 4]) -> f64 {
-        let mut error = 0.0;
+        let mut error: f64 = 0.0;
         
         for i in 0..4 {
             // Error estimate: |k2 - k3| / max(|k2|, |k3|, 1e-10)
@@ -240,7 +240,7 @@ impl RungeKutta4Static {
 
 impl ShootingMethodBVP {
     /// Create new BVP solver
-    pub const fn new(target_values: [f64; 4], config: SolverConfig) -> Self {
+    pub fn new(target_values: [f64; 4], config: SolverConfig) -> Self {
         Self {
             initial_guess: [0.0; 4],
             target_values,
@@ -268,7 +268,7 @@ impl ShootingMethodBVP {
             self.calculate_boundary_error(f)?;
             
             // Check convergence
-            let max_error = self.boundary_error.iter().fold(0.0, |acc, &x| acc.max(x.abs()));
+            let max_error = self.boundary_error.iter().fold(0.0_f64, |acc, &x| acc.max(x.abs()));
             self.solver_state.error = max_error;
             
             if max_error < self.config.tolerance {
@@ -295,15 +295,23 @@ impl ShootingMethodBVP {
     where
         F: BVPFunction,
     {
+        struct BvpOdeAdapter<'a, G: BVPFunction>(&'a G);
+        impl<G: BVPFunction> ODEFunction for BvpOdeAdapter<'_, G> {
+            fn derivatives(&self, t: f64, y: &[f64; 4]) -> [f64; 4] {
+                self.0.derivatives(t, y, &[0.0; 4])
+            }
+        }
+
         // Create RK4 solver for trajectory
         let mut rk4 = RungeKutta4Static::new((t1 - t0) / 100.0, self.config);
-        
+
         // Initial state
-        let initial_state = [self.initial_guess[0], self.initial_guess[1], 
+        let initial_state = [self.initial_guess[0], self.initial_guess[1],
                             self.initial_guess[2], self.initial_guess[3]];
-        
-        // Integrate to final boundary
-        let final_state = rk4.integrate(f, t0, initial_state, t1)?;
+
+        // Integrate to final boundary using ODE adapter
+        let ode_f = BvpOdeAdapter(f);
+        let final_state = rk4.integrate(&ode_f, t0, initial_state, t1)?;
         
         // Store trajectory (sample points)
         self.store_trajectory_sample(&final_state, 99); // Store final state
@@ -354,7 +362,7 @@ impl ShootingMethodBVP {
 
 impl SimpsonsIntegratorChunked {
     /// Create new Simpson's integrator
-    pub const fn new(a: f64, b: f64, config: SolverConfig) -> Self {
+    pub fn new(a: f64, b: f64, config: SolverConfig) -> Self {
         Self {
             chunk_buffer: [0.0; 12],
             chunk_index: 0,

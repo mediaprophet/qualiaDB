@@ -82,32 +82,6 @@ pub struct NQuin {
     pub parity: u64,
 }
 
-impl From<crate::NQuin> for NQuin {
-    fn from(quin: crate::NQuin) -> Self {
-        Self {
-            subject: quin.subject,
-            predicate: quin.predicate,
-            object: quin.object,
-            context: quin.context,
-            metadata: quin.metadata,
-            parity: quin.parity,
-        }
-    }
-}
-
-impl From<NQuin> for crate::NQuin {
-    fn from(quin: NQuin) -> Self {
-        Self {
-            subject: quin.subject,
-            predicate: quin.predicate,
-            object: quin.object,
-            context: quin.context,
-            metadata: quin.metadata,
-            parity: quin.parity,
-        }
-    }
-}
-
 /// Extension registry and manager
 pub struct ExtensionManager {
     extensions: HashMap<String, Box<dyn Extension>>,
@@ -127,7 +101,7 @@ impl ExtensionManager {
         self.extensions.insert(capability.name.clone(), extension);
     }
 
-    pub fn execute_job(&self, job: ExtensionJob) -> Result<ExtensionResult, ExtensionError> {
+    pub async fn execute_job(&self, job: ExtensionJob) -> Result<ExtensionResult, ExtensionError> {
         let extension = self.extensions.get(&job.extension_name)
             .ok_or(ExtensionError::ExtensionNotFound(job.extension_name.clone()))?;
 
@@ -138,7 +112,7 @@ impl ExtensionManager {
         }
 
         // Execute the job
-        let result = extension.execute(job);
+        let result = extension.execute(job).await;
 
         // Remove from active jobs
         {
@@ -157,9 +131,10 @@ impl ExtensionManager {
 }
 
 /// Extension trait for all computational extensions
+#[async_trait::async_trait]
 pub trait Extension: Send + Sync {
     fn capability(&self) -> ExtensionCapability;
-    fn execute(&self, job: ExtensionJob) -> Result<ExtensionResult, ExtensionError>;
+    async fn execute(&self, job: ExtensionJob) -> Result<ExtensionResult, ExtensionError>;
     fn shutdown(&self) -> Result<(), ExtensionError>;
 }
 
@@ -238,6 +213,15 @@ pub mod pinn_extension;
 pub mod snn_extension;
 pub mod qpu_extension;
 pub mod webgpu_extension;
+
+/// Helper function for hashing strings to 64-bit integers
+pub fn q_hash(input: &str) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    input.hash(&mut hasher);
+    hasher.finish()
+}
 
 #[cfg(test)]
 mod tests {

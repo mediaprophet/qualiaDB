@@ -16,25 +16,19 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub mod qpu;
 
-// Temporarily disabled until ExecutionError variants and SolverState fields
-// are reconciled with the crate-level definitions.
-// pub mod calculus;
-// pub mod linear_algebra;
-// pub mod optimization;
-// pub mod quantum_optimizers;
-// pub mod symbolic_logic;
+pub mod calculus;
+pub mod linear_algebra;
+pub mod optimization;
+pub mod quantum_optimizers;
+pub mod symbolic_logic;
 
-// Re-exports (disabled alongside their modules)
-// pub use calculus::{RungeKutta4Static, ShootingMethodBVP, SimpsonsIntegratorChunked, ODEState, BVPState, IntegralChunk};
-// pub use linear_algebra::{FixedLanczosEigensolver, StaticLuDecomposition, ConstTensorContractor, Matrix4x4, Vector4, Tensor3x3x3};
-// pub use optimization::{NelderMeadSimplex, BoundedNewtonRaphson, LevenbergMarquardtStack, OptimizationState, RootFindingState, CurveFitState};
-// pub use quantum_optimizers::{QAOAAngleOptimizer, SpsaOptimizer, QuantumOptimizerState, QAOAAngles, SpsaGradient};
-// pub use symbolic_logic::{ForwardChainingDefeasible, BoundedSatSolver, DefeasibleState, SatState};
+pub use calculus::{RungeKutta4Static, ShootingMethodBVP, SimpsonsIntegratorChunked, ODEState, BVPState, IntegralChunk};
+pub use linear_algebra::{FixedLanczosEigensolver, StaticLuDecomposition, ConstTensorContractor, Matrix4x4, Vector4, Tensor3x3x3};
+pub use optimization::{NelderMeadSimplex, BoundedNewtonRaphson, LevenbergMarquardtStack, OptimizationState, RootFindingState, CurveFitState};
+pub use quantum_optimizers::{QAOAAngleOptimizer, SpsaOptimizer, QuantumOptimizerState, QAOAAngles, SpsaGradient};
+pub use symbolic_logic::{ForwardChainingDefeasible, BoundedSatSolver, DefeasibleState, SatState};
 
 /// Unified error type for solver operations.
-///
-/// Variants cover the full range expected by all disabled sub-modules so they
-/// can be re-enabled without changing their error-handling code.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SolversError {
     CapacityExceeded,
@@ -45,6 +39,8 @@ pub enum SolversError {
     ComputationError,
     QuantumError(u32),
     OutOfMemory,
+    Unsatisfiable,
+    BacktrackFailed,
 }
 
 /// Result type for solver operations
@@ -81,8 +77,8 @@ pub struct SolverState {
     pub converged: bool,
     /// Classical cost / energy value (optimization, quantum_optimizers)
     pub cost_value: f64,
-    /// Satisfiability flag (symbolic_logic)
-    pub satisfiable: bool,
+    /// Satisfiability flag (symbolic_logic) — None = unknown, Some(true/false) = result
+    pub satisfiable: Option<bool>,
     /// QPU call counter (quantum_optimizers)
     pub quantum_calls: u32,
     /// Solver-specific packed data
@@ -96,7 +92,7 @@ impl Default for SolverState {
             error: f64::MAX,
             converged: false,
             cost_value: f64::MAX,
-            satisfiable: false,
+            satisfiable: None,
             quantum_calls: 0,
             solver_data: [0; 4],
         }

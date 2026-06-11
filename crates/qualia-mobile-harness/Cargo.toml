@@ -1,0 +1,39 @@
+[package]
+name = "qualia-mobile-harness"
+version = "0.0.10"
+edition = "2021"
+
+[dependencies]
+dioxus = { version = "0.6", features = ["web"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+futures-util = "0.3"
+web-sys = { version = "0.3", features = [
+    "HtmlElement",
+    "HtmlVideoElement",
+    "MediaStream",
+    "MediaStreamConstraints",
+    "MediaDevices",
+    "Navigator",
+    "Window",
+    "Document",
+    "WebSocket",
+    "MessageEvent",
+] }
+qualia-core-db = { path = "../qualia-core-db", optional = true }
+
+[features]
+default = ["websocket_streamer"]
+android_pwa_edge = ["dep:qualia-core-db", "wal_persistence", "crdt_dvv_eae", "wasm_simd"]
+wal_persistence = []
+crdt_dvv_eae = []
+websocket_streamer = []
+wasm_simd = []
+
+[profile.release]
+lto = true
+opt-level = 'z'
+codegen-units = 1

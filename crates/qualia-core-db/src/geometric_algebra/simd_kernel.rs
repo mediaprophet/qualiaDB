@@ -5,6 +5,7 @@
 //! Provides zero-allocation, hardware-accelerated multivector operations
 
 use crate::q_hash;
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 use std::mem;
 use std::ops::{Add, Sub, Mul, Div, Neg};
@@ -61,7 +62,10 @@ pub struct Translator {
 impl GeometricAlgebraSIMD {
     /// Create new SIMD kernel for specified dimension
     pub fn new(dimension: usize) -> Self {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         let simd_enabled = is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma");
+        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+        let simd_enabled = false;
         
         Self {
             dimension,
@@ -81,6 +85,7 @@ impl GeometricAlgebraSIMD {
     }
 
     /// SIMD-optimized geometric product
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     #[target_feature(enable = "avx2,fma")]
     pub unsafe fn geometric_product_simd(&self, a: &Multivector, b: &Multivector) -> Multivector {
         if !self.simd_enabled {
@@ -104,6 +109,7 @@ impl GeometricAlgebraSIMD {
     }
 
     /// AVX2-optimized geometric product kernel
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     #[target_feature(enable = "avx2,fma")]
     unsafe fn simd_geometric_product_avx2(&self, a: __m256, b: __m256) -> __m256 {
         // Load geometric product matrix coefficients
@@ -173,6 +179,7 @@ impl GeometricAlgebraSIMD {
     }
 
     /// SIMD-optimized outer product
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     #[target_feature(enable = "avx2")]
     pub unsafe fn outer_product_simd(&self, a: &Multivector, b: &Multivector) -> Multivector {
         if !self.simd_enabled {
@@ -195,6 +202,7 @@ impl GeometricAlgebraSIMD {
     }
 
     /// AVX2-optimized outer product kernel
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     #[target_feature(enable = "avx2")]
     unsafe fn simd_outer_product_avx2(&self, a: __m256, b: __m256) -> __m256 {
         // Load outer product matrix coefficients
@@ -314,20 +322,20 @@ impl GeometricAlgebraSIMD {
 
     /// High-level geometric product with automatic SIMD selection
     pub fn geometric_product(&self, a: &Multivector, b: &Multivector) -> Multivector {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         if self.simd_enabled {
-            unsafe { self.geometric_product_simd(a, b) }
-        } else {
-            self.geometric_product_scalar(a, b)
+            return unsafe { self.geometric_product_simd(a, b) };
         }
+        self.geometric_product_scalar(a, b)
     }
 
     /// High-level outer product with automatic SIMD selection
     pub fn outer_product(&self, a: &Multivector, b: &Multivector) -> Multivector {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         if self.simd_enabled {
-            unsafe { self.outer_product_simd(a, b) }
-        } else {
-            self.outer_product_scalar(a, b)
+            return unsafe { self.outer_product_simd(a, b) };
         }
+        self.outer_product_scalar(a, b)
     }
 
     /// Extract grade from multivector

@@ -22,7 +22,7 @@ pub struct QpuApiClient {
 }
 
 /// QPU provider configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct QpuProvider {
     name: String,
     endpoint: String,
@@ -33,7 +33,7 @@ pub struct QpuProvider {
 }
 
 /// Pricing model for QPU services
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum PricingModel {
     PerShot { cost_per_shot: f64 },
     PerSecond { cost_per_second: f64 },
@@ -205,7 +205,7 @@ impl QpuExtension {
         Ok(())
     }
 
-    async fn send_to_provider(&self, provider: &QpuProvider, circuit: &QuantumCircuit, shots: u32) -> Result<QuantumExecutionResult, ExtensionError> {
+    async fn send_to_provider(&self, provider: &QpuProvider, circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
         // Mock implementation - in real scenario, this would make HTTP calls
         match provider.name.as_str() {
             "IBM Quantum" => self.execute_ibm_quantum(circuit, shots).await,
@@ -215,7 +215,7 @@ impl QpuExtension {
         }
     }
 
-    async fn execute_ibm_quantum(&self, circuit: &QuantumCircuit, shots: u32) -> Result<QuantumExecutionResult, ExtensionError> {
+    async fn execute_ibm_quantum(&self, circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
         // Mock IBM Quantum execution
         let mut counts = HashMap::new();
         counts.insert("00".to_string(), shots / 2);
@@ -225,7 +225,7 @@ impl QpuExtension {
         probabilities.insert("00".to_string(), 0.5);
         probabilities.insert("11".to_string(), 0.5);
 
-        Ok(QuantumExecutionResult {
+        Ok(QpuExecutionResult {
             counts,
             probabilities,
             execution_time_ms: 1000, // Mock execution time
@@ -235,7 +235,7 @@ impl QpuExtension {
         })
     }
 
-    async fn execute_google_quantum(&self, circuit: &QuantumCircuit, shots: u32) -> Result<QuantumExecutionResult, ExtensionError> {
+    async fn execute_google_quantum(&self, circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
         // Mock Google Quantum execution
         let mut counts = HashMap::new();
         counts.insert("00".to_string(), shots * 3 / 4);
@@ -245,7 +245,7 @@ impl QpuExtension {
         probabilities.insert("00".to_string(), 0.75);
         probabilities.insert("11".to_string(), 0.25);
 
-        Ok(QuantumExecutionResult {
+        Ok(QpuExecutionResult {
             counts,
             probabilities,
             execution_time_ms: 800, // Mock execution time
@@ -255,7 +255,7 @@ impl QpuExtension {
         })
     }
 
-    async fn execute_aws_braket(&self, circuit: &QuantumCircuit, shots: u32) -> Result<QuantumExecutionResult, ExtensionError> {
+    async fn execute_aws_braket(&self, circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
         // Mock AWS Braket execution
         let mut counts = HashMap::new();
         counts.insert("00".to_string(), shots * 2 / 3);
@@ -265,7 +265,7 @@ impl QpuExtension {
         probabilities.insert("00".to_string(), 0.6667);
         probabilities.insert("11".to_string(), 0.3333);
 
-        Ok(QuantumExecutionResult {
+        Ok(QpuExecutionResult {
             counts,
             probabilities,
             execution_time_ms: 1200, // Mock execution time
@@ -389,16 +389,6 @@ impl Extension for QpuExtension {
         // Clean up resources
         Ok(())
     }
-}
-
-// Helper function for hashing (mock implementation)
-fn q_hash(input: &str) -> u64 {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    
-    let mut hasher = DefaultHasher::new();
-    input.hash(&mut hasher);
-    hasher.finish()
 }
 
 #[cfg(test)]

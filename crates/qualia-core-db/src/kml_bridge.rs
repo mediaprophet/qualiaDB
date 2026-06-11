@@ -17,13 +17,13 @@ pub const SPATIAL_CONTEXT: u64 = q_hash("urn:qualia:context:spatial");
 pub const T_CONTEXT: u64 = q_hash("urn:qualia:context:temporal");
 
 // ── GeoSPARQL predicate hashes ────────────────────────────────────────────────
-const P_HAS_GEOMETRY: u64 = q_hash("http://www.opengis.net/ont/geosparql#hasGeometry");
-const P_AS_WKT: u64 = q_hash("http://www.opengis.net/ont/geosparql#asWKT");
+pub const P_HAS_GEOMETRY: u64 = q_hash("http://www.opengis.net/ont/geosparql#hasGeometry");
+pub const P_AS_WKT: u64 = q_hash("http://www.opengis.net/ont/geosparql#asWKT");
 
 // ── PROV-O predicate hashes ───────────────────────────────────────────────────
-const P_GENERATED_AT: u64 = q_hash("http://www.w3.org/ns/prov#generatedAtTime");
-const P_STARTED_AT: u64 = q_hash("http://www.w3.org/ns/prov#startedAtTime");
-const P_ENDED_AT: u64 = q_hash("http://www.w3.org/ns/prov#endedAtTime");
+pub const P_GENERATED_AT: u64 = q_hash("http://www.w3.org/ns/prov#generatedAtTime");
+pub const P_STARTED_AT: u64 = q_hash("http://www.w3.org/ns/prov#startedAtTime");
+pub const P_ENDED_AT: u64 = q_hash("http://www.w3.org/ns/prov#endedAtTime");
 
 // ── Dublin Core predicate hashes ─────────────────────────────────────────────
 const P_TITLE: u64 = q_hash("http://purl.org/dc/terms/title");
@@ -63,7 +63,7 @@ pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap
     let mut lexicon: std::collections::HashMap<u64, String> = std::collections::HashMap::new();
     let mut buf = Vec::new();
 
-    // Placemark state machine
+    // Placemark / Point state
     let mut in_placemark = false;
     let mut in_point = false;
     let mut in_timestamp = false;
@@ -73,6 +73,21 @@ pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap
     let mut in_when = false;
     let mut in_begin = false;
     let mut in_end = false;
+
+    // Polygon state (Phase 2)
+    let mut in_polygon = false;
+    let mut in_outer_boundary = false;
+    let mut in_linear_ring = false;
+    let mut in_poly_coordinates = false;
+    let mut polygon_coordinates_text = String::new();
+
+    // NetworkLink state (Phase 2)
+    let mut in_network_link = false;
+    let mut in_link = false;
+    let mut in_href = false;
+    let mut href_text = String::new();
+    let mut network_link_name = String::new();
+    let mut network_link_idx: u64 = 0;
 
     let mut placemark_subject: u64 = 0;
     let mut placemark_idx: u64 = 0;
@@ -91,7 +106,9 @@ pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap
                         placemark_idx += 1;
                         placemark_subject = fnv_hash(format!("kml:placemark:{placemark_idx}").as_bytes());
                         in_placemark = true;
+                        in_polygon = false;
                         coordinates_text.clear();
+                        polygon_coordinates_text.clear();
                         name_text.clear();
                         when_text.clear();
                         begin_text.clear();
@@ -101,10 +118,25 @@ pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap
                     b"TimeStamp" if in_placemark => in_timestamp = true,
                     b"TimeSpan" if in_placemark => in_timespan = true,
                     b"name" if in_placemark => in_name = true,
+                    b"name" if in_network_link => in_name = true,
                     b"coordinates" if in_point => in_coordinates = true,
                     b"when" if in_timestamp => in_when = true,
                     b"begin" if in_timespan => in_begin = true,
                     b"end" if in_timespan => in_end = true,
+                    // Polygon (Phase 2)
+                    b"Polygon" if in_placemark => in_polygon = true,
+                    b"outerBoundaryIs" if in_polygon => in_outer_boundary = true,
+                    b"LinearRing" if in_outer_boundary => in_linear_ring = true,
+                    b"coordinates" if in_linear_ring => in_poly_coordinates = true,
+                    // NetworkLink (Phase 2)
+                    b"NetworkLink" => {
+                        network_link_idx += 1;
+                        in_network_link = true;
+                        href_text.clear();
+                        network_link_name.clear();
+                    }
+                    b"Link" if in_network_link => in_link = true,
+                    b"href" if in_link => in_href = true,
                     _ => {}
                 }
             }
@@ -122,29 +154,62 @@ pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap
                             &mut quins,
                             &mut lexicon,
                         )?;
+                        if in_polygon && !polygon_coordinates_text.is_empty() {
+                            flush_polygon(
+                                placemark_subject,
+                                &polygon_coordinates_text,
+                                &name_text,
+                                &mut quins,
+                                &mut lexicon,
+                            )?;
+                        }
                         in_placemark = false;
                         in_point = false;
                         in_timestamp = false;
                         in_timespan = false;
+                        in_polygon = false;
+                        in_outer_boundary = false;
+                        in_linear_ring = false;
                     }
                     b"Point" => in_point = false,
                     b"TimeStamp" => in_timestamp = false,
                     b"TimeSpan" => in_timespan = false,
-                    b"name" => in_name = false,
-                    b"coordinates" => in_coordinates = false,
+                    b"name" => { in_name = false; if in_network_link { network_link_name = name_text.clone(); } }
+                    b"coordinates" if !in_poly_coordinates => in_coordinates = false,
                     b"when" => in_when = false,
                     b"begin" => in_begin = false,
                     b"end" => in_end = false,
+                    // Polygon (Phase 2)
+                    b"Polygon" => in_polygon = false,
+                    b"outerBoundaryIs" => in_outer_boundary = false,
+                    b"LinearRing" => in_linear_ring = false,
+                    b"coordinates" if in_poly_coordinates => in_poly_coordinates = false,
+                    // NetworkLink (Phase 2)
+                    b"NetworkLink" if in_network_link => {
+                        flush_network_link(
+                            network_link_idx,
+                            &href_text,
+                            &network_link_name,
+                            &mut quins,
+                            &mut lexicon,
+                        );
+                        in_network_link = false;
+                        in_link = false;
+                    }
+                    b"Link" => in_link = false,
+                    b"href" => in_href = false,
                     _ => {}
                 }
             }
             Ok(Event::Text(e)) => {
                 let text = e.unescape().map_err(|e| KmlError::Xml(e.to_string()))?.into_owned();
-                if in_coordinates { coordinates_text = text; }
-                else if in_name    { name_text = text; }
-                else if in_when    { when_text = text; }
-                else if in_begin   { begin_text = text; }
-                else if in_end     { end_text = text; }
+                if in_poly_coordinates          { polygon_coordinates_text = text; }
+                else if in_coordinates          { coordinates_text = text; }
+                else if in_name                 { name_text = text; }
+                else if in_when                 { when_text = text; }
+                else if in_begin                { begin_text = text; }
+                else if in_end                  { end_text = text; }
+                else if in_href                 { href_text = text; }
             }
             Ok(Event::Eof) => break,
             Err(e) => return Err(KmlError::Xml(e.to_string())),
@@ -205,6 +270,121 @@ fn flush_placemark(
     }
 
     Ok(())
+}
+
+// ── Predicate hash used for NetworkLink DID pointer ───────────────────────────
+const P_SEE_ALSO: u64 = q_hash("http://www.w3.org/2000/01/rdf-schema#seeAlso");
+const P_BOUNDING_BOX: u64 = q_hash("urn:qualia:spatial:boundingBox");
+const P_BB_MIN_LON: u64 = q_hash("urn:qualia:spatial:minLon");
+const P_BB_MAX_LON: u64 = q_hash("urn:qualia:spatial:maxLon");
+const P_BB_MIN_LAT: u64 = q_hash("urn:qualia:spatial:minLat");
+const P_BB_MAX_LAT: u64 = q_hash("urn:qualia:spatial:maxLat");
+
+/// Build NQuins for a `<Polygon>` element and append them to `quins`.
+///
+/// Returns:
+/// - `geo:hasGeometry` = GeoHash-64 of polygon centroid
+/// - `geo:asWKT` = hash of WKT POLYGON string
+/// - Bounding box quins (`urn:qualia:spatial:minLon/maxLon/minLat/maxLat`)
+fn flush_polygon(
+    subject: u64,
+    coordinates_text: &str,
+    name: &str,
+    quins: &mut Vec<NQuin>,
+    lexicon: &mut std::collections::HashMap<u64, String>,
+) -> Result<(), KmlError> {
+    let points = parse_coordinate_list(coordinates_text)?;
+    if points.is_empty() {
+        return Ok(());
+    }
+
+    // Compute bounding box and centroid.
+    let mut min_lon = f64::MAX;
+    let mut max_lon = f64::MIN;
+    let mut min_lat = f64::MAX;
+    let mut max_lat = f64::MIN;
+    let mut sum_lon = 0.0f64;
+    let mut sum_lat = 0.0f64;
+    for &(lon, lat) in &points {
+        min_lon = min_lon.min(lon);
+        max_lon = max_lon.max(lon);
+        min_lat = min_lat.min(lat);
+        max_lat = max_lat.max(lat);
+        sum_lon += lon;
+        sum_lat += lat;
+    }
+    let n = points.len() as f64;
+    let centroid_lon = sum_lon / n;
+    let centroid_lat = sum_lat / n;
+
+    // WKT POLYGON((lon1 lat1, lon2 lat2, ...))
+    // KML convention: first and last coordinates must match to close the ring.
+    let ring: Vec<String> = points.iter().map(|(lon, lat)| format!("{lon} {lat}")).collect();
+    let wkt = format!("POLYGON(({})", ring.join(", "));
+    let wkt = wkt + ")";
+    let wkt_hash = fnv_hash(wkt.as_bytes());
+    lexicon.insert(wkt_hash, wkt);
+
+    let geohash = encode_geohash_64(centroid_lon, centroid_lat);
+    quins.push(make_quin(subject, P_HAS_GEOMETRY, geohash, SPATIAL_CONTEXT));
+    quins.push(make_quin(subject, P_AS_WKT, wkt_hash, SPATIAL_CONTEXT));
+
+    // Bounding box quins — encode as f64 bits in the object field.
+    let bb_subject = fnv_hash(format!("kml:bbox:{subject}").as_bytes());
+    quins.push(make_quin(subject, P_BOUNDING_BOX, bb_subject, SPATIAL_CONTEXT));
+    quins.push(make_quin(bb_subject, P_BB_MIN_LON, min_lon.to_bits(), SPATIAL_CONTEXT));
+    quins.push(make_quin(bb_subject, P_BB_MAX_LON, max_lon.to_bits(), SPATIAL_CONTEXT));
+    quins.push(make_quin(bb_subject, P_BB_MIN_LAT, min_lat.to_bits(), SPATIAL_CONTEXT));
+    quins.push(make_quin(bb_subject, P_BB_MAX_LAT, max_lat.to_bits(), SPATIAL_CONTEXT));
+
+    if !name.is_empty() {
+        let name_hash = fnv_hash(name.as_bytes());
+        lexicon.insert(name_hash, name.to_owned());
+        quins.push(make_quin(subject, P_TITLE, name_hash, SPATIAL_CONTEXT));
+    }
+
+    Ok(())
+}
+
+/// Parse a full KML coordinate list string into a `Vec<(lon, lat)>`.
+///
+/// Handles both space-separated and newline-separated coordinate tuples of the
+/// form `"lon,lat[,alt]"`.
+fn parse_coordinate_list(s: &str) -> Result<Vec<(f64, f64)>, KmlError> {
+    let mut out = Vec::new();
+    for token in s.split_whitespace() {
+        // Re-use the existing single-coordinate parser (parses "first token only").
+        let (lon, lat) = parse_first_coordinate(token)?;
+        out.push((lon, lat));
+    }
+    Ok(out)
+}
+
+/// Build NQuins for a `<NetworkLink>` element.
+///
+/// - If `href` looks like a DID URI (`did:...`), a `rdfs:seeAlso` quin records it in `SPATIAL_CONTEXT`.
+/// - Otherwise the href hash is stored as a `rdfs:seeAlso` string reference.
+fn flush_network_link(
+    idx: u64,
+    href: &str,
+    name: &str,
+    quins: &mut Vec<NQuin>,
+    lexicon: &mut std::collections::HashMap<u64, String>,
+) {
+    if href.is_empty() {
+        return;
+    }
+    let link_subject = fnv_hash(format!("kml:networklink:{idx}").as_bytes());
+    let href_hash = fnv_hash(href.as_bytes());
+    lexicon.insert(href_hash, href.to_owned());
+
+    quins.push(make_quin(link_subject, P_SEE_ALSO, href_hash, SPATIAL_CONTEXT));
+
+    if !name.is_empty() {
+        let name_hash = fnv_hash(name.as_bytes());
+        lexicon.insert(name_hash, name.to_owned());
+        quins.push(make_quin(link_subject, P_TITLE, name_hash, SPATIAL_CONTEXT));
+    }
 }
 
 /// Export a slice of NQuins (SPATIAL_CONTEXT + T_CONTEXT) back to a KML document string.
@@ -315,7 +495,7 @@ fn fnv_hash(bytes: &[u8]) -> u64 {
 
 /// Encode (lon, lat) into a 64-bit interleaved GeoHash integer.
 /// Uses 32 bits each for latitude and longitude mapped to [0, 2^32).
-fn encode_geohash_64(lon: f64, lat: f64) -> u64 {
+pub fn encode_geohash_64(lon: f64, lat: f64) -> u64 {
     let lon_u = ((lon + 180.0) / 360.0 * u32::MAX as f64) as u64;
     let lat_u = ((lat + 90.0) / 180.0 * u32::MAX as f64) as u64;
     // Bit-interleave: even bits = lon, odd bits = lat

@@ -31,6 +31,7 @@ rtrb = "0.3.4"
 tiny_http = "0.12"
 bytemuck = "1.14"
 lz4_flex = "0.11"
+chrono = "0.4.45"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

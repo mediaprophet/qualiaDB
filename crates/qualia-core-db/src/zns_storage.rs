@@ -6,7 +6,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::fs::{File, OpenOptions};
-use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 
@@ -245,8 +244,10 @@ impl ZnsZoneManager {
 
     /// Write data to zone (zero-copy when possible)
     pub fn write_zone(&mut self, handle: &ZoneHandle, data: &[u8]) -> Result<(), ZnsError> {
+        let op_id = self.generate_operation_id();
+
         let zone = &mut self.zones[handle.zone_id as usize];
-        
+
         // Check zone state
         if zone.state != ZoneState::ExplicitlyOpened && zone.state != ZoneState::ImplicitlyOpened {
             return Err(ZnsError::InvalidZoneState(format!(
@@ -264,13 +265,13 @@ impl ZnsZoneManager {
 
         // Perform zero-copy write if possible
         let lba = zone.zone_start_lba + write_position / zone.zone_size * zone.zone_size / 4096;
-        
+
         // Schedule write operation
         let operation = ZnsOperation::Write {
             zone_id: handle.zone_id,
             lba,
             data: data.to_vec(),
-            operation_id: self.generate_operation_id(),
+            operation_id: op_id,
         };
 
         self.io_scheduler.schedule_operation(operation);
@@ -287,9 +288,11 @@ impl ZnsZoneManager {
     }
 
     /// Read data from zone
-    pub fn read_zone(&self, handle: &ZoneHandle, offset: u64, length: u64) -> Result<Vec<u8>, ZnsError> {
+    pub fn read_zone(&mut self, handle: &ZoneHandle, offset: u64, length: u64) -> Result<Vec<u8>, ZnsError> {
+        let op_id = self.generate_operation_id();
+
         let zone = &self.zones[handle.zone_id as usize];
-        
+
         // Check bounds
         if offset + length > zone.write_pointer {
             return Err(ZnsError::InvalidOffset(format!(
@@ -305,7 +308,7 @@ impl ZnsZoneManager {
             zone_id: handle.zone_id,
             lba,
             length,
-            operation_id: self.generate_operation_id(),
+            operation_id: op_id,
         };
 
         self.io_scheduler.schedule_operation(operation);
@@ -330,12 +333,14 @@ impl ZnsZoneManager {
 
     /// Flush zone to ensure data persistence
     pub fn flush_zone(&mut self, handle: &ZoneHandle) -> Result<(), ZnsError> {
+        let op_id = self.generate_operation_id();
+
         let zone = &mut self.zones[handle.zone_id as usize];
-        
+
         // Schedule flush operation
         let operation = ZnsOperation::Flush {
             zone_id: handle.zone_id,
-            operation_id: self.generate_operation_id(),
+            operation_id: op_id,
         };
 
         self.io_scheduler.schedule_operation(operation);
@@ -350,12 +355,14 @@ impl ZnsZoneManager {
 
     /// Reset zone for reuse
     pub fn reset_zone(&mut self, handle: &ZoneHandle) -> Result<(), ZnsError> {
+        let op_id = self.generate_operation_id();
+
         let zone = &mut self.zones[handle.zone_id as usize];
-        
+
         // Schedule reset operation
         let operation = ZnsOperation::Reset {
             zone_id: handle.zone_id,
-            operation_id: self.generate_operation_id(),
+            operation_id: op_id,
         };
 
         self.io_scheduler.schedule_operation(operation);

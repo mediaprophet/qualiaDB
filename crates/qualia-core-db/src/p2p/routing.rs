@@ -26,7 +26,7 @@ impl CivicsRoutingTable {
         {
             let mut out = vec![crate::NQuin::default(); 128]; // Stack allocation alternative for demo, bounded
             if let Ok((match_count, _)) =
-                crate::webizen_bytecode::execute_program(&program, db, &mut out)
+                crate::webizen_bytecode::execute_program(&program, db, &mut out, None)
             {
                 for quin in &out[..match_count] {
                     let group_hash = quin.subject.to_le_bytes();

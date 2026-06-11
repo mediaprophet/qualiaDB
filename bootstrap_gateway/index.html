@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia Connect: Bootstrap Gateway</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: #58a6ff;
+            margin-top: 0;
+        }
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: #58a6ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Qualia Bootstrap</h1>
+        <p id="status">Resolving Local Fiduciary Node...</p>
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        // C6: Public Bootstrap Gateway Logic
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const target = params.get('target');
+
+            if (target) {
+                // Ensure it looks like a local IP/port before blindly redirecting
+                try {
+                    const url = new URL(target);
+                    // Provide a brief delay for UI smoothing
+                    setTimeout(() => {
+                        document.getElementById('status').innerText = `Redirecting to Secure Local Context...\n${url.host}`;
+                        setTimeout(() => {
+                            window.location.replace(target);
+                        }, 500);
+                    }, 500);
+                } catch (e) {
+                    document.getElementById('status').innerText = "Error: Invalid Target URL Payload.";
+                    document.getElementById('status').style.color = "#f85149";
+                    document.querySelector('.spinner').style.display = 'none';
+                }
+            } else {
+                document.getElementById('status').innerText = "Error: No bootstrap target specified. Please scan the QR code from the Desktop Studio.";
+                document.getElementById('status').style.color = "#f85149";
+                document.querySelector('.spinner').style.display = 'none';
+            }
+        };
+    </script>
+</body>
+</html>

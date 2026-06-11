@@ -455,7 +455,7 @@ impl LocalLlmAgent {
     /// `ContextType::adapter_filename()` (e.g. `medical_v1.lora`).
     pub fn attach_lora_adapters(&self, adapter_dir: impl Into<std::path::PathBuf>) {
         let mgr = crate::lora::LoRAAdapterManager::new(adapter_dir);
-        *self.lora_manager.lock().unwrap() = Some(mgr);
+        *self.lora_manager.lock().unwrap_or_else(|e| e.into_inner()) = Some(mgr);
     }
 
     /// Attach a LoRA manager pre-configured with expected embedding dimensions.
@@ -469,12 +469,12 @@ impl LocalLlmAgent {
     ) {
         let mut mgr = crate::lora::LoRAAdapterManager::new(adapter_dir);
         mgr.set_expected_dims(n_in, n_out);
-        *self.lora_manager.lock().unwrap() = Some(mgr);
+        *self.lora_manager.lock().unwrap_or_else(|e| e.into_inner()) = Some(mgr);
     }
 
     /// Remove the LoRA manager and revert to base-model-only inference.
     pub fn detach_lora_adapters(&self) {
-        *self.lora_manager.lock().unwrap() = None;
+        *self.lora_manager.lock().unwrap_or_else(|e| e.into_inner()) = None;
     }
 
     /// Detect context from `prompt` and pre-warm the LoRA adapter cache.
@@ -482,7 +482,7 @@ impl LocalLlmAgent {
     /// Call this before a batch of related prompts to avoid cold-load latency
     /// on the first inference.
     pub fn warm_lora_for_prompt(&self, prompt: &str) {
-        let mut guard = self.lora_manager.lock().unwrap();
+        let mut guard = self.lora_manager.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(mgr) = guard.as_mut() {
             let (ctx, conf) = mgr.detector.analyze_text(prompt);
             if conf >= mgr.detector.confidence_threshold {
@@ -493,13 +493,13 @@ impl LocalLlmAgent {
 
     /// Return the currently active LoRA context type, if any.
     pub fn active_lora_context(&self) -> Option<crate::lora::ContextType> {
-        let guard = self.lora_manager.lock().unwrap();
+        let guard = self.lora_manager.lock().unwrap_or_else(|e| e.into_inner());
         guard.as_ref().and_then(|m| m.active()).map(|a| a.context_type)
     }
 
     /// Wire the `.q42.lex` sidecar used to populate FSM sieve masks at inference time.
     pub fn configure_sieve_lex(&self, path: impl Into<String>) {
-        *self.sieve_lex_path.lock().unwrap() = Some(path.into());
+        *self.sieve_lex_path.lock().unwrap_or_else(|e| e.into_inner()) = Some(path.into());
     }
 
     pub fn agent_did_hash(&self) -> u64 {
@@ -548,12 +548,12 @@ impl LocalLlmAgent {
             .use_sieve_output
             .load(std::sync::atomic::Ordering::Relaxed);
         let sieve_spec = if use_sieve {
-            Some(*self.sieve_spec.lock().unwrap())
+            Some(*self.sieve_spec.lock().unwrap_or_else(|e| e.into_inner()))
         } else {
             None
         };
         let sieve_lex_path = if use_sieve {
-            self.sieve_lex_path.lock().unwrap().clone()
+            self.sieve_lex_path.lock().unwrap_or_else(|e| e.into_inner()).clone()
         } else {
             None
         };
@@ -585,7 +585,7 @@ impl LocalLlmAgent {
             // as fixed-size heap data — one allocation per infer call, not per token.
             #[allow(unused_variables)]
             let lora_active_adapter: Option<crate::lora::LoRAAdapter> = {
-                let mut guard = self.lora_manager.lock().unwrap();
+                let mut guard = self.lora_manager.lock().unwrap_or_else(|e| e.into_inner());
                 if let Some(ref mut mgr) = *guard {
                     let (ctx, conf, _switched) = mgr.auto_switch(
                         &prompt_owned,
@@ -631,6 +631,13 @@ impl LocalLlmAgent {
 
             // ── LLM engine thread ────────────────────────────────────────────
             let h = thread::spawn(move || -> (String, u32, Option<NQuin>, bool) {
+                // Initialize Tokio runtime for the thread to prevent panics in async components
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap_or_else(|e| panic!("Failed to create Tokio runtime for LLM thread: {}", e));
+                let _rt_guard = rt.enter();
+
                 let lora_adapter = lora_for_thread;
                 let sieve_spec = sieve_spec;
                 let sieve_lex_path = sieve_lex_path;
@@ -1118,7 +1125,7 @@ impl AgentRuntime for LocalLlmAgent {
                     spec.push_predicate(namespace_hash);
                 }
             }
-            *self.sieve_spec.lock().unwrap() = spec;
+            *self.sieve_spec.lock().unwrap_or_else(|e| e.into_inner()) = spec;
         }
 
         let frame = intent.to_frame();

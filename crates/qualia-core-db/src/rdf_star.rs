@@ -38,6 +38,20 @@ pub enum RdfStarSerializeError {
     UnsupportedFeature,
 }
 
+impl std::fmt::Display for RdfStarParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+impl std::error::Error for RdfStarParseError {}
+
+impl std::fmt::Display for RdfStarSerializeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+impl std::error::Error for RdfStarSerializeError {}
+
 /// Trait for RDF-Star parsers across multiple formats
 ///
 /// All parsers must implement this trait to ensure consistent

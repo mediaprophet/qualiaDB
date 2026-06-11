@@ -701,7 +701,7 @@ mod tests {
 
     #[test]
     fn test_fiduciary_crypto() {
-        let crypto = FiduciaryCrypto::new();
+        let mut crypto = FiduciaryCrypto::new();
         
         crypto.generate_key("test_key".to_string()).unwrap();
         

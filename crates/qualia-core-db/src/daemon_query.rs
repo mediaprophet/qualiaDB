@@ -33,10 +33,11 @@ pub fn execute_ntriples_pattern_on_graph(
     }
 
     let mut out_buffer = vec![NQuin::default(); QUERY_OUT_SLOTS];
-    let stats = webizen_bytecode::execute_program_with_stats(&program, graph, &mut out_buffer)
+    let stats = webizen_bytecode::execute_program_with_stats(&program, graph, &mut out_buffer, None)
         .map_err(|e| match e {
             webizen_bytecode::VmError::OutputBufferFull => QueryExecError::OutputBufferFull,
             webizen_bytecode::VmError::InvalidProgram => QueryExecError::InvalidProgram,
+            webizen_bytecode::VmError::HaltViolation => QueryExecError::InvalidProgram,
         })?;
 
     let results = out_buffer[..stats.match_count].to_vec();
@@ -67,10 +68,11 @@ pub fn execute_ntriples_metrics(
     }
 
     let mut out_buffer = vec![NQuin::default(); QUERY_OUT_SLOTS];
-    let stats = webizen_bytecode::execute_program_with_stats(&program, graph, &mut out_buffer)
+    let stats = webizen_bytecode::execute_program_with_stats(&program, graph, &mut out_buffer, None)
         .map_err(|e| match e {
             webizen_bytecode::VmError::OutputBufferFull => QueryExecError::OutputBufferFull,
             webizen_bytecode::VmError::InvalidProgram => QueryExecError::InvalidProgram,
+            webizen_bytecode::VmError::HaltViolation => QueryExecError::InvalidProgram,
         })?;
 
     for quin in &out_buffer[..stats.match_count] {

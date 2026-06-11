@@ -25,6 +25,12 @@ pub const OP_MATCH_PREDICATE: u8 = 0x02;
 pub const OP_MATCH_OBJECT: u8 = 0x03;
 pub const OP_HALT_IF_FALSE: u8 = 0x04;
 
+// Sentinel Deontic Logic ISA Extensions
+pub const OP_EVAL_PERMIT: u8 = 0x50;
+pub const OP_EVAL_OBLIGATE: u8 = 0x51;
+pub const OP_EVAL_FORBID: u8 = 0x52;
+pub const OP_HALT_VIOLATION: u8 = 0x53;
+
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     /// The query bytes are not valid UTF-8 or contain no recognisable tokens.

@@ -5,7 +5,7 @@
 //! the #![no_std] environment of Qualia-DB.
 
 use crate::solvers::{SolverConfig, SolverState, SolverResult};
-use crate::ggml_quants::ExecutionError;
+use crate::solvers::SolversError as ExecutionError;
 use crate::NQuin;
 use core::f64::consts;
 
@@ -114,7 +114,7 @@ pub trait SpsaCostFunction {
 
 impl QAOAAngleOptimizer {
     /// Create new QAOA angle optimizer
-    pub const fn new(depth: u8, config: SolverConfig) -> Self {
+    pub fn new(depth: u8, config: SolverConfig) -> Self {
         Self {
             angles: QAOAAngles::default(),
             angle_updates: QAOAAngles::default(),
@@ -232,7 +232,7 @@ impl QAOAAngleOptimizer {
             self.angles.beta[i] += self.angle_updates.beta[i];
             
             // Keep angles in [0, 2π] range
-            self.angles.beta[i] = self.angles.beta[i].rem(2.0 * consts::PI);
+            self.angles.beta[i] = self.angles.beta[i] % (2.0 * consts::PI);
             if self.angles.beta[i] < 0.0 {
                 self.angles.beta[i] += 2.0 * consts::PI;
             }
@@ -244,7 +244,7 @@ impl QAOAAngleOptimizer {
             self.angles.gamma[i] += self.angle_updates.gamma[i];
             
             // Keep angles in [0, 2π] range
-            self.angles.gamma[i] = self.angles.gamma[i].rem(2.0 * consts::PI);
+            self.angles.gamma[i] = self.angles.gamma[i] % (2.0 * consts::PI);
             if self.angles.gamma[i] < 0.0 {
                 self.angles.gamma[i] += 2.0 * consts::PI;
             }
@@ -268,13 +268,13 @@ impl QAOAAngleOptimizer {
         let mut count = 0;
         
         for i in 0..recent_window {
-            let idx = (start_idx + i) % 50;
+            let idx = (start_idx + i as usize) % 50;
             cost_change += (self.cost_history[idx] - self.cost_history[end_idx]).abs();
             count += 1;
         }
         
         if count > 0 {
-            cost_change / count as f64 < self.config.tolerance
+            cost_change / (count as f64) < self.config.tolerance
         } else {
             false
         }
@@ -293,7 +293,7 @@ impl QAOAAngleOptimizer {
 
 impl SpsaOptimizer {
     /// Create new SPSA optimizer
-    pub const fn new(num_params: u8, config: SolverConfig) -> Self {
+    pub fn new(num_params: u8, config: SolverConfig) -> Self {
         Self {
             parameters: [0.0; 20],
             perturbation: [0.0; 20],

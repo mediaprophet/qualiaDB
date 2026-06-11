@@ -1,0 +1,235 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix cog:   <https://www.w3.org/community/cogai/ont#> .
+@prefix q42:   <urn:qualia:ontology:> .
+@prefix q42ep: <urn:qualia:ontology:epistemic:> .
+@prefix q42sh: <urn:qualia:shapes:epistemic:> .
+
+# ── Qualia Epistemic Shapes Ontology ─────────────────────────────────────────
+#
+# Implements the Dynamic Epistemic Logic (DEL) layer for QualiaDB.
+#
+# Core distinction:
+#   ObjectiveKnowledgeShape  — cryptographically verified; wasGeneratedBy a CryptoSensor
+#   InferredBeliefShape      — derived via local logic; wasDerivedFrom an AgentQuery or HearsayEvent
+#   HearsayBeliefShape       — received from an unverified peer; q42ep:believesViaHearsay present
+#
+# Design principle: SHACL Closed World Assumption (CWA) is used throughout.
+# If the required justification edge is absent, the epistemic state is definitively
+# classified as lower-confidence — there is no "open world" inference that proof
+# might exist elsewhere. This is critical for legal and biomedical contexts.
+#
+# Integration: deontic_logic.rs can gate OP_PERMIT on conformance to these shapes:
+#   OP_PERMIT read IF CONFORMS_TO ObjectiveKnowledgeShape
+#   OP_CONDITIONALLY_PERMIT read IF CONFORMS_TO InferredBeliefShape
+#
+# Author: Peace Infrastructure Project founding DID (est. 2020)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Epistemic resource classes ─────────────────────────────────────────────────
+
+q42ep:CryptoSensor a rdfs:Class, owl:Class ;
+    rdfs:label "Cryptographic Sensor" ;
+    rdfs:comment "A source whose output is cryptographically signed or hardware-attested. Produces ObjectiveKnowledge." .
+
+q42ep:SignedObjectiveEvent a rdfs:Class, owl:Class ;
+    rdfs:label "Signed Objective Event" ;
+    rdfs:comment "A digitally signed event record from a verified party. Produces ObjectiveKnowledge." .
+
+q42ep:AgentQuery a rdfs:Class, owl:Class ;
+    rdfs:label "Agent Query Event" ;
+    rdfs:comment "A query made by an agent about a proposition — itself an epistemic event that propagates to observers." .
+
+q42ep:HearsayEvent a rdfs:Class, owl:Class ;
+    rdfs:label "Hearsay Event" ;
+    rdfs:comment "Information received from an unverified peer, without direct cryptographic linkage." .
+
+# ── Epistemic modality properties ─────────────────────────────────────────────
+
+q42ep:knowsDirectly a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "knows directly" ;
+    rdfs:comment "Agent has direct cryptographic or sensory proof of a proposition." ;
+    rdfs:domain cog:Agent ;
+    rdfs:range  rdfs:Resource .
+
+q42ep:infersFrom a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "infers from" ;
+    rdfs:comment "Agent derived a belief via local computation or logic from a source event." ;
+    rdfs:domain cog:Agent ;
+    rdfs:range  rdfs:Resource .
+
+q42ep:believesViaHearsay a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "believes via hearsay" ;
+    rdfs:comment "Agent holds a belief received from an unverified peer (e.g., by observing another agent's query)." ;
+    rdfs:domain cog:Agent ;
+    rdfs:range  rdfs:Resource .
+
+# ── ObjectiveKnowledgeShape ────────────────────────────────────────────────────
+#
+# A belief node passes this shape only when the justification chain includes
+# exactly one prov:wasGeneratedBy pointing to a CryptoSensor or SignedObjectiveEvent.
+# SHACL CWA: absence of that link means the state is NOT ObjectiveKnowledge.
+
+q42sh:ObjectiveKnowledgeShape
+    a sh:NodeShape ;
+    rdfs:label "Objective Knowledge Shape" ;
+    rdfs:comment "Validates that a belief is backed by cryptographic justification, upgrading it to Knowledge in the JTB model." ;
+    sh:targetClass cog:Belief ;
+
+    # Must hold a cog:believes assertion
+    sh:property [
+        sh:path     cog:believes ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message  "Belief node must have at least one cog:believes assertion." ;
+    ] ;
+
+    # Must have exactly one prov:wasGeneratedBy pointing to an objective source
+    sh:property [
+        sh:path       prov:wasGeneratedBy ;
+        sh:minCount   1 ;
+        sh:maxCount   1 ;
+        sh:or (
+            [ sh:class q42ep:CryptoSensor ]
+            [ sh:class q42ep:SignedObjectiveEvent ]
+        ) ;
+        sh:severity sh:Violation ;
+        sh:message  "ObjectiveKnowledge requires exactly one prov:wasGeneratedBy pointing to a CryptoSensor or SignedObjectiveEvent." ;
+    ] ;
+
+    # Must NOT have a wasDerivedFrom (that would demote it to InferredBelief)
+    sh:property [
+        sh:path     prov:wasDerivedFrom ;
+        sh:maxCount 0 ;
+        sh:severity sh:Warning ;
+        sh:message  "ObjectiveKnowledge should not have wasDerivedFrom — use InferredBeliefShape instead." ;
+    ] .
+
+# ── InferredBeliefShape ────────────────────────────────────────────────────────
+#
+# Passes when the belief is derived from a prior event (AgentQuery or HearsayEvent)
+# via prov:wasDerivedFrom — but lacks the cryptographic proof for ObjectiveKnowledge.
+# Jane's state in the John/Frank/Jane scenario conforms to this shape.
+
+q42sh:InferredBeliefShape
+    a sh:NodeShape ;
+    rdfs:label "Inferred Belief Shape" ;
+    rdfs:comment "Validates a belief that is derived from a prior epistemic event (query, inference) rather than direct proof." ;
+    sh:targetClass cog:Belief ;
+
+    # Must hold a cog:believes or cog:infers assertion
+    sh:property [
+        sh:path     cog:believes ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message  "Inferred belief node must have at least one cog:believes assertion." ;
+    ] ;
+
+    # Must have at least one prov:wasDerivedFrom pointing to a query or hearsay event
+    sh:property [
+        sh:path     prov:wasDerivedFrom ;
+        sh:minCount 1 ;
+        sh:or (
+            [ sh:class q42ep:AgentQuery ]
+            [ sh:class q42ep:HearsayEvent ]
+        ) ;
+        sh:severity sh:Violation ;
+        sh:message  "InferredBelief requires at least one prov:wasDerivedFrom pointing to an AgentQuery or HearsayEvent." ;
+    ] ;
+
+    # Must NOT have the direct cryptographic link (else it's ObjectiveKnowledge)
+    sh:property [
+        sh:path     prov:wasGeneratedBy ;
+        sh:maxCount 0 ;
+        sh:severity sh:Info ;
+        sh:message  "Node has prov:wasGeneratedBy — may conform to ObjectiveKnowledgeShape instead." ;
+    ] .
+
+# ── HearsayBeliefShape ─────────────────────────────────────────────────────────
+#
+# Lowest epistemic weight. Passes when the q42ep:believesViaHearsay modality is present.
+# The informant DID is captured via prov:wasDerivedFrom on the source HearsayEvent.
+
+q42sh:HearsayBeliefShape
+    a sh:NodeShape ;
+    rdfs:label "Hearsay Belief Shape" ;
+    rdfs:comment "Validates a belief held on the basis of an unverified peer's assertion, with the lowest epistemic weight." ;
+    sh:targetClass cog:Belief ;
+
+    sh:property [
+        sh:path     q42ep:believesViaHearsay ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message  "HearsayBelief requires at least one q42ep:believesViaHearsay property." ;
+    ] ;
+
+    sh:property [
+        sh:path     prov:wasDerivedFrom ;
+        sh:minCount 1 ;
+        sh:class    q42ep:HearsayEvent ;
+        sh:severity sh:Violation ;
+        sh:message  "HearsayBelief must reference a HearsayEvent via prov:wasDerivedFrom." ;
+    ] .
+
+# ── EpistemicPropagationShape ──────────────────────────────────────────────────
+#
+# Validates that a query event (Frank querying the matter) is properly recorded,
+# so that downstream agents (Jane observing Frank's query) have a traceable source.
+
+q42sh:EpistemicPropagationShape
+    a sh:NodeShape ;
+    rdfs:label "Epistemic Propagation Shape" ;
+    rdfs:comment "Validates that a query event is recorded with the querying agent's DID and a timestamp, enabling downstream epistemic traceability." ;
+    sh:targetClass q42ep:AgentQuery ;
+
+    sh:property [
+        sh:path     cog:queries ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message  "AgentQuery must have a cog:queries assertion naming the proposition queried." ;
+    ] ;
+
+    sh:property [
+        sh:path     prov:wasAttributedTo ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message  "AgentQuery must be attributed to the querying agent's DID via prov:wasAttributedTo." ;
+    ] ;
+
+    sh:property [
+        sh:path     prov:generatedAtTime ;
+        sh:minCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:severity sh:Warning ;
+        sh:message  "AgentQuery should have a prov:generatedAtTime timestamp (ms since epoch)." ;
+    ] .
+
+# ── Deontic gate integration (informational) ───────────────────────────────────
+#
+# The following SPARQL checks are evaluated by deontic_logic.rs at query time.
+# They are expressed here as sh:SPARQLConstraint so they are visible to SHACL validators
+# and can be loaded into sparql_shacl.rs alongside the NodeShapes above.
+
+q42sh:ObjectiveKnowledgeAccessGate
+    a sh:NodeShape ;
+    rdfs:label "Objective Knowledge Access Gate" ;
+    rdfs:comment "SPARQL gate: permits read access only when the proposition conforms to ObjectiveKnowledgeShape." ;
+    sh:targetClass cog:Belief ;
+    sh:sparql [
+        sh:message  "Read access requires ObjectiveKnowledge unless agent holds InferredBelief clearance." ;
+        sh:select """
+            SELECT $this WHERE {
+                $this prov:wasGeneratedBy ?src .
+                FILTER NOT EXISTS {
+                    ?src a <urn:qualia:ontology:epistemic:CryptoSensor> .
+                }
+                FILTER NOT EXISTS {
+                    ?src a <urn:qualia:ontology:epistemic:SignedObjectiveEvent> .
+                }
+            }
+        """ ;
+    ] .

@@ -6,7 +6,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::fs::{File, OpenOptions};
-use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 
@@ -115,7 +114,7 @@ pub enum RuleAction {
 }
 
 /// Packet modification actions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PacketModification {
     pub field: String,
     pub operation: ModificationOperation,
@@ -270,17 +269,34 @@ impl EbpfFirewall {
 
     /// Attach program to socket
     pub fn attach_socket(&mut self, fd: i32, program_name: &str) -> Result<(), EbpfError> {
-        // Get program
-        let program = self.programs.get_mut(program_name)
-            .ok_or_else(|| EbpfError::ProgramNotFound(program_name.to_string()))?;
+        // Pre-compute all &self operations before any mutable borrows
+        let socket_type = self.detect_socket_type(fd)?;
+        let protocol = self.detect_protocol(fd)?;
+        let local_address = self.get_local_address(fd)?;
+        let remote_address = self.get_remote_address(fd)?;
 
-        // Create socket info
+        // Extract program fields via immutable borrow (dropped before mutable ops)
+        let (program_id, program_type) = {
+            let program = self.programs.get(program_name)
+                .ok_or_else(|| EbpfError::ProgramNotFound(program_name.to_string()))?;
+            (program.program_id, program.program_type.clone())
+        };
+
+        // Attach program to socket (no live &mut program borrow)
+        self.attach_program_to_socket(fd, program_id, program_type)?;
+
+        // Update program attached sockets
+        self.programs.get_mut(program_name)
+            .ok_or_else(|| EbpfError::ProgramNotFound(program_name.to_string()))?
+            .attached_sockets.push(fd);
+
+        // Create and store socket info
         let socket_info = SocketInfo {
             fd,
-            socket_type: self.detect_socket_type(fd)?,
-            protocol: self.detect_protocol(fd)?,
-            local_address: self.get_local_address(fd)?,
-            remote_address: self.get_remote_address(fd)?,
+            socket_type,
+            protocol,
+            local_address,
+            remote_address,
             attached_program: Some(program_name.to_string()),
             bypass_enabled: true,
             performance_stats: SocketStats {
@@ -296,13 +312,6 @@ impl EbpfFirewall {
             },
         };
 
-        // Attach program to socket
-        self.attach_program_to_socket(fd, program.program_id, program.program_type)?;
-
-        // Update program
-        program.attached_sockets.push(fd);
-
-        // Store socket info
         self.sockets.insert(fd, socket_info);
 
         Ok(())

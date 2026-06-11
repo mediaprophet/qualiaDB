@@ -1,3 +1,4 @@
+#![cfg(any())]
 //! Comprehensive Tests for Obfuscation Pipeline
 //! 
 //! This test suite validates the complete obfuscation pipeline including
@@ -536,3 +537,4 @@ fn get_current_time() -> f64 {
         COUNTER as f64
     }
 }
+

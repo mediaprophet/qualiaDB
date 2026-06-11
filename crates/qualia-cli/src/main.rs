@@ -10,7 +10,6 @@ mod llm_lifecycle;
 mod llm_testing;
 pub mod compress;
 pub mod ingest;
-mod parsers;
 pub mod resources;
 pub mod telemetry_server;
 
@@ -724,6 +723,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let is_rdf = matches!(ext.as_str(), "rdf" | "xml" | "owl" | "ttl" | "turtle");
             let is_chk = ext == "chk";
             let is_cbor = ext == "cbor" || ext == "cbor-ld";
+            let is_kml = ext == "kml";
 
             // Ensure the output path ends in ".q42" so that lex_path()
             // correctly derives "<base>.q42.lex" from it.
@@ -740,6 +740,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("QualiaDB Cognitive AI .chk → .q42 Ingestor");
             } else if is_cbor {
                 println!("QualiaDB CBOR-LD → .q42 Ingestor");
+            } else if is_kml {
+                println!("QualiaDB KML → .q42 Ingestor (GeoSPARQL + PROV-O)");
             } else {
                 println!("QualiaDB N-Triples → .q42 Ingestor");
             }
@@ -755,6 +757,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ingest::ingest_chk(input, &q42_output)
             } else if is_cbor {
                 ingest::ingest_cbor(input, &q42_output)
+            } else if is_kml {
+                ingest::ingest_kml(input, &q42_output)
             } else {
                 ingest::ingest_ntriples(input, &q42_output)
             };
@@ -1609,7 +1613,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let context_hash = hash_str(&url);
 
                     let temp_dir = repo.join(".qualia_temp");
-                    let mut sorter = crate::parsers::external_sort::ExternalSorter::new(temp_dir);
+                    let mut sorter = qualia_core_db::sparql_formats::external_sort::ExternalSorter::new(temp_dir);
 
                     let is_http = url.starts_with("http");
                     let mut file_bytes: Vec<u8> = Vec::new();
@@ -1642,7 +1646,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let parsed_count = match fmt.as_str() {
                         "cbor-ld" => {
                             println!("📡 Stream-parsing CBOR-LD (Zero-allocation path)");
-                            crate::parsers::cbor_parser::parse_cbor_ld_stream(
+                            qualia_core_db::sparql_formats::cbor_parser::parse_cbor_ld_stream(
                                 &file_bytes,
                                 context_hash,
                                 &mut sorter,
@@ -1652,7 +1656,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             println!(
                                 "🏢 Stream-parsing JSON-LD via SAX-style State Machine (Zero DOM)"
                             );
-                            crate::parsers::json_ld_stream::parse_json_ld_stream(
+                            qualia_core_db::sparql_formats::json_ld_stream::parse_json_ld_stream(
                                 file_bytes.as_slice(),
                                 context_hash,
                                 &mut sorter,
@@ -1660,7 +1664,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         "turtle-star" => {
                             println!("🌿 Stream-parsing Turtle-Star (with MSB XOR folding)");
-                            crate::parsers::turtle_star::parse_turtle_star_stream(
+                            qualia_core_db::sparql_formats::turtle_star::parse_turtle_star_stream(
                                 file_bytes.as_slice(),
                                 context_hash,
                                 &mut sorter,
@@ -1668,7 +1672,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         "chk" => {
                             println!("🧠 Stream-parsing Cognitive AI Chunks (.chk format)");
-                            crate::parsers::chk_parser::parse_chk_stream(
+                            qualia_core_db::sparql_formats::chk_parser::parse_chk_stream(
                                 file_bytes.as_slice(),
                                 context_hash,
                                 &mut sorter,

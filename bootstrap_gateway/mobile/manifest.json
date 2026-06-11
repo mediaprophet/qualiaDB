@@ -1,0 +1,21 @@
+{
+    "display":  "standalone",
+    "icons":  [
+                  {
+                      "type":  "image/png",
+                      "sizes":  "192x192",
+                      "src":  "icon-192.png"
+                  },
+                  {
+                      "type":  "image/png",
+                      "sizes":  "512x512",
+                      "src":  "icon-512.png"
+                  }
+              ],
+    "background_color":  "#1a1a1a",
+    "theme_color":  "#1a1a1a",
+    "name":  "Qualia Sovereign Hub",
+    "description":  "Sovereign Edge Node and Tethered Client",
+    "start_url":  "./index.html",
+    "short_name":  "Qualia"
+}

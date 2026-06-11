@@ -14,7 +14,7 @@ use uuid::Uuid;
 /// SNN Extension implementation with CRDT synchronization
 pub struct SnnExtension {
     network_manager: SnnNetworkManager,
-    crdt_synchronizer: NoisyGradientCrdt,
+    crdt_synchronizer: tokio::sync::Mutex<NoisyGradientCrdt>,
     capability: ExtensionCapability,
 }
 
@@ -357,7 +357,7 @@ impl SnnExtension {
 
         Self {
             network_manager,
-            crdt_synchronizer,
+            crdt_synchronizer: tokio::sync::Mutex::new(crdt_synchronizer),
             capability: ExtensionCapability {
                 name: "snn".to_string(),
                 version: "1.0.0".to_string(),
@@ -390,9 +390,9 @@ impl SnnExtension {
         // Execute SNN simulation with temporal processing
         let result = self.execute_snn_simulation(network, &params).await?;
         
-        // Perform CRDT synchronization if enabled
         let sync_result = if params.crdt_sync_enabled {
-            self.crdt_synchronizer.synchronize_gradients(&result).await?
+            let mut sync = self.crdt_synchronizer.lock().await;
+            sync.synchronize_gradients(&result).await?
         } else {
             CrdtSyncMetrics::default()
         };
@@ -410,7 +410,8 @@ impl SnnExtension {
     }
 
     async fn execute_snn_simulation(&self, network: &SpikingNetwork, params: &SnnJobParams) -> Result<SnnExecutionResult, ExtensionError> {
-        let mut temporal_processor = network.temporal_config.create_processor();
+        let mut network_sim = network.clone();
+        let mut temporal_processor = network_sim.temporal_config.create_processor();
         let mut current_time = Duration::ZERO;
         let mut output_spikes = Vec::new();
         let mut membrane_potentials = Vec::new();
@@ -426,22 +427,22 @@ impl SnnExtension {
             }
 
             // Update neuron states
-            self.update_neuron_states(network, &mut temporal_processor, current_time)?;
+            self.update_neuron_states(&mut network_sim, &mut temporal_processor, current_time)?;
 
             // Record membrane potentials
-            let potentials: Vec<f64> = network.neurons.iter()
+            let potentials: Vec<f64> = network_sim.neurons.iter()
                 .map(|neuron| neuron.membrane_potential)
                 .collect();
             membrane_potentials.push(potentials);
 
             // Record synaptic weights
-            let weights: Vec<f64> = network.synapses.iter()
+            let weights: Vec<f64> = network_sim.synapses.iter()
                 .map(|synapse| synapse.weight)
                 .collect();
             synaptic_weights.push(weights);
 
             // Advance time
-            current_time += network.temporal_config.time_step;
+            current_time += network_sim.temporal_config.time_step;
         }
 
         // Extract output spikes
@@ -460,11 +461,11 @@ impl SnnExtension {
         })
     }
 
-    fn update_neuron_states(&self, network: &SpikingNetwork, processor: &mut TemporalProcessor, current_time: Duration) -> Result<(), ExtensionError> {
-        for neuron in &network.neurons {
+    fn update_neuron_states(&self, network: &mut SpikingNetwork, processor: &mut TemporalProcessor, current_time: Duration) -> Result<(), ExtensionError> {
+        for neuron in &mut network.neurons {
             // Check if neuron is in refractory period
             if let Some(last_spike) = neuron.last_spike_time {
-                if last_spike_time.elapsed() < neuron.refractory_period {
+                if last_spike.elapsed() < neuron.refractory_period {
                     continue;
                 }
             }
@@ -846,6 +847,10 @@ impl Extension for SnnExtension {
         self.capability.clone()
     }
 
+    fn shutdown(&self) -> Result<(), ExtensionError> {
+        Ok(())
+    }
+
     async fn execute(&self, job: ExtensionJob) -> Result<ExtensionResult, ExtensionError> {
         let start_time = Instant::now();
         
@@ -876,7 +881,7 @@ impl Extension for SnnExtension {
                     execution_time_ms: start_time.elapsed().as_millis() as u64,
                 })
             }
-            _ => Err(ExtensionError::UnsupportedOperation(job.operation)),
+            _ => Err(ExtensionError::OperationNotSupported(job.operation)),
         }
     }
 }

@@ -8,20 +8,24 @@ bodies.
 
 These items should be resolved before any serious external submission work.
 
-### 1. Unify `.q42` semantics — **substantially resolved (2026-06-09)**
+### 1. Unify `.q42` semantics — **substantially resolved (2026-06-11)**
 
 The repo previously exhibited multiple incompatible `.q42` interpretations. As of
-2026-06-09, **new ingest converges on unified v2 volumes**
+2026-06-11, **new ingest converges on unified v3 volumes**
 (`crates/qualia-core-db/src/q42_volume.rs`):
 
-- single `.q42` file with magic `Q42\0`, version 2
+- single `.q42` file with magic `Q42\0`, version 3
 - embedded Q42LEX + BIDX + block-local LZ4 SuperBlocks
-- `qualia-cli ingest` and external sort write v2 only
+- v3 header adds: `temporal_index_offset/length`, `merkle_root [u8;32]`,
+  `assertion_timestamp`, `dag_root_offset/length` (carved from `_reserved`)
+- v2 files are **hard-rejected** — `verify_version()` requires version == 3;
+  `migrate_v2_to_v3()` performs a one-pass in-place upgrade
+- `qualia-cli ingest` and external sort write v3 only
 - legacy v1 sidecars and framed transport remain **read** paths only
 
 Remaining before external standardization:
 
-- migrate WASM playground VFS to v2 (or document build-time translation)
+- migrate WASM playground VFS to v3 (or document build-time translation)
 - freeze media-type names and publish test vectors
 - complete `.c.q42` deprecation in all distribution docs
 
@@ -71,15 +75,16 @@ Each of those should become its own draft with its own conformance language.
   byte order, compression profile, HTTP delivery expectations.
 - Why it is non-standard: custom binary container with embedded index sections
   and browser / daemon transport conventions.
-- First doc to write here: `q42-format-internal-draft.md` (**updated for v2,
-  2026-06-09**)
+- First doc to write here: `q42-format-internal-draft.md` (**updated for v3,
+  2026-06-11**)
 - Primary SDO: IETF
 - Recommended format: Internet-Draft in Markdown-to-RFCXML
 - Exit criteria before submission:
-  - [x] canonical v2 serialization chosen and implemented
-  - [ ] content-type names proposed (`application/vnd.qualia.q42+v2`)
-  - [x] explicit versioning (magic + u16 version field)
-  - [ ] worked example vectors (v2 + legacy compatibility set)
+  - [x] canonical v3 serialization chosen and implemented (supersedes v2)
+  - [ ] content-type names proposed (`application/vnd.qualia.q42+v3`)
+  - [x] explicit versioning (magic + u16 version field; v2 hard-rejected)
+  - [x] v3 header extension fields documented (temporal, merkle_root, DAG)
+  - [ ] worked example vectors (v3 + legacy compatibility set)
   - [ ] playground / WASM reader aligned or explicitly scoped out
 
 ## 2. did:q42 method / pointer syntax
@@ -173,7 +178,31 @@ Each of those should become its own draft with its own conformance language.
   - each extension term has syntax, semantics, and failure behavior
   - at least one implementation report or test manifest exists
 
-## 6. Qualia qapp loopback protocol
+## 6. SPARQL temporal extension (`AS OF` / `AT TIME`)
+
+- Scope: two new SPARQL modifiers that wrap a WHERE clause with a historical
+  snapshot constraint. `AS OF <timestamp>` selects quins whose
+  `prov:generatedAtTime ≤ t` (assertion-time snapshot). `AT TIME <timestamp>`
+  selects quins whose `startedAtTime ≤ t ≤ endedAtTime` (valid-time point).
+- **Status:** ✅ **IMPLEMENTED** (2026-06-11)
+- Why it is non-standard: extends SPARQL 1.1/1.2 syntax outside the current
+  W3C working draft; depends on PROV-O T_CONTEXT overlay quins.
+- First doc to write here: `sparql-temporal-extension.md` (not yet written)
+- Primary SDO: W3C SPARQL WG or Community Group Note
+- Recommended format: extension note aligned with SPARQL 1.2 WD style
+- Why this fit: builds on PROV-O (W3C Rec.), GeoSPARQL temporal patterns, and
+  RDF-Star metadata; a natural W3C surface.
+- Implementation: `sparql_ast.rs` (`TemporalMode`, `Pattern::AsOf`),
+  `sparql_planner.rs` (`PhysicalOperatorType::AsOf`), `sparql_executor.rs`
+  (`execute_as_of`, `check_temporal_constraint`), `sparql_parser.rs`
+  (`parse_temporal_literal`). 138 SPARQL tests passing.
+- Exit criteria before submission:
+  - [ ] formal BNF extension to SPARQL grammar written
+  - [ ] interop scenario involves more than QualiaDB
+  - [ ] PROV-O dependency on T_CONTEXT clearly scoped
+  - [ ] relationship to SPARQL-MM temporal windows documented
+
+## 7. Qualia qapp loopback protocol (was §6)
 
 - Scope: localhost / loopback asset serving and host-embedded qapp access
   boundary, including URL model, lifecycle, and trust assumptions.

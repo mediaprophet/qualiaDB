@@ -75,7 +75,7 @@ fn standard_uri_query_triggers_lexicon_path() {
     compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
 
     let mut out = [NQuin::default(); 10];
-    let stats = execute_program_with_stats(&prog, &db, &mut out).unwrap();
+    let stats = execute_program_with_stats(&prog, &db, &mut out, None).unwrap();
 
     assert_eq!(stats.match_count, 1, "should match exactly Alice→knows→Bob");
     // Total match-opcode evaluations must be non-zero.
@@ -109,7 +109,7 @@ fn did_q42_query_triggers_direct_jump_path() {
         .unwrap();
 
     let mut out = [NQuin::default(); 10];
-    let stats = execute_program_with_stats(&prog, &db, &mut out).unwrap();
+    let stats = execute_program_with_stats(&prog, &db, &mut out, None).unwrap();
 
     assert_eq!(stats.match_count, 1, "should match the did:q42 Quin");
     assert!(
@@ -131,7 +131,7 @@ fn mixed_query_exercises_both_dispatch_paths() {
     let mut prog_std = [0u8; 1024];
     compile_ntriples_to_bytecode(b"?s <knows> ?o", &mut prog_std).unwrap();
     let mut out_std = [NQuin::default(); 10];
-    let stats_std = execute_program_with_stats(&prog_std, &db, &mut out_std).unwrap();
+    let stats_std = execute_program_with_stats(&prog_std, &db, &mut out_std, None).unwrap();
 
     // The predicate operand is q_hash("knows"); its MSB determines which counter
     // is incremented.  Either counter is valid — we check the total.
@@ -149,7 +149,7 @@ fn mixed_query_exercises_both_dispatch_paths() {
     let mut prog_did = [0u8; 1024];
     compile_ntriples_to_bytecode(b"<did:q42:z6MkAbCd1234> <links> ?o", &mut prog_did).unwrap();
     let mut out_did = [NQuin::default(); 10];
-    let stats_did = execute_program_with_stats(&prog_did, &db, &mut out_did).unwrap();
+    let stats_did = execute_program_with_stats(&prog_did, &db, &mut out_did, None).unwrap();
 
     assert!(
         stats_did.direct_jump_ops > 0,
@@ -174,7 +174,7 @@ fn simd_matches_scalar_on_standard_uri_query() {
     let mut out_scalar = [NQuin::default(); 10];
     let mut out_simd = [NQuin::default(); 10];
 
-    let (n_scalar, _) = execute_program(&prog, &db, &mut out_scalar).unwrap();
+    let (n_scalar, _) = execute_program(&prog, &db, &mut out_scalar, None).unwrap();
     let (n_simd, _) = execute_program_simd(&prog, &db, &mut out_simd).unwrap();
 
     assert_eq!(
@@ -197,7 +197,7 @@ fn simd_matches_scalar_on_did_q42_query() {
     let mut out_scalar = [NQuin::default(); 10];
     let mut out_simd = [NQuin::default(); 10];
 
-    let (n_scalar, _) = execute_program(&prog, &db, &mut out_scalar).unwrap();
+    let (n_scalar, _) = execute_program(&prog, &db, &mut out_scalar, None).unwrap();
     let (n_simd, _) = execute_program_simd(&prog, &db, &mut out_simd).unwrap();
 
     assert_eq!(n_scalar, n_simd, "SIMD result must equal scalar");
@@ -236,7 +236,7 @@ fn benchmark_scalar_vs_simd_cycle_counters() {
 
     // Scalar timing.
     let t_scalar = Instant::now();
-    let (n_scalar, cycles_scalar) = execute_program(&prog, &db, &mut out_scalar).unwrap();
+    let (n_scalar, cycles_scalar) = execute_program(&prog, &db, &mut out_scalar, None).unwrap();
     let elapsed_scalar = t_scalar.elapsed();
 
     // SIMD timing (falls back to scalar on non-wasm32 targets).
@@ -281,8 +281,8 @@ fn cycle_count_scales_linearly_with_dataset_size() {
     let mut out1 = vec![NQuin::default(); 20];
     let mut out2 = vec![NQuin::default(); 20];
 
-    let (_, c1) = execute_program(&prog, &db1, &mut out1).unwrap();
-    let (_, c2) = execute_program(&prog, &db2, &mut out2).unwrap();
+    let (_, c1) = execute_program(&prog, &db1, &mut out1, None).unwrap();
+    let (_, c2) = execute_program(&prog, &db2, &mut out2, None).unwrap();
 
     assert_eq!(
         c2,

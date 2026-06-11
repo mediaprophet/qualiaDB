@@ -29,6 +29,7 @@ neon_simd_unroll = []
 vm_tracing = []
 
 [dependencies]
+minicbor = { version = "0.20", features = ["std"] }
 futures-core = { version = "0.3", default-features = false }
 futures-channel = "0.3"
 futures-intrusive = { version = "0.5", default-features = false, features = ["alloc"] }
@@ -43,6 +44,9 @@ memmap2 = "0.9"
 log = "0.4"
 ed25519-dalek = { version = "2.1", default-features = false }
 sha2 = { version = "0.10", default-features = false }
+aes-gcm = { version = "0.10", default-features = false, features = ["aes", "alloc"] }
+x25519-dalek = { version = "2", default-features = false, features = ["static_secrets", "zeroize"] }
+hkdf = { version = "0.12", default-features = false }
 quick-xml = "0.36"
 crossbeam-channel = "0.5"
 core_affinity = "0.8"
@@ -61,7 +65,9 @@ ciborium = "0.2.2"
 async-trait = "0.1.89"
 dashmap = "6.2.1"
 rand_distr = "0.6.0"
-rayon = "1.12.0"
+fast_qr = { version = "0.13.1", features = ["svg"] }
+axum = { version = "0.8.9", features = ["ws"] }
+
 
 [lib]
 crate-type = ["rlib", "cdylib"]
@@ -111,13 +117,18 @@ wgpu = "0.19"
 warp = "0.3"
 futures-util = "0.3"
 tokio = { version = "1.0", features = ["full"] }
+rayon = "1.12.0"
+axum = "0.8.9"
+tower-http = { version = "0.6.11", features = ["fs", "cors"] }
+tokio-stream = { version = "0.1.18", features = ["sync"] }
+http-body-util = "0.1.3"
 zstd = "0.13"
 sysinfo = "0.30"
 libp2p = { version = "0.56.0", features = ["tcp", "dns", "noise", "yamux", "request-response", "kad", "mdns", "macros", "tokio"] }
 reqwest = { version = "0.13.4", features = ["json", "rustls"] }
 boringtun = "0.7.1"
 rcgen = "0.14.8"
-# DNSSEC and WireGuard dependencies for SocialWireGuard bootstrapping
+# DNSSEC and WireGuard dependencies for SocialWebNet bootstrapping
 trust-dns = { version = "0.23.2", features = ["dnssec", "dns-over-rustls"] }
 trust-dns-resolver = "0.23.2"
 # wireguard-rs = "0.1.1" # Currently unavailable - commented out
@@ -148,3 +159,4 @@ harness = false
 [[bench]]
 name = "ram_usage"
 harness = false
+

@@ -87,6 +87,13 @@ impl SolidExporter {
         writeln!(acl_file, "    acl:accessTo <./data.ttl> ;")?;
         writeln!(acl_file, "    acl:mode acl:Read, acl:Write, acl:Control .")?;
 
+        // Zero-scrub the transient buffer to enforce memory integrity
+        unsafe {
+            for byte in block_slice.iter_mut() {
+                core::ptr::write_volatile(byte, 0);
+            }
+        }
+
         println!(
             "Successfully exported {} Quins to W3C Solid Container at: {}",
             quin_count, output_dir_path
@@ -110,5 +117,36 @@ pub struct SolidLdpFacade;
 impl SolidLdpFacade {
     pub fn serialize_to_rdf_star(quin: &NQuin) -> String {
         format!("GRAPH <urn:qualia:context:{}> {{ geo:asWKT qualia:hardwareIntegrity \"VERIFIED_ECC_PASS\" }}", quin.context)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_allocation_firewall() {
+        // Assert that the `QualiaSuperBlock` buffer contains precisely what we expect
+        // without heap allocation.
+        assert_eq!(std::mem::size_of::<QualiaSuperBlock>(), crate::BLOCK_MULTIPLIER_SIZE);
+        let mut block = Box::new(unsafe { std::mem::zeroed::<QualiaSuperBlock>() });
+        let block_slice = unsafe {
+            std::slice::from_raw_parts_mut(
+                &mut *block as *mut QualiaSuperBlock as *mut u8,
+                crate::BLOCK_MULTIPLIER_SIZE,
+            )
+        };
+        
+        // Zero-scrub
+        unsafe {
+            for byte in block_slice.iter_mut() {
+                core::ptr::write_volatile(byte, 0);
+            }
+        }
+        
+        // Check that the memory was effectively zeroed
+        for &byte in block_slice.iter() {
+            assert_eq!(byte, 0);
+        }
     }
 }

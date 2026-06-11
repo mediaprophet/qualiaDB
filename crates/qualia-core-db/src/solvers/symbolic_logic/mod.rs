@@ -5,7 +5,7 @@
 //! environment of Qualia-DB.
 
 use crate::solvers::{SolverConfig, SolverState, SolverResult};
-use crate::ggml_quants::ExecutionError;
+use crate::solvers::SolversError as ExecutionError;
 use crate::webizen::SlgOpcode;
 
 /// Forward chaining defeasible reasoning solver
@@ -198,7 +198,7 @@ pub enum RuleType {
 
 /// Assignment values
 #[repr(u8)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum AssignmentValue {
     False = 0,
     True = 1,
@@ -225,7 +225,7 @@ pub enum ResolutionStrategy {
 
 impl ForwardChainingDefeasible {
     /// Create new defeasible reasoning solver
-    pub const fn new(config: SolverConfig) -> Self {
+    pub fn new(config: SolverConfig) -> Self {
         Self {
             rule_base: [DefeasibleRule::default(); 100],
             facts: [Fact::default(); 50],
@@ -303,7 +303,7 @@ impl ForwardChainingDefeasible {
     /// Queue fact for inference
     fn queue_inference(&mut self, fact_index: u8) {
         if ((self.queue_tail + 1) % 50) != self.queue_head {
-            self.inference_queue[self.queue_tail as usize] = fact_index;
+            self.inference_queue[self.queue_tail as usize] = fact_index as usize;
             self.queue_tail = (self.queue_tail + 1) % 50;
         }
     }
@@ -313,7 +313,7 @@ impl ForwardChainingDefeasible {
         if self.queue_head != self.queue_tail {
             let fact_index = self.inference_queue[self.queue_head as usize];
             self.queue_head = (self.queue_head + 1) % 50;
-            fact_index
+            fact_index as u8
         } else {
             0
         }
@@ -326,33 +326,39 @@ impl ForwardChainingDefeasible {
 
     /// Find applicable rules for given fact
     fn find_applicable_rules(&mut self, fact_index: u8) -> SolverResult<()> {
-        let fact = &self.facts[fact_index as usize];
-        
+        let fact_literal = self.facts[fact_index as usize].literal; // Copy
+
+        // Two-pass approach: collect which rules to fire, then fire them
+        let mut rules_to_fire = [false; 100];
+
         for i in 0..100 {
-            let rule = &mut self.rule_base[i];
-            
-            if rule.id == 0 || !rule.active {
+            if self.rule_base[i].id == 0 || !self.rule_base[i].active {
                 continue;
             }
-            
-            // Check if fact matches any antecedent
+
             for j in 0..5 {
-                if rule.antecedents[j].variable == 0 {
+                if self.rule_base[i].antecedents[j].variable == 0 {
                     break; // No more antecedents
                 }
-                
-                if self.literals_match(&rule.antecedents[j], &fact.literal) {
-                    // Mark rule for firing
-                    rule.fire_count += 1;
-                    
-                    // Check if all antecedents are satisfied
-                    if self.antecedents_satisfied(rule) {
-                        self.fire_rule(i)?;
+
+                let antecedent = self.rule_base[i].antecedents[j]; // Copy
+                if self.literals_match(&antecedent, &fact_literal) {
+                    self.rule_base[i].fire_count += 1;
+
+                    let rule_copy = self.rule_base[i]; // Copy for immutable check
+                    if self.antecedents_satisfied(&rule_copy) {
+                        rules_to_fire[i] = true;
                     }
                 }
             }
         }
-        
+
+        for i in 0..100 {
+            if rules_to_fire[i] {
+                self.fire_rule(i)?;
+            }
+        }
+
         Ok(())
     }
 
@@ -453,21 +459,21 @@ impl ForwardChainingDefeasible {
     /// Resolve conflicts using priority strategy
     fn resolve_conflicts(&mut self) -> SolverResult<()> {
         for i in 0..self.conflict_state.num_conflicts as usize {
-            let conflict = &self.conflict_state.conflicts[i];
-            
+            let conflict = self.conflict_state.conflicts[i]; // Copy
+
             match conflict.conflict_type {
                 ConflictType::Contradiction => {
-                    self.resolve_contradiction(conflict)?;
+                    self.resolve_contradiction(&conflict)?;
                 }
                 ConflictType::Defeat => {
-                    self.resolve_defeat(conflict)?;
+                    self.resolve_defeat(&conflict)?;
                 }
                 ConflictType::Preference => {
-                    self.resolve_preference(conflict)?;
+                    self.resolve_preference(&conflict)?;
                 }
             }
         }
-        
+
         Ok(())
     }
 
@@ -548,7 +554,7 @@ impl ForwardChainingDefeasible {
 
 impl BoundedSatSolver {
     /// Create new SAT solver
-    pub const fn new(config: SolverConfig) -> Self {
+    pub fn new(config: SolverConfig) -> Self {
         Self {
             clauses: [Clause::default(); 50],
             assignments: [VariableAssignment::default(); 20],
@@ -909,7 +915,7 @@ mod tests {
         let rule = DefeasibleRule {
             id: 1,
             rule_type: RuleType::Strict,
-            antecedents: [Literal { variable: 1, negated: false }, Literal::default(); 5],
+            antecedents: [Literal { variable: 1, negated: false }, Literal { variable: 0, negated: false }, Literal { variable: 0, negated: false }, Literal { variable: 0, negated: false }, Literal { variable: 0, negated: false }],
             consequent: Literal { variable: 2, negated: false },
             priority: 100,
             active: true,
@@ -949,7 +955,8 @@ mod tests {
                 Literal { variable: 1, negated: false },
                 Literal { variable: 2, negated: false },
                 Literal { variable: 3, negated: true },
-                Literal::default(); 2
+                Literal { variable: 0, negated: false },
+                Literal { variable: 0, negated: false },
             ],
             num_literals: 3,
             learned: false,

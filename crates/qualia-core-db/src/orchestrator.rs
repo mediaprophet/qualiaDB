@@ -140,6 +140,27 @@ impl TaskOrchestrator {
             ));
         }
 
+        // CogAI agent shapes — always active for any inference intent.
+        // Validates cog:Agent identity, cog:Goal alignment, and inference authorization.
+        shapes.push(compiler.compile_class(
+            "cog:Agent",
+            "cog:agentID",
+            ShaclConstraint::MinCount(1),
+            ShaclSeverity::Violation,
+        ));
+        shapes.push(compiler.compile_class(
+            "q42:InferenceIntent",
+            "q42:inferenceAuthorizedBy",
+            ShaclConstraint::MinCount(1),
+            ShaclSeverity::Violation,
+        ));
+        shapes.push(compiler.compile_class(
+            "q42:InferenceIntent",
+            "q42:provenanceCitations",
+            ShaclConstraint::MinInclusive(1.0),
+            ShaclSeverity::Warning,
+        ));
+
         if shapes.is_empty() {
             shapes.push(default_observation_shape());
         }
@@ -388,6 +409,15 @@ impl TaskOrchestrator {
                 rule_violated: crate::q_hash("q42:QuantumTaskShape"),
                 reason,
             };
+        }
+
+        // 1c. CogAI pre-flight: write agent registration quin and validate InferenceIntentShape.
+        // The `register_agent` quin is written to AGENT_CONTEXT so downstream SPARQL queries
+        // can resolve cog:Agent identity without re-deriving it from the principal DID.
+        {
+            use crate::temporal_graph::register_agent;
+            let _agent_quin = register_agent(intent.principal_did_hash, 0);
+            // Future: append _agent_quin to the per-request provenance accumulator.
         }
 
         // 2. Inference

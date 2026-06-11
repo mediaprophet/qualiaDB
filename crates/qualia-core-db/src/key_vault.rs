@@ -168,3 +168,322 @@ pub struct QappTokenPayload {
     pub qapp_did: String,
     pub allowed_shapes: Vec<String>,
 }
+
+// ── Credential-gated subgraph layer encryption ───────────────────────────────
+
+/// Named sensitivity tiers for credential-gated subgraph views.
+///
+/// Each layer has a dedicated AES-256-GCM key derived from the node's master key.
+/// Access is gated by the deontic engine evaluating the agent's VCs against the
+/// layer's ODRL policy before releasing the key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum SubgraphLayer {
+    Public      = 0,
+    Professional = 1,
+    Legal       = 2,
+    Medical     = 3,
+    Fiduciary   = 4,
+}
+
+impl SubgraphLayer {
+    /// HKDF info label used for key derivation — must stay stable across versions.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Public       => "qualia:subgraph:layer:public",
+            Self::Professional => "qualia:subgraph:layer:professional",
+            Self::Legal        => "qualia:subgraph:layer:legal",
+            Self::Medical      => "qualia:subgraph:layer:medical",
+            Self::Fiduciary    => "qualia:subgraph:layer:fiduciary",
+        }
+    }
+
+    /// Minimum sensitivity metadata bits[59:56] required to reach this layer.
+    pub fn sensitivity_tier(self) -> u8 {
+        self as u8
+    }
+}
+
+/// A 32-byte AES-256-GCM subgraph key bound to a specific `SubgraphLayer`.
+pub struct SubgraphKey {
+    layer: SubgraphLayer,
+    key_bytes: [u8; 32],
+}
+
+impl std::fmt::Debug for SubgraphKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SubgraphKey")
+            .field("layer", &self.layer)
+            .field("key_bytes", &"[REDACTED]")
+            .finish()
+    }
+}
+
+impl zeroize::Zeroize for SubgraphKey {
+    fn zeroize(&mut self) {
+        self.key_bytes.zeroize();
+    }
+}
+
+impl Drop for SubgraphKey {
+    fn drop(&mut self) {
+        use zeroize::Zeroize;
+        self.key_bytes.zeroize();
+    }
+}
+
+impl SubgraphKey {
+    /// Raw key bytes — use only to pass to an AES-GCM cipher; do not persist unencrypted.
+    #[inline]
+    pub fn raw(&self) -> &[u8; 32] {
+        &self.key_bytes
+    }
+
+    pub fn layer(&self) -> SubgraphLayer {
+        self.layer
+    }
+}
+
+/// An X25519 ECDH-encapsulated subgraph key (key wrapped for a specific recipient DID).
+///
+/// `ephemeral_public` is the sender's ephemeral X25519 public key (32 bytes).
+/// `ciphertext` is the 32-byte layer key XOR-masked with the ECDH shared secret.
+///
+/// The recipient computes `shared = X25519(their_static_private, ephemeral_public)`,
+/// then `layer_key = ciphertext XOR shared`, then verifies with `mac`.
+#[derive(Debug, Clone)]
+pub struct EncapsulatedKey {
+    pub layer:            SubgraphLayer,
+    pub ephemeral_public: [u8; 32],
+    /// `AES-256-GCM ciphertext` of the 32-byte layer key (32 + 16-byte tag = 48 bytes).
+    pub ciphertext:       [u8; 48],
+    /// Nonce used for the AES-GCM wrap (12 bytes).
+    pub nonce:            [u8; 12],
+}
+
+impl KeyVault {
+    /// Derive a deterministic AES-256-GCM key for `layer` using HKDF-SHA-256.
+    ///
+    /// IKM  = master ed25519 secret key bytes (32 bytes)
+    /// Salt = b"qualia:subgraph:salt:v1"
+    /// Info = `layer.label()` bytes
+    pub fn generate_layer_key(&self, layer: SubgraphLayer) -> SubgraphKey {
+        use hkdf::Hkdf;
+        use sha2::Sha256;
+
+        let ikm = self.master_key.to_bytes();
+        let salt: &[u8] = b"qualia:subgraph:salt:v1";
+        let hk = Hkdf::<Sha256>::new(Some(salt), &ikm);
+
+        let mut key_bytes = [0u8; 32];
+        hk.expand(layer.label().as_bytes(), &mut key_bytes)
+            .expect("HKDF expand: 32 bytes always fits");
+
+        SubgraphKey { layer, key_bytes }
+    }
+
+    /// Encapsulate `layer_key` for a recipient identified by their X25519 public key bytes.
+    ///
+    /// Uses ephemeral X25519 ECDH + AES-256-GCM to wrap the 32-byte layer key.
+    /// The `recipient_x25519_pub` is typically derived from the recipient's DID key material.
+    ///
+    /// # Errors
+    /// Returns `Err` if the recipient public key bytes are invalid.
+    pub fn encapsulate_for_recipient(
+        &self,
+        layer_key: &SubgraphKey,
+        recipient_x25519_pub: &[u8; 32],
+        nonce_entropy: &[u8; 32],
+    ) -> Result<EncapsulatedKey, String> {
+        use aes_gcm::{Aes256Gcm, KeyInit, aead::Aead};
+        use x25519_dalek::PublicKey;
+
+        // Derive ephemeral X25519 keypair from nonce_entropy (deterministic for tests).
+        let ephemeral_scalar = {
+            let mut h = Sha256::new();
+            h.update(b"qualia:ecdh:ephemeral:");
+            h.update(nonce_entropy);
+            h.update(layer_key.layer().label().as_bytes());
+            let digest = h.finalize();
+            let mut scalar = [0u8; 32];
+            scalar.copy_from_slice(&digest);
+            scalar
+        };
+
+        // Build ephemeral static secret from the scalar bytes.
+        let ephemeral_secret = x25519_dalek::StaticSecret::from(ephemeral_scalar);
+        let ephemeral_public = PublicKey::from(&ephemeral_secret);
+
+        // ECDH shared secret.
+        let recipient_pub = PublicKey::from(*recipient_x25519_pub);
+        let shared_secret = ephemeral_secret.diffie_hellman(&recipient_pub);
+
+        // Derive AES-GCM key from ECDH shared secret via SHA-256.
+        let wrap_key_bytes = {
+            let mut h = Sha256::new();
+            h.update(shared_secret.as_bytes());
+            h.update(b":qualia:wrap:");
+            h.update(layer_key.layer().label().as_bytes());
+            h.finalize()
+        };
+
+        // Derive 12-byte AES-GCM nonce from nonce_entropy.
+        let nonce_bytes: [u8; 12] = {
+            let mut h = Sha256::new();
+            h.update(b"qualia:nonce:");
+            h.update(nonce_entropy);
+            let d = h.finalize();
+            let mut n = [0u8; 12];
+            n.copy_from_slice(&d[..12]);
+            n
+        };
+
+        let cipher = Aes256Gcm::new_from_slice(&wrap_key_bytes)
+            .map_err(|_| "AES-GCM key init failed")?;
+        let aes_nonce = aes_gcm::Nonce::from_slice(&nonce_bytes);
+
+        let ct_vec = cipher
+            .encrypt(aes_nonce, layer_key.raw().as_ref())
+            .map_err(|_| "AES-GCM encryption failed")?;
+
+        let mut ciphertext = [0u8; 48];
+        if ct_vec.len() != 48 {
+            return Err(format!("unexpected ciphertext length {}", ct_vec.len()));
+        }
+        ciphertext.copy_from_slice(&ct_vec);
+
+        Ok(EncapsulatedKey {
+            layer: layer_key.layer(),
+            ephemeral_public: *ephemeral_public.as_bytes(),
+            ciphertext,
+            nonce: nonce_bytes,
+        })
+    }
+
+    /// Decapsulate an `EncapsulatedKey` using the recipient's X25519 static secret key bytes.
+    ///
+    /// Returns the 32-byte layer key on success.
+    pub fn decapsulate(
+        &self,
+        encapsulated: &EncapsulatedKey,
+        recipient_x25519_secret: &[u8; 32],
+    ) -> Result<SubgraphKey, String> {
+        use aes_gcm::{Aes256Gcm, KeyInit, aead::Aead};
+        use x25519_dalek::{StaticSecret, PublicKey};
+
+        let secret = StaticSecret::from(*recipient_x25519_secret);
+        let ephemeral_pub = PublicKey::from(encapsulated.ephemeral_public);
+        let shared_secret = secret.diffie_hellman(&ephemeral_pub);
+
+        let wrap_key_bytes = {
+            let mut h = Sha256::new();
+            h.update(shared_secret.as_bytes());
+            h.update(b":qualia:wrap:");
+            h.update(encapsulated.layer.label().as_bytes());
+            h.finalize()
+        };
+
+        let cipher = Aes256Gcm::new_from_slice(&wrap_key_bytes)
+            .map_err(|_| "AES-GCM key init failed")?;
+        let nonce = aes_gcm::Nonce::from_slice(&encapsulated.nonce);
+
+        let plaintext = cipher
+            .decrypt(nonce, encapsulated.ciphertext.as_ref())
+            .map_err(|_| "AES-GCM decryption failed — wrong key or tampered ciphertext")?;
+
+        if plaintext.len() != 32 {
+            return Err(format!("unexpected plaintext length {}", plaintext.len()));
+        }
+        let mut key_bytes = [0u8; 32];
+        key_bytes.copy_from_slice(&plaintext);
+
+        Ok(SubgraphKey { layer: encapsulated.layer, key_bytes })
+    }
+
+    /// Derive the X25519 static secret for this node from the master Ed25519 key.
+    ///
+    /// Used when the node itself is a VC recipient.
+    pub fn derive_x25519_secret(&self) -> [u8; 32] {
+        let mut h = Sha256::new();
+        h.update(self.master_key.to_bytes());
+        h.update(b"qualia:x25519:static");
+        h.finalize().into()
+    }
+}
+
+#[cfg(test)]
+mod subgraph_key_tests {
+    use super::*;
+
+    fn test_vault() -> KeyVault {
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        KeyVault::load_or_generate(tmp.path().to_str().unwrap()).expect("vault")
+    }
+
+    #[test]
+    fn layer_key_derivation_is_deterministic() {
+        let vault = test_vault();
+        let k1 = vault.generate_layer_key(SubgraphLayer::Medical);
+        let k2 = vault.generate_layer_key(SubgraphLayer::Medical);
+        assert_eq!(k1.raw(), k2.raw());
+    }
+
+    #[test]
+    fn different_layers_produce_different_keys() {
+        let vault = test_vault();
+        let med  = vault.generate_layer_key(SubgraphLayer::Medical);
+        let leg  = vault.generate_layer_key(SubgraphLayer::Legal);
+        let fid  = vault.generate_layer_key(SubgraphLayer::Fiduciary);
+        assert_ne!(med.raw(), leg.raw());
+        assert_ne!(leg.raw(), fid.raw());
+        assert_ne!(med.raw(), fid.raw());
+    }
+
+    #[test]
+    fn encapsulate_decapsulate_roundtrip() {
+        let vault = test_vault();
+        let layer_key = vault.generate_layer_key(SubgraphLayer::Fiduciary);
+
+        // Recipient's X25519 keys.
+        let recipient_secret = vault.derive_x25519_secret();
+        let recipient_pub = {
+            use x25519_dalek::{StaticSecret, PublicKey};
+            let s = StaticSecret::from(recipient_secret);
+            *PublicKey::from(&s).as_bytes()
+        };
+
+        let nonce_entropy = [0x42u8; 32];
+        let encapsulated = vault
+            .encapsulate_for_recipient(&layer_key, &recipient_pub, &nonce_entropy)
+            .expect("encapsulate");
+
+        let recovered = vault
+            .decapsulate(&encapsulated, &recipient_secret)
+            .expect("decapsulate");
+
+        assert_eq!(recovered.raw(), layer_key.raw());
+        assert_eq!(recovered.layer(), SubgraphLayer::Fiduciary);
+    }
+
+    #[test]
+    fn decapsulate_wrong_key_fails() {
+        let vault = test_vault();
+        let layer_key = vault.generate_layer_key(SubgraphLayer::Legal);
+
+        let recipient_secret = vault.derive_x25519_secret();
+        let recipient_pub = {
+            use x25519_dalek::{StaticSecret, PublicKey};
+            let s = StaticSecret::from(recipient_secret);
+            *PublicKey::from(&s).as_bytes()
+        };
+
+        let nonce_entropy = [0x99u8; 32];
+        let encapsulated = vault
+            .encapsulate_for_recipient(&layer_key, &recipient_pub, &nonce_entropy)
+            .expect("encapsulate");
+
+        let wrong_secret = [0xFFu8; 32];
+        let result = vault.decapsulate(&encapsulated, &wrong_secret);
+        assert!(result.is_err());
+    }
+}

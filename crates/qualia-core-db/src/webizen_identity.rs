@@ -278,9 +278,10 @@ mod webizen_tests {
         let mut registry = WebizenRegistry::new();
         let public_key = [1u64, 2, 3, 4];
         let identity = WebizenIdentity::new(0x123456789ABCDEF0, public_key);
+        let id = identity.webizen_id;
         
         assert!(registry.register_webizen(identity).is_ok());
-        assert!(registry.get_webizen(identity.webizen_id).is_some());
+        assert!(registry.get_webizen(id).is_some());
     }
 
     #[test]
@@ -316,12 +317,13 @@ mod webizen_tests {
         let mut registry = WebizenRegistry::new();
         let public_key = [1u64, 2, 3, 4];
         let identity = WebizenIdentity::new(0x123456789ABCDEF0, public_key);
+        let id = identity.webizen_id;
         registry.register_webizen(identity).unwrap();
         
         let message = b"test message";
         let signature = b"test signature";
         
         // Stub always returns true
-        assert!(registry.verify_signature(identity.webizen_id, message, signature).is_ok());
+        assert!(registry.verify_signature(id, message, signature).is_ok());
     }
 }

@@ -29,7 +29,7 @@ fn test_truncated_bytecode() {
     // If we pass only the first 5 bytes, it should return InvalidProgram
     let truncated = &prog[0..5];
 
-    let res = execute_program(truncated, &db, &mut out);
+    let res = execute_program(truncated, &db, &mut out, None);
     assert_eq!(res, Err(VmError::InvalidProgram));
 }
 
@@ -41,7 +41,7 @@ fn test_invalid_opcode() {
     // Create a program with an invalid opcode. 0xFF is likely invalid.
     let prog = [0xFF, 0, 0, 0, 0, 0, 0, 0, 0];
 
-    let res = execute_program(&prog, &db, &mut out);
+    let res = execute_program(&prog, &db, &mut out, None);
     assert_eq!(res, Err(VmError::InvalidProgram));
 }
 
@@ -54,7 +54,7 @@ fn test_output_buffer_full() {
     // Wildcard query matches everything
     qualia_core_db::mini_parser::compile_ntriples_to_bytecode(b"?s ?p ?o", &mut prog).unwrap();
 
-    let res = execute_program(&prog, &db, &mut out);
+    let res = execute_program(&prog, &db, &mut out, None);
     assert_eq!(res, Err(VmError::OutputBufferFull));
 }
 
@@ -85,7 +85,7 @@ fn test_scalar_match_logic() {
     qualia_core_db::mini_parser::compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog)
         .unwrap();
 
-    let (match_count, cycles) = execute_program(&prog, &db_str, &mut out).unwrap();
+    let (match_count, cycles) = execute_program(&prog, &db_str, &mut out, None).unwrap();
     assert_eq!(match_count, 1);
     assert!(cycles > 0);
     assert_eq!(out[0].subject, alice);

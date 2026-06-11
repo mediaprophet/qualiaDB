@@ -484,7 +484,7 @@ pub fn validate_shacl_constraint_wasm(val: JsValue) -> Result<JsValue, JsValue> 
     let p: ShaclValidateParams = serde_wasm_bindgen::from_value(val)?;
     let compiler = crate::modalities::logic::shacl::ShaclCompiler::new();
     let shape = compiler.compile(
-        "wasm:target",
+        crate::modalities::logic::shacl::ShaclTarget::TargetNode("wasm:target".to_string()),
         "wasm:property",
         crate::modalities::logic::shacl::ShaclCompiler::parse_constraint_pub(
             &p.constraint_type,
@@ -529,7 +529,7 @@ pub fn execute_ntriples_query(query: &str, db_bytes: &[u8], max_results: usize) 
     };
 
     let mut out = vec![crate::NQuin::default(); max_results];
-    match crate::webizen_bytecode::execute_program_with_stats(&program, quins, &mut out) {
+    match crate::webizen_bytecode::execute_program_with_stats(&program, quins, &mut out, None) {
         Ok(stats) => {
             #[derive(Serialize)]
             struct MatchOut {

@@ -3,7 +3,7 @@
 //! Each provider receives only anonymised QUBO matrices or VQE parameter vectors.
 //! Classified semantic data is blocked by the Sentinel before reaching this layer.
 
-use crate::qpu_oracle::{self, QpuArchitecture, QpuProvider};
+use crate::qpu_oracle::{self, QpuProvider};
 use qualia_core_db::qpu_ingress::{self, MAX_QPU_SAMPLES};
 use qualia_core_db::qubo_compiler::{QuboMatrix, MAX_QUBO_VARS, solve_classical};
 
@@ -80,7 +80,7 @@ pub fn dispatch_qubo(matrix: &QuboMatrix, shots: u32) -> Result<QpuDispatchResul
                     provenance_json = json.clone();
                     let mut bits = [0u8; MAX_QPU_SAMPLES];
                     let mut len = 0;
-                    if qpu_ingress::parse_ionq_samples(&json, &mut bits, &mut len).is_ok() {
+                    if qpu_ingress::parse_dwave_samples(&json, &mut bits, &mut len).is_ok() {
                         for i in 0..len.min(matrix.num_vars as usize) {
                             assignment[i] = bits[i];
                         }
@@ -219,7 +219,7 @@ pub fn dispatch_vqe(parameter_vector: &[f64], shots: u32) -> Result<QpuDispatchR
             Ok(json) => {
                 let mut bits = [0u8; MAX_QPU_SAMPLES];
                 let mut len = 0;
-                if qpu_ingress::parse_ionq_samples(&json, &mut bits, &mut len).is_ok() {
+                if qpu_ingress::parse_dwave_samples(&json, &mut bits, &mut len).is_ok() {
                     for i in 0..len.min(MAX_QUBO_VARS) {
                         assignment[i] = bits[i];
                     }

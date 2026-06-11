@@ -48,10 +48,35 @@ pub fn compute_spatial_overlap_gpu_mock(
     overlap_count as f64 / route_log.len() as f64
 }
 
-pub fn log_spatial_coordinate(_lat: f64, _lng: f64, _ts: u64) -> bool {
-    // In production, this encodes the tuple into a 48-byte Spatial_Log Quin
-    // and inserts it into the graph.
-    true
+/// Encode a GPS fix into two `SPATIAL_CONTEXT` quins and return them.
+///
+/// Quin 1: `subject=geohash64 | predicate=P_HAS_GEOMETRY | object=geohash64`
+/// Quin 2: `subject=geohash64 | predicate=P_GENERATED_AT | object=ts`
+///
+/// The GeoHash-64 value is bit-interleaved lon/lat (32 bits each) computed
+/// by `kml_bridge::encode_geohash_64`.  Callers write the returned quins to
+/// storage; this function never allocates a graph writer itself.
+pub fn log_spatial_coordinate(lat: f64, lng: f64, ts: u64) -> [crate::NQuin; 2] {
+    use crate::kml_bridge::{encode_geohash_64, SPATIAL_CONTEXT, P_HAS_GEOMETRY, P_GENERATED_AT};
+    let geohash = encode_geohash_64(lng, lat);
+    [
+        crate::NQuin {
+            subject:   geohash,
+            predicate: P_HAS_GEOMETRY,
+            object:    geohash,
+            context:   SPATIAL_CONTEXT,
+            metadata:  ts & 0xFFFF_FFFF,
+            parity:    0,
+        },
+        crate::NQuin {
+            subject:   geohash,
+            predicate: P_GENERATED_AT,
+            object:    ts,
+            context:   SPATIAL_CONTEXT,
+            metadata:  ts & 0xFFFF_FFFF,
+            parity:    0,
+        },
+    ]
 }
 
 /// Evaluates a recent spatial log against a claimed jurisdictional boundary

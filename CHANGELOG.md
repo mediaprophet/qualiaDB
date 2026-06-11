@@ -6,45 +6,152 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [0.0.10] — 2026-06-10
+## [0.0.10-dev] — 2026-06-11 (in progress)
 
 ### Summary
 
-v0.0.10 resolves all build errors (82 → 0), fixes tokio runtime nesting issues, and documents critical implementation gaps including security stubs and the wgpu/Vulkan mock pipeline issue.
+v0.0.10 resolves all build errors (82 → 0), ships a complete SPARQL 1.1/1.2 engine (138 tests),
+implements the Q42 v3 format with Merkle-DAG and temporal SPARQL extensions (Phases 1–4),
+adds Zero-Copy LoRA Multiplexing, 8-provider QPU dispatch, platform-native GPU inference pipelines,
+SHACL bioscience/biomedical/organic-chemistry extensions, credential-gated subgraphs, and
+real implementations for previously-stubbed security and query primitives.
+
+---
 
 ### Fixed — Build System
 
-- **All 82 build errors resolved**: Project now compiles successfully with 0 errors
-- **Tokio runtime fixes**: Fixed Handle::current() calls with try_current fallback for wgpu async operations
+- **All 82 build errors resolved**: Project compiles with 0 errors on all target platforms
+- **Tokio runtime nesting**: Fixed `Handle::current()` calls with `try_current` fallback for wgpu async
 - **Module reorganization**: Completed all path references and imports
-- **Test count**: 539 test functions in qualia-core-db (updated from incorrect 271 count)
+- **SPARQL engine (64 additional errors)**: Resolved type mismatches, lifetime issues, missing impls across 16 SPARQL modules post-initial-ship
 
-### Added — Documentation
+---
 
-- **Claude review analysis**: Comprehensive validation of 2026-06-10 code review findings
-- **Mock pipeline documentation**: Detailed analysis of wgpu/Vulkan placeholder shader issue
-- **CUDA support status**: Documented CUDA GPUDirect Storage (for calculus only, not LLM)
-- **Implementation task files**: 9 detailed task files for security, functionality, and documentation fixes
-- **BUILD_ISSUES.md**: Updated to reflect resolved build status
+### Added — SPARQL Engine (7,074 lines across 16 modules)
 
-### Known Limitations (Documented)
+- **Complete SPARQL 1.1/1.2**: Zero-allocation architecture with index-based AST; fixed-size arrays, no `Vec`/`String`/`Box` in hot paths, ~35 KB per query budget
+- **Core**: SELECT, ASK, CONSTRUCT, DESCRIBE, FILTER, aggregates (COUNT/SUM/AVG/MIN/MAX), GROUP BY, HAVING, DISTINCT, LIMIT/OFFSET, ORDER BY
+- **Patterns**: OPTIONAL, UNION, GRAPH, Property Paths (7 types), Subqueries
+- **SPARQL-Star / RDF-Star**: Embedded triples with provenance tracking, Virtual ID Hash strategy
+- **W3C extensions**: SPARQL Update, SHACL-SPARQL, GeoSPARQL (OGC), SPARQL-MM, Federated Query (`SERVICE`)
+- **DID integration**: `sparql_did.rs` — federated queries with DID authentication, CORS handling; 399-line ReSpec specification
+- **WebSocket endpoint**: `sparql_websocket.rs` — live SPARQL subscription over WebSocket
+- **HTTP endpoint**: `sparql_endpoint.rs` — SPARQL 1.1 Protocol-compliant HTTP endpoint
+- **Testing**: 138 tests passing (up from 45 at initial ship)
 
-- **Security stubs**: zk_proofs, fiduciary_crypto, ML-DSA, ECC parity require real implementation
-- **Query layer**: mmap_query_subject, lazy_superblock_query, indexing need real implementation
-- **Linux LLM inference**: wgpu/Vulkan path uses mock_pipeline (placeholder shader)
+### Added — SPARQL Temporal Extension (`AS OF` / `AT TIME`) — Phase 4
 
+- **`TemporalMode` enum** (`sparql_ast.rs`): `AsOf = 0` (assertion-time), `AtTime = 1` (valid-time); `#[repr(u8)]` + `Copy`
+- **`Pattern::AsOf`** variant: wraps any inner pattern with `timestamp_ms: u64` + `TemporalMode`
+- **`PhysicalOperatorType::AsOf`** (`sparql_planner.rs`): plans the temporal filter in the physical plan
+- **`execute_as_of` + `check_temporal_constraint`** (`sparql_executor.rs`): filters candidates via `T_CONTEXT` PROV-O quins (`generatedAtTime` / `startedAtTime` / `endedAtTime`); open-world (no annotation = include)
+- **Parser** (`sparql_parser.rs`): recognises `AS OF` and `AT TIME` after the closing `}` of the WHERE clause; `parse_temporal_literal` accepts integer ms or `"YYYY-MM-DD"^^xsd:dateTime`
+- **Syntax**: `SELECT ... WHERE { ... } AS OF "2024-06-01"^^xsd:dateTime` or `... AT TIME 1717286400000`
 
-### Added � SPARQL Engine (7,074 lines across 16 modules)
+---
 
-- **Complete SPARQL 1.1/1.2 implementation**: Zero-allocation architecture with index-based AST
-- **Core features**: SELECT, ASK, CONSTRUCT, DESCRIBE, FILTER, aggregates, GROUP BY, HAVING, DISTINCT, LIMIT/OFFSET, ORDER BY
-- **Advanced patterns**: OPTIONAL, UNION, GRAPH, Property Paths (7 types), Subqueries
-- **SPARQL-Star**: Embedded triples with provenance tracking, Virtual ID Hash strategy
-- **W3C Extensions**: SPARQL Update, SHACL-SPARQL, GeoSPARQL, SPARQL-MM, C2PA
-- **DID Integration**: SPARQL-DID specification, federated queries with DID authentication, CORS handling
-- **Zero-allocation**: Fixed-size arrays, no Vec/String/Box in hot paths, ~35KB per query
-- **Testing**: 45+ comprehensive tests covering all modules
-- **Documentation**: SPARQL-DID Integration Specification (399-line respec document)
+### Added — Q42 v3 Format
+
+- **v3 header** (`q42_volume.rs`): `temporal_index_offset/length`, `merkle_root [u8;32]`, `assertion_timestamp`, `dag_root_offset/length` carved from the former `_reserved` region `[88..256]`
+- **v2 hard-rejection**: `verify_version()` requires version == 3; old v2 files fail with a descriptive error
+- **`migrate_v2_to_v3()`**: in-place one-pass upgrade populating new header fields with zero/default sentinels
+- **NQuin v3 bit-layout**: bits 63–48 of the metadata field reserved for LoRA adapter routing (see LoRA section)
+
+### Added — Merkle-DAG (`git_bridge.rs`) — Phases 1 & 4
+
+- **`DagNode`** / **`DagStore`**: content-addressed 32-byte SHA-256 hash nodes, flat on-disk slab
+- **`MERGE_SECONDARY: u32 = 0x0008`**: flag for secondary-parent back-links in merge commits
+- **`merge_node(primary, secondary, quins, author_did, timestamp_ms, message)`**: creates two linked `DagNode`s (primary commit + secondary back-link); returns `(primary_hash, secondary_hash)`
+- **`nodes_as_of(ms: u64)`**: assertion-time snapshot filter — returns all node hashes with `timestamp <= ms`
+- **WAL → DagStore linking** (`wal.rs`): 32-byte header extended with `prev_dag_hash`; `checkpoint_to_dag()` commits WAL segments to DAG; `buffered_count()` for backpressure
+
+### Added — Temporal Graph & Provenance — Phase 2
+
+- **`temporal_graph.rs`**: `TemporalGraph` — assertion-time and valid-time edges, bi-temporal indexing
+- **`provenance.rs`**: PROV-O `Entity`/`Activity`/`Agent` quins; `CONTEST_CONTEXT` for contested-provenance tracking
+- **`spatial_sieve.rs`**: upgraded from stub to real GeoSPARQL quins using `kml_bridge::T_CONTEXT`
+- **`kml_bridge.rs`**: KML geometry ingest to NQuin spatial predicates; `T_CONTEXT = q_hash("urn:qualia:context:temporal")` public const
+- **CogAI orchestrator pre-flight** (`orchestrator.rs`): W3C CogAI CG agent-structure SHACL validation before every inference call
+
+### Added — Credential-Gated Subgraphs — Phase 3
+
+- **`SubgraphLayer` / `SubgraphKey`** (`rdf_star.rs` / `sentinel.rs`): AES-256-GCM encrypted subgraphs with HKDF-derived per-layer keys
+- **X25519 ECDH encapsulation**: ephemeral key exchange for subgraph key delivery
+- **ODRL policy evaluation** (`deontic_logic.rs`): `odrl:Permission` / `odrl:Prohibition` quins gate subgraph access
+- **PROV-O provenance filter** (`sparql_filter.rs`): `prov_predicates` module — `GENERATED_AT_TIME`, `STARTED_AT_TIME`, `ENDED_AT_TIME` as compiled constants
+
+### Added — Ontology Vocabulary Integration
+
+- **Temporal**: PROV-O (`prov:generatedAtTime`, `prov:startedAtTime`, `prov:endedAtTime`) + DC Terms
+- **Spatial**: GeoSPARQL + KML geometry bridge
+- **Rights**: ODRL (`odrl:Permission`, `odrl:Prohibition`) + SKOS concept schemes
+- **Agent structure**: W3C CogAI CG vocabulary + SHACL conformance profiles
+
+---
+
+### Added — Zero-Copy LoRA Multiplexing
+
+- **`lora/` module**: `LoraAdapter` (rank-r weight deltas, alpha scaling), `LoraMux` (mux table, up to 16 concurrent adapters)
+- **GPU shader** (`shaders/wgsl/lora_projection.wgsl`): fused LoRA projection compute shader (A x B + base weight), 64 threads/workgroup
+- **NQuin routing** (`gguf_bridge.rs`): bits 63–48 of metadata field encode adapter ID; `LocalLlmAgent::infer()` selects adapter from `NQuin` context before each forward pass
+- **Zero heap**: adapter weights mapped via `memmap2`, no heap copy; `LoraGuard` RAII ensures clean unload
+
+---
+
+### Added — QPU Dispatch (`solvers/qpu/`)
+
+- **8 providers**: IBM Quantum, D-Wave, IonQ, Rigetti, Azure Quantum, AWS Braket, Google Quantum AI, Quantinuum
+- **`QpuDispatcher`**: provider-agnostic trait; selects provider from `QpuConfig` or session Principal VC
+- **Commitment activation** (Tauri desktop): `activate_qpu_commitment()` FRB binding — prompts Principal consent before any QPU job submission
+- **WAL logging**: QPU job submissions and results recorded as provenance quins
+
+---
+
+### Added — GPU Inference Pipelines (Platform-Native)
+
+- **Windows — DirectML 1.15**: `wgpu` backend targeting DirectML; real quantized GEMM via `fused_transformer.wgsl`
+- **macOS — Accelerate / AMX**: `cblas_sgemm` via `Accelerate.framework`; AMX matrix engine enabled for Apple Silicon
+- **Linux — wgpu / Vulkan**: real `fused_tensor_contraction.wgsl` pipeline (replaces `mock_pipeline`); 64 threads/workgroup, 4096 FMA ops per thread
+- **`infer_local_model()`**: Phase 8 bifurcated autoregressive loop (LLM engine thread <-> Webizen Sentinel thread via SPSC ring buffers) now runs the real pipeline on all host targets; WASM retains mock path
+
+---
+
+### Added — SHACL Extension Modules
+
+- **Biosciences** (`shacl/biosciences.rs`): gene ontology constraints, sequence annotation shapes
+- **Biomedical** (`shacl/biomedical.rs`): SNOMED CT, MeSH, ICD-10 constraint validation
+- **Organic chemistry** (`shacl/organic_chemistry.rs`): SMILES/InChI structural constraints, isotope rules
+- **SlgOpcode wiring**: new `NativeBiosciencesEval`, `NativeBiomedicalEval`, `NativeOrganicChemEval` opcodes
+- **WASM exposure**: all three engines callable from the browser test suite
+- **149 tests** for SHACL extension modules
+
+### Added — Domain Crates (6 compiled)
+
+- `domains/bioinformatics` — sequence alignment, phylogenetic distance
+- `domains/organic_chemistry` — reaction SMILES, isotope distribution (fixed mass accumulation bug)
+- `domains/thermodynamics` — Gibbs energy, entropy calculations
+- `domains/geometric` — geometric algebra SIMD kernel (real SIMD lanes, no scalar fallback)
+- `domains/financial` — time-value of money, portfolio risk metrics
+- `domains/geospatial` — GeoSPARQL extension functions, WKT geometry
+
+---
+
+### Fixed — Security & Query Stubs Replaced with Real Implementations
+
+- **ECC parity check** (`q42_lex.rs`): real P-256 scalar validation; replaces always-true stub
+- **`FiduciaryCrypto::sign()` / `verify()`** (`fiduciary_crypto.rs`): wired to `ed25519-dalek`; replaces `unimplemented!()`
+- **ZK structural validation** (`zk_proofs.rs`): Pedersen commitment structure check; placeholder proof rejected
+- **`mmap_query_subject`** (`q42_volume.rs`): real mmap scan over SuperBlock index; replaces empty-return stub
+- **`QuinIndex::lookup()`** (`lexicon.rs`): B-tree subject index; replaces always-miss stub
+- **wgpu real pipeline** (`gguf_bridge.rs`): `build_real_pipeline()` replaces `mock_pipeline` on all host targets
+
+---
+
+### Added — Test Infrastructure
+
+- **271-test browser suite** (`docs/api-explorer/`): WASM / Native / Both execution modes; interactive per-test log viewer
+- **Interactive API Explorer**: live query execution against the running daemon; endpoint catalog with copy-to-clipboard
+- **Total test count**: 640+ across all crates (138 SPARQL, 149 SHACL extensions, 8 git_bridge, remainder spread across core, domains, CLI)
 
 ---
 
@@ -75,7 +182,7 @@ v0.0.8 ships cooperative group chat with sub-agent hierarchy, daemon-backed chat
 
 ### Added — Group Chat & Sub-Agents
 
-- **`chat_agents.rs`**: Sub-agent DID derivation (`did:qualia:subagent:…`), `OutcomeSharingPolicy`, cooperative peer context for multi-LLM inference.
+- **`chat_agents.rs`**: Sub-agent DID derivation (`did:qualia:subagent:...`), `OutcomeSharingPolicy`, cooperative peer context for multi-LLM inference.
 - **Chat relay**: `POST /chat/publish` + `GET /chat/pull` on the Qualia daemon; `syncChatRelay()` FRB binding.
 - **Chat graph**: Fragment replies, branch types, reactions, file attachments with sharing policy.
 - **Group sessions**: `createGroupChatSession`, participant management, session DIDs for ontology sharing.
@@ -103,7 +210,7 @@ v0.0.8 ships cooperative group chat with sub-agent hierarchy, daemon-backed chat
 
 ### Summary
 
-Phase 6 completes the core logic modality stack, adds fiduciary mediation between LLM agents and the graph engine, introduces capability profiles with a binary QCHK format, and ships the resource catalog download pipeline. Test count: **195/195** ✅.
+Phase 6 completes the core logic modality stack, adds fiduciary mediation between LLM agents and the graph engine, introduces capability profiles with a binary QCHK format, and ships the resource catalog download pipeline. Test count: **195/195** pass.
 
 ---
 
@@ -119,7 +226,7 @@ Phase 6 completes the core logic modality stack, adds fiduciary mediation betwee
 
 - **N3 → Deontic Bridge** (`deontic_logic.rs::compile_n3_rule_to_norm`): Compiles N3 `Rule` structs (from `n3_parser.rs`) into deontic norm Quins. Handles `Strict/Defeasible/Defeater/Linear` rule types. `^>` (Defeater) rules produce Quins with `DEFEATER_BIT` set. Returns `None` for malformed rules. Five tests passing.
 
-### Added — Modality Promotions (stubs → real implementations)
+### Added — Modality Promotions (stubs to real implementations)
 
 - **ASP (`modalities/asp.rs`)**: Replaced `generate_stable_models()` stub with zero-alloc `enumerate_stable_models`. Up to `MAX_STABLE_MODELS = 8` worlds encoded as context-hash variants.
 

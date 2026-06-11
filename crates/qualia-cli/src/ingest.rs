@@ -11,7 +11,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-use crate::parsers::external_sort::ExternalSorter;
+use qualia_core_db::sparql_formats::external_sort::ExternalSorter;
 use qualia_core_db::mini_parser::hash_token;
 use qualia_core_db::{NQuin, QUINS_PER_BLOCK};
 use qualia_core_db::q42_lex::LexiconEntry;
@@ -216,7 +216,7 @@ pub fn ingest_chk(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn st
     let mut sorter = ExternalSorter::new(temp_dir);
 
     // .chk format does not use a lexicon currently
-    let triples = crate::parsers::chk_parser::parse_chk_stream(reader, 0, &mut sorter)?;
+    let triples = qualia_core_db::sparql_formats::chk_parser::parse_chk_stream(reader, 0, &mut sorter)?;
 
     let block_seq = sorter.merge(output)?;
 
@@ -237,7 +237,7 @@ pub fn ingest_cbor(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn s
     let temp_dir = std::env::temp_dir().join("qualia_sort_cbor");
     let mut sorter = ExternalSorter::new(temp_dir);
 
-    let triples = crate::parsers::cbor_parser::parse_cbor_ld_stream(&buffer, 0, &mut sorter)?;
+    let triples = qualia_core_db::sparql_formats::cbor_parser::parse_cbor_ld_stream(&buffer, 0, &mut sorter)?;
 
     let block_seq = sorter.merge(output)?;
 
@@ -275,7 +275,7 @@ pub fn ingest_turtle_star(
         }
         
         // Use the Turtle-Star parser
-        let mut parser = crate::parsers::turtle_star::TurtleStarParser::new(0);
+        let mut parser = qualia_core_db::sparql_formats::turtle_star::TurtleStarParser::new(0);
         
         // Check if line contains embedded triple marker
         if line.contains("<<") {
@@ -356,4 +356,51 @@ pub fn ingest_turtle_star(
     })
 }
 
+/// Ingest a KML file into a `.q42` volume via `kml_bridge::import_kml`.
+///
+/// Each `<Placemark>` becomes a set of GeoSPARQL + PROV-O quins.  The string
+/// lexicon returned by the bridge is merged into the volume's embedded lexicon.
+pub fn ingest_kml(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
+    use std::io::Read;
 
+    let mut file = File::open(input)?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)?;
+
+    let (quins, str_lex) = qualia_core_db::kml_bridge::import_kml(&bytes)
+        .map_err(|e| format!("KML parse error: {e}"))?;
+
+    // Convert the string lexicon into `LexiconEntry::String` entries.
+    let lex: HashMap<u64, qualia_core_db::q42_lex::LexiconEntry> = str_lex
+        .into_iter()
+        .map(|(k, v)| (k, qualia_core_db::q42_lex::LexiconEntry::String(v)))
+        .collect();
+
+    let mut all_quins = quins;
+    all_quins.sort_unstable_by_key(|q| q.object);
+
+    let mut blocks: Vec<Vec<NQuin>> = Vec::new();
+    let mut block_ranges: Vec<(u64, u64)> = Vec::new();
+    for chunk in all_quins.chunks(QUINS_PER_BLOCK) {
+        let min_hash = chunk.iter().map(|q| q.object).min().unwrap_or(0);
+        let max_hash = chunk.iter().map(|q| q.object).max().unwrap_or(0);
+        block_ranges.push((min_hash, max_hash));
+        blocks.push(chunk.to_vec());
+    }
+
+    let triples_ingested = all_quins.len() as u64;
+    let block_seq = blocks.len() as u64;
+    let lex_entries = lex.len() as u64;
+
+    qualia_core_db::q42_volume::write_unified_volume_with_entries(
+        output, &lex, &block_ranges, &blocks,
+    )?;
+
+    Ok(IngestStats {
+        triples_ingested,
+        blocks_written: block_seq,
+        lex_entries,
+        lines_skipped: 0,
+        bidx_written: true,
+    })
+}

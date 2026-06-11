@@ -25,6 +25,13 @@ const P_PARENT: u64 = q_hash("urn:qualia:dag:parent");
 pub const FORK_DISPUTED: u32 = 0x0001;
 /// Node flag: genesis node (no parent).
 pub const GENESIS: u32 = 0x0002;
+/// Node flag: secondary-parent back-link in a merge commit.
+///
+/// A merge creates two nodes: the primary merge commit (`flags = 0`) and a
+/// secondary back-link node (`flags = MERGE_SECONDARY`), whose `quins_merkle`
+/// encodes the primary commit hash for bidirectional DAG traversal.
+/// Conflict quins should be written to `crate::provenance::CONTEST_CONTEXT`.
+pub const MERGE_SECONDARY: u32 = 0x0008;
 
 // ── DagNode ───────────────────────────────────────────────────────────────────
 
@@ -212,6 +219,65 @@ impl DagStore {
         }
     }
 
+    /// Create a merge node spanning two parent branches.
+    ///
+    /// Returns `(primary_hash, secondary_hash)`:
+    /// - `primary_hash`: the merge commit itself (`parent_hash = primary_parent`)
+    /// - `secondary_hash`: a MERGE_SECONDARY back-link node whose `quins_merkle`
+    ///   encodes `primary_hash` so the two branches stay bidirectionally linked
+    ///
+    /// Any conflict quins should be written to `crate::provenance::CONTEST_CONTEXT`
+    /// before or after calling this function.
+    pub fn merge_node(
+        &mut self,
+        primary_parent: [u8; 32],
+        secondary_parent: [u8; 32],
+        quins: &[NQuin],
+        author_did: u64,
+        timestamp_ms: u64,
+        message: &str,
+    ) -> ([u8; 32], [u8; 32]) {
+        let msg_hash = q_hash(message) as u32;
+        let merkle = quins_merkle(quins);
+
+        let primary = DagNode {
+            parent_hash: primary_parent,
+            quins_merkle: merkle,
+            author_did,
+            timestamp: timestamp_ms,
+            message_hash: msg_hash,
+            flags: 0,
+        };
+        let primary_hash = primary.digest();
+        self.nodes.push((primary, primary_hash));
+
+        // Secondary back-link: parent = secondary branch tip; quins_merkle = primary_hash.
+        let secondary = DagNode {
+            parent_hash: secondary_parent,
+            quins_merkle: primary_hash,
+            author_did,
+            timestamp: timestamp_ms,
+            message_hash: msg_hash,
+            flags: MERGE_SECONDARY,
+        };
+        let secondary_hash = secondary.digest();
+        self.nodes.push((secondary, secondary_hash));
+
+        (primary_hash, secondary_hash)
+    }
+
+    /// Return all node hashes with `timestamp ≤ as_of_ms` (assertion-time snapshot).
+    ///
+    /// Used by the SPARQL AS OF executor to reconstruct which DAG commits existed
+    /// at a given point in time.
+    pub fn nodes_as_of(&self, as_of_ms: u64) -> Vec<[u8; 32]> {
+        self.nodes
+            .iter()
+            .filter(|(n, _)| n.timestamp <= as_of_ms)
+            .map(|(_, h)| *h)
+            .collect()
+    }
+
     /// Return the current tip hash for `branch_name`, if set.
     pub fn branch_tip(&self, branch_name: &str) -> Option<[u8; 32]> {
         self.branches.get(&q_hash(branch_name)).copied()
@@ -353,6 +419,44 @@ mod tests {
         let restored = DagStore::deserialize(&bytes).expect("deser failed");
         assert_eq!(restored.nodes().len(), 1);
         assert_eq!(restored.nodes()[0].1, store.nodes()[0].1);
+    }
+
+    #[test]
+    fn merge_node_produces_two_linked_nodes() {
+        let mut store = DagStore::new();
+        let branch_a = store.genesis_node(&[], 1, 1000, "branch-a init");
+        let branch_b = store.genesis_node(&[], 2, 2000, "branch-b init");
+
+        let (primary, secondary) = store.merge_node(branch_a, branch_b, &[], 1, 3000, "merge");
+
+        assert_ne!(primary, secondary);
+        assert_ne!(primary, [0u8; 32]);
+        assert_ne!(secondary, [0u8; 32]);
+
+        // Primary node must have branch_a as its parent.
+        let primary_node = store.nodes().iter().find(|(_, h)| *h == primary).unwrap().0;
+        assert_eq!(primary_node.parent_hash, branch_a);
+        assert_eq!(primary_node.flags, 0);
+
+        // Secondary node must have branch_b as parent and encode primary_hash in quins_merkle.
+        let secondary_node = store.nodes().iter().find(|(_, h)| *h == secondary).unwrap().0;
+        assert_eq!(secondary_node.parent_hash, branch_b);
+        assert_eq!(secondary_node.flags, MERGE_SECONDARY);
+        assert_eq!(secondary_node.quins_merkle, primary);
+    }
+
+    #[test]
+    fn nodes_as_of_filters_by_timestamp() {
+        let mut store = DagStore::new();
+        store.genesis_node(&[], 1, 1000, "t=1000");
+        store.commit_node([0u8; 32], &[], 1, 5000, "t=5000");
+        store.commit_node([0u8; 32], &[], 1, 9000, "t=9000");
+
+        let snapshot = store.nodes_as_of(5000);
+        assert_eq!(snapshot.len(), 2, "should include nodes at t≤5000");
+
+        let full = store.nodes_as_of(u64::MAX);
+        assert_eq!(full.len(), 3);
     }
 
     #[test]

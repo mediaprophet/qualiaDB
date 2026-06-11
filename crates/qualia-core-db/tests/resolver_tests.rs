@@ -126,7 +126,7 @@ fn execute_program_returns_cycle_count() {
     compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
 
     let mut out = [NQuin::default(); 10];
-    let (match_count, vm_cycles) = execute_program(&prog, &[q], &mut out).unwrap();
+    let (match_count, vm_cycles) = execute_program(&prog, &[q], &mut out, None).unwrap();
 
     assert_eq!(match_count, 1, "expected one matching Quin");
     assert!(vm_cycles > 0, "VM must report a non-zero cycle count");
@@ -159,7 +159,7 @@ fn zero_match_still_reports_cycles_for_scanned_rows() {
     compile_ntriples_to_bytecode(b"<Carol> <knows> <Bob>", &mut prog).unwrap();
 
     let mut out = [NQuin::default(); 10];
-    let (n, cycles) = execute_program(&prog, &[q], &mut out).unwrap();
+    let (n, cycles) = execute_program(&prog, &[q], &mut out, None).unwrap();
 
     assert_eq!(n, 0, "Carol should not match");
     assert!(

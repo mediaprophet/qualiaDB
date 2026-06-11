@@ -5,7 +5,7 @@
 //! the #![no_std] environment of Qualia-DB.
 
 use crate::solvers::{SolverConfig, SolverState, SolverResult};
-use crate::ggml_quants::ExecutionError;
+use crate::solvers::SolversError as ExecutionError;
 use core::f64::consts;
 
 /// Fixed-size 4x4 matrix for stack-based operations
@@ -322,7 +322,7 @@ impl Tensor3x3x3 {
 
 impl FixedLanczosEigensolver {
     /// Create new Lanczos eigensolver
-    pub const fn new(config: SolverConfig) -> Self {
+    pub fn new(config: SolverConfig) -> Self {
         Self {
             iteration: 0,
             alpha: [0.0; 100],
@@ -432,7 +432,7 @@ impl FixedLanczosEigensolver {
 
 impl StaticLuDecomposition {
     /// Create new LU decomposition solver
-    pub const fn new(config: SolverConfig) -> Self {
+    pub fn new(config: SolverConfig) -> Self {
         Self {
             matrix: Matrix4x4::zero(),
             permutation: [0, 1, 2, 3],
@@ -551,7 +551,7 @@ impl StaticLuDecomposition {
 
 impl ConstTensorContractor {
     /// Create new tensor contractor
-    pub const fn new(config: SolverConfig) -> Self {
+    pub fn new(config: SolverConfig) -> Self {
         Self {
             tensor_a: Tensor3x3x3::zero(),
             tensor_b: Tensor3x3x3::zero(),

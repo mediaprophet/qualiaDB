@@ -18,6 +18,10 @@ pub mod ingest;
 pub mod local_scheduler;
 pub mod llm_agent;
 pub mod lora;
+pub mod yaml_ld_q42;
+pub mod extension_manifest;
+pub mod extension_bus;
+pub mod shacl_compiler;
 pub mod modalities;
 pub mod neuro_symbolic_sieve;
 pub mod profiles;
@@ -25,24 +29,10 @@ pub mod geometric_algebra;
 pub mod rdf_star;
 pub mod sentinel;
 pub mod webizen_identity;
-pub mod sparql_ast;
-pub mod sparql_parser;
-pub mod sparql_planner;
-pub mod sparql_executor;
-pub mod sparql_filter;
-pub mod sparql_aggregates;
-pub mod sparql_results;
-pub mod sparql_endpoint;
-pub mod sparql_extensions;
-pub mod sparql_update;
-pub mod sparql_shacl;
-pub mod sparql_websocket;
-pub mod sparql_federated;
-pub mod sparql_mm;
-pub mod sparql_did;
+pub mod sparql_library;
+pub use sparql_library::*;
 
-#[cfg(test)]
-mod sparql_tests;
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_lex;
 #[cfg(not(target_arch = "wasm32"))]
@@ -57,11 +47,11 @@ pub mod solid_ldp;
 pub mod vault_manifest;
 pub mod wasm_bridge;
 #[cfg(not(target_arch = "wasm32"))]
-// pub mod zns_storage;
+pub mod zns_storage;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod fiduciary_crypto;
 #[cfg(not(target_arch = "wasm32"))]
-// pub mod ebpf_firewall;
+pub mod ebpf_firewall;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod csd_storage;
 #[cfg(not(target_arch = "wasm32"))]
@@ -69,7 +59,7 @@ pub mod zk_proofs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ambient_orchestration;
 #[cfg(not(target_arch = "wasm32"))]
-// pub mod acoustic_ble_mesh; // Temporarily disabled due to type errors
+pub mod acoustic_ble_mesh;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod clinical_engine; // Temporarily disabled
 #[cfg(not(target_arch = "wasm32"))]
@@ -548,6 +538,12 @@ pub mod daemon_query;
 pub mod fuzz_testing;
 pub mod git_bridge;
 pub mod kml_bridge;
+pub mod temporal_graph;
+pub mod provenance;
+pub mod epistemic;
+pub mod deontic_logic;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ontology_loader;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
 pub mod indexing;
@@ -572,6 +568,8 @@ pub mod telemetry;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod wal;
 pub mod webizen;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod webizen_server;
 
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -641,7 +639,7 @@ mod tests {
 
     #[test]
     fn qualia_spatial_val() {
-        use crate::spatial::{embed_h3_context, SpatiotemporalQuadTree};
+        use crate::domains::geospatial::spatial::{embed_h3_context, SpatiotemporalQuadTree};
 
         let h3_index = 0x8a2a1072b59ffff; // Mock H3 cell index
         let context_val = embed_h3_context(h3_index);
@@ -739,7 +737,7 @@ mod tests {
 
     #[test]
     fn qualia_vector_density() {
-        use crate::geometric::{extract_spatial_projection, BoundingHull, VectorSectorMap};
+        use crate::domains::mathematical::geometric::{extract_spatial_projection, BoundingHull, VectorSectorMap};
         let q = NQuin {
             subject: 0,
             predicate: 0,

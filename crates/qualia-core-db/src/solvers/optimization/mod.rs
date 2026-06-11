@@ -4,7 +4,7 @@
 //! root finding methods suitable for the #![no_std] environment of Qualia-DB.
 
 use crate::solvers::{SolverConfig, SolverState, SolverResult};
-use crate::ggml_quants::ExecutionError;
+use crate::solvers::SolversError as ExecutionError;
 use core::f64::consts;
 
 /// Nelder-Mead simplex optimizer for unconstrained optimization
@@ -139,7 +139,7 @@ pub trait CurveFitFunction {
 
 impl NelderMeadSimplex {
     /// Create new Nelder-Mead optimizer
-    pub const fn new(initial_point: [f64; 4], config: SolverConfig) -> Self {
+    pub fn new(initial_point: [f64; 4], config: SolverConfig) -> Self {
         Self {
             vertices: Self::initialize_simplex(initial_point),
             values: [0.0; 5],
@@ -239,7 +239,7 @@ impl NelderMeadSimplex {
 
     /// Calculate simplex size
     fn calculate_simplex_size(&self) -> f64 {
-        let mut size = 0.0;
+        let mut size: f64 = 0.0;
         
         for i in 1..5 {
             let mut distance = 0.0;
@@ -386,7 +386,7 @@ impl NelderMeadSimplex {
 
 impl BoundedNewtonRaphson {
     /// Create new bounded Newton-Raphson solver
-    pub const fn new(initial_guess: f64, lower_bound: f64, upper_bound: f64, config: SolverConfig) -> Self {
+    pub fn new(initial_guess: f64, lower_bound: f64, upper_bound: f64, config: SolverConfig) -> Self {
         Self {
             current_guess: initial_guess,
             previous_guess: initial_guess,
@@ -456,7 +456,7 @@ impl BoundedNewtonRaphson {
 
 impl LevenbergMarquardtStack {
     /// Create new Levenberg-Marquardt optimizer
-    pub const fn new(initial_parameters: [f64; 4], config: SolverConfig) -> Self {
+    pub fn new(initial_parameters: [f64; 4], config: SolverConfig) -> Self {
         Self {
             parameters: initial_parameters,
             delta_parameters: [0.0; 4],

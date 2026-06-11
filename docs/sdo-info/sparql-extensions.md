@@ -1,3 +1,29 @@
+# SPARQL Extensions Reference
+
+> **QualiaDB Implementation Status — 2026-06-11**
+>
+> | Extension | Status | Module |
+> |-----------|--------|--------|
+> | SPARQL 1.1 UPDATE | ✅ Implemented | `sparql_update.rs` |
+> | SPARQL-Star / RDF-Star (`<< >>`) | ✅ Implemented | `sparql_library/parsers/`, `sparql_executor.rs` |
+> | SPARQL 1.1 Federated Query (`SERVICE`) | ✅ Implemented | `sparql_executor.rs::execute_service()` |
+> | GeoSPARQL (OGC) | ✅ Implemented | `kml_bridge.rs`, `spatial_sieve.rs` |
+> | Property Paths | ✅ Implemented | `sparql_executor.rs::execute_property_path()` |
+> | SHACL-SPARQL | ✅ Implemented | `sparql_shacl.rs` |
+> | SPARQL-MM (multimedia / time-series) | ✅ Implemented | `sparql_mm.rs` |
+> | Aggregates (COUNT/SUM/AVG/MIN/MAX) | ✅ Implemented | `sparql_aggregates.rs` |
+> | **`AS OF` / `AT TIME`** (Qualia extension) | ✅ Implemented (Phase 4) | `sparql_parser.rs`, `Pattern::AsOf`, `PhysicalOperatorType::AsOf` |
+> | Entailment Regimes (RDFS/OWL) | ⏳ Future | — |
+>
+> **`AS OF` / `AT TIME`** is a Qualia-specific extension not in SPARQL 1.1/1.2.
+> Syntax: `SELECT ... WHERE { ... } AS OF "YYYY-MM-DD"^^xsd:dateTime` or
+> `... AT TIME <ms-integer>`. See `sparql-temporal-extension.md` (pending) for
+> the standards track note.
+>
+> This document is a reference used during initial design.
+
+---
+
 To map out a clear frame of reference for your execution engine layout, SPARQL extensions fall into three distinct architectural categories: **W3C Standards Extensions**, **Vendor-Specific Engine Extensions**, and **Specialized Query/Reasoning Frameworks**.
 
 When building a high-performance database with zero-allocation constraints, tracking these extensions helps you plan your AST indexing pipelines and identify which features map directly down to raw integer-based index scans versus which features require complex custom expression evaluation.

@@ -473,6 +473,12 @@ pub struct UnifiedVolumeBuilder {
     block_ranges: Vec<(u64, u64)>,
     dir_entries: Vec<BlockDirectoryEntry>,
     data_blob: Vec<u8>,
+    /// Merkle-DAG commit history — populated as each SuperBlock is pushed.
+    dag_store: crate::git_bridge::DagStore,
+    /// DID hash of the agent performing this ingest (0 = system/anonymous).
+    author_did: u64,
+    /// Hash of the last committed DagNode; all-zero until first push.
+    last_dag_hash: [u8; 32],
 }
 
 impl UnifiedVolumeBuilder {
@@ -482,6 +488,9 @@ impl UnifiedVolumeBuilder {
             block_ranges: Vec::new(),
             dir_entries: Vec::new(),
             data_blob: Vec::new(),
+            dag_store: crate::git_bridge::DagStore::new(),
+            author_did: 0,
+            last_dag_hash: [0u8; 32],
         }
     }
 
@@ -492,11 +501,20 @@ impl UnifiedVolumeBuilder {
             block_ranges: Vec::new(),
             dir_entries: Vec::new(),
             data_blob: Vec::new(),
+            dag_store: crate::git_bridge::DagStore::new(),
+            author_did: 0,
+            last_dag_hash: [0u8; 32],
         }
     }
 
     pub fn with_empty_lex() -> Self {
         Self::with_lex_map(&HashMap::new())
+    }
+
+    /// Set the author DID for DAG commit nodes (optional; defaults to 0 = system).
+    pub fn with_author_did(mut self, did: u64) -> Self {
+        self.author_did = did;
+        self
     }
 
     pub fn push_block(&mut self, seq_id: u64, quins: &[NQuin]) {
@@ -511,6 +529,18 @@ impl UnifiedVolumeBuilder {
             uncomp_len: SUPERBLOCK_SIZE as u32,
         });
         self.data_blob.extend_from_slice(&compressed);
+
+        // Commit this SuperBlock to the Merkle-DAG.
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+        let msg = format!("ingest block {seq_id}");
+        self.last_dag_hash = if self.last_dag_hash == [0u8; 32] {
+            self.dag_store.genesis_node(quins, self.author_did, ts, &msg)
+        } else {
+            self.dag_store.commit_node(self.last_dag_hash, quins, self.author_did, ts, &msg)
+        };
     }
 
     pub fn block_count(&self) -> u64 {
@@ -531,6 +561,27 @@ impl UnifiedVolumeBuilder {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_millis() as u64)
             .unwrap_or(0);
+
+        // Serialize the Merkle-DAG and compute layout.
+        let dag_bytes = self.dag_store.serialize();
+        let dag_root_offset = if dag_bytes.is_empty() {
+            0
+        } else {
+            data_offset + self.data_blob.len() as u64
+        };
+        let dag_root_length = dag_bytes.len() as u64;
+
+        // merkle_root = SHA-256 of last committed DagNode hash (all-zero if no blocks).
+        let merkle_root = if self.last_dag_hash == [0u8; 32] {
+            [0u8; 32]
+        } else {
+            // Re-hash the tip hash so the header field is a hash-of-hash, not the raw node hash.
+            use sha2::{Digest, Sha256};
+            let mut h = Sha256::new();
+            h.update(self.last_dag_hash);
+            h.finalize().into()
+        };
+
         let header = Q42VolumeHeader {
             magic: Q42_MAGIC,
             version: Q42_VERSION_V3,
@@ -548,10 +599,10 @@ impl UnifiedVolumeBuilder {
             quins_per_block: QUINS_PER_BLOCK as u32,
             temporal_index_offset: 0,
             temporal_index_length: 0,
-            merkle_root: [0u8; 32],
+            merkle_root,
             assertion_timestamp,
-            dag_root_offset: 0,
-            dag_root_length: 0,
+            dag_root_offset,
+            dag_root_length,
             _reserved: [0; 96],
         };
 
@@ -568,6 +619,9 @@ impl UnifiedVolumeBuilder {
             entry.write_to(&mut w)?;
         }
         w.write_all(&self.data_blob)?;
+        if !dag_bytes.is_empty() {
+            w.write_all(&dag_bytes)?;
+        }
         w.flush()?;
         Ok(())
     }

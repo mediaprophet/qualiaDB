@@ -29,6 +29,7 @@
 
 use crate::mini_parser::{
     OP_END, OP_HALT_IF_FALSE, OP_MATCH_OBJECT, OP_MATCH_PREDICATE, OP_MATCH_SUBJECT,
+    OP_EVAL_PERMIT, OP_EVAL_OBLIGATE, OP_EVAL_FORBID, OP_HALT_VIOLATION,
 };
 use crate::NQuin;
 
@@ -40,6 +41,14 @@ pub enum VmError {
     OutputBufferFull,
     /// The bytecode stream contains an unrecognised opcode or a truncated operand.
     InvalidProgram,
+    /// Execution halted due to a Sentinel Deontic Logic violation.
+    HaltViolation,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GuardianshipContext {
+    pub principal_did: u64,
+    pub guardian_did: Option<u64>,
 }
 
 /// Per-execution breakdown returned by [`execute_program_with_stats`].
@@ -64,8 +73,9 @@ pub fn execute_program(
     program: &[u8],
     db: &[NQuin],
     out: &mut [NQuin],
+    guardianship_context: Option<&GuardianshipContext>,
 ) -> Result<(usize, u64), VmError> {
-    let s = execute_program_with_stats(program, db, out)?;
+    let s = execute_program_with_stats(program, db, out, guardianship_context)?;
     Ok((s.match_count, s.vm_cycles))
 }
 
@@ -77,6 +87,7 @@ pub fn execute_program_with_stats(
     program: &[u8],
     db: &[NQuin],
     out: &mut [NQuin],
+    guardianship_context: Option<&GuardianshipContext>,
 ) -> Result<ExecutionStats, VmError> {
     let mut stats = ExecutionStats::default();
 
@@ -140,6 +151,40 @@ pub fn execute_program_with_stats(
                     }
 
                     ip += 9;
+                }
+
+                OP_EVAL_PERMIT => {
+                    stats.vm_cycles += 1;
+                    if let Some(ctx) = guardianship_context {
+                        // If intent is initiated by principal but no guardian is present, halt
+                        if ctx.guardian_did.is_none() && quin.subject == ctx.principal_did {
+                            let _ = crate::wal::log_adversarial_conduct(&quin, 1);
+                            return Err(VmError::HaltViolation);
+                        }
+                    }
+                    ip += 1;
+                }
+
+                OP_EVAL_OBLIGATE => {
+                    stats.vm_cycles += 1;
+                    ip += 1;
+                }
+
+                OP_EVAL_FORBID => {
+                    stats.vm_cycles += 1;
+                    if let Some(ctx) = guardianship_context {
+                        if quin.subject == ctx.principal_did {
+                            let _ = crate::wal::log_adversarial_conduct(&quin, 2);
+                            return Err(VmError::HaltViolation);
+                        }
+                    }
+                    ip += 1;
+                }
+
+                OP_HALT_VIOLATION => {
+                    stats.vm_cycles += 1;
+                    let _ = crate::wal::log_adversarial_conduct(&quin, 3);
+                    return Err(VmError::HaltViolation);
                 }
 
                 _ => return Err(VmError::InvalidProgram),
@@ -264,7 +309,7 @@ pub fn execute_program_simd(
     db: &[NQuin],
     out: &mut [NQuin],
 ) -> Result<(usize, u64), VmError> {
-    execute_program(program, db, out)
+    execute_program(program, db, out, None)
 }
 
 #[cfg(test)]
@@ -286,7 +331,7 @@ mod tests {
         compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
 
         let mut out = [NQuin::default(); 10];
-        let (n, _cycles) = execute_program(&prog, &db, &mut out).unwrap();
+        let (n, _cycles) = execute_program(&prog, &db, &mut out, None).unwrap();
         assert_eq!(n, 1);
         assert_eq!(out[0], db[0]);
     }
@@ -302,7 +347,7 @@ mod tests {
         compile_ntriples_to_bytecode(b"?who <knows> <Bob>", &mut prog).unwrap();
 
         let mut out = [NQuin::default(); 10];
-        let (n, _cycles) = execute_program(&prog, &db, &mut out).unwrap();
+        let (n, _cycles) = execute_program(&prog, &db, &mut out, None).unwrap();
         assert_eq!(n, 2);
     }
 
@@ -314,7 +359,7 @@ mod tests {
 
         let mut out = [NQuin::default(); 1]; // too small
         assert_eq!(
-            execute_program(&prog, &db, &mut out),
+            execute_program(&prog, &db, &mut out, None),
             Err(VmError::OutputBufferFull)
         );
     }
@@ -324,7 +369,7 @@ mod tests {
         let mut prog = [0u8; 1024];
         compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
         let mut out = [NQuin::default(); 10];
-        let (n, cycles) = execute_program(&prog, &[], &mut out).unwrap();
+        let (n, cycles) = execute_program(&prog, &[], &mut out, None).unwrap();
         assert_eq!(n, 0);
         assert_eq!(cycles, 0, "no cycles should be burned on an empty database");
     }
@@ -335,7 +380,7 @@ mod tests {
         let mut prog = [0u8; 1024];
         compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
         let mut out = [NQuin::default(); 10];
-        let (n, cycles) = execute_program(&prog, &db, &mut out).unwrap();
+        let (n, cycles) = execute_program(&prog, &db, &mut out, None).unwrap();
         assert_eq!(n, 1);
         assert!(
             cycles > 0,
@@ -353,8 +398,8 @@ mod tests {
         compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
         let mut out = [NQuin::default(); 10];
 
-        let (_, c1) = execute_program(&prog, &db1, &mut out).unwrap();
-        let (_, c2) = execute_program(&prog, &db2, &mut out).unwrap();
+        let (_, c1) = execute_program(&prog, &db1, &mut out, None).unwrap();
+        let (_, c2) = execute_program(&prog, &db2, &mut out, None).unwrap();
         assert_eq!(
             c2,
             c1 * 2,

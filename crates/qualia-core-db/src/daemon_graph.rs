@@ -136,6 +136,26 @@ pub fn graph_read_guard() -> std::sync::RwLockReadGuard<'static, Vec<NQuin>> {
     graph_lock().read().expect("daemon graph poisoned")
 }
 
+/// Extend the live graph with ontology quins from `qualia-core-db::ontology_loader`.
+///
+/// Called at daemon startup after `init_daemon_graph`.  Quins are deduplicated by
+/// `(subject, predicate, context)` to avoid re-seeding across restarts.
+pub fn extend_with_ontology_quins(quins: Vec<crate::NQuin>) {
+    if quins.is_empty() { return; }
+    let lock = graph_lock();
+    if let Ok(mut guard) = lock.write() {
+        let existing: std::collections::HashSet<(u64, u64, u64)> = guard
+            .iter()
+            .map(|q| (q.subject, q.predicate, q.context))
+            .collect();
+        for q in quins {
+            if !existing.contains(&(q.subject, q.predicate, q.context)) {
+                guard.push(q);
+            }
+        }
+    }
+}
+
 /// Replace the in-memory graph with flat 48-byte NQuin bytes (browser bench_load).
 pub fn replace_graph_from_flat_bytes(bytes: &[u8]) -> Result<usize, &'static str> {
     if bytes.is_empty() {

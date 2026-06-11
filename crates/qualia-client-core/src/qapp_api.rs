@@ -142,10 +142,11 @@ pub fn execute_scoped_query_in_place(
 
     let mut result_buffer = [NQuin::default(); MAX_QUERY_RESULTS];
     let (match_count, _vm_cycles) =
-        webizen_bytecode::execute_program(query_bytecode, db, &mut result_buffer).map_err(|e| {
+        webizen_bytecode::execute_program(query_bytecode, db, &mut result_buffer, None).map_err(|e| {
             match e {
                 webizen_bytecode::VmError::OutputBufferFull => ExecutionError::OutputBufferFull,
                 webizen_bytecode::VmError::InvalidProgram => ExecutionError::InvalidBytecode,
+                webizen_bytecode::VmError::HaltViolation => ExecutionError::InvalidBytecode,
             }
         })?;
 

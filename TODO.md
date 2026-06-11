@@ -92,6 +92,39 @@ This file tracks remaining work after the build error resolution phase.
 
 ---
 
+## Completed (2026-06-11, Q42 Enhancement Phases)
+
+### Q42 Phase 2 — Bi-Temporal & Provenance
+- [x] `temporal_graph.rs` — `assert_temporal()`, T_CONTEXT predicate consts (PROV-O)
+- [x] `provenance.rs` — `label_with_worker_did()`, `contest_assertion()`, `write_activity()`
+- [x] `spatial_sieve.rs` — `log_spatial_coordinate()` writes real GeoHash-64 + SPATIAL_CONTEXT quins
+- [x] `sparql_filter.rs` — `prov_predicates` consts, `ProvOPredicate` enum, `ProvenanceFilter` (6 tests)
+- [x] `epistemic.rs` — Dynamic Epistemic Logic: per-agent mind contexts, JTB predicates, SHACL classifier
+
+### Q42 Phase 3 — Credential-Gated Views
+- [x] `key_vault.rs` — `SubgraphLayer` enum, `SubgraphKey` (AES-256-GCM, zeroize), `generate_layer_key()` (HKDF-SHA256), `encapsulate_for_recipient()` / `decapsulate()` (X25519 ECDH)
+- [x] `deontic_logic.rs` (new) — VC attribute evaluation for subgraph key release; ODRL policy table; `evaluate_vc_for_subgraph_key_release()`
+
+### Q42 Phase 4 — Temporal Traversal + Merge DAG (2026-06-11)
+- [x] `wal.rs` — 32-byte `prev_dag_hash` header, `checkpoint_to_dag()`, `buffered_count()`, `truncate()` preserves header; 5 new tests
+- [x] `git_bridge.rs` — `MERGE_SECONDARY` flag (0x0008), `merge_node()` (primary+secondary back-link nodes), `nodes_as_of()` (assertion-time snapshot filter)
+- [x] `sparql_ast.rs` — `TemporalMode` enum (`AsOf`/`AtTime`), `Pattern::AsOf { inner, timestamp_ms, mode }` variant
+- [x] `sparql_planner.rs` — `PhysicalOperatorType::AsOf { input, timestamp_ms, mode }` + `plan_pattern()` case
+- [x] `sparql_executor.rs` — `execute_as_of()` + `check_temporal_constraint()` (T_CONTEXT PROV-O lookup)
+- [x] `sparql_parser.rs` — `AS OF` / `AT TIME` keyword parsing after WHERE `}`; `parse_temporal_literal()` helper (integer ms + ISO 8601 date); 5 new tests
+- [x] 138 SPARQL tests passing (up from 133)
+
+### SPARQL Library (2026-06-11)
+- [x] Reorganized `sparql_*.rs` into `sparql_library/` subdirectory
+- [x] Fixed `n3_star.rs` `parse_embedded_triple_line`: `">>>"` → `">>"`, `end+3` → `end+2`; test input corrected
+- [x] Fixed `trig_star.rs` `parse_embedded_triple_line`: same `>>>`/offset bug
+- [x] Fixed `turtle_star.rs` CBOR test: tag 103 encodes as `[0xd8, 0x67]`, not `[0x67]`
+- [x] Fixed `sparql_executor.rs` `execute()`: added `operator_count == 0` guard (empty-plan now Err)
+- [x] Fixed `sparql_extensions.rs` `test_registry_full`: off-by-one loop (0..32 → 0..33)
+- [x] 133 SPARQL tests passing, 0 failing
+
+---
+
 ## Remaining Implementation Tasks
 
 ### Security (Completed 2026-06-11, batch 2)
@@ -123,5 +156,5 @@ The desktop UI (Flutter) is functional but could be enhanced:
 
 - Keep sovereignty as the default (no automatic external calls)
 - The Resource Catalog is now a first-class citizen in the system
-- Build status: 0 errors, 539 test functions in qualia-core-db
+- Build status: 0 errors, 600+ test functions in qualia-core-db (133 SPARQL + domain tests)
 - Version: 0.0.10-dev

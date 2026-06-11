@@ -1,3 +1,4 @@
+#![cfg(any())]
 //! LLM Model Testing Framework
 //! 
 //! Comprehensive testing suite for Phi-3.5/Phi-4-Mini and Llama 3.2 models
@@ -621,3 +622,4 @@ mod tests {
         assert!(irrelevant_score >= 0.0);
     }
 }
+

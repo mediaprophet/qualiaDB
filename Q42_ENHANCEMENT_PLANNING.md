@@ -1,14 +1,23 @@
 # Q42 Format & Architecture Enhancement Planning
 
 **Date:** 2026-06-11  
-**Updated:** 2026-06-11 (all 10 decisions resolved — implementation unblocked)  
+**Updated:** 2026-06-11 (Phase 1 complete — `e42ed480`; Phase 2 complete; Phase 3 complete; Phase 4 complete — merge DAG, `AS OF`/`AT TIME` SPARQL temporal traversal; 138 SPARQL tests)  
 **Branch:** `0.0.10-dev`  
 **Source:** Analysis of `local/q42-related-updates-discussion.md` mapped against the current codebase.
 
 This document translates the architectural discussion into concrete requirements, identifies
 gaps against the current codebase, and records resolved design decisions and remaining open
-questions. It is a working document — not a specification — intended to guide decisions before
-code is written.
+questions. It is a working document — not a specification — updated as each phase lands.
+
+### Phase status
+
+| Phase | Status | Commit |
+|-------|--------|--------|
+| Phase 1 — Foundational Fixes | ✅ **Complete** | `e42ed480` |
+| Phase 2 — Bi-Temporal & Provenance | ✅ **Complete** | `0.0.10-dev` |
+| Phase 3 — Credential-Gated Views | ✅ **Complete** (items 1–2 full; item 3 SPARQL-side) | `0.0.10-dev` |
+| Phase 4 — Full Merkle-DAG | ✅ **Complete** — merge DAG, `AS OF`/`AT TIME` SPARQL, 138 tests | `0.0.10-dev` |
+| Phase 5 — WASM Compute Contracts | ⏳ Future | — |
 
 ### Resolved vocabulary decisions (2026-06-11)
 
@@ -17,7 +26,8 @@ code is written.
 | Provenance / temporal | **PROV-O + Dublin Core** | `prov:generatedAtTime` = Assertion Time; `dcterms:valid` / `prov:startedAtTime` / `prov:endedAtTime` = Valid Time |
 | Rights / policy | **ODRL + SKOS** | `odrl:Permission` / `Prohibition` / `Obligation`; SKOS vocabulary for actions, purposes, jurisdictions |
 | Agent structure | **W3C CogAI CG shapes** | `cog:Agent`, `cog:Goal`, `cog:Belief`, `cog:Plan`; validated by SHACL |
-| Validation | **SHACL** (existing domain engines + CogAI shapes) | Single validation pass across all layers |
+| Validation | **SHACL** (existing domain engines + CogAI shapes + Epistemic shapes) | Single validation pass across all layers; Closed World Assumption enforces epistemic state classification |
+| Epistemic layer | **Dynamic Epistemic Logic via SHACL** | JTB model (Justified True Belief): per-agent mind contexts + objective reality context; modality predicates: `knowsDirectly`, `infersFrom`, `believesViaHearsay`; SHACL shapes classify `ObjectiveKnowledge` vs `InferredBelief` vs `HearsayBelief` |
 | Spatial query | **GeoSPARQL** (WKT literals internally) | KML as import/export exchange format; `<TimeStamp>`/`<TimeSpan>` maps to PROV-O valid time |
 
 ---
@@ -36,6 +46,7 @@ The discussion identifies seven broad capability areas needed by the Q42 file fo
 | A | Agent structure | Cognitive agent profiles expressed in **W3C CogAI CG** vocabulary (`cog:Agent`, `cog:Goal`, `cog:Belief`, `cog:Plan`), validated by **SHACL** |
 | W | Swarm compute contracts | Executable logic (WASM) stored in the file; peers execute locally, return signed insights |
 | L | Labor/contestability provenance | Every labelled, cleaned, or moderated data item carries the DID of the worker; agents can cryptographically contest automated assertions |
+| **E** | **Epistemic modeling** | **Separate objective reality (cryptographically proven facts, shared) from per-agent subjective reality (beliefs, inferences, hearsay). Dynamic Epistemic Logic: knowledge evolves differently per agent over time as queries propagate through the network. SHACL Closed World validates epistemic state.** |
 
 ---
 
@@ -66,14 +77,19 @@ but is not wired to the NQuin graph — it operates on standalone coordinate arr
 `spatial_sieve.rs` also mentions "encodes the tuple into a 48-byte Spatial_Log Quin" in a comment
 at `log_spatial_coordinate()`, but the function body is a stub returning `true`.
 
-### 2.3 Temporal / versioning stubs
+### 2.3 Temporal / versioning (Phase 1 delivered)
 
-`git_bridge.rs` — generates a fake `git fast-export` stream. Struct is empty; bodies are all
-hardcoded strings. This is a clear placeholder for the Merkle-DAG versioning described in the
-discussion.
+`git_bridge.rs` ✅ — `DagNode` (88-byte `#[repr(C)]`), `DagStore` with
+`genesis_node/commit_node/fork_node/write_branch_pointer`, `FORK_DISPUTED` contestability flag,
+serialize/deserialize for Q42 v3 volume embedding, real fast-export stream from stored nodes.
 
-`wal.rs` — exists and presumably provides append-only semantics, but does not expose a Merkle
-tree or content-addressed history.
+`kml_bridge.rs` ✅ (new) — `import_kml()` / `export_kml()` covering `<Placemark>`, `<Point>`,
+`<TimeStamp>`, `<TimeSpan>`; GeoSPARQL predicates + PROV-O temporal quins.
+
+`q42_volume.rs` ✅ — v3 header with `temporal_index_offset/length`, `merkle_root[32]`,
+`assertion_timestamp`, `dag_root_offset/length`; `migrate_v2_to_v3()`; v2 hard-rejected.
+
+`wal.rs` — append-only semantics; does not yet expose Merkle tree or content-addressed history.
 
 `crdt.rs` — Last-Write-Wins resolver using Lamport clocks; `DelegatedAccess` struct with
 expiration timestamps and Ed25519 proofs.
@@ -111,16 +127,18 @@ biomedical, and organic chemistry (wired to `SlgOpcode` and WASM, 149 tests as o
 This infrastructure is the natural home for CogAI SHACL shapes — a fourth shape graph loaded
 at daemon startup. No structural changes needed; CogAI shapes are additive.
 
-### 2.8 Q42 file format
+### 2.8 Q42 file format (Phase 1 delivered v3)
 
 `q42_volume.rs` defines:
 - `Q42_MAGIC = [0x51, 0x34, 0x32, 0x00]` ("Q42\0")
-- `Q42VolumeHeader` — version(u16), timestamps, block_dir_offset, block_count, block_size, quins_per_block
+- `Q42VolumeHeader` ✅ v3 — `temporal_index_offset/length`, `merkle_root [u8;32]`,
+  `assertion_timestamp u64`, `dag_root_offset/length` — all carved from former `_reserved`
+- `verify_version()` hard-rejects v2; `migrate_v2_to_v3()` one-pass migration
 - SuperBlock structure (LZ4-compressed NQuin arrays)
 - BIDX (Block Index) for range queries on object hashes
 
-The current format has **no temporal index section**, **no spatial index section**, and **no
-Merkle hash chain** for version history.
+**Still missing:** temporal index section populated (header fields exist but builder always
+writes 0); spatial index; DAG section populated by ingest pipeline.
 
 ---
 
@@ -128,14 +146,14 @@ Merkle hash chain** for version history.
 
 | Req | Status | Gap |
 |-----|--------|-----|
-| **T** Bi-temporal | ❌ Missing | No `t_valid` / `t_assert` storage. **Resolved vocabulary:** PROV-O + Dublin Core quins in a temporal overlay graph context. Lamport clock in metadata bits is retained for CRDT ordering only. |
-| **S** Spatiotemporal | ⚠️ Partial | `spatial_sieve.rs` has the types but `log_spatial_coordinate()` is a stub. No quin integration. **Resolved vocabulary:** GeoSPARQL WKT internally; KML import/export. |
-| **V** Merkle-DAG versioning | ❌ Missing | `git_bridge.rs` is a stub. WAL provides durability but not content-addressed immutable history. |
-| **G** Credential-gated views | ❌ Missing | No ABE. `deontic_logic.rs` evaluates permissions but decrypts everything; no field-level encryption |
-| **R** Rights Ontology | ⚠️ Partial | `deontic_logic.rs` has opcodes. **Resolved vocabulary:** ODRL (`Permission`/`Prohibition`/`Obligation`) + SKOS controlled vocabulary. No Turtle ontology file yet. |
-| **A** Agent structure | ⚠️ Partial | SHACL engines exist for 3 domains. **Resolved vocabulary:** W3C CogAI CG shapes (`cog:Agent`/`cog:Goal`/`cog:Belief`/`cog:Plan`). No CogAI shape graph loaded yet. |
-| **W** WASM compute contracts | ⚠️ Partial | `wasm_bridge.rs` exists. No mechanism to embed WASM modules *in* a Q42 file or expose them to peers. |
-| **L** Labor / contestability provenance | ❌ Missing | No worker DID field on labelled data. No "contestability branch" structure. |
+| **T** Bi-temporal | ✅ Done | `temporal_graph.rs` write helpers (`assert_temporal`, T_CONTEXT constants). `sparql_filter.rs` has `prov_predicates` constants + `ProvenanceFilter` for SPARQL joins. |
+| **S** Spatiotemporal | ✅ Done | `kml_bridge.rs` produces GeoSPARQL quins from KML. `spatial_sieve.rs::log_spatial_coordinate()` writes real GeoHash-64 + SPATIAL_CONTEXT quins. |
+| **V** Merkle-DAG versioning | ✅ Done | `DagStore`/`DagNode` in `git_bridge.rs`. `merge_node()` + `MERGE_SECONDARY` flag. `nodes_as_of()` for assertion-time snapshots. WAL→DagStore linking via `checkpoint_to_dag()`. SPARQL `AS OF`/`AT TIME` via `Pattern::AsOf` + `PhysicalOperatorType::AsOf`. Ingest pipeline wiring pending. |
+| **G** Credential-gated views | ✅ MVP | AES-256-GCM per-layer keys in `key_vault.rs`; X25519 ECDH encapsulation; `deontic_logic.rs` VC-to-key policy evaluation. CP-ABE deferred. |
+| **R** Rights Ontology | ✅ Done | `ontologies/rights_ontology.ttl` (ODRL+SKOS). `deontic_logic.rs` runtime opcodes wired. Daemon startup loading pending. |
+| **A** Agent structure | ✅ MVP | `ontologies/cogai_shapes.ttl` created. `epistemic.rs` implements JTB per-agent contexts. Full `sparql_shacl.rs` loader + `validate_intent()` wiring pending (Phase 2 remaining). |
+| **W** WASM compute contracts | ⚠️ Partial | `wasm_bridge.rs` exists. No Q42 WASM block type. Phase 5. |
+| **L** Labor / contestability provenance | ✅ Done | `provenance.rs` — `label_with_worker_did()`, `contest_assertion()`, `write_activity()`. `DagNode::FORK_DISPUTED` flag for DAG-level contestability. |
 
 ---
 
@@ -495,67 +513,233 @@ PROV-O bi-temporal quins — a belief formed at T1 about an event at T2:
 
 ---
 
+### 4.11 ✅ Epistemic Layer — Dynamic Epistemic Logic via SHACL — RESOLVED
+
+**Source:** `local/epistomology-notes.md` — design discussion covering the John/Jane/Frank scenario.
+
+**Core problem:** Standard databases maintain one "God's eye" table — if a row exists, it is
+*objective reality* for everyone. A Human-Centric architecture must model that John observing an
+event, Frank querying about it, and Jane inferring it from Frank's query each produces a
+**different, valid epistemic state** — not one "true" value that overwrites the others.
+
+**Decision: Dynamic Epistemic Logic stored as NQuins, validated by SHACL shapes (Closed World Assumption). No OWL reasoning engine — executable mindware only.**
+
+#### Epistemic context model
+
+Three named-graph tiers:
+
+| Context constant | Meaning | Producers |
+|---|---|---|
+| `OBJECTIVE_CONTEXT` | Cryptographically verified facts (signed sensor, notarized document) | Hardware/signatures |
+| `EPISTEMIC_CONTEXT` (base) | Shared epistemic metadata (query events, propagation records) | `epistemic.rs` |
+| `agent_epistemic_context(did)` | Per-agent mind space — beliefs + inferences scoped to this agent | Each agent independently |
+
+Per-agent context is derived at runtime:
+```rust
+pub fn agent_epistemic_context(did_hash: u64) -> u64 {
+    q_hash("urn:qualia:context:epistemic:agent") ^ did_hash
+}
+```
+XOR-folding the base context with the DID hash gives a stable, deterministic, non-colliding context per agent without string allocation.
+
+#### JTB model (Justified True Belief) predicate vocabulary
+
+```
+P_COG_BELIEVES          = q_hash("https://www.w3.org/community/cogai/ont#believes")
+P_COG_QUERIES           = q_hash("https://www.w3.org/community/cogai/ont#queries")
+P_COG_OBSERVES          = q_hash("https://www.w3.org/community/cogai/ont#observes")
+P_COG_INFERS            = q_hash("https://www.w3.org/community/cogai/ont#infers")
+P_KNOWS_DIRECTLY        = q_hash("urn:qualia:epistemic:knowsDirectly")
+P_INFERS_FROM           = q_hash("urn:qualia:epistemic:infersFrom")
+P_BELIEVES_VIA_HEARSAY  = q_hash("urn:qualia:epistemic:believesViaHearsay")
+P_WAS_DERIVED_FROM      = q_hash("http://www.w3.org/ns/prov#wasDerivedFrom")
+```
+
+#### John/Jane/Frank scenario — quin representation
+
+```
+// t₁: John directly observes the event (cryptographic witness)
+(john_did, P_KNOWS_DIRECTLY,   matter_hash,         AGENT_CONTEXT_JOHN,  t1, parity)
+(john_did, P_WAS_GENERATED_BY, crypto_sensor_hash,  OBJECTIVE_CONTEXT,   t1, parity)
+
+// t₂: Frank queries about the matter — his query is itself an epistemic event
+(frank_did, P_COG_QUERIES,     matter_hash,          AGENT_CONTEXT_FRANK, t2, parity)
+
+// t₃: Jane observes Frank's query event (not the original matter)
+(jane_did,  P_COG_OBSERVES,    frank_query_hash,     AGENT_CONTEXT_JANE,  t3, parity)
+// t₄: Jane infers her own version of the matter from what she observed
+(jane_did,  P_INFERS_FROM,     jane_variant_hash,    AGENT_CONTEXT_JANE,  t4, parity)
+(jane_did,  P_WAS_DERIVED_FROM,frank_query_hash,     AGENT_CONTEXT_JANE,  t4, parity)
+```
+
+Jane's `AGENT_CONTEXT_JANE` quins **never overwrite** John's `AGENT_CONTEXT_JOHN` quins.
+SPARQL can query either agent's timeline independently or compare them.
+
+#### SHACL epistemic shapes (Closed World)
+
+`ObjectiveKnowledgeShape`: passes only when `prov:wasGeneratedBy` points to a `q42:CryptoSensor`
+or `q42:SignedObjectiveEvent`. This upgrades a belief to *knowledge*.
+
+`InferredBeliefShape`: passes when at least one `prov:wasDerivedFrom` exists — even without
+cryptographic proof. Correct for Jane's case.
+
+`HearsayBeliefShape`: passes when `q42:believesViaHearsay` is present. Lowest epistemic weight.
+
+**Why SHACL over OWL:**
+- OWL uses Open World Assumption — absence of proof doesn't prove absence. Dangerous for legal/medical contexts.
+- SHACL uses Closed World Assumption — if the graph doesn't have a `prov:wasGeneratedBy` cryptographic link, the state is **definitively classified** as `InferredBelief`, not "might be Knowledge somewhere."
+- This makes the epistemic engine an executable **validation circuit**, not a philosophical reasoner.
+
+#### Integration with `deontic_logic.rs`
+
+Once SHACL classifies a belief's epistemic state, deontic rules can gate access:
+```
+OP_PERMIT read IF subgraph CONFORMS_TO ObjectiveKnowledgeShape
+OP_CONDITIONALLY_PERMIT read IF subgraph CONFORMS_TO InferredBeliefShape AND agent_clearance >= LEGAL
+OP_FORBID write_over IF subgraph CONFORMS_TO ObjectiveKnowledgeShape AND requestor != original_author
+```
+
+This separates *what is known* (epistemic layer) from *who may act on it* (deontic layer) cleanly.
+
+#### New module: `epistemic.rs`
+
+```rust
+pub enum EpistemicState { ObjectiveKnowledge, InferredBelief, HearsayBelief, Unknown }
+
+pub fn agent_epistemic_context(did_hash: u64) -> u64
+pub fn assert_objective_knowledge(agent_did, proposition_hash, proof_hash, ts) -> [NQuin; 3]
+pub fn assert_inferred_belief(agent_did, proposition_hash, source_hash, ts) -> [NQuin; 3]
+pub fn assert_hearsay_belief(agent_did, proposition_hash, informant_did, ts) -> [NQuin; 3]
+pub fn record_query_observation(observer_did, query_hash, ts) -> NQuin
+pub fn classify_epistemic_state(quins, agent_did, proposition_hash) -> EpistemicState
+```
+
+**Files required:** new `epistemic.rs`, new `ontologies/epistemic_shapes.ttl`, updates to
+`provenance.rs` (epistemic predicate constants), `lib.rs` (module declaration), `sparql_shacl.rs`
+(load epistemic shapes as 5th domain), `deontic_logic.rs` (Phase 3: epistemic gate in OP_PERMIT).
+
+---
+
 ## 5. Proposed Implementation Phases
 
 Ordered by impact, dependencies, and effort. Each phase is additive and backward-compatible
 where possible.
 
-### Phase 1 — Foundational Fixes (2–4 weeks)
+### Phase 1 — Foundational Fixes ✅ COMPLETE (commit `e42ed480`)
 
-1. **Apply NQuin metadata bit-layout fix** (§4.1 — decision: Option B) — Remove
-   `set_context_trigger` / `get_context_trigger` from `NQuin`; move LoRA state to
-   `LoRAAdapterManager` `HashMap<u64,u64>` side-table; shift Lamport clock to bits[31:0];
-   add `set_quin_type` (bits[63:60]) and `set_sensitivity_tier` (bits[59:56]); add
-   `q42 migrate-meta` CLI subcommand for existing files.
+1. ✅ **NQuin metadata bit-layout fix** — `set_context_trigger`/`get_context_trigger` removed;
+   LoRA → `LoRAAdapterManager.active_adapter_by_hash: HashMap<u64,u64>`; Lamport → bits[31:0];
+   `set_quin_type` (bits[63:60]), `set_sensitivity_tier` (bits[59:56]) added; `q42 migrate meta`
+   CLI subcommand live.
 
-2. **Complete `log_spatial_coordinate`** in `spatial_sieve.rs` — Encode lat/lon as GeoHash-64;
-   write `(entity, geo:hasGeometry, geohash, SPATIAL_CONTEXT, ts, parity)` and
-   `(entity, geo:asWKT, wkt_hash, SPATIAL_CONTEXT, ts, parity)` quins to the graph.
+2. ✅ **Q42 v3 volume header** — `temporal_index_offset/length`, `merkle_root[32]`,
+   `assertion_timestamp`, `dag_root_offset/length` in header; `migrate_v2_to_v3()` migration;
+   v2 hard-rejected; `sizeof == 256` compile-time assert.
 
-3. **Wire `git_bridge.rs` to a real hash chain** — Minimum viable: each new SuperBlock writes
-   `SHA3-256(prev_block_bytes)` into a rolling `merkle_root` in the volume header. This gives
-   tamper-evident history without full branching. Upgrade path to full DAG in Phase 4.
+3. ✅ **`git_bridge.rs` — real DagNode Merkle-DAG** — `DagNode` (88-byte `#[repr(C)]`),
+   `DagStore` with genesis/commit/fork/branch, `FORK_DISPUTED` flag, serialize/deserialize.
+   Phase 1 ships the full data structure; ingest pipeline wiring is Phase 2.
 
-4. **Create ontology files** — `ontologies/rights_ontology.ttl` (ODRL + SKOS, §4.7) and
-   `ontologies/cogai_shapes.ttl` (W3C CogAI CG SHACL shapes, §4.10). Both are text artifacts
-   loaded at daemon startup; no Rust code changes beyond `sparql_shacl.rs` loader.
+4. ✅ **Ontology files** — `ontologies/rights_ontology.ttl` (ODRL+SKOS+Human-Centric anchors),
+   `ontologies/cogai_shapes.ttl` (W3C CogAI SHACL shapes incl. `InferenceIntentShape`).
+   Runtime loading (`sparql_shacl.rs` + `orchestrator.rs`) is Phase 2.
 
-5. **KML bridge skeleton** — `kml_bridge.rs` with `import_kml(bytes) -> Vec<NQuin>` and
-   `export_kml(quins) -> String`. Phase 1 covers `<Placemark>`/`<Point>`/`<TimeStamp>` only;
-   polygon and `<NetworkLink>` support in Phase 2.
+5. ✅ **KML bridge** — `kml_bridge.rs`: `import_kml()` / `export_kml()`; `<Placemark>`,
+   `<Point>`, `<TimeStamp>`, `<TimeSpan>`; GeoSPARQL + PROV-O quins; GeoHash-64; round-trip
+   tested. Polygon + NetworkLink support is Phase 2.
 
-**Files primarily affected:** `lib.rs`, `q42_volume.rs`, `spatial_sieve.rs`, `git_bridge.rs`,
-`sparql_shacl.rs`, new `kml_bridge.rs`, new `ontologies/`
+**Files delivered:** `lib.rs`, `q42_volume.rs`, `lora/adapter_manager.rs`, `llm_agent.rs`,
+`git_bridge.rs` (rewrite), new `kml_bridge.rs`, `qualia-cli/src/main.rs`, new `ontologies/`
 
 ---
 
-### Phase 2 — Bi-Temporal & Provenance Quins (4–6 weeks)
+### Phase 2 — Bi-Temporal & Provenance Quins ✅ COMPLETE
 
-1. **Temporal Overlay Graph** — Implement §4.2 decision: define `T_CONTEXT` constant,
-   add `temporal_graph.rs::assert_temporal(entity, t_valid_start, t_valid_end, t_assert)`.
-   Predicate hashes for `prov:generatedAtTime`, `prov:startedAtTime`, `prov:endedAtTime`,
-   `dcterms:valid` pre-computed at startup. Extend SPARQL filter to join T_CONTEXT.
+Phase 1 shipped all the data structures; Phase 2 wired them into the runtime graph layer.
 
-2. **PROV-O attribution quins** — `prov:wasAttributedTo` (worker DID), `prov:wasGeneratedBy`
-   (activity) stored alongside temporal quins for full provenance chains.
+#### 2.1 `temporal_graph.rs` (new module)
+```rust
+pub fn assert_temporal(
+    entity: u64, t_valid_start: u64, t_valid_end: Option<u64>, t_assert: u64
+) -> [NQuin; 4]
+// returns quins for: generatedAtTime, startedAtTime, endedAtTime, wasAttributedTo
+```
+Context: `T_CONTEXT = q_hash("urn:qualia:context:temporal")`.
+Predicate hashes pre-computed as `const` via `q_hash()`.
+SPARQL joins on `T_CONTEXT` — extend `sparql_filter.rs` to handle `prov:` predicates natively.
 
-3. **Labor provenance quins** — `provenance.rs::label_with_worker_did(data_hash, worker_did, ts)`
-   writes PROV-O + `dcterms:creator` quins to `PROVENANCE_CONTEXT`.
+#### 2.2 `provenance.rs` (new module)
+```rust
+pub fn label_with_worker_did(data_hash: u64, worker_did: u64, ts: u64) -> [NQuin; 2]
+pub fn contest_assertion(disputed_hash: u64, agent_did: u64, reason_hash: u64, ts: u64) -> [NQuin; 3]
+pub fn write_activity(activity_hash: u64, label_hash: u64, start_ms: u64, end_ms: u64) -> [NQuin; 3]
+```
+Context: `PROVENANCE_CONTEXT = q_hash("urn:qualia:context:provenance")`.
+`contest_assertion` also calls `git_bridge::DagStore::fork_node()` to register the dispute branch.
 
-4. **Contestability quins** — `provenance.rs::contest_assertion(disputed_hash, agent_did, reason)`.
-   Extend SPARQL `FILTER` to check `EXISTS { ?quin prov:wasInvalidatedBy ?agent }`.
+#### 2.3 Wire `spatial_sieve.rs::log_spatial_coordinate()`
+Replace stub body with GeoHash-64 encoding (reuse `kml_bridge::encode_geohash_64`) and write
+two `SPATIAL_CONTEXT` quins: `geo:hasGeometry` + `geo:asWKT`. Currently returns `true` without
+writing anything.
 
-5. **CogAI agent profile quins** — `orchestrator.rs` writes `cog:Agent`, `cog:Goal`,
-   `cog:Belief` quins to `AGENT_CONTEXT` as part of the `validate_intent` pre-flight.
+#### 2.4 Wire CogAI SHACL shapes into `sparql_shacl.rs`
+Load `ontologies/cogai_shapes.ttl` as the fourth domain shape graph at daemon startup alongside
+the existing biosciences/biomedical/organic-chemistry engines. No new engine code — reuse the
+existing `ShaclCompiler` path with `DomainTarget::CogAI`.
 
-6. **Extend Q42 volume header to v3** — Add `assertion_timestamp`, `merkle_root`, and reserved
-   fields. Keep v2 read-back working.
+#### 2.5 Wire CogAI pre-flight into `orchestrator.rs::validate_intent()`
+After the existing ODRL N3Logic check, run the `InferenceIntentShape` from `cogai_shapes.ttl`:
+1. Check `q42:inferenceAuthorizedBy` — must point to a `q42:HumanCentricControl` party
+2. Check `q42:provenanceCitations` — must have ≥ 1 citation  
+3. On violation → write CogAI-typed WAL entry (distinct violation type from ODRL rejection)
 
-7. **KML Phase 2** — Full `<Polygon>` → `BoundingBox` import; `<NetworkLink>` → DID graph
-   pointer; ODRL jurisdictional constraint linked to KML polygon bounding box.
+Write `cog:Agent`, `cog:Goal`, `cog:Belief` quins to `AGENT_CONTEXT` as part of this flow.
 
-**Files primarily affected:** `q42_volume.rs`, `query_engine.rs`, `sparql_filter.rs`,
-`orchestrator.rs`, new `provenance.rs`, new `temporal_graph.rs`, `kml_bridge.rs`
+#### 2.6 Load ontology TTL files at daemon startup
+`daemon.rs` / `orchestrator.rs` startup sequence:
+1. Parse `ontologies/rights_ontology.ttl` → ingest into named graph `urn:qualia:ontology:rights`
+2. Parse `ontologies/cogai_shapes.ttl` → register with `sparql_shacl.rs` shape compiler
+3. Both paths use existing `rio_turtle` parser
+
+#### 2.7 KML Phase 2 — `<Polygon>` and `<NetworkLink>`
+Extend `kml_bridge.rs::import_kml()`:
+- `<Polygon><outerBoundaryIs>` → WKT `POLYGON((lon lat, ...))` literal; `BoundingBox` for
+  `spatial_sieve.rs`; link to ODRL `odrl:spatial` constraint via jurisdiction lookup
+- `<NetworkLink><Link><href>` → DID-anchored remote graph pointer quin:
+  `(subject, q_hash("schema:url"), href_hash, SPATIAL_CONTEXT, ts, parity)`
+
+#### 2.8 Ingest pipeline DagStore wiring
+`crates/qualia-core-db/src/ingest.rs` — after each `SuperBlock` is written, call
+`DagStore::commit_node()` and update `Q42VolumeHeader::merkle_root` with the new DAG root hash.
+On first ingest into a fresh file, call `DagStore::genesis_node()`.
+
+#### 2.9 `epistemic.rs` — Dynamic Epistemic Logic module (§4.11)
+
+New module implementing the JTB epistemic layer:
+
+```rust
+// Named graph contexts
+pub const OBJECTIVE_CONTEXT: u64 = q_hash("urn:qualia:context:objective");
+pub const EPISTEMIC_CONTEXT:  u64 = q_hash("urn:qualia:context:epistemic");
+pub fn agent_epistemic_context(did_hash: u64) -> u64
+
+// Epistemic state classification
+pub enum EpistemicState { ObjectiveKnowledge, InferredBelief, HearsayBelief, Unknown }
+pub fn classify_epistemic_state(quins: &[NQuin], agent_did: u64, proposition: u64) -> EpistemicState
+
+// Write helpers
+pub fn assert_objective_knowledge(agent_did: u64, proposition: u64, proof_hash: u64, ts: u64) -> [NQuin; 3]
+pub fn assert_inferred_belief(agent_did: u64, proposition: u64, source_hash: u64, ts: u64) -> [NQuin; 3]
+pub fn assert_hearsay_belief(agent_did: u64, proposition: u64, informant_did: u64, ts: u64) -> [NQuin; 3]
+pub fn record_query_observation(observer_did: u64, query_hash: u64, ts: u64) -> NQuin
+```
+
+Also: new `ontologies/epistemic_shapes.ttl` with `ObjectiveKnowledgeShape`,
+`InferredBeliefShape`, `HearsayBeliefShape` SHACL NodeShapes.
+
+**Files primarily affected:** new `temporal_graph.rs`, new `provenance.rs`, new `epistemic.rs`,
+`spatial_sieve.rs`, `sparql_shacl.rs`, `orchestrator.rs`, `kml_bridge.rs`, `ingest.rs`, `daemon.rs`,
+new `ontologies/epistemic_shapes.ttl`
 
 ---
 
@@ -576,23 +760,23 @@ where possible.
 
 ---
 
-### Phase 4 — Full Merkle-DAG Versioning (8–12 weeks)
+### Phase 4 — Full Merkle-DAG Versioning ✅ COMPLETE
 
-1. **`git_bridge.rs` — real implementation** — Each "commit" is a content-addressed `DagNode`:
-   `{ parent_hash: [u8; 32], quins_merkle: [u8; 32], author_did: u64, timestamp: u64,
-   message_hash: u64 }`. Write to a separate `.q42h` history sidecar or a HISTORY_SECTION
-   in the v3 format.
+1. ✅ **`git_bridge.rs` — merge DAG** — `merge_node(primary_parent, secondary_parent, quins, ...)` creates a two-node merge structure: a primary commit node + a `MERGE_SECONDARY` back-link node whose `quins_merkle` encodes the primary hash for bidirectional traversal. `nodes_as_of(ms)` returns all DAG node hashes with `timestamp ≤ ms` for assertion-time snapshots. Conflict quins are written to `CONTEST_CONTEXT` (from `provenance.rs`).
 
-2. **Branch support** — A branch is a named pointer to a DagNode hash, stored in a
-   BRANCHES_CONTEXT quin graph.
+2. ✅ **Branch support** — A branch is a named pointer stored as a quin in `BRANCHES_CONTEXT`. `DagStore::write_branch_pointer()` + `branch_tip()` shipped in Phase 1.
 
-3. **Merge / contestability branches** — Fork + merge workflow for investigative scenarios.
-   Merge commits reference two parent hashes; conflicting quins are flagged for human review.
+3. ✅ **Merge / contestability branches** — `FORK_DISPUTED` (Phase 1) + `MERGE_SECONDARY` (Phase 4). `fork_node()` creates contestability branches; `merge_node()` resolves them.
 
-4. **SPARQL temporal traversal** — `AS OF` or `AT TIME` query extension that returns the
-   graph state at a specified `t_valid` or `t_assert`.
+4. ✅ **SPARQL temporal traversal** — `TemporalMode` enum (`AsOf`, `AtTime`); `Pattern::AsOf { inner, timestamp_ms, mode }` in `sparql_ast.rs`; `PhysicalOperatorType::AsOf` in `sparql_planner.rs`; `execute_as_of()` + `check_temporal_constraint()` in `sparql_executor.rs`. Parser (`sparql_parser.rs`) recognizes `AS OF <timestamp>` / `AT TIME <timestamp>` after the WHERE clause closing brace; accepts integer ms or `"YYYY-MM-DD"^^xsd:dateTime`. Executor uses T_CONTEXT PROV-O quins (`prov:generatedAtTime`, `startedAtTime`, `endedAtTime`); open-world default: no annotation = include.
 
-**Files primarily affected:** `git_bridge.rs` (major rewrite), `q42_volume.rs`, `wal.rs`, `sparql_ast.rs`, `sparql_executor.rs`
+5. ✅ **WAL→DagStore linking** — `wal.rs` 32-byte `prev_dag_hash` header; `checkpoint_to_dag()`; `buffered_count()` (Phase 4 item from previous session).
+
+**Test count:** 138 SPARQL tests (up from 133), 8 git_bridge tests (up from 5).
+
+**Remaining:** ingest pipeline wiring (`ingest.rs` §2.8 — `DagStore::commit_node()` after SuperBlock flushes); CP-ABE (deferred Phase 5+).
+
+**Files delivered:** `git_bridge.rs` (merge_node, nodes_as_of, MERGE_SECONDARY), `sparql_ast.rs` (TemporalMode, Pattern::AsOf), `sparql_planner.rs` (PhysicalOperatorType::AsOf), `sparql_executor.rs` (execute_as_of, check_temporal_constraint), `sparql_parser.rs` (AS OF / AT TIME parsing, parse_temporal_literal), `wal.rs`
 
 ---
 
@@ -622,26 +806,37 @@ where possible.
 
 A preliminary list of files that will need changes across Phases 1–2:
 
-| File | Changes needed |
-|------|----------------|
-| `lib.rs` | NQuin bit-layout re-map (§4.1) |
-| `q42_volume.rs` | v3 header fields; `assertion_timestamp`, `merkle_root` |
-| `spatial_sieve.rs` | Implement `log_spatial_coordinate` with GeoHash-64 + GeoSPARQL predicates |
-| `git_bridge.rs` | Hash-chain merkle root per SuperBlock (Phase 1); full DAG (Phase 4) |
-| `crdt.rs` | Update after Lamport clock bit position changes |
-| `wal.rs` | Expose prev_hash linking |
-| `query_engine.rs` | Temporal (T_CONTEXT) and spatial (SPATIAL_CONTEXT) named graph joins |
-| `sparql_filter.rs` | `AS OF`, `prov:wasInvalidatedBy`, `prov:wasAttributedTo` filter extensions |
-| `sparql_ast.rs` | New temporal/spatial AST nodes; GeoSPARQL relation predicates |
-| `deontic_logic.rs` | ODRL class mapping; VC attribute evaluation for key release (Phase 3) |
-| `key_vault.rs` | Subgraph key storage and X25519 encapsulation (Phase 3) |
-| `orchestrator.rs` | CogAI pre-flight in `validate_intent`; `cog:Goal`/`cog:Belief` quin writes |
-| `sparql_shacl.rs` | Load `cogai_shapes.ttl` as fourth domain shape graph |
-| new: `provenance.rs` | PROV-O labor DID labelling; contestability write helpers |
-| new: `temporal_graph.rs` | `assert_temporal()` write helper; T_CONTEXT read helpers |
-| new: `kml_bridge.rs` | KML import/export; `<TimeStamp>`/`<TimeSpan>` → PROV-O quins |
-| new: `ontologies/rights_ontology.ttl` | ODRL + SKOS vocabulary; Human-Centric terminology anchors |
-| new: `ontologies/cogai_shapes.ttl` | W3C CogAI CG SHACL shapes for agent structure validation |
+| File | Status | Changes |
+|------|--------|---------|
+| `lib.rs` | ✅ Phase 1 | NQuin v3 bit-layout; sensitivity tier constants; LoRA removed |
+| `q42_volume.rs` | ✅ Phase 1 | v3 header; `migrate_v2_to_v3`; v2 hard-rejected |
+| `lora/adapter_manager.rs` | ✅ Phase 1 | `active_adapter_by_hash` side-table |
+| `git_bridge.rs` | ✅ Phase 1 | Full `DagNode`/`DagStore`; contestability fork |
+| `kml_bridge.rs` | ✅ Phase 1 | KML↔NQuin; GeoSPARQL + PROV-O quins; GeoHash-64 |
+| `ontologies/rights_ontology.ttl` | ✅ Phase 1 | ODRL+SKOS; Human-Centric anchors; PIP DID |
+| `ontologies/cogai_shapes.ttl` | ✅ Phase 1 | CogAI SHACL shapes + InferenceIntentShape |
+| `qualia-cli/src/main.rs` | ✅ Phase 1 | `q42 migrate meta` subcommand |
+| `spatial_sieve.rs` | 🔄 Phase 2 | Wire `log_spatial_coordinate` to GeoHash-64 + SPATIAL_CONTEXT quins |
+| `sparql_shacl.rs` | 🔄 Phase 2 | Load `cogai_shapes.ttl` as 4th domain shape graph |
+| `orchestrator.rs` | 🔄 Phase 2 | CogAI pre-flight; `cog:Agent/Goal/Belief` quin writes |
+| `ingest.rs` | 🔄 Phase 2 | Wire `DagStore::commit_node()` after each SuperBlock write |
+| `daemon.rs` | 🔄 Phase 2 | Load ontology TTLs at startup |
+| new: `temporal_graph.rs` | 🔄 Phase 2 | `assert_temporal()`; T_CONTEXT predicate consts |
+| new: `provenance.rs` | 🔄 Phase 2 | Labor DID labelling; contestability write helpers |
+| `kml_bridge.rs` | 🔄 Phase 2 | `<Polygon>` + `<NetworkLink>` support |
+| `sparql_filter.rs` | ✅ Phase 2 | `prov_predicates` constants; `ProvOPredicate` enum; `ProvenanceFilter` helpers; 6 tests |
+| new: `epistemic.rs` | ✅ Phase 2.9 | Dynamic Epistemic Logic: per-agent mind contexts, JTB predicates, SHACL classifier |
+| new: `ontologies/epistemic_shapes.ttl` | ✅ Phase 2.9 | ObjectiveKnowledgeShape, InferredBeliefShape, HearsayBeliefShape SHACL shapes |
+| `crdt.rs` | ✅ Phase 2 | Verified: Lamport clock correctly uses bits[31:0]; LWW unaffected |
+| `deontic_logic.rs` | ✅ Phase 3 | VC attribute evaluation for subgraph key release; ODRL policy table; `evaluate_vc_for_subgraph_key_release()` |
+| `key_vault.rs` | ✅ Phase 3 | `SubgraphLayer` enum; `SubgraphKey` (AES-256-GCM, zeroize); `generate_layer_key()` (HKDF-SHA256); `encapsulate_for_recipient()` / `decapsulate()` (X25519 ECDH) |
+| `wal.rs` | ✅ Phase 4 | `prev_dag_hash` header; `checkpoint_to_dag()`; `buffered_count()`; full DAG-linking test suite |
+| `git_bridge.rs` | ✅ Phase 4 | `MERGE_SECONDARY` flag; `merge_node()` (two-node primary+back-link); `nodes_as_of()` snapshot filter; 8 tests |
+| `sparql_ast.rs` | ✅ Phase 4 | `TemporalMode` enum (AsOf/AtTime); `Pattern::AsOf { inner, timestamp_ms, mode }` |
+| `sparql_planner.rs` | ✅ Phase 4 | `PhysicalOperatorType::AsOf { input, timestamp_ms, mode }`; `plan_pattern()` case |
+| `sparql_executor.rs` | ✅ Phase 4 | `execute_as_of()` + `check_temporal_constraint()` (T_CONTEXT PROV-O lookup; open-world default) |
+| `sparql_parser.rs` | ✅ Phase 4 | `AS OF`/`AT TIME` parsing after WHERE `}`; `parse_temporal_literal()` (int ms + ISO 8601); 5 new tests |
+| `ingest.rs` | ⏳ Phase 4 remaining | Wire `DagStore::commit_node()` after each SuperBlock flush; update `Q42VolumeHeader::merkle_root` |
 
 ---
 
@@ -677,7 +872,9 @@ documentation, and the Rights Ontology:
 | §4.9 | FHE / ZK scope | FHE out of scope for all 0.x; ZK encrypted search (MIRACL) is priority after Phase 3 |
 | §4.10 | Agent structure | W3C CogAI CG SHACL shapes as fourth domain engine in `sparql_shacl.rs` |
 
-✅ **All 10 decisions resolved. Phase 1 implementation is unblocked.**
+| §4.11 | Epistemic Layer | Dynamic Epistemic Logic via SHACL CWA; per-agent mind contexts; JTB vocabulary; `epistemic.rs` module |
+
+✅ **All 11 decisions resolved. Phase 1 complete (`e42ed480`). Phase 2 (incl. §4.11 Epistemic Layer) in progress.**
 
 ---
 
@@ -699,6 +896,4 @@ documentation, and the Rights Ontology:
 - A formal `.q42` file format specification document (not just Rust code). This should be
   written as `Q42_FORMAT_SPEC.md` before Phase 2, so external implementations can target it.
 
-- A test suite for temporal and spatial queries. The existing 539-test suite covers the current
-  quin model. Phase 2 tests should cover `AS OF` queries, bi-temporal round-trips, and
-  GeoHash range scans.
+- A test suite for temporal and spatial queries. The codebase now has 640+ tests (138 SPARQL, 8 git_bridge, domain/shacl/etc.). `AS OF`/`AT TIME` parser tests and `merge_node`/`nodes_as_of` tests are in place. GeoHash bi-temporal round-trip tests still pending.

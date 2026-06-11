@@ -319,6 +319,7 @@ pub async fn start_local_daemon_with_options(
             .unwrap_or_else(|_| ".qualia".to_string())
     });
     crate::daemon_graph::init_daemon_graph(&storage_path);
+    crate::ontology_loader::load_startup_ontologies();
 
     let security = DaemonSecurity {
         dev,
@@ -723,7 +724,42 @@ pub async fn start_local_daemon_with_options(
                     }
                 };
 
-                let match_count = stats.match_count;
+                let mut sanitized_results = Vec::with_capacity(final_results.len());
+                let mut gatekeeper_halt = false;
+                for quin in final_results {
+                    let sensitivity = quin.context >> 56;
+                    if sensitivity == 0x02 {
+                        // Classified - Mandatory Drop
+                        let _ = crate::wal::log_adversarial_conduct(&quin, 4); // 4 = Egress Violation
+                        gatekeeper_halt = true;
+                        sanitized_results.clear();
+                        break;
+                    } else if sensitivity == 0x01 {
+                        // Restricted - Verify Bilateral TrustGroup
+                        // Mock for scaffolding: assume valid if we got this far
+                        sanitized_results.push(quin);
+                    } else {
+                        // Public
+                        sanitized_results.push(quin);
+                    }
+                }
+
+                if gatekeeper_halt {
+                    println!("[Webizen Gatekeeper] DENIED egress of Classified record in buffer");
+                    return make_response(
+                        StatusCode::FORBIDDEN,
+                        "application/json",
+                        json!({
+                            "status": "error",
+                            "code": "restricted_data_access",
+                            "message": "Gatekeeper Policy Violation: Attempted egress of CLASSIFIED context data."
+                        })
+                        .to_string(),
+                    );
+                }
+
+                let final_results = sanitized_results;
+                let match_count = final_results.len();
                 let vm_cycles = stats.vm_cycles;
 
                 // --- Serialise and attach compute-cost telemetry -------------

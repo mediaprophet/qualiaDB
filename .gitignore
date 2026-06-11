@@ -44,7 +44,6 @@ node.zip
 
 # Local Libraries (export staging — see Local_LIbraries/EXPORTS/README.md)
 Local_Libraries/
-Local_LIbraries/
 
 # App development sandbox (wellfair, cooperative-projects — not part of the core release)
 qapp-development/
@@ -64,3 +63,4 @@ private/
 
 # Local development files (completed planning, temporary docs, etc.)
 local/
+legacy/

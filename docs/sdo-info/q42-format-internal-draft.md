@@ -1,7 +1,7 @@
 # q42 Format Internal Draft
 
-**Status:** Internal draft (implementation converged on v2 unified volume, 2026-06-09)  
-**Date:** 2026-06-09 (revised from 2026-06-08)  
+**Status:** Internal draft (implementation converged on v3 unified volume, 2026-06-11; v2 hard-rejected by v3 builds)  
+**Date:** 2026-06-09 (revised 2026-06-11 — v3 format)  
 **Purpose:** Freeze the current implementation reality of the `q42` container
 family before any external standardization work begins.
 
@@ -49,18 +49,24 @@ The storage model is:
 4. Compression, when used, is **block-local** (per SuperBlock), not
    whole-file stream-based.
 
-### 1.3 Index placement (v2 — implemented)
+### 1.3 Index placement (v3 — implemented 2026-06-11)
 
-As of 2026-06-09, **new ingest writes a single unified v2 `.q42` volume**:
+As of 2026-06-11, **new ingest writes a single unified v3 `.q42` volume**:
 
-- 256-byte file header (`Q42\0`, version 2)
+- 256-byte file header (`Q42\0`, version 3)
 - embedded Q42LEX blob (uncompressed)
 - embedded BIDX blob (uncompressed)
 - block directory (16 bytes per block: relative offset, compressed length,
   uncompressed length)
 - concatenated LZ4-compressed SuperBlock payloads
+- optional temporal index section (offset/length in header; `0` if absent)
+- optional Merkle-DAG history section (offset/length in header; `0` if absent)
 
 Implementation: `crates/qualia-core-db/src/q42_volume.rs`
+
+v2 files are **hard-rejected** by v3 builds — `verify_version()` returns an error
+unless version == 3. Use `migrate_v2_to_v3()` (one-pass, in-place rewrite) before
+opening. v3 adds no byte-alignment changes to the SuperBlock or NQuin layouts.
 
 Legacy v1 sidecars (`.q42.lex`, `.q42.bidx`) and raw SuperBlock streams remain
 **readable** via `Q42Lexicon::load_for_q42()` and related fallbacks, but are no
@@ -106,7 +112,7 @@ identifier be Qualia-specific.
 
 This draft covers the Layer 0 data artifacts currently exposed by QualiaDB:
 
-- unified v2 `.q42` volumes (canonical for new ingest)
+- unified v3 `.q42` volumes (canonical for new ingest)
 - legacy v1 raw SuperBlock `.q42` streams (read compatibility)
 - legacy `.q42.lex` and `.q42.bidx` sidecars (read compatibility)
 - deprecated `.c.q42` transport alias / framed LZ4 profile
@@ -124,17 +130,20 @@ This draft does not define:
 
 ## 4. Current Conclusion
 
-This draft adopts the following model as of 2026-06-09:
+This draft adopts the following model as of 2026-06-11:
 
-1. **Unified v2 `.q42`** is the canonical on-disk container for new datasets.
+1. **Unified v3 `.q42`** is the canonical on-disk container for new datasets.
+   v2 volumes must be migrated via `migrate_v2_to_v3()` before use.
 2. **Embedded Q42LEX and BIDX** replace sidecars for new writes.
 3. **Block-local LZ4** compresses each SuperBlock inside the volume; there is
    no separate mandatory compressed transport file.
-4. **`.c.q42`** is a deprecated alias only — `finalize_c_q42()` copies a v2
+4. **`.c.q42`** is a deprecated alias only — `finalize_c_q42()` copies a v3
    volume unchanged for backward-compatible distribution paths.
 5. **`q42_reader.rs`** reads the legacy framed LZ4 transport profile only; it
-   does not read v2 unified volumes.
+   does not read v3 unified volumes.
 6. **QCHK capability envelopes** should migrate from `.chk` to `.qchk`.
+7. **v3 header extensions** add: temporal index section, SHA-256 Merkle root,
+   assertion timestamp, and Merkle-DAG history section (see §7 for layout).
 
 ## 5. Current Implementation Reality
 
@@ -142,8 +151,9 @@ The repo now converges on one primary write path and several read fallbacks:
 
 | Path | Role | Module |
 |------|------|--------|
-| v2 unified volume write | canonical ingest output | `q42_volume.rs`, `qualia-cli/src/ingest.rs` |
-| v2 unified volume read | mmap open, lex view, BIDX search, block decompress | `Q42Volume` |
+| v3 unified volume write | canonical ingest output | `q42_volume.rs`, `qualia-cli/src/ingest.rs` |
+| v3 unified volume read | mmap open, lex view, BIDX search, block decompress | `Q42Volume` |
+| v2 → v3 migration | one-pass header upgrade | `q42_volume::migrate_v2_to_v3()` |
 | v1 sidecar lex read | legacy WordNet / Index trees | `Q42Lexicon::load`, `load_for_q42` |
 | v1 raw SuperBlock read | legacy aligned streams | `storage.rs`, browser VFS (not yet v2-aware) |
 | framed LZ4 transport read | legacy `.c.q42` / old ingest | `q42_reader.rs` |
@@ -187,12 +197,14 @@ The canonical physical storage page is `QualiaSuperBlock`.
 - Alignment: 4,096 bytes (logical page; v2 stores LZ4-compressed payloads)
 - Structure: 160-byte header + 40,800-byte quin ledger (850 × 48 bytes)
 
-### Unified v2 volume
+### Unified v3 volume
 
-- Single `.q42` file with file magic `Q42\0`, version `2`
+- Single `.q42` file with file magic `Q42\0`, version `3`
 - Flags: `0x0001` = blocks LZ4-compressed, `0x0002` = object-sorted ingest
+- Extended header adds: temporal index section, SHA-256 Merkle root,
+  assertion timestamp, Merkle-DAG history section
 
-### Embedded sections (v2)
+### Embedded sections (v3)
 
 - **Q42LEX**: same binary layout as legacy `.q42.lex` sidecar
 - **BIDX**: same binary layout as legacy `.q42.bidx` sidecar
@@ -264,45 +276,57 @@ BlockDirectoryEntry:
   [12..16] uncomp_len   u32 LE   — always 40960 for current ingest
 ```
 
-Header fields (little-endian):
+Header fields (little-endian, v3 — 256 bytes total):
 
 ```text
-[0..4]    magic           "Q42\0"
-[4..6]    version         u16 = 2
-[6..8]    flags           u16
-[8..16]   lex_offset      u64
-[16..24]  lex_length      u64
-[24..32]  bidx_offset     u64
-[32..40]  bidx_length     u64
-[40..48]  block_dir_offset u64
-[48..56]  block_dir_length u64
-[56..64]  data_offset     u64
-[64..72]  data_length     u64
-[72..80]  block_count     u64
-[80..84]  block_size      u32 = 40960
-[84..88]  quins_per_block u32 = 850
-[88..256] reserved
+[0..4]    magic                  "Q42\0"
+[4..6]    version                u16 = 3   (v2 hard-rejected; use migrate_v2_to_v3())
+[6..8]    flags                  u16
+[8..16]   lex_offset             u64
+[16..24]  lex_length             u64
+[24..32]  bidx_offset            u64
+[32..40]  bidx_length            u64
+[40..48]  block_dir_offset       u64
+[48..56]  block_dir_length       u64
+[56..64]  data_offset            u64
+[64..72]  data_length            u64
+[72..80]  block_count            u64
+[80..84]  block_size             u32 = 40960
+[84..88]  quins_per_block        u32 = 850
+— v3 extensions (carved from former reserved bytes) —
+[88..96]  temporal_index_offset  u64   (0 if no temporal index)
+[96..104] temporal_index_length  u64
+[104..136] merkle_root           [u8; 32]  SHA-256 of DAG root node
+[136..144] assertion_timestamp   u64   ms since Unix epoch (last write)
+[144..152] dag_root_offset       u64   (0 if no DAG history)
+[152..160] dag_root_length       u64
+[160..256] reserved              [u8; 96]  (was [88..256] in v2)
 ```
 
-Detection: `is_v2_volume()` checks for magic `Q42\0` at offset 0.
+Detection: `is_v2_volume()` checks magic `Q42\0` at offset 0. `verify_version()` rejects
+anything other than version 3; to open a v2 file call `migrate_v2_to_v3()` first.
 
 Ingest sorts all quins by **object hash** before chunking so BIDX ranges are
 ascending and binary-searchable.
 
 ## 8. Canonical Artifact Set
 
-### Unified v2 `.q42` (canonical)
+### Unified v3 `.q42` (canonical)
 
 Recommended meaning for all new datasets:
 
-- single self-contained file
+- single self-contained file, version 3
 - embedded lexicon and block index
 - LZ4-compressed SuperBlocks
+- optional temporal index section (bi-temporal PROV-O quins)
+- optional Merkle-DAG history section (`DagNode` chain from `git_bridge.rs`)
+- SHA-256 Merkle root over the current DAG tip
 - memory-mapped via `Q42Volume::open()`
 
 Matches:
 
 - `crates/qualia-core-db/src/q42_volume.rs`
+- `crates/qualia-core-db/src/git_bridge.rs` (`DagStore::serialize()`)
 - `crates/qualia-cli/src/ingest.rs`
 - `scripts/fetch_wordnet.sh` (outputs `wordnet.q42` only)
 
@@ -393,14 +417,29 @@ New ingest MUST NOT emit v1 sidecars. Re-ingest with `qualia-cli ingest` or
 
 **Resolved (2026-06-09):** v2 embeds lex + BIDX. Sidecars are legacy read-only.
 
-### 10.2 Resolved: file-level magic
+### 10.2 Resolved: file-level magic and version
 
-**Resolved:** v2 uses magic `Q42\0` and version `2` at offset 0.
+**Resolved:** v3 uses magic `Q42\0` and version `3` at offset 0. v2 files are
+hard-rejected by v3 builds; `migrate_v2_to_v3()` upgrades the 168-byte reserved
+region to the v3 extended header (temporal, merkle_root, assertion_timestamp,
+DAG section pointers).
 
 ### 10.3 Resolved: compression model
 
 **Resolved:** block-local LZ4 inside the volume. Whole-file stream compression
 is legacy transport only.
+
+### 10.8 Resolved: v3 temporal and DAG header fields (2026-06-11)
+
+**Resolved:** v3 carves six new fields from the former `_reserved` region
+(bytes 88–159):
+- `temporal_index_offset/length` — byte range of the optional temporal index
+- `merkle_root [u8;32]` — SHA-256 of the current Merkle-DAG tip
+- `assertion_timestamp u64` — last-write wall-clock ms
+- `dag_root_offset/length` — byte range of the serialized `DagStore`
+
+All fields are `0` until the corresponding section is written. v3 builds that
+read a v3 file with `dag_root_length == 0` simply have no DAG history yet.
 
 ### 10.4 Remaining: browser VFS
 
@@ -425,7 +464,7 @@ doc sweeps.
 
 ## 11. Proposed Canonical Rules
 
-1. **New writes** produce unified v2 `.q42` only (magic `Q42\0`, version 2).
+1. **New writes** produce unified v3 `.q42` only (magic `Q42\0`, version 3). v2 files must be migrated with `migrate_v2_to_v3()` before opening.
 2. Q42LEX and BIDX blobs inside a v2 volume use the same layouts as legacy
    sidecars.
 3. SuperBlocks inside v2 are LZ4-compressed individually; uncompressed size is
@@ -446,10 +485,10 @@ doc sweeps.
 ## 12. Open Questions
 
 1. Should `validation_checksum` remain a real field if `parity` already exists?
-2. Should BIDX move to subject-hash ranges in a future v3, or stay
-   object-indexed permanently?
-3. Should v2 receive an explicit media type (e.g.
-   `application/vnd.qualia.q42+v2`) before IETF submission?
+2. Should BIDX move to subject-hash ranges in a future v4, or stay
+   object-indexed permanently? (v3 retains object-hash BIDX; this remains open for v4.)
+3. Should v3 receive an explicit media type (e.g.
+   `application/vnd.qualia.q42+v3`) before IETF submission?
 4. Should the playground VFS adopt v2 natively or continue translating v2 →
    framed transport at build time?
 5. Which public media type should be chosen for `.qchk`?

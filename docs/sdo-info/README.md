@@ -100,11 +100,27 @@ Use an internal explainer or ADR first when:
 ## What to read next
 
 - [standards-backlog.md](./standards-backlog.md) - Updated with CBOR-LD implementation status
-- [q42-format-internal-draft.md](./q42-format-internal-draft.md)
+- [q42-format-internal-draft.md](./q42-format-internal-draft.md) - Updated for v3 (temporal/DAG header, v2 migration)
 - [qualia-vault-manifest.md](./qualia-vault-manifest.md) - CBOR-LD projection complete
 - [did-q42-method-draft.md](./did-q42-method-draft.md)
 - [qualia-sync-protocol.md](./qualia-sync-protocol.md) - CBOR-LD with Q42 lexicon complete
 - [qualia-shacl-extensions.html](./qualia-shacl-extensions.html) - ReSpec specification for SHACL extensions ⭐ NEW (2026-06-10)
+
+## Recent Implementation Updates (2026-06-11)
+
+**✅ Q42 v3 Format + Phase 4 Merkle-DAG & SPARQL Temporal Traversal**
+
+### **Key Achievements:**
+- **v3 Format Canonical:** `q42_volume.rs` version field is now `3`; v2 files are hard-rejected (`verify_version()` errors); `migrate_v2_to_v3()` performs an in-place one-pass upgrade. v3 header adds `temporal_index_offset/length`, `merkle_root [u8;32]`, `assertion_timestamp`, and `dag_root_offset/length` carved from the former reserved region.
+- **Merkle-DAG Merge Nodes:** `git_bridge.rs` now has `merge_node()` (creates primary commit + `MERGE_SECONDARY` back-link) and `nodes_as_of(ms)` (assertion-time snapshot filter). The `MERGE_SECONDARY` flag (0x0008) enables bidirectional DAG traversal across merge parents.
+- **SPARQL `AS OF` / `AT TIME`:** New temporal snapshot query modifiers. Syntax: `SELECT ... WHERE { ... } AS OF "2024-06-01"^^xsd:dateTime` or `... AT TIME 1717286400000`. Implemented end-to-end: `TemporalMode` enum + `Pattern::AsOf` in `sparql_ast.rs`; `PhysicalOperatorType::AsOf` in `sparql_planner.rs`; `execute_as_of()` + `check_temporal_constraint()` in `sparql_executor.rs`; parser recognition in `sparql_parser.rs`. Executor uses T_CONTEXT PROV-O quins; open-world default (no annotation = include).
+- **138 SPARQL tests passing** (up from 133 before Phase 4).
+
+### **Updated SDO Documents:**
+- **q42-format-internal-draft.md**: v3 header layout; v2 migration path; DAG section
+- **standards-backlog.md**: v3 format, new `AS OF`/`AT TIME` extension entry (§6)
+- **sparql-star.md**: implementation status table added
+- **sparql-extensions.md**: implementation status table with all extensions
 
 ## Recent Implementation Updates (2026-06-10)
 

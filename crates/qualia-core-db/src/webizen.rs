@@ -1515,7 +1515,7 @@ mod tests {
         // Test CRDT Queue Suspension and Wakeup
         let mut crdt_queue = SuspendedTransactionQueue::new();
 
-        let mut mock_vm = crate::logic::WebizenVM::new();
+        let mut mock_vm = crate::modalities::logic::WebizenVM::new();
         mock_vm.registers[0] = Some(999); // Mock execution state
 
         let suspended_tx = mock_vm.flatten_to_suspended(100, 2, crate::NQuin::default());
