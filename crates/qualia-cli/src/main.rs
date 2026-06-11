@@ -52,8 +52,11 @@ enum Commands {
         #[arg(long, help = "Initialize the memory-mapped storage vault")]
         init: bool,
     },
-    /// Database schema/state transitions
-    Migrate,
+    /// Database schema/state transitions and volume format migrations
+    Migrate {
+        #[command(subcommand)]
+        action: MigrateAction,
+    },
     /// Inspect memory layouts natively
     Mem {
         #[arg(long, help = "Triggers the Block Inspector to read hex layouts")]
@@ -208,6 +211,21 @@ enum ProfileAction {
     Inspect {
         /// Path to the .qchk file (legacy `.chk` also accepted)
         file: PathBuf,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum MigrateAction {
+    /// Migrate a .q42 volume from v2 to v3 (Lamport clock bit-shift + v3 header).
+    ///
+    /// Rewrites the header in-place and shifts each quin's Lamport clock from bits [60:32]
+    /// to bits [31:0]. Idempotent — safe to run on a file already at v3.
+    Meta {
+        /// Path to the .q42 file to migrate
+        path: PathBuf,
+        /// Print what would be done without modifying the file
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 
@@ -496,10 +514,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Vault Initialization Complete!");
             }
         }
-        Commands::Migrate => {
-            println!("Running Schema/State Transitions...");
-            println!("No migrations required. State is consistent.");
-        }
+        Commands::Migrate { action } => match action {
+            MigrateAction::Meta { path, dry_run } => {
+                if *dry_run {
+                    use std::fs::File;
+                    use std::io::Read as _;
+                    let mut f = File::open(path)?;
+                    let mut magic = [0u8; 6];
+                    f.read_exact(&mut magic)?;
+                    let version = u16::from_le_bytes([magic[4], magic[5]]);
+                    if version >= 3 {
+                        println!("[dry-run] {} is already v3 — no migration needed.", path.display());
+                    } else {
+                        println!("[dry-run] {} is v{version} — would migrate to v3 (Lamport bits [60:32]→[31:0], header bump).", path.display());
+                    }
+                } else {
+                    println!("Migrating {} to Q42 v3…", path.display());
+                    qualia_core_db::q42_volume::migrate_v2_to_v3(path)?;
+                    println!("Migration complete: {} is now v3.", path.display());
+                }
+            }
+        },
         Commands::Mem { inspect } => {
             if *inspect {
                 println!("Please use `qualia-cli inspect <superblock_path>` directly to inspect specific layouts.");

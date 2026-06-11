@@ -1,0 +1,191 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix cog:    <https://www.w3.org/community/cogai/ont#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix q42:    <urn:qualia:ontology:rights:> .
+@prefix q42sh:  <urn:qualia:shapes:cogai:> .
+
+# ── Ontology header ───────────────────────────────────────────────────────────
+
+<urn:qualia:shapes:cogai>
+    a              owl:Ontology ;
+    rdfs:label     "QualiaDB CogAI SHACL Shapes"@en ;
+    rdfs:comment   """SHACL constraint shapes for W3C CogAI Community Group
+                   classes (Agent, Goal, Belief, Plan). Used as the 4th domain
+                   validation engine in sparql_shacl.rs alongside the existing
+                   biosciences, biomedical, and organic-chemistry engines.
+                   Also wired into orchestrator.rs validate_intent() pre-flight."""@en ;
+    owl:imports    <https://www.w3.org/community/cogai/ont> .
+
+# ── cog:Agent Shape ───────────────────────────────────────────────────────────
+
+q42sh:AgentShape
+    a              sh:NodeShape ;
+    sh:targetClass cog:Agent ;
+    rdfs:label     "CogAI Agent Shape"@en ;
+
+    # Must have a DID-based identifier
+    sh:property [
+        sh:path        cog:agentID ;
+        sh:minCount    1 ;
+        sh:maxCount    1 ;
+        sh:datatype    xsd:anyURI ;
+        sh:pattern     "^did:" ;
+        sh:message     "cog:Agent must have exactly one cog:agentID whose value is a DID URI."@en
+    ] ;
+
+    # Must declare at least one capability (action it may perform)
+    sh:property [
+        sh:path        cog:hasCapability ;
+        sh:minCount    1 ;
+        sh:class       cog:Capability ;
+        sh:message     "cog:Agent must declare at least one cog:hasCapability."@en
+    ] ;
+
+    # Must be anchored to a Human-Centric principal (or be that principal)
+    sh:property [
+        sh:path        q42:controlledBy ;
+        sh:minCount    1 ;
+        sh:class       q42:HumanCentricControl ;
+        sh:message     "cog:Agent must be linked to a q42:HumanCentricControl principal via q42:controlledBy."@en
+    ] ;
+
+    # ODRL assigner must be present
+    sh:property [
+        sh:path        odrl:assignee ;
+        sh:minCount    1 ;
+        sh:message     "cog:Agent must appear as an odrl:assignee in at least one policy."@en
+    ] .
+
+# ── cog:Goal Shape ────────────────────────────────────────────────────────────
+
+q42sh:GoalShape
+    a              sh:NodeShape ;
+    sh:targetClass cog:Goal ;
+    rdfs:label     "CogAI Goal Shape"@en ;
+
+    sh:property [
+        sh:path    cog:goalDescription ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+        sh:maxLength 4096 ;
+        sh:message  "cog:Goal must have a cog:goalDescription string (max 4096 chars)."@en
+    ] ;
+
+    sh:property [
+        sh:path    cog:hasAgent ;
+        sh:minCount 1 ;
+        sh:class   cog:Agent ;
+        sh:message  "cog:Goal must reference at least one cog:Agent via cog:hasAgent."@en
+    ] ;
+
+    # Goal must not be prohibited by ODRL policy
+    sh:sparql [
+        sh:message "Goal must not be covered by an active odrl:Prohibition."@en ;
+        sh:select  """
+            PREFIX cog:  <https://www.w3.org/community/cogai/ont#>
+            PREFIX odrl: <http://www.w3.org/ns/odrl/2/>
+            SELECT $this WHERE {
+                $this a cog:Goal .
+                ?policy a odrl:Set ;
+                        odrl:prohibition ?prohib .
+                ?prohib odrl:target $this .
+                FILTER NOT EXISTS { ?prohib odrl:exception ?exc . $this a ?exc }
+            }
+        """
+    ] .
+
+# ── cog:Belief Shape ──────────────────────────────────────────────────────────
+
+q42sh:BeliefShape
+    a              sh:NodeShape ;
+    sh:targetClass cog:Belief ;
+    rdfs:label     "CogAI Belief Shape"@en ;
+
+    sh:property [
+        sh:path    cog:beliefContent ;
+        sh:minCount 1 ;
+        sh:message  "cog:Belief must have cog:beliefContent."@en
+    ] ;
+
+    # Beliefs must carry provenance
+    sh:property [
+        sh:path    prov:wasGeneratedBy ;
+        sh:minCount 1 ;
+        sh:message  "cog:Belief must carry prov:wasGeneratedBy provenance."@en
+    ] ;
+
+    # Confidence must be in [0.0, 1.0]
+    sh:property [
+        sh:path     cog:confidence ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 1.0 ;
+        sh:message  "cog:Belief confidence (if present) must be a decimal in [0.0, 1.0]."@en
+    ] .
+
+# ── cog:Plan Shape ────────────────────────────────────────────────────────────
+
+q42sh:PlanShape
+    a              sh:NodeShape ;
+    sh:targetClass cog:Plan ;
+    rdfs:label     "CogAI Plan Shape"@en ;
+
+    sh:property [
+        sh:path    cog:planStep ;
+        sh:minCount 1 ;
+        sh:message  "cog:Plan must have at least one cog:planStep."@en
+    ] ;
+
+    sh:property [
+        sh:path    cog:hasGoal ;
+        sh:minCount 1 ;
+        sh:class   cog:Goal ;
+        sh:message  "cog:Plan must reference at least one cog:Goal via cog:hasGoal."@en
+    ] ;
+
+    # Plan must be authored by a Human-Centric agent
+    sh:property [
+        sh:path    prov:wasAttributedTo ;
+        sh:minCount 1 ;
+        sh:class   q42:HumanCentricControl ;
+        sh:message  "cog:Plan must be prov:wasAttributedTo a q42:HumanCentricControl party."@en
+    ] .
+
+# ── validate_intent() pre-flight rules ───────────────────────────────────────
+# These shapes are evaluated by orchestrator.rs before any LLM invocation.
+# A SHACL violation here writes a conduct-violation quin to the WAL and aborts.
+
+q42sh:InferenceIntentShape
+    a              sh:NodeShape ;
+    rdfs:label     "Inference Intent Pre-flight Shape"@en ;
+    rdfs:comment   """Applied to every cog:Goal whose cog:hasCapability includes
+                   q42:infer. Enforces Human-Centric control gate."""@en ;
+    sh:targetClass cog:Goal ;
+
+    sh:property [
+        sh:path    q42:inferenceAuthorizedBy ;
+        sh:minCount 1 ;
+        sh:class   q42:HumanCentricControl ;
+        sh:message  "LLM inference goals must carry q42:inferenceAuthorizedBy a q42:HumanCentricControl party."@en
+    ] ;
+
+    sh:property [
+        sh:path    q42:provenanceCitations ;
+        sh:minCount 1 ;
+        sh:message  "LLM inference goals must include at least one q42:provenanceCitations source."@en
+    ] .
+
+# ── SKOS labels for shape categories ─────────────────────────────────────────
+
+q42sh:CogAIShapeGroup
+    a              skos:Collection ;
+    skos:prefLabel "CogAI SHACL Shape Group"@en ;
+    skos:member    q42sh:AgentShape, q42sh:GoalShape, q42sh:BeliefShape,
+                   q42sh:PlanShape, q42sh:InferenceIntentShape .

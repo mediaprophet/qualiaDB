@@ -386,6 +386,9 @@ pub struct LoRAAdapterManager {
     pub expected_n_in:  Option<usize>,
     /// Expected hidden/output dimension — used for dim-check at apply time.
     pub expected_n_out: Option<usize>,
+    /// Side-table: NQuin content-hash → active adapter ID.
+    /// Replaces the retired metadata bit-packing (§4.1 migration).
+    active_adapter_by_hash: std::collections::HashMap<u64, u64>,
 }
 
 impl LoRAAdapterManager {
@@ -401,6 +404,7 @@ impl LoRAAdapterManager {
             detector: super::context_detector::ContextDetector::new(),
             expected_n_in:  None,
             expected_n_out: None,
+            active_adapter_by_hash: std::collections::HashMap::new(),
         }
     }
 
@@ -421,23 +425,27 @@ impl LoRAAdapterManager {
 
     // ── Context detection ────────────────────────────────────────────────────
 
-    /// Detect `ContextType` from prompt text + optional NQuin metadata bits.
-    pub fn detect_context(
-        &self,
-        prompt:         &str,
-        metadata_bits:  Option<u64>,
-    ) -> (ContextType, f32) {
-        let text = self.detector.analyze_text(prompt);
-        let meta = metadata_bits.map(|m| {
-            let ctx_bits     = ((m >> 60) & 0xF) as u8;
-            let confidence_u = ((m >> 48) & 0xFF) as f32 / 255.0;
-            (ContextType::from_metadata_bits(ctx_bits), confidence_u)
-        });
+    /// Detect `ContextType` from prompt text.
+    /// LoRA context is no longer encoded in NQuin metadata bits (§4.1 migration);
+    /// use `active_adapter_for_hash()` to look up the adapter for a specific quin.
+    pub fn detect_context(&self, prompt: &str) -> (ContextType, f32) {
+        self.detector.analyze_text(prompt)
+    }
 
-        match meta {
-            Some(m) => self.detector.combine(text, m),
-            None    => text,
-        }
+    /// Look up the active adapter ID for a given NQuin content-hash.
+    /// Returns `None` if no adapter has been associated with that quin.
+    pub fn active_adapter_for_hash(&self, content_hash: u64) -> Option<u64> {
+        self.active_adapter_by_hash.get(&content_hash).copied()
+    }
+
+    /// Associate an adapter ID with a NQuin content-hash in the side-table.
+    pub fn set_adapter_for_hash(&mut self, content_hash: u64, adapter_id: u64) {
+        self.active_adapter_by_hash.insert(content_hash, adapter_id);
+    }
+
+    /// Remove all side-table associations (e.g. at end of an inference batch).
+    pub fn clear_hash_associations(&mut self) {
+        self.active_adapter_by_hash.clear();
     }
 
     // ── Adapter switching ────────────────────────────────────────────────────
@@ -478,16 +486,15 @@ impl LoRAAdapterManager {
         Ok(true)
     }
 
-    /// Detect context from `prompt` / `metadata_bits` and switch adapter if needed.
+    /// Detect context from `prompt` and switch adapter if confidence exceeds `threshold`.
     ///
     /// Returns `(context_type, confidence, switched)`.
     pub fn auto_switch(
         &mut self,
-        prompt:        &str,
-        metadata_bits: Option<u64>,
-        threshold:     f32,
+        prompt:    &str,
+        threshold: f32,
     ) -> (ContextType, f32, bool) {
-        let (ctx, conf) = self.detect_context(prompt, metadata_bits);
+        let (ctx, conf) = self.detect_context(prompt);
 
         if conf < threshold {
             return (ContextType::General, conf, false);

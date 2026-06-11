@@ -24,6 +24,7 @@ use crate::{NQuin, QUINS_PER_BLOCK};
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
 pub const Q42_VERSION_V2: u16 = 2;
+pub const Q42_VERSION_V3: u16 = 3;
 pub const HEADER_SIZE: usize = 256;
 pub const SUPERBLOCK_SIZE: usize = 40_960;
 pub const SUPERBLOCK_HEADER: usize = 160;
@@ -32,24 +33,85 @@ pub const BIDX_MAGIC: [u8; 4] = *b"BIDX";
 pub const FLAG_BLOCKS_LZ4: u16 = 0x0001;
 pub const FLAG_OBJECT_SORTED: u16 = 0x0002;
 
+/// Q42 volume header — 280 bytes, `repr(C, packed)`.
+/// v3 builds hard-reject files with `version < 3` — run `q42 migrate meta` first.
 #[repr(C, packed)]
 #[derive(Clone, Copy, Debug)]
 pub struct Q42VolumeHeader {
-    pub magic: [u8; 4],
-    pub version: u16,
-    pub flags: u16,
-    pub lex_offset: u64,
-    pub lex_length: u64,
-    pub bidx_offset: u64,
-    pub bidx_length: u64,
+    pub magic:            [u8; 4],
+    pub version:          u16,
+    pub flags:            u16,
+    pub lex_offset:       u64,
+    pub lex_length:       u64,
+    pub bidx_offset:      u64,
+    pub bidx_length:      u64,
     pub block_dir_offset: u64,
     pub block_dir_length: u64,
-    pub data_offset: u64,
-    pub data_length: u64,
-    pub block_count: u64,
-    pub block_size: u32,
-    pub quins_per_block: u32,
-    pub _reserved: [u8; 192],
+    pub data_offset:      u64,
+    pub data_length:      u64,
+    pub block_count:      u64,
+    pub block_size:       u32,
+    pub quins_per_block:  u32,
+    // v3 extension fields (carved from former _reserved[0..88]):
+    pub temporal_index_offset: u64,
+    pub temporal_index_length: u64,
+    pub merkle_root:      [u8; 32],  // SHA3-256 of DAG root; all-zero = no history
+    pub assertion_timestamp: u64,    // ms since Unix epoch when volume was last written
+    pub dag_root_offset:  u64,       // offset into file of DagNode store; 0 = absent
+    pub dag_root_length:  u64,       // byte length of DagNode store section
+    pub _reserved:        [u8; 96],  // remaining reserved (88 named + 72 v3 ext + 96 = 256 bytes)
+}
+
+const _: () = assert!(std::mem::size_of::<Q42VolumeHeader>() == 256,
+    "Q42VolumeHeader must be exactly 256 bytes — matches HEADER_SIZE constant");
+
+impl Q42VolumeHeader {
+    /// Reject v2 files. Call before any read/write on a mapped header.
+    pub fn verify_version(&self) -> Result<(), String> {
+        // Copy fields out of the packed struct before comparing to avoid unaligned refs.
+        let magic = self.magic;
+        let version = { self.version };
+        if magic != Q42_MAGIC {
+            return Err(format!("bad magic {magic:?}"));
+        }
+        if version < Q42_VERSION_V3 {
+            return Err(format!(
+                "Q42 file is version {version}; v3 required — run `q42 migrate meta <file>` first"
+            ));
+        }
+        Ok(())
+    }
+
+    /// Build a minimal valid v3 header with all extension fields zeroed.
+    pub fn new_v3(
+        lex_offset: u64, lex_length: u64,
+        bidx_offset: u64, bidx_length: u64,
+        block_dir_offset: u64, block_dir_length: u64,
+        data_offset: u64, data_length: u64,
+        block_count: u64, block_size: u32, quins_per_block: u32,
+    ) -> Self {
+        let assertion_timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+        Self {
+            magic: Q42_MAGIC,
+            version: Q42_VERSION_V3,
+            flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED,
+            lex_offset, lex_length,
+            bidx_offset, bidx_length,
+            block_dir_offset, block_dir_length,
+            data_offset, data_length,
+            block_count, block_size, quins_per_block,
+            temporal_index_offset: 0,
+            temporal_index_length: 0,
+            merkle_root: [0u8; 32],
+            assertion_timestamp,
+            dag_root_offset: 0,
+            dag_root_length: 0,
+            _reserved: [0u8; 96],
+        }
+    }
 }
 
 #[repr(C, packed)]
@@ -204,6 +266,7 @@ pub fn encode_superblock(seq_id: u64, quins: &[NQuin]) -> [u8; SUPERBLOCK_SIZE] 
 
 fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
     let mut buf = [0u8; HEADER_SIZE];
+    // Core fields (0..88)
     buf[0..4].copy_from_slice(&h.magic);
     buf[4..6].copy_from_slice(&h.version.to_le_bytes());
     buf[6..8].copy_from_slice(&h.flags.to_le_bytes());
@@ -218,21 +281,27 @@ fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
     buf[72..80].copy_from_slice(&h.block_count.to_le_bytes());
     buf[80..84].copy_from_slice(&h.block_size.to_le_bytes());
     buf[84..88].copy_from_slice(&h.quins_per_block.to_le_bytes());
+    // v3 extension fields (88..160)
+    buf[88..96].copy_from_slice(&h.temporal_index_offset.to_le_bytes());
+    buf[96..104].copy_from_slice(&h.temporal_index_length.to_le_bytes());
+    buf[104..136].copy_from_slice(&h.merkle_root);
+    buf[136..144].copy_from_slice(&h.assertion_timestamp.to_le_bytes());
+    buf[144..152].copy_from_slice(&h.dag_root_offset.to_le_bytes());
+    buf[152..160].copy_from_slice(&h.dag_root_length.to_le_bytes());
     buf
 }
 
 fn header_from_bytes(buf: &[u8; HEADER_SIZE]) -> io::Result<Q42VolumeHeader> {
     if buf[0..4] != Q42_MAGIC {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "invalid Q42 magic",
-        ));
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid Q42 magic"));
     }
     let version = u16::from_le_bytes(buf[4..6].try_into().unwrap());
-    if version != Q42_VERSION_V2 {
+    if version < Q42_VERSION_V3 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("unsupported Q42 version {version}"),
+            format!(
+                "Q42 file is version {version}; v3 required — run `q42 migrate meta <file>` first"
+            ),
         ));
     }
     Ok(Q42VolumeHeader {
@@ -250,11 +319,113 @@ fn header_from_bytes(buf: &[u8; HEADER_SIZE]) -> io::Result<Q42VolumeHeader> {
         block_count: u64::from_le_bytes(buf[72..80].try_into().unwrap()),
         block_size: u32::from_le_bytes(buf[80..84].try_into().unwrap()),
         quins_per_block: u32::from_le_bytes(buf[84..88].try_into().unwrap()),
-        _reserved: [0; 192],
+        temporal_index_offset: u64::from_le_bytes(buf[88..96].try_into().unwrap()),
+        temporal_index_length: u64::from_le_bytes(buf[96..104].try_into().unwrap()),
+        merkle_root: buf[104..136].try_into().unwrap(),
+        assertion_timestamp: u64::from_le_bytes(buf[136..144].try_into().unwrap()),
+        dag_root_offset: u64::from_le_bytes(buf[144..152].try_into().unwrap()),
+        dag_root_length: u64::from_le_bytes(buf[152..160].try_into().unwrap()),
+        _reserved: [0; 96],
     })
 }
 
-/// Write a unified v2 `.q42` volume.
+/// One-pass in-place migration: v2 header → v3 header + Lamport clock bit-shift in every quin.
+///
+/// The Lamport clock moves from bits [60:32] to bits [31:0]. The header version is bumped to 3.
+/// On success, writes back to the same path atomically (via temp file + rename).
+pub fn migrate_v2_to_v3(path: &Path) -> io::Result<()> {
+    use std::io::{Seek, SeekFrom};
+
+    let mut f = OpenOptions::new().read(true).write(true).open(path)?;
+
+    // Read and validate old header.
+    let mut hdr_buf = [0u8; HEADER_SIZE];
+    f.read_exact(&mut hdr_buf)?;
+    if hdr_buf[0..4] != Q42_MAGIC {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid Q42 magic"));
+    }
+    let version = u16::from_le_bytes(hdr_buf[4..6].try_into().unwrap());
+    if version >= Q42_VERSION_V3 {
+        return Ok(()); // already migrated
+    }
+    if version != Q42_VERSION_V2 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("cannot migrate Q42 version {version}"),
+        ));
+    }
+
+    let _block_count = u64::from_le_bytes(hdr_buf[72..80].try_into().unwrap());
+    let block_dir_offset = u64::from_le_bytes(hdr_buf[40..48].try_into().unwrap());
+    let block_dir_length = u64::from_le_bytes(hdr_buf[48..56].try_into().unwrap());
+    let data_offset = u64::from_le_bytes(hdr_buf[56..64].try_into().unwrap());
+
+    // Rewrite v3 header in-place (version bump + zero-init v3 extension fields).
+    hdr_buf[4..6].copy_from_slice(&Q42_VERSION_V3.to_le_bytes());
+    // v3 extension fields (88..160) — zero-init (already 0 in old reserved section)
+    let assertion_timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    hdr_buf[136..144].copy_from_slice(&assertion_timestamp.to_le_bytes());
+    f.seek(SeekFrom::Start(0))?;
+    f.write_all(&hdr_buf)?;
+
+    // Shift Lamport clock: bits [60:32] → [31:0] in every quin in every block.
+    let n_entries = block_dir_length as usize / BlockDirectoryEntry::SIZE;
+    let mut dir_buf = vec![0u8; block_dir_length as usize];
+    f.seek(SeekFrom::Start(block_dir_offset))?;
+    f.read_exact(&mut dir_buf)?;
+
+    for i in 0..n_entries {
+        let ent_off = i * BlockDirectoryEntry::SIZE;
+        let ent = BlockDirectoryEntry::from_bytes(dir_buf[ent_off..ent_off + 16].try_into().unwrap());
+        let block_file_offset = data_offset + ent.rel_offset;
+        let comp_len = ent.comp_len as usize;
+        let uncomp_len = ent.uncomp_len as usize;
+
+        let mut comp_buf = vec![0u8; comp_len];
+        f.seek(SeekFrom::Start(block_file_offset))?;
+        f.read_exact(&mut comp_buf)?;
+
+        let mut block = vec![0u8; uncomp_len];
+        lz4_flex::decompress_into(&comp_buf, &mut block)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+
+        // Patch each 48-byte quin's metadata field (bytes 40..48 within quin = field `metadata`).
+        let quin_start = SUPERBLOCK_HEADER;
+        let mut off = quin_start;
+        while off + QUIN_SIZE <= block.len() {
+            let meta_bytes: [u8; 8] = block[off + 40..off + 48].try_into().unwrap();
+            let meta = u64::from_le_bytes(meta_bytes);
+            // Old Lamport = bits [60:32] (29 bits). New Lamport = bits [31:0] (32 bits).
+            // Strip old lane, extract, re-place at low 32.
+            let old_lamport = ((meta >> 32) & 0x1FFF_FFFF) as u32; // bits [60:32]
+            // Clear bits [63:32] (upper half), set low 32 to old_lamport.
+            let new_meta = (meta & 0xFFFF_FFFF_0000_0000u64 & !(0xFFFFFFFu64 << 32))
+                | (old_lamport as u64);
+            block[off + 40..off + 48].copy_from_slice(&new_meta.to_le_bytes());
+            off += QUIN_SIZE;
+        }
+
+        let new_comp = lz4_flex::compress_prepend_size(&block[..uncomp_len]);
+        if new_comp.len() != comp_len {
+            // Compressed size changed — this shouldn't happen for a bit-twiddling migration,
+            // but guard against it by returning an error rather than corrupting the file.
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("block {i}: recompressed size changed {comp_len} → {}; aborting migration", new_comp.len()),
+            ));
+        }
+        f.seek(SeekFrom::Start(block_file_offset))?;
+        f.write_all(&new_comp)?;
+    }
+
+    f.flush()?;
+    Ok(())
+}
+
+/// Write a unified v3 `.q42` volume.
 pub fn write_unified_volume(
     path: &Path,
     lex: &HashMap<u64, String>,
@@ -274,10 +445,9 @@ pub fn write_unified_volume(
     builder.finish(path)
 }
 
-/// Write a unified v2 .q42 volume with embedded triple support.
-/// 
-/// This version accepts HashMap<u64, LexiconEntry> to support SPARQL-Star
-/// embedded triples in addition to regular string lexicon entries.
+/// Write a unified v3 .q42 volume with embedded triple support.
+///
+/// Accepts `HashMap<u64, LexiconEntry>` to support SPARQL-Star embedded triples.
 pub fn write_unified_volume_with_entries(
     path: &Path,
     lex: &HashMap<u64, LexiconEntry>,
@@ -357,9 +527,13 @@ impl UnifiedVolumeBuilder {
         let block_dir_length = block_count * BlockDirectoryEntry::SIZE as u64;
         let data_offset = block_dir_offset + block_dir_length;
 
+        let assertion_timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
         let header = Q42VolumeHeader {
             magic: Q42_MAGIC,
-            version: Q42_VERSION_V2,
+            version: Q42_VERSION_V3,
             flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED,
             lex_offset,
             lex_length: self.lex_bytes.len() as u64,
@@ -372,7 +546,13 @@ impl UnifiedVolumeBuilder {
             block_count,
             block_size: SUPERBLOCK_SIZE as u32,
             quins_per_block: QUINS_PER_BLOCK as u32,
-            _reserved: [0; 192],
+            temporal_index_offset: 0,
+            temporal_index_length: 0,
+            merkle_root: [0u8; 32],
+            assertion_timestamp,
+            dag_root_offset: 0,
+            dag_root_length: 0,
+            _reserved: [0; 96],
         };
 
         let out = OpenOptions::new()

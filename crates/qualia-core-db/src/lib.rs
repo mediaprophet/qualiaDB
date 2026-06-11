@@ -173,7 +173,16 @@ impl NQuin {
         self.subject & !Self::NESTED_BIT_MASK
     }
 
-    // Extract the two bits (61-62) of the metadata slot for fast lane classification
+    // ── Metadata field bit-layout (v3, post §4.1 migration) ─────────────────
+    //
+    // [63:60]  Quin Type  — 4-bit nibble; bits [62:61] are the routing lane
+    // [59:56]  Sensitivity tier — 4-bit ODRL layer (0=PUBLIC..4=FIDUCIARY)
+    // [55:32]  Reserved — 24 bits for Phase 2 temporal/spatial flags
+    // [31:0]   Lamport clock — 32-bit logical clock for CRDT ordering
+    //
+    // LoRA context triggers have been moved to LoRAAdapterManager's side-table.
+
+    // Routing lane reads bits [62:61] — sub-bits of the Quin Type nibble.
     const LANE_MASK: u64 = 0b11 << 61;
     const SHIFT_LANE: u32 = 61;
 
@@ -211,23 +220,58 @@ impl NQuin {
         self.context |= (sensitivity as u64) << 56;
     }
 
-    /// Extracts the Lamport Logical Clock embedded in bits 32-60 of the metadata.
+    // ── Quin Type (bits [63:60]) ─────────────────────────────────────────────
+
+    /// Read the 4-bit Quin Type nibble from bits [63:60].
+    /// Note: bits [62:61] within this nibble are also the routing lane.
+    #[inline(always)]
+    pub fn get_quin_type(&self) -> u8 {
+        ((self.metadata >> 60) & 0xF) as u8
+    }
+
+    /// Write the 4-bit Quin Type nibble into bits [63:60], preserving all other bits.
+    #[inline(always)]
+    pub fn set_quin_type(&mut self, quin_type: u8) {
+        self.metadata = (self.metadata & !(0xFu64 << 60)) | ((quin_type as u64 & 0xF) << 60);
+    }
+
+    // ── Sensitivity tier (bits [59:56]) — ODRL layer ─────────────────────────
+
+    pub const SENSITIVITY_TIER_PUBLIC:       u8 = 0x00;
+    pub const SENSITIVITY_TIER_PROFESSIONAL: u8 = 0x01;
+    pub const SENSITIVITY_TIER_LEGAL:        u8 = 0x02;
+    pub const SENSITIVITY_TIER_MEDICAL:      u8 = 0x03;
+    pub const SENSITIVITY_TIER_FIDUCIARY:    u8 = 0x04;
+
+    /// Read the 4-bit ODRL sensitivity tier from bits [59:56].
+    #[inline(always)]
+    pub fn get_sensitivity_tier(&self) -> u8 {
+        ((self.metadata >> 56) & 0xF) as u8
+    }
+
+    /// Write the 4-bit ODRL sensitivity tier into bits [59:56], preserving all other bits.
+    #[inline(always)]
+    pub fn set_sensitivity_tier(&mut self, tier: u8) {
+        self.metadata = (self.metadata & !(0xFu64 << 56)) | ((tier as u64 & 0xF) << 56);
+    }
+
+    // ── Lamport clock (bits [31:0]) ───────────────────────────────────────────
+
+    /// Extracts the 32-bit Lamport logical clock from bits [31:0].
     #[inline(always)]
     pub fn extract_lamport_clock(&self) -> u32 {
-        ((self.metadata >> 32) & 0x1FFF_FFFF) as u32
+        (self.metadata & 0xFFFF_FFFF) as u32
     }
 
-    /// Sets the Lamport Logical Clock in bits 32-60, preserving payload and routing lanes.
+    /// Sets the 32-bit Lamport logical clock in bits [31:0], preserving all upper bits.
     #[inline(always)]
     pub fn set_lamport_clock(&mut self, clock: u32) {
-        // Clear bits 32..60
-        self.metadata &= !(0x1FFF_FFFFu64 << 32);
-        // Set new clock
-        self.metadata |= ((clock as u64) & 0x1FFF_FFFF) << 32;
+        self.metadata = (self.metadata & !0xFFFF_FFFFu64) | (clock as u64);
     }
 
-    /// Extracts the geometric pruning sector ID from the raw metadata payload.
-    /// Payload is stored in bits 0-31 to reserve 32-60 for the CRDT Lamport clock.
+    /// Returns bits [31:0] of the metadata field.
+    /// After the v3 migration this is the Lamport clock; call `extract_lamport_clock()`
+    /// directly for clarity in new code.
     #[inline(always)]
     pub fn extract_clean_metadata_value(&self) -> u64 {
         self.metadata & 0xFFFF_FFFF
@@ -243,39 +287,6 @@ impl NQuin {
     #[inline(always)]
     pub fn verify_ecc_parity(&self) -> bool {
         self.parity == Self::calculate_parity(self.subject, self.predicate, self.object, self.context, self.metadata)
-    }
-
-    // ── LoRA context-trigger helpers (bits 63–48 of `metadata`) ─────────────
-
-    /// Encode a LoRA context trigger into the `metadata` field.
-    ///
-    /// Bits 63–60: `ContextType` (4 bits)
-    /// Bits 59–56: `adapter_id` (4 bits, 0–15)
-    /// Bits 55–48: `confidence` (8 bits, 0 = 0.0, 255 = 1.0)
-    /// Bits 47–0:  unchanged
-    ///
-    /// Call `recalculate_parity()` afterwards if parity must stay valid.
-    #[inline]
-    pub fn set_context_trigger(&mut self, context_bits: u8, adapter_id: u8, confidence: f32) {
-        let conf_u  = (confidence.clamp(0.0, 1.0) * 255.0) as u64;
-        let ctx_u   = (context_bits & 0xF) as u64;
-        let adpt_u  = (adapter_id   & 0xF) as u64;
-        // Preserve lower 48 bits; overwrite upper 16
-        self.metadata = (self.metadata & 0x0000_FFFF_FFFF_FFFF)
-                      | (ctx_u  << 60)
-                      | (adpt_u << 56)
-                      | (conf_u << 48);
-    }
-
-    /// Decode the LoRA context trigger from the `metadata` field.
-    ///
-    /// Returns `(context_bits, adapter_id, confidence_0_to_1)`.
-    #[inline]
-    pub fn get_context_trigger(&self) -> (u8, u8, f32) {
-        let ctx_bits  = ((self.metadata >> 60) & 0xF)  as u8;
-        let adapter_id = ((self.metadata >> 56) & 0xF) as u8;
-        let conf_u    = ((self.metadata >> 48) & 0xFF) as f32 / 255.0;
-        (ctx_bits, adapter_id, conf_u)
     }
 
     /// Recalculate and store ECC parity after mutating any field.
@@ -536,6 +547,7 @@ pub mod daemon_graph;
 pub mod daemon_query;
 pub mod fuzz_testing;
 pub mod git_bridge;
+pub mod kml_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
 pub mod indexing;
@@ -812,65 +824,56 @@ mod tests {
 
     #[test]
     fn qualia_validate_routing() {
-        // Test 1: Passthrough Standard
-        let q1 = NQuin {
-            subject: 0,
-            predicate: 0,
-            object: 0,
-            context: 0,
-            metadata: 0b00 << 61 | 12345,
-            parity: 0,
-        };
-        assert_eq!(
-            q1.identify_routing_lane(),
-            PermissiveRoutingLane::PassthroughStandard
-        );
-        assert_eq!(q1.extract_clean_metadata_value(), 12345);
+        // Routing lane = bits[62:61]; Lamport clock = bits[31:0] (v3 layout).
+        // Values set in bits[31:0] are the Lamport clock; routing lane bits stay in [62:61].
 
-        // Test 2: Permissive Commons
-        let q2 = NQuin {
-            subject: 0,
-            predicate: 0,
-            object: 0,
-            context: 0,
-            metadata: 0b01 << 61 | 67890,
-            parity: 0,
-        };
-        assert_eq!(
-            q2.identify_routing_lane(),
-            PermissiveRoutingLane::EnforcePermissiveCommons
-        );
-        assert_eq!(q2.extract_clean_metadata_value(), 67890);
+        let q1 = NQuin { subject: 0, predicate: 0, object: 0, context: 0,
+            metadata: 0b00u64 << 61 | 12345, parity: 0 };
+        assert_eq!(q1.identify_routing_lane(), PermissiveRoutingLane::PassthroughStandard);
+        assert_eq!(q1.extract_lamport_clock(), 12345);
 
-        // Test 3: Bilateral Micro Commons
-        let q3 = NQuin {
-            subject: 0,
-            predicate: 0,
-            object: 0,
-            context: 0,
-            metadata: 0b10 << 61 | 42,
-            parity: 0,
-        };
-        assert_eq!(
-            q3.identify_routing_lane(),
-            PermissiveRoutingLane::EnforceBilateralMicroCommons
-        );
-        assert_eq!(q3.extract_clean_metadata_value(), 42);
+        let q2 = NQuin { subject: 0, predicate: 0, object: 0, context: 0,
+            metadata: 0b01u64 << 61 | 67890, parity: 0 };
+        assert_eq!(q2.identify_routing_lane(), PermissiveRoutingLane::EnforcePermissiveCommons);
+        assert_eq!(q2.extract_lamport_clock(), 67890);
 
-        // Test 4: Spatiotemporal Ambiguous
-        let q4 = NQuin {
-            subject: 0,
-            predicate: 0,
-            object: 0,
-            context: 0,
-            metadata: 0b11 << 61 | 999,
-            parity: 0,
-        };
-        assert_eq!(
-            q4.identify_routing_lane(),
-            PermissiveRoutingLane::SpatiotemporalAmbiguous
-        );
-        assert_eq!(q4.extract_clean_metadata_value(), 999);
+        let q3 = NQuin { subject: 0, predicate: 0, object: 0, context: 0,
+            metadata: 0b10u64 << 61 | 42, parity: 0 };
+        assert_eq!(q3.identify_routing_lane(), PermissiveRoutingLane::EnforceBilateralMicroCommons);
+        assert_eq!(q3.extract_lamport_clock(), 42);
+
+        let q4 = NQuin { subject: 0, predicate: 0, object: 0, context: 0,
+            metadata: 0b11u64 << 61 | 999, parity: 0 };
+        assert_eq!(q4.identify_routing_lane(), PermissiveRoutingLane::SpatiotemporalAmbiguous);
+        assert_eq!(q4.extract_lamport_clock(), 999);
+    }
+
+    #[test]
+    fn nquin_metadata_v3_layout() {
+        let mut q = NQuin::default();
+
+        // Quin type nibble
+        q.set_quin_type(0b1001);
+        assert_eq!(q.get_quin_type(), 0b1001);
+        // Routing lane reads bits[62:61] = bits 2:1 of the nibble = 0b00 (from 0b1001)
+        assert_eq!(q.identify_routing_lane(), PermissiveRoutingLane::PassthroughStandard);
+
+        // Sensitivity tier
+        q.set_sensitivity_tier(NQuin::SENSITIVITY_TIER_MEDICAL);
+        assert_eq!(q.get_sensitivity_tier(), NQuin::SENSITIVITY_TIER_MEDICAL);
+
+        // Lamport clock
+        q.set_lamport_clock(0xDEAD_BEEF);
+        assert_eq!(q.extract_lamport_clock(), 0xDEAD_BEEF);
+
+        // Ensure fields don't bleed into each other
+        assert_eq!(q.get_quin_type(), 0b1001);
+        assert_eq!(q.get_sensitivity_tier(), NQuin::SENSITIVITY_TIER_MEDICAL);
+        assert_eq!(q.extract_lamport_clock(), 0xDEAD_BEEF);
+
+        // Parity still works after mutations
+        q.recalculate_parity();
+        assert!(q.verify_ecc_parity());
     }
 
     #[test]

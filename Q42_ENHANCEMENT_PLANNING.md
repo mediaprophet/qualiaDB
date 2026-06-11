@@ -1,7 +1,7 @@
 # Q42 Format & Architecture Enhancement Planning
 
 **Date:** 2026-06-11  
-**Updated:** 2026-06-11 (all vocabulary + cryptography + bit-layout decisions resolved; 2 open items remain)  
+**Updated:** 2026-06-11 (all 10 decisions resolved — implementation unblocked)  
 **Branch:** `0.0.10-dev`  
 **Source:** Analysis of `local/q42-related-updates-discussion.md` mapped against the current codebase.
 
@@ -250,47 +250,76 @@ context quins. A `kml_bridge.rs` module handles both directions.
 
 ---
 
-### 4.4 🟡 Q42 Format Version Strategy
+### 4.4 ✅ Q42 Format Version Strategy — RESOLVED
 
-The current format is `version = 2` (implied by "v2 unified volume" in `q42_volume.rs`).
-Adding temporal, spatial, and Merkle sections requires a v3 format.
+**Decision: Option B — Migration required. v3 builds refuse to open v2 files without a `q42 migrate-meta` run.**
 
-**Proposed v3 additions to `Q42VolumeHeader`:**
+**Reasoning:** The Q42 format serves as a cryptographic ledger for legal investigations, biomedical
+data, and rights-bearing assertions. Option A (silent bit reinterpretation) would allow a v3 engine
+to silently misread a v2 file's Lamport clock bits as a valid temporal sequence — compromising the
+truth of the graph without raising an error. A file's bit-layout must be mathematically verified
+before any read/write operations occur. Strict enforcement is the only position consistent with
+the data integrity requirement at the core of the format.
+
+**v3 `Q42VolumeHeader` additions:**
 ```rust
 pub struct Q42VolumeHeader {
     // existing fields (v2) ...
-    pub format_version: u16,         // 3 for v3
-    pub temporal_index_offset: u64,  // 0 if absent
+    pub format_version: u16,         // 3 for v3; v3 builds reject version < 3
+    pub temporal_index_offset: u64,  // 0 if no temporal index present
     pub temporal_index_length: u64,
-    pub merkle_root: [u8; 32],       // SHA3-256 of all SuperBlock hashes; 0 if no history
-    pub assertion_timestamp: u64,    // When this volume was last written (assertion time)
-    pub reserved: [u8; 32],          // Future spatial/rights fields
+    pub merkle_root: [u8; 32],       // SHA3-256 of DAG root; [0u8;32] if no history yet
+    pub assertion_timestamp: u64,    // ms since Unix epoch when volume was last written
+    pub reserved: [u8; 32],          // reserved for spatial/rights extension fields
 }
 ```
 
-**Question for owner:** Should v2 volumes remain readable in v3 builds (backward compat), or
-is a migration required?
+**`q42 migrate-meta` subcommand** performs a one-pass rewrite:
+1. Reads v2 header, verifies magic `[0x51, 0x34, 0x32, 0x00]`
+2. For each NQuin: shifts Lamport clock bits from [60:32] → [31:0]; clears bits [63:32]
+3. Writes v3 header with updated `format_version = 3` and `assertion_timestamp = now()`
+4. v3 build opens the file; if `format_version < 3` → hard error with migration hint
 
 ---
 
-### 4.5 🟡 Merkle-DAG Versioning vs. WAL
+### 4.5 ✅ Merkle-DAG Versioning — RESOLVED
 
-Two potential paths for immutable history:
+**Decision: Option B — Minimal Merkle-DAG with `DagNode` structure in `git_bridge.rs`, from day one.**
 
-**Option A — Extend the WAL**  
-Each WAL entry already has a sequence ID. Add a `prev_hash: [u8; 32]` linking each entry to
-the previous, forming a hash chain. This gives a linear immutable log (like a blockchain).
+**Reasoning:** A linear WAL hash chain structurally enforces a single timeline, which would make
+it impossible for a human agent to cryptographically contest an automated classification while
+preserving both the original assertion and the dispute simultaneously. Contestability requires
+branching at the data structure level — the Right of Recourse is not retrofittable onto a linear
+log. The extra 2–3 weeks of Phase 1 effort is load-bearing, not gold-plating.
 
-**Option B — True Merkle-DAG (Git-like)**  
-`git_bridge.rs` is the stub for this. Each "commit" is a Merkle tree of NQuin hashes,
-with a parent pointer to the previous commit. This supports branching (e.g., contested
-hypotheses) and content-addressed deduplication.
+**`DagNode` structure (implemented in `git_bridge.rs`):**
+```rust
+#[repr(C)]
+pub struct DagNode {
+    pub parent_hash:   [u8; 32],   // SHA3-256 of parent DagNode; [0u8;32] = genesis
+    pub quins_merkle:  [u8; 32],   // Merkle root of all NQuin hashes in this commit
+    pub author_did:    u64,        // q_hash of the committing agent's DID
+    pub timestamp:     u64,        // assertion time (ms since Unix epoch)
+    pub message_hash:  u64,        // q_hash of optional commit description
+    pub flags:         u32,        // bit 0 = merge node (two parents); bits 31:1 reserved
+    pub _pad:          u32,
+}
+// Total: 88 bytes, repr(C) for mmap-safe serialisation
+```
 
-Option B is significantly more complex but is what the discussion describes ("like Git branches,
-different investigative teams can fork the temporal graph to test conflicting hypotheses").
+**Branch model:** a branch is a named pointer stored as a quin in `BRANCHES_CONTEXT`:
+```
+(branch_name_hash, q_hash("dag:pointsTo"), dag_node_hash, BRANCHES_CONTEXT, ts, parity)
+```
 
-**Question for owner:** Is linear hash-chain (Option A, ~2 weeks of work) acceptable for
-the initial release, with Option B deferred? Or is branching essential from day one?
+**Contestability fork:** when an agent disputes a classification, `git_bridge.rs::fork_node()`
+creates a new `DagNode` with `parent_hash = disputed_node_hash` and `flags |= FORK_DISPUTED`.
+Both the original and the dispute branch coexist in the DAG. SPARQL queries can traverse either
+path or show both via the `BRANCHES_CONTEXT` named graph.
+
+**Merge nodes** reference two parents: `parent_hash` = primary parent; a second `DagNode` with
+`flags |= MERGE_SECONDARY` points to the secondary parent. Conflicting NQuins between branches
+are written to `CONTEST_CONTEXT` for human review.
 
 ---
 
@@ -640,44 +669,15 @@ documentation, and the Rights Ontology:
 | §4.1 | NQuin metadata bit-layout | Option B — LoRA → side-table; Lamport → bits[31:0]; Quin Type → bits[63:60] |
 | §4.2 | Bi-temporal model | PROV-O + Dublin Core quins in T_CONTEXT overlay graph |
 | §4.3 | Spatial encoding | GeoSPARQL WKT internally; GeoHash-64 in `object` field; KML import/export |
+| §4.4 | Format versioning | Option B — migration required; v3 builds hard-reject v2; `q42 migrate-meta` CLI |
+| §4.5 | Versioning / DAG | Option B — Minimal Merkle-DAG with `DagNode` in `git_bridge.rs` from day one; branching supports contestability |
 | §4.6 | Credential-gated views | AES-256-GCM per layer + X25519 ECDH encapsulation; CP-ABE deferred |
 | §4.7 | Rights Ontology format | ODRL + SKOS Turtle at `ontologies/`; signed by Peace Infrastructure Project founding DID (2020) |
 | §4.8 | Labor provenance | PROV-O `wasAttributedTo` + `PROVENANCE_CONTEXT` overlay quins |
 | §4.9 | FHE / ZK scope | FHE out of scope for all 0.x; ZK encrypted search (MIRACL) is priority after Phase 3 |
 | §4.10 | Agent structure | W3C CogAI CG SHACL shapes as fourth domain engine in `sparql_shacl.rs` |
 
-### ⏳ Open (2/10) — needed before Phase 1 begins
-
-**§4.4 — Q42 format versioning / backward compatibility**
-
-> The v3 header adds `assertion_timestamp`, `merkle_root`, and reserved fields. The NQuin struct
-> size is unchanged (48 bytes), but the Lamport clock bits shift from [60:32] to [31:0].
->
-> **Option A — Backward compat:** v3 builds read v2 files silently; Lamport values in old files
-> are re-interpreted under the new bit mask (values ≤ 2²⁹ are unambiguous; higher values need
-> a one-pass metadata rewrite). A `q42 migrate-meta` subcommand is provided but optional.
->
-> **Option B — Migration required:** v3 builds refuse to open v2 files without a `q42 migrate-meta`
-> run first. Simpler code path; no silent reinterpretation risk.
->
-> *Which is acceptable?*
-
----
-
-**§4.5 — Versioning strategy for Phase 1**
-
-> **Option A — Linear WAL hash chain (~2 weeks):** Add `prev_hash: [u8; 32]` to each WAL entry,
-> forming a tamper-evident log. Simple, no branching. `git_bridge.rs` remains a stub until Phase 4.
->
-> **Option B — Minimal Merkle-DAG (~4–5 weeks):** Implement a lightweight DAG in `git_bridge.rs`
-> with `DagNode { parent_hash, quins_merkle, author_did, timestamp }`. Supports branching for
-> contested-hypothesis workflows from day one.
->
-> The discussion explicitly describes investigative teams forking the temporal graph to test
-> conflicting hypotheses — that requires Option B. Option A is faster but needs a Phase 4
-> upgrade later.
->
-> *Is branching essential from day one, or is Option A acceptable for the initial 0.0.10 release?*
+✅ **All 10 decisions resolved. Phase 1 implementation is unblocked.**
 
 ---
 

@@ -1,0 +1,218 @@
+@prefix rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:      <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:      <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:     <http://www.w3.org/2004/02/skos/core#> .
+@prefix odrl:     <http://www.w3.org/ns/odrl/2/> .
+@prefix prov:     <http://www.w3.org/ns/prov#> .
+@prefix dcterms:  <http://purl.org/dc/terms/> .
+@prefix q42:      <urn:qualia:ontology:rights:> .
+@prefix pip:      <https://www.peaceinfrast.org/did/> .
+
+# ── Ontology declaration ──────────────────────────────────────────────────────
+
+<urn:qualia:ontology:rights>
+    a                  owl:Ontology ;
+    rdfs:label         "QualiaDB Rights Ontology"@en ;
+    dcterms:title      "QualiaDB ODRL/SKOS Rights Ontology"@en ;
+    dcterms:description
+        """Defines the rights, obligations, and permissions vocabulary for the
+        QualiaDB Q42 format. Built on ODRL 2.2 and SKOS. Anchored to Human-Centric
+        agency principles — the individual or designated fiduciary holds final
+        control; no automated system may override an explicit human principal
+        decision recorded here."""@en ;
+    dcterms:creator    pip:founding-did ;
+    dcterms:created    "2020-01-01"^^xsd:date ;
+    dcterms:modified   "2026-06-11"^^xsd:date ;
+    dcterms:license    <https://creativecommons.org/licenses/by/4.0/> ;
+    owl:versionInfo    "1.0.0" .
+
+# ── Peace Infrastructure Project founding DID ─────────────────────────────────
+
+pip:founding-did
+    a              prov:Agent, odrl:Party ;
+    rdfs:label     "Peace Infrastructure Project Founding DID"@en ;
+    rdfs:comment   """The cryptographic identity that signed the founding rights
+                   registry. Established 2020. DID method: did:key."""@en .
+
+# ── Human-Centric Agency root class ──────────────────────────────────────────
+
+q42:HumanCentricControl
+    a              owl:Class ;
+    rdfs:label     "Human-Centric Control"@en ;
+    rdfs:comment   """A control modality in which a human principal (or
+                   their designated fiduciary) retains final authority over
+                   policy decisions. Preferred terminology — 'sovereign' is
+                   deprecated in favour of this term."""@en ;
+    owl:equivalentClass  odrl:Party .
+
+q42:Principal
+    a              owl:Class ;
+    rdfs:subClassOf  q42:HumanCentricControl ;
+    rdfs:label     "Principal"@en ;
+    rdfs:comment   "The named individual who owns or controls a data asset."@en .
+
+q42:Fiduciary
+    a              owl:Class ;
+    rdfs:subClassOf  q42:HumanCentricControl ;
+    rdfs:label     "Fiduciary"@en ;
+    rdfs:comment   """A delegated party acting in the Principal's interest under
+                   legal obligation (FIDUCIARY sensitivity tier)."""@en .
+
+# ── Sensitivity tier individuals ─────────────────────────────────────────────
+# Maps directly onto NQuin.metadata bits [59:56]:
+#   0x00 = PUBLIC, 0x01 = PROFESSIONAL, 0x02 = LEGAL, 0x03 = MEDICAL, 0x04 = FIDUCIARY
+
+q42:PUBLIC
+    a              odrl:Prohibition, skos:Concept ;
+    skos:prefLabel "Public"@en ;
+    skos:notation  "0x00"^^xsd:hexBinary ;
+    rdfs:comment   "No sensitivity restriction. Readable by any agent."@en .
+
+q42:PROFESSIONAL
+    a              skos:Concept ;
+    skos:prefLabel "Professional"@en ;
+    skos:notation  "0x01"^^xsd:hexBinary ;
+    rdfs:comment   "Restricted to professional-role agents (employer/employee)."@en ;
+    skos:broader   q42:PUBLIC .
+
+q42:LEGAL
+    a              skos:Concept ;
+    skos:prefLabel "Legal"@en ;
+    skos:notation  "0x02"^^xsd:hexBinary ;
+    rdfs:comment   "Restricted to legally-privileged parties (solicitor/client)."@en ;
+    skos:broader   q42:PROFESSIONAL .
+
+q42:MEDICAL
+    a              skos:Concept ;
+    skos:prefLabel "Medical"@en ;
+    skos:notation  "0x03"^^xsd:hexBinary ;
+    rdfs:comment   "Restricted to healthcare providers and the Principal."@en ;
+    skos:broader   q42:PROFESSIONAL .
+
+q42:FIDUCIARY
+    a              skos:Concept ;
+    skos:prefLabel "Fiduciary"@en ;
+    skos:notation  "0x04"^^xsd:hexBinary ;
+    rdfs:comment   "Highest sensitivity. Requires signed VC from Principal."@en ;
+    skos:broader   q42:LEGAL .
+
+# ── SKOS concept schemes ──────────────────────────────────────────────────────
+
+q42:Actions
+    a              skos:ConceptScheme ;
+    skos:prefLabel "Q42 Actions Vocabulary"@en ;
+    rdfs:comment   "Maps ODRL actions to QualiaDB opcode constants."@en .
+
+q42:read       a skos:Concept ; skos:inScheme q42:Actions ; skos:prefLabel "read"@en ;
+               owl:sameAs odrl:read .
+q42:write      a skos:Concept ; skos:inScheme q42:Actions ; skos:prefLabel "write"@en ;
+               owl:sameAs odrl:write .
+q42:use        a skos:Concept ; skos:inScheme q42:Actions ; skos:prefLabel "use"@en ;
+               owl:sameAs odrl:use .
+q42:transfer   a skos:Concept ; skos:inScheme q42:Actions ; skos:prefLabel "transfer"@en ;
+               owl:sameAs odrl:transfer .
+q42:derive     a skos:Concept ; skos:inScheme q42:Actions ; skos:prefLabel "derive"@en ;
+               owl:sameAs odrl:derive .
+q42:delete     a skos:Concept ; skos:inScheme q42:Actions ; skos:prefLabel "delete"@en .
+q42:infer      a skos:Concept ; skos:inScheme q42:Actions ; skos:prefLabel "infer"@en ;
+               rdfs:comment "LLM inference against this data asset."@en .
+
+q42:Purposes
+    a              skos:ConceptScheme ;
+    skos:prefLabel "Q42 Purposes Vocabulary"@en ;
+    rdfs:comment   "Permitted purposes for using a data asset."@en .
+
+q42:PersonalUse       a skos:Concept ; skos:inScheme q42:Purposes ; skos:prefLabel "Personal use"@en .
+q42:ResearchUse       a skos:Concept ; skos:inScheme q42:Purposes ; skos:prefLabel "Research"@en .
+q42:CommercialUse     a skos:Concept ; skos:inScheme q42:Purposes ; skos:prefLabel "Commercial"@en ;
+                      skos:narrower q42:PersonalUse .
+q42:HealthcareUse     a skos:Concept ; skos:inScheme q42:Purposes ; skos:prefLabel "Healthcare"@en .
+q42:LegalProceedings  a skos:Concept ; skos:inScheme q42:Purposes ; skos:prefLabel "Legal proceedings"@en .
+
+q42:Jurisdictions
+    a              skos:ConceptScheme ;
+    skos:prefLabel "Q42 Jurisdictions Vocabulary"@en ;
+    rdfs:comment   "ISO 3166-1 + custom jurisdictional tags for ODRL spatial constraints."@en .
+
+q42:Jurisdiction_AU   a skos:Concept ; skos:inScheme q42:Jurisdictions ;
+                      skos:notation "AU"^^xsd:string ; skos:prefLabel "Australia"@en .
+q42:Jurisdiction_EU   a skos:Concept ; skos:inScheme q42:Jurisdictions ;
+                      skos:notation "EU"^^xsd:string ; skos:prefLabel "European Union"@en .
+q42:Jurisdiction_US   a skos:Concept ; skos:inScheme q42:Jurisdictions ;
+                      skos:notation "US"^^xsd:string ; skos:prefLabel "United States"@en .
+q42:Jurisdiction_INTL a skos:Concept ; skos:inScheme q42:Jurisdictions ;
+                      skos:notation "INTL"^^xsd:string ; skos:prefLabel "International"@en .
+
+q42:AgentRoles
+    a              skos:ConceptScheme ;
+    skos:prefLabel "Q42 Agent Roles Vocabulary"@en ;
+    rdfs:comment   "Roles that may be assigned to parties in ODRL policies."@en .
+
+q42:RoleOwner      a skos:Concept ; skos:inScheme q42:AgentRoles ; skos:prefLabel "Owner"@en .
+q42:RoleProcessor  a skos:Concept ; skos:inScheme q42:AgentRoles ; skos:prefLabel "Processor"@en .
+q42:RoleController a skos:Concept ; skos:inScheme q42:AgentRoles ; skos:prefLabel "Controller"@en .
+q42:RoleFiduciary  a skos:Concept ; skos:inScheme q42:AgentRoles ; skos:prefLabel "Fiduciary"@en ;
+                   owl:sameAs q42:Fiduciary .
+
+# ── Core ODRL policy patterns ─────────────────────────────────────────────────
+
+q42:DefaultPublicReadPolicy
+    a              odrl:Set ;
+    rdfs:label     "Default Public Read Policy"@en ;
+    odrl:permission [
+        odrl:action   odrl:read ;
+        odrl:assignee odrl:All ;
+        odrl:constraint [
+            odrl:leftOperand  q42:sensitivityTier ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand q42:PUBLIC
+        ]
+    ] .
+
+q42:HumanCentricInferencePolicy
+    a              odrl:Set ;
+    rdfs:label     "Human-Centric LLM Inference Policy"@en ;
+    rdfs:comment   """LLM inference must be authorised by the Principal.
+                   Ungrounded output (no provenance citation) is prohibited."""@en ;
+    odrl:permission [
+        odrl:action   q42:infer ;
+        odrl:assignee q42:HumanCentricControl ;
+        odrl:constraint [
+            odrl:leftOperand  odrl:purpose ;
+            odrl:operator     odrl:isPartOf ;
+            odrl:rightOperand q42:Purposes
+        ]
+    ] ;
+    odrl:prohibition [
+        odrl:action   q42:infer ;
+        odrl:assignee odrl:All ;
+        odrl:constraint [
+            odrl:leftOperand  q42:provenanceCitations ;
+            odrl:operator     odrl:lt ;
+            odrl:rightOperand "1"^^xsd:integer
+        ]
+    ] .
+
+# ── Mapping to deontic_logic.rs opcodes ───────────────────────────────────────
+# OP_PERMIT  ↔ odrl:Permission
+# OP_FORBID  ↔ odrl:Prohibition
+# OP_OBLIGE  ↔ odrl:Duty
+
+q42:OP_PERMIT   owl:sameAs odrl:Permission .
+q42:OP_FORBID   owl:sameAs odrl:Prohibition .
+q42:OP_OBLIGE   owl:sameAs odrl:Duty .
+
+# ── Dialect fork mechanism (SKOS broaderTransitive) ───────────────────────────
+
+q42:DialectFork
+    a              owl:Class ;
+    rdfs:label     "Rights Dialect Fork"@en ;
+    rdfs:comment   """A jurisdiction- or sector-specific extension of a base
+                   policy. Use skos:broaderTransitive to link a fork to its
+                   canonical parent."""@en .
+
+# ── Provenance of this registry ───────────────────────────────────────────────
+
+<urn:qualia:ontology:rights> prov:wasAttributedTo pip:founding-did ;
+    prov:generatedAtTime "2020-01-01T00:00:00Z"^^xsd:dateTime .

@@ -8,7 +8,7 @@ fn main() {
         "Generating Git Fast-Export stream for Project: {}",
         project_id
     );
-    let stream = git_bridge::generate_fast_export_stream(project_id);
+    let stream = git_bridge::generate_fast_export_stream_for_project(project_id);
 
     println!("\n[EXPORT STREAM START]\n");
     println!("{}", stream);

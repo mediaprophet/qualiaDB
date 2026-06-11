@@ -589,7 +589,6 @@ impl LocalLlmAgent {
                 if let Some(ref mut mgr) = *guard {
                     let (ctx, conf, _switched) = mgr.auto_switch(
                         &prompt_owned,
-                        None, // metadata_bits: could be passed from a NQuin if available
                         mgr.detector.confidence_threshold,
                     );
                     log::debug!("LoRA|context-detect|domain={ctx}|conf={conf:.3}");
