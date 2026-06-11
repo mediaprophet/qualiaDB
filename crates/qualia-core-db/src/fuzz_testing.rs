@@ -5,7 +5,7 @@
 #[cfg(test)]
 mod tests {
     use crate::query_compiler::QueryCompiler;
-    use crate::QualiaQuin;
+    use crate::NQuin;
     use proptest::prelude::*;
 
     proptest! {
@@ -21,10 +21,10 @@ mod tests {
         // Generates random bytes to ensure zero-copy unaligned memory mappings don't fail
         #[test]
         fn fuzz_raw_quin_memory_mapping(bytes in proptest::collection::vec(any::<u8>(), 48)) {
-            // Because QualiaQuin is strictly #[repr(C, align(16))] and exactly 48 bytes,
+            // Because NQuin is strictly #[repr(C, align(16))] and exactly 48 bytes,
             // we should be able to map ANY 48-byte chunk into the struct safely.
             let chunk: &[u8] = &bytes;
-            let _quin: QualiaQuin = unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const QualiaQuin) };
+            let _quin: NQuin = unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
         }
     }
 
@@ -34,7 +34,7 @@ mod tests {
         // testing the `zeroize` memory scrubbing capability.
         use zeroize::Zeroize;
 
-        let mut quin = QualiaQuin {
+        let mut quin = NQuin {
             subject: 999,
             predicate: 888,
             object: 777,

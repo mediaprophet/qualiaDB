@@ -12,12 +12,12 @@ mod sparql_tests {
     use crate::sparql_extensions::*;
     use crate::sparql_mm::*;
     use crate::sparql_did::*;
-    use crate::QualiaQuin;
+    use crate::NQuin;
 
     // Helper to create test quins
-    fn create_test_quins() -> Vec<QualiaQuin> {
+    fn create_test_quins() -> Vec<NQuin> {
         vec![
-            QualiaQuin {
+            NQuin {
                 subject: 0x1,
                 predicate: 0x2,
                 object: 0x3,
@@ -25,7 +25,7 @@ mod sparql_tests {
                 metadata: 0x5,
                 parity: 0x6,
             },
-            QualiaQuin {
+            NQuin {
                 subject: 0x1,
                 predicate: 0x7,
                 object: 0x8,

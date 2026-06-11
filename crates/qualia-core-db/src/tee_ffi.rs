@@ -9,11 +9,11 @@ pub mod android_keystore {
 
     extern "C" {
         // Native C-API hooks into the Android Hardware-Backed Keystore (Titan M / TrustZone)
-        // Passes the 48-byte QualiaQuin memory block directly to the secure enclave for signing.
+        // Passes the 48-byte NQuin memory block directly to the secure enclave for signing.
         pub fn AKeyStore_signData(
             key_alias: *const u8,
             key_alias_len: usize,
-            data: *const QualiaQuin,
+            data: *const NQuin,
             data_len: usize,
             out_signature: *mut *mut u8,
             out_signature_len: *mut usize,
@@ -22,7 +22,7 @@ pub mod android_keystore {
         pub fn AKeyStore_verifySignature(
             key_alias: *const u8,
             key_alias_len: usize,
-            data: *const QualiaQuin,
+            data: *const NQuin,
             data_len: usize,
             signature: *const u8,
             signature_len: usize,
@@ -37,7 +37,7 @@ pub mod apple_secure_enclave {
     #[link(name = "Security", kind = "framework")]
     extern "C" {
         // CoreFoundation & Security framework native bindings for the Apple Secure Enclave
-        // `dataToSign` points to the CFDataRef wrapper of the 48-byte QualiaQuin
+        // `dataToSign` points to the CFDataRef wrapper of the 48-byte NQuin
         pub fn SecKeyCreateSignature(
             key: *mut c_void,        // SecKeyRef
             algorithm: *mut c_void,  // SecKeyAlgorithm

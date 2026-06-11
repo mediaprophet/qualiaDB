@@ -14,7 +14,7 @@ and the zero-copy ABI used by the WASM, desktop, and edge-native targets.
 | Rule | Detail |
 |------|--------|
 | **Zero heap in hot paths** | No `Vec`, `String`, or `Box` inside evaluator loops. Caller supplies fixed-size output buffers (`&mut [T]`). Use `[T; N]` stack arrays for local state. |
-| **48-byte Super-Quin** | Every semantic datum fits in `QualiaQuin`. Opcodes are packed into bit-fields of the six `u64` fields. See the Bit Layout table in §1. |
+| **48-byte Super-Quin** | Every semantic datum fits in `NQuin`. Opcodes are packed into bit-fields of the six `u64` fields. See the Bit Layout table in §1. |
 | **42MB Sentinel** | Any single execution pass must stay within 42 × 1024 × 1024 bytes of memory. `SlgArena` enforces this structurally. |
 | **Deterministic, non-recursive** | No unbounded recursion. LTL/ASP evaluators iterate over slices; they never call themselves. |
 | **q_hash for all URIs** | All string IRIs are FNV-1a–hashed at compile time via `q_hash()` or `q_turtle!`. No runtime string allocation. |
@@ -128,7 +128,7 @@ route `did:q42:` URIs through the direct hardware-pointer path (MSB dispatch in 
 Three components that directly support deontic multi-party contracts:
 
 1. **`CrdtResolver::resolve_lww`** — Lamport clock tie-breaking. Concurrent mutations
-   resolved by `object` magnitude. Pure, zero-alloc over `&QualiaQuin`.
+   resolved by `object` magnitude. Pure, zero-alloc over `&NQuin`.
 
 2. **`CrdtResolver::verify_delegation`** — Already does temporal expiry + context-bound
    check on `DelegatedAccess` grants. Nearly identical logic to deontic expiry — but uses
@@ -177,7 +177,7 @@ budget. `NullThermalGovernor` always returns `Cool` (real governor not yet wired
 
 ### `gguf_sharder.rs` — GGUF Parser + GgufTokenizer
 
-`GGufSharder`: parses GGUF header magic + tensor count; generates `QualiaQuin` pointer maps.
+`GGufSharder`: parses GGUF header magic + tensor count; generates `NQuin` pointer maps.
 
 `GgufTokenizer` (added 2026-06-06): parses the GGUF v2/v3 KV metadata section to extract
 the full vocabulary (`tokenizer.ggml.tokens`), `bos_token_id`, and `eos_token_id`.
@@ -240,10 +240,10 @@ pub const OP_COMMON_KNOWLEDGE: u8 = 0x22;
 pub const CERTAINTY_BIT_SHIFT: u32 = 8;
 pub const NESTING_BIT_SHIFT: u32 = 16;
 
-pub struct EpistemicVerdict { pub claim: QualiaQuin, pub status: EpistemicStatus, pub certainty: u8 }
+pub struct EpistemicVerdict { pub claim: NQuin, pub status: EpistemicStatus, pub certainty: u8 }
 
 pub fn evaluate_epistemic_frame(
-    quins: &[QualiaQuin],
+    quins: &[NQuin],
     agent_did_hash: u64,    // 0 = accept all agents
     world_hash: u64,        // 0 = accept all worlds
     out: &mut [EpistemicVerdict],
@@ -300,7 +300,7 @@ pub enum LtlFormula {
 
 // Evaluate a fixed-depth LTL formula stack against a Quin trace
 pub fn evaluate_ltl_trace(
-    trace: &[QualiaQuin],
+    trace: &[NQuin],
     formula: &LtlFormula,
 ) -> bool
 ```
@@ -347,9 +347,9 @@ pub enum ContradictionStatus {
 }
 
 pub fn route_paraconsistent(
-    quins: &[QualiaQuin],
-    out_consistent: &mut [QualiaQuin],
-    out_isolated: &mut [QualiaQuin],
+    quins: &[NQuin],
+    out_consistent: &mut [NQuin],
+    out_isolated: &mut [NQuin],
 ) -> Result<(usize, usize), ParaconsistentError>
 ```
 
@@ -374,8 +374,8 @@ Replace `generate_stable_models(rule_id: &str) -> Vec<String>` with a zero-alloc
 // Worlds are encoded as context-hash variants: world_i_context = base_context ^ (i as u64)
 pub const MAX_STABLE_MODELS: usize = 8;
 pub fn enumerate_stable_models(
-    base: &QualiaQuin,
-    rules: &[QualiaQuin],  // rule Quins where predicate = q_hash("q42:rule")
+    base: &NQuin,
+    rules: &[NQuin],  // rule Quins where predicate = q_hash("q42:rule")
     out_worlds: &mut [u64; MAX_STABLE_MODELS],  // context hashes for each world
 ) -> usize
 ```
@@ -387,7 +387,7 @@ Replace the string-comparison stub. Subsumption check against a TBox stored in a
 pub fn check_subsumption_quin(
     sub_class_hash: u64,
     super_class_hash: u64,
-    tbox: &[QualiaQuin],   // Quins with predicate = q_hash("rdfs:subClassOf")
+    tbox: &[NQuin],   // Quins with predicate = q_hash("rdfs:subClassOf")
 ) -> bool
 ```
 
@@ -396,8 +396,8 @@ Replace println stub with a tombstone mechanism:
 ```rust
 // Marks a Quin as consumed by setting metadata bit 59 (CONSUMED_BIT)
 pub const CONSUMED_BIT: u64 = 1u64 << 59;
-pub fn consume_quin(q: &mut QualiaQuin) { q.metadata |= CONSUMED_BIT; }
-pub fn is_consumed(q: &QualiaQuin) -> bool { (q.metadata & CONSUMED_BIT) != 0 }
+pub fn consume_quin(q: &mut NQuin) { q.metadata |= CONSUMED_BIT; }
+pub fn is_consumed(q: &NQuin) -> bool { (q.metadata & CONSUMED_BIT) != 0 }
 ```
 
 ---
@@ -451,7 +451,7 @@ use crate::n3_parser::{Rule, RuleType, Term};
 ///
 /// Returns None if the rule does not have the expected triple structure.
 pub fn compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u32)
-    -> Option<QualiaQuin>
+    -> Option<NQuin>
 ```
 
 **Opcode selection:**
@@ -489,9 +489,9 @@ Map Hegelian dialectic to the ASP two-world framework:
 pub const SYNTHESIZED_BIT: u64 = 1u64 << 58;
 
 pub fn synthesize_dialectical(
-    thesis: &QualiaQuin,
-    antithesis: &QualiaQuin,
-) -> Option<QualiaQuin>   // None if no contradiction found
+    thesis: &NQuin,
+    antithesis: &NQuin,
+) -> Option<NQuin>   // None if no contradiction found
 ```
 
 ---
@@ -499,14 +499,14 @@ pub fn synthesize_dialectical(
 ## 4. Known Bugs / Correctness Issues (fix while working in the area)
 
 ### 4-A `prune_defeasible_claims` in `logic.rs` uses heap
-`WebizenVM::prune_defeasible_claims` takes `&mut Vec<QualiaQuin>` and uses `HashSet`. This
+`WebizenVM::prune_defeasible_claims` takes `&mut Vec<NQuin>` and uses `HashSet`. This
 violates the zero-heap mandate. If you're touching `logic.rs`, replace with:
 ```rust
 // Caller supplies two output buffers; function partitions in-place
 pub fn partition_defeasible(
-    quins: &[QualiaQuin],
-    out_hard: &mut [QualiaQuin],
-    out_defeasible: &mut [QualiaQuin],
+    quins: &[NQuin],
+    out_hard: &mut [NQuin],
+    out_defeasible: &mut [NQuin],
 ) -> (usize, usize)
 ```
 
@@ -546,7 +546,7 @@ and `[u8; 64]` (for Ed25519 signatures). Existing call sites are not in hot path
 is low urgency, but any new code that creates `DelegatedAccess` in a loop is wrong.
 
 ### 4-C `execute_differential_diagnostics` in `logic.rs` returns `Vec`
-Violates zero-heap mandate. Caller should pass `out: &mut [QualiaQuin]`.
+Violates zero-heap mandate. Caller should pass `out: &mut [NQuin]`.
 
 ---
 
@@ -566,7 +566,7 @@ Violates zero-heap mandate. Caller should pass `out: &mut [QualiaQuin]`.
 //! # SHACL Blueprint (at least one concrete legal/domain example)
 //! ...
 
-use crate::QualiaQuin;
+use crate::NQuin;
 
 pub const OP_XYZ: u8 = 0xNN;
 pub const MAX_OUT: usize = 512;
@@ -577,13 +577,13 @@ pub enum XyzStatus { Active = 0x00, ... }
 
 #[repr(C, align(8))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct XyzVerdict { pub norm: QualiaQuin, pub status: XyzStatus, pub opcode: u8, _pad: [u8; 6] }
+pub struct XyzVerdict { pub norm: NQuin, pub status: XyzStatus, pub opcode: u8, _pad: [u8; 6] }
 
 #[derive(Debug, PartialEq)]
 pub enum XyzError { OutputBufferFull }
 
 pub fn evaluate_xyz(
-    quins: &[QualiaQuin],
+    quins: &[NQuin],
     // modality-specific scalar parameters (no alloc)
     out: &mut [XyzVerdict],
 ) -> Result<usize, XyzError> {

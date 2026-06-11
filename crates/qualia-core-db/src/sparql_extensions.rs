@@ -4,13 +4,13 @@
 //! Follows zero-allocation architecture with fixed-size function arrays.
 
 use crate::sparql_ast::*;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Extension function signature
 /// 
 /// Args: array of argument values (hashes or literals)
 /// Returns: bool indicating success/failure, modifies binding row in-place
-pub type ExtensionFn = fn(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool;
+pub type ExtensionFn = fn(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool;
 
 /// Extension registry for magic predicates and custom functions
 #[repr(C)]
@@ -69,14 +69,14 @@ impl Default for ExtensionRegistry {
 }
 
 /// Default no-op function for unregistered extensions
-fn no_op(_args: &[u64], _quins: &[QualiaQuin], _result: &mut BindingRow) -> bool {
+fn no_op(_args: &[u64], _quins: &[NQuin], _result: &mut BindingRow) -> bool {
     false
 }
 
 /// Built-in extension functions
 
 /// BOUND function (already in FILTER, but can be called as extension)
-pub fn ext_bound(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_bound(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -85,7 +85,7 @@ pub fn ext_bound(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -
 }
 
 /// STR function
-pub fn ext_str(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_str(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -95,7 +95,7 @@ pub fn ext_str(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> 
 }
 
 /// LANG function
-pub fn ext_lang(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_lang(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -105,7 +105,7 @@ pub fn ext_lang(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) ->
 }
 
 /// DATATYPE function
-pub fn ext_datatype(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_datatype(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -115,7 +115,7 @@ pub fn ext_datatype(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow
 }
 
 /// isIRI function
-pub fn ext_is_iri(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_is_iri(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -127,7 +127,7 @@ pub fn ext_is_iri(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) 
 }
 
 /// isBlank function
-pub fn ext_is_blank(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_is_blank(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -137,7 +137,7 @@ pub fn ext_is_blank(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow
 }
 
 /// isLiteral function
-pub fn ext_is_literal(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_is_literal(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -147,7 +147,7 @@ pub fn ext_is_literal(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingR
 }
 
 /// isNumeric function
-pub fn ext_is_numeric(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_is_numeric(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -157,7 +157,7 @@ pub fn ext_is_numeric(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingR
 }
 
 /// ABS function
-pub fn ext_abs(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_abs(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -167,7 +167,7 @@ pub fn ext_abs(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> 
 }
 
 /// CEIL function
-pub fn ext_ceil(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_ceil(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -177,7 +177,7 @@ pub fn ext_ceil(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) ->
 }
 
 /// FLOOR function
-pub fn ext_floor(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_floor(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -187,7 +187,7 @@ pub fn ext_floor(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -
 }
 
 /// ROUND function
-pub fn ext_round(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_round(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -199,7 +199,7 @@ pub fn ext_round(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -
 /// GeoSPARQL functions
 
 /// geof:distance - calculate distance between two points
-pub fn ext_geof_distance(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_geof_distance(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 2 {
         return false;
     }
@@ -212,7 +212,7 @@ pub fn ext_geof_distance(args: &[u64], _quins: &[QualiaQuin], result: &mut Bindi
 }
 
 /// geof:sfContains - check if point is within polygon
-pub fn ext_geof_sfcontains(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_geof_sfcontains(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 2 {
         return false;
     }
@@ -222,7 +222,7 @@ pub fn ext_geof_sfcontains(args: &[u64], _quins: &[QualiaQuin], result: &mut Bin
 }
 
 /// geof:sfWithin - check if point is within distance of another
-pub fn ext_geof_sfwithin(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_geof_sfwithin(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 2 {
         return false;
     }
@@ -235,7 +235,7 @@ pub fn ext_geof_sfwithin(args: &[u64], _quins: &[QualiaQuin], result: &mut Bindi
 }
 
 /// geof:sfIntersects - check if geometries intersect
-pub fn ext_geof_sfintersects(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_geof_sfintersects(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 2 {
         return false;
     }
@@ -245,7 +245,7 @@ pub fn ext_geof_sfintersects(args: &[u64], _quins: &[QualiaQuin], result: &mut B
 }
 
 /// geof:sfTouches - check if geometries touch
-pub fn ext_geof_sftouches(args: &[u64], _quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_geof_sftouches(args: &[u64], _quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 2 {
         return false;
     }
@@ -257,108 +257,108 @@ pub fn ext_geof_sftouches(args: &[u64], _quins: &[QualiaQuin], result: &mut Bind
 /// SPARQL-MM functions
 
 /// mm:duration - get media duration
-pub fn ext_mm_duration(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_mm_duration(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::mm_duration(args, quins, result)
 }
 
 /// mm:dimensions - get media dimensions
-pub fn ext_mm_dimensions(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_mm_dimensions(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::mm_dimensions(args, quins, result)
 }
 
 /// mm:temporalFragment - create temporal fragment
-pub fn ext_mm_temporal_fragment(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_mm_temporal_fragment(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::mm_temporal_fragment(args, quins, result)
 }
 
 /// MA Ontology functions
 
 /// ma:format - get media format
-pub fn ext_ma_format(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_ma_format(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::ma_format(args, quins, result)
 }
 
 /// ma:mimeType - get media MIME type
-pub fn ext_ma_mime_type(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_ma_mime_type(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::ma_mime_type(args, quins, result)
 }
 
 /// ma:codec - get media codec
-pub fn ext_ma_codec(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_ma_codec(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::ma_codec(args, quins, result)
 }
 
 /// ma:bitrate - get media bitrate
-pub fn ext_ma_bitrate(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_ma_bitrate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::ma_bitrate(args, quins, result)
 }
 
 /// ma:framerate - get media framerate
-pub fn ext_ma_framerate(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_ma_framerate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::ma_framerate(args, quins, result)
 }
 
 /// C2PA functions
 
 /// c2pa:credential - get content credential
-pub fn ext_c2pa_credential(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_c2pa_credential(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::c2pa_credential(args, quins, result)
 }
 
 /// c2pa:isVerified - check if media is verified
-pub fn ext_c2pa_is_verified(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_c2pa_is_verified(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::c2pa_is_verified(args, quins, result)
 }
 
 /// c2pa:verificationStatus - get verification status
-pub fn ext_c2pa_verification_status(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_c2pa_verification_status(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::c2pa_verification_status(args, quins, result)
 }
 
 /// c2pa:createdAt - get creation timestamp
-pub fn ext_c2pa_created_at(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_c2pa_created_at(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::c2pa_created_at(args, quins, result)
 }
 
 /// c2pa:createdBy - get creator
-pub fn ext_c2pa_created_by(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_c2pa_created_by(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::c2pa_created_by(args, quins, result)
 }
 
 /// c2pa:verifySignature - verify content signature
-pub fn ext_c2pa_verify_signature(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_c2pa_verify_signature(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::c2pa_verify_signature(args, quins, result)
 }
 
 /// c2pa:derivedFrom - get source asset
-pub fn ext_c2pa_derived_from(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_c2pa_derived_from(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_mm::c2pa_derived_from(args, quins, result)
 }
 
 /// DID functions
 
 /// did:resolve - Resolve DID to Document
-pub fn ext_did_resolve(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_did_resolve(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_did::did_resolve(args, quins, result)
 }
 
 /// did:verify - Verify DID signature
-pub fn ext_did_verify(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_did_verify(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_did::did_verify(args, quins, result)
 }
 
 /// did:auth - Authenticate with DID
-pub fn ext_did_auth(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_did_auth(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_did::did_auth(args, quins, result)
 }
 
 /// did:sign - Sign with DID
-pub fn ext_did_sign(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_did_sign(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_did::did_sign(args, quins, result)
 }
 
 /// did:permission - Check DID permission
-pub fn ext_did_permission(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ext_did_permission(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     crate::sparql_did::did_permission(args, quins, result)
 }
 
@@ -367,46 +367,46 @@ pub fn create_builtin_registry() -> ExtensionRegistry {
     let mut registry = ExtensionRegistry::new();
     
     // Register built-in SPARQL functions (using placeholder hashes - in production, use actual q_hash)
-    let _ = registry.register(0xB0UND000000000000, ext_bound);
+    let _ = registry.register(0xB0_0000_0000_0000_u64, ext_bound);
     let _ = registry.register(0x5452000000000000, ext_str);
     let _ = registry.register(0x4C414E0000000000, ext_lang);
-    let _ = registry.register(0x44545950000000000, ext_datatype);
-    let _ = registry.register(0x49534952000000000, ext_is_iri);
-    let _ = registry.register(0x4953424C000000000, ext_is_blank);
-    let _ = registry.register(0x49534C54000000000, ext_is_literal);
-    let _ = registry.register(0x49534E554D0000000, ext_is_numeric);
-    let _ = registry.register(0x41425300000000000, ext_abs);
-    let _ = registry.register(0x4345494C000000000, ext_ceil);
-    let _ = registry.register(0x464C5F52000000000, ext_floor);
-    let _ = registry.register(0x524E4400000000000, ext_round);
-    
+    let _ = registry.register(0x4454595000000000_u64, ext_datatype);
+    let _ = registry.register(0x4953495200000000_u64, ext_is_iri);
+    let _ = registry.register(0x4953424C00000000_u64, ext_is_blank);
+    let _ = registry.register(0x49534C5400000000_u64, ext_is_literal);
+    let _ = registry.register(0x49534E554D000000_u64, ext_is_numeric);
+    let _ = registry.register(0x4142530000000000_u64, ext_abs);
+    let _ = registry.register(0x4345494C00000000_u64, ext_ceil);
+    let _ = registry.register(0x464C5F5200000000_u64, ext_floor);
+    let _ = registry.register(0x524E440000000000_u64, ext_round);
+
     // Register GeoSPARQL functions
-    let _ = registry.register(0x47454F445F444553, ext_geof_distance);
-    let _ = registry.register(0x47454F5F5346436E, ext_geof_sfcontains);
-    let _ = registry.register(0x47454F5F534657494E, ext_geof_sfwithin);
-    let _ = registry.register(0x47454F5F53464954, ext_geof_sfintersects);
-    let _ = registry.register(0x47454F5F534654F, ext_geof_sftouches);
-    
+    let _ = registry.register(0x47454F445F444553_u64, ext_geof_distance);
+    let _ = registry.register(0x47454F5F5346436E_u64, ext_geof_sfcontains);
+    let _ = registry.register(0x47454F5F53465749_u64, ext_geof_sfwithin);
+    let _ = registry.register(0x47454F5F53464954_u64, ext_geof_sfintersects);
+    let _ = registry.register(0x47454F5F5346540F_u64, ext_geof_sftouches);
+
     // Register SPARQL-MM functions
-    let _ = registry.register(0x4D4D5F445552000000, ext_mm_duration);
-    let _ = registry.register(0x4D4D5F44494D000000, ext_mm_dimensions);
-    let _ = registry.register(0x4D4D5F54456D700000, ext_mm_temporal_fragment);
-    
+    let _ = registry.register(0x4D4D5F4455520000_u64, ext_mm_duration);
+    let _ = registry.register(0x4D4D5F44494D0000_u64, ext_mm_dimensions);
+    let _ = registry.register(0x4D4D5F54456D7000_u64, ext_mm_temporal_fragment);
+
     // Register MA Ontology functions
-    let _ = registry.register(0x4D415F464F524D0000, ext_ma_format);
-    let _ = registry.register(0x4D415F4D494D450000, ext_ma_mime_type);
-    let _ = registry.register(0x4D415F434F44450000, ext_ma_codec);
-    let _ = registry.register(0x4D415F42495452415445, ext_ma_bitrate);
-    let _ = registry.register(0x4D415F4652414D4552, ext_ma_framerate);
-    
+    let _ = registry.register(0x4D415F464F524D00_u64, ext_ma_format);
+    let _ = registry.register(0x4D415F4D494D4500_u64, ext_ma_mime_type);
+    let _ = registry.register(0x4D415F434F444500_u64, ext_ma_codec);
+    let _ = registry.register(0x4D415F4249545241_u64, ext_ma_bitrate);
+    let _ = registry.register(0x4D415F4652414D45_u64, ext_ma_framerate);
+
     // Register C2PA functions
-    let _ = registry.register(0x433250415F43524544, ext_c2pa_credential);
-    let _ = registry.register(0x433250415F4953564552, ext_c2pa_is_verified);
-    let _ = registry.register(0x433250415F5645525354, ext_c2pa_verification_status);
-    let _ = registry.register(0x433250415F4352454154, ext_c2pa_created_at);
-    let _ = registry.register(0x433250415F4352454259, ext_c2pa_created_by);
-    let _ = registry.register(0x433250415F5645524946, ext_c2pa_verify_signature);
-    let _ = registry.register(0x433250415F4445525656, ext_c2pa_derived_from);
+    let _ = registry.register(0x433250415F435245_u64, ext_c2pa_credential);
+    let _ = registry.register(0x433250415F495356_u64, ext_c2pa_is_verified);
+    let _ = registry.register(0x433250415F564552_u64, ext_c2pa_verification_status);
+    let _ = registry.register(0x433250415F435245_u64, ext_c2pa_created_at);
+    let _ = registry.register(0x433250415F435245_u64, ext_c2pa_created_by);
+    let _ = registry.register(0x433250415F564552_u64, ext_c2pa_verify_signature);
+    let _ = registry.register(0x433250415F444552_u64, ext_c2pa_derived_from);
     
     registry
 }
@@ -414,11 +414,11 @@ pub fn create_builtin_registry() -> ExtensionRegistry {
 /// Magic predicate executor
 pub struct MagicPredicateExecutor<'a> {
     pub registry: &'a ExtensionRegistry,
-    pub quins: &'a [QualiaQuin],
+    pub quins: &'a [NQuin],
 }
 
 impl<'a> MagicPredicateExecutor<'a> {
-    pub fn new(registry: &'a ExtensionRegistry, quins: &'a [QualiaQuin]) -> Self {
+    pub fn new(registry: &'a ExtensionRegistry, quins: &'a [NQuin]) -> Self {
         Self { registry, quins }
     }
 

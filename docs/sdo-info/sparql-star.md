@@ -108,8 +108,8 @@ How are you currently handling your string-to-ID mappings (dictionary) inside yo
 Here are the direct answers to your architectural questions regarding the implementation of SPARQL-Star within the current QualiaDB 0.0.10-dev codebase.
 
 1. Internal Format Mapping
-You must use Virtual Node IDs. Do not attempt to pack the triple components into the existing QualiaQuin. A single field in the 48-byte QualiaQuin is exactly 8 bytes (u64). An embedded triple requires 24 bytes (three u64 IDs).
-Instead, hash the three u64 IDs together to create a new 60-bit Virtual ID. Tag the top 4 bits with a dedicated TAG_EMBEDDED marker. You can then safely place this 64-bit Virtual ID into the Subject or Object position of your standard QualiaQuin array in q42_volume.rs.
+You must use Virtual Node IDs. Do not attempt to pack the triple components into the existing NQuin. A single field in the 48-byte NQuin is exactly 8 bytes (u64). An embedded triple requires 24 bytes (three u64 IDs).
+Instead, hash the three u64 IDs together to create a new 60-bit Virtual ID. Tag the top 4 bits with a dedicated TAG_EMBEDDED marker. You can then safely place this 64-bit Virtual ID into the Subject or Object position of your standard NQuin array in q42_volume.rs.
 
 2. Lexicon/Dictionary
 Yes, QualiaDB handles string-to-ID mappings inside crates/qualia-core-db/src/lexicon.rs (using the 60-bit truncated FNV-1a hashing) and crates/qualia-core-db/src/q42_lex.rs (Q42LexMmap).
@@ -133,7 +133,7 @@ You should create a new test file crates/qualia-core-db/tests/sparql_star_tests.
 7. Storage Location
 Embedded triples do not need a new file format.
 
-The assertions about the triple (e.g., <<s p o>> :certainty 0.9) are stored as standard 48-byte QualiaQuins inside your existing .q42 superblocks.
+The assertions about the triple (e.g., <<s p o>> :certainty 0.9) are stored as standard 48-byte NQuins inside your existing .q42 superblocks.
 
 The reverse lookup mapping (Virtual ID -> [s, p, o]) is appended directly into your existing .q42.lex file, exactly like a string literal.
 
@@ -324,7 +324,7 @@ This section documents the completed SPARQL-Star (SPARQL 1.2) implementation for
 ### 2. Context in Virtual ID Hash ✅
 **Decision:** Keep Virtual ID context-independent
 **Rationale:** Identical claims across different contexts should have same Virtual ID for global deduplication
-**Implementation:** Context stored separately in QualiaQuin context field
+**Implementation:** Context stored separately in NQuin context field
 
 ### 3. Sentinel Storage Format ✅
 **Decision:** Store Sentinel rules as separate dedicated Q42 blocks

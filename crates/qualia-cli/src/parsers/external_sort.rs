@@ -1,5 +1,5 @@
 use qualia_core_db::q42_volume::UnifiedVolumeBuilder;
-use qualia_core_db::{QualiaQuin, QUINS_PER_BLOCK};
+use qualia_core_db::{NQuin, QUINS_PER_BLOCK};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::fs::File;
@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 const CHUNK_SIZE_LIMIT: usize = 1_000_000;
 
 pub struct ExternalSorter {
-    buffer: Vec<QualiaQuin>,
+    buffer: Vec<NQuin>,
     chunk_files: Vec<PathBuf>,
     temp_dir: PathBuf,
     total_quins: u64,
@@ -28,7 +28,7 @@ impl ExternalSorter {
         }
     }
 
-    pub fn push(&mut self, quin: QualiaQuin) -> std::io::Result<()> {
+    pub fn push(&mut self, quin: NQuin) -> std::io::Result<()> {
         self.buffer.push(quin);
         self.total_quins += 1;
         if self.buffer.len() >= CHUNK_SIZE_LIMIT {
@@ -83,7 +83,7 @@ impl ExternalSorter {
         // Priority queue for K-way merge
         #[derive(Eq)]
         struct HeapItem {
-            quin: QualiaQuin,
+            quin: NQuin,
             reader_idx: usize,
         }
 
@@ -154,7 +154,7 @@ impl ExternalSorter {
         Ok(block_seq)
     }
 
-    fn read_quin(reader: &mut BufReader<File>) -> std::io::Result<Option<QualiaQuin>> {
+    fn read_quin(reader: &mut BufReader<File>) -> std::io::Result<Option<NQuin>> {
         let mut bytes = [0u8; 48];
         match reader.read_exact(&mut bytes) {
             Ok(_) => Ok(Some(*bytemuck::from_bytes(&bytes))),

@@ -14,7 +14,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion, Benchmark
 use qualia_core_db::clinical_engine::{
     DefeasibleClinicalEngine, DefeasibleRule, DefeasibleRuleType,
     RuleCondition, RuleAction, ConditionType, ActionType, ComparisonOperator,
-    QualiaQuin, SensitivityLevel, ClinicalEngineError
+    NQuin, SensitivityLevel, ClinicalEngineError
 };
 use qualia_core_db::comorbidity_eval::ComorbidityVerdict;
 use std::hint::black_box as std_black_box;
@@ -155,11 +155,11 @@ pub fn clinical_zero_allocation_benchmark(c: &mut Criterion) {
 }
 
 /// Generate test patient data with zero allocation
-fn generate_patient_data(rule_count: usize) -> Vec<QualiaQuin> {
+fn generate_patient_data(rule_count: usize) -> Vec<NQuin> {
     let mut patient_quins = Vec::with_capacity(rule_count);
     
     for i in 0..rule_count {
-        let quin = QualiaQuin {
+        let quin = NQuin {
             subject: (i as u64 + 1000), // Patient condition ID
             predicate: 0x1234, // HasCondition predicate
             object: (i as u64 + 2000), // Condition value

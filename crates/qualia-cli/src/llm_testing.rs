@@ -138,7 +138,7 @@ pub fn run_comprehensive_llm_test(
     let test_prompts = vec![
         ("Basic Knowledge", "What is the capital of France?", 50),
         ("System Awareness", "What is QualiaDB and what are its main features?", 100),
-        ("Technical Understanding", "Explain what a QualiaQuin is in simple terms.", 80),
+        ("Technical Understanding", "Explain what a NQuin is in simple terms.", 80),
         ("Capability Awareness", "What capabilities does the Qualia system have for semantic graph processing?", 120),
         ("Instruction Following", "Write a haiku about artificial intelligence.", 30),
     ];

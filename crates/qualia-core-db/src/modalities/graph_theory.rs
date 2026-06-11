@@ -1,10 +1,10 @@
 // Advanced Graph Theory Algorithms
-// Zero-allocation centrality, community detection, and motif finding for QualiaQuin graphs
+// Zero-allocation centrality, community detection, and motif finding for NQuin graphs
 
-use crate::QualiaQuin;
+use crate::NQuin;
 use std::collections::{HashMap, HashSet};
 
-/// Graph structure built from QualiaQuin relations
+/// Graph structure built from NQuin relations
 #[derive(Debug, Clone)]
 pub struct QualiaGraph {
     pub nodes: HashMap<u64, GraphNode>,
@@ -28,8 +28,8 @@ pub struct GraphEdge {
 }
 
 impl QualiaGraph {
-    /// Create a new graph from QualiaQuin relations
-    pub fn from_quins(quins: &[QualiaQuin]) -> Self {
+    /// Create a new graph from NQuin relations
+    pub fn from_quins(quins: &[NQuin]) -> Self {
         let mut nodes = HashMap::new();
         let mut edges = HashMap::new();
         let mut adjacency_list = HashMap::new();
@@ -301,13 +301,13 @@ impl QualiaGraph {
         self.edges.len() as f64 / possible_edges as f64
     }
     
-    /// Convert graph state to QualiaQuin for storage
-    pub fn to_quins(&self, context: u64) -> Vec<QualiaQuin> {
+    /// Convert graph state to NQuin for storage
+    pub fn to_quins(&self, context: u64) -> Vec<NQuin> {
         let mut quins = Vec::new();
         
         // Store node centrality scores
         for (node_id, node) in &self.nodes {
-            let mut quin = QualiaQuin {
+            let mut quin = NQuin {
                 subject: *node_id,
                 predicate: crate::q_hash("has_centrality_score"),
                 object: (node.centrality_score * 1000.0) as u64, // Store as scaled integer
@@ -344,7 +344,7 @@ pub struct Motif {
 }
 
 /// Analyze graph topology
-pub fn analyze_graph_topology(quins: &[QualiaQuin], context: u64) -> GraphAnalysisResult {
+pub fn analyze_graph_topology(quins: &[NQuin], context: u64) -> GraphAnalysisResult {
     let mut graph = QualiaGraph::from_quins(quins);
     
     // Calculate centrality
@@ -379,7 +379,7 @@ pub fn analyze_graph_topology(quins: &[QualiaQuin], context: u64) -> GraphAnalys
 /// Result of graph analysis
 #[derive(Debug, Clone)]
 pub struct GraphAnalysisResult {
-    pub graph_quins: Vec<QualiaQuin>,
+    pub graph_quins: Vec<NQuin>,
     pub communities: Vec<Vec<u64>>,
     pub motifs: Vec<Motif>,
     pub top_nodes: Vec<(u64, f64)>,
@@ -395,7 +395,7 @@ mod tests {
     #[test]
     fn test_graph_creation() {
         let quins = vec![
-            QualiaQuin {
+            NQuin {
                 subject: 1,
                 predicate: crate::q_hash("connects_to"),
                 object: 2,
@@ -403,7 +403,7 @@ mod tests {
                 metadata: 0,
                 parity: 0,
             },
-            QualiaQuin {
+            NQuin {
                 subject: 2,
                 predicate: crate::q_hash("connects_to"),
                 object: 3,
@@ -411,7 +411,7 @@ mod tests {
                 metadata: 0,
                 parity: 0,
             },
-            QualiaQuin {
+            NQuin {
                 subject: 1,
                 predicate: crate::q_hash("connects_to"),
                 object: 3,
@@ -431,9 +431,9 @@ mod tests {
     #[test]
     fn test_centrality_calculation() {
         let quins = vec![
-            QualiaQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
-            QualiaQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
-            QualiaQuin { subject: 1, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 1, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
         ];
         
         let mut graph = QualiaGraph::from_quins(&quins);
@@ -449,10 +449,10 @@ mod tests {
     #[test]
     fn test_community_detection() {
         let quins = vec![
-            QualiaQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
-            QualiaQuin { subject: 2, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
-            QualiaQuin { subject: 3, predicate: 1, object: 4, context: 100, metadata: 0, parity: 0 },
-            QualiaQuin { subject: 4, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 2, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 3, predicate: 1, object: 4, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 4, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
         ];
         
         let mut graph = QualiaGraph::from_quins(&quins);
@@ -465,9 +465,9 @@ mod tests {
     #[test]
     fn test_motif_detection() {
         let quins = vec![
-            QualiaQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
-            QualiaQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
-            QualiaQuin { subject: 3, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 3, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
         ];
         
         let graph = QualiaGraph::from_quins(&quins);
@@ -481,9 +481,9 @@ mod tests {
     #[test]
     fn test_graph_analysis() {
         let quins = vec![
-            QualiaQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
-            QualiaQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
-            QualiaQuin { subject: 3, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 3, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
         ];
         
         let result = analyze_graph_topology(&quins, 100);

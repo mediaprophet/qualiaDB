@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use qualia_core_db::{q42_reader::read_q42_quins, q_hash, QualiaQuin};
+use qualia_core_db::{q42_reader::read_q42_quins, q_hash, NQuin};
 use serde::{Deserialize, Serialize};
 
 use crate::chat_session::ChatEnvironment;
@@ -125,7 +125,7 @@ fn extract_keywords(prompt: &str) -> Vec<String> {
         .collect()
 }
 
-fn matches_keywords(quin: &QualiaQuin, keywords: &[String]) -> bool {
+fn matches_keywords(quin: &NQuin, keywords: &[String]) -> bool {
     if keywords.is_empty() {
         return true;
     }

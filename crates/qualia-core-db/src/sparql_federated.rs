@@ -3,7 +3,7 @@
 //! Implements federated query support with DID integration for CORS handling.
 
 use crate::sparql_ast::*;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// SERVICE endpoint configuration
 #[repr(C)]
@@ -26,14 +26,14 @@ pub struct FederatedResult {
 
 /// SPARQL Federated Query Handler
 pub struct FederatedQueryHandler<'a> {
-    pub local_quins: &'a [QualiaQuin],
+    pub local_quins: &'a [NQuin],
     pub endpoints: [Option<ServiceEndpoint>; 16],
     pub endpoint_count: u8,
     pub cache_enabled: bool,
 }
 
 impl<'a> FederatedQueryHandler<'a> {
-    pub fn new(quins: &'a [QualiaQuin]) -> Self {
+    pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             local_quins: quins,
             endpoints: [None; 16],
@@ -106,7 +106,7 @@ impl<'a> FederatedQueryHandler<'a> {
                         1 => {
                             // DID-LD authentication
                             // In production: sign request with DID key
-                            return Ok(vec![(0x4155544800000000, 0x4449442D4C44000000)]); // "Authorization": "DID-LD"
+                            return Ok(vec![(0x4155544800000000_u64, 0x4449442D4C440000_u64)]); // "Authorization": "DID-LD"
                         }
                         2 => {
                             // JWT authentication
@@ -189,14 +189,14 @@ impl<'a> FederatedQueryHandler<'a> {
         // In production, this would generate proper CORS headers
         // based on DID resolution and trust relationships
         
-        let access_control_origin = 0x41432D4F726967696E; // "Access-Control-Origin"
-        let access_control_methods = 0x41432D4D6574686F64; // "Access-Control-Methods"
-        let access_control_headers = 0x41432D486561646572; // "Access-Control-Headers"
-        
+        let access_control_origin: u64 = 0x41432D4F72696769; // "Access-Control-Origin" (truncated)
+        let access_control_methods: u64 = 0x41432D4D65746F64; // "Access-Control-Methods" (truncated)
+        let access_control_headers: u64 = 0x41432D4865616465; // "Access-Control-Headers" (truncated)
+
         Ok(vec![
             (access_control_origin, did), // Use DID as origin
-            (access_control_methods, 0x4745540000000000), // "GET"
-            (access_control_headers, 0x436F6E74656E742D54), // "Content-Type"
+            (access_control_methods, 0x4745540000000000_u64), // "GET"
+            (access_control_headers, 0x436F6E74656E742D_u64), // "Content-Type" (truncated)
         ])
     }
 }

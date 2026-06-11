@@ -1,5 +1,5 @@
 use qualia_core_db::logic::WebizenOpcode;
-use qualia_core_db::{q_hash, QualiaQuin};
+use qualia_core_db::{q_hash, NQuin};
 use warp::Filter;
 
 pub fn ldp_routes() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -26,7 +26,7 @@ pub fn ldp_routes() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rej
 
 /// Translates a Solid JSON-LD payload into a native 48-byte Super-Quin vector.
 /// Serves as the allocation firewall: no strings cross this boundary.
-pub fn ldp_to_quins(payload: &[u8]) -> Vec<QualiaQuin> {
+pub fn ldp_to_quins(payload: &[u8]) -> Vec<NQuin> {
     // For test_allocation_firewall verification, we perform zero allocations of Strings inside the loop
     let mut quins = Vec::new();
 
@@ -37,7 +37,7 @@ pub fn ldp_to_quins(payload: &[u8]) -> Vec<QualiaQuin> {
         // Hash the raw bytes natively without converting to String
         let subject = fast_hash_bytes(chunk);
 
-        let quin = QualiaQuin {
+        let quin = NQuin {
             subject,
             predicate: q_hash("solid:contains"),
             object: subject.wrapping_add(1),

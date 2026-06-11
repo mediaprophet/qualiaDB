@@ -4,7 +4,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
-use qualia_core_db::{q_hash, wal::WriteAheadLog, QualiaQuin};
+use qualia_core_db::{q_hash, wal::WriteAheadLog, NQuin};
 use serde::{Deserialize, Serialize};
 
 const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
@@ -371,14 +371,14 @@ fn role_context_hash(role: Role) -> u64 {
     q_hash(&format!("chat:role:{}", role.as_str()))
 }
 
-fn build_message_quin(session_id: &str, role: Role, lamport: u64, content_hash: u64) -> QualiaQuin {
+fn build_message_quin(session_id: &str, role: Role, lamport: u64, content_hash: u64) -> NQuin {
     let subject = session_subject_hash(session_id);
     let predicate = q_hash("chat:hasMessage");
     let object = message_object_hash(lamport);
     let context = role_context_hash(role);
     let metadata = (lamport & LAMPORT_MASK) << LAMPORT_SHIFT | (content_hash & 0xFFFF_FFFF);
     let parity = subject ^ predicate ^ object ^ context ^ metadata;
-    QualiaQuin {
+    NQuin {
         subject,
         predicate,
         object,
@@ -388,7 +388,7 @@ fn build_message_quin(session_id: &str, role: Role, lamport: u64, content_hash: 
     }
 }
 
-fn write_quins_to_q42(quins: &[QualiaQuin], out_path: &Path) -> Result<u64, ChatError> {
+fn write_quins_to_q42(quins: &[NQuin], out_path: &Path) -> Result<u64, ChatError> {
     let mut out_file = File::create(out_path)?;
     let mut written_count = 0u64;
     let mut block_id: u64 = 0;

@@ -122,8 +122,36 @@ impl<'a> Q42LexMmap<'a> {
         std::str::from_utf8(&data[text_start..text_end]).ok()
     }
 
+    /// Binary search for `hash` in the sorted index; returns the embedded triple [subject, predicate, object].
+    ///
+    /// Used by SPARQL-Star Virtual ID resolution: a Virtual ID is the FNV-1a hash of an embedded
+    /// triple, stored in the lexicon with tag `LEX_TAG_EMBEDDED` instead of `LEX_TAG_STRING`.
+    pub fn lookup_embedded_triple(&self, hash: u64) -> Option<[u64; 3]> {
+        let mut lo = 0usize;
+        let mut hi = self.entry_count;
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            let off = HEADER_SIZE + mid * INDEX_ENTRY_SIZE;
+            let entry_hash = u64::from_le_bytes(self.data[off..off + 8].try_into().ok()?);
+            match entry_hash.cmp(&hash) {
+                std::cmp::Ordering::Less    => lo = mid + 1,
+                std::cmp::Ordering::Greater => hi = mid,
+                std::cmp::Ordering::Equal   => {
+                    let str_off = u64::from_le_bytes(
+                        self.data[off + 8..off + 16].try_into().ok()?,
+                    ) as usize;
+                    return Self::read_embedded_triple_at(
+                        self.data, self.strings_offset, str_off,
+                    )
+                    .copied();
+                }
+            }
+        }
+        None
+    }
+
     /// Reads a 24-byte embedded triple [u64; 3] at the given offset.
-    /// 
+    ///
     /// Format: [TAG_EMBEDDED (1 byte)] + [24-byte triple]
     /// This is used for SPARQL-Star embedded triples where the lexicon stores
     /// the three component IDs (subject, predicate, object) as a fixed-size

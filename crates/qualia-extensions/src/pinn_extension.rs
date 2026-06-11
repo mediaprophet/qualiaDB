@@ -6,7 +6,7 @@
 //! This extension uses the native Qualia LLM pipeline (wgpu + WGSL shaders) for neural network
 //! inference, ensuring zero-allocation hot paths and GPU acceleration without external ML frameworks.
 
-use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, QualiaQuin};
+use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, NQuin};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -14,7 +14,7 @@ use std::time::Instant;
 use base64;
 
 #[cfg(feature = "pinn")]
-use qualia_core_db::{llm_agent::LocalLlmAgent, QualiaQuin as CoreQualiaQuin};
+use qualia_core_db::{llm_agent::LocalLlmAgent, NQuin as CoreNQuin};
 
 /// PINN Extension implementation with SMX formatting and ternary quantization
 pub struct PinnExtension {
@@ -636,11 +636,11 @@ impl PinnExtension {
         violations
     }
 
-    fn result_to_quins(result: &PinnExecutionResult, job_id: &str) -> Vec<QualiaQuin> {
+    fn result_to_quins(result: &PinnExecutionResult, job_id: &str) -> Vec<NQuin> {
         let mut quins = Vec::new();
 
         // Add convergence metrics
-        let convergence_quin = QualiaQuin {
+        let convergence_quin = NQuin {
             subject: crate::q_hash(job_id),
             predicate: crate::q_hash("q42:hasConvergence"),
             object: (result.convergence_metrics.final_loss * 1000000.0) as u64, // Fixed-point
@@ -652,7 +652,7 @@ impl PinnExtension {
         quins.push(convergence_quin);
 
         // Add execution time
-        let time_quin = QualiaQuin {
+        let time_quin = NQuin {
             subject: crate::q_hash(job_id),
             predicate: crate::q_hash("q42:hasExecutionTime"),
             object: result.execution_time_ms,
@@ -664,7 +664,7 @@ impl PinnExtension {
 
         // Add physics violations if any
         for (i, violation) in result.physics_violations.iter().enumerate() {
-            let violation_quin = QualiaQuin {
+            let violation_quin = NQuin {
                 subject: crate::q_hash(job_id),
                 predicate: crate::q_hash("q42:hasPhysicsViolation"),
                 object: crate::q_hash(&violation.constraint),

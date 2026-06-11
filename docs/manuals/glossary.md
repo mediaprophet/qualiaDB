@@ -6,7 +6,7 @@ _Branch: `0.0.8-dev` | Last updated: 2026-06-07_
 
 ## Core Structures
 
-- **Super-Quin (QualiaQuin)**: 48-byte struct — six `u64` fields: subject, predicate, object, context, metadata, parity. Replaces RDF triples. All semantic meaning is bit-packed; no pointers, no heap references.
+- **Super-Quin (NQuin)**: 48-byte struct — six `u64` fields: subject, predicate, object, context, metadata, parity. Replaces RDF triples. All semantic meaning is bit-packed; no pointers, no heap references.
 - **SuperBlock**: 40,960-byte (10 sectors) LZ4-compressed block holding ~850 Quins plus a 160-byte header. Supports lazy header scanning.
 - **`.q42`**: Native binary format. A file is a sequence of SuperBlocks preceded by a header.
 - **`.q42.bidx`**: Block-range index sidecar. Maps subject-hash ranges to SuperBlock byte offsets for O(1) block skip.
@@ -54,7 +54,7 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 
 ## LLM Inference Stack
 
-- **gguf_sharder.rs**: Parses GGUF header; generates `QualiaQuin` pointer map encoding byte offsets (upper 4 bits = modality flag `0b1001`).
+- **gguf_sharder.rs**: Parses GGUF header; generates `NQuin` pointer map encoding byte offsets (upper 4 bits = modality flag `0b1001`).
 - **gguf_bridge.rs**: Maps model weights into OS page cache via `memmap2` (zero heap allocation); dispatches fused transformer blocks to the GPU via `wgpu`.
 - **fused_tensor_contraction.wgsl**: WGSL compute shader. 64 threads/workgroup, 4096 FMA ops per thread. Runs on DirectML / Vulkan / Metal / WebGPU.
 - **AgentBackend**: Enum in `llm_agent.rs` — `Local` (GGUF on-disk, no outbound traffic), `Remote` (Nym mixnet, ILP-metered, requires signed VC), `Hybrid` (local-first with consent-gated remote fallback).

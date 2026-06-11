@@ -1,12 +1,12 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 
 pub const MAX_STABLE_MODELS: usize = 8;
 
 /// Returns number of stable models found (max MAX_STABLE_MODELS = 8)
 /// Worlds are encoded as context-hash variants: world_i_context = base_context ^ (i as u64)
 pub fn enumerate_stable_models(
-    base: &QualiaQuin,
-    _rules: &[QualiaQuin],
+    base: &NQuin,
+    _rules: &[NQuin],
     out_worlds: &mut [u64; MAX_STABLE_MODELS],
 ) -> usize {
     // For MVP, we'll just mock generating two parallel realities
@@ -21,7 +21,7 @@ mod tests {
 
     #[test]
     fn test_enumerate_stable_models() {
-        let base = QualiaQuin {
+        let base = NQuin {
             subject: 0,
             predicate: 0,
             object: 0,

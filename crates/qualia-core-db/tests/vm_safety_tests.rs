@@ -1,8 +1,8 @@
 use qualia_core_db::webizen_bytecode::{execute_program, VmError};
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 
-fn make_quin(subject: u64, predicate: u64, object: u64) -> QualiaQuin {
-    QualiaQuin {
+fn make_quin(subject: u64, predicate: u64, object: u64) -> NQuin {
+    NQuin {
         subject,
         predicate,
         object,
@@ -15,7 +15,7 @@ fn make_quin(subject: u64, predicate: u64, object: u64) -> QualiaQuin {
 #[test]
 fn test_truncated_bytecode() {
     let db = [make_quin(1, 2, 3)];
-    let mut out = [QualiaQuin::default(); 10];
+    let mut out = [NQuin::default(); 10];
 
     // OP_MATCH_SUBJECT is 0x0A or something? Wait, what are the opcodes?
     // Let me check mini_parser for exact opcodes if needed, but I can just use the byte value.
@@ -36,7 +36,7 @@ fn test_truncated_bytecode() {
 #[test]
 fn test_invalid_opcode() {
     let db = [make_quin(1, 2, 3)];
-    let mut out = [QualiaQuin::default(); 10];
+    let mut out = [NQuin::default(); 10];
 
     // Create a program with an invalid opcode. 0xFF is likely invalid.
     let prog = [0xFF, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -48,7 +48,7 @@ fn test_invalid_opcode() {
 #[test]
 fn test_output_buffer_full() {
     let db = [make_quin(1, 2, 3), make_quin(4, 5, 6)];
-    let mut out = [QualiaQuin::default(); 1]; // Buffer can only hold 1 item
+    let mut out = [NQuin::default(); 1]; // Buffer can only hold 1 item
 
     let mut prog = [0u8; 1024];
     // Wildcard query matches everything
@@ -66,7 +66,7 @@ fn test_scalar_match_logic() {
         make_quin(100, 200, 400),
         make_quin(101, 201, 301),
     ];
-    let mut out = [QualiaQuin::default(); 10];
+    let mut out = [NQuin::default(); 10];
 
     // Construct bytecode manually or using compiler
     // Let's use the compiler since it's safer

@@ -13,7 +13,7 @@ use crate::modalities::logic::shacl::{CompiledShape, ShaclCompiler, ShaclConstra
 #[cfg(not(target_arch = "wasm32"))]
 use crate::wal::{commit_semantic_mutation, WalHandoffResult, WriteAheadLog};
 use crate::webizen::{SlgArena, SlgOpcode, VmFrame};
-use crate::{q_hash, QualiaQuin};
+use crate::{q_hash, NQuin};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -34,7 +34,7 @@ pub enum OrchestrationResult {
     Committed {
         text: String,
         provenance_quins: Vec<u64>,
-        semantic_quin: Option<QualiaQuin>,
+        semantic_quin: Option<NQuin>,
         wal_committed: bool,
         wal_suspended: bool,
         suspended_agreement_id: Option<u64>,
@@ -285,7 +285,7 @@ impl TaskOrchestrator {
         let routed_shapes = Self::routed_shapes(intent);
         let shapes: Vec<&CompiledShape> = routed_shapes.iter().collect();
         let mut opcodes = [SlgOpcode::Call; 256];
-        let mut quins = [crate::QualiaQuin::default(); 64];
+        let mut quins = [crate::NQuin::default(); 64];
         let program =
             compile_rules_with_shacl_gate(&rules, &shapes, &mut opcodes, &mut quins, contract_hash)
                 .map_err(|_| "SHACL validation failed for LLM N3 output")?;
@@ -619,7 +619,7 @@ pub mod tests {
         let bytecode = vec![crate::modalities::logic::core::WebizenOpcode::LoadModel(999)];
         vm.load_bytecode(&bytecode);
 
-        let quin = crate::QualiaQuin {
+        let quin = crate::NQuin {
             subject: 0,
             predicate: 0,
             object: 0,

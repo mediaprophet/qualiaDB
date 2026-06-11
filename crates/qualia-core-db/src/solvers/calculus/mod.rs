@@ -5,7 +5,7 @@
 //! environment of Qualia-DB.
 
 use crate::solvers::{SolverConfig, SolverState, SolverResult};
-use crate::execution_error::ExecutionError;
+use crate::ggml_quants::ExecutionError;
 use core::f64::consts;
 
 /// Runge-Kutta 4th order ODE solver with fixed memory footprint

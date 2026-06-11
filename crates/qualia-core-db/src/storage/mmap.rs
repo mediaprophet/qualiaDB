@@ -1,4 +1,4 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 use memmap2::MmapMut;
 use std::fs::OpenOptions;
 
@@ -30,7 +30,7 @@ impl MmapStore {
     }
 
     // Appends a Quin. Returns error if capacity exceeded.
-    pub fn append(&mut self, quin: &QualiaQuin) -> Result<(), std::io::Error> {
+    pub fn append(&mut self, quin: &NQuin) -> Result<(), std::io::Error> {
         if self.active_quins >= self.capacity_quins {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::WriteZero,
@@ -47,7 +47,7 @@ impl MmapStore {
     }
 
     // Returns a zero-copy slice of all active Quins.
-    pub fn as_slice(&self) -> &[QualiaQuin] {
+    pub fn as_slice(&self) -> &[NQuin] {
         let active_bytes = self.active_quins * 48;
         let slice = &self.mmap[..active_bytes];
         bytemuck::cast_slice(slice)
@@ -74,7 +74,7 @@ mod tests {
         let path = temp_file.path().to_str().unwrap();
         let mut store = MmapStore::open(path, 10).unwrap();
 
-        let quin = QualiaQuin {
+        let quin = NQuin {
             subject: 1,
             predicate: 2,
             object: 3,

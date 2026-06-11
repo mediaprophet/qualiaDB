@@ -15,7 +15,7 @@ use qualia_core_db::{
     mini_parser::compile_ntriples_to_bytecode,
     q_hash,
     webizen_bytecode::{execute_program, execute_program_simd, execute_program_with_stats},
-    QualiaQuin,
+    NQuin,
 };
 use std::time::Instant;
 
@@ -23,8 +23,8 @@ use std::time::Instant;
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn standard_uri_quin(subject: &str, predicate: &str, object: &str) -> QualiaQuin {
-    QualiaQuin {
+fn standard_uri_quin(subject: &str, predicate: &str, object: &str) -> NQuin {
+    NQuin {
         subject: q_hash(subject),
         predicate: q_hash(predicate),
         object: q_hash(object),
@@ -34,8 +34,8 @@ fn standard_uri_quin(subject: &str, predicate: &str, object: &str) -> QualiaQuin
     }
 }
 
-fn did_q42_quin(subject_did: &[u8], predicate: &str, object: &str) -> QualiaQuin {
-    QualiaQuin {
+fn did_q42_quin(subject_did: &[u8], predicate: &str, object: &str) -> NQuin {
+    NQuin {
         subject: parse_did_q42(subject_did).expect("valid did:q42"),
         predicate: q_hash(predicate),
         object: q_hash(object),
@@ -51,7 +51,7 @@ fn did_q42_quin(subject_did: &[u8], predicate: &str, object: &str) -> QualiaQuin
 
 /// Mixed dataset: some records keyed by standard FNV-1a hashes, some keyed by
 /// did:q42 topological coordinates.
-fn build_mixed_dataset() -> [QualiaQuin; 6] {
+fn build_mixed_dataset() -> [NQuin; 6] {
     [
         // Standard URI records (MSB=0 on subject).
         standard_uri_quin("Alice", "knows", "Bob"),
@@ -74,7 +74,7 @@ fn standard_uri_query_triggers_lexicon_path() {
     let mut prog = [0u8; 1024];
     compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
 
-    let mut out = [QualiaQuin::default(); 10];
+    let mut out = [NQuin::default(); 10];
     let stats = execute_program_with_stats(&prog, &db, &mut out).unwrap();
 
     assert_eq!(stats.match_count, 1, "should match exactly Alice→knows→Bob");
@@ -108,7 +108,7 @@ fn did_q42_query_triggers_direct_jump_path() {
     compile_ntriples_to_bytecode(b"<did:q42:z6MkpTHR8VNs> <locatedAt> <Node42>", &mut prog)
         .unwrap();
 
-    let mut out = [QualiaQuin::default(); 10];
+    let mut out = [NQuin::default(); 10];
     let stats = execute_program_with_stats(&prog, &db, &mut out).unwrap();
 
     assert_eq!(stats.match_count, 1, "should match the did:q42 Quin");
@@ -130,7 +130,7 @@ fn mixed_query_exercises_both_dispatch_paths() {
     // --- plain wildcard query: predicate is a standard URI ---
     let mut prog_std = [0u8; 1024];
     compile_ntriples_to_bytecode(b"?s <knows> ?o", &mut prog_std).unwrap();
-    let mut out_std = [QualiaQuin::default(); 10];
+    let mut out_std = [NQuin::default(); 10];
     let stats_std = execute_program_with_stats(&prog_std, &db, &mut out_std).unwrap();
 
     // The predicate operand is q_hash("knows"); its MSB determines which counter
@@ -148,7 +148,7 @@ fn mixed_query_exercises_both_dispatch_paths() {
     // --- did:q42 subject query: MSB=1 is unconditionally set by parse_did_q42 ---
     let mut prog_did = [0u8; 1024];
     compile_ntriples_to_bytecode(b"<did:q42:z6MkAbCd1234> <links> ?o", &mut prog_did).unwrap();
-    let mut out_did = [QualiaQuin::default(); 10];
+    let mut out_did = [NQuin::default(); 10];
     let stats_did = execute_program_with_stats(&prog_did, &db, &mut out_did).unwrap();
 
     assert!(
@@ -171,8 +171,8 @@ fn simd_matches_scalar_on_standard_uri_query() {
     let mut prog = [0u8; 1024];
     compile_ntriples_to_bytecode(b"?s <knows> ?o", &mut prog).unwrap();
 
-    let mut out_scalar = [QualiaQuin::default(); 10];
-    let mut out_simd = [QualiaQuin::default(); 10];
+    let mut out_scalar = [NQuin::default(); 10];
+    let mut out_simd = [NQuin::default(); 10];
 
     let (n_scalar, _) = execute_program(&prog, &db, &mut out_scalar).unwrap();
     let (n_simd, _) = execute_program_simd(&prog, &db, &mut out_simd).unwrap();
@@ -194,8 +194,8 @@ fn simd_matches_scalar_on_did_q42_query() {
     let mut prog = [0u8; 1024];
     compile_ntriples_to_bytecode(b"<did:q42:QUALIA_ROOT> <type> <Topology>", &mut prog).unwrap();
 
-    let mut out_scalar = [QualiaQuin::default(); 10];
-    let mut out_simd = [QualiaQuin::default(); 10];
+    let mut out_scalar = [NQuin::default(); 10];
+    let mut out_simd = [NQuin::default(); 10];
 
     let (n_scalar, _) = execute_program(&prog, &db, &mut out_scalar).unwrap();
     let (n_simd, _) = execute_program_simd(&prog, &db, &mut out_simd).unwrap();
@@ -209,7 +209,7 @@ fn simd_matches_scalar_on_did_q42_query() {
 // ---------------------------------------------------------------------------
 
 /// Extends the dataset to `target` records by repeating the base set.
-fn large_dataset(target: usize) -> Vec<QualiaQuin> {
+fn large_dataset(target: usize) -> Vec<NQuin> {
     let base = build_mixed_dataset();
     let mut v = Vec::with_capacity(target);
     while v.len() < target {
@@ -231,8 +231,8 @@ fn benchmark_scalar_vs_simd_cycle_counters() {
     let mut prog = [0u8; 1024];
     compile_ntriples_to_bytecode(b"?s <knows> ?o", &mut prog).unwrap();
 
-    let mut out_scalar = vec![QualiaQuin::default(); N];
-    let mut out_simd = vec![QualiaQuin::default(); N];
+    let mut out_scalar = vec![NQuin::default(); N];
+    let mut out_simd = vec![NQuin::default(); N];
 
     // Scalar timing.
     let t_scalar = Instant::now();
@@ -278,8 +278,8 @@ fn cycle_count_scales_linearly_with_dataset_size() {
     let db1 = large_dataset(6); // one repetition of the base set
     let db2 = large_dataset(12); // two repetitions
 
-    let mut out1 = vec![QualiaQuin::default(); 20];
-    let mut out2 = vec![QualiaQuin::default(); 20];
+    let mut out1 = vec![NQuin::default(); 20];
+    let mut out2 = vec![NQuin::default(); 20];
 
     let (_, c1) = execute_program(&prog, &db1, &mut out1).unwrap();
     let (_, c2) = execute_program(&prog, &db2, &mut out2).unwrap();
@@ -292,20 +292,20 @@ fn cycle_count_scales_linearly_with_dataset_size() {
 }
 
 // ---------------------------------------------------------------------------
-// Part 4: QualiaQuin alignment assertion for SIMD
+// Part 4: NQuin alignment assertion for SIMD
 // ---------------------------------------------------------------------------
 
 #[test]
-fn qualia_quin_size_allows_perfect_simd_alignment() {
+fn n_quin_size_allows_perfect_simd_alignment() {
     // 48 bytes == 3 × 16-byte SIMD registers — no padding or partial loads.
     assert_eq!(
-        std::mem::size_of::<QualiaQuin>(),
+        std::mem::size_of::<NQuin>(),
         3 * 16,
-        "QualiaQuin must be exactly 48 bytes so that 3 × v128 loads cover it completely"
+        "NQuin must be exactly 48 bytes so that 3 × v128 loads cover it completely"
     );
     assert_eq!(
-        std::mem::align_of::<QualiaQuin>(),
+        std::mem::align_of::<NQuin>(),
         16,
-        "QualiaQuin must be 16-byte aligned for safe v128_load on wasm32"
+        "NQuin must be 16-byte aligned for safe v128_load on wasm32"
     );
 }

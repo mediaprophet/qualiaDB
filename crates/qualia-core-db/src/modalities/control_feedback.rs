@@ -1,7 +1,7 @@
 // Control Theory & Feedback Modality
 // Provides self-stabilizing agents for power systems and sanctuary management
 
-use crate::QualiaQuin;
+use crate::NQuin;
 use std::collections::HashMap;
 
 pub const CONTROL_BIT: u64 = 1u64 << 52;
@@ -368,9 +368,9 @@ pub enum SanctuaryAction {
     PerimeterBreach,
 }
 
-/// Convert controller state to QualiaQuin for storage
-pub fn controller_to_quin(controller: &FeedbackController, context: u64) -> QualiaQuin {
-    let mut quin = QualiaQuin {
+/// Convert controller state to NQuin for storage
+pub fn controller_to_quin(controller: &FeedbackController, context: u64) -> NQuin {
+    let mut quin = NQuin {
         subject: crate::q_hash(&controller.name),
         predicate: crate::q_hash("has_control_state"),
         object: ((controller.state.setpoint * 1000.0) as u64) << 32 |

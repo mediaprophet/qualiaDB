@@ -21,7 +21,7 @@
 //! let provenance = transformed.get_provenance();
 //! ```
 
-use crate::QualiaQuin;
+use crate::NQuin;
 use std::collections::HashMap;
 
 // ─── Tensor State ─────────────────────────────────────────────────────────────
@@ -169,8 +169,8 @@ impl TensorState {
     }
     
     /// Converts the tensor state to a Quin for graph storage
-    pub fn to_quin(&self) -> QualiaQuin {
-        let mut quin = QualiaQuin::default();
+    pub fn to_quin(&self) -> NQuin {
+        let mut quin = NQuin::default();
         quin.subject = self.state_id;
         
         // Pack tensor metadata into object field

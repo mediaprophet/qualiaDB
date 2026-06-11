@@ -3,7 +3,7 @@
 //! Implements high-priority lexicon slots and signature verification for Webizen identities.
 //! Webizen IDs are sovereign actor identifiers with reserved prefix range.
 
-use crate::QualiaQuin;
+use crate::NQuin;
 use std::collections::HashMap;
 
 /// Webizen ID type (64-bit with TAG_WEBIZEN prefix)
@@ -123,21 +123,35 @@ impl WebizenRegistry {
         if let Some(&cached) = self.signature_cache.get(&cache_key) {
             return Ok(cached);
         }
-        
-        // TODO: Implement actual Ed25519 verification using identity.public_key
-        // For now, return true as a stub
-        let verified = true;
-        
+
+        // Repack [u64; 4] public key as [u8; 32] (little-endian)
+        let mut key_bytes = [0u8; 32];
+        for (i, &chunk) in identity.public_key.iter().enumerate() {
+            key_bytes[i * 8..(i + 1) * 8].copy_from_slice(&chunk.to_le_bytes());
+        }
+
+        // Parse the verifying key
+        use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+        let vk = VerifyingKey::from_bytes(&key_bytes)
+            .map_err(|e| format!("Invalid public key: {e}"))?;
+
+        // Signature must be exactly 64 bytes
+        let sig_arr: [u8; 64] = signature.try_into()
+            .map_err(|_| format!("Signature must be 64 bytes, got {}", signature.len()))?;
+        let sig = Signature::from_bytes(&sig_arr);
+
+        let verified = vk.verify_strict(message, &sig).is_ok();
+
         // Cache the result
         self.signature_cache.insert(cache_key, verified);
-        
+
         Ok(verified)
     }
     
-    /// Verify a Webizen signature on a QualiaQuin
+    /// Verify a Webizen signature on a NQuin
     pub fn verify_quin_signature(
         &mut self,
-        quin: &QualiaQuin,
+        quin: &NQuin,
         signature: &[u8],
     ) -> Result<bool, String> {
         // Check if the subject is a Webizen
@@ -151,8 +165,8 @@ impl WebizenRegistry {
         self.verify_signature(quin.subject, &message, signature)
     }
     
-    /// Serialize a QualiaQuin for signature verification
-    fn serialize_quin_for_signature(&self, quin: &QualiaQuin) -> Vec<u8> {
+    /// Serialize a NQuin for signature verification
+    fn serialize_quin_for_signature(&self, quin: &NQuin) -> Vec<u8> {
         // Serialize subject, predicate, object, context, and metadata
         // Exclude parity as it's a checksum
         let mut bytes = Vec::with_capacity(40);
@@ -190,7 +204,7 @@ impl WebizenSignatureStorage {
         webizen_id: WebizenId,
         quin_hash: u64,
         signature: &[u8; 64],
-    ) -> Vec<QualiaQuin> {
+    ) -> Vec<NQuin> {
         const WEBIZEN_METADATA_FLAG: u64 = 0x1 << 63; // Use bit 63 as Webizen signature flag
         
         // Split 64-byte signature into 8 u64 values
@@ -199,7 +213,7 @@ impl WebizenSignatureStorage {
         // Create Quins for each part
         let mut quins = Vec::with_capacity(8);
         for (i, part) in sig_parts.iter().enumerate() {
-            quins.push(QualiaQuin {
+            quins.push(NQuin {
                 subject: webizen_id,
                 predicate: quin_hash,
                 object: *part,
@@ -213,7 +227,7 @@ impl WebizenSignatureStorage {
     }
     
     /// Deserialize Quins to signature
-    pub fn quins_to_signature(quins: &[QualiaQuin]) -> Option<[u8; 64]> {
+    pub fn quins_to_signature(quins: &[NQuin]) -> Option<[u8; 64]> {
         const WEBIZEN_METADATA_FLAG: u64 = 0x1 << 63;
         
         // Filter Webizen signature Quins

@@ -1,6 +1,6 @@
 // no_std is declared at the crate level if needed
 
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Represents a 12-byte structural pointer used for $O(N)$ Merkle DAG diffing.
 #[repr(C, packed)]
@@ -18,7 +18,7 @@ impl MerkleCrdtSynchronizer {
     /// Extracts the 12-bit Lamport clock integer from the 5th Vector (Metadata).
     /// The Lamport clock is embedded in bits 32-43.
     #[inline(always)]
-    pub fn extract_lamport_time(quin: &QualiaQuin) -> u16 {
+    pub fn extract_lamport_time(quin: &NQuin) -> u16 {
         ((quin.metadata >> 32) & 0x0FFF) as u16
     }
 
@@ -69,8 +69,8 @@ impl MerkleCrdtSynchronizer {
     /// Resolves structural conflicts between an incoming 128KB divergent frame and the local frame.
     /// Follows a strict selectable compaction policy triggered by the context metadata.
     pub fn resolve_frame_conflict(
-        local_frame: &mut [QualiaQuin],
-        incoming_frame: &[QualiaQuin],
+        local_frame: &mut [NQuin],
+        incoming_frame: &[NQuin],
         compaction_policy_metadata: u16,
     ) {
         const MASK_STRICT_HISTORY: u16 = 0x0010;

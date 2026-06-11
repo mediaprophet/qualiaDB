@@ -9,19 +9,19 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Decompress all quin slots from a legacy framed compressed transport file.
 ///
 /// Prefer this function only for `.c.q42`-style payloads or other explicitly
 /// legacy framed artifacts. Canonical raw `.q42` readers should operate on
 /// 40,960-byte `QualiaSuperBlock` pages directly.
-pub fn read_c_q42_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
+pub fn read_c_q42_quins(path: &Path) -> std::io::Result<Vec<NQuin>> {
     let mut file = File::open(path)?;
     let file_len = file.metadata()?.len();
     let mut offset = 0u64;
     let mut quins = Vec::new();
-    let quin_size = std::mem::size_of::<QualiaQuin>();
+    let quin_size = std::mem::size_of::<NQuin>();
 
     while offset < file_len {
         let mut header = [0u8; 16];
@@ -39,8 +39,8 @@ pub fn read_c_q42_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
         for chunk in uncompressed.chunks_exact(quin_size) {
-            let quin: QualiaQuin =
-                unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const QualiaQuin) };
+            let quin: NQuin =
+                unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
             quins.push(quin);
         }
     }
@@ -52,17 +52,17 @@ pub fn read_c_q42_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
 ///
 /// This name predates the raw `.q42` versus transport `.c.q42` split and is
 /// retained only to avoid breaking older call sites all at once.
-pub fn read_q42_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
+pub fn read_q42_quins(path: &Path) -> std::io::Result<Vec<NQuin>> {
     read_c_q42_quins(path)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{q_hash, QualiaQuin};
+    use crate::{q_hash, NQuin};
     use std::io::Write;
 
-    fn write_test_c_q42(path: &Path, quins: &[QualiaQuin]) {
+    fn write_test_c_q42(path: &Path, quins: &[NQuin]) {
         let mut file = File::create(path).unwrap();
         let bytes: Vec<u8> = quins
             .iter()
@@ -84,7 +84,7 @@ mod tests {
         let s = q_hash("ex:subject");
         let p = q_hash("ex:predicate");
         let o = q_hash("ex:object");
-        let quin = QualiaQuin {
+        let quin = NQuin {
             subject: s,
             predicate: p,
             object: o,

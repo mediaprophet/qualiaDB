@@ -4,7 +4,7 @@
 //! N-Quads-Star extends N-Triples-Star with a fourth component (graph/context).
 //! Format: `<subject> <predicate> <object> <graph> .`
 
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 use qualia_core_db::lexicon::{generate_embedded_triple_id, generate_60bit_token};
 use qualia_core_db::rdf_star::{RdfStarParser, RdfStarParseError};
 
@@ -218,11 +218,11 @@ pub fn parse_nquads_star_stream<R: std::io::Read>(
         match parser.parse_line(&line)? {
             ParseResult::Comment => continue,
             ParseResult::RegularQuad { subject, predicate, object, graph, .. } => {
-                sorter.push(QualiaQuin {
+                sorter.push(NQuin {
                     subject,
                     predicate,
                     object,
-                    context: graph,  // Use graph as context in QualiaQuin
+                    context: graph,  // Use graph as context in NQuin
                     metadata: 0b10 << 61,
                     parity: 0,
                 })?;
@@ -230,7 +230,7 @@ pub fn parse_nquads_star_stream<R: std::io::Read>(
             }
             ParseResult::EmbeddedQuad { virtual_id, components, outer_predicate, outer_object, outer_graph, .. } => {
                 // Emit the outer quad with the Virtual ID as the subject
-                sorter.push(QualiaQuin {
+                sorter.push(NQuin {
                     subject: virtual_id,
                     predicate: outer_predicate,
                     object: outer_object,
@@ -241,7 +241,7 @@ pub fn parse_nquads_star_stream<R: std::io::Read>(
                 count += 1;
                 
                 // Also emit the embedded triple components for indexing
-                sorter.push(QualiaQuin {
+                sorter.push(NQuin {
                     subject: components[0],
                     predicate: components[1],
                     object: components[2],

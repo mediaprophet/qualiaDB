@@ -149,6 +149,14 @@ impl MlDsaSigner {
         let t0 = Self::generate_polynomial(&rho, 2)?;
         let t1 = Self::generate_polynomial(&rho, 3)?;
 
+        // Embed a commitment to s1 in the public key's t1 field:
+        // t1_pub[0..64] = SHA3-512(s1 || seed)  — allows verify_response_bounds to check z
+        let mut t1_pub = t1.clone();
+        let mut t1_commit = Sha3_512::new();
+        t1_commit.update(&s1);
+        t1_commit.update(&seed);
+        t1_pub[..64].copy_from_slice(&t1_commit.finalize());
+
         let private_key = MlDsaPrivateKey {
             seed,
             rho,
@@ -157,12 +165,12 @@ impl MlDsaSigner {
             s1,
             s2,
             t0,
-            t1: t1.clone(),
+            t1,
         };
 
         let public_key = MlDsaPublicKey {
             rho,
-            t1,
+            t1: t1_pub,
             seed,
         };
 
@@ -288,8 +296,8 @@ impl MlDsaSigner {
         // Verify challenge
         let c_tilde_match = signature.c_tilde == expected_c_tilde.as_slice();
 
-        // Verify response bounds
-        let z_valid = Self::verify_response_bounds(&signature.z);
+        // Verify response bounds: recover s1 from z and check commitment
+        let z_valid = Self::verify_response_bounds(&signature.z, &signature.c_tilde, public_key);
 
         // Verify hint validity
         let h_valid = Self::verify_hint_validity(&signature.h, &public_key.t1);
@@ -338,11 +346,20 @@ impl MlDsaSigner {
         Ok(h)
     }
 
-    // Verify response bounds
-    fn verify_response_bounds(z: &[u8]) -> bool {
-        // Check if response is within valid bounds
-        // Simplified check for demonstration
-        z.iter().all(|&x| x <= 15) // Example bound check
+    // Verify z proves knowledge of s1: recover s1' = z - c_tilde (wrapping), then
+    // check SHA3-512(s1' || seed) matches the commitment embedded in public_key.t1[0..64].
+    fn verify_response_bounds(z: &[u8], c_tilde: &[u8], public_key: &MlDsaPublicKey) -> bool {
+        if z.is_empty() || public_key.t1.len() < 64 || c_tilde.is_empty() {
+            return false;
+        }
+        let recovered_s1: Vec<u8> = z.iter().enumerate()
+            .map(|(i, &zi)| zi.wrapping_sub(c_tilde[i % c_tilde.len()]))
+            .collect();
+        let mut hasher = Sha3_512::new();
+        hasher.update(&recovered_s1);
+        hasher.update(&public_key.seed);
+        let expected = hasher.finalize();
+        expected.as_slice() == &public_key.t1[..64]
     }
 
     // Verify hint validity
@@ -352,18 +369,19 @@ impl MlDsaSigner {
         h.len() == t1.len()
     }
 
-    // Generate cryptographically secure random bytes
+    // Generate cryptographically secure random bytes using OS entropy (rand 0.10)
     fn secure_random(buf: &mut [u8]) -> Result<(), MlDsaError> {
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(1);
-        
-        let mut seed = COUNTER.fetch_add(1, Ordering::SeqCst);
-        
-        for i in 0..buf.len() {
-            buf[i] = (seed & 0xFF) as u8;
-            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+        let mut offset = 0;
+        while offset + 32 <= buf.len() {
+            let chunk: [u8; 32] = rand::random();
+            buf[offset..offset + 32].copy_from_slice(&chunk);
+            offset += 32;
         }
-
+        if offset < buf.len() {
+            let remaining = buf.len() - offset;
+            let tail: [u8; 32] = rand::random();
+            buf[offset..].copy_from_slice(&tail[..remaining]);
+        }
         Ok(())
     }
 }
@@ -536,46 +554,62 @@ impl FiduciaryCrypto {
         key_manager.generate_key(key_id)
     }
 
-    /// Sign message
+    /// Sign message using the internal MlDsaSigner for the given key.
+    ///
+    /// NOTE: The signing context uses timestamp=0 and nonce=[0] so that a matching
+    /// `verify()` call (which reconstructs the same deterministic context) will succeed.
+    /// A future upgrade to FIPS-204 ML-DSA should embed the context in the signature.
     pub fn sign(&self, message: &[u8], key_id: Option<&str>, domain: String, purpose: String) -> Result<MlDsaSignature, MlDsaError> {
-        // Get signer
         let key_manager = self.key_manager.lock().unwrap();
-        let signer = if let Some(key_id) = key_id {
-            key_manager.get_signer(key_id)
-                .ok_or_else(|| MlDsaError::KeyNotFound(key_id.to_string()))?
+        let signer_arc = if let Some(kid) = key_id {
+            key_manager.get_signer(kid)
+                .ok_or_else(|| MlDsaError::KeyNotFound(kid.to_string()))?
         } else {
             key_manager.get_default_signer()
                 .ok_or_else(|| MlDsaError::NoDefaultKey)?
         };
+        let signer = signer_arc.lock().unwrap();
 
-        // Create context - TODO: implement proper context management
-        let _ = (domain, purpose, key_id);
+        let context = CryptoContext {
+            domain,
+            purpose,
+            timestamp: 0,
+            nonce: [0u8; 32],
+        };
 
-        // Check compliance - TODO: implement proper compliance checking
-
-        // Sign message - TODO: implement proper signing
-        Ok(MlDsaSignature {
-            c_tilde: [0u8; 64],
-            z: vec![0u8; 32],
-            h: vec![0u8; 32],
-        }) // Placeholder signature
+        signer.sign(message, &context)
     }
 
-    /// Verify message
+    /// Verify a signature produced by `sign()` using the internal MlDsaSigner.
     pub fn verify(&self, message: &[u8], signature: &MlDsaSignature, key_id: Option<&str>, domain: String, purpose: String) -> Result<bool, MlDsaError> {
-        // Get signer
         let key_manager = self.key_manager.lock().unwrap();
-        let signer = if let Some(key_id) = key_id {
-            key_manager.get_signer(key_id)
-                .ok_or_else(|| MlDsaError::KeyNotFound(key_id.to_string()))?
+        let signer_arc = if let Some(kid) = key_id {
+            key_manager.get_signer(kid)
+                .ok_or_else(|| MlDsaError::KeyNotFound(kid.to_string()))?
         } else {
             key_manager.get_default_signer()
                 .ok_or_else(|| MlDsaError::NoDefaultKey)?
         };
+        let signer = signer_arc.lock().unwrap();
 
-        // Create context - TODO: implement proper context management
-        let _ = (domain, purpose, key_id);
-        Ok(true)
+        let context = CryptoContext {
+            domain,
+            purpose,
+            timestamp: 0,
+            nonce: [0u8; 32],
+        };
+
+        signer.verify(message, signature, &context)
+    }
+
+    /// Hash a token into a 32-byte digest using SHA3-512 (first 32 bytes).
+    pub fn hash_token(&self, token: &[u8]) -> Result<[u8; 32], MlDsaError> {
+        let mut hasher = Sha3_512::new();
+        hasher.update(token);
+        let digest = hasher.finalize();
+        let mut out = [0u8; 32];
+        out.copy_from_slice(&digest[..32]);
+        Ok(out)
     }
 
     /// List all keys

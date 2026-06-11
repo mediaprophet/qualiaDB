@@ -9,7 +9,7 @@
 ## Current State
 ```rust
 // Mock ECC parity check
-pub fn verify_ecc_parity(quin: &QualiaQuin) -> bool {
+pub fn verify_ecc_parity(quin: &NQuin) -> bool {
     let parity = quin.parity;
     if parity == u64::MAX {
         return false;
@@ -25,14 +25,14 @@ The parity field should be a XOR fold of all other Quin fields for integrity che
 
 1. **Calculate actual parity**:
    ```rust
-   pub fn calculate_parity(quin: &QualiaQuin) -> u64 {
+   pub fn calculate_parity(quin: &NQuin) -> u64 {
        quin.subject ^ quin.predicate ^ quin.object ^ quin.context ^ quin.metadata
    }
    ```
 
 2. **Verify parity**:
    ```rust
-   pub fn verify_ecc_parity(quin: &QualiaQuin) -> bool {
+   pub fn verify_ecc_parity(quin: &NQuin) -> bool {
        let expected_parity = calculate_parity(quin);
        quin.parity == expected_parity
    }
@@ -40,7 +40,7 @@ The parity field should be a XOR fold of all other Quin fields for integrity che
 
 3. **Add parity calculation on creation**:
    ```rust
-   impl QualiaQuin {
+   impl NQuin {
        pub fn new(
            subject: u64,
            predicate: u64,
@@ -48,7 +48,7 @@ The parity field should be a XOR fold of all other Quin fields for integrity che
            context: u64,
            metadata: u64,
        ) -> Self {
-           let quin = QualiaQuin {
+           let quin = NQuin {
                subject,
                predicate,
                object,
@@ -57,7 +57,7 @@ The parity field should be a XOR fold of all other Quin fields for integrity che
                parity: 0, // Will be calculated
            };
            let parity = calculate_parity(&quin);
-           QualiaQuin { parity, ..quin }
+           NQuin { parity, ..quin }
        }
    }
    ```
@@ -67,7 +67,7 @@ The parity field should be a XOR fold of all other Quin fields for integrity che
    ```rust
    use reed_solomon::Encoder;
 
-   pub fn calculate_reed_solomon_ecc(quin: &QualiaQuin) -> u64 {
+   pub fn calculate_reed_solomon_ecc(quin: &NQuin) -> u64 {
        let encoder = Encoder::new(2); // 2 parity bytes
        let data = [
            quin.subject.to_le_bytes(),
@@ -86,7 +86,7 @@ The parity field should be a XOR fold of all other Quin fields for integrity che
 
 1. Implement `calculate_parity()` function
 2. Update `verify_ecc_parity()` to use real calculation
-3. Add `QualiaQuin::new()` constructor with automatic parity calculation
+3. Add `NQuin::new()` constructor with automatic parity calculation
 4. Update all Quin creation sites to use constructor
 5. Add Reed-Solomon ECC (optional but recommended for stronger protection)
 6. Write comprehensive tests:
@@ -108,7 +108,7 @@ The parity field should be a XOR fold of all other Quin fields for integrity che
 - `crates/qualia-core-db/src/crdt.rs` (Quin usage)
 - `crates/qualia-core-db/src/storage.rs` (Quin persistence)
 - `crates/qualia-core-db/src/wal.rs` (Quin logging)
-- All files creating QualiaQuin instances
+- All files creating NQuin instances
 
 ## Estimated Complexity
 - Basic XOR parity: 0.5-1 day

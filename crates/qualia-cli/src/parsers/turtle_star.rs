@@ -7,9 +7,9 @@
 //! - Fixed-size stack array [StackFrame; 16] for nested embedded triples
 //! - No heap allocations in hot path
 //! - Virtual IDs minted via generate_embedded_triple_id()
-//! - Context stored separately in QualiaQuin field (not in Virtual ID hash)
+//! - Context stored separately in NQuin field (not in Virtual ID hash)
 
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 use qualia_core_db::lexicon::{generate_embedded_triple_id, generate_60bit_token};
 use qualia_core_db::rdf_star::{RdfStarParser, RdfStarParseError};
 use std::io::{BufRead, BufReader, Read};
@@ -296,11 +296,11 @@ pub fn parse_turtle_star_stream<R: Read>(
             // Parse embedded triple using stack-based parser
             if let Ok((virtual_id, components)) = parser.parse_embedded_triple(bytes) {
                 // Emit the embedded triple as a Quin
-                sorter.push(QualiaQuin {
+                sorter.push(NQuin {
                     subject: components[0],
                     predicate: components[1],
                     object: components[2],
-                    context: context_hash, // Context in QualiaQuin field, not Virtual ID
+                    context: context_hash, // Context in NQuin field, not Virtual ID
                     metadata: 0b10 << 61,
                     parity: 0,
                 })?;
@@ -313,7 +313,7 @@ pub fn parse_turtle_star_stream<R: Read>(
         } else {
             // Parse regular triple
             if let Ok((subject, predicate, object)) = parser.parse_triple(bytes) {
-                sorter.push(QualiaQuin {
+                sorter.push(NQuin {
                     subject,
                     predicate,
                     object,

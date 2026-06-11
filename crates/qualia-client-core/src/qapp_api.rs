@@ -4,7 +4,7 @@
 //! to the FRB wrapper that copies geometry into a Dart `Float32List`.
 
 use qualia_core_db::{
-    daemon_graph, mini_parser, q_hash, wal::WriteAheadLog, webizen_bytecode, QualiaQuin,
+    daemon_graph, mini_parser, q_hash, wal::WriteAheadLog, webizen_bytecode, NQuin,
 };
 
 use crate::qapp_manifest::{get_compiled_capability, CompiledCapability};
@@ -89,7 +89,7 @@ fn wal_path() -> Option<String> {
 
 /// Append a conduct-violation Quin when a qapp breaches its compiled capability scope.
 pub fn append_sanctuary_violation(app_id_hash: u64, reason: &'static str) {
-    let mut quin = QualiaQuin::new_conduct_violation(reason.as_bytes());
+    let mut quin = NQuin::new_conduct_violation(reason.as_bytes());
     quin.subject = app_id_hash;
     quin.predicate = q_hash("q42:conductViolation");
     quin.context = q_hash("q42:qappSanctuaryOverride");
@@ -104,7 +104,7 @@ pub fn append_sanctuary_violation(app_id_hash: u64, reason: &'static str) {
 
 /// Map matched Quins into a flat `f32` lane for Dart `Float32List` rendering.
 /// Uses `f32::from_bits` on the low 32 bits — no scalar tagging in Quin objects.
-pub fn translate_quin_to_geometry(quin: &QualiaQuin, out: &mut [f32], base: usize) -> usize {
+pub fn translate_quin_to_geometry(quin: &NQuin, out: &mut [f32], base: usize) -> usize {
     if base + FLOATS_PER_QUIN > out.len() {
         return 0;
     }
@@ -118,7 +118,7 @@ pub fn translate_quin_to_geometry(quin: &QualiaQuin, out: &mut [f32], base: usiz
 }
 
 #[inline]
-fn result_passes_clearance(quin: &QualiaQuin, clearance: u8) -> bool {
+fn result_passes_clearance(quin: &NQuin, clearance: u8) -> bool {
     quin.get_sensitivity_byte() <= clearance
 }
 
@@ -140,7 +140,7 @@ pub fn execute_scoped_query_in_place(
     let graph_guard = daemon_graph::graph_read_guard();
     let db = graph_guard.as_slice();
 
-    let mut result_buffer = [QualiaQuin::default(); MAX_QUERY_RESULTS];
+    let mut result_buffer = [NQuin::default(); MAX_QUERY_RESULTS];
     let (match_count, _vm_cycles) =
         webizen_bytecode::execute_program(query_bytecode, db, &mut result_buffer).map_err(|e| {
             match e {
@@ -304,7 +304,7 @@ pub fn eval_comorbidity_json_from_daemon(
 pub fn eval_comorbidity_json(
     patient_did_hash: u64,
     target_organ_hash: u64,
-    graph_quins: &[qualia_core_db::QualiaQuin],
+    graph_quins: &[qualia_core_db::NQuin],
 ) -> Result<String, String> {
     use qualia_core_db::comorbidity_eval::{
         eval_comorbidity, ComorbidityVerdict, MAX_COMORBIDITY_VERDICTS,

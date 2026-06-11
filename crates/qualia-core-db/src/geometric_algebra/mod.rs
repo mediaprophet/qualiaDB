@@ -85,11 +85,11 @@ pub mod utils {
 /// Geometric Algebra operations for QualiaDB integration
 pub mod qualia_integration {
     use super::*;
-    use crate::QualiaQuin;
+    use crate::NQuin;
     
-    /// Convert multivector to QualiaQuin representation
-    pub fn multivector_to_quin(mv: &Multivector, context: u64) -> QualiaQuin {
-        // Pack multivector coefficients into QualiaQuin
+    /// Convert multivector to NQuin representation
+    pub fn multivector_to_quin(mv: &Multivector, context: u64) -> NQuin {
+        // Pack multivector coefficients into NQuin
         // This is a simplified packing - full implementation would handle all grades
         
         let scalar_bytes = mv.get_scalar().to_le_bytes();
@@ -102,7 +102,7 @@ pub mod qualia_integration {
         // Combine hashes for multivector representation
         let combined_hash = scalar_hash.wrapping_mul(31).wrapping_add(vector_hash);
         
-        QualiaQuin {
+        NQuin {
             subject: combined_hash,
             predicate: q_hash("q42:multivector"),
             object: q_hash("geometric_algebra"),
@@ -112,8 +112,8 @@ pub mod qualia_integration {
         }
     }
     
-    /// Extract multivector from QualiaQuin
-    pub fn quin_to_multivector(quin: &QualiaQuin) -> Option<Multivector> {
+    /// Extract multivector from NQuin
+    pub fn quin_to_multivector(quin: &NQuin) -> Option<Multivector> {
         // This is a simplified extraction - full implementation would
         // reconstruct the multivector from the stored hash
         if quin.predicate == q_hash("q42:multivector") {
@@ -129,8 +129,8 @@ pub mod qualia_integration {
         operand_a: u64,
         operand_b: u64,
         context: u64,
-    ) -> QualiaQuin {
-        QualiaQuin {
+    ) -> NQuin {
+        NQuin {
             subject: operand_a,
             predicate: q_hash(&format!("q42:ga:{}", operation)),
             object: operand_b,

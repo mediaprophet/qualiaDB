@@ -6,7 +6,7 @@
 //!
 //! # Quin encoding
 //!
-//! Each catalog entry can be encoded as a set of `QualiaQuin`s for first-class
+//! Each catalog entry can be encoded as a set of `NQuin`s for first-class
 //! graph membership. Predicate convention:
 //!
 //! | Predicate string         | Meaning                        |
@@ -25,7 +25,7 @@
 
 use crate::llm_agent::AgentBackend;
 use crate::profiles::CapabilityProfile;
-use crate::{q_hash, QualiaQuin};
+use crate::{q_hash, NQuin};
 use serde::{Deserialize, Serialize};
 
 // ─── Inline type tag for object field (resolver.rs convention) ───────────────
@@ -132,11 +132,11 @@ impl LLMResource {
         self.context_window
             .unwrap_or(if self.is_multimodal() { 8192 } else { 4096 })
     }
-    /// Encode this catalog entry as a set of `QualiaQuin`s.
+    /// Encode this catalog entry as a set of `NQuin`s.
     ///
     /// Returns Quins using the `catalog:llm` context graph.  Vec allocation is
     /// intentional — this runs once at catalog load, not in a hot evaluator loop.
-    pub fn to_quins(&self) -> Vec<QualiaQuin> {
+    pub fn to_quins(&self) -> Vec<NQuin> {
         let subject = q_hash(&format!("llm:{}", self.id));
         let mut out = Vec::with_capacity(8);
 
@@ -229,10 +229,10 @@ impl LLMResource {
         out
     }
 
-    /// Generate a provenance `QualiaQuin` recording a completed download event.
+    /// Generate a provenance `NQuin` recording a completed download event.
     ///
     /// Written to the WAL immediately after the file is saved to disk.
-    pub fn provenance_quin(&self, timestamp_unix: u64, local_path: &str) -> QualiaQuin {
+    pub fn provenance_quin(&self, timestamp_unix: u64, local_path: &str) -> NQuin {
         let subject = q_hash(&format!("download:{}", self.id));
         let predicate = q_hash("prov:wasGeneratedBy");
         let object = q_hash(local_path);
@@ -240,7 +240,7 @@ impl LLMResource {
         // Store lower 32 bits of Unix timestamp in metadata
         let metadata = timestamp_unix & 0xFFFF_FFFF;
         let parity = subject ^ predicate ^ object ^ context ^ metadata;
-        QualiaQuin {
+        NQuin {
             subject,
             predicate,
             object,
@@ -251,13 +251,13 @@ impl LLMResource {
     }
 
     /// Generate a supplementary provenance Quin recording the source URL.
-    pub fn source_url_quin(&self) -> Option<QualiaQuin> {
+    pub fn source_url_quin(&self) -> Option<NQuin> {
         let url = self.download.resolved_url()?;
         let subject = q_hash(&format!("download:{}", self.id));
         let predicate = q_hash("prov:hadPrimarySource");
         let object = q_hash(&url);
         let parity = subject ^ predicate ^ object ^ CTX_PROV;
-        Some(QualiaQuin {
+        Some(NQuin {
             subject,
             predicate,
             object,
@@ -304,9 +304,9 @@ impl LLMResource {
         }
     }
 
-    fn quin(subject: u64, predicate: u64, object: u64, context: u64) -> QualiaQuin {
+    fn quin(subject: u64, predicate: u64, object: u64, context: u64) -> NQuin {
         let parity = subject ^ predicate ^ object ^ context;
-        QualiaQuin {
+        NQuin {
             subject,
             predicate,
             object,
@@ -339,8 +339,8 @@ pub struct OntologyResource {
 }
 
 impl OntologyResource {
-    /// Encode this ontology entry as `QualiaQuin`s in the `catalog:ontology` context.
-    pub fn to_quins(&self) -> Vec<QualiaQuin> {
+    /// Encode this ontology entry as `NQuin`s in the `catalog:ontology` context.
+    pub fn to_quins(&self) -> Vec<NQuin> {
         let subject = q_hash(&format!("ont:{}", self.id));
         let mut out = Vec::with_capacity(5);
 
@@ -392,13 +392,13 @@ impl OntologyResource {
     }
 
     /// Provenance Quin for a completed ontology import.
-    pub fn provenance_quin(&self, timestamp_unix: u64, local_path: &str) -> QualiaQuin {
+    pub fn provenance_quin(&self, timestamp_unix: u64, local_path: &str) -> NQuin {
         let subject = q_hash(&format!("import:{}", self.id));
         let predicate = q_hash("prov:wasGeneratedBy");
         let object = q_hash(local_path);
         let metadata = timestamp_unix & 0xFFFF_FFFF;
         let parity = subject ^ predicate ^ object ^ CTX_PROV ^ metadata;
-        QualiaQuin {
+        NQuin {
             subject,
             predicate,
             object,
@@ -408,9 +408,9 @@ impl OntologyResource {
         }
     }
 
-    fn quin(subject: u64, predicate: u64, object: u64, context: u64) -> QualiaQuin {
+    fn quin(subject: u64, predicate: u64, object: u64, context: u64) -> NQuin {
         let parity = subject ^ predicate ^ object ^ context;
-        QualiaQuin {
+        NQuin {
             subject,
             predicate,
             object,

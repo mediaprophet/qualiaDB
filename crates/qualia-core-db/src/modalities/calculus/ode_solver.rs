@@ -21,7 +21,7 @@
 //! ```
 
 use crate::modalities::calculus::gpu::{GpuIntegrator, GpuError, PlatformGpuIntegrator};
-use crate::QualiaQuin;
+use crate::NQuin;
 
 // ─── BVP Convergence (Shooting Method) ──────────────────────────────────────────
 
@@ -592,7 +592,7 @@ impl<S: OdeSystem> Rk4Solver<S> {
     /// # Returns
     ///
     /// New Quin with updated ODE state
-    pub fn step_quin(&mut self, quin: QualiaQuin, h: f64) -> QualiaQuin {
+    pub fn step_quin(&mut self, quin: NQuin, h: f64) -> NQuin {
         let (t, y) = extract_ode_state(&quin);
         let y_new = self.step(t, y, h);
         let t_new = t + h;
@@ -609,9 +609,9 @@ impl<S: OdeSystem> Rk4Solver<S> {
     pub fn step_quin_gpu(
         &mut self,
         integrator: &mut PlatformGpuIntegrator,
-        quin: QualiaQuin,
+        quin: NQuin,
         h: f64,
-    ) -> Result<QualiaQuin, GpuError> {
+    ) -> Result<NQuin, GpuError> {
         let (t, y) = extract_ode_state(&quin);
         let y_new = self.step_gpu(integrator, t, y, h)?;
         let t_new = t + h;
@@ -641,8 +641,8 @@ pub fn create_ode_step_quin(
     t: f64,
     y: f64,
     step_size: f32,
-) -> QualiaQuin {
-    let mut quin = QualiaQuin::default();
+) -> NQuin {
+    let mut quin = NQuin::default();
     quin.subject = job_id;
     quin.object = y.to_bits() as u64; // Pack state into object field
     quin.metadata = t.to_bits(); // Pack time into metadata field
@@ -654,14 +654,14 @@ pub fn create_ode_step_quin(
 }
 
 /// Extracts ODE state from a Quin
-pub fn extract_ode_state(quin: &QualiaQuin) -> (f64, f64) {
+pub fn extract_ode_state(quin: &NQuin) -> (f64, f64) {
     let y = f64::from_bits(quin.object);
     let t = f64::from_bits(quin.metadata);
     (t, y)
 }
 
 /// Packs ODE state into a Quin
-pub fn pack_ode_state(quin: &mut QualiaQuin, t: f64, y: f64) {
+pub fn pack_ode_state(quin: &mut NQuin, t: f64, y: f64) {
     quin.object = y.to_bits() as u64;
     quin.metadata = t.to_bits();
 }
@@ -964,7 +964,7 @@ mod tests {
 
     #[test]
     fn test_ode_quin_roundtrip() {
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         pack_ode_state(&mut quin, 3.14, 2.718);
         
         let (t, y) = extract_ode_state(&quin);
@@ -977,7 +977,7 @@ mod tests {
         let decay = ExponentialDecay::new(0.5);
         let mut solver = Rk4Solver::new(decay, 0.01);
         
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         pack_ode_state(&mut quin, 0.0, 1.0);
         
         let result_quin = solver.step_quin(quin, 0.01);
@@ -998,7 +998,7 @@ mod tests {
         // validates the API structure but falls back to CPU
         // In production, this would use actual GPU integration
         
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         pack_ode_state(&mut quin, 0.0, 1.0);
         
         // For now, we'll test the CPU fallback path
@@ -1015,7 +1015,7 @@ mod tests {
         let decay = ExponentialDecay::new(0.5);
         let mut solver = Rk4Solver::new(decay, 0.01);
         
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         pack_ode_state(&mut quin, 0.0, 1.0);
         
         // Chain 10 steps

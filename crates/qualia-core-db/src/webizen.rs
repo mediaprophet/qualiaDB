@@ -5,7 +5,7 @@ use crate::modalities::logic::deontic::{
 };
 use crate::modalities::{asp, dialectical, dl, epistemic, linear, paraconsistent, probabilistic};
 use crate::domains::financial::tax_schema::TaxRuleSchema;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 macro_rules! vm_log {
     ($($arg:tt)*) => {
@@ -40,9 +40,9 @@ const RECENT_SLOT_RING: usize = 512;
 pub struct SlgArena {
     // We will use a safe Vec wrapper here since it is allocated strictly once and never grown.
     #[cfg(feature = "alloc_buffers")]
-    buffer: alloc::vec::Vec<QualiaQuin>,
+    buffer: alloc::vec::Vec<NQuin>,
     #[cfg(not(feature = "alloc_buffers"))]
-    buffer: std::vec::Vec<QualiaQuin>,
+    buffer: std::vec::Vec<NQuin>,
     head_pointer: usize,
     recent_slots: [usize; RECENT_SLOT_RING],
     recent_slot_head: usize,
@@ -68,7 +68,7 @@ impl SlgArena {
         
         // Pre-fill the ring buffer with empty Quins
         for _ in 0..MAX_SLOTS {
-            buffer.push(QualiaQuin {
+            buffer.push(NQuin {
                 subject: 0,
                 predicate: 0,
                 object: 0,
@@ -103,7 +103,7 @@ impl SlgArena {
     }
 
     /// Collect recently written Quins with valid ECC parity (bounded scan, zero heap).
-    pub fn collect_active_quins(&self, out: &mut [QualiaQuin]) -> usize {
+    pub fn collect_active_quins(&self, out: &mut [NQuin]) -> usize {
         let mut n = 0usize;
         let scan = RECENT_SLOT_RING.min(self.recent_slot_head);
         for off in 0..scan {
@@ -147,7 +147,7 @@ impl SlgArena {
     }
 
     /// Checks the SLG Arena for a previously proven sub-goal.
-    pub fn check_table(&self, subject: u64, predicate: u64, object: u64) -> Option<QualiaQuin> {
+    pub fn check_table(&self, subject: u64, predicate: u64, object: u64) -> Option<NQuin> {
         let slot = fast_hash_goal(subject, predicate, object) % MAX_SLOTS;
 
         let cached = self.buffer[slot];
@@ -161,7 +161,7 @@ impl SlgArena {
     /// Writes a proven sub-goal into the SLG Arena.
     /// If the slot is occupied (hash collision) or we hit the boundary,
     /// it acts as a FIFO ring-buffer and strictly overwrites the oldest cache entries.
-    pub fn write_table(&mut self, result: QualiaQuin) {
+    pub fn write_table(&mut self, result: NQuin) {
         let slot = fast_hash_goal(result.subject, result.predicate, result.object) % MAX_SLOTS;
 
         // Cyclic Eviction Policy: Overwrite whatever is in the slot natively
@@ -178,7 +178,7 @@ impl SlgArena {
         subject: u64,
         predicate: u64,
         object: u64,
-    ) -> Option<&mut QualiaQuin> {
+    ) -> Option<&mut NQuin> {
         let scan = RECENT_SLOT_RING.min(self.recent_slot_head);
         for off in 0..scan {
             let ring_idx = (self.recent_slot_head + RECENT_SLOT_RING - 1 - off) % RECENT_SLOT_RING;
@@ -393,8 +393,8 @@ pub struct VmFrame {
 }
 
 #[inline]
-fn frame_to_quin(frame: &VmFrame) -> QualiaQuin {
-    let mut q = QualiaQuin {
+fn frame_to_quin(frame: &VmFrame) -> NQuin {
+    let mut q = NQuin {
         subject: frame.subject_reg,
         predicate: frame.predicate_reg,
         object: frame.object_reg,
@@ -422,7 +422,7 @@ fn unify_frame(arena: &SlgArena, frame: &mut VmFrame) -> bool {
         return true;
     }
 
-    let mut scratch = [QualiaQuin::default(); 256];
+    let mut scratch = [NQuin::default(); 256];
     let count = arena.collect_active_quins(&mut scratch);
     for q in &scratch[..count] {
         let subject_ok = frame.subject_reg == 0 || q.subject == frame.subject_reg;
@@ -446,7 +446,7 @@ pub fn execute_vm_frame(
     arena: &mut SlgArena,
     bytecode: &[SlgOpcode],
     frame: &mut VmFrame,
-) -> Option<QualiaQuin> {
+) -> Option<NQuin> {
     let mut instruction_pointer = 0;
 
     while instruction_pointer < bytecode.len() {
@@ -463,7 +463,7 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::CheckDefeaters => {
-                let mut scratch = [QualiaQuin::default(); 512];
+                let mut scratch = [NQuin::default(); 512];
                 let count = arena.collect_active_quins(&mut scratch);
                 let mut fp_buf = [0u64; MAX_DEFEATER_SLOTS];
                 let fp_count = harvest_defeater_fingerprints(&scratch[..count], &mut fp_buf);
@@ -1083,7 +1083,7 @@ pub fn execute_vm_frame(
                 vm_log!("[Webizen] NativeIsotopeDistribution evaluated");
             }
             SlgOpcode::NativeDeonticEval => {
-                let mut scratch = [QualiaQuin::default(); 512];
+                let mut scratch = [NQuin::default(); 512];
                 let count = arena.collect_active_quins(&mut scratch);
                 let mut verdicts = [DeonticVerdict::default(); 64];
                 let vcount =
@@ -1102,10 +1102,10 @@ pub fn execute_vm_frame(
                 vm_log!("[Webizen] NativeDeonticEval: {} norms evaluated", vcount);
             }
             SlgOpcode::NativeEpistemicEval(min_certainty) => {
-                let mut scratch = [QualiaQuin::default(); 512];
+                let mut scratch = [NQuin::default(); 512];
                 let count = arena.collect_active_quins(&mut scratch);
                 let mut verdicts = [epistemic::EpistemicVerdict {
-                    claim: QualiaQuin::default(),
+                    claim: NQuin::default(),
                     status: epistemic::EpistemicStatus::Skipped,
                     certainty: 0,
                 }; 64];
@@ -1150,13 +1150,13 @@ pub fn execute_vm_frame(
                 frame.context_reg = out_worlds[0];
             }
             SlgOpcode::NativeParaconsistentIsolate => {
-                let mut scratch = [QualiaQuin::default(); 64];
+                let mut scratch = [NQuin::default(); 64];
                 let count = arena.collect_active_quins(&mut scratch);
                 if count == 0 {
                     return None;
                 }
-                let mut consistent = [QualiaQuin::default(); 64];
-                let mut isolated = [QualiaQuin::default(); 64];
+                let mut consistent = [NQuin::default(); 64];
+                let mut isolated = [NQuin::default(); 64];
                 let routed = paraconsistent::route_paraconsistent(
                     &scratch[..count],
                     &mut consistent,
@@ -1171,7 +1171,7 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeDialecticalSynthesis => {
-                let mut scratch = [QualiaQuin::default(); 64];
+                let mut scratch = [NQuin::default(); 64];
                 let count = arena.collect_active_quins(&mut scratch);
                 if count < 2 {
                     return None;
@@ -1417,8 +1417,8 @@ pub struct AgreementDID {
 
 impl AgreementDID {
     /// Compiles a ratified agreement into hardware-aligned Super-Quins.
-    pub fn compile_to_super_quins(&self) -> [QualiaQuin; 16] {
-        let mut buffer = [QualiaQuin {
+    pub fn compile_to_super_quins(&self) -> [NQuin; 16] {
+        let mut buffer = [NQuin {
             subject: 0,
             predicate: 0,
             object: 0,
@@ -1437,7 +1437,7 @@ impl AgreementDID {
 
         for i in 0..self.num_agents as usize {
             if idx < 16 {
-                buffer[idx] = QualiaQuin {
+                buffer[idx] = NQuin {
                     subject: self.principal,
                     predicate: has_guardian,
                     object: self.agents[i],
@@ -1452,7 +1452,7 @@ impl AgreementDID {
 
         for i in 0..self.num_agents as usize {
             if idx < 16 {
-                buffer[idx] = QualiaQuin {
+                buffer[idx] = NQuin {
                     subject: self.agreement_id,
                     predicate: has_domain_scope,
                     object: self.domain_id,
@@ -1465,7 +1465,7 @@ impl AgreementDID {
         }
 
         if idx < 16 {
-            buffer[idx] = QualiaQuin {
+            buffer[idx] = NQuin {
                 subject: self.agreement_id,
                 predicate: requires_consensus,
                 object: self.threshold as u64,
@@ -1518,11 +1518,11 @@ mod tests {
         let mut mock_vm = crate::logic::WebizenVM::new();
         mock_vm.registers[0] = Some(999); // Mock execution state
 
-        let suspended_tx = mock_vm.flatten_to_suspended(100, 2, crate::QualiaQuin::default());
+        let suspended_tx = mock_vm.flatten_to_suspended(100, 2, crate::NQuin::default());
         assert!(crdt_queue.push(suspended_tx).is_ok());
 
         // First signature token arrives via WebRTC
-        let token_1 = crate::QualiaQuin {
+        let token_1 = crate::NQuin {
             subject: 300,
             predicate: crate::q_hash("q42:issuesConsentToken"),
             object: 100,
@@ -1533,7 +1533,7 @@ mod tests {
         assert!(crdt_queue.apply_consensus_token(&token_1).is_none()); // Threshold not met
 
         // Second signature token arrives via WebRTC
-        let token_2 = crate::QualiaQuin {
+        let token_2 = crate::NQuin {
             subject: 400,
             predicate: crate::q_hash("q42:issuesConsentToken"),
             object: 100,
@@ -1599,7 +1599,7 @@ mod tests {
     #[test]
     fn unify_binds_frame_from_arena_fact() {
         let mut arena = SlgArena::new();
-        let fact = QualiaQuin {
+        let fact = NQuin {
             subject: 10,
             predicate: 20,
             object: 30,

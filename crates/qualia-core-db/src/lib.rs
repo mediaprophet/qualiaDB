@@ -17,6 +17,7 @@ pub mod ingest;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod local_scheduler;
 pub mod llm_agent;
+pub mod lora;
 pub mod modalities;
 pub mod neuro_symbolic_sieve;
 pub mod profiles;
@@ -144,7 +145,7 @@ pub const CAPABILITY_REGISTRY: &[&str] = &[
     serde::Serialize,
     serde::Deserialize,
 )]
-pub struct QualiaQuin {
+pub struct NQuin {
     /// Subject identifier code reference index
     pub subject: u64,
     /// Predicate relation code reference index
@@ -159,7 +160,7 @@ pub struct QualiaQuin {
     pub parity: u64,
 }
 
-impl QualiaQuin {
+impl NQuin {
     const NESTED_BIT_MASK: u64 = 1 << 63;
 
     #[inline(always)]
@@ -232,22 +233,68 @@ impl QualiaQuin {
         self.metadata & 0xFFFF_FFFF
     }
 
+    /// XOR parity over the five semantic fields. Store in `parity` at creation time;
+    /// call `verify_ecc_parity()` to confirm integrity.
+    #[inline(always)]
+    pub fn calculate_parity(subject: u64, predicate: u64, object: u64, context: u64, metadata: u64) -> u64 {
+        subject ^ predicate ^ object ^ context ^ metadata
+    }
+
     #[inline(always)]
     pub fn verify_ecc_parity(&self) -> bool {
-        // Mock ECC parity check. In real implementation, this would compute CRC-64.
-        // For testing, we just assume it's valid unless parity is u64::MAX.
-        self.parity != u64::MAX
+        self.parity == Self::calculate_parity(self.subject, self.predicate, self.object, self.context, self.metadata)
+    }
+
+    // ── LoRA context-trigger helpers (bits 63–48 of `metadata`) ─────────────
+
+    /// Encode a LoRA context trigger into the `metadata` field.
+    ///
+    /// Bits 63–60: `ContextType` (4 bits)
+    /// Bits 59–56: `adapter_id` (4 bits, 0–15)
+    /// Bits 55–48: `confidence` (8 bits, 0 = 0.0, 255 = 1.0)
+    /// Bits 47–0:  unchanged
+    ///
+    /// Call `recalculate_parity()` afterwards if parity must stay valid.
+    #[inline]
+    pub fn set_context_trigger(&mut self, context_bits: u8, adapter_id: u8, confidence: f32) {
+        let conf_u  = (confidence.clamp(0.0, 1.0) * 255.0) as u64;
+        let ctx_u   = (context_bits & 0xF) as u64;
+        let adpt_u  = (adapter_id   & 0xF) as u64;
+        // Preserve lower 48 bits; overwrite upper 16
+        self.metadata = (self.metadata & 0x0000_FFFF_FFFF_FFFF)
+                      | (ctx_u  << 60)
+                      | (adpt_u << 56)
+                      | (conf_u << 48);
+    }
+
+    /// Decode the LoRA context trigger from the `metadata` field.
+    ///
+    /// Returns `(context_bits, adapter_id, confidence_0_to_1)`.
+    #[inline]
+    pub fn get_context_trigger(&self) -> (u8, u8, f32) {
+        let ctx_bits  = ((self.metadata >> 60) & 0xF)  as u8;
+        let adapter_id = ((self.metadata >> 56) & 0xF) as u8;
+        let conf_u    = ((self.metadata >> 48) & 0xFF) as f32 / 255.0;
+        (ctx_bits, adapter_id, conf_u)
+    }
+
+    /// Recalculate and store ECC parity after mutating any field.
+    #[inline(always)]
+    pub fn recalculate_parity(&mut self) {
+        self.parity = Self::calculate_parity(
+            self.subject, self.predicate, self.object, self.context, self.metadata,
+        );
     }
 
     #[inline(always)]
     pub fn new_conduct_violation(reason: &[u8]) -> Self {
         let mut quin = Self::default();
-        quin.predicate = 0x42_0000_0000_0000; // Fake hash for q42:conductViolation
-                                              // Truncate reason to 8 bytes for object for simplicity
+        quin.predicate = 0x42_0000_0000_0000; // q42:conductViolation
         let mut obj_bytes = [0u8; 8];
         let len = core::cmp::min(reason.len(), 8);
         obj_bytes[..len].copy_from_slice(&reason[..len]);
         quin.object = u64::from_le_bytes(obj_bytes);
+        quin.parity = Self::calculate_parity(quin.subject, quin.predicate, quin.object, quin.context, quin.metadata);
         quin
     }
 }
@@ -262,7 +309,7 @@ pub trait QuinPointerExt {
     fn extract_byte_offset(&self) -> u64;
 }
 
-impl QuinPointerExt for QualiaQuin {
+impl QuinPointerExt for NQuin {
     #[inline(always)]
     fn extract_modality_flag(&self) -> u8 {
         (self.object >> 60) as u8
@@ -294,7 +341,7 @@ pub struct QualiaSuperBlock {
     /// Fixed trailing block buffer space to force page-header normalization
     pub layout_padding: [u8; 120], // Adjusted padding to maintain exactly 160 bytes header
     /// Contiguous un-padded sequential database array zones
-    pub quin_ledger: [QualiaQuin; QUINS_PER_BLOCK],
+    pub quin_ledger: [NQuin; QUINS_PER_BLOCK],
 }
 
 pub mod archive;
@@ -358,7 +405,7 @@ pub struct QuinIncrementalScanner<'a> {
 }
 
 impl<'a> Stream for QuinIncrementalScanner<'a> {
-    type Item = Result<Vec<QualiaQuin>, std::io::Error>;
+    type Item = Result<Vec<NQuin>, std::io::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.current_cursor >= self.block_sector_offsets.len() {
@@ -455,7 +502,7 @@ impl<'a> Stream for QuinIncrementalScanner<'a> {
         self.current_cursor += 1;
         let elements_in_frame = self.allocated_working_buffer.active_quin_count as usize;
 
-        // Cannot take a slice of an unaligned array. However, `QualiaQuin` is 40 bytes, which is a multiple of 8.
+        // Cannot take a slice of an unaligned array. However, `NQuin` is 40 bytes, which is a multiple of 8.
         // But `#[repr(C, packed)]` causes the elements in `quin_ledger` to be tightly packed with 1-byte alignment.
         // But since it's 40 bytes (multiple of 8), they end up exactly where they would be if aligned to 8!
         // We can safely create a Vec by copying element by element to avoid unaligned reference warnings, or just use `to_vec()` if it compiles.
@@ -564,7 +611,7 @@ pub const fn q_hash(s: &str) -> u64 {
 #[macro_export]
 macro_rules! q_turtle {
     ($s:expr, $p:expr, $o:expr) => {
-        $crate::QualiaQuin {
+        $crate::NQuin {
             subject: $crate::q_hash($s),
             predicate: $crate::q_hash($p),
             object: $crate::q_hash($o),
@@ -607,7 +654,7 @@ mod tests {
     #[test]
     fn qualia_logic_val() {
         use crate::modalities::logic::core::{WebizenCompiler, WebizenOpcode, WebizenVM};
-        let q = QualiaQuin {
+        let q = NQuin {
             subject: 0,
             predicate: 100,
             object: 18,
@@ -634,7 +681,7 @@ mod tests {
         use crate::modalities::logic::core::{WebizenOpcode, WebizenVM};
 
         // 0b11 << 61 signals SpatiotemporalAmbiguous for bounding logic
-        let q = QualiaQuin {
+        let q = NQuin {
             subject: 0,
             predicate: 0,
             object: 0,
@@ -660,7 +707,7 @@ mod tests {
     #[test]
     fn qualia_ldp_rdf_star_mapping() {
         use crate::solid_ldp::SolidLdpFacade;
-        let q = QualiaQuin {
+        let q = NQuin {
             subject: 1,
             predicate: 2,
             object: 3,
@@ -681,7 +728,7 @@ mod tests {
     #[test]
     fn qualia_vector_density() {
         use crate::geometric::{extract_spatial_projection, BoundingHull, VectorSectorMap};
-        let q = QualiaQuin {
+        let q = NQuin {
             subject: 0,
             predicate: 0,
             object: 0,
@@ -723,15 +770,15 @@ mod tests {
     #[test]
     fn qualia_validate_quin() {
         assert_eq!(
-            std::mem::size_of::<QualiaQuin>(),
+            std::mem::size_of::<NQuin>(),
             48,
-            "QualiaQuin must be exactly 48 bytes"
+            "NQuin must be exactly 48 bytes"
         );
     }
 
     #[test]
     fn qualia_validate_ecc() {
-        let mut q = QualiaQuin {
+        let mut q = NQuin {
             subject: 0,
             predicate: 0,
             object: 0,
@@ -766,7 +813,7 @@ mod tests {
     #[test]
     fn qualia_validate_routing() {
         // Test 1: Passthrough Standard
-        let q1 = QualiaQuin {
+        let q1 = NQuin {
             subject: 0,
             predicate: 0,
             object: 0,
@@ -781,7 +828,7 @@ mod tests {
         assert_eq!(q1.extract_clean_metadata_value(), 12345);
 
         // Test 2: Permissive Commons
-        let q2 = QualiaQuin {
+        let q2 = NQuin {
             subject: 0,
             predicate: 0,
             object: 0,
@@ -796,7 +843,7 @@ mod tests {
         assert_eq!(q2.extract_clean_metadata_value(), 67890);
 
         // Test 3: Bilateral Micro Commons
-        let q3 = QualiaQuin {
+        let q3 = NQuin {
             subject: 0,
             predicate: 0,
             object: 0,
@@ -811,7 +858,7 @@ mod tests {
         assert_eq!(q3.extract_clean_metadata_value(), 42);
 
         // Test 4: Spatiotemporal Ambiguous
-        let q4 = QualiaQuin {
+        let q4 = NQuin {
             subject: 0,
             predicate: 0,
             object: 0,
@@ -846,3 +893,4 @@ pub mod webizen_sync;
 pub mod web_civics;
 
 pub mod domains;
+pub mod solvers;

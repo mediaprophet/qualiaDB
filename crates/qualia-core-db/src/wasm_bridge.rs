@@ -230,7 +230,7 @@ pub fn check_drug_interactions_wasm(val: JsValue) -> Result<JsValue, JsValue> {
 pub fn predict_receptor_binding_wasm() -> f64 {
     // Molecule and receptor Quins would be loaded from the OPFS graph in production.
     // Returns binding affinity in kcal/mol (more negative = stronger binding).
-    let demo_molecule = crate::QualiaQuin {
+    let demo_molecule = crate::NQuin {
         subject: crate::q_hash("demo:ligand"),
         predicate: crate::q_hash("HAS_ELECTRON"),
         object: 0,
@@ -238,7 +238,7 @@ pub fn predict_receptor_binding_wasm() -> f64 {
         metadata: 0,
         parity: 0,
     };
-    let demo_receptor = crate::QualiaQuin {
+    let demo_receptor = crate::NQuin {
         subject: crate::q_hash("demo:receptor"),
         predicate: crate::q_hash("HAS_ELECTRON"),
         object: 0,
@@ -523,12 +523,12 @@ pub fn execute_ntriples_query(query: &str, db_bytes: &[u8], max_results: usize) 
     }
     let quins = unsafe {
         std::slice::from_raw_parts(
-            db_bytes.as_ptr() as *const crate::QualiaQuin,
+            db_bytes.as_ptr() as *const crate::NQuin,
             db_bytes.len() / 48,
         )
     };
 
-    let mut out = vec![crate::QualiaQuin::default(); max_results];
+    let mut out = vec![crate::NQuin::default(); max_results];
     match crate::webizen_bytecode::execute_program_with_stats(&program, quins, &mut out) {
         Ok(stats) => {
             #[derive(Serialize)]

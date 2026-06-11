@@ -703,7 +703,7 @@ pub fn finalize_local_gguf(
     let predicate = q_hash("prov:wasDerivedFrom");
     let object = q_hash(&path_str);
     let context = q_hash("ctx:local-gguf");
-    let prov = qualia_core_db::QualiaQuin {
+    let prov = qualia_core_db::NQuin {
         subject,
         predicate,
         object,

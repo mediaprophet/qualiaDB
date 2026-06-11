@@ -417,7 +417,7 @@ pub fn add_reaction(
         let context = q_hash(&profile.public_did);
         let metadata = (message_lamport & 0x1FFF_FFFF) << 32;
         let parity = subject ^ predicate ^ object ^ context ^ metadata;
-        let quin = qualia_core_db::QualiaQuin {
+        let quin = qualia_core_db::NQuin {
             subject,
             predicate,
             object,

@@ -1,7 +1,7 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// A point projected into the Lorentz Hyperboloid (Minkowski space).
-/// The QualiaQuin is unpacked into a standard Euclidean embedding and then projected.
+/// The NQuin is unpacked into a standard Euclidean embedding and then projected.
 #[derive(Debug, Clone, Copy)]
 pub struct LorentzVector {
     pub x0: f32, // The time-like component (always positive)
@@ -11,8 +11,8 @@ pub struct LorentzVector {
 }
 
 impl LorentzVector {
-    /// Maps a 48-byte QualiaQuin into a 4D Lorentz vector for exact non-Euclidean representation.
-    pub fn from_quin(quin: &QualiaQuin) -> Self {
+    /// Maps a 48-byte NQuin into a 4D Lorentz vector for exact non-Euclidean representation.
+    pub fn from_quin(quin: &NQuin) -> Self {
         // Unpack subject, predicate, object into floating-point coordinates.
         // In production, these map to standard LLM embedding weights.
         let v1 = (quin.subject % 1000) as f32 / 100.0;
@@ -77,7 +77,7 @@ impl VectorSectorMap {
     }
 }
 
-pub fn extract_spatial_projection(quin: &QualiaQuin) -> u64 {
+pub fn extract_spatial_projection(quin: &NQuin) -> u64 {
     quin.metadata
 }
 
@@ -102,7 +102,7 @@ pub struct HomologicalSieve;
 
 impl HomologicalSieve {
     /// Evaluates if the semantic topology has stabilized (Topological Compression)
-    pub fn evaluate_topology_tick(active_bitmask: *const u64, quins: &[QualiaQuin], tier_mask: u8) {
+    pub fn evaluate_topology_tick(active_bitmask: *const u64, quins: &[NQuin], tier_mask: u8) {
         if quins.is_empty() {
             return;
         }

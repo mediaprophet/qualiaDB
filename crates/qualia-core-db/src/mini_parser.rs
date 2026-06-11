@@ -3,7 +3,7 @@
 //! Accepts a single N-Triples pattern line such as
 //!   `<http://example.org/Alice> <schema:knows> ?who .`
 //! and compiles it into a flat bytecode program that `webizen_bytecode::execute_program`
-//! can run directly against a `&[QualiaQuin]` slice without any heap allocation.
+//! can run directly against a `&[NQuin]` slice without any heap allocation.
 //!
 //! # Bytecode encoding
 //! Each instruction occupies either 1 or 9 bytes:
@@ -37,7 +37,7 @@ pub enum ParseError {
 ///
 /// Returns the number of bytes written to `program` on success.
 /// Wildcards (`?var`) are silently elided; bound terms are hashed with FNV-1a
-/// so the VM can compare directly against `QualiaQuin` field values.
+/// so the VM can compare directly against `NQuin` field values.
 pub fn compile_ntriples_to_bytecode(
     query: &[u8],
     program: &mut [u8; 1024],

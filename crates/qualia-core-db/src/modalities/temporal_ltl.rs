@@ -1,4 +1,4 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 
 pub const OP_LTL_GLOBALLY: u8 = 0x40;
 pub const OP_LTL_FINALLY: u8 = 0x41;
@@ -16,7 +16,7 @@ pub enum LtlFormula {
     Release { trigger: u64, invariant: u64 },
 }
 
-pub fn evaluate_ltl_trace(trace: &[QualiaQuin], formula: &LtlFormula) -> bool {
+pub fn evaluate_ltl_trace(trace: &[NQuin], formula: &LtlFormula) -> bool {
     match formula {
         LtlFormula::Globally(p) => {
             if trace.is_empty() {
@@ -92,10 +92,10 @@ pub fn evaluate_ltl_trace(trace: &[QualiaQuin], formula: &LtlFormula) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::QualiaQuin;
+    use crate::NQuin;
 
-    fn make_quin(predicate: u64) -> QualiaQuin {
-        QualiaQuin {
+    fn make_quin(predicate: u64) -> NQuin {
+        NQuin {
             subject: 0,
             predicate,
             object: 0,

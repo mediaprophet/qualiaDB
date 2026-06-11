@@ -1,4 +1,4 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 
 pub const SYNTHESIZED_BIT: u64 = 1u64 << 58;
 pub const DO_INTERVENTION_BIT: u64 = 1u64 << 57;
@@ -7,7 +7,7 @@ pub const COUNTERFACTUAL_BIT: u64 = 1u64 << 56;
 /// Causal intervention operator for do-calculus
 /// Implements P(Y | do(X = x)) by intervening on the causal graph
 pub fn do_intervention(
-    graph: &[QualiaQuin],
+    graph: &[NQuin],
     intervention_var: u64,
     intervention_value: u64,
     target_var: u64,
@@ -52,12 +52,12 @@ pub fn do_intervention(
 
 /// Counterfactual query: "What would happen if X were x?"
 pub fn counterfactual_query(
-    actual_graph: &[QualiaQuin],
+    actual_graph: &[NQuin],
     factual_outcome: u64,
     counterfactual_intervention: u64,
     intervention_value: u64,
     target_var: u64,
-) -> Option<QualiaQuin> {
+) -> Option<NQuin> {
     // Step 1: Abduction - update beliefs based on actual outcome
     let mut updated_graph = actual_graph.to_vec();
     for quin in &mut updated_graph {
@@ -82,7 +82,7 @@ pub fn counterfactual_query(
         intervention_value,
         target_var,
     ) {
-        let mut result = QualiaQuin::default();
+        let mut result = NQuin::default();
         result.subject = target_var;
         result.predicate = crate::q_hash("has_counterfactual_probability");
         result.object = (counterfactual_prob * 1000.0) as u64; // Store as scaled integer
@@ -97,10 +97,10 @@ pub fn counterfactual_query(
 
 /// Find all causal paths from source to target in the causal graph
 fn find_causal_paths(
-    graph: &[QualiaQuin],
+    graph: &[NQuin],
     source: u64,
     target: u64,
-    paths: &mut Vec<Vec<QualiaQuin>>,
+    paths: &mut Vec<Vec<NQuin>>,
 ) {
     // Simple depth-first search for causal paths
     let mut visited = std::collections::HashSet::new();
@@ -111,12 +111,12 @@ fn find_causal_paths(
 
 /// Depth-first search helper for finding causal paths
 fn dfs_find_paths(
-    graph: &[QualiaQuin],
+    graph: &[NQuin],
     current: u64,
     target: u64,
     visited: &mut std::collections::HashSet<u64>,
-    current_path: &mut Vec<QualiaQuin>,
-    all_paths: &mut Vec<Vec<QualiaQuin>>,
+    current_path: &mut Vec<NQuin>,
+    all_paths: &mut Vec<Vec<NQuin>>,
 ) {
     if visited.contains(&current) {
         return;
@@ -145,7 +145,7 @@ fn dfs_find_paths(
 }
 
 /// Check if two variables are confounded (share a common cause)
-pub fn are_confounded(graph: &[QualiaQuin], var1: u64, var2: u64) -> bool {
+pub fn are_confounded(graph: &[NQuin], var1: u64, var2: u64) -> bool {
     // Find common causes by looking for nodes that point to both var1 and var2
     let mut parents1 = std::collections::HashSet::new();
     let mut parents2 = std::collections::HashSet::new();
@@ -165,7 +165,7 @@ pub fn are_confounded(graph: &[QualiaQuin], var1: u64, var2: u64) -> bool {
 
 /// Compute do-calculus adjustment for confounding
 pub fn adjust_for_confounding(
-    graph: &[QualiaQuin],
+    graph: &[NQuin],
     treatment: u64,
     outcome: u64,
     confounder: u64,
@@ -211,7 +211,7 @@ pub fn adjust_for_confounding(
 }
 
 /// Compute conditional probability P(Y|X) from graph
-fn compute_conditional_probability(graph: &[QualiaQuin], y_var: u64, x_var: u64) -> Option<f64> {
+fn compute_conditional_probability(graph: &[NQuin], y_var: u64, x_var: u64) -> Option<f64> {
     let mut x_true_count = 0;
     let mut x_true_y_true_count = 0;
     
@@ -236,7 +236,7 @@ fn compute_conditional_probability(graph: &[QualiaQuin], y_var: u64, x_var: u64)
     }
 }
 
-pub fn synthesize_dialectical(thesis: &QualiaQuin, antithesis: &QualiaQuin) -> Option<QualiaQuin> {
+pub fn synthesize_dialectical(thesis: &NQuin, antithesis: &NQuin) -> Option<NQuin> {
     // A contradiction requires the same subject and predicate but different object
     if thesis.subject == antithesis.subject
         && thesis.predicate == antithesis.predicate
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_synthesize_dialectical() {
-        let thesis = QualiaQuin {
+        let thesis = NQuin {
             subject: 1,
             predicate: 2,
             object: 3,
@@ -271,7 +271,7 @@ mod tests {
             metadata: 0,
             parity: 0,
         };
-        let antithesis = QualiaQuin {
+        let antithesis = NQuin {
             subject: 1,
             predicate: 2,
             object: 4,
@@ -291,7 +291,7 @@ mod tests {
         let mut graph = Vec::new();
         
         // X = 1 causes Y = 1
-        let mut x_to_y = QualiaQuin::default();
+        let mut x_to_y = NQuin::default();
         x_to_y.subject = 1; // X
         x_to_y.predicate = crate::q_hash("causes");
         x_to_y.object = 2; // Y
@@ -310,7 +310,7 @@ mod tests {
         // Create causal graph: Treatment -> Outcome
         let mut graph = Vec::new();
         
-        let mut treatment_to_outcome = QualiaQuin::default();
+        let mut treatment_to_outcome = NQuin::default();
         treatment_to_outcome.subject = 10; // Treatment
         treatment_to_outcome.predicate = crate::q_hash("causes");
         treatment_to_outcome.object = 20; // Outcome
@@ -333,7 +333,7 @@ mod tests {
         let mut graph = Vec::new();
         
         // Confounder -> Treatment
-        let mut conf_to_treat = QualiaQuin::default();
+        let mut conf_to_treat = NQuin::default();
         conf_to_treat.subject = 100; // Confounder
         conf_to_treat.predicate = crate::q_hash("causes");
         conf_to_treat.object = 10; // Treatment
@@ -342,7 +342,7 @@ mod tests {
         graph.push(conf_to_treat);
         
         // Confounder -> Outcome
-        let mut conf_to_outcome = QualiaQuin::default();
+        let mut conf_to_outcome = NQuin::default();
         conf_to_outcome.subject = 100; // Confounder
         conf_to_outcome.predicate = crate::q_hash("causes");
         conf_to_outcome.object = 20; // Outcome
@@ -361,7 +361,7 @@ mod tests {
         let mut graph = Vec::new();
         
         // Confounder -> Treatment
-        let mut conf_to_treat = QualiaQuin::default();
+        let mut conf_to_treat = NQuin::default();
         conf_to_treat.subject = 100; // Confounder
         conf_to_treat.predicate = crate::q_hash("causes");
         conf_to_treat.object = 10; // Treatment
@@ -370,7 +370,7 @@ mod tests {
         graph.push(conf_to_treat);
         
         // Treatment -> Outcome
-        let mut treat_to_outcome = QualiaQuin::default();
+        let mut treat_to_outcome = NQuin::default();
         treat_to_outcome.subject = 10; // Treatment
         treat_to_outcome.predicate = crate::q_hash("causes");
         treat_to_outcome.object = 20; // Outcome
@@ -386,7 +386,7 @@ mod tests {
     
     #[test]
     fn test_no_contradiction() {
-        let thesis = QualiaQuin {
+        let thesis = NQuin {
             subject: 1,
             predicate: 2,
             object: 3,
@@ -395,7 +395,7 @@ mod tests {
             parity: 0,
         };
 
-        let no_contradiction = QualiaQuin {
+        let no_contradiction = NQuin {
             subject: 1,
             predicate: 3, // Different predicate
             object: 4,

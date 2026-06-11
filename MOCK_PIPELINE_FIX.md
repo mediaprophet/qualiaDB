@@ -83,8 +83,21 @@ cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
 ## Status
 
 - Tokio runtime fixes: ✅ Committed (cff37440)
-- Mock pipeline fix: ⚠️ Requires careful implementation
+- Mock pipeline fix: ✅ Implemented (2026-06-11)
 - Orchestrator integration: ⏳ Pending
+
+## Fix Applied (2026-06-11)
+
+`dispatch_fused_transformer_block` in `gguf_bridge.rs` was updated:
+
+1. `self.mock_pipeline` → `self.pipeline` (real `fused_transformer.wgsl`)
+2. Hardcoded `(4096 * 4)` output size → dynamic `(rows * 4).max(4)`
+3. `GemmGpuParams` uniform buffer created and uploaded (binding 2); output moved to binding 3
+4. `dispatch_workgroups(4096 / 64, 1, 1)` → `dispatch_workgroups((rows as u32 + 63) / 64, 1, 1)`
+5. Telemetry: `4096 * 4096` → `rows * cols`
+
+The wgpu/Vulkan path on Linux now uses the same quantized GEMM shader (`fused_transformer.wgsl`)
+as the real `dispatch_gemm_raw_into()` path.
 
 ## Other Mock Implementations Found
 

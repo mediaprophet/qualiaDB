@@ -1,4 +1,4 @@
-use crate::{q_hash, QualiaQuin};
+use crate::{q_hash, NQuin};
 
 pub const OP_ISOLATE: u8 = 0x30;
 pub const OP_CONTRADICTION_SCORE: u8 = 0x31;
@@ -21,9 +21,9 @@ pub enum ParaconsistentError {
 }
 
 pub fn route_paraconsistent(
-    quins: &[QualiaQuin],
-    out_consistent: &mut [QualiaQuin],
-    out_isolated: &mut [QualiaQuin],
+    quins: &[NQuin],
+    out_consistent: &mut [NQuin],
+    out_isolated: &mut [NQuin],
 ) -> Result<(usize, usize), ParaconsistentError> {
     let mut num_consistent = 0;
     let mut num_isolated = 0;
@@ -78,8 +78,8 @@ pub fn route_paraconsistent(
 mod tests {
     use super::*;
 
-    fn dummy_quin(subject: u64, predicate: u64, object: u64, context: u64) -> QualiaQuin {
-        QualiaQuin {
+    fn dummy_quin(subject: u64, predicate: u64, object: u64, context: u64) -> NQuin {
+        NQuin {
             subject,
             predicate,
             object,
@@ -95,8 +95,8 @@ mod tests {
         let q2 = dummy_quin(2, 2, 2, 100);
         let quins = [q1, q2];
 
-        let mut out_cons = [QualiaQuin::default(); 4];
-        let mut out_iso = [QualiaQuin::default(); 4];
+        let mut out_cons = [NQuin::default(); 4];
+        let mut out_iso = [NQuin::default(); 4];
 
         let (c, i) = route_paraconsistent(&quins, &mut out_cons, &mut out_iso).unwrap();
         assert_eq!(c, 2);
@@ -109,8 +109,8 @@ mod tests {
         let q2 = dummy_quin(1, 1, 2, 100); // Same subject/predicate/context, diff object
         let quins = [q1, q2];
 
-        let mut out_cons = [QualiaQuin::default(); 4];
-        let mut out_iso = [QualiaQuin::default(); 4];
+        let mut out_cons = [NQuin::default(); 4];
+        let mut out_iso = [NQuin::default(); 4];
 
         let (c, i) = route_paraconsistent(&quins, &mut out_cons, &mut out_iso).unwrap();
         assert_eq!(c, 1);
@@ -127,8 +127,8 @@ mod tests {
         let q3 = dummy_quin(2, 2, 2, 100); // Normal
         let quins = [q1, q2, q3];
 
-        let mut out_cons = [QualiaQuin::default(); 4];
-        let mut out_iso = [QualiaQuin::default(); 4];
+        let mut out_cons = [NQuin::default(); 4];
+        let mut out_iso = [NQuin::default(); 4];
 
         let (c, i) = route_paraconsistent(&quins, &mut out_cons, &mut out_iso).unwrap();
         assert_eq!(c, 2);
@@ -144,8 +144,8 @@ mod tests {
         let q1 = dummy_quin(1, 1, 1, ISOLATED_CONTEXT_PREFIX);
         let quins = [q1];
 
-        let mut out_cons = [QualiaQuin::default(); 4];
-        let mut out_iso = [QualiaQuin::default(); 4];
+        let mut out_cons = [NQuin::default(); 4];
+        let mut out_iso = [NQuin::default(); 4];
 
         let (c, i) = route_paraconsistent(&quins, &mut out_cons, &mut out_iso).unwrap();
         assert_eq!(c, 1);
@@ -163,8 +163,8 @@ mod tests {
 
         let quins = [q1, q2, q3, q4];
 
-        let mut out_cons = [QualiaQuin::default(); 4];
-        let mut out_iso = [QualiaQuin::default(); 4];
+        let mut out_cons = [NQuin::default(); 4];
+        let mut out_iso = [NQuin::default(); 4];
 
         let (_, i) = route_paraconsistent(&quins, &mut out_cons, &mut out_iso).unwrap();
 

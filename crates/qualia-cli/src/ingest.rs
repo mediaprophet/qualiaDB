@@ -1,6 +1,6 @@
 //! N-Triples → unified `.q42` v2 volume (embedded lex + bidx + LZ4 SuperBlocks).
 //!
-//! Reads N-Triples line-by-line, buffers all [`QualiaQuin`] records, sorts by
+//! Reads N-Triples line-by-line, buffers all [`NQuin`] records, sorts by
 //! object hash, then writes a single v2 volume via [`qualia_core_db::q42_volume`].
 //!
 //! Legacy v1 sidecars (`.q42.lex`, `.q42.bidx`) remain readable via
@@ -13,7 +13,7 @@ use std::path::Path;
 
 use crate::parsers::external_sort::ExternalSorter;
 use qualia_core_db::mini_parser::hash_token;
-use qualia_core_db::{QualiaQuin, QUINS_PER_BLOCK};
+use qualia_core_db::{NQuin, QUINS_PER_BLOCK};
 use qualia_core_db::q42_lex::LexiconEntry;
 use rio_api::parser::TriplesParser;
 use rio_xml::RdfXmlParser;
@@ -40,7 +40,7 @@ pub fn ingest_ntriples(
     let reader = BufReader::new(File::open(input)?);
 
     let mut lex: HashMap<u64, String> = HashMap::new();
-    let mut all_quins: Vec<QualiaQuin> = Vec::new();
+    let mut all_quins: Vec<NQuin> = Vec::new();
     let mut skipped: u64 = 0;
 
     // ── Phase 1: parse all triples into memory ───────────────────────────
@@ -63,7 +63,7 @@ pub fn ingest_ntriples(
         lex.entry(ph).or_insert_with(|| ps);
         lex.entry(oh).or_insert_with(|| os);
 
-        all_quins.push(QualiaQuin {
+        all_quins.push(NQuin {
             subject: sh,
             predicate: ph,
             object: oh,
@@ -82,7 +82,7 @@ pub fn ingest_ntriples(
     all_quins.sort_unstable_by_key(|q| q.object);
 
     // ── Phase 3: build SuperBlock chunks ─────────────────────────────────
-    let mut blocks: Vec<Vec<QualiaQuin>> = Vec::new();
+    let mut blocks: Vec<Vec<NQuin>> = Vec::new();
     let mut block_ranges: Vec<(u64, u64)> = Vec::new();
 
     for chunk in all_quins.chunks(QUINS_PER_BLOCK) {
@@ -116,7 +116,7 @@ pub fn ingest_rdf_xml(
     let reader = BufReader::new(File::open(input)?);
 
     let mut lex: HashMap<u64, String> = HashMap::new();
-    let mut all_quins: Vec<QualiaQuin> = Vec::new();
+    let mut all_quins: Vec<NQuin> = Vec::new();
 
     let mut parser = RdfXmlParser::new(reader, None);
     let _ = parser.parse_all(
@@ -133,7 +133,7 @@ pub fn ingest_rdf_xml(
             lex.entry(ph).or_insert(ps);
             lex.entry(oh).or_insert(os);
 
-            all_quins.push(QualiaQuin {
+            all_quins.push(NQuin {
                 subject: sh,
                 predicate: ph,
                 object: oh,
@@ -149,7 +149,7 @@ pub fn ingest_rdf_xml(
 
     all_quins.sort_unstable_by_key(|q| q.object);
 
-    let mut blocks: Vec<Vec<QualiaQuin>> = Vec::new();
+    let mut blocks: Vec<Vec<NQuin>> = Vec::new();
     let mut block_ranges: Vec<(u64, u64)> = Vec::new();
 
     for chunk in all_quins.chunks(QUINS_PER_BLOCK) {
@@ -262,7 +262,7 @@ pub fn ingest_turtle_star(
     
     let reader = BufReader::new(File::open(input)?);
     let mut lex: HashMap<u64, LexiconEntry> = HashMap::new();
-    let mut all_quins: Vec<QualiaQuin> = Vec::new();
+    let mut all_quins: Vec<NQuin> = Vec::new();
     let mut skipped: u64 = 0;
 
     // ── Phase 1: parse all triples into memory ───────────────────────────
@@ -285,7 +285,7 @@ pub fn ingest_turtle_star(
                 lex.entry(virtual_id).or_insert_with(|| LexiconEntry::EmbeddedTriple(components));
                 
                 // Emit the embedded triple as a Quin (for indexing)
-                all_quins.push(QualiaQuin {
+                all_quins.push(NQuin {
                     subject: components[0],
                     predicate: components[1],
                     object: components[2],
@@ -310,7 +310,7 @@ pub fn ingest_turtle_star(
                     lex.entry(predicate).or_insert_with(|| LexiconEntry::String(predicate_str.to_string()));
                     lex.entry(object).or_insert_with(|| LexiconEntry::String(object_str.to_string()));
                     
-                    all_quins.push(QualiaQuin {
+                    all_quins.push(NQuin {
                     subject,
                     predicate,
                     object,
@@ -330,7 +330,7 @@ pub fn ingest_turtle_star(
     all_quins.sort_unstable_by_key(|q| q.object);
 
     // ── Phase 3: build SuperBlock chunks ─────────────────────────────────
-    let mut blocks: Vec<Vec<QualiaQuin>> = Vec::new();
+    let mut blocks: Vec<Vec<NQuin>> = Vec::new();
     let mut block_ranges: Vec<(u64, u64)> = Vec::new();
 
     for chunk in all_quins.chunks(QUINS_PER_BLOCK) {

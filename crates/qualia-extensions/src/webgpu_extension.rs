@@ -3,7 +3,7 @@
 //! WebGPU-based computational shaders for fluid dynamics, electromagnetics,
 //! and other continuous physics simulations while maintaining core constraints.
 
-use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, QualiaQuin};
+use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, NQuin};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -535,11 +535,11 @@ fn compute_curl_e(x: u32, y: u32, z: u32, grid_size: u32, E: array<vec3<f32>>) -
         output_data.insert("magnetic_out".to_string(), magnetic_field);
     }
 
-    fn result_to_quins(result: &WebGpuExecutionResult, job_id: &str) -> Vec<QualiaQuin> {
+    fn result_to_quins(result: &WebGpuExecutionResult, job_id: &str) -> Vec<NQuin> {
         let mut quins = Vec::new();
 
         // Add performance metrics
-        let performance_quin = QualiaQuin {
+        let performance_quin = NQuin {
             subject: crate::q_hash(job_id),
             predicate: crate::q_hash("q42:hasGpuPerformance"),
             object: (result.performance_metrics.tflops_achieved * 1000.0) as u64, // Fixed-point TFLOPS
@@ -551,7 +551,7 @@ fn compute_curl_e(x: u32, y: u32, z: u32, grid_size: u32, E: array<vec3<f32>>) -
         quins.push(performance_quin);
 
         // Add convergence info
-        let convergence_quin = QualiaQuin {
+        let convergence_quin = NQuin {
             subject: crate::q_hash(job_id),
             predicate: crate::q_hash("q42:hasConvergence"),
             object: (result.convergence_info.final_residual * 1000000.0) as u64, // Fixed-point residual
@@ -563,7 +563,7 @@ fn compute_curl_e(x: u32, y: u32, z: u32, grid_size: u32, E: array<vec3<f32>>) -
         quins.push(convergence_quin);
 
         // Add execution time
-        let time_quin = QualiaQuin {
+        let time_quin = NQuin {
             subject: crate::q_hash(job_id),
             predicate: crate::q_hash("q42:hasExecutionTime"),
             object: result.execution_time_ms,

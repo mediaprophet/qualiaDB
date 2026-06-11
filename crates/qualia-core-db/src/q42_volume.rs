@@ -20,7 +20,7 @@ use std::path::Path;
 use memmap2::{Mmap, MmapOptions};
 
 use crate::q42_lex::{LexError, Q42LexMmap, LEX_MAGIC, LexiconEntry};
-use crate::{QualiaQuin, QUINS_PER_BLOCK};
+use crate::{NQuin, QUINS_PER_BLOCK};
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
 pub const Q42_VERSION_V2: u16 = 2;
@@ -184,7 +184,7 @@ pub fn encode_bidx(ranges: &[(u64, u64)]) -> Vec<u8> {
 }
 
 /// Encode Q42LEX bytes from a hash → LexiconEntry map (supports embedded triples).
-pub fn encode_superblock(seq_id: u64, quins: &[QualiaQuin]) -> [u8; SUPERBLOCK_SIZE] {
+pub fn encode_superblock(seq_id: u64, quins: &[NQuin]) -> [u8; SUPERBLOCK_SIZE] {
     debug_assert!(quins.len() <= QUINS_PER_BLOCK);
     let mut block = [0u8; SUPERBLOCK_SIZE];
     block[0..8].copy_from_slice(&seq_id.to_le_bytes());
@@ -259,7 +259,7 @@ pub fn write_unified_volume(
     path: &Path,
     lex: &HashMap<u64, String>,
     block_ranges: &[(u64, u64)],
-    blocks: &[Vec<QualiaQuin>],
+    blocks: &[Vec<NQuin>],
 ) -> io::Result<()> {
     if blocks.len() != block_ranges.len() {
         return Err(io::Error::new(
@@ -282,7 +282,7 @@ pub fn write_unified_volume_with_entries(
     path: &Path,
     lex: &HashMap<u64, LexiconEntry>,
     block_ranges: &[(u64, u64)],
-    blocks: &[Vec<QualiaQuin>],
+    blocks: &[Vec<NQuin>],
 ) -> io::Result<()> {
     if blocks.len() != block_ranges.len() {
         return Err(io::Error::new(
@@ -329,7 +329,7 @@ impl UnifiedVolumeBuilder {
         Self::with_lex_map(&HashMap::new())
     }
 
-    pub fn push_block(&mut self, seq_id: u64, quins: &[QualiaQuin]) {
+    pub fn push_block(&mut self, seq_id: u64, quins: &[NQuin]) {
         let min_hash = quins.first().map(|q| q.object).unwrap_or(0);
         let max_hash = quins.last().map(|q| q.object).unwrap_or(0);
         self.block_ranges.push((min_hash, max_hash));
@@ -525,7 +525,7 @@ mod tests {
     use std::io::Write;
     use tempfile::NamedTempFile;
 
-    fn sample_quin(subj: &str, pred: &str, obj: &str) -> (QualiaQuin, HashMap<u64, String>) {
+    fn sample_quin(subj: &str, pred: &str, obj: &str) -> (NQuin, HashMap<u64, String>) {
         let mut lex = HashMap::new();
         let sh = hash_token(subj);
         let ph = hash_token(pred);
@@ -533,7 +533,7 @@ mod tests {
         lex.insert(sh, subj.to_string());
         lex.insert(ph, pred.to_string());
         lex.insert(oh, obj.to_string());
-        let q = QualiaQuin {
+        let q = NQuin {
             subject: sh,
             predicate: ph,
             object: oh,

@@ -1,6 +1,6 @@
 //! Lexicon Dictionary Manager
 //! Maps multi-modal semantic concepts (Text, Audio, Visual) into the deterministic 60-bit integers
-//! required by the QualiaQuin data structure.
+//! required by the NQuin data structure.
 
 // Re-export the embedded triple tag from resolver for SPARQL-Star support
 pub use crate::resolver::{TAG_EMBEDDED, TAG_WEBIZEN};
@@ -39,7 +39,7 @@ pub fn generate_60bit_token(bytes: &[u8]) -> u64 {
 /// 
 /// # Returns
 /// A 64-bit Virtual ID with the TAG_EMBEDDED bit set, suitable for
-/// storage in the Subject or Object position of a QualiaQuin.
+/// storage in the Subject or Object position of a NQuin.
 #[inline(always)]
 pub fn generate_embedded_triple_id(subject: u64, predicate: u64, object: u64) -> u64 {
     // Serialize the three u64 IDs into a 24-byte array

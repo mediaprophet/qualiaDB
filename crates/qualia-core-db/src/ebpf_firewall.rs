@@ -472,31 +472,109 @@ impl EbpfFirewall {
     }
 
     /// Load program into kernel
+    ///
+    /// Requires the `aya` feature (Linux-only eBPF runtime loader).  Returns an
+    /// explicit `LoadError` instead of silently succeeding so callers know the
+    /// program was never actually loaded into the kernel.
     fn load_program_into_kernel(&self, program: &EbpfProgram) -> Result<(), EbpfError> {
-        // In real implementation, would use bpf() syscall
-        // For now, simulate successful load
-        Ok(())
+        #[cfg(target_os = "linux")]
+        {
+            return Err(EbpfError::LoadError(
+                format!(
+                    "eBPF program '{}' cannot be loaded: aya feature not enabled in this build. \
+                     Recompile with `--features aya` on Linux to enable kernel eBPF loading.",
+                    program.name
+                )
+            ));
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            return Err(EbpfError::LoadError(
+                format!(
+                    "eBPF program '{}' cannot be loaded: eBPF is Linux-only \
+                     (current OS does not support BPF syscalls).",
+                    program.name
+                )
+            ));
+        }
     }
 
     /// Attach program to socket
+    ///
+    /// Requires a loaded eBPF program file descriptor from the kernel.  Returns
+    /// `AttachError` instead of silently succeeding when the runtime is absent.
     fn attach_program_to_socket(&self, fd: i32, program_id: u32, program_type: ProgramType) -> Result<(), EbpfError> {
-        // In real implementation, would use setsockopt() with SO_ATTACH_BPF
-        // For now, simulate successful attachment
-        Ok(())
+        #[cfg(target_os = "linux")]
+        {
+            return Err(EbpfError::AttachError(
+                format!(
+                    "Cannot attach program {} (type {:?}) to socket fd {}: \
+                     eBPF runtime not available — compile with `--features aya`.",
+                    program_id, program_type, fd
+                )
+            ));
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            return Err(EbpfError::AttachError(
+                format!(
+                    "Cannot attach program {} to socket fd {}: eBPF is Linux-only.",
+                    program_id, fd
+                )
+            ));
+        }
     }
 
-    /// Configure socket bypass
+    /// Configure socket bypass (zero-copy)
+    ///
+    /// Returns `ConfigurationError` instead of silently succeeding when the
+    /// kernel eBPF bypass path is not available.
     fn configure_socket_bypass(&self, fd: i32) -> Result<(), EbpfError> {
-        // In real implementation, would configure kernel for zero-copy
-        // For now, simulate successful configuration
-        Ok(())
+        #[cfg(target_os = "linux")]
+        {
+            return Err(EbpfError::ConfigurationError(
+                format!(
+                    "Cannot enable zero-copy bypass for socket fd {}: \
+                     eBPF runtime not available — compile with `--features aya`.",
+                    fd
+                )
+            ));
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            return Err(EbpfError::ConfigurationError(
+                format!(
+                    "Cannot enable zero-copy bypass for socket fd {}: eBPF is Linux-only.",
+                    fd
+                )
+            ));
+        }
     }
 
-    /// Configure socket normal processing
+    /// Restore normal socket processing
+    ///
+    /// Returns `ConfigurationError` instead of silently succeeding when the
+    /// eBPF detach path is not available.
     fn configure_socket_normal(&self, fd: i32) -> Result<(), EbpfError> {
-        // In real implementation, would restore normal socket processing
-        // For now, simulate successful configuration
-        Ok(())
+        #[cfg(target_os = "linux")]
+        {
+            return Err(EbpfError::ConfigurationError(
+                format!(
+                    "Cannot restore normal processing for socket fd {}: \
+                     eBPF runtime not available — compile with `--features aya`.",
+                    fd
+                )
+            ));
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            return Err(EbpfError::ConfigurationError(
+                format!(
+                    "Cannot restore normal processing for socket fd {}: eBPF is Linux-only.",
+                    fd
+                )
+            ));
+        }
     }
 
     /// Detect socket type
@@ -549,17 +627,50 @@ impl EbpfFirewall {
     }
 
     /// Update firewall programs
+    ///
+    /// Re-compiling eBPF programs with new ruleset requires the `aya` kernel
+    /// loader.  Returns `LoadError` rather than silently no-oping.
     fn update_firewall_programs(&mut self) -> Result<(), EbpfError> {
-        // In real implementation, would recompile eBPF programs with new rules
-        // For now, simulate successful update
-        Ok(())
+        #[cfg(target_os = "linux")]
+        {
+            return Err(EbpfError::LoadError(
+                "Cannot update eBPF firewall programs: aya feature not enabled in this build. \
+                 Recompile with `--features aya` on Linux.".to_string()
+            ));
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            return Err(EbpfError::LoadError(
+                "Cannot update eBPF firewall programs: eBPF is Linux-only.".to_string()
+            ));
+        }
     }
 
     /// Execute eBPF program
-    fn execute_ebpf_program(&self, program: &EbpfProgram, packet: &[u8]) -> Result<PacketAction, EbpfError> {
-        // In real implementation, would execute eBPF program in kernel
-        // For now, simulate packet processing
-        Ok(PacketAction::Allow)
+    ///
+    /// In-kernel eBPF execution requires the `aya` loader.  Returns
+    /// `AttachError` (program was never actually loaded) rather than silently
+    /// allowing all packets.
+    fn execute_ebpf_program(&self, program: &EbpfProgram, _packet: &[u8]) -> Result<PacketAction, EbpfError> {
+        #[cfg(target_os = "linux")]
+        {
+            return Err(EbpfError::AttachError(
+                format!(
+                    "eBPF program '{}' (id {}) is not loaded into the kernel: \
+                     compile with `--features aya` to enable in-kernel execution.",
+                    program.name, program.program_id
+                )
+            ));
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            return Err(EbpfError::AttachError(
+                format!(
+                    "eBPF program '{}' cannot be executed: eBPF is Linux-only.",
+                    program.name
+                )
+            ));
+        }
     }
 
     /// Generate unique program ID
@@ -729,24 +840,41 @@ mod tests {
     #[test]
     fn test_program_loading() {
         let mut firewall = EbpfFirewall::new().unwrap();
-        
+
         // Create dummy bytecode
         let bytecode = vec![0u8; 64];
-        
-        let program_id = firewall.load_program(
+
+        // eBPF kernel loading requires the `aya` feature (Linux-only).
+        // On non-Linux builds and without the feature flag, load_program
+        // correctly returns an error rather than silently succeeding.
+        let result = firewall.load_program(
             "test_program".to_string(),
             ProgramType::SocketFilter,
             bytecode,
-        ).unwrap();
+        );
 
-        assert!(program_id > 0);
-        assert!(firewall.list_programs().contains(&"test_program".to_string()));
+        #[cfg(target_os = "linux")]
+        {
+            // Even on Linux, the aya feature is not enabled — expect LoadError.
+            assert!(
+                matches!(result, Err(EbpfError::LoadError(_))),
+                "Expected LoadError when aya feature is absent: {:?}", result
+            );
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            // On non-Linux hosts, expect LoadError with a "Linux-only" message.
+            assert!(
+                matches!(result, Err(EbpfError::LoadError(_))),
+                "Expected LoadError on non-Linux: {:?}", result
+            );
+        }
     }
 
     #[test]
     fn test_firewall_rules() {
         let mut firewall = EbpfFirewall::new().unwrap();
-        
+
         let rule = FirewallRule {
             rule_id: 1,
             name: "test_rule".to_string(),
@@ -763,11 +891,19 @@ mod tests {
             hit_count: 0,
         };
 
-        firewall.add_rule(rule).unwrap();
-        assert_eq!(firewall.list_rules().len(), 1);
-        
-        firewall.remove_rule(1).unwrap();
-        assert_eq!(firewall.list_rules().len(), 0);
+        // add_rule calls update_firewall_programs which requires aya — expect an error.
+        let add_result = firewall.add_rule(rule);
+        assert!(
+            matches!(add_result, Err(EbpfError::LoadError(_))),
+            "Expected LoadError when aya feature is absent: {:?}", add_result
+        );
+
+        // remove_rule also calls update_firewall_programs — same expectation.
+        let remove_result = firewall.remove_rule(1);
+        assert!(
+            matches!(remove_result, Err(EbpfError::LoadError(_))),
+            "Expected LoadError when aya feature is absent: {:?}", remove_result
+        );
     }
 
     #[test]

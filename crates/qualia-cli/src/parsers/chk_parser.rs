@@ -1,4 +1,4 @@
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Read};
 
@@ -75,7 +75,7 @@ pub fn parse_chk_stream<R: Read>(
                     // Lower 32 bits can hold the lamport clock, set to 0 here.
                     let metadata = weight_bits << 32;
 
-                    sorter.push(QualiaQuin {
+                    sorter.push(NQuin {
                         subject: current_subject,
                         predicate,
                         object,
@@ -97,7 +97,7 @@ pub fn parse_chk_stream<R: Read>(
                 let predicate = hash_str("=>");
                 let object = hash_str(c);
 
-                sorter.push(QualiaQuin {
+                sorter.push(NQuin {
                     subject,
                     predicate,
                     object,

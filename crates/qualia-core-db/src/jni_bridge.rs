@@ -3,7 +3,7 @@
 use crate::cbor_compiler::parse_cbor_ld_to_quin;
 use crate::git_bridge;
 use crate::spatial_sieve;
-use crate::QualiaQuin;
+use crate::NQuin;
 use jni::objects::{JByteArray, JByteBuffer, JClass, JString};
 use jni::sys::{jboolean, jbyteArray, jdouble, jstring};
 use jni::JNIEnv;
@@ -15,7 +15,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_queryLedgerTransaction
 ) -> jbyteArray {
     // Generate actual Quin representations rather than JSON overhead
     let quins = [
-        QualiaQuin {
+        NQuin {
             subject: crate::q_hash("tx_1"),
             predicate: crate::q_hash("is_transaction"),
             object: crate::q_hash("Software Sub"),
@@ -23,7 +23,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_queryLedgerTransaction
             metadata: 0,
             parity: 0,
         },
-        QualiaQuin {
+        NQuin {
             subject: crate::q_hash("tx_2"),
             predicate: crate::q_hash("is_transaction"),
             object: crate::q_hash("Client Payment"),
@@ -53,7 +53,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_insertLedgerTransactio
         return 0; // false
     }
 
-    let _quins: &[QualiaQuin] = bytemuck::cast_slice(&bytes);
+    let _quins: &[NQuin] = bytemuck::cast_slice(&bytes);
 
     // Native insertion logic without JSON parsing overhead
     1 // true
@@ -127,7 +127,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_evaluateTaxLiability(
         .into();
 
     // Evaluate via Webizen VM and return 48-byte norm quins natively
-    let liability_quin = QualiaQuin {
+    let liability_quin = NQuin {
         subject: crate::q_hash("tax_liability_result"),
         predicate: crate::q_hash("has_liability_amount"),
         object: (0b010u64 << 60) | 10_000_000, // 10.0 in micro-currency

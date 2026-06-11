@@ -1,6 +1,6 @@
 //! QUBO (Quadratic Unconstrained Binary Optimization) compiler for quantum annealing.
 
-use crate::QualiaQuin;
+use crate::NQuin;
 
 pub const MAX_QUBO_VARS: usize = 128;
 
@@ -94,7 +94,7 @@ pub fn solve_classical(matrix: &QuboMatrix, assignment: &mut [u8]) -> f32 {
 }
 
 /// Compile Quins to QUBO matrix (placeholder)
-pub fn compile_quins_to_qubo(quins: &[QualiaQuin], matrix: &mut QuboMatrix) -> Result<(), String> {
+pub fn compile_quins_to_qubo(quins: &[NQuin], matrix: &mut QuboMatrix) -> Result<(), String> {
     // Placeholder: simple conversion
     for quin in quins.iter().take(MAX_QUBO_VARS) {
         let var = quin.object as usize % MAX_QUBO_VARS;
@@ -104,12 +104,12 @@ pub fn compile_quins_to_qubo(quins: &[QualiaQuin], matrix: &mut QuboMatrix) -> R
 }
 
 /// Rehydrate solution from assignment (placeholder)
-pub fn rehydrate_solution(matrix: &mut QuboMatrix, assignment: &[u8], out: &mut [QualiaQuin]) -> usize {
+pub fn rehydrate_solution(matrix: &mut QuboMatrix, assignment: &[u8], out: &mut [NQuin]) -> usize {
     // Placeholder: simple conversion
     let mut count = 0;
     for (i, &val) in assignment.iter().enumerate().take(out.len()) {
         if i < matrix.num_vars {
-            out[count] = QualiaQuin {
+            out[count] = NQuin {
                 subject: i as u64,
                 predicate: val as u64,
                 object: 0,

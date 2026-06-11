@@ -3,7 +3,7 @@
 //! Provides quantum computing capabilities through remote QPU APIs
 //! while maintaining zero-allocation principles in the core engine.
 
-use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, QualiaQuin};
+use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, NQuin};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -275,12 +275,12 @@ impl QpuExtension {
         })
     }
 
-    fn result_to_quins(result: &QpuExecutionResult, job_id: &str) -> Vec<QualiaQuin> {
+    fn result_to_quins(result: &QpuExecutionResult, job_id: &str) -> Vec<NQuin> {
         let mut quins = Vec::new();
         
-        // Convert execution results to QualiaQuins
+        // Convert execution results to NQuins
         for (state, count) in &result.counts {
-            let quin = QualiaQuin {
+            let quin = NQuin {
                 subject: crate::q_hash(job_id),
                 predicate: crate::q_hash("q42:hasQuantumState"),
                 object: crate::q_hash(state),
@@ -292,7 +292,7 @@ impl QpuExtension {
         }
 
         // Add metadata quins
-        let provider_quin = QualiaQuin {
+        let provider_quin = NQuin {
             subject: crate::q_hash(job_id),
             predicate: crate::q_hash("q42:executedBy"),
             object: crate::q_hash(&result.provider),
@@ -303,7 +303,7 @@ impl QpuExtension {
         quins.push(provider_quin);
 
         if let Some(fidelity) = result.fidelity {
-            let fidelity_quin = QualiaQuin {
+            let fidelity_quin = NQuin {
                 subject: crate::q_hash(job_id),
                 predicate: crate::q_hash("q42:hasFidelity"),
                 object: (fidelity * 1000000.0) as u64, // Store as fixed-point

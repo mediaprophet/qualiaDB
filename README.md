@@ -47,7 +47,7 @@ Qualia-DB is four things at once:
 
 - **In-process LLM inference**: `GgufTokenizer` parses the GGUF v2/v3 KV section (vocabulary, BOS/EOS IDs); greedy longest-match encode; SentencePiece-aware decode. `infer_local_model()` runs a real autoregressive decode loop — GPU dispatch via DirectML 1.15 (Windows) / Accelerate AMX (macOS) / wgpu/Vulkan (Linux) — with Phase 8 SPSC Webizen Sentinel mid-generation rollback. No Ollama, no Python.
 - **Flutter Chat UI wired**: `runInference(prompt, modelPath)` exported via flutter_rust_bridge. The Chat screen calls the full `TaskOrchestrator` governance pipeline (intent validation → Phase 8 GPU loop → provenance grounding) and shows a live loading indicator.
-- **GPU compute layer**: DirectML 1.15 SDK (`vendor/directml/`), `directml_bridge.rs` (real D3D12 + Q4_K GEMM), `metal_bridge.rs` (Accelerate `cblas_sgemm`, runs on Apple AMX), `gguf_bridge.rs` (`load_gguf` memory-maps weights via `memmap2`; `dispatch_fused_transformer_block` tries DirectML → Accelerate → wgpu in order).
+- **GPU compute layer**: DirectML 1.15 SDK (`vendor/directml/`), `directml_bridge.rs` (real D3D12 + Q4_K GEMM), `metal_bridge.rs` (Accelerate `cblas_sgemm`, runs on Apple AMX), `gguf_bridge.rs` (`load_gguf` memory-maps weights via `memmap2`; `dispatch_fused_transformer_block` tries DirectML → Accelerate → wgpu/Vulkan in order — wgpu path uses the real `fused_transformer.wgsl` shader with `GemmGpuParams` uniform buffer).
 - **Full Modality Stack**: Epistemic logic (OP_KNOWS/BELIEVES/COMMON_KNOWLEDGE), LTL trace evaluation (G/F/X/U/R), Paraconsistent routing (contradiction isolation without system halt), Dialectical synthesis (thesis-antithesis-synthesis over ASP stable models).
 - **N3 → Deontic Bridge**: N3 rule parser now compiles directly to norm Quins. `^>` (Defeater) rules set `DEFEATER_BIT`. Round-trip tested.
 - **MCP Fiduciary Mediation**: `McpIntentFrame` + `enforce_fiduciary_tool_dispatch` + sanctuary gate with WAL conduct logging.
@@ -56,12 +56,21 @@ Qualia-DB is four things at once:
 - **Resource Catalog**: Full download pipeline (YAML → reqwest → GGufSharder → WAL). `resources` CLI subcommand live. LLM, Ontology, and SPARQL endpoint registries.
 - **539 test functions in qualia-core-db alone** (browser suite + unit suite).
 
-**Build Status**: ✅ Compiles successfully (0 errors, all 82 build errors resolved)
+**Build Status**: ⚠️ qualia-core-db: 64 errors in newly-added SPARQL modules (`sparql_executor`, `sparql_endpoint`, `sparql_extensions`, `sparql_mm`, `sparql_websocket`) — all other crates compile cleanly.
 
-**⚠️ Known Limitations** (see [to-do/](to-do/) for implementation tasks):
-- Query layer stubs: mmap_query_subject, lazy_superblock_query need real implementation
-- Security stubs: zk_proofs, fiduciary_crypto, ML-DSA, ECC parity need real implementation  
-- Linux LLM inference: wgpu/Vulkan path uses mock pipeline (placeholder shader)
+**Implemented in 0.0.10-dev** (see [to-do/](to-do/) for detail):
+- ✅ ECC parity: real XOR fold (`subject ^ predicate ^ object ^ context ^ metadata`) — `to-do/004`
+- ✅ FiduciaryCrypto sign/verify: wired to MlDsaSigner (hash-based construction) — `to-do/002`
+- ✅ ZK proof structural validation: rejects short/all-zero/empty-key proofs — `to-do/001`
+- ✅ mmap_query_subject: real memmap2 scan over flat `.q42` files — `to-do/005`
+- ✅ QuinIndex: in-memory inverted index by subject/predicate/object/context — `to-do/005`
+- ✅ wgpu/Vulkan inference: real `fused_transformer.wgsl` pipeline with GemmGpuParams — `to-do/006`
+- ✅ lazy_superblock_query: removed mock WebRTC/emoji noise, real LZ4 block sampling — `to-do/005`
+
+**⚠️ Still pending** (see [to-do/](to-do/) for implementation tasks):
+- ML-DSA: hand-rolled SHA3 construction, not FIPS 204 (`to-do/003`)
+- ZK proofs: no cryptographic backend (bellman/arkworks not yet integrated) (`to-do/001`)
+- SPARQL engine: 64 build errors in new SPARQL implementation modules
 
 Full changelog: [CHANGELOG.md](CHANGELOG.md)
 
@@ -164,7 +173,7 @@ qualia daemon start
 ┌─────────────────────────────────────────────────────────────────┐
 │                   Storage Engine (.q42)                         │
 │   SuperBlocks (LZ4) + BIDX demand-paging + WAL (Ed25519)       │
-│   48-byte QualiaQuins | FNV-1a hashed IRIs | zero heap          │
+│   48-byte NQuins | FNV-1a hashed IRIs | zero heap          │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

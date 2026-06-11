@@ -1,4 +1,4 @@
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 use std::hash::{Hash, Hasher};
 use std::io::Read;
 
@@ -57,7 +57,7 @@ pub fn parse_json_ld_stream<R: Read>(
                         if let Some((prev_sub, prev_key)) = stack.pop() {
                             if prev_key != 0 && prev_sub != 0 {
                                 // We just finished an object that was a value to a property
-                                sorter.push(QualiaQuin {
+                                sorter.push(NQuin {
                                     subject: prev_sub,
                                     predicate: prev_key,
                                     object: current_subject,
@@ -103,7 +103,7 @@ pub fn parse_json_ld_stream<R: Read>(
                     } else if ch == ',' || ch == '}' {
                         // The string was a value
                         if current_key != 0 && current_subject != 0 {
-                            sorter.push(QualiaQuin {
+                            sorter.push(NQuin {
                                 subject: current_subject,
                                 predicate: current_key,
                                 object: hash_str(&current_string),
@@ -116,7 +116,7 @@ pub fn parse_json_ld_stream<R: Read>(
                         if ch == '}' {
                             if let Some((prev_sub, prev_key)) = stack.pop() {
                                 if prev_key != 0 && prev_sub != 0 {
-                                    sorter.push(QualiaQuin {
+                                    sorter.push(NQuin {
                                         subject: prev_sub,
                                         predicate: prev_key,
                                         object: current_subject,
@@ -207,7 +207,7 @@ pub fn parse_json_ld_star_stream<R: Read>(
                     } else if ch == '}' {
                         // Emit embedded triple assertions if any
                         for (virtual_id, pred) in &embedded_triples {
-                            sorter.push(QualiaQuin {
+                            sorter.push(NQuin {
                                 subject: current_subject,
                                 predicate: *pred,
                                 object: *virtual_id,
@@ -244,7 +244,7 @@ pub fn parse_json_ld_star_stream<R: Read>(
                         if current_key == 0 {
                             current_subject = hash;
                         } else {
-                            sorter.push(QualiaQuin {
+                            sorter.push(NQuin {
                                 subject: current_subject,
                                 predicate: current_key,
                                 object: hash,

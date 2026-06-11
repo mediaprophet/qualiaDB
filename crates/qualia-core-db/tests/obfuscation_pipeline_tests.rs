@@ -19,7 +19,7 @@ use qualia_core_db::{
         RungeKutta4Static, NelderMeadSimplex, QAOAAngleOptimizer,
         calculus::ODEFunction, optimization::ObjectiveFunction, quantum_optimizers::QuantumCostFunction
     },
-    qualia_quin::QualiaQuin,
+    n_quin::NQuin,
     execution_error::ExecutionError,
 };
 
@@ -104,7 +104,7 @@ fn test_polynomial_obfuscation_domains(
     ];
     let matrix_bytes = unsafe { core::mem::transmute::<[f64; 4], [u8; 32]>(matrix_data) };
     
-    let mut matrix_quin = QualiaQuin::default();
+    let mut matrix_quin = NQuin::default();
     obfuscator.encode_to_quin(&matrix_bytes, ObfuscationDomain::Matrix, &mut matrix_quin)?;
     
     // Verify matrix encoding preserves mathematical structure
@@ -122,7 +122,7 @@ fn test_polynomial_obfuscation_domains(
     ];
     let opt_bytes = unsafe { core::mem::transmute::<[f64; 4], [u8; 32]>(opt_data) };
     
-    let mut opt_quin = QualiaQuin::default();
+    let mut opt_quin = NQuin::default();
     obfuscator.encode_to_quin(&opt_bytes, ObfuscationDomain::OptimizationProblem, &mut opt_quin)?;
     
     // Verify optimization encoding preserves parameter relationships
@@ -140,7 +140,7 @@ fn test_polynomial_obfuscation_domains(
     ];
     let ham_bytes = unsafe { core::mem::transmute::<[f64; 4], [u8; 32]>(hamiltonian_data) };
     
-    let mut ham_quin = QualiaQuin::default();
+    let mut ham_quin = NQuin::default();
     obfuscator.encode_to_quin(&ham_bytes, ObfuscationDomain::HamiltonianOperator, &mut ham_quin)?;
     
     // Verify Hamiltonian encoding preserves energy relationships
@@ -292,7 +292,7 @@ fn test_end_to_end_integration(
     
     // Step 3: Apply polynomial obfuscation
     let data_bytes = unsafe { core::mem::transmute::<[f64; 4], [u8; 32]>(physics_data.field_values) };
-    let mut quin = QualiaQuin::default();
+    let mut quin = NQuin::default();
     polynomial_obfuscator.encode_to_quin(&data_bytes, target_domain, &mut quin)?;
     
     // Step 4: Initialize hybrid state for QPU offloading
@@ -337,7 +337,7 @@ fn test_obfuscation_with_specialized_libraries() -> Result<(), ExecutionError> {
     let ouroboros_params = ouroboros_solver.parameters;
     let params_bytes = unsafe { core::mem::transmute::<_, [u8; 48]>(ouroboros_params) };
     
-    let mut ouroboros_quin = QualiaQuin::default();
+    let mut ouroboros_quin = NQuin::default();
     polynomial_obfuscator.encode_to_quin(&params_bytes, ObfuscationDomain::HamiltonianOperator, &mut ouroboros_quin)?;
     
     // Verify Ouroboros data preservation
@@ -352,7 +352,7 @@ fn test_obfuscation_with_specialized_libraries() -> Result<(), ExecutionError> {
     let opt_results = parameter_optimizer.get_current_best();
     let opt_bytes = unsafe { core::mem::transmute::<_, [u8; 48]>(opt_results) };
     
-    let mut opt_quin = QualiaQuin::default();
+    let mut opt_quin = NQuin::default();
     polynomial_obfuscator.encode_to_quin(&opt_bytes, ObfuscationDomain::OptimizationProblem, &mut opt_quin)?;
     
     // Verify optimization data preservation
@@ -396,7 +396,7 @@ fn test_obfuscation_performance_constraints() -> Result<(), ExecutionError> {
     let large_data = [0.0f64; 1000]; // Large but fixed-size
     let data_bytes = unsafe { core::mem::transmute::<[f64; 1000], [u8; 8000]>(large_data) };
     
-    let mut quin = QualiaQuin::default();
+    let mut quin = NQuin::default();
     
     // Should handle large data without allocation
     polynomial_obfuscator.encode_to_quin(&data_bytes, ObfuscationDomain::Matrix, &mut quin)?;
@@ -413,7 +413,7 @@ fn test_obfuscation_performance_constraints() -> Result<(), ExecutionError> {
     let start_time = get_current_time();
     
     for _ in 0..100 {
-        let mut test_quin = QualiaQuin::default();
+        let mut test_quin = NQuin::default();
         polynomial_obfuscator.encode_to_quin(&data_bytes, ObfuscationDomain::Matrix, &mut test_quin)?;
     }
     
@@ -437,7 +437,7 @@ fn test_obfuscation_error_handling() -> Result<(), ExecutionError> {
     let invalid_data = [1.0; 4];
     let data_bytes = unsafe { core::mem::transmute::<[f64; 4], [u8; 32]>(invalid_data) };
     
-    let mut quin = QualiaQuin::default();
+    let mut quin = NQuin::default();
     
     // Should handle domain mismatches gracefully
     let result = polynomial_obfuscator.encode_to_quin(&data_bytes, ObfuscationDomain::Matrix, &mut quin);

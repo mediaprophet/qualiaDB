@@ -33,7 +33,7 @@
 //! - `host`: Host-side I/O management (ZeroCopyStreamer, io_uring, IOCP)
 //! - `gpu`: GPU integration (DirectStorage, GPUDirect, WebGPU)
 
-use crate::QualiaQuin;
+use crate::NQuin;
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::_MM_HINT_T0;
@@ -173,7 +173,7 @@ impl<'a> ContinuousGrid<'a> {
     /// that it is 8-byte aligned before creating the grid view.
     pub fn resume_from_quin(
         raw_slice: &'a [u8],
-        quin: &QualiaQuin,
+        quin: &NQuin,
     ) -> Result<(Self, usize), CalculusError> {
         let offset = quin.object as usize;
         
@@ -572,7 +572,7 @@ mod tests {
     #[test]
     fn test_state_suspension() {
         // Test that integration state can be packed into Quin
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         quin.object = 1024;  // Byte offset
         quin.metadata = f64::to_bits(42.5);  // Accumulator
         
@@ -597,7 +597,7 @@ mod tests {
             )
         };
         
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         quin.object = 64;  // Aligned offset (8 * 8 = 64)
         
         let (grid, offset) = ContinuousGrid::resume_from_quin(raw_bytes, &quin).unwrap();
@@ -608,7 +608,7 @@ mod tests {
     #[test]
     fn test_resume_from_quin_misaligned() {
         let data = [0u8; 100];
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         quin.object = 63;  // Misaligned offset
         
         let result = ContinuousGrid::resume_from_quin(&data, &quin);

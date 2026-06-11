@@ -3,7 +3,7 @@
 //! Strips DIDs and URIs into ephemeral local indices, emits linear biases and
 //! quadratic coupler weights, then re-hydrates binary solutions back to Quins.
 
-use crate::QualiaQuin;
+use crate::NQuin;
 
 pub const OP_EMIT_WEIGHT: u8 = 0x50;
 pub const MAX_QUBO_VARS: usize = 64;
@@ -104,12 +104,12 @@ impl QuboMatrix {
 
 /// Walk constraint Quins and compile a blind QUBO matrix.
 pub fn compile_quins_to_qubo(
-    quins: &[QualiaQuin],
+    quins: &[NQuin],
     out: &mut QuboMatrix,
 ) -> Result<(), QuboCompileError> {
     *out = QuboMatrix::default();
     for q in quins {
-        if q.get_sensitivity_byte() == QualiaQuin::SENSITIVITY_CLASSIFIED {
+        if q.get_sensitivity_byte() == NQuin::SENSITIVITY_CLASSIFIED {
             return Err(QuboCompileError::ClassifiedEgress);
         }
         let subj = out.map_var(q.subject)?;
@@ -133,7 +133,7 @@ pub fn compile_quins_to_qubo(
 
 /// VM opcode handler: push a float weight from the object register.
 pub fn emit_weight_from_quin(
-    quin: &QualiaQuin,
+    quin: &NQuin,
     matrix: &mut QuboMatrix,
 ) -> Result<(), QuboCompileError> {
     let subj = matrix.map_var(quin.subject)?;
@@ -212,7 +212,7 @@ fn qubo_energy(matrix: &QuboMatrix, assignment: &[u8; MAX_QUBO_VARS], n: usize) 
 pub fn rehydrate_solution(
     matrix: &mut QuboMatrix,
     assignment: &[u8; MAX_QUBO_VARS],
-    out: &mut [QualiaQuin],
+    out: &mut [NQuin],
 ) -> usize {
     let mut count = 0;
     for i in 0..matrix.index_count {
@@ -224,7 +224,7 @@ pub fn rehydrate_solution(
         let predicate = crate::q_hash("q42:quantumAssignment");
         let context = crate::q_hash("q42:rehydrated");
         let object = if val == 1 { 1 } else { 0 };
-        let q = QualiaQuin {
+        let q = NQuin {
             subject: entity,
             predicate,
             object,
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn classified_quin_blocks_egress() {
-        let mut q = QualiaQuin {
+        let mut q = NQuin {
             subject: 1,
             predicate: 0,
             object: 2,
@@ -272,7 +272,7 @@ mod tests {
             metadata: 0,
             parity: 0,
         };
-        q.set_sensitivity_byte(QualiaQuin::SENSITIVITY_CLASSIFIED);
+        q.set_sensitivity_byte(NQuin::SENSITIVITY_CLASSIFIED);
         let mut m = QuboMatrix::default();
         assert_eq!(
             compile_quins_to_qubo(&[q], &mut m),

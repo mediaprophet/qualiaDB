@@ -4,7 +4,7 @@
 
 pub mod mmap;
 
-use crate::{QualiaQuin, QualiaSuperBlock, BLOCK_MULTIPLIER_SIZE, QUINS_PER_BLOCK};
+use crate::{NQuin, QualiaSuperBlock, BLOCK_MULTIPLIER_SIZE, QUINS_PER_BLOCK};
 use std::fs::{File, OpenOptions};
 use std::io::{self, Seek, SeekFrom};
 use std::path::Path;
@@ -36,7 +36,7 @@ impl SuperBlockWriter {
         &mut self,
         sequence_id: u64,
         owner_did: u64,
-        quins: &[QualiaQuin; QUINS_PER_BLOCK],
+        quins: &[NQuin; QUINS_PER_BLOCK],
     ) -> io::Result<()> {
         let mut block = Box::new(unsafe { std::mem::zeroed::<QualiaSuperBlock>() });
 
@@ -110,7 +110,7 @@ mod tests {
         let mut writer = SuperBlockWriter::open(temp_file.path()).unwrap();
 
         // Create an array of exactly 850 mock quins
-        let quins = [QualiaQuin {
+        let quins = [NQuin {
             subject: 0,
             predicate: 0,
             object: 0,

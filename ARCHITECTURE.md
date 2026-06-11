@@ -11,7 +11,7 @@ QualiaDB is a zero-allocation, mechanically sympathetic semantic database and mu
 | Principle | Detail |
 |-----------|--------|
 | **Zero-Heap in Hot Paths** | No `Vec`, `String`, or `Box` inside evaluator loops. Callers supply fixed-size output buffers (`&mut [T]`) or `[T; N]` stack arrays for local state. |
-| **48-Byte Super-Quin** | Every semantic datum fits in a `QualiaQuin` (6 × `u64`: subject, predicate, object, context, metadata, parity). Hashes and bit-packing replace string pointers entirely. |
+| **48-Byte Super-Quin** | Every semantic datum fits in a `NQuin` (6 × `u64`: subject, predicate, object, context, metadata, parity). Hashes and bit-packing replace string pointers entirely. |
 | **42 MB Prolog Sentinel** | Any single execution pass must stay within 42 × 1024 × 1024 bytes. `SlgArena` enforces this structurally (917,504 Quin slots). |
 | **512 MB Edge Floor** | Total system — graph engine, Webizen VM, LLM runtime, and all caches — must stay within 512 MB. Hard design target for personal-device deployment. |
 | **Deterministic, Non-Recursive** | No unbounded recursion. LTL/ASP evaluators iterate over slices; they never call themselves. |
@@ -23,7 +23,7 @@ QualiaDB is a zero-allocation, mechanically sympathetic semantic database and mu
 
 ## 2. Universal Quin Bit Layout
 
-Every `QualiaQuin` is exactly 48 bytes — six `u64` fields. All semantic meaning is encoded via bit-packing; no pointers, no heap references.
+Every `NQuin` is exactly 48 bytes — six `u64` fields. All semantic meaning is encoded via bit-packing; no pointers, no heap references.
 
 ```
 Field      Bits      Meaning
@@ -58,7 +58,7 @@ metadata   [61..62]  PermissiveRoutingLane (00=Passthrough, 01=Commons,
            [59]      CONSUMED_BIT — linear.rs resource tombstone
            [58]      SYNTHESIZED_BIT — dialectical.rs synthesis marker
 
-parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context (ECC stub)
+parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context ^ metadata (implemented — NQuin::calculate_parity)
 ```
 
 **Note on `lexicon.rs`:** `generate_60bit_token` masks hashes to 60 bits (`& 0x0FFF_FFFF_FFFF_FFFF`), explicitly reserving bits 60-63 for type tags. All new modality object values must respect this mask.
@@ -69,7 +69,7 @@ parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context (ECC stub)
 
 ### SuperBlocks (`storage.rs`, `wal.rs`)
 
-The fundamental on-disk unit is the **SuperBlock**: exactly 40,960 bytes (10 × 4,096-byte disk sectors), holding 850 `QualiaQuin`s plus a 160-byte header. SuperBlocks are LZ4-compressed for density.
+The fundamental on-disk unit is the **SuperBlock**: exactly 40,960 bytes (10 × 4,096-byte disk sectors), holding 850 `NQuin`s plus a 160-byte header. SuperBlocks are LZ4-compressed for density.
 
 - **Header-first boot**: On startup only block headers are read. The engine maps the full `.q42` file via `memmap2` and services queries by seeking directly to relevant blocks — non-relevant blocks are never decompressed.
 - **WAL (`wal.rs`)**: All mutations are append-only to the Write-Ahead Log before being compacted into SuperBlocks. Conduct violation Quins are written here and signed with Ed25519.
@@ -86,7 +86,7 @@ A `.q42.bidx` sidecar file records the subject-hash range covered by each SuperB
 
 | Type | File | Purpose |
 |------|------|---------|
-| `QualiaQuin` | `lib.rs` | 48-byte semantic datum |
+| `NQuin` | `lib.rs` | 48-byte semantic datum |
 | `QualiaSuperBlock` | `storage.rs` | 850-Quin compressed block |
 | `QuinIncrementalScanner` | `storage.rs` | Zero-alloc streaming cursor |
 | `BlockOffsetMap` | `indexing.rs` | BIDX-backed demand-paging index |
@@ -175,7 +175,7 @@ Quin layout for epistemic Quins:
 Key function:
 ```rust
 pub fn evaluate_epistemic_frame(
-    quins: &[QualiaQuin],
+    quins: &[NQuin],
     agent_did_hash: u64,    // 0 = accept all agents
     world_hash: u64,        // 0 = accept all worlds
     out: &mut [EpistemicVerdict],
@@ -215,8 +215,8 @@ Stable model enumeration (up to 8 worlds), zero-alloc.
 ```rust
 pub const MAX_STABLE_MODELS: usize = 8;
 pub fn enumerate_stable_models(
-    base: &QualiaQuin,
-    rules: &[QualiaQuin],
+    base: &NQuin,
+    rules: &[NQuin],
     out_worlds: &mut [u64; MAX_STABLE_MODELS],
 ) -> usize
 ```
@@ -230,7 +230,7 @@ Subsumption check against a TBox stored in a Quin slice.
 pub fn check_subsumption_quin(
     sub_class_hash: u64,
     super_class_hash: u64,
-    tbox: &[QualiaQuin],   // Quins with predicate = q_hash("rdfs:subClassOf")
+    tbox: &[NQuin],   // Quins with predicate = q_hash("rdfs:subClassOf")
 ) -> bool
 ```
 
@@ -239,8 +239,8 @@ Resource consumption via tombstone mechanism (no heap allocation).
 
 ```rust
 pub const CONSUMED_BIT: u64 = 1u64 << 59;
-pub fn consume_quin(q: &mut QualiaQuin)
-pub fn is_consumed(q: &QualiaQuin) -> bool
+pub fn consume_quin(q: &mut NQuin)
+pub fn is_consumed(q: &NQuin) -> bool
 ```
 
 #### Dialectical Logic (`modalities/dialectical.rs`) — ✅ Complete
@@ -249,9 +249,9 @@ Thesis/antithesis/synthesis over ASP stable-model pairs.
 ```rust
 pub const SYNTHESIZED_BIT: u64 = 1u64 << 58;
 pub fn synthesize_dialectical(
-    thesis: &QualiaQuin,
-    antithesis: &QualiaQuin,
-) -> Option<QualiaQuin>
+    thesis: &NQuin,
+    antithesis: &NQuin,
+) -> Option<NQuin>
 ```
 
 Synthesis context = `thesis_context ^ antithesis_context`; `SYNTHESIZED_BIT` set in metadata.
@@ -337,7 +337,7 @@ The Model Context Protocol server exposes the graph engine to AI agent tools via
 - `query_graph` — requires valid `sanctuary_override` token; blocked without one
 - `inject_test_quin` — routes directly to paraconsistent isolation lane
 
-**Sanctuary gate**: If `query_graph` is called without a valid override token, a conduct violation `QualiaQuin` is immediately written to the WAL and signed. Buffer scrubbing via `write_volatile` after each dispatch.
+**Sanctuary gate**: If `query_graph` is called without a valid override token, a conduct violation `NQuin` is immediately written to the WAL and signed. Buffer scrubbing via `write_volatile` after each dispatch.
 
 ---
 
@@ -463,7 +463,7 @@ Model lifecycle state machine: `Discovered → MappedToDisk → StreamingVRAM �
 
 Three components for deontic multi-party contract support:
 
-1. **`CrdtResolver::resolve_lww`** — Lamport clock tie-breaking. Concurrent mutations resolved by `object` magnitude. Pure, zero-alloc over `&QualiaQuin`.
+1. **`CrdtResolver::resolve_lww`** — Lamport clock tie-breaking. Concurrent mutations resolved by `object` magnitude. Pure, zero-alloc over `&NQuin`.
 
 2. **`CrdtResolver::verify_delegation`** — Temporal expiry + context-bound check on `DelegatedAccess` grants.
 
@@ -586,13 +586,13 @@ Early desktop prototype. **Not built or released by CI** (Tauri removed from `re
 
 ### 15-C `prune_defeasible_claims` Uses Heap
 
-`WebizenVM::prune_defeasible_claims` takes `&mut Vec<QualiaQuin>` and uses `HashSet`. This violates the zero-heap mandate. The zero-alloc replacement signature is:
+`WebizenVM::prune_defeasible_claims` takes `&mut Vec<NQuin>` and uses `HashSet`. This violates the zero-heap mandate. The zero-alloc replacement signature is:
 
 ```rust
 pub fn partition_defeasible(
-    quins: &[QualiaQuin],
-    out_hard: &mut [QualiaQuin],
-    out_defeasible: &mut [QualiaQuin],
+    quins: &[NQuin],
+    out_hard: &mut [NQuin],
+    out_defeasible: &mut [NQuin],
 ) -> (usize, usize)
 ```
 

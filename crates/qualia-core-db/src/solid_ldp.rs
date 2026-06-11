@@ -1,5 +1,5 @@
 use crate::{
-    PermissiveRoutingLane, QualiaQuin, QualiaSuperBlock, BLOCK_MULTIPLIER_SIZE, QUINS_PER_BLOCK,
+    PermissiveRoutingLane, NQuin, QualiaSuperBlock, BLOCK_MULTIPLIER_SIZE, QUINS_PER_BLOCK,
 };
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
@@ -95,7 +95,7 @@ impl SolidExporter {
     }
 
     /// Helper to translate a 48-byte Super-Quin into a W3C Turtle string.
-    fn quin_to_turtle(quin: &QualiaQuin) -> String {
+    fn quin_to_turtle(quin: &NQuin) -> String {
         // We use pseudo-URIs here. A real lexicon lookup would happen for string resolution.
         // N3Logic Context (Vector 4) is appended as a comment since Turtle does not support quads.
         format!(
@@ -108,7 +108,7 @@ impl SolidExporter {
 // Backward compatibility stub for old tests
 pub struct SolidLdpFacade;
 impl SolidLdpFacade {
-    pub fn serialize_to_rdf_star(quin: &QualiaQuin) -> String {
+    pub fn serialize_to_rdf_star(quin: &NQuin) -> String {
         format!("GRAPH <urn:qualia:context:{}> {{ geo:asWKT qualia:hardwareIntegrity \"VERIFIED_ECC_PASS\" }}", quin.context)
     }
 }

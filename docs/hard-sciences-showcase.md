@@ -56,3 +56,30 @@ Because these features are deeply embedded in the `qualia-core-db` foundation, t
 
 * **Qualia Vault (Android):** The mobile client runs the native Rust engine on ARM64, accessing biometric JNI wrappers and NEON vector capabilities natively on-device.
 * **Qualia Desktop (Tauri):** The desktop Webizen environment orchestrates the Swarm daemon, capable of ingesting vast libraries of semantic data, dispatching local LLM inference, and unleashing the full power of a dedicated NVIDIA/AMD GPU for quantum and engineering computations.
+
+---
+
+## 6. Specialized Library Extensions
+
+Ten domain-specific extension libraries are planned under the advanced extensions framework,
+covering: Chaos Theory, Classical/Relativistic Mechanics, Complex Analysis, Differential Geometry,
+Electromagnetism, Fluid Dynamics, Group Theory, Information Theory, Number Theory, and Statistical Mechanics.
+
+Infrastructure is complete: PINN (ternary quantisation + SMX), SNN (noisy-gradient CRDT), WebGPU compute, and QPU bridge are all implemented.
+
+The Geometric Algebra SIMD kernel is **implemented** in `crates/qualia-core-db/src/geometric_algebra/simd_kernel.rs` — AVX2/FMA-accelerated Multivector, Rotor, and Translator operations with NQuin integration.
+
+Six compiled domain engines exist under `crates/qualia-core-db/src/domains/`:
+- **Bioinformatics** (Smith-Waterman/Needleman-Wunsch, BLOSUM62, k-mer, MinHash, Tanimoto)
+- **Organic Chemistry** (SMILES, Lipinski/Veber/Ghose/Egan filters, LogP, Morgan fingerprint, Arrhenius, Gibbs-Helmholtz, Green chemistry)
+- **Thermodynamics** (Metropolis-Hastings MCMC, Gibbs free energy — covers Statistical Mechanics)
+- **Geometric** (LorentzVector / Minkowski space, tropical geometry — covers Classical/Relativistic Mechanics)
+- **Financial** and **Geospatial** domain models
+
+Statistical Mechanics, Classical/Relativistic Mechanics, Differential Geometry, and Fluid Dynamics have substantial partial coverage through the above compiled code.
+Electromagnetism and Chaos Theory have PINN/WebGPU enum wiring.
+Number Theory, Information Theory, and Group Theory have no dedicated code yet.
+
+Nine large specialized library files (physics simulation, chemistry modeling, engineering analysis, cryptographic, statistical computing, etc.) exist in `specialized_libs/` but are currently disabled due to build errors.
+
+See the full status breakdown in [`docs/specialized-library-extensions-status.md`](specialized-library-extensions-status.md).

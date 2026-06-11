@@ -1,4 +1,4 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ParseError {
@@ -43,7 +43,7 @@ pub fn ingest_network_payload(payload: &[u8]) -> Result<&[u8], ParseError> {
 /// A lightweight, no_std compatible loop to read variable-length integers from CBOR-LD.
 /// Maps the extracted dictionary tags directly into the 64-bit Lexicon registers
 /// without allocating a single String or Vec.
-pub fn parse_cbor_ld_to_quin(payload: &[u8]) -> Result<QualiaQuin, ParseError> {
+pub fn parse_cbor_ld_to_quin(payload: &[u8]) -> Result<NQuin, ParseError> {
     // 1. Enforce the Strict Binary Gatekeeper
     let valid_payload = ingest_network_payload(payload)?;
 
@@ -117,7 +117,7 @@ pub fn parse_cbor_ld_to_quin(payload: &[u8]) -> Result<QualiaQuin, ParseError> {
     // Hardcode metadata to Passthrough for this base compilation layer
     let metadata = 0b00 << 61;
 
-    Ok(QualiaQuin {
+    Ok(NQuin {
         subject,
         predicate,
         object,

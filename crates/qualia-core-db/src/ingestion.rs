@@ -1,4 +1,4 @@
-use crate::{query_compiler::QueryCompiler, QualiaQuin};
+use crate::{query_compiler::QueryCompiler, NQuin};
 
 /// A zero-allocation stream processor trait that iterates over lines or chunks
 /// of bytes/strings without allocating to the heap.
@@ -20,7 +20,7 @@ impl<'a> IngestionPipeline<'a> {
     }
 
     /// Parses a single line natively, determining hardware routing based on the syntax.
-    pub fn parse_line(line: &str) -> Option<QualiaQuin> {
+    pub fn parse_line(line: &str) -> Option<NQuin> {
         let trimmed = line.trim();
         if trimmed.is_empty() || trimmed.starts_with('#') {
             return None; // Skip empty lines and comments
@@ -55,7 +55,7 @@ impl<'a> IngestionPipeline<'a> {
             metadata |= 0b00 << 61;
         }
 
-        Some(QualiaQuin {
+        Some(NQuin {
             subject: 0,
             predicate: 0,
             object: 0,
@@ -67,7 +67,7 @@ impl<'a> IngestionPipeline<'a> {
 }
 
 impl<'a> ZeroCopyStream<'a> for IngestionPipeline<'a> {
-    type Item = QualiaQuin;
+    type Item = NQuin;
 
     /// Iterates over the string payload line-by-line, compiling immediately.
     fn stream_parse(&self) -> impl Iterator<Item = Self::Item> + 'a {

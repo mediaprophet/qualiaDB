@@ -3,7 +3,7 @@
 //! Implements SPARQL 1.1 Update Language (INSERT DATA, DELETE DATA, DELETE/INSERT WHERE).
 
 use crate::sparql_ast::*;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Update operation types
 #[repr(C)]
@@ -11,12 +11,12 @@ use crate::QualiaQuin;
 pub enum UpdateOperation {
     /// INSERT DATA { triples }
     InsertData {
-        quins: [QualiaQuin; 64],
+        quins: [NQuin; 64],
         quin_count: u8,
     },
     /// DELETE DATA { triples }
     DeleteData {
-        quins: [QualiaQuin; 64],
+        quins: [NQuin; 64],
         quin_count: u8,
     },
     /// DELETE { pattern } INSERT { pattern } WHERE { pattern }
@@ -46,11 +46,11 @@ pub enum UpdateOperation {
 
 /// Update executor
 pub struct UpdateExecutor<'a> {
-    pub quins: &'a mut Vec<QualiaQuin>,
+    pub quins: &'a mut Vec<NQuin>,
 }
 
 impl<'a> UpdateExecutor<'a> {
-    pub fn new(quins: &'a mut Vec<QualiaQuin>) -> Self {
+    pub fn new(quins: &'a mut Vec<NQuin>) -> Self {
         Self { quins }
     }
 
@@ -89,7 +89,7 @@ impl<'a> UpdateExecutor<'a> {
 
     fn execute_insert_data(
         &mut self,
-        quins: &[QualiaQuin],
+        quins: &[NQuin],
         quin_count: u8,
     ) -> Result<u64, String> {
         let count = quin_count as usize;
@@ -106,7 +106,7 @@ impl<'a> UpdateExecutor<'a> {
 
     fn execute_delete_data(
         &mut self,
-        quins: &[QualiaQuin],
+        quins: &[NQuin],
         quin_count: u8,
     ) -> Result<u64, String> {
         let count = quin_count as usize;
@@ -200,7 +200,7 @@ mod tests {
         let mut quins = vec![];
         let mut executor = UpdateExecutor::new(&mut quins);
         
-        let test_quin = QualiaQuin {
+        let test_quin = NQuin {
             subject: 1,
             predicate: 2,
             object: 3,
@@ -209,7 +209,7 @@ mod tests {
             parity: 0,
         };
         
-        let mut quins_array = [QualiaQuin::default(); 64];
+        let mut quins_array = [NQuin::default(); 64];
         quins_array[0] = test_quin;
         
         let result = executor.execute_insert_data(&quins_array, 1).unwrap();
@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn test_delete_data() {
-        let mut quins = vec![QualiaQuin {
+        let mut quins = vec![NQuin {
             subject: 1,
             predicate: 2,
             object: 3,
@@ -230,7 +230,7 @@ mod tests {
         
         let mut executor = UpdateExecutor::new(&mut quins);
         
-        let test_quin = QualiaQuin {
+        let test_quin = NQuin {
             subject: 1,
             predicate: 2,
             object: 3,
@@ -239,7 +239,7 @@ mod tests {
             parity: 0,
         };
         
-        let mut quins_array = [QualiaQuin::default(); 64];
+        let mut quins_array = [NQuin::default(); 64];
         quins_array[0] = test_quin;
         
         let result = executor.execute_delete_data(&quins_array, 1).unwrap();

@@ -2,7 +2,7 @@
 //! A `#![no_std]` compatible virtual machine that executes a fixed-size
 //! instruction set across the 48-byte Quins without triggering heap allocations.
 
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// The micro-instruction set (ISA) for the Core 1 Logic Engine.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -103,7 +103,7 @@ impl WebizenVM {
         &self,
         agreement_id: u64,
         threshold: u8,
-        current_quin: crate::QualiaQuin,
+        current_quin: crate::NQuin,
     ) -> crate::crdt::SuspendedTransaction {
         crate::crdt::SuspendedTransaction {
             agreement_id,
@@ -117,7 +117,7 @@ impl WebizenVM {
     }
 
     /// Evaluates a loaded constraint block against a target Quin.
-    pub fn execute_constraint(&mut self, quin: &QualiaQuin) -> bool {
+    pub fn execute_constraint(&mut self, quin: &NQuin) -> bool {
         let mut condition_flag = true;
 
         // Extract 5th Metadata Vector for Stochastic/Fuzzy logic weight (bottom 16 bits as probability 0.0 - 1.0)
@@ -236,8 +236,8 @@ impl WebizenVM {
     }
 
     /// Evaluates an N3 Implication `=>` constraint against a target Quin.
-    /// Returns `Some(QualiaQuin)` if the antecedent passes and yields a consequence.
-    pub fn execute_implication(&mut self, quin: &QualiaQuin) -> Option<QualiaQuin> {
+    /// Returns `Some(NQuin)` if the antecedent passes and yields a consequence.
+    pub fn execute_implication(&mut self, quin: &NQuin) -> Option<NQuin> {
         let mut condition_flag = true;
         let mut emitted_quin = None;
         let mut defeasible_tag = false;
@@ -299,7 +299,7 @@ impl WebizenVM {
                         let s = self.registers[*subject_reg].unwrap_or(0);
                         let c = self.registers[*context_reg].unwrap_or(0);
 
-                        let mut resulting_quin = QualiaQuin {
+                        let mut resulting_quin = NQuin {
                             subject: s,
                             predicate: *predicate,
                             object: *object,
@@ -368,7 +368,7 @@ impl WebizenVM {
                             _ => 0.0_f32,
                         };
 
-                        let mut resulting_quin = QualiaQuin {
+                        let mut resulting_quin = NQuin {
                             subject: s,
                             predicate: *predicate,
                             // Tag the object as float (0x1 << 60) and pack f32
@@ -412,7 +412,7 @@ impl WebizenVM {
     /// Extracts a tagged floating point value from a given 64-bit Quin vector.
     /// Uses the top 4 bits as a type tag (0x1 = float).
     #[inline(always)]
-    fn extract_float(quin: &QualiaQuin, vector_id: u8) -> Option<f32> {
+    fn extract_float(quin: &NQuin, vector_id: u8) -> Option<f32> {
         let val = match vector_id {
             0 => quin.subject,
             1 => quin.predicate,
@@ -430,7 +430,7 @@ impl WebizenVM {
     }
 
     /// Prunes neural hallucinations: If a Defeasible claim is contradicted by a hard physical fact, it is removed.
-    pub fn prune_defeasible_claims(qualia_graph: &mut Vec<QualiaQuin>) {
+    pub fn prune_defeasible_claims(qualia_graph: &mut Vec<NQuin>) {
         // A claim is defeasible if bit 60 is set.
         let mut deterministic_subjects = std::collections::HashSet::new();
 
@@ -498,7 +498,7 @@ impl WebizenCompiler {
 /// The Informatics Subsystem (Differential Diagnostics)
 /// Executes N3Logic bytecode constraints over a subset of Quins (e.g., from a .q42 file)
 /// to derive deterministic inferences natively on the edge, replacing the legacy WebAssembly/Prolog engine.
-pub fn execute_differential_diagnostics(qualia_graph: &[QualiaQuin]) -> Vec<QualiaQuin> {
+pub fn execute_differential_diagnostics(qualia_graph: &[NQuin]) -> Vec<NQuin> {
     let mut inferences = Vec::new();
     let mut vm = WebizenVM::new();
     let diagnostic_rules = WebizenCompiler::compile_diagnostic_constraint();
@@ -531,7 +531,7 @@ mod tests {
         vm.load_bytecode(&bytecode);
 
         // Matching Quin
-        let valid_quin = QualiaQuin {
+        let valid_quin = NQuin {
             subject: 999,
             predicate: 42,
             object: 0,
@@ -541,7 +541,7 @@ mod tests {
         };
 
         // Fails predicate match
-        let invalid_quin = QualiaQuin {
+        let invalid_quin = NQuin {
             subject: 999,
             predicate: 99,
             object: 0,
@@ -595,7 +595,7 @@ mod tests {
         // The input antecedent
         let _input_quin = crate::q_turtle!("Alice", "knows", "Bob");
         // q_turtle! hashes "knows" to something, but we hardcoded predicate 42 in bytecode, so let's mock it
-        let trigger_quin = QualiaQuin {
+        let trigger_quin = NQuin {
             subject: 123,
             predicate: 42,
             object: 456,
@@ -647,7 +647,7 @@ mod tests {
         let float_val = 3.14_f32;
         let tagged_object = (0x1 << 60) | (float_val.to_bits() as u64);
 
-        let q = QualiaQuin {
+        let q = NQuin {
             subject: 0,
             predicate: 0,
             object: tagged_object,

@@ -1,4 +1,4 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// OP_KNOWS = 0x20
 pub const OP_KNOWS: u8 = 0x20;
@@ -23,7 +23,7 @@ pub enum EpistemicStatus {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EpistemicVerdict {
-    pub claim: QualiaQuin,
+    pub claim: NQuin,
     pub status: EpistemicStatus,
     pub certainty: u8,
 }
@@ -46,7 +46,7 @@ fn has_common_knowledge(ck_buf: &[u64], claim_fingerprint: u64) -> bool {
 }
 
 pub fn evaluate_epistemic_frame(
-    quins: &[QualiaQuin],
+    quins: &[NQuin],
     agent_did_hash: u64,
     world_hash: u64,
     out: &mut [EpistemicVerdict],
@@ -115,9 +115,9 @@ mod tests {
         certainty: u8,
         claim_fingerprint: u64,
         world: u64,
-    ) -> QualiaQuin {
+    ) -> NQuin {
         let predicate = (opcode as u64) | ((certainty as u64) << CERTAINTY_BIT_SHIFT);
-        QualiaQuin {
+        NQuin {
             subject,
             predicate,
             object: claim_fingerprint,

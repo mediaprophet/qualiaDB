@@ -155,51 +155,55 @@ mod tests {
 /// 
 /// Example: BIND (SUBJECT(?triple) AS ?subject)
 
-/// Extract the subject component from an embedded triple
-/// 
-/// Given a Virtual ID, look up the 24-byte embedded triple data and return
-/// the subject component ID.
+/// Extract the subject component from an embedded triple.
+///
+/// Given a Virtual ID, performs a binary search in the Q42LEX data and returns
+/// the subject component ID stored in the embedded triple entry.
 pub fn subject_of_virtual_id(
     virtual_id: u64,
-    _lex_data: &[u8],
+    lex_data: &[u8],
     _blob_base: usize,
 ) -> Result<u64, RdfStarParseError> {
     if !is_virtual_id(virtual_id) {
         return Err(RdfStarParseError::MalformedEmbeddedTriple);
     }
-    
-    // Find the Virtual ID in the lexicon (binary search)
-    // For now, return a placeholder
-    // TODO: Implement binary search in Q42LexMmap
-    Err(RdfStarParseError::LexiconError)
+    let lex = crate::q42_lex::Q42LexMmap::from_bytes(lex_data)
+        .map_err(|_| RdfStarParseError::LexiconError)?;
+    lex.lookup_embedded_triple(virtual_id)
+        .map(|t| t[0])
+        .ok_or(RdfStarParseError::LexiconError)
 }
 
-/// Extract the predicate component from an embedded triple
+/// Extract the predicate component from an embedded triple.
 pub fn predicate_of_virtual_id(
     virtual_id: u64,
-    _lex_data: &[u8],
+    lex_data: &[u8],
     _blob_base: usize,
 ) -> Result<u64, RdfStarParseError> {
     if !is_virtual_id(virtual_id) {
         return Err(RdfStarParseError::MalformedEmbeddedTriple);
     }
-    
-    // TODO: Implement binary search in Q42LexMmap
-    Err(RdfStarParseError::LexiconError)
+    let lex = crate::q42_lex::Q42LexMmap::from_bytes(lex_data)
+        .map_err(|_| RdfStarParseError::LexiconError)?;
+    lex.lookup_embedded_triple(virtual_id)
+        .map(|t| t[1])
+        .ok_or(RdfStarParseError::LexiconError)
 }
 
-/// Extract the object component from an embedded triple
+/// Extract the object component from an embedded triple.
 pub fn object_of_virtual_id(
     virtual_id: u64,
-    _lex_data: &[u8],
+    lex_data: &[u8],
     _blob_base: usize,
 ) -> Result<u64, RdfStarParseError> {
     if !is_virtual_id(virtual_id) {
         return Err(RdfStarParseError::MalformedEmbeddedTriple);
     }
-    
-    // TODO: Implement binary search in Q42LexMmap
-    Err(RdfStarParseError::LexiconError)
+    let lex = crate::q42_lex::Q42LexMmap::from_bytes(lex_data)
+        .map_err(|_| RdfStarParseError::LexiconError)?;
+    lex.lookup_embedded_triple(virtual_id)
+        .map(|t| t[2])
+        .ok_or(RdfStarParseError::LexiconError)
 }
 
 /// Construct a Virtual ID from three component IDs

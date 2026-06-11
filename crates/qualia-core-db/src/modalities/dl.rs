@@ -1,10 +1,10 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Returns true if sub_class_hash is subsumed by super_class_hash in the TBox slice
 pub fn check_subsumption_quin(
     sub_class_hash: u64,
     super_class_hash: u64,
-    tbox: &[QualiaQuin], // Quins with predicate = q_hash("rdfs:subClassOf")
+    tbox: &[NQuin], // Quins with predicate = q_hash("rdfs:subClassOf")
 ) -> bool {
     if sub_class_hash == super_class_hash {
         return true;
@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn test_check_subsumption_quin() {
         let tbox = vec![
-            QualiaQuin {
+            NQuin {
                 subject: 10,
                 predicate: 0,
                 object: 20,
@@ -48,7 +48,7 @@ mod tests {
                 metadata: 0,
                 parity: 0,
             },
-            QualiaQuin {
+            NQuin {
                 subject: 20,
                 predicate: 0,
                 object: 30,

@@ -12,7 +12,7 @@ use qualia_core_db::{
     profiles::CapabilityProfile,
     q_hash,
     resource_catalog::{OntologyResource, ResourceCatalog},
-    QualiaQuin, CAPABILITY_REGISTRY,
+    NQuin, CAPABILITY_REGISTRY,
 };
 
 use crate::chat_session::{ChatEnvironment, OntologyScopeSummary};
@@ -414,7 +414,7 @@ fn read_ontology_meta(storage: &Path, ont_id: &str) -> Option<OntologyMetaSideca
     serde_json::from_str(&text).ok()
 }
 
-fn collect_lexicon_prefixes(quins: &[QualiaQuin], out: &mut Vec<u64>) {
+fn collect_lexicon_prefixes(quins: &[NQuin], out: &mut Vec<u64>) {
     let mut freq: HashMap<u64, u32> = HashMap::new();
     for q in quins {
         *freq.entry(q.subject & OBJECT_HASH_MASK).or_insert(0) += 1;
@@ -452,7 +452,7 @@ fn write_environment_manifest_q42(
         let metadata = i as u64;
         let context = q_hash("chat:environment");
         let parity = subject ^ predicate ^ object ^ context ^ metadata;
-        quins.push(QualiaQuin {
+        quins.push(NQuin {
             subject,
             predicate,
             object,
@@ -470,7 +470,7 @@ fn write_environment_manifest_q42(
     Ok(())
 }
 
-fn write_quins_to_q42(quins: &[QualiaQuin], out_path: &Path) -> Result<(), BindError> {
+fn write_quins_to_q42(quins: &[NQuin], out_path: &Path) -> Result<(), BindError> {
     let mut out_file = File::create(out_path)?;
     let mut block_id: u64 = 0;
     let mut buffer = Vec::with_capacity(393_216);

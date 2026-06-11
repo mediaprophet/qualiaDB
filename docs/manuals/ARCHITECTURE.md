@@ -64,7 +64,7 @@ Qualia-DB runs LLM inference entirely in-process. There is no Ollama, no Python 
 | Step | Component | Detail |
 |------|-----------|--------|
 | 1 | `gguf_sharder.rs` · `GgufTokenizer` | Parses GGUF v2/v3 KV section: extracts vocabulary (`tokenizer.ggml.tokens`), BOS/EOS IDs. Greedy longest-match `encode()`; SentencePiece `▁`-aware `decode()`. Falls back to 256-entry byte-level tokeniser when no model is loaded. |
-| 2 | `gguf_sharder.rs` · `GGufSharder` | Parses GGUF header magic + tensor count; generates `QualiaQuin` pointer map (byte offsets in object field, upper 4 bits = modality flag `0b1001`). |
+| 2 | `gguf_sharder.rs` · `GGufSharder` | Parses GGUF header magic + tensor count; generates `NQuin` pointer map (byte offsets in object field, upper 4 bits = modality flag `0b1001`). |
 | 3 | `gguf_bridge.rs` · `QTensorEngine` | `load_gguf(path)` memory-maps weights via `memmap2` (zero heap). `dispatch_fused_transformer_block()` tries DirectML → Accelerate → wgpu/WGSL in order. |
 | 4 | `shaders/fused_tensor_contraction.wgsl` | WGSL compute shader, 64 threads/workgroup, 4096 FMA ops per thread; backend via DirectML 1.15 / Vulkan / Metal / WebGPU. |
 | 5 | `llm_agent.rs` · `LocalLlmAgent` | `infer_local_model()` runs the Phase 8 autoregressive decode loop: tokenise prompt → per-step GPU dispatch → SPSC logit stream → sentinel rollback check → argmax sample → EOS detection → detokenise. |
@@ -113,7 +113,7 @@ Hybrid  // Local-first. Falls back to Remote only with explicit Principal consen
 
 1. `validate_intent(intent)` — pre-flight. Checks N3Logic Rights Ontology rules. If `Deny`, writes a conduct violation Quin to the WAL (signed with Ed25519) and aborts. The model is never invoked.
 2. `agent.infer(prompt, graph_context)` — the actual GPU inference.
-3. `validate_output(output)` — post-flight. Output must have ≥ 1 provenance `QualiaQuin` citation. Ungrounded output is rejected.
+3. `validate_output(output)` — post-flight. Output must have ≥ 1 provenance `NQuin` citation. Ungrounded output is rejected.
 
 The MCP server (`mcp_server.rs`) exposes the graph engine via `McpIntentFrame` (purpose_hash, deontic_constraints, profile_id, sanctuary_override). The state machine progresses: `HandshakePhase → AllocationFirewallActive → SanctuaryGated`.
 

@@ -52,7 +52,7 @@ Claude conducted a comprehensive code review of the qualiaDB project, examining 
 
 **What IS real**:
 - `mini_parser.rs` + bytecode VM: legitimate, single N-Triples pattern matching with wildcards
-- Compiled to bytecode, linear scan over &[QualiaQuin]
+- Compiled to bytecode, linear scan over &[NQuin]
 - `q42_reader.rs` (.q42/LZ4 framed read path) looks real and tested
 - **Limitation**: Single-pattern matching, no joins, no FILTER, no BGP resolution
 - "SPARQL-like" claim is overselling

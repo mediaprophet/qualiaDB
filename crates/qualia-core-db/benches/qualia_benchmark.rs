@@ -28,7 +28,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use qualia_core_db::query_compiler::QueryCompiler;
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 use std::collections::{BTreeMap, HashMap};
 
 // ─── FNV-1a hash — same algorithm as the qualiaDB lexicon engine ─────────────
@@ -303,9 +303,9 @@ fn bench_scaling(c: &mut Criterion) {
 
 // ─── Existing internal benchmarks (preserved) ────────────────────────────────
 fn bench_quin_allocation(c: &mut Criterion) {
-    c.bench_function("qualia_quin_allocation", |b| {
+    c.bench_function("n_quin_allocation", |b| {
         b.iter(|| {
-            let quin = QualiaQuin {
+            let quin = NQuin {
                 subject: black_box(1),
                 predicate: black_box(2),
                 object: black_box(3),

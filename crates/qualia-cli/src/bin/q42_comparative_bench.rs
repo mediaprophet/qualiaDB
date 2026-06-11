@@ -21,7 +21,7 @@ use std::time::Instant;
 
 use qualia_core_db::mini_parser::hash_token;
 use qualia_core_db::q42_reader::read_c_q42_quins;
-use qualia_core_db::{q_hash, QualiaQuin, QUINS_PER_BLOCK};
+use qualia_core_db::{q_hash, NQuin, QUINS_PER_BLOCK};
 use sysinfo::System;
 
 const BLOCK_SIZE: u64 = 40_960;
@@ -47,7 +47,7 @@ struct QuerySpec {
 }
 
 /// Read `.q42` files produced by `qualia-cli ingest` (160-byte SuperBlock headers).
-fn read_cli_superblock_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
+fn read_cli_superblock_quins(path: &Path) -> std::io::Result<Vec<NQuin>> {
     use std::fs::File;
     use std::io::Read;
 
@@ -67,8 +67,8 @@ fn read_cli_superblock_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
         let count = active.min(QUINS_PER_BLOCK);
         for i in 0..count {
             let off = i * QUIN_SIZE;
-            let quin: QualiaQuin = unsafe {
-                std::ptr::read_unaligned(ledger[off..off + QUIN_SIZE].as_ptr() as *const QualiaQuin)
+            let quin: NQuin = unsafe {
+                std::ptr::read_unaligned(ledger[off..off + QUIN_SIZE].as_ptr() as *const NQuin)
             };
             quins.push(quin);
         }
@@ -78,7 +78,7 @@ fn read_cli_superblock_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
     Ok(quins)
 }
 
-fn read_ntriples_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
+fn read_ntriples_quins(path: &Path) -> std::io::Result<Vec<NQuin>> {
     let reader = BufReader::new(fs::File::open(path)?);
     let mut quins = Vec::new();
 
@@ -96,7 +96,7 @@ fn read_ntriples_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
         let sh = hash_token(s);
         let ph = hash_token(p);
         let oh = hash_token(o) & OBJECT_HASH_MASK;
-        quins.push(QualiaQuin {
+        quins.push(NQuin {
             subject: sh,
             predicate: ph,
             object: oh,
@@ -109,7 +109,7 @@ fn read_ntriples_quins(path: &Path) -> std::io::Result<Vec<QualiaQuin>> {
     Ok(quins)
 }
 
-fn load_quins(path: &Path, format: InputFormat) -> std::io::Result<Vec<QualiaQuin>> {
+fn load_quins(path: &Path, format: InputFormat) -> std::io::Result<Vec<NQuin>> {
     match format {
         InputFormat::Superblock => read_cli_superblock_quins(path),
         InputFormat::Cq42 => read_c_q42_quins(path),
@@ -156,7 +156,7 @@ fn peak_rss_mb() -> f64 {
         .unwrap_or(0.0)
 }
 
-fn build_index(quins: &[QualiaQuin]) -> HashMap<u64, Vec<(u64, u64)>> {
+fn build_index(quins: &[NQuin]) -> HashMap<u64, Vec<(u64, u64)>> {
     let mut map: HashMap<u64, Vec<(u64, u64)>> = HashMap::new();
     for q in quins {
         map.entry(q.subject)

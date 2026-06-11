@@ -6,7 +6,7 @@
 //! treated as a migration-era compatibility format rather than the governing
 //! raw `.q42` layout.
 
-use crate::{q_hash, QualiaQuin};
+use crate::{q_hash, NQuin};
 use log;
 
 const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
@@ -44,7 +44,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     // 2. Channel Setup
     // Use bounded channels to strictly enforce the 512MB RAM floor (backpressure)
     let (tx_raw, rx_raw): (Sender<RawTriple>, Receiver<RawTriple>) = bounded(10_000);
-    let (tx_bin, rx_bin): (Sender<QualiaQuin>, Receiver<QualiaQuin>) = bounded(10_000);
+    let (tx_bin, rx_bin): (Sender<NQuin>, Receiver<NQuin>) = bounded(10_000);
 
     // 3. Spawn Parallel Hasher Shards (Workers)
     let mut worker_handles = vec![];
@@ -62,7 +62,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
                 let metadata = 0u64;
                 let parity = s_hash ^ p_hash ^ o_hash ^ context ^ metadata;
 
-                let quin = QualiaQuin {
+                let quin = NQuin {
                     subject: s_hash,
                     predicate: p_hash,
                     object: o_hash,

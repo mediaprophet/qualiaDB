@@ -1,7 +1,7 @@
 //! Grammar-constrained FSM sieve for neuro-symbolic LLM output (zero-heap hot path).
 
 use crate::q_hash;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Max allowed token IDs per FSM state (stack-only mask).
 pub const MAX_SIEVE_ALLOW: usize = 16;
@@ -294,9 +294,9 @@ impl NeuroSymbolicSieve {
         Ok(())
     }
 
-    /// Assemble the 48-byte `QualiaQuin` from constrained emissions (stack only).
-    pub fn assemble_quin(&self, context_hash: u64) -> QualiaQuin {
-        let mut quin = QualiaQuin {
+    /// Assemble the 48-byte `NQuin` from constrained emissions (stack only).
+    pub fn assemble_quin(&self, context_hash: u64) -> NQuin {
+        let mut quin = NQuin {
             subject: self.subject_hash,
             predicate: self.predicate_hash,
             object: self.object_hash,

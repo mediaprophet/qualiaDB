@@ -40,7 +40,7 @@ that must not be violated.
 ## Key constraints (from CLAUDE.md — mandatory)
 
 - No `Vec`/`String`/`Box` in hot paths.
-- 48-byte `QualiaQuin` for all semantic data.
+- 48-byte `NQuin` for all semantic data.
 - The LLM backend is `gguf_bridge.rs` + `wgpu` — not Ollama.
 - `orchestrate_inference()` gates every LLM call — do not bypass.
 - Daemon on 4242 is the graph engine + relay + web seeds — not an LLM HTTP server.

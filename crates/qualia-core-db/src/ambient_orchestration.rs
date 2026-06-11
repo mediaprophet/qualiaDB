@@ -530,48 +530,94 @@ impl AmbientOrchestrationManager {
         Ok(())
     }
 
-    /// Discover ambient devices
+    /// Discover ambient devices using sysinfo to enumerate real local hardware.
     pub fn discover_devices(&mut self) -> Result<Vec<String>, AmbientError> {
-        let mut discovered_devices = Vec::new();
-        
-        // Scan for mobile devices
-        for i in 0..10 {
-            let device_id = format!("mobile_device_{}", i);
-            
-            // Create dummy device for demonstration
-            let device = AmbientDevice {
-                device_id: device_id.clone(),
-                device_type: DeviceType::Mobile,
+        use sysinfo::System;
+
+        let sys = System::new_all();
+        let mut discovered = Vec::new();
+
+        let cpus = sys.cpus();
+        let cpu_count = cpus.len().max(1);
+        let cpu_brand = cpus.first()
+            .map(|c| c.brand().to_string())
+            .unwrap_or_else(|| "Unknown CPU".to_string());
+        let base_freq_mhz = cpus.first().map(|c| c.frequency()).unwrap_or(1000);
+        let total_mem = sys.total_memory(); // bytes
+
+        // Register the local machine as one aggregate compute device
+        let host_id = "local_host".to_string();
+        let host = AmbientDevice {
+            device_id: host_id.clone(),
+            device_type: DeviceType::Embedded,
+            capabilities: DeviceCapabilities {
+                neural_engines: vec![NeuralEngine::ONNXRuntime],
+                compute_units: cpu_count as u32,
+                memory_size: total_mem,
+                battery_capacity: 0,
+                thermal_limit: 95.0,
+                supported_frameworks: vec![
+                    Framework::ONNX,
+                    Framework::Custom(cpu_brand.clone()),
+                ],
+            },
+            current_state: DeviceState::Active,
+            performance_profile: PerformanceProfile {
+                peak_performance: base_freq_mhz as f64 * cpu_count as f64 / 1000.0,
+                sustainable_performance: base_freq_mhz as f64 * cpu_count as f64 * 0.8 / 1000.0,
+                thermal_performance: base_freq_mhz as f64 * cpu_count as f64 * 0.6 / 1000.0,
+                battery_performance: 1.0,
+                efficiency_factor: 0.90,
+            },
+            power_profile: PowerProfile {
+                baseline_power: 5.0 * cpu_count as f64,
+                active_power: 15.0 * cpu_count as f64,
+                peak_power: 35.0 * cpu_count as f64,
+                idle_power: 1.0,
+                sleep_power: 0.5,
+            },
+        };
+        if self.register_device(host).is_ok() {
+            discovered.push(host_id);
+        }
+
+        // Register up to 8 individual logical CPU cores for fine-grained scheduling
+        for i in 0..cpu_count.min(8) {
+            let core_freq = cpus.get(i).map(|c| c.frequency()).unwrap_or(base_freq_mhz);
+            let core_id = format!("cpu_core_{}", i);
+            let core = AmbientDevice {
+                device_id: core_id.clone(),
+                device_type: DeviceType::Embedded,
                 capabilities: DeviceCapabilities {
-                    neural_engines: vec![NeuralEngine::NNAPI, NeuralEngine::CoreML],
-                    compute_units: 8,
-                    memory_size: 8 * 1024 * 1024 * 1024, // 8GB
-                    battery_capacity: 5000, // 5000mAh
-                    thermal_limit: 85.0, // 85°C
-                    supported_frameworks: vec![Framework::TensorFlow, Framework::PyTorch, Framework::CoreML],
+                    neural_engines: vec![NeuralEngine::ONNXRuntime],
+                    compute_units: 1,
+                    memory_size: total_mem / cpu_count as u64,
+                    battery_capacity: 0,
+                    thermal_limit: 95.0,
+                    supported_frameworks: vec![Framework::ONNX],
                 },
                 current_state: DeviceState::Active,
                 performance_profile: PerformanceProfile {
-                    peak_performance: 100.0,
-                    sustainable_performance: 80.0,
-                    thermal_performance: 60.0,
-                    battery_performance: 70.0,
+                    peak_performance: core_freq as f64 / 1000.0,
+                    sustainable_performance: core_freq as f64 * 0.8 / 1000.0,
+                    thermal_performance: core_freq as f64 * 0.6 / 1000.0,
+                    battery_performance: 1.0,
                     efficiency_factor: 0.85,
                 },
                 power_profile: PowerProfile {
-                    baseline_power: 0.5,
-                    active_power: 2.0,
-                    peak_power: 4.0,
-                    idle_power: 0.1,
-                    sleep_power: 0.05,
+                    baseline_power: 5.0,
+                    active_power: 15.0,
+                    peak_power: 35.0,
+                    idle_power: 1.0,
+                    sleep_power: 0.5,
                 },
             };
-
-            self.register_device(device)?;
-            discovered_devices.push(device_id);
+            if self.register_device(core).is_ok() {
+                discovered.push(core_id);
+            }
         }
 
-        Ok(discovered_devices)
+        Ok(discovered)
     }
 
     /// Submit task for execution
@@ -587,18 +633,20 @@ impl AmbientOrchestrationManager {
 
     /// Execute neural inference task
     pub fn execute_neural_inference(&mut self, device_id: &str, model_data: &[u8], input_data: &[u8]) -> Result<Vec<u8>, AmbientError> {
-        // Get device - TODO: implement proper device management (borrow checker conflict)
-        // let device = self.devices.get_mut(device_id)
-        //     .ok_or_else(|| AmbientError::DeviceNotFound(device_id.to_string()))?;
-        
-        // For now, return error
-        Err(AmbientError::DeviceNotFound("Device management not yet implemented".to_string()))
+        // Clone device to release the borrow on self.devices before calling the helper
+        let device = self.devices.get(device_id)
+            .ok_or_else(|| AmbientError::DeviceNotFound(device_id.to_string()))?
+            .clone();
+        self.execute_inference_on_device(&device, model_data, input_data)
     }
 
     /// Execute sub-threshold computation
     pub fn execute_sub_threshold_computation(&mut self, device_id: &str, computation: SubThresholdComputation) -> Result<ComputationResult, AmbientError> {
-        // Get device - TODO: implement proper device management (borrow checker conflict)
-        return Err(AmbientError::DeviceNotFound("Device management not yet implemented".to_string()));
+        // Clone device to release the borrow on self.devices before calling the helper
+        let device = self.devices.get(device_id)
+            .ok_or_else(|| AmbientError::DeviceNotFound(device_id.to_string()))?
+            .clone();
+        self.execute_computation_on_device(&device, &computation)
     }
 
     /// Get device status

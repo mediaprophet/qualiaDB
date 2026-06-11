@@ -4,7 +4,7 @@ use std::sync::{Mutex, OnceLock};
 
 use qualia_core_db::crdt::SuspendedTransactionQueue;
 use qualia_core_db::wal::WriteAheadLog;
-use qualia_core_db::{q_hash, QualiaQuin};
+use qualia_core_db::{q_hash, NQuin};
 use serde::{Deserialize, Serialize};
 
 const MAX_RATIFIED: usize = 32;
@@ -95,7 +95,7 @@ pub fn is_agreement_ratified(agreement_id: u64) -> bool {
 
 /// Apply a guardian consent token (`q42:issuesConsentToken`) for the given agreement.
 pub fn apply_guardian_token(agreement_id: u64, token_fields: [u64; 6]) -> GuardianTokenOutcome {
-    let token = QualiaQuin {
+    let token = NQuin {
         subject: token_fields[0],
         predicate: token_fields[1],
         object: token_fields[2],
@@ -131,7 +131,7 @@ pub fn apply_guardian_token(agreement_id: u64, token_fields: [u64; 6]) -> Guardi
 
 /// Build a consent token for the local principal co-signing an agreement.
 pub fn build_consent_token(agreement_id: u64, principal_hash: u64) -> [u64; 6] {
-    let q = QualiaQuin {
+    let q = NQuin {
         subject: principal_hash,
         predicate: q_hash("q42:issuesConsentToken"),
         object: agreement_id,
@@ -182,7 +182,7 @@ mod tests {
             registers: [None; 16],
             bytecode_buffer: [None; 64],
             yielded_op: None,
-            suspended_quin: QualiaQuin::default(),
+            suspended_quin: NQuin::default(),
         };
         suspended_queue().lock().unwrap().push(tx).unwrap();
 

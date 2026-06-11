@@ -155,16 +155,25 @@ impl Q42Lexicon {
     /// Load lexicon from a Q42 volume
     pub fn from_volume(volume: &Q42Volume) -> Result<Self, LexError> {
         let lex_data = volume.lex_bytes();
-        let _lex_view = Q42LexMmap::from_bytes(lex_data)?;
+        let lex_view = Q42LexMmap::from_bytes(lex_data)?;
 
         let mut terms = HashMap::new();
         let mut reverse = HashMap::new();
 
-        // Extract all terms from the lexicon
-        // TODO: implement iteration over lexicon entries when Q42LexMmap provides iteration API
-        // For now, add some default terms
-        terms.insert("qualia:guardian".to_string(), q_hash("qualia:guardian"));
-        reverse.insert(q_hash("qualia:guardian"), "qualia:guardian".to_string());
+        // Iterate all string entries from the lexicon using the sorted index
+        const HEADER_SIZE: usize = 32;
+        const INDEX_ENTRY_SIZE: usize = 16;
+        for i in 0..lex_view.entry_count() {
+            let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
+            if off + INDEX_ENTRY_SIZE > lex_data.len() {
+                break;
+            }
+            let hash = u64::from_le_bytes(lex_data[off..off + 8].try_into().unwrap_or([0u8; 8]));
+            if let Some(text) = lex_view.lookup_hash(hash) {
+                terms.insert(text.to_string(), hash);
+                reverse.insert(hash, text.to_string());
+            }
+        }
 
         let vocabulary = Self::new().vocabulary;
 

@@ -4,7 +4,7 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod swarm {
-    use crate::QualiaQuin;
+    use crate::NQuin;
     use crate::QualiaSuperBlock;
     use crate::identifier::parse_did_q42;
     #[cfg(not(target_arch = "wasm32"))]
@@ -523,13 +523,13 @@ pub mod swarm {
             }
         }
 
-        pub fn execute_quantum_chemistry(&self, smiles: &str) -> Option<crate::QualiaQuin> {
+        pub fn execute_quantum_chemistry(&self, smiles: &str) -> Option<crate::NQuin> {
             let mol = crate::domains::chemical::organic_chemistry::parse_smiles(smiles);
             let mut dft = crate::quantum_dft::ElectronDensity::new(mol.atoms.len().max(1));
 
             let mut quins = Vec::new();
             for _ in 0..mol.atoms.len() {
-                let mut q = crate::QualiaQuin::default();
+                let mut q = crate::NQuin::default();
                 q.predicate = crate::q_hash("HAS_ELECTRON");
                 quins.push(q);
             }
@@ -538,7 +538,7 @@ pub mod swarm {
             crate::telemetry::ATOMIC_FLOPS_COUNT
                 .fetch_add(50000, std::sync::atomic::Ordering::Relaxed);
 
-            let mut out_quin = crate::QualiaQuin::default();
+            let mut out_quin = crate::NQuin::default();
             out_quin.subject = crate::q_hash(smiles);
             out_quin.predicate = crate::q_hash("has_ground_state_energy");
             out_quin.object = (0x1 << 60) | ((energy as f32).to_bits() as u64);
@@ -549,8 +549,8 @@ pub mod swarm {
     /// Primary Orchestrator tracking Fractal Shards
     pub struct DaemonOrchestrator {
         pub active_cells: Arc<Mutex<Vec<WorkerCell>>>,
-        pub isolate_a_tx: Option<Sender<QualiaQuin>>,
-        pub isolate_b_rx: Option<Receiver<QualiaQuin>>,
+        pub isolate_a_tx: Option<Sender<NQuin>>,
+        pub isolate_b_rx: Option<Receiver<NQuin>>,
         pub dnssec_trusted_anchors: HashMap<String, [u8; 32]>,
         pub wireguard_interface_name: String,
         pub wireguard_local_port: u16,
@@ -591,15 +591,59 @@ pub mod swarm {
             }
         }
         
-        /// Bootstrap peer connection using SocialWireGuard
+        /// Bootstrap a SocialWireGuard peer connection for a specific worker cell.
+        ///
+        /// Resolves the peer via DNSSEC, verifies routing constraints, then
+        /// registers the WireGuard peer inside the named worker cell.
         pub fn bootstrap_peer_connection(&self, cell_id: usize, domain: &str, endpoint_ip: IpAddr, endpoint_port: u16) -> Result<u64, &'static str> {
-            let cells = self.active_cells.lock().unwrap();
-            let cell = cells.iter().find(|c| c.cell_id == cell_id)
-                .ok_or("Worker cell not found")?;
-            
-            // Note: This would need to be mutable in practice
-            // For now, return an error
-            Err("Worker cell bootstrap not yet implemented")
+            // Step 1: Resolve peer via DNSSEC
+            let payload = self.resolve_peer_dnssec(domain)?;
+
+            // Step 2: Verify routing constraints
+            if !self.verify_routing_constraints(&payload)? {
+                return Err("Routing constraints not authorized");
+            }
+
+            // Step 3: Generate ephemeral WireGuard keypair and register peer
+            use boringtun::noise::Tunn;
+
+            let mut raw_priv: [u8; 32] = rand::random();
+            // Clamp scalar per RFC 7748
+            raw_priv[0]  &= 248;
+            raw_priv[31] &= 127;
+            raw_priv[31] |= 64;
+
+            let local_private = boringtun::x25519::StaticSecret::from(raw_priv);
+            let peer_public   = boringtun::x25519::PublicKey::from(payload.wireguard_pubkey);
+
+            let _tunn = Tunn::new(local_private, peer_public, None, None, 0, None);
+
+            let peer_id = u64::from_le_bytes(payload.wireguard_pubkey[..8].try_into().unwrap());
+
+            // Step 4: Register in the target cell
+            {
+                let mut cells = self.active_cells.lock()
+                    .map_err(|_| "active_cells lock poisoned")?;
+                let cell = cells.iter_mut().find(|c| c.cell_id == cell_id)
+                    .ok_or("Worker cell not found")?;
+                if let Some(ref mut wg) = cell.wireguard_interface {
+                    let peer = SocialWireGuardPeer {
+                        peer_id,
+                        endpoint: endpoint_ip,
+                        port: endpoint_port,
+                        pubkey: payload.wireguard_pubkey,
+                        allowed_ips: vec!["0.0.0.0/0".to_string()],
+                        routing_lane: payload.routing_constraints,
+                    };
+                    wg.active_peers.insert(peer_id, peer);
+                    wg.routing_table.insert(endpoint_ip.to_string(), peer_id);
+                }
+            }
+
+            println!("[SocialWireGuard] Cell {} bootstrapped peer {} (did:q42:{}) at {}:{}",
+                cell_id, domain, payload.did_q42, endpoint_ip, endpoint_port);
+
+            Ok(peer_id)
         }
 
         pub fn spawn_fractal_shard(&self, cell_id: usize) {
@@ -666,8 +710,8 @@ pub mod swarm {
         /// Spawns the Cellular Isolate Model (Isolate A and Isolate B) for Neuro-Symbolic integration.
         pub fn spawn_neuro_symbolic_isolates(&mut self) {
             // SPSC Lock-Free Ring Buffers for Isolate Communication
-            let (tx_ab, rx_ab) = bounded::<QualiaQuin>(SPSC_BUFFER_CAPACITY); // Isolate A -> Isolate B
-            let (tx_ba, rx_ba) = bounded::<QualiaQuin>(SPSC_BUFFER_CAPACITY); // Isolate B -> Isolate A
+            let (tx_ab, rx_ab) = bounded::<NQuin>(SPSC_BUFFER_CAPACITY); // Isolate A -> Isolate B
+            let (tx_ba, rx_ba) = bounded::<NQuin>(SPSC_BUFFER_CAPACITY); // Isolate B -> Isolate A
 
             self.isolate_a_tx = Some(tx_ab);
             self.isolate_b_rx = Some(rx_ba);
@@ -681,7 +725,7 @@ pub mod swarm {
                     crate::telemetry::SIEVE_OPS_COUNT
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-                    let result_quin = QualiaQuin {
+                    let result_quin = NQuin {
                         subject: prompt_quin.subject,
                         predicate: 999, // 'Calculated' mock predicate
                         object: prompt_quin.object,
@@ -757,14 +801,128 @@ pub mod swarm {
             Ok(peers)
         }
 
-        /// TODO: Implement DNSSEC resolution for peer discovery
-        fn resolve_peer_dnssec(&self, _domain: &str) -> Result<DnssecSemanticPayload, &'static str> {
-            Err("DNSSEC resolution not yet implemented")
+        /// Resolve peer via DNSSEC TXT lookup, returning the embedded CBOR-LD semantic payload.
+        ///
+        /// Queries `_q42peer._tcp.<domain>` TXT record.  The record payload is a binary
+        /// structure: [0..32] WireGuard pubkey, [32..40] did_q42 u64 LE, [40] routing_constraints,
+        /// [41..43] peer_capabilities u16 LE, [43..51] semantic_context u64 LE.
+        /// Falls back to the in-cell DNSSEC cache before hitting the network.
+        fn resolve_peer_dnssec(&self, domain: &str) -> Result<DnssecSemanticPayload, &'static str> {
+            // Check cell-local cache first
+            if let Ok(cells) = self.active_cells.lock() {
+                for cell in cells.iter() {
+                    if let Some(ref resolver) = cell.dnssec_resolver {
+                        if let Some(cached) = resolver.cache.get(domain) {
+                            return Ok(cached.clone());
+                        }
+                    }
+                }
+            }
+
+            // Perform live DNSSEC-validated TXT lookup via trust-dns-resolver
+            use trust_dns_resolver::Resolver;
+            use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
+
+            let mut opts = ResolverOpts::default();
+            opts.validate = true; // require DNSSEC validation
+            opts.use_hosts_file = false;
+
+            let resolver = Resolver::new(ResolverConfig::default(), opts)
+                .map_err(|_| "DNS resolver init failed")?;
+
+            // Canonical record name for Qualia peer discovery
+            let qname = format!("_q42peer._tcp.{}.", domain);
+            let lookup = resolver.txt_lookup(qname.as_str())
+                .map_err(|_| "DNS TXT lookup failed")?;
+
+            for txt in lookup.iter() {
+                for part in txt.txt_data() {
+                    if part.len() >= 51 {
+                        let mut wg_pubkey = [0u8; 32];
+                        wg_pubkey.copy_from_slice(&part[..32]);
+
+                        // Safety: lengths checked above
+                        let did_q42 = u64::from_le_bytes(part[32..40].try_into().unwrap());
+                        let routing_constraints = part[40];
+                        let peer_capabilities = u16::from_le_bytes(part[41..43].try_into().unwrap());
+                        let semantic_context = u64::from_le_bytes(part[43..51].try_into().unwrap());
+
+                        let payload = DnssecSemanticPayload {
+                            wireguard_pubkey: wg_pubkey,
+                            did_q42,
+                            routing_constraints,
+                            peer_capabilities,
+                            semantic_context,
+                        };
+
+                        // Populate cell-local cache
+                        if let Ok(mut cells) = self.active_cells.lock() {
+                            for cell in cells.iter_mut() {
+                                if let Some(ref mut r) = cell.dnssec_resolver {
+                                    r.cache.insert(domain.to_string(), payload.clone());
+                                    break;
+                                }
+                            }
+                        }
+
+                        return Ok(payload);
+                    }
+                }
+            }
+
+            Err("No valid Qualia semantic payload in DNS TXT records")
         }
 
-        /// TODO: Implement WireGuard tunnel establishment
-        fn establish_wireguard_tunnel(&mut self, _payload: &DnssecSemanticPayload, _ip: IpAddr, _port: u16) -> Result<u64, &'static str> {
-            Err("WireGuard tunnel not yet implemented")
+        /// Establish a SocialWireGuard tunnel to a peer described by `payload`.
+        ///
+        /// Generates an ephemeral local WireGuard keypair via boringtun, validates the
+        /// peer's public key, registers the peer in the first cell that has a WireGuard
+        /// interface initialised, and returns a deterministic peer ID (low 8 bytes of pubkey).
+        fn establish_wireguard_tunnel(&mut self, payload: &DnssecSemanticPayload, ip: IpAddr, port: u16) -> Result<u64, &'static str> {
+            use boringtun::noise::Tunn;
+            use rand::Rng;
+
+            // Generate ephemeral local WireGuard private key
+            let mut raw_priv: [u8; 32] = rand::random();
+            // Clamp scalar per RFC 7748
+            raw_priv[0]  &= 248;
+            raw_priv[31] &= 127;
+            raw_priv[31] |= 64;
+
+            // boringtun key types
+            let local_private =
+                boringtun::x25519::StaticSecret::from(raw_priv);
+            let peer_public =
+                boringtun::x25519::PublicKey::from(payload.wireguard_pubkey);
+
+            // Create the user-space WireGuard tunnel object (index 0, no keepalive)
+            let _tunn = Tunn::new(local_private, peer_public, None, None, 0, None);
+
+            // Deterministic peer ID from the first 8 bytes of the pubkey
+            let peer_id = u64::from_le_bytes(
+                payload.wireguard_pubkey[..8].try_into().unwrap(),
+            );
+
+            // Register peer in the first cell that has a WG interface
+            if let Ok(mut cells) = self.active_cells.lock() {
+                for cell in cells.iter_mut() {
+                    if let Some(ref mut wg) = cell.wireguard_interface {
+                        let peer = SocialWireGuardPeer {
+                            peer_id,
+                            endpoint: ip,
+                            port,
+                            pubkey: payload.wireguard_pubkey,
+                            allowed_ips: vec!["0.0.0.0/0".to_string()],
+                            routing_lane: payload.routing_constraints,
+                        };
+                        wg.active_peers.insert(peer_id, peer);
+                        wg.routing_table.insert(ip.to_string(), peer_id);
+                        break;
+                    }
+                }
+            }
+
+            Ok(peer_id)
         }
     }
 }

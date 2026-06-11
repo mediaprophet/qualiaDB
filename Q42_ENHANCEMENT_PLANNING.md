@@ -1,0 +1,704 @@
+# Q42 Format & Architecture Enhancement Planning
+
+**Date:** 2026-06-11  
+**Updated:** 2026-06-11 (all vocabulary + cryptography + bit-layout decisions resolved; 2 open items remain)  
+**Branch:** `0.0.10-dev`  
+**Source:** Analysis of `local/q42-related-updates-discussion.md` mapped against the current codebase.
+
+This document translates the architectural discussion into concrete requirements, identifies
+gaps against the current codebase, and records resolved design decisions and remaining open
+questions. It is a working document — not a specification — intended to guide decisions before
+code is written.
+
+### Resolved vocabulary decisions (2026-06-11)
+
+| Layer | Vocabulary | Notes |
+|---|---|---|
+| Provenance / temporal | **PROV-O + Dublin Core** | `prov:generatedAtTime` = Assertion Time; `dcterms:valid` / `prov:startedAtTime` / `prov:endedAtTime` = Valid Time |
+| Rights / policy | **ODRL + SKOS** | `odrl:Permission` / `Prohibition` / `Obligation`; SKOS vocabulary for actions, purposes, jurisdictions |
+| Agent structure | **W3C CogAI CG shapes** | `cog:Agent`, `cog:Goal`, `cog:Belief`, `cog:Plan`; validated by SHACL |
+| Validation | **SHACL** (existing domain engines + CogAI shapes) | Single validation pass across all layers |
+| Spatial query | **GeoSPARQL** (WKT literals internally) | KML as import/export exchange format; `<TimeStamp>`/`<TimeSpan>` maps to PROV-O valid time |
+
+---
+
+## 1. Summary of Discussion Requirements
+
+The discussion identifies seven broad capability areas needed by the Q42 file format and QualiaDB:
+
+| # | Capability | Description |
+|---|-----------|-------------|
+| T | Bi-temporal tracking | Distinguish **Valid Time** (when an event occurred in reality) from **Assertion Time** (when the system recorded it). Vocabulary: **PROV-O + Dublin Core** |
+| S | Spatiotemporal coordinates | Anchor data to geographic coordinates and jurisdictional bounding boxes alongside time. Internal: **GeoSPARQL** WKT. Exchange: **KML** (with `<TimeStamp>`/`<TimeSpan>` feeding PROV-O valid time) |
+| V | Versioning / DAG deltas | Immutable, append-only Merkle-DAG where every change is a new cryptographically-linked node, not an overwrite |
+| G | Credential-gated contextual views | One file presents different data depending on the agent's Verifiable Credentials — Attribute-Based Encryption (ABE) or equivalent |
+| R | Rights Ontology | DID-anchored access policies using **ODRL** (permissions/prohibitions/obligations) + **SKOS** (controlled vocabulary for actions, purposes, jurisdictions) |
+| A | Agent structure | Cognitive agent profiles expressed in **W3C CogAI CG** vocabulary (`cog:Agent`, `cog:Goal`, `cog:Belief`, `cog:Plan`), validated by **SHACL** |
+| W | Swarm compute contracts | Executable logic (WASM) stored in the file; peers execute locally, return signed insights |
+| L | Labor/contestability provenance | Every labelled, cleaned, or moderated data item carries the DID of the worker; agents can cryptographically contest automated assertions |
+
+---
+
+## 2. What Already Exists
+
+### 2.1 NQuin (48-byte core primitive)
+
+```
+Subject   [u64]  — hashed entity IRI
+Predicate [u64]  — hashed property IRI
+Object    [u64]  — hashed value/IRI
+Context   [u64]  — graph context + sensitivity bits[63:56]
+Metadata  [u64]  — bit-packed: Quin Type[63:60], Sensitivity tier[59:56], Reserved[55:32], Lamport clock[31:0] (✅ LoRA moved to side-table — see §4.1)
+Parity    [u64]  — XOR of all five fields
+```
+
+**Lamport clocks** are currently stored in `metadata` bits[60:32] via `extract_lamport_clock()` /
+`set_lamport_clock()`. Per the §4.1 decision, this will shift to bits[31:0] once the LoRA
+side-table migration is applied. The clock provides coarse event ordering for CRDT resolution
+(`crdt.rs`); wall-clock temporal semantics live in PROV-O overlay quins (§4.2), not in this field.
+
+### 2.2 Spatial primitives
+
+`spatial_sieve.rs` already defines `GeoCoordinate { lat: f64, lng: f64, timestamp_ms: u64 }`
+and `BoundingBox`. A Minkowski spatial overlap check (`compute_spatial_overlap_gpu_mock`) exists
+but is not wired to the NQuin graph — it operates on standalone coordinate arrays.
+
+`spatial_sieve.rs` also mentions "encodes the tuple into a 48-byte Spatial_Log Quin" in a comment
+at `log_spatial_coordinate()`, but the function body is a stub returning `true`.
+
+### 2.3 Temporal / versioning stubs
+
+`git_bridge.rs` — generates a fake `git fast-export` stream. Struct is empty; bodies are all
+hardcoded strings. This is a clear placeholder for the Merkle-DAG versioning described in the
+discussion.
+
+`wal.rs` — exists and presumably provides append-only semantics, but does not expose a Merkle
+tree or content-addressed history.
+
+`crdt.rs` — Last-Write-Wins resolver using Lamport clocks; `DelegatedAccess` struct with
+expiration timestamps and Ed25519 proofs.
+
+### 2.4 Identity / DID layer
+
+`web_civics.rs` — derives a Webizen ULA IPv6 address from an Ed25519 public key (Cryptokey
+Routing).
+
+`webizen_identity.rs` — Ed25519 sign/verify wired (✅ in this branch).
+
+`sparql_did.rs` — SPARQL extension for DID resolution; exists as a module.
+
+`identifier.rs`, `profiles.rs`, `key_vault.rs` — identity management scaffolding.
+
+### 2.5 Rights / deontic layer
+
+`deontic_logic.rs` — `OP_PERMIT` / `OP_FORBID` opcodes exist. N3Logic Rights Ontology rules are
+evaluated at inference time (`validate_intent` in `orchestrator.rs`). Maps onto ODRL:
+`OP_PERMIT` → `odrl:Permission`, `OP_FORBID` → `odrl:Prohibition`.
+
+`fiduciary_crypto.rs` — ML-DSA signatures for fiduciary operations (✅ commitment-based in this
+branch).
+
+### 2.6 Cryptography
+
+`zk_proofs.rs` — ZK proof generation scaffolding (✅ hash-chain approach in this branch).
+
+No ABE implementation currently exists in the codebase.
+
+### 2.7 SHACL validation and domain engines
+
+`sparql_shacl.rs` — core SHACL engine. Domain-specific SHACL engines exist for biosciences,
+biomedical, and organic chemistry (wired to `SlgOpcode` and WASM, 149 tests as of 2026-06-05).
+This infrastructure is the natural home for CogAI SHACL shapes — a fourth shape graph loaded
+at daemon startup. No structural changes needed; CogAI shapes are additive.
+
+### 2.8 Q42 file format
+
+`q42_volume.rs` defines:
+- `Q42_MAGIC = [0x51, 0x34, 0x32, 0x00]` ("Q42\0")
+- `Q42VolumeHeader` — version(u16), timestamps, block_dir_offset, block_count, block_size, quins_per_block
+- SuperBlock structure (LZ4-compressed NQuin arrays)
+- BIDX (Block Index) for range queries on object hashes
+
+The current format has **no temporal index section**, **no spatial index section**, and **no
+Merkle hash chain** for version history.
+
+---
+
+## 3. Requirements vs. Current State — Gap Analysis
+
+| Req | Status | Gap |
+|-----|--------|-----|
+| **T** Bi-temporal | ❌ Missing | No `t_valid` / `t_assert` storage. **Resolved vocabulary:** PROV-O + Dublin Core quins in a temporal overlay graph context. Lamport clock in metadata bits is retained for CRDT ordering only. |
+| **S** Spatiotemporal | ⚠️ Partial | `spatial_sieve.rs` has the types but `log_spatial_coordinate()` is a stub. No quin integration. **Resolved vocabulary:** GeoSPARQL WKT internally; KML import/export. |
+| **V** Merkle-DAG versioning | ❌ Missing | `git_bridge.rs` is a stub. WAL provides durability but not content-addressed immutable history. |
+| **G** Credential-gated views | ❌ Missing | No ABE. `deontic_logic.rs` evaluates permissions but decrypts everything; no field-level encryption |
+| **R** Rights Ontology | ⚠️ Partial | `deontic_logic.rs` has opcodes. **Resolved vocabulary:** ODRL (`Permission`/`Prohibition`/`Obligation`) + SKOS controlled vocabulary. No Turtle ontology file yet. |
+| **A** Agent structure | ⚠️ Partial | SHACL engines exist for 3 domains. **Resolved vocabulary:** W3C CogAI CG shapes (`cog:Agent`/`cog:Goal`/`cog:Belief`/`cog:Plan`). No CogAI shape graph loaded yet. |
+| **W** WASM compute contracts | ⚠️ Partial | `wasm_bridge.rs` exists. No mechanism to embed WASM modules *in* a Q42 file or expose them to peers. |
+| **L** Labor / contestability provenance | ❌ Missing | No worker DID field on labelled data. No "contestability branch" structure. |
+
+---
+
+## 4. Design Decisions
+
+Most decisions are resolved (marked ✅). Two open items (§4.4, §4.5) are the only remaining
+blockers before Phase 1 implementation begins.
+
+---
+
+### 4.1 ✅ NQuin Metadata Bit-Layout Conflict — RESOLVED
+
+**Decision: Option B — move LoRA state out of NQuin into a side-table / LORA_CONTEXT overlay.**
+
+**Reasoning:** The 48-byte NQuin is the atomic performance primitive; its layout must not be
+compromised by sparse, inference-time state. LoRA triggers are inference-specific and sparse
+relative to base graph operations — they do not belong in the struct. Moving them out frees the
+top 16 bits entirely.
+
+**New `metadata` field layout (64 bits, no ABI change to NQuin size):**
+
+```
+Bits 63:60  —  Quin Type flag (4 bits, up to 16 distinct quin types for future use)
+Bits 59:56  —  Sensitivity / access tier (4 bits, links to ODRL subgraph layer)
+Bits 55:32  —  Reserved (24 bits, available for Phase 2 temporal/spatial flags)
+Bits 31:0   —  Lamport clock (32 bits, clean — no overlap)
+```
+
+**LoRA side-table:** `LoRAAdapterManager` (in `lora/adapter_manager.rs`) holds a
+`HashMap<u64, u64>` mapping quin content-hash → active adapter ID. When an inference batch
+needs LoRA context, the manager looks up by hash, not by struct field. For persistent LoRA
+attribution, a `LORA_CONTEXT` overlay quin is written:
+```
+(quin_hash, q_hash("lora:activeAdapter"), adapter_id_hash, LORA_CONTEXT, lamport, parity)
+```
+
+**Migration:** No `.q42` file migration required. The metadata field is read-only metadata; no
+persisted files encode the LoRA bits (they were runtime-only). The Lamport clock bits shift
+from 60:32 to 31:0 — any persisted files with Lamport values need a one-pass rewrite of the
+metadata field. A `q42 migrate-meta` CLI subcommand will handle this.
+
+**`lib.rs` / `lora/` changes required:**
+- Remove `set_context_trigger()` / `get_context_trigger()` from `NQuin`
+- Update `set_lamport_clock()` / `extract_lamport_clock()` to use bits 31:0
+- Add `set_quin_type()` / `get_quin_type()` for bits 63:60
+- Update `lora/adapter_manager.rs`: replace metadata-bit lookup with HashMap lookup
+- Update `LocalLlmAgent::warm_lora_for_prompt()`: remove metadata-bit write
+
+---
+
+### 4.2 ✅ Bi-Temporal Design Strategy — RESOLVED
+
+**Decision:** PROV-O + Dublin Core predicates stored as quins in a dedicated `T_CONTEXT` overlay
+graph. No NQuin struct changes. The metadata bits retain the Lamport clock for CRDT ordering
+only; wall-clock temporal semantics live entirely in the graph layer.
+
+**Predicate mapping:**
+
+| Bi-temporal concept | Predicate | Stored as |
+|---|---|---|
+| Assertion Time (when recorded) | `prov:generatedAtTime` | `(entity, q_hash("prov:generatedAtTime"), encode_ms(t), T_CONTEXT, 0, parity)` |
+| Valid Time start | `prov:startedAtTime` | same pattern in T_CONTEXT |
+| Valid Time end | `prov:endedAtTime` | same pattern in T_CONTEXT |
+| Validity period (compact) | `dcterms:valid` | ISO 8601 interval hash in object field |
+| Who asserted it | `prov:wasAttributedTo` | DID hash in object field |
+| Activity that produced it | `prov:wasGeneratedBy` | Activity quin hash |
+
+KML `<TimeStamp>` imports populate `prov:generatedAtTime`; `<TimeSpan begin/end>` populates
+`prov:startedAtTime` / `prov:endedAtTime` — both paths converge on the same T_CONTEXT quins.
+
+SPARQL temporal joins use the `T_CONTEXT` graph as a named graph:
+```sparql
+SELECT ?s WHERE {
+  GRAPH <urn:q42:context:temporal> {
+    ?s prov:startedAtTime ?t1 ; prov:endedAtTime ?t2 .
+    FILTER(?t1 <= "2025-01-01"^^xsd:dateTime && ?t2 >= "2025-01-01"^^xsd:dateTime)
+  }
+}
+```
+
+**New module required:** `temporal_graph.rs` — write helpers `assert_temporal(entity, t_valid_start, t_valid_end, t_assert)` and read helpers for T_CONTEXT queries.
+
+---
+
+### 4.3 ✅ Spatial Encoding — RESOLVED
+
+**Decision:** GeoSPARQL internally; KML as the import/export exchange format.
+
+**Internal representation** — GeoHash-64 in the `object` field of spatial quins:
+```
+(entity_hash, q_hash("geo:hasGeometry"), geohash_u64, SPATIAL_CONTEXT, ts, parity)
+(entity_hash, q_hash("geo:asWKT"), wkt_literal_hash, SPATIAL_CONTEXT, ts, parity)
+```
+GeoHash-64 encodes lat/lon to ~1mm precision in a u64. Spatial range queries are range scans on
+`object` within `SPATIAL_CONTEXT`. `spatial_sieve.rs::log_spatial_coordinate` implements this.
+
+GeoSPARQL predicates (`geo:hasGeometry`, `geo:asWKT`, `geo:sfWithin`, `geo:sfIntersects`) are
+used in SPARQL queries — this makes the spatial layer compatible with any GeoSPARQL client.
+
+**KML exchange:**
+- KML `<Placemark>` → graph entity with `geo:hasGeometry` quin
+- KML `<Polygon>` → `BoundingBox` in `spatial_sieve.rs` → WKT POLYGON literal
+- KML `<TimeStamp>` → `prov:generatedAtTime` in T_CONTEXT (feeds bi-temporal layer)
+- KML `<TimeSpan begin/end>` → `prov:startedAtTime` / `prov:endedAtTime` in T_CONTEXT
+- KML `<NetworkLink>` → DID-anchored remote graph pointer
+
+KML export is the inverse: reconstruct `<Placemark>` + `<TimeSpan>` from spatial + temporal
+context quins. A `kml_bridge.rs` module handles both directions.
+
+**Jurisdictional bounding boxes** are stored as named `BoundingBox` entities with
+`dcterms:spatial` + `odrl:spatial` constraints linking geographic extent to ODRL access policies.
+
+---
+
+### 4.4 🟡 Q42 Format Version Strategy
+
+The current format is `version = 2` (implied by "v2 unified volume" in `q42_volume.rs`).
+Adding temporal, spatial, and Merkle sections requires a v3 format.
+
+**Proposed v3 additions to `Q42VolumeHeader`:**
+```rust
+pub struct Q42VolumeHeader {
+    // existing fields (v2) ...
+    pub format_version: u16,         // 3 for v3
+    pub temporal_index_offset: u64,  // 0 if absent
+    pub temporal_index_length: u64,
+    pub merkle_root: [u8; 32],       // SHA3-256 of all SuperBlock hashes; 0 if no history
+    pub assertion_timestamp: u64,    // When this volume was last written (assertion time)
+    pub reserved: [u8; 32],          // Future spatial/rights fields
+}
+```
+
+**Question for owner:** Should v2 volumes remain readable in v3 builds (backward compat), or
+is a migration required?
+
+---
+
+### 4.5 🟡 Merkle-DAG Versioning vs. WAL
+
+Two potential paths for immutable history:
+
+**Option A — Extend the WAL**  
+Each WAL entry already has a sequence ID. Add a `prev_hash: [u8; 32]` linking each entry to
+the previous, forming a hash chain. This gives a linear immutable log (like a blockchain).
+
+**Option B — True Merkle-DAG (Git-like)**  
+`git_bridge.rs` is the stub for this. Each "commit" is a Merkle tree of NQuin hashes,
+with a parent pointer to the previous commit. This supports branching (e.g., contested
+hypotheses) and content-addressed deduplication.
+
+Option B is significantly more complex but is what the discussion describes ("like Git branches,
+different investigative teams can fork the temporal graph to test conflicting hypotheses").
+
+**Question for owner:** Is linear hash-chain (Option A, ~2 weeks of work) acceptable for
+the initial release, with Option B deferred? Or is branching essential from day one?
+
+---
+
+### 4.6 ✅ Credential-Gated Views — RESOLVED
+
+**Decision: Option B — AES-256-GCM per-layer keys with X25519 ECDH key encapsulation.**
+
+**Reasoning:** `aes-gcm` and `curve25519-dalek` are already in the workspace. The functional
+outcome is identical to CP-ABE for the target threat model (file owner as key authority, DID-
+identified agents presenting Verifiable Credentials). CP-ABE's additional 8–12 weeks of
+cryptographic engineering introduces unacceptable risk for 0.x releases.
+
+**Layer model:**
+
+Named subgraph layers, each with its own AES-256-GCM key:
+
+| Layer constant | Example content | ODRL action required |
+|---|---|---|
+| `PUBLIC` | Open data, ontology quins | none |
+| `PROFESSIONAL` | Employment, affiliation | `odrl:use` with professional VC |
+| `LEGAL` | Case records, testimony | judge/solicitor VC |
+| `MEDICAL` | Health records | clinician VC + purpose constraint |
+| `FIDUCIARY` | Financial, asset records | fiduciary VC |
+
+**Key encapsulation flow:**
+1. Subgraph key `K_layer` ∈ AES-256 stored in `key_vault.rs`
+2. Agent presents VC to `deontic_logic.rs` → VC attributes evaluated against ODRL policy
+3. If policy satisfied: `key_vault.rs` generates capsule = `X25519(agent_pubkey, HKDF(K_layer))`
+4. Agent decapsulates with their DID private key → recovers `K_layer` → decrypts subgraph quins
+5. Capsule is one-use, time-bounded (TTL in ODRL constraint)
+
+**CP-ABE** is deferred to a future research phase after Phase 3 stabilises.
+
+---
+
+### 4.7 ✅ Rights Ontology — Format and Anchoring — RESOLVED
+
+**Decision:** ODRL + SKOS, as a Turtle ontology file (`ontologies/rights_ontology.ttl`) loaded
+at daemon startup. The deontic opcodes in `deontic_logic.rs` are the runtime evaluation layer;
+the Turtle file is the vocabulary layer — they are complementary, not alternative.
+
+**Vocabulary stack:**
+
+```
+ODRL (W3C Rec.)         — policy structure: Permission, Prohibition, Obligation, Constraint
+SKOS (W3C Rec.)         — controlled vocabulary: Actions, Purposes, Jurisdictions, Agent roles
+Dublin Core (DCMI)      — resource metadata: rights, subject, publisher linkage
+deontic_logic.rs        — runtime opcodes: OP_PERMIT, OP_FORBID, OP_OBLIGE (map to ODRL classes)
+```
+
+**ODRL mapping to existing code:**
+
+| `deontic_logic.rs` | ODRL class | SKOS role |
+|---|---|---|
+| `OP_PERMIT` | `odrl:Permission` | `skos:Concept` in actions vocabulary |
+| `OP_FORBID` | `odrl:Prohibition` | same |
+| `OP_OBLIGE` | `odrl:Obligation` | same |
+| N3Logic rule | `odrl:Constraint` | `skos:scopeNote` on constraint concept |
+| DID party | `odrl:uid` | `skos:prefLabel` for human-readable identity |
+
+**ODRL parties are DID URIs** — `odrl:permission [ odrl:party <did:example:alice> ]`. This
+means the same DID identifier works across ODRL policies, PROV-O attribution, and CogAI agent
+profiles. No separate identity namespace required.
+
+**SKOS vocabulary sections in `rights_ontology.ttl`:**
+- `q42:Actions` — read, write, infer, label, contest, compute, share, export
+- `q42:Purposes` — research, clinical, commercial, governance, personal
+- `q42:Jurisdictions` — topical + geographic (linked to GeoSPARQL bounding boxes via §4.3)
+- `q42:AgentRoles` — human, agent, swarm-peer, fiduciary, rights-orchestrator
+
+**Terminology anchor** — the ontology formally defines:
+- `q42:HumanCentricControl` (preferred); `owl:deprecated q42:Sovereign`
+- `q42:DataAgency` (preferred); `owl:deprecated q42:DataOwnership`
+- `q42:AccessPolicy` (preferred); `owl:deprecated q42:Permission` in ACL sense
+
+**Dialect forks** — a community override is a separate `skos:ConceptScheme` that
+`skos:broaderTransitive` the base vocabulary. The SHACL shape for policies allows either the
+base scheme or any registered override scheme as valid `odrl:Action` values.
+
+**Signing** — the canonical `rights_ontology.ttl` is signed with the **founding DID of the
+Peace Infrastructure Project (established 2020)** via `fiduciary_crypto.rs`. The signature is
+stored as a `prov:wasAttributedTo` annotation quin at daemon startup, binding the network
+mathematically to the vocabulary definitions. Community dialect files (e.g., an indigenous
+cooperative's contextual override) carry their own community DID's signature and
+`skos:broaderTransitive` the root ontology — they extend without overriding the root definitions.
+
+---
+
+### 4.8 🟢 Labor Provenance and Contestability
+
+**Labor provenance:**  
+Each NQuin that has been labeled, cleaned, or moderated by a human agent should carry
+that agent's DID. The most natural representation:
+```
+(data_quin_hash, q_hash("LABELLED_BY"), worker_did_hash, PROVENANCE_CONTEXT, timestamp, parity)
+(data_quin_hash, q_hash("LABELLED_AT"), encode_ms(t_assert), PROVENANCE_CONTEXT, ..., parity)
+```
+This is an extension of Option A for bi-temporal (§4.2) and requires no NQuin struct changes.
+
+**Contestability:**  
+When an automated swarm computation produces a result (appends a quin), the affected DID must
+be able to "fork" that result with a signed dispute quin:
+```
+(disputed_quin_hash, q_hash("CONTESTED_BY"), agent_did_hash, CONTEST_CONTEXT, t_assert, parity)
+(disputed_quin_hash, q_hash("CONTEST_REASON"), reason_hash, CONTEST_CONTEXT, ..., parity)
+```
+The SPARQL engine must be able to query "is this assertion contested?" and return both
+the original and any dispute records. This is additive — no struct changes required.
+
+---
+
+### 4.9 ✅ Homomorphic Encryption and ZK Encrypted Search — RESOLVED
+
+**Decision: FHE is out of scope for all 0.x releases. ZK encrypted search (MIRACL approach) is the priority privacy path.**
+
+**FHE** — retained as a stub + design note in `zk_proofs.rs` only. The computational overhead
+(10³–10⁶× vs plaintext) makes it unsuitable for swarm compute in any 0.x timeframe.
+
+**ZK encrypted search** — agents prove a predicate (e.g., "this graph contains a spatial quin
+within bounding box X") without revealing the underlying data. `zk_proofs.rs` has the proof
+scaffolding. Integration with the SPARQL query path is a 3–6 month investment after Phase 3
+stabilises — it builds on the AES-GCM layer key infrastructure from §4.6.
+
+**Deployment value:** agents in the swarm can verify semantic links or spatial states for
+another agent's Q42 file without that agent exposing plaintext — directly enabling the
+compute-to-data model described in the discussion.
+
+---
+
+### 4.10 ✅ W3C CogAI CG — Agent Structure Layer — RESOLVED
+
+**Decision:** Load W3C Cognitive AI CG SHACL shapes as a fourth domain shape graph in
+`sparql_shacl.rs`, alongside the existing biosciences, biomedical, and organic chemistry engines.
+
+**Why CogAI applies here:**
+
+The Webizen agent model (`orchestrator.rs`, `llm_agent.rs`, `agency.rs`) implements an agent
+with beliefs (the knowledge graph), goals (the inferred task), plans (the orchestration pipeline),
+and actions (validated by `validate_intent`). CogAI vocabulary makes this structure explicit and
+queryable as linked data.
+
+**Key CogAI concepts and their QualiaDB mapping:**
+
+| CogAI concept | QualiaDB equivalent | Stored as |
+|---|---|---|
+| `cog:Agent` | Webizen identity | `(did_hash, rdf:type, q_hash("cog:Agent"), AGENT_CONTEXT, ts, parity)` |
+| `cog:Belief` | Graph assertion | PROV-O annotated quin in T_CONTEXT |
+| `cog:Goal` | Orchestrator task | `(agent_hash, cog:hasGoal, goal_hash, AGENT_CONTEXT, ts, parity)` |
+| `cog:Plan` | Inference pipeline | `(goal_hash, cog:hasPlan, plan_hash, AGENT_CONTEXT, ts, parity)` |
+| `cog:Action` | Validated opcode | Links to `odrl:Permission` — goal can only be pursued if ODRL permits action |
+| Working memory | SlgArena | The 42 MB arena is the agent's working memory at inference time |
+
+**Integration with validate_intent():**
+
+`orchestrator.rs::validate_intent()` currently checks N3Logic Rights Ontology rules. With CogAI:
+1. Check ODRL policy for the requested action (existing path)
+2. Check SHACL CogAI shapes — does the agent's current `cog:Goal` graph conform to the shape?
+3. If both pass → inference proceeds. If CogAI shape fails → the goal is malformed, not just
+   forbidden; write a different conduct violation type to the WAL.
+
+**New `cog:Belief` + PROV-O intersection:**
+
+A `cog:Belief` is an assertion held by an agent at a given time. This maps naturally onto
+PROV-O bi-temporal quins — a belief formed at T1 about an event at T2:
+```
+(agent_hash, cog:holdsBelief, belief_quin_hash, AGENT_CONTEXT, t_assert, parity)
+(belief_quin_hash, prov:generatedAtTime, t_assert, T_CONTEXT, 0, parity)
+(belief_quin_hash, prov:startedAtTime, t_valid, T_CONTEXT, 0, parity)
+```
+
+**Files affected:** `sparql_shacl.rs` (load CogAI shape graph), new `ontologies/cogai_shapes.ttl`,
+`orchestrator.rs` (CogAI pre-flight check in `validate_intent`).
+
+---
+
+## 5. Proposed Implementation Phases
+
+Ordered by impact, dependencies, and effort. Each phase is additive and backward-compatible
+where possible.
+
+### Phase 1 — Foundational Fixes (2–4 weeks)
+
+1. **Apply NQuin metadata bit-layout fix** (§4.1 — decision: Option B) — Remove
+   `set_context_trigger` / `get_context_trigger` from `NQuin`; move LoRA state to
+   `LoRAAdapterManager` `HashMap<u64,u64>` side-table; shift Lamport clock to bits[31:0];
+   add `set_quin_type` (bits[63:60]) and `set_sensitivity_tier` (bits[59:56]); add
+   `q42 migrate-meta` CLI subcommand for existing files.
+
+2. **Complete `log_spatial_coordinate`** in `spatial_sieve.rs` — Encode lat/lon as GeoHash-64;
+   write `(entity, geo:hasGeometry, geohash, SPATIAL_CONTEXT, ts, parity)` and
+   `(entity, geo:asWKT, wkt_hash, SPATIAL_CONTEXT, ts, parity)` quins to the graph.
+
+3. **Wire `git_bridge.rs` to a real hash chain** — Minimum viable: each new SuperBlock writes
+   `SHA3-256(prev_block_bytes)` into a rolling `merkle_root` in the volume header. This gives
+   tamper-evident history without full branching. Upgrade path to full DAG in Phase 4.
+
+4. **Create ontology files** — `ontologies/rights_ontology.ttl` (ODRL + SKOS, §4.7) and
+   `ontologies/cogai_shapes.ttl` (W3C CogAI CG SHACL shapes, §4.10). Both are text artifacts
+   loaded at daemon startup; no Rust code changes beyond `sparql_shacl.rs` loader.
+
+5. **KML bridge skeleton** — `kml_bridge.rs` with `import_kml(bytes) -> Vec<NQuin>` and
+   `export_kml(quins) -> String`. Phase 1 covers `<Placemark>`/`<Point>`/`<TimeStamp>` only;
+   polygon and `<NetworkLink>` support in Phase 2.
+
+**Files primarily affected:** `lib.rs`, `q42_volume.rs`, `spatial_sieve.rs`, `git_bridge.rs`,
+`sparql_shacl.rs`, new `kml_bridge.rs`, new `ontologies/`
+
+---
+
+### Phase 2 — Bi-Temporal & Provenance Quins (4–6 weeks)
+
+1. **Temporal Overlay Graph** — Implement §4.2 decision: define `T_CONTEXT` constant,
+   add `temporal_graph.rs::assert_temporal(entity, t_valid_start, t_valid_end, t_assert)`.
+   Predicate hashes for `prov:generatedAtTime`, `prov:startedAtTime`, `prov:endedAtTime`,
+   `dcterms:valid` pre-computed at startup. Extend SPARQL filter to join T_CONTEXT.
+
+2. **PROV-O attribution quins** — `prov:wasAttributedTo` (worker DID), `prov:wasGeneratedBy`
+   (activity) stored alongside temporal quins for full provenance chains.
+
+3. **Labor provenance quins** — `provenance.rs::label_with_worker_did(data_hash, worker_did, ts)`
+   writes PROV-O + `dcterms:creator` quins to `PROVENANCE_CONTEXT`.
+
+4. **Contestability quins** — `provenance.rs::contest_assertion(disputed_hash, agent_did, reason)`.
+   Extend SPARQL `FILTER` to check `EXISTS { ?quin prov:wasInvalidatedBy ?agent }`.
+
+5. **CogAI agent profile quins** — `orchestrator.rs` writes `cog:Agent`, `cog:Goal`,
+   `cog:Belief` quins to `AGENT_CONTEXT` as part of the `validate_intent` pre-flight.
+
+6. **Extend Q42 volume header to v3** — Add `assertion_timestamp`, `merkle_root`, and reserved
+   fields. Keep v2 read-back working.
+
+7. **KML Phase 2** — Full `<Polygon>` → `BoundingBox` import; `<NetworkLink>` → DID graph
+   pointer; ODRL jurisdictional constraint linked to KML polygon bounding box.
+
+**Files primarily affected:** `q42_volume.rs`, `query_engine.rs`, `sparql_filter.rs`,
+`orchestrator.rs`, new `provenance.rs`, new `temporal_graph.rs`, `kml_bridge.rs`
+
+---
+
+### Phase 3 — Credential-Gated Views (6–10 weeks)
+
+1. **Layered AES-GCM subgraph encryption** (§4.6, Option B) — Define 4–8 named subgraph
+   layers (e.g., `MEDICAL`, `LEGAL`, `FINANCIAL`, `PUBLIC`). Each layer has an AES-256-GCM
+   key stored in `key_vault.rs`. Key encapsulation uses X25519 ECDH + HKDF.
+
+2. **VC-to-key mapping in `deontic_logic.rs`** — Extend the deontic engine to evaluate
+   an agent's presented Verifiable Credentials and release the relevant subgraph key if
+   the VC attributes satisfy the policy.
+
+3. **Selective disclosure / query-time decryption** — SPARQL queries on encrypted subgraphs
+   first check deontic rules, then decrypt only the relevant blocks for the requesting DID.
+
+**Files primarily affected:** `deontic_logic.rs`, `key_vault.rs`, `query_engine.rs`, `sparql_executor.rs`
+
+---
+
+### Phase 4 — Full Merkle-DAG Versioning (8–12 weeks)
+
+1. **`git_bridge.rs` — real implementation** — Each "commit" is a content-addressed `DagNode`:
+   `{ parent_hash: [u8; 32], quins_merkle: [u8; 32], author_did: u64, timestamp: u64,
+   message_hash: u64 }`. Write to a separate `.q42h` history sidecar or a HISTORY_SECTION
+   in the v3 format.
+
+2. **Branch support** — A branch is a named pointer to a DagNode hash, stored in a
+   BRANCHES_CONTEXT quin graph.
+
+3. **Merge / contestability branches** — Fork + merge workflow for investigative scenarios.
+   Merge commits reference two parent hashes; conflicting quins are flagged for human review.
+
+4. **SPARQL temporal traversal** — `AS OF` or `AT TIME` query extension that returns the
+   graph state at a specified `t_valid` or `t_assert`.
+
+**Files primarily affected:** `git_bridge.rs` (major rewrite), `q42_volume.rs`, `wal.rs`, `sparql_ast.rs`, `sparql_executor.rs`
+
+---
+
+### Phase 5 — WASM Compute Contracts (10–16 weeks)
+
+1. **Q42 block type for WASM modules** — Add `BLOCK_TYPE_WASM = 0x03` to the v3 format.
+   A WASM block stores: entry-point hash, access policy hash, executable bytes.
+
+2. **Compute-to-data invocation** — When a peer requests computation, `wasm_edge.rs` loads
+   the WASM block, sandboxes it, and passes it the local quin graph as a read-only view.
+   The result is signed by the peer's DID and appended as provenance quins.
+
+3. **Swarm routing** — The peer-to-peer dispatch layer (`daemon_swarm.rs`) broadcasts
+   compute requests to peers holding the target Q42 files.
+
+---
+
+### Future / Research
+
+- **CP-ABE** (§4.6, Option C) — deferred; requires dedicated cryptography engineering
+- **FHE compute** (§4.9) — deferred; research track only
+- **ZK encrypted search** — integrate with `zk_proofs.rs` after Phase 3 stabilizes
+
+---
+
+## 6. Files Impacted by Phase 1–2
+
+A preliminary list of files that will need changes across Phases 1–2:
+
+| File | Changes needed |
+|------|----------------|
+| `lib.rs` | NQuin bit-layout re-map (§4.1) |
+| `q42_volume.rs` | v3 header fields; `assertion_timestamp`, `merkle_root` |
+| `spatial_sieve.rs` | Implement `log_spatial_coordinate` with GeoHash-64 + GeoSPARQL predicates |
+| `git_bridge.rs` | Hash-chain merkle root per SuperBlock (Phase 1); full DAG (Phase 4) |
+| `crdt.rs` | Update after Lamport clock bit position changes |
+| `wal.rs` | Expose prev_hash linking |
+| `query_engine.rs` | Temporal (T_CONTEXT) and spatial (SPATIAL_CONTEXT) named graph joins |
+| `sparql_filter.rs` | `AS OF`, `prov:wasInvalidatedBy`, `prov:wasAttributedTo` filter extensions |
+| `sparql_ast.rs` | New temporal/spatial AST nodes; GeoSPARQL relation predicates |
+| `deontic_logic.rs` | ODRL class mapping; VC attribute evaluation for key release (Phase 3) |
+| `key_vault.rs` | Subgraph key storage and X25519 encapsulation (Phase 3) |
+| `orchestrator.rs` | CogAI pre-flight in `validate_intent`; `cog:Goal`/`cog:Belief` quin writes |
+| `sparql_shacl.rs` | Load `cogai_shapes.ttl` as fourth domain shape graph |
+| new: `provenance.rs` | PROV-O labor DID labelling; contestability write helpers |
+| new: `temporal_graph.rs` | `assert_temporal()` write helper; T_CONTEXT read helpers |
+| new: `kml_bridge.rs` | KML import/export; `<TimeStamp>`/`<TimeSpan>` → PROV-O quins |
+| new: `ontologies/rights_ontology.ttl` | ODRL + SKOS vocabulary; Human-Centric terminology anchors |
+| new: `ontologies/cogai_shapes.ttl` | W3C CogAI CG SHACL shapes for agent structure validation |
+
+---
+
+## 7. Terminology Notes
+
+The following terminology preferences should be used consistently throughout the codebase,
+documentation, and the Rights Ontology:
+
+| Avoid | Use instead | Reason |
+|-------|------------|--------|
+| "sovereign" / "sovereignty" | "agency", "Human-Centric control", "data agency" | Owner's explicit preference; "sovereign" has been misappropriated by extractive systems |
+| "DID = identity" | "DID = persistent pointer / URI" | DIDs are durable identifiers; the semantic payload and agency live in the Q42 graph, not the DID itself |
+| "permissions" (as in ACL) | "access policy" / "deontic rules" | Permissions implies centralized grant; the Q42 model is rule-based and embedded in the data |
+| "data owner" | "rights orchestrator" | The entity who sets up access rules, not a property owner in the proprietary sense |
+| "anonymized data" | "pseudonymous data with DID binding" | True anonymization is not achievable when DIDs are present; be precise |
+
+---
+
+## 8. Decisions Checklist
+
+### ✅ Resolved (8/10)
+
+| # | Decision | Outcome |
+|---|---|---|
+| §4.1 | NQuin metadata bit-layout | Option B — LoRA → side-table; Lamport → bits[31:0]; Quin Type → bits[63:60] |
+| §4.2 | Bi-temporal model | PROV-O + Dublin Core quins in T_CONTEXT overlay graph |
+| §4.3 | Spatial encoding | GeoSPARQL WKT internally; GeoHash-64 in `object` field; KML import/export |
+| §4.6 | Credential-gated views | AES-256-GCM per layer + X25519 ECDH encapsulation; CP-ABE deferred |
+| §4.7 | Rights Ontology format | ODRL + SKOS Turtle at `ontologies/`; signed by Peace Infrastructure Project founding DID (2020) |
+| §4.8 | Labor provenance | PROV-O `wasAttributedTo` + `PROVENANCE_CONTEXT` overlay quins |
+| §4.9 | FHE / ZK scope | FHE out of scope for all 0.x; ZK encrypted search (MIRACL) is priority after Phase 3 |
+| §4.10 | Agent structure | W3C CogAI CG SHACL shapes as fourth domain engine in `sparql_shacl.rs` |
+
+### ⏳ Open (2/10) — needed before Phase 1 begins
+
+**§4.4 — Q42 format versioning / backward compatibility**
+
+> The v3 header adds `assertion_timestamp`, `merkle_root`, and reserved fields. The NQuin struct
+> size is unchanged (48 bytes), but the Lamport clock bits shift from [60:32] to [31:0].
+>
+> **Option A — Backward compat:** v3 builds read v2 files silently; Lamport values in old files
+> are re-interpreted under the new bit mask (values ≤ 2²⁹ are unambiguous; higher values need
+> a one-pass metadata rewrite). A `q42 migrate-meta` subcommand is provided but optional.
+>
+> **Option B — Migration required:** v3 builds refuse to open v2 files without a `q42 migrate-meta`
+> run first. Simpler code path; no silent reinterpretation risk.
+>
+> *Which is acceptable?*
+
+---
+
+**§4.5 — Versioning strategy for Phase 1**
+
+> **Option A — Linear WAL hash chain (~2 weeks):** Add `prev_hash: [u8; 32]` to each WAL entry,
+> forming a tamper-evident log. Simple, no branching. `git_bridge.rs` remains a stub until Phase 4.
+>
+> **Option B — Minimal Merkle-DAG (~4–5 weeks):** Implement a lightweight DAG in `git_bridge.rs`
+> with `DagNode { parent_hash, quins_merkle, author_did, timestamp }`. Supports branching for
+> contested-hypothesis workflows from day one.
+>
+> The discussion explicitly describes investigative teams forking the temporal graph to test
+> conflicting hypotheses — that requires Option B. Option A is faster but needs a Phase 4
+> upgrade later.
+>
+> *Is branching essential from day one, or is Option A acceptable for the initial 0.0.10 release?*
+
+---
+
+## 9. Relation to Existing Work
+
+### What is NOT duplicating existing implementations
+
+- `temporal_ltl.rs` evaluates LTL temporal logic on trace sequences. It is a *reasoning* layer
+  over quin sequences, not bi-temporal storage. Phase 2 adds the storage layer that feeds it.
+
+- `deontic_logic.rs` enforces *who can act*. Phase 3 adds *what they can see* (key release).
+  These are complementary, not duplicate.
+
+- `zk_proofs.rs` (hash-chain approach) provides proof generation. Phase 5 ZK encrypted search
+  would use it as a building block.
+
+### What the discussion implicitly assumes exists but does not yet
+
+- A formal `.q42` file format specification document (not just Rust code). This should be
+  written as `Q42_FORMAT_SPEC.md` before Phase 2, so external implementations can target it.
+
+- A test suite for temporal and spatial queries. The existing 539-test suite covers the current
+  quin model. Phase 2 tests should cover `AS OF` queries, bi-temporal round-trips, and
+  GeoHash range scans.

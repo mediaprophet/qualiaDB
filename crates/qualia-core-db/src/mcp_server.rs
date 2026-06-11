@@ -4,7 +4,7 @@
 extern crate std;
 
 use crate::wal::append_mutation;
-use crate::QualiaQuin;
+use crate::NQuin;
 use core::ptr::write_volatile;
 use std::string::String;
 
@@ -78,7 +78,7 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         // ── Graph Engine Tools ───────────────────────────────────────────────
         b"query_graph" => {
             if intent_frame.sanctuary_override.is_none() {
-                let violation_quin = QualiaQuin::new_conduct_violation(
+                let violation_quin = NQuin::new_conduct_violation(
                     b"EgressViolation: Missing Cryptographic Sanctuary Override",
                 );
                 let _ = append_mutation(&violation_quin);
@@ -336,7 +336,7 @@ unsafe fn execute_paraconsistent_injection(
     _args: &[u8],
     intent: &McpIntentFrame,
 ) -> Result<usize, McpSystemError> {
-    let candidate = QualiaQuin {
+    let candidate = NQuin {
         subject: intent.purpose_hash,
         predicate: crate::q_hash("q42:testClaim"),
         object: intent.session_nonce,
@@ -347,8 +347,8 @@ unsafe fn execute_paraconsistent_injection(
     let mut q = candidate;
     q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
 
-    let mut consistent = [QualiaQuin::default(); 8];
-    let mut isolated = [QualiaQuin::default(); 8];
+    let mut consistent = [NQuin::default(); 8];
+    let mut isolated = [NQuin::default(); 8];
     let (c, i) = crate::modalities::paraconsistent::route_paraconsistent(
         &[q],
         &mut consistent,

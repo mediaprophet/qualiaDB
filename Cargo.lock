@@ -6697,6 +6697,7 @@ dependencies = [
  "ed25519-dalek",
  "futures-util",
  "hex 0.4.3",
+ "hmac",
  "image 0.25.10",
  "lazy_static",
  "log",

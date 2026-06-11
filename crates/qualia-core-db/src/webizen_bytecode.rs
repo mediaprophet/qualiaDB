@@ -1,6 +1,6 @@
 //! Bytecode execution engine.
 //!
-//! Runs a compiled `mini_parser` program against a `&[QualiaQuin]` database
+//! Runs a compiled `mini_parser` program against a `&[NQuin]` database
 //! slice, writing every matching Quin into a caller-supplied output buffer.
 //! No heap allocation is performed inside this module.
 //!
@@ -30,7 +30,7 @@
 use crate::mini_parser::{
     OP_END, OP_HALT_IF_FALSE, OP_MATCH_OBJECT, OP_MATCH_PREDICATE, OP_MATCH_SUBJECT,
 };
-use crate::QualiaQuin;
+use crate::NQuin;
 
 const MSB: u64 = 1u64 << 63;
 
@@ -62,8 +62,8 @@ pub struct ExecutionStats {
 #[inline]
 pub fn execute_program(
     program: &[u8],
-    db: &[QualiaQuin],
-    out: &mut [QualiaQuin],
+    db: &[NQuin],
+    out: &mut [NQuin],
 ) -> Result<(usize, u64), VmError> {
     let s = execute_program_with_stats(program, db, out)?;
     Ok((s.match_count, s.vm_cycles))
@@ -75,8 +75,8 @@ pub fn execute_program(
 /// which VM dispatch path was exercised for each operand.
 pub fn execute_program_with_stats(
     program: &[u8],
-    db: &[QualiaQuin],
-    out: &mut [QualiaQuin],
+    db: &[NQuin],
+    out: &mut [NQuin],
 ) -> Result<ExecutionStats, VmError> {
     let mut stats = ExecutionStats::default();
 
@@ -157,7 +157,7 @@ pub fn execute_program_with_stats(
 /// SIMD-vectorized execution of `program` against `db`.
 ///
 /// On wasm32 targets with the `wasm_simd` feature enabled the function loads
-/// each 48-byte [`QualiaQuin`] record using three `v128` registers:
+/// each 48-byte [`NQuin`] record using three `v128` registers:
 ///
 /// | Register | Bytes  | Fields             |
 /// |----------|--------|--------------------|
@@ -166,23 +166,23 @@ pub fn execute_program_with_stats(
 /// | C        | 32–47  | metadata + parity   |
 ///
 /// The three-register layout achieves perfect 16-byte SIMD alignment because
-/// `size_of::<QualiaQuin>() == 48 == 3 × 16`.
+/// `size_of::<NQuin>() == 48 == 3 × 16`.
 ///
 /// The bytecode program is then evaluated against the SIMD-preloaded record.
 /// On non-wasm32 builds the function falls back to the scalar [`execute_program`].
 #[cfg(all(target_arch = "wasm32", feature = "wasm_simd"))]
 pub fn execute_program_simd(
     program: &[u8],
-    db: &[QualiaQuin],
-    out: &mut [QualiaQuin],
+    db: &[NQuin],
+    out: &mut [NQuin],
 ) -> Result<(usize, u64), VmError> {
     use core::arch::wasm32::*;
     use core::mem::size_of;
 
-    // Compile-time proof that 3 × v128 covers exactly one QualiaQuin.
+    // Compile-time proof that 3 × v128 covers exactly one NQuin.
     const _: () = assert!(
-        size_of::<QualiaQuin>() == 3 * 16,
-        "QualiaQuin must be 48 bytes (3 × 16-byte SIMD registers) for perfect alignment"
+        size_of::<NQuin>() == 3 * 16,
+        "NQuin must be 48 bytes (3 × 16-byte SIMD registers) for perfect alignment"
     );
 
     let mut match_count: usize = 0;
@@ -190,9 +190,9 @@ pub fn execute_program_simd(
 
     'quin_loop: for &quin in db {
         // Load the 48-byte record into three SIMD registers.
-        // Safety: QualiaQuin is #[repr(C, align(16))] and 48 bytes;
-        // slices of QualiaQuin guarantee 16-byte alignment for every element.
-        let quin_ptr = &quin as *const QualiaQuin as *const v128;
+        // Safety: NQuin is #[repr(C, align(16))] and 48 bytes;
+        // slices of NQuin guarantee 16-byte alignment for every element.
+        let quin_ptr = &quin as *const NQuin as *const v128;
         let _reg_a = unsafe { v128_load(quin_ptr.add(0)) }; // subject + predicate
         let _reg_b = unsafe { v128_load(quin_ptr.add(1)) }; // object  + context
         let _reg_c = unsafe { v128_load(quin_ptr.add(2)) }; // metadata + parity
@@ -261,8 +261,8 @@ pub fn execute_program_simd(
 #[inline]
 pub fn execute_program_simd(
     program: &[u8],
-    db: &[QualiaQuin],
-    out: &mut [QualiaQuin],
+    db: &[NQuin],
+    out: &mut [NQuin],
 ) -> Result<(usize, u64), VmError> {
     execute_program(program, db, out)
 }
@@ -272,7 +272,7 @@ mod tests {
     use super::*;
     use crate::mini_parser::compile_ntriples_to_bytecode;
 
-    fn make_quin(s: &str, p: &str, o: &str) -> QualiaQuin {
+    fn make_quin(s: &str, p: &str, o: &str) -> NQuin {
         crate::q_turtle!(s, p, o)
     }
 
@@ -285,7 +285,7 @@ mod tests {
         let mut prog = [0u8; 1024];
         compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
 
-        let mut out = [QualiaQuin::default(); 10];
+        let mut out = [NQuin::default(); 10];
         let (n, _cycles) = execute_program(&prog, &db, &mut out).unwrap();
         assert_eq!(n, 1);
         assert_eq!(out[0], db[0]);
@@ -301,7 +301,7 @@ mod tests {
         let mut prog = [0u8; 1024];
         compile_ntriples_to_bytecode(b"?who <knows> <Bob>", &mut prog).unwrap();
 
-        let mut out = [QualiaQuin::default(); 10];
+        let mut out = [NQuin::default(); 10];
         let (n, _cycles) = execute_program(&prog, &db, &mut out).unwrap();
         assert_eq!(n, 2);
     }
@@ -312,7 +312,7 @@ mod tests {
         let mut prog = [0u8; 1024];
         compile_ntriples_to_bytecode(b"?s ?p ?o", &mut prog).unwrap();
 
-        let mut out = [QualiaQuin::default(); 1]; // too small
+        let mut out = [NQuin::default(); 1]; // too small
         assert_eq!(
             execute_program(&prog, &db, &mut out),
             Err(VmError::OutputBufferFull)
@@ -323,7 +323,7 @@ mod tests {
     fn empty_db_returns_zero_matches_and_zero_cycles() {
         let mut prog = [0u8; 1024];
         compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
-        let mut out = [QualiaQuin::default(); 10];
+        let mut out = [NQuin::default(); 10];
         let (n, cycles) = execute_program(&prog, &[], &mut out).unwrap();
         assert_eq!(n, 0);
         assert_eq!(cycles, 0, "no cycles should be burned on an empty database");
@@ -334,7 +334,7 @@ mod tests {
         let db = [make_quin("Alice", "knows", "Bob")];
         let mut prog = [0u8; 1024];
         compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
-        let mut out = [QualiaQuin::default(); 10];
+        let mut out = [NQuin::default(); 10];
         let (n, cycles) = execute_program(&prog, &db, &mut out).unwrap();
         assert_eq!(n, 1);
         assert!(
@@ -351,7 +351,7 @@ mod tests {
         let db2 = [q, q];
         let mut prog = [0u8; 1024];
         compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
-        let mut out = [QualiaQuin::default(); 10];
+        let mut out = [NQuin::default(); 10];
 
         let (_, c1) = execute_program(&prog, &db1, &mut out).unwrap();
         let (_, c2) = execute_program(&prog, &db2, &mut out).unwrap();

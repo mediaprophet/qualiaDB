@@ -106,11 +106,11 @@ Keep `Q42Archive` for distribution/archival exports only (compressed bundles for
 
 In `daemon.rs:292`:
 ```rust
-let current_database_state: &[crate::QualiaQuin] = &[];  // ← ALWAYS EMPTY
+let current_database_state: &[crate::NQuin] = &[];  // ← ALWAYS EMPTY
 ```
 
 At daemon startup, scan `%APPDATA%\QualiaData\Index\` for `*.q42` files. Load them into a
-`Arc<RwLock<Vec<QualiaQuin>>>` held in a `lazy_static`. Every POST /query executes against
+`Arc<RwLock<Vec<NQuin>>>` held in a `lazy_static`. Every POST /query executes against
 this live slice. Add a `reload_index()` endpoint so the daemon picks up newly indexed files
 without restart.
 

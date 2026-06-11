@@ -14,7 +14,7 @@
 //!   0     │ 0b0010       │ scaled × 10⁶  │ Inline xsd:decimal literal
 //!   0     │ 0b0011       │ 0 or 1        │ Inline xsd:boolean literal
 //!   0     │ 0b001        │ embedded hash │ SPARQL-Star embedded triple <<s p o>>
-   0     │ 0b1000       │ webizen id    │ Sovereign WebID agent identifier
+//!   0     │ 0b1000       │ webizen id    │ Sovereign WebID agent identifier
 //!   0     │ 0b0101–0b0111│ reserved      │ Treated as IRI hash (future use)
 //! ```
 //!
@@ -26,7 +26,7 @@
 //! `format_ntriples_to` writes directly to any `impl io::Write` sink and
 //! never touches the heap.  Callers own the output buffer.
 
-use crate::QualiaQuin;
+use crate::NQuin;
 use std::io;
 
 // ---------------------------------------------------------------------------
@@ -243,7 +243,7 @@ fn write_object_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
 /// Subject values are written via `write_iri_term` (which accounts for the
 /// MSB / did:q42 flag).  Object values additionally check bits 60-62 for
 /// inline-typed literals.
-pub fn format_ntriples_to<W: io::Write>(quins: &[QualiaQuin], out: &mut W) -> io::Result<()> {
+pub fn format_ntriples_to<W: io::Write>(quins: &[NQuin], out: &mut W) -> io::Result<()> {
     for q in quins {
         // Subject: the nested-Quin bit (bit 63) doubles as the did:q42 flag;
         // pass the raw value so `write_iri_term` can render it correctly.
@@ -265,8 +265,8 @@ pub fn format_ntriples_to<W: io::Write>(quins: &[QualiaQuin], out: &mut W) -> io
 mod tests {
     use super::*;
 
-    fn quin(s: u64, p: u64, o: u64) -> QualiaQuin {
-        QualiaQuin {
+    fn quin(s: u64, p: u64, o: u64) -> NQuin {
+        NQuin {
             subject: s,
             predicate: p,
             object: o,
@@ -276,7 +276,7 @@ mod tests {
         }
     }
 
-    fn render(quins: &[QualiaQuin]) -> String {
+    fn render(quins: &[NQuin]) -> String {
         let mut buf = Vec::new();
         format_ntriples_to(quins, &mut buf).unwrap();
         String::from_utf8(buf).unwrap()

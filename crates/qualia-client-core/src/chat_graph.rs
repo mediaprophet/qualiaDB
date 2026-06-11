@@ -4,7 +4,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
-use qualia_core_db::{q_hash, wal::WriteAheadLog, QualiaQuin};
+use qualia_core_db::{q_hash, wal::WriteAheadLog, NQuin};
 use serde::{Deserialize, Serialize};
 
 use crate::chat_session::{ChatError, Role};
@@ -77,14 +77,14 @@ fn session_subject_hash(session_id: &str) -> u64 {
     q_hash(&format!("chat:session:{session_id}"))
 }
 
-fn build_fragment_quin(session_id: &str, fragment_id_hex: &str, lamport: u64) -> QualiaQuin {
+fn build_fragment_quin(session_id: &str, fragment_id_hex: &str, lamport: u64) -> NQuin {
     let subject = session_subject_hash(session_id);
     let predicate = q_hash("chat:hasFragment");
     let object = u64::from_str_radix(fragment_id_hex, 16).unwrap_or(0) & OBJECT_HASH_MASK;
     let context = q_hash(&format!("msg:{lamport}"));
     let metadata = (lamport & LAMPORT_MASK) << LAMPORT_SHIFT;
     let parity = subject ^ predicate ^ object ^ context ^ metadata;
-    QualiaQuin {
+    NQuin {
         subject,
         predicate,
         object,
@@ -99,14 +99,14 @@ fn build_reply_edge_quin(
     child_fragment_id_hex: &str,
     parent_fragment_id_hex: &str,
     reply_lamport: u64,
-) -> QualiaQuin {
+) -> NQuin {
     let subject = u64::from_str_radix(child_fragment_id_hex, 16).unwrap_or(0) & OBJECT_HASH_MASK;
     let predicate = q_hash("chat:repliesTo");
     let object = u64::from_str_radix(parent_fragment_id_hex, 16).unwrap_or(0) & OBJECT_HASH_MASK;
     let context = session_subject_hash(session_id);
     let metadata = (reply_lamport & LAMPORT_MASK) << LAMPORT_SHIFT;
     let parity = subject ^ predicate ^ object ^ context ^ metadata;
-    QualiaQuin {
+    NQuin {
         subject,
         predicate,
         object,

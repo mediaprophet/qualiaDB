@@ -3,7 +3,7 @@
 //! Transforms semantic data into polynomial representations suitable for QPU offloading
 //! while maintaining strict zero-allocation invariants and mapping to 48-byte Quin payloads.
 
-use crate::qualia_quin::{QualiaQuin, QualiaQuinField};
+use crate::n_quin::{NQuin, NQuinField};
 use crate::execution_error::ExecutionError;
 use crate::hash::fnv1a_64;
 
@@ -13,7 +13,7 @@ pub struct PolynomialObfuscator {
     encoding_degree: u32,
     field_modulus: u64,
     /// Fixed workspace for zero-allocation operations (12 × 4 bytes = 48 bytes)
-    workspace: [QualiaQuinField; 12],
+    workspace: [NQuinField; 12],
     /// Randomization state for deterministic obfuscation
     randomization_state: [u64; 4],
     /// Domain-specific transformation parameters
@@ -37,18 +37,18 @@ impl PolynomialObfuscator {
         Self {
             encoding_degree: degree,
             field_modulus: modulus,
-            workspace: [QualiaQuinField::default(); 12],
+            workspace: [NQuinField::default(); 12],
             randomization_state: [0; 4],
             domain_params: [0; 4],
         }
     }
 
-    /// Encode semantic data to QualiaQuin with specified domain transformation
+    /// Encode semantic data to NQuin with specified domain transformation
     pub fn encode_to_quin(
         &mut self, 
         data: &[u8], 
         target_domain: ObfuscationDomain,
-        target_quin: &mut QualiaQuin
+        target_quin: &mut NQuin
     ) -> Result<(), ExecutionError> {
         // Validate data size (must fit in fixed workspace)
         if data.len() > 48 {
@@ -76,7 +76,7 @@ impl PolynomialObfuscator {
     /// Decode results from QPU back to semantic domain (reverse transformation)
     pub fn decode_from_quin(
         &mut self,
-        source_quin: &QualiaQuin,
+        source_quin: &NQuin,
         target_domain: ObfuscationDomain
     ) -> Result<[u8; 48], ExecutionError> {
         // 1. Extract polynomial coefficients from Quin payload
@@ -136,8 +136,8 @@ impl PolynomialObfuscator {
             // Apply field modulus
             coeff = coeff % self.field_modulus;
             
-            // Convert to QualiaQuinField and store in workspace
-            self.workspace[i] = QualiaQuinField::from_u64(coeff)?;
+            // Convert to NQuinField and store in workspace
+            self.workspace[i] = NQuinField::from_u64(coeff)?;
         }
         
         Ok(())
@@ -158,7 +158,7 @@ impl PolynomialObfuscator {
                 coeff = coeff.wrapping_mul((row as u64 + 1) * (col as u64 + 1));
                 coeff = coeff % self.field_modulus;
                 
-                self.workspace[element_index] = QualiaQuinField::from_u64(coeff)?;
+                self.workspace[element_index] = NQuinField::from_u64(coeff)?;
                 element_index += 1;
             }
         }
@@ -182,7 +182,7 @@ impl PolynomialObfuscator {
             }
             
             coeff = coeff % self.field_modulus;
-            self.workspace[i] = QualiaQuinField::from_u64(coeff)?;
+            self.workspace[i] = NQuinField::from_u64(coeff)?;
         }
         
         Ok(())
@@ -205,7 +205,7 @@ impl PolynomialObfuscator {
             
             coeff = coeff.wrapping_add((i as u64).pow(2));
             coeff = coeff % self.field_modulus;
-            self.workspace[i] = QualiaQuinField::from_u64(coeff)?;
+            self.workspace[i] = NQuinField::from_u64(coeff)?;
         }
         
         Ok(())
@@ -219,8 +219,8 @@ impl PolynomialObfuscator {
                 for i in 0..12 {
                     let coeff = self.workspace[i].to_u64();
                     let transformed = coeff.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(i as u64);
-                    self.workspace[i] = QualiaQuinField::from_u64(transformed % self.field_modulus)
-                        .unwrap_or(QualiaQuinField::default());
+                    self.workspace[i] = NQuinField::from_u64(transformed % self.field_modulus)
+                        .unwrap_or(NQuinField::default());
                 }
             }
             ObfuscationDomain::MatrixTransformation => {
@@ -230,8 +230,8 @@ impl PolynomialObfuscator {
                     // Preserve diagonal dominance for numerical stability
                     let factor = if i < 4 { 2 } else { 1 };
                     let transformed = coeff.wrapping_mul(factor);
-                    self.workspace[i] = QualiaQuinField::from_u64(transformed % self.field_modulus)
-                        .unwrap_or(QualiaQuinField::default());
+                    self.workspace[i] = NQuinField::from_u64(transformed % self.field_modulus)
+                        .unwrap_or(NQuinField::default());
                 }
             }
             ObfuscationDomain::HamiltonianOperator => {
@@ -244,8 +244,8 @@ impl PolynomialObfuscator {
                     } else {
                         coeff.wrapping_neg().wrapping_mul(0x6A09E667F3BCC909)
                     };
-                    self.workspace[i] = QualiaQuinField::from_u64(transformed % self.field_modulus)
-                        .unwrap_or(QualiaQuinField::default());
+                    self.workspace[i] = NQuinField::from_u64(transformed % self.field_modulus)
+                        .unwrap_or(NQuinField::default());
                 }
             }
             ObfuscationDomain::OptimizationProblem => {
@@ -254,15 +254,15 @@ impl PolynomialObfuscator {
                     let coeff = self.workspace[i].to_u64();
                     // Preserve convexity properties for optimization
                     let transformed = coeff.wrapping_add((i as u64).wrapping_mul(2));
-                    self.workspace[i] = QualiaQuinField::from_u64(transformed % self.field_modulus)
-                        .unwrap_or(QualiaQuinField::default());
+                    self.workspace[i] = NQuinField::from_u64(transformed % self.field_modulus)
+                        .unwrap_or(NQuinField::default());
                 }
             }
         }
     }
 
     /// Pack polynomial coefficients into 48-byte Quin payload
-    fn pack_into_quin(&self, target_quin: &mut QualiaQuin, domain: ObfuscationDomain) -> Result<(), ExecutionError> {
+    fn pack_into_quin(&self, target_quin: &mut NQuin, domain: ObfuscationDomain) -> Result<(), ExecutionError> {
         // Pack 12 coefficients (4 bytes each) into object field
         let mut object_bytes = [0u8; 48];
         
@@ -297,7 +297,7 @@ impl PolynomialObfuscator {
     }
 
     /// Unpack polynomial coefficients from Quin payload
-    fn unpack_from_quin(&mut self, source_quin: &QualiaQuin, domain: ObfuscationDomain) -> Result<(), ExecutionError> {
+    fn unpack_from_quin(&mut self, source_quin: &NQuin, domain: ObfuscationDomain) -> Result<(), ExecutionError> {
         // Reconstruct 48-byte payload from Quin fields
         let mut object_bytes = [0u8; 48];
         
@@ -311,13 +311,13 @@ impl PolynomialObfuscator {
             object_bytes[8 + i * 8..16 + i * 8].copy_from_slice(&metadata_bytes);
         }
         
-        // Convert bytes back to QualiaQuinField coefficients
+        // Convert bytes back to NQuinField coefficients
         for i in 0..12 {
             let coeff_bytes = &object_bytes[i * 4..(i + 1) * 4];
             let coeff_val = u32::from_le_bytes([
                 coeff_bytes[0], coeff_bytes[1], coeff_bytes[2], coeff_bytes[3]
             ]);
-            self.workspace[i] = QualiaQuinField::from_u64(coeff_val as u64)?;
+            self.workspace[i] = NQuinField::from_u64(coeff_val as u64)?;
         }
         
         Ok(())
@@ -331,8 +331,8 @@ impl PolynomialObfuscator {
                 for i in 0..12 {
                     let coeff = self.workspace[i].to_u64();
                     let original = coeff.wrapping_mul(0x3C6EF372FE94F82B).wrapping_sub(i as u64);
-                    self.workspace[i] = QualiaQuinField::from_u64(original % self.field_modulus)
-                        .unwrap_or(QualiaQuinField::default());
+                    self.workspace[i] = NQuinField::from_u64(original % self.field_modulus)
+                        .unwrap_or(NQuinField::default());
                 }
             }
             // Implement reverse transformations for other domains...
@@ -375,7 +375,7 @@ mod tests {
     #[test]
     fn test_encode_decode_roundtrip() {
         let mut obfuscator = PolynomialObfuscator::default();
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         
         let test_data = b"test data for polynomial encoding";
         let domain = ObfuscationDomain::PolynomialSystem;

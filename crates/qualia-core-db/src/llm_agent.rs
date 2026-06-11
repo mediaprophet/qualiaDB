@@ -13,11 +13,11 @@
 //
 // CRITICAL CONSTRAINT: All paths enforce:
 //   - Zero outbound telemetry
-//   - All outputs must be cited to a QualiaQuin provenance chain
+//   - All outputs must be cited to a NQuin provenance chain
 //   - Webizen validates I/O before touching the semantic graph
 //   - Memory budget hard-capped; default 128MB within 512MB floor
 
-use crate::{q_hash, QualiaQuin};
+use crate::{q_hash, NQuin};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
@@ -207,7 +207,7 @@ pub enum WebizenVerdict {
     Deny {
         rule_violated: u64,
         reason: &'static str,
-        conduct_record: Option<QualiaQuin>,
+        conduct_record: Option<NQuin>,
     },
     /// Block with a detailed explanation for the user, usually tied to an Intent Frame violation.
     DenyWithExplanation {
@@ -229,7 +229,7 @@ pub struct AgentOutput {
     pub text: String,
     /// Structured graph emission when the neuro-symbolic sieve completes (no heap parse).
     #[serde(default)]
-    pub semantic_quin: Option<QualiaQuin>,
+    pub semantic_quin: Option<NQuin>,
     /// Provenance citations — hashes of QualiuQuins this output is grounded in.
     /// MUST be non-empty: uncited outputs are blocked by the Webizen.
     pub provenance_quins: Vec<u64>,
@@ -320,6 +320,43 @@ fn cpu_embedding_forward(
     }
 }
 
+/// Like `cpu_embedding_forward` but applies a LoRA delta to the embedding
+/// vector before dispatching it through the transformer block.
+///
+/// The delta is computed as `B @ (A @ emb) * scaling` on the CPU.
+/// If the adapter dimensions do not match `emb_dim` the call silently falls
+/// back to the unmodified embedding (the base model is still correct).
+#[cfg(not(target_arch = "wasm32"))]
+fn lora_embedding_forward(
+    engine:  &crate::gguf_bridge::QTensorEngine,
+    idx:     &crate::gguf_sharder::GgufTensorIndex,
+    mmap:    &[u8],
+    token_id: u32,
+    emb_dim: usize,
+    emb_buf: &mut [f32],
+    wt:      &crate::gguf_bridge::QTensor,
+    adapter: &crate::lora::LoRAAdapter,
+) -> Vec<f32> {
+    let n = idx.dequantize_token_embedding_into(mmap, token_id, &mut emb_buf[..emb_dim]);
+    let actual_n = if n > 0 { n } else { emb_dim };
+
+    if n == 0 {
+        // Populate emb_buf with pseudo embeddings
+        for i in 0..emb_dim {
+            emb_buf[i] = (token_id as f32 * (i as f32 + 1.0) * 0.001_f32).sin()
+                * (1.0_f32 / (emb_dim as f32).sqrt());
+        }
+    }
+
+    // Apply LoRA delta if dimensions match — silent no-op otherwise
+    if adapter.meta.n_in == actual_n && adapter.meta.n_out == actual_n {
+        let input_snap: Vec<f32> = emb_buf[..actual_n].to_vec();
+        let _ = adapter.apply_cpu(&input_snap, &mut emb_buf[..actual_n]);
+    }
+
+    engine.dispatch_fused_transformer_block(wt, &emb_buf[..actual_n])
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 fn build_sieve(
     tok: &crate::gguf_sharder::GgufTokenizer,
@@ -372,6 +409,11 @@ pub struct LocalLlmAgent {
     sieve_lex_path: std::sync::Mutex<Option<String>>,
     /// IRI hashes to resolve through the lexicon for Subject / Predicate / Object slots.
     sieve_spec: std::sync::Mutex<crate::neuro_symbolic_sieve::SieveLexSpec>,
+    /// Optional LoRA adapter manager for zero-copy context-driven neural adaptation.
+    /// When set, the prompt is classified into a domain (Medical / Legal / Chemical / …)
+    /// and the matching adapter's delta is applied to the embedding hidden state before
+    /// the autoregressive decode loop.
+    lora_manager: std::sync::Mutex<Option<crate::lora::LoRAAdapterManager>>,
 }
 
 impl LocalLlmAgent {
@@ -400,7 +442,59 @@ impl LocalLlmAgent {
             sieve_spec: std::sync::Mutex::new(
                 crate::neuro_symbolic_sieve::SieveLexSpec::graph_mutation_default(),
             ),
+            lora_manager: std::sync::Mutex::new(None),
         }
+    }
+
+    // ── LoRA adapter management ───────────────────────────────────────────────
+
+    /// Attach a LoRA adapter directory to this agent.
+    ///
+    /// Adapters are loaded lazily on the first prompt that triggers a domain
+    /// switch.  The directory must contain `*.lora` files named after
+    /// `ContextType::adapter_filename()` (e.g. `medical_v1.lora`).
+    pub fn attach_lora_adapters(&self, adapter_dir: impl Into<std::path::PathBuf>) {
+        let mgr = crate::lora::LoRAAdapterManager::new(adapter_dir);
+        *self.lora_manager.lock().unwrap() = Some(mgr);
+    }
+
+    /// Attach a LoRA manager pre-configured with expected embedding dimensions.
+    ///
+    /// `n_in` should match the model's embedding dimension (e.g. 4096 for 7B models).
+    pub fn attach_lora_adapters_with_dims(
+        &self,
+        adapter_dir: impl Into<std::path::PathBuf>,
+        n_in:  usize,
+        n_out: usize,
+    ) {
+        let mut mgr = crate::lora::LoRAAdapterManager::new(adapter_dir);
+        mgr.set_expected_dims(n_in, n_out);
+        *self.lora_manager.lock().unwrap() = Some(mgr);
+    }
+
+    /// Remove the LoRA manager and revert to base-model-only inference.
+    pub fn detach_lora_adapters(&self) {
+        *self.lora_manager.lock().unwrap() = None;
+    }
+
+    /// Detect context from `prompt` and pre-warm the LoRA adapter cache.
+    ///
+    /// Call this before a batch of related prompts to avoid cold-load latency
+    /// on the first inference.
+    pub fn warm_lora_for_prompt(&self, prompt: &str) {
+        let mut guard = self.lora_manager.lock().unwrap();
+        if let Some(mgr) = guard.as_mut() {
+            let (ctx, conf) = mgr.detector.analyze_text(prompt);
+            if conf >= mgr.detector.confidence_threshold {
+                let _ = mgr.switch_to(ctx);
+            }
+        }
+    }
+
+    /// Return the currently active LoRA context type, if any.
+    pub fn active_lora_context(&self) -> Option<crate::lora::ContextType> {
+        let guard = self.lora_manager.lock().unwrap();
+        guard.as_ref().and_then(|m| m.active()).map(|a| a.context_type)
     }
 
     /// Wire the `.q42.lex` sidecar used to populate FSM sieve masks at inference time.
@@ -427,7 +521,7 @@ impl LocalLlmAgent {
         prompt: &str,
         graph_context: &str,
         mut on_token: Option<F>,
-    ) -> (String, Vec<u64>, u32, Option<QualiaQuin>) {
+    ) -> (String, Vec<u64>, u32, Option<NQuin>) {
         self.infer_local_model_inner(prompt, graph_context, on_token.as_mut())
     }
 
@@ -435,7 +529,7 @@ impl LocalLlmAgent {
         &self,
         prompt: &str,
         graph_context: &str,
-    ) -> (String, Vec<u64>, u32, Option<QualiaQuin>) {
+    ) -> (String, Vec<u64>, u32, Option<NQuin>) {
         self.infer_local_model_inner::<fn(String)>(prompt, graph_context, None)
     }
 
@@ -445,7 +539,7 @@ impl LocalLlmAgent {
         prompt: &str,
         graph_context: &str,
         mut on_token: Option<&mut F>,
-    ) -> (String, Vec<u64>, u32, Option<QualiaQuin>) {
+    ) -> (String, Vec<u64>, u32, Option<NQuin>) {
         let prov_hash = graph_context
             .bytes()
             .take(8)
@@ -485,6 +579,26 @@ impl LocalLlmAgent {
             };
             let prompt_owned = prompt.to_string();
 
+            // ── LoRA context detection (before thread spawn) ─────────────────
+            // Detect the prompt domain and pre-load the matching LoRA adapter.
+            // The pre-computed delta vectors are cloned into the inference thread
+            // as fixed-size heap data — one allocation per infer call, not per token.
+            #[allow(unused_variables)]
+            let lora_active_adapter: Option<crate::lora::LoRAAdapter> = {
+                let mut guard = self.lora_manager.lock().unwrap();
+                if let Some(ref mut mgr) = *guard {
+                    let (ctx, conf, _switched) = mgr.auto_switch(
+                        &prompt_owned,
+                        None, // metadata_bits: could be passed from a NQuin if available
+                        mgr.detector.confidence_threshold,
+                    );
+                    log::debug!("LoRA|context-detect|domain={ctx}|conf={conf:.3}");
+                    mgr.active().cloned()
+                } else {
+                    None
+                }
+            };
+
             // Fixed-size types keep the hot-path allocation-free in the ring buffer.
             #[derive(Clone, Copy)]
             struct LogitSummary {
@@ -513,8 +627,12 @@ impl LocalLlmAgent {
             };
             let stream_tx_thread = stream_pair.as_ref().map(|(tx, _)| tx.clone());
 
+            // Move the (optional) LoRA adapter into the inference thread.
+            let lora_for_thread = lora_active_adapter;
+
             // ── LLM engine thread ────────────────────────────────────────────
-            let h = thread::spawn(move || -> (String, u32, Option<QualiaQuin>, bool) {
+            let h = thread::spawn(move || -> (String, u32, Option<NQuin>, bool) {
+                let lora_adapter = lora_for_thread;
                 let sieve_spec = sieve_spec;
                 let sieve_lex_path = sieve_lex_path;
                 // Build the GPU engine and memory-map the GGUF inside the thread to
@@ -615,7 +733,7 @@ impl LocalLlmAgent {
                 } else {
                     None
                 };
-                let mut semantic_quin: Option<QualiaQuin> = None;
+                let mut semantic_quin: Option<NQuin> = None;
                 let mut sieve_failed = false;
                 let gen_budget = if sieve.is_some() {
                     3usize
@@ -638,6 +756,18 @@ impl LocalLlmAgent {
                             })
                         })
                         .unwrap_or(0);
+
+                    // 1b) LoRA delta — additive correction to the embedding vector.
+                    // Applied after dequantize so the base model is unmodified.
+                    // Silently skipped if dimensions don't match (wrong adapter for model).
+                    if hidden_ok > 0 {
+                        if let Some(ref adapter) = lora_adapter {
+                            if adapter.meta.n_in == hidden_ok && adapter.meta.n_out == hidden_ok {
+                                let snap: Vec<f32> = emb_buf[..hidden_ok].to_vec();
+                                let _ = adapter.apply_cpu(&snap, &mut emb_buf[..hidden_ok]);
+                            }
+                        }
+                    }
 
                     let (top_i, top_v) = if hidden_ok > 0 {
                         if let Some(idx) = tensor_idx.as_ref() {
@@ -912,7 +1042,7 @@ impl LocalLlmAgent {
                 .unwrap()
                 .as_millis() as u64;
 
-            let mut conduct_quin = QualiaQuin {
+            let mut conduct_quin = NQuin {
                 subject: q_hash(agent.agent_did()),
                 predicate: q_hash("q42:conductViolation"),
                 // Inline tag integer (0b001 << 60)
@@ -1264,7 +1394,7 @@ mod tests {
 
         let stats_after = dhat::HeapStats::get();
 
-        // Verify we got the Deny verdict with the QualiaQuin
+        // Verify we got the Deny verdict with the NQuin
         if let WebizenVerdict::Deny { conduct_record, .. } = verdict {
             assert!(
                 conduct_record.is_some(),

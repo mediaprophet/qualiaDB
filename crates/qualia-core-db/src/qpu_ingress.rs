@@ -1,6 +1,6 @@
 //! QPU response ingress firewall — collapses provider JSON into Quins / bitstrings.
 
-use crate::QualiaQuin;
+use crate::NQuin;
 
 pub const MAX_QPU_SAMPLES: usize = 64;
 
@@ -83,7 +83,7 @@ pub fn parse_ibm_counts(
 }
 
 /// Pack bitstring into provenance Quins for orchestrator post-flight.
-pub fn bits_to_provenance_quins(bits: &[u8], num_vars: u8, out: &mut [QualiaQuin]) -> usize {
+pub fn bits_to_provenance_quins(bits: &[u8], num_vars: u8, out: &mut [NQuin]) -> usize {
     let mut n = 0usize;
     for (i, &b) in bits.iter().enumerate().take(num_vars as usize) {
         if n >= out.len() {
@@ -93,7 +93,7 @@ pub fn bits_to_provenance_quins(bits: &[u8], num_vars: u8, out: &mut [QualiaQuin
         let context = crate::q_hash("q42:qpuIngress");
         let subject = i as u64;
         let object = b as u64;
-        let q = QualiaQuin {
+        let q = NQuin {
             subject,
             predicate,
             object,

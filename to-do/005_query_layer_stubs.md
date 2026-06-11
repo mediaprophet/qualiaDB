@@ -16,7 +16,7 @@ The query layer has critical stubs that prevent real database functionality:
 
 ### mmap_query_subject (Line 8)
 ```rust
-pub fn mmap_query_subject(subject: u64) -> Result<Vec<QualiaQuin>, Error> {
+pub fn mmap_query_subject(subject: u64) -> Result<Vec<NQuin>, Error> {
     println!("Querying subject: {}", subject);
     return Ok(vec![]); // Returns empty - does nothing
 }
@@ -49,12 +49,12 @@ Implement actual memory-mapped query for subject ID:
 pub fn mmap_query_subject(
     subject: u64,
     mmap: &[u8],
-) -> Result<Vec<QualiaQuin>, Error> {
+) -> Result<Vec<NQuin>, Error> {
     let mut results = Vec::new();
     let quins = unsafe {
         std::slice::from_raw_parts(
-            mmap.as_ptr() as *const QualiaQuin,
-            mmap.len() / std::mem::size_of::<QualiaQuin>(),
+            mmap.as_ptr() as *const NQuin,
+            mmap.len() / std::mem::size_of::<NQuin>(),
         )
     };
 
@@ -79,8 +79,8 @@ pub fn lazy_superblock_query(
     let mut results = Vec::new();
     let quins = unsafe {
         std::slice::from_raw_parts(
-            mmap.as_ptr() as *const QualiaQuin,
-            mmap.len() / std::mem::size_of::<QualiaQuin>(),
+            mmap.as_ptr() as *const NQuin,
+            mmap.len() / std::mem::size_of::<NQuin>(),
         )
     };
 
@@ -105,7 +105,7 @@ pub fn lazy_superblock_query(
     })
 }
 
-fn calculate_relevance(quin: &QualiaQuin, query: &Query) -> f32 {
+fn calculate_relevance(quin: &NQuin, query: &Query) -> f32 {
     // Real relevance scoring based on predicate/object matching
     // Use TF-IDF or BM25 if text, exact match for IRIs
     // ...
@@ -133,7 +133,7 @@ impl QuinIndex {
         }
     }
 
-    pub fn build(&mut self, quins: &[QualiaQuin]) {
+    pub fn build(&mut self, quins: &[NQuin]) {
         for (idx, quin) in quins.iter().enumerate() {
             self.subject_index.entry(quin.subject)
                 .or_insert_with(Vec::new).push(idx);

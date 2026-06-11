@@ -21,7 +21,7 @@ and no external daemon to query.
 | Model pulled from a registry | GGUF file mapped directly from disk via OS page cache |
 
 **The actual inference stack:**
-1. `gguf_sharder.rs` — parses GGUF header, generates `QualiaQuin` pointer map (byte offsets encoded into quin object field, upper 4 bits = modality flag `0b1001`)
+1. `gguf_sharder.rs` — parses GGUF header, generates `NQuin` pointer map (byte offsets encoded into quin object field, upper 4 bits = modality flag `0b1001`)
 2. `gguf_bridge.rs` — maps model weights into the OS page cache with `memmap2` (zero heap allocation); dispatches fused transformer blocks to the GPU
 3. `shaders/fused_tensor_contraction.wgsl` — WGSL compute shader, 64 threads/workgroup, 4096 FMA ops per thread; runs on DirectML / Vulkan / Metal / WebGPU via `wgpu`
 4. `llm_agent.rs` — `LocalLlmAgent` orchestrates the two-thread Phase 8 bifurcated compute (see §3 below)
@@ -68,7 +68,7 @@ the governance mechanism.
 
 1. `validate_intent(intent)` — pre-flight. Checks N3Logic Rights Ontology rules. If `Deny`, writes a conduct violation Quin to the WAL (signed with ed25519) and aborts. The model is never invoked.
 2. `agent.infer(prompt, graph_context)` — the actual GPU inference.
-3. `validate_output(output)` — post-flight. Output must have ≥1 provenance `QualiaQuin` citation. Ungrounded output is rejected.
+3. `validate_output(output)` — post-flight. Output must have ≥1 provenance `NQuin` citation. Ungrounded output is rejected.
 
 This is **mandatory infrastructure**, not optional middleware. Do not bypass or stub it.
 
@@ -97,7 +97,7 @@ These break things if violated:
 | Rule | Why it matters |
 |------|---------------|
 | No `Vec`/`String`/`Box` in hot paths | Breaks zero-copy ABI used by WASM, desktop, and edge targets |
-| 48-byte `QualiaQuin` for all semantic data | Everything is bit-packed into 6 × `u64` fields |
+| 48-byte `NQuin` for all semantic data | Everything is bit-packed into 6 × `u64` fields |
 | 42 MB `SlgArena` ceiling | The Webizen VM must fit within this; allocating past it is an OOM |
 | `q_hash()` for all URIs | No runtime string allocation; FNV-1a at compile time |
 | Opcodes `0x10+` for new modalities | `mini_parser.rs` owns `0x00–0x04`; never overlap |

@@ -15,7 +15,7 @@
 //!
 //! - `cuda_gds`: Enable CUDA GPUDirect Storage support (Linux only, requires NVIDIA drivers)
 
-use crate::QualiaQuin;
+use crate::NQuin;
 use std::path::Path;
 use std::io::Seek;
 use wgpu::util::DeviceExt;
@@ -94,6 +94,7 @@ pub struct WebGpuIntegrator {
     device: wgpu::Device,
     queue: wgpu::Queue,
     compute_pipeline: wgpu::ComputePipeline,
+    rk4_pipeline: wgpu::ComputePipeline,
 }
 
 impl WebGpuIntegrator {
@@ -113,14 +114,7 @@ impl WebGpuIntegrator {
             .ok_or(GpuError::WebGPUUnavailable("No adapter found".to_string()))?;
         
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("Calculus GPU Device"),
-                    required_features: wgpu::Features::empty(),
-                    required_limits: wgpu::Limits::default(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor::default(), None)
             .await
             .map_err(|e| GpuError::WebGPUUnavailable(format!("Device request failed: {e}")))?;
         
@@ -138,11 +132,20 @@ impl WebGpuIntegrator {
                 module: &shader,
                 entry_point: "simpsons_integration",
             });
-        
+
+        let rk4_pipeline = device
+            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("RK4 Pipeline"),
+                layout: None,
+                module: &shader,
+                entry_point: "rk4_step",
+            });
+
         Ok(Self {
             device,
             queue,
             compute_pipeline,
+            rk4_pipeline,
         })
     }
     
@@ -266,6 +269,94 @@ impl WebGpuIntegrator {
         
         Ok(sum)
     }
+
+    /// RK4 variant of execute_compute, using the rk4_step pipeline.
+    async fn execute_rk4_compute(
+        &self,
+        input_data: &[u8],
+        step_size: f32,
+    ) -> Result<f64, GpuError> {
+        let input_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label:    Some("RK4 Input Buffer"),
+            contents: input_data,
+            usage:    wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let num_workgroups = ((input_data.len() / 8) + 63) / 64;
+        let output_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label:              Some("RK4 Reduction Buffer"),
+            size:               (num_workgroups * 8) as u64,
+            usage:              wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        #[repr(C)]
+        #[derive(bytemuck::Pod, bytemuck::Zeroable, Copy, Clone)]
+        struct Uniforms { step_size: f32, total_elements: u32 }
+
+        let uniforms = Uniforms {
+            step_size,
+            total_elements: (input_data.len() / 8) as u32,
+        };
+        let step_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label:    Some("RK4 Uniforms"),
+            contents: bytemuck::cast_slice(&[uniforms]),
+            usage:    wgpu::BufferUsages::UNIFORM,
+        });
+
+        let bgl = self.rk4_pipeline.get_bind_group_layout(0);
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label:   Some("RK4 Bind Group"),
+            layout:  &bgl,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: input_buffer.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: output_buffer.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: step_buffer.as_entire_binding() },
+            ],
+        });
+
+        let mut encoder = self.device.create_command_encoder(
+            &wgpu::CommandEncoderDescriptor { label: Some("RK4 Encoder") },
+        );
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label:            Some("RK4 Pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.rk4_pipeline);
+            pass.set_bind_group(0, &bind_group, &[]);
+            pass.dispatch_workgroups(num_workgroups as u32, 1, 1);
+        }
+
+        let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label:              Some("RK4 Staging"),
+            size:               (num_workgroups * 8) as u64,
+            usage:              wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging, 0, (num_workgroups * 8) as u64);
+        self.queue.submit(Some(encoder.finish()));
+
+        let slice = staging.slice(..);
+        let (tx, rx) = futures_channel::oneshot::channel();
+        slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
+        self.queue.submit(None);
+        let _ = rx.await.unwrap();
+
+        let mapped = slice.get_mapped_range();
+        let partials: &[f64] = bytemuck::cast_slice(&*mapped);
+
+        // Kahan summation for numerical stability
+        let mut sum = 0.0f64;
+        let mut comp = 0.0f64;
+        for &p in partials {
+            let y = p - comp;
+            let t = sum + y;
+            comp = (t - sum) - y;
+            sum = t;
+        }
+        Ok(sum)
+    }
 }
 
 #[async_trait::async_trait]
@@ -308,15 +399,29 @@ impl GpuIntegrator for WebGpuIntegrator {
         size: u64,
         step_size: f32,
     ) -> Result<f64, GpuError> {
-        // Similar to integrate_simpsons_gpu but with RK4 shader entry point
-        // For now, return error as RK4 shader not yet implemented
-        Err(GpuError::ShaderCompilationFailed("RK4 shader not yet implemented".to_string()))
+        // Read data from file (CPU RAM path)
+        let mut file = std::fs::File::open(file_path)
+            .map_err(|e| GpuError::WebGPUUnavailable(format!("File open failed: {e}")))?;
+
+        use std::io::Read;
+        file.seek(std::io::SeekFrom::Start(offset))
+            .map_err(|e| GpuError::WebGPUUnavailable(format!("Seek failed: {e}")))?;
+
+        let mut buffer = vec![0u8; size as usize];
+        file.read_exact(&mut buffer)
+            .map_err(|e| GpuError::WebGPUUnavailable(format!("Read failed: {e}")))?;
+
+        // Dispatch the rk4_step compute shader
+        let handle = tokio::runtime::Handle::try_current()
+            .map_err(|e| GpuError::WebGPUUnavailable(format!("Tokio handle failed: {e}")))?;
+        handle.block_on(self.execute_rk4_compute(&buffer, step_size))
     }
-    
+
     fn available_vram(&self) -> u64 {
-        // Query adapter memory info
-        // For now, return a conservative estimate
-        2_147_483_648  // 2GB default
+        // Use max_buffer_size from device limits as a practical proxy for available VRAM.
+        // On discrete GPUs this cap is typically set to the full VRAM size; on integrated
+        // GPUs it reflects the shared system memory window.
+        self.device.limits().max_buffer_size
     }
 }
 
@@ -326,12 +431,12 @@ impl GpuIntegrator for WebGpuIntegrator {
 ///
 /// When the GPU finishes processing, the scalar result is written back
 /// to the host and packed into the Quin's metadata field for SLG VM resumption.
-pub fn pack_gpu_result_into_quin(quin: &mut QualiaQuin, result: f64) {
+pub fn pack_gpu_result_into_quin(quin: &mut NQuin, result: f64) {
     quin.metadata = f64::to_bits(result);
 }
 
 /// Extracts GPU computation result from Quin metadata field.
-pub fn extract_gpu_result_from_quin(quin: &QualiaQuin) -> f64 {
+pub fn extract_gpu_result_from_quin(quin: &NQuin) -> f64 {
     f64::from_bits(quin.metadata)
 }
 
@@ -344,8 +449,8 @@ pub fn create_gpu_job_quin(
     opcode: u8,
     file_offset: u64,
     step_size: f32,
-) -> QualiaQuin {
-    let mut quin = QualiaQuin::default();
+) -> NQuin {
+    let mut quin = NQuin::default();
     quin.subject = job_id;
     quin.predicate = (opcode as u64) | (q_hash("calculus:gpu") << 8);
     quin.object = file_offset;
@@ -379,7 +484,7 @@ mod tests {
     #[test]
     fn test_gpu_result_packing() {
         let result = 42.5f64;
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         
         pack_gpu_result_into_quin(&mut quin, result);
         

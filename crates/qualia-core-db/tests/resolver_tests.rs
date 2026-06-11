@@ -3,7 +3,7 @@ use qualia_core_db::{
     q_hash,
     resolver::{format_ntriples_to, resolve_hash},
     webizen_bytecode::execute_program,
-    QualiaQuin,
+    NQuin,
 };
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ fn topological_pointer_not_in_lexicon() {
 
 #[test]
 fn unknown_hash_fallback_is_hex_format() {
-    let q = QualiaQuin {
+    let q = NQuin {
         subject: 0x00_00_00_00_00_00_00_01,
         predicate: 0x00_00_00_00_00_00_00_02,
         object: 0x00_00_00_00_00_00_00_03,
@@ -78,7 +78,7 @@ fn unknown_hash_fallback_is_hex_format() {
 
 #[test]
 fn known_terms_produce_full_iri_ntriples_line() {
-    let q = QualiaQuin {
+    let q = NQuin {
         subject: q_hash("Alice"),
         predicate: q_hash("knows"),
         object: q_hash("Bob"),
@@ -114,7 +114,7 @@ fn known_terms_produce_full_iri_ntriples_line() {
 
 #[test]
 fn execute_program_returns_cycle_count() {
-    let q = QualiaQuin {
+    let q = NQuin {
         subject: q_hash("Alice"),
         predicate: q_hash("knows"),
         object: q_hash("Bob"),
@@ -125,7 +125,7 @@ fn execute_program_returns_cycle_count() {
     let mut prog = [0u8; 1024];
     compile_ntriples_to_bytecode(b"<Alice> <knows> <Bob>", &mut prog).unwrap();
 
-    let mut out = [QualiaQuin::default(); 10];
+    let mut out = [NQuin::default(); 10];
     let (match_count, vm_cycles) = execute_program(&prog, &[q], &mut out).unwrap();
 
     assert_eq!(match_count, 1, "expected one matching Quin");
@@ -146,7 +146,7 @@ fn compute_cost_header_format_is_matches_plus_cycles() {
 #[test]
 fn zero_match_still_reports_cycles_for_scanned_rows() {
     // A query that matches nothing should still burn cycles while scanning.
-    let q = QualiaQuin {
+    let q = NQuin {
         subject: q_hash("Alice"),
         predicate: q_hash("knows"),
         object: q_hash("Bob"),
@@ -158,7 +158,7 @@ fn zero_match_still_reports_cycles_for_scanned_rows() {
     // Query for Carol — not in the db above.
     compile_ntriples_to_bytecode(b"<Carol> <knows> <Bob>", &mut prog).unwrap();
 
-    let mut out = [QualiaQuin::default(); 10];
+    let mut out = [NQuin::default(); 10];
     let (n, cycles) = execute_program(&prog, &[q], &mut out).unwrap();
 
     assert_eq!(n, 0, "Carol should not match");

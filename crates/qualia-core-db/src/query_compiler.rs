@@ -1,4 +1,4 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Zero-Allocation Query Compiler
 /// Parses standardized SPARQL-Star and GeoSPARQL-Star streams directly into hardware-ready
@@ -8,7 +8,7 @@ pub struct QueryCompiler;
 
 impl QueryCompiler {
     /// Compiles a raw query stream into an executable hardware Quin bitmask.
-    pub fn compile_to_quin(query: &str) -> Option<QualiaQuin> {
+    pub fn compile_to_quin(query: &str) -> Option<NQuin> {
         // A full state-machine would use a continuous byte-stream iterator here to avoid allocations.
         // For this localized mobile architecture, we use highly optimized zero-allocation string slice matching.
         // We now support SPARQL-Star, GeoSPARQL, JSON-LD, Turtle, N3, and their Star variants.
@@ -51,7 +51,7 @@ impl QueryCompiler {
             metadata |= 999;
         }
 
-        Some(QualiaQuin {
+        Some(NQuin {
             subject: 0,
             predicate: 0,
             object: 0,

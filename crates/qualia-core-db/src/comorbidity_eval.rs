@@ -6,7 +6,7 @@
 
 use crate::modalities::paraconsistent::route_paraconsistent;
 use crate::q_hash;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 pub const MAX_CONDITION_SLOTS: usize = 32;
 pub const MAX_COMORBIDITY_VERDICTS: usize = 64;
@@ -79,11 +79,11 @@ pub fn compile_exacerbation_quins(
     cons_condition: u64,
     patient_context: u64,
     severity: f32,
-    out: &mut [QualiaQuin; 2],
+    out: &mut [NQuin; 2],
 ) -> usize {
     let nested = nested_claim_fingerprint(ante_condition, PRED_EXACERBATES, cons_condition);
 
-    let mut edge = QualiaQuin::default();
+    let mut edge = NQuin::default();
     edge.subject = ante_condition;
     edge.predicate = PRED_EXACERBATES;
     edge.object = cons_condition;
@@ -91,7 +91,7 @@ pub fn compile_exacerbation_quins(
     edge.parity = edge.subject ^ edge.predicate ^ edge.object ^ edge.context;
     out[0] = edge;
 
-    let mut severity_quin = QualiaQuin::default();
+    let mut severity_quin = NQuin::default();
     severity_quin.subject = nested;
     severity_quin.predicate = PRED_HAS_SEVERITY;
     severity_quin.object = encode_severity_object(severity);
@@ -134,11 +134,11 @@ fn condition_intersects_organ(condition_hash: u64, target_organ_hash: u64) -> bo
 pub fn eval_comorbidity(
     patient_did_hash: u64,
     target_organ_hash: u64,
-    quins: &[QualiaQuin],
+    quins: &[NQuin],
     out: &mut [ComorbidityVerdict],
 ) -> Result<usize, ComorbidityError> {
-    let mut consistent_buf = [QualiaQuin::default(); 128];
-    let mut isolated_buf = [QualiaQuin::default(); 32];
+    let mut consistent_buf = [NQuin::default(); 128];
+    let mut isolated_buf = [NQuin::default(); 32];
     let (consistent_count, isolated_count) =
         route_paraconsistent(quins, &mut consistent_buf, &mut isolated_buf)
             .map_err(|_| ComorbidityError::OutputBufferFull)?;
@@ -242,14 +242,14 @@ mod tests {
         q_hash("did:patient:comorb-test")
     }
 
-    fn compile_demo_graph(patient: u64, out: &mut [QualiaQuin; 16]) -> usize {
+    fn compile_demo_graph(patient: u64, out: &mut [NQuin; 16]) -> usize {
         let diabetes = q_hash("Type 2 Diabetes Mellitus");
         let neuropathy = q_hash("Diabetic Neuropathy");
         let heart = q_hash("Heart");
 
         let mut idx = 0usize;
 
-        let mut has_diabetes = QualiaQuin::default();
+        let mut has_diabetes = NQuin::default();
         has_diabetes.subject = patient;
         has_diabetes.predicate = PRED_HAS_CONDITION;
         has_diabetes.object = diabetes;
@@ -261,7 +261,7 @@ mod tests {
         out[idx] = has_diabetes;
         idx += 1;
 
-        let mut has_neuropathy = QualiaQuin::default();
+        let mut has_neuropathy = NQuin::default();
         has_neuropathy.subject = patient;
         has_neuropathy.predicate = PRED_HAS_CONDITION;
         has_neuropathy.object = neuropathy;
@@ -273,12 +273,12 @@ mod tests {
         out[idx] = has_neuropathy;
         idx += 1;
 
-        let mut pair = [QualiaQuin::default(); 2];
+        let mut pair = [NQuin::default(); 2];
         let wrote = compile_exacerbation_quins(diabetes, neuropathy, patient, 0.85, &mut pair);
         out[idx..idx + wrote].copy_from_slice(&pair[..wrote]);
         idx += wrote;
 
-        let mut cardio = QualiaQuin::default();
+        let mut cardio = NQuin::default();
         cardio.subject = patient;
         cardio.predicate = PRED_HAS_CONDITION;
         cardio.object = heart;
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn eval_finds_compounded_diabetes_neuropathy_risk() {
         let patient = patient_ctx();
-        let mut graph = [QualiaQuin::default(); 16];
+        let mut graph = [NQuin::default(); 16];
         let n = compile_demo_graph(patient, &mut graph);
 
         let mut verdicts = [ComorbidityVerdict {
@@ -317,7 +317,7 @@ mod tests {
     #[test]
     fn zero_heap_eval_comorbidity() {
         let patient = patient_ctx();
-        let mut graph = [QualiaQuin::default(); 16];
+        let mut graph = [NQuin::default(); 16];
         let n = compile_demo_graph(patient, &mut graph);
 
         let _profiler = dhat::Profiler::builder().testing().build();

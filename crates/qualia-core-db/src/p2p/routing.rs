@@ -15,7 +15,7 @@ impl CivicsRoutingTable {
     }
 
     /// Hydrates trusted groups from the `.q42` database slice using the zero-allocation VM.
-    pub fn hydrate_from_db(&self, db: &[crate::QualiaQuin]) {
+    pub fn hydrate_from_db(&self, db: &[crate::NQuin]) {
         let mut program = [0u8; 1024];
         // Compile a query for all Quins declaring a TrustGroup
         if crate::mini_parser::compile_ntriples_to_bytecode(
@@ -24,13 +24,13 @@ impl CivicsRoutingTable {
         )
         .is_ok()
         {
-            let mut out = vec![crate::QualiaQuin::default(); 128]; // Stack allocation alternative for demo, bounded
+            let mut out = vec![crate::NQuin::default(); 128]; // Stack allocation alternative for demo, bounded
             if let Ok((match_count, _)) =
                 crate::webizen_bytecode::execute_program(&program, db, &mut out)
             {
                 for quin in &out[..match_count] {
                     let group_hash = quin.subject.to_le_bytes();
-                    // Derive a dummy 32-byte VerifyingKey from the object hash since QualiaQuin is 64-bit bounded
+                    // Derive a dummy 32-byte VerifyingKey from the object hash since NQuin is 64-bit bounded
                     // In full production, this would resolve via `did:q42` hardware pointer to the 32-byte blob.
                     let mut key_bytes = [0u8; 32];
                     key_bytes[0..8].copy_from_slice(&quin.object.to_le_bytes());

@@ -3,7 +3,7 @@
 //! This module provides semantic data transformation capabilities that strip
 //! human-centric context while preserving mathematical structure for QPU offloading.
 //! All operations maintain strict zero-allocation invariants and map directly
-//! to the 48-byte QualiaQuin payload structure.
+//! to the 48-byte NQuin payload structure.
 
 #![no_std]
 

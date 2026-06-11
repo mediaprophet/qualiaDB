@@ -3,7 +3,7 @@
 //! Implements RDF-Star (SPARQL 1.2) parsing for Trig syntax with embedded triples.
 //! Trig-Star extends Turtle-Star with named graph support via GRAPH {} blocks.
 
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 use qualia_core_db::lexicon::{generate_embedded_triple_id, generate_60bit_token};
 use qualia_core_db::rdf_star::{RdfStarParser, RdfStarParseError};
 
@@ -237,7 +237,7 @@ pub fn parse_trig_star_stream<R: std::io::Read>(
                 parser.set_current_graph(graph_hash);
             }
             ParseResult::RegularTriple { subject, predicate, object, graph_hash } => {
-                sorter.push(QualiaQuin {
+                sorter.push(NQuin {
                     subject,
                     predicate,
                     object,
@@ -248,7 +248,7 @@ pub fn parse_trig_star_stream<R: std::io::Read>(
                 count += 1;
             }
             ParseResult::EmbeddedTriple { virtual_id, components, outer_predicate, outer_object, graph_hash } => {
-                sorter.push(QualiaQuin {
+                sorter.push(NQuin {
                     subject: virtual_id,
                     predicate: outer_predicate,
                     object: outer_object,
@@ -258,7 +258,7 @@ pub fn parse_trig_star_stream<R: std::io::Read>(
                 })?;
                 count += 1;
                 
-                sorter.push(QualiaQuin {
+                sorter.push(NQuin {
                     subject: components[0],
                     predicate: components[1],
                     object: components[2],

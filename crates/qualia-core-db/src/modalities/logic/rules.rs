@@ -42,7 +42,7 @@ impl RuleEngine {
     }
 
     /// Evaluate all rulesets against a Quin
-    pub fn evaluate(&self, quin: &crate::QualiaQuin) -> Vec<RuleResult> {
+    pub fn evaluate(&self, quin: &crate::NQuin) -> Vec<RuleResult> {
         let mut results = Vec::new();
         
         for ruleset in &self.rulesets {

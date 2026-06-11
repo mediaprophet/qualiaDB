@@ -23,7 +23,7 @@
 //! ```
 
 use crate::webizen::SlgOpcode;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 // ─── Severity ─────────────────────────────────────────────────────────────────
 
@@ -497,21 +497,21 @@ impl ShaclCompiler {
         shape.opcodes
     }
 
-    /// Compiles a JSON-LD shape node into a QualiaQuin with embedded sensitivity byte.
+    /// Compiles a JSON-LD shape node into a NQuin with embedded sensitivity byte.
     pub fn compile_json_node(
         &self,
         shape_json: &serde_json::Value,
-    ) -> Result<crate::QualiaQuin, String> {
-        let mut quin = crate::QualiaQuin::default();
+    ) -> Result<crate::NQuin, String> {
+        let mut quin = crate::NQuin::default();
 
         // ── Sensitivity label ────────────────────────────────────────────────
         let sensitivity = match shape_json
             .get("webizen:SensitivityLabel")
             .and_then(|v| v.as_str())
         {
-            Some("Restricted") => crate::QualiaQuin::SENSITIVITY_RESTRICTED,
-            Some("Classified") => crate::QualiaQuin::SENSITIVITY_CLASSIFIED,
-            _ => crate::QualiaQuin::SENSITIVITY_PUBLIC,
+            Some("Restricted") => crate::NQuin::SENSITIVITY_RESTRICTED,
+            Some("Classified") => crate::NQuin::SENSITIVITY_CLASSIFIED,
+            _ => crate::NQuin::SENSITIVITY_PUBLIC,
         };
         quin.set_sensitivity_byte(sensitivity);
 
@@ -613,7 +613,7 @@ impl ShaclCompiler {
     pub fn validate_with_report(
         &self,
         shapes: &[CompiledShape],
-        data: &[QualiaQuin],
+        data: &[NQuin],
     ) -> ValidationReport {
         let mut results = Vec::new();
         let mut conforms = true;
@@ -639,7 +639,7 @@ impl ShaclCompiler {
     }
 
     /// Check if a quin matches the shape's target
-    fn shape_matches_target(&self, shape: &CompiledShape, quin: &QualiaQuin) -> bool {
+    fn shape_matches_target(&self, shape: &CompiledShape, quin: &NQuin) -> bool {
         match &shape.target {
             ShaclTarget::TargetClass(class) => {
                 // Simple check: if the quin's object matches the class hash
@@ -661,7 +661,7 @@ impl ShaclCompiler {
     }
 
     /// Evaluate a shape against a specific quin
-    fn evaluate_shape(&self, shape: &CompiledShape, quin: &QualiaQuin) -> Option<ValidationResult> {
+    fn evaluate_shape(&self, shape: &CompiledShape, quin: &NQuin) -> Option<ValidationResult> {
         let mut frame = crate::webizen::VmFrame {
             subject_reg: quin.subject,
             predicate_reg: quin.predicate,
@@ -1408,7 +1408,7 @@ mod tests {
         
         // Create test data
         let data = vec![
-            QualiaQuin {
+            NQuin {
                 subject: crate::q_hash("person1"),
                 predicate: crate::q_hash("rdf:type"),
                 object: crate::q_hash("ex:Person"),
@@ -1416,7 +1416,7 @@ mod tests {
                 metadata: 0,
                 parity: 0,
             },
-            QualiaQuin {
+            NQuin {
                 subject: crate::q_hash("person1"),
                 predicate: crate::q_hash("ex:age"),
                 object: 25, // Valid: >= 0
@@ -1424,7 +1424,7 @@ mod tests {
                 metadata: 0,
                 parity: 0,
             },
-            QualiaQuin {
+            NQuin {
                 subject: crate::q_hash("person1"),
                 predicate: crate::q_hash("ex:name"),
                 object: crate::q_hash("A"), // Invalid: length < 2
@@ -1619,7 +1619,7 @@ mod tests {
         let quin = compiler().compile_json_node(&json).unwrap();
         assert_eq!(
             quin.get_sensitivity_byte(),
-            crate::QualiaQuin::SENSITIVITY_RESTRICTED
+            crate::NQuin::SENSITIVITY_RESTRICTED
         );
     }
 

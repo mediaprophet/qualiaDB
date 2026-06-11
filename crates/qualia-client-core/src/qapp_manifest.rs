@@ -3,7 +3,7 @@
 //! String parsing and `Vec`/`String` are permitted **only** during install/boot.
 //! Compiled capabilities are stored as fixed-size records keyed by `q_hash(app_id)`.
 
-use qualia_core_db::{q_hash, QualiaQuin};
+use qualia_core_db::{q_hash, NQuin};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{OnceLock, RwLock};
@@ -70,7 +70,7 @@ impl Default for CompiledCapability {
     fn default() -> Self {
         Self {
             app_id_hash: 0,
-            clearance_level: QualiaQuin::SENSITIVITY_PUBLIC,
+            clearance_level: NQuin::SENSITIVITY_PUBLIC,
             domain_count: 0,
             permitted_domains: [0u64; MAX_PERMITTED_DOMAINS],
         }
@@ -101,12 +101,12 @@ fn registry_len() -> &'static RwLock<usize> {
 pub fn parse_clearance(raw: &str) -> u8 {
     let trimmed = raw.trim();
     if trimmed.eq_ignore_ascii_case("restricted") || trimmed == "0x01" {
-        return QualiaQuin::SENSITIVITY_RESTRICTED;
+        return NQuin::SENSITIVITY_RESTRICTED;
     }
     if trimmed.eq_ignore_ascii_case("classified") || trimmed == "0x02" {
-        return QualiaQuin::SENSITIVITY_CLASSIFIED;
+        return NQuin::SENSITIVITY_CLASSIFIED;
     }
-    QualiaQuin::SENSITIVITY_PUBLIC
+    NQuin::SENSITIVITY_PUBLIC
 }
 
 /// Compile manifest strings into a fixed `CompiledCapability` record.
@@ -140,13 +140,13 @@ pub fn compile_capability_record(
 }
 
 /// Encode a compiled capability as a 48-byte Quin for `.q42.bidx` persistence.
-pub fn compile_capability_quin(cap: &CompiledCapability) -> QualiaQuin {
+pub fn compile_capability_quin(cap: &CompiledCapability) -> NQuin {
     let predicate = q_hash("q42:qappCapability");
     let object = cap.permitted_domains[0];
     let context = (cap.clearance_level as u64) << 56;
     let metadata = cap.domain_count as u64;
     let parity = cap.app_id_hash ^ predicate ^ object ^ context;
-    QualiaQuin {
+    NQuin {
         subject: cap.app_id_hash,
         predicate,
         object,
@@ -407,7 +407,7 @@ mod tests {
             },
         };
         let cap = compile_capability_record(&manifest).unwrap();
-        assert_eq!(cap.clearance_level, QualiaQuin::SENSITIVITY_PUBLIC);
+        assert_eq!(cap.clearance_level, NQuin::SENSITIVITY_PUBLIC);
         assert_eq!(cap.domain_count, 2);
         assert_eq!(cap.permitted_domains[0], q_hash("q42:anatomy"));
     }

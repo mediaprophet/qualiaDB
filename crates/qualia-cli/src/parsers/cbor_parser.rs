@@ -6,7 +6,7 @@ const CBOR_TAG_TRIPLE: u64 = 103;
 const CBOR_TAG_SUBJECT: u64 = 104;
 const CBOR_TAG_PREDICATE: u64 = 105;
 const CBOR_TAG_OBJECT: u64 = 106;
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 use std::hash::{Hash, Hasher};
 
 fn hash_str(s: &str) -> u64 {
@@ -197,7 +197,7 @@ fn parse_cbor_object(
 
     // Emit all properties
     for (p, o) in properties {
-        let quin = QualiaQuin {
+        let quin = NQuin {
             subject: subject_hash,
             predicate: p,
             object: o,
@@ -276,7 +276,7 @@ fn parse_cbor_object_star(
         } else if key_str != "@type" && key_str != "@context" {
             if !embedded_triples.is_empty() {
                 for (virtual_id, pred) in &embedded_triples {
-                    let quin = QualiaQuin {
+                    let quin = NQuin {
                         subject: subject_hash,
                         predicate: *pred,
                         object: *virtual_id,
@@ -290,7 +290,7 @@ fn parse_cbor_object_star(
                 embedded_triples.clear();
             }
             
-            let quin = QualiaQuin {
+            let quin = NQuin {
                 subject: subject_hash,
                 predicate: pred_hash,
                 object: obj_hash,

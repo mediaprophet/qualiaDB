@@ -85,8 +85,8 @@ pub fn export_prometheus_metrics<W: std::io::Write>(mut writer: W) -> std::io::R
 
 /// Logs federated system telemetry (latency, VLM compute load) as a System_Log Quin.
 /// Converts the semantic metric into a 48-byte struct instead of heap strings.
-pub fn log_federated_telemetry(metric_hash: u64, value: f64) -> crate::QualiaQuin {
-    crate::QualiaQuin {
+pub fn log_federated_telemetry(metric_hash: u64, value: f64) -> crate::NQuin {
+    crate::NQuin {
         subject: crate::q_hash("did:q42:local-node"),
         predicate: metric_hash,
         // Mock inline decimal representation for telemetry value

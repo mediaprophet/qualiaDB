@@ -1,7 +1,7 @@
 // Epic 21: Spatio-Temporal Logics
 // Allen's Interval Algebra & RCC8 Spatial Relations
 
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Allen's Interval Algebra operations for temporal reasoning
 pub enum TemporalOp {
@@ -226,8 +226,8 @@ pub fn evaluate_temporal(
     }
 }
 
-/// Convert spatial region to QualiaQuin for storage in graph
-pub fn region_to_quin(region: &SpatialRegion, context: u64) -> QualiaQuin {
+/// Convert spatial region to NQuin for storage in graph
+pub fn region_to_quin(region: &SpatialRegion, context: u64) -> NQuin {
     let subject = crate::q_hash(&format!("region_{}", region.region_id));
     let predicate = crate::q_hash("has_spatial_region");
     
@@ -236,7 +236,7 @@ pub fn region_to_quin(region: &SpatialRegion, context: u64) -> QualiaQuin {
                 ((region.centroid.1 as u64) << 32) |
                 ((region.area as u64) & 0xFFFFFFFF);
     
-    let mut quin = QualiaQuin {
+    let mut quin = NQuin {
         subject,
         predicate,
         object,
@@ -251,8 +251,8 @@ pub fn region_to_quin(region: &SpatialRegion, context: u64) -> QualiaQuin {
     quin
 }
 
-/// Extract spatial region from QualiaQuin
-pub fn quin_to_region(quin: &QualiaQuin) -> Option<SpatialRegion> {
+/// Extract spatial region from NQuin
+pub fn quin_to_region(quin: &NQuin) -> Option<SpatialRegion> {
     // Extract centroid and area from object field
     let centroid_x = ((quin.object >> 48) & 0xFFFF) as f64;
     let centroid_y = ((quin.object >> 32) & 0xFFFF) as f64;

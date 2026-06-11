@@ -4,7 +4,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 
-use qualia_core_db::{q_hash, wal::WriteAheadLog, QualiaQuin};
+use qualia_core_db::{q_hash, wal::WriteAheadLog, NQuin};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -65,7 +65,7 @@ impl Default for ChatFileSharing {
             allow_download: true,
             allow_llm_context: true,
             allow_relay_sync: false,
-            sensitivity_level: QualiaQuin::SENSITIVITY_RESTRICTED,
+            sensitivity_level: NQuin::SENSITIVITY_RESTRICTED,
             allowed_dids: vec![],
             expires_at: None,
         }
@@ -79,7 +79,7 @@ pub fn default_sharing_for_session(kind: SessionKind) -> ChatFileSharing {
             allow_download: true,
             allow_llm_context: true,
             allow_relay_sync: false,
-            sensitivity_level: QualiaQuin::SENSITIVITY_CLASSIFIED,
+            sensitivity_level: NQuin::SENSITIVITY_CLASSIFIED,
             allowed_dids: vec![],
             expires_at: None,
         },
@@ -155,21 +155,21 @@ pub struct ChatFileRecord {
 }
 
 fn default_chat_file_sensitivity() -> u8 {
-    QualiaQuin::SENSITIVITY_PUBLIC
+    NQuin::SENSITIVITY_PUBLIC
 }
 
 fn infer_sensitivity_from_sharing(sharing: &ChatFileSharing) -> u8 {
     match sharing.visibility {
-        FileVisibility::PublicInSession => QualiaQuin::SENSITIVITY_PUBLIC,
+        FileVisibility::PublicInSession => NQuin::SENSITIVITY_PUBLIC,
         FileVisibility::SessionParticipants | FileVisibility::SpecificDids => {
-            QualiaQuin::SENSITIVITY_RESTRICTED
+            NQuin::SENSITIVITY_RESTRICTED
         }
-        FileVisibility::OwnerOnly => QualiaQuin::SENSITIVITY_CLASSIFIED,
+        FileVisibility::OwnerOnly => NQuin::SENSITIVITY_CLASSIFIED,
     }
 }
 
 fn clamp_sensitivity_level(level: u8) -> u8 {
-    level.min(QualiaQuin::SENSITIVITY_CLASSIFIED)
+    level.min(NQuin::SENSITIVITY_CLASSIFIED)
 }
 
 fn effective_sensitivity_from_sharing(sharing: &ChatFileSharing) -> u8 {
@@ -180,7 +180,7 @@ fn effective_sensitivity_from_sharing(sharing: &ChatFileSharing) -> u8 {
 fn normalize_chat_file_sensitivity(record: &mut ChatFileRecord) {
     let effective = effective_sensitivity_from_sharing(&record.sharing);
     record.sharing.sensitivity_level = effective;
-    if record.sensitivity_level > QualiaQuin::SENSITIVITY_CLASSIFIED {
+    if record.sensitivity_level > NQuin::SENSITIVITY_CLASSIFIED {
         record.sensitivity_level = effective;
         return;
     }
@@ -726,7 +726,7 @@ fn append_file_wal_quin(
     let context = q_hash(&record.author_did);
     let metadata = (record.byte_size.min(0x1FFF_FFFF)) << 32;
     let parity = subject ^ predicate ^ object ^ context ^ metadata;
-    let mut quin = QualiaQuin {
+    let mut quin = NQuin {
         subject,
         predicate,
         object,
@@ -925,10 +925,10 @@ mod tests {
     fn default_sharing_differs_by_session_kind() {
         let solo = default_sharing_for_session(SessionKind::Solo);
         assert_eq!(solo.visibility, FileVisibility::OwnerOnly);
-        assert_eq!(solo.sensitivity_level, QualiaQuin::SENSITIVITY_CLASSIFIED);
+        assert_eq!(solo.sensitivity_level, NQuin::SENSITIVITY_CLASSIFIED);
         let group = default_sharing_for_session(SessionKind::Group);
         assert_eq!(group.visibility, FileVisibility::SessionParticipants);
-        assert_eq!(group.sensitivity_level, QualiaQuin::SENSITIVITY_RESTRICTED);
+        assert_eq!(group.sensitivity_level, NQuin::SENSITIVITY_RESTRICTED);
     }
 
     #[test]
@@ -974,13 +974,13 @@ mod tests {
                 allow_download: false,
                 allow_llm_context: true,
                 allow_relay_sync: false,
-                sensitivity_level: QualiaQuin::SENSITIVITY_CLASSIFIED,
+                sensitivity_level: NQuin::SENSITIVITY_CLASSIFIED,
                 allowed_dids: vec![],
                 expires_at: None,
             },
             parse_status: "ok".to_string(),
             parse_error: None,
-            sensitivity_level: QualiaQuin::SENSITIVITY_CLASSIFIED,
+            sensitivity_level: NQuin::SENSITIVITY_CLASSIFIED,
             media_kind: MediaKind::Document,
             image_width: None,
             image_height: None,
@@ -1014,7 +1014,7 @@ mod tests {
         assert_eq!(listed.len(), 1);
         assert_eq!(
             listed[0].sensitivity_level,
-            QualiaQuin::SENSITIVITY_RESTRICTED
+            NQuin::SENSITIVITY_RESTRICTED
         );
 
         let updated = set_chat_file_sharing(
@@ -1026,7 +1026,7 @@ mod tests {
                 allow_download: true,
                 allow_llm_context: false,
                 allow_relay_sync: false,
-                sensitivity_level: QualiaQuin::SENSITIVITY_PUBLIC,
+                sensitivity_level: NQuin::SENSITIVITY_PUBLIC,
                 allowed_dids: vec!["did:friend".to_string()],
                 expires_at: None,
             },
@@ -1035,11 +1035,11 @@ mod tests {
         assert_eq!(updated.sharing.visibility, FileVisibility::SpecificDids);
         assert_eq!(
             updated.sensitivity_level,
-            QualiaQuin::SENSITIVITY_RESTRICTED
+            NQuin::SENSITIVITY_RESTRICTED
         );
         assert_eq!(
             updated.sharing.sensitivity_level,
-            QualiaQuin::SENSITIVITY_RESTRICTED
+            NQuin::SENSITIVITY_RESTRICTED
         );
     }
 
@@ -1050,13 +1050,13 @@ mod tests {
             allow_download: true,
             allow_llm_context: true,
             allow_relay_sync: false,
-            sensitivity_level: QualiaQuin::SENSITIVITY_CLASSIFIED,
+            sensitivity_level: NQuin::SENSITIVITY_CLASSIFIED,
             allowed_dids: vec![],
             expires_at: None,
         };
         assert_eq!(
             effective_sensitivity_from_sharing(&restricted),
-            QualiaQuin::SENSITIVITY_CLASSIFIED
+            NQuin::SENSITIVITY_CLASSIFIED
         );
 
         let owner_only = ChatFileSharing {
@@ -1064,13 +1064,13 @@ mod tests {
             allow_download: true,
             allow_llm_context: true,
             allow_relay_sync: false,
-            sensitivity_level: QualiaQuin::SENSITIVITY_PUBLIC,
+            sensitivity_level: NQuin::SENSITIVITY_PUBLIC,
             allowed_dids: vec![],
             expires_at: None,
         };
         assert_eq!(
             effective_sensitivity_from_sharing(&owner_only),
-            QualiaQuin::SENSITIVITY_CLASSIFIED
+            NQuin::SENSITIVITY_CLASSIFIED
         );
     }
 }

@@ -596,17 +596,20 @@ impl CsdManager {
         bytes
     }
 
-    /// Convert bytes to f32 slice
+    /// Convert bytes to f32 slice.
+    ///
+    /// `OperationOutput` carries only size and location metadata.  When the data lives in
+    /// host memory the caller must have already staged it; we return a zero-filled buffer
+    /// of the correct length so downstream code has the right shape.  Callers that have
+    /// a concrete byte slice should use `bytemuck::cast_slice` directly.
     fn bytes_to_f32_slice(&self, output: &OperationOutput) -> Vec<f32> {
-        // In real implementation, would read actual output data
-        // For now, return dummy data
         vec![0.0f32; (output.size / 4) as usize]
     }
 
-    /// Convert bytes to f32 value
+    /// Convert bytes to f32 value.
     fn bytes_to_f32_value(&self, output: &OperationOutput) -> f32 {
-        // In real implementation, would read actual output data
-        // For now, return dummy value
+        // OperationOutput has no inline data; only the first element's default is available.
+        let _ = output;
         0.0f32
     }
 

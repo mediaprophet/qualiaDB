@@ -42,19 +42,28 @@ All 82 build errors have been resolved through:
 
 ## Current Status
 
-✅ **Build succeeds**: `cargo build --release --workspace` completes with 0 errors  
+✅ **Build errors (original 82)**: All resolved  
+⚠️ **New SPARQL build errors**: 64 errors in `sparql_executor`, `sparql_endpoint`, `sparql_extensions`, `sparql_mm`, `sparql_websocket`, `qpu_bridge` — introduced with the SPARQL 1.1 implementation commits  
 ✅ **Test count**: 539 test functions in qualia-core-db  
-✅ **Version**: 0.0.10
+✅ **Version**: 0.0.10-dev
 
 ---
 
 ## Remaining Work (Not Build Errors)
 
-While the build succeeds, there are implementation stubs that need attention:
+Implementation stubs addressed as of 2026-06-11 (see [to-do/](to-do/)):
 
-- **Security stubs** (see to-do/001-004.md): zk_proofs, fiduciary_crypto, ML-DSA, ECC parity
-- **Query layer stubs** (see to-do/005.md): mmap_query_subject, lazy_superblock_query, indexing
-- **LLM inference** (see to-do/006.md): wgpu/Vulkan mock pipeline needs real shader
+- ✅ **ECC parity** (to-do/004): real XOR fold implemented in `verify_ecc_parity()`
+- ✅ **FiduciaryCrypto sign/verify** (to-do/002): wired to `MlDsaSigner`
+- ✅ **ZK proof structural validation** (to-do/001): rejects invalid proofs
+- ✅ **mmap_query_subject** (to-do/005): real memmap2 scan over `.q42` files
+- ✅ **QuinIndex** (to-do/005): in-memory inverted index implemented
+- ✅ **wgpu/Vulkan mock pipeline** (to-do/006): replaced with real `fused_transformer.wgsl`
+
+Still pending:
+- ⚠️ **ML-DSA FIPS 204** (to-do/003): hand-rolled SHA3, not real standard
+- ⚠️ **ZK cryptographic backend** (to-do/001): structural checks only, no bellman/arkworks
+- ⚠️ **SPARQL build errors**: 64 errors in new SPARQL modules
 
 ---
 
@@ -192,7 +201,8 @@ The remaining 19 errors require deeper architectural changes:
 - [x] Phase 2.1 errors fixed (4/4)
 - [x] Phase 2.2 errors fixed (5/5)
 - [x] Phase 2.3 errors fixed (13/13)
-- [ ] Phase 3.1 errors fixed (2/6 - partial)
-- [ ] Phase 3.2 errors fixed (0/0)
-- [ ] `cargo build --release -p qualia-cli` succeeds
-- [ ] No new warnings introduced
+- [x] Phase 3.1 errors fixed (all borrow/type errors resolved)
+- [x] Phase 3.2 errors fixed (module reorganisation complete)
+- [x] Implementation stubs addressed (to-do/001–006, 2026-06-11)
+- [ ] SPARQL build errors resolved (64 remaining in new SPARQL modules)
+- [ ] `cargo build --release -p qualia-cli` succeeds (blocked by SPARQL errors)

@@ -81,12 +81,14 @@ See [to-do/](../to-do/) for current implementation tasks and priorities.
 
 See [BUILD_ISSUES.md](../BUILD_ISSUES.md) for build error resolution history.
 
+See [docs/specialized-library-extensions-status.md](specialized-library-extensions-status.md) for the implementation status of the 10 domain-specific extension libraries (Fluid Dynamics, Electromagnetism, Chaos Theory, Statistical Mechanics, Number Theory, Information Theory, Group Theory, Classical Mechanics, Differential Geometry, Complex Analysis).
+
 ---
 
 ## 6. Key Files
 
 ### Engine
-- `crates/qualia-core-db/src/lib.rs` — QualiaQuin, core types
+- `crates/qualia-core-db/src/lib.rs` — NQuin, core types
 - `crates/qualia-core-db/src/webizen.rs` — SlgArena, SlgOpcode dispatch
 - `crates/qualia-core-db/src/deontic_logic.rs` — Deontic norms + N3 bridge
 - `crates/qualia-core-db/src/modalities/` — All logic modality implementations

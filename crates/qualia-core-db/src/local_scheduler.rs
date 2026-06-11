@@ -6,7 +6,7 @@
 //!
 //! Architecture:
 //! - Supervisor thread: Manages job queue and coordinates workers
-//! - Worker threads: Pinned to specific cores, process QualiaQuin jobs
+//! - Worker threads: Pinned to specific cores, process NQuin jobs
 //! - SPSC channels: Lock-free communication between supervisor and workers
 //! - NVMe WAL: Persistent backing store for job state (future)
 //!
@@ -17,7 +17,7 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::QualiaQuin;
+use crate::NQuin;
 use crate::wal::WriteAheadLog;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use core_affinity::CoreId;
@@ -45,7 +45,7 @@ pub enum JobStatus {
 /// Production queue job wrapper
 #[derive(Debug, Clone)]
 pub struct Job {
-    pub quin: QualiaQuin,
+    pub quin: NQuin,
     pub status: JobStatus,
     pub total_bytes: u64,
     pub dispatched_at: Option<Instant>,
@@ -54,7 +54,7 @@ pub struct Job {
 }
 
 impl Job {
-    pub fn new(quin: QualiaQuin, total_bytes: u64) -> Self {
+    pub fn new(quin: NQuin, total_bytes: u64) -> Self {
         Self {
             quin,
             status: JobStatus::Pending,
@@ -65,7 +65,7 @@ impl Job {
         }
     }
 
-    pub fn with_target(quin: QualiaQuin, total_bytes: u64, compute_target: ComputeTarget) -> Self {
+    pub fn with_target(quin: NQuin, total_bytes: u64, compute_target: ComputeTarget) -> Self {
         Self {
             quin,
             status: JobStatus::Pending,
@@ -692,7 +692,7 @@ mod tests {
 
     #[test]
     fn test_job_progress_calculation() {
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         quin.object = 5000; // 5000 bytes processed
         
         let job = Job::new(quin, 10000); // Total 10000 bytes
@@ -703,7 +703,7 @@ mod tests {
 
     #[test]
     fn test_job_velocity_calculation() {
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         quin.object = 1000;
         
         let mut job = Job::new(quin, 10000);
@@ -733,7 +733,7 @@ mod tests {
         
         // Submit dummy jobs
         for i in 0..num_jobs {
-            let mut quin = QualiaQuin::default();
+            let mut quin = NQuin::default();
             quin.object = i * 1000; // Different starting offsets
             let job = Job::new(quin, 10000);
             queue.submit_job(job).unwrap();
@@ -760,7 +760,7 @@ mod tests {
         let queue = ProductionQueue::new();
         
         // Submit a job
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         quin.object = 1000;
         let job = Job::new(quin, 10000);
         queue.submit_job(job).unwrap();
@@ -792,7 +792,7 @@ mod tests {
         
         // Submit jobs
         for i in 0..5 {
-            let mut quin = QualiaQuin::default();
+            let mut quin = NQuin::default();
             quin.object = i * 1000;
             let job = Job::new(quin, 20000);
             queue.submit_job(job).unwrap();
@@ -927,7 +927,7 @@ mod tests {
         let mut t: f64 = 0.0;
         
         for step in 0..num_steps {
-            let mut quin = QualiaQuin::default();
+            let mut quin = NQuin::default();
             quin.object = y.to_bits() as u64;
             quin.metadata = t.to_bits();
             

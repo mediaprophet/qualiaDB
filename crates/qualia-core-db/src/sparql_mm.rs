@@ -4,7 +4,7 @@
 //! Supports Media Annotations Ontology (MA Ontology, http://www.w3.org/ns/ma-ont#).
 
 use crate::sparql_ast::*;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Media Annotations Ontology predicate hashes (pre-computed FNV-1a)
 pub mod ma_ont {
@@ -107,15 +107,15 @@ pub struct TimeWindow {
 
 /// SPARQL-MM Media Handler
 pub struct SparqlMmHandler<'a> {
-    pub quins: &'a [QualiaQuin],
-    pub windows: [TimeWindow; 64];
+    pub quins: &'a [NQuin],
+    pub windows: [TimeWindow; 64],
     pub window_count: u8,
-    pub media_fragments: [MediaFragment; 128];
+    pub media_fragments: [MediaFragment; 128],
     pub fragment_count: u8,
 }
 
 impl<'a> SparqlMmHandler<'a> {
-    pub fn new(quins: &'a [QualiaQuin]) -> Self {
+    pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             quins,
             windows: [TimeWindow {
@@ -249,11 +249,11 @@ impl<'a> SparqlMmHandler<'a> {
     }
 
     /// Query quins within a time window
-    pub fn query_window(&self, window_id: u8, timestamp_field: u64) -> Result<Vec<&QualiaQuin>, String> {
+    pub fn query_window(&self, window_id: u8, timestamp_field: u64) -> Result<Vec<&NQuin>, String> {
         let window = self.windows.get(window_id as usize)
             .ok_or("Window ID out of bounds")?;
 
-        let results: Vec<&QualiaQuin> = self.quins
+        let results: Vec<&NQuin> = self.quins
             .iter()
             .filter(|quin| {
                 // Check if quin's timestamp is within window
@@ -266,7 +266,7 @@ impl<'a> SparqlMmHandler<'a> {
     }
 
     /// Query media fragment
-    pub fn query_media_fragment(&self, fragment_id: u8) -> Result<Vec<&QualiaQuin>, String> {
+    pub fn query_media_fragment(&self, fragment_id: u8) -> Result<Vec<&NQuin>, String> {
         let fragment = self.media_fragments.get(fragment_id as usize)
             .ok_or("Fragment ID out of bounds")?;
 
@@ -286,13 +286,13 @@ impl<'a> SparqlMmHandler<'a> {
         Ok(results)
     }
 
-    fn check_fragment_match(&self, quin: &QualiaQuin, fragment: &MediaFragment) -> bool {
+    fn check_fragment_match(&self, quin: &NQuin, fragment: &MediaFragment) -> bool {
         for i in 0..fragment.dimension_count as usize {
             if let Some(dim) = fragment.dimensions[i] {
                 match dim {
                     MediaFragmentDimension::Temporal { start, end } => {
                         let quin_time = quin.metadata & 0x1FFF_FFFF;
-                        if quin_time < *start || quin_time > *end {
+                        if quin_time < start || quin_time > end {
                             return false;
                         }
                     }
@@ -301,7 +301,7 @@ impl<'a> SparqlMmHandler<'a> {
                         // In production, check spatial coordinates
                     }
                     MediaFragmentDimension::Track { track_id, .. } => {
-                        if quin.object != *track_id {
+                        if quin.object != track_id {
                             return false;
                         }
                     }
@@ -443,7 +443,7 @@ impl<'a> SparqlMmHandler<'a> {
     pub fn window_aggregate(
         &self,
         window_id: u8,
-        aggregate_fn: fn(&[&QualiaQuin]) -> u64,
+        aggregate_fn: fn(&[&NQuin]) -> u64,
     ) -> Result<u64, String> {
         let quins = self.query_window(window_id, 0)?;
         Ok(aggregate_fn(&quins))
@@ -457,7 +457,7 @@ impl<'a> Default for SparqlMmHandler<'a> {
 }
 
 /// SPARQL-MM extension functions
-pub fn mm_duration(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn mm_duration(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -473,7 +473,7 @@ pub fn mm_duration(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) 
     }
 }
 
-pub fn mm_dimensions(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn mm_dimensions(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -490,7 +490,7 @@ pub fn mm_dimensions(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow
     }
 }
 
-pub fn mm_temporal_fragment(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn mm_temporal_fragment(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 2 {
         return false;
     }
@@ -515,7 +515,7 @@ pub fn mm_temporal_fragment(args: &[u64], quins: &[QualiaQuin], result: &mut Bin
 }
 
 /// MA Ontology extension functions
-pub fn ma_format(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ma_format(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -531,7 +531,7 @@ pub fn ma_format(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) ->
     }
 }
 
-pub fn ma_mime_type(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ma_mime_type(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -547,7 +547,7 @@ pub fn ma_mime_type(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow)
     }
 }
 
-pub fn ma_codec(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ma_codec(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -563,7 +563,7 @@ pub fn ma_codec(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> 
     }
 }
 
-pub fn ma_bitrate(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ma_bitrate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -578,7 +578,7 @@ pub fn ma_bitrate(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -
         Err(_) => false,
     }
 }
-pub fn ma_framerate(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn ma_framerate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -597,7 +597,7 @@ pub fn ma_framerate(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow)
 /// C2PA extension functions
 
 /// c2pa:credential - get content credential
-pub fn c2pa_credential(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn c2pa_credential(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -614,7 +614,7 @@ pub fn c2pa_credential(args: &[u64], quins: &[QualiaQuin], result: &mut BindingR
 }
 
 /// c2pa:isVerified - check if media is verified
-pub fn c2pa_is_verified(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn c2pa_is_verified(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -631,7 +631,7 @@ pub fn c2pa_is_verified(args: &[u64], quins: &[QualiaQuin], result: &mut Binding
 }
 
 /// c2pa:verificationStatus - get verification status
-pub fn c2pa_verification_status(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn c2pa_verification_status(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -648,7 +648,7 @@ pub fn c2pa_verification_status(args: &[u64], quins: &[QualiaQuin], result: &mut
 }
 
 /// c2pa:createdAt - get creation timestamp
-pub fn c2pa_created_at(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn c2pa_created_at(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -665,7 +665,7 @@ pub fn c2pa_created_at(args: &[u64], quins: &[QualiaQuin], result: &mut BindingR
 }
 
 /// c2pa:createdBy - get creator
-pub fn c2pa_created_by(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn c2pa_created_by(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -682,7 +682,7 @@ pub fn c2pa_created_by(args: &[u64], quins: &[QualiaQuin], result: &mut BindingR
 }
 
 /// c2pa:verifySignature - verify content signature
-pub fn c2pa_verify_signature(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn c2pa_verify_signature(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -699,7 +699,7 @@ pub fn c2pa_verify_signature(args: &[u64], quins: &[QualiaQuin], result: &mut Bi
 }
 
 /// c2pa:derivedFrom - get source asset
-pub fn c2pa_derived_from(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn c2pa_derived_from(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }

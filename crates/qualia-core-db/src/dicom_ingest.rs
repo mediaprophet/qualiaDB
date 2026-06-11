@@ -10,7 +10,7 @@ use crate::dicom::{
 };
 use crate::q_hash;
 use crate::wal::WriteAheadLog;
-use crate::QualiaQuin;
+use crate::NQuin;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use memmap2::Mmap;
 use std::cell::UnsafeCell;
@@ -205,7 +205,7 @@ fn compile_semantic_quins(
     series_hash: u64,
     blob_offset: u64,
     blob_length: u32,
-    out: &mut [QualiaQuin; 6],
+    out: &mut [NQuin; 6],
 ) -> usize {
     let study_ctx = q_hash("q42:imagingStudy");
     let modality_hash = q_hash(&meta.modality);
@@ -216,7 +216,7 @@ fn compile_semantic_quins(
 
     let mut count = 0usize;
 
-    let mut q0 = QualiaQuin::default();
+    let mut q0 = NQuin::default();
     q0.subject = patient_did_hash;
     q0.predicate = pred_has_series;
     q0.object = series_hash;
@@ -226,7 +226,7 @@ fn compile_semantic_quins(
     out[count] = q0;
     count += 1;
 
-    let mut q1 = QualiaQuin::default();
+    let mut q1 = NQuin::default();
     q1.subject = series_hash;
     q1.predicate = pred_modality;
     q1.object = modality_hash;
@@ -236,7 +236,7 @@ fn compile_semantic_quins(
     count += 1;
 
     if !meta.body_part_examined.is_empty() {
-        let mut q2 = QualiaQuin::default();
+        let mut q2 = NQuin::default();
         q2.subject = series_hash;
         q2.predicate = pred_body_part;
         q2.object = q_hash(&meta.body_part_examined);
@@ -246,7 +246,7 @@ fn compile_semantic_quins(
         count += 1;
     }
 
-    let mut q3 = QualiaQuin::default();
+    let mut q3 = NQuin::default();
     q3.subject = series_hash;
     q3.predicate = pred_pixel_ptr;
     q3.object = encode_blob_pointer(blob_offset);
@@ -305,7 +305,7 @@ fn run_split_ingest(job: IngestJob) {
             q_hash("q42:anonymousPatient")
         };
 
-        let mut quins = [QualiaQuin::default(); 6];
+        let mut quins = [NQuin::default(); 6];
         let quin_count = compile_semantic_quins(
             &meta,
             patient,
@@ -441,7 +441,7 @@ pub fn split_ingest_sync(
         q_hash("q42:anonymousPatient")
     };
 
-    let mut quins = [QualiaQuin::default(); 6];
+    let mut quins = [NQuin::default(); 6];
     let quin_count = compile_semantic_quins(
         &meta,
         patient,

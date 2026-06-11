@@ -385,7 +385,7 @@ pub fn add_delegation_rule(rule: DelegationRule) -> Result<(), String> {
 }
 
 
-// -- QPU Oracle ----------------------------------------------------------------
+// -- QPU Oracle / Advanced Capabilities ----------------------------------------
 
 #[command]
 pub fn get_qpu_settings() -> Result<qualia_client_core::qpu_oracle::QpuOracleSettings, String> {
@@ -405,6 +405,39 @@ pub fn enable_qpu_feature() -> Result<qualia_client_core::qpu_oracle::QpuOracleS
 #[command]
 pub fn disable_qpu_feature() -> Result<qualia_client_core::qpu_oracle::QpuOracleSettings, String> {
     qualia_client_core::qpu_oracle::disable_qpu_feature()
+}
+
+/// Activate the QPU Oracle and advanced capabilities by affirming the
+/// Universal Human Rights commitment.
+///
+/// `commitment` must be "I Affirm My Commitment to Universal Human Rights"
+/// or the base64 form `SSBBZmZpcm0gTXkgQ29tbWl0bWVudCB0byBVbml2ZXJzYWwgSHVtYW4gUmlnaHRz`.
+#[command]
+pub fn activate_advanced_capabilities(
+    commitment: String,
+) -> Result<qualia_client_core::qpu_oracle::QpuOracleSettings, String> {
+    qualia_client_core::qpu_oracle::activate_with_commitment(&commitment)
+}
+
+/// Check whether the advanced capabilities commitment has been affirmed.
+#[command]
+pub fn get_advanced_activation_status() -> bool {
+    qualia_client_core::qpu_oracle::is_qpu_feature_unlocked()
+}
+
+/// Return the commitment text that must be affirmed to activate.
+#[command]
+pub fn get_commitment_prompt() -> serde_json::Value {
+    serde_json::json!({
+        "text": "I Affirm My Commitment to Universal Human Rights",
+        "key": "SSBBZmZpcm0gTXkgQ29tbWl0bWVudCB0byBVbml2ZXJzYWwgSHVtYW4gUmlnaHRz",
+        "description": "By affirming this commitment you agree that the advanced computational \
+                        capabilities of QualiaDB — including quantum computing offload, \
+                        physics-informed neural networks, and advanced scientific solvers — \
+                        will be used in accordance with the Universal Declaration of Human Rights \
+                        and in ways that benefit humanity.",
+        "udhr_url": "https://www.un.org/en/about-us/universal-declaration-of-human-rights"
+    })
 }
 // ── Handler registration ──────────────────────────────────────────────────────
 
@@ -474,5 +507,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::Invoke) {
         save_qpu_settings,
         enable_qpu_feature,
         disable_qpu_feature,
+        activate_advanced_capabilities,
+        get_advanced_activation_status,
+        get_commitment_prompt,
     ]
 }

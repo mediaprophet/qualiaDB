@@ -4,7 +4,7 @@
 //! while maintaining zero-allocation invariants and preserving non-monotonic
 //! reasoning loops in specialized libraries.
 
-use crate::qualia_quin::QualiaQuin;
+use crate::n_quin::NQuin;
 use crate::execution_error::ExecutionError;
 use crate::clinical_engine::{DefeasibleClinicalEngine, ClinicalEngineError, ClassicalState};
 use core::sync::atomic::{AtomicU32, Ordering};
@@ -156,7 +156,7 @@ impl HybridStateManager {
     /// Synchronize quantum result back to specialized library
     pub fn sync_quantum_to_domain(
         &mut self,
-        quantum_result: &QualiaQuin,
+        quantum_result: &NQuin,
         domain: HybridStateDomain,
         clinical_engine: Option<&mut DefeasibleClinicalEngine>
     ) -> Result<ConvergenceState, ExecutionError> {
@@ -193,8 +193,8 @@ impl HybridStateManager {
         Ok(convergence_state)
     }
 
-    /// Extract quantum state from QualiaQuin result
-    fn extract_quantum_state(&mut self, quantum_result: &QualiaQuin) -> Result<(), ExecutionError> {
+    /// Extract quantum state from NQuin result
+    fn extract_quantum_state(&mut self, quantum_result: &NQuin) -> Result<(), ExecutionError> {
         // Extract 48-byte payload from Quin
         let payload_bytes = self.extract_payload_from_quin(quantum_result)?;
         
@@ -221,8 +221,8 @@ impl HybridStateManager {
         Ok(())
     }
 
-    /// Extract 48-byte payload from QualiaQuin
-    fn extract_payload_from_quin(&self, quin: &QualiaQuin) -> Result<[u8; 64], ExecutionError> {
+    /// Extract 48-byte payload from NQuin
+    fn extract_payload_from_quin(&self, quin: &NQuin) -> Result<[u8; 64], ExecutionError> {
         let mut payload = [0u8; 64];
         
         // Extract from object field (first 8 bytes)
@@ -646,7 +646,7 @@ mod tests {
     #[test]
     fn test_quantum_state_extraction() {
         let mut manager = HybridStateManager::new();
-        let mut quin = QualiaQuin::default();
+        let mut quin = NQuin::default();
         
         // Set up test data
         quin.object = 0x123456789ABCDEF0;

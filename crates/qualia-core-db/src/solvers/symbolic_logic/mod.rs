@@ -5,8 +5,8 @@
 //! environment of Qualia-DB.
 
 use crate::solvers::{SolverConfig, SolverState, SolverResult};
-use crate::execution_error::ExecutionError;
-use crate::slg_opcode::SlgOpcode;
+use crate::ggml_quants::ExecutionError;
+use crate::webizen::SlgOpcode;
 
 /// Forward chaining defeasible reasoning solver
 #[repr(C)]

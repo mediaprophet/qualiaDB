@@ -3,7 +3,7 @@
 //! Strips human-centric context from specialized library data before QPU offloading
 //! while preserving computational structure and maintaining zero-allocation invariants.
 
-use crate::qualia_quin::QualiaQuin;
+use crate::n_quin::NQuin;
 use crate::execution_error::ExecutionError;
 use super::{PolynomialObfuscator, ObfuscationDomain, ObfuscationResult};
 
@@ -69,9 +69,9 @@ impl SemanticStripper {
     /// Strip semantic context from specialized library data
     pub fn strip_context(
         &mut self,
-        source_quins: &[QualiaQuin],
+        source_quins: &[NQuin],
         source_domain: SourceDomain,
-        target_quin: &mut QualiaQuin
+        target_quin: &mut NQuin
     ) -> ObfuscationResult<()> {
         self.stripping_state = StrippingState::Analyzing;
         
@@ -107,7 +107,7 @@ impl SemanticStripper {
     /// Extract mathematical structure from source quins
     fn extract_mathematical_structure(
         &self,
-        quins: &[QualiaQuin],
+        quins: &[NQuin],
         mapping: ContextMapping
     ) -> ObfuscationResult<MathematicalStructure> {
         let mut structure = MathematicalStructure::default();
@@ -151,7 +151,7 @@ impl SemanticStripper {
     }
 
     /// Extract clinical engine mathematical structure
-    fn extract_clinical_structure(&self, quins: &[QualiaQuin]) -> ObfuscationResult<MathematicalStructure> {
+    fn extract_clinical_structure(&self, quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
         let mut structure = MathematicalStructure::default();
         structure.structure_type = StructureType::OptimizationProblem;
         
@@ -167,7 +167,7 @@ impl SemanticStripper {
     }
 
     /// Extract quantum biology mathematical structure
-    fn extract_biology_structure(&self, quins: &[QualiaQuin]) -> ObfuscationResult<MathematicalStructure> {
+    fn extract_biology_structure(&self, quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
         let mut structure = MathematicalStructure::default();
         structure.structure_type = StructureType::HamiltonianOperator;
         
@@ -182,7 +182,7 @@ impl SemanticStripper {
     }
 
     /// Extract linear algebra mathematical structure
-    fn extract_linear_algebra_structure(&self, quins: &[QualiaQuin]) -> ObfuscationResult<MathematicalStructure> {
+    fn extract_linear_algebra_structure(&self, quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
         let mut structure = MathematicalStructure::default();
         structure.structure_type = StructureType::MatrixTransformation;
         
@@ -285,7 +285,7 @@ impl SemanticStripper {
     }
 
     /// Convert clinical parameter to mathematical variable
-    fn clinical_param_to_math_var(&self, quin: &QualiaQuin) -> u64 {
+    fn clinical_param_to_math_var(&self, quin: &NQuin) -> u64 {
         // Extract numerical value from clinical Quin
         // Remove clinical context (LOINC codes, SNOMED concepts, etc.)
         let clinical_value = quin.object;
@@ -295,7 +295,7 @@ impl SemanticStripper {
     }
 
     /// Convert biology parameter to mathematical variable
-    fn biology_param_to_math_var(&self, quin: &QualiaQuin) -> u64 {
+    fn biology_param_to_math_var(&self, quin: &NQuin) -> u64 {
         // Extract molecular simulation parameter
         let bio_value = quin.object;
         
@@ -304,7 +304,7 @@ impl SemanticStripper {
     }
 
     /// Convert linear algebra parameter to mathematical variable
-    fn linear_algebra_param_to_math_var(&self, quin: &QualiaQuin) -> u64 {
+    fn linear_algebra_param_to_math_var(&self, quin: &NQuin) -> u64 {
         // Extract matrix element
         let matrix_value = quin.object;
         
@@ -313,31 +313,31 @@ impl SemanticStripper {
     }
 
     /// Placeholder implementations for other domains
-    fn extract_statistical_structure(&self, _quins: &[QualiaQuin]) -> ObfuscationResult<MathematicalStructure> {
+    fn extract_statistical_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
         Ok(MathematicalStructure::default())
     }
 
-    fn extract_ml_structure(&self, _quins: &[QualiaQuin]) -> ObfuscationResult<MathematicalStructure> {
+    fn extract_ml_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
         Ok(MathematicalStructure::default())
     }
 
-    fn extract_financial_structure(&self, _quins: &[QualiaQuin]) -> ObfuscationResult<MathematicalStructure> {
+    fn extract_financial_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
         Ok(MathematicalStructure::default())
     }
 
-    fn extract_chemistry_structure(&self, _quins: &[QualiaQuin]) -> ObfuscationResult<MathematicalStructure> {
+    fn extract_chemistry_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
         Ok(MathematicalStructure::default())
     }
 
-    fn extract_physics_structure(&self, _quins: &[QualiaQuin]) -> ObfuscationResult<MathematicalStructure> {
+    fn extract_physics_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
         Ok(MathematicalStructure::default())
     }
 
-    fn extract_engineering_structure(&self, _quins: &[QualiaQuin]) -> ObfuscationResult<MathematicalStructure> {
+    fn extract_engineering_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
         Ok(MathematicalStructure::default())
     }
 
-    fn extract_crypto_structure(&self, _quins: &[QualiaQuin]) -> ObfuscationResult<MathematicalStructure> {
+    fn extract_crypto_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
         Ok(MathematicalStructure::default())
     }
 

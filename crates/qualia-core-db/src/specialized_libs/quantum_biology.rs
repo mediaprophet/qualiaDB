@@ -9,7 +9,7 @@
 //! - Continuous Solver (WebGPU/SIMD): GPU-accelerated quantum approximations
 //! - QPU Bridge (Remote API): IBM Quantum API integration via NativeQuantumDft
 
-use crate::qualia_quin::QualiaQuin;
+use crate::n_quin::NQuin;
 use crate::lexicon::generate_60bit_token;
 use crate::webizen_vm::{WebizenVM, SlgOpcode};
 use crate::ambient_orchestration::AmbientOrchestrator;
@@ -38,7 +38,7 @@ pub struct QuantumBiologyOrchestrator {
 #[derive(Clone, Copy)]
 pub struct BiologicalEntity {
     /// 48-byte Super-Quin identifier
-    quin: QualiaQuin,
+    quin: NQuin,
     /// Entity type (enzyme, protein, DNA, etc.)
     entity_type: BiologicalEntityType,
     /// Quantum computation type required
@@ -242,7 +242,7 @@ impl QuantumBiologyOrchestrator {
     }
 
     /// Register biological entity for quantum computation (zero allocation)
-    pub fn register_entity(&mut self, quin: QualiaQuin, entity_type: BiologicalEntityType, computation_type: QuantumComputationType) -> Result<usize, QuantumBiologyError> {
+    pub fn register_entity(&mut self, quin: NQuin, entity_type: BiologicalEntityType, computation_type: QuantumComputationType) -> Result<usize, QuantumBiologyError> {
         // Find empty slot in entity mappings
         for i in 0..256 {
             if self.entity_mappings[i].quin.subject == 0 && self.entity_mappings[i].quin.predicate == 0 {
@@ -712,7 +712,7 @@ impl Default for BiologicalEntity {
     #[inline(always)]
     fn default() -> Self {
         Self {
-            quin: QualiaQuin::default(),
+            quin: NQuin::default(),
             entity_type: BiologicalEntityType::Enzyme,
             computation_type: QuantumComputationType::ElectronTunneling,
             quantum_state: QuantumState::default(),
@@ -791,7 +791,7 @@ mod tests {
     #[test]
     fn test_entity_registration() {
         let mut orchestrator = QuantumBiologyOrchestrator::new();
-        let quin = QualiaQuin::default();
+        let quin = NQuin::default();
         
         let result = orchestrator.register_entity(
             quin, 

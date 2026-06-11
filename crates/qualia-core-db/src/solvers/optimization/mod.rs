@@ -4,7 +4,7 @@
 //! root finding methods suitable for the #![no_std] environment of Qualia-DB.
 
 use crate::solvers::{SolverConfig, SolverState, SolverResult};
-use crate::execution_error::ExecutionError;
+use crate::ggml_quants::ExecutionError;
 use core::f64::consts;
 
 /// Nelder-Mead simplex optimizer for unconstrained optimization

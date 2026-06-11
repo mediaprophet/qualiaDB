@@ -7,15 +7,15 @@ use crate::sparql_parser;
 use crate::sparql_planner::*;
 use crate::sparql_executor::*;
 use crate::sparql_results::ResultFormatter;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// SPARQL HTTP endpoint handler
 pub struct SparqlEndpoint {
-    quins: Vec<QualiaQuin>,
+    quins: Vec<NQuin>,
 }
 
 impl SparqlEndpoint {
-    pub fn new(quins: Vec<QualiaQuin>) -> Self {
+    pub fn new(quins: Vec<NQuin>) -> Self {
         Self { quins }
     }
 
@@ -41,7 +41,7 @@ impl SparqlEndpoint {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx)?;
+                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "json" => {
@@ -52,7 +52,7 @@ impl SparqlEndpoint {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_json(&mut output, &vars, &results, &ctx)?;
+                ResultFormatter::format_json(&mut output, &vars, &results, &ctx).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "tsv" => {
@@ -63,7 +63,7 @@ impl SparqlEndpoint {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_tsv(&mut output, &vars, &results, &ctx)?;
+                ResultFormatter::format_tsv(&mut output, &vars, &results, &ctx).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "csv" => {
@@ -74,7 +74,7 @@ impl SparqlEndpoint {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_csv(&mut output, &vars, &results, &ctx)?;
+                ResultFormatter::format_csv(&mut output, &vars, &results, &ctx).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             _ => Err("Unsupported format. Use: xml, json, tsv, or csv".to_string()),
@@ -84,20 +84,20 @@ impl SparqlEndpoint {
     /// Handle ASK query
     pub fn handle_ask(&self, query: &str, format: &str) -> Result<String, String> {
         let (sparql_query, mut ctx) = sparql_parser::parse_sparql(query)?;
-        
+
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(&self.quins);
         let has_results = executor.execute_ask(&plan, &ctx)?;
-        
+
         match format.to_lowercase().as_str() {
             "xml" => {
                 let mut output = Vec::new();
-                ResultFormatter::format_ask_xml(&mut output, has_results)?;
+                ResultFormatter::format_ask_xml(&mut output, has_results).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "json" => {
                 let mut output = Vec::new();
-                ResultFormatter::format_ask_json(&mut output, has_results)?;
+                ResultFormatter::format_ask_json(&mut output, has_results).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             _ => Err("Unsupported format for ASK. Use: xml or json".to_string()),
@@ -107,24 +107,24 @@ impl SparqlEndpoint {
     /// Handle CONSTRUCT query
     pub fn handle_construct(&self, query: &str, format: &str) -> Result<String, String> {
         let (sparql_query, mut ctx) = sparql_parser::parse_sparql(query)?;
-        
+
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(&self.quins);
         let results = executor.execute_construct(&plan, &ctx)?;
-        
+
         // For now, format as SELECT results (simplified - no template variables)
         match format.to_lowercase().as_str() {
             "xml" => {
                 let mut output = Vec::new();
                 // Use default variables for CONSTRUCT
                 let vars = vec![0u8, 1u8, 2u8]; // subject, predicate, object
-                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx)?;
+                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "json" => {
                 let mut output = Vec::new();
                 let vars = vec![0u8, 1u8, 2u8];
-                ResultFormatter::format_json(&mut output, &vars, &results, &ctx)?;
+                ResultFormatter::format_json(&mut output, &vars, &results, &ctx).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             _ => Err("Unsupported format. Use: xml or json".to_string()),
@@ -134,11 +134,11 @@ impl SparqlEndpoint {
     /// Handle DESCRIBE query
     pub fn handle_describe(&self, query: &str, format: &str) -> Result<String, String> {
         let (sparql_query, mut ctx) = sparql_parser::parse_sparql(query)?;
-        
+
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(&self.quins);
         let results = executor.execute_describe(&plan, &ctx)?;
-        
+
         // For now, format as SELECT results (simplified)
         match format.to_lowercase().as_str() {
             "xml" => {
@@ -154,7 +154,7 @@ impl SparqlEndpoint {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx)?;
+                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "json" => {
@@ -169,7 +169,7 @@ impl SparqlEndpoint {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_json(&mut output, &vars, &results, &ctx)?;
+                ResultFormatter::format_json(&mut output, &vars, &results, &ctx).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             _ => Err("Unsupported format. Use: xml or json".to_string()),
@@ -183,7 +183,7 @@ pub struct SparqlProtocolHandler {
 }
 
 impl SparqlProtocolHandler {
-    pub fn new(quins: Vec<QualiaQuin>) -> Self {
+    pub fn new(quins: Vec<NQuin>) -> Self {
         Self {
             endpoint: SparqlEndpoint::new(quins),
         }

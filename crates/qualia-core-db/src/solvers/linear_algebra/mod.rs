@@ -5,7 +5,7 @@
 //! the #![no_std] environment of Qualia-DB.
 
 use crate::solvers::{SolverConfig, SolverState, SolverResult};
-use crate::execution_error::ExecutionError;
+use crate::ggml_quants::ExecutionError;
 use core::f64::consts;
 
 /// Fixed-size 4x4 matrix for stack-based operations

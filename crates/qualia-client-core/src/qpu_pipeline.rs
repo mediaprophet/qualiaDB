@@ -3,7 +3,7 @@
 use crate::qpu_dispatcher::{self, QpuDispatchResult};
 use crate::qpu_oracle::{self, QpuChatCommandResult};
 use qualia_core_db::qubo_compiler::{QuboMatrix, compile_quins_to_qubo, rehydrate_solution};
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 
 pub const MAX_REHYDRATED: usize = 64;
 
@@ -17,7 +17,7 @@ pub enum QuantumTaskKind {
 pub struct QuantumPipelineResult {
     pub task: QuantumTaskKind,
     pub dispatch: QpuDispatchResult,
-    pub rehydrated: Vec<QualiaQuin>,
+    pub rehydrated: Vec<NQuin>,
     pub summary: String,
 }
 
@@ -49,7 +49,7 @@ pub fn detect_task_from_prompt(prompt: &str) -> Option<QuantumTaskKind> {
 
 pub fn execute_quantum_pipeline(
     task: QuantumTaskKind,
-    quins: &[QualiaQuin],
+    quins: &[NQuin],
     latex_hint: Option<&str>,
 ) -> Result<QuantumPipelineResult, String> {
     if !qpu_oracle::is_qpu_feature_unlocked() {
@@ -68,7 +68,7 @@ pub fn execute_quantum_pipeline(
                 build_demo_qubo(&mut matrix, latex_hint);
             }
             let dispatch = qpu_dispatcher::dispatch_qubo(&matrix, shots)?;
-            let mut out = [QualiaQuin {
+            let mut out = [NQuin {
                 subject: 0,
                 predicate: 0,
                 object: 0,
@@ -181,7 +181,7 @@ pub fn handle_engine_chat_command(text: &str) -> QpuChatCommandResult {
                     .to_string(),
             };
         }
-        let quins: Vec<QualiaQuin> = vec![];
+        let quins: Vec<NQuin> = vec![];
         let latex = if text.contains(r"$$") {
             Some(text)
         } else {

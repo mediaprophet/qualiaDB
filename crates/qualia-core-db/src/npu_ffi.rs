@@ -1,10 +1,10 @@
 //! GPU/NPU Sieve
 //! Uses `wgpu` to execute cross-platform compute shaders (Vulkan/DirectML/Metal/WebGPU)
-//! that filter the 5th Vector of the QualiaQuin parallel arrays.
+//! that filter the 5th Vector of the NQuin parallel arrays.
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gpu_sieve {
-    use crate::QualiaQuin;
+    use crate::NQuin;
     use wgpu::util::DeviceExt;
 
     /// 64-bit filter mask split into two u32 words — matches the lo/hi layout in sieve.wgsl.
@@ -62,7 +62,7 @@ pub mod gpu_sieve {
         /// Dispatches the GPU sieve over `quins`, returns matching Quin indices decoded from
         /// a 27-u32 bitmask (108 bytes readback vs. N×4 bytes for the old per-flag approach).
         /// The 64-bit `mask` is split lo/hi so the shader needs no shader-int64 capability.
-        pub async fn execute_sieve(&self, quins: &[QualiaQuin], mask: u64) -> Option<Vec<u32>> {
+        pub async fn execute_sieve(&self, quins: &[NQuin], mask: u64) -> Option<Vec<u32>> {
             let filter = FilterMask64 {
                 lo: mask as u32,
                 hi: (mask >> 32) as u32,
@@ -181,7 +181,7 @@ pub mod gpu_sieve {
 /// directly to the GPU/NPU orchestration layer, guaranteeing $O(1)$ routing.
 #[no_mangle]
 pub unsafe extern "C" fn nets_map_lorentz(
-    quins_ptr: *const crate::QualiaQuin,
+    quins_ptr: *const crate::NQuin,
     quins_len: usize,
     out_lorentz_ptr: *mut crate::domains::mathematical::geometric::LorentzVector,
 ) {
@@ -225,14 +225,14 @@ pub unsafe extern "C" fn nets_tropical_voronoi_route(
 
 /// Pure Rust Valency & Stoichiometric Bridges
 /// Previously C-ABI, now migrated to native Rust to avoid FFI overhead.
-pub fn nets_parse_smiles(smiles: &str) -> Option<crate::QualiaQuin> {
+pub fn nets_parse_smiles(smiles: &str) -> Option<crate::NQuin> {
     // Pure Rust semantic parsing of SMILES into a Quin graph entry
     if smiles.is_empty() {
         return None;
     }
 
     // Placeholder semantic mapping
-    let generated_quin = crate::QualiaQuin {
+    let generated_quin = crate::NQuin {
         subject: crate::q_hash(smiles),
         predicate: crate::q_hash("IS_SMILES"),
         object: 0,
@@ -244,7 +244,7 @@ pub fn nets_parse_smiles(smiles: &str) -> Option<crate::QualiaQuin> {
     Some(generated_quin)
 }
 
-pub fn nets_calculate_valency(molecule_quin: &crate::QualiaQuin) -> i32 {
+pub fn nets_calculate_valency(molecule_quin: &crate::NQuin) -> i32 {
     // Pure Rust implementation to mathematically prove stoichiometric viability
     // Placeholder mocked valency result based on predicate hashing
     if molecule_quin.predicate == crate::q_hash("IS_SMILES") {

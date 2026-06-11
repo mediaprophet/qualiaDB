@@ -1,7 +1,7 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Lazy-loaded ingestion function for pulling Webizen FOAF or Solid Linked Data graphs.
-pub async fn pull_foaf_graph(url: &str) -> Result<Vec<QualiaQuin>, String> {
+pub async fn pull_foaf_graph(url: &str) -> Result<Vec<NQuin>, String> {
     let client = reqwest::Client::new();
     let res = client
         .get(url)
@@ -23,7 +23,7 @@ pub async fn pull_foaf_graph(url: &str) -> Result<Vec<QualiaQuin>, String> {
         .map_err(|e| format!("Failed to read bytes: {}", e))?;
 
     // In a real implementation we would parse the Linked Data payload here.
-    // For now we will mock the ingestion of the payload to QualiaQuin format.
+    // For now we will mock the ingestion of the payload to NQuin format.
 
     // Yield back to the tokio executor periodically if the payload is massive
     tokio::task::yield_now().await;
@@ -34,10 +34,10 @@ pub async fn pull_foaf_graph(url: &str) -> Result<Vec<QualiaQuin>, String> {
         url
     );
 
-    // Mock converting to 48-byte QualiaQuin records
+    // Mock converting to 48-byte NQuin records
     let mut mock_quins = Vec::new();
     for _ in 0..10 {
-        mock_quins.push(QualiaQuin::default());
+        mock_quins.push(NQuin::default());
     }
 
     Ok(mock_quins)

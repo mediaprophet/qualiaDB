@@ -4,7 +4,7 @@
 //! Implements Appendix B of the SPARQL-DID Integration Specification.
 
 use crate::sparql_ast::*;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// DID resolution result (fixed-size to avoid allocation)
 #[repr(C)]
@@ -47,13 +47,13 @@ pub struct DidCacheEntry {
 
 /// SPARQL-DID Handler
 pub struct SparqlDidHandler<'a> {
-    pub quins: &'a [QualiaQuin],
+    pub quins: &'a [NQuin],
     pub did_cache: [Option<DidCacheEntry>; 32],
     pub cache_count: u8,
 }
 
 impl<'a> SparqlDidHandler<'a> {
-    pub fn new(quins: &'a [QualiaQuin]) -> Self {
+    pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             quins,
             did_cache: [None; 32],
@@ -221,7 +221,7 @@ impl<'a> Default for SparqlDidHandler<'a> {
 /// to identify them as Magic Property Functions
 
 /// did:resolve - Resolve DID to Document
-pub fn did_resolve(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn did_resolve(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -239,7 +239,7 @@ pub fn did_resolve(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) 
 }
 
 /// did:verify - Verify DID signature
-pub fn did_verify(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn did_verify(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 3 {
         return false;
     }
@@ -263,7 +263,7 @@ pub fn did_verify(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -
 }
 
 /// did:auth - Authenticate with DID
-pub fn did_auth(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn did_auth(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 2 {
         return false;
     }
@@ -283,7 +283,7 @@ pub fn did_auth(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> 
 }
 
 /// did:sign - Sign with DID
-pub fn did_sign(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn did_sign(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 2 {
         return false;
     }
@@ -304,7 +304,7 @@ pub fn did_sign(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> 
 }
 
 /// did:permission - Check DID permission
-pub fn did_permission(args: &[u64], quins: &[QualiaQuin], result: &mut BindingRow) -> bool {
+pub fn did_permission(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 3 {
         return false;
     }

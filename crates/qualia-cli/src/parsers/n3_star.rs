@@ -3,7 +3,7 @@
 //! Implements RDF-Star (SPARQL 1.2) parsing for N3 syntax with embedded triples.
 //! N3-Star extends Turtle-Star with formulae, variables, and rules.
 
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 use qualia_core_db::lexicon::{generate_embedded_triple_id, generate_60bit_token};
 use qualia_core_db::rdf_star::{RdfStarParser, RdfStarParseError};
 

@@ -12,7 +12,7 @@ use qualia_core_db::{
     orchestrator::{ModelLifecycle, OrchestrationResult},
     q_hash,
     wal::WriteAheadLog,
-    QualiaQuin,
+    NQuin,
 };
 use serde::{Deserialize, Serialize};
 
@@ -507,7 +507,7 @@ fn cancelled_result(
     }
 }
 
-fn quin_to_fields(q: QualiaQuin) -> [u64; 6] {
+fn quin_to_fields(q: NQuin) -> [u64; 6] {
     [
         q.subject,
         q.predicate,
@@ -808,7 +808,7 @@ fn persist_citations(
     let session_subject = q_hash(&format!("chat:session:{session_id}"));
     for hash in &output.provenance_quins {
         let object = *hash & OBJECT_HASH_MASK;
-        let quin = QualiaQuin {
+        let quin = NQuin {
             subject: session_subject,
             predicate: q_hash("q42:groundedBy"),
             object,

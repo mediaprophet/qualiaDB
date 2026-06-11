@@ -4,7 +4,7 @@
 //! to appropriate mathematical domains for QPU processing while maintaining
 //! zero-allocation invariants.
 
-use crate::qualia_quin::QualiaQuin;
+use crate::n_quin::NQuin;
 use crate::execution_error::ExecutionError;
 use super::{ObfuscationResult, ObfuscationDomain};
 

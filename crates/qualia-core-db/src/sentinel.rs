@@ -3,7 +3,7 @@
 //! Implements Sentinel policy validation for embedded triples.
 //! Sentinel rules are stored as dedicated Q42 blocks and validated during ingestion.
 
-use crate::QualiaQuin;
+use crate::NQuin;
 use std::collections::HashSet;
 
 /// Sentinel Rule ID type
@@ -122,7 +122,7 @@ impl SentinelValidator {
     
     /// Fast-path check: does this Quin need Sentinel validation?
     /// Returns false if no rules apply, allowing fast-path to Q42 append buffer
-    pub fn needs_validation(&self, quin: &QualiaQuin) -> bool {
+    pub fn needs_validation(&self, quin: &NQuin) -> bool {
         // Check if any rules apply to this context or predicate
         for rule in &self.rules {
             if rule.context_id == 0 || rule.context_id == quin.context {
@@ -134,8 +134,8 @@ impl SentinelValidator {
         false
     }
     
-    /// Validate a QualiaQuin against Sentinel rules
-    pub fn validate(&self, quin: &QualiaQuin) -> SentinelVerdict {
+    /// Validate a NQuin against Sentinel rules
+    pub fn validate(&self, quin: &NQuin) -> SentinelVerdict {
         // Extract confidence from metadata field (bits [0..31])
         let confidence = (quin.metadata & 0xFFFFFFFF) as f32 / u32::MAX as f32;
         
@@ -247,12 +247,12 @@ pub struct SentinelStorage {
 
 impl SentinelStorage {
     /// Serialize Sentinel rules to Quins
-    pub fn rules_to_quins(rules: &[SentinelRule]) -> Vec<QualiaQuin> {
+    pub fn rules_to_quins(rules: &[SentinelRule]) -> Vec<NQuin> {
         const SENTINEL_METADATA_FLAG: u64 = 0x1 << 62; // Use bit 62 as Sentinel flag
         
         rules.iter()
             .map(|rule| {
-                QualiaQuin {
+                NQuin {
                     subject: rule.rule_id,
                     predicate: (rule.rule_type as u64) << 8 | (rule.context_id & 0xFF),
                     object: rule.predicate_hash,
@@ -267,7 +267,7 @@ impl SentinelStorage {
     }
     
     /// Deserialize Quins to Sentinel rules
-    pub fn quins_to_rules(quins: &[QualiaQuin]) -> Vec<SentinelRule> {
+    pub fn quins_to_rules(quins: &[NQuin]) -> Vec<SentinelRule> {
         const SENTINEL_METADATA_FLAG: u64 = 0x1 << 62;
         
         quins.iter()
@@ -309,7 +309,7 @@ mod sentinel_tests {
     #[test]
     fn test_validator_creation() {
         let validator = SentinelValidator::new();
-        assert!(!validator.needs_validation(&QualiaQuin {
+        assert!(!validator.needs_validation(&NQuin {
             subject: 1, predicate: 2, object: 3, context: 0, metadata: 0, parity: 0
         }));
     }
@@ -322,7 +322,7 @@ mod sentinel_tests {
             .with_context(789);
         validator.add_rule(rule);
         
-        let quin = QualiaQuin {
+        let quin = NQuin {
             subject: 1, predicate: 456, object: 3, context: 789, metadata: 0, parity: 0
         };
         assert!(validator.needs_validation(&quin));
@@ -333,7 +333,7 @@ mod sentinel_tests {
         let mut validator = SentinelValidator::new();
         validator.set_confidence_threshold(0.5);
         
-        let quin = QualiaQuin {
+        let quin = NQuin {
             subject: 1, predicate: 2, object: 3, context: 0, 
             metadata: u32::MAX as u64, // Maximum confidence
             parity: 0
@@ -347,7 +347,7 @@ mod sentinel_tests {
         let mut validator = SentinelValidator::new();
         validator.set_confidence_threshold(0.5);
         
-        let quin = QualiaQuin {
+        let quin = NQuin {
             subject: 1, predicate: 2, object: 3, context: 0, 
             metadata: 0, // Zero confidence
             parity: 0

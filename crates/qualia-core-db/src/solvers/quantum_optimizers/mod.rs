@@ -5,8 +5,8 @@
 //! the #![no_std] environment of Qualia-DB.
 
 use crate::solvers::{SolverConfig, SolverState, SolverResult};
-use crate::execution_error::ExecutionError;
-use crate::qualia_quin::QualiaQuin;
+use crate::ggml_quants::ExecutionError;
+use crate::NQuin;
 use core::f64::consts;
 
 /// QAOA angle optimizer for quantum approximate optimization

@@ -3,7 +3,9 @@
 //! This module contains high-performance specialized mathematical and scientific libraries
 //! that leverage Phase 2 architectural enhancements for unprecedented performance and capabilities.
 
-// Temporarily disabled all specialized libs due to build errors
+// QPU bridge enabled — all other specialized libs temporarily disabled due to build errors
+pub mod qpu_bridge;
+
 // pub mod linear_algebra;
 // pub mod statistical_computing;
 // pub mod cryptographic_library;

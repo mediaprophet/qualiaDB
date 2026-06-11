@@ -3,7 +3,7 @@
 //! (tensor-info section) are extracted into native Rust types; multi-gigabyte tensor
 //! payloads are left on disk for direct VRAM mapping via `gguf_bridge.rs`.
 
-use crate::{QualiaQuin, QualiaSuperBlock};
+use crate::{NQuin, QualiaSuperBlock};
 
 // ─── Module-level GGUF helpers ───────────────────────────────────────────────
 
@@ -510,7 +510,7 @@ impl GGufSharder {
     /// Step 2: The Pointer-Quin Map (.q42.bidx)
     /// Generates the Master Record map connecting N3 logic semantic rules to the exact
     /// 60-bit byte offsets in the massive GGUF tensor payload.
-    pub fn generate_bidx_pointer_map(&self) -> Vec<QualiaQuin> {
+    pub fn generate_bidx_pointer_map(&self) -> Vec<NQuin> {
         let flag = if self
             .source_gguf_path
             .to_ascii_lowercase()
@@ -523,7 +523,7 @@ impl GGufSharder {
         self.generate_bidx_pointer_map_with_flag(flag)
     }
 
-    pub fn generate_bidx_pointer_map_with_flag(&self, modality_flag: u8) -> Vec<QualiaQuin> {
+    pub fn generate_bidx_pointer_map_with_flag(&self, modality_flag: u8) -> Vec<NQuin> {
         let mut pointers = Vec::new();
 
         // Actual GGUF header parsing (reading magic bytes, version, tensor count)
@@ -549,7 +549,7 @@ impl GGufSharder {
                         let byte_offset: u64 = 0x1000 + (i * 0x4000); // Compute relative physical offset
                         let tensor_name = format!("tensor_{}", i);
 
-                        let q_tensor = QualiaQuin {
+                        let q_tensor = NQuin {
                             subject: crate::q_hash(&tensor_name),
                             predicate: crate::q_hash("has_tensor_offset"),
                             object: ((modality_flag as u64) << 60) | byte_offset,
@@ -566,7 +566,7 @@ impl GGufSharder {
 
         // Fallback for tests when no GGUF file is actually on disk
         let mock_byte_offset: u64 = 0x00000ABC;
-        let q_tensor = QualiaQuin {
+        let q_tensor = NQuin {
             subject: crate::q_hash("blk.0.attn_q.weight"),
             predicate: crate::q_hash("has_tensor_offset"),
             object: ((modality_flag as u64) << 60) | mock_byte_offset,
@@ -581,8 +581,8 @@ impl GGufSharder {
 
     /// Step 3: WordNet Lexicon Integration
     /// Maps a discrete WordNet Synset ID to its dense tensor representation.
-    pub fn map_wordnet_synset(&self, synset_id: u64, byte_offset: u64) -> QualiaQuin {
-        QualiaQuin {
+    pub fn map_wordnet_synset(&self, synset_id: u64, byte_offset: u64) -> NQuin {
+        NQuin {
             subject: synset_id,
             predicate: crate::q_hash("has_embedding"),
             object: ((crate::MODALITY_FLAG_DENSE_PHYSICS as u64) << 60) | byte_offset,

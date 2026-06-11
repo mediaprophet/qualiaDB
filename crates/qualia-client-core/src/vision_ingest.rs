@@ -3,7 +3,7 @@
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use qualia_core_db::{gguf_sharder::GGufSharder, q_hash, wal::WriteAheadLog, QualiaQuin};
+use qualia_core_db::{gguf_sharder::GGufSharder, q_hash, wal::WriteAheadLog, NQuin};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
@@ -101,14 +101,14 @@ fn facet_for_typology(typology: &str, image_hash: &str, arch: Option<&str>) -> S
     }
 }
 
-fn provenance_quin(image_path: &str, typology: &str, timestamp: u64) -> QualiaQuin {
+fn provenance_quin(image_path: &str, typology: &str, timestamp: u64) -> NQuin {
     let subject = q_hash(&format!("vision:{}", image_path));
     let predicate = q_hash("prov:wasDerivedFrom");
     let object = q_hash(typology);
     let context = q_hash("ctx:vision_ingest");
     let metadata = timestamp & 0xFFFF_FFFF;
     let parity = subject ^ predicate ^ object ^ context ^ metadata;
-    QualiaQuin {
+    NQuin {
         subject,
         predicate,
         object,

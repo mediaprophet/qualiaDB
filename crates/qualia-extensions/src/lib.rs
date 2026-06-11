@@ -58,7 +58,7 @@ pub struct ExtensionJob {
     pub extension_name: String,
     pub operation: String,
     pub parameters: HashMap<String, serde_json::Value>,
-    pub boundary_conditions: Vec<QualiaQuin>,
+    pub boundary_conditions: Vec<NQuin>,
 }
 
 /// Extension job result for core QualiaDB
@@ -66,14 +66,14 @@ pub struct ExtensionJob {
 pub struct ExtensionResult {
     pub job_id: String,
     pub success: bool,
-    pub result_quins: Vec<QualiaQuin>,
+    pub result_quins: Vec<NQuin>,
     pub metadata: HashMap<String, String>,
     pub execution_time_ms: u64,
 }
 
-/// QualiaQuin representation for extension communication
+/// NQuin representation for extension communication
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QualiaQuin {
+pub struct NQuin {
     pub subject: u64,
     pub predicate: u64,
     pub object: u64,
@@ -82,8 +82,8 @@ pub struct QualiaQuin {
     pub parity: u64,
 }
 
-impl From<crate::QualiaQuin> for QualiaQuin {
-    fn from(quin: crate::QualiaQuin) -> Self {
+impl From<crate::NQuin> for NQuin {
+    fn from(quin: crate::NQuin) -> Self {
         Self {
             subject: quin.subject,
             predicate: quin.predicate,
@@ -95,8 +95,8 @@ impl From<crate::QualiaQuin> for QualiaQuin {
     }
 }
 
-impl From<QualiaQuin> for crate::QualiaQuin {
-    fn from(quin: QualiaQuin) -> Self {
+impl From<NQuin> for crate::NQuin {
+    fn from(quin: NQuin) -> Self {
         Self {
             subject: quin.subject,
             predicate: quin.predicate,
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_quin_conversion() {
-        let core_quin = crate::QualiaQuin {
+        let core_quin = crate::NQuin {
             subject: 1,
             predicate: 2,
             object: 3,
@@ -254,8 +254,8 @@ mod tests {
             parity: 6,
         };
 
-        let ext_quin = QualiaQuin::from(core_quin.clone());
-        let converted_back = crate::QualiaQuin::from(ext_quin);
+        let ext_quin = NQuin::from(core_quin.clone());
+        let converted_back = crate::NQuin::from(ext_quin);
 
         assert_eq!(core_quin.subject, converted_back.subject);
         assert_eq!(core_quin.predicate, converted_back.predicate);

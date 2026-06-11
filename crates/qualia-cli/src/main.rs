@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use qualia_core_db::QualiaQuin;
+use qualia_core_db::NQuin;
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
@@ -513,15 +513,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             file.read_to_end(&mut buffer)?;
 
             if buffer.len() % 48 != 0 {
-                eprintln!("WARNING: File size {} is not a multiple of 48 bytes (QualiaQuin alignment). File may be corrupted.", buffer.len());
+                eprintln!("WARNING: File size {} is not a multiple of 48 bytes (NQuin alignment). File may be corrupted.", buffer.len());
             }
 
-            let quin_size = std::mem::size_of::<QualiaQuin>();
+            let quin_size = std::mem::size_of::<NQuin>();
             let mut count = 0;
 
             for chunk in buffer.chunks_exact(quin_size) {
-                let quin: QualiaQuin =
-                    unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const QualiaQuin) };
+                let quin: NQuin =
+                    unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
                 let lamport_clock = quin.extract_lamport_clock();
                 let geometric_payload = quin.extract_clean_metadata_value();
 
@@ -543,7 +543,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .truncate(true)
                 .open(out_path)?;
 
-            let mut q1 = QualiaQuin {
+            let mut q1 = NQuin {
                 subject: 100,
                 predicate: 200,
                 object: 300,
@@ -552,7 +552,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 parity: 0,
             };
             q1.set_lamport_clock(1);
-            let mut q2 = QualiaQuin {
+            let mut q2 = NQuin {
                 subject: 101,
                 predicate: 201,
                 object: 301,
@@ -561,7 +561,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 parity: 0,
             };
             q2.set_lamport_clock(2);
-            let mut q3 = QualiaQuin {
+            let mut q3 = NQuin {
                 subject: 102,
                 predicate: 202,
                 object: 302,
@@ -576,8 +576,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             for quin in quins.iter() {
                 let bytes = unsafe {
                     std::slice::from_raw_parts(
-                        (quin as *const QualiaQuin) as *const u8,
-                        std::mem::size_of::<QualiaQuin>(),
+                        (quin as *const NQuin) as *const u8,
+                        std::mem::size_of::<NQuin>(),
                     )
                 };
                 file.write_all(bytes)?;
@@ -1205,9 +1205,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // 4. Ingestion simulation (0-alloc style construction of Quins)
             let qualia_ingest = time_ms(|| {
-                let mut quins: Vec<qualia_core_db::QualiaQuin> = Vec::with_capacity(10_000);
+                let mut quins: Vec<qualia_core_db::NQuin> = Vec::with_capacity(10_000);
                 for i in 0..10_000 {
-                    quins.push(qualia_core_db::QualiaQuin {
+                    quins.push(qualia_core_db::NQuin {
                         subject: fnv1a(i as u64),
                         predicate: fnv1a((i % 5) as u64),
                         object: fnv1a((i * 13) as u64),
@@ -1354,9 +1354,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     black_box(cnt)
                 }),
                 "ingestion_10k_quins": latency_stats(|| {
-                    let mut quins: Vec<qualia_core_db::QualiaQuin> = Vec::with_capacity(10_000);
+                    let mut quins: Vec<qualia_core_db::NQuin> = Vec::with_capacity(10_000);
                     for i in 0..10_000 {
-                        quins.push(qualia_core_db::QualiaQuin {
+                        quins.push(qualia_core_db::NQuin {
                             subject: fnv1a(i as u64),
                             predicate: fnv1a((i % 5) as u64),
                             object: fnv1a((i * 13) as u64),
@@ -1646,7 +1646,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     };
 
                     println!(
-                        "⚙️ Transpiled {} raw triples directly into 48-byte QualiaQuins buffer.",
+                        "⚙️ Transpiled {} raw triples directly into 48-byte NQuins buffer.",
                         parsed_count
                     );
                     println!("📦 Commencing K-Way External Merge Sort into BIDX format...");

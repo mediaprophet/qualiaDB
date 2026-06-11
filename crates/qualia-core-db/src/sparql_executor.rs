@@ -1,20 +1,20 @@
 //! SPARQL Physical Query Executor
 //!
-//! Executes query plans against QualiaQuin arrays using zero-allocation patterns.
+//! Executes query plans against NQuin arrays using zero-allocation patterns.
 
 use crate::sparql_ast::*;
 use crate::sparql_planner::*;
 use crate::sparql_filter::ExpressionEvaluator;
 use crate::sparql_aggregates::{AggregationContext, GroupKey, AggregateFunction};
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// Query executor
 pub struct QueryExecutor<'a> {
-    pub quins: &'a [QualiaQuin],
+    pub quins: &'a [NQuin],
 }
 
 impl<'a> QueryExecutor<'a> {
-    pub fn new(quins: &'a [QualiaQuin]) -> Self {
+    pub fn new(quins: &'a [NQuin]) -> Self {
         Self { quins }
     }
 
@@ -118,22 +118,22 @@ impl<'a> QueryExecutor<'a> {
                 self.execute_distinct(input, plan, ctx, row, results)
             }
             PhysicalOperatorType::GroupBy { input, group_vars, group_var_count } => {
-                self.execute_group_by(input, group_vars, *group_var_count, plan, ctx, row, results)
+                self.execute_group_by(input, group_vars, group_var_count, plan, ctx, row, results)
             }
             PhysicalOperatorType::Aggregate { input, aggregates, aggregate_count } => {
-                self.execute_aggregate(input, *aggregates, *aggregate_count, plan, ctx, row, results)
+                self.execute_aggregate(input, aggregates, aggregate_count, plan, ctx, row, results)
             }
             PhysicalOperatorType::Having { input, expression } => {
-                self.execute_having(input, *expression, plan, ctx, row, results)
+                self.execute_having(input, expression, plan, ctx, row, results)
             }
             PhysicalOperatorType::PropertyPath { subject, path_id, object } => {
-                self.execute_property_path(*subject, *path_id, *object, ctx, row, results)
+                self.execute_property_path(subject, path_id, object, ctx, row, results)
             }
             PhysicalOperatorType::Graph { graph_var_or_id, inner } => {
-                self.execute_graph(*graph_var_or_id, inner, plan, ctx, row, results)
+                self.execute_graph(graph_var_or_id, inner, plan, ctx, row, results)
             }
             PhysicalOperatorType::Service { endpoint_did_id, inner_pattern } => {
-                self.execute_service(*endpoint_did_id, inner_pattern, plan, ctx, row, results)
+                self.execute_service(endpoint_did_id, inner_pattern, plan, ctx, row, results)
             }
         }
     }
@@ -523,7 +523,7 @@ impl<'a> QueryExecutor<'a> {
 
         // Filter results based on HAVING expression
         for result in all_results {
-            let eval_result = ExpressionEvaluator::evaluate(expression, ctx, result)?;
+            let eval_result = ExpressionEvaluator::evaluate(expression, ctx, &result)?;
             if eval_result.as_bool() {
                 results.push(result);
             }
@@ -657,7 +657,7 @@ impl<'a> QueryExecutor<'a> {
         let graph_id = graph_var_or_id;
         
         // Filter quins by graph context
-        let graph_quins: Vec<QualiaQuin> = self.quins
+        let graph_quins: Vec<NQuin> = self.quins
             .iter()
             .filter(|quin| quin.context == graph_id)
             .cloned()

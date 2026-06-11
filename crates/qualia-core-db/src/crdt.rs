@@ -1,4 +1,4 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 use serde::{Deserialize, Serialize};
 
 /// Represents a cryptographic grant of authority from a Principal to a Delegate.
@@ -19,7 +19,7 @@ pub struct CrdtResolver;
 impl CrdtResolver {
     /// Merges two conflicting mutations from the same logical Context graph.
     /// Returns the mathematically deterministically "winning" Quin.
-    pub fn resolve_lww(local: &QualiaQuin, remote: &QualiaQuin) -> QualiaQuin {
+    pub fn resolve_lww(local: &NQuin, remote: &NQuin) -> NQuin {
         let local_clock = local.extract_lamport_clock();
         let remote_clock = remote.extract_lamport_clock();
 
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn qualia_crdt_resolution() {
-        let mut q_local = QualiaQuin {
+        let mut q_local = NQuin {
             subject: 1,
             predicate: 2,
             object: 100,
@@ -75,7 +75,7 @@ mod tests {
         };
         q_local.set_lamport_clock(5);
 
-        let mut q_remote = QualiaQuin {
+        let mut q_remote = NQuin {
             subject: 1,
             predicate: 2,
             object: 200,
@@ -93,7 +93,7 @@ mod tests {
         );
 
         // Concurrent mutations (same clock)
-        let mut q_concurrent = QualiaQuin {
+        let mut q_concurrent = NQuin {
             subject: 1,
             predicate: 2,
             object: 50,
@@ -122,7 +122,7 @@ pub struct SuspendedTransaction {
     pub registers: [Option<u64>; 16],
     pub bytecode_buffer: [Option<crate::modalities::logic::core::WebizenOpcode>; 64],
     pub yielded_op: Option<crate::modalities::logic::core::WebizenOpcode>,
-    pub suspended_quin: QualiaQuin,
+    pub suspended_quin: NQuin,
 }
 
 /// A fixed-size pending queue for Webizen VM transactions waiting on M:N Guardianship signatures.
@@ -150,7 +150,7 @@ impl SuspendedTransactionQueue {
     /// Asynchronously wakes up a suspended transaction if the signature threshold is met by an incoming WebRTC token.
     pub fn apply_consensus_token(
         &mut self,
-        token_quin: &QualiaQuin,
+        token_quin: &NQuin,
     ) -> Option<SuspendedTransaction> {
         for slot in self.queue.iter_mut() {
             if let Some(tx) = slot {

@@ -8,7 +8,7 @@ use crate::agency::{scrub_quin_volatile, sign_graph_mutation, stamp_fiduciary_me
 use crate::crdt::SuspendedTransactionQueue;
 use crate::modalities::logic::core::WebizenOpcode;
 use crate::PermissiveRoutingLane;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// The Write-Ahead Log (WAL) ensures mobile fault tolerance by appending all
 /// 48-byte Quin mutations directly to flash memory synchronously before they are
@@ -30,9 +30,9 @@ impl WriteAheadLog {
         Ok(Self { file })
     }
 
-    /// Synchronously appends a QualiaQuin to the log and flushes to disk.
+    /// Synchronously appends a NQuin to the log and flushes to disk.
     /// This prevents data loss if the OS kills the process.
-    pub fn append_mutation(&mut self, quin: &QualiaQuin) -> io::Result<()> {
+    pub fn append_mutation(&mut self, quin: &NQuin) -> io::Result<()> {
         let bytes = quin_as_bytes(quin);
         self.file.write_all(bytes)?;
         self.file.sync_all()?;
@@ -40,7 +40,7 @@ impl WriteAheadLog {
     }
 
     /// Append with volatile field scrub after durable sync (wipes transient reasoning state).
-    pub fn append_mutation_volatile(&mut self, quin: &mut QualiaQuin) -> io::Result<()> {
+    pub fn append_mutation_volatile(&mut self, quin: &mut NQuin) -> io::Result<()> {
         let bytes = quin_as_bytes(quin);
         self.file.write_all(bytes)?;
         self.file.sync_all()?;
@@ -49,20 +49,20 @@ impl WriteAheadLog {
     }
 
     /// Reconstructs the uncommitted Quins from the raw WAL file.
-    pub fn recover(&mut self) -> io::Result<Vec<QualiaQuin>> {
+    pub fn recover(&mut self) -> io::Result<Vec<NQuin>> {
         self.file.seek(SeekFrom::Start(0))?;
 
         let mut buffer = Vec::new();
         self.file.read_to_end(&mut buffer)?;
 
         let mut recovered_quins = Vec::new();
-        let quin_size = std::mem::size_of::<QualiaQuin>();
+        let quin_size = std::mem::size_of::<NQuin>();
 
         // Ensure we only read complete 48-byte chunks.
         // Partial chunks mean a power failure occurred mid-write, which we discard or handle via advanced ECC recovery.
         for chunk in buffer.chunks_exact(quin_size) {
-            let quin: QualiaQuin =
-                unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const QualiaQuin) };
+            let quin: NQuin =
+                unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
             recovered_quins.push(quin);
         }
 
@@ -78,11 +78,11 @@ impl WriteAheadLog {
 }
 
 #[inline]
-fn quin_as_bytes(quin: &QualiaQuin) -> &[u8] {
+fn quin_as_bytes(quin: &NQuin) -> &[u8] {
     unsafe {
         std::slice::from_raw_parts(
-            (quin as *const QualiaQuin) as *const u8,
-            std::mem::size_of::<QualiaQuin>(),
+            (quin as *const NQuin) as *const u8,
+            std::mem::size_of::<NQuin>(),
         )
     }
 }
@@ -97,7 +97,7 @@ pub enum WalHandoffResult {
 /// Fiduciary-stamped, signed WAL handoff for neuro-symbolic graph mutations (zero String parse).
 pub fn commit_semantic_mutation(
     wal: &mut WriteAheadLog,
-    quin: &mut QualiaQuin,
+    quin: &mut NQuin,
     principal_did_hash: u64,
     agent_did_hash: u64,
     signing_key: &SigningKey,
@@ -133,7 +133,7 @@ pub fn commit_semantic_mutation(
 
 /// Appends a mutation to the global Write-Ahead Log.
 /// For the MVP/MCP, we write to a default location or stderr.
-pub fn append_mutation(quin: &QualiaQuin) -> io::Result<()> {
+pub fn append_mutation(quin: &NQuin) -> io::Result<()> {
     // In a real implementation this would use a globally managed WAL lock.
     // For now we open it locally or just pass.
     let mut wal = WriteAheadLog::open("qualia_global.wal")?;
@@ -150,7 +150,7 @@ mod tests {
         let temp_file = NamedTempFile::new().unwrap();
         let mut wal = WriteAheadLog::open(temp_file.path()).unwrap();
 
-        let q1 = QualiaQuin {
+        let q1 = NQuin {
             subject: 1,
             predicate: 2,
             object: 3,
@@ -158,7 +158,7 @@ mod tests {
             metadata: 5,
             parity: 0,
         };
-        let q2 = QualiaQuin {
+        let q2 = NQuin {
             subject: 10,
             predicate: 20,
             object: 30,

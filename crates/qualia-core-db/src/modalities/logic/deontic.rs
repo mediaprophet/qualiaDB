@@ -1,6 +1,6 @@
 //! Deontic Logic extension for the Qualia Bytecode VM.
 //!
-//! Implements a defeasible deontic contract evaluator over a `&[QualiaQuin]` slice.
+//! Implements a defeasible deontic contract evaluator over a `&[NQuin]` slice.
 //! Conforms to the 42 MB Prolog Sentinel memory ceiling, the 48-byte Super-Quin
 //! invariant, and the zero-heap-allocation mandate (no `Vec`, `String`, or `Box`).
 //!
@@ -25,7 +25,7 @@
 //! │ predicate│ [63]=DEFEATER  │ [8..62] = property-path hash (action/norm URI) │
 //! │          │                │ [0..7]  = deontic opcode (OP_OBLIGATE etc.)    │
 //! │ object   │ [63]=0 (rsvd)  │ [0..62] = FNV-1a hash of the action object    │
-//! │ context  │ [56..63] = sensitivity class (from QualiaQuin::SENSITIVITY_*)   │
+//! │ context  │ [56..63] = sensitivity class (from NQuin::SENSITIVITY_*)   │
 //! │          │ [0..55]  = q_hash of the contract/graph DID                     │
 //! │ metadata │ [61..62] = PermissiveRoutingLane bits                           │
 //! │          │ [32..60] = Lamport logical clock                                │
@@ -133,7 +133,7 @@
 
 use crate::modalities::logic::n3_parser::{Rule, RuleType, Term};
 use crate::q_hash;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 // ─── Deontic Opcodes ─────────────────────────────────────────────────────────
 //
@@ -185,7 +185,7 @@ pub enum DeonticStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct DeonticVerdict {
     /// The original norm Quin that was evaluated.
-    pub norm: QualiaQuin,
+    pub norm: NQuin,
     /// Outcome of the evaluation.
     pub status: DeonticStatus,
     /// Deontic opcode extracted from `norm.predicate[0..7]`.
@@ -224,14 +224,14 @@ pub fn extract_expiry_unix32(metadata: u64) -> u32 {
 /// defeater bit).  The opcode byte and defeater bit are masked out so that a
 /// `q42:unless` node correctly matches the norm it defeats.
 #[inline(always)]
-pub fn defeater_fingerprint(q: &QualiaQuin) -> u64 {
+pub fn defeater_fingerprint(q: &NQuin) -> u64 {
     // Strip defeater bit (63) and opcode byte (0..7); retain property-path (8..62).
     let path_bits = q.predicate & 0x7FFF_FFFF_FFFF_FF00;
     q.subject ^ q.context ^ path_bits
 }
 
 /// Harvest `q42:unless` defeater fingerprints from a contract slice (Phase 1 only).
-pub fn harvest_defeater_fingerprints(quins: &[QualiaQuin], out: &mut [u64]) -> usize {
+pub fn harvest_defeater_fingerprints(quins: &[NQuin], out: &mut [u64]) -> usize {
     let mut count = 0usize;
     for &q in quins {
         if q.predicate & DEFEATER_BIT == 0 {
@@ -248,12 +248,12 @@ pub fn harvest_defeater_fingerprints(quins: &[QualiaQuin], out: &mut [u64]) -> u
 
 /// Returns `true` if the defeater buffer contains a fingerprint that matches `norm`.
 #[inline]
-pub fn norm_has_active_defeater(norm: &QualiaQuin, defeaters: &[u64]) -> bool {
+pub fn norm_has_active_defeater(norm: &NQuin, defeaters: &[u64]) -> bool {
     has_defeater(defeaters, norm)
 }
 
 #[inline]
-fn has_defeater(defeaters: &[u64], norm: &QualiaQuin) -> bool {
+fn has_defeater(defeaters: &[u64], norm: &NQuin) -> bool {
     let key = defeater_fingerprint(norm);
     let mut i = 0;
     while i < defeaters.len() {
@@ -267,7 +267,7 @@ fn has_defeater(defeaters: &[u64], norm: &QualiaQuin) -> bool {
 
 // ─── evaluate_deontic_contract ────────────────────────────────────────────────
 
-/// Evaluate a deontic contract encoded as a `&[QualiaQuin]` slice.
+/// Evaluate a deontic contract encoded as a `&[NQuin]` slice.
 ///
 /// ## Algorithm
 ///
@@ -306,7 +306,7 @@ fn has_defeater(defeaters: &[u64], norm: &QualiaQuin) -> bool {
 ///
 /// `Ok(n)` where `n` is the number of verdicts written to `out[..n]`.
 pub fn evaluate_deontic_contract(
-    quins: &[QualiaQuin],
+    quins: &[NQuin],
     now_unix: u32,
     out: &mut [DeonticVerdict],
 ) -> Result<usize, DeonticError> {
@@ -443,7 +443,7 @@ pub fn compile_n3_rule_to_norm(
     rule: &Rule,
     contract_hash: u64,
     expiry_unix32: u32,
-) -> Option<QualiaQuin> {
+) -> Option<NQuin> {
     let premise = rule.premise.triples.first()?;
     let party = term_uri_hash(&premise.subject)?;
     let property_path = term_uri_hash(&premise.predicate)?;
@@ -489,7 +489,7 @@ pub fn compile_norm_quin(
     contract_hash: u64,
     expiry_unix32: u32,
     is_defeater: bool,
-) -> QualiaQuin {
+) -> NQuin {
     let defeater_flag = if is_defeater { DEFEATER_BIT } else { 0u64 };
     // Mask DEFEATER_BIT from the shifted path so only `is_defeater` controls bit 63.
     let path_bits = (property_path_hash << 8) & !DEFEATER_BIT;
@@ -497,7 +497,7 @@ pub fn compile_norm_quin(
     let metadata = expiry_unix32 as u64; // bits [0..31]; Lamport/routing bits left zero
     let parity = party_did_hash ^ predicate ^ action_object_hash ^ contract_hash;
 
-    QualiaQuin {
+    NQuin {
         subject: party_did_hash,
         predicate,
         object: action_object_hash,
@@ -533,7 +533,7 @@ mod tests {
     const NOW: u32 = 1_717_200_000; // ~2024-06-01 — well before NDA expiry
     const EXPIRY_NDA: u32 = 1_830_297_600; // 2028-01-01
 
-    fn nda_quins() -> [QualiaQuin; 3] {
+    fn nda_quins() -> [NQuin; 3] {
         [
             // Quin 0: Alice FORBID disclose (active)
             compile_norm_quin(
@@ -572,7 +572,7 @@ mod tests {
     fn nda_alice_is_defeated_bob_is_active() {
         let quins = nda_quins();
         let mut out = [DeonticVerdict {
-            norm: QualiaQuin::default(),
+            norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
             _pad: [0u8; 6],
@@ -615,7 +615,7 @@ mod tests {
         );
         let quins = [norm];
         let mut out = [DeonticVerdict {
-            norm: QualiaQuin::default(),
+            norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
             _pad: [0u8; 6],
@@ -639,7 +639,7 @@ mod tests {
         );
         let quins = [norm];
         let mut out = [DeonticVerdict {
-            norm: QualiaQuin::default(),
+            norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
             _pad: [0u8; 6],
@@ -657,7 +657,7 @@ mod tests {
     #[test]
     fn non_deontic_quins_are_skipped() {
         // Plain SHACL/data Quin with opcode 0x00 — should produce no verdicts.
-        let plain = QualiaQuin {
+        let plain = NQuin {
             subject: 1,
             predicate: 0x00,
             object: 2,
@@ -666,7 +666,7 @@ mod tests {
             parity: 0,
         };
         let mut out = [DeonticVerdict {
-            norm: QualiaQuin::default(),
+            norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
             _pad: [0u8; 6],
@@ -680,7 +680,7 @@ mod tests {
     fn output_buffer_full_returns_error() {
         let quins = nda_quins(); // 2 norm Quins
         let mut out = [DeonticVerdict {
-            norm: QualiaQuin::default(),
+            norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
             _pad: [0u8; 6],
@@ -695,7 +695,7 @@ mod tests {
     #[test]
     fn empty_slice_returns_zero_verdicts() {
         let mut out = [DeonticVerdict {
-            norm: QualiaQuin::default(),
+            norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
             _pad: [0u8; 6],
@@ -724,7 +724,7 @@ mod tests {
         let quins = [obligation];
 
         let mut out = [DeonticVerdict {
-            norm: QualiaQuin::default(),
+            norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
             _pad: [0u8; 6],

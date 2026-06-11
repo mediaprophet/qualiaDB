@@ -5,7 +5,7 @@
 //! GGUF tensor bytes are memory-mapped via `memmap2` — zero heap copy.
 
 use crate::gguf_sharder::GgufTensorInfo;
-use crate::QualiaQuin;
+use crate::NQuin;
 use log;
 use memmap2::MmapOptions;
 use std::sync::Arc;
@@ -48,7 +48,7 @@ impl QTensor {
     }
 
     /// Maps the exact bytes from the GGUF using the 60-bit pointer.
-    pub fn map_from_pointer(quin: &QualiaQuin) -> Option<Self> {
+    pub fn map_from_pointer(quin: &NQuin) -> Option<Self> {
         use crate::QuinPointerExt;
 
         let flag = quin.extract_modality_flag();
@@ -503,8 +503,7 @@ impl QTensorEngine {
     }
 
     pub fn new() -> Self {
-        let handle = tokio::runtime::Handle::try_current()
-            .unwrap_or_else(|_| tokio::runtime::Runtime::new().unwrap().handle());
+        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| { let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap())); rt.handle().clone() });
         tokio::task::block_in_place(|| {
             handle.block_on(Self::try_new())
                 .expect("Failed to initialize native GGUF engine")
@@ -881,7 +880,7 @@ impl QTensorEngine {
         });
         self.device.poll(wgpu::Maintain::Wait);
 
-        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| tokio::runtime::Runtime::new().unwrap().handle());
+        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| { let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap())); rt.handle().clone() });
         if handle.block_on(receiver).ok()?.is_err() {
             return None;
         }
@@ -981,7 +980,7 @@ impl QTensorEngine {
             }
         }
 
-        let output_size = (4096 * 4) as wgpu::BufferAddress;
+        let output_size = (rows * 4).max(4) as wgpu::BufferAddress;
         let output_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Output"),
             size: output_size,
@@ -989,7 +988,23 @@ impl QTensorEngine {
             mapped_at_creation: false,
         });
 
-        let bind_group_layout = self.mock_pipeline.get_bind_group_layout(0);
+        // Upload GemmGpuParams for fused_transformer.wgsl (binding 2).
+        let gemm_params = GemmGpuParams {
+            n_in: cols as u32,
+            n_out: rows as u32,
+            weight_ggml_type: if tensor.is_quantized_q4_k { 12 } else { 14 },
+            weight_row_elems: cols as u32,
+            weight_byte_len: (rows * cols * 4) as u32,
+        };
+        let params_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("TransformerParams"),
+            size: std::mem::size_of::<GemmGpuParams>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        self.queue.write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
+
+        let bind_group_layout = self.pipeline.get_bind_group_layout(0);
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &bind_group_layout,
@@ -1004,6 +1019,10 @@ impl QTensorEngine {
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
+                    resource: params_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
                     resource: output_buf.as_entire_binding(),
                 },
             ],
@@ -1017,9 +1036,9 @@ impl QTensorEngine {
                 label: None,
                 timestamp_writes: None,
             });
-            cpass.set_pipeline(&self.mock_pipeline);
+            cpass.set_pipeline(&self.pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
-            cpass.dispatch_workgroups(4096 / 64, 1, 1);
+            cpass.dispatch_workgroups((rows as u32 + 63) / 64, 1, 1);
         }
 
         let staging_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -1036,7 +1055,7 @@ impl QTensorEngine {
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
         self.device.poll(wgpu::Maintain::Wait);
 
-        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| tokio::runtime::Runtime::new().unwrap().handle());
+        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| { let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap())); rt.handle().clone() });
         handle.block_on(receiver).unwrap().unwrap();
 
         let data = buffer_slice.get_mapped_range();
@@ -1045,7 +1064,7 @@ impl QTensorEngine {
         staging_buf.unmap();
 
         crate::telemetry::SIEVE_OPS_COUNT
-            .fetch_add(4096 * 4096, std::sync::atomic::Ordering::Relaxed);
+            .fetch_add(rows * cols, std::sync::atomic::Ordering::Relaxed);
         result
     }
 
@@ -2030,8 +2049,8 @@ impl QTensorEngine {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn probe_gguf_runtime(path: &str) -> Result<GgufLoadReport, String> {
     let mut engine = tokio::task::block_in_place(|| {
-        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| tokio::runtime::Runtime::new().unwrap().handle());
-            .block_on(QTensorEngine::try_new())
+        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| { let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap())); rt.handle().clone() });
+        handle.block_on(QTensorEngine::try_new())
     })?;
     engine.load_gguf_checked(path)
 }
@@ -2074,7 +2093,7 @@ mod tests {
 
     #[test]
     fn test_q_tensor_pointer_extraction() {
-        let quin = QualiaQuin {
+        let quin = NQuin {
             subject: crate::q_hash("LLM_Prompt"),
             predicate: crate::q_hash("has_tensor_offset"),
             // Pack the LLM flag + byte offset

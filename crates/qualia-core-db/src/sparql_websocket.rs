@@ -7,7 +7,7 @@ use crate::sparql_parser;
 use crate::sparql_planner::*;
 use crate::sparql_executor::*;
 use crate::sparql_results::ResultFormatter;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// WebSocket message type
 #[repr(C)]
@@ -41,13 +41,13 @@ pub struct WebSocketSession {
 
 /// SPARQL WebSocket handler
 pub struct SparqlWebSocketHandler<'a> {
-    pub quins: &'a [QualiaQuin],
+    pub quins: &'a [NQuin],
     pub sessions: [Option<WebSocketSession>; 32],
     pub session_count: u8,
 }
 
 impl<'a> SparqlWebSocketHandler<'a> {
-    pub fn new(quins: &'a [QualiaQuin]) -> Self {
+    pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             quins,
             sessions: [None; 32],
@@ -112,7 +112,7 @@ impl<'a> SparqlWebSocketHandler<'a> {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_json(&mut output, &vars, &results, &ctx)?;
+                ResultFormatter::format_json(&mut output, &vars, &results, &ctx).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "xml" => {
@@ -123,7 +123,7 @@ impl<'a> SparqlWebSocketHandler<'a> {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx)?;
+                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx).map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             _ => Err("Unsupported format. Use: xml or json".to_string()),
@@ -142,7 +142,7 @@ impl<'a> SparqlWebSocketHandler<'a> {
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(self.quins);
         let results = executor.execute(&plan, &ctx)?;
-        
+
         // Get variables
         let vars = match &sparql_query {
             SparqlQuery::Select(select) => {
@@ -150,12 +150,12 @@ impl<'a> SparqlWebSocketHandler<'a> {
             }
             _ => vec![],
         };
-        
+
         // Chunk results
         let mut chunks = Vec::new();
         for chunk in results.chunks(chunk_size) {
             let mut output = Vec::new();
-            ResultFormatter::format_json(&mut output, &vars, chunk, &ctx)?;
+            ResultFormatter::format_json(&mut output, &vars, chunk, &ctx).map_err(|e| e.to_string())?;
             chunks.push(String::from_utf8(output).unwrap());
         }
         

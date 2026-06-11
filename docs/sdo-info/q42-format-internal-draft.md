@@ -166,9 +166,9 @@ expects legacy framed transport or raw SuperBlock layouts.
 
 ## 6. Terminology
 
-### QualiaQuin
+### NQuin
 
-The atomic record unit is `QualiaQuin`.
+The atomic record unit is `NQuin`.
 
 - Size: 48 bytes
 - Layout: six little-endian `u64` fields
@@ -213,7 +213,7 @@ The canonical physical storage page is `QualiaSuperBlock`.
 
 ## 7. Canonical Physical Layout
 
-### `QualiaQuin`
+### `NQuin`
 
 ```text
 Offset  Size  Field
@@ -228,7 +228,7 @@ Offset  Size  Field
 All fields are little-endian.
 
 Producers commonly set `parity = subject ^ predicate ^ object ^ context`.
-`QualiaQuin::verify_ecc_parity()` is currently a stub that rejects `u64::MAX`.
+`NQuin::verify_ecc_parity()` is currently a stub that rejects `u64::MAX`.
 
 ### `QualiaSuperBlock`
 

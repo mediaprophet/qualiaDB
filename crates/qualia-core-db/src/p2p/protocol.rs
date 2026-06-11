@@ -13,14 +13,14 @@ use crate::q42_volume::Q42Volume;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct QualiaQuin {
+pub struct NQuin {
     pub subject: [u8; 8],
     pub predicate: [u8; 8],
     pub object: [u8; 8],
     pub context: [u8; 8],
     pub clock_sig: [u8; 16],
 }
-const _: () = assert!(std::mem::size_of::<QualiaQuin>() == 48);
+const _: () = assert!(std::mem::size_of::<NQuin>() == 48);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QualiaRequest {

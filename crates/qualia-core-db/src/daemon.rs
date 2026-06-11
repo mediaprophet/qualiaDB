@@ -433,7 +433,7 @@ pub async fn start_local_daemon_with_options(
                                         json!({
                                             "type": "bench_load_ready",
                                             "id": id,
-                                            "message": "send next binary frame with flat QualiaQuin bytes"
+                                            "message": "send next binary frame with flat NQuin bytes"
                                         })
                                     } else if let Some(b64) = frame.get("db_b64").and_then(|v| v.as_str()) {
                                         match decode_bench_load_b64(b64) {
@@ -1048,7 +1048,7 @@ pub async fn start_local_daemon_with_options(
         let behaviour = crate::p2p::swarm::build_behaviour(local_peer_id);
 
         let routing_table = std::sync::Arc::new(crate::p2p::routing::CivicsRoutingTable::new());
-        let local_db_slice: &[crate::QualiaQuin] = &[]; // Mock of memory mapped DB slice
+        let local_db_slice: &[crate::NQuin] = &[]; // Mock of memory mapped DB slice
         routing_table.hydrate_from_db(local_db_slice);
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
@@ -1093,8 +1093,8 @@ pub async fn start_local_daemon_with_options(
 
                                             // Zero-allocation cast for the 48-byte Quin
                                             let quin_bytes = &credentials[offset..offset+48];
-                                            let quin: &crate::p2p::protocol::QualiaQuin = unsafe {
-                                                &*(quin_bytes.as_ptr() as *const crate::p2p::protocol::QualiaQuin)
+                                            let quin: &crate::p2p::protocol::NQuin = unsafe {
+                                                &*(quin_bytes.as_ptr() as *const crate::p2p::protocol::NQuin)
                                             };
 
                                             let signature_bytes: &[u8; 64] = credentials[offset+48..offset+112].try_into().unwrap();
@@ -1168,7 +1168,7 @@ pub async fn start_local_daemon_with_options(
                                         if success && blocks_sent > 0 {
                                             let mut buf = Vec::new();
                                             let overhead = if ciborium::into_writer(&response, &mut buf).is_ok() { buf.len() } else { 0 };
-                                            // Actual serialized payload: CBOR overhead + (blocks_sent * 48 bytes per QualiaQuin)
+                                            // Actual serialized payload: CBOR overhead + (blocks_sent * 48 bytes per NQuin)
                                             let bytes_transferred = overhead + (blocks_sent as usize * 48);
                                             let peer_str = peer.to_string();
                                             bandwidth_meter_swarm.entry(peer_str)

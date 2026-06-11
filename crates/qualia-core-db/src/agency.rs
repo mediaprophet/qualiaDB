@@ -1,4 +1,4 @@
-use crate::QualiaQuin;
+use crate::NQuin;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 
@@ -12,7 +12,7 @@ pub enum AgencyError {
 /// It partitions the 128KB frame by the Author's DID, strictly ignoring claims
 /// authored by other actors in the Bilateral frame.
 /// Uses zero-allocation iteration over the existing memory slice.
-pub fn compute_scoped_merkle_root(frame: &[QualiaQuin], author_did: u64) -> [u8; 32] {
+pub fn compute_scoped_merkle_root(frame: &[NQuin], author_did: u64) -> [u8; 32] {
     let mut hasher = Sha256::new();
 
     // Iterate through the frame without allocating Vectors or Strings
@@ -44,7 +44,7 @@ pub fn sign_agency_root(signing_key: &SigningKey, sub_root_hash: &[u8; 32]) -> S
 /// Validates an incoming 64-byte signature against the author's Public Key (`VerifyingKey`).
 /// Only validates the specific claims matching the author's DID, ensuring Bilateral Integrity.
 pub fn verify_human_agency(
-    frame: &[QualiaQuin],
+    frame: &[NQuin],
     author_did: u64,
     verifying_key: &VerifyingKey,
     signature: &Signature,
@@ -63,7 +63,7 @@ pub fn verify_human_agency(
 /// Stamp fiduciary metadata and refresh the XOR parity block before WAL commit.
 /// `principal_did_hash` is embedded in `context`; agent identity in metadata low bits.
 pub fn stamp_fiduciary_metadata(
-    quin: &mut QualiaQuin,
+    quin: &mut NQuin,
     principal_did_hash: u64,
     agent_did_hash: u64,
 ) {
@@ -75,7 +75,7 @@ pub fn stamp_fiduciary_metadata(
 }
 
 /// Volatile zero of all Quin fields after WAL commit (wipes transient LLM state).
-pub fn scrub_quin_volatile(quin: &mut QualiaQuin) {
+pub fn scrub_quin_volatile(quin: &mut NQuin) {
     unsafe {
         std::ptr::write_volatile(&mut quin.subject, 0);
         std::ptr::write_volatile(&mut quin.predicate, 0);
@@ -87,7 +87,7 @@ pub fn scrub_quin_volatile(quin: &mut QualiaQuin) {
 }
 
 /// Sign a single graph-mutation Quin using the author-scoped Merkle sub-root.
-pub fn sign_graph_mutation(signing_key: &SigningKey, quin: &QualiaQuin) -> Signature {
+pub fn sign_graph_mutation(signing_key: &SigningKey, quin: &NQuin) -> Signature {
     let frame = [*quin];
     let root = compute_scoped_merkle_root(&frame, quin.context);
     sign_agency_root(signing_key, &root)
@@ -123,7 +123,7 @@ mod tests {
         let author_did_alice = 1001;
         let author_did_bob = 2002;
 
-        let mut frame = [QualiaQuin {
+        let mut frame = [NQuin {
             subject: 0,
             predicate: 0,
             object: 0,

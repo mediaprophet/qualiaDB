@@ -9,7 +9,7 @@ use crate::modalities::logic::n3_parser::{Formula, Rule, RuleType, Term, Triple}
 use crate::q_hash;
 use crate::modalities::logic::shacl::{CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity};
 use crate::webizen::{execute_vm_frame, SlgArena, SlgOpcode, VmFrame};
-use crate::QualiaQuin;
+use crate::NQuin;
 
 pub const MAX_COMPILED_OPCODES: usize = 256;
 pub const MAX_COMPILED_QUINS: usize = 64;
@@ -77,8 +77,8 @@ fn term_hash(term: &Term) -> Result<u64, N3CompileError> {
     }
 }
 
-fn triple_to_quin(triple: &Triple, context: u64) -> Result<QualiaQuin, N3CompileError> {
-    let mut quin = QualiaQuin::default();
+fn triple_to_quin(triple: &Triple, context: u64) -> Result<NQuin, N3CompileError> {
+    let mut quin = NQuin::default();
     quin.subject = term_hash(&triple.subject)?;
     quin.predicate = term_hash(&triple.predicate)?;
     quin.object = term_hash(&triple.object)?;
@@ -172,7 +172,7 @@ pub fn compile_rule_to_opcodes(
 pub fn compile_rule_to_quin(
     rule: &Rule,
     contract_hash: u64,
-    out: &mut [QualiaQuin],
+    out: &mut [NQuin],
 ) -> Result<usize, N3CompileError> {
     if let Some(norm) = crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0) {
         if out.is_empty() {
@@ -204,7 +204,7 @@ pub fn compile_rules_with_shacl_gate(
     rules: &[Rule],
     shapes: &[&CompiledShape],
     opcodes_out: &mut [SlgOpcode],
-    quins_out: &mut [QualiaQuin],
+    quins_out: &mut [NQuin],
     contract_hash: u64,
 ) -> Result<N3CompiledProgram, N3CompileError> {
     let mut opcode_offset = 0usize;
@@ -232,7 +232,7 @@ pub fn execute_compiled_program(
     opcodes: &[SlgOpcode],
     frame: &mut VmFrame,
     max_depth: u8,
-) -> Result<Option<QualiaQuin>, SentinelError> {
+) -> Result<Option<NQuin>, SentinelError> {
     if opcodes.len() > max_depth as usize {
         return Err(SentinelError::MemoryOverflow);
     }
@@ -305,7 +305,7 @@ mod tests {
         let shape = default_observation_shape();
         let shapes = [&shape];
         let mut opcodes = [SlgOpcode::Call; MAX_COMPILED_OPCODES];
-        let mut quins = [QualiaQuin::default(); MAX_COMPILED_QUINS];
+        let mut quins = [NQuin::default(); MAX_COMPILED_QUINS];
 
         let result = compile_rules_with_shacl_gate(
             &rules,

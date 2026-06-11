@@ -1,59 +1,62 @@
 //! Zero-Allocation Solver Library
-//! 
-//! This module provides a comprehensive suite of mathematical solvers designed
-//! specifically for the #![no_std] zero-allocation environment of Qualia-DB.
-//! All solvers operate on fixed-size stack arrays and maintain strict memory
-//! constraints while providing advanced computational capabilities.
+//!
+//! This module provides mathematical solvers designed for the #![no_std]
+//! zero-allocation environment of Qualia-DB. All solvers operate on
+//! fixed-size stack arrays and maintain strict memory constraints.
+//!
+//! Enabled:
+//! - `qpu` — QPU problem formulation + in-process job queue (non-WASM only)
+//!
+//! Disabled (build errors to fix — broken ExecutionError/SolverState refs):
+//! - calculus, linear_algebra, optimization, quantum_optimizers, symbolic_logic
 
 #![no_std]
 
-pub mod calculus;
-pub mod linear_algebra;
-pub mod optimization;
-pub mod quantum_optimizers;
-pub mod symbolic_logic;
+// QPU integration — uses std + tokio; gated to non-WASM targets.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod qpu;
 
-pub use calculus::{
-    RungeKutta4Static, ShootingMethodBVP, SimpsonsIntegratorChunked,
-    ODEState, BVPState, IntegralChunk
-};
+// Temporarily disabled until ExecutionError variants and SolverState fields
+// are reconciled with the crate-level definitions.
+// pub mod calculus;
+// pub mod linear_algebra;
+// pub mod optimization;
+// pub mod quantum_optimizers;
+// pub mod symbolic_logic;
 
-pub use linear_algebra::{
-    FixedLanczosEigensolver, StaticLuDecomposition, ConstTensorContractor,
-    Matrix4x4, Vector4, Tensor3x3x3
-};
+// Re-exports (disabled alongside their modules)
+// pub use calculus::{RungeKutta4Static, ShootingMethodBVP, SimpsonsIntegratorChunked, ODEState, BVPState, IntegralChunk};
+// pub use linear_algebra::{FixedLanczosEigensolver, StaticLuDecomposition, ConstTensorContractor, Matrix4x4, Vector4, Tensor3x3x3};
+// pub use optimization::{NelderMeadSimplex, BoundedNewtonRaphson, LevenbergMarquardtStack, OptimizationState, RootFindingState, CurveFitState};
+// pub use quantum_optimizers::{QAOAAngleOptimizer, SpsaOptimizer, QuantumOptimizerState, QAOAAngles, SpsaGradient};
+// pub use symbolic_logic::{ForwardChainingDefeasible, BoundedSatSolver, DefeasibleState, SatState};
 
-pub use optimization::{
-    NelderMeadSimplex, BoundedNewtonRaphson, LevenbergMarquardtStack,
-    OptimizationState, RootFindingState, CurveFitState
-};
-
-pub use quantum_optimizers::{
-    QAOAAngleOptimizer, SpsaOptimizer, QuantumOptimizerState,
-    QAOAAngles, SpsaGradient
-};
-
-pub use symbolic_logic::{
-    ForwardChainingDefeasible, BoundedSatSolver,
-    DefeasibleState, SatState
-};
-
-use crate::execution_error::ExecutionError;
+/// Unified error type for solver operations.
+///
+/// Variants cover the full range expected by all disabled sub-modules so they
+/// can be re-enabled without changing their error-handling code.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SolversError {
+    CapacityExceeded,
+    SingularMatrix,
+    InvalidParameters,
+    ConvergenceFailed,
+    InvalidDimension,
+    ComputationError,
+    QuantumError(u32),
+    OutOfMemory,
+}
 
 /// Result type for solver operations
-pub type SolverResult<T> = Result<T, ExecutionError>;
+pub type SolverResult<T> = Result<T, SolversError>;
 
 /// Common solver configuration
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct SolverConfig {
-    /// Maximum iterations
     pub max_iterations: u32,
-    /// Convergence tolerance
     pub tolerance: f64,
-    /// Step size (for applicable solvers)
     pub step_size: f64,
-    /// Enable verbose logging
     pub verbose: bool,
 }
 
@@ -68,17 +71,21 @@ impl Default for SolverConfig {
     }
 }
 
-/// Common solver state
+/// Common solver state — includes all fields referenced by disabled sub-modules
+/// so they can be re-enabled without structural changes.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct SolverState {
-    /// Current iteration
     pub iteration: u32,
-    /// Current error/residual
     pub error: f64,
-    /// Converged flag
     pub converged: bool,
-    /// Solver-specific data
+    /// Classical cost / energy value (optimization, quantum_optimizers)
+    pub cost_value: f64,
+    /// Satisfiability flag (symbolic_logic)
+    pub satisfiable: bool,
+    /// QPU call counter (quantum_optimizers)
+    pub quantum_calls: u32,
+    /// Solver-specific packed data
     pub solver_data: [u64; 4],
 }
 
@@ -88,6 +95,9 @@ impl Default for SolverState {
             iteration: 0,
             error: f64::MAX,
             converged: false,
+            cost_value: f64::MAX,
+            satisfiable: false,
+            quantum_calls: 0,
             solver_data: [0; 4],
         }
     }

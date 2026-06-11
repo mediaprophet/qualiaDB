@@ -4,7 +4,7 @@
 //! for temporal processing and event-driven computation while maintaining
 //! distributed consistency across edge deployments.
 
-use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, QualiaQuin};
+use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, NQuin};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -533,11 +533,11 @@ impl SnnExtension {
         }
     }
 
-    fn result_to_quins(result: &SnnExecutionResult, job_id: &str) -> Vec<QualiaQuin> {
+    fn result_to_quins(result: &SnnExecutionResult, job_id: &str) -> Vec<NQuin> {
         let mut quins = Vec::new();
 
         // Add learning metrics
-        let learning_quin = QualiaQuin {
+        let learning_quin = NQuin {
             subject: crate::q_hash(job_id),
             predicate: crate::q_hash("q42:hasLearningMetrics"),
             object: (result.learning_metrics.final_loss * 1000000.0) as u64,
@@ -549,7 +549,7 @@ impl SnnExtension {
         quins.push(learning_quin);
 
         // Add CRDT sync metrics
-        let sync_quin = QualiaQuin {
+        let sync_quin = NQuin {
             subject: crate::q_hash(job_id),
             predicate: crate::q_hash("q42:hasCrdtSync"),
             object: result.crdt_sync_metrics.sync_rounds as u64,
@@ -561,7 +561,7 @@ impl SnnExtension {
         quins.push(sync_quin);
 
         // Add execution time
-        let time_quin = QualiaQuin {
+        let time_quin = NQuin {
             subject: crate::q_hash(job_id),
             predicate: crate::q_hash("q42:hasExecutionTime"),
             object: result.execution_time_ms,

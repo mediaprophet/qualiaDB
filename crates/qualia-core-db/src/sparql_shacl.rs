@@ -6,7 +6,7 @@ use crate::sparql_ast::*;
 use crate::sparql_parser;
 use crate::sparql_planner::*;
 use crate::sparql_executor::*;
-use crate::QualiaQuin;
+use crate::NQuin;
 
 /// SHACL constraint types
 #[repr(C)]
@@ -72,7 +72,7 @@ pub struct ValidationResult {
 
 /// SHACL validator
 pub struct ShaclValidator<'a> {
-    pub quins: &'a [QualiaQuin],
+    pub quins: &'a [NQuin],
     pub shapes: [ShaclShape; 64],
     pub shape_count: u8,
     pub constraints: [ShaclConstraint; 256],
@@ -80,7 +80,7 @@ pub struct ShaclValidator<'a> {
 }
 
 impl<'a> ShaclValidator<'a> {
-    pub fn new(quins: &'a [QualiaQuin]) -> Self {
+    pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             quins,
             shapes: [ShaclShape {

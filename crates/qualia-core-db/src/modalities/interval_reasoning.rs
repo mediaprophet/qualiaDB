@@ -1,7 +1,7 @@
 // Enhanced Interval Reasoning Engine
 // Advanced temporal algebra operations, interval constraint satisfaction, and temporal planning
 
-use crate::QualiaQuin;
+use crate::NQuin;
 use std::collections::HashMap;
 
 /// Temporal interval with start and end points
@@ -370,9 +370,9 @@ impl TemporalAlgebra {
     }
 }
 
-/// Convert interval reasoning results to QualiaQuin
-pub fn interval_to_quin(interval: &TemporalInterval, context: u64) -> QualiaQuin {
-    let mut quin = QualiaQuin {
+/// Convert interval reasoning results to NQuin
+pub fn interval_to_quin(interval: &TemporalInterval, context: u64) -> NQuin {
+    let mut quin = NQuin {
         subject: interval.id,
         predicate: crate::q_hash("has_temporal_interval"),
         object: ((interval.start as u64) << 32) | (interval.duration as u64 & 0xFFFFFFFF),
@@ -385,8 +385,8 @@ pub fn interval_to_quin(interval: &TemporalInterval, context: u64) -> QualiaQuin
     quin
 }
 
-/// Convert schedule to QualiaQuin collection
-pub fn schedule_to_quins(schedule: &[ScheduledTask], context: u64) -> Vec<QualiaQuin> {
+/// Convert schedule to NQuin collection
+pub fn schedule_to_quins(schedule: &[ScheduledTask], context: u64) -> Vec<NQuin> {
     let mut quins = Vec::new();
     
     for scheduled_task in schedule {
@@ -394,7 +394,7 @@ pub fn schedule_to_quins(schedule: &[ScheduledTask], context: u64) -> Vec<Qualia
         quins.push(interval_quin);
         
         // Store task metadata
-        let task_quin = QualiaQuin {
+        let task_quin = NQuin {
             subject: scheduled_task.task.id,
             predicate: crate::q_hash("has_task_metadata"),
             object: scheduled_task.task.duration as u64,

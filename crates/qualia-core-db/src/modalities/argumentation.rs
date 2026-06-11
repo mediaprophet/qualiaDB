@@ -1,7 +1,7 @@
 // Argumentation Frameworks - Dung-style Abstract Argumentation
 // Provides formal debate resolution mechanisms for Peace Infrastructure
 
-use crate::QualiaQuin;
+use crate::NQuin;
 use std::collections::{HashMap, HashSet};
 
 pub const ARGUMENT_BIT: u64 = 1u64 << 55;
@@ -13,14 +13,14 @@ pub const DEFENSE_BIT: u64 = 1u64 << 53;
 pub struct Argument {
     pub id: u64,
     pub content: String,
-    pub premise_quins: Vec<QualiaQuin>,
-    pub conclusion_quin: QualiaQuin,
+    pub premise_quins: Vec<NQuin>,
+    pub conclusion_quin: NQuin,
     pub strength: f32, // Argument strength for weighted argumentation
 }
 
 impl Argument {
     /// Create a new argument from premises and conclusion
-    pub fn new(id: u64, content: String, premises: Vec<QualiaQuin>, conclusion: QualiaQuin) -> Self {
+    pub fn new(id: u64, content: String, premises: Vec<NQuin>, conclusion: NQuin) -> Self {
         Self {
             id,
             content,
@@ -31,7 +31,7 @@ impl Argument {
     }
     
     /// Create an argument with specified strength
-    pub fn with_strength(id: u64, content: String, premises: Vec<QualiaQuin>, conclusion: QualiaQuin, strength: f32) -> Self {
+    pub fn with_strength(id: u64, content: String, premises: Vec<NQuin>, conclusion: NQuin, strength: f32) -> Self {
         Self {
             id,
             content,
@@ -274,13 +274,13 @@ pub enum ArgumentStatus {
     Undecided,
 }
 
-/// Convert argument framework to QualiaQuin representation for storage
-pub fn framework_to_quins(framework: &ArgumentationFramework, context: u64) -> Vec<QualiaQuin> {
+/// Convert argument framework to NQuin representation for storage
+pub fn framework_to_quins(framework: &ArgumentationFramework, context: u64) -> Vec<NQuin> {
     let mut quins = Vec::new();
     
     // Store arguments
     for (arg_id, argument) in &framework.arguments {
-        let mut quin = QualiaQuin {
+        let mut quin = NQuin {
             subject: *arg_id,
             predicate: crate::q_hash("has_argument"),
             object: crate::q_hash(&argument.content),
@@ -294,7 +294,7 @@ pub fn framework_to_quins(framework: &ArgumentationFramework, context: u64) -> V
     
     // Store attacks
     for attack in &framework.attacks {
-        let mut quin = QualiaQuin {
+        let mut quin = NQuin {
             subject: attack.attacker,
             predicate: crate::q_hash("attacks"),
             object: attack.target,
@@ -318,7 +318,7 @@ pub fn create_sanctuary_debate() -> ArgumentationFramework {
         1,
         "Sanctuary must protect all living beings".to_string(),
         vec![],
-        QualiaQuin {
+        NQuin {
             subject: crate::q_hash("sanctuary"),
             predicate: crate::q_hash("protects"),
             object: crate::q_hash("all_life"),
@@ -334,7 +334,7 @@ pub fn create_sanctuary_debate() -> ArgumentationFramework {
         2,
         "Limited resources require prioritized protection".to_string(),
         vec![],
-        QualiaQuin {
+        NQuin {
             subject: crate::q_hash("sanctuary"),
             predicate: crate::q_hash("protects"),
             object: crate::q_hash("prioritized_life"),
