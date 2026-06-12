@@ -76,7 +76,7 @@ When emitting an intent that alters physical or logical state, immediately put t
 <mcp_tools>
 QApps can dispatch complex intents (QPU, Logic, Bioinformatics, Clinical Risk) to the native Daemon via the `mcp_server.rs` endpoints.
 
-- **Available Tools:** `evaluate_modality`, `bioinformatics_align`, `chemical_descriptors`, `clinical_risk`, `execute_llm_inference`, `validate_hardware_assembly`.
+- **Available Tools:** `query_graph`, `get_graph_stats`, `list_ontologies`, `llm_infer`, `llm_chat`, `list_models`, `qpu_optimize`, `qpu_dft`, `qpu_status`, `matrix_operation`, `ode_solve`, `chemical_analysis`, `statistical_analysis`, `ml_inference`, `financial_model`, `medical_score`, `engineering_analysis_op`, `get_wallet_status`, `get_did_info`, `ingest_ontology`, `validate_shacl`, `inject_test_quin`, `list_qapps`, `get_qapp_manifest`, `inspect_qapp_readiness`, `list_qapp_updates`, `describe_qapp_surface_schema`, `get_system_status`, `evaluate_modality`, `bioinformatics_align`, `chemical_descriptors`, `clinical_risk`, `symbolic_logic_infer`, `geometric_algebra_op`, `validate_hardware_assembly`.
 - **DO:** Construct raw byte representations of arguments (e.g. `bincode`) to send over the websocket to avoid JSON parsing overhead on the Daemon.
 </mcp_tools>
 
@@ -120,12 +120,12 @@ While Rust/Dioxus is the strictly mandated standard for QApps, **highly speciali
 <native_capabilities>
 The native Webizen Daemon (`qualia-core-db`) contains fully-wired, hardware-accelerated domain engines. **Do not assume these are stubs.** You can access all of the following natively via the MCP Intent bridge without writing custom JS solvers:
 
-- **Query Language Constraints:** 
-  - **N-Triples Only:** QualiaDB evaluates streaming N-Triples patterns directly across 48-byte `Super-Quin` memory slots. 
-  - **NO SPARQL:** Standard SPARQL is fundamentally unsupported due to string-allocation overhead. All QApp graph queries must be framed as strict `?subject ?predicate ?object .` patterns.
+- **Query Language Capabilities:** 
+  - **N-Triples / Super-Quin Arena:** QualiaDB natively evaluates streaming N-Triples patterns directly across 48-byte `Super-Quin` memory slots for zero-allocation performance.
+  - **SPARQL Support:** Full support for SPARQL 1.1 and nested SPARQL-Star (RDF-Star) via the embedded `qualia_core_db::sparql_library` parser and query planner, though it incurs standard string allocation overhead during planning.
 - **Bioinformatics:** Zero-allocation SW (Smith-Waterman) alignment, protein sequence analysis, k-mer generation, FASTA parsing, and Tanimoto similarity scoring.
 - **Clinical Risk & Medical Logic:** Real-time computation of Framingham, CHA₂DS₂-VASc, and SCORE2 indices, alongside drug-interaction checks and contraindications utilizing native FHIR/LOINC ontology mapping.
 - **Organic Chemistry:** Native SMILES & InChI parsing, Molecular Weight (MW), LogP, TPSA, Lipinski's Rule of 5, Veber rules, Morgan fingerprints, Henderson-Hasselbalch equations, and atom economy/E-factor solvers.
 - **Physics & Simulation:** Thermodynamics MCMC (Markov Chain Monte Carlo), RK4 ODE solvers, DFT (Density Functional Theory) ground state estimations, and PINN (Physics-Informed Neural Network) binding affinity.
-- **Advanced Formal Logic:** Native evaluators for Deontic Logic (Obligations/Permissions), Epistemic Logic (Knowledge/Belief), and Linear Temporal Logic (LTL - Globally, Finally, Next, Until, Release) traces, executed completely within deterministic, bounded 42MB memory limits.
+- **Advanced Formal Logic:** Native evaluators for Deontic Logic (Obligations/Permissions), Epistemic Logic (Knowledge/Belief), Linear Temporal Logic (LTL traces), Answer Set Programming (ASP / stable models), Probabilistic Logic, Argumentation Frameworks (grounded extensions), Symbolic Rule Inferencing, and Geometric Algebra operations.
 </native_capabilities>
