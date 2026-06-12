@@ -936,20 +936,20 @@ SHA-256 of the public key bytes → first 15 bytes mapped into the `fd__:____:__
 
 ## 30. Specialized Libraries (`specialized_libs/`)
 
-High-performance domain libraries targeting Phase 2 architectural enhancements. Most sub-modules are currently disabled pending build-error resolution; only `qpu_bridge` is active.
+High-performance domain libraries. All 9 sub-modules are **✅ fully active** as of 2026-06-12 (79/79 tests passing). Each module exposes a top-level `*Library::new()` + `initialize()` entry point and is directly wired into MCP tools (see `mcp_server.rs`). `qpu_bridge` bridges external QPU providers; the remaining 9 are self-contained compute libraries.
 
-| File | Status | Contents |
-|---|---|---|
-| `qpu_bridge.rs` | ✅ Active | Bridge between `solvers/qpu/` and external QPU providers; classical problem formulation → QPU submission |
-| `linear_algebra.rs` | ⚠️ Disabled | Dense/sparse matrix ops, BLAS-level routines |
-| `statistical_computing.rs` | ⚠️ Disabled | Bayesian inference, Monte Carlo sampling |
-| `cryptographic_library.rs` | ⚠️ Disabled | Advanced cryptographic primitives beyond `fiduciary_crypto.rs` |
-| `engineering_analysis.rs` | ⚠️ Disabled | FEA / FEM structural analysis |
-| `financial_modeling.rs` | ⚠️ Disabled | Derivatives pricing, risk models (complements `domains/financial/`) |
-| `machine_learning.rs` | ⚠️ Disabled | Classical ML (SVM, decision trees) as complement to LLM inference |
-| `medical_computing.rs` | ⚠️ Disabled | Clinical decision support beyond `clinical_engine.rs` |
-| `physics_simulation.rs` | ⚠️ Disabled | N-body, rigid body, fluid simulation |
-| `quantum_biology.rs` | ⚠️ Disabled | Photosynthesis coherence models, enzyme tunneling |
+| File | Status | Contents | MCP tool |
+|---|---|---|---|
+| `qpu_bridge.rs` | ✅ Active | Bridge between `solvers/qpu/` and external QPU providers; classical problem formulation → QPU submission | `qpu_optimize`, `qpu_dft` |
+| `linear_algebra.rs` | ✅ Active | Dense/sparse matrix ops, LU decomposition, SVD, eigenvalues; ZK privacy matrix multiply | `matrix_operation` |
+| `statistical_computing.rs` | ✅ Active | Descriptive stats (mean/median/variance/correlation), regression, hypothesis testing, histograms | `statistical_analysis` |
+| `cryptographic_library.rs` | ✅ Active | AES-256-GCM encrypt/decrypt, Ed25519 sign/verify, SHA-256 hashing, key rotation | (internal; `fiduciary_crypto.rs` is the primary MCP path) |
+| `engineering_analysis.rs` | ✅ Active | FEA / FEM structural, mechanical, thermal, fluid, reliability analysis | `engineering_analysis_op` |
+| `financial_modeling.rs` | ✅ Active | Black-Scholes option pricing, Monte Carlo VaR, portfolio risk metrics | `financial_model` |
+| `machine_learning.rs` | ✅ Active | Gradient descent, neural net training, decision tree, clustering, inference | `ml_inference` |
+| `medical_computing.rs` | ✅ Active | Framingham CVD, SOFA, CHA₂DS₂-VASc, CKD-EPI eGFR, clinical decision support | `medical_score` |
+| `physics_simulation.rs` | ✅ Active | Burgers CFD (velocity/pressure/temperature), distributed N-body, wave propagation | `ode_solve` |
+| `quantum_biology.rs` | ⚠️ Planned | Photosynthesis coherence models, enzyme tunneling | — |
 
 ---
 

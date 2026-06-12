@@ -119,6 +119,10 @@ These break things if violated:
 | Governance / rights | `webizen.rs`, `agency.rs`, `deontic_logic.rs` |
 | Profile / identity | `profiles.rs`, `key_vault.rs`, `identifier.rs` |
 | Scientific primitives | `webizen.rs::execute_vm_frame` (fully wired, not stubs) |
+| Specialized domain libs (matrix, stats, ML, finance, medical, physics, chemistry, engineering) | `specialized_libs/` — all 9 active (79 tests); each `*Library::new() + initialize()`; MCP-exposed via `mcp_server.rs` |
+| Cross-platform storage (ZNS / APFS / WinNVMe / Mmap) | `storage_driver.rs` — use `open_storage(data_dir)`, not `ZnsZoneManager::new()` directly |
+| Thread QoS / CPU placement | `platform_scheduler.rs` — `bind_inference_thread()` / `bind_background_thread()` |
+| Network filtering (eBPF / WFP / XPC / VPN) | `ebpf_filter.rs` — use `open_platform_filter()` |
 
 ---
 
