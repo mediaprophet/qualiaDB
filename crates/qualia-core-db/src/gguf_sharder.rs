@@ -598,9 +598,21 @@ impl GGufSharder {
     pub fn map_model_to_virtual_memory(
         &self,
         file_path: &str,
-    ) -> Result<memmap2::Mmap, std::io::Error> {
-        let file = std::fs::File::open(file_path)?;
-        unsafe { memmap2::MmapOptions::new().map(&file) }
+    ) -> Result<std::sync::Arc<[u8]>, std::io::Error> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let file = std::fs::File::open(file_path)?;
+            let mmap = unsafe { memmap2::MmapOptions::new().map(&file)? };
+            Ok(std::sync::Arc::from(mmap.as_ref()))
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = file_path;
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                "Virtual memory mapping not supported on WASM",
+            ))
+        }
     }
 }
 

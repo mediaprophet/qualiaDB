@@ -1,0 +1,2 @@
+﻿<< <http://example.org/Alice> <http://example.org/treated> <http://example.org/PatientB> >> <http://example.org/assignedBy> <http://example.org/DoctorX> .
+<http://example.org/DoctorX> <http://example.org/hasClearanceLevel> "High"^^<http://www.w3.org/2001/XMLSchema#integer> .

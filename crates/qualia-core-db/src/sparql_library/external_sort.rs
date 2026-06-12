@@ -166,7 +166,7 @@ impl ExternalSorter {
     fn read_quin(reader: &mut BufReader<File>) -> std::io::Result<Option<NQuin>> {
         let mut bytes = [0u8; 48];
         match reader.read_exact(&mut bytes) {
-            Ok(_) => Ok(Some(*bytemuck::from_bytes(&bytes))),
+            Ok(_) => Ok(Some(bytemuck::pod_read_unaligned(&bytes))),
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => Ok(None),
             Err(e) => Err(e),
         }

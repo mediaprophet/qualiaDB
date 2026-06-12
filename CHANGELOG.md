@@ -6,11 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [0.0.10-dev] — 2026-06-11 (in progress)
+## [0.0.11-dev] - 2026-06-12 (in progress)
+
+### Added
+- Integrated native async `QTensorEngine` for WASM execution over WebGPU
+- Deployed locally hosted GGUF model downloader via `coi-serviceworker`
+- Exported WASM WebGPU module via `wasm-pack` into `docs/llmdemo/pkg`
+
+---
+
+## [0.0.10] - 2026-06-11
 
 ### Summary
 
-v0.0.10 resolves all build errors (82 → 0), ships a complete SPARQL 1.1/1.2 engine (138 tests),
+v0.0.10 resolves all build errors (82 -> 0), ships a complete SPARQL 1.1/1.2 engine (138 tests),
+ (82 → 0), ships a complete SPARQL 1.1/1.2 engine (138 tests),
 implements the Q42 v3 format with Merkle-DAG and temporal SPARQL extensions (Phases 1–4),
 adds Zero-Copy LoRA Multiplexing, 8-provider QPU dispatch, platform-native GPU inference pipelines,
 SHACL bioscience/biomedical/organic-chemistry extensions, credential-gated subgraphs, and
@@ -56,6 +66,7 @@ real implementations for previously-stubbed security and query primitives.
 - **v2 hard-rejection**: `verify_version()` requires version == 3; old v2 files fail with a descriptive error
 - **`migrate_v2_to_v3()`**: in-place one-pass upgrade populating new header fields with zero/default sentinels
 - **NQuin v3 bit-layout**: bits 63–48 of the metadata field reserved for LoRA adapter routing (see LoRA section)
+- **Ingest Pipeline DAG wiring**: `streaming_import_rdf` in `ingest.rs` upgraded to generate full v3 unified `Q42Volume` formats (with valid V3 headers, Block Directory, and DagStore serialization) instead of legacy `.c.q42` stream format.
 
 ### Added — Merkle-DAG (`git_bridge.rs`) — Phases 1 & 4
 

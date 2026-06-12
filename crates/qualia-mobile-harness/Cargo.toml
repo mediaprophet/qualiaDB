@@ -1,6 +1,6 @@
 [package]
 name = "qualia-mobile-harness"
-version = "0.0.10"
+version = "0.0.11"
 edition = "2021"
 
 [dependencies]
@@ -22,12 +22,35 @@ web-sys = { version = "0.3", features = [
     "Document",
     "WebSocket",
     "MessageEvent",
+    # OPFS storage — required for android_pwa_edge and ios_pwa_edge targets.
+    # Minimum platform support: Chrome 102+, Safari 15.2+ (iOS), Firefox 111+.
+    # FileSystemSyncAccessHandle must only be called from a Web Worker.
+    "StorageManager",
+    "StorageEstimate",
+    "FileSystemDirectoryHandle",
+    "FileSystemFileHandle",
+    "FileSystemSyncAccessHandle",
+    "FileSystemWritableFileStream",
+    "FileSystemGetFileOptions",
+    "File",
+    "Blob",
 ] }
 qualia-core-db = { path = "../qualia-core-db", optional = true }
 
 [features]
 default = ["websocket_streamer"]
-android_pwa_edge = ["dep:qualia-core-db", "wal_persistence", "crdt_dvv_eae", "wasm_simd"]
+
+# Mobile PWA installed on Android (Chrome/WebView, OPFS + WAL persistence).
+# Use profile_minimal_512 on qualia-core-db to stay under 512 MB RAM budget.
+android_pwa_edge = ["dep:qualia-core-db", "opfs_storage", "wal_persistence", "crdt_dvv_eae", "wasm_simd"]
+
+# Mobile PWA installed on iOS (Safari 15.2+, OPFS available but quota ~1 GB cap).
+# FileSystemSyncAccessHandle requires a Worker; do NOT call it on the main thread.
+ios_pwa_edge = ["dep:qualia-core-db", "opfs_storage", "wal_persistence", "crdt_dvv_eae"]
+
+# Enables OPFS block read/write via the wasm_storage module in qualia-core-db.
+opfs_storage = []
+
 wal_persistence = []
 crdt_dvv_eae = []
 websocket_streamer = []

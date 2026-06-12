@@ -125,7 +125,7 @@ pub struct BlockDirectoryEntry {
 impl BlockDirectoryEntry {
     pub const SIZE: usize = 16;
 
-    fn write_to(&self, out: &mut impl Write) -> io::Result<()> {
+    pub fn write_to(&self, out: &mut impl Write) -> io::Result<()> {
         out.write_all(&self.rel_offset.to_le_bytes())?;
         out.write_all(&self.comp_len.to_le_bytes())?;
         out.write_all(&self.uncomp_len.to_le_bytes())?;
@@ -264,7 +264,7 @@ pub fn encode_superblock(seq_id: u64, quins: &[NQuin]) -> [u8; SUPERBLOCK_SIZE] 
     block
 }
 
-fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
+pub fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
     let mut buf = [0u8; HEADER_SIZE];
     // Core fields (0..88)
     buf[0..4].copy_from_slice(&h.magic);

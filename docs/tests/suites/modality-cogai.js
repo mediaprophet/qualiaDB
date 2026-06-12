@@ -8,9 +8,8 @@
 //   ShaclConstraint::Unless               → SlgOpcode::NativeUnless
 //
 // These opcodes are compiled by shacl_compiler and dispatched by execute_vm_frame
-// (webizen.rs). RetrieveByActivation and DecayMetadata currently YIELD to the
-// GPU Sieve (Core 2) — they return None from execute_vm_frame. Unless executes
-// inline as non-monotonic default logic.
+// (webizen.rs). RetrieveByActivation, DecayMetadata, and Unless all
+// execute inline on Core 1.
 //
 // CogAI .chk text format is distinct from QCHK binary Capability Profiles.
 // See modality-cogai disambiguation note in ARCHITECTURE.md §4.
@@ -297,21 +296,18 @@ export function register(runner) {
             runner.expect(h1 === h2).toBeFalsy();
         });
 
-        // ── Core 2 yield semantics (documentation tests) ─────────────────────
+        // ── Inline execution semantics (documentation tests) ─────────────────────
         // These tests verify the *specified behaviour*, not live WASM execution.
-        // RetrieveByActivation and DecayMetadata yield to the GPU Sieve (Core 2)
-        // and return None from execute_vm_frame — they do not execute inline.
+        // RetrieveByActivation, DecayMetadata, and Unless execute inline on Core 1.
 
-        runner.it('RetrieveByActivation opcode is Core 2 (GPU Sieve) — returns None from VM (spec)', () => {
-            // Documented in webizen.rs: NativeRetrieveByActivation => return None
-            // This test validates the specification, not live WASM execution.
-            const specBehaviour = 'CORE_2_YIELD';
-            runner.expect(specBehaviour).toBe('CORE_2_YIELD');
+        runner.it('RetrieveByActivation opcode executes inline on Core 1 (spec)', () => {
+            const specBehaviour = 'CORE_1_INLINE';
+            runner.expect(specBehaviour).toBe('CORE_1_INLINE');
         });
 
-        runner.it('DecayMetadata opcode is Core 2 (GPU Sieve) — returns None from VM (spec)', () => {
-            const specBehaviour = 'CORE_2_YIELD';
-            runner.expect(specBehaviour).toBe('CORE_2_YIELD');
+        runner.it('DecayMetadata opcode executes inline on Core 1 (spec)', () => {
+            const specBehaviour = 'CORE_1_INLINE';
+            runner.expect(specBehaviour).toBe('CORE_1_INLINE');
         });
 
         runner.it('Unless opcode executes inline on Core 1 as non-monotonic default logic (spec)', () => {

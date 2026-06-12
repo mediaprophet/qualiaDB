@@ -232,19 +232,50 @@ impl RdfStarParser for TurtleStarParser {
     fn parse_triple(&mut self, input: &[u8]) -> Result<(u64, u64, u64), RdfStarParseError> {
         let mut pos = 0;
         
-        let subject = match self.parse_token(input, &mut pos)? {
-            Some(h) => h,
-            None => return Err(RdfStarParseError::InvalidSyntax),
+        let mut skip_ws = |p: &mut usize| {
+            while *p < input.len() && input[*p].is_ascii_whitespace() {
+                *p += 1;
+            }
+        };
+
+        skip_ws(&mut pos);
+        let subject = if pos + 1 < input.len() && input[pos] == b'<' && input[pos + 1] == b'<' {
+            pos += 2; // skip <<
+            let (hash, _) = self.parse_embedded_triple_internal(input, &mut pos)?;
+            // parse_token might have stopped at '>>'
+            // skip '>>'
+            skip_ws(&mut pos);
+            if pos + 1 < input.len() && input[pos] == b'>' && input[pos + 1] == b'>' {
+                pos += 2;
+            }
+            hash
+        } else {
+            match self.parse_token(input, &mut pos)? {
+                Some(h) => h,
+                None => return Err(RdfStarParseError::InvalidSyntax),
+            }
         };
         
+        skip_ws(&mut pos);
         let predicate = match self.parse_token(input, &mut pos)? {
             Some(h) => h,
             None => return Err(RdfStarParseError::InvalidSyntax),
         };
         
-        let object = match self.parse_token(input, &mut pos)? {
-            Some(h) => h,
-            None => return Err(RdfStarParseError::InvalidSyntax),
+        skip_ws(&mut pos);
+        let object = if pos + 1 < input.len() && input[pos] == b'<' && input[pos + 1] == b'<' {
+            pos += 2; // skip <<
+            let (hash, _) = self.parse_embedded_triple_internal(input, &mut pos)?;
+            skip_ws(&mut pos);
+            if pos + 1 < input.len() && input[pos] == b'>' && input[pos + 1] == b'>' {
+                pos += 2;
+            }
+            hash
+        } else {
+            match self.parse_token(input, &mut pos)? {
+                Some(h) => h,
+                None => return Err(RdfStarParseError::InvalidSyntax),
+            }
         };
         
         Ok((subject, predicate, object))

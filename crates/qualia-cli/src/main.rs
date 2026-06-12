@@ -12,6 +12,7 @@ pub mod compress;
 pub mod ingest;
 pub mod resources;
 pub mod telemetry_server;
+pub mod bench;
 
 /// The Qualia-DB Block Inspector & Data Ingestion CLI
 #[derive(Parser)]
@@ -122,6 +123,17 @@ enum Commands {
         /// Benchmark suite selector (full, nym_partition, etc.). For compatibility the value is accepted but full metrics are always emitted.
         #[arg(long, default_value = "full")]
         suite: String,
+    },
+    /// Verify the structural integrity of a `.q42` file against its source `.ntx` file
+    /// by calculating and comparing an XOR Parity Checksum across all triples.
+    /// This uses O(1) memory and verifies that zero records were lost.
+    VerifyIntegrity {
+        /// The original N-Triples/Turtle source file
+        #[arg(long)]
+        input: PathBuf,
+        /// The compiled .q42 dataset binary file
+        #[arg(long)]
+        dataset: PathBuf,
     },
     /// Stream-ingests an RDF/XML file into a mathematically pure .q42 binary
     Import {
@@ -388,6 +400,8 @@ enum LlmAction {
 
 #[derive(Subcommand, Debug)]
 enum BenchmarkAction {
+    /// Evaluates SPARQL-Star nested graph queries
+    SparqlStar { path: PathBuf },
     /// Simulates querying a percentage of the compressed graph and tracks peak RSS
     RssScan { path: PathBuf, percent: u8 },
     /// Executes a Defeasible N3 logic rule on a specific subtree
@@ -720,9 +734,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .and_then(|e| e.to_str())
                 .unwrap_or("")
                 .to_lowercase();
-            let is_rdf = matches!(ext.as_str(), "rdf" | "xml" | "owl" | "ttl" | "turtle");
+            let is_rdf = matches!(ext.as_str(), "rdf" | "xml" | "owl");
+            let is_turtle_star = matches!(ext.as_str(), "ttl" | "turtle" | "ttls" | "ttlstar" | "ntx" | "ntstar" | "nts");
             let is_chk = ext == "chk";
-            let is_cbor = ext == "cbor" || ext == "cbor-ld";
+            let is_cbor = matches!(ext.as_str(), "cbor" | "cbor-ld");
             let is_kml = ext == "kml";
 
             // Ensure the output path ends in ".q42" so that lex_path()
@@ -736,6 +751,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("============================================================");
             if is_rdf {
                 println!("QualiaDB RDF/XML → .q42 Ingestor");
+            } else if is_turtle_star {
+                println!("QualiaDB Turtle/RDF-Star → .q42 Ingestor");
             } else if is_chk {
                 println!("QualiaDB Cognitive AI .chk → .q42 Ingestor");
             } else if is_cbor {
@@ -753,6 +770,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let result = if is_rdf {
                 ingest::ingest_rdf_xml(input, &q42_output)
+            } else if is_turtle_star {
+                ingest::ingest_turtle_star(input, &q42_output)
             } else if is_chk {
                 ingest::ingest_chk(input, &q42_output)
             } else if is_cbor {
@@ -775,6 +794,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 Err(e) => eprintln!("Ingest failed: {}", e),
+            }
+        }
+        Commands::VerifyIntegrity { input, dataset } => {
+            println!("============================================================");
+            println!("🔒 QualiaDB Zero-Allocation Integrity Verification");
+            println!("  Input   : {}", input.display());
+            println!("  Dataset : {}", dataset.display());
+            println!("============================================================");
+            
+            match qualia_core_db::ingest::verify_integrity(input.clone(), dataset.clone()) {
+                Ok(true) => {
+                    println!("\n✅ Integrity Check Passed: 100% Exact Match!");
+                    println!("The XOR Fold Checksums are perfectly identical.");
+                }
+                Ok(false) => {
+                    eprintln!("\n❌ Integrity Check Failed: Checksums mismatch!");
+                    std::process::exit(1);
+                }
+                Err(e) => {
+                    eprintln!("\n❌ Integrity Verification Error: {}", e);
+                    std::process::exit(1);
+                }
             }
         }
         Commands::Import { input, output } => {
@@ -977,6 +1018,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut sys = sysinfo::System::new_all();
 
             match action {
+                BenchmarkAction::SparqlStar { path } => {
+                    if let Err(e) = bench::sparql_bench::run_sparql_suite(&path) {
+                        eprintln!("Benchmark suite failed: {}", e);
+                    }
+                }
                 BenchmarkAction::RssScan { path, percent } => {
                     println!("=======================================================");
                     println!("🚀 QualiaDB Native Block-Level Benchmark: RSS Scan");
@@ -1613,7 +1659,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let context_hash = hash_str(&url);
 
                     let temp_dir = repo.join(".qualia_temp");
-                    let mut sorter = qualia_core_db::sparql_formats::external_sort::ExternalSorter::new(temp_dir);
+                    let mut sorter = qualia_core_db::external_sort::ExternalSorter::new(temp_dir);
 
                     let is_http = url.starts_with("http");
                     let mut file_bytes: Vec<u8> = Vec::new();
@@ -1646,7 +1692,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let parsed_count = match fmt.as_str() {
                         "cbor-ld" => {
                             println!("📡 Stream-parsing CBOR-LD (Zero-allocation path)");
-                            qualia_core_db::sparql_formats::cbor_parser::parse_cbor_ld_stream(
+                            qualia_core_db::parsers::cbor_parser::parse_cbor_ld_stream(
                                 &file_bytes,
                                 context_hash,
                                 &mut sorter,
@@ -1656,7 +1702,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             println!(
                                 "🏢 Stream-parsing JSON-LD via SAX-style State Machine (Zero DOM)"
                             );
-                            qualia_core_db::sparql_formats::json_ld_stream::parse_json_ld_stream(
+                            qualia_core_db::parsers::json_ld_stream::parse_json_ld_stream(
                                 file_bytes.as_slice(),
                                 context_hash,
                                 &mut sorter,
@@ -1664,7 +1710,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         "turtle-star" => {
                             println!("🌿 Stream-parsing Turtle-Star (with MSB XOR folding)");
-                            qualia_core_db::sparql_formats::turtle_star::parse_turtle_star_stream(
+                            qualia_core_db::parsers::turtle_star::parse_turtle_star_stream(
                                 file_bytes.as_slice(),
                                 context_hash,
                                 &mut sorter,
@@ -1672,7 +1718,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         "chk" => {
                             println!("🧠 Stream-parsing Cognitive AI Chunks (.chk format)");
-                            qualia_core_db::sparql_formats::chk_parser::parse_chk_stream(
+                            qualia_core_db::parsers::chk_parser::parse_chk_stream(
                                 file_bytes.as_slice(),
                                 context_hash,
                                 &mut sorter,

@@ -1,3 +1,5 @@
+#![allow(unused)]
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::Path;
@@ -33,18 +35,22 @@ const WAL_HEADER_SIZE: u64 = 32;
 /// The WAL also maintains a `prev_dag_hash` linking each checkpoint into the
 /// `git_bridge::DagStore` Merkle-DAG so the full write history is content-addressed.
 pub struct WriteAheadLog {
+    #[cfg(not(target_arch = "wasm32"))]
     file: File,
+    #[cfg(target_arch = "wasm32")]
+    file: Vec<u8>,
     /// SHA-256 of the most recent DagNode committed from this WAL.
     /// `[0u8; 32]` means no prior checkpoint — next call to `checkpoint_to_dag` triggers `genesis_node`.
     pub prev_dag_hash: [u8; 32],
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl WriteAheadLog {
     /// Opens or creates the append-only WAL file at `path`.
     ///
     /// If the file already has a 32-byte header (prior checkpoint hash), it is read
     /// back so the chain is preserved across restarts.
-    pub fn open<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+    pub fn open<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
         let mut file = OpenOptions::new()
             .create(true)
             .write(true)
@@ -75,7 +81,7 @@ impl WriteAheadLog {
 
     /// Synchronously appends a NQuin to the log and flushes to disk.
     /// This prevents data loss if the OS kills the process.
-    pub fn append_mutation(&mut self, quin: &NQuin) -> io::Result<()> {
+    pub fn append_mutation(&mut self, quin: &NQuin) -> std::io::Result<()> {
         // Always append — the file cursor is already at the end after open().
         self.file.write_all(quin_as_bytes(quin))?;
         self.file.sync_all()?;
@@ -83,7 +89,7 @@ impl WriteAheadLog {
     }
 
     /// Append with volatile field scrub after durable sync (wipes transient reasoning state).
-    pub fn append_mutation_volatile(&mut self, quin: &mut NQuin) -> io::Result<()> {
+    pub fn append_mutation_volatile(&mut self, quin: &mut NQuin) -> std::io::Result<()> {
         self.file.write_all(quin_as_bytes(quin))?;
         self.file.sync_all()?;
         scrub_quin_volatile(quin);
@@ -91,7 +97,7 @@ impl WriteAheadLog {
     }
 
     /// Reconstructs uncommitted NQuins from the WAL (skips the 32-byte header).
-    pub fn recover(&mut self) -> io::Result<Vec<NQuin>> {
+    pub fn recover(&mut self) -> std::io::Result<Vec<NQuin>> {
         self.file.seek(SeekFrom::Start(WAL_HEADER_SIZE))?;
 
         let mut buffer = Vec::new();
@@ -113,7 +119,7 @@ impl WriteAheadLog {
     /// Wipes the NQuin region of the WAL after a SuperBlock commit, preserving the header.
     ///
     /// Call `checkpoint_to_dag` **before** this so the hash chain is updated first.
-    pub fn truncate(&mut self) -> io::Result<()> {
+    pub fn truncate(&mut self) -> std::io::Result<()> {
         self.file.set_len(WAL_HEADER_SIZE)?;
         self.file.seek(SeekFrom::End(0))?;
         self.file.sync_all()?;
@@ -135,7 +141,7 @@ impl WriteAheadLog {
         dag_store: &mut crate::git_bridge::DagStore,
         author_did: u64,
         timestamp_ms: u64,
-    ) -> io::Result<[u8; 32]> {
+    ) -> std::io::Result<[u8; 32]> {
         let quins = self.recover()?;
         if quins.is_empty() {
             return Ok(self.prev_dag_hash);
@@ -165,11 +171,32 @@ impl WriteAheadLog {
     }
 
     /// Return the number of NQuin records currently buffered in the WAL.
-    pub fn buffered_count(&mut self) -> io::Result<usize> {
+    pub fn buffered_count(&mut self) -> std::io::Result<usize> {
         let file_len = self.file.seek(SeekFrom::End(0))?;
         let data_len = file_len.saturating_sub(WAL_HEADER_SIZE);
         Ok((data_len as usize) / std::mem::size_of::<NQuin>())
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl WriteAheadLog {
+    pub fn open<P: AsRef<Path>>(_path: P) -> std::io::Result<Self> {
+        Ok(Self { file: Vec::new(), prev_dag_hash: [0; 32] })
+    }
+    pub fn append_mutation(&mut self, _quin: &NQuin) -> std::io::Result<()> { Ok(()) }
+    pub fn append_mutation_volatile(&mut self, quin: &mut NQuin) -> std::io::Result<()> {
+        scrub_quin_volatile(quin);
+        Ok(())
+    }
+    pub fn recover(&mut self) -> std::io::Result<Vec<NQuin>> { Ok(Vec::new()) }
+    pub fn truncate(&mut self) -> std::io::Result<()> { Ok(()) }
+    pub fn checkpoint_to_dag(
+        &mut self,
+        _dag_store: &mut crate::git_bridge::DagStore,
+        _author_did: u64,
+        _timestamp_ms: u64,
+    ) -> std::io::Result<[u8; 32]> { Ok(self.prev_dag_hash) }
+    pub fn buffered_count(&mut self) -> std::io::Result<usize> { Ok(0) }
 }
 
 #[inline]

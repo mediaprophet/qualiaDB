@@ -2,7 +2,7 @@
 
 Build, test, benchmark, and contribute to QualiaDB / Webizen.
 
-_Branch: `0.0.10-dev` | Last updated: 2026-06-11_
+_Branch: `0.0.11-dev` | Last updated: 2026-06-11_
 
 ---
 
@@ -12,8 +12,7 @@ _Branch: `0.0.10-dev` | Last updated: 2026-06-11_
 |---|---|---|
 | [Rust stable](https://rustup.rs/) | Everything | `rustup update stable` |
 | [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/) | WASM browser build | |
-| [Flutter SDK](https://docs.flutter.dev/get-started/install) ≥ 3.16 | Desktop app | Primary shipped desktop target |
-| [flutter_rust_bridge_codegen](https://cjycode.com/flutter_rust_bridge/) | Flutter FRB API changes | Run after editing `crates/qualia-flutter/rust/src/api/` |
+| [Dioxus CLI](https://dioxuslabs.com/learn/0.5/getting_started) | Qualia Studio | Primary shipped desktop target (`cargo binstall dioxus-cli`) |
 | Node.js ≥ 18 | Docs test suite, API explorer | `docs/tests/run-local.ps1` |
 | [Tauri CLI v1.x](https://tauri.app/v1/guides/getting-started/prerequisites/) | Legacy desktop only | `qualia-desktop` crate — not in release CI |
 
@@ -28,15 +27,14 @@ cargo build --release -p qualia-cli
 ./target/release/qualia --help
 ```
 
-### Flutter desktop app (primary shipped desktop target)
+### Qualia Studio desktop app (primary shipped desktop target)
 
 ```bash
-cd crates/qualia-flutter
-flutter pub get
-flutter run -d windows   # or: -d macos / -d linux
+cd crates/qualia-studio
+dx build --release
 
-# After editing crates/qualia-flutter/rust/src/api/*.rs:
-flutter_rust_bridge_codegen generate
+# Or to run in development mode:
+dx serve --platform desktop
 ```
 
 ### WASM browser module
@@ -56,8 +54,8 @@ GitHub Actions (`.github/workflows/release.yml`) builds on tag push:
 - Flutter desktop bundles — `.dmg` (macOS), AppImage + `.deb` (Linux), `.exe` + `.msi` (Windows)
 
 ```bash
-git tag v0.0.10
-git push origin v0.0.10
+git tag v0.0.11
+git push origin v0.0.11
 ```
 
 ### Cross-compiling the CLI locally (Windows → Linux)
@@ -275,7 +273,7 @@ Supported input formats for `qualia ingest`:
 
 ---
 
-## Known Build Issues (v0.0.10-dev)
+## Known Build Issues (v0.0.11-dev)
 
 All crates compile cleanly except where noted:
 
@@ -301,7 +299,7 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 
 ## Releases & Versioning
 
-- **Current branch:** `0.0.10-dev`
+- **Current branch:** `0.0.11-dev`
 - **Release config:** `release.toml` (cargo-release)
 - **Release notes:** [CHANGELOG.md](../../CHANGELOG.md)
 - **CI:** `.github/workflows/release.yml` — builds on tag push (Windows, macOS, Linux)
@@ -309,8 +307,8 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 To cut a release:
 
 ```bash
-git tag v0.0.10
-git push origin v0.0.10
+git tag v0.0.11
+git push origin v0.0.11
 ```
 
 ADRs (Architectural Decision Records): [`docs/manuals/adr/`](adr/)

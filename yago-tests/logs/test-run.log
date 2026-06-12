@@ -1,0 +1,18 @@
+[2026-06-12 03:01:05] [INFO] Starting YAGO Test Suite (Automated)
+[2026-06-12 03:01:05] [INFO] CLI Path: C:\Projects\qualiaDB\target\release\qualia-cli.exe
+[2026-06-12 03:01:05] [INFO] YAGO Directory: C:\Projects\qualiaDB\local\ontology\yago
+[2026-06-12 03:01:05] [INFO] Test 1: Q42 Converter - Small file (schema)
+[2026-06-12 03:01:05] [INFO] Starting Q42 conversion test: yago-schema
+[2026-06-12 03:01:06] [SUCCESS] Q42 conversion completed in 0.34s
+[2026-06-12 03:01:06] [INFO] Test 2: Q42 Converter - Medium file (taxonomy)
+[2026-06-12 03:01:06] [INFO] Starting Q42 conversion test: yago-taxonomy
+[2026-06-12 03:01:07] [SUCCESS] Q42 conversion completed in 1.30s
+[2026-06-12 03:01:07] [INFO] Test 3: Inspection test on yago-schema
+[2026-06-12 03:01:07] [INFO] Starting inspection test: inspect-yago-schema
+[2026-06-12 03:01:07] [SUCCESS] Inspection completed in 0.10s
+[2026-06-12 03:01:07] [INFO] Test 3: Inspection test on yago-taxonomy
+[2026-06-12 03:01:07] [INFO] Starting inspection test: inspect-yago-taxonomy
+[2026-06-12 03:01:08] [SUCCESS] Inspection completed in 0.71s
+[2026-06-12 03:01:08] [INFO] Reports generated: C:\Projects\qualiaDB\yago-tests\results\test-report-20260612-030108.json and C:\Projects\qualiaDB\yago-tests\results\test-report-20260612-030108.txt
+[2026-06-12 03:01:08] [INFO] YAGO Test Suite completed
+[2026-06-12 03:01:08] [INFO] Results saved to: C:\Projects\qualiaDB\yago-tests\results

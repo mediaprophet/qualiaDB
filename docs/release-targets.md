@@ -1,6 +1,6 @@
 # Release Targets — Feature Matrix
 
-_Branch: `0.0.10-dev` | Updated: 2026-06-11_
+_Branch: `0.0.11-dev` | Updated: 2026-06-11_
 
 Five release artefacts are built or planned from this repository:
 
@@ -9,12 +9,12 @@ Five release artefacts are built or planned from this repository:
 | **WASM (Browser)** | `qualia-core-wasm` (`wasm_bridge.rs`, `wasm_edge.rs`) | `qualia-core-wasm.tar.gz` — drop into any web project |
 | **WASM (Mobile PWA)** | `crates/qualia-mobile-harness/` (Dioxus WASM) | PWA — installed via "Add to Home Screen" on any mobile browser; QR-scan bootstrap from desktop |
 | **CLI** | `crates/qualia-cli/` | Binary: `qualia-cli`; built via `cargo build --release -p qualia-cli` |
-| **Desktop — Webizen** | `crates/qualia-flutter/` (Flutter + FRB) | Installer: Windows / macOS / Linux via GitHub Releases |
+| **Desktop — Qualia Studio** | `crates/qualia-studio/` (Dioxus 0.5 + Shoelace) | Installer: Windows / macOS / Linux via GitHub Releases |
 | **Mobile Native** | TBA (likely Flutter mobile) | TBA — iOS / Android; planned for a future milestone |
 
 > **Note — WASM (Mobile PWA):** This is a Dioxus WASM thin-client PWA that runs on a mobile phone and connects back to the user's personal Webizen desktop daemon via WebSocket (port 4242). It does **not** run the graph engine locally. It provides pane-based UI rendering, QR-scan bootstrap, and DID challenge-response pairing. Core graph, inference, and storage features are executed by the daemon and streamed to the mobile UI. Phase C of the Mindware Studio plan (`webizen-platform-plan.md`).
 
-> **Note on the Tauri/React desktop** (`crates/qualia-desktop/`): retained in-tree for reference only. Not built by CI, not released. All active desktop work is in the Flutter / Webizen target.
+> **Note on Legacy Desktop Prototypes** (`crates/qualia-desktop/` and `crates/qualia-flutter/`): The Tauri/React/NodeJS prototypes are retained in-tree for reference only. The Flutter application is deprecated. All active desktop work has transitioned to the native Dioxus 0.5 / Shoelace target in `crates/qualia-studio/`.
 
 ---
 
@@ -66,6 +66,7 @@ Five release artefacts are built or planned from this repository:
 | RDF-Star / SPARQL-Star embedded triples | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | Sort-first ingestor (BIDX-indexable output) | ❌ | ❌ | ✅ | ✅ | 🚧 |
 | Multi-pass external sorter (datasets > RAM) | ❌ | ❌ | ✅ | ❌ | 🚧 |
+| Streaming ingest v3 DAG generation (`DagStore`) | ❌ | ❌ | ✅ | ✅ | 🚧 |
 | Profile-bound ingest (`--profile <file>.qchk`) | ❌ | ❌ | ✅ | ✅ Via Credential Manager | 🚧 |
 | KML geometry ingest → NQuin spatial predicates | ❌ | ❌ | ✅ | ✅ | 🚧 |
 | FNV-1a zero-alloc URI hashing (`q_hash`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
@@ -121,7 +122,7 @@ Five release artefacts are built or planned from this repository:
 | Bi-temporal graph (`temporal_graph.rs`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | PROV-O provenance quins (`provenance.rs`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | Credential-gated subgraphs (AES-256-GCM + HKDF + X25519) | ⚠️ In-memory | ❌ | ✅ | ✅ | 🚧 |
-| CogAI / ACT-R opcodes (retrieve, decay, unless) | ⚠️ Partial stubs | ❌ | ⚠️ Partial stubs | ⚠️ Partial stubs | 🚧 |
+| CogAI / ACT-R opcodes (retrieve, decay, unless) | ✅ Complete | ✅ | ✅ Complete | ✅ Complete | ✅ |
 
 ---
 
@@ -233,7 +234,7 @@ CG specifications: [Solid Protocol v0.11](https://solidproject.org/TR/protocol) 
 | Solid LDP Basic Container export — `data.ttl` + `data.ttl.acl` (`solid_ldp.rs`, `export-solid`) | Exit / portability | ❌ | ❌ | ✅ | ⚠️ Future | 🚧 |
 | WAC `.acl` rules from NQuin routing lanes (public / owner-only) | Exit / portability | ❌ | ❌ | ✅ | ⚠️ Future | 🚧 |
 | Inbound Solid Pod import (LDP Turtle → `.q42` ingest) | Federation / entry | 🚧 | ❌ | 🚧 | 🚧 | 🚧 |
-| WebID profile URI → `webid_hash` FNV-1a in `WebizenId` (`webizen_identity.rs`) | Identity bridge | ✅ | ❌ | ✅ | ✅ | 🚧 |
+| WebID profile URI → `webid_hash` FNV-1a in `WebizenId` (`webizen_identifiers.rs`) | Identity bridge | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | `IdentityRegistry` WebID URI → WebizenId reverse-lookup | Identity bridge | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | WebID Profile document generation (`foaf:Agent`, `pim:storage`, `solid:oidcIssuer`) | Identity bridge | 🚧 | ❌ | 🚧 | 🚧 | 🚧 |
 | `did:solid` resolution (specialisation of `did:web` via Solid server registry) | Identity bridge | 🚧 | ❌ | 🚧 | 🚧 | 🚧 |
@@ -411,7 +412,7 @@ Grammar-constrained FSM token-filtering over LLM logit output.
 
 | Feature | WASM (Browser) | WASM (Mobile PWA) | CLI | Desktop (Webizen) | Mobile Native |
 |---|:---:|:---:|:---:|:---:|:---:|
-| `webizen_identity.rs` — Webizen identity lifecycle | ✅ | ❌ | ✅ | ✅ | 🚧 |
+| `webizen_identifiers.rs` — Webizen identity lifecycle | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | Ed25519 key generation + signing | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | `derive_webizen_ipv6` — DID → IPv6 (Ed25519 key-derived) | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | Cryptokey routing via IPv6 address space (`web_civics.rs`) | ❌ | ❌ | ✅ | ✅ | 🚧 |

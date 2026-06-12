@@ -1,7 +1,7 @@
 # Qualia-DB Architecture
 
 > The 3-Core Triad, Webizen VM, Rights Ontology, and the Principal-Agent Ecosystem.
-> _Branch: `0.0.10-dev` | Last updated: 2026-06-10_
+> _Branch: `0.0.11-dev` | Last updated: 2026-06-10_
 
 Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favour of a specialised 3-Core Triad built with ruthless mechanical sympathy (512 MB RAM floor). Raw multi-modal data (audio, camera feeds) would immediately breach this floor, so the ecosystem forces an **Orchestration Sieve**: the Primary Agent must coordinate deterministic tools (OpenCV, Audio DSP) to strip noise, extract contours, and build optimised files *before* handing them to the local LLM or the database.
 
@@ -171,7 +171,7 @@ Qualia-DB explicitly rejects the infinite rent-seeking paradigm of the legacy we
 
 Qualia-DB ships with three tightly-bound human-facing interfaces:
 
-1. **Qualia Flutter App (`crates/qualia-flutter/`)** — Primary desktop shell (Windows, macOS, Linux) via flutter_rust_bridge. Provides cooperative group chat with sub-agent hierarchy, ontology branches, chat graph panel, LLM Hub, Ontology Workbench (URI import → `.c.q42` → magnet sharing), Qapp Vault (embedded WebView), Wallet, Address Book, and Spatial Physics. The Qualia daemon on loopback also serves chat relay (`/chat/publish`, `/chat/pull`) and HTTP web seeds for ontology artifacts (`/torrent/webseed/{hash}`). See [Flutter API Reference](flutter-api-reference.md) and [RELEASE_NOTES_v0.0.8.md](RELEASE_NOTES_v0.0.8.md).
+1. **Qualia Studio (`crates/qualia-studio/`)** — The primary desktop shell and Webizen environment (Windows, macOS, Linux). Built natively in Rust using Dioxus 0.5 and harvested Shoelace web components, bypassing legacy Node.js/React overhead. It provides a flexible pane registry system housing a Neuro-Symbolic Chat (`chat_graph`), LLM Engine harness (`llm_harness`), Vital Monitor (`health_monitor`), and an Ontology Builder (`personal_ontology`) designed to let people define personal ontological axioms via natural language. Qualia Studio replaces both the older Node.js/React prototypes and the Flutter desktop application.
 
 2. **Qualia CLI (`crates/qualia-cli`)** — The primary toolchain for data ingestion, benchmarking, daemon management, capability profile compilation, and resource catalog operations.
 

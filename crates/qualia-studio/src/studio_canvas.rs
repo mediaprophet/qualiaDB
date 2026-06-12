@@ -76,6 +76,7 @@ pub fn DynamicPage(path: Vec<String>) -> Element {
     // ── Telemetry SSE ──────────────────────────────────────
     let mut telemetry_logs = use_signal(Vec::<String>::new);
 
+    #[cfg(target_arch = "wasm32")]
     use_effect(move || {
         if let Ok(es) = EventSource::new("http://127.0.0.1:8080/telemetry") {
             let callback = Closure::wrap(Box::new(move |e: MessageEvent| {
@@ -92,33 +93,37 @@ pub fn DynamicPage(path: Vec<String>) -> Element {
         }
     });
 
+    #[cfg(not(target_arch = "wasm32"))]
+    use_effect(move || {
+        // Desktop natively polling or disabled for now to avoid web_sys panic
+    });
+
     // ── Drag-and-Drop: handle drop on the canvas ───────────
     let on_canvas_drop = {
         let mut workspace = workspace.clone();
         move |evt: Event<DragData>| {
             evt.prevent_default();
             // Retrieve the component_id that was set in drag_start
-            if let Some(dt) = evt.data().data_transfer() {
-                if let Ok(component_id) = dt.get_data("text/plain") {
-                    if !component_id.is_empty() {
-                        // Look up default dimensions from the registry
-                        let (default_w, default_h) = find_pane(&component_id)
-                            .map(|p| (p.default_w, p.default_h))
-                            .unwrap_or((4, 2));
+            let dt = evt.data().data_transfer();
+            if let Some(component_id) = dt.get_data("application/x-qualia-pane-id") {
+                if !component_id.is_empty() {
+                    // Look up default dimensions from the registry
+                    let (default_w, default_h) = find_pane(&component_id)
+                        .map(|p| (p.default_w, p.default_h))
+                        .unwrap_or((4, 2));
 
-                        let new_pane = PanePlacement {
-                            component_id,
-                            x: 1,
-                            y: (workspace.read().pages.first().map(|p| p.panes.len()).unwrap_or(0) as u8) + 1,
-                            w: default_w,
-                            h: default_h,
-                            data_bindings: vec![],
-                        };
+                    let new_pane = PanePlacement {
+                        component_id,
+                        x: 1,
+                        y: (workspace.read().pages.first().map(|p| p.panes.len()).unwrap_or(0) as u8) + 1,
+                        w: default_w,
+                        h: default_h,
+                        data_bindings: vec![],
+                    };
 
-                        let mut ws = workspace.write();
-                        if let Some(page) = ws.pages.first_mut() {
-                            page.panes.push(new_pane);
-                        }
+                    let mut ws = workspace.write();
+                    if let Some(page) = ws.pages.first_mut() {
+                        page.panes.push(new_pane);
                     }
                 }
             }
@@ -153,7 +158,8 @@ pub fn DynamicPage(path: Vec<String>) -> Element {
         let mut workspace = workspace.clone();
         let mut selected_pane_index = selected_pane_index.clone();
         move |_| {
-            if let Some(idx) = *selected_pane_index.read() {
+            let idx_opt = *selected_pane_index.read();
+            if let Some(idx) = idx_opt {
                 let mut ws = workspace.write();
                 if let Some(page) = ws.pages.first_mut() {
                     if idx < page.panes.len() {
@@ -330,7 +336,7 @@ pub fn DynamicPage(path: Vec<String>) -> Element {
                                             if pane.data_bindings.is_empty() {
                                                 "None"
                                             } else {
-                                                &pane.data_bindings.join(", ")
+                                                "{pane.data_bindings.join(\", \")}"
                                             }
                                         }
                                     }
@@ -417,9 +423,8 @@ fn render_palette_category(palette: &[PaneDefinition], category: PaneCategory) -
                     ondragstart: {
                         let cid = item.component_id.clone();
                         move |evt: Event<DragData>| {
-                            if let Some(dt) = evt.data().data_transfer() {
-                                let _ = dt.set_data("text/plain", &cid);
-                            }
+                            let dt = evt.data().data_transfer();
+                            let _ = dt.set_data("application/x-qualia-pane-id", &cid);
                         }
                     },
                     // Icon placeholder

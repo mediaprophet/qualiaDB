@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-10 (Updated)  
 **Original Date:** 2026-06-06  
-**Branch:** `0.0.10-dev`  
+**Branch:** `0.0.11-dev`  
 **Purpose:** Context export for new chat sessions
 
 ---
@@ -25,7 +25,7 @@ Key themes:
 
 **Build:** ✅ Compiling successfully (0 errors, all 82 errors resolved)  
 **Test Count:** 539 test functions in qualia-core-db  
-**Version:** 0.0.10-dev
+**Version:** 0.0.11-dev
 
 ---
 

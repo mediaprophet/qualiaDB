@@ -1,5 +1,5 @@
 # QualiaDB — Multi-Agent Collaboration Ecosystem
-_Branch: `0.0.10-dev` | Last updated: 2026-06-09_
+_Branch: `0.0.11-dev` | Last updated: 2026-06-09_
 
 This document is the coordination layer for concurrent or sequential AI-agent sessions
 working on the QualiaDB engine. Read it before writing a single line of code.
@@ -607,7 +607,7 @@ At the end of your session:
 1. **Run tests:** `cargo test -p qualia-core-db --lib` — all tests must pass.
 2. **Update this file (AGENTS.md):** move your completed task from §3 to §2 with status ✅.
 3. **Update HANDOVER.md §3 (Engine Capability Inventory):** add your module to Tier 1 or Tier 2.
-4. **Commit + push** to `0.0.10-dev` with prefix `feat(modality):` or `fix(modality):`.
+4. **Commit + push** to `0.0.11-dev` with prefix `feat(modality):` or `fix(modality):`.
 5. **Leave a session note** at the bottom of this doc (§7) describing what you did,
    what you left incomplete, and any architectural decisions future agents should know.
 
@@ -615,7 +615,7 @@ At the end of your session:
 
 ## 7. Session Notes
 
-### 2026-06-09 — Flutter 0.0.10 LLM lifecycle + telemetry
+### 2026-06-09 — Flutter 0.0.11 LLM lifecycle + telemetry
 
 **Completed:**
 - Async model activation (`set_active_model_async`, `apply_model_preference_async`) — no FFI thread blocking
@@ -624,8 +624,8 @@ At the end of your session:
 - Live VRAM used/total in `HardwareTelemetry` + VaultHudBar (DirectML on Windows)
 - In-app + Dev Console + tray file logging via `set_telemetry_file_logging_enabled`
 - Inference backend preference (`local` / `hybrid` / `remote`) in Settings + chat agent defaults
-- Plan doc: `docs/manuals/0.0.10-flutter-plan.md`
-- Version bump to `0.0.10`; branches `0.0.10` and `0.0.10-dev`
+- Plan doc: `docs/manuals/0.0.11-flutter-plan.md`
+- Version bump to `0.0.11`; branches `0.0.11` and `0.0.11-dev`
 - Resident GGUF mmap (`resident_model.rs`) + eviction clears mmap; inference reuses via `adopt_resident_mmap`
 - Structured system telemetry bus (`system_telemetry.rs`) + FRB stream + `SystemTelemetryHub` / live HUD during activation
 - Doc correction: real embedding lookup via `GgufTensorIndex` (not pseudo-embeddings)

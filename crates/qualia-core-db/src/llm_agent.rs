@@ -287,7 +287,7 @@ pub enum AgentError {
 
 // ─── Embedding dispatch helpers (native) ─────────────────────────────────────
 
-#[cfg(not(target_arch = "wasm32"))]
+
 fn pseudo_embedding_forward(
     token_id: u32,
     emb_dim: usize,
@@ -326,7 +326,6 @@ fn cpu_embedding_forward(
 /// The delta is computed as `B @ (A @ emb) * scaling` on the CPU.
 /// If the adapter dimensions do not match `emb_dim` the call silently falls
 /// back to the unmodified embedding (the base model is still correct).
-#[cfg(not(target_arch = "wasm32"))]
 fn lora_embedding_forward(
     engine:  &crate::gguf_bridge::QTensorEngine,
     idx:     &crate::gguf_sharder::GgufTensorIndex,
@@ -357,13 +356,13 @@ fn lora_embedding_forward(
     engine.dispatch_fused_transformer_block(wt, &emb_buf[..actual_n])
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn build_sieve(
     tok: &crate::gguf_sharder::GgufTokenizer,
     spec: Option<&crate::neuro_symbolic_sieve::SieveLexSpec>,
     lex_path: Option<&str>,
 ) -> Option<crate::neuro_symbolic_sieve::NeuroSymbolicSieve> {
     let spec = spec?;
+    #[cfg(not(target_arch = "wasm32"))]
     if let Some(path) = lex_path {
         let p = std::path::Path::new(path);
         if crate::q42_volume::is_v2_volume(p).unwrap_or(false) {
@@ -936,69 +935,341 @@ impl LocalLlmAgent {
             return (text, prov, tokens, semantic_quin);
         }
 
-        // ── WASM / non-local fallback (original mock — unchanged) ────────────
-        // On non-WASM this block is dead code; the native path above always returns.
-        #[allow(unreachable_code)]
+// ── Native GPU path ─────────────────────────────────────────────────
+        #[cfg(target_arch = "wasm32")]
         {
-            use rtrb::RingBuffer;
-            use std::thread;
-            use std::time::Duration;
+            use crate::gguf_bridge::{QTensor, QTensorEngine};
+            use crate::gguf_sharder::GgufTokenizer;
+                        
+            let model_path = match &self.backend {
+                AgentBackend::Local { model_path, .. } => model_path.clone(),
+                _ => {
+                    return (
+                        String::from("[no local model configured]"),
+                        vec![prov_hash],
+                        0,
+                        None,
+                    )
+                }
+            };
+            let prompt_owned = prompt.to_string();
 
-            #[derive(Clone, Debug)]
-            enum VectorOp {
-                TokenBytes([u8; 16]),
-                EndOfStream,
+            // ── LoRA context detection (before thread spawn) ─────────────────
+            // Detect the prompt domain and pre-load the matching LoRA adapter.
+            // The pre-computed delta vectors are cloned into the inference thread
+            // as fixed-size heap data — one allocation per infer call, not per token.
+            #[allow(unused_variables)]
+            let lora_active_adapter: Option<crate::lora::LoRAAdapter> = {
+                let mut guard = self.lora_manager.lock().unwrap_or_else(|e| e.into_inner());
+                if let Some(ref mut mgr) = *guard {
+                    let (ctx, conf, _switched) = mgr.auto_switch(
+                        &prompt_owned,
+                        mgr.detector.confidence_threshold,
+                    );
+                    log::debug!("LoRA|context-detect|domain={ctx}|conf={conf:.3}");
+                    mgr.active().cloned()
+                } else {
+                    None
+                }
+            };
+
+            // Fixed-size types keep the hot-path allocation-free in the ring buffer.
+            #[derive(Clone, Copy)]
+            struct LogitSummary {
+                _top_id: u32,
+                anomaly: u8,
             }
-            #[derive(Clone, Debug)]
-            enum WebizenOp {
+            #[derive(Clone)]
+            enum LlmMsg {
+                Logit(LogitSummary),
+                Eos,
+            }
+            #[derive(Clone)]
+            enum SentMsg {
                 DenyRollback,
             }
 
-            let (mut logit_p, mut logit_c) = RingBuffer::<VectorOp>::new(1024);
-            let (mut control_p, mut control_c) = RingBuffer::<WebizenOp>::new(16);
+            
+            
+            // Move the (optional) LoRA adapter into the inference thread.
+            let lora_for_thread = lora_active_adapter;
 
-            let llm_handle = thread::spawn(move || {
-                let mut final_text = String::new();
-                let output_text = "The rapid development of modern infrastructure... Wait, the internet did not exist in 1930.";
-                let mut tokens_generated = 0u32;
-                for word in output_text.split_whitespace() {
-                    if let Ok(WebizenOp::DenyRollback) = control_c.pop() {
-                        thread::sleep(Duration::from_millis(10));
-                        final_text.push_str("[recalculated deterministic tensor] ");
-                        tokens_generated += 3;
-                        continue;
-                    }
-                    let mut vector = [0u8; 16];
-                    vector[0] = if word.contains("internet") || word.contains("modern") {
-                        0x99
-                    } else {
-                        0x01
-                    };
-                    let _ = logit_p.push(VectorOp::TokenBytes(vector));
-                    final_text.push_str(word);
-                    final_text.push(' ');
-                    tokens_generated += 1;
-                    thread::sleep(Duration::from_millis(5));
+            // ── LLM engine synchronous execution ─────────────────────────────
+            let (text, tokens, semantic_quin, sieve_failed) = {
+                let mut rollback = false;
+
+                let lora_adapter = lora_for_thread;
+                let sieve_spec = sieve_spec;
+                let sieve_lex_path = sieve_lex_path;
+                // Build the GPU engine and memory-map the GGUF inside the thread to
+                // avoid Send constraints on the DirectML / wgpu device handles.
+                let mut engine = {
+                    let engine_guard = crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| g.borrow_mut().take());
+                    engine_guard.expect("WASM WebGPU engine not initialized. Call initialize_webgpu_engine first.")
+                };
+
+                let tok = engine
+                    .gguf_mmap
+                    .as_ref()
+                    .map(|m| GgufTokenizer::from_gguf(m))
+                    .unwrap_or_default();
+
+                // Parse tensor-info section → real embedding lookup.
+                let tensor_idx = engine
+                    .gguf_mmap
+                    .as_ref()
+                    .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
+
+                let mut ctx = tok.encode(&prompt_owned);
+                if ctx.is_empty() {
+                    ctx.push(tok.bos_token_id);
                 }
-                let _ = logit_p.push(VectorOp::EndOfStream);
-                (final_text, tokens_generated)
-            });
+                let eos = tok.eos_token_id;
+                let vlen = tok.vocab_len().max(1);
 
-            loop {
-                match logit_c.pop() {
-                    Ok(VectorOp::EndOfStream) => break,
-                    Ok(VectorOp::TokenBytes(b)) => {
-                        if b[0] == 0x99 {
-                            let _ = control_p.push(WebizenOp::DenyRollback);
+                // Use the real embedding dimension if the tensor was found; fall back to 4096.
+                let emb_dim = tensor_idx
+                    .as_ref()
+                    .map(|idx| idx.emb_dim())
+                    .filter(|&d| d > 0)
+                    .unwrap_or(4096);
+
+                // Stack buffers — zero-heap path (512MB floor safe).
+                use crate::gguf_bridge::{PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS};
+
+                const MAX_EMB_DIM: usize = 8192;
+                const MAX_FFN_DIM: usize = 10240;
+                let mut emb_buf = [0f32; MAX_EMB_DIM];
+                let mut scratch_a = [0f32; MAX_FFN_DIM];
+                let mut scratch_b = [0f32; MAX_FFN_DIM];
+                let mut prefill_chunk = [0f32; PREFILL_CHUNK_STACK_FLOATS];
+                let emb_dim = emb_dim.min(MAX_EMB_DIM);
+                engine.reset_kv_cache();
+
+                // Chunked prefill: populate KV for prompt tokens [0, prompt_len-1).
+                let prompt_len = ctx.len();
+                if prompt_len > 1 {
+                    if let Some(idx) = tensor_idx.as_ref() {
+                        let prefill_tokens = prompt_len - 1;
+                        let chunk_cap = (PREFILL_CHUNK_STACK_FLOATS / emb_dim)
+                            .min(PREFILL_CHUNK_SIZE)
+                            .max(1);
+                        let mut pos = 0usize;
+                        while pos < prefill_tokens {
+                            let n = (prefill_tokens - pos).min(chunk_cap);
+                            let batch_elems = n * emb_dim;
+                            {
+                                let mmap = match engine.gguf_mmap.as_deref() {
+                                    Some(m) => m,
+                                    None => break,
+                                };
+                                for t in 0..n {
+                                    let _ = idx.dequantize_token_embedding_into(
+                                        mmap,
+                                        ctx[pos + t],
+                                        &mut prefill_chunk[t * emb_dim..(t + 1) * emb_dim],
+                                    );
+                                }
+                            }
+                            let _ = engine.dispatch_prefill_chunk(
+                                idx,
+                                &mut prefill_chunk[..batch_elems],
+                                emb_dim,
+                                n as u32,
+                                pos as u32,
+                                &mut scratch_a,
+                                &mut scratch_b,
+                                TEST_TRANSFORMER_LAYER_CAP,
+                            );
+                            pos += n;
                         }
                     }
-                    Err(_) => {}
                 }
-            }
 
-            let (text, tokens) = llm_handle.join().unwrap_or((String::new(), 0));
-            (text, vec![prov_hash], tokens, None)
+                let mut out_ids: Vec<u32> = Vec::new();
+                let mut streamed_len = 0usize;
+                let mut sieve = if use_sieve {
+                    build_sieve(&tok, sieve_spec.as_ref(), sieve_lex_path.as_deref())
+                } else {
+                    None
+                };
+                let mut semantic_quin: Option<NQuin> = None;
+                let mut sieve_failed = false;
+                let gen_budget = if sieve.is_some() {
+                    3usize
+                } else {
+                    DECODE_TOKEN_BUDGET as usize
+                };
+
+                for _ in 0..gen_budget {
+                    // Check ControlStream for a DenyRollback injected in the previous step.
+                    let rollback_val = rollback; rollback = false; let mut rollback = rollback_val;
+
+                    let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
+
+                    // 1) Embedding lookup → hidden state (stack dequant).
+                    let hidden_ok = tensor_idx
+                        .as_ref()
+                        .and_then(|idx| {
+                            engine.gguf_mmap.as_deref().map(|m| {
+                                idx.dequantize_token_embedding_into(m, cur, &mut emb_buf[..emb_dim])
+                            })
+                        })
+                        .unwrap_or(0);
+
+                    // 1b) LoRA delta — additive correction to the embedding vector.
+                    // Applied after dequantize so the base model is unmodified.
+                    // Silently skipped if dimensions don't match (wrong adapter for model).
+                    if hidden_ok > 0 {
+                        if let Some(ref adapter) = lora_adapter {
+                            if adapter.meta.n_in == hidden_ok && adapter.meta.n_out == hidden_ok {
+                                let snap: Vec<f32> = emb_buf[..hidden_ok].to_vec();
+                                let _ = adapter.apply_cpu(&snap, &mut emb_buf[..hidden_ok]);
+                            }
+                        }
+                    }
+
+                    let (top_i, top_v) = if hidden_ok > 0 {
+                        if let Some(idx) = tensor_idx.as_ref() {
+                            let token_idx = ctx.len().saturating_sub(1) as u32;
+                            let _layers = engine.dispatch_transformer_forward(
+                                idx,
+                                &mut emb_buf[..emb_dim],
+                                emb_dim,
+                                &mut scratch_a,
+                                &mut scratch_b,
+                                token_idx,
+                                TEST_TRANSFORMER_LAYER_CAP,
+                            );
+                            let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
+                            if let Some(argmax) = engine.dispatch_output_argmax_chunked(
+                                idx,
+                                &emb_buf[..emb_dim],
+                                emb_dim,
+                                &mut scratch_a[..],
+                                TEST_VOCAB_CHUNK_CAP,
+                                sieve_mask,
+                            ) {
+                                if argmax.max_logit > f32::NEG_INFINITY {
+                                    (argmax.best_token_id as usize, argmax.max_logit)
+                                } else {
+                                    sieve_failed = true;
+                                    (0usize, f32::NEG_INFINITY)
+                                }
+                            } else {
+                                emb_buf[..emb_dim].iter().enumerate().fold(
+                                    (0usize, f32::NEG_INFINITY),
+                                    |(bi, bv), (i, &v)| {
+                                        if v > bv {
+                                            (i, v)
+                                        } else {
+                                            (bi, bv)
+                                        }
+                                    },
+                                )
+                            }
+                        } else {
+                            (0usize, 0.0)
+                        }
+                    } else {
+                        let wt = QTensor::new(vec![emb_dim, emb_dim], 0, true);
+                        let logits =
+                            pseudo_embedding_forward(cur, emb_dim, &mut emb_buf[..], &engine, &wt);
+                        logits.iter().enumerate().fold(
+                            (0usize, f32::NEG_INFINITY),
+                            |(bi, bv), (i, &v)| if v > bv { (i, v) } else { (bi, bv) },
+                        )
+                    };
+
+                    // Anomaly flag: 0x99 as the first byte of the top logit's IEEE-754
+                    // representation is the sentinel value for an anachronistic token.
+                    let anomaly = if top_v.to_le_bytes()[0] == 0x99 {
+                        0x99u8
+                    } else {
+                        0x01u8
+                    };
+
+                    // Inline Sentinel Check
+                    if anomaly == 0x99 {
+                        rollback = true;
+                    }
+
+                    // On DenyRollback, substitute a safe neighbour token instead of argmax.
+                    if sieve_failed {
+                        break;
+                    }
+
+                    let next = if rollback {
+                        cur.wrapping_add(1) % vlen
+                    } else {
+                        (top_i as u32) % vlen
+                    };
+
+                    if let Some(ref mut s) = sieve {
+                        match s.apply_token(next) {
+                            Ok(()) => {
+                                out_ids.push(next);
+                                ctx.push(next);
+                                if s.is_complete() {
+                                    semantic_quin = Some(s.assemble_quin(prov_hash));
+                                    break;
+                                }
+                            }
+                            Err(_) => {
+                                sieve_failed = true;
+                                break;
+                            }
+                        }
+                    } else {
+                        out_ids.push(next);
+                        ctx.push(next);
+                        if let Some(ref mut cb) = on_token {
+                            let full = tok.decode(&out_ids);
+                            if full.len() > streamed_len {
+                                let delta = full[streamed_len..].to_string();
+                                streamed_len = full.len();
+                                cb(delta);
+                            }
+                        }
+                        if next == eos {
+                            break;
+                        }
+                    }
+                }
+
+                let text = if semantic_quin.is_some() {
+                    String::new()
+                } else if sieve_failed {
+                    String::from("[sieve-misaligned]")
+                } else {
+                    tok.decode(&out_ids)
+                };
+                
+                // Return engine to global instance
+                {
+                    crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| {
+                        *g.borrow_mut() = Some(engine);
+                    });
+                }
+
+                (text, out_ids.len() as u32, semantic_quin, sieve_failed)
+            };
+            let mut prov = vec![prov_hash];
+            if prov_hash == 0 {
+                prov.push(q_hash("qualia:grounded"));
+            }
+            if let Some(q) = semantic_quin {
+                prov.push(q.subject);
+                prov.push(q.predicate);
+                prov.push(q.object);
+            }
+            if sieve_failed && semantic_quin.is_none() {
+                return (text, prov, tokens, None);
+            }
+            return (text, prov, tokens, semantic_quin);
         }
+
+        
     }
 }
 

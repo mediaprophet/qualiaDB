@@ -999,7 +999,7 @@ GET http://127.0.0.1:4242/health
             js(`
 const r    = await fetch('http://127.0.0.1:4242/health');
 const body = await r.json();
-// { status: "active", engine: "qualia-core-db", version: "0.0.10-dev", webtorrent: { … } }
+// { status: "active", engine: "qualia-core-db", version: "0.0.11-dev", webtorrent: { … } }
 `),
             cli(`
 # Start the daemon (dev mode — no token required)
@@ -1111,7 +1111,7 @@ ws.onmessage = (e) => {
             cli(`
 # WebSocket test with websocat (install: cargo install websocat)
 websocat ws://127.0.0.1:4242/qualia-bridge
-# Immediately receives: {"type":"HANDSHAKE_SUCCESS","payload":{"mode":"NATIVE","version":"0.0.10-dev"}}
+# Immediately receives: {"type":"HANDSHAKE_SUCCESS","payload":{"mode":"NATIVE","version":"0.0.11-dev"}}
 `),
         ],
         live: async (_wasm, native) => {
@@ -1651,7 +1651,7 @@ qualia-cli ingest --input knowledge.chk --output knowledge.q42
         id: 'cogai.actr_opcodes',
         category: 'CogAI Chunks',
         name: 'ACT-R Opcodes (RetrieveByActivation / DecayMetadata)',
-        summary: 'SHACL constraints that compile to ACT-R cognitive opcodes in the Webizen VM. qualia:retrieveByActivation → NativeRetrieveByActivation (yields to GPU Sieve / Core 2). qualia:decayMetadata → NativeDecayMetadata (yields to Core 2). qualia:unless → NativeUnless (executes inline on Core 1 as non-monotonic default logic). Activation levels are encoded in Quin metadata bits 0–31 as fixed-point u32.',
+        summary: 'SHACL constraints that compile to ACT-R cognitive opcodes in the Webizen VM. qualia:retrieveByActivation → NativeRetrieveByActivation. qualia:decayMetadata → NativeDecayMetadata. qualia:unless → NativeUnless. All ACT-R opcodes execute inline on Core 1 (NativeUnless acts as non-monotonic default logic). Activation levels are encoded in Quin metadata bits 0–31 as fixed-point u32.',
         params: [
             { name: 'activation', type: 'f32 in [0.0, 1.0]', desc: 'Chunk activation level — encoded as fixed-point u32 in metadata bits 0–31' },
             { name: 'decayRate',  type: 'f32',                desc: 'ACT-R base-level decay rate d (typically 0.5)' },
@@ -1711,7 +1711,7 @@ fn decay_activation(level: f32, rate: f32, elapsed_ms: u64) -> f32 {
                 metadata_bits_0_31:    '0x' + encoded.toString(16).padStart(8, '0'),
                 decayed_activation:    decayed.toFixed(6),
                 decayed_encoded_u32:   Math.round(decayed * SCALE),
-                core2_yield:           'NativeRetrieveByActivation + NativeDecayMetadata → GPU Sieve (returns None from execute_vm_frame)',
+                core1_inline:          'NativeRetrieveByActivation + NativeDecayMetadata → executes inline on Core 1',
             };
         },
         liveInputs: [

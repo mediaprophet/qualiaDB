@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QualiaDB WebGPU LLM Inference</title>
+    <!-- Enable Cross-Origin Isolation for SharedArrayBuffer -->
+    <script src="coi-serviceworker.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2c3e50; }
+        .status-box {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            background-color: #e8f4f8;
+            border: 1px solid #b6e0ec;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: none;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover { background-color: #45a049; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        .terminal {
+            background-color: #1e1e1e;
+            color: #00ff00;
+            font-family: 'Consolas', 'Courier New', monospace;
+            padding: 15px;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+        .loading { display: none; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QualiaDB Native WebGPU Inference</h1>
+        <p>This demo downloads Gemma 3 1B IT (Q4_0) directly to your browser memory and executes it using WebGPU and WebAssembly.</p>
+        
+        <div class="status-box" id="statusBox">
+            <strong>System Status:</strong> <span id="sysStatus">Checking WebGPU support...</span>
+        </div>
+
+        <button id="btnLoadModel" disabled>1. Load GGUF Model into Browser</button>
+        <span class="loading" id="spinner">Downloading...</span>
+        
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <br><br>
+        <button id="btnInitWasm" disabled>2. Initialize WASM WebGPU Engine</button>
+
+        <div class="terminal" id="terminalOutput">
+> QualiaDB Terminal Ready
+        </div>
+    </div>
+
+    <!-- Load the WASM module -->
+    <script type="module">
+        import init, { initialize_webgpu_engine } from './pkg/qualia_core_db.js';
+
+        const sysStatus = document.getElementById('sysStatus');
+        const btnLoadModel = document.getElementById('btnLoadModel');
+        const btnInitWasm = document.getElementById('btnInitWasm');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const terminal = document.getElementById('terminalOutput');
+        const spinner = document.getElementById('spinner');
+        
+        let ggufBuffer = null;
+
+        function log(msg) {
+            terminal.innerHTML += `\n> ${msg}`;
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        async function checkWebGPU() {
+            if (!navigator.gpu) {
+                sysStatus.innerHTML = '<span style="color:red">WebGPU is not supported in this browser.</span>';
+                log("Error: WebGPU not supported.");
+                return;
+            }
+            const adapter = await navigator.gpu.requestAdapter();
+            if (!adapter) {
+                sysStatus.innerHTML = '<span style="color:red">Failed to get WebGPU adapter.</span>';
+                log("Error: Failed to request WebGPU adapter.");
+                return;
+            }
+            sysStatus.innerHTML = '<span style="color:green">WebGPU is supported!</span>';
+            log("WebGPU Adapter found: " + adapter.name);
+            btnLoadModel.disabled = false;
+        }
+
+        btnLoadModel.addEventListener('click', async () => {
+            btnLoadModel.disabled = true;
+            spinner.style.display = 'inline';
+            progressBar.style.display = 'block';
+            log("Starting download of gemma-3-1b-it-q4_0.gguf from local server (http://localhost:8081)...");
+            
+            try {
+                // Ensure serve_models.py is running on port 8081
+                const response = await fetch('http://localhost:8081/gemma-3-1b-it-q4_0.gguf');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const reader = response.body.getReader();
+                const contentLength = +response.headers.get('Content-Length');
+                let receivedLength = 0;
+                let chunks = [];
+
+                while(true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    receivedLength += value.length;
+                    
+                    if (contentLength) {
+                        const percent = (receivedLength / contentLength) * 100;
+                        progressFill.style.width = percent + '%';
+                        if (receivedLength % (1024*1024*10) < value.length) {
+                             // Log every ~10MB to avoid spam
+                             log(`Downloaded ${(receivedLength/1024/1024).toFixed(1)} MB...`);
+                        }
+                    }
+                }
+
+                let chunksAll = new Uint8Array(receivedLength);
+                let position = 0;
+                for(let chunk of chunks) {
+                    chunksAll.set(chunk, position);
+                    position += chunk.length;
+                }
+                
+                ggufBuffer = chunksAll;
+                log(`Download complete! Total size: ${(receivedLength/1024/1024).toFixed(2)} MB`);
+                spinner.style.display = 'none';
+                btnInitWasm.disabled = false;
+                
+            } catch (e) {
+                log(`Error downloading model: ${e.message}`);
+                log("Make sure serve_models.py is running in the local/ directory!");
+                spinner.style.display = 'none';
+                btnLoadModel.disabled = false;
+            }
+        });
+
+        btnInitWasm.addEventListener('click', async () => {
+            btnInitWasm.disabled = true;
+            log("Loading WebAssembly module...");
+            try {
+                await init();
+                log("WASM Module loaded successfully.");
+                
+                log("Initializing WebGPU Engine inside WASM... (This will parse the GGUF)");
+                
+                // Call our exported WASM function!
+                await initialize_webgpu_engine(ggufBuffer);
+                
+                log("GGUF Engine initialized successfully! QualiaDB native WebGPU pipeline is active.");
+                sysStatus.innerHTML = '<span style="color:green">WASM Engine Ready</span>';
+                
+            } catch(e) {
+                log(`WASM Error: ${e.message}`);
+            }
+        });
+
+        // Start
+        checkWebGPU();
+
+    </script>
+</body>
+</html>

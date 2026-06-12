@@ -28,13 +28,42 @@ pub mod profiles;
 pub mod geometric_algebra;
 pub mod rdf_star;
 pub mod sentinel;
-pub mod webizen_identity;
+pub mod webizen_identifiers;
 pub mod sparql_library;
 pub use sparql_library::*;
 
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_lex;
+#[cfg(target_arch = "wasm32")]
+pub mod q42_lex {
+    pub struct Q42LexMmap<'a> {
+        _marker: std::marker::PhantomData<&'a ()>,
+    }
+    impl<'a> Q42LexMmap<'a> {
+        pub fn from_bytes(_data: &'a [u8]) -> Result<Self, String> { Err("Not supported on WASM".to_string()) }
+        pub fn lookup_embedded_triple(&self, _id: u64) -> Option<[u64; 3]> { None }
+        pub fn lookup_hash(&self, _id: u64) -> Option<&'a str> { None }
+    }
+    pub struct Q42LexFile {}
+    impl Q42LexFile {
+        pub fn open(_p: &std::path::Path) -> Result<Self, String> { Err("Not supported on WASM".to_string()) }
+        pub fn view(&self) -> Q42LexMmap<'_> { Q42LexMmap { _marker: std::marker::PhantomData } }
+    }
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub mod clinical_engine;
+#[cfg(target_arch = "wasm32")]
+pub mod clinical_engine {
+    pub struct GeneExpressionResult {
+        pub fold_change: f64,
+        pub log2_fold_change: f64,
+        pub is_significant: bool,
+    }
+    pub fn evaluate_gene_expression(_gene_id: u64, _baseline: f64, _treatment: f64, _fc_threshold: f64) -> GeneExpressionResult {
+        GeneExpressionResult { fold_change: 0.0, log2_fold_change: 0.0, is_significant: false }
+    }
+}
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_lexicon;
 #[cfg(not(target_arch = "wasm32"))]
@@ -61,7 +90,7 @@ pub mod ambient_orchestration;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod acoustic_ble_mesh;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod clinical_engine; // Temporarily disabled
+// pub mod clinical_engine; // Temporarily disabled
 #[cfg(not(target_arch = "wasm32"))]
 pub mod specialized_libs;
 
@@ -565,7 +594,6 @@ pub mod storage;
 pub mod sync;
 pub mod tee_ffi;
 pub mod telemetry;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod wal;
 pub mod webizen;
 #[cfg(not(target_arch = "wasm32"))]
@@ -576,11 +604,8 @@ pub mod webizen_server;
 pub mod daemon_swarm;
 #[cfg(target_os = "windows")]
 pub mod directml_bridge;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod ggml_quants;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod gguf_bridge;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod gguf_sharder;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
@@ -598,8 +623,10 @@ pub mod webizen_bytecode;
 pub mod jni_bridge;
 
 #[cfg(target_arch = "wasm32")]
-#[cfg(target_arch = "wasm32")]
 pub mod wasm_edge;
+
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_storage;
 
 /// A zero-allocation compile-time hashing function for Q-Turtle macros.
 /// Uses the FNV-1a algorithm to hash strings into 64-bit Quin vectors natively.

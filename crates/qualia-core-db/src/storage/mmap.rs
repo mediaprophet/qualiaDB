@@ -1,13 +1,17 @@
 use crate::NQuin;
+#[cfg(not(target_arch = "wasm32"))]
 use memmap2::MmapMut;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::OpenOptions;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub struct MmapStore {
     mmap: MmapMut,
     capacity_quins: usize,
     active_quins: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl MmapStore {
     // Opens or creates a file of exactly `capacity_quins * 48` bytes.
     pub fn open(path: &str, capacity_quins: usize) -> Result<Self, std::io::Error> {
@@ -51,6 +55,38 @@ impl MmapStore {
         let active_bytes = self.active_quins * 48;
         let slice = &self.mmap[..active_bytes];
         bytemuck::cast_slice(slice)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub struct MmapStore {
+    data: Vec<NQuin>,
+    capacity_quins: usize,
+}
+
+#[cfg(target_arch = "wasm32")]
+impl MmapStore {
+    pub fn open(_path: &str, capacity_quins: usize) -> Result<Self, std::io::Error> {
+        Ok(Self {
+            data: Vec::with_capacity(capacity_quins),
+            capacity_quins,
+        })
+    }
+
+    pub fn append(&mut self, quin: &NQuin) -> Result<(), std::io::Error> {
+        if self.data.len() >= self.capacity_quins {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::WriteZero,
+                "MmapStore capacity exceeded",
+            ));
+        }
+
+        self.data.push(*quin);
+        Ok(())
+    }
+
+    pub fn as_slice(&self) -> &[NQuin] {
+        &self.data
     }
 }
 

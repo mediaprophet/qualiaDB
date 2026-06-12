@@ -64,3 +64,5 @@ private/
 # Local development files (completed planning, temporary docs, etc.)
 local/
 legacy/
+ingest_raw.wal.tmp
+yago-tests/large-file-results/*.ttl

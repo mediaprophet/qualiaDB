@@ -727,6 +727,7 @@ pub fn execute_vm_frame(
                     freqs.len()
                 );
             }
+
             SlgOpcode::NativeFastaValidation => {
                 let record = crate::domains::biological::bioinformatics::validate_fasta_record(">test", b"ATCGATCG");
                 if !record.is_valid {
@@ -769,6 +770,7 @@ pub fn execute_vm_frame(
                 );
             }
             // ── Biomedical ────────────────────────────────────────────────
+            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeClinicalRisk(model_id) => match model_id {
                 0 => {
                     let input = crate::clinical_engine::FraminghamInput {
@@ -821,11 +823,15 @@ pub fn execute_vm_frame(
                 }
                 _ => vm_log!("[Webizen] NativeClinicalRisk: unknown model {}", model_id),
             },
+            #[cfg(target_arch = "wasm32")]
+            SlgOpcode::NativeClinicalRisk(_) => {}
+
             SlgOpcode::NativeLongitudinalTrend(window_days) => {
                 vm_log!("[Webizen] NativeLongitudinalTrend: window={}d — awaiting time-series Quin stream", window_days);
             }
+            
+            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeDrugInteraction => {
-                // Medication list encoded as Quins in the arena; demo with two hashes from registers
                 let meds = vec![frame.subject_reg, frame.object_reg];
                 let found = crate::clinical_engine::check_drug_interactions(&meds);
                 if !found.is_empty() {
@@ -839,10 +845,13 @@ pub fn execute_vm_frame(
                     }
                 }
             }
+            #[cfg(target_arch = "wasm32")]
+            SlgOpcode::NativeDrugInteraction => {}
+
+            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeContraindication => {
                 let conds = vec![frame.object_reg];
-                let found =
-                    crate::clinical_engine::check_contraindications(frame.subject_reg, &conds);
+                let found = crate::clinical_engine::check_contraindications(frame.subject_reg, &conds);
                 if !found.is_empty() {
                     vm_log!(
                         "[Webizen] NativeContraindication: {} contraindication(s) found.",
@@ -851,8 +860,11 @@ pub fn execute_vm_frame(
                     return None;
                 }
             }
+            #[cfg(target_arch = "wasm32")]
+            SlgOpcode::NativeContraindication => {}
+
+            #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeFhirObservation(loinc_hash) => {
-                // Real lookup would decode the LOINC string from the lexicon; demo path below
                 let obs = crate::clinical_engine::FhirObservation {
                     loinc_code: format!("{:016x}", loinc_hash),
                     value: f64::from_bits(frame.object_reg),
@@ -870,6 +882,8 @@ pub fn execute_vm_frame(
                     return None;
                 }
             }
+            #[cfg(target_arch = "wasm32")]
+            SlgOpcode::NativeFhirObservation(_) => {}
             // ── Organic chemistry ─────────────────────────────────────────
             SlgOpcode::NativeSmilesValidation => {
                 // In production the SMILES string is retrieved from the lexicon by object_reg hash.

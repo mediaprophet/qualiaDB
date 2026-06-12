@@ -45,9 +45,9 @@ fn map_ts_type_to_rust(ts_type: &str) -> &'static str {
     match ts_type {
         "boolean" => "bool",
         "number" => "f64", // Using f64 as a safe default for JS numbers
-        "string" => "&'a str",
-        _ if ts_type.contains('|') => "&'a str", // For union strings like 'primary' | 'success'
-        _ => "&'a str", // Fallback
+        "string" => "String",
+        _ if ts_type.contains('|') => "String", // For union strings like 'primary' | 'success'
+        _ => "String", // Fallback
     }
 }
 
@@ -93,7 +93,7 @@ fn main() -> Result<()> {
 fn generate_dioxus_macro(out: &mut File, decl: &Declaration, tag_name: &str) -> Result<()> {
     writeln!(out, "/// Dioxus wrapper for `{}`", tag_name)?;
     writeln!(out, "#[component]")?;
-    writeln!(out, "pub fn <'a> {}(", decl.name)?;
+    writeln!(out, "pub fn {}(", decl.name)?;
     
     // Properties
     let mut props = Vec::new();
@@ -103,7 +103,7 @@ fn generate_dioxus_macro(out: &mut File, decl: &Declaration, tag_name: &str) -> 
                 let rust_type = if let Some(t) = &member.member_type {
                     map_ts_type_to_rust(&t.text)
                 } else {
-                    "&'a str"
+                    "String"
                 };
                 
                 let safe_name = sanitize_ident(&member.name);

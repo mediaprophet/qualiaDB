@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB | Online LLM Demo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/coi-serviceworker/0.1.7/coi-serviceworker.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.10); }
+        .glass-strong { background: rgba(255,255,255,0.07); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.13); }
+        #token-stream { white-space: pre-wrap; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.82rem; line-height: 1.6; min-height: 120px; }
+        .mode-tab { cursor: pointer; padding: 0.4rem 1rem; border-radius: 9999px; font-size: 0.8rem; transition: background 0.15s; }
+        .mode-tab.active { background: rgba(99,102,241,0.25); color: #a5b4fc; }
+        .mode-tab:not(.active) { color: #94a3b8; }
+        .mode-tab:not(.active):hover { background: rgba(255,255,255,0.06); }
+        .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 9999px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #06b6d4); border-radius: 9999px; transition: width 0.3s; }
+        .sparql-result { border-left: 3px solid #6366f1; background: rgba(99,102,241,0.07); }
+        .wikidata-result { border-left: 3px solid #06b6d4; background: rgba(6,182,212,0.07); }
+        textarea:focus { outline: none; }
+        pre { overflow-x: auto; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200 min-h-screen">
+
+<!-- Nav -->
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center gap-8">
+                <a href="index.html" class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                </a>
+                <div class="hidden md:flex items-center gap-6 text-sm text-zinc-400">
+                    <a href="index.html" class="hover:text-white transition-colors">Home</a>
+                    <a href="sparql-showcase.html" class="hover:text-white transition-colors">SPARQL</a>
+                    <a href="science-playground.html" class="hover:text-white transition-colors">Sciences</a>
+                    <a href="edge-llm.html" class="hover:text-white transition-colors">Edge LLM</a>
+                    <span class="text-indigo-400 font-medium">Online LLM</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+                <div id="model-badge" class="px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">No model loaded</div>
+                <div id="daemon-badge" class="px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">Daemon offline</div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="max-w-screen-2xl mx-auto px-8 pt-10 pb-16 grid grid-cols-1 xl:grid-cols-3 gap-8">
+
+    <!-- Left: Config Panel -->
+    <div class="xl:col-span-1 flex flex-col gap-6">
+
+        <!-- Model Loader -->
+        <div class="glass-strong rounded-3xl p-6">
+            <h2 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                <i class="fas fa-microchip text-indigo-400"></i> Model
+            </h2>
+            <div class="space-y-3 mb-4">
+                <label class="block text-xs text-zinc-400 mb-1">Select GGUF</label>
+                <select id="model-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:border-indigo-500 focus:outline-none">
+                    <option value="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf" data-name="Llama-3.2-1B Q4_K_M (~850 MB)">Llama 3.2 1B Instruct Q4_K_M</option>
+                    <option value="https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf" data-name="Llama-3.2-3B Q4_K_M (~2.0 GB)">Llama 3.2 3B Instruct Q4_K_M</option>
+                    <option value="https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf" data-name="SmolLM2-1.7B Q4_K_M (~1.2 GB)">SmolLM2 1.7B Instruct Q4_K_M</option>
+                    <option value="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf" data-name="Qwen2.5-1.5B Q4_K_M (~1.1 GB)">Qwen 2.5 1.5B Instruct Q4_K_M</option>
+                </select>
+            </div>
+            <div class="progress-bar mb-2" id="dl-progress-wrap" style="display:none">
+                <div class="progress-fill" id="dl-progress" style="width:0%"></div>
+            </div>
+            <div id="dl-status" class="text-xs text-zinc-500 mb-3 hidden"></div>
+            <button id="load-btn" onclick="loadModel()" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                <i class="fas fa-download"></i> Load Model
+            </button>
+            <button id="unload-btn" onclick="unloadModel()" class="w-full py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-xs text-zinc-400 mt-2 hidden transition-colors">
+                Unload
+            </button>
+        </div>
+
+        <!-- Data Sources -->
+        <div class="glass-strong rounded-3xl p-6">
+            <h2 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                <i class="fas fa-database text-cyan-400"></i> Data Sources
+            </h2>
+            <div class="space-y-3">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="src-local" checked class="accent-indigo-500 w-4 h-4">
+                    <div>
+                        <div class="text-sm font-medium">QualiaDB Local</div>
+                        <div class="text-xs text-zinc-500">localhost:4242/query (SPARQL)</div>
+                    </div>
+                    <span id="local-dot" class="ml-auto w-2 h-2 rounded-full bg-zinc-600"></span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="src-wikidata" checked class="accent-cyan-500 w-4 h-4">
+                    <div>
+                        <div class="text-sm font-medium">Wikidata SPARQL</div>
+                        <div class="text-xs text-zinc-500">query.wikidata.org/sparql</div>
+                    </div>
+                    <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="src-ontology" checked class="accent-purple-500 w-4 h-4">
+                    <div>
+                        <div class="text-sm font-medium">Inject Ontologies</div>
+                        <div class="text-xs text-zinc-500">QualiaDB vocab in system prompt</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="glass-strong rounded-3xl p-6">
+            <h2 class="font-semibold text-lg mb-3 flex items-center gap-2">
+                <i class="fas fa-sliders text-purple-400"></i> Mode
+            </h2>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <span class="mode-tab active" id="tab-chat" onclick="setMode('chat')">Chat</span>
+                <span class="mode-tab" id="tab-sparql" onclick="setMode('sparql')">Text→SPARQL</span>
+                <span class="mode-tab" id="tab-jsonld" onclick="setMode('jsonld')">JSON-LD</span>
+                <span class="mode-tab" id="tab-lookup" onclick="setMode('lookup')">Lookup</span>
+            </div>
+            <div id="mode-desc" class="text-xs text-zinc-500 leading-relaxed">
+                General conversation. The model answers freely, optionally grounded by SPARQL context.
+            </div>
+        </div>
+
+        <!-- System Prompt -->
+        <div class="glass-strong rounded-3xl p-6">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-semibold text-sm flex items-center gap-2"><i class="fas fa-scroll text-amber-400"></i> System Prompt</h2>
+                <button onclick="resetSystemPrompt()" class="text-xs text-zinc-500 hover:text-zinc-300">Reset</button>
+            </div>
+            <textarea id="system-prompt" rows="6"
+                class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-300 resize-none focus:border-indigo-500"
+            ></textarea>
+        </div>
+    </div>
+
+    <!-- Right: Chat + Results -->
+    <div class="xl:col-span-2 flex flex-col gap-6">
+
+        <!-- Chat Window -->
+        <div class="glass-strong rounded-3xl p-6 flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <h2 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-comments text-indigo-400"></i> Conversation
+                </h2>
+                <button onclick="clearChat()" class="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1">
+                    <i class="fas fa-trash-alt"></i> Clear
+                </button>
+            </div>
+
+            <!-- Messages -->
+            <div id="chat-messages" class="space-y-4 min-h-[200px] max-h-[400px] overflow-y-auto pr-1">
+                <div class="text-xs text-zinc-600 text-center pt-8">Load a model and start chatting.</div>
+            </div>
+
+            <!-- Streaming Output (active generation) -->
+            <div id="stream-wrap" class="hidden glass rounded-2xl p-4">
+                <div class="text-xs text-indigo-400 mb-2 flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                    Generating…
+                </div>
+                <div id="token-stream" class="text-zinc-300"></div>
+            </div>
+
+            <!-- Input -->
+            <div class="flex gap-3 mt-2">
+                <textarea id="user-input" rows="2" placeholder="Ask anything… or type a SPARQL query / entity lookup in the selected mode."
+                    class="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-200 resize-none focus:border-indigo-500 placeholder:text-zinc-600"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"
+                ></textarea>
+                <button id="send-btn" onclick="sendMessage()" disabled
+                    class="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl font-semibold text-sm transition-colors self-end flex items-center gap-2">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="flex items-center gap-4 text-xs text-zinc-600">
+                <span>Shift+Enter = newline</span>
+                <span id="token-count" class="ml-auto"></span>
+            </div>
+        </div>
+
+        <!-- SPARQL Query Panel (shown in sparql/lookup modes) -->
+        <div id="sparql-panel" class="glass-strong rounded-3xl p-6 hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-code text-cyan-400"></i> Generated SPARQL
+                </h2>
+                <div class="flex gap-2">
+                    <button onclick="runSparqlManual()" class="px-3 py-1.5 text-xs bg-cyan-700 hover:bg-cyan-600 rounded-lg transition-colors">Run</button>
+                    <button onclick="copyGeneratedSparql()" class="px-3 py-1.5 text-xs border border-zinc-700 hover:bg-zinc-800 rounded-lg transition-colors">Copy</button>
+                </div>
+            </div>
+            <pre id="sparql-output" class="bg-black/50 rounded-xl p-4 text-xs text-cyan-300 min-h-[80px]">-- SPARQL will appear here after generation</pre>
+        </div>
+
+        <!-- Results Panel -->
+        <div id="results-panel" class="glass-strong rounded-3xl p-6 hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-table text-emerald-400"></i> Query Results
+                </h2>
+                <div class="flex gap-2 text-xs text-zinc-500" id="result-source-label"></div>
+            </div>
+            <div id="results-output" class="space-y-2 max-h-[400px] overflow-y-auto text-sm"></div>
+        </div>
+
+        <!-- JSON-LD Panel -->
+        <div id="jsonld-panel" class="glass-strong rounded-3xl p-6 hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-project-diagram text-purple-400"></i> JSON-LD Output
+                </h2>
+                <button onclick="copyJsonLd()" class="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+            </div>
+            <pre id="jsonld-output" class="bg-black/50 rounded-xl p-4 text-xs text-purple-300 min-h-[80px]">-- JSON-LD will appear here</pre>
+        </div>
+
+        <!-- Architecture Accordion -->
+        <details class="glass rounded-3xl p-6 group">
+            <summary class="cursor-pointer font-semibold text-sm flex items-center justify-between list-none">
+                <span class="flex items-center gap-2"><i class="fas fa-sitemap text-zinc-400"></i> Architecture: LLM ↔ SPARQL closed loop</span>
+                <i class="fas fa-chevron-down text-zinc-600 group-open:rotate-180 transition-transform"></i>
+            </summary>
+            <div class="mt-4 text-xs text-zinc-400 leading-relaxed space-y-3">
+                <p>The pipeline runs entirely client-side via WebAssembly (wllama). No data leaves your device.</p>
+                <pre class="bg-black/40 rounded-xl p-4 text-emerald-300 overflow-x-auto">
+[ Human Input ]
+       │
+       ▼
+┌──────────────────────┐
+│  Llama 3.2 (WASM)    │ ◄── System prompt with QualiaDB ontologies
+└──────────┬───────────┘
+           │ Emits SPARQL query or JSON-LD
+           ▼
+┌──────────────────────┐
+│  SPARQL Engine       │ ◄── QualiaDB :4242 | Wikidata | Both
+└──────────┬───────────┘
+           │ Returns semantic bindings
+           ▼
+┌──────────────────────┐
+│  Llama 3.2 (WASM)    │ ──► Natural language answer + JSON-LD node
+└──────────────────────┘</pre>
+                <p>If the SPARQL query fails validation, the error is fed back to the model for self-correction (up to 3 retries). All inference runs through the standard wllama Web Worker thread.</p>
+                <p><strong class="text-zinc-300">COI note:</strong> The COI service worker at the top of this page injects <code class="text-yellow-300">Cross-Origin-Opener-Policy: same-origin</code> and <code class="text-yellow-300">Cross-Origin-Embedder-Policy: require-corp</code> headers on reload, enabling SharedArrayBuffer for multi-threaded WASM inference.</p>
+            </div>
+        </details>
+    </div>
+</div>
+
+<script type="module">
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const WLLAMA_CDN = 'https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.0/esm/';
+const QUALIA_SPARQL = 'http://localhost:4242/query';
+const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
+const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.11 (https://github.com/mediaprophet/qualiaDB)';
+
+const QUALIA_ONTOLOGY = `
+# QualiaDB Ontology Prefixes
+PREFIX q: <https://qualia-db.org/vocab/#>
+PREFIX qr: <https://qualia-db.org/rights/#>
+PREFIX nquin: <https://qualia-db.org/nquin/#>
+PREFIX webizen: <https://webizen.org/vocab/#>
+PREFIX schema: <https://schema.org/>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX odrl: <http://www.w3.org/ns/odrl/2/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+# Key properties: q:hasNQuin, q:modality, q:parity, q:context, qr:policy, webizen:principalDID
+`;
+
+const MODE_DESCS = {
+    chat: 'General conversation. The model answers freely, optionally grounded by SPARQL context.',
+    sparql: 'The model converts your natural language into a SPARQL query, which is executed against the selected data sources. Results are fed back for a natural-language summary.',
+    jsonld: 'The model maps your input into a valid JSON-LD node using QualiaDB ontology terms. Useful for creating semantic graph entries.',
+    lookup: 'Entity lookup: the model identifies entity names in your input, fetches them from Wikidata, and summarises the graph context.',
+};
+
+const SYSTEM_PROMPTS = {
+    chat: `You are a helpful assistant integrated with QualiaDB, a zero-allocation semantic graph engine. You may reference RDF/SPARQL concepts and the QualiaDB ontology when relevant. Be concise and precise.`,
+    sparql: `You are a SPARQL generation engine. Convert the user's natural language request into a valid SPARQL 1.1 SELECT query.
+Output ONLY the raw SPARQL query block — no explanation, no markdown fences.
+Use these prefixes where appropriate:
+${QUALIA_ONTOLOGY}
+Also use standard Wikidata prefixes (wd:, wdt:, wikibase:, bd:) when querying Wikidata.
+If querying Wikidata, use SERVICE <https://query.wikidata.org/sparql> { ... } syntax.`,
+    jsonld: `You are a JSON-LD mapping engine for QualiaDB. Convert the user's input into a valid JSON-LD object.
+Use the QualiaDB context: { "@context": { "q": "https://qualia-db.org/vocab/#", "schema": "https://schema.org/", "prov": "http://www.w3.org/ns/prov#" } }
+Output ONLY the raw JSON-LD object — no explanation, no markdown fences.`,
+    lookup: `You are an entity lookup assistant. Given the user's input, identify key named entities (people, organisations, places, concepts). For each entity, output a Wikidata SPARQL query to fetch its label, description, and key properties.
+Format: output one SPARQL query per entity, separated by --- markers. No other text.`,
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+let wllama = null;
+let currentMode = 'chat';
+let messages = []; // {role, content}
+let isGenerating = false;
+let lastSparql = '';
+let lastJsonLd = '';
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+
+window.setMode = setMode;
+window.loadModel = loadModel;
+window.unloadModel = unloadModel;
+window.sendMessage = sendMessage;
+window.clearChat = clearChat;
+window.runSparqlManual = runSparqlManual;
+window.copyGeneratedSparql = () => navigator.clipboard.writeText(lastSparql);
+window.copyJsonLd = () => navigator.clipboard.writeText(lastJsonLd);
+window.resetSystemPrompt = () => { document.getElementById('system-prompt').value = SYSTEM_PROMPTS[currentMode]; };
+
+document.getElementById('system-prompt').value = SYSTEM_PROMPTS.chat;
+checkDaemon();
+
+function setMode(mode) {
+    currentMode = mode;
+    ['chat','sparql','jsonld','lookup'].forEach(m => {
+        document.getElementById(`tab-${m}`).classList.toggle('active', m === mode);
+    });
+    document.getElementById('mode-desc').textContent = MODE_DESCS[mode];
+    document.getElementById('system-prompt').value = SYSTEM_PROMPTS[mode];
+    document.getElementById('sparql-panel').classList.toggle('hidden', !['sparql','lookup'].includes(mode));
+    document.getElementById('jsonld-panel').classList.toggle('hidden', mode !== 'jsonld');
+}
+
+// ── Model Loading ─────────────────────────────────────────────────────────────
+
+async function loadModel() {
+    if (wllama) return;
+    const sel = document.getElementById('model-select');
+    const url = sel.value;
+    const name = sel.options[sel.selectedIndex].dataset.name;
+
+    document.getElementById('load-btn').disabled = true;
+    document.getElementById('load-btn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading…';
+    showDlStatus('Initialising WASM worker…');
+
+    try {
+        const { Wllama } = await import(`${WLLAMA_CDN}index.js`);
+        wllama = new Wllama({ 'single-thread/wllama.wasm': `${WLLAMA_CDN}single-thread/wllama.wasm`, 'multi-thread/wllama.wasm': `${WLLAMA_CDN}multi-thread/wllama.wasm` });
+
+        document.getElementById('dl-progress-wrap').style.display = 'block';
+        document.getElementById('dl-status').classList.remove('hidden');
+
+        await wllama.loadModelFromUrl(url, {
+            progressCallback: ({ loaded, total }) => {
+                const pct = total ? Math.round(loaded / total * 100) : 0;
+                document.getElementById('dl-progress').style.width = `${pct}%`;
+                showDlStatus(`Downloading ${name}: ${pct}%`);
+            }
+        });
+
+        document.getElementById('dl-progress-wrap').style.display = 'none';
+        showDlStatus('');
+        document.getElementById('model-badge').textContent = name;
+        document.getElementById('model-badge').className = 'px-3 py-1.5 rounded-2xl bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs';
+        document.getElementById('load-btn').classList.add('hidden');
+        document.getElementById('unload-btn').classList.remove('hidden');
+        document.getElementById('send-btn').disabled = false;
+        appendSystem(`Model loaded: ${name}. Ready.`);
+    } catch (err) {
+        document.getElementById('load-btn').disabled = false;
+        document.getElementById('load-btn').innerHTML = '<i class="fas fa-download"></i> Load Model';
+        showDlStatus(`Error: ${err.message}`);
+        wllama = null;
+    }
+}
+
+async function unloadModel() {
+    if (!wllama) return;
+    await wllama.exit();
+    wllama = null;
+    document.getElementById('model-badge').textContent = 'No model loaded';
+    document.getElementById('model-badge').className = 'px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700 text-xs';
+    document.getElementById('load-btn').classList.remove('hidden');
+    document.getElementById('load-btn').disabled = false;
+    document.getElementById('load-btn').innerHTML = '<i class="fas fa-download"></i> Load Model';
+    document.getElementById('unload-btn').classList.add('hidden');
+    document.getElementById('send-btn').disabled = true;
+}
+
+// ── Message Handling ──────────────────────────────────────────────────────────
+
+async function sendMessage() {
+    if (!wllama || isGenerating) return;
+    const input = document.getElementById('user-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    isGenerating = true;
+    document.getElementById('send-btn').disabled = true;
+
+    appendUser(text);
+
+    try {
+        if (currentMode === 'chat') {
+            await runChat(text);
+        } else if (currentMode === 'sparql') {
+            await runSparqlMode(text);
+        } else if (currentMode === 'jsonld') {
+            await runJsonLdMode(text);
+        } else if (currentMode === 'lookup') {
+            await runLookupMode(text);
+        }
+    } catch (err) {
+        appendAssistant(`Error: ${err.message}`);
+    }
+
+    isGenerating = false;
+    document.getElementById('send-btn').disabled = false;
+}
+
+async function runChat(userText) {
+    let sparqlContext = '';
+    if (document.getElementById('src-local').checked || document.getElementById('src-wikidata').checked) {
+        sparqlContext = await tryFetchRelevantContext(userText);
+    }
+    const sysPrompt = document.getElementById('system-prompt').value +
+        (sparqlContext ? `\n\nRelevant graph context:\n${sparqlContext}` : '');
+    const reply = await generate(buildPrompt(sysPrompt, userText));
+    appendAssistant(reply);
+}
+
+async function runSparqlMode(userText) {
+    const sysPrompt = document.getElementById('system-prompt').value +
+        (document.getElementById('src-ontology').checked ? `\n${QUALIA_ONTOLOGY}` : '');
+
+    showDlStatus('Generating SPARQL…');
+    let sparql = await generate(buildPrompt(sysPrompt, userText), { max_tokens: 512 });
+    sparql = stripMarkdown(sparql);
+    lastSparql = sparql;
+    document.getElementById('sparql-output').textContent = sparql;
+    document.getElementById('sparql-panel').classList.remove('hidden');
+
+    // Execute
+    const results = await executeSparql(sparql);
+    if (results) {
+        renderResults(results);
+        // Summarise
+        const summary = await generate(buildPrompt(
+            'Summarise these SPARQL results in 2-3 sentences for the user.',
+            `Original question: ${userText}\nResults:\n${JSON.stringify(results.slice(0,10), null, 2)}`
+        ));
+        appendAssistant(summary);
+    }
+    showDlStatus('');
+}
+
+async function runJsonLdMode(userText) {
+    const sysPrompt = document.getElementById('system-prompt').value;
+    const raw = await generate(buildPrompt(sysPrompt, userText), { max_tokens: 600 });
+    const cleaned = stripMarkdown(raw);
+    lastJsonLd = cleaned;
+    document.getElementById('jsonld-output').textContent = cleaned;
+    document.getElementById('jsonld-panel').classList.remove('hidden');
+    appendAssistant('JSON-LD generated. See the panel below.');
+}
+
+async function runLookupMode(userText) {
+    const sysPrompt = document.getElementById('system-prompt').value;
+    const raw = await generate(buildPrompt(sysPrompt, userText), { max_tokens: 600 });
+    const queries = raw.split(/---+/).map(s => stripMarkdown(s.trim())).filter(Boolean);
+
+    document.getElementById('sparql-panel').classList.remove('hidden');
+    document.getElementById('sparql-output').textContent = queries.join('\n\n--- next entity ---\n\n');
+    lastSparql = queries.join('\n\n');
+
+    const allResults = [];
+    for (const q of queries.slice(0, 3)) {
+        const r = await executeSparql(q);
+        if (r) allResults.push(...r);
+    }
+    if (allResults.length) {
+        renderResults(allResults);
+        const summary = await generate(buildPrompt(
+            'Given these Wikidata entity results, write a concise summary of the key facts.',
+            `User asked: ${userText}\nData:\n${JSON.stringify(allResults.slice(0,15), null, 2)}`
+        ));
+        appendAssistant(summary);
+    } else {
+        appendAssistant('No results found for that lookup.');
+    }
+}
+
+// ── Generation ────────────────────────────────────────────────────────────────
+
+async function generate(prompt, opts = {}) {
+    document.getElementById('stream-wrap').classList.remove('hidden');
+    const streamEl = document.getElementById('token-stream');
+    streamEl.textContent = '';
+    let full = '';
+
+    await wllama.createCompletion(prompt, {
+        nPredict: opts.max_tokens ?? 800,
+        sampling: { temp: 0.15, topK: 40, topP: 0.9 },
+        onNewToken: (_tok, piece, cur) => {
+            full = cur;
+            streamEl.textContent = cur;
+        }
+    });
+
+    document.getElementById('stream-wrap').classList.add('hidden');
+    return full.trim();
+}
+
+function buildPrompt(system, user) {
+    // Llama 3.2 / SmolLM2 instruct format
+    return `<|im_start|>system\n${system}<|im_end|>\n<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n`;
+}
+
+// ── SPARQL Execution ──────────────────────────────────────────────────────────
+
+async function executeSparql(query, retries = 2) {
+    const useLocal = document.getElementById('src-local').checked;
+    const useWiki = document.getElementById('src-wikidata').checked;
+
+    // Try local first
+    if (useLocal) {
+        try {
+            const res = await fetch(`${QUALIA_SPARQL}?query=${encodeURIComponent(query)}`, {
+                headers: { Accept: 'application/sparql-results+json' },
+                signal: AbortSignal.timeout(4000)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setResultSource('QualiaDB Local');
+                return data.results?.bindings ?? [];
+            }
+        } catch {}
+    }
+
+    // Wikidata fallback
+    if (useWiki) {
+        try {
+            const res = await fetch(`${WIKIDATA_SPARQL}?query=${encodeURIComponent(query)}`, {
+                headers: { Accept: 'application/sparql-results+json', 'User-Agent': USER_AGENT },
+                signal: AbortSignal.timeout(10000)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setResultSource('Wikidata');
+                return data.results?.bindings ?? [];
+            }
+        } catch (err) {
+            if (retries > 0 && wllama) {
+                // Self-correct: ask model to fix the query
+                const fixed = await generate(buildPrompt(
+                    'You are a SPARQL debugger. Fix the following SPARQL query so it is valid. Output ONLY the corrected query.',
+                    `Error: ${err.message}\n\nQuery:\n${query}`
+                ));
+                return executeSparql(stripMarkdown(fixed), retries - 1);
+            }
+        }
+    }
+    return null;
+}
+
+async function tryFetchRelevantContext(text) {
+    const useLocal = document.getElementById('src-local').checked;
+    if (!useLocal) return '';
+    try {
+        const q = `SELECT ?s ?p ?o WHERE { ?s ?p ?o . FILTER(CONTAINS(LCASE(STR(?o)), "${text.slice(0,20).toLowerCase()}")) } LIMIT 10`;
+        const res = await fetch(`${QUALIA_SPARQL}?query=${encodeURIComponent(q)}`, {
+            headers: { Accept: 'application/sparql-results+json' },
+            signal: AbortSignal.timeout(2000)
+        });
+        if (res.ok) {
+            const data = await res.json();
+            return (data.results?.bindings ?? []).map(b =>
+                `${b.s?.value} ${b.p?.value} ${b.o?.value}`).join('\n');
+        }
+    } catch {}
+    return '';
+}
+
+async function runSparqlManual() {
+    const q = document.getElementById('sparql-output').textContent;
+    if (!q || q.startsWith('--')) return;
+    const results = await executeSparql(q);
+    if (results) renderResults(results);
+}
+
+// ── UI Helpers ────────────────────────────────────────────────────────────────
+
+function renderResults(bindings) {
+    const panel = document.getElementById('results-panel');
+    const out = document.getElementById('results-output');
+    panel.classList.remove('hidden');
+    if (!bindings.length) { out.innerHTML = '<p class="text-zinc-500 text-xs">No results.</p>'; return; }
+
+    const vars = Object.keys(bindings[0]);
+    let html = `<table class="w-full text-xs border-collapse"><thead><tr>`;
+    vars.forEach(v => { html += `<th class="text-left px-2 py-1 text-zinc-400 border-b border-zinc-800">${v}</th>`; });
+    html += `</tr></thead><tbody>`;
+    bindings.slice(0, 50).forEach(row => {
+        html += '<tr class="hover:bg-white/3">';
+        vars.forEach(v => {
+            const val = row[v]?.value ?? '';
+            const short = val.length > 60 ? val.slice(0, 57) + '…' : val;
+            html += `<td class="px-2 py-1 border-b border-zinc-900 text-zinc-300" title="${escHtml(val)}">${escHtml(short)}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    out.innerHTML = html;
+}
+
+function appendUser(text) {
+    messages.push({ role: 'user', content: text });
+    const div = document.createElement('div');
+    div.className = 'flex justify-end';
+    div.innerHTML = `<div class="max-w-[80%] bg-indigo-600/20 border border-indigo-500/20 rounded-2xl px-4 py-3 text-sm text-indigo-100">${escHtml(text)}</div>`;
+    getMessages().appendChild(div);
+    scrollMessages();
+}
+
+function appendAssistant(text) {
+    messages.push({ role: 'assistant', content: text });
+    const div = document.createElement('div');
+    div.className = 'flex justify-start';
+    div.innerHTML = `<div class="max-w-[90%] glass rounded-2xl px-4 py-3 text-sm text-zinc-200 whitespace-pre-wrap">${escHtml(text)}</div>`;
+    getMessages().appendChild(div);
+    scrollMessages();
+}
+
+function appendSystem(text) {
+    const div = document.createElement('div');
+    div.className = 'text-center text-xs text-zinc-600';
+    div.textContent = text;
+    getMessages().appendChild(div);
+    scrollMessages();
+}
+
+function getMessages() {
+    const el = document.getElementById('chat-messages');
+    if (el.children.length === 1 && el.children[0].classList.contains('text-center')) el.innerHTML = '';
+    return el;
+}
+
+function scrollMessages() {
+    const el = document.getElementById('chat-messages');
+    el.scrollTop = el.scrollHeight;
+}
+
+function clearChat() {
+    messages = [];
+    document.getElementById('chat-messages').innerHTML = '<div class="text-xs text-zinc-600 text-center pt-8">Load a model and start chatting.</div>';
+    document.getElementById('results-panel').classList.add('hidden');
+    document.getElementById('sparql-panel').classList.add('hidden');
+    document.getElementById('jsonld-panel').classList.add('hidden');
+}
+
+function setResultSource(src) {
+    document.getElementById('result-source-label').textContent = `Source: ${src}`;
+}
+
+function showDlStatus(msg) {
+    const el = document.getElementById('dl-status');
+    el.textContent = msg;
+    el.classList.toggle('hidden', !msg);
+}
+
+function stripMarkdown(s) {
+    return s.replace(/^```[a-z]*\n?/i, '').replace(/```$/,'').trim();
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function checkDaemon() {
+    try {
+        const res = await fetch('http://localhost:4242/health', { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+            const d = await res.json();
+            document.getElementById('daemon-badge').textContent = `Daemon v${d.version}`;
+            document.getElementById('daemon-badge').className = 'px-3 py-1.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs';
+            document.getElementById('local-dot').className = 'ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        }
+    } catch {}
+}
+</script>
+</body>
+</html>

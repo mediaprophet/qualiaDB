@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 dioxus = { version = "0.7.9", features = ["router", "web"] }
-qualia-core-db = { version = "0.0.10", path = "../qualia-core-db" }
+qualia-core-db = { version = "0.0.11", path = "../qualia-core-db" }
 reqwest = "0.13.4"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"

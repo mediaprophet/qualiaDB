@@ -98,6 +98,7 @@ impl VcAttributes {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The result of a deontic policy evaluation for subgraph key release.
 #[derive(Debug)]
 pub enum DeonticResult {
@@ -107,6 +108,7 @@ pub enum DeonticResult {
     AccessDenied { layer: SubgraphLayer, reason: &'static str },
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl DeonticResult {
     pub fn is_permitted(&self) -> bool {
         matches!(self, Self::KeyRelease(_))

@@ -291,6 +291,44 @@ pub fn builtin_pane_definitions() -> Vec<PaneDefinition> {
             default_w: 6, default_h: 3,
             rdf_type_hash: None,
         },
+        
+        // --- Webizen Integrations ---
+        PaneDefinition {
+            component_id: "neuro-symbolic-chat".into(),
+            display_name: "Neuro-Symbolic Chat".into(),
+            element_tag: "neuro-symbolic-chat".into(),
+            icon: "chat-dots".into(),
+            category: PaneCategory::DataInput,
+            default_w: 8, default_h: 6,
+            rdf_type_hash: None,
+        },
+        PaneDefinition {
+            component_id: "llm-model-harness".into(),
+            display_name: "LLM Model Harness".into(),
+            element_tag: "llm-harness".into(),
+            icon: "cpu-fill".into(),
+            category: PaneCategory::System,
+            default_w: 6, default_h: 4,
+            rdf_type_hash: None,
+        },
+        PaneDefinition {
+            component_id: "health-vital-monitor".into(),
+            display_name: "Health Vital Monitor".into(),
+            element_tag: "health-vital-monitor".into(),
+            icon: "heart-pulse".into(),
+            category: PaneCategory::DataDisplay,
+            default_w: 6, default_h: 4,
+            rdf_type_hash: None,
+        },
+        PaneDefinition {
+            component_id: "personal-ontology-builder".into(),
+            display_name: "Personal Ontology Builder".into(),
+            element_tag: "personal-ontology-builder".into(),
+            icon: "diagram-3".into(),
+            category: PaneCategory::DataInput,
+            default_w: 6, default_h: 4,
+            rdf_type_hash: None,
+        },
     ]
 }
 

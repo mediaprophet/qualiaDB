@@ -10,33 +10,42 @@ pub fn mmap_query_subject(
     file_path: &str,
     subject_id: u64,
 ) -> Result<Vec<NQuin>, Box<dyn std::error::Error>> {
-    use memmap2::MmapOptions;
-    use std::fs::File;
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use memmap2::MmapOptions;
+        use std::fs::File;
 
-    const QUIN_SIZE: usize = std::mem::size_of::<NQuin>();
+        const QUIN_SIZE: usize = std::mem::size_of::<NQuin>();
 
-    let file = File::open(file_path)?;
-    let mmap = unsafe { MmapOptions::new().map(&file)? };
-    let len = mmap.len();
+        let file = File::open(file_path)?;
+        let mmap = unsafe { MmapOptions::new().map(&file)? };
+        let len = mmap.len();
 
-    if len % QUIN_SIZE != 0 {
-        return Err(format!(
-            "File size {} is not a multiple of NQuin ({} bytes)",
-            len, QUIN_SIZE
-        )
-        .into());
+        if len % QUIN_SIZE != 0 {
+            return Err(format!(
+                "File size {} is not a multiple of NQuin ({} bytes)",
+                len, QUIN_SIZE
+            )
+            .into());
+        }
+
+        let count = len / QUIN_SIZE;
+        let quins: &[NQuin] = unsafe {
+            std::slice::from_raw_parts(mmap.as_ptr() as *const NQuin, count)
+        };
+
+        Ok(quins
+            .iter()
+            .filter(|q| q.subject == subject_id)
+            .copied()
+            .collect())
     }
-
-    let count = len / QUIN_SIZE;
-    let quins: &[NQuin] = unsafe {
-        std::slice::from_raw_parts(mmap.as_ptr() as *const NQuin, count)
-    };
-
-    Ok(quins
-        .iter()
-        .filter(|q| q.subject == subject_id)
-        .copied()
-        .collect())
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = file_path;
+        let _ = subject_id;
+        Err("mmap_query_subject is not available on wasm32".into())
+    }
 }
 
 /// Telemetry counters for `lazy_superblock_query`.

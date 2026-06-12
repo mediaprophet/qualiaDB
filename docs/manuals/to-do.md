@@ -26,7 +26,7 @@ The following are confirmed by code inspection:
 - [ ] **`logic.rs::extract_float` conflicts with `resolver.rs` type tags** — `0b001<<60` used for different purposes in two modules. Do not fix unilaterally; see `AGENTS.md §4-D`.
 - [ ] **WASM OPFS bindings** — `wasm_bridge.rs`. Scaffolded; two TODOs remaining for full block caching.
 - [ ] **`sanctuary_purge` not implemented** — `mcp_server.rs`. Required for full Sanctuary lifecycle.
-- [ ] **CogAI `.chk` ingestion pipeline** — `ingest.rs`. The CogAI Cognitive AI Chunks text format (W3C CG chunks-and-rules) ingestion path is not yet wired end-to-end through the `ExternalSorter`. The ACT-R SHACL opcodes (`RetrieveByActivation`, `DecayMetadata`) are compiled but defer to "Core 2 GPU Sieve" (return `None` from `execute_vm_frame`) rather than executing inline. Note: this gap is about CogAI text chunks — not the QCHK binary Capability Profile format, which is a separate system.
+- [ ] **CogAI `.chk` ingestion pipeline** — `ingest.rs`. The CogAI Cognitive AI Chunks text format (W3C CG chunks-and-rules) ingestion path is not yet wired end-to-end through the `ExternalSorter`. Note: this gap is about CogAI text chunks — not the QCHK binary Capability Profile format, which is a separate system.
 - [ ] **`NullThermalGovernor` always returns `Cool`** — `orchestrator.rs`. Real thermal governor not yet wired.
 - [ ] **WASM profile loading** — `wasm_bridge.rs`. QCHK profiles not yet loadable in browser.
 - [x] **Qapp Vault (Flutter)** — `listInstalledQapps`, `launchInstalledQapp`, `generateQappCredential`, `verifyAndInstallQapp` via FRB; embedded `QualiaQappWebView`.

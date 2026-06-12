@@ -124,81 +124,44 @@ QCHK (`.qchk`) binary bundles declare the allowed engine operations and ontology
 
 ---
 
-## Flutter Desktop App & FRB API
+## Qualia Studio (Desktop App)
 
-The `crates/qualia-flutter/` package is a Flutter desktop app (Windows, macOS, Linux) that calls the Rust engine via [flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust_bridge) (FRB).
+The `crates/qualia-studio/` package is the new primary desktop application (Windows, macOS, Linux) built using native Rust, Dioxus 0.5, and Shoelace web components. It entirely bypasses legacy Node.js/React and Flutter overhead.
 
 ### Architecture
 
-```
-Flutter (Dart)
-  └── lib/src/rust/api/   ← generated FRB bindings (do not edit directly)
-        ├── qualia_api.dart      ← main API surface
-        └── resource_catalog.dart ← LLM / ontology catalog
+Qualia Studio employs a pane-based architecture managed via a central `PaneRegistry`. UI components are harvested from Shoelace into native Rust Dioxus components using the `webizen-component-harvester`.
 
-      ↕  FFI (cdylib on desktop, staticlib on iOS)
-
-crates/qualia-flutter/rust/src/api/
-  ├── qualia_api.rs         ← FRB-exported functions (edit here)
-  └── resource_catalog.rs   ← catalog functions
+```text
+crates/qualia-studio/
+  ├── src/main.rs                ← Application entry point & router
+  ├── src/pane_registry.rs       ← Registry of available panes
+  ├── src/studio_canvas.rs       ← Main workspace managing active panes
+  ├── src/components/            ← Custom panes and UI wrappers
+  │     ├── shoelace.rs          ← Generated Dioxus wrappers for Shoelace components
+  │     ├── chat_graph.rs        ← Neuro-Symbolic Chat pane
+  │     ├── health_monitor.rs    ← Vital Monitor pane
+  │     ├── llm_harness.rs       ← LLM Engine harness pane
+  │     └── personal_ontology.rs ← Ontology Builder pane
   └── depends on: qualia-core-db, qualia-client-core
 ```
 
-### Regenerating bindings
+### Developing Panes
 
-After editing any `pub fn` in `rust/src/api/`:
+To add a new pane to the studio environment:
+1. Create a new component in `src/components/`.
+2. Ensure it utilizes the generated Shoelace components in `src/components/shoelace.rs` for a consistent UI.
+3. Register the component in `src/pane_registry.rs`.
+
+### Running in Development
 
 ```bash
-cd crates/qualia-flutter
-flutter_rust_bridge_codegen generate
+cd crates/qualia-studio
+dx serve --platform desktop
 ```
 
-This overwrites `lib/src/rust/` — commit the generated files.
-
-### Key inference function
-
-```dart
-import 'package:qualia_flutter/src/rust/api/qualia_api.dart' as api;
-
-// Runs the full Webizen-gated inference pipeline:
-//   validate_intent → Phase 8 SPSC GPU loop → validate_output
-final response = await api.runInference(
-  prompt: 'What is the thermodynamic entropy of water at 300 K?',
-  modelPath: '/home/user/.qualia/models/phi3-mini-q4km.gguf',
-);
-```
-
-`modelPath` must be the absolute path to a `.gguf` file already downloaded to the device. Pass an empty string to receive the "no model loaded" sentinel message.
-
-See the full API reference at [flutter-api-reference.md](flutter-api-reference.md).
-
-### Screen → API mapping
-
-| Screen | Primary API calls |
-|---|---|
-| Chat | `runInference`, `getLocalAgentConfig`, `updateAgentOutcomeSharing`, `syncChatRelay`, `getChatGraph` |
-| Group Chat | `createGroupChatSession`, `getChatParticipants`, `addChatParticipant`, `syncChatRelay` |
-| LLM Hub | `loadLlmResources()`, `downloadLlm(id)`, `downloadModel(url, filename, modelId)` |
-| Ontology Hub / Workbench | `workbenchImportOntologyUri`, `listWorkbenchOntologies`, `setWorkbenchSeed`, `setWorkbenchTorrentPolicy` |
-| Qapp Vault | `listInstalledQapps()`, `launchInstalledQapp(qappName)`, `verifyAndInstallQapp(zipPath, credentialSig)` |
-| Wallet | `getCoinBalances()`, `deriveWalletsFromSeed(seed)`, `generateBip39Seed()` |
-| Settings | `getConfig()`, `saveConfig(newConfig)` |
-| Dashboard | `getHardwareStatus()`, `daemonStatus()`, `startDaemon()`, `fetchTorrentTelemetry()` |
-
-### Daemon endpoints (v0.0.8)
-
-Beyond `/health` and `/query`, the loopback daemon exposes:
-
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /chat/publish` | Group-chat relay inbox append |
-| `GET /chat/pull` | Incremental relay pull by Lamport watermark |
-| `GET /torrent/webseed/{hash}` | HTTP web seed for `.c.q42` artifacts |
-| `POST /torrent/seed` / `/unseed` | Register/stop ontology seeds |
-| `GET /torrent/telemetry` | Live seeder stats (`seeder: "qualia-daemon"`) |
-| `POST /torrent/sync` | Reload seeds from workbench index |
-
-See [flutter-api-reference.md](flutter-api-reference.md) and the [API Explorer](../api-explorer/) for snippets.
+### Legacy Prototypes
+For reference, the deprecated Flutter application resides in `crates/qualia-flutter/`. The Flutter bindings (`flutter_rust_bridge`) and related architecture are no longer actively maintained for desktop targeting.
 
 ---
 

@@ -197,7 +197,6 @@ impl NeuroSymbolicSieve {
     }
 
     /// Tokenizer-only fallback when no `.q42.lex` sidecar is loaded (dev / tests).
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn from_gguf_tokenizer(tok: &crate::gguf_sharder::GgufTokenizer) -> Self {
         let mut sieve = Self::empty_fsm();
         const SUBJECTS: &[(&str, u64)] = &[
@@ -325,7 +324,6 @@ impl NeuroSymbolicSieve {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn fill_mask_literal(
     mask: &mut SieveStateMask,
     tok: &crate::gguf_sharder::GgufTokenizer,

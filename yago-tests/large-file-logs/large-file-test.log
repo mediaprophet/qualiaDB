@@ -1,0 +1,352 @@
+[2026-06-12 03:04:32.450] [INFO] === Starting Comprehensive Large File Test Suite ===
+[2026-06-12 03:04:32.472] [INFO] Target file: C:\Projects\qualiaDB\local\ontology\yago\yago-meta-facts.ntx
+[2026-06-12 03:04:32.475] [INFO] Results directory: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:04:32.478] [INFO] Test 1/5: Large file conversion
+[2026-06-12 03:04:32.484] [INFO] === Large File Conversion Test ===
+[2026-06-12 03:04:32.506] [INFO] File size: 973.09 MB
+[2026-06-12 03:04:32.515] [INFO] Starting: Large File Conversion
+[2026-06-12 03:04:32.557] [DEBUG] Initial Memory - WS: 74.08MB, PM: 67.2MB
+[2026-06-12 03:04:33.170] [ERROR] Conversion failed: A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.
+[2026-06-12 03:04:33.178] [WARN] Skipping streaming tests due to conversion failure
+[2026-06-12 03:04:33.181] [WARN] Skipping inspection tests due to conversion failure
+[2026-06-12 03:04:33.184] [WARN] Skipping daemon query tests due to conversion failure
+[2026-06-12 03:04:33.187] [WARN] Skipping stress test due to conversion failure
+[2026-06-12 03:04:33.293] [INFO] Comprehensive reports generated: C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-030433.json and C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-030433.txt
+[2026-06-12 03:04:33.296] [INFO] === Comprehensive Large File Test Suite Completed ===
+[2026-06-12 03:04:33.326] [INFO] Results saved to: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:05:04.927] [INFO] === Starting Comprehensive Large File Test Suite ===
+[2026-06-12 03:05:04.950] [INFO] Target file: C:\Projects\qualiaDB\local\ontology\yago\yago-meta-facts.ntx
+[2026-06-12 03:05:04.952] [INFO] Results directory: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:05:04.955] [INFO] Test 1/5: Large file conversion
+[2026-06-12 03:05:04.960] [INFO] === Large File Conversion Test ===
+[2026-06-12 03:05:04.986] [INFO] File size: 973.09 MB
+[2026-06-12 03:05:04.997] [INFO] Starting: Large File Conversion
+[2026-06-12 03:05:05.029] [DEBUG] Initial Memory - WS: 74.53MB, PM: 67.78MB
+[2026-06-12 03:05:05.714] [ERROR] Conversion failed: Cannot overwrite variable pid because it is read-only or constant.
+[2026-06-12 03:05:05.724] [WARN] Skipping streaming tests due to conversion failure
+[2026-06-12 03:05:05.727] [WARN] Skipping inspection tests due to conversion failure
+[2026-06-12 03:05:05.729] [WARN] Skipping daemon query tests due to conversion failure
+[2026-06-12 03:05:05.733] [WARN] Skipping stress test due to conversion failure
+[2026-06-12 03:05:05.827] [INFO] Comprehensive reports generated: C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-030505.json and C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-030505.txt
+[2026-06-12 03:05:05.830] [INFO] === Comprehensive Large File Test Suite Completed ===
+[2026-06-12 03:05:05.833] [INFO] Results saved to: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:05:26.092] [INFO] === Starting Comprehensive Large File Test Suite ===
+[2026-06-12 03:05:26.112] [INFO] Target file: C:\Projects\qualiaDB\local\ontology\yago\yago-meta-facts.nt
+[2026-06-12 03:05:26.116] [INFO] Results directory: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:05:26.119] [INFO] Test 1/5: Large file conversion
+[2026-06-12 03:05:26.125] [INFO] === Large File Conversion Test ===
+[2026-06-12 03:05:26.145] [INFO] File size: 973.09 MB
+[2026-06-12 03:05:26.154] [INFO] Starting: Large File Conversion
+[2026-06-12 03:05:26.184] [DEBUG] Initial Memory - WS: 73.93MB, PM: 67.12MB
+[2026-06-12 03:05:26.822] [DEBUG] Final Memory - WS: 91.48MB, PM: 88.72MB
+[2026-06-12 03:05:26.856] [SUCCESS] Conversion completed in 0.59s
+[2026-06-12 03:05:26.861] [INFO] Output size: 0 MB (Compression: 0.0%)
+[2026-06-12 03:05:26.868] [INFO] Throughput: 1638.76 MB/s
+[2026-06-12 03:05:26.871] [INFO] Peak memory: 91.48 MB
+[2026-06-12 03:05:26.876] [INFO] Memory delta: +17.55 MB
+[2026-06-12 03:05:26.907] [INFO] Test 2/5: Streaming performance
+[2026-06-12 03:05:26.922] [INFO] === Streaming Performance Test ===
+[2026-06-12 03:05:26.925] [INFO] Test 1: Sequential read performance
+[2026-06-12 03:05:26.929] [INFO] Starting: Sequential Read
+[2026-06-12 03:05:26.943] [DEBUG] Initial Memory - WS: 98.49MB, PM: 91.82MB
+[2026-06-12 03:05:27.142] [DEBUG] Final Memory - WS: 98.75MB, PM: 91.88MB
+[2026-06-12 03:05:27.144] [INFO] Test 2: Random access performance
+[2026-06-12 03:05:27.147] [INFO] Starting: Random Access
+[2026-06-12 03:05:27.158] [DEBUG] Initial Memory - WS: 99.25MB, PM: 92.43MB
+[2026-06-12 03:05:27.377] [INFO] Sequential read: 0 MB/s
+[2026-06-12 03:05:27.383] [INFO] Random access: 8035.85 accesses/s
+[2026-06-12 03:05:27.385] [INFO] Test 3/5: Inspection performance
+[2026-06-12 03:05:27.389] [INFO] === Inspection Performance Test ===
+[2026-06-12 03:05:27.391] [INFO] Starting: Large File Inspection
+[2026-06-12 03:05:27.402] [DEBUG] Initial Memory - WS: 99.88MB, PM: 91.98MB
+[2026-06-12 03:05:27.664] [DEBUG] Final Memory - WS: 100.02MB, PM: 92.29MB
+[2026-06-12 03:05:27.667] [SUCCESS] Inspection completed in 0.20s
+[2026-06-12 03:05:27.671] [INFO] Inspection speed: 0 MB/s
+[2026-06-12 03:05:27.673] [INFO] Peak memory: 100.02 MB
+[2026-06-12 03:05:27.679] [INFO] Daemon query tests skipped by user
+[2026-06-12 03:05:27.683] [INFO] Stress test skipped by user
+[2026-06-12 03:05:46.041] [INFO] === Starting Comprehensive Large File Test Suite ===
+[2026-06-12 03:05:46.062] [INFO] Target file: C:\Projects\qualiaDB\local\ontology\yago\yago-meta-facts.ttl
+[2026-06-12 03:05:46.065] [INFO] Results directory: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:05:46.068] [INFO] Test 1/5: Large file conversion
+[2026-06-12 03:05:46.075] [INFO] === Large File Conversion Test ===
+[2026-06-12 03:05:46.099] [INFO] File size: 973.09 MB
+[2026-06-12 03:05:46.107] [INFO] Starting: Large File Conversion
+[2026-06-12 03:05:46.140] [DEBUG] Initial Memory - WS: 74.12MB, PM: 67.47MB
+[2026-06-12 03:05:46.797] [DEBUG] Final Memory - WS: 91.17MB, PM: 88.52MB
+[2026-06-12 03:05:46.831] [SUCCESS] Conversion completed in 0.60s
+[2026-06-12 03:05:46.838] [INFO] Output size: 0 MB (Compression: 0.0%)
+[2026-06-12 03:05:46.842] [INFO] Throughput: 1617.5 MB/s
+[2026-06-12 03:05:46.844] [INFO] Peak memory: 91.17 MB
+[2026-06-12 03:05:46.848] [INFO] Memory delta: +17.05 MB
+[2026-06-12 03:05:46.855] [INFO] Test 2/5: Streaming performance
+[2026-06-12 03:05:46.871] [INFO] === Streaming Performance Test ===
+[2026-06-12 03:05:46.873] [INFO] Test 1: Sequential read performance
+[2026-06-12 03:05:46.875] [INFO] Starting: Sequential Read
+[2026-06-12 03:05:46.887] [DEBUG] Initial Memory - WS: 99.14MB, PM: 93.3MB
+[2026-06-12 03:05:47.087] [DEBUG] Final Memory - WS: 101.45MB, PM: 95.43MB
+[2026-06-12 03:05:47.090] [INFO] Test 2: Random access performance
+[2026-06-12 03:05:47.092] [INFO] Starting: Random Access
+[2026-06-12 03:05:47.104] [DEBUG] Initial Memory - WS: 102.1MB, PM: 96.05MB
+[2026-06-12 03:05:47.342] [INFO] Sequential read: 0 MB/s
+[2026-06-12 03:05:47.348] [INFO] Random access: 8389.99 accesses/s
+[2026-06-12 03:05:47.351] [INFO] Test 3/5: Inspection performance
+[2026-06-12 03:05:47.355] [INFO] === Inspection Performance Test ===
+[2026-06-12 03:05:47.357] [INFO] Starting: Large File Inspection
+[2026-06-12 03:05:47.368] [DEBUG] Initial Memory - WS: 104.13MB, PM: 96.34MB
+[2026-06-12 03:05:47.593] [DEBUG] Final Memory - WS: 104.66MB, PM: 96.9MB
+[2026-06-12 03:05:47.598] [SUCCESS] Inspection completed in 0.17s
+[2026-06-12 03:05:47.602] [INFO] Inspection speed: 0 MB/s
+[2026-06-12 03:05:47.605] [INFO] Peak memory: 104.66 MB
+[2026-06-12 03:05:47.611] [INFO] Daemon query tests skipped by user
+[2026-06-12 03:05:47.614] [INFO] Stress test skipped by user
+[2026-06-12 03:05:47.675] [INFO] Comprehensive reports generated: C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-030547.json and C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-030547.txt
+[2026-06-12 03:05:47.678] [INFO] === Comprehensive Large File Test Suite Completed ===
+[2026-06-12 03:05:47.680] [INFO] Results saved to: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:06:10.044] [INFO] === Starting Comprehensive Large File Test Suite ===
+[2026-06-12 03:06:10.066] [INFO] Target file: C:\Projects\qualiaDB\local\ontology\yago\yago-taxonomy.ttl
+[2026-06-12 03:06:10.069] [INFO] File description: YAGO Taxonomy (13MB Turtle file)
+[2026-06-12 03:06:10.072] [INFO] Results directory: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:06:10.074] [INFO] Test 1/5: Large file conversion
+[2026-06-12 03:06:10.080] [INFO] === Large File Conversion Test ===
+[2026-06-12 03:06:10.099] [INFO] File size: 12.73 MB
+[2026-06-12 03:06:10.108] [INFO] Starting: Large File Conversion
+[2026-06-12 03:06:10.139] [DEBUG] Initial Memory - WS: 74.12MB, PM: 67.57MB
+[2026-06-12 03:06:11.618] [DEBUG] Final Memory - WS: 91.15MB, PM: 88.52MB
+[2026-06-12 03:06:11.644] [SUCCESS] Conversion completed in 1.44s
+[2026-06-12 03:06:11.650] [INFO] Output size: 3.54 MB (Compression: 27.8%)
+[2026-06-12 03:06:11.654] [INFO] Throughput: 8.85 MB/s
+[2026-06-12 03:06:11.658] [INFO] Peak memory: 91.15 MB
+[2026-06-12 03:06:11.662] [INFO] Memory delta: +17.03 MB
+[2026-06-12 03:06:11.692] [INFO] Test 2/5: Streaming performance
+[2026-06-12 03:06:11.704] [INFO] === Streaming Performance Test ===
+[2026-06-12 03:06:11.708] [INFO] Test 1: Sequential read performance
+[2026-06-12 03:06:11.711] [INFO] Starting: Sequential Read
+[2026-06-12 03:06:11.722] [DEBUG] Initial Memory - WS: 99.06MB, PM: 92.64MB
+[2026-06-12 03:06:11.990] [DEBUG] Final Memory - WS: 99.6MB, PM: 92.7MB
+[2026-06-12 03:06:11.993] [INFO] Test 2: Random access performance
+[2026-06-12 03:06:11.996] [INFO] Starting: Random Access
+[2026-06-12 03:06:12.008] [DEBUG] Initial Memory - WS: 99.6MB, PM: 92.7MB
+[2026-06-12 03:06:12.227] [DEBUG] Final Memory - WS: 103.09MB, PM: 96.52MB
+[2026-06-12 03:06:12.238] [INFO] Sequential read: 31.32 MB/s
+[2026-06-12 03:06:12.243] [INFO] Random access: 5149.57 accesses/s
+[2026-06-12 03:06:12.245] [INFO] Test 3/5: Inspection performance
+[2026-06-12 03:06:12.249] [INFO] === Inspection Performance Test ===
+[2026-06-12 03:06:12.252] [INFO] Starting: Large File Inspection
+[2026-06-12 03:06:12.262] [DEBUG] Initial Memory - WS: 105.15MB, PM: 98.54MB
+[2026-06-12 03:06:13.056] [DEBUG] Final Memory - WS: 158.16MB, PM: 151.33MB
+[2026-06-12 03:06:13.061] [SUCCESS] Inspection completed in 0.77s
+[2026-06-12 03:06:13.065] [INFO] Inspection speed: 4.6 MB/s
+[2026-06-12 03:06:13.069] [INFO] Peak memory: 158.16 MB
+[2026-06-12 03:06:13.075] [INFO] Daemon query tests skipped by user
+[2026-06-12 03:06:13.078] [INFO] Stress test skipped by user
+[2026-06-12 03:06:13.157] [INFO] Comprehensive reports generated: C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-030613.json and C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-030613.txt
+[2026-06-12 03:06:13.161] [INFO] === Comprehensive Large File Test Suite Completed ===
+[2026-06-12 03:06:13.163] [INFO] Results saved to: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:06:25.706] [INFO] === Starting Comprehensive Large File Test Suite ===
+[2026-06-12 03:06:25.727] [INFO] Target file: C:\Projects\qualiaDB\local\ontology\yago\yago-taxonomy.ttl
+[2026-06-12 03:06:25.730] [INFO] File description: YAGO Taxonomy (13MB Turtle file)
+[2026-06-12 03:06:25.733] [INFO] Results directory: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:06:25.736] [INFO] Test 1/5: Large file conversion
+[2026-06-12 03:06:25.742] [INFO] === Large File Conversion Test ===
+[2026-06-12 03:06:25.762] [INFO] File size: 12.73 MB
+[2026-06-12 03:06:25.773] [INFO] Starting: Large File Conversion
+[2026-06-12 03:06:25.805] [DEBUG] Initial Memory - WS: 74.02MB, PM: 67.28MB
+[2026-06-12 03:06:27.374] [DEBUG] Final Memory - WS: 91.68MB, PM: 88.93MB
+[2026-06-12 03:06:27.433] [SUCCESS] Conversion completed in 1.52s
+[2026-06-12 03:06:27.453] [INFO] Output size: 3.54 MB (Compression: 27.8%)
+[2026-06-12 03:06:27.457] [INFO] Throughput: 8.37 MB/s
+[2026-06-12 03:06:27.462] [INFO] Peak memory: 91.68 MB
+[2026-06-12 03:06:27.466] [INFO] Memory delta: +17.66 MB
+[2026-06-12 03:06:27.503] [INFO] Test 2/5: Streaming performance
+[2026-06-12 03:06:27.517] [INFO] === Streaming Performance Test ===
+[2026-06-12 03:06:27.520] [INFO] Test 1: Sequential read performance
+[2026-06-12 03:06:27.522] [INFO] Starting: Sequential Read
+[2026-06-12 03:06:27.532] [DEBUG] Initial Memory - WS: 98.56MB, PM: 91.96MB
+[2026-06-12 03:06:27.710] [DEBUG] Final Memory - WS: 99.12MB, PM: 92.04MB
+[2026-06-12 03:06:27.712] [INFO] Test 2: Random access performance
+[2026-06-12 03:06:27.716] [INFO] Starting: Random Access
+[2026-06-12 03:06:27.730] [DEBUG] Initial Memory - WS: 99.13MB, PM: 92.04MB
+[2026-06-12 03:06:27.999] [DEBUG] Final Memory - WS: 102.38MB, PM: 95.21MB
+[2026-06-12 03:06:28.012] [INFO] Sequential read: 32.77 MB/s
+[2026-06-12 03:06:28.018] [INFO] Random access: 4805.06 accesses/s
+[2026-06-12 03:06:28.021] [INFO] Test 3/5: Inspection performance
+[2026-06-12 03:06:28.025] [INFO] === Inspection Performance Test ===
+[2026-06-12 03:06:28.027] [INFO] Starting: Large File Inspection
+[2026-06-12 03:06:28.040] [DEBUG] Initial Memory - WS: 104.46MB, PM: 97.23MB
+[2026-06-12 03:06:28.847] [DEBUG] Final Memory - WS: 158.12MB, PM: 151.19MB
+[2026-06-12 03:06:28.851] [SUCCESS] Inspection completed in 0.78s
+[2026-06-12 03:06:28.856] [INFO] Inspection speed: 4.51 MB/s
+[2026-06-12 03:06:28.859] [INFO] Peak memory: 158.12 MB
+[2026-06-12 03:06:28.862] [INFO] Test 4/5: Daemon query performance
+[2026-06-12 03:06:28.871] [INFO] === Daemon Query Performance Test ===
+[2026-06-12 03:06:28.874] [INFO] Starting QualiaDB daemon...
+[2026-06-12 03:07:04.176] [ERROR] Failed to start daemon
+[2026-06-12 03:07:04.191] [INFO] Test 5/5: Stress test
+[2026-06-12 03:07:04.194] [INFO] Starting: Stress Test
+[2026-06-12 03:07:04.204] [DEBUG] Initial Memory - WS: 169.52MB, PM: 150.31MB
+[2026-06-12 03:07:13.834] [DEBUG] Final Memory - WS: 98.27MB, PM: 79.25MB
+[2026-06-12 03:07:13.839] [INFO] Stress test completed: 0.96s per iteration
+[2026-06-12 03:07:13.910] [INFO] Comprehensive reports generated: C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-030713.json and C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-030713.txt
+[2026-06-12 03:07:13.912] [INFO] === Comprehensive Large File Test Suite Completed ===
+[2026-06-12 03:07:13.914] [INFO] Results saved to: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:13:14.197] [INFO] === Starting Comprehensive Large File Test Suite ===
+[2026-06-12 03:13:14.222] [INFO] Target file: C:\Projects\qualiaDB\local\ontology\yago\yago-meta-facts.ntx
+[2026-06-12 03:13:14.224] [INFO] File description: YAGO Meta-Facts (973 MB RDF-Star file)
+[2026-06-12 03:13:14.227] [INFO] Results directory: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:13:14.236] [INFO] Pre-processing: Converting RDF-Star format to standard Turtle
+[2026-06-12 03:13:14.240] [INFO] Converting RDF-Star to standard Turtle format...
+[2026-06-12 03:15:00.729] [DEBUG] Processed 100000 lines, 99966 triples
+[2026-06-12 03:15:48.948] [INFO] === Starting Comprehensive Large File Test Suite ===
+[2026-06-12 03:15:48.997] [INFO] Target file: C:\Projects\qualiaDB\local\ontology\yago\yago-meta-facts.ntx
+[2026-06-12 03:15:49.000] [INFO] File description: YAGO Meta-Facts (973 MB RDF-Star file - 7.49M triples)
+[2026-06-12 03:15:49.023] [INFO] Results directory: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:15:49.028] [INFO] File already ingested: C:\Projects\qualiaDB\yago-tests\large-file-results\yago-meta-facts-ntx.q42 (7.49M triples)
+[2026-06-12 03:15:49.082] [INFO] Test 1/4: Streaming performance
+[2026-06-12 03:15:49.094] [INFO] === Streaming Performance Test ===
+[2026-06-12 03:15:49.101] [INFO] Test 1: Sequential read performance
+[2026-06-12 03:15:49.126] [INFO] Starting: Sequential Read
+[2026-06-12 03:15:49.209] [DEBUG] Initial Memory - WS: 74.34MB, PM: 68.02MB
+[2026-06-12 03:15:50.113] [DEBUG] Final Memory - WS: 91.38MB, PM: 87.93MB
+[2026-06-12 03:15:50.125] [INFO] Test 2: Random access performance
+[2026-06-12 03:15:50.135] [INFO] Starting: Random Access
+[2026-06-12 03:15:50.155] [DEBUG] Initial Memory - WS: 90.84MB, PM: 87.14MB
+[2026-06-12 03:15:50.690] [DEBUG] Final Memory - WS: 96.73MB, PM: 92.64MB
+[2026-06-12 03:15:50.745] [INFO] Sequential read: 210.16 MB/s
+[2026-06-12 03:15:50.760] [INFO] Random access: 2153.76 accesses/s
+[2026-06-12 03:15:50.768] [INFO] Test 2/4: Inspection performance
+[2026-06-12 03:15:50.799] [INFO] === Inspection Performance Test ===
+[2026-06-12 03:15:50.806] [INFO] Starting: Large File Inspection
+[2026-06-12 03:15:50.823] [DEBUG] Initial Memory - WS: 103.22MB, PM: 96.39MB
+[2026-06-12 03:16:35.507] [DEBUG] Final Memory - WS: 1801.93MB, PM: 1797.71MB
+[2026-06-12 03:16:35.536] [SUCCESS] Inspection completed in 44.65s
+[2026-06-12 03:16:35.542] [INFO] Inspection speed: 3.14 MB/s
+[2026-06-12 03:16:35.547] [INFO] Peak memory: 1801.93 MB
+[2026-06-12 03:16:35.551] [INFO] Test 3/4: Daemon query performance
+[2026-06-12 03:16:35.562] [INFO] === Daemon Query Performance Test ===
+[2026-06-12 03:16:35.569] [INFO] Starting QualiaDB daemon...
+[2026-06-12 03:17:10.973] [ERROR] Failed to start daemon
+[2026-06-12 03:17:11.011] [INFO] Test 4/4: Stress test
+[2026-06-12 03:17:11.015] [INFO] Starting: Stress Test
+[2026-06-12 03:17:11.033] [DEBUG] Initial Memory - WS: 1815.06MB, PM: 1798.83MB
+[2026-06-12 03:17:14.636] [DEBUG] Processed 200000 lines, 199966 triples
+[2026-06-12 03:19:57.134] [DEBUG] Processed 300000 lines, 299966 triples
+[2026-06-12 03:23:24.193] [DEBUG] Processed 400000 lines, 399966 triples
+[2026-06-12 03:25:54.569] [DEBUG] Processed 500000 lines, 499966 triples
+[2026-06-12 03:27:03.486] [DEBUG] Final Memory - WS: 1749.29MB, PM: 1732.24MB
+[2026-06-12 03:27:03.534] [INFO] Stress test completed: 59.24s per iteration
+[2026-06-12 03:27:03.682] [INFO] Comprehensive reports generated: C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-032703.json and C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-032703.txt
+[2026-06-12 03:27:03.697] [INFO] === Comprehensive Large File Test Suite Completed ===
+[2026-06-12 03:27:03.709] [INFO] Results saved to: C:\Projects\qualiaDB\yago-tests\large-file-results
+[2026-06-12 03:28:12.619] [DEBUG] Processed 600000 lines, 599966 triples
+[2026-06-12 03:30:08.680] [DEBUG] Processed 700000 lines, 699966 triples
+[2026-06-12 03:32:15.257] [DEBUG] Processed 800000 lines, 799966 triples
+[2026-06-12 03:34:01.810] [DEBUG] Processed 900000 lines, 899966 triples
+[2026-06-12 03:35:52.216] [DEBUG] Processed 1000000 lines, 999966 triples
+[2026-06-12 03:38:11.648] [DEBUG] Processed 1100000 lines, 1099966 triples
+[2026-06-12 03:44:06.168] [DEBUG] Processed 1200000 lines, 1199966 triples
+[2026-06-12 03:45:50.874] [DEBUG] Processed 1300000 lines, 1299966 triples
+[2026-06-12 03:47:28.548] [DEBUG] Processed 1400000 lines, 1399966 triples
+[2026-06-12 03:49:07.025] [DEBUG] Processed 1500000 lines, 1499966 triples
+[2026-06-12 03:56:19.764] [DEBUG] Processed 1600000 lines, 1599966 triples
+[2026-06-12 03:58:45.061] [DEBUG] Processed 1700000 lines, 1699966 triples
+[2026-06-12 04:00:26.273] [DEBUG] Processed 1800000 lines, 1799966 triples
+[2026-06-12 04:02:06.356] [DEBUG] Processed 1900000 lines, 1899966 triples
+[2026-06-12 04:03:45.903] [DEBUG] Processed 2000000 lines, 1999966 triples
+[2026-06-12 04:05:46.364] [DEBUG] Processed 2100000 lines, 2099966 triples
+[2026-06-12 04:07:48.353] [DEBUG] Processed 2200000 lines, 2199966 triples
+[2026-06-12 04:09:32.115] [DEBUG] Processed 2300000 lines, 2299966 triples
+[2026-06-12 04:11:14.967] [DEBUG] Processed 2400000 lines, 2399966 triples
+[2026-06-12 04:12:50.579] [DEBUG] Processed 2500000 lines, 2499966 triples
+[2026-06-12 04:14:54.384] [DEBUG] Processed 2600000 lines, 2599966 triples
+[2026-06-12 04:20:02.754] [DEBUG] Processed 2700000 lines, 2699966 triples
+[2026-06-12 04:22:31.604] [DEBUG] Processed 2800000 lines, 2799966 triples
+[2026-06-12 04:24:59.756] [DEBUG] Processed 2900000 lines, 2899966 triples
+[2026-06-12 04:27:13.802] [DEBUG] Processed 3000000 lines, 2999966 triples
+[2026-06-12 04:29:17.212] [DEBUG] Processed 3100000 lines, 3099966 triples
+[2026-06-12 04:32:14.278] [DEBUG] Processed 3200000 lines, 3199966 triples
+[2026-06-12 04:34:16.663] [DEBUG] Processed 3300000 lines, 3299966 triples
+[2026-06-12 04:37:06.952] [DEBUG] Processed 3400000 lines, 3399966 triples
+[2026-06-12 04:39:55.846] [DEBUG] Processed 3500000 lines, 3499966 triples
+[2026-06-12 04:42:38.931] [DEBUG] Processed 3600000 lines, 3599966 triples
+[2026-06-12 04:45:15.248] [DEBUG] Processed 3700000 lines, 3699966 triples
+[2026-06-12 04:47:45.466] [DEBUG] Processed 3800000 lines, 3799966 triples
+[2026-06-12 04:50:06.388] [DEBUG] Processed 3900000 lines, 3899966 triples
+[2026-06-12 04:53:04.205] [DEBUG] Processed 4000000 lines, 3999966 triples
+[2026-06-12 04:55:18.274] [DEBUG] Processed 4100000 lines, 4099966 triples
+[2026-06-12 04:57:34.930] [DEBUG] Processed 4200000 lines, 4199966 triples
+[2026-06-12 04:59:54.417] [DEBUG] Processed 4300000 lines, 4299966 triples
+[2026-06-12 05:02:11.895] [DEBUG] Processed 4400000 lines, 4399966 triples
+[2026-06-12 05:06:10.400] [DEBUG] Processed 4500000 lines, 4499966 triples
+[2026-06-12 05:08:47.869] [DEBUG] Processed 4600000 lines, 4599966 triples
+[2026-06-12 05:11:37.352] [DEBUG] Processed 4700000 lines, 4699966 triples
+[2026-06-12 05:14:14.348] [DEBUG] Processed 4800000 lines, 4799966 triples
+[2026-06-12 05:16:38.008] [DEBUG] Processed 4900000 lines, 4899966 triples
+[2026-06-12 05:20:42.268] [DEBUG] Processed 5000000 lines, 4999966 triples
+[2026-06-12 05:23:19.106] [DEBUG] Processed 5100000 lines, 5099966 triples
+[2026-06-12 05:25:55.714] [DEBUG] Processed 5200000 lines, 5199966 triples
+[2026-06-12 05:28:23.900] [DEBUG] Processed 5300000 lines, 5299966 triples
+[2026-06-12 05:30:40.481] [DEBUG] Processed 5400000 lines, 5399966 triples
+[2026-06-12 05:33:12.815] [DEBUG] Processed 5500000 lines, 5499966 triples
+[2026-06-12 05:36:08.122] [DEBUG] Processed 5600000 lines, 5599966 triples
+[2026-06-12 05:37:59.559] [DEBUG] Processed 5700000 lines, 5699966 triples
+[2026-06-12 05:39:46.990] [DEBUG] Processed 5800000 lines, 5799966 triples
+[2026-06-12 05:41:33.751] [DEBUG] Processed 5900000 lines, 5899966 triples
+[2026-06-12 05:43:20.894] [DEBUG] Processed 6000000 lines, 5999966 triples
+[2026-06-12 05:45:08.027] [DEBUG] Processed 6100000 lines, 6099966 triples
+[2026-06-12 05:46:54.900] [DEBUG] Processed 6200000 lines, 6199966 triples
+[2026-06-12 05:48:41.185] [DEBUG] Processed 6300000 lines, 6299966 triples
+[2026-06-12 05:50:30.071] [DEBUG] Processed 6400000 lines, 6399966 triples
+[2026-06-12 05:52:18.884] [DEBUG] Processed 6500000 lines, 6499966 triples
+[2026-06-12 05:54:05.896] [DEBUG] Processed 6600000 lines, 6599966 triples
+[2026-06-12 05:55:57.065] [DEBUG] Processed 6700000 lines, 6699966 triples
+[2026-06-12 05:57:46.217] [DEBUG] Processed 6800000 lines, 6799966 triples
+[2026-06-12 05:59:32.873] [DEBUG] Processed 6900000 lines, 6899966 triples
+[2026-06-12 06:01:20.627] [DEBUG] Processed 7000000 lines, 6999966 triples
+[2026-06-12 06:03:06.709] [DEBUG] Processed 7100000 lines, 7099966 triples
+[2026-06-12 06:04:53.499] [DEBUG] Processed 7200000 lines, 7199966 triples
+[2026-06-12 06:06:40.203] [DEBUG] Processed 7300000 lines, 7299966 triples
+[2026-06-12 06:08:27.508] [DEBUG] Processed 7400000 lines, 7399966 triples
+[2026-06-12 06:10:04.168] [INFO] Conversion complete: 7490025 lines, 7489991 triples
+[2026-06-12 06:10:04.172] [INFO] Test 1/5: Large file conversion
+[2026-06-12 06:10:04.180] [INFO] === Large File Conversion Test ===
+[2026-06-12 06:10:04.203] [INFO] File size: 578.19 MB
+[2026-06-12 06:10:04.215] [INFO] Starting: Large File Conversion
+[2026-06-12 06:10:04.301] [DEBUG] Initial Memory - WS: 67.46MB, PM: 58.52MB
+[2026-06-12 06:10:05.378] [DEBUG] Final Memory - WS: 81.21MB, PM: 76.7MB
+[2026-06-12 06:10:05.423] [SUCCESS] Conversion completed in 1.00s
+[2026-06-12 06:10:05.431] [INFO] Output size: 0 MB (Compression: 0.0%)
+[2026-06-12 06:10:05.438] [INFO] Throughput: 578.41 MB/s
+[2026-06-12 06:10:05.441] [INFO] Peak memory: 81.21 MB
+[2026-06-12 06:10:05.448] [INFO] Memory delta: +13.75 MB
+[2026-06-12 06:10:05.455] [INFO] Test 2/5: Streaming performance
+[2026-06-12 06:10:05.479] [INFO] === Streaming Performance Test ===
+[2026-06-12 06:10:05.482] [INFO] Test 1: Sequential read performance
+[2026-06-12 06:10:05.485] [INFO] Starting: Sequential Read
+[2026-06-12 06:10:05.507] [DEBUG] Initial Memory - WS: 84.63MB, PM: 76.84MB
+[2026-06-12 06:10:05.798] [DEBUG] Final Memory - WS: 84.94MB, PM: 77MB
+[2026-06-12 06:10:05.801] [INFO] Test 2: Random access performance
+[2026-06-12 06:10:05.806] [INFO] Starting: Random Access
+[2026-06-12 06:10:05.827] [DEBUG] Initial Memory - WS: 85.55MB, PM: 77.62MB
+[2026-06-12 06:10:06.144] [INFO] Sequential read: 0 MB/s
+[2026-06-12 06:10:06.152] [INFO] Random access: 5053.07 accesses/s
+[2026-06-12 06:10:06.155] [INFO] Test 3/5: Inspection performance
+[2026-06-12 06:10:06.160] [INFO] === Inspection Performance Test ===
+[2026-06-12 06:10:06.163] [INFO] Starting: Large File Inspection
+[2026-06-12 06:10:06.185] [DEBUG] Initial Memory - WS: 90.53MB, PM: 81.61MB
+[2026-06-12 06:10:06.485] [DEBUG] Final Memory - WS: 91.94MB, PM: 83.07MB
+[2026-06-12 06:10:06.492] [SUCCESS] Inspection completed in 0.24s
+[2026-06-12 06:10:06.498] [INFO] Inspection speed: 0 MB/s
+[2026-06-12 06:10:06.501] [INFO] Peak memory: 91.94 MB
+[2026-06-12 06:10:06.505] [INFO] Test 4/5: Daemon query performance
+[2026-06-12 06:10:06.520] [INFO] === Daemon Query Performance Test ===
+[2026-06-12 06:10:06.523] [INFO] Starting QualiaDB daemon...
+[2026-06-12 06:10:41.889] [ERROR] Failed to start daemon
+[2026-06-12 06:10:41.911] [INFO] Test 5/5: Stress test
+[2026-06-12 06:10:41.914] [INFO] Starting: Stress Test
+[2026-06-12 06:10:41.931] [DEBUG] Initial Memory - WS: 108.05MB, PM: 88.07MB
+[2026-06-12 06:10:42.924] [DEBUG] Final Memory - WS: 108.97MB, PM: 88.95MB
+[2026-06-12 06:10:42.929] [INFO] Stress test completed: 0.1s per iteration
+[2026-06-12 06:10:43.018] [INFO] Comprehensive reports generated: C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-061042.json and C:\Projects\qualiaDB\yago-tests\large-file-results\comprehensive-report-20260612-061043.txt
+[2026-06-12 06:10:43.022] [INFO] === Comprehensive Large File Test Suite Completed ===
+[2026-06-12 06:10:43.024] [INFO] Results saved to: C:\Projects\qualiaDB\yago-tests\large-file-results

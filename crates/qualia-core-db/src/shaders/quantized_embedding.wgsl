@@ -15,6 +15,9 @@ struct EmbeddingParams {
 
 const BLOCK_Q6K_BYTES: u32 = 210u;
 const BLOCK_Q6K_ELEMS: u32 = 256u;
+const BLOCK_Q4_0_BYTES: u32 = 18u;
+const BLOCK_Q4_0_ELEMS: u32 = 32u;
+const GGML_TYPE_Q4_0: u32 = 2u;
 const GGML_TYPE_Q6_K: u32 = 14u;
 
 fn read_u8(idx: u32) -> u32 {
@@ -89,7 +92,32 @@ fn dequantize_q6_k_elem(k: u32) -> f32 {
     return d * f32(sc) * f32(q);
 }
 
+fn dequantize_q4_0_elem(k: u32) -> f32 {
+    let block_idx = k / BLOCK_Q4_0_ELEMS;
+    let base = block_idx * BLOCK_Q4_0_BYTES;
+    let y = k % BLOCK_Q4_0_ELEMS;
+
+    let d_bits = read_u8(base) | (read_u8(base + 1u) << 8u);
+    let d = f16_to_f32(d_bits);
+
+    let half_idx = y % 16u;
+    let byte_val = read_u8(base + 2u + half_idx);
+
+    var nibble: u32;
+    if y < 16u {
+        nibble = byte_val & 0xFu;
+    } else {
+        nibble = byte_val >> 4u;
+    }
+
+    let q = i32(nibble) - 8;
+    return d * f32(q);
+}
+
 fn dequantize_embd_elem(k: u32) -> f32 {
+    if params.ggml_type == GGML_TYPE_Q4_0 {
+        return dequantize_q4_0_elem(k);
+    }
     if params.ggml_type == GGML_TYPE_Q6_K {
         return dequantize_q6_k_elem(k);
     }

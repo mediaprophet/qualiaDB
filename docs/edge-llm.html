@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB | Edge LLM Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass-strong { background: rgba(255,255,255,0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.12); }
+        .glass-panel { background: rgba(17,23,31,0.85); border: 1px solid rgba(148,163,184,0.14); backdrop-filter: blur(28px); }
+        .input-field { background: rgba(10,10,15,0.65); border: 1px solid rgba(148,163,184,0.2); border-radius: 8px; color: #e2e8f0; padding: 0.5rem 0.75rem; outline: none; transition: border-color 0.2s; width: 100%; }
+        .input-field:focus { border-color: rgba(16,185,129,0.5); }
+        .model-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; padding: 1rem; cursor: pointer; transition: all 0.18s; }
+        .model-card:hover { background: rgba(255,255,255,0.07); border-color: rgba(16,185,129,0.25); }
+        .model-card.selected { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.45); }
+        .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+        .chat-bubble { max-width: 80%; border-radius: 16px; padding: 0.6rem 0.9rem; font-size: 0.9rem; line-height: 1.5; }
+        .chat-user { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.2); margin-left: auto; }
+        .chat-assistant { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); }
+        .token-cursor { display: inline-block; width: 2px; height: 1em; background: #34d399; animation: blink 0.7s step-end infinite; vertical-align: text-bottom; margin-left: 1px; }
+        @keyframes blink { 50% { opacity: 0; } }
+        .spinbtn { background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.3); color: #34d399; border-radius: 8px; padding: 0.5rem 1.2rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .spinbtn:hover { background: rgba(16,185,129,0.3); }
+        .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .spinbtn.blue { background:rgba(59,130,246,0.2);border-color:rgba(59,130,246,0.3);color:#93c5fd; }
+        .spinbtn.blue:hover { background:rgba(59,130,246,0.3); }
+        .spinbtn.red { background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.3);color:#fca5a5; }
+        .code-block { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.78rem; background: rgba(10,10,15,0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 0.85rem 1rem; white-space: pre-wrap; overflow-x: auto; }
+        .accordion-body { display: none; }
+        .accordion-body.open { display: block; }
+        select.input-field option { background: #0f172a; }
+        #chat-messages { scroll-behavior: smooth; }
+        .telem-bar { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.5rem 0.75rem; text-align: center; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+
+<!-- Nav -->
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center gap-8">
+                <a href="index.html" class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                </a>
+                <div class="hidden md:flex items-center gap-6 text-sm">
+                    <a href="advanced-features.html" class="hover:text-white transition-colors">Features</a>
+                    <a href="sparql-showcase.html" class="hover:text-white transition-colors">SPARQL</a>
+                    <a href="science-playground.html" class="hover:text-white transition-colors">Sciences</a>
+                    <a href="edge-llm.html" class="text-white border-b-2 border-violet-500 pb-1">Edge LLM</a>
+                    <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                    <a href="api-explorer/" class="hover:text-white transition-colors text-cyan-400">API Explorer</a>
+                    <a href="tests/" class="hover:text-white transition-colors text-cyan-400">Test Suite</a>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="daemon-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                    <div class="w-2 h-2 rounded-full bg-slate-500 animate-pulse" id="daemon-dot"></div>
+                    <span id="daemon-text">Checking…</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="max-w-screen-2xl mx-auto px-6 pt-10 pb-20">
+
+    <!-- Hero -->
+    <div class="text-center mb-10">
+        <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-violet-500/10 text-violet-400 text-sm mb-4">
+            <i class="fas fa-microchip"></i>
+            <span>Your device · Your weights · No cloud required</span>
+        </div>
+        <h1 class="text-5xl font-semibold tracking-tighter mb-3">Edge LLM Hub</h1>
+        <p class="text-white/60 max-w-xl mx-auto">GGUF models mapped via <code class="text-cyan-400">memmap2</code> directly into the OS page cache. Phase 8 bifurcated compute on DirectML / Vulkan / Metal via <code class="text-cyan-400">wgpu</code>. Zero cloud egress.</p>
+    </div>
+
+    <!-- Daemon status banner -->
+    <div id="daemon-banner" class="rounded-2xl p-4 mb-8 text-sm flex items-start gap-4" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2)">
+        <i class="fas fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0"></i>
+        <div>
+            <span class="font-semibold text-amber-300">Daemon not detected on localhost:4242</span>
+            <span class="text-white/60 ml-2">— Demo mode active. Run </span>
+            <code class="text-cyan-300 mx-1">qualia-cli daemon --dev</code>
+            <span class="text-white/60"> to enable live inference via the WebSocket bridge.</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        <!-- ── LEFT: Model catalogue ─────────────────────────── -->
+        <div class="xl:col-span-1 space-y-4">
+            <div class="glass-strong rounded-3xl p-5">
+                <h2 class="font-semibold text-lg mb-4">Model Catalog</h2>
+                <p class="text-white/50 text-xs mb-4">Select a model to chat. Click <i class="fas fa-terminal text-cyan-400 mx-1"></i> to copy the CLI load command.</p>
+                <div id="model-list" class="space-y-2"></div>
+            </div>
+
+            <!-- Telemetry -->
+            <div class="glass-strong rounded-3xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-semibold">Telemetry</h3>
+                    <div class="flex items-center gap-1.5 text-xs text-white/40">
+                        <div class="w-1.5 h-1.5 rounded-full bg-slate-500" id="telem-dot"></div>
+                        <span id="telem-status">ws://127.0.0.1:9090</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="telem-bar"><div class="text-white/40 mb-1">RSS</div><div id="t-rss" class="font-mono font-bold text-emerald-400">— MB</div></div>
+                    <div class="telem-bar"><div class="text-white/40 mb-1">Tokens/s</div><div id="t-tps" class="font-mono font-bold text-cyan-400">—</div></div>
+                    <div class="telem-bar"><div class="text-white/40 mb-1">Hot blocks</div><div id="t-hot" class="font-mono font-bold text-amber-400">—</div></div>
+                    <div class="telem-bar"><div class="text-white/40 mb-1">Context</div><div id="t-ctx" class="font-mono font-bold text-blue-400">—</div></div>
+                </div>
+                <div class="mt-3 text-xs text-white/30 leading-relaxed">
+                    Live RAM feed from <code class="text-cyan-400/70">TelemetryPayload</code> on port 9090. Connect the daemon to see real data.
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT: Chat interface ──────────────────────────── -->
+        <div class="xl:col-span-2 flex flex-col gap-4">
+
+            <!-- Model info bar -->
+            <div class="glass-strong rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center text-sm font-bold text-white" id="chat-model-icon">?</div>
+                    <div>
+                        <div id="chat-model-name" class="font-semibold text-sm">Select a model</div>
+                        <div id="chat-model-meta" class="text-xs text-white/40">—</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 text-xs">
+                    <label class="flex items-center gap-2 text-white/60 cursor-pointer select-none">
+                        <div class="relative" onclick="toggleDemo()">
+                            <div class="w-10 h-5 bg-slate-700 rounded-full transition-colors" id="demo-track"></div>
+                            <div class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform" id="demo-thumb"></div>
+                        </div>
+                        <span id="demo-label">Demo mode</span>
+                    </label>
+                    <button onclick="clearChat()" class="spinbtn red text-xs py-1 px-3"><i class="fas fa-trash mr-1"></i>Clear</button>
+                </div>
+            </div>
+
+            <!-- Chat window -->
+            <div class="glass-strong rounded-3xl flex flex-col" style="height:480px">
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-5 space-y-4 text-sm"></div>
+
+                <!-- Input area -->
+                <div class="border-t border-white/10 p-4 flex gap-3 items-end">
+                    <textarea id="chat-input" rows="2"
+                        class="flex-1 input-field resize-none text-sm"
+                        placeholder="Ask the model something… (Enter to send, Shift+Enter for newline)"
+                        onkeydown="handleChatKey(event)"></textarea>
+                    <button id="send-btn" onclick="sendMessage()" class="spinbtn shrink-0 self-stretch px-4">
+                        <i class="fas fa-paper-plane mr-1.5"></i>Send
+                    </button>
+                </div>
+            </div>
+
+            <!-- Token stream telemetry bar -->
+            <div class="glass-strong rounded-2xl px-5 py-3 flex flex-wrap gap-4 text-xs text-white/60" id="stream-bar" style="display:none!important">
+                <div><span class="text-white/40">Tokens:</span> <span id="sb-tokens" class="font-mono text-cyan-300">0</span></div>
+                <div><span class="text-white/40">T/s:</span> <span id="sb-tps" class="font-mono text-emerald-300">—</span></div>
+                <div><span class="text-white/40">Elapsed:</span> <span id="sb-elapsed" class="font-mono text-amber-300">—</span></div>
+                <div><span class="text-white/40">RAM:</span> <span id="sb-ram" class="font-mono text-blue-300">—</span></div>
+                <div class="ml-auto"><span id="sb-phase" class="text-violet-400 font-semibold">Phase 8 bifurcated</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── WebSocket Protocol spec ────────────────────────────────── -->
+    <div class="glass-strong rounded-3xl p-6 mt-8">
+        <button class="w-full flex items-center justify-between text-left" onclick="toggleAccordion('proto')">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-plug text-cyan-400"></i>
+                <h3 class="font-semibold">WebSocket Protocol — <code class="text-cyan-300 text-sm">ws://127.0.0.1:4242/qualia-bridge</code></h3>
+            </div>
+            <i class="fas fa-chevron-down text-white/40 transition-transform" id="proto-chevron"></i>
+        </button>
+        <div id="proto-body" class="accordion-body mt-5">
+            <p class="text-white/60 text-sm mb-4">The <code class="text-cyan-400">qualia-bridge</code> WebSocket is the single persistent connection from any browser client to the native daemon. LLM inference multiplexes over the same socket using the <code class="text-amber-300">llm_*</code> frame family.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div>
+                    <div class="text-white/50 font-semibold mb-2">Handshake (server → client)</div>
+                    <div class="code-block text-cyan-300">← { "type": "HANDSHAKE_SUCCESS",
+     "payload": { "mode": "NATIVE",
+                  "version": "0.0.11" } }</div>
+                </div>
+                <div>
+                    <div class="text-white/50 font-semibold mb-2">Start inference (client → server)</div>
+                    <div class="code-block text-amber-300">→ { "type": "llm_infer",
+     "id": 1,
+     "model": "phi-3-mini-4k-instruct-q4km",
+     "prompt": "Explain NQuin layout",
+     "max_tokens": 256,
+     "temperature": 0.7 }</div>
+                </div>
+                <div>
+                    <div class="text-white/50 font-semibold mb-2">Streaming token (server → client)</div>
+                    <div class="code-block text-emerald-300">← { "type": "llm_token",
+     "id": 1,
+     "token": " Hello",
+     "tps": 14.2,
+     "rss_mb": 2841 }
+← { "type": "llm_token", "id": 1, "token": " world", … }</div>
+                </div>
+                <div>
+                    <div class="text-white/50 font-semibold mb-2">Completion (server → client)</div>
+                    <div class="code-block text-violet-300">← { "type": "llm_done",
+     "id": 1,
+     "total_tokens": 128,
+     "elapsed_ms": 9043,
+     "tps": 14.1,
+     "stop_reason": "eos_token" }</div>
+                </div>
+                <div>
+                    <div class="text-white/50 font-semibold mb-2">Cancel (client → server)</div>
+                    <div class="code-block text-red-300">→ { "type": "llm_cancel", "id": 1 }</div>
+                </div>
+                <div>
+                    <div class="text-white/50 font-semibold mb-2">Status query (client → server)</div>
+                    <div class="code-block text-blue-300">→ { "type": "llm_status" }
+← { "type": "llm_status_reply",
+     "loaded_model": "phi-3-mini…",
+     "lifecycle": "Resident",
+     "rss_mb": 2841,
+     "thermal": "Normal" }</div>
+                </div>
+            </div>
+            <div class="mt-4 p-3 rounded-xl bg-amber-500/8 border border-amber-500/20 text-xs text-amber-300/80">
+                <i class="fas fa-info-circle mr-2"></i>
+                The <code>llm_*</code> frame family is planned infrastructure. Today, send <code>llm_infer</code> and the daemon returns <code class="text-red-300">{ "code": "unknown_type" }</code> — use <code>qualia-cli llm eval</code> for actual inference.
+            </div>
+        </div>
+    </div>
+
+    <!-- ── CLI Reference ─────────────────────────────────────────── -->
+    <div class="glass-strong rounded-3xl p-6 mt-6">
+        <button class="w-full flex items-center justify-between text-left" onclick="toggleAccordion('cli')">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-terminal text-emerald-400"></i>
+                <h3 class="font-semibold">CLI Reference — <code class="text-emerald-300 text-sm">qualia-cli llm</code></h3>
+            </div>
+            <i class="fas fa-chevron-down text-white/40 transition-transform" id="cli-chevron"></i>
+        </button>
+        <div id="cli-body" class="accordion-body mt-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div class="space-y-3">
+                    <div>
+                        <div class="text-white/50 font-semibold mb-1">List models in vault</div>
+                        <div class="code-block text-cyan-300">qualia-cli llm list
+qualia-cli llm list --vault-path C:\llmmodels</div>
+                    </div>
+                    <div>
+                        <div class="text-white/50 font-semibold mb-1">Download a model</div>
+                        <div class="code-block text-emerald-300">qualia-cli resources download phi-3-mini-4k-instruct-q4km
+qualia-cli resources download qwen2.5-1.5b-instruct-q4km</div>
+                    </div>
+                    <div>
+                        <div class="text-white/50 font-semibold mb-1">Load into memory</div>
+                        <div class="code-block text-amber-300">qualia-cli llm load phi-3-mini-4k-instruct-q4km
+# Maps GGUF via memmap2 → wgpu DirectML pipeline
+# Prints profile_id + resident bytes</div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <div class="text-white/50 font-semibold mb-1">Run inference</div>
+                        <div class="code-block text-violet-300">qualia-cli llm eval "Explain NQuin layout"
+qualia-cli llm eval "Explain NQuin" --orchestrated
+# --orchestrated routes through Webizen VM pre/post checks</div>
+                    </div>
+                    <div>
+                        <div class="text-white/50 font-semibold mb-1">Check status &amp; lifecycle</div>
+                        <div class="code-block text-blue-300">qualia-cli llm status
+# Shows: lifecycle state, resident bytes, KV cache MB,
+#        thermal state, scrubbing lock</div>
+                    </div>
+                    <div>
+                        <div class="text-white/50 font-semibold mb-1">Evict (free GPU/RAM)</div>
+                        <div class="code-block text-red-300">qualia-cli llm evict phi-3-mini-4k-instruct-q4km</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 p-4 bg-black/30 rounded-xl border border-white/10 text-xs">
+                <div class="font-semibold text-white/70 mb-2">Inference pipeline summary</div>
+                <div class="text-white/50 leading-relaxed">
+                    <code class="text-amber-300">GgufSharder</code> → parses GGUF header → NQuin pointer map (byte offsets in upper bits, modality flag <code>0b1001</code>)<br>
+                    <code class="text-cyan-300">GgufBridge</code> → mmap weights into OS page cache via <code>memmap2</code> → zero heap allocation<br>
+                    <code class="text-emerald-300">fused_tensor_contraction.wgsl</code> → 64 threads/workgroup, 4096 FMA ops/thread → DirectML/Vulkan/Metal<br>
+                    <code class="text-violet-300">LocalLlmAgent</code> → Phase 8 bifurcated compute: LLM Engine ↔ Webizen Sentinel via SPSC ring buffers<br>
+                    <code class="text-blue-300">Orchestrator</code> → N3Logic rights pre-flight → infer → provenance NQuin citation check
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Architecture diagram ───────────────────────────────────── -->
+    <div class="glass-strong rounded-3xl p-6 mt-6">
+        <button class="w-full flex items-center justify-between text-left" onclick="toggleAccordion('arch')">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-diagram-project text-blue-400"></i>
+                <h3 class="font-semibold">Architecture — Phase 8 Bifurcated Compute</h3>
+            </div>
+            <i class="fas fa-chevron-down text-white/40 transition-transform" id="arch-chevron"></i>
+        </button>
+        <div id="arch-body" class="accordion-body mt-5">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div class="bg-black/30 rounded-2xl p-4 border border-white/10">
+                    <div class="text-violet-400 font-semibold mb-2"><i class="fas fa-brain mr-2"></i>LLM Engine Thread</div>
+                    <ul class="text-white/60 text-xs space-y-1.5">
+                        <li><i class="fas fa-arrow-right text-white/30 mr-1.5"></i>Autoregressive token loop</li>
+                        <li><i class="fas fa-arrow-right text-white/30 mr-1.5"></i>GPU dispatch via wgpu</li>
+                        <li><i class="fas fa-arrow-right text-white/30 mr-1.5"></i>Pushes logit vectors → <code class="text-cyan-300">LogitStream</code></li>
+                        <li><i class="fas fa-arrow-right text-white/30 mr-1.5"></i>Reads control signals ← <code class="text-amber-300">ControlStream</code></li>
+                        <li><i class="fas fa-arrow-right text-white/30 mr-1.5"></i>On <code class="text-red-300">DenyRollback</code>: recalculates mid-generation</li>
+                    </ul>
+                </div>
+                <div class="bg-black/30 rounded-2xl p-4 border border-white/10">
+                    <div class="text-cyan-400 font-semibold mb-2"><i class="fas fa-shield-halved mr-2"></i>Webizen Sentinel Thread</div>
+                    <ul class="text-white/60 text-xs space-y-1.5">
+                        <li><i class="fas fa-arrow-right text-white/30 mr-1.5"></i>Reads logit vectors in real time</li>
+                        <li><i class="fas fa-arrow-right text-white/30 mr-1.5"></i>Detects anomalies (e.g., <code class="text-red-300">0x99</code> byte signature)</li>
+                        <li><i class="fas fa-arrow-right text-white/30 mr-1.5"></i>Injects <code class="text-red-300">DenyRollback</code> into ControlStream</li>
+                        <li><i class="fas fa-arrow-right text-white/30 mr-1.5"></i>Writes conduct violation Quin → WAL (ed25519)</li>
+                        <li><i class="fas fa-arrow-right text-white/30 mr-1.5"></i>Governance is mid-generation, not post-hoc</li>
+                    </ul>
+                </div>
+                <div class="bg-black/30 rounded-2xl p-4 border border-white/10">
+                    <div class="text-emerald-400 font-semibold mb-2"><i class="fas fa-gavel mr-2"></i>Orchestrator Gates</div>
+                    <ul class="text-white/60 text-xs space-y-1.5">
+                        <li><i class="fas fa-check text-emerald-500 mr-1.5"></i><code class="text-amber-300">validate_intent()</code> — N3Logic rights pre-flight</li>
+                        <li><i class="fas fa-check text-emerald-500 mr-1.5"></i>Deny writes signed Quin to WAL; model never invoked</li>
+                        <li><i class="fas fa-check text-emerald-500 mr-1.5"></i><code class="text-cyan-300">agent.infer()</code> — actual GPU inference</li>
+                        <li><i class="fas fa-check text-emerald-500 mr-1.5"></i><code class="text-violet-300">validate_output()</code> — output must cite ≥1 NQuin provenance</li>
+                        <li><i class="fas fa-check text-emerald-500 mr-1.5"></i>Ungrounded output rejected — no hallucination egress</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-4 code-block text-xs text-white/60">
+AgentBackend variants:
+  Local   — GGUF on disk → wgpu → in-process. No outbound traffic. 128 MB RAM cap.
+  Remote  — API call → Nym mixnet → ILP metered. Requires signed VC from Principal.
+  Hybrid  — Local-first. Falls back to Remote only with explicit Principal consent.
+
+// Never add an Ollama backend. Model it on LocalLlmAgent in llm_agent.rs.
+            </div>
+        </div>
+    </div>
+
+</div><!-- /main -->
+
+<script>
+// ─── Model catalog (from resources/llms.yaml) ──────────────────────
+const MODELS = [
+    { id:'smolvlm2-500m-video-q8',    name:'SmolVLM2 500M Video',     provider:'HuggingFaceTB',   sizeMb:420,   ramMb:1200,  quant:'Q8_0',  modality:'multimodal', tags:['vision','edge','tiny'],    icon:'🔬', ctx:8192 },
+    { id:'qwen2.5-1.5b-instruct-q4km',name:'Qwen2.5 1.5B',            provider:'Alibaba',         sizeMb:1100,  ramMb:1400,  quant:'Q4_K_M',modality:'text',       tags:['coding','edge','tiny'],    icon:'💬', ctx:32768 },
+    { id:'gemma-2-2b-it-q4km',        name:'Gemma 2 2B Instruct',     provider:'Google',          sizeMb:1600,  ramMb:1900,  quant:'Q4_K_M',modality:'text',       tags:['multilingual','edge'],     icon:'💎', ctx:8192 },
+    { id:'qwen2.5-3b-instruct-q4km',  name:'Qwen2.5 3B',              provider:'Alibaba',         sizeMb:2100,  ramMb:2600,  quant:'Q4_K_M',modality:'text',       tags:['coding','reasoning'],      icon:'🧠', ctx:32768 },
+    { id:'phi-3-mini-4k-instruct-q4km',name:'Phi-3 Mini 4K',          provider:'Microsoft',       sizeMb:2400,  ramMb:2800,  quant:'Q4_K_M',modality:'text',       tags:['reasoning','rag','edge'],  icon:'⚡', ctx:4096 },
+    { id:'llama-3.2-3b-instruct-q4km',name:'Llama 3.2 3B',           provider:'Meta',            sizeMb:2200,  ramMb:2600,  quant:'Q4_K_M',modality:'text',       tags:['general','instruction'],   icon:'🦙', ctx:4096 },
+    { id:'qwen2.5-vl-3b-instruct-q4km',name:'Qwen2.5-VL 3B',         provider:'Alibaba',         sizeMb:1840,  ramMb:4500,  quant:'Q4_K_M',modality:'multimodal', tags:['vision','document'],       icon:'👁️', ctx:8192 },
+    { id:'mistral-7b-instruct-v0.3-q4km',name:'Mistral 7B v0.3',     provider:'Mistral AI',      sizeMb:4100,  ramMb:4800,  quant:'Q4_K_M',modality:'text',       tags:['reasoning','balanced'],    icon:'🌊', ctx:8192 },
+    { id:'phi-3-medium-4k-instruct-q4km',name:'Phi-3 Medium 4K',     provider:'Microsoft',       sizeMb:4800,  ramMb:5500,  quant:'Q4_K_M',modality:'text',       tags:['reasoning','balanced'],    icon:'🔮', ctx:4096 },
+];
+
+const TAG_COLORS = {
+    edge:'bg-emerald-500/15 text-emerald-400', tiny:'bg-cyan-500/15 text-cyan-400',
+    vision:'bg-purple-500/15 text-purple-400', coding:'bg-blue-500/15 text-blue-400',
+    reasoning:'bg-amber-500/15 text-amber-400', rag:'bg-pink-500/15 text-pink-400',
+    general:'bg-slate-500/15 text-slate-300', instruction:'bg-indigo-500/15 text-indigo-400',
+    multilingual:'bg-teal-500/15 text-teal-400', document:'bg-orange-500/15 text-orange-400',
+    balanced:'bg-lime-500/15 text-lime-400',
+};
+
+let selectedModel = MODELS[4]; // Default: Phi-3 mini
+let demoMode = true;
+let ws = null;
+let generating = false;
+let streamBuffer = '';
+let streamMsgEl = null;
+let streamStart = 0;
+let streamTokenCount = 0;
+
+// ─── Render model list ─────────────────────────────────────────────
+function renderModels() {
+    const el = document.getElementById('model-list');
+    el.innerHTML = MODELS.map(m => {
+        const tags = m.tags.map(t => `<span class="tag ${TAG_COLORS[t]||'bg-slate-500/15 text-slate-300'}">${t}</span>`).join(' ');
+        const isSelected = m.id === selectedModel.id;
+        return `<div class="model-card ${isSelected?'selected':''}" onclick="selectModel('${m.id}')">
+            <div class="flex items-start justify-between gap-2 mb-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">${m.icon}</span>
+                    <div>
+                        <div class="font-semibold text-sm text-white/90">${m.name}</div>
+                        <div class="text-xs text-white/40">${m.provider}</div>
+                    </div>
+                </div>
+                <button onclick="copyLoadCmd('${m.id}',event)" title="Copy CLI load command"
+                    class="shrink-0 w-6 h-6 flex items-center justify-center rounded-md bg-white/5 hover:bg-cyan-500/20 text-white/40 hover:text-cyan-400 transition-colors text-xs">
+                    <i class="fas fa-terminal"></i>
+                </button>
+            </div>
+            <div class="flex flex-wrap gap-1 mb-2">${tags}</div>
+            <div class="flex gap-3 text-xs text-white/40">
+                <span><i class="fas fa-weight-hanging mr-1"></i>${(m.sizeMb/1024).toFixed(1)} GB</span>
+                <span><i class="fas fa-memory mr-1"></i>~${m.ramMb >= 1024 ? (m.ramMb/1024).toFixed(1)+'GB' : m.ramMb+'MB'} RAM</span>
+                <span><i class="fas fa-code mr-1"></i>${m.quant}</span>
+                ${m.modality==='multimodal'?'<span class="text-purple-400"><i class="fas fa-eye mr-1"></i>vision</span>':''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function selectModel(id) {
+    selectedModel = MODELS.find(m => m.id === id) || selectedModel;
+    renderModels();
+    const m = selectedModel;
+    document.getElementById('chat-model-icon').textContent = m.icon;
+    document.getElementById('chat-model-name').textContent = m.name;
+    document.getElementById('chat-model-meta').textContent =
+        `${m.provider} · ${m.quant} · ~${m.ramMb >= 1024 ? (m.ramMb/1024).toFixed(1)+'GB' : m.ramMb+'MB'} RAM · ${(m.ctx/1024).toFixed(m.ctx>=1024?0:0)}k ctx`;
+}
+
+function copyLoadCmd(id, e) {
+    e.stopPropagation();
+    const cmd = `qualia-cli llm load ${id}`;
+    navigator.clipboard?.writeText(cmd).catch(()=>{});
+    const btn = e.currentTarget;
+    btn.innerHTML = '<i class="fas fa-check"></i>';
+    btn.style.color = '#34d399';
+    setTimeout(() => { btn.innerHTML = '<i class="fas fa-terminal"></i>'; btn.style.color = ''; }, 1500);
+}
+
+window.selectModel = selectModel;
+window.copyLoadCmd = copyLoadCmd;
+
+// ─── Demo mode toggle ──────────────────────────────────────────────
+function toggleDemo() {
+    demoMode = !demoMode;
+    const track = document.getElementById('demo-track');
+    const thumb = document.getElementById('demo-thumb');
+    const label = document.getElementById('demo-label');
+    if (demoMode) {
+        track.style.background = 'rgba(16,185,129,0.5)';
+        thumb.style.transform = 'translateX(20px)';
+        label.textContent = 'Demo mode';
+    } else {
+        track.style.background = '';
+        thumb.style.transform = '';
+        label.textContent = 'Live (daemon)';
+    }
+}
+
+window.toggleDemo = toggleDemo;
+// Initialize toggle state
+setTimeout(() => {
+    document.getElementById('demo-track').style.background = 'rgba(16,185,129,0.5)';
+    document.getElementById('demo-thumb').style.transform = 'translateX(20px)';
+}, 0);
+
+// ─── Chat ──────────────────────────────────────────────────────────
+function appendMessage(role, content) {
+    const el = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} gap-2`;
+    if (role === 'assistant') {
+        div.innerHTML = `<div class="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">${selectedModel.icon}</div>
+            <div class="chat-bubble chat-assistant text-zinc-200"></div>`;
+    } else {
+        div.innerHTML = `<div class="chat-bubble chat-user text-zinc-100">${escHtml(content)}</div>`;
+    }
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+    return role === 'assistant' ? div.querySelector('.chat-assistant') : null;
+}
+
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function clearChat() {
+    document.getElementById('chat-messages').innerHTML = '';
+    generating = false;
+    streamMsgEl = null;
+}
+
+window.clearChat = clearChat;
+
+function handleChatKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+window.handleChatKey = handleChatKey;
+
+function sendMessage() {
+    if (generating) return;
+    const inp = document.getElementById('chat-input');
+    const text = inp.value.trim();
+    if (!text) return;
+    inp.value = '';
+    appendMessage('user', text);
+    if (demoMode) { runDemoInference(text); }
+    else { runLiveInference(text); }
+}
+
+window.sendMessage = sendMessage;
+
+// ─── Demo inference (simulated streaming) ─────────────────────────
+const DEMO_RESPONSES = {
+    default: [
+        "The NQuin is a 48-byte zero-copy semantic statement container. Each of its six `u64` fields encodes a different facet of a semantic assertion:\n\n• **subject** — FNV-1a hash of the subject IRI\n• **predicate** — hash of predicate IRI\n• **object** — hash of object or literal\n• **context** — named graph identifier\n• **metadata** — routing lane (bits 61–62), Lamport clock (bits 32–60)\n• **parity** — ECC checksum (set to `u64::MAX` to mark sector corrupt)\n\nAll six fields are packed into a `repr(C, align(16))` struct, enabling SIMD operations and direct memory-mapping without serialization.",
+        "Phase 8 bifurcated compute splits the inference loop across two wait-free SPSC ring buffers:\n\n```\nLLM Engine thread  ──logits──►  LogitStream  ──►  Webizen Sentinel\n                   ◄─control──  ControlStream ◄──  (anomaly detection)\n```\n\nThe Sentinel reads logit vectors in real time. If it detects an anomaly (e.g., the `0x99` byte signature for temporal anachronism), it injects a `DenyRollback` into the ControlStream and the LLM recalculates **mid-generation** — not post-hoc. This is the governance mechanism, not optional middleware.",
+        "The `AgentBackend` enum has exactly three variants:\n\n• **Local** — GGUF on disk → wgpu → in-process. No outbound traffic. 128 MB RAM cap.\n• **Remote** — API call routed through the Nym mixnet, metered via ILP. Requires a signed VC from the Principal.\n• **Hybrid** — Local-first. Falls back to Remote only with explicit Principal consent.\n\nThe inference pipeline: `GgufSharder` parses the GGUF header → `GgufBridge` maps weights into the OS page cache via `memmap2` (zero heap allocation) → `fused_tensor_contraction.wgsl` runs on DirectML/Vulkan/Metal.",
+    ]
+};
+
+let demoResponseIdx = 0;
+
+function runDemoInference(userMsg) {
+    generating = true;
+    document.getElementById('send-btn').disabled = true;
+    streamMsgEl = appendMessage('assistant', '');
+    streamStart = performance.now();
+    streamTokenCount = 0;
+
+    const baseReply = DEMO_RESPONSES.default[demoResponseIdx % DEMO_RESPONSES.default.length];
+    demoResponseIdx++;
+
+    const tokens = baseReply.split(/(?<=\s)|(?=\s)/);
+    let i = 0;
+    streamMsgEl.innerHTML = '<span class="token-cursor"></span>';
+
+    const RAM_BASE = selectedModel.ramMb;
+    const TPS_BASE = Math.round(12 + Math.random() * 8);
+
+    const iv = setInterval(() => {
+        if (i >= tokens.length) {
+            clearInterval(iv);
+            const cursor = streamMsgEl.querySelector('.token-cursor');
+            if (cursor) cursor.remove();
+            generating = false;
+            document.getElementById('send-btn').disabled = false;
+            updateStreamBar(false);
+            return;
+        }
+        const tok = tokens[i++];
+        streamTokenCount++;
+        const elapsed = (performance.now() - streamStart) / 1000;
+        const tps = (streamTokenCount / (elapsed || 0.001)).toFixed(1);
+
+        const cursor = streamMsgEl.querySelector('.token-cursor');
+        const text = document.createTextNode(tok);
+        streamMsgEl.insertBefore(text, cursor);
+        streamMsgEl.closest('.xl\\:col-span-2') ? null : null;
+        document.getElementById('chat-messages').scrollTop = 9999;
+
+        document.getElementById('sb-tokens').textContent = streamTokenCount;
+        document.getElementById('sb-tps').textContent = tps;
+        document.getElementById('sb-elapsed').textContent = elapsed.toFixed(1) + 's';
+        document.getElementById('sb-ram').textContent = (RAM_BASE + Math.random() * 50 - 25).toFixed(0) + ' MB';
+        document.getElementById('t-tps').textContent = tps;
+        document.getElementById('t-rss').textContent = (RAM_BASE + 200).toFixed(0) + ' MB';
+        document.getElementById('t-ctx').textContent = streamTokenCount + ' tok';
+    }, 22 + Math.random() * 18);
+
+    document.getElementById('stream-bar').style.removeProperty('display');
+    document.getElementById('stream-bar').style.display = 'flex';
+}
+
+function updateStreamBar(visible) {
+    const el = document.getElementById('stream-bar');
+    if (!visible) { el.style.display = 'none'; }
+}
+
+// ─── Live inference (daemon WebSocket) ────────────────────────────
+function runLiveInference(prompt) {
+    generating = true;
+    document.getElementById('send-btn').disabled = true;
+    streamMsgEl = appendMessage('assistant', '');
+    streamMsgEl.innerHTML = '<span class="text-white/30 text-xs italic">Connecting to daemon…</span>';
+
+    ensureWs().then(socket => {
+        const id = Date.now();
+        streamMsgEl.innerHTML = '<span class="token-cursor"></span>';
+        streamStart = performance.now();
+        streamTokenCount = 0;
+
+        socket.send(JSON.stringify({
+            type: 'llm_infer', id,
+            model: selectedModel.id,
+            prompt, max_tokens: 512, temperature: 0.7
+        }));
+
+        const originalOnMsg = socket.onmessage;
+        socket.onmessage = (evt) => {
+            try {
+                const frame = JSON.parse(evt.data);
+                if (frame.id !== id) { if (originalOnMsg) originalOnMsg(evt); return; }
+
+                if (frame.type === 'llm_token') {
+                    streamTokenCount++;
+                    const cursor = streamMsgEl.querySelector('.token-cursor');
+                    const text = document.createTextNode(frame.token);
+                    if (cursor) streamMsgEl.insertBefore(text, cursor);
+                    else streamMsgEl.appendChild(text);
+                    document.getElementById('chat-messages').scrollTop = 9999;
+                } else if (frame.type === 'llm_done') {
+                    const cursor = streamMsgEl.querySelector('.token-cursor');
+                    if (cursor) cursor.remove();
+                    generating = false;
+                    document.getElementById('send-btn').disabled = false;
+                    socket.onmessage = originalOnMsg;
+                } else if (frame.type === 'error') {
+                    streamMsgEl.querySelector('.token-cursor')?.remove();
+                    const code = frame.code || '';
+                    if (code === 'unknown_type') {
+                        streamMsgEl.innerHTML = `<span class="text-amber-300"><i class="fas fa-triangle-exclamation mr-1.5"></i>Daemon running but LLM inference bridge not available yet.</span>
+                        <div class="mt-2 text-xs text-white/50">Use <code class="text-cyan-300">qualia-cli llm eval "${escHtml(prompt)}"</code> in a terminal.</div>`;
+                    } else {
+                        streamMsgEl.innerHTML = `<span class="text-red-400">Daemon error: ${escHtml(frame.message || code)}</span>`;
+                    }
+                    generating = false;
+                    document.getElementById('send-btn').disabled = false;
+                    socket.onmessage = originalOnMsg;
+                }
+            } catch {}
+        };
+
+    }).catch(err => {
+        streamMsgEl.innerHTML = `<span class="text-red-400"><i class="fas fa-plug mr-1.5"></i>Cannot connect to daemon.</span>
+        <div class="mt-2 text-xs text-white/50">Start with <code class="text-cyan-300">qualia-cli daemon --dev</code>, then reload this page.</div>`;
+        generating = false;
+        document.getElementById('send-btn').disabled = false;
+    });
+}
+
+function ensureWs() {
+    if (ws && ws.readyState === WebSocket.OPEN) return Promise.resolve(ws);
+    return new Promise((resolve, reject) => {
+        const sock = new WebSocket('ws://127.0.0.1:4242/qualia-bridge');
+        sock.onopen = () => { ws = sock; resolve(sock); };
+        sock.onerror = () => reject(new Error('WebSocket failed'));
+        sock.onclose = () => { ws = null; };
+        sock.onmessage = () => {};
+        setTimeout(() => reject(new Error('timeout')), 4000);
+    });
+}
+
+// ─── Accordion ────────────────────────────────────────────────────
+function toggleAccordion(id) {
+    const body = document.getElementById(id + '-body');
+    const chevron = document.getElementById(id + '-chevron');
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+window.toggleAccordion = toggleAccordion;
+
+// ─── Telemetry WS (port 9090) ──────────────────────────────────────
+function connectTelemetry() {
+    try {
+        const twsock = new WebSocket('ws://127.0.0.1:9090');
+        twsock.onopen = () => {
+            document.getElementById('telem-dot').className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse';
+            document.getElementById('telem-status').textContent = 'Connected';
+        };
+        twsock.onmessage = evt => {
+            try {
+                const d = JSON.parse(evt.data);
+                if (d.rss_mb != null) document.getElementById('t-rss').textContent = d.rss_mb.toFixed(0) + ' MB';
+                if (d.blocks_loaded != null) document.getElementById('t-hot').textContent = d.blocks_loaded;
+            } catch {}
+        };
+        twsock.onclose = () => {
+            document.getElementById('telem-dot').className = 'w-1.5 h-1.5 rounded-full bg-slate-500';
+            document.getElementById('telem-status').textContent = 'Disconnected';
+        };
+        twsock.onerror = () => {};
+    } catch {}
+}
+
+// ─── Daemon health check ───────────────────────────────────────────
+async function checkDaemon() {
+    try {
+        const res = await fetch('http://127.0.0.1:4242/health', { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+            const d = await res.json();
+            document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+            document.getElementById('daemon-text').textContent = `Daemon v${d.version || '?'} • Active`;
+            document.getElementById('daemon-badge').className =
+                'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+
+            const banner = document.getElementById('daemon-banner');
+            banner.style.background = 'rgba(16,185,129,0.08)';
+            banner.style.borderColor = 'rgba(16,185,129,0.2)';
+            banner.innerHTML = `<i class="fas fa-circle-check text-emerald-400 mt-0.5 shrink-0"></i>
+                <div><span class="font-semibold text-emerald-300">Daemon active — v${d.version || '?'}</span>
+                <span class="text-white/60 ml-2">Graph: ${(d.graph_quin_count||0).toLocaleString()} quins. Switch to <strong>Live mode</strong> to send inference requests.</span></div>`;
+        }
+    } catch {}
+}
+
+// ─── Init ──────────────────────────────────────────────────────────
+renderModels();
+selectModel(selectedModel.id);
+checkDaemon();
+connectTelemetry();
+
+// Seed the chat with a welcome message
+appendMessage('assistant', '').innerHTML =
+    `<div class="text-white/60 text-sm">
+        <div class="font-semibold text-white/80 mb-2">Welcome to the Edge LLM Hub</div>
+        <p class="mb-2">Select a model from the catalog, then ask anything. <strong>Demo mode</strong> simulates the Phase 8 streaming protocol so you can see the UX without a running daemon.</p>
+        <p class="text-xs text-white/40">To run actual inference: <code class="text-cyan-300">qualia-cli llm load phi-3-mini-4k-instruct-q4km</code> then toggle to <strong>Live mode</strong>.</p>
+    </div>`;
+</script>
+
+</body>
+</html>

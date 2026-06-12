@@ -4,17 +4,14 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, OnceLock};
 
 #[cfg(not(target_arch = "wasm32"))]
-use memmap2::Mmap;
-
-#[cfg(not(target_arch = "wasm32"))]
-use crate::gguf_bridge::{GgufLoadReport, QTensorEngine};
+use crate::gguf_bridge::{GgufLoadReport, QTensorEngine, GgufBuffer};
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug)]
 pub struct ResidentModelSlot {
     pub model_id: u64,
     pub gguf_path: String,
-    pub mmap: Arc<Mmap>,
+    pub mmap: GgufBuffer,
     pub report: GgufLoadReport,
 }
 
@@ -69,7 +66,7 @@ pub fn clear_resident_model() {
 pub fn clear_resident_model() {}
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn resident_mmap_for_path(path: &str) -> Option<Arc<Mmap>> {
+pub fn resident_mmap_for_path(path: &str) -> Option<GgufBuffer> {
     let guard = slot().lock().ok()?;
     let slot = guard.as_ref()?;
     let requested = Path::new(path);

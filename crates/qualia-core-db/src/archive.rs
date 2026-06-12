@@ -1,3 +1,4 @@
+#[cfg(not(target_arch = "wasm32"))]
 use memmap2::MmapOptions;
 use std::fs::File;
 use std::io;
@@ -50,10 +51,12 @@ impl Q42JumpEntry {
 }
 
 /// The main Q42 Archive reader utilizing memory-mapping and zero-deserialization structs.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct Q42Archive {
     mmap: memmap2::Mmap,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Q42Archive {
     /// Opens and memory-maps a `.q42` file, instantly verifying the magic preamble.
     pub fn open<P: AsRef<Path>>(path: P) -> io::Result<Self> {
@@ -104,7 +107,6 @@ impl Q42Archive {
     }
 
     /// Fetches and decompresses a specific 128KB frame dynamically using the embedded Zstd dictionary.
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn decompress_frame(&self, entry: &Q42JumpEntry, dict: &[u8]) -> io::Result<Vec<u8>> {
         let start = entry.physical_offset() as usize;
         let end = start + entry.frame_size as usize;

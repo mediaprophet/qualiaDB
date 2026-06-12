@@ -1,4 +1,4 @@
-use qualia_core_db::logic::WebizenOpcode;
+use qualia_core_db::modalities::logic::core::WebizenOpcode;
 use qualia_core_db::{q_hash, NQuin};
 use warp::Filter;
 

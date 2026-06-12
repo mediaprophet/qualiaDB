@@ -93,10 +93,23 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     // 4. Spawn Writer Thread
     let out_path_copy = out_path.to_string();
     let writer_handle = thread::spawn(move || {
-        let mut out_file = File::create(out_path_copy).expect("Failed to create output .q42 file");
+        use std::io::{Seek, SeekFrom};
+        use crate::q42_volume::{Q42VolumeHeader, BlockDirectoryEntry, HEADER_SIZE, header_to_bytes};
+        use crate::git_bridge::DagStore;
+
+        let mut out_file = std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(true).open(out_path_copy).expect("Failed to create output .q42 file");
+        out_file.seek(SeekFrom::Start(HEADER_SIZE as u64)).unwrap();
+        
         let mut written_count = 0;
         let mut block_id: u64 = 0;
         let mut buffer = Vec::with_capacity(393_216);
+
+        let mut block_directory: Vec<BlockDirectoryEntry> = Vec::new();
+        let mut dag_store = DagStore::new();
+        let mut last_dag_hash = [0u8; 32];
+        
+        let data_offset = HEADER_SIZE as u64;
+        let mut current_offset = data_offset;
 
         for quin in rx_bin {
             let bytes = bytemuck::bytes_of(&quin);
@@ -105,16 +118,28 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
 
             if buffer.len() >= 393_216 {
                 let compressed = lz4_flex::compress_prepend_size(&buffer);
-                // Write Header: block_id (8), compressed_len (4), uncompressed_len (4)
-                out_file.write_all(&block_id.to_le_bytes()).unwrap();
-                out_file
-                    .write_all(&(compressed.len() as u32).to_le_bytes())
-                    .unwrap();
-                out_file
-                    .write_all(&(buffer.len() as u32).to_le_bytes())
-                    .unwrap();
-                // Write payload
+                
                 out_file.write_all(&compressed).unwrap();
+
+                let block_size = compressed.len() as u32;
+                block_directory.push(BlockDirectoryEntry {
+                    rel_offset: current_offset - data_offset,
+                    comp_len: block_size,
+                    uncomp_len: buffer.len() as u32,
+                });
+                current_offset += block_size as u64;
+
+                let quins_slice: &[NQuin] = bytemuck::cast_slice(&buffer);
+                let ts = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis() as u64)
+                    .unwrap_or(0);
+                let msg = format!("ingest block {block_id}");
+                last_dag_hash = if last_dag_hash == [0u8; 32] {
+                    dag_store.genesis_node(quins_slice, 0, ts, &msg)
+                } else {
+                    dag_store.commit_node(last_dag_hash, quins_slice, 0, ts, &msg)
+                };
 
                 log::info!(
                     "Ontology Ingest: wrote SuperBlock #{}, streamed {} quins so far",
@@ -129,20 +154,93 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
         // Flush remaining
         if !buffer.is_empty() {
             let compressed = lz4_flex::compress_prepend_size(&buffer);
-            out_file.write_all(&block_id.to_le_bytes()).unwrap();
-            out_file
-                .write_all(&(compressed.len() as u32).to_le_bytes())
-                .unwrap();
-            out_file
-                .write_all(&(buffer.len() as u32).to_le_bytes())
-                .unwrap();
             out_file.write_all(&compressed).unwrap();
+
+            let block_size = compressed.len() as u32;
+            block_directory.push(BlockDirectoryEntry {
+                rel_offset: current_offset - data_offset,
+                comp_len: block_size,
+                uncomp_len: buffer.len() as u32,
+            });
+            current_offset += block_size as u64;
+
+            let quins_slice: &[NQuin] = bytemuck::cast_slice(&buffer);
+            let ts = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+            let msg = format!("ingest block {block_id}");
+            last_dag_hash = if last_dag_hash == [0u8; 32] {
+                dag_store.genesis_node(quins_slice, 0, ts, &msg)
+            } else {
+                dag_store.commit_node(last_dag_hash, quins_slice, 0, ts, &msg)
+            };
+
             log::info!(
                 "Ontology Ingest: wrote SuperBlock #{} (final block, {} quins total)",
                 block_id + 1,
                 written_count
             );
+            block_id += 1;
         }
+
+        let block_dir_offset = current_offset;
+        for entry in &block_directory {
+            entry.write_to(&mut out_file).unwrap();
+        }
+        let block_dir_length = (block_directory.len() * BlockDirectoryEntry::SIZE) as u64;
+        current_offset += block_dir_length;
+
+        let dag_root_offset = current_offset;
+        let dag_blob = dag_store.serialize();
+        out_file.write_all(&dag_blob).unwrap();
+        let dag_root_length = dag_blob.len() as u64;
+        current_offset += dag_root_length;
+
+        let empty_section_offset = current_offset;
+        out_file.flush().unwrap();
+
+        let merkle_root = if last_dag_hash == [0u8; 32] {
+            [0u8; 32]
+        } else {
+            use sha2::{Digest, Sha256};
+            let mut h = Sha256::new();
+            h.update(last_dag_hash);
+            h.finalize().into()
+        };
+
+        let assertion_timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+
+        let header = Q42VolumeHeader {
+            magic: crate::q42_volume::Q42_MAGIC,
+            version: crate::q42_volume::Q42_VERSION_V3,
+            flags: crate::q42_volume::FLAG_BLOCKS_LZ4 | crate::q42_volume::FLAG_OBJECT_SORTED,
+            lex_offset: empty_section_offset,
+            lex_length: 0,
+            bidx_offset: empty_section_offset,
+            bidx_length: 0,
+            block_dir_offset,
+            block_dir_length,
+            data_offset,
+            data_length: block_dir_offset - data_offset,
+            block_count: block_id,
+            block_size: crate::q42_volume::SUPERBLOCK_SIZE as u32,
+            quins_per_block: crate::QUINS_PER_BLOCK as u32,
+            temporal_index_offset: 0,
+            temporal_index_length: 0,
+            merkle_root,
+            assertion_timestamp,
+            dag_root_offset,
+            dag_root_length,
+            _reserved: [0u8; 96],
+        };
+
+        out_file.seek(SeekFrom::Start(0)).unwrap();
+        out_file.write_all(&header_to_bytes(&header)).unwrap();
+        out_file.flush().unwrap();
 
         log::debug!(
             "Ontology Ingest: writer processed {} quins across {} SuperBlocks",
@@ -293,4 +391,68 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     );
 
     Ok(total_written)
+}
+
+pub fn verify_integrity(input_path: std::path::PathBuf, dataset_path: std::path::PathBuf) -> std::io::Result<bool> {
+    use std::io::Read;
+    use std::fs::File;
+    use std::io::BufReader;
+    use crate::sparql_library::parsers::turtle_star::TurtleStarParser;
+    use crate::rdf_star::RdfStarParser;
+    
+    // Calculate source checksum
+    let mut source_checksum: u64 = 0;
+    let file = File::open(&input_path)?;
+    let mut reader = BufReader::new(file);
+    let mut parser = TurtleStarParser::new(0);
+    
+    let mut buffer = Vec::new();
+    while {
+        buffer.clear();
+        std::io::BufRead::read_until(&mut reader, b'\n', &mut buffer)? > 0
+    } {
+        let mut slice = buffer.as_slice();
+        if slice.ends_with(b"\r\n") {
+            slice = &slice[..slice.len() - 2];
+        } else if slice.ends_with(b"\n") {
+            slice = &slice[..slice.len() - 1];
+        }
+        
+        if slice.is_empty() || slice[0] == b'#' || slice.iter().all(|b| b.is_ascii_whitespace()) {
+            continue;
+        }
+        
+        if let Ok((s, p, o)) = parser.parse_triple(slice) {
+            let parity = s ^ p ^ o ^ 0;
+            source_checksum ^= parity;
+        }
+    }
+    
+    println!("Source Checksum: 0x{:016X}", source_checksum);
+    
+    // Dataset calculation
+    let mut dataset_checksum: u64 = 0;
+    
+    let volume = match crate::q42_volume::Q42Volume::open(&dataset_path) {
+        Ok(v) => v,
+        Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Failed to open Q42 volume: {}", e))),
+    };
+    
+    let mut sb_buf = vec![0u8; crate::q42_volume::SUPERBLOCK_SIZE];
+    for i in 0..volume.block_count() as usize {
+        let _ = volume.read_superblock_into(i, &mut sb_buf)?;
+        let quin_count = u64::from_le_bytes(sb_buf[16..24].try_into().unwrap()) as usize;
+        let mut off = crate::q42_volume::SUPERBLOCK_HEADER;
+        for _ in 0..quin_count {
+            let parity = u64::from_le_bytes(sb_buf[off+40..off+48].try_into().unwrap());
+            if parity != 0 {
+                dataset_checksum ^= parity;
+            }
+            off += crate::q42_volume::QUIN_SIZE;
+        }
+    }
+    
+    println!("Dataset Checksum: 0x{:016X}", dataset_checksum);
+    
+    Ok(source_checksum == dataset_checksum && source_checksum != 0)
 }

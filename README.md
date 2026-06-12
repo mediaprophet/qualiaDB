@@ -30,7 +30,7 @@ An N3Logic + SHACL + deontic logic engine that evaluates rules, rights, and cons
 **3. Fiduciary AI layer**
 Every LLM call is pre- and post-validated against your declared rights and capability profile. The model never runs without your consent; its output must carry semantic provenance. Conduct violations are written to a cryptographically auditable, DID-associated log.
 
-**4. Sovereign identity and networking**
+**4. Human-Centric with Socially Defined Networking**
 DID-based identity with Verifiable Credentials, SocialWebNet peer-to-peer networking (DNSSEC-bootstrapped, WireGuard-encrypted), and W3C Solid interoperability for connecting with institutions and preserving your right to move your data elsewhere.
 
 ---
@@ -65,7 +65,7 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**v0.0.10-dev** — active development, pre-release.
+**v0.0.11-dev** — active development, pre-release.
 
 This branch includes: in-process LLM inference with GPU dispatch; SPARQL 1.1 + RDF-Star engine; full deontic / epistemic / LTL / paraconsistent modality stack; SHACL biosciences, chemistry, and biomedical extensions; DID Verifiable Credentials; SocialWebNet DNSSEC peer bootstrap; W3C Solid export; 539+ tests.
 

@@ -500,7 +500,7 @@ impl PinnExtension {
                 let value = self.mock_neural_forward(input_point, i, &model.domain);
                 output.push(value);
             }
-            output_points.push(output);
+            output_points.push(output.clone());
 
             // Calculate residuals (mock)
             let residual = self.calculate_residual(input_point, &output, &model.physics_constraints);
@@ -824,13 +824,15 @@ impl TernaryPinnModelManager {
             ternary_data.push(quantized);
         }
         
+        let compressed_size = ternary_data.len();
+        
         Ok(TernaryTensor {
             ternary_data,
             metadata: TensorMetadata {
                 quantization_bits: config.quantization_bits,
                 compression_method: "ternary_1.58bit".to_string(),
                 original_size: tensor.ternary_data.len() * 4, // Assume 32-bit original
-                compressed_size: ternary_data.len(), // 1.58-bit compressed
+                compressed_size, // 1.58-bit compressed
                 ..tensor.metadata.clone()
             },
             ..tensor.clone()

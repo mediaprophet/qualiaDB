@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB | Advanced Features Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div class="hidden md:flex items-center gap-6 text-sm">
+                        <a href="advanced-features.html" class="text-white border-b-2 border-emerald-500 pb-1">Features</a>
+                        <a href="sparql-showcase.html" class="hover:text-white transition-colors">SPARQL</a>
+                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="api.html" class="hover:text-white transition-colors">API Docs</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-xl mx-auto px-8 pt-12 pb-16">
+        <div class="text-center mb-16">
+            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Advanced Platform Features</h1>
+            <p class="text-xl text-white/70 max-w-2xl mx-auto">Merkle-DAG Integrity. V3 Volume Format. Fiduciary Rule Engines.</p>
+        </div>
+
+        <!-- Merkle DAG -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-16 glass-strong p-8 rounded-3xl">
+            <div>
+                <h2 class="text-3xl font-semibold mb-4 text-emerald-400">Merkle-DAG Content Addressed History</h2>
+                <p class="text-white/80 leading-relaxed mb-4">
+                    The entire semantic graph state is versioned in a Git-like Merkle-DAG. Every commit node tracks `timestamp_ms`, `author_did`, and references a parent node, resulting in immutable historical snapshots.
+                </p>
+                <ul class="space-y-3 text-white/70 text-sm">
+                    <li><i class="fas fa-check text-emerald-500 mr-2"></i> Assertion-time snapshot queries</li>
+                    <li><i class="fas fa-check text-emerald-500 mr-2"></i> Content-addressed 32-byte SHA-256 integrity</li>
+                    <li><i class="fas fa-check text-emerald-500 mr-2"></i> O(1) multi-parent branching and merging</li>
+                </ul>
+            </div>
+            <div class="bg-black/50 p-6 rounded-2xl border border-white/10 font-mono text-xs text-emerald-300">
+                // Example: Navigating DagStore checkpoints<br>
+                let dag_store = DagStore::new();<br>
+                let root_hash = dag_store.genesis_node(author_did);<br>
+                <br>
+                // Insert data, compute checkpoint<br>
+                let commit_hash = dag_store.commit_node(<br>
+                &nbsp;&nbsp;parent_hash,<br>
+                &nbsp;&nbsp;new_quins,<br>
+                &nbsp;&nbsp;author_did,<br>
+                &nbsp;&nbsp;timestamp_ms<br>
+                );
+            </div>
+        </div>
+
+        <!-- Q42 v3 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-16 glass-strong p-8 rounded-3xl">
+            <div class="order-2 md:order-1 bg-black/50 p-6 rounded-2xl border border-white/10 font-mono text-xs text-blue-300">
+                0x00: MAGIC "Q42\0"<br>
+                0x04: Version: 0x03<br>
+                0x10: Merkle Root [32 bytes]<br>
+                0x30: Assertion Timestamp<br>
+                0x38: DagStore Serialized Blob<br>
+                0x...: Compressed SuperBlocks
+            </div>
+            <div class="order-1 md:order-2">
+                <h2 class="text-3xl font-semibold mb-4 text-blue-400">Unified V3 Volume Format</h2>
+                <p class="text-white/80 leading-relaxed mb-4">
+                    The Q42 Volume V3 unifies streaming ingest and demand-paging reads. It bakes the Merkle-DAG and Block Directories natively into the binary format, resolving format drift.
+                </p>
+                <ul class="space-y-3 text-white/70 text-sm">
+                    <li><i class="fas fa-check text-blue-500 mr-2"></i> Fast `migrate_v2_to_v3` upgrade paths</li>
+                    <li><i class="fas fa-check text-blue-500 mr-2"></i> Zero-overhead chunk-aligned `.bidx` directory</li>
+                    <li><i class="fas fa-check text-blue-500 mr-2"></i> 16MB constant footprint for up to 1M blocks</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Agent Fiduciary & LoRA -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass-strong p-6 rounded-3xl">
+                <div class="text-purple-400 text-3xl mb-4"><i class="fas fa-brain"></i></div>
+                <h3 class="text-xl font-semibold mb-2">Zero-Copy LoRA Mux</h3>
+                <p class="text-white/70 text-sm">Dynamically swap 16+ LLM adapters with zero heap memory allocation using memmap2 weight projection and DirectML fused shaders.</p>
+            </div>
+            <div class="glass-strong p-6 rounded-3xl">
+                <div class="text-rose-400 text-3xl mb-4"><i class="fas fa-gavel"></i></div>
+                <h3 class="text-xl font-semibold mb-2">Agent Fiduciary Engines</h3>
+                <p class="text-white/70 text-sm">Strict capability profiles (QCHK) and 7 core fiduciary rules govern what LLM agents can query or modify in the user's sovereign domain.</p>
+            </div>
+            <div class="glass-strong p-6 rounded-3xl">
+                <div class="text-amber-400 text-3xl mb-4"><i class="fas fa-vial"></i></div>
+                <h3 class="text-xl font-semibold mb-2">Domain Extensibility</h3>
+                <p class="text-white/70 text-sm">SHACL constraint engines loaded for specific sciences: organic chemistry (SMILES/InChI), biomedical, and structural biology.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

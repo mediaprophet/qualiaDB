@@ -1,6 +1,6 @@
 # QualiaDB Architecture
 
-_Branch: `0.0.10-dev` | Last updated: 2026-06-10_
+_Branch: `0.0.11-dev` | Last updated: 2026-06-10_
 
 QualiaDB is a zero-allocation, mechanically sympathetic semantic database and multi-agent collaboration ecosystem. It bridges the string-heavy reality of the Semantic Web with hardware-aligned execution paths, enforcing strict constraints to ensure bounded memory and deterministic performance.
 
@@ -268,7 +268,7 @@ NativeDecayMetadata         — activation decay over time
 NativeUnless                — non-monotonic default logic
 ```
 
-SHACL properties: `qualia:retrieveByActivation`, `qualia:decayMetadata`. These opcodes are compiled by `shacl_compiler.rs` and wired in the `execute_vm_frame` dispatch, but ACT-R activation/decay ops currently **yield to Core 2 GPU Sieve** (return `None`) rather than executing inline — full implementation is a Phase 7 gap. The CogAI `.chk` chunks-and-rules text format is a supported ingest source; see §4 for the `.chk` extension disambiguation.
+SHACL properties: `qualia:retrieveByActivation`, `qualia:decayMetadata`. These opcodes are compiled by `shacl_compiler.rs` and wired in the `execute_vm_frame` dispatch. They execute inline on Core 1 as ACT-R activation and decay operations. The CogAI `.chk` chunks-and-rules text format is a supported ingest source; see §4 for the `.chk` extension disambiguation.
 
 ### SHACL Compiler (`shacl_compiler.rs`)
 
@@ -493,7 +493,7 @@ W3C standards: [Decentralised Identifiers (DIDs) v1.0](https://www.w3.org/TR/did
 - **VC issuance** — `fiduciary_crypto.rs` (§37) `sign_operation(quin, OperationType::VerifiableCredential)` produces the Ed25519 proof. ML-DSA post-quantum issuance is planned (§37).
 - **VC presentation + verification** — `verify_operation(proof_index)` checks the stored signature. Presentation proofs (holder binding) are a known gap — planned alongside ML-DSA.
 - **QCHK capability profiles** (`profiles.rs`) — binary capability grants that are themselves VC-shaped: a signed assertion from a Principal that a named agent may exercise a named set of capabilities.
-- **WebID interoperability** (`webizen_identity.rs`) — each `WebizenId` struct carries a `webid_hash: u64` (FNV-1a of the WebID URI string). The `IdentityRegistry` maps `webid_hash → WebizenId`, enabling lookup of a sovereign Webizen identity from a legacy HTTP/FOAF WebID profile URI. SocialWebNet (§38) supersedes WebID-TLS at the transport layer; WebID profile document discovery remains a complementary application-layer mechanism alongside `did:web`.
+- **WebID interoperability** (`webizen_identifiers.rs`) — each `WebizenId` struct carries a `webid_hash: u64` (FNV-1a of the WebID URI string). The `IdentityRegistry` maps `webid_hash → WebizenId`, enabling lookup of a Webizen identitifier from a legacy HTTP/FOAF WebID profile URI. SocialWebNet (§38) supersedes WebID-TLS at the transport layer; WebID profile document discovery remains a complementary application-layer mechanism alongside `did:web`.
 - **W3C Solid Protocol interoperability** (`solid_ldp.rs`) — `SolidExporter::export_to_solid_pod(input_q42_path, output_dir_path)` translates a `.q42` vault into a W3C Solid LDP Basic Container. Output: `data.ttl` (Turtle RDF serialisation of Quins via `rio_turtle`) and `data.ttl.acl` (Web Access Control rules). NQuin routing lane `EnforcePermissiveCommons` maps to a `acl:mode acl:Read` public-read ACL. Invoked via the `export-solid` CLI command. Inbound Solid Pod import (LDP container → `.q42` ingest) is planned. `SolidLdpFacade::serialize_to_rdf_star(quin)` is a backward-compatibility stub for RDF-Star serialisation.
 
 ---
@@ -610,13 +610,13 @@ pub fn partition_defeasible(
 
 `agency.rs::derive_lane_key` currently uses SHA256. Production Sanctuary Mode requires PBKDF2 with ≥ 310,000 iterations.
 
-### 15-E Three Incompatible `.q42` Write Formats
+### 15-E Legacy `.q42` Write Formats
 
-- `storage.rs::SuperBlockWriter` — raw 40,960-byte `QualiaSuperBlock` structs
-- `ingest.rs::streaming_import_rdf` — LZ4-compressed variable blocks with `block_id+len` header
-- `archive.rs::Q42Archive` — reader expecting Zstd + 64-byte preamble + jump tables
+- `storage.rs::SuperBlockWriter` — legacy raw 40,960-byte `QualiaSuperBlock` structs
+- `ingest.rs::streaming_import_rdf` — (Upgraded to v3 `Q42Volume` format with DagStore and block directory)
+- `archive.rs::Q42Archive` — legacy reader expecting Zstd + 64-byte preamble + jump tables
 
-None of the writers produce what the archive reader expects. `SuperBlockWriter` should become the canonical on-disk format.
+The ingest pipeline (`streaming_import_rdf`) has been successfully migrated to the unified v3 `Q42Volume` format. `SuperBlockWriter` and `Q42Archive` will be deprecated or updated to align with v3 in the future.
 
 ### 15-F Legacy Tauri Desktop (not shipped)
 
@@ -626,7 +626,7 @@ None of the writers produce what the archive reader expects. `SuperBlockWriter` 
 
 ## 16. Test Status
 
-**640+ tests** as of `0.0.10-dev` (138 SPARQL, 149 SHACL extensions, 8 git_bridge, remainder across core, domains, CLI).
+**640+ tests** as of `0.0.11-dev` (138 SPARQL, 149 SHACL extensions, 8 git_bridge, remainder across core, domains, CLI).
 
 ---
 
@@ -872,7 +872,7 @@ Power-efficient edge orchestration via NNAPI (Android) and CoreML (iOS/macOS). M
 
 ---
 
-## 28. Webizen Identity (`webizen_identity.rs`)
+## 28. Webizen Identifiers (`webizen_identifiers.rs`)
 
 Sovereign actor identifier layer for SPARQL-Star provenance.
 

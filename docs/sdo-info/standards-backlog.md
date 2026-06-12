@@ -187,7 +187,7 @@ Each of those should become its own draft with its own conformance language.
 - **Status:** ✅ **IMPLEMENTED** (2026-06-11)
 - Why it is non-standard: extends SPARQL 1.1/1.2 syntax outside the current
   W3C working draft; depends on PROV-O T_CONTEXT overlay quins.
-- First doc to write here: `sparql-temporal-extension.md` (not yet written)
+- First doc to write here: `sparql-temporal-extension.md` ✅ **COMPLETE**
 - Primary SDO: W3C SPARQL WG or Community Group Note
 - Recommended format: extension note aligned with SPARQL 1.2 WD style
 - Why this fit: builds on PROV-O (W3C Rec.), GeoSPARQL temporal patterns, and
@@ -208,11 +208,11 @@ Each of those should become its own draft with its own conformance language.
   boundary, including URL model, lifecycle, and trust assumptions.
 - Why it is non-standard: it is currently a product-specific app hosting
   boundary rather than a general web standard.
-- First doc to write here: `qualia-qapp-loopback-protocol.md`
+- First doc to write here: `qualia-qapp-loopback-protocol.md` ✅ **COMPLETE**
 - Primary SDO: internal first
 - Recommended format: internal explainer or ADR first
 - Why this fit: the design is still tightly coupled to current desktop /
-  Flutter host behavior and is not ready for external submission.
+  Dioxus host behavior and is not ready for external submission.
 - Exit criteria before submission:
   - local trust model clearly documented
   - browser and desktop embeddings converge
@@ -298,7 +298,8 @@ Each of those should become its own draft with its own conformance language.
 - [x] `qualia-vault-manifest.md`
 - [x] `qualia-sync-protocol.md`
 - [ ] `qualia-shacl-extensions.md`
-- [ ] `qualia-qapp-loopback-protocol.md`
+- [x] `qualia-qapp-loopback-protocol.md`
+- [x] `sparql-temporal-extension.md`
 - [ ] `solid-webizen-bridge-profile.md`
 - [ ] `qchk-capability-profile.md`
 - [ ] `mcp-fiduciary-mediation-explainer.md`

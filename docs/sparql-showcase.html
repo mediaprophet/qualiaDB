@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB | SPARQL Engine Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div class="hidden md:flex items-center gap-6 text-sm">
+                        <a href="advanced-features.html" class="hover:text-white transition-colors">Features</a>
+                        <a href="sparql-showcase.html" class="text-white border-b-2 border-blue-500 pb-1">SPARQL</a>
+                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="api.html" class="hover:text-white transition-colors">API Docs</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-xl mx-auto px-8 pt-12 pb-16">
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Zero-Allocation SPARQL 1.1/1.2 Engine</h1>
+            <p class="text-xl text-white/70 max-w-2xl mx-auto">138 Passing Tests. ~35 KB memory per query. Full temporal and spatial extensions.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div class="glass-strong p-6 rounded-3xl">
+                <div class="text-blue-400 text-3xl mb-4"><i class="fas fa-bolt"></i></div>
+                <h3 class="text-xl font-semibold mb-2">Extreme Performance</h3>
+                <p class="text-white/70 text-sm">Achieves over 1.2M ops/s on point lookups. Strict zero-heap allocation inside the evaluation hot loops ensures predictable execution latency.</p>
+            </div>
+            <div class="glass-strong p-6 rounded-3xl">
+                <div class="text-amber-400 text-3xl mb-4"><i class="fas fa-history"></i></div>
+                <h3 class="text-xl font-semibold mb-2">Temporal Extensions</h3>
+                <p class="text-white/70 text-sm">Navigate graph history effortlessly with <code class="text-amber-300">AS OF "2024-06-01"</code> and <code class="text-amber-300">AT TIME</code> syntax. Perfect for Merkle-DAG integration.</p>
+            </div>
+            <div class="glass-strong p-6 rounded-3xl">
+                <div class="text-emerald-400 text-3xl mb-4"><i class="fas fa-globe"></i></div>
+                <h3 class="text-xl font-semibold mb-2">Federation &amp; DID</h3>
+                <p class="text-white/70 text-sm">Secure, authenticated <code class="text-emerald-300">SERVICE</code> federation with built-in W3C Decentralised Identifiers (DIDs) verification.</p>
+            </div>
+        </div>
+
+        <div class="glass-strong p-8 rounded-3xl mb-12">
+            <h2 class="text-2xl font-semibold mb-6">Live Query Examples</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <h4 class="text-lg font-medium mb-3">Temporal Snapshot</h4>
+                    <div class="bg-black/50 p-4 rounded-xl border border-white/10 font-mono text-sm text-blue-300">
+                        PREFIX prov: &lt;http://www.w3.org/ns/prov#&gt;<br>
+                        SELECT ?agent ?activity<br>
+                        WHERE {<br>
+                        &nbsp;&nbsp;?agent prov:wasAssociatedWith ?activity .<br>
+                        } AS OF "2026-06-01"^^xsd:dateTime
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-lg font-medium mb-3">GeoSPARQL &amp; SHACL</h4>
+                    <div class="bg-black/50 p-4 rounded-xl border border-white/10 font-mono text-sm text-blue-300">
+                        PREFIX geo: &lt;http://www.opengis.net/ont/geosparql#&gt;<br>
+                        SELECT ?feature<br>
+                        WHERE {<br>
+                        &nbsp;&nbsp;?feature geo:hasGeometry ?geom .<br>
+                        &nbsp;&nbsp;FILTER(geo:sfWithin(?geom, "POLYGON(...)"))<br>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-strong p-8 rounded-3xl">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-chart-bar text-cyan-400"></i>
+                Performance Telemetry
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-black/30 p-4 rounded-xl text-center">
+                    <div class="text-3xl font-mono text-white mb-1">138</div>
+                    <div class="text-xs text-white/50 uppercase tracking-wider">Passing Tests</div>
+                </div>
+                <div class="bg-black/30 p-4 rounded-xl text-center">
+                    <div class="text-3xl font-mono text-white mb-1">~35 KB</div>
+                    <div class="text-xs text-white/50 uppercase tracking-wider">Memory Per Query</div>
+                </div>
+                <div class="bg-black/30 p-4 rounded-xl text-center">
+                    <div class="text-3xl font-mono text-white mb-1">0</div>
+                    <div class="text-xs text-white/50 uppercase tracking-wider">Heap Allocations</div>
+                </div>
+                <div class="bg-black/30 p-4 rounded-xl text-center">
+                    <div class="text-3xl font-mono text-white mb-1">1.2M+</div>
+                    <div class="text-xs text-white/50 uppercase tracking-wider">Ops/Sec (Point Lookup)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
