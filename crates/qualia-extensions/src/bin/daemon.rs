@@ -3,9 +3,9 @@
 //! Manages and executes advanced computational extensions while maintaining
 //! strict isolation from the core QualiaDB engine.
 
-use qualia_extensions::{ExtensionManager, ExtensionJob, ExtensionResult, QpuExtension, PinnExtension, WebGpuExtension};
+use qualia_extensions::{ExtensionManager, ExtensionJob, ExtensionResult, qpu_extension::QpuExtension, pinn_extension::PinnExtension, webgpu_extension::WebGpuExtension};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     manager.register_extension(Box::new(PinnExtension::new()));
     manager.register_extension(Box::new(WebGpuExtension::new()));
 
-    let manager = Arc::new(Mutex::new(manager));
+    let manager = Arc::new(manager);
 
     // Start TCP server for communication with core QualiaDB
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
@@ -48,10 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             debug!("Processing job: {}", job.job_id);
             
             let start_time = Instant::now();
-            let result = {
-                let manager = manager_clone.lock().unwrap();
-                manager.execute_job(job).await
-            };
+            let result = manager_clone.execute_job(job).await;
             
             match result {
                 Ok(extension_result) => {
@@ -105,8 +102,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn handle_connection(
     mut stream: TcpStream,
-    manager: Arc<Mutex<ExtensionManager>>,
-) -> Result<(), Box<dyn std::error::Error>> {
+    manager: Arc<ExtensionManager>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut buffer = vec![0u8; 4096];
     
     loop {
@@ -120,11 +117,7 @@ async fn handle_connection(
 
         // Parse incoming message
         if let Ok(job) = parse_job_request(&message) {
-            // Execute job directly for simple requests
-            let result = {
-                let manager = manager.lock().unwrap();
-                manager.execute_job(job).await
-            };
+            let result = manager.execute_job(job).await;
 
             match result {
                 Ok(extension_result) => {

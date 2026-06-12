@@ -17,7 +17,7 @@ shapes:
 - a minimal compiler shape in
   [crates/qualia-core-db/src/yaml_ld_q42.rs](/C:/Projects/qualiaDB/crates/qualia-core-db/src/yaml_ld_q42.rs:39)
 - a richer studio/runtime shape in
-  [crates/qualia-studio/src/studio_canvas.rs](/C:/Projects/qualiaDB/crates/qualia-studio/src/studio_canvas.rs:16)
+  [crates/webizen-studio/src/studio_canvas.rs](/C:/Projects/qualiaDB/crates/webizen-studio/src/studio_canvas.rs:16)
 
 This document records both and distinguishes between:
 
@@ -122,7 +122,7 @@ compiled by the `yaml_ld_q42.rs` bridge.
 
 ## 6. Current Studio Runtime Shape
 
-The richer workspace model in `qualia-studio` is:
+The richer workspace model in `webizen-studio` is:
 
 ```rust
 pub struct WebizenWorkspace {
@@ -228,7 +228,7 @@ for:
 - theme preset references by `theme_id`
 
 For details, see
-[crates/qualia-studio/THEMING.md](/C:/Projects/qualiaDB/crates/qualia-studio/THEMING.md:1).
+[crates/webizen-studio/THEMING.md](/C:/Projects/qualiaDB/crates/webizen-studio/THEMING.md:1).
 
 ## 9. Example Minimal Document
 

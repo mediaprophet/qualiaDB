@@ -1,6 +1,6 @@
 # QApps Catalogue
 
-_Review draft for current `qualia-studio` / Webizen Studio state_
+_Review draft for current `webizen-studio` / Webizen Studio state_
 
 ## Purpose
 
@@ -87,7 +87,7 @@ The current studio canvas does **not** yet mount most named custom Qapps as thei
 - partially scaffolded
 - not yet fully mounted/interactive in the live canvas
 
-## Higher-Level Qapps Referenced Elsewhere But Not Yet Present In Current `qualia-studio`
+## Higher-Level Qapps Referenced Elsewhere But Not Yet Present In Current `webizen-studio`
 
 These are explicitly named in project docs, but the referenced list comes from the older Flutter desktop surface rather than the present Dioxus studio implementation.
 
@@ -161,9 +161,9 @@ These are the sovereign day-to-day surfaces the platform needs.
 
 ## Source Basis For This Catalogue
 
-- `crates/qualia-studio/src/pane_registry.rs`
-- `crates/qualia-studio/src/components/`
-- `crates/qualia-studio/src/studio_canvas.rs`
+- `crates/webizen-studio/src/pane_registry.rs`
+- `crates/webizen-studio/src/components/`
+- `crates/webizen-studio/src/studio_canvas.rs`
 - `docs/qapps_specification.md`
 - `docs/manuals/ARCHITECTURE.md`
 - `docs/manuals/developer-guide.md`

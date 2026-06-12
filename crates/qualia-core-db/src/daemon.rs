@@ -3,8 +3,6 @@
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_json::json;
-use warp::http::StatusCode;
-use warp::Filter;
 
 const OFFICIAL_WEB_HUB_ORIGIN: &str = "https://mediaprophet.github.io";
 const QUERY_PAYLOAD_LIMIT_BYTES: u64 = 64 * 1024;
@@ -57,21 +55,7 @@ fn ip_is_restricted(ip: std::net::IpAddr) -> bool {
     }
 }
 
-fn proxy_fetch_error(
-    status: StatusCode,
-    message: impl Into<String>,
-) -> warp::http::Response<warp::hyper::Body> {
-    let body = json!({
-        "status": "error",
-        "message": message.into()
-    })
-    .to_string();
-    warp::http::Response::builder()
-        .status(status)
-        .header("content-type", "application/json")
-        .body(warp::hyper::Body::from(body))
-        .expect("proxy error response")
-}
+
 
 fn ws_query_error_json(id: u64, err: QueryExecError) -> serde_json::Value {
     match err {
@@ -137,16 +121,7 @@ fn decode_bench_load_b64(b64: &str) -> Result<Vec<u8>, &'static str> {
     Ok(out)
 }
 
-fn proxy_fetch_ok(content_type: &str, bytes: Vec<u8>) -> warp::http::Response<warp::hyper::Body> {
-    let mut response = warp::http::Response::new(warp::hyper::Body::from(bytes));
-    *response.status_mut() = StatusCode::OK;
-    response.headers_mut().insert(
-        warp::http::header::CONTENT_TYPE,
-        warp::http::HeaderValue::from_str(content_type)
-            .unwrap_or_else(|_| warp::http::HeaderValue::from_static("application/octet-stream")),
-    );
-    response
-}
+
 
 /// Fractal-sharding topology configured at daemon boot (`qualia-cli daemon --workers N`).
 #[derive(Clone, Copy, Debug, Default, serde::Serialize)]
@@ -261,38 +236,12 @@ fn negotiate_format(
 /// Build an HTTP response with an explicit `content-type`.
 /// `warp::http::Response<String>` implements `warp::Reply`, so every branch of
 /// the query handler can return the same concrete type.
-fn make_response(
-    status: StatusCode,
-    content_type: &'static str,
-    body: String,
-) -> warp::http::Response<String> {
-    warp::http::Response::builder()
-        .status(status)
-        .header("content-type", content_type)
-        .body(body)
-        .expect("infallible response builder")
-}
+
 
 /// Build a successful query response that includes the `X-Qualia-Compute-Cost`
 /// telemetry header.  The header value is `{match_count}+{vm_cycles}` — the
 /// number of results found and the total VM opcodes decoded to find them.
-fn make_query_response(
-    status: StatusCode,
-    content_type: &'static str,
-    body: String,
-    match_count: usize,
-    vm_cycles: u64,
-) -> warp::http::Response<String> {
-    warp::http::Response::builder()
-        .status(status)
-        .header("content-type", content_type)
-        .header(
-            "X-Qualia-Compute-Cost",
-            format!("{match_count}+{vm_cycles}"),
-        )
-        .body(body)
-        .expect("infallible query response builder")
-}
+
 
 // ---------------------------------------------------------------------------
 // Daemon entry points
@@ -307,17 +256,33 @@ pub async fn start_local_daemon(
 }
 
 /// Starts the native loopback daemon with WebSocket and REST handoff routes.
+
+use tokio::sync::mpsc;
+
 pub async fn start_local_daemon_with_options(
     port: u16,
     dev: bool,
     vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>,
-) {
+) -> mpsc::Sender<String> {
+
     let storage_path = std::env::var("QUALIA_STORAGE_PATH").unwrap_or_else(|_| {
         std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
             .map(|h| format!("{h}/.qualia"))
             .unwrap_or_else(|_| ".qualia".to_string())
     });
+    
+    // Create Isolated Paths for Ontological Path Isolation
+    let sovereign_path = std::path::Path::new(&storage_path).join("sovereign");
+    let commons_path = std::path::Path::new(&storage_path).join("commons");
+    if let Err(e) = std::fs::create_dir_all(&sovereign_path) {
+        eprintln!("[Qualia Daemon] FATAL: Failed to create sovereign storage path: {}", e);
+        std::process::exit(1); // Graceful fail on volume disconnect
+    }
+    if let Err(e) = std::fs::create_dir_all(&commons_path) {
+        eprintln!("[Qualia Daemon] FATAL: Failed to create commons storage path: {}", e);
+        std::process::exit(1);
+    }
     crate::daemon_graph::init_daemon_graph(&storage_path);
     crate::ontology_loader::load_startup_ontologies();
 
@@ -338,699 +303,29 @@ pub async fn start_local_daemon_with_options(
     // -----------------------------------------------------------------------
     // WebSocket bridge — handshake + query metrics + bench_load
     // -----------------------------------------------------------------------
-    let ws_dev = dev;
-    let qualia_bridge = warp::path("qualia-bridge")
-        .and(warp::ws())
-        .map(move |ws: warp::ws::Ws| {
-            let dev = ws_dev;
-            ws.on_upgrade(move |mut socket| async move {
-                let handshake = json!({
-                    "type": "HANDSHAKE_SUCCESS",
-                    "payload": { "mode": "NATIVE", "version": crate::ENGINE_VERSION }
-                });
-                if socket
-                    .send(warp::ws::Message::text(handshake.to_string()))
-                    .await
-                    .is_ok()
-                {
-                    println!("[Qualia Daemon] Client connected to Native WebSocket Bridge");
-                }
+    
+    let (control_tx, mut control_rx) = mpsc::channel::<String>(16);
 
-                let mut pending_bench_id: Option<u64> = None;
-
-                while let Some(result) = socket.next().await {
-                    match result {
-                        Ok(msg) if msg.is_binary() => {
-                            if let Some(id) = pending_bench_id.take() {
-                                let bytes = msg.as_bytes();
-                                let reply = match crate::daemon_graph::replace_graph_from_flat_bytes(bytes)
-                                {
-                                    Ok(count) => json!({
-                                        "type": "bench_loaded",
-                                        "id": id,
-                                        "quin_count": count,
-                                        "graph_quin_count": crate::daemon_graph::graph_quin_count(),
-                                    }),
-                                    Err(message) => json!({
-                                        "type": "error",
-                                        "id": id,
-                                        "code": "bench_load_failed",
-                                        "message": message,
-                                    }),
-                                };
-                                let _ = socket.send(warp::ws::Message::text(reply.to_string())).await;
-                            }
-                        }
-                        Ok(msg) if msg.is_text() => {
-                            let text = msg.to_str().unwrap_or_default();
-                            let Ok(frame) = serde_json::from_str::<serde_json::Value>(text) else {
-                                let _ = socket.send(warp::ws::Message::text(json!({
-                                    "type": "error",
-                                    "code": "invalid_json",
-                                    "message": "expected JSON frame"
-                                }).to_string())).await;
-                                continue;
-                            };
-
-                            let frame_type = frame.get("type").and_then(|v| v.as_str()).unwrap_or("");
-                            let id = frame.get("id").and_then(|v| v.as_u64()).unwrap_or(0);
-
-                            let reply = match frame_type {
-                                "query" => {
-                                    let query = frame
-                                        .get("query")
-                                        .and_then(|v| v.as_str())
-                                        .unwrap_or("")
-                                        .to_string();
-                                    let format = frame
-                                        .get("format")
-                                        .and_then(|v| v.as_str())
-                                        .unwrap_or("metrics");
-                                    if format != "metrics" {
-                                        json!({
-                                            "type": "error",
-                                            "id": id,
-                                            "code": "unsupported_format",
-                                            "message": "WebSocket queries support format=metrics only"
-                                        })
-                                    } else {
-                                        let graph = crate::daemon_graph::graph_read_guard();
-                                        match daemon_query::execute_ntriples_metrics(&query, graph.as_slice()) {
-                                            Ok(stats) => json!({
-                                                "type": "result",
-                                                "id": id,
-                                                "match_count": stats.match_count,
-                                                "vm_cycles": stats.vm_cycles,
-                                                "direct_jump_ops": stats.direct_jump_ops,
-                                                "lexicon_lookup_ops": stats.lexicon_lookup_ops,
-                                            }),
-                                            Err(err) => ws_query_error_json(id, err),
-                                        }
-                                    }
-                                }
-                                "bench_load" if dev => {
-                                    if frame.get("byte_length").and_then(|v| v.as_u64()).is_some() {
-                                        pending_bench_id = Some(id);
-                                        json!({
-                                            "type": "bench_load_ready",
-                                            "id": id,
-                                            "message": "send next binary frame with flat NQuin bytes"
-                                        })
-                                    } else if let Some(b64) = frame.get("db_b64").and_then(|v| v.as_str()) {
-                                        match decode_bench_load_b64(b64) {
-                                            Ok(bytes) => match crate::daemon_graph::replace_graph_from_flat_bytes(&bytes) {
-                                                Ok(count) => json!({
-                                                    "type": "bench_loaded",
-                                                    "id": id,
-                                                    "quin_count": count,
-                                                    "graph_quin_count": crate::daemon_graph::graph_quin_count(),
-                                                }),
-                                                Err(message) => json!({
-                                                    "type": "error",
-                                                    "id": id,
-                                                    "code": "bench_load_failed",
-                                                    "message": message,
-                                                }),
-                                            },
-                                            Err(message) => json!({
-                                                "type": "error",
-                                                "id": id,
-                                                "code": "bench_load_failed",
-                                                "message": message,
-                                            }),
-                                        }
-                                    } else {
-                                        json!({
-                                            "type": "error",
-                                            "id": id,
-                                            "code": "bench_load_failed",
-                                            "message": "bench_load requires db_b64 or byte_length + binary frame"
-                                        })
-                                    }
-                                }
-                                "bench_load" => json!({
-                                    "type": "error",
-                                    "id": id,
-                                    "code": "forbidden",
-                                    "message": "bench_load requires daemon --dev"
-                                }),
-                                _ => json!({
-                                    "type": "error",
-                                    "id": id,
-                                    "code": "unknown_type",
-                                    "message": format!("unsupported frame type: {frame_type}")
-                                }),
-                            };
-
-                            let _ = socket.send(warp::ws::Message::text(reply.to_string())).await;
-                        }
-                        Ok(_) => {}
-                        Err(e) => {
-                            eprintln!("[Qualia Daemon] WebSocket error: {e}");
-                            break;
-                        }
-                    }
-                }
-                println!("[Qualia Daemon] Client disconnected.");
-            })
-        });
-
-    // -----------------------------------------------------------------------
-    // GET /health
-    // -----------------------------------------------------------------------
-    let health_dev = dev;
-    let health = warp::path("health").and(warp::get()).map(move || {
-        warp::reply::with_status(
-            warp::reply::json(&json!({
-                "status": "active",
-                "engine": "qualia-core-db",
-                "version": crate::ENGINE_VERSION,
-                "dev_mode": health_dev,
-                "graph_quin_count": crate::daemon_graph::graph_quin_count(),
-                "webtorrent": crate::webtorrent_seeder::telemetry(),
-                "execution_environment": execution_environment_json()
-            })),
-            StatusCode::OK,
-        )
-    });
-
-    // -----------------------------------------------------------------------
-    // POST /query
-    // -----------------------------------------------------------------------
-    let query_security = security.clone();
-    let query = warp::path("query")
-        .and(warp::post())
-        .and(warp::header::optional::<String>("x-qualia-token"))
-        .and(warp::header::optional::<String>("accept"))
-        .and(warp::body::content_length_limit(QUERY_PAYLOAD_LIMIT_BYTES))
-        .and(warp::body::json())
-        .map(
-            move |token: Option<String>,
-                  accept: Option<String>,
-                  request: NativeQueryRequest| {
-
-                // --- Auth & Gatekeeper Policy -------------------------------
-                let mut allowed_shapes: Option<Vec<String>> = None;
-                
-                if !query_security.dev {
-                    if let Some(t) = token.as_ref() {
-                        let vault = query_security.vault.lock().unwrap();
-                        match vault.verify_qapp_token(t) {
-                            Ok(payload) => {
-                                // Semantic token valid!
-                                allowed_shapes = Some(payload.allowed_shapes);
-                            }
-                            Err(_) => {
-                                // Check if it's the simple global dev token fallback
-                                if Some(t) != query_security.token.as_ref() {
-                                    return make_response(
-                                        StatusCode::UNAUTHORIZED,
-                                        "application/json",
-                                        json!({
-                                            "status": "error",
-                                            "code": "unauthorized",
-                                            "message": "Invalid Semantic App Token or Dev Token"
-                                        })
-                                        .to_string(),
-                                    );
-                                }
-                            }
-                        }
-                    } else {
-                        return make_response(
-                            StatusCode::UNAUTHORIZED,
-                            "application/json",
-                            json!({
-                                "status": "error",
-                                "code": "unauthorized",
-                                "message": "Missing X-Qualia-Token header"
-                            })
-                            .to_string(),
-                        );
-                    }
-                }
-
-                // --- Semantic Shape Enforcement (Fail-Closed) ---------------
-                if let Some(shapes) = allowed_shapes {
-                    // Primitive namespace check based on the incoming query string.
-                    // If the app requested shacl:MedicalRecord, and the query is trying to hit foaf:Person,
-                    // we block it unless foaf:Person is also in the allowed shapes.
-                    // This is a naive substring matching validation for foundational scaffolding.
-                    let q = request.query.to_lowercase();
-                    let mut authorized = false;
-                    for shape in shapes {
-                        let ns = shape.split(':').next().unwrap_or(&shape).to_lowercase();
-                        if q.contains(&ns) {
-                            authorized = true;
-                            break;
-                        }
-                    }
-                    // For safety, if they are just querying something broad we can allow it, 
-                    // but if it's specifically a namespace, it must match.
-                    if !authorized && !q.is_empty() {
-                         return make_response(
-                             StatusCode::FORBIDDEN,
-                             "application/json",
-                             json!({
-                                 "status": "error",
-                                 "code": "forbidden",
-                                 "message": "Gatekeeper Policy Violation: Query targets semantic shapes outside your App Manifest scope."
-                             })
-                             .to_string(),
-                         );
-                    }
-                }
-
-                // --- Format negotiation -------------------------------------
-                let output_format =
-                    match negotiate_format(request.format.as_deref(), accept.as_deref()) {
-                        Ok(f) => f,
-                        Err(()) => {
-                            return make_response(
-                                StatusCode::NOT_ACCEPTABLE,
-                                "application/json",
-                                json!({
-                                    "status": "error",
-                                    "code": "not_acceptable",
-                                    "message": "Supported: application/ld+json, application/n-triples, application/x-qualia-q42"
-                                })
-                                .to_string(),
-                            );
-                        }
-                    };
-
-                // Raw Q42 binary streaming is not implemented yet.
-                if matches!(output_format, OutputFormat::RawQ42) {
-                    return make_response(
-                        StatusCode::NOT_IMPLEMENTED,
-                        "application/json",
-                        json!({
-                            "status": "error",
-                            "code": "not_implemented",
-                            "message": "application/x-qualia-q42 binary streaming is not yet available"
-                        })
-                        .to_string(),
-                    );
-                }
-
-                // --- Basic validation ----------------------------------------
-                if request.query.trim().is_empty() {
-                    return make_response(
-                        StatusCode::BAD_REQUEST,
-                        "application/json",
-                        json!({
-                            "status": "error",
-                            "code": "empty_query",
-                            "message": "Query payload must include a non-empty query string"
-                        })
-                        .to_string(),
-                    );
-                }
-
-                let graph_guard = crate::daemon_graph::graph_read_guard();
-                let (stats, final_results) = match daemon_query::execute_ntriples_pattern_on_graph(
-                    &request.query,
-                    graph_guard.as_slice(),
-                ) {
-                    Ok(pair) => pair,
-                    Err(QueryExecError::EmptyQuery) => {
-                        return make_response(
-                            StatusCode::BAD_REQUEST,
-                            "application/json",
-                            json!({
-                                "status": "error",
-                                "code": "empty_query",
-                                "message": "Query payload must include a non-empty query string"
-                            })
-                            .to_string(),
-                        );
-                    }
-                    Err(QueryExecError::ParseError(detail)) => {
-                        return make_response(
-                            StatusCode::BAD_REQUEST,
-                            "application/json",
-                            json!({
-                                "status": "error",
-                                "code": "parse_error",
-                                "message": format!(
-                                    "Query could not be compiled to bytecode: {detail}. \
-                                     Supply a single N-Triples pattern, e.g. \
-                                     \"<subject> ?p <object> .\""
-                                )
-                            })
-                            .to_string(),
-                        );
-                    }
-                    Err(QueryExecError::OutputBufferFull) => {
-                        return make_response(
-                            StatusCode::PAYLOAD_TOO_LARGE,
-                            "application/json",
-                            json!({
-                                "status": "error",
-                                "code": "result_set_too_large",
-                                "message": format!(
-                                    "Query matched more than {} Quins. \
-                                     Add more constraints to narrow the result set.",
-                                    daemon_query::QUERY_OUT_SLOTS
-                                )
-                            })
-                            .to_string(),
-                        );
-                    }
-                    Err(QueryExecError::InvalidProgram) => {
-                        return make_response(
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            "application/json",
-                            json!({
-                                "status": "error",
-                                "code": "vm_error",
-                                "message": "Internal VM rejected the compiled program."
-                            })
-                            .to_string(),
-                        );
-                    }
-                    Err(QueryExecError::ClassifiedEgress) => {
-                        println!("[Webizen Gatekeeper] DENIED egress of Classified record");
-                        return make_response(
-                            StatusCode::FORBIDDEN,
-                            "application/json",
-                            json!({
-                                "status": "error",
-                                "code": "restricted_data_access",
-                                "message": "Gatekeeper Policy Violation: Attempted egress of CLASSIFIED context data."
-                            })
-                            .to_string(),
-                        );
-                    }
-                };
-
-                let mut sanitized_results = Vec::with_capacity(final_results.len());
-                let mut gatekeeper_halt = false;
-                for quin in final_results {
-                    let sensitivity = quin.context >> 56;
-                    if sensitivity == 0x02 {
-                        // Classified - Mandatory Drop
-                        let _ = crate::wal::log_adversarial_conduct(&quin, 4); // 4 = Egress Violation
-                        gatekeeper_halt = true;
-                        sanitized_results.clear();
-                        break;
-                    } else if sensitivity == 0x01 {
-                        // Restricted - Verify Bilateral TrustGroup
-                        // Mock for scaffolding: assume valid if we got this far
-                        sanitized_results.push(quin);
-                    } else {
-                        // Public
-                        sanitized_results.push(quin);
-                    }
-                }
-
-                if gatekeeper_halt {
-                    println!("[Webizen Gatekeeper] DENIED egress of Classified record in buffer");
-                    return make_response(
-                        StatusCode::FORBIDDEN,
-                        "application/json",
-                        json!({
-                            "status": "error",
-                            "code": "restricted_data_access",
-                            "message": "Gatekeeper Policy Violation: Attempted egress of CLASSIFIED context data."
-                        })
-                        .to_string(),
-                    );
-                }
-
-                let final_results = sanitized_results;
-                let match_count = final_results.len();
-                let vm_cycles = stats.vm_cycles;
-
-                // --- Serialise and attach compute-cost telemetry -------------
-                match output_format {
-                    OutputFormat::NTriples => {
-                        // `format_ntriples_to` writes directly to the Vec<u8>
-                        // buffer — the formatter itself performs no allocation.
-                        let mut body_buf: Vec<u8> =
-                            Vec::with_capacity(match_count.max(1) * 80);
-                        let _ = crate::resolver::format_ntriples_to(
-                            &final_results,
-                            &mut body_buf,
-                        );
-                        let body = String::from_utf8(body_buf).unwrap_or_default();
-                        make_query_response(
-                            StatusCode::OK,
-                            "application/n-triples",
-                            body,
-                            match_count,
-                            vm_cycles,
-                        )
-                    }
-
-                    OutputFormat::JsonLd => {
-                        let graph: Vec<serde_json::Value> = final_results
-                            .iter()
-                            .map(|q| {
-                                json!({
-                                    "subject":   q.subject.to_string(),
-                                    "predicate": q.predicate.to_string(),
-                                    "object":    q.object.to_string(),
-                                    "context":   q.context.to_string(),
-                                    "metadata":  q.metadata.to_string(),
-                                    "parity":    q.parity.to_string()
-                                })
-                            })
-                            .collect();
-
-                        make_query_response(
-                            StatusCode::OK,
-                            "application/ld+json",
-                            json!({
-                                "@context": { "@vocab": "https://qualia-db.org/vocab#" },
-                                "@graph": graph,
-                                "match_count": match_count
-                            })
-                            .to_string(),
-                            match_count,
-                            vm_cycles,
-                        )
-                    }
-
-                    // Already handled above; unreachable here.
-                    OutputFormat::RawQ42 => unreachable!(),
-                }
-            },
-        );
-
-    // -----------------------------------------------------------------------
-    // POST /cache  — dataset shard upload
-    // -----------------------------------------------------------------------
-    let cache = warp::path("cache")
-        .and(warp::post())
-        .and(warp::query::<std::collections::HashMap<String, String>>())
-        .and(warp::body::content_length_limit(QUERY_PAYLOAD_LIMIT_BYTES))
-        .and(warp::body::bytes())
-        .map(
-            |qs: std::collections::HashMap<String, String>, body: warp::hyper::body::Bytes| {
-                let filename = qs
-                    .get("filename")
-                    .cloned()
-                    .unwrap_or_else(|| "dataset_shard.q42".to_string());
-                let mut path = std::env::var("HOME")
-                    .or_else(|_| std::env::var("USERPROFILE"))
-                    .map(std::path::PathBuf::from)
-                    .unwrap_or_else(|_| std::path::PathBuf::from("."));
-                path.push(".qualia");
-                path.push("cache");
-                let _ = std::fs::create_dir_all(&path);
-                path.push(&filename);
-                let _ = std::fs::write(&path, body);
-                println!("[Qualia Daemon] Cached shard to {:?}", path);
-                warp::reply::with_status(
-                    warp::reply::json(&json!({ "status": "ok", "saved_to": path.to_str() })),
-                    StatusCode::OK,
-                )
-            },
-        );
-
-    // -----------------------------------------------------------------------
-    // GET /proxy/fetch?url=…  — CORS relay for GH Pages / playground URI import
-    // -----------------------------------------------------------------------
-    let proxy_fetch = warp::path!("proxy" / "fetch")
-        .and(warp::get())
-        .and(warp::query::<std::collections::HashMap<String, String>>())
-        .and_then(|qs: std::collections::HashMap<String, String>| async move {
-            let target = qs.get("url").cloned().unwrap_or_default();
-            if target.is_empty() {
-                return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                    StatusCode::BAD_REQUEST,
-                    "missing url query parameter",
-                ));
-            }
-
-            let parsed = match reqwest::Url::parse(&target) {
-                Ok(url) => url,
-                Err(_) => {
-                    return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                        StatusCode::BAD_REQUEST,
-                        "invalid url",
-                    ));
-                }
-            };
-
-            if !proxy_target_allowed(&parsed) {
-                return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                    StatusCode::FORBIDDEN,
-                    "target host is not allowed",
-                ));
-            }
-
-            let client = match reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(120))
-                .redirect(reqwest::redirect::Policy::limited(5))
-                .build()
-            {
-                Ok(c) => c,
-                Err(_) => {
-                    return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "proxy client init failed",
-                    ));
-                }
-            };
-
-            let response = match client.get(parsed).send().await {
-                Ok(r) => r,
-                Err(e) => {
-                    return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                        StatusCode::BAD_GATEWAY,
-                        format!("upstream fetch failed: {e}"),
-                    ));
-                }
-            };
-
-            if !response.status().is_success() {
-                return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                    StatusCode::BAD_GATEWAY,
-                    format!("upstream HTTP {}", response.status()),
-                ));
-            }
-
-            let content_type = response
-                .headers()
-                .get(reqwest::header::CONTENT_TYPE)
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("application/octet-stream")
-                .to_string();
-
-            let bytes = match response.bytes().await {
-                Ok(b) => b,
-                Err(e) => {
-                    return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                        StatusCode::BAD_GATEWAY,
-                        format!("upstream body read failed: {e}"),
-                    ));
-                }
-            };
-
-            if bytes.len() > PROXY_FETCH_MAX_BYTES {
-                return Ok::<_, warp::Rejection>(proxy_fetch_error(
-                    StatusCode::PAYLOAD_TOO_LARGE,
-                    "upstream payload exceeds 64 MiB proxy limit",
-                ));
-            }
-
-            Ok::<_, warp::Rejection>(proxy_fetch_ok(&content_type, bytes.to_vec()))
-        });
-
-    let proxy_preflight = warp::path!("proxy" / "fetch").and(warp::options()).map(|| {
-        warp::reply::with_status(
-            warp::reply::json(&json!({ "status": "ok" })),
-            StatusCode::OK,
-        )
-    });
-
-    // -----------------------------------------------------------------------
-    // OPTIONS preflight
-    // -----------------------------------------------------------------------
-    let preflight = warp::path("health")
-        .or(warp::path("query"))
-        .unify()
-        .and(warp::options())
-        .map(|| {
-            warp::reply::with_status(
-                warp::reply::json(&json!({ "status": "ok" })),
-                StatusCode::OK,
-            )
-        });
-
-    // -----------------------------------------------------------------------
-    // CORS + private-network header
-    // Dev mode allows any origin so that localhost test runners and desktop
-    // apps can connect without being blocked by same-origin policy.
-    // -----------------------------------------------------------------------
-    let allowed_origins: Vec<&str> = if dev {
-        vec![
-            "http://localhost:8788",
-            "http://127.0.0.1:8788",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            OFFICIAL_WEB_HUB_ORIGIN,
-        ]
-    } else {
-        vec![OFFICIAL_WEB_HUB_ORIGIN]
-    };
-
-    let cors = warp::cors()
-        .allow_origins(allowed_origins)
-        .allow_methods(vec!["GET", "POST", "OPTIONS"])
-        .allow_header("range")
-        .allow_headers(vec![
-            "content-type",
-            "accept",
-            "x-qualia-token",
-            "access-control-request-private-network",
-        ])
-        .expose_headers(vec!["x-qualia-compute-cost"]);
-
-    let relay_routes =
-        crate::chat_relay_daemon::chat_relay_routes(storage_path.clone(), security.vault.clone());
-
-    crate::webtorrent_seeder::sync_from_workbench(&storage_path, port);
-
-    let torrent_routes = crate::webtorrent_routes::webtorrent_routes(port);
-
-    let routes = qualia_bridge
-        .or(health)
-        .or(query)
-        .or(proxy_fetch)
-        .or(proxy_preflight)
-        .or(relay_routes)
-        .or(torrent_routes)
-        .or(cache)
-        .or(preflight)
-        .with(cors)
-        .with(warp::reply::with::header(
-            "Access-Control-Allow-Private-Network",
-            "true",
-        ));
-
-    println!("============================================================");
-    println!("Qualia-DB Native Local Daemon Booting");
-    println!("Listening on 127.0.0.1:{port}");
-    println!("  WebSocket: ws://127.0.0.1:{port}/qualia-bridge");
-    println!("  Health:    http://127.0.0.1:{port}/health");
-    println!("  Query:     http://127.0.0.1:{port}/query");
-    println!("  Chat relay: http://127.0.0.1:{port}/chat/publish | /chat/pull");
-    println!("  CORS proxy: http://127.0.0.1:{port}/proxy/fetch?url=<encoded>");
-    println!("  WebTorrent: http://127.0.0.1:{port}/torrent/webseed/{{hash}} | /torrent/seed");
-    println!(
-        "  Mode:      {}",
-        if security.dev {
-            "dev token bypass"
-        } else {
-            "token required"
-        }
-    );
-    println!("============================================================");
-
+    let state = crate::webizen_server::spawn_loopback_server(port, dev, security.vault.clone());
+    
+    // Wire up control channel
+    let state_clone = state.clone();
     tokio::spawn(async move {
+        while let Some(cmd) = control_rx.recv().await {
+            if cmd == "REVOKE" {
+                // broadcast revocation over the unified telemetry channel
+                let _ = state_clone.telemetry_tx.send(b"REVOKE".to_vec());
+            }
+        }
+    });
+
+    println!("============================================================");
+    println!("Qualia-DB Unified Axum Daemon Booting");
+    println!("Listening on 127.0.0.1:{}", port);
+    println!("  Mode:      {}", if security.dev { "dev bypass" } else { "token required" });
+    println!("============================================================");
+
+tokio::spawn(async move {
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
         loop {
             interval.tick().await;
@@ -1328,5 +623,7 @@ pub async fn start_local_daemon_with_options(
         }
     });
 
-    warp::serve(routes).run(([127, 0, 0, 1], port)).await;
+    
+
+    control_tx
 }

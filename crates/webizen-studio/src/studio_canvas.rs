@@ -182,9 +182,9 @@ pub fn DynamicPage(path: Vec<String>) -> Element {
     #[cfg(target_arch = "wasm32")]
     use_effect(move || {
         if let Ok(ws) = web_sys::WebSocket::new("ws://127.0.0.1:4242") {
-            let onopen = Closure::wrap(Box::new(move |_e: Event| {
+            let onopen = Closure::wrap(Box::new(move |_e: web_sys::Event| {
                 is_native_llm_active.set(true);
-            }) as Box<dyn FnMut(Event)>);
+            }) as Box<dyn FnMut(web_sys::Event)>);
             ws.set_onopen(Some(onopen.as_ref().unchecked_ref()));
             onopen.forget();
         }
@@ -195,8 +195,8 @@ pub fn DynamicPage(path: Vec<String>) -> Element {
         is_native_llm_active.set(true); // Always true on native build
     });
 
-    // ── Telemetry SSE ──────────────────────────────────────
-    let telemetry_logs = use_signal(Vec::<String>::new);
+    // 🔴🔴 Telemetry SSE 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
+    let mut telemetry_logs = use_signal(Vec::<String>::new);
 
     #[cfg(target_arch = "wasm32")]
     use_effect(move || {

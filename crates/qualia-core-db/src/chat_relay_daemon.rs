@@ -7,9 +7,14 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
+};
 use serde::{Deserialize, Serialize};
-use warp::http::StatusCode;
-use warp::Filter;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RelayEnvelope {
@@ -28,6 +33,12 @@ pub struct RelayEnvelope {
 pub struct RelayPullResponse {
     pub messages: Vec<RelayEnvelope>,
     pub latest_lamport: u64,
+}
+
+#[derive(Clone)]
+pub struct ChatState {
+    pub storage_path: String,
+    pub vault: Arc<Mutex<crate::key_vault::KeyVault>>,
 }
 
 fn relay_root(storage_path: &str) -> PathBuf {
@@ -91,114 +102,98 @@ fn read_inbox(
     })
 }
 
+async fn publish_handler(
+    State(state): State<ChatState>,
+    Json(envelope): Json<RelayEnvelope>,
+) -> impl IntoResponse {
+    if envelope.content.is_empty() || envelope.session_id.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "invalid envelope"})),
+        );
+    }
+
+    if !envelope.signature_hex.is_empty() {
+        if let Ok(sig_bytes) = hex::decode(&envelope.signature_hex) {
+            if sig_bytes.len() == 64 {
+                let payload = serde_json::json!({
+                    "session_id": envelope.session_id,
+                    "lamport": envelope.lamport,
+                    "role": envelope.role,
+                    "content": envelope.content,
+                    "author_did": envelope.author_did,
+                    "author_name": envelope.author_name,
+                    "reply_to_fragment": envelope.reply_to_fragment,
+                    "timestamp": envelope.timestamp,
+                });
+                if let Ok(payload_str) = serde_json::to_string(&payload) {
+                    let vault = state.vault.lock().unwrap();
+                    let key = vault.derive_key(&format!("relay:{}", envelope.author_did));
+                    let pk = ed25519_dalek::VerifyingKey::from(&key);
+                    let mut sig_arr = [0u8; 64];
+                    sig_arr.copy_from_slice(&sig_bytes);
+                    if crate::key_vault::KeyVault::verify_signature(
+                        pk.as_bytes(),
+                        payload_str.as_bytes(),
+                        &sig_arr,
+                    )
+                    .is_err()
+                    {
+                        return (
+                            StatusCode::UNAUTHORIZED,
+                            Json(serde_json::json!({"error": "signature invalid"})),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    match append_inbox(&state.storage_path, &envelope) {
+        Ok(()) => (
+            StatusCode::OK,
+            Json(serde_json::json!({"ok": true, "lamport": envelope.lamport})),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e})),
+        ),
+    }
+}
+
+async fn pull_handler(
+    State(state): State<ChatState>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    let session_id = params.get("session_id").cloned().unwrap_or_default();
+    let since = params
+        .get("since_lamport")
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(0);
+
+    if session_id.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "session_id required"})).into_response(),
+        );
+    }
+
+    match read_inbox(&state.storage_path, &session_id, since) {
+        Ok(resp) => (StatusCode::OK, Json(serde_json::json!(resp)).into_response()),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e})).into_response(),
+        ),
+    }
+}
+
 pub fn chat_relay_routes(
     storage_path: String,
     vault: Arc<Mutex<crate::key_vault::KeyVault>>,
-) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    let storage_publish = storage_path.clone();
-    let vault_publish = vault.clone();
-
-    let publish = warp::path!("chat" / "publish")
-        .and(warp::post())
-        .and(warp::body::json())
-        .and(warp::any().map(move || storage_publish.clone()))
-        .and(warp::any().map(move || vault_publish.clone()))
-        .and_then(
-            |envelope: RelayEnvelope,
-             storage: String,
-             vault: Arc<Mutex<crate::key_vault::KeyVault>>| async move {
-                if envelope.content.is_empty() || envelope.session_id.is_empty() {
-                    return Ok::<_, std::convert::Infallible>(warp::reply::with_status(
-                        warp::reply::json(&serde_json::json!({"error": "invalid envelope"})),
-                        StatusCode::BAD_REQUEST,
-                    ));
-                }
-
-                if !envelope.signature_hex.is_empty() {
-                    if let Ok(sig_bytes) = hex::decode(&envelope.signature_hex) {
-                        if sig_bytes.len() == 64 {
-                            let payload = serde_json::json!({
-                                "session_id": envelope.session_id,
-                                "lamport": envelope.lamport,
-                                "role": envelope.role,
-                                "content": envelope.content,
-                                "author_did": envelope.author_did,
-                                "author_name": envelope.author_name,
-                                "reply_to_fragment": envelope.reply_to_fragment,
-                                "timestamp": envelope.timestamp,
-                            });
-                            if let Ok(payload_str) = serde_json::to_string(&payload) {
-                                let vault = vault.lock().unwrap();
-                                let key =
-                                    vault.derive_key(&format!("relay:{}", envelope.author_did));
-                                let pk = ed25519_dalek::VerifyingKey::from(&key);
-                                let mut sig_arr = [0u8; 64];
-                                sig_arr.copy_from_slice(&sig_bytes);
-                                if crate::key_vault::KeyVault::verify_signature(
-                                    pk.as_bytes(),
-                                    payload_str.as_bytes(),
-                                    &sig_arr,
-                                )
-                                .is_err()
-                                {
-                                    return Ok(warp::reply::with_status(
-                                        warp::reply::json(
-                                            &serde_json::json!({"error": "signature invalid"}),
-                                        ),
-                                        StatusCode::UNAUTHORIZED,
-                                    ));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                match append_inbox(&storage, &envelope) {
-                    Ok(()) => Ok(warp::reply::with_status(
-                        warp::reply::json(
-                            &serde_json::json!({"ok": true, "lamport": envelope.lamport}),
-                        ),
-                        StatusCode::OK,
-                    )),
-                    Err(e) => Ok(warp::reply::with_status(
-                        warp::reply::json(&serde_json::json!({"error": e})),
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                    )),
-                }
-            },
-        );
-
-    let pull = warp::path!("chat" / "pull")
-        .and(warp::get())
-        .and(warp::query::<std::collections::HashMap<String, String>>())
-        .and(warp::any().map(move || storage_path.clone()))
-        .and_then(
-            |params: std::collections::HashMap<String, String>, storage: String| async move {
-                let session_id = params.get("session_id").cloned().unwrap_or_default();
-                let since = params
-                    .get("since_lamport")
-                    .and_then(|s| s.parse::<u64>().ok())
-                    .unwrap_or(0);
-
-                if session_id.is_empty() {
-                    return Ok::<_, std::convert::Infallible>(warp::reply::with_status(
-                        warp::reply::json(&serde_json::json!({"error": "session_id required"})),
-                        StatusCode::BAD_REQUEST,
-                    ));
-                }
-
-                match read_inbox(&storage, &session_id, since) {
-                    Ok(resp) => Ok(warp::reply::with_status(
-                        warp::reply::json(&resp),
-                        StatusCode::OK,
-                    )),
-                    Err(e) => Ok(warp::reply::with_status(
-                        warp::reply::json(&serde_json::json!({"error": e})),
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                    )),
-                }
-            },
-        );
-
-    publish.or(pull)
+) -> Router {
+    let state = ChatState { storage_path, vault };
+    Router::new()
+        .route("/publish", post(publish_handler))
+        .route("/pull", get(pull_handler))
+        .with_state(state)
 }

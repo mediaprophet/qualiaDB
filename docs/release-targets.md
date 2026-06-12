@@ -9,12 +9,12 @@ Five release artefacts are built or planned from this repository:
 | **WASM (Browser)** | `qualia-core-wasm` (`wasm_bridge.rs`, `wasm_edge.rs`) | `qualia-core-wasm.tar.gz` — drop into any web project |
 | **WASM (Mobile PWA)** | `crates/qualia-mobile-harness/` (Dioxus WASM) | PWA — installed via "Add to Home Screen" on any mobile browser; QR-scan bootstrap from desktop |
 | **CLI** | `crates/qualia-cli/` | Binary: `qualia-cli`; built via `cargo build --release -p qualia-cli` |
-| **Desktop — Webizen Studio** | `crates/qualia-studio/` (Dioxus 0.5 + Shoelace) | Installer: Windows / macOS / Linux via GitHub Releases |
+| **Desktop — Webizen Studio** | `crates/webizen-studio/` (Dioxus 0.5 + Shoelace) | Installer: Windows / macOS / Linux via GitHub Releases |
 | **Mobile Native** | TBA (likely Flutter mobile) | TBA — iOS / Android; planned for a future milestone |
 
 > **Note — WASM (Mobile PWA):** This is a Dioxus WASM PWA that can run standalone on a mobile device for local-first UI and lightweight client behavior, or connect back to the user's personal Webizen desktop daemon via WebSocket (port 4242) when native offload, deeper inference, or resident storage services are available. It provides pane-based UI rendering, QR-scan bootstrap, and DID challenge-response pairing across both modes. Phase C of the Webizen Studio plan (`webizen-platform-plan.md`).
 
-> **Note on Legacy Desktop Prototypes** (`crates/qualia-desktop/` and `crates/qualia-flutter/`): The Tauri/React/NodeJS prototypes are retained in-tree for reference only. The Flutter application is deprecated. All active desktop work has transitioned to the native Dioxus 0.5 / Shoelace target in `crates/qualia-studio/`.
+> **Note on Legacy Desktop Prototypes** (`crates/qualia-desktop/` and `crates/qualia-flutter/`): The Tauri/React/NodeJS prototypes are retained in-tree for reference only. The Flutter application is deprecated. All active desktop work has transitioned to the native Dioxus 0.5 / Shoelace target in `crates/webizen-studio/`.
 
 ---
 
@@ -70,6 +70,7 @@ Five release artefacts are built or planned from this repository:
 | Profile-bound ingest (`--profile <file>.qchk`) | ❌ | ❌ | ✅ | ✅ Via Credential Manager | 🚧 |
 | KML geometry ingest → NQuin spatial predicates | ❌ | ❌ | ✅ | ✅ | 🚧 |
 | FNV-1a zero-alloc URI hashing (`q_hash`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
+| 60-bit zero-alloc typed literal packing (`xsd:integer`/`decimal`/`boolean`) | ⚠️ | ❌ | ✅ | ✅ | 🚧 |
 
 ---
 

@@ -12,6 +12,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Integrated native async `QTensorEngine` for WASM execution over WebGPU
 - Deployed locally hosted GGUF model downloader via `coi-serviceworker`
 - Exported WASM WebGPU module via `wasm-pack` into `docs/llmdemo/pkg`
+- **Zero-allocation payload packing**: `xsd:integer`, `xsd:decimal`, and `xsd:boolean` datatypes are now intercepted during semantic parsing (`qualia-core-db` & `qualia-cli`) and packed natively into the 60-bit payload, enforcing two's complement and fixed-point scale boundaries without intermediate `String` allocations.
+
+### Fixed
+- Addressed `mcp_server.rs` build failure caused by missing `.to_string()` conversions for integers.
+- **resolver.rs**: Corrected `write_object_term` to properly sign-extend 60-bit `xsd:integer` and `xsd:decimal` payloads on display, preventing negative numbers from appearing as large unsigned positive values.
 
 ### Added — CLI ETL Pipeline & Full RDF/SPARQL Exposure
 
@@ -51,6 +56,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Tests
 - 16 new unit tests in `ingest/detect.rs` and `ingest/mapper.rs`; all passing
 - Covers: extension-based detection, magic-byte probing (Q42, QCHK, CBOR-LD, XML, KML, JSON), SHACL field extraction, datatype mapping, predicate hash consistency, error cases
+
+### Added — SocialWebNet Fiduciary Supremacy & Fifth Vector Routing (2026-06-12)
+
+**Fiduciary Supremacy & Sanctuary Mode**:
+- `webizen_server.rs`: Added the RPC bridge (`window.webizen`) intercept point ensuring edge devices (mobile/WASM apps) must use the native node.
+- Enforced **Sanctuary Mode**: `POST /api/v1/webizen/rpc` will return `423 Locked` and sever access to `/sovereign` domains when the daemon is in Sanctuary mode.
+
+**Fifth Vector Handshakes (`daemon_swarm.rs`)**:
+- Implemented `DnssecSemanticPayload` serialization and parsing over CBOR-LD/DNSSEC TXT records.
+- WireGuard tunnels are strictly gated by bitmask evaluation (`routing_mask`) against the local `CompiledPermission`. The SocialWebNet WireGuard stack runs *exclusively* on native installs.
+
+**CRDT Bifurcation (`crdt.rs`)**:
+- Sovereign `wf:` (WellFair) domains are explicitly exempted from automated LWW merges. These require Tri-Party Access and manual user authorization.
+- Only Commons domains (`qp:`) undergo Lamport clock-based LWW consensus.
 
 ### Added — CLI Logic Modality & Science Surface (2026-06-12)
 

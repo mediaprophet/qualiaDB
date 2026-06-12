@@ -33,18 +33,18 @@ use std::io;
 // Bit-layout constants
 // ---------------------------------------------------------------------------
 
-const MSB_FLAG: u64 = 1u64 << 63;
-const INLINE_TAG_MASK: u64 = 0b111u64 << 60; // bits 60-62 (only when MSB=0)
-const INLINE_TAG_INTEGER: u64 = 0b001u64 << 60;
-const INLINE_TAG_DECIMAL: u64 = 0b010u64 << 60;
-const INLINE_TAG_BOOLEAN: u64 = 0b011u64 << 60;
+pub const MSB_FLAG: u64 = 1u64 << 63;
+pub const INLINE_TAG_MASK: u64 = 0b111u64 << 60; // bits 60-62 (only when MSB=0)
+pub const INLINE_TAG_INTEGER: u64 = 0b001u64 << 60;
+pub const INLINE_TAG_DECIMAL: u64 = 0b010u64 << 60;
+pub const INLINE_TAG_BOOLEAN: u64 = 0b011u64 << 60;
 /// SPARQL-Star embedded triple tag: indicates the value is a Virtual ID for <<s p o>>
 pub const TAG_EMBEDDED: u64 = 0b001u64 << 60;
 /// Webizen identity tag: indicates the value is a sovereign WebID agent identifier
 /// Uses 0x8 prefix for instant identification without dictionary lookup
 pub const TAG_WEBIZEN: u64 = 0b1000u64 << 60;
 /// Mask over bits 0-59 — the value payload when an inline tag is present.
-const INLINE_VALUE_MASK: u64 = !(MSB_FLAG | INLINE_TAG_MASK);
+pub const INLINE_VALUE_MASK: u64 = !(MSB_FLAG | INLINE_TAG_MASK);
 
 // ---------------------------------------------------------------------------
 // Demo lexicon
@@ -209,18 +209,35 @@ fn write_object_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
     //    there is no ambiguity with normalised IRI hashes in a live database.
     match val & INLINE_TAG_MASK {
         INLINE_TAG_INTEGER => {
-            let n = val & INLINE_VALUE_MASK;
+            let mut n = (val & INLINE_VALUE_MASK) as i64;
+            // Sign-extend 60-bit two's complement to 64-bit
+            if (n & (1i64 << 59)) != 0 {
+                n |= !((1i64 << 60) - 1);
+            }
             write!(out, "\"{n}\"^^<http://www.w3.org/2001/XMLSchema#integer>")
         }
         INLINE_TAG_DECIMAL => {
             // Fixed-point: lower 60 bits encode value × 10⁶.
-            let raw = val & INLINE_VALUE_MASK;
-            let whole = raw / 1_000_000;
-            let frac = raw % 1_000_000;
-            write!(
-                out,
-                "\"{whole}.{frac:06}\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
-            )
+            let mut raw = (val & INLINE_VALUE_MASK) as i64;
+            // Sign-extend 60-bit two's complement to 64-bit
+            if (raw & (1i64 << 59)) != 0 {
+                raw |= !((1i64 << 60) - 1);
+            }
+            let is_negative = raw < 0;
+            let abs_raw = raw.abs();
+            let whole = abs_raw / 1_000_000;
+            let frac = abs_raw % 1_000_000;
+            if is_negative {
+                write!(
+                    out,
+                    "\"-{whole}.{frac:06}\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
+                )
+            } else {
+                write!(
+                    out,
+                    "\"{whole}.{frac:06}\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
+                )
+            }
         }
         INLINE_TAG_BOOLEAN => {
             let lit = if (val & 1) != 0 { "true" } else { "false" };
@@ -368,6 +385,33 @@ mod tests {
         assert_eq!(
             String::from_utf8(buf).unwrap(),
             "\"3.141592\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
+        );
+    }
+
+    #[test]
+    fn inline_negative_integer_object() {
+        let num = -42i64;
+        let unsigned = (num as u64) & INLINE_VALUE_MASK;
+        let val = INLINE_TAG_INTEGER | unsigned;
+        let mut buf = Vec::new();
+        write_object_term(val, &mut buf).unwrap();
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"-42\"^^<http://www.w3.org/2001/XMLSchema#integer>"
+        );
+    }
+
+    #[test]
+    fn inline_negative_decimal_object() {
+        let num_f64 = -3.141592f64;
+        let num = (num_f64 * 1_000_000.0).round() as i64;
+        let unsigned = (num as u64) & INLINE_VALUE_MASK;
+        let val = INLINE_TAG_DECIMAL | unsigned;
+        let mut buf = Vec::new();
+        write_object_term(val, &mut buf).unwrap();
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"-3.141592\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
         );
     }
 

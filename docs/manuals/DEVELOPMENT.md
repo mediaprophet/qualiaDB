@@ -30,7 +30,7 @@ cargo build --release -p qualia-cli
 ### Webizen Studio desktop app (primary shipped desktop target)
 
 ```bash
-cd crates/qualia-studio
+cd crates/webizen-studio
 dx build --release
 
 # Or to run in development mode:

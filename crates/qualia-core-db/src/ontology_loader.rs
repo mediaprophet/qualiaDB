@@ -94,6 +94,38 @@ pub fn parse_ttl_to_quins(path: &std::path::Path, graph_context: u64) -> Vec<NQu
     quins
 }
 
+/// Load a unified `.q42` volume ontology file.
+pub fn load_q42_file(path: &std::path::Path) -> Vec<NQuin> {
+    use crate::q42_volume::{Q42Volume, SUPERBLOCK_SIZE, SUPERBLOCK_HEADER};
+    let vol = match Q42Volume::open(path) {
+        Ok(v) => v,
+        Err(e) => {
+            log::warn!("[ontology_loader] cannot open q42 volume {:?}: {e}", path);
+            return Vec::new();
+        }
+    };
+    let mut all_quins = Vec::new();
+    let mut buf = vec![0u8; SUPERBLOCK_SIZE];
+    for i in 0..vol.block_count() as usize {
+        if let Ok(n) = vol.read_superblock_into(i, &mut buf) {
+            if n <= SUPERBLOCK_HEADER { continue; }
+            let quin_size = std::mem::size_of::<NQuin>();
+            let data_len = n - SUPERBLOCK_HEADER;
+            let quin_count = data_len / quin_size;
+            
+            let chunk = &buf[SUPERBLOCK_HEADER..SUPERBLOCK_HEADER + quin_count * quin_size];
+            let quins: &[NQuin] = bytemuck::cast_slice(chunk);
+            for q in quins {
+                if q.subject != 0 || q.predicate != 0 || q.object != 0 {
+                    all_quins.push(*q);
+                }
+            }
+        }
+    }
+    log::info!("[ontology_loader] loaded {} quins from unified volume {:?}", all_quins.len(), path);
+    all_quins
+}
+
 /// Load all startup ontologies into the daemon graph.
 ///
 /// Call this once, immediately after `daemon_graph::init_daemon_graph()`.
@@ -117,6 +149,17 @@ pub fn load_startup_ontologies() {
         }
         let quins = parse_ttl_to_quins(&path, *context);
         all_quins.extend(quins);
+    }
+
+    // Load any binary .q42 files present in the ontologies directory
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("q42") {
+                let quins = load_q42_file(&path);
+                all_quins.extend(quins);
+            }
+        }
     }
 
     crate::daemon_graph::extend_with_ontology_quins(all_quins);

@@ -19,7 +19,11 @@ pub struct CrdtResolver;
 impl CrdtResolver {
     /// Merges two conflicting mutations from the same logical Context graph.
     /// Returns the mathematically deterministically "winning" Quin.
-    pub fn resolve_lww(local: &NQuin, remote: &NQuin) -> NQuin {
+    pub fn resolve_lww(local: &NQuin, remote: &NQuin, is_sovereign_domain: bool) -> NQuin {
+        if is_sovereign_domain {
+            return local.clone(); // Bifurcated CRDT Logic: Protect the unalienable sovereign record from automated external merging.
+        }
+
         let local_clock = local.extract_lamport_clock();
         let remote_clock = remote.extract_lamport_clock();
 
@@ -86,7 +90,7 @@ mod tests {
         q_remote.set_lamport_clock(8); // Remote occurred later
 
         // Remote wins due to clock
-        let winner_clock = CrdtResolver::resolve_lww(&q_local, &q_remote);
+        let winner_clock = CrdtResolver::resolve_lww(&q_local, &q_remote, false);
         assert_eq!(
             winner_clock.object, 200,
             "CRDT failed to resolve higher lamport clock"
@@ -104,11 +108,32 @@ mod tests {
         q_concurrent.set_lamport_clock(5);
 
         // Tie-breaker falls to magnitude
-        let winner_tie = CrdtResolver::resolve_lww(&q_local, &q_concurrent);
+        let winner_tie = CrdtResolver::resolve_lww(&q_local, &q_concurrent, false);
         assert_eq!(
             winner_tie.object, 100,
             "CRDT failed deterministic tie-breaker"
         );
+    }
+
+    #[test]
+    fn test_crdt_bifurcation() {
+        let mut q_local = NQuin {
+            subject: 1, predicate: 2, object: 100, context: 5, metadata: 0, parity: 0,
+        };
+        q_local.set_lamport_clock(5);
+
+        let mut q_remote = NQuin {
+            subject: 1, predicate: 2, object: 200, context: 5, metadata: 0, parity: 0,
+        };
+        q_remote.set_lamport_clock(8); // Remote occurred later
+
+        // Normal sync (qp:Project Commons)
+        let winner_commons = CrdtResolver::resolve_lww(&q_local, &q_remote, false);
+        assert_eq!(winner_commons.object, 200, "CRDT failed to resolve higher lamport clock in Commons");
+
+        // Sovereign sync (wf: WellFair)
+        let winner_sovereign = CrdtResolver::resolve_lww(&q_local, &q_remote, true);
+        assert_eq!(winner_sovereign.object, 100, "CRDT failed to protect sovereign domain from external merge");
     }
 }
 

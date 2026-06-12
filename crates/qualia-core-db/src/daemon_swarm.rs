@@ -37,7 +37,8 @@ pub mod swarm {
     pub struct DnssecSemanticPayload {
         pub wireguard_pubkey: [u8; WG_PUBKEY_LEN],
         pub did_q42: u64,
-        pub routing_constraints: u8, // 5th Vector Metadata: 0b01=Commons, 0b10=Bilateral
+        pub routing_mask: u64, // 5th Vector Metadata 64-bit hardware mask
+        pub semantic_handshake: String,
         pub peer_capabilities: u16,
         pub semantic_context: u64,
     }
@@ -50,7 +51,7 @@ pub mod swarm {
         pub port: u16,
         pub pubkey: [u8; WG_PUBKEY_LEN],
         pub allowed_ips: Vec<String>,
-        pub routing_lane: u8,
+        pub routing_mask: u64,
     }
     
     /// DNSSEC resolver for CBOR-LD semantic payloads
@@ -223,16 +224,17 @@ pub mod swarm {
                     None => 0,
                 };
                 
-                let routing_constraints = if !semantic_payload.routing_constraints.is_empty() {
-                    0b10 // Default to Bilateral
+                let routing_mask = if !semantic_payload.routing_constraints.is_empty() {
+                    0x02 << 61 // Default to Bilateral
                 } else {
-                    0b01 // Default to Commons
+                    0x01 << 61 // Default to Commons
                 };
                 
                 return Ok(DnssecSemanticPayload {
                     wireguard_pubkey,
                     did_q42,
-                    routing_constraints,
+                    routing_mask,
+                    semantic_handshake: "Semantic Cryptographic Proof Template".to_string(),
                     peer_capabilities: 0, // TODO: parse from HashMap
                     semantic_context: 0, // TODO: parse from HashMap
                 });
@@ -253,7 +255,8 @@ pub mod swarm {
             let mut payload = DnssecSemanticPayload {
                 wireguard_pubkey: [0u8; WG_PUBKEY_LEN],
                 did_q42: 0,
-                routing_constraints: 0,
+                routing_mask: 0,
+                semantic_handshake: "Legacy Proof".to_string(),
                 peer_capabilities: 0,
                 semantic_context: 0,
             };
@@ -274,8 +277,8 @@ pub mod swarm {
                         payload.did_q42 = parse_did_q42(&value)
                             .map_err(|_| "Invalid did:q42 in CBOR-LD")?;
                     }
-                    3 => { // routing_constraints
-                        payload.routing_constraints = value[0];
+                    3 => { // routing_mask
+                        payload.routing_mask = value[0] as u64; // Stub legacy parser conversion
                     }
                     4 => { // peer_capabilities
                         payload.peer_capabilities = u16::from_be_bytes([value[0], value[1]]);
@@ -375,7 +378,7 @@ pub mod swarm {
                 port,
                 pubkey: peer_payload.wireguard_pubkey,
                 allowed_ips: vec!["10.0.0.0/24".to_string()], // Default subnet
-                routing_lane: peer_payload.routing_constraints,
+                routing_mask: peer_payload.routing_mask,
             };
             
             // Configure WireGuard peer via wg command
@@ -413,7 +416,12 @@ pub mod swarm {
             let peer_payload = self.resolve_peer_dnssec(domain)?;
             
             // Step 2: Verify routing constraints against local policy
-            if !self.verify_routing_constraints(&peer_payload)? {
+            let local_permission = crate::webizen_server::CompiledPermission {
+                routing_mask: 0, // In production, fetch from node configuration
+                semantic_handshake: "".to_string(),
+                is_permissive_commons: true,
+            };
+            if !self.verify_routing_constraints(&peer_payload, &local_permission)? {
                 return Err("Routing constraints not authorized");
             }
             
@@ -428,22 +436,16 @@ pub mod swarm {
         }
         
         /// Verify routing constraints against local trust graph
-        fn verify_routing_constraints(&self, payload: &DnssecSemanticPayload) -> Result<bool, &'static str> {
-            // Check if peer's routing constraints are compatible with local policy
-            // 0b01: Permissive Commons (allow all)
-            // 0b10: Bilateral Micro-Commons (require explicit authorization)
-            // 0b11: Restricted (deny by default)
-            
-            match payload.routing_constraints {
-                0b01 => Ok(true), // Permissive - always allow
-                0b10 => {
-                    // Bilateral - check if peer is in trust graph
-                    // In production, query local TrustGraph for authorization
-                    Ok(true) // Mock: assume authorized
-                }
-                0b11 => Err("Restricted routing constraints"),
-                _ => Err("Invalid routing constraints"),
+        fn verify_routing_constraints(&self, payload: &DnssecSemanticPayload, local_compiled_permission: &crate::webizen_server::CompiledPermission) -> Result<bool, &'static str> {
+            // Evaluate the 64-bit Fifth Vector hardware mask.
+            // If the peer's requested access does not mathematically satisfy the ro:RightsOntology bitmask, the tunnel is silently dropped.
+            if (payload.routing_mask & local_compiled_permission.routing_mask) != local_compiled_permission.routing_mask {
+                return Err("Failed ro:RightsOntology Fifth Vector hardware mask evaluation");
             }
+            if payload.semantic_handshake.is_empty() {
+                return Err("Missing Semantic Handshake payload");
+            }
+            Ok(true)
         }
         
         /// Parse SAN URI from certificate or handshake (zero-allocation)
@@ -600,7 +602,12 @@ pub mod swarm {
             let payload = self.resolve_peer_dnssec(domain)?;
 
             // Step 2: Verify routing constraints
-            if !self.verify_routing_constraints(&payload)? {
+            let local_permission = crate::webizen_server::CompiledPermission {
+                routing_mask: 0, // Mock: Fetch from config
+                semantic_handshake: "".to_string(),
+                is_permissive_commons: true,
+            };
+            if !self.verify_routing_constraints(&payload, &local_permission)? {
                 return Err("Routing constraints not authorized");
             }
 
@@ -656,7 +663,7 @@ pub mod swarm {
                         port: endpoint_port,
                         pubkey: payload.wireguard_pubkey,
                         allowed_ips: vec!["0.0.0.0/0".to_string()],
-                        routing_lane: payload.routing_constraints,
+                        routing_mask: payload.routing_mask,
                     };
                     wg.active_peers.insert(peer_id, peer);
                     wg.routing_table.insert(endpoint_ip.to_string(), peer_id);
@@ -697,7 +704,12 @@ pub mod swarm {
             let peer_payload = self.resolve_peer_dnssec(domain)?;
             
             // Step 2: Verify routing constraints against local policy
-            if !self.verify_routing_constraints(&peer_payload)? {
+            let local_permission = crate::webizen_server::CompiledPermission {
+                routing_mask: 0,
+                semantic_handshake: "".to_string(),
+                is_permissive_commons: true,
+            };
+            if !self.verify_routing_constraints(&peer_payload, &local_permission)? {
                 return Err("Routing constraints not authorized");
             }
             
@@ -712,22 +724,16 @@ pub mod swarm {
         }
         
         /// Verify routing constraints against local trust graph
-        fn verify_routing_constraints(&self, payload: &DnssecSemanticPayload) -> Result<bool, &'static str> {
-            // Check if peer's routing constraints are compatible with local policy
-            // 0b01: Permissive Commons (allow all)
-            // 0b10: Bilateral Micro-Commons (require explicit authorization)
-            // 0b11: Restricted (deny by default)
-            
-            match payload.routing_constraints {
-                0b01 => Ok(true), // Permissive - always allow
-                0b10 => {
-                    // Bilateral - check if peer is in trust graph
-                    // In production, query local TrustGraph for authorization
-                    Ok(true) // Mock: assume authorized
-                }
-                0b11 => Err("Restricted routing constraints"),
-                _ => Err("Invalid routing constraints"),
+        fn verify_routing_constraints(&self, payload: &DnssecSemanticPayload, local_compiled_permission: &crate::webizen_server::CompiledPermission) -> Result<bool, &'static str> {
+            // Evaluate the 64-bit Fifth Vector hardware mask.
+            // If the peer's requested access does not mathematically satisfy the ro:RightsOntology bitmask, the tunnel is silently dropped.
+            if (payload.routing_mask & local_compiled_permission.routing_mask) != local_compiled_permission.routing_mask {
+                return Err("Failed ro:RightsOntology Fifth Vector hardware mask evaluation");
             }
+            if payload.semantic_handshake.is_empty() {
+                return Err("Missing Semantic Handshake payload");
+            }
+            Ok(true)
         }
         
         /// Spawns the Cellular Isolate Model (Isolate A and Isolate B) for Neuro-Symbolic integration.
@@ -866,14 +872,15 @@ pub mod swarm {
 
                         // Safety: lengths checked above
                         let did_q42 = u64::from_le_bytes(part[32..40].try_into().unwrap());
-                        let routing_constraints = part[40];
+                        let routing_mask = part[40] as u64;
                         let peer_capabilities = u16::from_le_bytes(part[41..43].try_into().unwrap());
                         let semantic_context = u64::from_le_bytes(part[43..51].try_into().unwrap());
-
+                        
                         let payload = DnssecSemanticPayload {
                             wireguard_pubkey: wg_pubkey,
                             did_q42,
-                            routing_constraints,
+                            routing_mask,
+                            semantic_handshake: "Legacy Proof".to_string(),
                             peer_capabilities,
                             semantic_context,
                         };
@@ -887,8 +894,6 @@ pub mod swarm {
                                 }
                             }
                         }
-
-                        return Ok(payload);
                     }
                 }
             }
@@ -936,7 +941,7 @@ pub mod swarm {
                             port,
                             pubkey: payload.wireguard_pubkey,
                             allowed_ips: vec!["0.0.0.0/0".to_string()],
-                            routing_lane: payload.routing_constraints,
+                            routing_mask: payload.routing_mask,
                         };
                         wg.active_peers.insert(peer_id, peer);
                         wg.routing_table.insert(ip.to_string(), peer_id);

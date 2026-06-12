@@ -4,6 +4,7 @@ mod pane_registry;
 mod studio_canvas;
 mod theme_engine;
 pub mod components;
+pub mod telemetry;
 
 use dioxus::prelude::*;
 use studio_canvas::DynamicPage;
@@ -35,6 +36,8 @@ const INTER_FONT: &str = "https://fonts.googleapis.com/css2?family=Inter:wght@30
 
 #[component]
 fn App() -> Element {
+    telemetry::use_telemetry();
+
     rsx! {
         // Inject Shoelace & Fonts
         document::Link { rel: "stylesheet", href: SHOELACE_CSS }

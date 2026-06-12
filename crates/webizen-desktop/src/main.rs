@@ -9,9 +9,9 @@ use tauri::{Manager, SystemTray, SystemTrayMenu, SystemTrayMenuItem, CustomMenuI
 pub mod commands;
 pub use commands::*;
 
-pub use commands::*;
 use qualia_client_core::qapp_registry::QAPPS_DIR;
 use qualia_client_core::state::{dirs_default_path, init_app_state, AppState};
+use tokio::sync::broadcast;
 
 fn main() {
     let app_state = init_app_state();
@@ -22,69 +22,48 @@ fn main() {
     let vault_for_daemon = app_state.key_vault.clone();
 
     // Create system tray menu
-    let show = CustomMenuItem::new("show".to_string(), "Show Window");
-    let hide = CustomMenuItem::new("hide".to_string(), "Hide Window");
+    let show = CustomMenuItem::new("show".to_string(), "Open Webizen Studio");
     let settings = CustomMenuItem::new("settings".to_string(), "Settings");
     let logs = CustomMenuItem::new("logs".to_string(), "View Logs");
+    let revoke = CustomMenuItem::new("revoke".to_string(), "Revoke Sessions");
     let daemon_status = CustomMenuItem::new("daemon_status".to_string(), "Daemon Status");
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
 
     let tray_menu = SystemTrayMenu::new()
         .add_item(show)
-        .add_item(hide)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(settings)
         .add_item(logs)
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(revoke)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(daemon_status)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(quit);
 
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(100);
+    let tx_for_tray = tx.clone();
+
     let system_tray = SystemTray::new().with_menu(tray_menu);
 
     tauri::Builder::default()
         .system_tray(system_tray)
-        .on_system_tray_event(|app, event| match event {
+        .on_system_tray_event(move |app, event| match event {
             SystemTrayEvent::LeftClick {
-                position: _,
-                size: _,
                 ..
             } => {
-                let window = app.get_window("main").unwrap();
-                if window.is_visible().unwrap() {
-                    let _ = window.hide();
-                } else {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
+                let _ = open::that("http://127.0.0.1:4567/");
             }
             SystemTrayEvent::MenuItemClick { id, .. } => {
-                let window = app.get_window("main").unwrap();
                 match id.as_str() {
-                    "show" => {
-                        let _ = window.show();
-                        let _ = window.set_focus();
+                    "show" | "settings" | "logs" => {
+                        let _ = open::that("http://127.0.0.1:4567/");
                     }
-                    "hide" => {
-                        let _ = window.hide();
-                    }
-                    "settings" => {
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                        // Navigate to settings page
-                        let _ = window.eval("window.location.href = '/settings'");
-                    }
-                    "logs" => {
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                        // Navigate to settings page and show logs
-                        let _ = window.eval("window.location.href = '/settings'; setTimeout(() => { document.querySelector('button:nth-child(2)')?.click(); }, 100)");
+                    "revoke" => {
+                        let _ = tx_for_tray.try_send("REVOKE".to_string());
                     }
                     "daemon_status" => {
-                        // Show daemon status in a simple alert
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                        let _ = window.eval("alert('Daemon Status: Running on port 4242\\n\\nThis feature will show detailed daemon health information in a future update.')");
+                        // We could show a simple native notification here in the future
                     }
                     "quit" => {
                         std::process::exit(0);
@@ -121,13 +100,6 @@ fn main() {
             }
         })
         .manage(app_state)
-        // Hide to tray when the window is closed rather than quitting
-        .on_window_event(|event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event.event() {
-                event.window().hide().unwrap();
-                api.prevent_close();
-            }
-        })
         .setup(move |app| {
             let handle = app.handle();
 
@@ -192,11 +164,17 @@ fn main() {
 
             tauri::async_runtime::spawn(async move {
                 *flag.lock().unwrap() = true;
-                // Update tray item to show daemon is live
                 if let Some(item) = tray_h.tray_handle().try_get_item("daemon_status") {
                     let _ = item.set_title(&format!("Daemon: running (:{})", final_port));
                 }
-                qualia_core_db::daemon::start_local_daemon(final_port, vault_clone).await;
+                
+                let control_tx = qualia_core_db::daemon::start_local_daemon_with_options(final_port, false, vault_clone).await;
+                
+                // Forward tray commands to daemon
+                while let Some(cmd) = rx.recv().await {
+                    let _ = control_tx.send(cmd).await;
+                }
+                
                 *flag.lock().unwrap() = false;
                 if let Some(item) = tray_h.tray_handle().try_get_item("daemon_status") {
                     let _ = item.set_title("Daemon: stopped");

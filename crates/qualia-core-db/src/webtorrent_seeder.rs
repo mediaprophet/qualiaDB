@@ -43,6 +43,7 @@ pub struct SeedRecord {
     pub bytes_uploaded_total: u64,
     pub bytes_uploaded_session: u64,
     pub download_count: u64,
+    pub deprecated: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -92,7 +93,7 @@ pub fn ensure_magnet_webseed(
     build_magnet_uri(info_hash, display_name, port)
 }
 
-fn sha1_file(path: &Path) -> Result<String, String> {
+pub fn sha1_file(path: &Path) -> Result<String, String> {
     use sha1::{Digest, Sha1};
     let mut file = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut hasher = Sha1::new();
@@ -141,6 +142,7 @@ pub fn register_seed(req: RegisterSeedRequest) -> Result<SeedRecord, String> {
         bytes_uploaded_total: 0,
         bytes_uploaded_session: 0,
         download_count: 0,
+        deprecated: false,
     };
     registry().write().unwrap().insert(hash, record.clone());
     println!(
@@ -153,6 +155,17 @@ pub fn register_seed(req: RegisterSeedRequest) -> Result<SeedRecord, String> {
 pub fn unregister_seed(info_hash: &str) -> bool {
     let hash = normalize_info_hash(info_hash);
     registry().write().unwrap().remove(&hash).is_some()
+}
+
+pub fn deprecate_seed(info_hash: &str) -> bool {
+    let hash = normalize_info_hash(info_hash);
+    if let Some(rec) = registry().write().unwrap().get_mut(&hash) {
+        rec.deprecated = true;
+        // DHT Caching for intermittent connections: We retain the record to resume seeding
+        // seamlessly if the node drops offline and reconnects, but mark it as deprecated.
+        return true;
+    }
+    false
 }
 
 pub fn list_active_seeds() -> Vec<SeedRecord> {

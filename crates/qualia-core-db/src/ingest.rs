@@ -26,6 +26,7 @@ pub struct RawTriple {
     pub subject: String,
     pub predicate: String,
     pub object: String,
+    pub packed_object: Option<u64>,
 }
 
 pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u64> {
@@ -57,7 +58,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
             for triple in rx {
                 let s_hash = q_hash(&triple.subject);
                 let p_hash = q_hash(&triple.predicate);
-                let o_hash = q_hash(&triple.object) & OBJECT_HASH_MASK;
+                let o_hash = triple.packed_object.unwrap_or_else(|| q_hash(&triple.object) & OBJECT_HASH_MASK);
                 let context = 0u64;
                 let metadata = 0u64;
                 let parity = s_hash ^ p_hash ^ o_hash ^ context ^ metadata;
@@ -263,11 +264,44 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
         let subject = t.subject.to_string();
         let predicate = t.predicate.to_string();
         let object = t.object.to_string();
+        let mut packed_object = None;
+
+        if let rio_api::model::Term::Literal(rio_api::model::Literal::Typed { value, datatype }) = t.object {
+            let dt = datatype.iri;
+            if dt == "http://www.w3.org/2001/XMLSchema#integer" {
+                if let Ok(num) = value.parse::<i64>() {
+                    let max_val = (1i64 << 59) - 1;
+                    let min_val = -(1i64 << 59);
+                    if num >= min_val && num <= max_val {
+                        let unsigned = (num as u64) & crate::resolver::INLINE_VALUE_MASK;
+                        packed_object = Some(crate::resolver::INLINE_TAG_INTEGER | unsigned);
+                    }
+                }
+            } else if dt == "http://www.w3.org/2001/XMLSchema#decimal" {
+                if let Ok(num) = value.parse::<f64>() {
+                    let scaled = num * 1_000_000.0;
+                    let max_val = ((1i64 << 59) - 1) as f64;
+                    let min_val = (-(1i64 << 59)) as f64;
+                    if scaled >= min_val && scaled <= max_val {
+                        let num_i64 = scaled.round() as i64;
+                        let unsigned = (num_i64 as u64) & crate::resolver::INLINE_VALUE_MASK;
+                        packed_object = Some(crate::resolver::INLINE_TAG_DECIMAL | unsigned);
+                    }
+                }
+            } else if dt == "http://www.w3.org/2001/XMLSchema#boolean" {
+                if value == "true" || value == "1" {
+                    packed_object = Some(crate::resolver::INLINE_TAG_BOOLEAN | 1);
+                } else if value == "false" || value == "0" {
+                    packed_object = Some(crate::resolver::INLINE_TAG_BOOLEAN | 0);
+                }
+            }
+        }
 
         let raw = RawTriple {
             subject,
             predicate,
             object,
+            packed_object,
         };
         if tx_raw.send(raw).is_ok() {
             triples_read += 1;
@@ -326,6 +360,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
                         subject,
                         predicate,
                         object,
+                        packed_object: None,
                     };
                     if tx_raw.send(raw).is_ok() {
                         triples_read += 1;

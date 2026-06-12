@@ -135,7 +135,41 @@ pub fn ingest_rdf_xml(
 
             let sh = hash_token(&s);
             let ph = hash_token(&p);
-            let oh = hash_token(&o);
+            
+            let mut oh = None;
+
+            if let rio_api::model::Term::Literal(rio_api::model::Literal::Typed { value, datatype }) = t.object {
+                let dt = datatype.iri;
+                if dt == "http://www.w3.org/2001/XMLSchema#integer" {
+                    if let Ok(num) = value.parse::<i64>() {
+                        let max_val = (1i64 << 59) - 1;
+                        let min_val = -(1i64 << 59);
+                        if num >= min_val && num <= max_val {
+                            let unsigned = (num as u64) & qualia_core_db::resolver::INLINE_VALUE_MASK;
+                            oh = Some(qualia_core_db::resolver::INLINE_TAG_INTEGER | unsigned);
+                        }
+                    }
+                } else if dt == "http://www.w3.org/2001/XMLSchema#decimal" {
+                    if let Ok(num) = value.parse::<f64>() {
+                        let scaled = num * 1_000_000.0;
+                        let max_val = ((1i64 << 59) - 1) as f64;
+                        let min_val = (-(1i64 << 59)) as f64;
+                        if scaled >= min_val && scaled <= max_val {
+                            let num_i64 = scaled.round() as i64;
+                            let unsigned = (num_i64 as u64) & qualia_core_db::resolver::INLINE_VALUE_MASK;
+                            oh = Some(qualia_core_db::resolver::INLINE_TAG_DECIMAL | unsigned);
+                        }
+                    }
+                } else if dt == "http://www.w3.org/2001/XMLSchema#boolean" {
+                    if value == "true" || value == "1" {
+                        oh = Some(qualia_core_db::resolver::INLINE_TAG_BOOLEAN | 1);
+                    } else if value == "false" || value == "0" {
+                        oh = Some(qualia_core_db::resolver::INLINE_TAG_BOOLEAN | 0);
+                    }
+                }
+            }
+
+            let oh = oh.unwrap_or_else(|| hash_token(&o) & 0x0FFF_FFFF_FFFF_FFFF);
 
             sorter.push(NQuin {
                 subject: sh,

@@ -171,7 +171,7 @@ Qualia-DB explicitly rejects the infinite rent-seeking paradigm of the legacy we
 
 Qualia-DB ships with three tightly-bound human-facing interfaces:
 
-1. **Webizen Studio (`crates/qualia-studio/`)** — The primary desktop shell and Webizen environment (Windows, macOS, Linux). Built natively in Rust using Dioxus 0.5 and harvested Shoelace web components, bypassing legacy Node.js/React overhead. It provides a flexible pane registry system housing a Neuro-Symbolic Chat (`chat_graph`), LLM Engine harness (`llm_harness`), Vital Monitor (`health_monitor`), and an Ontology Builder (`personal_ontology`) designed to let people define personal ontological axioms via natural language. Webizen Studio replaces both the older Node.js/React prototypes and the Flutter desktop application.
+1. **Webizen Studio (`crates/webizen-studio/`)** — The primary desktop shell and Webizen environment (Windows, macOS, Linux). Built natively in Rust using Dioxus 0.5 and harvested Shoelace web components, bypassing legacy Node.js/React overhead. It provides a flexible pane registry system housing a Neuro-Symbolic Chat (`chat_graph`), LLM Engine harness (`llm_harness`), Vital Monitor (`health_monitor`), and an Ontology Builder (`personal_ontology`) designed to let people define personal ontological axioms via natural language. Webizen Studio replaces both the older Node.js/React prototypes and the Flutter desktop application.
 
 2. **Qualia CLI (`crates/qualia-cli`)** — The primary toolchain for data ingestion, benchmarking, daemon management, capability profile compilation, and resource catalog operations.
 

@@ -204,7 +204,7 @@ pub extern "C" fn extension_manager_execute_job(
 #[no_mangle]
 pub extern "C" fn extension_manager_free(manager: *mut ExtensionManager) {
     if !manager.is_null() {
-        unsafe { Box::from_raw(manager); }
+        unsafe { let _ = Box::from_raw(manager); }
     }
 }
 

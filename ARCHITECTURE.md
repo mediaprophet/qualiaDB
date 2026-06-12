@@ -102,7 +102,7 @@ into `.q42` vaults.
 - **Profile-bound ingestion**: `qualia ingest --profile <file>.qchk` binds a `CapabilityProfile` for the ingest session, restricting available opcodes and ontologies.
 
 > ⚠ **Capability envelope migration**: CogAI Chunks remain `.chk` text inputs. QCHK capability envelopes are migrating to `.qchk`; legacy `.chk` QCHK files are compatibility-only and should be renamed over time. The `QCHK` magic bytes (`0x51 0x43 0x48 0x4B`) still identify the binary profile payload.
-- **Zero-Allocation Parsing**: Values are hashed directly into Quins using FNV-1a; no intermediate string representation enters the engine.
+- **Zero-Allocation Parsing**: Values are hashed directly into Quins using FNV-1a; no intermediate string representation enters the core engine. For recognized typed literals (`xsd:integer`, `xsd:decimal`, `xsd:boolean`), values are intercepted during the ingest parsing callback and packed natively into the 60-bit payload using fixed-point math and two's complement boundaries, completely eliminating string allocations for supported scalar values.
 - **Sort-First Ingestor**: Before SuperBlock emission, Quins are sorted by subject hash for BIDX-indexable output.
 - **Multi-Pass External Sorter**: Handles datasets larger than RAM by buffering ~50 MB chunks, sorting, and flushing to disk. A K-way merge emits the final sorted `.q42` stream.
 - **BIDX Indexing**: A `.q42.bidx` sidecar is generated alongside every `.q42` file.
@@ -1273,3 +1273,15 @@ SAI is planned as the primary mechanism for Qualia-to-Qualia and Qualia-to-Solid
 ### 41-H. Planned: Inbound Solid Pod Import
 
 Reading an LDP container from a Solid server (HTTP `GET` with `text/turtle`, parse via `rio_turtle`, ingest Quins into `.q42`) is the symmetric counterpart to the existing export. The `rio_turtle` parser dependency is already present in `Cargo.toml`. Requires Solid-OIDC or DID-challenge-response authentication to access protected containers.
+
+---
+
+## 42. SocialWebNet & Fiduciary Supremacy
+
+**Fiduciary Supremacy**: The edge device (e.g., mobile phone or WASM app) merely acts as a lens. The native node retains ultimate sovereignty over consumption and data sharing. Private keys and the WireGuard network stack reside exclusively on the native installation.
+
+**Sanctuary Mode**: A bare-metal lockdown state enforced by the daemon (`webizen_server.rs`). When engaged, all `window.webizen` RPC requests targeting `/sovereign` paths are categorically denied (`423 Locked`). This guarantees data remains strictly locked down even if commons seeding continues intermittently.
+
+**Fifth Vector Routing**: Peer connections are bootstrapped via `daemon_swarm.rs`. DNSSEC TXT records provide `DnssecSemanticPayload` capabilities and a `routing_mask`. Before establishing a WireGuard tunnel, the incoming routing mask is evaluated against the node's `CompiledPermission` bitmask.
+
+**CRDT Bifurcation**: In `crdt.rs`, automatic Last-Writer-Wins (LWW) Lamport clock merging is restricted to Permissive Commons domains (e.g., `qp:`). Sovereign domains such as `wf:` (WellFair) require explicit Tri-Party Consent and bypass automated consensus merging to enforce Fiduciary Supremacy.

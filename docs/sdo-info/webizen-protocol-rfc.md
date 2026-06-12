@@ -77,6 +77,9 @@ libp2p request-response protocol rather than a fully standardized WebRTC mesh.
 This section should therefore be read as an architectural direction, not as the
 final statement of the implemented sync grammar.
 
+### 3.4 Fiduciary Supremacy and SocialWebNet
+The SocialWebNet network stack (including WireGuard tunnels) operates **exclusively** on native node installations. Mobile and WASM web-app clients act merely as a lens and must rely on the native backend via the `window.webizen` RPC bridge. This ensures that private keys never sit in vulnerable mobile memory space, fully realizing Fiduciary Supremacy. During **Sanctuary Mode**, the native node categorically severs access to sovereign data paths (`/sovereign`), protecting the user even during immersive field research with intermittent connectivity.
+
 ---
 
 ## 4. The Permissive Commons Framework
@@ -100,12 +103,15 @@ The Webizen Protocol utilizes a **Hybrid `.q42` Ledger** approach to Decentraliz
 - The `.q42` graph contains the Permissive Commons **Compute Bounties** (the economic and legal rules), accompanied by a WebTorrent Magnet URI pointing to a standard dense ML model (e.g., `.gguf`).
 - When a user's device goes to sleep, if their **Energy Circumstance** allows (e.g., connected to grid power, or off-grid solar batteries are at 100% capacity), the Daemon spins up a **Sleep-Cycle Assembly**. It downloads the model, runs the inference utilizing Fractal GPU Sharding, and submits the cryptographic proof-of-work back to the ledger to earn Lightning micropayments.
 
-### 4.4 Neurosymbolic LLM Override (Axiomatic Spatio-Temporal Intercept)
+### 4.5 Neurosymbolic LLM Override (Axiomatic Spatio-Temporal Intercept)
 When executing Large Language Models from the Permissive Commons, Webizens are not subjected to the black-box hallucinations or generic vector biases of connectionist AI. 
 The protocol enforces a **Neurosymbolic Intercept**:
 - The exact procedural vector matrices of the LLM are mapped into 48-byte `.q42` Quins.
 - Local Webizens define strict **Spatio-Temporal Qualia Contexts** (e.g., `time=1920`, `location=australia`).
 - As the opaque LLM executes natively on the device, the Webizen VM actively monitors the procedural path. If an execution triggers a vector that violates a local Symbolic Axiom (e.g., "thongs" meaning underwear vs. footwear in Australia), the Webizen VM mathematically clips and overrides the active tensor in real-time. This forces the LLM to instantly obey the human-defined, localized boundaries of the Permissive Commons.
+
+### 4.6 Tri-Party Access and WellFair (`wf:`) Domains
+Data stored under the `wf:` (WellFair) domain—covering health, social work, emergency medicine, and legal information—requires strict Tri-Party Authorization. To enforce this, the underlying Qualia-DB engine uses a **bifurcated CRDT consensus** model. Unlike Commons data (`qp:`), which uses Lamport Clock LWW merging, `wf:` data bypasses automated multi-agent merges entirely. Every Tri-Party Access request must be manually authorized by the user via the `window.webizen` bridge.
 
 ### 4.5 Open Directives (Pending Integration)
 The following topics require precise definition based on historical Permissive Commons models:

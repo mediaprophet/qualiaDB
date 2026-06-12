@@ -122,3 +122,76 @@ pub fn rehydrate_solution(matrix: &mut QuboMatrix, assignment: &[u8], out: &mut 
     }
     count
 }
+
+/// Scrub personal URIs from index_map to ensure no sovereign data leaks
+pub fn scrub_metadata(matrix: &mut QuboMatrix) {
+    matrix.index_map.clear();
+    matrix.index_count = 0;
+}
+
+/// Serialize QuboMatrix to multi-dimensional HDF5-like format
+pub fn serialize_matrix(matrix: &QuboMatrix) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"HDF5_Q42_MAGIC");
+    bytes.extend_from_slice(&(matrix.num_vars as u64).to_le_bytes());
+    bytes.extend_from_slice(&(matrix.coupler_count as u64).to_le_bytes());
+    for &val in &matrix.linear {
+        bytes.extend_from_slice(&val.to_le_bytes());
+    }
+    for coupler in &matrix.couplers {
+        bytes.extend_from_slice(&(coupler.var_a as u64).to_le_bytes());
+        bytes.extend_from_slice(&(coupler.var_b as u64).to_le_bytes());
+        bytes.extend_from_slice(&coupler.weight.to_le_bytes());
+    }
+    bytes
+}
+
+/// Publish a solved matrix to the WebTorrent Commons
+pub fn publish_to_commons(matrix: &mut QuboMatrix, storage_path: &std::path::Path) -> Result<String, String> {
+    scrub_metadata(matrix);
+    let bytes = serialize_matrix(matrix);
+    
+    let commons_dir = storage_path.join("commons");
+    std::fs::create_dir_all(&commons_dir).map_err(|e| e.to_string())?;
+    
+    let file_path = commons_dir.join("quantum_cache.q42");
+    std::fs::write(&file_path, bytes).map_err(|e| e.to_string())?;
+    
+    let info_hash = crate::webtorrent_seeder::sha1_file(&file_path)?;
+    let req = crate::webtorrent_seeder::RegisterSeedRequest {
+        info_hash: info_hash.clone(),
+        file_path: file_path.to_str().unwrap().to_string(),
+        display_name: "quantum_cache.q42".to_string(),
+        ontology_id: "quantum_commons".to_string(),
+        bandwidth_limit_kbps: 1024,
+    };
+    
+    // Check if there is an existing seed and deprecate it
+    if let Some(_existing) = crate::webtorrent_seeder::lookup_seed(&info_hash) {
+        crate::webtorrent_seeder::deprecate_seed(&info_hash);
+    }
+    
+    crate::webtorrent_seeder::register_seed(req)?;
+    Ok(crate::webtorrent_seeder::build_magnet_uri(&info_hash, "quantum_cache.q42", 4242))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_rigorous_metadata_scrubbing() {
+        let mut matrix = QuboMatrix::new(2);
+        // Inject mock personal URI data
+        matrix.index_map.push((12345, 67890));
+        matrix.index_count = 1;
+        
+        // Scrub
+        scrub_metadata(&mut matrix);
+        
+        // Assert no traces of personal URIs
+        assert_eq!(matrix.index_count, 0);
+        assert!(matrix.index_map.is_empty(), "Index map was not fully scrubbed!");
+    }
+}

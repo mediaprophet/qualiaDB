@@ -3,7 +3,7 @@
 //! Command-line interface for managing and interacting with QualiaDB extensions.
 
 use clap::{Parser, Subcommand};
-use qualia_extensions::{ExtensionManager, QpuExtension, PinnExtension, WebGpuExtension};
+use qualia_extensions::{ExtensionManager, qpu_extension::QpuExtension, pinn_extension::PinnExtension, webgpu_extension::WebGpuExtension};
 use serde_json;
 use std::collections::HashMap;
 use tokio::net::TcpStream;

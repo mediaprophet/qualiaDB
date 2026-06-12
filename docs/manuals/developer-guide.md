@@ -126,14 +126,14 @@ QCHK (`.qchk`) binary bundles declare the allowed engine operations and ontology
 
 ## Webizen Studio (Desktop App)
 
-The `crates/qualia-studio/` package is the new primary desktop application (Windows, macOS, Linux) built using native Rust, Dioxus 0.5, and Shoelace web components. It entirely bypasses legacy Node.js/React and Flutter overhead.
+The `crates/webizen-studio/` package is the new primary desktop application (Windows, macOS, Linux) built using native Rust, Dioxus 0.5, and Shoelace web components. It entirely bypasses legacy Node.js/React and Flutter overhead.
 
 ### Architecture
 
 Webizen Studio employs a pane-based architecture managed via a central `PaneRegistry`. UI components are harvested from Shoelace into native Rust Dioxus components using the `webizen-component-harvester`.
 
 ```text
-crates/qualia-studio/
+crates/webizen-studio/
   ├── src/main.rs                ← Application entry point & router
   ├── src/pane_registry.rs       ← Registry of available panes
   ├── src/studio_canvas.rs       ← Main workspace managing active panes
@@ -156,7 +156,7 @@ To add a new pane to the studio environment:
 ### Running in Development
 
 ```bash
-cd crates/qualia-studio
+cd crates/webizen-studio
 dx serve --platform desktop
 ```
 
