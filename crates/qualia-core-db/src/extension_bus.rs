@@ -180,3 +180,138 @@ impl ExtensionBus {
         Ok(format!("Asset provisioned successfully at {:?}", target_file))
     }
 }
+
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_bus {
+    use std::cell::RefCell;
+    use wasm_bindgen::prelude::*;
+    use wasm_bindgen::JsCast;
+    use web_sys::{ErrorEvent, Event, MessageEvent, WebSocket};
+    use serde::{Serialize, Deserialize};
+
+    thread_local! {
+        pub static EXTENSION_BUS: RefCell<Option<ExtensionBusState>> = RefCell::new(None);
+    }
+
+    pub struct ExtensionBusState {
+        pub ws: WebSocket,
+        pub on_open: Closure<dyn FnMut(Event)>,
+        pub on_message: Closure<dyn FnMut(MessageEvent)>,
+        pub on_error: Closure<dyn FnMut(ErrorEvent)>,
+        pub on_close: Closure<dyn FnMut(Event)>,
+        pub is_authenticated: bool,
+        pub active_token_callback: Option<Box<dyn FnMut(String)>>,
+    }
+
+    #[derive(Serialize)]
+    struct ChallengePayload {
+        pub challenge: String,
+        pub did: String,
+    }
+
+    #[derive(Serialize)]
+    struct IntentPayload {
+        pub rpc: String,
+        pub prompt: String,
+        pub graph_context: String,
+        pub signature: String,
+    }
+
+    pub fn init_extension_bus(did: String) -> Result<(), JsValue> {
+        let ws = WebSocket::new("ws://127.0.0.1:4242")?;
+        
+        let ws_clone = ws.clone();
+        let did_clone = did.clone();
+        
+        let on_open = Closure::wrap(Box::new(move |_e: Event| {
+            let payload = ChallengePayload {
+                challenge: "did:q42".into(),
+                did: did_clone.clone(),
+            };
+            if let Ok(json) = serde_json::to_string(&payload) {
+                let _ = ws_clone.send_with_str(&json);
+            }
+        }) as Box<dyn FnMut(Event)>);
+        ws.set_onopen(Some(on_open.as_ref().unchecked_ref()));
+
+        let on_message = Closure::wrap(Box::new(move |e: MessageEvent| {
+            if let Ok(txt) = e.data().dyn_into::<js_sys::JsString>() {
+                let s: String = txt.into();
+                // Parse the response
+                if s.contains("\"authenticated\":true") {
+                    EXTENSION_BUS.with(|bus| {
+                        if let Some(state) = bus.borrow_mut().as_mut() {
+                            state.is_authenticated = true;
+                        }
+                    });
+                } else if s.contains("\"token\":") || s.contains("\"text\":") {
+                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
+                        if let Some(text) = v.get("text").and_then(|t| t.as_str()) {
+                            EXTENSION_BUS.with(|bus| {
+                                if let Some(state) = bus.borrow_mut().as_mut() {
+                                    if let Some(ref mut cb) = state.active_token_callback {
+                                        cb(text.to_string());
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }) as Box<dyn FnMut(MessageEvent)>);
+        ws.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
+
+        let on_error = Closure::wrap(Box::new(move |_e: ErrorEvent| {
+            // Placeholder for error telemetry
+        }) as Box<dyn FnMut(ErrorEvent)>);
+        ws.set_onerror(Some(on_error.as_ref().unchecked_ref()));
+        
+        let on_close = Closure::wrap(Box::new(move |_e: Event| {
+            EXTENSION_BUS.with(|bus| {
+                *bus.borrow_mut() = None;
+            });
+        }) as Box<dyn FnMut(Event)>);
+        ws.set_onclose(Some(on_close.as_ref().unchecked_ref()));
+
+        EXTENSION_BUS.with(|bus| {
+            *bus.borrow_mut() = Some(ExtensionBusState {
+                ws,
+                on_open,
+                on_message,
+                on_error,
+                on_close,
+                is_authenticated: false,
+                active_token_callback: None,
+            });
+        });
+
+        Ok(())
+    }
+
+    pub fn is_connected() -> bool {
+        EXTENSION_BUS.with(|bus| {
+            bus.borrow().as_ref().map(|s| s.is_authenticated).unwrap_or(false)
+        })
+    }
+
+    pub fn send_intent<F: FnMut(String) + 'static>(prompt: &str, graph_context: &str, on_token: F) -> Result<(), String> {
+        let payload = IntentPayload {
+            rpc: "infer_local_model".into(),
+            prompt: prompt.to_string(),
+            graph_context: graph_context.to_string(),
+            signature: "did:q42:active".into(), 
+        };
+        let intent_json = serde_json::to_string(&payload).unwrap_or_default();
+        
+        EXTENSION_BUS.with(|bus| {
+            if let Some(state) = bus.borrow_mut().as_mut() {
+                if state.is_authenticated {
+                    state.active_token_callback = Some(Box::new(on_token));
+                    state.ws.send_with_str(&intent_json).map_err(|e| format!("{:?}", e))?;
+                    return Ok(());
+                }
+            }
+            Err("Not connected or authenticated".into())
+        })
+    }
+}

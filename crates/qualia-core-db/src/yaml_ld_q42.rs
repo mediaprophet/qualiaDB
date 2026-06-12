@@ -36,7 +36,7 @@ impl<'a> YamlStreamingLexer<'a> {
     }
 }
 
-/// A fully structured Mindware Workspace, typically deserialized from yaml-ld-q42
+/// A fully structured Webizen Studio workspace, typically deserialized from yaml-ld-q42.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WebizenWorkspace {
     pub pages: Vec<Page>,

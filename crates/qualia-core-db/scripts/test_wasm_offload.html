@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Qualia WASM Offload Verification</title>
+    <style>
+        body { font-family: system-ui; background: #0a0a0a; color: #eee; padding: 2rem; }
+        #log { background: #111; border: 1px solid #333; padding: 1rem; height: 200px; overflow-y: auto; font-family: monospace; }
+        #spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #0ff; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <h2>WASM Offload Non-Blocking Test</h2>
+    <p>This test ensures that while `infer_local_model_streaming` is offloaded over the Extension Bus, the browser's main thread remains fully responsive.</p>
+    
+    <div>
+        <strong>Main Thread Status: </strong>
+        <span id="spinner"></span>
+        <span id="fps">FPS: 60</span>
+    </div>
+    <br>
+    
+    <button id="runBtn" style="padding: 0.5rem 1rem; background: #0ff; color: #000; font-weight: bold; cursor: pointer;">
+        Trigger WASM Offload Inference
+    </button>
+    
+    <div style="margin-top: 1rem;">
+        <strong>LLM Output Stream:</strong>
+        <div id="log"></div>
+    </div>
+
+    <!-- 
+      In a real test, this script would load the WASM module exported by wasm-pack.
+      We simulate the exact architectural contract exposed by the WASM bindgen layer here.
+    -->
+    <script type="module">
+        const logEl = document.getElementById('log');
+        const fpsEl = document.getElementById('fps');
+        const btn = document.getElementById('runBtn');
+        
+        function appendLog(msg) {
+            logEl.innerHTML += `<div>${msg}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // 1. Maintain 60fps to prove the event loop is unblocked
+        let lastTime = performance.now();
+        let frames = 0;
+        function renderLoop() {
+            frames++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                fpsEl.textContent = `FPS: ${frames}`;
+                frames = 0;
+                lastTime = now;
+            }
+            requestAnimationFrame(renderLoop);
+        }
+        requestAnimationFrame(renderLoop);
+
+        // 2. Mocking the WASM bindings for the purpose of the verification script
+        const wasm = {
+            init_extension_bus: (did) => {
+                appendLog(`[WASM] Initializing extension bus for ${did}`);
+                const ws = new WebSocket("ws://127.0.0.1:4242");
+                
+                ws.onopen = () => {
+                    appendLog("[WASM] WebSocket connected, sending did:q42 challenge...");
+                    ws.send(JSON.stringify({ challenge: "did:q42", did }));
+                };
+                
+                ws.onmessage = (e) => {
+                    const data = JSON.parse(e.data);
+                    if (data.authenticated) {
+                        appendLog("[WASM] Connection Authenticated!");
+                        wasm.isAuthenticated = true;
+                    } else if (data.text) {
+                        // In the real Rust code, this fires the on_token closure synchronously in the event loop tick
+                        wasm.on_token_callback(data.text);
+                    }
+                };
+                wasm.ws = ws;
+            },
+            infer_local_model_streaming: (prompt, context, on_token) => {
+                if (wasm.isAuthenticated) {
+                    appendLog(`[WASM] intercepting inference, offloading to Native Daemon...`);
+                    wasm.on_token_callback = on_token;
+                    wasm.ws.send(JSON.stringify({
+                        rpc: "infer_local_model",
+                        prompt: prompt,
+                        graph_context: context,
+                        signature: "did:q42:active"
+                    }));
+                    
+                    // CRITICAL: returns immediately, freeing the JS main thread
+                    return "[Offloaded to Extension Bus]";
+                }
+                return "[Error: Not Authenticated]";
+            }
+        };
+
+        // Initialize the bus on load
+        wasm.init_extension_bus("did:q42:test-user");
+
+        btn.addEventListener('click', () => {
+            appendLog(`\n--- Calling infer_local_model_streaming ---`);
+            const prompt = "Explain quantum computing.";
+            
+            // This call takes < 1ms because it returns immediately
+            const start = performance.now();
+            const result = wasm.infer_local_model_streaming(prompt, "{}", (token) => {
+                // This callback is fired asynchronously by the WebSocket onmessage handler
+                appendLog(`<span style="color: #0f0;">Token Received:</span> ${token}`);
+            });
+            const duration = performance.now() - start;
+            
+            appendLog(`Call completed in ${duration.toFixed(2)}ms. Return value: ${result}`);
+            appendLog(`Notice the spinner never stopped spinning! The main thread is free.`);
+        });
+    </script>
+</body>
+</html>

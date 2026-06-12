@@ -9,10 +9,9 @@ pub mod simd_kernel;
 
 // Re-export main types for convenience
 pub use simd_kernel::{
-    GeometricAlgebraSIMD, Multivector, Rotor, Translator, Grade,
+    Multivector, Rotor, Translator, Grade,
     geometric_product, outer_product, rotor_from_angle_axis, apply_rotor,
     translator_from_displacement, apply_translator, is_simd_available,
-    get_simd_kernel, init_simd_kernel,
 };
 
 /// Geometric Algebra constants and utilities
@@ -247,7 +246,7 @@ mod integration_tests {
     
     #[test]
     fn test_comprehensive_operations() {
-        let kernel = get_simd_kernel();
+        // let kernel = get_simd_kernel();
         
         // Test rotor composition
         let rotor1 = rotor_from_angle_axis(deg_to_rad(45.0), [0.0, 0.0, 1.0]);

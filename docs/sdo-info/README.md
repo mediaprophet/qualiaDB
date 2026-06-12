@@ -101,6 +101,7 @@ Use an internal explainer or ADR first when:
 
 - [standards-backlog.md](./standards-backlog.md) - Updated with CBOR-LD implementation status
 - [q42-format-internal-draft.md](./q42-format-internal-draft.md) - Updated for v3 (temporal/DAG header, v2 migration)
+- [yaml-ld-q42-specification.md](./yaml-ld-q42-specification.md) - Internal draft for the declarative Webizen workspace format
 - [qualia-vault-manifest.md](./qualia-vault-manifest.md) - CBOR-LD projection complete
 - [did-q42-method-draft.md](./did-q42-method-draft.md)
 - [qualia-sync-protocol.md](./qualia-sync-protocol.md) - CBOR-LD with Q42 lexicon complete

@@ -659,7 +659,7 @@ impl<'a> QueryExecutor<'a> {
                 results.extend_from_slice(&direct_results);
                 
                 if !direct_results.is_empty() {
-                    self.execute_zero_or_more(subject, *inner_id, object, ctx, row, results, 2);
+                    let _ = self.execute_zero_or_more(subject, *inner_id, object, ctx, row, results, 2);
                 }
                 Ok(!results.is_empty())
             }
@@ -755,7 +755,7 @@ impl<'a> QueryExecutor<'a> {
     ) -> Result<bool, String> {
         // Zero-allocation federated query execution
         // Use fixed-size network buffer instead of allocating per request
-        let mut network_buffer = [0u8; 4096];
+        let network_buffer = [0u8; 4096];
         
         // Check if DID has 0x8 prefix (identity recognition)
         let is_did = (endpoint_did_id & 0x8000000000000000) != 0;

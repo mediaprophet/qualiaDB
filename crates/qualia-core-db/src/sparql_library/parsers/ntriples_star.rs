@@ -192,7 +192,7 @@ pub fn parse_ntriples_star_stream<R: std::io::Read>(
 ) -> Result<u64, Box<dyn std::error::Error>> {
     use std::io::BufRead;
     
-    let mut parser = NTriplesStarParser::new(context_hash);
+    let parser = NTriplesStarParser::new(context_hash);
     let mut count = 0;
     let buf_reader = BufReader::new(reader);
 

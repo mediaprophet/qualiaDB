@@ -481,10 +481,6 @@ impl ExpressionEvaluator {
                     Err("ROUND requires at least one argument".to_string())
                 }
             }
-            _ => {
-                // Placeholder for other functions including SPARQL-Star
-                Ok(EvalResult::Boolean(true))
-            }
             Function::TripleSubject => {
                 // TRIPLESUBJECT(<<s p o>>) - return subject
                 if args_len >= 1 {
@@ -549,6 +545,10 @@ impl ExpressionEvaluator {
                 } else {
                     Err("TRIPLE requires at least three arguments".to_string())
                 }
+            }
+            _ => {
+                // Placeholder for other functions including SPARQL-Star
+                Ok(EvalResult::Boolean(true))
             }
         }
     }

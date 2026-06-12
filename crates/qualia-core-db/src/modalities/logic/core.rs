@@ -410,7 +410,7 @@ impl WebizenVM {
     }
 
     /// Extracts a tagged floating point value from a given 64-bit Quin vector.
-    /// Uses the top 4 bits as a type tag (0x1 = float).
+    /// Uses the top 4 bits as a type tag (0x2 = float).
     #[inline(always)]
     fn extract_float(quin: &NQuin, vector_id: u8) -> Option<f32> {
         let val = match vector_id {
@@ -422,8 +422,8 @@ impl WebizenVM {
         };
 
         let tag = val >> 60;
-        if tag == 0x1 {
-            Some(f32::from_bits((val & 0xFFFFFFFF) as u32))
+        if tag == 0x2 {
+            Some(extract_inline_float(val))
         } else {
             None
         }
@@ -451,6 +451,15 @@ impl WebizenVM {
             true
         });
     }
+}
+
+/// Zero-allocation float extraction fast-path.
+/// Extracts a single-precision float stored in the lower 32 bits of a u64 vector.
+#[inline(always)]
+pub fn extract_inline_float(object_vector: u64) -> f32 {
+    // Mask out the top 32 bits entirely (dropping the Tag and Padding)
+    let raw_bits = (object_vector & 0x0000_0000_FFFF_FFFF) as u32;
+    f32::from_bits(raw_bits)
 }
 
 /// The Translation Layer. Parses N3Logic/SHACL into bytecode arrays.

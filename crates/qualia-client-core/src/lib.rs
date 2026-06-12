@@ -21,6 +21,7 @@ pub mod ontology_workbench;
 pub mod prerequisites;
 pub mod q42_compress;
 pub mod qapp_api;
+pub mod qapp_mcp;
 pub mod qapp_manifest;
 pub mod qapp_paths;
 pub mod qapp_registry;

@@ -537,7 +537,7 @@ mod tests {
         );
         // Note: Unless the llm extension is loaded locally, it will fail with "Extension not found"
         // But it won't fail with a gatekeeper block. We're testing the gatekeeper logic.
-        assert!(!safe_res.unwrap_err_or_else(|e| e).contains("GATEKEEPER_BLOCK"));
+        assert!(!safe_res.unwrap_err().contains("GATEKEEPER_BLOCK"));
 
         // 2. Dispatch a classified prompt without guardianship override
         let classified_res = bus.dispatch_task(

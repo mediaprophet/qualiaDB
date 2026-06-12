@@ -2,6 +2,7 @@
 
 mod pane_registry;
 mod studio_canvas;
+mod theme_engine;
 pub mod components;
 
 use dioxus::prelude::*;
@@ -74,7 +75,7 @@ fn App() -> Element {
                 h1 { 
                     style: "margin: 0; font-weight: 600; font-size: 1.25rem; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.5rem;",
                     span { style: "color: var(--qualia-accent);", "⬡" }
-                    "Qualia Studio "
+                    "Webizen Studio "
                     span { style: "font-size: 0.85rem; font-weight: 400; color: var(--qualia-text-muted);", "(Fiduciary HUD)" }
                 }
                 div {

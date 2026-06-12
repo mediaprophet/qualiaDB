@@ -55,6 +55,14 @@ keystore.bin
 # One-off migration scripts, old release binaries, debug artefacts
 scratch/
 
+# Build/debug error logs (PowerShell redirection output — UTF-16, not source)
+*_errors.json
+*_errors.txt
+compile_errors.txt
+cargo_err.txt
+clippy.json
+clippy_report.md
+
 # QPU internal functionality (undocumented, private)
 qpu/
 

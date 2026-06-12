@@ -27,7 +27,7 @@ pub mod neuro_symbolic_sieve;
 pub mod profiles;
 pub mod geometric_algebra;
 pub mod rdf_star;
-pub mod sentinel;
+pub mod webizen_validator;
 pub mod webizen_identifiers;
 pub mod sparql_library;
 pub use sparql_library::*;

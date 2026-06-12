@@ -193,6 +193,26 @@ pub fn list_installed_qapps() -> Vec<String> {
     qapps
 }
 
+pub fn mcp_list_qapps() -> Result<String, String> {
+    crate::qapp_mcp::list_qapp_catalogue_json()
+}
+
+pub fn mcp_get_qapp_manifest(qapp_name: String) -> Result<String, String> {
+    crate::qapp_mcp::get_qapp_manifest_json(&qapp_name)
+}
+
+pub fn mcp_inspect_qapp_readiness(qapp_name: String) -> Result<String, String> {
+    crate::qapp_mcp::inspect_qapp_readiness_json(&qapp_name)
+}
+
+pub fn mcp_list_qapp_updates() -> Result<String, String> {
+    crate::qapp_mcp::list_qapp_updates_json()
+}
+
+pub fn mcp_describe_qapp_surface_schema() -> Result<String, String> {
+    crate::qapp_mcp::describe_qapp_surface_schema_json()
+}
+
 pub fn generate_qapp_credential(qapp_name: String) -> String {
     format!("did:qualia:qapp:{}:signed_vc", qapp_name)
 }

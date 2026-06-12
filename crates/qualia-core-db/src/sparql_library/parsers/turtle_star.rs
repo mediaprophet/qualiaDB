@@ -232,7 +232,7 @@ impl RdfStarParser for TurtleStarParser {
     fn parse_triple(&mut self, input: &[u8]) -> Result<(u64, u64, u64), RdfStarParseError> {
         let mut pos = 0;
         
-        let mut skip_ws = |p: &mut usize| {
+        let skip_ws = |p: &mut usize| {
             while *p < input.len() && input[*p].is_ascii_whitespace() {
                 *p += 1;
             }

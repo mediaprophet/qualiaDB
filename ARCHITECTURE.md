@@ -1,6 +1,6 @@
 # QualiaDB Architecture
 
-_Branch: `0.0.11-dev` | Last updated: 2026-06-10_
+_Branch: `0.0.11` | Last updated: 2026-06-12_
 
 QualiaDB is a zero-allocation, mechanically sympathetic semantic database and multi-agent collaboration ecosystem. It bridges the string-heavy reality of the Semantic Web with hardware-aligned execution paths, enforcing strict constraints to ensure bounded memory and deterministic performance.
 
@@ -385,6 +385,13 @@ Sanitised                      // output was modified to remove unsafe content
 
 During token generation two wait-free SPSC ring buffers (`rtrb`) run in parallel — an LLM Engine thread streaming logits and a Webizen Sentinel thread that can inject a `DenyRollback` mid-generation at the token level. This is the implemented governance architecture; it is not optional middleware and must not be replaced with a simple `generate() -> String` wrapper.
 
+### Native-First WASM-LLM Offloading
+
+When `qualia-core-db` is compiled to the `wasm32-unknown-unknown` target, `infer_local_model_streaming` acts as an interceptor. Instead of running synchronous inference inside the single-threaded WASM sandbox (which would block the UI event loop), it probes for the Native Qualia Daemon via the `ExtensionBus` (`ws://127.0.0.1:4242`). 
+- **Non-Blocking Execution**: If the daemon accepts the `did:q42` handshake, the intent is forwarded, and the synchronous trait returns immediately. 
+- **Asynchronous Token Routing**: Inference tokens are asynchronously streamed back into the Dioxus or generic UI state via the captured `F: 'static` closure.
+- **WebGPU Fallback**: If the daemon is unreachable, the execution falls back to the in-browser WebGPU engine (subject to RAM constraints).
+
 ---
 
 ## 9. Capability Profiles (`profiles.rs`, `resource_catalog.rs`)
@@ -528,6 +535,34 @@ W3C standards: [Decentralised Identifiers (DIDs) v1.0](https://www.w3.org/TR/did
 | `webizen publish-ipfs` | Publish to IPFS |
 | `webizen seed-webtorrent` | Seed via WebTorrent |
 | `webizen dns-frontdoor` | Generate `did:web` + DNS TXT records |
+| `evaluate <modality>` | Run logic/reasoning evaluation against a `.q42` vault (16 modalities) |
+| `solve <group>` | Mathematical solver dispatch (5 groups: `linalg`, `optimize`, `ode`, `quantum`, `symbolic`) |
+| `science <domain>` | Scientific computation runners (7 domains, 23 runners) |
+| `qpu` *(requires `--enable-qpu`)* | QPU provider config and job submission (8 providers) |
+
+**`evaluate` modalities** (pass as positional arg): `propositional`, `predicate`, `modal`, `temporal`, `deontic`, `fuzzy`, `paraconsistent`, `relevance`, `intuitionistic`, `linear`, `abductive`, `causal`, `probabilistic`, `defeasible`, `epistemic`, `neuro_symbolic`
+
+**`solve` groups:**
+- `linalg` — matrix ops, LU decomposition, eigensolvers
+- `optimize` — Nelder-Mead, Newton-Raphson, Levenberg-Marquardt
+- `ode` — Runge-Kutta 4, shooting-method BVP, Simpson integrator
+- `quantum` — QAOA angle optimiser, SPSA gradient estimator
+- `symbolic` — forward-chaining defeasible reasoner, bounded SAT solver
+
+**`science` domains:** `chem`, `bio`, `geo`, `thermo`, `geometric`, `clinical`, `economics` (23 runners total)
+
+**`qpu` subcommands** (all require `--enable-qpu` global flag):
+
+| Subcommand | Description |
+|---|---|
+| `qpu list-providers` | List all 8 supported QPU providers with required credential fields |
+| `qpu configure <provider>` | Write/update provider API credentials in `$QUALIA_DATA_DIR/qpu_config.json` |
+| `qpu show [<provider>]` | Show stored credentials (keys are masked) |
+| `qpu clear <provider>` | Remove stored credentials for a provider |
+| `qpu test-connection <provider>` | Validate connectivity and credentials |
+| `qpu submit <provider>` | Submit a QPU job (local `FallbackHandler` simulation if daemon unavailable) |
+
+**Supported QPU providers:** IBM Quantum, D-Wave Leap, IonQ, Rigetti QCS, Azure Quantum, AWS Braket, Google Quantum AI, Quantinuum. Credentials stored as JSON in `$QUALIA_DATA_DIR/qpu_config.json` (defaults to `./qpu_config.json`).
 
 ### Profile CLI Workflow
 
@@ -746,9 +781,11 @@ Zero-allocation mathematical solvers operating on fixed-size stack arrays. All s
 
 See §8 (LLM Agent Layer) for the full QPU provider table. The QPU sub-module here handles:
 
-- `dispatcher.rs` — `QpuDispatcher` trait + 8-provider concrete implementations
+- `dispatcher.rs` — `QpuDispatcher` trait + 8-provider concrete implementations + `FallbackHandler` (classical simulation)
 - `pre_solver.rs` — classical pre-processing (graph reduction, variable elimination) before QPU submission
-- `mod.rs` — `QpuJob` queue, provider selection from `QpuConfig` or Principal VC
+- `mod.rs` — `QpuJob` queue, `ProblemType` (`Annealing | GateModel | Vqe | Qaoa`), provider selection from `QpuConfig` or Principal VC
+
+**CLI integration** — Provider credentials are managed at runtime via the `qualia-cli qpu` subcommand group (requires `--enable-qpu` global flag). Credentials are stored in `$QUALIA_DATA_DIR/qpu_config.json`. The compile-time `qpu_internal` feature flag previously used to gate this surface has been replaced by the runtime flag. See §13 for the full `qpu` subcommand reference.
 
 ### Calculus Solvers (`solvers/calculus/`) — ✅ Active
 

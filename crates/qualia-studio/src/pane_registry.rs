@@ -291,6 +291,15 @@ pub fn builtin_pane_definitions() -> Vec<PaneDefinition> {
             default_w: 6, default_h: 3,
             rdf_type_hash: None,
         },
+        PaneDefinition {
+            component_id: "custom-web-module".into(),
+            display_name: "Web Module (RPC/IFrame)".into(),
+            element_tag: "qualia-web-module".into(),
+            icon: "window-dock".into(),
+            category: PaneCategory::System,
+            default_w: 8, default_h: 6,
+            rdf_type_hash: Some(qualia_core_db::q_hash("q42:WebModule")),
+        },
         
         // --- Webizen Integrations ---
         PaneDefinition {

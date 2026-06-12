@@ -5,7 +5,7 @@ A **QApp** (Qualia App) is a stateless, declarative user interface shell that bi
 
 ## 1. What is a QApp?
 
-A QApp is entirely defined by a `yaml-ld-q42` file. This manifest describes a `WebizenWorkspace` (or `MindwareWorkspace`) consisting of one or more `Pages`. Each Page contains a `LayoutStrategy` and an array of `PanePlacements`.
+A QApp is entirely defined by a `yaml-ld-q42` file. This manifest describes a `WebizenWorkspace` consisting of one or more `Pages`. Each Page contains a `LayoutStrategy` and an array of `PanePlacements`.
 
 A QApp **does not** contain executable logic for things like video transcoding or machine learning. Instead, it relies on the global `ExtensionBus` for capabilities and the Sentinel VM for enforcing fiduciary boundaries.
 

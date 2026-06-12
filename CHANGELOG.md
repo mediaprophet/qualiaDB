@@ -13,6 +13,106 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Deployed locally hosted GGUF model downloader via `coi-serviceworker`
 - Exported WASM WebGPU module via `wasm-pack` into `docs/llmdemo/pkg`
 
+### Added — CLI ETL Pipeline & Full RDF/SPARQL Exposure
+
+**Format auto-detection** (`crates/qualia-cli/src/ingest/detect.rs`):
+- `SemanticFormat` enum covering all 16 supported formats
+- `detect_format(path)` — two-stage: file-extension hint + 16-byte magic-byte probe (Q42 `b"Q42"`, CBOR-LD `0xd9 0xd9 0xf7`, XML envelope, JSON envelope, QCHK)
+
+**Ingest pipeline — allocation-safe rewrite**:
+- `ingest_ntriples` and `ingest_rdf_xml` rewritten to use `ExternalSorter` (out-of-core K-way merge, ≤48 MB peak); eliminates the unbounded `Vec<NQuin>` + `HashMap<u64,String>` that OOM'd on any non-trivial file
+- `ingest_cbor` / `ingest_kml` — 256 MB file-size guard; `ingest_kml` now uses `memmap2::Mmap` instead of `read_to_end` (eliminates heap copy of raw bytes)
+- Query vault load — `std::fs::read(&vault)` replaced with `memmap2::Mmap::map` throughout the `query` command
+
+**All RDF/RDF-Star/N3 parsers wired to `ingest semantic <file>`** (`ingest/mod.rs`):
+- `stream_ingest!` macro generates zero-boilerplate streaming wrappers for all parser variants
+- New CLI ingest functions: `ingest_ntriples_star`, `ingest_nquads`, `ingest_nquads_star`, `ingest_turtle`, `ingest_trig`, `ingest_trig_star`, `ingest_n3`, `ingest_json_ld`, `ingest_json_ld_star`
+- `ingest_auto(input, output)` — top-level dispatcher: runs `detect_format`, routes to correct function
+- `IngestFormat::Semantic { file }` handler uses `ingest_auto`; prints detected format, triple/block counts, output path
+- Added `parse_n3_star_stream` to `n3_star.rs` in `qualia-core-db` (was the only parser missing a streaming entry point)
+
+**SPARQL query command — native engine**:
+- `Commands::Query { Sparql | SparqlStar }` now runs the full native pipeline: `parse_sparql` → `QueryPlanner::plan` → `memmap2` vault → `QueryExecutor::execute`
+- `run_sparql_query(vault, qs)` helper in `main.rs`; results streamed to stdout row-by-row
+- Both `sparql` and `sparql-star` dialects use the same engine (the native parser already handles RDF-Star embedded triples)
+
+**SHACL mapping compiler** (`ingest/mapper.rs`):
+- `compile_shacl_mapping(path)` — boot-phase lightweight Turtle parser; extracts `@prefix` declarations, `sh:targetClass`, and all `sh:property [...]` blocks containing `qext:sourceColumn` or `qext:sourceJsonKey`
+- Maps `sh:datatype` → `TargetDatatype::{Integer,Float,DateTime,StringRef}`
+- Replaces the previous `unimplemented!()` stub; CSV and JSON ingest now fully operational
+
+**CSV/JSON streamer — all datatype arms complete** (`csv_mapper.rs`, `json_mapper.rs`):
+- `DateTime` arm: parses RFC3339 / ISO8601 / date-only strings via `chrono`; stores as `(0b011u64 << 60) | unix_millis` (XSD dateTime inline tag)
+- `StringRef` arm: hashes string via `hash_token` (FNV-1a); stores object hash (consistent with IRI hashing elsewhere)
+
+**Bug fix** (`json_ld_stream.rs`):
+- `hash_str` previously used `DefaultHasher` (non-deterministic across process restarts, incompatible with rest of engine); replaced with `hash_token` (FNV-1a)
+
+### Tests
+- 16 new unit tests in `ingest/detect.rs` and `ingest/mapper.rs`; all passing
+- Covers: extension-based detection, magic-byte probing (Q42, QCHK, CBOR-LD, XML, KML, JSON), SHACL field extraction, datatype mapping, predicate hash consistency, error cases
+
+### Added — CLI Logic Modality & Science Surface (2026-06-12)
+
+**`qualia-cli evaluate <modality>` — 16 subcommands (15 modalities + neuro-symbolic)**:
+- `ltl`, `asp`, `dl`, `probabilistic`, `linear-logic`, `dialectical`, `diffusion`, `spatio-temporal`, `interval`, `graph-topology`, `argumentation`, `control-feedback` (12 new in previous session)
+- `neuro-symbolic` — demonstrates `SieveLexSpec::fever_observation()` + `graph_mutation_default()`, showing token-level SHACL constraint masks and their FNV-1a hashes
+
+**`qualia-cli solve <group>` — extended with 3 new groups**:
+- `solve ode rk4|harmonic|bvp|quantum-spectrum` — `Rk4Solver`, `ShootingMethod`, `QuantizationMapper`
+- `solve quantum qaoa|spsa` — `QAOAAngleOptimizer`, `SpsaOptimizer` with `DemoQaoa`/`DemoSpsa` adapters
+- `solve symbolic defeasible|sat` — `ForwardChainingDefeasible`, `BoundedSatSolver`
+
+**`qualia-cli science <domain>` — new top-level command (7 subdomains, 23 runners)**:
+- `chem smiles|thermo|drug-like|pka` — SMILES descriptors, Arrhenius/Gibbs/HH, Lipinski/Veber/Ghose/Egan/BBB, ionisation fraction
+- `bio align|kmer|translate|isoelectric|jaccard|minhash` — Smith-Waterman/Needleman-Wunsch, k-mer frequencies, DNA→protein, pI, MinHash Jaccard
+- `geo embed-h3` — H3 index → NQuin context hash
+- `thermo gibbs|anneal` — `ThermodynamicSampler` Gibbs free energy and Metropolis-Hastings acceptance
+- `geometric cross|angle` — `geometric_algebra::utils::{cross_product, dot_product, angle_between_vectors, rad_to_deg}`
+- `clinical framingham|sofa|ckd|pk|drug-interactions` — Framingham CVD risk, SOFA score, CKD-EPI eGFR + Cockcroft-Gault, 1-compartment IV PK, DDI screening
+- `economics gbm|var|macro` — GBM path simulation, Monte Carlo 95% VaR, macroeconomic MV=PQ flow
+
+**MCP surface extension (`mcp_server.rs`) — 6 new tools**:
+- `evaluate_modality` — routes `ltl|asp|probabilistic|argumentation` to Webizen VM evaluators
+- `bioinformatics_align` — `align_nucleotide`/`align_protein` dispatch
+- `chemical_descriptors` — SMILES → `parse_smiles` + `compute_descriptors`, returns MW proxy
+- `clinical_risk` — Framingham 10-year CVD risk score dispatch
+- `symbolic_logic_infer` — `ForwardChainingDefeasible` or `BoundedSatSolver` dispatch
+- `geometric_algebra_op` — `cross_product` or `angle_between_vectors` dispatch
+
+**New source files**: `crates/qualia-cli/src/solve.rs` (extended), `crates/qualia-cli/src/science.rs` (new)
+**Modified source files**: `evaluate.rs` (+`run_neuro_symbolic`), `main.rs` (+`Commands::Science`, +`SolveAction::{Ode,Quantum,Symbolic}`, +`EvaluateModality::NeuroSymbolic`, +all dispatch arms), `mcp_server.rs` (+6 tool handlers)
+
+### Added — QPU Provider Configuration (2026-06-12)
+
+**`qualia-cli --enable-qpu qpu <subcommand>`** — runtime-gated QPU management:
+- `--enable-qpu` global flag on `Cli` struct (replaces compile-time `#[cfg(feature = "qpu_internal")]` stub)
+- Credentials stored in `$QUALIA_DATA_DIR/qpu_config.json` (JSON, keys masked on display)
+
+**Supported providers (8 total)**:
+
+| ID | Provider | Problem types | Key credentials |
+|----|----------|--------------|----------------|
+| `ibm` | IBM Quantum | gate-model, vqe, qaoa | `api_key`, `hub`, `group`, `project` |
+| `dwave` | D-Wave Leap | annealing (QUBO) | `api_key` |
+| `ionq` | IonQ | gate-model | `api_key`, `backend` |
+| `rigetti` | Rigetti QCS | gate-model, vqe, qaoa | `api_key`, `user_id`, `qpu_id` |
+| `azure` | Azure Quantum | gate-model, annealing | `subscription_id`, `resource_group`, `workspace`, `location` |
+| `braket` | AWS Braket | gate-model, annealing | `access_key_id`, `secret_access_key`, `region` |
+| `google` | Google Quantum AI | gate-model | `project_id`, `processor_id` |
+| `quantinuum` | Quantinuum | gate-model | `api_key`, `machine` |
+
+**Subcommands**:
+- `list-providers` — show all 8 providers with required fields and docs links
+- `configure <provider> [--field value ...]` — set/update credentials (partial updates supported; existing fields not overwritten by omission)
+- `show [--provider <id>]` — display config for all or one provider (API keys masked)
+- `clear <provider>` — remove a provider's stored credentials
+- `test-connection <provider>` — validate required fields are present; print endpoint and auth method
+- `submit <provider> [--problem-type annealing|gate-model|vqe|qaoa] [--qubits N] [--shots N]` — local classical simulation via `FallbackHandler`; live dispatch via `qualia-cli daemon`
+
+**New source file**: `crates/qualia-cli/src/qpu.rs`
+**Modified**: `crates/qualia-cli/src/main.rs` — `Commands::Qpu` now always compiled, gated at runtime; `QpuAction` fully implemented
+
 ---
 
 ## [0.0.10] - 2026-06-11
@@ -97,6 +197,14 @@ real implementations for previously-stubbed security and query primitives.
 - **Spatial**: GeoSPARQL + KML geometry bridge
 - **Rights**: ODRL (`odrl:Permission`, `odrl:Prohibition`) + SKOS concept schemes
 - **Agent structure**: W3C CogAI CG vocabulary + SHACL conformance profiles
+
+---
+
+### Added — Native-First WASM-LLM Offloading
+
+- **`extension_bus::wasm_bus`**: Implemented `did:q42` WebSocket handshake and event routing for WASM targets (`qualia-core-db/src/extension_bus.rs`).
+- **Zero-Allocation Sync/Async Bridge**: Refactored `llm_agent.rs` WASM execution path to intercept inference requests and cleanly pipe synchronous LLM traits into the non-blocking Dioxus `on_token` event loop callback.
+- **WASM Extension Fallback**: The WASM inference pipeline now intelligently escalates to the Qualia Native Daemon (port 4242) if installed, or gracefully falls back to the in-browser WebGPU engine if not.
 
 ---
 

@@ -1,11 +1,10 @@
+use crate::mini_parser::hash_token;
 use crate::NQuin;
-use std::hash::{Hash, Hasher};
 use std::io::Read;
 
+#[inline(always)]
 fn hash_str(s: &str) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    s.hash(&mut hasher);
-    hasher.finish()
+    hash_token(s)
 }
 
 pub fn parse_json_ld_stream<R: Read>(

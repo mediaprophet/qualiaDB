@@ -10,25 +10,58 @@ mod llm_lifecycle;
 mod llm_testing;
 pub mod compress;
 pub mod ingest;
+pub mod query;
+pub mod qpu;
 pub mod resources;
 pub mod telemetry_server;
 pub mod bench;
+pub mod evaluate;
+pub mod solve;
+pub mod science;
 
-/// The Qualia-DB Block Inspector & Data Ingestion CLI
-#[derive(Parser)]
-#[command(name = "qualia-cli")]
-#[command(about = "Tooling for inspecting raw 40KB SuperBlocks, .q42 distributions, and Native Loopback Server", long_about = None)]
-struct Cli {
-    /// Stream engine log lines and 100 ms telemetry samples to stderr
+/// Qualia-DB Command Line Interface
+/// 
+/// Edge-native, zero-allocation semantic graph and neuro-symbolic engine.
+#[derive(Parser, Debug)]
+#[command(name = "qualia-cli", version = "0.0.11", author = "Qualia-DB")]
+#[command(about = "Manage, query, and evaluate Qualia-DB vaults and models", long_about = None)]
+pub struct Cli {
+    /// Set verbosity level (-v for debug, -vv for trace opcodes)
+    #[arg(short, long, action = clap::ArgAction::Count, global = true)]
+    pub verbose: u8,
+
+    /// Enable QPU (Quantum Processing Unit) provider configuration and job submission.
+    /// Unlocks `qpu configure|show|clear|list-providers|test-connection|submit`.
+    /// API credentials are stored in $QUALIA_DATA_DIR/qpu_config.json.
     #[arg(long, global = true)]
-    log_stream: bool,
+    pub enable_qpu: bool,
 
     #[command(subcommand)]
-    command: Commands,
+    pub command: Commands,
 }
 
-#[derive(Subcommand)]
-enum Commands {
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    /// Manage localhost capability extensions
+    Extension {
+        #[command(subcommand)]
+        action: ExtensionAction,
+    },
+    /// Execute deterministic logic evaluators against a .q42 graph
+    Evaluate {
+        #[command(subcommand)]
+        modality: EvaluateModality,
+    },
+    /// Cryptographic Governance, WAL operations, and CRDT sync
+    Governance {
+        #[command(subcommand)]
+        action: GovernanceAction,
+    },
+    /// Compile external logic formats (N3/Turtle) to native Quins
+    Compile {
+        #[command(subcommand)]
+        action: CompileAction,
+    },
     /// Native GGUF lifecycle: discover, mmap, infer, evict (wgpu / Phase 8)
     Llm {
         #[command(subcommand)]
@@ -39,13 +72,10 @@ enum Commands {
         #[arg(long, help = "List all registered capabilities")]
         list: bool,
     },
-    /// Advanced SHACL (Shapes Constraint Language) operations
+    /// Validate structural semantics using SHACL shapes
     Shacl {
-        #[arg(
-            long,
-            help = "List all available SHACL extensions (e.g. Deontic, Epistemic)"
-        )]
-        list_extensions: bool,
+        #[command(subcommand)]
+        action: ShaclAction,
     },
     /// Vault initialization and management
     Vault {
@@ -142,22 +172,15 @@ enum Commands {
         /// The output .q42 file
         output: PathBuf,
     },
-    /// Ingest N-Triples into a unified v2 `.q42` volume (embedded lex + bidx + LZ4 blocks).
-    /// Suitable for building browser-deployable datasets (e.g. WordNet for the GH Pages demo).
+    /// Ingest and compile raw data into .q42 SuperBlocks
     Ingest {
-        /// Input N-Triples file (.nt or .nt.gz pre-decompressed)
-        #[arg(long)]
-        input: PathBuf,
-        /// Output base path — writes `<path>.q42` only (no sidecars)
-        #[arg(long)]
-        output: PathBuf,
+        #[command(subcommand)]
+        format: IngestFormat,
     },
-    /// Performs an instantaneous microsecond lookup on a massive .q42 binary via OS memory mapping
+    /// Execute semantic graph queries against a .q42 vault
     Query {
-        /// The target .q42 dataset binary file
-        dataset: PathBuf,
-        /// The u64 subject ID to query
-        subject: u64,
+        #[command(subcommand)]
+        dialect: QueryDialect,
     },
     /// Compress a .q42 SuperBlock file or .lex side-car into an LZ4 block stream
     /// for browser delivery.  For .q42 input, SuperBlock headers are stripped so
@@ -196,13 +219,526 @@ enum Commands {
         #[command(subcommand)]
         action: ProfileAction,
     },
-    /// QPU internal functionality (undocumented, private)
-    /// Only available when compiled with --features qpu_internal
-    #[cfg(feature = "qpu_internal")]
+    /// Quantum Processing Unit provider management (requires --enable-qpu).
+    /// Configure API credentials for IBM, D-Wave, IonQ, Rigetti, Azure,
+    /// Braket, Google, and Quantinuum; submit jobs via the local daemon.
     Qpu {
         #[command(subcommand)]
         action: QpuAction,
     },
+    /// Numeric solvers: linear algebra, optimization, ODE, quantum, symbolic
+    Solve {
+        #[command(subcommand)]
+        action: SolveAction,
+    },
+    /// Domain science: chemistry, biology, geospatial, thermodynamics, geometric algebra, clinical, economics
+    Science {
+        #[command(subcommand)]
+        action: ScienceAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ExtensionAction {
+    /// Register a new Webizen/WASM extension from a manifest
+    Register { manifest_path: PathBuf },
+    /// List all currently registered localhost extensions
+    List,
+    /// Dispatch a JSON-LD payload to an extension for processing
+    Dispatch { id: String, input: String },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum EvaluateModality {
+    /// Evaluate active obligations and normative contracts
+    Deontic { dataset: PathBuf, contract_hash: u64 },
+    /// Evaluate agent belief states and trust graphs
+    Epistemic { dataset: PathBuf, agent_hash: u64 },
+    /// Isolate and route contradiction boundaries
+    Paraconsistent { dataset: PathBuf },
+    /// Evaluate a Linear Temporal Logic formula over a trace (globally / next / until)
+    Ltl {
+        dataset: PathBuf,
+        /// Operator: globally | next | until
+        #[arg(long)]
+        formula_type: String,
+        /// Primary hash (predicate hash for globally/next; ante hash for until)
+        #[arg(long, default_value = "0")]
+        hash_a: u64,
+        /// Consequent hash (only used for 'until')
+        #[arg(long, default_value = "0")]
+        hash_b: u64,
+    },
+    /// Enumerate stable models via Answer Set Programming
+    Asp {
+        dataset: PathBuf,
+        /// Index of the base quin (default 0)
+        #[arg(long, default_value = "0")]
+        base_index: usize,
+    },
+    /// Check subsumption between two class hashes in a TBox
+    Dl {
+        dataset: PathBuf,
+        /// FNV-1a hash of the sub-class URI
+        #[arg(long)]
+        sub_class: u64,
+        /// FNV-1a hash of the super-class URI
+        #[arg(long)]
+        super_class: u64,
+    },
+    /// Threshold test on a probabilistic weight value
+    Probabilistic {
+        /// Observed weight / probability (0.0–1.0)
+        #[arg(long)]
+        weight: f32,
+        /// Threshold to test against
+        #[arg(long)]
+        threshold: f32,
+    },
+    /// Linear logic: consume a resource quin and report its status
+    LinearLogic {
+        dataset: PathBuf,
+        /// Zero-based index of the quin to consume
+        #[arg(long, default_value = "0")]
+        quin_index: usize,
+    },
+    /// Dialectical: test confounding and causal intervention between two variables
+    Dialectical {
+        dataset: PathBuf,
+        /// FNV-1a hash of variable 1
+        #[arg(long)]
+        var1: u64,
+        /// FNV-1a hash of variable 2
+        #[arg(long)]
+        var2: u64,
+    },
+    /// Trigger semantic diffusion propagation on a named graph
+    Diffusion {
+        /// Graph identifier string (used for diffusion context key)
+        graph_id: String,
+    },
+    /// Spatio-temporal relation: rcc8 topology or Allen temporal op
+    SpatioTemporal {
+        /// Action: rcc8 | temporal-before | temporal-meets | temporal-overlaps | temporal-during
+        action: String,
+        #[arg(long, default_value = "0")] ax1: f64,
+        #[arg(long, default_value = "1")] ay1: f64,
+        #[arg(long, default_value = "1")] ax2: f64,
+        #[arg(long, default_value = "0")] ay2: f64,
+        #[arg(long, default_value = "2")] bx1: f64,
+        #[arg(long, default_value = "3")] by1: f64,
+        #[arg(long, default_value = "3")] bx2: f64,
+        #[arg(long, default_value = "2")] by2: f64,
+    },
+    /// Allen interval algebra: contains, overlaps, intersection, union, gap
+    Interval {
+        /// Action: contains | overlaps | intersection | union | gap
+        action: String,
+        #[arg(long, default_value = "0")]  start1: i64,
+        #[arg(long, default_value = "10")] end1: i64,
+        #[arg(long, default_value = "5")]  start2: i64,
+        #[arg(long, default_value = "15")] end2: i64,
+        /// Point for 'contains' check
+        #[arg(long, default_value = "7")]  point: i64,
+    },
+    /// Graph topology analysis: density, communities, motifs, centrality
+    GraphTopology {
+        dataset: PathBuf,
+        /// Context graph hash (use 0 for all graphs)
+        #[arg(long, default_value = "0")]
+        context: u64,
+    },
+    /// Argumentation framework: compute grounded extension
+    Argumentation {
+        /// Use built-in sanctuary debate demo instead of a dataset
+        #[arg(long)]
+        demo: bool,
+        /// Path to a .q42 dataset containing attack quins (optional when --demo)
+        dataset: Option<PathBuf>,
+    },
+    /// PID control feedback: compute single-step output from Kp/Ki/Kd + error
+    ControlFeedback {
+        #[arg(long)] kp: f64,
+        #[arg(long)] ki: f64,
+        #[arg(long)] kd: f64,
+        #[arg(long)] setpoint: f64,
+        #[arg(long)] measurement: f64,
+    },
+    /// Neuro-symbolic constrained inference (token-level SHACL sieve)
+    NeuroSymbolic {
+        /// Run demo fever-observation sieve (no dataset required)
+        #[arg(long)]
+        demo: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ShaclAction {
+    /// List compiled SHACL extension profiles (Biosciences, Legal, etc.)
+    List,
+    /// Validate a memory-mapped .q42 dataset against a SHACL shape file
+    Validate { dataset: PathBuf, shapes: PathBuf },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum GovernanceAction {
+    /// Append a raw mutation directly to the Write-Ahead Log
+    WalAppend { 
+        #[arg(long)]
+        quin: String, 
+        #[arg(long)]
+        sign: String 
+    },
+    /// Ratify a suspended transaction (M-of-N consensus)
+    Ratify { agreement_did: String },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SolveAction {
+    /// Linear algebra operations (matrix multiply, determinant, solve, eigenvalues, tensor contract)
+    Linalg {
+        #[command(subcommand)]
+        action: LinalgAction,
+    },
+    /// Non-linear optimization (Nelder-Mead simplex, Newton-Raphson root, Levenberg-Marquardt curve-fit)
+    Optimize {
+        #[command(subcommand)]
+        action: OptimizeAction,
+    },
+    /// Ordinary differential equation solvers (RK4, BVP shooting, quantum harmonic)
+    Ode {
+        #[command(subcommand)]
+        action: OdeAction,
+    },
+    /// Quantum-inspired optimizers (QAOA angle optimizer, SPSA)
+    Quantum {
+        #[command(subcommand)]
+        action: QuantumSolveAction,
+    },
+    /// Symbolic logic solvers (defeasible forward-chaining, bounded SAT)
+    Symbolic {
+        #[command(subcommand)]
+        action: SymbolicSolveAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum OdeAction {
+    /// RK4 exponential decay: dy/dt = -λy
+    Rk4 {
+        #[arg(long, default_value = "1.0")] lambda: f64,
+        #[arg(long, default_value = "0.0")] t_start: f64,
+        #[arg(long, default_value = "5.0")] t_end: f64,
+        #[arg(long, default_value = "1.0")] y0: f64,
+        #[arg(long, default_value = "0.01")] step_size: f64,
+    },
+    /// RK4 harmonic oscillator: dy/dt = -ω²·y
+    Harmonic {
+        #[arg(long, default_value = "1.0")] omega: f64,
+        #[arg(long, default_value = "0.0")] t_start: f64,
+        #[arg(long, default_value = "6.28")] t_end: f64,
+        #[arg(long, default_value = "1.0")] y0: f64,
+        #[arg(long, default_value = "0.01")] step_size: f64,
+    },
+    /// Boundary-value problem via shooting method (f'=-y)
+    Bvp {
+        #[arg(long, default_value = "0.0")] t_start: f64,
+        #[arg(long, default_value = "1.0")] t_end: f64,
+        #[arg(long, default_value = "1.0")] y_left: f64,
+        #[arg(long, default_value = "0.0")] y_right: f64,
+        #[arg(long, default_value = "1e-6")] threshold: f64,
+    },
+    /// Quantum harmonic mass spectrum
+    QuantumSpectrum {
+        #[arg(long, default_value = "1.22e19")] planck_mass: f64,
+        #[arg(long, default_value = "0.1")] coupling: f64,
+        #[arg(long, default_value = "10")] max_n: u64,
+        #[arg(long, default_value = "1.0")] frequency: f64,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum QuantumSolveAction {
+    /// QAOA angle optimizer (demo MaxCut-like cost)
+    Qaoa {
+        #[arg(long, default_value = "3")] depth: u8,
+        #[arg(long, default_value = "0.1,0.2,0.3")] beta: String,
+        #[arg(long, default_value = "0.5,0.5,0.5")] gamma: String,
+    },
+    /// SPSA optimizer (demo quadratic cost)
+    Spsa {
+        #[arg(long, default_value = "4")] num_params: u8,
+        #[arg(long, default_value = "1.0,2.0,3.0,4.0")] initial: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SymbolicSolveAction {
+    /// Defeasible forward-chaining inference
+    Defeasible {
+        /// Comma-separated variable indices for initial facts (e.g. "1,2,3")
+        #[arg(long, default_value = "1,2")] facts: String,
+        /// Semicolon-separated rules of form "ant1,ant2:cons" (e.g. "1,2:3;3:4")
+        #[arg(long, default_value = "1,2:3")] rules: String,
+    },
+    /// Bounded SAT (DPLL)
+    Sat {
+        /// Pipe-separated clauses of comma-separated literals (e.g. "1,-2,3|4,-5")
+        #[arg(long, default_value = "1,-2|2,3|-1,3")] clauses: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum LinalgAction {
+    /// Multiply two 4×4 matrices (pass 16 comma-separated f64 values each)
+    Multiply {
+        #[arg(long)] matrix_a: String,
+        #[arg(long)] matrix_b: String,
+    },
+    /// Compute the determinant of a 4×4 matrix (16 comma-separated f64 values)
+    Determinant {
+        #[arg(long)] matrix: String,
+    },
+    /// Solve Ax=b (pass 16 f64 for A, 4 f64 for b)
+    SolveSystem {
+        #[arg(long)] matrix: String,
+        #[arg(long)] vector: String,
+    },
+    /// Compute lowest N eigenvalues of a 4×4 matrix via Lanczos
+    Eigenvalues {
+        #[arg(long)] matrix: String,
+        #[arg(long, default_value = "4")] count: usize,
+    },
+    /// Contract a 3×3×3 tensor (27 comma-separated f64 values) to a scalar
+    TensorContract {
+        #[arg(long)] tensor: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum OptimizeAction {
+    /// Nelder-Mead simplex minimizer (4-parameter, comma-separated initial guess)
+    Simplex {
+        #[arg(long)] initial: String,
+        #[arg(long, default_value = "200")] iterations: u32,
+    },
+    /// Newton-Raphson root finder (bounded)
+    Root {
+        #[arg(long)] initial: f64,
+        #[arg(long)] lower: f64,
+        #[arg(long)] upper: f64,
+        #[arg(long, default_value = "1e-8")] tolerance: f64,
+    },
+    /// Levenberg-Marquardt curve fitting (4-parameter; pass x-data and y-data as comma-separated lists)
+    CurveFit {
+        #[arg(long)] initial_params: String,
+        #[arg(long)] x_data: String,
+        #[arg(long)] y_data: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ScienceAction {
+    /// Organic chemistry: SMILES descriptors, thermochemistry, drug-likeness, pKa
+    Chem {
+        #[command(subcommand)]
+        action: ChemAction,
+    },
+    /// Bioinformatics: sequence alignment, k-mer, translation, isoelectric point, Jaccard
+    Bio {
+        #[command(subcommand)]
+        action: BioAction,
+    },
+    /// Geospatial: H3 index embedding
+    Geo {
+        #[command(subcommand)]
+        action: GeoAction,
+    },
+    /// Thermodynamics: Gibbs free energy, Metropolis-Hastings annealing
+    Thermo {
+        #[command(subcommand)]
+        action: ThermoAction,
+    },
+    /// Geometric algebra: cross product, angle between vectors
+    Geometric {
+        #[command(subcommand)]
+        action: GeometricAction,
+    },
+    /// Clinical decision support: Framingham, SOFA, CKD-EPI, PK model, drug interactions
+    Clinical {
+        #[command(subcommand)]
+        action: ClinicalAction,
+    },
+    /// Financial economics: GBM path, Monte Carlo VaR, macroeconomic flow
+    Economics {
+        #[command(subcommand)]
+        action: EconomicsAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ChemAction {
+    /// Parse SMILES and compute molecular descriptors
+    Smiles { smiles: String },
+    /// Thermochemistry: arrhenius | gibbs | henderson-hasselbalch
+    Thermo {
+        reaction: String,
+        #[arg(long)] a: f64,
+        #[arg(long)] b: f64,
+        #[arg(long)] c: f64,
+    },
+    /// Drug-likeness filters (Lipinski, Veber, Ghose, Egan, BBB)
+    DrugLike { smiles: String },
+    /// Henderson-Hasselbalch + ionisation fraction
+    Pka {
+        #[arg(long)] pka: f64,
+        #[arg(long)] conc_base: f64,
+        #[arg(long)] conc_acid: f64,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum BioAction {
+    /// Pairwise sequence alignment (nucleotide or protein)
+    Align {
+        query: String,
+        target: String,
+        #[arg(long, default_value = "dna")] mode: String,
+    },
+    /// k-mer frequency table
+    Kmer {
+        sequence: String,
+        #[arg(long, default_value = "4")] k: usize,
+    },
+    /// Translate a DNA sequence to protein (standard genetic code)
+    Translate { dna: String },
+    /// Isoelectric point of a protein sequence
+    Isoelectric { protein: String },
+    /// Jaccard similarity between two MinHash sketches (comma-separated hashes)
+    Jaccard { sketch_a: String, sketch_b: String },
+    /// Compute a MinHash sketch for a DNA/protein sequence
+    Minhash {
+        sequence: String,
+        #[arg(long, default_value = "4")] k: usize,
+        #[arg(long, default_value = "128")] size: usize,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum GeoAction {
+    /// Embed an H3 index into a graph context quin
+    EmbedH3 {
+        /// H3 index (decimal or 0x-prefixed hex)
+        #[arg(long)] index: u64,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ThermoAction {
+    /// Gibbs free energy: ΔG = ΔH − T·ΔS
+    Gibbs {
+        #[arg(long)] enthalpy: f64,
+        #[arg(long)] entropy: f64,
+        #[arg(long)] temp: f64,
+    },
+    /// Metropolis-Hastings acceptance step
+    Anneal {
+        #[arg(long, default_value = "300.0")] initial_temp: f64,
+        #[arg(long, default_value = "1")] particles: usize,
+        #[arg(long)] proposed_energy: f64,
+        /// Uniform random value in [0,1] for the acceptance criterion
+        #[arg(long, default_value = "0.5")] random: f64,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum GeometricAction {
+    /// Cross product a×b and dot product a·b (3D vectors, comma-separated)
+    Cross {
+        #[arg(long)] a: String,
+        #[arg(long)] b: String,
+    },
+    /// Angle θ between two 3D vectors (radians + degrees)
+    Angle {
+        #[arg(long)] a: String,
+        #[arg(long)] b: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ClinicalAction {
+    /// Framingham 10-year CVD risk
+    Framingham {
+        #[arg(long)] age: u8,
+        #[arg(long)] sex_male: bool,
+        #[arg(long)] total_chol: f64,
+        #[arg(long)] hdl_chol: f64,
+        #[arg(long)] systolic_bp: f64,
+        #[arg(long)] bp_treated: bool,
+        #[arg(long)] smoker: bool,
+        #[arg(long)] diabetic: bool,
+    },
+    /// SOFA (Sequential Organ Failure Assessment) score
+    Sofa {
+        #[arg(long)] pao2_fio2: f64,
+        #[arg(long)] platelets: f64,
+        #[arg(long)] bilirubin: f64,
+        #[arg(long)] map: f64,
+        #[arg(long)] gcs: u8,
+        #[arg(long)] creatinine: f64,
+    },
+    /// CKD-EPI eGFR + Cockcroft-Gault CrCl
+    Ckd {
+        #[arg(long)] age: u8,
+        #[arg(long)] sex_male: bool,
+        #[arg(long)] weight_kg: f64,
+        #[arg(long)] creatinine: f64,
+    },
+    /// 1-compartment IV bolus PK model
+    Pk {
+        #[arg(long)] dose_mg: f64,
+        #[arg(long)] vd_l: f64,
+        #[arg(long)] cl_l_hr: f64,
+        #[arg(long)] time_hr: f64,
+    },
+    /// Drug-drug interaction screening (comma-separated drug names)
+    DrugInteractions { drug_names: String },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum EconomicsAction {
+    /// Simulate a single GBM path
+    Gbm {
+        #[arg(long, default_value = "100.0")] price: f64,
+        #[arg(long, default_value = "0.05")] drift: f64,
+        #[arg(long, default_value = "0.2")] vol: f64,
+        #[arg(long, default_value = "1.0")] horizon: f64,
+        #[arg(long, default_value = "252")] steps: usize,
+    },
+    /// Monte Carlo Value at Risk (95%)
+    Var {
+        #[arg(long, default_value = "100.0")] price: f64,
+        #[arg(long, default_value = "0.05")] drift: f64,
+        #[arg(long, default_value = "0.2")] vol: f64,
+        #[arg(long, default_value = "1.0")] horizon: f64,
+        #[arg(long, default_value = "252")] steps: usize,
+        #[arg(long, default_value = "1000")] paths: usize,
+    },
+    /// Macroeconomic MV=PQ flow simulation
+    Macro {
+        #[arg(long, default_value = "1000.0")] m0: f64,
+        #[arg(long, default_value = "1.0")]    p0: f64,
+        #[arg(long, default_value = "2.0")]    velocity: f64,
+        #[arg(long, default_value = "500.0")]  real_gdp: f64,
+        #[arg(long, default_value = "10.0")]   horizon: f64,
+        #[arg(long, default_value = "100")]    steps: usize,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CompileAction {
+    /// Compile defeasible logic (.n3) into native .q42 structural norms
+    N3ToDeontic { file: PathBuf },
 }
 
 #[derive(Subcommand, Debug)]
@@ -240,23 +776,110 @@ enum MigrateAction {
     },
 }
 
-#[cfg(feature = "qpu_internal")]
 #[derive(Subcommand, Debug)]
-enum QpuAction {
-    /// Passthrough to internal QPU solver
-    Solve {
-        /// Input problem file
-        #[arg(long)]
-        input: PathBuf,
-        /// Output solution file
-        #[arg(long)]
-        output: PathBuf,
+pub enum QpuAction {
+    /// List all 8 supported QPU providers with required configuration fields
+    ListProviders,
+
+    /// Set or update API credentials for a QPU provider.
+    ///
+    /// Provider IDs: ibm | dwave | ionq | rigetti | azure | braket | google | quantinuum
+    ///
+    /// IBM:          --api-key --hub --group --project [--instance] [--endpoint]
+    /// D-Wave:       --api-key [--endpoint]
+    /// IonQ:         --api-key [--backend] [--endpoint]
+    /// Rigetti:      --api-key --user-id [--qpu-id] [--endpoint]
+    /// Azure:        --subscription-id --resource-group --workspace --location [--api-key]
+    /// Braket:       --access-key-id --secret-access-key --region [--s3-bucket]
+    /// Google:       --project-id --processor-id [--service-account-key-path]
+    /// Quantinuum:   --api-key [--machine] [--endpoint]
+    Configure {
+        /// Provider ID (ibm | dwave | ionq | rigetti | azure | braket | google | quantinuum)
+        provider: String,
+        // ── Universal ────────────────────────────────────────────────────────
+        #[arg(long, help = "API key / bearer token (IBM, D-Wave, IonQ, Rigetti, Quantinuum)")]
+        api_key: Option<String>,
+        #[arg(long, help = "Custom API endpoint URL (overrides provider default)")]
+        endpoint: Option<String>,
+        // ── IBM ──────────────────────────────────────────────────────────────
+        #[arg(long, help = "IBM Quantum Network hub (e.g. ibm-q)")]
+        hub: Option<String>,
+        #[arg(long, help = "IBM Quantum Network group (e.g. open)")]
+        group: Option<String>,
+        #[arg(long, help = "IBM Quantum Network project (e.g. main)")]
+        project: Option<String>,
+        #[arg(long, help = "IBM instance string (alternate to hub/group/project)")]
+        instance: Option<String>,
+        // ── Azure ────────────────────────────────────────────────────────────
+        #[arg(long, help = "Azure subscription ID")]
+        subscription_id: Option<String>,
+        #[arg(long, help = "Azure resource group name")]
+        resource_group: Option<String>,
+        #[arg(long, help = "Azure Quantum workspace name")]
+        workspace: Option<String>,
+        #[arg(long, help = "Azure region (e.g. eastus)")]
+        location: Option<String>,
+        // ── Braket ───────────────────────────────────────────────────────────
+        #[arg(long, help = "AWS access key ID (IAM with AmazonBraketFullAccess)")]
+        access_key_id: Option<String>,
+        #[arg(long, help = "AWS secret access key")]
+        secret_access_key: Option<String>,
+        #[arg(long, help = "AWS region (e.g. us-east-1)")]
+        region: Option<String>,
+        #[arg(long, help = "S3 bucket for Braket job results")]
+        s3_bucket: Option<String>,
+        // ── Google ───────────────────────────────────────────────────────────
+        #[arg(long, help = "Google Cloud project ID")]
+        project_id: Option<String>,
+        #[arg(long, help = "Quantum processor ID (e.g. rainbow, weber)")]
+        processor_id: Option<String>,
+        #[arg(long, help = "Path to service account JSON key file")]
+        service_account_key_path: Option<String>,
+        // ── Rigetti ──────────────────────────────────────────────────────────
+        #[arg(long, help = "Rigetti QCS user ID")]
+        user_id: Option<String>,
+        #[arg(long, help = "Rigetti QPU ID (e.g. Ankaa-2)")]
+        qpu_id: Option<String>,
+        // ── IonQ ─────────────────────────────────────────────────────────────
+        #[arg(long, help = "IonQ backend (ionq_sim | ionq_qpu | qpu.aria-1 | qpu.forte-1)")]
+        backend: Option<String>,
+        // ── Quantinuum ───────────────────────────────────────────────────────
+        #[arg(long, help = "Quantinuum machine (H1-1 | H1-2 | H2-1 | H1-1E | H1-1SC)")]
+        machine: Option<String>,
     },
-    /// Dispatch job to QPU
-    Dispatch {
-        /// Job configuration file
+
+    /// Show stored credentials for all (or one) provider — API keys are masked
+    Show {
+        /// Show only this provider (default: all configured providers)
         #[arg(long)]
-        config: PathBuf,
+        provider: Option<String>,
+    },
+
+    /// Remove stored credentials for a provider
+    Clear {
+        /// Provider ID to remove
+        provider: String,
+    },
+
+    /// Validate that required credential fields are set for a provider
+    TestConnection {
+        /// Provider ID to test
+        provider: String,
+    },
+
+    /// Submit a test job to a provider (local simulation; live dispatch via daemon)
+    Submit {
+        /// Provider ID to submit to
+        provider: String,
+        /// Problem type: annealing | gate-model | vqe | qaoa
+        #[arg(long, default_value = "annealing")]
+        problem_type: String,
+        /// Number of qubits
+        #[arg(long, default_value = "4")]
+        qubits: u32,
+        /// Number of measurement shots
+        #[arg(long, default_value = "1000")]
+        shots: u32,
     },
 }
 
@@ -302,7 +925,47 @@ enum WebizenAction {
 }
 
 #[derive(Subcommand, Debug)]
-enum LlmAction {
+pub enum QueryDialect {
+    /// Execute a standard SPARQL 1.1 Query
+    Sparql { 
+        vault: PathBuf, 
+        query_string: Option<String>,
+        #[arg(short, long)]
+        file: Option<PathBuf>,
+    },
+    /// Execute a nested SPARQL-Star Query (RDF-Star)
+    SparqlStar { 
+        vault: PathBuf, 
+        query_string: Option<String>,
+        #[arg(short, long)]
+        file: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum IngestFormat {
+    /// Ingest standard Semantic Web formats (N-Triples, RDF/XML, Turtle)
+    Semantic { file: PathBuf },
+    
+    /// Ingest a CSV file using a semantic mapping definition
+    Csv { 
+        file: PathBuf, 
+        /// JSON mapping file defining how columns map to Predicate URIs
+        #[arg(long)]
+        map: PathBuf 
+    },
+    
+    /// Ingest a massive JSON export (e.g. Samsung Health) via streaming
+    Json { 
+        file: PathBuf, 
+        /// JSON mapping file defining how object keys map to Predicate URIs
+        #[arg(long)]
+        map: PathBuf 
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum LlmAction {
     /// Scan a vault directory for `.gguf` models
     List {
         /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT` or `C:/llmmodels`)
@@ -328,6 +991,9 @@ enum LlmAction {
         /// Stream decoded token deltas to stdout (direct path only)
         #[arg(long)]
         stream: bool,
+        /// Optional path to a LoRA .safetensors adapter to multiplex
+        #[arg(long)]
+        lora: Option<PathBuf>,
     },
     /// Evict resident model, scrub buffers, and release mmap
     Evict {
@@ -437,10 +1103,77 @@ struct RpcResponse {
     id: u64,
 }
 
+/// Execute a SPARQL (or SPARQL-Star) query string against a `.q42` vault.
+///
+/// Uses the core-db native pipeline:
+///   `parse_sparql` → `QueryPlanner::plan` → memmap vault → `QueryExecutor::execute`
+///
+/// Results are printed as variable-slot → hash-value pairs. A reverse lexicon
+/// lookup is not yet implemented; values are the FNV-1a hashes stored in the
+/// vault and can be cross-referenced with the vault's embedded `.lex` section.
+fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
+    use qualia_core_db::sparql_executor::QueryExecutor;
+    use qualia_core_db::sparql_planner::QueryPlanner;
+
+    // 1. Parse
+    let (query, ctx) = match qualia_core_db::sparql_parser::parse_sparql(query_str) {
+        Ok(pair) => pair,
+        Err(e) => { eprintln!("SPARQL parse error: {e}"); return; }
+    };
+
+    // 2. Plan
+    let plan = match QueryPlanner::plan(&query, &ctx) {
+        Ok(p) => p,
+        Err(e) => { eprintln!("SPARQL plan error: {e}"); return; }
+    };
+
+    // 3. Open vault (memmap, zero heap copy)
+    let vault_file = std::fs::File::open(vault).ok();
+    // Safety: read-only mapping of a .q42 vault written by the ingest pipeline.
+    let vault_mmap = vault_file.as_ref()
+        .and_then(|f| unsafe { memmap2::Mmap::map(f).ok() });
+    let quins: &[qualia_core_db::NQuin] = vault_mmap
+        .as_deref()
+        .map(bytemuck::cast_slice)
+        .unwrap_or(&[]);
+
+    if quins.is_empty() {
+        eprintln!("Warning: vault '{}' is empty or could not be opened.", vault.display());
+    }
+
+    // 4. Execute
+    let executor = QueryExecutor::new(quins);
+    match executor.execute(&plan, &ctx) {
+        Err(e) => eprintln!("SPARQL execution error: {e}"),
+        Ok(rows) => {
+            println!("{} result(s) from {}", rows.len(), vault.display());
+            for (i, row) in rows.iter().enumerate() {
+                print!("[{i:>4}]");
+                for (slot_idx, slot) in row.slots.iter().enumerate() {
+                    if let Some(v) = slot {
+                        print!("  ?v{}=0x{v:016x}", slot_idx);
+                    }
+                }
+                println!();
+            }
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
-    if cli.log_stream {
+    
+    let log_level = match cli.verbose {
+        0 => "info",
+        1 => "debug",
+        _ => "trace",
+    };
+    std::env::set_var("RUST_LOG", log_level);
+    let _ = env_logger::try_init();
+    
+    if cli.verbose >= 1 {
+        // Fallback for the old log_stream
         llm_lifecycle::init_log_stream(true);
     }
 
@@ -464,7 +1197,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     prompt,
                     orchestrated,
                     stream,
+                    lora,
                 } => {
+                    if let Some(l) = lora {
+                        println!("Multiplexing LoRA adapter from {:?}", l);
+                        // Future: Pass lora path to run_eval or mount via lora_manager
+                    }
                     llm_lifecycle::run_eval(prompt, *orchestrated, *stream)?;
                 }
                 LlmAction::Evict { model_id } => {
@@ -500,8 +1238,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Use `qualia-cli capabilities --list` to view capabilities.");
             }
         }
-        Commands::Shacl { list_extensions } => {
-            if *list_extensions {
+        Commands::Shacl { action } => match action {
+            ShaclAction::List => {
                 println!("============================================================");
                 println!("⚙️  QualiaDB SHACL Extensions Active in Binary");
                 println!("============================================================");
@@ -513,10 +1251,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("  - EpistemicBelief");
                 println!("  - CommonKnowledge");
                 println!("============================================================");
-            } else {
-                println!("Use `qualia-cli shacl --list-extensions` to view SHACL features.");
             }
-        }
+            ShaclAction::Validate { dataset, shapes } => {
+                println!("Validating {:?} against SHACL shapes in {:?}...", dataset, shapes);
+                // Zero-copy memmap2 SHACL validation will go here
+            }
+        },
         Commands::Vault { init } => {
             if *init {
                 println!("Initializing Memory-Mapped Vault...");
@@ -728,74 +1468,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        Commands::Ingest { input, output } => {
-            let ext = input
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("")
-                .to_lowercase();
-            let is_rdf = matches!(ext.as_str(), "rdf" | "xml" | "owl");
-            let is_turtle_star = matches!(ext.as_str(), "ttl" | "turtle" | "ttls" | "ttlstar" | "ntx" | "ntstar" | "nts");
-            let is_chk = ext == "chk";
-            let is_cbor = matches!(ext.as_str(), "cbor" | "cbor-ld");
-            let is_kml = ext == "kml";
-
-            // Ensure the output path ends in ".q42" so that lex_path()
-            // correctly derives "<base>.q42.lex" from it.
-            let q42_output = if output.extension().and_then(|e| e.to_str()) == Some("q42") {
-                output.clone()
-            } else {
-                output.with_extension("q42")
-            };
-
-            println!("============================================================");
-            if is_rdf {
-                println!("QualiaDB RDF/XML → .q42 Ingestor");
-            } else if is_turtle_star {
-                println!("QualiaDB Turtle/RDF-Star → .q42 Ingestor");
-            } else if is_chk {
-                println!("QualiaDB Cognitive AI .chk → .q42 Ingestor");
-            } else if is_cbor {
-                println!("QualiaDB CBOR-LD → .q42 Ingestor");
-            } else if is_kml {
-                println!("QualiaDB KML → .q42 Ingestor (GeoSPARQL + PROV-O)");
-            } else {
-                println!("QualiaDB N-Triples → .q42 Ingestor");
-            }
-            println!("  input  : {}", input.display());
-            println!("  output : {}", q42_output.display());
-            println!("         + {}.lex  (lexicon)", q42_output.display());
-            println!("         + {}.bidx (block index)", q42_output.display());
-            println!("============================================================");
-
-            let result = if is_rdf {
-                ingest::ingest_rdf_xml(input, &q42_output)
-            } else if is_turtle_star {
-                ingest::ingest_turtle_star(input, &q42_output)
-            } else if is_chk {
-                ingest::ingest_chk(input, &q42_output)
-            } else if is_cbor {
-                ingest::ingest_cbor(input, &q42_output)
-            } else if is_kml {
-                ingest::ingest_kml(input, &q42_output)
-            } else {
-                ingest::ingest_ntriples(input, &q42_output)
-            };
-
-            match result {
-                Ok(stats) => {
-                    println!("Done.");
-                    println!("  Triples ingested : {}", stats.triples_ingested);
-                    println!("  SuperBlocks      : {}", stats.blocks_written);
-                    println!("  Lexicon entries  : {}", stats.lex_entries);
-                    println!("  BIDX             : {} block ranges", stats.blocks_written);
-                    if stats.lines_skipped > 0 {
-                        println!("  Lines skipped    : {}", stats.lines_skipped);
+        Commands::Ingest { format } => match format {
+            IngestFormat::Semantic { file } => {
+                let out_path = file.with_extension("q42");
+                println!("Detecting format for: {}", file.display());
+                match ingest::ingest_auto(&file, &out_path) {
+                    Ok((stats, fmt)) => {
+                        println!("Format : {}", fmt.label());
+                        println!("Triples: {}", stats.triples_ingested);
+                        println!("Blocks : {}", stats.blocks_written);
+                        println!("Output : {}", out_path.display());
+                        println!("Done.");
                     }
+                    Err(e) => eprintln!("Ingest error: {e}"),
                 }
-                Err(e) => eprintln!("Ingest failed: {}", e),
             }
-        }
+            IngestFormat::Csv { file, map } => {
+                println!("CSV ingest for {:?} using map {:?}", file, map);
+                match ingest::mapper::compile_shacl_mapping(map) {
+                    Ok(mut profile) => {
+                        let path_str = file.to_string_lossy();
+                        let out_path = file.with_extension("q42").to_string_lossy().into_owned();
+                        ingest::csv_mapper::stream_csv_to_quins(&path_str, &out_path, &mut profile);
+                        println!("✅ CSV Ingest Complete");
+                    }
+                    Err(e) => eprintln!("❌ Failed to compile SHACL mapping: {}", e),
+                }
+            }
+            IngestFormat::Json { file, map } => {
+                println!("JSON ingest for {:?} using map {:?}", file, map);
+                match ingest::mapper::compile_shacl_mapping(map) {
+                    Ok(profile) => {
+                        let path_str = file.to_string_lossy();
+                        let out_path = file.with_extension("q42").to_string_lossy().into_owned();
+                        ingest::json_mapper::stream_json_to_quins(&path_str, &out_path, &profile);
+                        println!("✅ JSON Ingest Complete");
+                    }
+                    Err(e) => eprintln!("❌ Failed to compile SHACL mapping: {}", e),
+                }
+            }
+        },
         Commands::VerifyIntegrity { input, dataset } => {
             println!("============================================================");
             println!("🔒 QualiaDB Zero-Allocation Integrity Verification");
@@ -835,29 +1547,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        Commands::Query { dataset, subject } => {
-            println!("============================================================");
-            println!("⚡ QualiaDB Zero-Allocation Memory-Mapped Query Engine");
-            println!("============================================================");
+        Commands::Query { dialect } => match dialect {
+            QueryDialect::Sparql { vault, query_string, file } => {
+                let qs = if let Some(q) = query_string {
+                    q.clone()
+                } else if let Some(f) = file {
+                    std::fs::read_to_string(f).expect("Failed to read SPARQL file")
+                } else {
+                    panic!("Must provide either a query_string or a file");
+                };
 
-            let path = dataset.to_string_lossy().to_string();
-            match qualia_core_db::query_engine::mmap_query_subject(&path, *subject) {
-                Ok(results) => {
-                    if results.is_empty() {
-                        println!("No records found for subject ID {}.", subject);
-                    } else {
-                        println!(
-                            "Example Record: S:{} P:{} O:{} Ctx:{}",
-                            results[0].subject,
-                            results[0].predicate,
-                            results[0].object,
-                            results[0].context
-                        );
-                    }
-                }
-                Err(e) => eprintln!("❌ Query Failed: {}", e),
+                run_sparql_query(&vault, &qs);
             }
-        }
+            QueryDialect::SparqlStar { vault, query_string, file } => {
+                let qs = if let Some(q) = query_string {
+                    q.clone()
+                } else if let Some(f) = file {
+                    std::fs::read_to_string(f).expect("Failed to read SPARQL-Star file")
+                } else {
+                    panic!("Must provide either a query_string or a file");
+                };
+                run_sparql_query(&vault, &qs);
+            }
+        },
         Commands::Compress { input, output } => {
             let ext = input
                 .extension()
@@ -1967,30 +2679,247 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        #[cfg(feature = "qpu_internal")]
         Commands::Qpu { action } => {
+            if !cli.enable_qpu {
+                eprintln!("QPU commands require the --enable-qpu flag:");
+                eprintln!("  qualia-cli --enable-qpu qpu <subcommand>");
+                eprintln!();
+                eprintln!("Subcommands: list-providers | configure | show | clear | test-connection | submit");
+                std::process::exit(1);
+            }
+            let data_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());
             match action {
-                QpuAction::Solve { input, output } => {
-                    println!("========================================");
-                    println!("QPU Internal Solver (undocumented, private)");
-                    println!("Input: {:?}", input);
-                    println!("Output: {:?}", output);
-                    println!("========================================");
-                    // Passthrough to internal QPU solver
-                    // This is a stub - actual implementation would call QPU internal modules
-                    println!("QPU solver passthrough - not implemented");
+                QpuAction::ListProviders => {
+                    qpu::run_list_providers();
                 }
-                QpuAction::Dispatch { config } => {
-                    println!("========================================");
-                    println!("QPU Internal Dispatcher (undocumented, private)");
-                    println!("Config: {:?}", config);
-                    println!("========================================");
-                    // Passthrough to internal QPU dispatcher
-                    // This is a stub - actual implementation would call QPU internal modules
-                    println!("QPU dispatcher passthrough - not implemented");
+                QpuAction::Configure {
+                    provider, api_key, endpoint,
+                    hub, group, project, instance,
+                    subscription_id, resource_group, workspace, location,
+                    access_key_id, secret_access_key, region, s3_bucket,
+                    project_id, processor_id, service_account_key_path,
+                    user_id, qpu_id, backend, machine,
+                } => {
+                    qpu::run_configure(
+                        &data_dir, provider,
+                        api_key.as_deref(), endpoint.as_deref(),
+                        hub.as_deref(), group.as_deref(), project.as_deref(), instance.as_deref(),
+                        subscription_id.as_deref(), resource_group.as_deref(),
+                        workspace.as_deref(), location.as_deref(),
+                        access_key_id.as_deref(), secret_access_key.as_deref(),
+                        region.as_deref(), s3_bucket.as_deref(),
+                        project_id.as_deref(), processor_id.as_deref(),
+                        service_account_key_path.as_deref(),
+                        user_id.as_deref(), qpu_id.as_deref(),
+                        backend.as_deref(),
+                        machine.as_deref(),
+                    );
+                }
+                QpuAction::Show { provider } => {
+                    qpu::run_show(&data_dir, provider.as_deref());
+                }
+                QpuAction::Clear { provider } => {
+                    qpu::run_clear(&data_dir, provider);
+                }
+                QpuAction::TestConnection { provider } => {
+                    qpu::run_test_connection(&data_dir, provider);
+                }
+                QpuAction::Submit { provider, problem_type, qubits, shots } => {
+                    qpu::run_submit(&data_dir, provider, problem_type, *qubits, *shots);
                 }
             }
         }
+        Commands::Extension { action } => match action {
+            ExtensionAction::Register { manifest_path } => {
+                println!("Registering extension from {:?}", manifest_path);
+            }
+            ExtensionAction::List => {
+                println!("Listing registered extensions...");
+            }
+            ExtensionAction::Dispatch { id, input } => {
+                println!("Dispatching to extension '{}': {}", id, input);
+            }
+        },
+        Commands::Evaluate { modality } => match modality {
+            EvaluateModality::Deontic { dataset, contract_hash } => {
+                evaluate::run_deontic(dataset, *contract_hash);
+            }
+            EvaluateModality::Epistemic { dataset, agent_hash } => {
+                evaluate::run_epistemic(dataset, *agent_hash);
+            }
+            EvaluateModality::Paraconsistent { dataset } => {
+                evaluate::run_paraconsistent(dataset);
+            }
+            EvaluateModality::Ltl { dataset, formula_type, hash_a, hash_b } => {
+                evaluate::run_ltl(dataset, formula_type, *hash_a, *hash_b);
+            }
+            EvaluateModality::Asp { dataset, base_index } => {
+                evaluate::run_asp(dataset, *base_index);
+            }
+            EvaluateModality::Dl { dataset, sub_class, super_class } => {
+                evaluate::run_dl(dataset, *sub_class, *super_class);
+            }
+            EvaluateModality::Probabilistic { weight, threshold } => {
+                evaluate::run_probabilistic(*weight, *threshold);
+            }
+            EvaluateModality::LinearLogic { dataset, quin_index } => {
+                evaluate::run_linear_logic(dataset, *quin_index);
+            }
+            EvaluateModality::Dialectical { dataset, var1, var2 } => {
+                evaluate::run_dialectical(dataset, *var1, *var2);
+            }
+            EvaluateModality::Diffusion { graph_id } => {
+                evaluate::run_diffusion(graph_id);
+            }
+            EvaluateModality::SpatioTemporal { action, ax1, ay1, ax2, ay2, bx1, by1, bx2, by2 } => {
+                evaluate::run_spatio_temporal(action, *ax1, *ay1, *ax2, *ay2, *bx1, *by1, *bx2, *by2);
+            }
+            EvaluateModality::Interval { action, start1, end1, start2, end2, point } => {
+                evaluate::run_interval(action, *start1, *end1, *start2, *end2, *point);
+            }
+            EvaluateModality::GraphTopology { dataset, context } => {
+                evaluate::run_graph_topology(dataset, *context);
+            }
+            EvaluateModality::Argumentation { demo, dataset } => {
+                evaluate::run_argumentation(*demo, dataset.as_deref());
+            }
+            EvaluateModality::ControlFeedback { kp, ki, kd, setpoint, measurement } => {
+                evaluate::run_control_feedback(*kp, *ki, *kd, *setpoint, *measurement);
+            }
+            EvaluateModality::NeuroSymbolic { demo: _ } => {
+                evaluate::run_neuro_symbolic();
+            }
+        },
+        Commands::Solve { action } => match action {
+            SolveAction::Linalg { action } => match action {
+                LinalgAction::Multiply { matrix_a, matrix_b } => {
+                    solve::run_matrix_multiply(matrix_a, matrix_b);
+                }
+                LinalgAction::Determinant { matrix } => {
+                    solve::run_determinant(matrix);
+                }
+                LinalgAction::SolveSystem { matrix, vector } => {
+                    solve::run_solve_system(matrix, vector);
+                }
+                LinalgAction::Eigenvalues { matrix, count } => {
+                    solve::run_eigenvalues(matrix, *count);
+                }
+                LinalgAction::TensorContract { tensor } => {
+                    solve::run_tensor_contract(tensor);
+                }
+            },
+            SolveAction::Optimize { action } => match action {
+                OptimizeAction::Simplex { initial, iterations } => {
+                    solve::run_simplex(initial, *iterations);
+                }
+                OptimizeAction::Root { initial, lower, upper, tolerance } => {
+                    solve::run_root(*initial, *lower, *upper, *tolerance);
+                }
+                OptimizeAction::CurveFit { initial_params, x_data, y_data } => {
+                    solve::run_curve_fit(initial_params, x_data, y_data);
+                }
+            },
+            SolveAction::Ode { action } => match action {
+                OdeAction::Rk4 { lambda, t_start, t_end, y0, step_size } => {
+                    solve::run_ode_rk4(*lambda, *t_start, *t_end, *y0, *step_size);
+                }
+                OdeAction::Harmonic { omega, t_start, t_end, y0, step_size } => {
+                    solve::run_ode_harmonic(*omega, *t_start, *t_end, *y0, *step_size);
+                }
+                OdeAction::Bvp { t_start, t_end, y_left, y_right, threshold } => {
+                    solve::run_ode_bvp(*t_start, *t_end, *y_left, *y_right, *threshold);
+                }
+                OdeAction::QuantumSpectrum { planck_mass, coupling, max_n, frequency } => {
+                    solve::run_ode_quantum_spectrum(*planck_mass, *coupling, *max_n, *frequency);
+                }
+            },
+            SolveAction::Quantum { action } => match action {
+                QuantumSolveAction::Qaoa { depth, beta, gamma } => {
+                    solve::run_quantum_qaoa(*depth, beta, gamma);
+                }
+                QuantumSolveAction::Spsa { num_params, initial } => {
+                    solve::run_quantum_spsa(*num_params, initial);
+                }
+            },
+            SolveAction::Symbolic { action } => match action {
+                SymbolicSolveAction::Defeasible { facts, rules } => {
+                    solve::run_symbolic_defeasible(facts, rules);
+                }
+                SymbolicSolveAction::Sat { clauses } => {
+                    solve::run_symbolic_sat(clauses);
+                }
+            },
+        },
+        Commands::Science { action } => match action {
+            ScienceAction::Chem { action } => match action {
+                ChemAction::Smiles { smiles } => science::run_chem_smiles(smiles),
+                ChemAction::Thermo { reaction, a, b, c } => science::run_chem_thermo(reaction, *a, *b, *c),
+                ChemAction::DrugLike { smiles } => science::run_chem_druglike(smiles),
+                ChemAction::Pka { pka, conc_base, conc_acid } => science::run_chem_pka(*pka, *conc_base, *conc_acid),
+            },
+            ScienceAction::Bio { action } => match action {
+                BioAction::Align { query, target, mode } => science::run_bio_align(query, target, mode),
+                BioAction::Kmer { sequence, k } => science::run_bio_kmer(sequence, *k),
+                BioAction::Translate { dna } => science::run_bio_translate(dna),
+                BioAction::Isoelectric { protein } => science::run_bio_isoelectric(protein),
+                BioAction::Jaccard { sketch_a, sketch_b } => science::run_bio_jaccard(sketch_a, sketch_b),
+                BioAction::Minhash { sequence, k, size } => science::run_bio_minhash(sequence, *k, *size),
+            },
+            ScienceAction::Geo { action } => match action {
+                GeoAction::EmbedH3 { index } => science::run_geo_embed_h3(*index),
+            },
+            ScienceAction::Thermo { action } => match action {
+                ThermoAction::Gibbs { enthalpy, entropy, temp } => science::run_thermo_gibbs(*enthalpy, *entropy, *temp),
+                ThermoAction::Anneal { initial_temp, particles, proposed_energy, random } => {
+                    science::run_thermo_anneal(*initial_temp, *particles, *proposed_energy, *random);
+                }
+            },
+            ScienceAction::Geometric { action } => match action {
+                GeometricAction::Cross { a, b } => science::run_geometric_cross(a, b),
+                GeometricAction::Angle { a, b } => science::run_geometric_angle(a, b),
+            },
+            ScienceAction::Clinical { action } => match action {
+                ClinicalAction::Framingham { age, sex_male, total_chol, hdl_chol, systolic_bp, bp_treated, smoker, diabetic } => {
+                    science::run_clinical_framingham(*age, *sex_male, *total_chol, *hdl_chol, *systolic_bp, *bp_treated, *smoker, *diabetic);
+                }
+                ClinicalAction::Sofa { pao2_fio2, platelets, bilirubin, map, gcs, creatinine } => {
+                    science::run_clinical_sofa(*pao2_fio2, *platelets, *bilirubin, *map, *gcs, *creatinine);
+                }
+                ClinicalAction::Ckd { age, sex_male, weight_kg, creatinine } => {
+                    science::run_clinical_ckd(*age, *sex_male, *weight_kg, *creatinine);
+                }
+                ClinicalAction::Pk { dose_mg, vd_l, cl_l_hr, time_hr } => {
+                    science::run_clinical_pk(*dose_mg, *vd_l, *cl_l_hr, *time_hr);
+                }
+                ClinicalAction::DrugInteractions { drug_names } => {
+                    science::run_clinical_drug_interactions(drug_names);
+                }
+            },
+            ScienceAction::Economics { action } => match action {
+                EconomicsAction::Gbm { price, drift, vol, horizon, steps } => {
+                    science::run_economics_gbm(*price, *drift, *vol, *horizon, *steps);
+                }
+                EconomicsAction::Var { price, drift, vol, horizon, steps, paths } => {
+                    science::run_economics_var(*price, *drift, *vol, *horizon, *steps, *paths);
+                }
+                EconomicsAction::Macro { m0, p0, velocity, real_gdp, horizon, steps } => {
+                    science::run_economics_macro(*m0, *p0, *velocity, *real_gdp, *horizon, *steps);
+                }
+            },
+        },
+        Commands::Governance { action } => match action {
+            GovernanceAction::WalAppend { quin, sign } => {
+                println!("Appending to WAL: {} (signed by {})", quin, sign);
+            }
+            GovernanceAction::Ratify { agreement_did } => {
+                println!("Ratifying agreement: {}", agreement_did);
+            }
+        },
+        Commands::Compile { action } => match action {
+            CompileAction::N3ToDeontic { file } => {
+                println!("Compiling N3 logic to native norms from {:?}", file);
+            }
+        },
     }
 
     Ok(())

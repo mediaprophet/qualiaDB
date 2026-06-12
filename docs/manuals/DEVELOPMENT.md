@@ -12,7 +12,7 @@ _Branch: `0.0.11-dev` | Last updated: 2026-06-11_
 |---|---|---|
 | [Rust stable](https://rustup.rs/) | Everything | `rustup update stable` |
 | [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/) | WASM browser build | |
-| [Dioxus CLI](https://dioxuslabs.com/learn/0.5/getting_started) | Qualia Studio | Primary shipped desktop target (`cargo binstall dioxus-cli`) |
+| [Dioxus CLI](https://dioxuslabs.com/learn/0.5/getting_started) | Webizen Studio | Primary shipped desktop target (`cargo binstall dioxus-cli`) |
 | Node.js ≥ 18 | Docs test suite, API explorer | `docs/tests/run-local.ps1` |
 | [Tauri CLI v1.x](https://tauri.app/v1/guides/getting-started/prerequisites/) | Legacy desktop only | `qualia-desktop` crate — not in release CI |
 
@@ -27,7 +27,7 @@ cargo build --release -p qualia-cli
 ./target/release/qualia --help
 ```
 
-### Qualia Studio desktop app (primary shipped desktop target)
+### Webizen Studio desktop app (primary shipped desktop target)
 
 ```bash
 cd crates/qualia-studio

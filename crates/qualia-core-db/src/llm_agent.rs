@@ -515,13 +515,13 @@ impl LocalLlmAgent {
     ///
     /// On WASM / non-local backends: falls through to the original mock path.
     /// Run local inference, optionally streaming decoded text deltas to `on_token`.
-    pub fn infer_local_model_streaming<F: FnMut(String) + Send>(
+    pub fn infer_local_model_streaming<F: FnMut(String) + Send + 'static>(
         &self,
         prompt: &str,
         graph_context: &str,
         mut on_token: Option<F>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
-        self.infer_local_model_inner(prompt, graph_context, on_token.as_mut())
+        self.infer_local_model_inner(prompt, graph_context, on_token)
     }
 
     fn infer_local_model(
@@ -533,11 +533,11 @@ impl LocalLlmAgent {
     }
 
     #[cfg_attr(target_arch = "wasm32", allow(unused_variables, unused_mut))]
-    fn infer_local_model_inner<F: FnMut(String) + Send>(
+    fn infer_local_model_inner<F: FnMut(String) + Send + 'static>(
         &self,
         prompt: &str,
         graph_context: &str,
-        mut on_token: Option<&mut F>,
+        mut on_token: Option<F>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
         let prov_hash = graph_context
             .bytes()
@@ -952,6 +952,16 @@ impl LocalLlmAgent {
                     )
                 }
             };
+            
+            // ── WASM Extension Bus Offloading ────────────────────────────────
+            if crate::extension_bus::wasm_bus::is_connected() {
+                if let Some(cb) = on_token {
+                    let _ = crate::extension_bus::wasm_bus::send_intent(prompt, graph_context, cb);
+                } else {
+                    let _ = crate::extension_bus::wasm_bus::send_intent(prompt, graph_context, |_| {});
+                }
+                return (String::new(), vec![prov_hash], 0, None);
+            }
             let prompt_owned = prompt.to_string();
 
             // ── LoRA context detection (before thread spawn) ─────────────────

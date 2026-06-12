@@ -2095,9 +2095,13 @@ impl std::fmt::Display for MeshError {
 impl std::error::Error for MeshError {}
 
 // Bit type aliases for compact representation
+#[allow(non_camel_case_types)]
 pub type u4 = u8;
+#[allow(non_camel_case_types)]
 pub type u3 = u8;
+#[allow(non_camel_case_types)]
 pub type u5 = u8;
+#[allow(non_camel_case_types)]
 pub type u12 = u16;
 
 #[cfg(test)]

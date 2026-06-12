@@ -93,7 +93,7 @@ impl<'a> SparqlWebSocketHandler<'a> {
         session_id: u64,
     ) -> Result<String, String> {
         // Parse query
-        let (sparql_query, mut ctx) = sparql_parser::parse_sparql(query)?;
+        let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
         
         // Plan query
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
@@ -138,7 +138,7 @@ impl<'a> SparqlWebSocketHandler<'a> {
         session_id: u64,
     ) -> Result<Vec<String>, String> {
         // Parse and execute query
-        let (sparql_query, mut ctx) = sparql_parser::parse_sparql(query)?;
+        let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(self.quins);
         let results = executor.execute(&plan, &ctx)?;

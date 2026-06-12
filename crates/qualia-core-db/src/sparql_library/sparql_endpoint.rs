@@ -22,7 +22,7 @@ impl<'a> SparqlEndpoint<'a> {
     /// Handle SPARQL query via HTTP
     pub fn handle_query(&self, query: &str, format: &str) -> Result<String, String> {
         // Parse query
-        let (sparql_query, mut ctx) = sparql_parser::parse_sparql(query)?;
+        let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
         
         // Plan query
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
@@ -83,7 +83,7 @@ impl<'a> SparqlEndpoint<'a> {
 
     /// Handle ASK query
     pub fn handle_ask(&self, query: &str, format: &str) -> Result<String, String> {
-        let (sparql_query, mut ctx) = sparql_parser::parse_sparql(query)?;
+        let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
 
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(&self.quins);
@@ -106,7 +106,7 @@ impl<'a> SparqlEndpoint<'a> {
 
     /// Handle CONSTRUCT query
     pub fn handle_construct(&self, query: &str, format: &str) -> Result<String, String> {
-        let (sparql_query, mut ctx) = sparql_parser::parse_sparql(query)?;
+        let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
 
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(&self.quins);
@@ -138,7 +138,7 @@ impl<'a> SparqlEndpoint<'a> {
 
     /// Handle DESCRIBE query
     pub fn handle_describe(&self, query: &str, format: &str) -> Result<String, String> {
-        let (sparql_query, mut ctx) = sparql_parser::parse_sparql(query)?;
+        let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
 
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(&self.quins);

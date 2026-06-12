@@ -1,6 +1,6 @@
 # Release Targets — Feature Matrix
 
-_Branch: `0.0.11-dev` | Updated: 2026-06-11_
+_Branch: `0.0.11` | Updated: 2026-06-12_
 
 Five release artefacts are built or planned from this repository:
 
@@ -9,10 +9,10 @@ Five release artefacts are built or planned from this repository:
 | **WASM (Browser)** | `qualia-core-wasm` (`wasm_bridge.rs`, `wasm_edge.rs`) | `qualia-core-wasm.tar.gz` — drop into any web project |
 | **WASM (Mobile PWA)** | `crates/qualia-mobile-harness/` (Dioxus WASM) | PWA — installed via "Add to Home Screen" on any mobile browser; QR-scan bootstrap from desktop |
 | **CLI** | `crates/qualia-cli/` | Binary: `qualia-cli`; built via `cargo build --release -p qualia-cli` |
-| **Desktop — Qualia Studio** | `crates/qualia-studio/` (Dioxus 0.5 + Shoelace) | Installer: Windows / macOS / Linux via GitHub Releases |
+| **Desktop — Webizen Studio** | `crates/qualia-studio/` (Dioxus 0.5 + Shoelace) | Installer: Windows / macOS / Linux via GitHub Releases |
 | **Mobile Native** | TBA (likely Flutter mobile) | TBA — iOS / Android; planned for a future milestone |
 
-> **Note — WASM (Mobile PWA):** This is a Dioxus WASM thin-client PWA that runs on a mobile phone and connects back to the user's personal Webizen desktop daemon via WebSocket (port 4242). It does **not** run the graph engine locally. It provides pane-based UI rendering, QR-scan bootstrap, and DID challenge-response pairing. Core graph, inference, and storage features are executed by the daemon and streamed to the mobile UI. Phase C of the Mindware Studio plan (`webizen-platform-plan.md`).
+> **Note — WASM (Mobile PWA):** This is a Dioxus WASM PWA that can run standalone on a mobile device for local-first UI and lightweight client behavior, or connect back to the user's personal Webizen desktop daemon via WebSocket (port 4242) when native offload, deeper inference, or resident storage services are available. It provides pane-based UI rendering, QR-scan bootstrap, and DID challenge-response pairing across both modes. Phase C of the Webizen Studio plan (`webizen-platform-plan.md`).
 
 > **Note on Legacy Desktop Prototypes** (`crates/qualia-desktop/` and `crates/qualia-flutter/`): The Tauri/React/NodeJS prototypes are retained in-tree for reference only. The Flutter application is deprecated. All active desktop work has transitioned to the native Dioxus 0.5 / Shoelace target in `crates/qualia-studio/`.
 
@@ -165,6 +165,7 @@ Five release artefacts are built or planned from this repository:
 | Resource catalog — LLM model download pipeline (YAML → WAL) | ❌ | ❌ | ✅ | ✅ Via LLM Hub | 🚧 |
 | LLM Hub UI (grid/list, bulk actions, download state) | ❌ | ❌ | ❌ | ✅ | 🚧 |
 | Inference results streamed to mobile PWA via WebSocket | ❌ | ✅ Streamed | ❌ | ✅ Daemon | 🚧 |
+| Native-First Extension Bus Offloading (WebSocket RPC) | ✅ | ❌ | ❌ | ❌ | 🚧 |
 | WASM mock inference path (ring-buffer stub) | ✅ | ❌ | ❌ | ❌ | 🚧 |
 
 ---
@@ -282,6 +283,9 @@ CG specifications: [Solid Protocol v0.11](https://solidproject.org/TR/protocol) 
 | Quantinuum | ❌ | ❌ | ✅ | ✅ | 🚧 |
 | Principal consent commitment activation | ❌ | ❌ | ✅ | ✅ | 🚧 |
 | QPU job provenance quins (WAL-logged) | ❌ | ❌ | ✅ | ✅ | 🚧 |
+| Provider credential management (`qpu configure/show/clear`) | ❌ | ❌ | ✅ | 🚧 | ❌ |
+
+> **CLI note:** All `qpu` subcommands require the `--enable-qpu` global flag (`qualia-cli --enable-qpu qpu <subcommand>`). Credentials are stored in `$QUALIA_DATA_DIR/qpu_config.json`. The compile-time `qpu_internal` feature gate has been replaced by this runtime flag as of 0.0.11. See `crates/qualia-cli/src/qpu.rs` for the implementation.
 
 ---
 
@@ -487,7 +491,7 @@ These features exist exclusively in the Flutter desktop release:
 | KaTeX mathematical rendering | LaTeX in chat responses |
 | FRB bridge (`qualia_api.rs`) | Direct Rust ↔ Flutter bindings for inference, vault, daemon, resources |
 | QR code generation (`GET /mobile/qr`) | Serves pairing QR for mobile PWA bootstrap |
-| Mindware Studio canvas | Dioxus WASM pane-composer served on port 8080; SSE telemetry; manifest deploy |
+| Webizen Studio canvas | Dioxus WASM pane-composer served on port 8080; SSE telemetry; manifest deploy |
 
 ---
 
@@ -521,6 +525,25 @@ These features exist exclusively in the CLI release:
 | `webizen dns-frontdoor` | Generate `did:web` + DNS TXT zone records |
 | `resources import-ontology <id>` | Multi-step download + validate + ingest pipeline |
 | Multi-pass external sorter | For datasets that exceed available RAM |
+| `evaluate <modality>` | Logic/reasoning evaluator against a `.q42` vault — 16 modalities: propositional, predicate, modal, temporal, deontic, fuzzy, paraconsistent, relevance, intuitionistic, linear, abductive, causal, probabilistic, defeasible, epistemic, neuro_symbolic |
+| `solve linalg` | Matrix ops, LU decomposition, eigensolvers; exposed via `solvers::linear_algebra` |
+| `solve optimize` | Nelder-Mead, Newton-Raphson, Levenberg-Marquardt |
+| `solve ode` | Runge-Kutta 4, shooting-method BVP, Simpson integrator |
+| `solve quantum` | QAOA angle optimiser, SPSA gradient estimator |
+| `solve symbolic` | Forward-chaining defeasible reasoner, bounded SAT solver |
+| `science chem` | Molecular reaction, electron affinity, orbital hybridisation runners |
+| `science bio` | Phylogenetic clustering, protein folding, population dynamics runners |
+| `science geo` | Plate motion, geoid anomaly, seismic wave runners |
+| `science thermo` | Carnot cycle, entropy balance, heat exchange runners |
+| `science geometric` | Multivector product, rotor transform, outermorphism runners |
+| `science clinical` | Pharmacokinetics, diagnosis probability, vital sign runners |
+| `science economics` | Supply/demand, portfolio optimisation, utility curve runners |
+| `--enable-qpu qpu list-providers` | Display all 8 QPU providers and their required credential fields |
+| `--enable-qpu qpu configure <provider>` | Write/update provider API credentials (partial updates supported) |
+| `--enable-qpu qpu show [<provider>]` | Display stored credentials (keys masked) |
+| `--enable-qpu qpu clear <provider>` | Remove stored credentials for a provider |
+| `--enable-qpu qpu test-connection <provider>` | Validate connectivity and credentials |
+| `--enable-qpu qpu submit <provider>` | Submit a QPU job; uses `FallbackHandler` simulation when daemon is unavailable |
 
 ---
 
