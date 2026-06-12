@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Ontology for Multi-Entity Rights over Content</title>
+  <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove"></script>
+  <script class="remove">
+    var respecConfig = {
+      specStatus: "unofficial",
+      editors: [{
+        name: "Timothy C. Holborn",
+        company: "WebCivics",
+        url: "https://www.linkedin.com/in/ubiquitous/"},
+        {
+        name: "Grok 3",
+        company: "xAI",
+        url: "https://x.ai"
+      }],
+      shortName: "multi-entity-rights-ontology",
+      pubDomain: "ontology",
+      publishDate: "2025-06-20",
+      license: "document",
+      historyURI: null,
+      github: null,
+      sotd: {
+        after: "abstract",
+        custom: "<p>This is an unofficial draft and not a formal W3C specification. It is provided for discussion and feedback to explore a rights-based ontology for content involving multiple entities or agents, building on the ODRL Model and other relevant ontologies.</p>"
+      }
+    };
+  </script>
+</head>
+<body>
+  <section id="abstract">
+    <h2>Abstract</h2>
+    <p>
+      This document defines an ontology for describing rights over content where multiple entities or agents have stakes or claims, such as in collaborative creations or shared digital expressions. The ontology extends the <a href="https://www.w3.org/TR/odrl-model/">Open Digital Rights Language (ODRL) Model</a> and integrates concepts from Dublin Core, FOAF, and Creative Commons Rights Expression Language (CC REL). It provides a vocabulary of classes and properties to model entities, content, rights, relationships between rights, and contextual conditions, enabling machine-readable representations of complex rights structures in digital and physical contexts.
+    </p>
+  </section>
+
+  <section id="sotd">
+    <!-- Status of This Document, overridden by custom sotd in respecConfig -->
+  </section>
+
+  <section id="introduction">
+    <h2>Introduction</h2>
+    <p>
+      Traditional intellectual property (IP) frameworks, rooted in property-based models, often struggle to address the rights of multiple stakeholders over shared content, particularly in digital environments. The <em>Ontology for Multi-Entity Rights over Content</em> builds on the <a href="https://www.w3.org/TR/odrl-model/">ODRL Model</a> to provide a structured, machine-readable framework for representing rights held by multiple entities or agents over a single content item. It supports use cases such as co-authorship, licensing agreements, and collaborative digital works, emphasizing moral, social, and economic rights over proprietary ownership.
+    </p>
+    <p>
+      The ontology integrates ODRL's policy-based approach with concepts from Dublin Core (for metadata), FOAF (for agent relationships), and CC REL (for licensing). It is designed to be interoperable with existing standards (e.g., RDF, OWL) and applicable to both digital and physical contexts, addressing challenges like fair attribution, shared control, and contextual constraints.
+    </p>
+  </section>
+
+  <section id="scope">
+    <h2>Scope</h2>
+    <p>
+      This ontology focuses on:
+      <ul>
+        <li>Defining rights for content with multiple stakeholders, including natural persons, organizations, or automated agents.</li>
+        <li>Modeling relationships between rights, such as derivation, licensing, or transfer, using ODRL's policy framework.</li>
+        <li>Supporting contextual conditions that affect rights, such as temporal or jurisdictional constraints.</li>
+        <li>Enabling machine-readable representations for use in digital platforms, rights management systems, and legal frameworks.</li>
+        <li>Integrating with ODRL, Dublin Core, FOAF, and CC REL for interoperability.</li>
+      </ul>
+    </p>
+    <p>
+      Out of scope: Specific legal interpretations or jurisdictional regulations, which are left to implementers to align with applicable laws.
+    </p>
+  </section>
+
+  <section id="terminology">
+    <h2>Terminology</h2>
+    <p>
+      The following terms are used throughout this specification, aligned with ODRL and other referenced ontologies:
+      <dl>
+        <dt>Entity</dt>
+        <dd>An individual, organization, or system capable of holding rights over content, aligned with ODRL's <code>Party</code> and FOAF's <code>Agent</code>.</dd>
+        <dt>Content</dt>
+        <dd>A digital or physical object (e.g., text, image, video) subject to rights, aligned with ODRL's <code>Asset</code> and Dublin Core's <code>Resource</code>.</dd>
+        <dt>Right</dt>
+        <dd>A specific entitlement or permission associated with content, held by one or more entities, aligned with ODRL's <code>Permission</code>, <code>Prohibition</code>, or <code>Duty</code>.</dd>
+        <dt>RightsRelationship</dt>
+        <dd>A relationship between rights, such as derivation or licensing, extending ODRL's <code>Policy</code> relationships.</dd>
+        <dt>Condition</dt>
+        <dd>A contextual factor (e.g., time, location) that constrains the applicability of a right, aligned with ODRL's <code>Constraint</code>.</dd>
+      </dl>
+    </p>
+  </section>
+
+  <section id="ontology">
+    <h2>Ontology Specification</h2>
+    <p>
+      This ontology extends the <a href="https://www.w3.org/TR/odrl-model/">ODRL Model</a> and incorporates elements from Dublin Core, FOAF, and CC REL to model multi-entity rights over content.
+    </p>
+ád
+    <section id="classes">
+      <h3>Classes</h3>
+      <dl>
+        <dt><code>Entity</code></dt>
+        <dd>
+          Represents an individual, organization, or system capable of holding rights, extending ODRL's <code>Party</code> and FOAF's <code>Agent</code>.
+          <ul>
+            <li>Subclasses: <code>Person</code>, <code>Organization</code>, <code>AutomatedAgent</code></li>
+            <li>Attributes: <code>odrl:uid</code>, <code>foaf:name</code>, <code>dc:identifier</code></li>
+          </ul>
+        </dd>
+        <dt><code>Content</code></dt>
+        <dd>
+          Represents the object over which rights are defined, extending ODRL's <code>Asset</code> and Dublin Core's <code>Resource</code>.
+          <ul>
+            <li>Attributes: <code>odrl:uid</code>, <code>dc:type</code>, <code>dc:created</code></li>
+          </ul>
+        </dd>
+        <dt><code>Right</code></dt>
+        <dd>
+          Represents a specific right or permission, extending ODRL's <code>Permission</code>, <code>Prohibition</code>, or <code>Duty</code>.
+          <ul>
+            <li>Subclasses: <code>MoralRight</code> (e.g., attribution, aligned with CC REL), <code>EconomicRight</code> (e.g., licensing), <code>DataProtectionRight</code> (e.g., privacy)</li>
+            <li>Attributes: <code>odrl:action</code>, <code>cc:license</code></li>
+          </ul>
+        </dd>
+        <dt><code>RightsRelationship</code></dt>
+        <dd>
+          Represents a relationship between rights, extending ODRL's <code>Policy</code> relationships (e.g., <code>odrl:agreement</code>, <code>odrl:offer</code>).
+          <ul>
+            <li>Attributes: <code>odrl:relation</code>, <code>relationshipType</code> (e.g., license, transfer)</li>
+          </ul>
+        </dd>
+        <dt><code>Condition</code></dt>
+        <dd>
+          Represents a constraint on a right, aligned with ODRL's <code>Constraint</code>.
+          <ul>
+            <li>Attributes: <code>odrl:constraint</code>, <code>odrl:operator</code>, <code>odrl:value</code> (e.g., temporal, geographic)</li>
+          </ul>
+        </dd>
+      </dl>
+    </section>
+    <section id="properties">
+      <h3>Properties</h3>
+      <dl>
+        <dt><code>holder</code></dt>
+        <dd>
+          Links a <code>Right</code> to one or more <code>Entity</code> instances, extending ODRL's <code>odrl:assigner</code> or <code>odrl:assignee</code>.
+          <ul>
+            <li>Domain: <code>Right</code></li>
+            <li>Range: <code>Entity</code></li>
+          </ul>
+        </dd>
+        <dt><code>appliesTo</code></dt>
+        <dd>
+          Associates a <code>Right</code> with the <code>Content</code>, aligned with ODRL's <code>odrl:target</code>.
+          <ul>
+            <li>Domain: <code>Right</code></li>
+            <li>Range: <code>Content</code></li>
+          </ul>
+        </dd>
+        <dt><code>hasType</code></dt>
+        <dd>
+          Specifies the type of right, extending ODRL's <code>odrl:action</code> (e.g., use, reproduce).
+          <ul>
+            <li>Domain: <code>Right</code></li>
+            <li>Range: <code>RightType</code></li>
+          </ul>
+        </dd>
+        <dt><code>subjectTo</code></dt>
+        <dd>
+          Links a <code>Right</code> to one or more <code>Condition</code> instances, aligned with ODRL's <code>odrl:constraint</code>.
+          <ul>
+            <li>Domain: <code>Right</code></li>
+            <li>Range: <code>Condition</code></li>
+          </ul>
+        </dd>
+        <dt><code>sourceRight</code></dt>
+        <dd>
+          Identifies the originating <code>Right</code> in a <code>RightsRelationship</code>, extending ODRL's <code>odrl:policy</code>.
+          <ul>
+            <li>Domain: <code>RightsRelationship</code></li>
+            <li>Range: <code>Right</code></li>
+          </ul>
+        </dd>
+        <dt><code>targetRight</code></dt>
+        <dd>
+          Identifies the resulting <code>Right</code> in a <code>RightsRelationship</code>.
+          <ul>
+            <li>Domain: <code>RightsRelationship</code></li>
+            <li>Range: <code>Right</code></li>
+          </ul>
+        </dd>
+        <dt><code>relationshipType</code></dt>
+        <dd>
+          Specifies the nature of a <code>RightsRelationship</code>, extending ODRL's <code>odrl:relation</code> (e.g., license, transfer).
+          <ul>
+            <li>Domain: <code>RightsRelationship</code></li>
+            <li>Range: <code>RelationshipType</code></li>
+          </ul>
+        </dd>
+      </dl>
+    </section>
+    <section id="axioms">
+      <h3>Axioms</h3>
+      <ul>
+        <li>Each <code>Right</code> must have at least one <code>holder</code> and one <code>appliesTo</code> relationship, per ODRL's policy structure.</li>
+        <li><code>MoralRight</code> instances are inalienable, aligned with CC REL's non-transferable rights (e.g., <code>cc:attribution</code>).</li>
+        <li><code>RightsRelationship</code> must link a <code>sourceRight</code> to a <code>targetRight</code> with a defined <code>relationshipType</code>, consistent with ODRL's <code>odrl:policy</code>.</li>
+        <li><code>Condition</code> instances may constrain the scope of a <code>Right</code>, using ODRL's <code>odrl:constraint</code> model.</li>
+      </ul>
+    </section>
+  </section>
+
+  <section id="examples">
+    <h2>Examples</h2>
+    <section id="example-coauthorship">
+      <h3>Co-Authorship Scenario</h3>
+      <p>
+        Two entities, Person A and Person B, co-author a digital article. Both hold moral and economic rights. The ontology models:
+        <ul>
+          <li><code>Content</code>: The article (<code>odrl:Asset</code>, <code>dc:type="text"</code>).</li>
+          <li><code>Right</code>: <code>MoralRight</code> (attribution, <code>cc:attribution</code>) for A and B; <code>EconomicRight</code> (licensing, <code>odrl:use</code>) shared equally.</li>
+          <li><code>holder</code>: Links A and B (<code>odrl:Party</code>, <code>foaf:Agent</code>) to the rights.</li>
+          <li><code>Condition</code>: Attribution persists indefinitely (<code>odrl:constraint</code>).</li>
+        </ul>
+      </p>
+    </section>
+    <section id="example-licensing">
+      <h3>Licensing Scenario</h3>
+      <p>
+        Entity A grants Entity B a non-exclusive license to use a video. The ontology models:
+        <ul>
+          <li><code>Content</code>: The video (<code>odrl:Asset</code>, <code>dc:type="video"</code>).</li>
+          <li><code>Right</code>: <code>EconomicRight</code> (usage, <code>odrl:use</code>) held by B.</li>
+          <li><code>RightsRelationship</code>: License (<code>odrl:agreement</code>) from A’s <code>EconomicRight</code> to B’s <code>EconomicRight</code>.</li>
+          <li><code>Condition</code>: Usage limited to one year (<code>odrl:constraint</code>).</li>
+        </ul>
+      </p>
+    </section>
+  </section>
+
+  <section id="implementation">
+    <h2>Implementation Considerations</h2>
+    <p>
+      Implementers can use this ontology with RDF/OWL for machine-readable representations, leveraging ODRL's policy framework. Potential applications include:
+      <ul>
+        <li>Digital rights management systems for collaborative platforms, using ODRL policies.</li>
+        <li>Smart contracts on blockchain for transparent rights tracking, aligned with ODRL's <code>odrl:agreement</code>.</li>
+        <li>Integration with Creative Commons licenses (<code>cc:license</code>) for open content.</li>
+        <li>Metadata interoperability with Dublin Core (<code>dc:identifier</code>, <code>dc:type</code>) and FOAF (<code>foaf:Agent</code>).</li>
+      </ul>
+    </p>
+    <p>
+      Implementers should align with applicable legal frameworks (e.g., GDPR for <code>DataProtectionRight</code>) and ensure compatibility with ODRL's vocabulary and profiles.
+    </p>
+  </section>
+
+  <section id="references">
+    <h2>References</h2>
+    <section id="normative-references">
+      <h3>Normative References</h3>
+      <dl>
+        <dt>ODRL-MODEL</dt>
+        <dd>Open Digital Rights Language (ODRL) Information Model 2.2. W3C Recommendation. <a href="https://www.w3.org/TR/odrl-model/">https://www.w3.org/TR/odrl-model/</a></dd>
+        <dt>RDF</dt>
+        <dd>Resource Description Framework (RDF). W3C Recommendation. <a href="https://www.w3.org/RDF/">https://www.w3.org/RDF/</a></dd>
+        <dt>OWL</dt>
+        <dd>Web Ontology Language (OWL). W3C Recommendation. <a href="https://www.w3.org/OWL/">https://www.w3.org/OWL/</a></dd>
+        <dt>DC</dt>
+        <dd>Dublin Core Metadata Initiative Terms. <a href="https://www.dublincore.org/specifications/dublin-core/dcmi-terms/">https://www.dublincore.org/specifications/dublin-core/dcmi-terms/</a></dd>
+        <dt>FOAF</dt>
+        <dd>Friend of a Friend (FOAF) Vocabulary. <a href="http://xmlns.com/foaf/spec/">http://xmlns.com/foaf/spec/</a></dd>
+      </dl>
+    </section>
+    <section id="informative-references">
+      <h3>Informative References</h3>
+      <dl>
+        <dt>CC-REL</dt>
+        <dd>Creative Commons Rights Expression Language. <a href="https://creativecommons.org/ns">https://creativecommons.org/ns</a></dd>
+        <dt>GDPR</dt>
+        <dd>General Data Protection Regulation. <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">https://eur-lex.europa.eu/eli/reg/2016/679/oj</a></dd>
+      </dl>
+    </section>
+  </section>
+
+  <section id="acknowledgments">
+    <h2>Acknowledgments</h2>
+    <p>
+      This draft is inspired by the ODRL Model, Creative Commons, and discussions on rights-based approaches to intellectual property in digital contexts, drawing from human rights and open access principles.
+    </p>
+  </section>
+</body>
+</html>

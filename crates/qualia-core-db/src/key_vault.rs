@@ -9,6 +9,17 @@ pub struct KeyVault {
 }
 
 impl KeyVault {
+    /// Creates an in-memory KeyVault with a fresh ephemeral key (for tests/stubs only).
+    pub fn new() -> Self {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(b"ephemeral");
+        let result = hasher.finalize();
+        let mut secret = [0u8; 32];
+        secret.copy_from_slice(&result);
+        Self { master_key: SigningKey::from_bytes(&secret) }
+    }
+
     /// Initializes the KeyVault from disk. Generates a new master key if none exists.
     pub fn load_or_generate(storage_dir: &str) -> Result<Self, String> {
         let vault_path = Path::new(storage_dir).join("keystore.bin");

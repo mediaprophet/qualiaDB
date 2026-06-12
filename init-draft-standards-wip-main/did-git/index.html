@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>DID Method Specification: did:git</title>
+  <meta name="description" content="Specification for the did:git DID method using Git repositories as a source of truth for decentralized identifiers.">
+  <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove"></script>
+  <script class="remove">
+    var respecConfig = {
+      specStatus: "unofficial",
+      editors: [{
+        name: "Timothy C. Holborn",
+        company: "WebCivics",
+        url: "https://www.linkedin.com/in/ubiquitous/"},
+        {
+        name: "Grok 3",
+        company: "xAI",
+        url: "https://x.ai"
+      }],
+      processVersion: 2023,
+      shortName: "did-git",
+      edDraftURI: "https://example.com/did-git-spec/",
+      github: "https://github.com/your-org/did-git-spec",
+      includePermalinks: true,
+      license: "w3c-software-doc",
+      abstract: `
+        <p>
+          This document specifies the <code>did:git</code> DID method, which uses a Git repository as the source of truth for managing decentralized identifiers (DIDs). It defines how DID documents are stored, resolved, and verified within a Git repository, leveraging Git's decentralized architecture and cryptographic signing mechanisms such as GPG and SSH. The specification conforms to the requirements of the W3C Decentralized Identifiers (DIDs) v1.0 specification.
+        </p>
+      `,
+      sotd: `
+        <p>
+          This is an Editor's Draft of the <code>did:git</code> DID method specification. It is a work in progress and may undergo significant changes. Feedback is welcome via the GitHub repository linked above.
+        </p>
+      `
+    };
+  </script>
+</head>
+<body>
+  <section id="introduction">
+    <h2>Introduction</h2>
+    <p>
+      Decentralized Identifiers (DIDs) are a type of identifier that enables verifiable, decentralized digital identities, as defined by the <a href="https://www.w3.org/TR/did-core/">W3C DID Core Specification</a>. The <code>did:git</code> method leverages Git, a distributed version control system, to serve as the source of truth for DID documents. Git's decentralized nature, combined with its robust history tracking and cryptographic signing capabilities, makes it a suitable platform for managing DIDs without relying on a centralized authority.
+    </p>
+    <p>
+      This specification defines the structure, resolution, and management of <code>did:git</code> identifiers. It addresses the use of cryptographic mechanisms such as Pretty Good Privacy (PGP, implemented as GPG) and Secure Shell (SSH) for signing and verifying commits, ensuring the integrity and authenticity of DID documents stored in a Git repository. The method is designed to be platform-agnostic, applicable to any Git repository, and independent of specific hosting services like GitHub.
+    </p>
+  </section>
+
+  <section id="terminology">
+    <h2>Terminology</h2>
+    <p>
+      The following terms are used in this specification:
+    </p>
+    <ul>
+      <li><strong>DID</strong>: Decentralized Identifier, as defined by the W3C DID Core Specification.</li>
+      <li><strong>DID Document</strong>: A JSON or JSON-LD document containing metadata about a DID, including public keys and service endpoints.</li>
+      <li><strong>Git</strong>: A distributed version control system for tracking changes in source code or other data.</li>
+      <li><strong>GPG</strong>: GNU Privacy Guard, an open-source implementation of the OpenPGP standard for cryptographic operations.</li>
+      <li><strong>SSH</strong>: Secure Shell, a protocol used for secure remote access and authentication, also used for signing Git commits since Git 2.34.</li>
+      <li><strong>Commit Hash</strong>: A SHA-1 hash representing a Git commit, used as a unique identifier in the <code>did:git</code> method.</li>
+    </ul>
+  </section>
+
+  <section id="did-method-name">
+    <h2>DID Method Name</h2>
+    <p>
+      The method name for this DID method is <code>git</code>. A DID using this method has the form:
+      <pre>did:git:&lt;commit-hash&gt;</pre>
+      where <code>&lt;commit-hash&gt;</code> is the SHA-1 hash of a Git commit that establishes or modifies the DID document.
+    </p>
+  </section>
+
+  <section id="did-syntax">
+    <h2>DID Syntax</h2>
+    <p>
+      The <code>did:git</code> DID syntax follows the generic DID syntax defined in the W3C DID Core Specification. The ABNF (Augmented Backus-Naur Form) for a <code>did:git</code> identifier is:
+    </p>
+    <pre>
+      did-git = "did:git:" commit-hash
+      commit-hash = 40*40HEXDIG
+    </pre>
+    <p>
+      The <code>commit-hash</code> is a 40-character hexadecimal SHA-1 hash of a Git commit. This hash serves as a content-addressable identifier that ensures the integrity of the DID document and its associated repository state.
+    </p>
+    <p>
+      Example:
+      <pre>did:git:5c3386cf54bba0a33a32da706aa52bc0155503c2</pre>
+    </p>
+  </section>
+
+  <section id="did-document-structure">
+    <h2>DID Document Structure</h2>
+    <p>
+      The DID document for a <code>did:git</code> identifier is stored as a JSON or JSON-LD file within a Git repository, typically at a predefined path such as <code>.dids/&lt;did&gt;.json</code>. The document conforms to the W3C DID Core Specification and includes standard properties such as <code>id</code>, <code>verificationMethod</code>, and <code>service</code>.
+    </p>
+    <p>
+      Example DID document:
+    </p>
+    <pre>
+{
+  "@context": "https://www.w3.org/ns/did/v1",
+  "id": "did:git:5c3386cf54bba0a33a32da706aa52bc0155503c2",
+  "verificationMethod": [{
+    "id": "did:git:5c3386cf54bba0a33a32da706aa52bc0155503c2#key-1",
+    "type": "OpenPgpVerificationKey2019",
+    "controller": "did:git:5c3386cf54bba0a33a32da706aa52bc0155503c2",
+    "publicKeyPem": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n...\n-----END PGP PUBLIC KEY BLOCK-----"
+  }],
+  "service": [{
+    "id": "did:git:5c3386cf54bba0a33a32da706aa52bc0155503c2#service-1",
+    "type": "GitRepository",
+    "serviceEndpoint": "https://example.com/repo.git"
+  }]
+}
+    </pre>
+    <p>
+      The DID document is committed to the Git repository, and its associated commit hash becomes the DID identifier.
+    </p>
+  </section>
+
+  <section id="operations">
+    <h2>Operations</h2>
+    <section id="create">
+      <h3>Create</h3>
+      <p>
+        To create a <code>did:git</code> identifier:
+        <ol>
+          <li>Create a DID document as a JSON or JSON-LD file.</li>
+          <li>Commit the DID document to a Git repository at a path such as <code>.dids/&lt;did&gt;.json</code>.</li>
+          <li>Sign the commit using GPG or SSH to ensure authenticity (see <a href="#security-considerations">Security Considerations</a>).</li>
+          <li>The resulting commit hash becomes the DID identifier, e.g., <code>did:git:5c3386cf54bba0a33a32da706aa52bc0155503c2</code>.</li>
+        </ol>
+      </p>
+    </section>
+    <section id="resolve">
+      <h3>Resolve</h3>
+      <p>
+        To resolve a <code>did:git</code> identifier:
+        <ol>
+          <li>Access the Git repository containing the DID document (via the <code>serviceEndpoint</code> or a known repository URL).</li>
+          <li>Retrieve the commit specified by the <code>commit-hash</code> in the DID.</li>
+          <li>Extract the DID document from the commit, typically from <code>.dids/&lt;did&gt;.json</code>.</li>
+          <li>Verify the commit signature using GPG or SSH to ensure integrity and authenticity.</li>
+          <li>Return the DID document to the requester.</li>
+        </ol>
+      </p>
+    </section>
+    <section id="update">
+      <h3>Update</h3>
+      <p>
+        To update a <code>did:git</code> identifier:
+        <ol>
+          <li>Modify the DID document in the Git repository.</li>
+          <li>Commit the changes with a GPG or SSH signature.</li>
+          <li>The new commit hash becomes the updated DID identifier.</li>
+          <li>Update any references to the DID to use the new commit hash.</li>
+        </ol>
+      </p>
+      <p>
+        Note: Updating a DID creates a new identifier, as the commit hash changes. Applications must handle this immutability by tracking the latest commit hash.
+      </p>
+    </section>
+    <section id="deactivate">
+      <h3>Deactivate</h3>
+      <p>
+        To deactivate a <code>did:git</code> identifier:
+        <ol>
+          <li>Remove the DID document from the Git repository or mark it as deactivated (e.g., by adding a <code>deactivated</code> property).</li>
+          <li>Commit the change with a GPG or SSH signature.</li>
+          <li>The new commit hash reflects the deactivated state.</li>
+        </ol>
+      </p>
+    </section>
+  </section>
+
+  <section id="security-considerations">
+    <h2>Security Considerations</h2>
+    <p>
+      The <code>did:git</code> method relies on Git's cryptographic signing mechanisms to ensure the integrity and authenticity of DID documents. The following considerations apply:
+    </p>
+    <section id="gpg-signing">
+      <h3>GPG Signing</h3>
+      <p>
+        GPG (GNU Privacy Guard) is used to sign Git commits and tags, providing cryptographic assurance of the committer's identity. Key considerations include:
+        <ul>
+          <li><strong>Key Management</strong>: GPG keys must be securely generated, stored, and managed. Private keys should be protected with strong passphrases and stored in secure environments (e.g., using hardware security modules like YubiKey).</li>[](https://developers.yubico.com/PGP/SSH_authentication/Windows.html)
+          <li><strong>Key Expiration</strong>: GPG keys can be configured to expire, requiring periodic renewal. This enhances security but requires users to update their public keys on platforms or keyservers.</li>[](https://codex.so/gpg-verification-github)
+          <li><strong>Verification</strong>: Resolvers must verify GPG signatures using the committer’s public key, which may be retrieved from a public keyserver or included in the DID document.</li>[](https://www.linux.com/news/protecting-code-integrity-pgp-part-6-using-pgp-git/)
+          <li><strong>Platform Support</strong>: GPG has robust support on Linux and macOS but may require additional configuration on Windows (e.g., using Gpg4win).</li>[](https://stackoverflow.com/questions/46992596/configure-gpg-for-git-on-windows)
+          <li><strong>Limitations</strong>: GPG is less user-friendly and has limited adoption on non-Linux platforms, which may hinder its use in some environments.</li>[](https://github.com/dhuseby/did-git-spec/blob/master/did-git-spec.md)
+        </ul>
+      </p>
+    </section>
+    <section id="ssh-signing">
+      <h3>SSH Signing</h3>
+      <p>
+        Since Git 2.34, SSH keys can be used to sign commits, offering an alternative to GPG. Key considerations include:
+        <ul>
+          <li><strong>Simplicity</strong>: SSH keys are easier to generate and manage for users already familiar with SSH authentication. Existing SSH keys can be reused for signing.</li>[](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key)
+          <li><strong>Limitations</strong>: Unlike GPG, SSH keys do not support expiration or revocation, which may reduce their suitability for long-term identity management. If an SSH key is marked as expired, all commits signed with it may appear unverified.</li>[](https://javorszky.co.uk/2024/05/28/back-to-signing-git-commits-with-gpg/)
+          <li><strong>Verification</strong>: Resolvers must verify SSH signatures using the committer’s public SSH key, which may be stored in the DID document or a trusted repository.</li>[](https://stackoverflow.com/questions/51412164/gpg-vs-ssh-keys)
+          <li><strong>Dependencies</strong>: SSH signing requires Git 2.34 or later and OpenSSH 8.2p1 or later, which may not be available on older systems (e.g., Ubuntu 18.04).</li>[](https://sethmlarson.dev/switching-git-back-to-gpg-signing)
+        </ul>
+      </p>
+    </section>
+    <section id="trust-model">
+      <h3>Trust Model</h3>
+      <p>
+        The <code>did:git</code> method adopts a Trust-Over-First-Use (TOFU) model, similar to SSH, where the first import of a public key is assumed valid. Subsequent changes to the key trigger validation checks. A combined TOFU+PGP trust model, as recommended by the Linux Kernel documentation, is suggested for enhanced security.</p>[](https://www.kernel.org/doc/html/next/process/maintainer-pgp-guide.html)
+      <p>
+        Implementers should maintain a local keyring or repository of trusted public keys to verify signatures, as public keyservers may be unreliable.</p>[](https://www.kernel.org/doc/html/next/process/maintainer-pgp-guide.html)
+    </section>
+    <section id="repository-access">
+      <h3>Repository Access</h3>
+      <p>
+        Access to the Git repository must be secured to prevent unauthorized modifications. SSH is recommended for secure repository access, with keys managed via an SSH agent or hardware-backed solutions like YubiKey.</p>[](https://developers.yubico.com/PGP/SSH_authentication/Windows.html)
+      <p>
+        Public repositories must be protected against tampering by requiring signed commits and restricting push access to trusted contributors.
+      </p>
+    </section>
+  </section>
+
+  <section id="privacy-considerations">
+    <h2>Privacy Considerations</h2>
+    <p>
+      <ul>
+        <li><strong>Public Repositories</strong>: DID documents stored in public Git repositories are accessible to anyone, potentially exposing metadata such as email addresses or public keys. Users should use private commit email addresses or anonymized identifiers.</li>[](https://docs.gitlab.com/user/project/repository/signed_commits/gpg/)
+        <li><strong>Commit Metadata</strong>: Git commit metadata (e.g., author name, email, timestamp) may reveal personal information. Users should configure Git to use privacy-preserving settings.</li>
+        <li><strong>Key Exposure</strong>: Public keys in DID documents are not sensitive, but private keys must be securely stored. Avoid committing private keys to the repository.</li>[](https://docs.gitguardian.com/secrets-detection/secrets-detection-engine/detectors/specifics/private_key_pgp)
+      </ul>
+    </p>
+  </section>
+
+  <section id="implementation-details">
+    <h2>Implementation Details</h2>
+    <p>
+      The <code>did:git</code> method organizes DID documents in a Git repository under a designated directory, such as <code>.dids/</code>. Each DID document is stored as a file named after the DID or a related identifier. The repository may include additional metadata, such as a <code>DID-REGISTRY</code> file listing all DIDs managed in the repository.
+    </p>
+    <p>
+      Example repository structure:
+    </p>
+    <pre>
+/repo
+  /.dids/
+    /did:git:5c3386cf54bba0a33a32da706aa52bc0155503c2.json
+    /did:git:ca82a6dff817ec66f44342007202690a93763949.json
+  /DID-REGISTRY
+    </pre>
+    <p>
+      The <code>DID-REGISTRY</code> file may contain a JSON array of DIDs and their corresponding commit hashes for easy lookup.
+    </p>
+    <p>
+      Implementers should ensure that commits modifying DID documents are signed using either GPG or SSH. Verification scripts can be integrated into the resolution process to check signatures automatically.
+    </p>
+  </section>
+
+  <section id="references">
+    <h2>References</h2>
+    <section id="normative-references">
+      <h3>Normative References</h3>
+      <ul>
+        <li><a href="https://www.w3.org/TR/did-core/">Decentralized Identifiers (DIDs) v1.0</a>, W3C Recommendation.</li>
+        <li><a href="https://git-scm.com/docs/git">Git Documentation</a>, Git Project.</li>
+        <li><a href="https://www.gnupg.org/documentation/">GnuPG Documentation</a>, GnuPG Project.</li>
+      </ul>
+    </section>
+    <section id="informative-references">
+      <h3>Informative References</h3>
+      <ul>
+        <li><a href="https://www.kernel.org/doc/html/latest/maintainer/pgp-guide.html">Kernel Maintainer PGP Guide</a>, Linux Kernel Documentation.</li>[](https://www.kernel.org/doc/html/next/process/maintainer-pgp-guide.html)
+        <li><a href="https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work">Git - Signing Your Work</a>, Git SCM.</li>[](https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work)
+        <li><a href="https://docs.github.com/en/authentication/managing-commit-signature-verification">GitHub: Signing Commits</a>, GitHub Docs.</li>[](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key)
+      </ul>
+    </section>
+  </section>
+
+  <section id="acknowledgments">
+    <h2>Acknowledgments</h2>
+    <p>
+      This specification builds on prior work by the W3C Credentials Community Group and the Git community. Special thanks to contributors to the <code>did-git-spec</code> repository and the Linux Kernel documentation for their insights into Git and PGP integration.
+    </p>
+  </section>
+</body>
+</html>

@@ -29,6 +29,7 @@ pub struct StructuralAnalyzer {
     structural_dynamics: StructuralDynamics,
     buckling_analysis: BucklingAnalysis,
     vibration_analysis: VibrationAnalysis,
+    model_store: HashMap<String, EngineeringModel>,
 }
 
 /// Finite element solver
@@ -572,6 +573,7 @@ pub enum LoadType {
     Displacement,
     Acceleration,
     Pressure,
+    Point,
 }
 
 /// Response calculation
@@ -1452,6 +1454,25 @@ pub enum MeasurementMethod {
     OilAnalysis,
 }
 
+/// Reliability analysis results
+#[derive(Debug, Clone)]
+pub struct ReliabilityResults {
+    pub results_id: String,
+    pub reliability_index: f64,
+    pub failure_probability: f64,
+    pub mean_time_to_failure: f64,
+    pub maintenance_interval: u64,
+}
+
+/// Engineering library performance summary metrics
+#[derive(Debug, Clone)]
+pub struct EngineeringPerformanceMetrics {
+    pub total_analyses: u64,
+    pub average_computation_time: f64,
+    pub average_accuracy: f64,
+    pub convergence_rate: f64,
+}
+
 /// Engineering operation result
 #[derive(Debug, Clone)]
 pub struct EngineeringOperationResult<T> {
@@ -1603,7 +1624,7 @@ impl EngineeringAnalysisLibrary {
     }
 
     /// Initialize the library
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         // Initialize structural analyzer
         self.structural_analyzer.initialize()?;
 
@@ -1628,6 +1649,9 @@ impl EngineeringAnalysisLibrary {
 
         // Validate model
         self.structural_analyzer.validate_model(&model)?;
+
+        // Store model for later retrieval
+        self.structural_analyzer.store_model(model.clone());
 
         // Perform analysis
         let results = self.structural_analyzer.analyze(&model, analysis_type)?;
@@ -1777,16 +1801,21 @@ impl StructuralAnalyzer {
             structural_dynamics: StructuralDynamics::new(),
             buckling_analysis: BucklingAnalysis::new(),
             vibration_analysis: VibrationAnalysis::new(),
+            model_store: HashMap::new(),
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn store_model(&mut self, model: EngineeringModel) {
+        self.model_store.insert(model.model_id.clone(), model);
+    }
+
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.finite_element_solver.initialize()?;
         self.structural_dynamics.initialize()?;
         Ok(())
     }
 
-    pub fn validate_model(&self, model: &EngineeringModel) -> Result<EngineeringError> {
+    pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError("Model must have dimensions".to_string()));
         }
@@ -1805,8 +1834,7 @@ impl StructuralAnalyzer {
     }
 
     pub fn get_model(&self, model_id: &str) -> Option<EngineeringModel> {
-        // For now, return None
-        None
+        self.model_store.get(model_id).cloned()
     }
 
     pub fn get_performance_metrics(&self) -> EngineeringPerformanceMetrics {
@@ -1824,7 +1852,7 @@ impl FiniteElementSolver {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.mesh_generator.initialize()?;
         self.element_library.initialize()?;
         self.solver_engine.initialize()?;
@@ -1842,7 +1870,7 @@ impl MeshGenerator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -1874,7 +1902,7 @@ impl ElementLibrary {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -1888,7 +1916,7 @@ impl SolverEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -1922,7 +1950,7 @@ impl PostProcessor {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.visualization_engine.initialize()?;
         self.report_generator.initialize()?;
         Ok(())
@@ -1937,7 +1965,7 @@ impl VisualizationEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -1970,7 +1998,7 @@ impl ReportGenerator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -1984,7 +2012,7 @@ impl StructuralDynamics {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2095,7 +2123,7 @@ impl BucklingAnalysis {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2127,7 +2155,7 @@ impl VibrationAnalysis {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2172,7 +2200,7 @@ impl MechanicalAnalyzer {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.kinematics.initialize()?;
         self.dynamics.initialize()?;
         self.mechanism_analysis.initialize()?;
@@ -2180,7 +2208,7 @@ impl MechanicalAnalyzer {
         Ok(())
     }
 
-    pub fn validate_model(&self, model: &EngineeringModel) -> Result<EngineeringError> {
+    pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError("Model must have dimensions".to_string()));
         }
@@ -2204,7 +2232,7 @@ impl Kinematics {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2248,7 +2276,7 @@ impl Dynamics {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2293,7 +2321,7 @@ impl MechanismAnalysis {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2346,7 +2374,7 @@ impl MachineDesign {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2412,7 +2440,7 @@ impl ToleranceAnalysis {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2456,11 +2484,11 @@ impl ThermalAnalyzer {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 
-    pub fn validate_model(&self, model: &EngineeringModel) -> Result<EngineeringError> {
+    pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError("Model must have dimensions".to_string()));
         }
@@ -2561,12 +2589,12 @@ impl FluidAnalyzer {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.computational_fluid_dynamics.initialize()?;
         Ok(())
     }
 
-    pub fn validate_model(&self, model: &EngineeringModel) -> Result<EngineeringError> {
+    pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError("Model must have dimensions".to_string()));
         }
@@ -2590,7 +2618,7 @@ impl ComputationalFluidDynamics {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2690,14 +2718,14 @@ impl ReliabilityAnalyzer {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.reliability_methods.initialize()?;
         self.failure_analysis.initialize()?;
         self.maintenance_optimization.initialize()?;
         Ok(())
     }
 
-    pub fn validate_model(&self, model: &EngineeringModel) -> Result<EngineeringError> {
+    pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError("Model must have dimensions".to_string()));
         }
@@ -2721,7 +2749,7 @@ impl ReliabilityMethods {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2803,7 +2831,7 @@ impl FailureAnalysis {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -2848,7 +2876,7 @@ impl MaintenanceOptimization {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<EngineeringError> {
+    pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
@@ -3052,7 +3080,7 @@ mod tests {
 
     #[test]
     fn test_engineering_library_creation() {
-        let library = EngineeringAnalysisLibrary::new();
+        let mut library = EngineeringAnalysisLibrary::new();
         assert!(library.initialize().is_ok());
     }
 

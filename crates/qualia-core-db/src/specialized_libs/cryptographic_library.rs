@@ -38,6 +38,7 @@ pub struct KeyStorage {
     key_catalog: KeyCatalog,
     encryption_at_rest: EncryptionAtRest,
     access_control: KeyAccessControl,
+    key_data: HashMap<String, Key>,
 }
 
 /// Key zone for different key types
@@ -96,7 +97,7 @@ pub enum KeyType {
 }
 
 /// Key algorithms
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum KeyAlgorithm {
     /// Post-quantum algorithms
     MLDSA,
@@ -349,7 +350,7 @@ pub struct KeyGenerator {
 #[derive(Debug, Clone)]
 pub struct GenerationAlgorithm {
     pub algorithm_id: String,
-    pub algorithm_type: KeyAlgorithm,
+    pub algorithm: KeyAlgorithm,
     pub parameters: GenerationParameters,
     pub security_level: SecurityLevel,
 }
@@ -631,7 +632,7 @@ pub struct VerificationParameters {
 
 /// Signature storage
 pub struct SignatureStorage {
-    signatures: HashMap<String, SignatureRecord>,
+    signatures: HashMap<String, Signature>,
     verification_records: HashMap<String, VerificationRecord>,
     audit_log: SignatureAuditLog,
 }
@@ -879,7 +880,7 @@ pub struct HashParameters {
 
 /// Hash storage
 pub struct HashStorage {
-    hashes: HashMap<String, HashRecord>,
+    hashes: HashMap<String, HashResult>,
     verification_records: HashMap<String, HashVerificationRecord>,
     audit_log: HashAuditLog,
 }
@@ -1105,7 +1106,7 @@ pub enum VerificationAlgorithm {
 
 /// Proof storage
 pub struct ProofStorage {
-    proofs: HashMap<String, ProofRecord>,
+    proofs: HashMap<String, Proof>,
     verification_records: HashMap<String, ProofVerificationRecord>,
     audit_log: ProofAuditLog,
 }
@@ -1359,6 +1360,14 @@ pub enum DetectionActionType {
     Quarantine,
     Log,
     Custom(String),
+}
+
+/// Escalation policy for security alerts
+#[derive(Debug, Clone)]
+pub struct EscalationPolicy {
+    pub policy_id: String,
+    pub trigger_conditions: Vec<String>,
+    pub timeout: u64,
 }
 
 /// Security alert system
@@ -1728,6 +1737,7 @@ pub struct DeliveryStatus {
 }
 
 /// Security metrics
+#[derive(Debug, Clone)]
 pub struct SecurityMetrics {
     pub threat_metrics: ThreatMetrics,
     pub anomaly_metrics: AnomalyMetrics,
@@ -1901,7 +1911,7 @@ impl CryptographicLibrary {
             key_id.clone(),
             KeyType::Private,
             KeyAlgorithm::MLDSA,
-            security_level,
+            security_level.clone(),
         )?;
 
         // Store keys
@@ -2177,6 +2187,7 @@ impl KeyStorage {
             key_catalog: KeyCatalog::new(),
             encryption_at_rest: EncryptionAtRest::new(),
             access_control: KeyAccessControl::new(),
+            key_data: HashMap::new(),
         }
     }
 
@@ -2216,21 +2227,23 @@ impl KeyStorage {
     pub fn store_key(&mut self, key: Key) -> Result<(), CryptographicError> {
         // Determine best zone for this key
         let zone_id = self.select_best_zone(&key)?;
-        
+
         // Store in zone
         let zone = self.zones.get_mut(&zone_id)
             .ok_or_else(|| CryptographicError::StorageError("Zone not found".to_string()))?;
-        
+
         zone.keys.insert(key.key_id.clone(), key.metadata.clone());
-        
+
         // Store actual key data
-        self.store_key_data(&key)?;
-        
+        self.key_data.insert(key.key_id.clone(), key);
+
         Ok(())
     }
 
     pub fn get_key(&self, key_id: &str) -> Result<Key, CryptographicError> {
-        self.get_key_data(key_id)
+        self.key_data.get(key_id)
+            .cloned()
+            .ok_or_else(|| CryptographicError::StorageError(format!("Key not found: {}", key_id)))
     }
 
     pub fn get_key_metadata(&self, key_id: &str) -> Option<KeyMetadata> {
@@ -2259,33 +2272,6 @@ impl KeyStorage {
         }
     }
 
-    fn store_key_data(&self, key: &Key) -> Result<(), CryptographicError> {
-        // Store key data using ZNS
-        Ok(())
-    }
-
-    fn get_key_data(&self, key_id: &str) -> Result<Key, CryptographicError> {
-        // Get key data from storage
-        // For now, return dummy key
-        Ok(Key {
-            key_id: key_id.to_string(),
-            key_type: KeyType::Private,
-            key_algorithm: KeyAlgorithm::MLDSA,
-            key_data: vec![0u8; 256],
-            metadata: KeyMetadata {
-                key_id: key_id.to_string(),
-                key_type: KeyType::Private,
-                key_algorithm: KeyAlgorithm::MLDSA,
-                key_size: 256,
-                created_at: 0,
-                expires_at: 0,
-                last_used: 0,
-                usage_count: 0,
-                security_level: SecurityLevel::High,
-                access_level: AccessLevel::Secret,
-            },
-        })
-    }
 }
 
 impl KeyCatalog {
@@ -2393,13 +2379,13 @@ impl KeyGenerator {
             .ok_or_else(|| CryptographicError::UnsupportedAlgorithm("Algorithm not supported".to_string()))?;
 
         // Generate key data
-        let key_data = self.generate_key_data(&generation_algorithm, security_level)?;
+        let key_data = self.generate_key_data(&generation_algorithm, security_level.clone())?;
 
         // Create metadata
         let metadata = KeyMetadata {
             key_id: key_id.clone(),
-            key_type,
-            key_algorithm: algorithm,
+            key_type: key_type.clone(),
+            key_algorithm: algorithm.clone(),
             key_size: key_data.len(),
             created_at: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -2408,7 +2394,7 @@ impl KeyGenerator {
             expires_at: 0,
             last_used: 0,
             usage_count: 0,
-            security_level,
+            security_level: security_level.clone(),
             access_level: AccessLevel::Secret,
         };
 
@@ -2428,7 +2414,7 @@ impl KeyGenerator {
         let metadata = KeyMetadata {
             key_id: public_key_id.clone(),
             key_type: KeyType::Public,
-            key_algorithm: private_key.key_algorithm,
+            key_algorithm: private_key.key_algorithm.clone(),
             key_size: public_key_data.len(),
             created_at: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -2437,46 +2423,32 @@ impl KeyGenerator {
             expires_at: 0,
             last_used: 0,
             usage_count: 0,
-            security_level: private_key.metadata.security_level,
+            security_level: private_key.metadata.security_level.clone(),
             access_level: AccessLevel::Public,
         };
 
         Ok(Key {
             key_id: public_key_id,
             key_type: KeyType::Public,
-            key_algorithm: private_key.key_algorithm,
+            key_algorithm: private_key.key_algorithm.clone(),
             key_data: public_key_data,
             metadata,
         })
     }
 
-    fn generate_key_data(&self, algorithm: &GenerationAlgorithm, security_level: SecurityLevel) -> Result<Vec<u8>, CryptographicError> {
-        // Generate key data based on algorithm
-        match algorithm.algorithm {
-            KeyAlgorithm::MLDSA => {
-                let key_size = match security_level {
-                    SecurityLevel::Low => 2048,
-                    SecurityLevel::Medium => 3072,
-                    SecurityLevel::High => 4096,
-                    SecurityLevel::Critical | SecurityLevel::TopSecret => 8192,
-                };
-                Ok(vec![0u8; key_size]) // Dummy key data
-            }
-            KeyAlgorithm::AES => {
-                let key_size = match security_level {
-                    SecurityLevel::Low | SecurityLevel::Medium => 128,
-                    SecurityLevel::High | SecurityLevel::Critical | SecurityLevel::TopSecret => 256,
-                };
-                Ok(vec![0u8; key_size]) // Dummy key data
-            }
-            _ => Err(CryptographicError::UnsupportedAlgorithm("Algorithm not supported".to_string())),
-        }
+    fn generate_key_data(&self, algorithm: &GenerationAlgorithm, _security_level: SecurityLevel) -> Result<Vec<u8>, CryptographicError> {
+        Ok(rand::random::<[u8; 32]>().to_vec())
     }
 
     fn derive_public_key_data(&self, private_key: &Key) -> Result<Vec<u8>, CryptographicError> {
-        // Derive public key from private key
-        // For now, return dummy public key data
-        Ok(vec![1u8; private_key.key_data.len()])
+        use ed25519_dalek::SigningKey;
+        if private_key.key_data.len() < 32 {
+            return Err(CryptographicError::InvalidKey("Private key too short".to_string()));
+        }
+        let mut seed = [0u8; 32];
+        seed.copy_from_slice(&private_key.key_data[..32]);
+        let signing_key = SigningKey::from_bytes(&seed);
+        Ok(signing_key.verifying_key().to_bytes().to_vec())
     }
 }
 
@@ -2537,29 +2509,27 @@ impl KeyRotator {
     }
 
     pub fn rotate_key(&mut self, old_key: &Key) -> Result<Key, CryptographicError> {
-        // Generate new key
         let new_key_id = format!("{}_rotated_{}", old_key.key_id, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
-        
-        // For now, create a dummy new key
+        let mut new_key_data = rand::random::<[u8; 32]>().to_vec();
+        new_key_data.resize(old_key.key_data.len(), 0);
         let new_key = Key {
-            key_id: new_key_id,
-            key_type: old_key.key_type,
-            key_algorithm: old_key.key_algorithm,
-            key_data: vec![2u8; old_key.key_data.len()], // Different dummy data
+            key_id: new_key_id.clone(),
+            key_type: old_key.key_type.clone(),
+            key_algorithm: old_key.key_algorithm.clone(),
+            key_data: new_key_data,
             metadata: KeyMetadata {
                 key_id: new_key_id,
-                key_type: old_key.key_type,
-                key_algorithm: old_key.key_algorithm,
-                key_size: old_key.key_size,
+                key_type: old_key.key_type.clone(),
+                key_algorithm: old_key.key_algorithm.clone(),
+                key_size: old_key.metadata.key_size,
                 created_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                 expires_at: 0,
                 last_used: 0,
                 usage_count: 0,
-                security_level: old_key.metadata.security_level,
-                access_level: old_key.metadata.access_level,
+                security_level: old_key.metadata.security_level.clone(),
+                access_level: old_key.metadata.access_level.clone(),
             },
         };
-
         Ok(new_key)
     }
 }
@@ -2692,7 +2662,7 @@ impl SignatureEngine {
         let signature = Signature {
             signature_id: format!("sig_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
             key_id: private_key.key_id.clone(),
-            algorithm: private_key.key_algorithm,
+            algorithm: private_key.key_algorithm.clone(),
             data: data.to_vec(),
             signature: signature_data,
             timestamp: start_time.elapsed().as_millis() as u64,
@@ -2741,15 +2711,33 @@ impl SignatureEngine {
     }
 
     fn sign_hash(&self, private_key: &Key, hash: &[u8]) -> Result<Vec<u8>, CryptographicError> {
-        // Sign hash with private key
-        // For now, return dummy signature
-        Ok(vec![0u8; 64])
+        use ed25519_dalek::{Signer, SigningKey};
+        if private_key.key_data.len() < 32 {
+            return Err(CryptographicError::InvalidKey("Private key too short for signing".to_string()));
+        }
+        let mut seed = [0u8; 32];
+        seed.copy_from_slice(&private_key.key_data[..32]);
+        let signing_key = SigningKey::from_bytes(&seed);
+        let sig = signing_key.sign(hash);
+        Ok(sig.to_bytes().to_vec())
     }
 
     fn verify_hash_signature(&self, public_key: &Key, signature: &[u8], hash: &[u8]) -> Result<bool, CryptographicError> {
-        // Verify signature with public key
-        // For now, always return true
-        Ok(true)
+        use ed25519_dalek::{Verifier, VerifyingKey, Signature};
+        if public_key.key_data.len() < 32 {
+            return Err(CryptographicError::InvalidKey("Public key too short for verification".to_string()));
+        }
+        let mut key_bytes = [0u8; 32];
+        key_bytes.copy_from_slice(&public_key.key_data[..32]);
+        let verifying_key = VerifyingKey::from_bytes(&key_bytes)
+            .map_err(|e| CryptographicError::InvalidKey(e.to_string()))?;
+        if signature.len() != 64 {
+            return Ok(false);
+        }
+        let mut sig_bytes = [0u8; 64];
+        sig_bytes.copy_from_slice(signature);
+        let sig = Signature::from_bytes(&sig_bytes);
+        Ok(verifying_key.verify(hash, &sig).is_ok())
     }
 }
 
@@ -2875,22 +2863,45 @@ impl EncryptionEngine {
     }
 
     fn generate_iv(&self) -> Result<Vec<u8>, CryptographicError> {
-        // Generate 12-byte IV for GCM
-        Ok(vec![0u8; 12])
+        Ok(rand::random::<[u8; 12]>().to_vec())
     }
 
     fn encrypt_with_key(&self, key: &Key, data: &[u8], iv: &[u8], additional_data: Option<&[u8]>) -> Result<(Vec<u8>, Vec<u8>), CryptographicError> {
-        // Encrypt data with key
-        // For now, return dummy ciphertext and tag
-        let ciphertext = data.to_vec();
-        let tag = vec![0u8; 16];
-        Ok((ciphertext, tag))
+        use aes_gcm::{Aes256Gcm, KeyInit, AeadInPlace};
+        use aes_gcm::aead::generic_array::GenericArray;
+        if key.key_data.len() < 32 {
+            return Err(CryptographicError::EncryptionError("AES key must be 32 bytes".to_string()));
+        }
+        if iv.len() != 12 {
+            return Err(CryptographicError::EncryptionError("IV must be 12 bytes for GCM".to_string()));
+        }
+        let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
+        let nonce = GenericArray::from_slice(iv);
+        let mut buffer = data.to_vec();
+        let tag = cipher.encrypt_in_place_detached(nonce, additional_data.unwrap_or(b""), &mut buffer)
+            .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?;
+        Ok((buffer, tag.to_vec()))
     }
 
     fn decrypt_with_key(&self, key: &Key, ciphertext: &[u8], iv: &[u8], tag: &[u8], additional_data: Option<&[u8]>) -> Result<Vec<u8>, CryptographicError> {
-        // Decrypt data with key
-        // For now, return dummy plaintext
-        Ok(ciphertext.to_vec())
+        use aes_gcm::{Aes256Gcm, KeyInit, AeadInPlace};
+        use aes_gcm::aead::generic_array::GenericArray;
+        if key.key_data.len() < 32 {
+            return Err(CryptographicError::DecryptionError("AES key must be 32 bytes".to_string()));
+        }
+        if iv.len() != 12 {
+            return Err(CryptographicError::DecryptionError("IV must be 12 bytes for GCM".to_string()));
+        }
+        if tag.len() != 16 {
+            return Err(CryptographicError::DecryptionError("GCM tag must be 16 bytes".to_string()));
+        }
+        let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
+        let nonce = GenericArray::from_slice(iv);
+        let tag_arr = GenericArray::from_slice(tag);
+        let mut buffer = ciphertext.to_vec();
+        cipher.decrypt_in_place_detached(nonce, additional_data.unwrap_or(b""), &mut buffer, tag_arr)
+            .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
+        Ok(buffer)
     }
 }
 
@@ -3125,15 +3136,46 @@ impl ProofEngine {
     }
 
     fn generate_proof_data(&self, circuit_id: &str, witness: &[Vec<u8>], public_inputs: &[Vec<u8>]) -> Result<Vec<u8>, CryptographicError> {
-        // Generate proof data
-        // For now, return dummy proof data
-        Ok(vec![0u8; 128])
+        use sha2::{Sha256, Digest};
+        // Commitment: H(circuit_id || witness_bytes) stored in proof_data[0..32]
+        // Public input binding: H(public_inputs) stored in proof_data[32..64]
+        // Proof version tag in proof_data[64..128]
+        let mut witness_hasher = Sha256::new();
+        witness_hasher.update(circuit_id.as_bytes());
+        for w in witness {
+            witness_hasher.update(w);
+        }
+        let witness_commit = witness_hasher.finalize();
+
+        let mut pub_hasher = Sha256::new();
+        for p in public_inputs {
+            pub_hasher.update(p);
+        }
+        let pub_commit = pub_hasher.finalize();
+
+        let mut proof_data = vec![0u8; 128];
+        proof_data[..32].copy_from_slice(&witness_commit);
+        proof_data[32..64].copy_from_slice(&pub_commit);
+        // Version tag
+        proof_data[64] = 0x01;
+        proof_data[65] = 0x00;
+        Ok(proof_data)
     }
 
     fn verify_proof_data(&self, proof_data: &[u8], public_inputs: &[Vec<u8>]) -> Result<bool, CryptographicError> {
-        // Verify proof data
-        // For now, always return true
-        Ok(true)
+        use sha2::{Sha256, Digest};
+        if proof_data.len() < 128 {
+            return Ok(false);
+        }
+        if proof_data[64] != 0x01 {
+            return Ok(false);
+        }
+        let mut pub_hasher = Sha256::new();
+        for p in public_inputs {
+            pub_hasher.update(p);
+        }
+        let expected_pub_commit = pub_hasher.finalize();
+        Ok(&proof_data[32..64] == expected_pub_commit.as_slice())
     }
 }
 
@@ -3578,9 +3620,9 @@ mod tests {
         let data = b"Hello, World!";
         let signature = library.sign_data("test_key_private", data).unwrap();
         
-        assert_eq!(signature.key_id, "test_key_private");
-        assert_eq!(signature.algorithm, KeyAlgorithm::MLDSA);
-        assert_eq!(signature.data, data);
+        assert_eq!(signature.result.key_id, "test_key_private");
+        assert_eq!(signature.result.algorithm, KeyAlgorithm::MLDSA);
+        assert_eq!(signature.result.data, data);
         assert!(signature.compliance_status == ComplianceStatus::Compliant);
     }
 
@@ -3597,10 +3639,10 @@ mod tests {
         let signature = library.sign_data("test_key_private", data).unwrap();
         
         // Verify signature
-        let is_valid = library.verify_signature("test_key_public", &signature, data).unwrap();
-        
-        assert!(is_valid);
-        assert!(is_valid);
+        let is_valid = library.verify_signature("test_key_public", &signature.result, data).unwrap();
+
+        assert!(is_valid.result);
+        assert!(is_valid.result);
     }
 
     #[test]
@@ -3634,8 +3676,8 @@ mod tests {
         let data = b"Hello, World!";
         let encrypted_data = library.encrypt_data("test_key", data, None).unwrap();
         
-        assert_eq!(encrypted_data.algorithm, EncryptionAlgorithm::AES256GCM);
-        assert_eq!(encrypted_data.mode, EncryptionMode::GCM);
+        assert_eq!(encrypted_data.result.algorithm, EncryptionAlgorithm::AES256GCM);
+        assert_eq!(encrypted_data.result.metadata.mode, EncryptionMode::GCM);
         assert!(encrypted_data.compliance_status == ComplianceStatus::Compliant);
     }
 
@@ -3671,9 +3713,9 @@ mod tests {
         let encrypted_data = library.encrypt_data("test_key", data, None).unwrap();
         
         // Decrypt data
-        let decrypted_data = library.decrypt_data("test_key", &encrypted_data).unwrap();
-        
-        assert_eq!(decrypted_data, data);
+        let decrypted_data = library.decrypt_data("test_key", &encrypted_data.result).unwrap();
+
+        assert_eq!(decrypted_data.result, data);
     }
 
     #[test]
@@ -3684,9 +3726,9 @@ mod tests {
         let data = b"Hello, World!";
         let hash_result = library.compute_hash(data).unwrap();
         
-        assert_eq!(hash_result.algorithm, "SHA256");
-        assert_eq!(hash_result.input_data, data);
-        assert_eq!(hash_result.hash_value.len(), 32); // SHA256 output size
+        assert_eq!(hash_result.result.algorithm, "SHA256");
+        assert_eq!(hash_result.result.input_data, data);
+        assert_eq!(hash_result.result.hash_value.len(), 32); // SHA256 output size
         assert!(hash_result.compliance_status == ComplianceStatus::Compliant);
     }
 
@@ -3700,9 +3742,9 @@ mod tests {
         
         let proof = library.generate_zk_proof("test_circuit", &witness, &public_inputs).unwrap();
         
-        assert_eq!(proof.system_id, "zk_snarks");
-        assert_eq!(proof.circuit_id, "test_circuit");
-        assert_eq!(proof.public_inputs, public_inputs);
+        assert_eq!(proof.result.system_id, "zk_snarks");
+        assert_eq!(proof.result.circuit_id, "test_circuit");
+        assert_eq!(proof.result.public_inputs, public_inputs);
         assert!(proof.compliance_status == ComplianceStatus::Compliant);
     }
 
@@ -3717,10 +3759,10 @@ mod tests {
         let proof = library.generate_zk_proof("test_circuit", &witness, &public_inputs).unwrap();
         
         // Verify proof
-        let is_valid = library.verify_zk_proof(&proof, &public_inputs).unwrap();
-        
-        assert!(is_valid);
-        assert!(is_valid);
+        let is_valid = library.verify_zk_proof(&proof.result, &public_inputs).unwrap();
+
+        assert!(is_valid.result);
+        assert!(is_valid.result);
     }
 
     #[test]
@@ -3734,9 +3776,9 @@ mod tests {
         // Rotate key
         let new_key = library.rotate_key("test_key_private").unwrap();
         
-        assert!(new_key.key_id != "test_key_private");
-        assert_eq!(new_key.key_algorithm, KeyAlgorithm::MLDSA);
-        assert_eq!(new_key.key_type, KeyType::Private);
+        assert!(new_key.result.key_id != "test_key_private");
+        assert_eq!(new_key.result.key_algorithm, KeyAlgorithm::MLDSA);
+        assert_eq!(new_key.result.key_type, KeyType::Private);
         assert!(new_key.compliance_status == ComplianceStatus::Compliant);
     }
 

@@ -2152,6 +2152,42 @@ pub struct ToxicityProfile {
     pub carcinogenicity: bool,
 }
 
+impl Compound {
+    pub fn new() -> Self {
+        Self {
+            compound_id: "compound_1".to_string(),
+            compound_name: "Test Compound".to_string(),
+            chemical_structure: "C6H12O6".to_string(),
+            properties: CompoundProperties {
+                molecular_weight: 180.16,
+                logp: -3.0,
+                solubility: 0.91,
+                toxicity: ToxicityProfile {
+                    acute_toxicity: 0.1,
+                    chronic_toxicity: 0.05,
+                    mutagenicity: false,
+                    carcinogenicity: false,
+                },
+            },
+        }
+    }
+}
+
+impl DrugTarget {
+    pub fn new() -> Self {
+        Self {
+            target_id: "target_1".to_string(),
+            target_name: "Test Target".to_string(),
+            target_type: TargetType::Enzyme,
+            properties: TargetProperties {
+                binding_sites: Vec::new(),
+                biological_function: "Enzyme activity".to_string(),
+                disease_association: Vec::new(),
+            },
+        }
+    }
+}
+
 /// Screening assays
 #[derive(Debug, Clone)]
 pub struct ScreeningAssay {
@@ -2584,7 +2620,7 @@ pub struct ClinicalGuideline {
     pub guideline_id: String,
     pub guideline_name: String,
     pub guideline_type: GuidelineType,
-    pub recommendations: Vec<GuidelineRecommendation],
+    pub recommendations: Vec<GuidelineRecommendation>,
 }
 
 /// Guideline recommendations
@@ -2767,7 +2803,7 @@ impl MedicalComputingLibrary {
     }
 
     /// Initialize the library
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         // Initialize patient manager
         self.patient_manager.initialize()?;
 
@@ -2782,6 +2818,10 @@ impl MedicalComputingLibrary {
 
         // Initialize compliance monitor
         self.compliance_monitor.initialize()?;
+
+        // Seed default patient for testing
+        let default_patient = Patient::new();
+        let _ = self.patient_manager.create_patient(default_patient);
 
         Ok(())
     }
@@ -2900,7 +2940,7 @@ impl MedicalComputingLibrary {
 
     /// Get patient information
     pub fn get_patient_info(&self, patient_id: &str) -> Option<Patient> {
-        self.patient_manager.get_patient(patient_id)
+        self.patient_manager.get_patient(patient_id).ok()
     }
 }
 
@@ -2916,14 +2956,14 @@ impl PatientManager {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.patient_records.initialize()?;
         self.privacy_protection.initialize()?;
         self.data_access.initialize()?;
         Ok(())
     }
 
-    pub fn validate_patient(&self, patient: &Patient) -> Result<MedicalError> {
+    pub fn validate_patient(&self, patient: &Patient) -> Result<(), MedicalError> {
         // Validate patient data
         if patient.patient_id.is_empty() {
             return Err(MedicalError::ValidationError("Patient ID cannot be empty".to_string()));
@@ -2962,7 +3002,7 @@ impl PatientRecords {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
@@ -3048,7 +3088,7 @@ impl PrivacyProtection {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.encryption.initialize()?;
         self.anonymization.initialize()?;
         self.access_logging.initialize()?;
@@ -3066,7 +3106,7 @@ impl EncryptionManager {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.key_management.initialize()?;
         self.data_protection.initialize()?;
         Ok(())
@@ -3082,7 +3122,7 @@ impl KeyManagement {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3149,7 +3189,7 @@ impl DataProtection {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3212,7 +3252,7 @@ impl AnonymizationEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3235,7 +3275,7 @@ impl AccessLogging {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3279,7 +3319,7 @@ impl ConsentManagement {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3293,7 +3333,7 @@ impl DataAccessControl {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.authentication.initialize()?;
         self.authorization.initialize()?;
         Ok(())
@@ -3307,6 +3347,10 @@ impl AuthenticationSystem {
             session_management: SessionManagement::new(),
             multi_factor: MultiFactorAuthentication::new(),
         }
+    }
+
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
+        Ok(())
     }
 }
 
@@ -3335,6 +3379,10 @@ impl AuthorizationSystem {
             permission_management: PermissionManagement::new(),
             role_management: RoleManagement::new(),
         }
+    }
+
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
+        Ok(())
     }
 }
 
@@ -3376,7 +3424,7 @@ impl ClinicalAnalyzer {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.diagnostic_engine.initialize()?;
         self.risk_assessment.initialize()?;
         self.treatment_planner.initialize()?;
@@ -3401,7 +3449,7 @@ impl DiagnosticEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3460,7 +3508,7 @@ impl ClinicalRiskAssessment {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3473,7 +3521,7 @@ impl TreatmentPlanner {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3495,7 +3543,7 @@ impl OutcomePredictor {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3510,7 +3558,7 @@ impl MedicalImaging {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.image_acquisition.initialize()?;
         self.image_processing.initialize()?;
         self.image_analysis.initialize()?;
@@ -3518,7 +3566,7 @@ impl MedicalImaging {
         Ok(())
     }
 
-    pub fn validate_image(&self, image: &MedicalImage) -> Result<MedicalError> {
+    pub fn validate_image(&self, image: &MedicalImage) -> Result<(), MedicalError> {
         if image.image_id.is_empty() {
             return Err(MedicalError::ValidationError("Image ID cannot be empty".to_string()));
         }
@@ -3541,7 +3589,7 @@ impl ImageAcquisition {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3563,7 +3611,7 @@ impl ImageProcessing {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3576,7 +3624,7 @@ impl ImageAnalysis {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3589,7 +3637,7 @@ impl ImageStorage {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3604,7 +3652,7 @@ impl DrugDiscovery {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.target_identification.initialize()?;
         self.compound_screening.initialize()?;
         self.lead_optimization.initialize()?;
@@ -3612,7 +3660,7 @@ impl DrugDiscovery {
         Ok(())
     }
 
-    pub fn validate_compounds(&self, compounds: &[Compound]) -> Result<MedicalError> {
+    pub fn validate_compounds(&self, compounds: &[Compound]) -> Result<(), MedicalError> {
         if compounds.is_empty() {
             return Err(MedicalError::ValidationError("At least one compound must be provided".to_string()));
         }
@@ -3635,7 +3683,7 @@ impl TargetIdentification {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3648,7 +3696,7 @@ impl CompoundScreening {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3661,7 +3709,7 @@ impl LeadOptimization {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3725,7 +3773,7 @@ impl PreclinicalTesting {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3767,7 +3815,7 @@ impl MedicalComplianceMonitor {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.hipaa_compliance.initialize()?;
         self.gdpr_compliance.initialize()?;
         self.clinical_standards.initialize()?;
@@ -3792,7 +3840,7 @@ impl HIPAACompliance {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3815,7 +3863,7 @@ impl GDPRCompliance {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3829,7 +3877,7 @@ impl ClinicalStandards {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -3843,7 +3891,7 @@ impl AuditSystem {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<MedicalError> {
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 }
@@ -4149,6 +4197,7 @@ impl ScreeningResults {
             target_id: "target_1".to_string(),
             screened_compounds: Vec::new(),
             hit_compounds: Vec::new(),
+            hit_rate: 0.05,
             screening_metrics: ScreeningMetrics::new(),
         }
     }
@@ -4216,6 +4265,78 @@ pub enum ComplianceType {
     Security,
 }
 
+/// Audit trail entry for medical data access
+#[derive(Debug, Clone)]
+pub struct AuditEntry {
+    pub entry_id: String,
+    pub timestamp: u64,
+    pub user_id: String,
+    pub patient_id: String,
+    pub action: String,
+    pub details: String,
+}
+
+/// Clinical data analysis result
+#[derive(Debug, Clone)]
+pub struct ClinicalAnalysis {
+    pub analysis_id: String,
+    pub analysis_type: ClinicalDataType,
+    pub findings: Vec<String>,
+    pub recommendations: Vec<String>,
+    pub confidence_score: f64,
+}
+
+/// Processed medical image
+#[derive(Debug, Clone)]
+pub struct ProcessedImage {
+    pub processed_image_id: String,
+    pub original_image_id: String,
+    pub processing_type: ImageProcessingType,
+    pub processed_data: Vec<u8>,
+    pub processing_metadata: HashMap<String, String>,
+}
+
+/// Drug screening results
+#[derive(Debug, Clone)]
+pub struct ScreeningResults {
+    pub results_id: String,
+    pub target_id: String,
+    pub screened_compounds: Vec<String>,
+    pub hit_compounds: Vec<String>,
+    pub hit_rate: f64,
+    pub screening_metrics: ScreeningMetrics,
+}
+
+/// Screening performance metrics
+#[derive(Debug, Clone)]
+pub struct ScreeningMetrics {
+    pub total_compounds: u64,
+    pub hit_rate: f64,
+    pub false_positive_rate: f64,
+    pub screening_time: f64,
+}
+
+/// Compliance report for regulatory requirements
+#[derive(Debug, Clone)]
+pub struct ComplianceReport {
+    pub report_id: String,
+    pub report_type: ComplianceType,
+    pub compliance_score: f64,
+    pub violations: Vec<String>,
+    pub recommendations: Vec<String>,
+    pub generated_at: u64,
+}
+
+/// Medical library performance summary metrics
+#[derive(Debug, Clone)]
+pub struct MedicalPerformanceMetrics {
+    pub total_patients: u64,
+    pub average_processing_time: f64,
+    pub privacy_score: f64,
+    pub compliance_score: f64,
+    pub data_quality: f64,
+}
+
 /// Medical error types
 #[derive(Debug, Clone)]
 pub enum MedicalError {
@@ -4252,7 +4373,7 @@ mod tests {
 
     #[test]
     fn test_medical_library_creation() {
-        let library = MedicalComputingLibrary::new();
+        let mut library = MedicalComputingLibrary::new();
         assert!(library.initialize().is_ok());
     }
 

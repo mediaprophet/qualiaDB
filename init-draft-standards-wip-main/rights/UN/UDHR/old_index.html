@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>UN Human Rights Instruments Ontology</title>
+    <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove"></script>
+    <script class="remove">
+        var respecConfig = {
+            specStatus: "unofficial",
+            editors: [{
+                name: "Grok 3",
+                company: "xAI",
+                url: "https://x.ai"
+            }],
+            shortName: "un-human-rights-ontology",
+            subtitle: "Version 1.1",
+            publishDate: "2025-07-05",
+            github: "https://github.com/example/un-human-rights-ontology",
+            license: "document",
+            localBiblio: {
+                "UDHR": {
+                    title: "Universal Declaration of Human Rights",
+                    href: "https://www.un.org/en/about-us/universal-declaration-of-human-rights",
+                    publisher: "United Nations"
+                },
+                "CRC": {
+                    title: "Convention on the Rights of the Child",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-rights-child",
+                    publisher: "United Nations"
+                },
+                "ICCPR": {
+                    title: "International Covenant on Civil and Political Rights",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights",
+                    publisher: "United Nations"
+                },
+                "ICESCR": {
+                    title: "International Covenant on Economic, Social and Cultural Rights",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-economic-social-and-cultural-rights",
+                    publisher: "United Nations"
+                },
+                "CAT": {
+                    title: "Convention against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading",
+                    publisher: "United Nations"
+                },
+                "CRPD": {
+                    title: "Convention on the Rights of Persons with Disabilities",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-rights-persons-disabilities",
+                    publisher: "United Nations"
+                },
+                "CEDAW": {
+                    title: "Convention on the Elimination of All Forms of Discrimination against Women",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-elimination-all-forms-discrimination-against-women",
+                    publisher: "United Nations"
+                },
+                "CERD": {
+                    title: "International Convention on the Elimination of All Forms of Racial Discrimination",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-elimination-all-forms-racial",
+                    publisher: "United Nations"
+                },
+                "SLAVERY": {
+                    title: "Slavery Convention",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/slavery-convention",
+                    publisher: "United Nations"
+                },
+                "SUPP-SLAVERY": {
+                    title: "Supplementary Convention on the Abolition of Slavery, the Slave Trade, and Institutions and Practices Similar to Slavery",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and",
+                    publisher: "United Nations"
+                },
+                "UDHGHR": {
+                    title: "Universal Declaration on the Human Genome and Human Rights",
+                    href: "https://unesdoc.unesco.org/ark:/48223/pf0000110220",
+                    publisher: "UNESCO"
+                },
+                "UDCD": {
+                    title: "Universal Declaration on Cultural Diversity",
+                    href: "https://unesdoc.unesco.org/ark:/48223/pf0000127162",
+                    publisher: "UNESCO"
+                },
+                "MILLENNIUM": {
+                    title: "United Nations Millennium Declaration",
+                    href: "https://www.un.org/en/development/desa/population/migration/generalassembly/docs/globalcompact/A_RES_55_2.pdf",
+                    publisher: "United Nations"
+                },
+                "OWL2": {
+                    title: "OWL 2 Web Ontology Language",
+                    href: "https://www.w3.org/TR/owl2-overview/",
+                    publisher: "W3C"
+                },
+                "RDF": {
+                    title: "RDF 1.1 Concepts and Abstract Syntax",
+                    href: "https://www.w3.org/TR/rdf11-concepts/",
+                    publisher: "W3C"
+                }
+            }
+        };
+    </script>
+</head>
+<body>
+    <section id="abstract">
+        <h2>Abstract</h2>
+        <p>
+            This document specifies an upper-level ontology for UN Human Rights Instruments, including
+            the Universal Declaration of Human Rights (UDHR), Convention on the Rights of the Child (CRC),
+            International Covenant on Civil and Political Rights (ICCPR), and others. It provides a
+            structured, machine-readable framework for modeling provisions, rights, violations, and
+            protection mechanisms, with specific instrument provisions represented as literals. The
+            ontology is extensible and supports semantic web applications such as reasoning and querying.
+        </p>
+    </section>
+    <section id="sotd">
+        <h2>Status of This Document</h2>
+        <p>
+            This is an unofficial ontology specification for UN Human Rights Instruments, created for
+            demonstration purposes. It is not endorsed by the United Nations or UNESCO.
+        </p>
+    </section>
+    <section id="introduction">
+        <h2>Introduction</h2>
+        <p>
+            The UN Human Rights Instruments ontology provides a generalized framework for modeling
+            human rights documents listed by the UN Office of the High Commissioner for Human Rights,
+            including treaties, conventions, and declarations. It defines classes for instruments,
+            provisions, rights, violations, and protection mechanisms, enabling interoperability and
+            extensibility for specific instruments such as the UDHR, CRC, and ICCPR.
+        </p>
+        <section id="namespace">
+            <h3>Namespace</h3>
+            <p>
+                The namespace for this ontology is <code>http://www.udhr.org/ontology/udhr#</code>.
+                Prefixes used include:
+            </p>
+            <ul>
+                <li><code>udhr:</code> <code>http://www.udhr.org/ontology/udhr#</code></li>
+                <li><code>rdf:</code> <code>http://www.w3.org/1999/02/22-rdf-syntax-ns#</code></li>
+                <li><code>rdfs:</code> <code>http://www.w3.org/2000/01/rdf-schema#</code></li>
+                <li><code>owl:</code> <code>http://www.w3.org/2002/07/owl#</code></li>
+                <li><code>xsd:</code> <code>http://www.w3.org/2001/XMLSchema#</code></li>
+            </ul>
+        </section>
+    </section>
+    <section id="ontology-structure">
+        <h2>Ontology Structure</h2>
+        <section id="classes">
+            <h3>Classes</h3>
+            <p>The ontology defines the following classes:</p>
+            <table class="simple">
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        <th>Description</th>
+                        <th>URI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>HumanRightsInstrument</code></td>
+                        <td>A UN human rights document (e.g., UDHR, ICCPR, CRC).</td>
+                        <td><code>udhr:HumanRightsInstrument</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Provision</code></td>
+                        <td>An article or clause within an instrument.</td>
+                        <td><code>udhr:Article</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Right</code></td>
+                        <td>A human right defined by an instrument.</td>
+                        <td><code>udhr:HumanRights</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Violation</code></td>
+                        <td>An act or omission contravening a right.</td>
+                        <td><code>udhr:ActOmission</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>ProtectionMechanism</code></td>
+                        <td>A mechanism to promote or protect rights.</td>
+                        <td><code>udhr:HumanRightsProtectionMechanism</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Person</code></td>
+                        <td>An individual entitled to rights.</td>
+                        <td><code>udhr:Person</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Group</code></td>
+                        <td>A collective entitled to rights.</td>
+                        <td><code>udhr:Group</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Child</code></td>
+                        <td>A person under a certain age, with specific rights.</td>
+                        <td><code>udhr:Child</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Discrimination</code></td>
+                        <td>A violation involving unfair treatment based on specific grounds.</td>
+                        <td><code>udhr:Discrimination</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>ChildEducation</code></td>
+                        <td>Right to education for children.</td>
+                        <td><code>udhr:ChildEducation</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        <section id="properties">
+            <h3>Properties</h3>
+            <p>The ontology includes the following properties:</p>
+            <table class="simple">
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Type</th>
+                        <th>Domain</th>
+                        <th>Range</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>udhr:hasInstrumentName</code></td>
+                        <td>Data Property</td>
+                        <td><code>udhr:HumanRightsInstrument</code></td>
+                        <td><code>xsd:string</code></td>
+                        <td>Specifies the name of the instrument (e.g., "UDHR").</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:hasProvision</code></td>
+                        <td>Object Property</td>
+                        <td><code>udhr:HumanRightsInstrument</code></td>
+                        <td><code>udhr:Article</code></td>
+                        <td>Links an instrument to its provisions.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:hasArticleNumber</code></td>
+                        <td>Data Property</td>
+                        <td><code>udhr:Article</code></td>
+                        <td><code>xsd:integer</code></td>
+                        <td>Specifies the article or clause number.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:hasContent</code></td>
+                        <td>Data Property</td>
+                        <td><code>udhr:Article</code></td>
+                        <td><code>xsd:string</code></td>
+                        <td>Contains the textual content of a provision.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:definesRight</code></td>
+                        <td>Object Property</td>
+                        <td><code>udhr:Article</code></td>
+                        <td><code>udhr:HumanRights</code></td>
+                        <td>Links a provision to the right it defines.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:appliesTo</code></td>
+                        <td>Object Property</td>
+                        <td><code>udhr:HumanRights</code></td>
+                        <td><code>udhr:Person</code> or <code>udhr:Group</code> or <code>udhr:Child</code></td>
+                        <td>Links a right to its entitled entities.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:addressesViolation</code></td>
+                        <td>Object Property</td>
+                        <td><code>udhr:Article</code></td>
+                        <td><code>udhr:ActOmission</code></td>
+                        <td>Links a provision to a violation it addresses.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:hasProtectionMechanism</code></td>
+                        <td>Object Property</td>
+                        <td><code>udhr:Article</code> or <code>udhr:ActOmission</code></td>
+                        <td><code>udhr:HumanRightsProtectionMechanism</code></td>
+                        <td>Links a provision or violation to a protection mechanism.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        <section id="instances">
+            <h3>Instances</h3>
+            <p>Examples of instances from various instruments:</p>
+            <table class="simple">
+                <thead>
+                    <tr>
+                        <th>Instance</th>
+                        <th>Class</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>udhr:UDHR</code></td>
+                        <td><code>udhr:HumanRightsInstrument</code></td>
+                        <td>Universal Declaration of Human Rights.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:CRC</code></td>
+                        <td><code>udhr:HumanRightsInstrument</code></td>
+                        <td>Convention on the Rights of the Child.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:ICCPR</code></td>
+                        <td><code>udhr:HumanRightsInstrument</code></td>
+                        <td>International Covenant on Civil and Political Rights.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:UDHR_Article1</code></td>
+                        <td><code>udhr:Article</code></td>
+                        <td>UDHR Article 1: All human beings are born free and equal...</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:CRC_Article28</code></td>
+                        <td><code>udhr:Article</code></td>
+                        <td>CRC Article 28: Right to education for children.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:ICCPR_Article14</code></td>
+                        <td><code>udhr:Article</code></td>
+                        <td>ICCPR Article 14: Right to a fair trial.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:Equality</code></td>
+                        <td><code>udhr:HumanRights</code></td>
+                        <td>Right to equality before the law.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:ChildEducation</code></td>
+                        <td><code>udhr:HumanRights</code></td>
+                        <td>Right to education for children.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:Torture</code></td>
+                        <td><code>udhr:ActOmission</code></td>
+                        <td>Violation involving torture or cruel treatment.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:TortureProsecution</code></td>
+                        <td><code>udhr:HumanRightsProtectionMechanism</code></td>
+                        <td>Mechanism for prosecuting torture violations.</td>
+                    </tr>
+                    <tr>
+                        <td><code>udhr:Slavery</code></td>
+                        <td><code>udhr:ActOmission</code></td>
+                        <td>Violation involving slavery or slave trade.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </section>
+    <section id="serialization">
+        <h2>Ontology Serialization</h2>
+        <p>An example of the ontology in Turtle format, covering multiple instruments:</p>
+        <pre>
+@prefix udhr: <http://www.udhr.org/ontology/udhr#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+udhr:HumanRightsInstrument a owl:Class ;
+    rdfs:label "Human Rights Instrument" ;
+    rdfs:comment "A UN human rights document, e.g., UDHR, CRC, ICCPR." .
+
+udhr:Article a owl:Class ;
+    rdfs:label "Provision" ;
+    rdfs:comment "An article or clause within a human rights instrument." .
+
+udhr:HumanRights a owl:Class ;
+    rdfs:label "Human Right" ;
+    rdfs:comment "A right defined by a human rights instrument." .
+
+udhr:ActOmission a owl:Class ;
+    rdfs:label "Violation" ;
+    rdfs:comment "An act or omission contravening a human right." .
+
+udhr:HumanRightsProtectionMechanism a owl:Class ;
+    rdfs:label "Protection Mechanism" ;
+    rdfs:comment "A mechanism to promote or protect human rights." .
+
+udhr:Child a owl:Class ;
+    rdfs:label "Child" ;
+    rdfs:comment "A person under a certain age, entitled to specific rights." .
+
+udhr:hasInstrumentName a owl:DatatypeProperty ;
+    rdfs:domain udhr:HumanRightsInstrument ;
+    rdfs:range xsd:string ;
+    rdfs:label "has instrument name" .
+
+udhr:hasProvision a owl:ObjectProperty ;
+    rdfs:domain udhr:HumanRightsInstrument ;
+    rdfs:range udhr:Article ;
+    rdfs:label "has provision" .
+
+udhr:hasArticleNumber a owl:DatatypeProperty ;
+    rdfs:domain udhr:Article ;
+    rdfs:range xsd:integer ;
+    rdfs:label "has article number" .
+
+udhr:hasContent a owl:DatatypeProperty ;
+    rdfs:domain udhr:Article ;
+    rdfs:range xsd:string ;
+    rdfs:label "has content" .
+
+udhr:definesRight a owl:ObjectProperty ;
+    rdfs:domain udhr:Article ;
+    rdfs:range udhr:HumanRights ;
+    rdfs:label "defines right" .
+
+udhr:appliesTo a owl:ObjectProperty ;
+    rdfs:domain udhr:HumanRights ;
+    rdfs:range [ a owl:Class ; owl:unionOf (udhr:Person udhr:Group udhr:Child) ] ;
+    rdfs:label "applies to" .
+
+udhr:addressesViolation a owl:ObjectProperty ;
+    rdfs:domain udhr:Article ;
+    rdfs:range udhr:ActOmission ;
+    rdfs:label "addresses violation" .
+
+udhr:hasProtectionMechanism a owl:ObjectProperty ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (udhr:Article udhr:ActOmission) ] ;
+    rdfs:range udhr:HumanRightsProtectionMechanism ;
+    rdfs:label "has protection mechanism" .
+
+udhr:UDHR a udhr:HumanRightsInstrument ;
+    udhr:hasInstrumentName "Universal Declaration of Human Rights" .
+
+udhr:CRC a udhr:HumanRightsInstrument ;
+    udhr:hasInstrumentName "Convention on the Rights of the Child" .
+
+udhr:ICCPR a udhr:HumanRightsInstrument ;
+    udhr:hasInstrumentName "International Covenant on Civil and Political Rights" .
+
+udhr:CAT a udhr:HumanRightsInstrument ;
+    udhr:hasInstrumentName "Convention against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment" .
+
+udhr:UDHR_Article1 a udhr:Article ;
+    udhr:hasArticleNumber 1 ;
+    udhr:hasContent "All human beings are born free and equal in dignity and rights..." ;
+    udhr:definesRight udhr:Equality ;
+    udhr:addressesViolation udhr:Discrimination .
+
+udhr:CRC_Article28 a udhr:Article ;
+    udhr:hasArticleNumber 28 ;
+    udhr:hasContent "States Parties recognize the right of the child to education..." ;
+    udhr:definesRight udhr:ChildEducation ;
+    udhr:addressesViolation udhr:ChildEducationFreeFromDiscrimination .
+
+udhr:ICCPR_Article14 a udhr:Article ;
+    udhr:hasArticleNumber 14 ;
+    udhr:hasContent "All persons shall be equal before the courts and tribunals..." ;
+    udhr:definesRight udhr:PublicTrial ;
+    udhr:addressesViolation udhr:DueProcess .
+
+udhr:CAT_Article4 a udhr:Article ;
+    udhr:hasArticleNumber 4 ;
+    udhr:hasContent "Each State Party shall ensure that all acts of torture are offences under its criminal law..." ;
+    udhr:addressesViolation udhr:Torture ;
+    udhr:hasProtectionMechanism udhr:TortureProsecution .
+
+udhr:Equality a udhr:HumanRights ;
+    rdfs:label "Equality" ;
+    udhr:appliesTo udhr:Person .
+
+udhr:ChildEducation a udhr:HumanRights ;
+    rdfs:label "Child Education" ;
+    udhr:appliesTo udhr:Child .
+
+udhr:PublicTrial a udhr:HumanRights ;
+    rdfs:label "Public Trial" ;
+    udhr:appliesTo udhr:Person .
+
+udhr:Discrimination a udhr:ActOmission ;
+    rdfs:label "Discrimination" ;
+    udhr:hasProtectionMechanism udhr:DiscriminationProsecution .
+
+udhr:Torture a udhr:ActOmission ;
+    rdfs:label "Torture" ;
+    udhr:hasProtectionMechanism udhr:TortureProsecution .
+
+udhr:Slavery a udhr:ActOmission ;
+    rdfs:label "Slavery" ;
+    udhr:hasProtectionMechanism udhr:SlaveryProsecution .
+
+udhr:DiscriminationProsecution a udhr:HumanRightsProtectionMechanism ;
+    rdfs:label "Discrimination Prosecution" .
+
+udhr:TortureProsecution a udhr:HumanRightsProtectionMechanism ;
+    rdfs:label "Torture Prosecution" .
+
+udhr:SlaveryProsecution a udhr:HumanRightsProtectionMechanism ;
+    rdfs:label "Slavery Prosecution" .
+        </pre>
+    </section>
+    <section id="constraints">
+        <h2>Constraints and Axioms</h2>
+        <p>The ontology enforces the following constraints:</p>
+        <ul>
+            <li>Each <code>udhr:Article</code> must have exactly one <code>udhr:hasArticleNumber</code>.</li>
+            <li><code>udhr:Person</code>, <code>udhr:Group</code>, and <code>udhr:Child</code> are disjoint classes.</li>
+            <li>Each <code>udhr:HumanRightsInstrument</code> must have at least one <code>udhr:hasProvision</code>.</li>
+        </ul>
+    </section>
+    <section id="usage">
+        <h2>Usage Examples</h2>
+        <p>SPARQL query to retrieve provisions addressing specific violations across instruments:</p>
+        <pre>
+PREFIX udhr: <http://www.udhr.org/ontology/udhr#>
+SELECT ?instrument ?provision ?content ?violation
+WHERE {
+    ?instrument a udhr:HumanRightsInstrument ;
+                udhr:hasProvision ?provision .
+    ?provision udhr:hasContent ?content ;
+               udhr:addressesViolation ?violation .
+    ?violation a udhr:ActOmission .
+}
+        </pre>
+        <p>SPARQL query to find rights and protection mechanisms for children:</p>
+        <pre>
+PREFIX udhr: <http://www.udhr.org/ontology/udhr#>
+SELECT ?right ?mechanism
+WHERE {
+    ?right a udhr:HumanRights ;
+           udhr:appliesTo udhr:Child ;
+           udhr:hasProtectionMechanism ?mechanism .
+}
+        </pre>
+    </section>
+    <section id="extensibility">
+        <h2>Extending the Ontology</h2>
+        <p>
+            To model a specific instrument, create instances of <code>udhr:HumanRightsInstrument</code>
+            and <code>udhr:Article</code>, and link them to rights, violations, or mechanisms. For example,
+            to add an article from the Convention on the Elimination of All Forms of Discrimination
+            against Women (CEDAW):
+        </p>
+        <pre>
+ud

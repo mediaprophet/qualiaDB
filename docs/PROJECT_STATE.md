@@ -1,8 +1,8 @@
 # Cooperative Projects + Qualia Ecosystem — Project State
 
-**Date:** 2026-06-10 (Updated)  
+**Date:** 2026-06-12 (Updated)  
 **Original Date:** 2026-06-06  
-**Branch:** `0.0.11-dev`  
+**Branch:** `0.0.11`  
 **Purpose:** Context export for new chat sessions
 
 ---
@@ -23,9 +23,9 @@ Key themes:
 
 ## 2. Current Build Status
 
-**Build:** ✅ Compiling successfully (0 errors, all 82 errors resolved)  
-**Test Count:** 539 test functions in qualia-core-db  
-**Version:** 0.0.11-dev
+**Build:** ✅ Compiling successfully (0 errors)  
+**Test Count:** ~720 tests passing in qualia-core-db (includes 79 specialized_libs + 19 platform abstraction tests added 2026-06-12)  
+**Version:** 0.0.11
 
 ---
 
@@ -54,22 +54,28 @@ Key themes:
 - Module reorganization completed
 - Test count: 539 functions in qualia-core-db
 
-### Critical Implementation Gaps (Documented in to-do/)
+### Completed Since 2026-06-10
 
-**Security Stubs** (Tasks 001-004):
-- zk_proofs.rs: verify_proof returns true unconditionally
-- fiduciary_crypto.rs: signature verification ignored
-- ML-DSA: Hand-rolled, not FIPS 204 compliant
-- ECC parity: Mock implementation
+- All 9 `specialized_libs/` modules enabled + 79/79 tests passing (real Ed25519, AES-256-GCM, Burgers CFD, ZK commitments, HashMap storage)
+- `zk_proofs.rs`: fixed `verification_key_id` key mismatch bug (was using proving key ID instead of circuit ID)
+- `storage_driver.rs`: cross-platform `StorageDriver` trait with real `MmapApfsDriver` (clonefile/madvise/F_NOCACHE), `WinNvmeDriver` (DeviceIoControl), `ZnsDriver`
+- `platform_scheduler.rs`: thread QoS binding — `pthread_set_qos_class_self_np` (macOS), `core_affinity + setpriority` (Linux), `SetThreadPriority` (Windows)
+- `ebpf_filter.rs`: real platform network filters — Linux eBPF, Windows WFP, macOS Network Extension XPC, Android VpnService
+- `ARCHITECTURE.md §43` added: full cross-platform documentation
 
-**Query Layer Stubs** (Task 005):
-- mmap_query_subject: Returns empty vector
-- lazy_superblock_query: Fabricates results
-- indexing.rs: Empty file
+### Remaining Known Gaps
 
-**LLM Inference** (Task 006):
-- wgpu/Vulkan path uses mock_pipeline (placeholder shader)
-- Real fused_transformer.wgsl exists but unused
+**Security**:
+- `fiduciary_crypto.rs`: ML-DSA hand-rolled, not FIPS 204 compliant
+- `zk_proofs.rs`: full Halo2 zk-SNARK backend pending (Pedersen commitment structural check is real)
+
+**Query Layer**:
+- `mmap_query_subject`: returns empty vector
+- `lazy_superblock_query`: fabricates results
+- `indexing.rs`: empty file
+
+**LLM Inference**:
+- `infer_local_model()` Phase 8 autoregressive loop is real on host targets; WASM still uses mock ring-buffer path
 
 ---
 

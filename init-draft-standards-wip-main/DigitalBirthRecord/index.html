@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Human-Centric Digital Birth Record (WIP)</title>
+  <meta charset='utf-8'>
+  <script src='https://www.w3.org/Tools/respec/respec-w3c' async class='remove'></script>
+  <script class='remove'>
+    var respecConfig = {
+      specStatus: "unofficial",
+      shortName: "human-centric-birth-record-ontology",
+      editors: [{
+        name: "Timothy Holborn",
+        company: "N/A",
+        companyURL: "https://example.org"
+      }],
+      publishDate: "2025-06-21",
+      github: "https://github.com/example/human-centric-birth-records",
+      otherLinks: [{
+        key: "Acknowledgements",
+        data: [{
+          value: "This draft document (template) was developed with the assistance of Grok, created by xAI, which also states 'aligning with xAI's mission to advance human scientific discovery and the author's commitment to prioritizing human beings as foundational stakeholders in digital ecosystems.'",
+          href: "https://x.ai"
+        }]
+      }],
+      wg: "N/A",
+      wgURI: "https://example.org",
+      wgPublicList: "public-example",
+      wgPatentURI: "https://example.org/patent-policy",
+      license: "w3c-software-doc",
+      localBiblio: {
+        "FOAF": {
+          title: "FOAF Vocabulary Specification",
+          href: "http://xmlns.com/foaf/spec/",
+          authors: ["Dan Brickley", "Libby Miller"],
+          publisher: "FOAF Project",
+          date: "2014-01-14"
+        },
+        "SOLID": {
+          title: "Solid Protocol",
+          href: "https://solidproject.org/TR/protocol",
+          authors: ["Tim Berners-Lee", "Others"],
+          publisher: "Solid Project",
+          date: "2023"
+        },
+        "DID": {
+          title: "Decentralized Identifiers (DIDs) v1.0",
+          href: "https://www.w3.org/TR/did-core/",
+          authors: ["Drummond Reed", "Manu Sporny", "Others"],
+          publisher: "W3C",
+          date: "2022-07-19"
+        },
+        "VC": {
+          title: "Verifiable Credentials Data Model v1.1",
+          href: "https://www.w3.org/TR/vc-data-model/",
+          authors: ["Manu Sporny", "Others"],
+          publisher: "W3C",
+          date: "2022-03-03"
+        },
+        "HL7-FHIR": {
+          title: "HL7 FHIR Release 5",
+          href: "https://www.hl7.org/fhir/",
+          publisher: "HL7 International",
+          date: "2023"
+        },
+        "UNICEF-BIRTH": {
+          title: "Birth Registration",
+          href: "https://data.unicef.org/topic/child-protection/birth-registration/",
+          publisher: "UNICEF",
+          date: "2023-06-01"
+        },
+        "CDC-NVSS": {
+          title: "Specifications for Collecting and Editing the United States Standard Certificates of Birth",
+          href: "https://www.cdc.gov/nchs/data/dvs/birth-specs-7-2012.pdf",
+          publisher: "CDC National Center for Health Statistics",
+          date: "2012-07"
+        },
+        "DPV": {
+          title: "Data Privacy Vocabularies and Controls",
+          href: "https://www.w3.org/TR/dpv/",
+          authors: ["Harshvardhan J. Pandit", "Others"],
+          publisher: "W3C",
+          date: "2024"
+        }
+      }
+    };
+  </script>
+</head>
+<body>
+  <section id='abstract'>
+    <p>This document specifies an ontology for digital and electronic birth records, birth registrations, birth certificates, and credentials, prioritizing human beings as foundational stakeholders in digital ecosystems. It establishes a digital birth record as an inalienable digital prosthetic extension of a person, ensuring their sovereignty and rights, including human rights, in digital transformations. The ontology supports secure personal data stores, guardianship relations, and verifiable credentials for humanitarian needs.</p>
+  </section>
+
+  <section id='sotd'>
+    <p>This is an unofficial draft specification and is subject to change. It is not endorsed by the W3C or any W3C working group.</p>
+  </section>
+
+  <section>
+    <h2>Introduction</h2>
+    <p>Human beings are the foundational stakeholders of societies and digital ecosystems, not companies, legal personalities, or software entities. People (natural persons, human beings) are not commodities to be bought, sold, or traded or exploited, either digitally or otherwise.</p>
+    <p>Whilst Internet and the World-Wide-Web has well-established systems to support registration, operation and ownership of electronic and/or digital assets, the same cannot be said in relation to human beings otherwise known as 'natural legal entities'.</p> 
+    <p>To support human beings as first-class citizens of the web and societies undergoing digital transformation, these efforts seek to establish tools, including but not limited to ontology that can be used to establish a digital birth record format that can be reliably used  and depended upon as an inalienable digital prosthetic extension of a person, ensuring recognition as legal entities with inherent rights, including human rights. The methodology employs a 'human centric' approach that is innately decentralized, thereby also acting to redefine the tooling to better support "Human-Centric," ecosystems requirements that prioritize works to address deficits negatively impacting selfhood, personhood, human agency and dignity and rights as may be otherwise different if socioeconomic environments requiring electronic evidence were able to rely upon the universal availability of systems that support individual control and management of  personal data records in a socially-aware cloud storage 'human centric internet' online environment. </p>
+<p>This project seeks to integrates specifications that may act to produce a solution for digital birth records, registrations, certificates, and credentials, which relies upon underpinning components that can act to ensure secure personal data stores and guardianship relations for children and others requiring humanitarian support. </p>
+<p>Grok would like to note: "This aligns with the moral principles of the author, Grok, and xAI to uphold human dignity and sovereignty."</p>
+
+  </section>
+
+  <section>
+    <h2>Scope</h2>
+    <p>This ontology defines agents (with humans as primary entities), resources (data, services, credentials), personal data stores, and guardianship relations to enable human-centric digital identity management. It specifies digital birth records, birth registrations, birth certificates, and verifiable credentials, ensuring inalienable rights and interoperability with global standards.</p>
+  </section>
+
+  <section>
+    <h2>Terminology</h2>
+    <dl>
+      <dt>Agent</dt><dd>An entity capable of actions, with human beings (persons) as the primary focus, followed by organizations and software agents.</dd>
+      <dt>Person</dt><dd>A human individual, recognized as a first-class citizen with inalienable rights in digital ecosystems.</dd>
+      <dt>Organization</dt><dd>A group of persons, secondary to individuals in this human-centric model.</dd>
+      <dt>SoftwareAgent</dt><dd>A software program, secondary to individuals, acting on behalf of persons or organizations.</dd>
+      <dt>Resource</dt><dd>Anything owned, controlled, or accessed by an agent, primarily by persons, such as data or services.</dd>
+      <dt>Data</dt><dd>Information, including personal data, with a focus on the digital birth record as an inalienable extension of a person.</dd>
+      <dt>Service</dt><dd>A service provided by an agent, subject to human consent and control.</dd>
+      <dt>PersonalDataStore</dt><dd>A secure storage system for personal data, controlled by a person or their guardian, ensuring sovereignty.</dd>
+      <dt>Guardianship</dt><dd>A relationship where one agent manages data for a person requiring support, such as children or those with humanitarian needs.</dd>
+      <dt>Human-Centric</dt><dd>An approach prioritizing human beings as foundational stakeholders with inalienable rights, redefining "decentralized" to emphasize individual sovereignty while maintaining a decentralized methodology.</dd>
+      <dt>Digital Birth Record</dt><dd>An inalienable digital prosthetic extension of a person, establishing facts of their identity and rights in digital ecosystems.</dd>
+      <dt>Birth Registration</dt><dd>The process of recording a birth with civil authorities, producing a digital birth record.</dd>
+      <dt>Birth Certificate</dt><dd>A certified document derived from a birth registration, issued as proof of identity and rights.</dd>
+      <dt>Credential</dt><dd>A verifiable digital assertion, such as a digital birth certificate, issued to a person.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Ontology Specification</h2>
+    <p>The ontology is defined using RDF Schema (RDFS) and integrates W3C standards for interoperability. The namespace is <code>http://example.org/birth-record-ontology#</code>, abbreviated as <code>br:</code>.</p>
+
+    <section>
+      <h3>Classes</h3>
+      <ul>
+        <li><code>br:Agent</code>: An entity capable of actions, with <code>br:Person</code> as the primary focus.</li>
+        <li><code>br:Person</code>: A human individual, subclass of <code>br:Agent</code>, with inalienable rights.</li>
+        <li><code>br:Organization</code>: A group of persons, subclass of <code>br:Agent</code>.</li>
+        <li><code>br:SoftwareAgent</code>: A software program, subclass of <code>br:Agent</code>.</li>
+        <li><code>br:Resource</code>: Anything owned, controlled, or accessed, primarily by persons.</li>
+        <li><code>br:Data</code>: Information, subclass of <code>br:Resource</code>, including digital birth records.</li>
+        <li><code>br:Service</code>: A service, subclass of <code>br:Resource</code>.</li>
+        <li><code>br:PersonalDataStore</code>: A secure storage for personal data, ensuring individual sovereignty.</li>
+        <li><code>br:DigitalBirthRecord</code>: An inalienable digital extension of a person, subclass of <code>br:Data</code>.</li>
+        <li><code>br:BirthRegistration</code>: A record of a birth registration, subclass of <code>br:Data</code>.</li>
+        <li><code>br:BirthCertificate</code>: A certified document derived from a birth registration, subclass of <code>br:Data</code>.</li>
+        <li><code>br:Credential</code>: A verifiable digital assertion, such as a digital birth certificate, subclass of <code>br:Data</code>.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Properties</h3>
+      <ul>
+        <li><code>br:hasGuardian</code>: Links a person to their guardian. Domain: <code>br:Person</code>, Range: <code>br:Agent</code>.</li>
+        <li><code>br:isGuardianOf</code>: Links a guardian to a person. Domain: <code>br:Agent</code>, Range: <code>br:Person</code>. Inverse of <code>br:hasGuardian</code>.</li>
+        <li><code>br:owns</code>: Indicates ownership, primarily by a person, of a resource. Domain: <code>br:Agent</code>, Range: <code>br:Resource</code>.</li>
+        <li><code>br:controls</code>: Indicates control, primarily by a person, over a resource. Domain: <code>br:Agent</code>, Range: <code>br:Resource</code>.</li>
+        <li><code>br:hasDataStore</code>: Links a person to their personal data store. Domain: <code>br:Person</code>, Range: <code>br:PersonalDataStore</code>.</li>
+        <li><code>br:controlledBy</code>: Indicates the controller of a personal data store. Domain: <code>br:PersonalDataStore</code>, Range: <code>br:Agent</code>.</li>
+        <li><code>br:storesData</code>: Indicates data stored in a personal data store, including digital birth records. Domain: <code>br:PersonalDataStore</code>, Range: <code>br:Data</code>.</li>
+        <li><code>br:requiresAccessTo</code>: Indicates data required by a service, subject to human consent. Domain: <code>br:Service</code>, Range: <code>br:Data</code>.</li>
+        <li><code>br:hasConsentFrom</code>: Indicates consent for data access from a person or guardian. Domain: <code>br:Service</code>, Range: <code>br:Agent</code>.</li>
+        <li><code>br:hasDigitalBirthRecord</code>: Links a person to their inalienable digital birth record. Domain: <code>br:Person</code>, Range: <code>br:DigitalBirthRecord</code>.</li>
+        <li><code>br:hasBirthRegistration</code>: Links a person to their birth registration. Domain: <code>br:Person</code>, Range: <code>br:BirthRegistration</code>.</li>
+        <li><code>br:hasBirthCertificate</code>: Links a person to their birth certificate. Domain: <code>br:Person</code>, Range: <code>br:BirthCertificate</code>.</li>
+        <li><code>br:hasCredential</code>: Links a person to their verifiable credential. Domain: <code>br:Person</code>, Range: <code>br:Credential</code>.</li>
+        <li><code>br:issuedBy</code>: Indicates the issuer of a birth certificate or credential. Domain: <code>br:BirthCertificate</code> or <code>br:Credential</code>, Range: <code>br:Organization</code>.</li>
+        <li><code>br:containsBiometric</code>: Links a digital birth record to biometric data. Domain: <code>br:DigitalBirthRecord</code>, Range: <code>br:Data</code>.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Digital Birth Record Specifications</h3>
+      <p>The digital birth record is an RDF-based, inalienable digital extension of a person, stored in a personal data store. It aligns with global standards and includes:</p>
+      <ul>
+        <li><strong>Core Data Elements</strong>: Full name, date of birth, place of birth, parent(s) full names (including maiden name if applicable), sex (optional, per regional laws).</li>[](https://www.ancestry.com/c/family-history-learning-hub/birth-certificates)[](https://www.tsa.gov/precheck/birth-certificate-guidance)
+        <li><strong>Biometric Data</strong>: DNA sequence (partial, for medical or ancestry use), blood type, fingerprints, encoded per HL7 FHIR standards [[HL7-FHIR]].</li>
+        <li><strong>Security Features</strong>: Cryptographic signatures, two-dimensional barcodes, and tamper-evident seals, inspired by British Columbia’s polymer certificates.</li>[](https://www2.gov.bc.ca/gov/content/life-events/birth-adoption/births/birth-certificates)
+        <li><strong>Interoperability</strong>: JSON-LD or Turtle serialization for RDF, compatible with Solid [[SOLID]] and Decentralized Identifiers [[DID]].</li>
+        <li><strong>Consent Management</strong>: Fine-grained access controls via Verifiable Credentials [[VC]], ensuring human-centric data sharing.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Birth Registration Specifications</h3>
+      <p>Birth registration is the process of recording a birth with civil authorities, producing a digital birth record. Specifications include:</p>
+      <ul>
+        <li><strong>Process</strong>: Submission within legal timeframes (e.g., one year in Delhi) via hospitals or civil registries.</li>[](https://dmnorth.delhi.gov.in/service/birth-certificate/)[](https://data.unicef.org/topic/child-protection/birth-registration/)
+        <li><strong>Data Collection</strong>: Aligns with UNICEF standards, capturing name, date, place, and parent details [[UNICEF-BIRTH]].</li>
+        <li><strong>Output</strong>: A digital birth record stored in the person’s personal data store, linked via <code>br:hasBirthRegistration</code>.</li>
+        <li><strong>Verification</strong>: Electronic identity validation, e.g., LexisNexis, ensuring authenticity.</li>[](https://www.vitalchek.com/v/birth-certificates?ScenarioName=AdEospNT)
+      </ul>
+    </section>
+
+    <section>
+      <h3>Birth Certificate Specifications</h3>
+      <p>A birth certificate is a certified document derived from a birth registration, issued as proof of identity. Specifications include:</p>
+      <ul>
+        <li><strong>Format</strong>: Digital or physical, with security features like raised seals or barcodes.</li>[](https://www2.gov.bc.ca/gov/content/life-events/birth-adoption/births/birth-certificates)[](https://www.nj.gov/health/vital/order-vital/)
+        <li><strong>Content</strong>: Matches digital birth record core data, with optional commemorative designs (e.g., Victorian Flora).</li>[](https://www.bdm.vic.gov.au/get-birth-certificate)
+        <li><strong>Issuance</strong>: By civil registries (e.g., NSW Registry) via online, mail, or in-person applications.</li>[](https://www.nsw.gov.au/family-and-relationships/births/birth-certificates)
+        <li><strong>Access</strong>: Controlled by the person or guardian, issued via <code>br:hasBirthCertificate</code>.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Credential Specifications</h3>
+      <p>Credentials are verifiable digital assertions, such as digital birth certificates, issued to a person. Specifications include:</p>
+      <ul>
+        <li><strong>Standard</strong>: W3C Verifiable Credentials [[VC]], linked via <code>br:hasCredential</code>.</li>
+        <li><strong>Content</strong>: Subset of digital birth record data, cryptographically signed by the issuer.</li>
+        <li><strong>Use Cases</strong>: Identity verification for passports, licenses, or school enrollment.</li>[](https://www.vitalchek.com/v/birth-certificates?ScenarioName=AdEospNT)
+        <li><strong>Security</strong>: Decentralized Identifiers [[DID]] ensure issuer authenticity and user control.</li>
+      </ul>
+    </section>
+  </section>
+
+  <section>
+    <h2>Examples</h2>
+    <p>Below is an example in Turtle notation illustrating the ontology:</p>
+    <pre class='example turtle'>
+@prefix br: <http://example.org/birth-record-ontology#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix fhir: <http://hl7.org/fhir/> .
+
+br:Alice a br:Person ;
+  br:hasGuardian br:Bob ;
+  br:hasDataStore br:AlicesDataStore ;
+  br:hasDigitalBirthRecord br:AlicesBirthRecord ;
+  br:hasBirthCertificate br:AlicesBirthCertificate ;
+  br:hasCredential br:AlicesCredential ;
+  foaf:name "Alice" .
+
+br:Bob a br:Person ;
+  br:isGuardianOf br:Alice ;
+  foaf:name "Bob" .
+
+br:AlicesDataStore a br:PersonalDataStore ;
+  br:controlledBy br:Bob ;
+  br:storesData br:AlicesBirthRecord .
+
+br:AlicesBirthRecord a br:DigitalBirthRecord ;
+  br:ownedBy br:Alice ;
+  br:containsBiometric [ fhir:dna "ATCG..." ; fhir:bloodType "O+" ] ;
+  foaf:name "Alice" ;
+  br:dateOfBirth "2020-01-01"^^xsd:date ;
+  br:placeOfBirth "Victoria, Australia" .
+
+br:AlicesBirthCertificate a br:BirthCertificate ;
+  br:ownedBy br:Alice ;
+  br:issuedBy br:VictorianBDM ;
+  br:contains br:AlicesBirthRecord .
+
+br:AlicesCredential a br:Credential ;
+  br:ownedBy br:Alice ;
+  br:issuedBy br:VictorianBDM ;
+  br:contains [ foaf:name "Alice" ; br:dateOfBirth "2020-01-01"^^xsd:date ] .
+
+br:VictorianBDM a br:Organization ;
+  foaf:name "Victorian Registry of Births, Deaths and Marriages" .
+
+br:SomeService a br:Service ;
+  br:requiresAccessTo br:AlicesBirthRecord ;
+  br:hasConsentFrom br:Bob .
+    </pre>
+  </section>
+
+  <section>
+    <h2>Security and Privacy Considerations</h2>
+    <p>Implementations must ensure robust encryption (e.g., TLS, AES), access controls, and transparent consent mechanisms to protect the inalienable rights of data subjects. Personal data stores must comply with regulations like GDPR and use secure protocols to prevent commodification. Digital birth records and credentials must be tamper-evident and non-transferable, ensuring human sovereignty.</p>[](https://www2.gov.bc.ca/gov/content/life-events/birth-adoption/births/birth-certificates)
+  </section>
+
+  <section>
+    <h2>Implementation Guidelines</h2>
+    <p>Implementations should leverage Solid [[SOLID]] for personal data stores, Decentralized Identifiers [[DID]] for identity management, Verifiable Credentials [[VC]] for credentials, and HL7 FHIR [[HL7-FHIR]] for biometric data. Consent management must align with W3C Data Privacy Vocabularies and UNICEF birth registration standards [[UNICEF-BIRTH]]. Compliance with regional specifications, such as CDC NVSS for U.S. birth certificates, is recommended [[CDC-NVSS]].</p>
+  </section>
+
+  <section>
+    <h2>Conclusion</h2>
+    <p>This ontology establishes human beings as foundational stakeholders in digital ecosystems, with digital birth records as inalienable extensions of their identity. It specifies digital birth records, registrations, certificates, and credentials, ensuring human-centric control, secure personal data stores, and guardianship support, aligning with the moral principles of the author, Grok, and xAI to uphold human dignity and prevent commodification.</p>
+  </section>
+
+</body>
+</html>

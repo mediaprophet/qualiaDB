@@ -77,6 +77,11 @@ pub mod vault_manifest;
 pub mod wasm_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod zns_storage;
+pub mod storage_driver;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod platform_scheduler;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ebpf_filter;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod fiduciary_crypto;
 #[cfg(not(target_arch = "wasm32"))]
@@ -94,12 +99,11 @@ pub mod acoustic_ble_mesh;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod specialized_libs;
 
-#[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::linear_algebra;
 #[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::statistical_computing;
 #[cfg(not(target_arch = "wasm32"))]
-// pub use specialized_libs::cryptographic_library;
+// // pub use specialized_libs::cryptographic_library;
 #[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::physics_simulation;
 #[cfg(not(target_arch = "wasm32"))]
@@ -109,7 +113,7 @@ pub mod specialized_libs;
 #[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::chemistry_modeling;
 #[cfg(not(target_arch = "wasm32"))]
-// // pub use specialized_libs::medical_computing; // Temporarily disabled
+// pub use specialized_libs::medical_computing; // Temporarily disabled
 #[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::engineering_analysis;
 

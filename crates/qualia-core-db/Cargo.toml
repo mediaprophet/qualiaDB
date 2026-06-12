@@ -116,9 +116,13 @@ windows = { version = "0.58", features = [
     "Win32_System_LibraryLoader",
     "Win32_System_Threading",
     "Win32_Security",
+    "Win32_System_Ioctl",
+    "Win32_NetworkManagement_WindowsFilteringPlatform",
+    "Win32_System_Rpc",
 ] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+libc = "0.2"
 memmap2 = "0.9"
 futures-util = "0.3"
 tokio = { version = "1.0", features = ["full"] }

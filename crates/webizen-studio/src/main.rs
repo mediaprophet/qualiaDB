@@ -79,7 +79,7 @@ fn App() -> Element {
                     style: "margin: 0; font-weight: 600; font-size: 1.25rem; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.5rem;",
                     span { style: "color: var(--qualia-accent);", "⬡" }
                     "Webizen Studio "
-                    span { style: "font-size: 0.85rem; font-weight: 400; color: var(--qualia-text-muted);", "(Fiduciary HUD)" }
+                    span { style: "font-size: 0.85rem; font-weight: 400; color: var(--qualia-text-muted);", "(Human-Centric HUD)" }
                 }
                 div {
                     style: "display: flex; gap: 1rem; align-items: center;",

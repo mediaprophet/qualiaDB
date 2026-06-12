@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Ontology for Describing Software Agent Characteristics: A Framework for Disambiguating AI Agents</title>
+  <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove"></script>
+  <script class="remove">
+    var respecConfig = {
+      specStatus: "unofficial",
+      editors: [{
+        name: "Timothy C. Holborn",
+        company: "WebCivics",
+        url: "https://www.linkedin.com/in/ubiquitous/"},
+        {
+        name: "Grok 3",
+        company: "xAI",
+        url: "https://x.ai"
+      }],
+      publishDate: "2025-06-20",
+      shortName: "ai-agent-ontology",
+      github: "https://github.com/example/ai-agent-ontology",
+      license: "w3c-software-doc",
+      wg: "AI Ontology Working Group",
+      wgURI: "https://example.org/ai-ontology-wg",
+      edDraftURI: "https://example.org/drafts/ai-agent-ontology",
+      abstract: `
+        <p>
+          This document proposes an ontological framework to standardize the description of software agents, platforms, systems, or software, particularly in the context of Human-Centered AI (HCAI), Human-Centric AI (HCA), and related paradigms. The framework aims to disambiguate overlapping terms, enhance comprehension of agent characteristics, and promote responsible, sustainable, and human-aligned technology development. By defining clear properties, relationships, and classifications, this ontology seeks to improve communication among researchers, developers, policymakers, and stakeholders.
+        </p>
+      `
+    };
+  </script>
+</head>
+<body>
+  <section id="sotd">
+    <p>
+      This is an unofficial draft document and has not been formally endorsed by any standards body. It is intended for discussion and feedback from the AI research, development, and policy communities. Comments and contributions are welcome via the <a href="https://github.com/example/ai-agent-ontology">GitHub repository</a>.
+    </p>
+  </section>
+
+  <section id="introduction">
+    <h2>Introduction</h2>
+    <section id="purpose">
+      <h3>Purpose</h3>
+      <p>
+        The proliferation of terms such as <dfn>Human-Centered AI</dfn> (HCAI), <dfn>Human-Centric AI</dfn> (HCA), and People-Centered AI has led to ambiguity in describing the characteristics, goals, and ethical implications of software agents and systems. This document proposes an ontological framework to systematically describe these entities, enabling precise communication and alignment with human values.
+      </p>
+    </section>
+    <section id="scope">
+      <h3>Scope</h3>
+      <p>
+        The ontology applies to software agents, platforms, systems, or software with AI components, focusing on their human-interaction properties, ethical considerations, and societal impact. It addresses both technical and non-technical characteristics.
+      </p>
+    </section>
+    <section id="audience">
+      <h3>Audience</h3>
+      <p>
+        This document targets:
+        <ul>
+          <li>AI researchers and developers</li>
+          <li>Policymakers and ethicists</li>
+          <li>Industry stakeholders</li>
+          <li>Academic communities studying AI and human-computer interaction</li>
+        </ul>
+      </p>
+    </section>
+  </section>
+
+  <section id="motivation">
+    <h2>Motivation and Problem Statement</h2>
+    <section id="ambiguity">
+      <h3>Ambiguity in Existing Terms</h3>
+      <p>
+        Terms like <a>Human-Centered AI</a> and <a>Human-Centric AI</a> are often used interchangeably despite distinct connotations. This lack of standardized definitions hinders collaboration and evaluation. For example, HCAI emphasizes transparency and oversight, while HCA prioritizes symbiotic human-AI integration.
+      </p>
+    </section>
+    <section id="need-for-ontology">
+      <h3>Need for an Ontological Framework</h3>
+      <p>
+        Ontologies provide structured representations of knowledge, enabling clear classification and relationships. A dedicated ontology for AI agents can address ambiguity, support interoperability, and guide ethical development.
+      </p>
+    </section>
+    <section id="goals">
+      <h3>Goals</h3>
+      <p>
+        <ul>
+          <li>Disambiguate terms like HCAI, HCA, and related paradigms.</li>
+          <li>Provide a reusable framework for describing agent characteristics.</li>
+          <li>Promote human responsibility, sustainability, and alignment with societal values.</li>
+        </ul>
+      </p>
+    </section>
+  </section>
+
+  <section id="terminology">
+    <h2>Terminology and Scope</h2>
+    <section id="definitions">
+      <h3>Definitions</h3>
+      <dl>
+        <dt><dfn>Software Agent</dfn></dt>
+        <dd>An autonomous or semi-autonomous computational entity capable of performing tasks or decision-making.</dd>
+        <dt><a>Human-Centered AI</a> (HCAI)</dt>
+        <dd>AI systems designed with a focus on transparency, accountability, fairness, and human oversight.</dd>
+        <dt><a>Human-Centric AI</a> (HCA)</dt>
+        <dd>AI systems prioritizing human needs, emotions, and symbiotic integration into human life.</dd>
+        <dt><dfn>Ontology</dfn></dt>
+        <dd>A formal representation of knowledge as a set of concepts, properties, and relationships within a domain.</dd>
+      </dl>
+    </section>
+    <section id="related-concepts">
+      <h3>Related Concepts</h3>
+      <p>
+        Related terms include People-Centered AI, Responsible AI, and Sustainable AI. Proposed acronyms include:
+        <ul>
+          <li><dfn>HRCAI</dfn>: Human-Responsible Centric Artificial Intelligence</li>
+          <li><dfn>HCSTEW</dfn>: Human-Centric Sustainable Technological Ecosystems for Wellbeing</li>
+        </ul>
+      </p>
+    </section>
+    <section id="scope-limitations">
+      <h3>Scope Limitations</h3>
+      <p>
+        This ontology focuses on AI-driven systems; non-AI software is out of scope unless integrated with AI components. It does not prescribe specific implementation technologies.
+      </p>
+    </section>
+  </section>
+
+  <section id="framework">
+    <h2>Proposed Ontological Framework</h2>
+    <section id="core-components">
+      <h3>Core Components</h3>
+      <p>
+        The ontology consists of:
+        <ul>
+          <li><strong>Classes</strong>: Categories of entities (e.g., Agent, System, Platform).</li>
+          <li><strong>Properties</strong>: Attributes describing entities (e.g., Transparency, Adaptability, Responsibility).</li>
+          <li><strong>Relationships</strong>: Interactions between entities (e.g., Augments, Oversees, AdaptsTo).</li>
+        </ul>
+      </p>
+    </section>
+    <section id="taxonomy">
+      <h3>Taxonomy of Agent Characteristics</h3>
+      <section id="human-interaction">
+        <h4>Human-Interaction Properties</h4>
+        <dl>
+          <dt><dfn>Transparency</dfn></dt>
+          <dd>Degree to which system decisions are explainable.</dd>
+          <dt><dfn>Accountability</dfn></dt>
+          <dd>Mechanisms for assigning responsibility for outcomes.</dd>
+          <dt><dfn>Adaptability</dfn></dt>
+          <dd>Ability to adjust to user needs or contexts.</dd>
+          <dt><dfn>Symbiosis</dfn></dt>
+          <dd>Extent of integration with human cognition or behavior.</dd>
+        </dl>
+      </section>
+      <section id="ethical-properties">
+        <h4>Ethical Properties</h4>
+        <dl>
+          <dt><dfn>Fairness</dfn></dt>
+          <dd>Equitable treatment of users or stakeholders.</dd>
+          <dt><dfn>Sustainability</dfn></dt>
+          <dd>Environmental and societal impact of the system.</dd>
+          <dt><dfn>Responsibility</dfn></dt>
+          <dd>Human oversight and accountability for consequences.</dd>
+        </dl>
+      </section>
+      <section id="technical-properties">
+        <h4>Technical Properties</h4>
+        <dl>
+          <dt><dfn>Autonomy</dfn></dt>
+          <dd>Level of independent decision-making.</dd>
+          <dt><dfn>Scalability</dfn></dt>
+          <dd>Ability to handle increased complexity or users.</dd>
+          <dt><dfn>Interoperability</dfn></dt>
+          <dd>Compatibility with other systems or standards.</dd>
+        </dl>
+      </section>
+    </section>
+    <section id="relationships">
+      <h3>Relationships</h3>
+      <p>
+        Key relationships include:
+        <ul>
+          <li><strong>Agent-Human</strong>: Augments, Supports, LearnsFrom, AdaptsTo.</li>
+          <li><strong>Agent-System</strong>: IntegratesWith, DependsOn, Controls.</li>
+          <li><strong>Human-Society</strong>: Impacts, Benefits, Governs.</li>
+        </ul>
+      </p>
+    </section>
+    <section id="acronyms">
+      <h3>Proposed Acronyms and Terms</h3>
+      <p>
+        To disambiguate and standardize:
+        <ul>
+          <li><a>HCAI</a>: Human-Centered Artificial Intelligence (transparency, oversight).</li>
+          <li><a>HCA</a>: Human-Centric Artificial Intelligence (symbiosis, personalization).</li>
+          <li><a>HRCAI</a>: Human-Responsible Centric AI (human accountability).</li>
+          <li><a>HCSTEW</a>: Human-Centric Sustainable Technological Ecosystems for Wellbeing.</li>
+          <li>Others: HCIA, HCTA, HCST, HCBT, HCDT, HCAE, HCTI, HCAT, HCSI, HCRAI, HCRAT.</li>
+        </ul>
+      </p>
+    </section>
+    <section id="formal-representation">
+      <h3>Formal Representation</h3>
+      <p>
+        The ontology will be expressed in OWL (Web Ontology Language). Example structure:
+      </p>
+      <pre class="example" title="Ontology Structure">
+        Class: Agent
+          SubClassOf: System
+          Properties: hasTransparency, hasAdaptability
+          Relationships: augments(Human), adaptsTo(Context)
+      </pre>
+    </section>
+  </section>
+
+  <section id="application">
+    <h2>Application of the Framework</h2>
+    <section id="use-cases">
+      <h3>Use Cases</h3>
+      <p>
+        <ul>
+          <li><strong>Healthcare</strong>: Describing AI diagnostic tools with properties like <a>Transparency</a> and <a>Fairness</a>.</li>
+          <li><strong>Education</strong>: Classifying adaptive learning systems as <a>HCA</a> with high <a>Symbiosis</a>.</li>
+          <li><strong>Policy</strong>: Guiding regulations based on <a>Responsibility</a> and <a>Sustainability</a>.</li>
+        </ul>
+      </p>
+    </section>
+    <section id="example-annotations">
+      <h3>Example Annotations</h3>
+      <p>
+        System: AI-driven healthcare platform
+        <ul>
+          <li>Class: Agent</li>
+          <li>Properties: High <a>Transparency</a>, Medium <a>Adaptability</a></li>
+          <li>Relationships: augments(Clinician), impacts(Patient)</li>
+        </ul>
+      </p>
+    </section>
+    <section id="benefits">
+      <h3>Benefits</h3>
+      <p>
+        <ul>
+          <li>Improved clarity in academic and industry discussions.</li>
+          <li>Enhanced evaluation of AI systems for ethical alignment.</li>
+          <li>Support for interoperable standards in AI development.</li>
+        </ul>
+      </p>
+    </section>
+  </section>
+
+  <section id="implementation">
+    <h2>Implementation Considerations</h2>
+    <section id="technical-implementation">
+      <h3>Technical Implementation</h3>
+      <p>
+        <ul>
+          <li>Use of semantic web technologies (RDF, OWL) for ontology encoding.</li>
+          <li>Integration with existing AI metadata standards (e.g., ML Schema).</li>
+        </ul>
+      </p>
+    </section>
+    <section id="adoption-strategies">
+      <h3>Adoption Strategies</h3>
+      <p>
+        <ul>
+          <li>Collaboration with standards bodies (e.g., W3C, IEEE).</li>
+          <li>Open-source ontology repository for community contributions.</li>
+          <li>Training materials for developers and policymakers.</li>
+        </ul>
+      </p>
+    </section>
+    <section id="challenges">
+      <h3>Challenges</h3>
+      <p>
+        <ul>
+          <li>Resistance to standardization due to diverse stakeholder priorities.</li>
+          <li>Complexity of capturing nuanced human-AI interactions.</li>
+          <li>Evolving nature of AI requiring ontology updates.</li>
+        </ul>
+      </p>
+    </section>
+  </section>
+
+  <section id="future-work">
+    <h2>Future Work</h2>
+    <p>
+      <ul>
+        <li>Develop a reference implementation of the ontology.</li>
+        <li>Conduct case studies to validate the framework.</li>
+        <li>Extend the ontology to non-AI systems or emerging technologies.</li>
+        <li>Engage with global AI ethics initiatives for alignment.</li>
+      </ul>
+    </p>
+  </section>
+
+  <section id="references">
+    <h2>References</h2>
+    <ul>
+      <li>W3C Web Ontology Language (OWL) Specification, <a href="https://www.w3.org/TR/owl2-overview/">https://www.w3.org/TR/owl2-overview/</a></li>
+      <li>IEEE P7000 Standards on AI Ethics, <a href="https://standards.ieee.org/project/7000.html">https://standards.ieee.org/project/7000.html</a></li>
+    </ul>
+  </section>
+
+  <section id="acknowledgments">
+    <h2>Acknowledgments</h2>
+    <p>
+      Contributions from the AI ethics and ontology communities are gratefully acknowledged. Specific contributors will be listed in future revisions.
+    </p>
+  </section>
+
+  <section id="appendix-glossary" class="appendix">
+    <h2>Appendix: Glossary of Terms</h2>
+    <dl>
+      <dt><a>Software Agent</a></dt>
+      <dd>A computational entity with autonomy.</dd>
+      <dt><a>Human-Centered AI</a></dt>
+      <dd>AI prioritizing transparency and oversight.</dd>
+      <dt><a>Human-Centric AI</a></dt>
+      <dd>AI emphasizing symbiosis and personalization.</dd>
+      <dt><a>Ontology</a></dt>
+      <dd>A structured knowledge representation.</dd>
+    </dl>
+  </section>
+</body>
+</html>

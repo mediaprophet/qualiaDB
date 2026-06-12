@@ -338,6 +338,15 @@ pub fn builtin_pane_definitions() -> Vec<PaneDefinition> {
             default_w: 6, default_h: 4,
             rdf_type_hash: None,
         },
+        PaneDefinition {
+            component_id: "hardware-configurator".into(),
+            display_name: "Hardware Configurator".into(),
+            element_tag: "hardware-configurator".into(),
+            icon: "tools".into(),
+            category: PaneCategory::DataInput,
+            default_w: 8, default_h: 6,
+            rdf_type_hash: None,
+        },
     ]
 }
 

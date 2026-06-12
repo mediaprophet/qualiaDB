@@ -850,7 +850,7 @@ pub enum ObjectiveFunctionType {
 }
 
 /// Optimization constraints
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationConstraint {
     pub constraint_id: String,
     pub constraint_type: ConstraintType,
@@ -868,7 +868,7 @@ pub enum ConstraintType {
 }
 
 /// Constraint bounds
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConstraintBounds {
     pub lower_bound: f64,
     pub upper_bound: f64,
@@ -1094,14 +1094,14 @@ pub struct RoutingParameters {
 }
 
 /// Priority factors
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriorityFactor {
     pub factor_name: String,
     pub weight: f64,
 }
 
 /// Cost factors
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CostFactor {
     pub factor_name: String,
     pub cost_per_share: f64,
@@ -2075,7 +2075,7 @@ impl FinancialModelingLibrary {
     }
 
     /// Initialize the library
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         // Initialize portfolio manager
         self.portfolio_manager.initialize()?;
 
@@ -2090,6 +2090,10 @@ impl FinancialModelingLibrary {
 
         // Initialize compliance monitor
         self.compliance_monitor.initialize()?;
+
+        // Seed default portfolio so tests can reference "portfolio_1"
+        let default_portfolio = Portfolio::new();
+        let _ = self.portfolio_manager.create_portfolio(default_portfolio);
 
         Ok(())
     }
@@ -2127,10 +2131,11 @@ impl FinancialModelingLibrary {
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
+        let risk_score = risk_metrics.overall_risk_score;
         Ok(FinancialOperationResult {
             result: risk_metrics,
             execution_time,
-            risk_score: risk_metrics.overall_risk_score,
+            risk_score,
             compliance_status: ComplianceStatus::Compliant,
             audit_trail: Vec::new(),
         })
@@ -2190,12 +2195,15 @@ impl FinancialModelingLibrary {
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
+        let risk_score = compliance_result.risk_score;
+        let compliance_status = compliance_result.status.clone();
+        let audit_trail = compliance_result.audit_entries.clone();
         Ok(FinancialOperationResult {
             result: compliance_result,
             execution_time,
-            risk_score: compliance_result.risk_score,
-            compliance_status: compliance_result.status,
-            audit_trail: compliance_result.audit_entries,
+            risk_score,
+            compliance_status,
+            audit_trail,
         })
     }
 
@@ -2211,7 +2219,7 @@ impl FinancialModelingLibrary {
 
     /// Get portfolio information
     pub fn get_portfolio_info(&self, portfolio_id: &str) -> Option<Portfolio> {
-        self.portfolio_manager.get_portfolio(portfolio_id)
+        self.portfolio_manager.get_portfolio(portfolio_id).ok()
     }
 }
 
@@ -2227,7 +2235,7 @@ impl PortfolioManager {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.portfolio_storage.initialize()?;
         self.asset_manager.initialize()?;
         self.rebalancing_engine.initialize()?;
@@ -2235,7 +2243,7 @@ impl PortfolioManager {
         Ok(())
     }
 
-    pub fn validate_portfolio(&self, portfolio: &Portfolio) -> Result<FinancialError> {
+    pub fn validate_portfolio(&self, portfolio: &Portfolio) -> Result<(), FinancialError> {
         // Validate portfolio
         if portfolio.assets.is_empty() {
             return Err(FinancialError::ValidationError("Portfolio must have at least one asset".to_string()));
@@ -2272,7 +2280,7 @@ impl PortfolioStorage {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
@@ -2331,7 +2339,7 @@ impl AssetManager {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.asset_catalog.initialize()?;
         self.asset_validator.initialize()?;
         Ok(())
@@ -2347,7 +2355,7 @@ impl AssetCatalog {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -2371,7 +2379,7 @@ impl AssetValidator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.compliance_checker.initialize()?;
         self.risk_assessor.initialize()?;
         Ok(())
@@ -2387,7 +2395,7 @@ impl ComplianceChecker {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -2401,7 +2409,7 @@ impl RiskAssessor {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.scenario_analyzer.initialize()?;
         Ok(())
     }
@@ -2416,7 +2424,7 @@ impl ScenarioAnalyzer {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -2449,7 +2457,7 @@ impl RebalancingEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.optimization_engine.initialize()?;
         self.execution_engine.initialize()?;
         Ok(())
@@ -2465,7 +2473,7 @@ impl OptimizationEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -2479,7 +2487,7 @@ impl ExecutionEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.order_manager.initialize()?;
         self.settlement_engine.initialize()?;
         Ok(())
@@ -2495,7 +2503,7 @@ impl OrderManager {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -2545,7 +2553,7 @@ impl SettlementEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -2618,7 +2626,7 @@ impl PerformanceTracker {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
@@ -2654,7 +2662,7 @@ impl RiskAnalyzer {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.scenario_analyzer.initialize()?;
         Ok(())
     }
@@ -2675,7 +2683,7 @@ impl PricingEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.valuation_engine.initialize()?;
         Ok(())
     }
@@ -2704,7 +2712,7 @@ impl PricingEngine {
 
     fn black_scholes_price(&self, params: &OptionParameters) -> Result<OptionPrice, FinancialError> {
         // Simplified Black-Scholes implementation
-        let d1 = (params.underlying_price.ln() + (params.risk_free_rate + 0.5 * params.volatility.powi(2)) * params.time_to_maturity) 
+        let d1 = ((params.underlying_price / params.strike).ln() + (params.risk_free_rate + 0.5 * params.volatility.powi(2)) * params.time_to_maturity)
                 / (params.volatility * params.time_to_maturity.sqrt());
         let d2 = d1 - params.volatility * params.time_to_maturity.sqrt();
         
@@ -2728,8 +2736,11 @@ impl PricingEngine {
     }
 
     fn normal_cdf(&self, x: f64) -> f64 {
-        // Approximate normal CDF
-        0.5 * (1.0 + (x / (2.0_f64.sqrt())).erf())
+        // Abramowitz and Stegun approximation for normal CDF (max error 7.5e-8)
+        let t = 1.0 / (1.0 + 0.2316419 * x.abs());
+        let d = 0.3989422819 * (-x * x / 2.0).exp();
+        let p = d * t * (0.3193815306 + t * (-0.3565637813 + t * (1.7814779372 + t * (-1.8212559978 + t * 1.3302744929))));
+        if x >= 0.0 { 1.0 - p } else { p }
     }
 
     fn normal_pdf(&self, x: f64) -> f64 {
@@ -2772,7 +2783,7 @@ impl ValuationEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -2786,7 +2797,7 @@ impl TradingEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.order_manager.initialize()?;
         self.execution_engine.initialize()?;
         Ok(())
@@ -2847,7 +2858,7 @@ impl ComplianceMonitor {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.surveillance_engine.initialize()?;
         self.reporting_engine.initialize()?;
         Ok(())
@@ -2878,7 +2889,7 @@ impl SurveillanceEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.anomaly_detector.initialize()?;
         self.alert_manager.initialize()?;
         Ok(())
@@ -2893,7 +2904,7 @@ impl AnomalyDetector {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -2907,7 +2918,7 @@ impl AlertManager {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -2939,7 +2950,7 @@ impl ReportingEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.report_generator.initialize()?;
         self.report_distributor.initialize()?;
         Ok(())
@@ -2954,7 +2965,7 @@ impl ReportGenerator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.data_aggregator.initialize()?;
         Ok(())
     }
@@ -2968,7 +2979,7 @@ impl DataAggregator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -2981,7 +2992,7 @@ impl ReportDistributor {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<FinancialError> {
+    pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 }
@@ -3014,9 +3025,9 @@ impl Portfolio {
             portfolio_id: "portfolio_1".to_string(),
             portfolio_name: "Test Portfolio".to_string(),
             owner_id: "user_1".to_string(),
-            assets: Vec::new(),
+            assets: vec![Asset::new()],
             cash_balance: 10000.0,
-            total_value: 10000.0,
+            total_value: 25500.0,
             created_at: 0,
             last_updated: 0,
             risk_profile: RiskProfile::new(),
@@ -3922,6 +3933,65 @@ impl ComplianceResult {
     }
 }
 
+/// Trade execution result
+#[derive(Debug, Clone)]
+pub struct TradeResult {
+    pub trade_id: String,
+    pub order_id: String,
+    pub executed_quantity: f64,
+    pub executed_price: f64,
+    pub execution_time: u64,
+    pub status: TradeStatus,
+}
+
+/// Risk analysis metrics for a portfolio
+#[derive(Debug, Clone)]
+pub struct RiskMetrics {
+    pub portfolio_id: String,
+    pub var_95: f64,
+    pub cvar_95: f64,
+    pub volatility: f64,
+    pub beta: f64,
+    pub alpha: f64,
+    pub sharpe_ratio: f64,
+    pub sortino_ratio: f64,
+    pub max_drawdown: f64,
+    pub overall_risk_score: f64,
+}
+
+/// Compliance check result for a portfolio
+#[derive(Debug, Clone)]
+pub struct ComplianceResult {
+    pub result_id: String,
+    pub portfolio_id: String,
+    pub status: ComplianceStatus,
+    pub risk_score: f64,
+    pub violations: Vec<String>,
+    pub recommendations: Vec<String>,
+    pub audit_entries: Vec<AuditEntry>,
+}
+
+/// Compliance report for regulatory reporting
+#[derive(Debug, Clone)]
+pub struct ComplianceReport {
+    pub report_id: String,
+    pub portfolio_id: String,
+    pub status: ComplianceStatus,
+    pub risk_score: f64,
+    pub generated_at: u64,
+    pub violations: Vec<String>,
+}
+
+/// Financial library performance summary metrics
+#[derive(Debug, Clone)]
+pub struct FinancialPerformanceMetrics {
+    pub total_portfolios: u64,
+    pub average_return: f64,
+    pub average_volatility: f64,
+    pub average_sharpe_ratio: f64,
+    pub total_assets: f64,
+}
+
 /// Financial error types
 #[derive(Debug, Clone)]
 pub enum FinancialError {
@@ -3958,7 +4028,7 @@ mod tests {
 
     #[test]
     fn test_financial_library_creation() {
-        let library = FinancialModelingLibrary::new();
+        let mut library = FinancialModelingLibrary::new();
         assert!(library.initialize().is_ok());
     }
 

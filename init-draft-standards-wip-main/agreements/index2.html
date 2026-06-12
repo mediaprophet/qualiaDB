@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Human Centric AI Agreements Standard</title>
+  <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove" async></script>
+  <script src="https://unpkg.com/mermaid@10.9.3/dist/mermaid.min.js" class="remove" async></script>
+  <script class="remove">
+    var respecConfig = {
+      specStatus: "unofficial",
+      shortName: "hcai-agreements",
+      editors: [{
+        name: "Timothy C. Holborn",
+        company: "WebCivics",
+        url: "https://www.linkedin.com/in/ubiquitous/"
+      }, {
+        name: "Grok 3",
+        company: "xAI",
+        url: "https://x.ai"
+      }],
+      edDraftURI: "https://github.com/WebCivics/SocialWeb-WebExtensionDev-v4/",
+      github: "https://github.com/WebCivics/SocialWeb-WebExtensionDev-v4/",
+      group: "human-centric-ai",
+      license: "w3c-software-doc",
+      publishDate: "2025-06-20",
+      previousPublishDate: null,
+      wgPublicList: "public-human-centric-ai",
+      otherLinks: [{
+        key: "Repository",
+        data: [{
+          value: "https://github.com/WebCivics/SocialWeb-WebExtensionDev-v4/tree/main/valuecredentials",
+          href: "https://github.com/WebCivics/SocialWeb-WebExtensionDev-v4/tree/main/valuecredentials"
+        }]
+      }],
+      localBiblio: {
+        "UDHR": {
+          title: "Universal Declaration of Human Rights",
+          href: "https://www.ohchr.org/en/human-rights/universal-declaration/translations/english",
+          authors: ["United Nations General Assembly"],
+          date: "10 December 1948",
+          publisher: "United Nations"
+        },
+        "CRC": {
+          title: "Convention on the Rights of the Child",
+          href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-rights-child",
+          authors: ["United Nations General Assembly"],
+          date: "2 September 1990",
+          publisher: "United Nations"
+        },
+        "ITPC": {
+          title: "Indigenous and Tribal Peoples Convention, 1989 (No. 169)",
+          href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/indigenous-and-tribal-peoples-convention-1989-no-169",
+          authors: ["International Labour Organization"],
+          date: "27 June 1989",
+          publisher: "International Labour Organization"
+        },
+        "W3C-Solid": {
+          title: "Solid Technical Reports",
+          href: "https://solidproject.org/TR/",
+          publisher: "Solid Community Group"
+        },
+        "W3Collection {
+          title: "Verifiable Credentials Data Model",
+          href: "https://www.w3.org/TR/vc-data-model/",
+          publisher: "W3C Credentials Community Group"
+        }
+      },
+      postProcess: [function() {
+        if (typeof mermaid !== 'undefined' && mermaid.initialize) {
+          mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            sequence: { showSequenceNumbers: false },
+            classDiagram: { useMaxWidth: true },
+            stateDiagram: { useMaxWidth: true }
+          });
+        }
+      }]
+    };
+  </script>
+</head>
+<body>
+  <section id="abstract">
+    <h2>Abstract</h2>
+    <p>
+      This specification defines a standard for creating, negotiating, and managing electronic agreements in a human-centric manner, supporting the social web and Human Centric AI systems. It enables mutually agreed terms between parties, leveraging Semantic Web technologies (RDF, SHACL, JSON-LD) and cryptographic signatures to ensure interoperability, trust, and enforceability. The standard supports value credentials based on human rights instruments (e.g., UDHR, CRC), facilitates personal AI agents in managing relationships and data sharing, and accounts for temporal dynamics such as cooling-off periods and relationship changes.
+    </p>
+  </section>
+
+  <section id="sotd">
+    <h2>Status of This Document</h2>
+    <p>
+      This is an unofficial draft produced by the W3C Human Centric AI Community Group. It is a work in progress and does not imply endorsement by the W3C Membership. Feedback is welcome via the <a href="https://github.com/WebCivics/SocialWeb-WebExtensionDev-v4/issues">GitHub repository</a> or the <a href="mailto:public-human-centric-ai@w3.org">public mailing list</a>.
+    </p>
+  </section>
+
+  <section id="introduction">
+    <h2>Introduction</h2>
+    <p>
+      Online agreements, such as terms of service, are typically imposed as mandates, limiting user agency and negotiation. This specification proposes a W3C Agreements Standard to support mutually agreed terms, enabling natural and legal persons to negotiate electronic contracts that reflect consensual relationships. The standard is designed for the social web, where personal AI agents assist in managing agreements and data sharing, ensuring alignment with human rights principles (e.g., [[UDHR]], [[CRC]]). It incorporates temporal considerations, such as cooling-off periods and evolving relationship dynamics, to adapt access rights and obligations over time.
+    </p>
+    <p>
+      The standard leverages W3C technologies, including RDF for machine-readable data, SHACL for data validation, and Verifiable Credentials for tamper-proof agreements. It builds on the Solid project ([[W3C-Solid]]) for decentralized data management and incorporates value credentials to encode ethical and legal frameworks, such as UN human rights instruments, into electronic agreements.
+    </p>
+    <section id="goals">
+      <h3>Goals</h3>
+      <ul>
+        <li>Enable negotiation of mutually agreed terms for electronic agreements.</li>
+        <li>Support human rights-based value credentials for relationship management.</li>
+        <li>Facilitate interoperable, secure, and extensible agreements using Semantic Web standards.</li>
+        <li>Empower personal AI agents to manage agreements and data sharing on behalf of users.</li>
+        <li>Enhance trust, transparency, and enforceability in digital interactions.</li>
+        <li>Account for temporal dynamics, including cooling-off periods and relationship changes.</li>
+      </ul>
+    </section>
+  </section>
+
+  <section id="terminology">
+    <h2>Terminology</h2>
+    <dl>
+      <dt>Agreement</dt>
+      <dd>A shared understanding between parties defining terms and conditions of their interactions, formalized electronically using RDF and cryptographic signatures.</dd>
+      <dt>Asserted Agreement</dt>
+      <dd>An agreement imposed by one party upon another, e.g., terms of service.</dd>
+      <dt>Mutually Agreed Terms</dt>
+      <dd>Terms negotiated and consented to by all parties involved in an agreement.</dd>
+      <dt>Value Credential</dt>
+      <dd>A digital credential encoding ethical or legal principles (e.g., human rights) used to define agreement terms.</dd>
+      <dt>Personal AI Agent</dt>
+      <dd>Software acting on behalf of a user to manage agreements, data sharing, and interactions based on user-defined terms.</dd>
+      <dt>Solid Pod</dt>
+      <dd>A personal data store controlled by the user, as defined by the Solid project ([[W3C-Solid]]).</dd>
+      <dt>Cooling-Off Period</dt>
+      <dd>A defined timeframe during which a party may withdraw from an agreement without penalty.</dd>
+      <dt>Temporal Metadata</dt>
+      <dd>Data describing the validity, versioning, and historical context of an agreement, enabling dynamic adjustments over time.</dd>
+    </dl>
+  </section>
+
+  <section id="use-cases">
+    <h2>Use Cases</h2>
+    <p>
+      The following use cases illustrate the application of the Agreements Standard, including temporal considerations.
+    </p>
+    <section id="use-case-relationship">
+      <h3>Establishing Personal Relationships</h3>
+      <p>
+        Alice wants to connect with Bob online. Using a compatible service, she sends a connection request with proposed terms referencing value credentials based on [[UDHR]] and [[CRC]], including a 7-day cooling-off period. Bob reviews the terms, proposes modifications, and both parties cryptographically sign the final agreement. Their personal AI agents use the agreement to manage data sharing and interactions. Over time, their relationship evolves into a professional partnership, prompting a new agreement with updated terms, but historical shared media remains accessible under the original agreement’s terms.
+      </p>
+      <p>
+        The following diagram illustrates the negotiation process with a cooling-off period:
+      </p>
+      <pre class="mermaid">
+sequenceDiagram
+  participant Alice
+  participant Bob
+  participant AliceAI as Alice's AI Agent
+  participant BobAI as Bob's AI Agent
+  Alice->>AliceAI: Compose connection request with terms
+  AliceAI->>BobAI: Send request
+  BobAI->>Bob: Notify and present terms
+  Bob->>BobAI: Review and propose modifications
+  BobAI->>AliceAI: Send modified terms
+  AliceAI->>Alice: Notify and present modified terms
+  Alice->>AliceAI: Approve terms
+  AliceAI->>BobAI: Send signed agreement
+  BobAI->>Bob: Notify agreement finalization
+  Bob->>BobAI: Sign agreement
+  BobAI->>AliceAI: Confirm signed agreement
+  Note over Alice,Bob: Cooling-off period (7 days)
+  opt Withdrawal
+    Alice->>AliceAI: Request withdrawal
+    AliceAI->>BobAI: Notify withdrawal
+  end
+  AliceAI->>Alice: Store in Solid Pod
+  BobAI->>Bob: Store in Solid Pod
+      </pre>
+    </section>
+    <section id="use-case-data-sharing">
+      <h3>Data Sharing Agreements</h3>
+      <p>
+        A user agrees to share health data with a research institution under terms specifying data usage, security measures, duration, and a 14-day cooling-off period. The agreement is stored in the user’s Solid Pod. During an emergency, temporary terms grant broader access to medical data, reverting to original terms post-emergency. The AI agent enforces compliance with temporal terms.
+      </p>
+    </section>
+    <section id="use-case-guardianship">
+      <h3>Guardianship Agreements</h3>
+      <p>
+        A guardian establishes an agreement for a minor, defining access to educational resources with strict supervision. As the minor reaches adulthood, the agreement is updated to grant full autonomy, but historical data (e.g., school records) remains accessible under the original terms. The AI agent adjusts permissions dynamically based on temporal metadata.
+      </p>
+    </section>
+  </section>
+
+  <section id="requirements">
+    <h2>Requirements</h2>
+    <p>
+      The Agreements Standard must meet the following functional and non-functional requirements:
+    </p>
+    <ul>
+      <li><strong>Negotiation Support:</strong> Enable parties to propose, modify, and agree on terms through a standardized process.</li>
+      <li><strong>Interoperability:</strong> Use W3C standards (RDF, SHACL, JSON-LD, Verifiable Credentials) for compatibility with existing systems.</li>
+      <li><strong>Security:</strong> Incorporate cryptographic signatures and tamper-evident seals to ensure agreement integrity.</li>
+      <li><strong>Temporal Support:</strong> Allow agreements to include cooling-off periods, be varied, terminated, or linked to historical instruments with temporal metadata, supporting dynamic relationship changes and historical resource access.</li>
+      <li><strong>Human Rights Alignment:</strong> Support value credentials encoding UN instruments (e.g., [[UDHR]], [[CRC]], [[ITPC]]) in RDF.</li>
+      <li><strong>Accessibility:</strong> Ensure agreements are human-readable and machine-readable, supporting diverse user needs.</li>
+      <li><strong>Consent Validation:</strong> Address guardianship, coercion, capacity, and temporal considerations (e.g., emergency provisions, life-stage changes) to ensure valid consent.</li>
+      <li><strong>Conflict Detection:</strong> Provide logical inferencing to identify conflicts between agreements or terms, including temporal conflicts.</li>
+    </ul>
+  </section>
+
+  <section id="technical-design">
+    <h2>Technical Design</h2>
+    <p>
+      The Agreements Standard is built on Semantic Web technologies and integrates with the Solid ecosystem for decentralized data management, with explicit support for temporal dynamics.
+    </p>
+    <section id="data-model">
+      <h3>Data Model</h3>
+      <p>
+        Agreements are represented as RDF graphs serialized in formats such as JSON-LD, Turtle, or N3. The data model includes:
+      </p>
+      <ul>
+        <li><strong>Agreement Class:</strong> Defines the agreement, including parties, terms, and metadata (e.g., creation date, version).</li>
+        <li><strong>Terms:</strong> Express and implied terms, linked to value credentials or external instruments (e.g., [[UDHR]]).</li>
+        <li><strong>Signatures:</strong> Cryptographic signatures per [[W3C-Credential]] to ensure authenticity.</li>
+        <li><strong>Constituencies:</strong> References to related instruments, such as prior agreements or legal frameworks.</li>
+        <li><strong>Temporal Metadata:</strong> Timestamps, versioning, cooling-off period, validity periods, and historical access rules to support relationship changes and resource access under past terms.</li>
+      </ul>
+      <p>
+        The following diagram illustrates the updated data model structure:
+      </p>
+      <pre class="mermaid">
+classDiagram
+
+class Agreement {
+  +string id
+  +string created
+  +string modified
+  +string version
+}
+
+class Party {
+  +string id
+  +string type
+  +string name
+}
+
+class Term {
+  +string id
+  +string description
+  +string validFrom
+  +string validUntil
+}
+
+class Signature {
+  +string id
+  +string signer
+  +string signatureValue
+}
+
+class Constituency {
+  +string id
+  +string reference
+}
+
+class Credential {
+  +string id
+  +string type
+  +string issuer
+}
+
+class TemporalMetadata {
+  +string coolingOffEnd
+  +string validityPeriods
+}
+
+class HistoricalAccess {
+  +string resource
+  +string applicableTerms
+  +string accessPeriod
+}
+
+Agreement --> Party : hasParty
+Agreement --> Term : hasTerm
+Agreement --> Signature : hasSignature
+Agreement --> Constituency : hasConstituency
+Agreement --> TemporalMetadata : hasTemporal
+Term --> Credential : references
+TemporalMetadata --> HistoricalAccess : hasHistoricalAccess
+      </pre>
+    </section>
+    <section id="ontology">
+      <h3>Ontology</h3>
+      <p>
+        An RDF ontology defines classes and properties for agreements, extending existing ontologies (e.g., RDFS, OWL). Key concepts include:
+      </p>
+      <ul>
+        <li><code>Agreement</code>: The main class representing an agreement.</li>
+        <li><code>Party</code>: Natural or legal persons involved in the agreement.</li>
+        <li><code>Term</code>: Conditions or obligations, linked to value credentials, with validity periods.</li>
+        <li><code>Credential</code>: Verifiable credentials per [[W3C-Credentials]].</li>
+        <li><code>TemporalMetadata</code>: Metadata for cooling-off periods, validity, and historical access rules.</li>
+      </ul>
+    </section>
+    <section id="protocols">
+      <h3>Protocols</h3>
+      <p>
+        The standard defines protocols for:
+      </p>
+      <ul>
+        <li><strong>Negotiation:</strong> A message-based exchange where parties propose and modify terms, including cooling-off periods, using SPARQL for querying agreement drafts.</li>
+        <li><strong>Storage:</strong> Agreements are stored in Solid Pods, with temporal metadata enabling historical access.</li>
+        <li><strong>Enforcement:</strong> AI agents use logical rules to monitor compliance, adjust permissions based on relationship changes, and enforce historical access rights.</li>
+      </ul>
+      <p>
+        The following diagram illustrates the interaction between personal AI agents and Solid Pods, including temporal adjustments:
+      </p>
+      <pre class="mermaid">
+sequenceDiagram
+  participant User
+  participant AI as Personal AI Agent
+  participant Pod as Solid Pod
+  participant Service as Compatible Service
+  User->>AI: Request agreement creation
+  AI->>Pod: Store draft agreement
+  AI->>Service: Send agreement proposal
+  Service->>AI: Return modified agreement
+  AI->>User: Notify modifications
+  User->>AI: Approve and sign agreement
+  AI->>Pod: Store signed agreement
+  AI->>Service: Send signed agreement
+  Note over AI,Pod: Cooling-off period active
+  AI->>Pod: Query agreement for compliance
+  Pod->>AI: Return agreement data
+  opt Relationship Change
+    User->>AI: Request agreement variation
+    AI->>Pod: Store updated agreement
+    AI->>Service: Notify variation
+    AI->>Pod: Retain historical access rights
+  end
+  AI->>User: Alert if conflict detected
+      </pre>
+    </section>
+    <section id="temporal-dynamics">
+      <h3>Temporal Dynamics</h3>
+      <p>
+        Agreements evolve over time due to relationship changes, emergencies, or life-stage transitions. The following diagram illustrates how agreements and resource access adapt:
+      </p>
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> DraftAgreement
+  DraftAgreement --> ActiveAgreement : Sign with cooling-off
+  ActiveAgreement --> ActiveAgreement : Cooling-off period expires
+  ActiveAgreement --> Terminated : Withdrawal during cooling-off
+  ActiveAgreement --> VariedAgreement : Relationship change
+  VariedAgreement --> ActiveAgreement : New terms signed
+  ActiveAgreement --> Terminated : Agreement termination
+  ActiveAgreement --> EmergencyAgreement : Emergency provisions
+  EmergencyAgreement --> ActiveAgreement : Emergency resolved
+  ActiveAgreement --> GuardianshipAgreement : Guardianship required
+  GuardianshipAgreement --> ActiveAgreement : Guardianship ends
+  note right of ActiveAgreement
+    Historical resources accessible under past terms
+  end note
+      </pre>
+    </section>
+  </section>
+
+  <section id="human-rights-integration">
+    <h2>Human Rights Integration</h2>
+    <p>
+      The standard supports encoding UN human rights instruments (e.g., [[UDHR]], [[CRC]], [[ITPC]]) as value credentials in RDF. These instruments are adapted to apply to natural and legal persons, replacing references to "states" with "parties" to enable peer-to-peer agreements. Temporal terms ensure compliance with human rights during relationship changes, e.g., prioritizing the best interests of the child ([[CRC]] Article 3) in guardianship agreements.
+    </p>
+    <ul>
+      <li>[[UDHR]] Article 1: "All human beings are born free and equal in dignity and rights" becomes a term affirming mutual respect in an agreement.</li>
+      <li>[[CRC]] Article 3: "The best interests of the child shall be a primary consideration" is encoded as a term for agreements involving minors, with temporal adjustments as the child matures.</li>
+    </ul>
+    <p>
+      SHACL shapes and logical rules ensure that agreement terms align with these instruments, promoting human rights compliance.
+    </p>
+  </section>
+
+  <section id="implementation">
+    <h2>Implementation Considerations</h2>
+    <p>
+      Implementations should include:
+    </p>
+    <ul>
+      <li><strong>Libraries:</strong> Software libraries for generating, validating, and signing agreements in RDF formats, with temporal metadata support.</li>
+      <li><strong>Tools:</strong> User interfaces for negotiating, varying, and managing agreements, integrated with Solid Pods.</li>
+      <li><strong>AI Agents:</strong> Software agents that parse agreements, enforce terms, adjust permissions based on temporal changes, and provide alerts using SPARQL queries and logical inferencing.</li>
+      <li><strong>Test Suite:</strong> A comprehensive suite to validate ontology, SHACL shapes, temporal protocols, and historical access implementations.</li>
+    </ul>
+    <p>
+      The standard is designed to be extensible, allowing integration with future W3C standards (e.g., CogAI) and legal frameworks.
+    </p>
+  </section>
+
+  <section id="privacy-security">
+    <h2>Privacy and Security Considerations</h2>
+    <p>
+      The standard addresses privacy and security through:
+    </p>
+    <ul>
+      <li><strong>Data Control:</strong> Agreements are stored in user-controlled Solid Pods, minimizing third-party access.</li>
+      <li><strong>Encryption:</strong> Cryptographic signatures and seals ensure agreement integrity and authenticity.</li>
+      <li><strong>Consent:</strong> Mechanisms to validate consent, addressing guardianship, coercion, and temporal scenarios (e.g., emergency provisions).</li>
+      <li><strong>Zero-Knowledge Proofs:</strong> Optional support for proving agreement compliance without revealing sensitive data.</li>
+    </ul>
+  </section>
+
+  <section id="acknowledgments">
+    <h2>Acknowledgments</h2>
+    <p>
+      This work is inspired by contributions from the W3C Human Centric AI Community Group, the Solid Community Group, and the W3C Credentials Community Group. Special thanks to contributors to the WebCivics repository and UN human rights frameworks.
+    </p>
+  </section>
+</body>
+</html>

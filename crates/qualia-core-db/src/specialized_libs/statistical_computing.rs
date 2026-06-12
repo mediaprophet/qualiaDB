@@ -29,6 +29,7 @@ pub struct StatisticalDataStorage {
     data_catalog: DataCatalog,
     compression_engine: DataCompressionEngine,
     indexing_engine: DataIndexingEngine,
+    dataset_cache: HashMap<String, Dataset>,
 }
 
 /// Statistical zone for different data types
@@ -88,7 +89,7 @@ pub enum DatasetType {
 }
 
 /// Dataset dimensions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatasetDimensions {
     pub rows: usize,
     pub columns: usize,
@@ -195,6 +196,7 @@ pub enum IndexingStrategy {
     Ngram,
     SkipGram,
     BM25,
+    BTree,
     Custom,
 }
 
@@ -681,6 +683,18 @@ pub struct ResultMetadata {
     pub significance_level: Option<f64>,
     pub privacy_preserved: bool,
 }
+
+/// Load balancing strategies
+#[derive(Debug, Clone, PartialEq)]
+pub enum BalancingStrategy {
+    RoundRobin,
+    LoadBased,
+    CapacityWeighted,
+    LeastConnections,
+}
+
+/// Optimization engine for statistical acceleration
+pub struct OptimizationEngine {}
 
 /// Load balancer
 pub struct LoadBalancer {
@@ -1353,7 +1367,7 @@ impl StatisticalComputingLibrary {
 
         // Find column index
         let column_index = dataset.column_names.iter()
-            .position(|&name| name == column)
+            .position(|name| name == column)
             .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
 
         // Validate column type
@@ -1412,7 +1426,7 @@ impl StatisticalComputingLibrary {
 
         // Find column index
         let column_index = dataset.column_names.iter()
-            .position(|&name| name == column)
+            .position(|name| name == column)
             .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
 
         // Validate column type
@@ -1478,7 +1492,7 @@ impl StatisticalComputingLibrary {
 
         // Find column index
         let column_index = dataset.column_names.iter()
-            .position(|&name| name == column)
+            .position(|name| name == column)
             .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
 
         // Validate column type
@@ -1544,11 +1558,11 @@ impl StatisticalComputingLibrary {
 
         // Find column indices
         let column1_index = dataset.column_names.iter()
-            .position(|&name| name == column1)
+            .position(|name| name == column1)
             .ok_or_else(|| StatisticalError::InvalidColumn(column1.to_string()))?;
 
         let column2_index = dataset.column_names.iter()
-            .position(|&name| name == column2)
+            .position(|name| name == column2)
             .ok_or_else(|| StatisticalError::InvalidColumn(column2.to_string()))?;
 
         // Validate column types
@@ -1627,7 +1641,7 @@ impl StatisticalComputingLibrary {
 
         // Find column index
         let column_index = dataset.column_names.iter()
-            .position(|&name| name == column)
+            .position(|name| name == column)
             .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
 
         // Validate column type
@@ -1697,7 +1711,7 @@ impl StatisticalComputingLibrary {
 
         // Find column index
         let column_index = dataset.column_names.iter()
-            .position(|&name| name == column)
+            .position(|name| name == column)
             .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
 
         // Validate column type
@@ -1851,8 +1865,9 @@ impl StatisticalComputingLibrary {
 
         let mut ranks = vec![0.0; n];
         let mut current_rank = 1.0;
+        let mut i = 0;
 
-        for i in 0..n {
+        while i < n {
             if i > 0 && indexed_values[i].1 == indexed_values[i - 1].1 {
                 // Handle ties - average rank
                 let tie_start = i;
@@ -1869,6 +1884,7 @@ impl StatisticalComputingLibrary {
                 ranks[indexed_values[i].0] = current_rank;
                 current_rank += 1.0;
             }
+            i += 1;
         }
 
         ranks
@@ -1950,6 +1966,7 @@ impl StatisticalDataStorage {
             data_catalog: DataCatalog::new(),
             compression_engine: DataCompressionEngine::new(),
             indexing_engine: DataIndexingEngine::new(),
+            dataset_cache: HashMap::new(),
         }
     }
 
@@ -1997,16 +2014,19 @@ impl StatisticalDataStorage {
     pub fn store_dataset(&mut self, dataset: Dataset) -> Result<(), StatisticalError> {
         // Determine best zone for this dataset
         let zone_id = self.select_best_zone(&dataset)?;
-        
+
         // Store in zone
         let zone = self.zones.get_mut(&zone_id)
             .ok_or_else(|| StatisticalError::StorageError("Zone not found".to_string()))?;
-        
+
         zone.datasets.insert(dataset.dataset_id.clone(), dataset.metadata.clone());
-        
+
+        // Cache the actual dataset data
+        self.dataset_cache.insert(dataset.dataset_id.clone(), dataset.clone());
+
         // Store actual data
         self.store_dataset_data(&dataset)?;
-        
+
         Ok(())
     }
 
@@ -2047,8 +2067,14 @@ impl StatisticalDataStorage {
     }
 
     fn get_dataset_data(&self, dataset_id: &str) -> Result<Dataset, StatisticalError> {
-        // Get dataset data from storage
-        // For now, return dummy dataset
+        // Return from cache if available
+        if let Some(dataset) = self.dataset_cache.get(dataset_id) {
+            return Ok(dataset.clone());
+        }
+        Err(StatisticalError::DataNotFound(dataset_id.to_string()))
+    }
+
+    fn get_dataset_data_legacy(&self, dataset_id: &str) -> Result<Dataset, StatisticalError> {
         Ok(Dataset {
             dataset_id: dataset_id.to_string(),
             metadata: DatasetMetadata {
@@ -2318,7 +2344,7 @@ impl StatisticalPrivacyEngine {
         let random = COUNTER.fetch_add(1, Ordering::SeqCst) as f64;
         
         // Generate Laplace noise using exponential distribution
-        let u = (random % 1000) / 1000.0;
+        let u = (random as u64 % 1000) as f64 / 1000.0;
         if u < 0.5 {
             scale * (1.0 + u).ln()
         } else {
@@ -2599,6 +2625,7 @@ pub enum StatisticalError {
     ComputationError(String),
     PrivacyError(String),
     AnalysisError(String),
+    DataNotFound(String),
 }
 
 impl std::fmt::Display for StatisticalError {
@@ -2611,6 +2638,7 @@ impl std::fmt::Display for StatisticalError {
             StatisticalError::ComputationError(msg) => write!(f, "Computation error: {}", msg),
             StatisticalError::PrivacyError(msg) => write!(f, "Privacy error: {}", msg),
             StatisticalError::AnalysisError(msg) => write!(f, "Analysis error: {}", msg),
+            StatisticalError::DataNotFound(msg) => write!(f, "Dataset not found: {}", msg),
         }
     }
 }

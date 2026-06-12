@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Centric Digital Biometrics Specification</title>
+    <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove"></script>
+    <script class="remove">
+        var respecConfig = {
+            specStatus: "unofficial",
+            shortName: "decentralized-biometrics",
+            editors: [{
+                name: "Anonymous Editor",
+                company: "Decentralized Biometrics Community",
+                companyURL: "http://example.org/"
+            }],
+            edDraftURI: "http://example.org/decentralized-biometrics/draft",
+            otherLinks: [{
+                key: "GenAI Agent Co-Authors",
+                data: [{
+                    value: "meta/llama-3.3-70b",
+                    href: "https://lmstudio.ai/models/meta/llama-3.3-70b",
+                },
+                {
+                    value: "XAI/Grok3",
+                    href: "https://x.ai/grok",
+                },
+                ],
+            },
+            ],
+            publishDate: "2025-06-21",
+            license: "w3c-software-doc",
+            abstract: "This specification defines a standardized framework for the decentralized management of biometric data, ensuring personal ownership, secure storage, and permissive discoverability and usage through privacy-preserving technologies. Leveraging semantic web standards (excluding OWL and Schema.org), it enables interoperable, secure, and user-controlled biometric systems that uphold the inalienable nature of biometric data as an extension of personal identity.",
+            sotd: "This is an unofficial draft specification intended for community review and feedback. It has not been endorsed by any standards body and is subject to change based on further development and input.",
+            github: "https://github.com/decentralized-biometrics/spec",
+            localBiblio: {
+                "IPFS": {
+                    title: "InterPlanetary File System (IPFS)",
+                    href: "https://ipfs.io/",
+                    publisher: "Protocol Labs"
+                },
+                "ZKP": {
+                    title: "Zero-Knowledge Proofs",
+                    href: "https://en.wikipedia.org/wiki/Zero-knowledge_proof",
+                    publisher: "Wikipedia"
+                }
+            }
+        };
+    </script>
+    <style>
+        pre {
+            background: #f8f8f8;
+            padding: 1em;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+        }
+        code {
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <section id="abstract">
+        <h2>Abstract</h2>
+        <p>
+            This specification defines a standardized framework for the Human Centric management of biometric information (data), ensuring personal ownership, secure storage, and permissive discoverability and usage through privacy-preserving technologies. Leveraging semantic web standards (excluding OWL and Schema.org), it enables interoperable, secure, and user-controlled biometric systems that uphold the inalienable nature of biometric data as an extension of personal identity. The framework supports use cases in justice, healthcare, and identity verification while prioritizing privacy, security, and individual autonomy.
+        </p>
+    </section>
+    <section id="sotd">
+        <h2>Status of This Document</h2>
+        <p>
+            This is an unofficial draft specification intended for community review and feedback. It has not been endorsed by any standards body and is subject to change based on further development and input. Contributions and issues can be submitted via the <a href="https://github.com/decentralized-biometrics/spec">GitHub repository</a>.
+        </p>
+    </section>
+    <section id="introduction">
+        <h2>Introduction</h2>
+        <p>
+            Biometric data, such as fingerprints, facial recognition patterns, and iris scans, are unique identifiers inherently tied to an individual’s identity. As digital transformation accelerates, the management of biometric data raises significant concerns about privacy, security, and personal autonomy. Centralized systems often undermine individual control, increasing risks of misuse, unauthorized access, and data breaches.
+        </p>
+        <p>
+            This specification proposes a decentralized framework for biometric data management, where individuals retain ownership and control over their data, recognized as an inalienable extension of self. By utilizing semantic web standards (specifically RDF Schema and SPARQL extensions, excluding OWL and Schema.org), decentralized storage technologies, and cryptographic methods like zero-knowledge proofs, this framework ensures secure storage, consent-based discoverability, and privacy-preserving usage.
+        </p>
+        <p>
+            The framework aligns with human rights principles (e.g., <a href="https://www.ohchr.org/en/universal-declaration-of-human-rights">UDHR</a>, Article 12) and philosophical considerations of personal identity and autonomy, ensuring that digital transformation upholds the sanctity of natural persons.
+        </p>
+        <section id="goals">
+            <h3>Goals</h3>
+            <ul>
+                <li>Enable individuals to own and control their biometric data.</li>
+                <li>Ensure secure, decentralized storage of biometric records.</li>
+                <li>Facilitate permissive, consent-based discoverability and usage.</li>
+                <li>Support legal and ethical use cases while preserving privacy.</li>
+            </ul>
+        </section>
+    </section>
+    <section id="terminology">
+        <h2>Terminology</h2>
+        <dl>
+            <dt><dfn>Biometrics</dfn></dt>
+            <dd>Unique physical or behavioral characteristics used for identification, such as fingerprints, facial patterns, or voiceprints.</dd>
+            <dt><dfn>Personal Data Store (PDS)</dfn></dt>
+            <dd>A secure, encrypted storage location controlled by an individual, hosting their biometric data.</dd>
+            <dt><dfn>Decentralized Storage</dfn></dt>
+            <dd>A method of storing data across multiple locations without reliance on a central authority.</dd>
+            <dt><dfn>Zero-Knowledge Proofs (ZKP)</dfn></dt>
+            <dd>Cryptographic techniques that allow verification of information without revealing the information itself [[ZKP]].</dd>
+            <dt><dfn>Linked Data</dfn></dt>
+            <dd>A method of publishing structured data to be interlinked and queried using semantic web technologies.</dd>
+            <dt><dfn>SPARQL-MM</dfn></dt>
+            <dd>An assumed extension of SPARQL for querying multimedia data (to be defined if not standardized).</dd>
+            <dt><dfn>SPARQL-Fed</dfn></dt>
+            <dd>A mechanism for executing SPARQL queries across distributed endpoints [[SPARQL11-FEDERATED-QUERY]].</dd>
+        </dl>
+    </section>
+    <section id="architecture">
+        <h2>Architecture</h2>
+        <p>
+            The decentralized biometrics system is built on a distributed architecture where biometric data resides in individual <a>Personal Data Stores (PDS)</a>. No single entity controls the data, and access is granted only through consent-based mechanisms.
+        </p>
+        <section id="components">
+            <h3>Key Components</h3>
+            <ul>
+                <li><strong>Personal Data Store (PDS):</strong> A decentralized, encrypted storage unit controlled by the individual or their guardian, hosting biometric records.</li>
+                <li><strong>Identity Provider:</strong> A service that authenticates identities using cryptographic proofs without accessing raw biometric data.</li>
+                <li><strong>Query Federation:</strong> A system for querying biometric data across PDSs using <a>SPARQL-Fed</a>, ensuring decentralized access.</li>
+                <li><strong>Consent Manager:</strong> A mechanism to manage and enforce user consent for data access, implemented via cryptographic signatures or smart contracts.</li>
+            </ul>
+        </section>
+    </section>
+    <section id="data-model">
+        <h2>Data Model</h2>
+        <p>
+            The data model is defined using <a href="https://www.w3.org/TR/rdf-schema/">RDF Schema (RDFS)</a>, a lightweight semantic web standard for structuring linked data. This model excludes OWL and Schema.org as per requirements.
+        </p>
+        <pre><code class="turtle">
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix db: <http://example.org/decentralized-biometrics#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+
+db:BiometricRecord a rdfs:Class ;
+    rdfs:label "Biometric Record" ;
+    rdfs:comment "A record containing biometric data and metadata for an individual." .
+
+db:hasBiometricData a rdfs:Property ;
+    rdfs:domain db:BiometricRecord ;
+    rdfs:range db:BiometricData ;
+    rdfs:label "has biometric data" ;
+    rdfs:comment "Links a biometric record to its biometric data." .
+
+db:BiometricData a rdfs:Class ;
+    rdfs:label "Biometric Data" ;
+    rdfs:comment "The actual biometric data, such as a fingerprint or facial scan." .
+
+db:owner a rdfs:Property ;
+    rdfs:domain db:BiometricRecord ;
+    rdfs:range db:Person ;
+    rdfs:label "owner" ;
+    rdfs:comment "Identifies the individual who owns the biometric record." .
+
+db:Person a rdfs:Class ;
+    rdfs:label "Person" ;
+    rdfs:comment "An individual who owns and controls a biometric record." .
+
+db:consent a rdfs:Property ;
+    rdfs:domain db:BiometricRecord ;
+    rdfs:range db:Consent ;
+    rdfs:label "consent" ;
+    rdfs:comment "Links a biometric record to its consent policy." .
+
+db:Consent a rdfs:Class ;
+    rdfs:label "Consent" ;
+    rdfs:comment "A policy defining access permissions for a biometric record." .
+
+db:created a rdfs:Property ;
+    rdfs:domain db:BiometricRecord ;
+    rdfs:range dct:created ;
+    rdfs:label "created" ;
+    rdfs:comment "Timestamp of when the biometric record was created." .
+        </code></pre>
+        <p>
+            This model supports extensibility for additional metadata, such as guardianship details or data provenance.
+        </p>
+    </section>
+    <section id="storage">
+        <h2>Storage</h2>
+        <p>
+            Biometric data is stored in a decentralized manner using technologies like <a href="https://ipfs.io/">IPFS</a> or blockchain-based solutions. Each <a>PDS</a> is encrypted, with access restricted to the owner or authorized guardians.
+        </p>
+        <ul>
+            <li><strong>IPFS Integration:</strong> Biometric data is encrypted and stored on IPFS, with content hashes recorded on a blockchain for integrity.</li>
+            <li><strong>Encryption:</strong> Data is encrypted using AES-256 or equivalent standards for both at-rest and in-transit protection.</li>
+            <li><strong>Access Keys:</strong> Cryptographic keys are managed by the individual or their guardian, ensuring exclusive control.</li>
+        </ul>
+        <p>
+            Implementations <em class="rfc2119">MUST</em> ensure that no unencrypted biometric data is accessible outside the <a>PDS</a>.
+        </p>
+    </section>
+    <section id="discoverability">
+        <h2>Discoverability and Usage</h2>
+        <p>
+            Discoverability and usage are enabled through semantic web querying standards:
+        </p>
+        <ul>
+            <li><strong>SPARQL-MM:</strong> Supports queries over multimedia biometric data (e.g., facial recognition patterns). If not standardized, implementations <em class="rfc2119">SHOULD</em> define a compatible extension.</li>
+            <li><strong>SPARQL-Fed:</strong> Enables federated queries across PDSs, allowing authorized parties to search without centralizing data [[SPARQL11-FEDERATED-QUERY]].</li>
+        </ul>
+        <p>
+            Example SPARQL query to locate biometric records with specific attributes:
+        </p>
+        <pre><code class="sparql">
+PREFIX db: <http://example.org/decentralized-biometrics#>
+SELECT ?record
+WHERE {
+    ?record a db:BiometricRecord ;
+            db:hasBiometricData ?data ;
+            db:consent ?consent .
+    FILTER (?consent = "authorized")
+}
+        </code></pre>
+        <p>
+            Access is controlled via the Consent Manager, ensuring data is shared only with explicit permission.
+        </p>
+    </section>
+    <section id="privacy-security">
+        <h2>Privacy and Security</h2>
+        <p>
+            Privacy and security are foundational:
+        </p>
+        <ul>
+            <li><strong>Zero-Knowledge Proofs:</strong> Enable verification without exposing raw data (e.g., proving a fingerprint match without revealing the fingerprint) [[ZKP]].</li>
+            <li><strong>Encryption:</strong> All data <em class="rfc2119">MUST</em> be encrypted using standards like AES-256.</li>
+            <li><strong>Consent Enforcement:</strong> Cryptographic signatures or smart contracts ensure data access aligns with user consent.</li>
+        </ul>
+        <p>
+            Implementations <em class="rfc2119">MUST</em> protect against unauthorized access and data breaches.
+        </p>
+    </section>
+    <section id="guardianship">
+        <h2>Guardianship</h2>
+        <p>
+            For individuals unable to manage their biometric data (e.g., minors, individuals with disabilities), a guardianship mechanism is defined:
+        </p>
+        <ul>
+            <li><strong>Authorization:</strong> Guardians are designated through secure, auditable processes (e.g., legal documentation or multi-party consent).</li>
+            <li><strong>Accountability:</strong> All guardian actions are logged on a blockchain or similar immutable ledger.</li>
+            <li><strong>Revocation:</strong> Individuals or legal authorities can revoke guardianship, transferring control back to the owner.</li>
+        </ul>
+        <p>
+            Implementations <em class="rfc2119">SHOULD</em> provide user-friendly interfaces for guardianship management.
+        </p>
+    </section>
+    <section id="use-cases">
+        <h2>Use Cases</h2>
+        <ul>
+            <li><strong>Justice and Law Enforcement:</strong> Biometric data access for identification, requiring a warrant or explicit consent.</li>
+            <li><strong>Healthcare:</strong> Secure sharing of biometric data for personalized treatment, with patient consent.</li>
+            <li><strong>Identity Verification:</strong> Privacy-preserving authentication for services like banking or travel.</li>
+        </ul>
+    </section>
+    <section id="conformance">
+        <h2>Conformance</h2>
+        <p>
+            As well as sections marked as non-normative, all authoring guidelines, diagrams, examples, and notes in this specification are non-normative. Everything else in this specification is normative.
+        </p>
+        <p>
+            The key words <em class="rfc2119">MUST</em>, <em class="rfc2119">MUST NOT</em>, <em class="rfc2119">SHOULD</em>, and <em class="rfc2119">MAY</em> are to be interpreted as described in [[RFC2119]].
+        </p>
+        <p>
+            An implementation conforms to this specification if it:
+        </p>
+        <ul>
+            <li>Implements the RDFS-based data model (Section [[[#data-model]]]).</li>
+            <li>Stores biometric data decentrally (Section [[[#storage]]]).</li>
+            <li>Supports discoverability and usage via SPARQL-MM and SPARQL-Fed (Section [[[#discoverability]]]).</li>
+            <li>Employs zero-knowledge proofs for privacy-preserving verification (Section [[[#privacy-security]]]).</li>
+            <li>Adheres to privacy, security, and guardianship requirements (Sections [[[#privacy-security]]], [[[#guardianship]]]).</li>
+        </ul>
+    </section>
+    <section id="security-considerations">
+        <h2>Security Considerations</h2>
+        <p>
+            Implementations <em class="rfc2119">MUST</em> address the following risks:
+        </p>
+        <ul>
+            <li><strong>Data Breaches:</strong> Robust encryption and decentralized storage mitigate unauthorized access.</li>
+            <li><strong>Misuse of Biometrics:</strong> Consent enforcement prevents unauthorized usage.</li>
+            <li><strong>Key Management:</strong> Secure key storage and recovery mechanisms are critical to prevent loss of access.</li>
+        </ul>
+    </section>
+    <section id="privacy-considerations">
+        <h2>Privacy Considerations</h2>
+        <p>
+            Biometric data is highly sensitive and inalienable. Implementations <em class="rfc2119">MUST</em>:
+        </p>
+        <ul>
+            <li>Minimize data exposure using zero-knowledge proofs.</li>
+            <li>Ensure explicit consent for all data access.</li>
+            <li>Comply with privacy regulations like GDPR.</li>
+        </ul>
+    </section>
+    <section id="references">
+        <h2>References</h2>
+        <section id="normative-references">
+            <h3>Normative References</h3>
+            <dl>
+                <dt>[[RDF-SCHEMA]]</dt>
+                <dd><a href="https://www.w3.org/TR/rdf-schema/">RDF Schema 1.1</a>. W3C Recommendation. 25 February 2014.</dd>
+                <dt>[[SPARQL11-FEDERATED-QUERY]]</dt>
+                <dd><a href="https://www.w3.org/TR/sparql11-federated-query/">SPARQL 1.1 Federated Query</a>. W3C Recommendation. 21 March 2013.</dd>
+                <dt>[[RFC2119]]</dt>
+                <dd><a href="https://tools.ietf.org/html/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a>. S. Bradner. IETF. March 1997.</dd>
+            </dl>
+        </section>
+        <section id="informative-references">
+            <h3>Informative References</h3>
+            <dl>
+                <dt>[[IPFS]]</dt>
+                <dd><a href="https://ipfs.io/">InterPlanetary File System (IPFS)</a>. Protocol Labs.</dd>
+                <dt>[[ZKP]]</dt>
+                <dd><a href="https://en.wikipedia.org/wiki/Zero-knowledge_proof">Zero-Knowledge Proofs</a>. Wikipedia.</dd>
+                <dt>[[UDHR]]</dt>
+                <dd><a href="https://www.ohchr.org/en/universal-declaration-of-human-rights">Universal Declaration of Human Rights</a>. United Nations. 1948.</dd>
+            </dl>
+        </section>
+    </section>
+    <section id="acknowledgments" class="appendix">
+        <h2>Acknowledgments</h2>
+        <p>
+            This specification is inspired by discussions on decentralized identity, privacy-preserving technologies, and human rights principles. Thanks to the semantic web community and contributors to open standards.
+        </p>
+    </section>
+</body>
+</html>

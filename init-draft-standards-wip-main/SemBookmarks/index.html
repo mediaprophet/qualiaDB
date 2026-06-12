@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Semantic Bookmarks Specification</title>
+    <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove"></script>
+    <script class="remove">
+        var respecConfig = {
+            specStatus: "unofficial",
+            shortName: "semantic-bookmarks",
+            editors: [{
+                name: "[Your Name or Placeholder]",
+                company: "[Your Organization or Placeholder]",
+                companyURL: "https://example.com"
+            }],
+            publishDate: "2025-06-21",
+            license: "cc-by",
+            github: "[Placeholder for repository link, e.g., https://github.com/your-repo/semantic-bookmarks]",
+            abstract: `
+                <p>This specification defines <strong>Semantic Bookmarks</strong>, an enhanced bookmarking system that extends traditional web bookmarks by integrating Semantic Web technologies, including RDF, Linked Data ontologies, and microdata. Semantic Bookmarks aim to provide richer metadata, improve discoverability, enable collaboration, and support AI-powered applications. This document outlines the structure, requirements, and use cases for Semantic Bookmarks, leveraging formats such as Turtle and JSON-LD for data serialization.</p>
+            `,
+            sotd: `
+                <p>This is an unofficial draft specification for Semantic Bookmarks. It is not endorsed by the W3C or any other standards body. Feedback is welcome via the <a href="[Placeholder for feedback channel, e.g., GitHub issues]">project repository</a>.</p>
+            `,
+            localBiblio: {
+                "RDF": {
+                    title: "Resource Description Framework (RDF) 1.1 Concepts and Abstract Syntax",
+                    href: "https://www.w3.org/TR/rdf11-concepts/",
+                    publisher: "W3C"
+                },
+                "JSON-LD": {
+                    title: "JSON-LD 1.1",
+                    href: "https://www.w3.org/TR/json-ld11/",
+                    publisher: "W3C"
+                },
+                "SCHEMA-ORG": {
+                    title: "Schema.org",
+                    href: "https://schema.org/",
+                    publisher: "Schema.org"
+                },
+                "DUBLIN-CORE": {
+                    title: "Dublin Core Metadata Initiative",
+                    href: "https://www.dublincore.org/specifications/dublin-core/",
+                    publisher: "Dublin Core Metadata Initiative"
+                },
+                "BOOKMARK-MSDN": {
+                    title: "Bookmark (Microsoft)",
+                    href: "https://learn.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/platform-apis/aa753582(v=vs.85)?redirectedfrom=MSDN",
+                    publisher: "Microsoft"
+                },
+                "BOOKMARK-WIKI": {
+                    title: "Bookmark (Wikipedia)",
+                    href: "https://en.wikipedia.org/wiki/Bookmark_(World_Wide_Web)",
+                    publisher: "Wikipedia"
+                }
+            }
+        };
+    </script>
+    <style>
+        pre {
+            background: #f5f5f5;
+            padding: 1em;
+            border-left: 4px solid #0078d4;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <section id="abstract">
+    </section>
+
+    <section id="sotd">
+    </section>
+
+    <section>
+        <h2>Introduction</h2>
+        <p>Traditional web bookmarks, as described in <a href="[[BOOKMARK-MSDN]]">Microsoft's documentation</a> and <a href="[[BOOKMARK-WIKI]]">Wikipedia</a>, were designed for early web environments with limited storage, network speeds, and data handling capabilities. They typically store only a URL, title, and optional annotations, which limits their functionality in modern contexts.</p>
+        <p>Semantic Bookmarks address these limitations by incorporating machine-readable metadata, standardized ontologies, and additional attributes to create a more robust, flexible, and interoperable bookmarking system. This specification defines the requirements, data model, and serialization formats for Semantic Bookmarks, enabling enhanced discoverability, sharing, and integration with AI-driven applications.</p>
+
+        <section>
+            <h3>Purpose</h3>
+            <p>The purpose of this specification is to:</p>
+            <ul>
+                <li>Define a standardized structure for Semantic Bookmarks.</li>
+                <li>Enable interoperability across platforms using Semantic Web technologies.</li>
+                <li>Support advanced use cases such as improved search, collaboration, and AI-powered recommendations.</li>
+                <li>Provide a foundation for developers to implement Semantic Bookmark systems.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>Scope</h3>
+            <p>This specification covers:</p>
+            <ul>
+                <li>The data model for Semantic Bookmarks, including required and optional attributes.</li>
+                <li>Serialization formats (e.g., Turtle, JSON-LD).</li>
+                <li>Integration with Semantic Web technologies (<a href="[[RDF]]">RDF</a>, Linked Data ontologies, microdata).</li>
+                <li>Use cases and benefits for end-users and developers.</li>
+                <li>Guidelines for implementation and extensibility.</li>
+            </ul>
+            <p>This specification does not cover:</p>
+            <ul>
+                <li>User interface design for Semantic Bookmark applications.</li>
+                <li>Specific storage or database implementations.</li>
+                <li>Proprietary extensions beyond the core specification.</li>
+            </ul>
+        </section>
+    </section>
+
+    <section>
+        <h2>Terminology</h2>
+        <dl>
+            <dt>Bookmark</dt>
+            <dd>A stored reference to a web resource, typically consisting of a URL and title.</dd>
+            <dt>Semantic Bookmark</dt>
+            <dd>An enhanced bookmark that includes structured metadata, described using <a href="[[RDF]]">RDF</a>, microdata, and Linked Data ontologies.</dd>
+            <dt>RDF (Resource Description Framework)</dt>
+            <dd>A standard model for data interchange on the web, as defined by the <a href="[[RDF]]">W3C</a>.</dd>
+            <dt>Linked Data</dt>
+            <dd>A method for publishing structured data using standardized vocabularies and URIs.</dd>
+            <dt>Microdata</dt>
+            <dd>A lightweight method for embedding structured data in HTML, as per the W3C's HTML Microdata specification.</dd>
+            <dt>Ontology</dt>
+            <dd>A formal representation of knowledge as a set of concepts and relationships, used in Linked Data.</dd>
+            <dt>Serialization Format</dt>
+            <dd>A machine-readable format for encoding Semantic Bookmark data (e.g., <a href="[[JSON-LD]]">JSON-LD</a>, Turtle).</dd>
+        </dl>
+    </section>
+
+    <section>
+        <h2>Requirements</h2>
+        <section>
+            <h3>Functional Requirements</h3>
+            <ol>
+                <li><strong>Metadata Enrichment</strong>: Semantic Bookmarks MUST include metadata beyond URL and title, such as author, creation date, tags, and ratings.</li>
+                <li><strong>Semantic Web Integration</strong>: Semantic Bookmarks MUST use <a href="[[RDF]]">RDF</a> and Linked Data ontologies to describe resources in a machine-readable format.</li>
+                <li><strong>Serialization</strong>: Semantic Bookmarks MUST support at least one RDF serialization format (e.g., Turtle, <a href="[[JSON-LD]]">JSON-LD</a>).</li>
+                <li><strong>Interoperability</strong>: Semantic Bookmarks MUST be compatible with existing Semantic Web standards and tools.</li>
+                <li><strong>Extensibility</strong>: The specification MUST allow for custom attributes and ontologies to support domain-specific use cases.</li>
+            </ol>
+        </section>
+        <section>
+            <h3>Non-Functional Requirements</h3>
+            <ol>
+                <li><strong>Scalability</strong>: The system SHOULD handle large collections of Semantic Bookmarks efficiently.</li>
+                <li><strong>Discoverability</strong>: Metadata SHOULD enable precise search and filtering of bookmarks.</li>
+                <li><strong>Privacy</strong>: Implementations SHOULD provide mechanisms to protect user data, such as access controls for shared bookmarks.</li>
+                <li><strong>Performance</strong>: Serialization and parsing of Semantic Bookmarks SHOULD be optimized for low latency.</li>
+            </ol>
+        </section>
+    </section>
+
+    <section>
+        <h2>Data Model</h2>
+        <section>
+            <h3>Core Attributes</h3>
+            <p>A Semantic Bookmark MUST include the following core attributes:</p>
+            <ul>
+                <li><strong>URI</strong>: The unique identifier of the bookmarked resource (e.g., a URL or URN).</li>
+                <li><strong>Title</strong>: A human-readable title for the resource.</li>
+                <li><strong>Created</strong>: The date and time the bookmark was created (ISO 8601 format).</li>
+                <li><strong>Creator</strong>: The entity (e.g., user or application) that created the bookmark, represented as a URI or string.</li>
+            </ul>
+        </section>
+        <section>
+            <h3>Optional Attributes</h3>
+            <p>A Semantic Bookmark MAY include:</p>
+            <ul>
+                <li><strong>Description</strong>: A textual summary or annotation of the resource.</li>
+                <li><strong>Tags</strong>: Keywords or categories for organization and search.</li>
+                <li><strong>Rating</strong>: A user-assigned rating (e.g., 1-5 stars).</li>
+                <li><strong>Author</strong>: The creator of the bookmarked resource.</li>
+                <li><strong>Language</strong>: The primary language of the resource (e.g., using IETF language tags).</li>
+                <li><strong>Related Resources</strong>: Links to related Semantic Bookmarks or resources, represented as URIs.</li>
+                <li><strong>Custom Metadata</strong>: Domain-specific metadata defined by ontologies or schemas.</li>
+            </ul>
+        </section>
+        <section>
+            <h3>Ontology Integration</h3>
+            <p>Semantic Bookmarks MUST use standardized ontologies, such as:</p>
+            <ul>
+                <li><strong>Dublin Core</strong> (e.g., <code>dc:title</code>, <code>dc:creator</code>, <code>dc:date</code>) [<a href="[[DUBLIN-CORE]]">DUBLIN-CORE</a>].</li>
+                <li><strong>Schema.org</strong> (e.g., <code>schema:WebPage</code>, <code>schema:CreativeWork</code>) [<a href="[[SCHEMA-ORG]]">SCHEMA-ORG</a>].</li>
+                <li><strong>FOAF (Friend of a Friend)</strong> for describing creators or users.</li>
+            </ul>
+            <p>Custom ontologies MAY be used for domain-specific applications.</p>
+        </section>
+        <section>
+            <h3>Example Data Model (JSON-LD)</h3>
+            <pre class="example" title="JSON-LD Semantic Bookmark">
+{
+  "@context": "http://schema.org",
+  "@type": "Bookmark",
+  "url": "https://example.com/article",
+  "name": "Introduction to Semantic Web",
+  "dateCreated": "2025-06-21T14:30:00Z",
+  "creator": {
+    "@type": "Person",
+    "name": "Jane Doe",
+    "@id": "https://example.com/users/janedoe"
+  },
+  "description": "An article explaining Semantic Web concepts.",
+  "keywords": ["Semantic Web", "RDF", "Linked Data"],
+  "ratingValue": 4
+}
+            </pre>
+        </section>
+    </section>
+
+    <section>
+        <h2>Serialization Formats</h2>
+        <p>Semantic Bookmarks MUST be serialized in at least one of the following RDF formats:</p>
+        <ul>
+            <li><strong>Turtle</strong>: A human-readable RDF format [<a href="[[RDF]]">RDF</a>].</li>
+            <li><strong>JSON-LD</strong>: A JSON-based format for Linked Data [<a href="[[JSON-LD]]">JSON-LD</a>].</li>
+            <li><strong>RDF/XML</strong>: An XML-based RDF format (optional due to complexity) [<a href="[[RDF]]">RDF</a>].</li>
+        </ul>
+        <section>
+            <h3>Example in Turtle</h3>
+            <pre class="example" title="Turtle Semantic Bookmark">
+@prefix schema: <http://schema.org/> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+
+<https://example.com/bookmarks/123> a schema:Bookmark ;
+  schema:url <https://example.com/article> ;
+  schema:name "Introduction to Semantic Web" ;
+  schema:dateCreated "2025-06-21T14:30:00Z"^^xsd:dateTime ;
+  schema:creator <https://example.com/users/janedoe> ;
+  schema:description "An article explaining Semantic Web concepts." ;
+  schema:keywords "Semantic Web", "RDF", "Linked Data" ;
+  schema:ratingValue 4 .
+            </pre>
+        </section>
+    </section>
+
+    <section>
+        <h2>Use Cases</h2>
+        <ol>
+            <li><strong>Personal Knowledge Management</strong>:
+                <ul>
+                    <li>Users organize bookmarks using tags and ontologies, enabling semantic search and filtering.</li>
+                    <li>Example: A researcher bookmarks academic papers with metadata like author, publication date, and topic.</li>
+                </ul>
+            </li>
+            <li><strong>Collaborative Bookmarking</strong>:
+                <ul>
+                    <li>Teams share Semantic Bookmarks with rich metadata, improving context for shared resources.</li>
+                    <li>Example: A project team shares annotated links to project-related resources.</li>
+                </ul>
+            </li>
+            <li><strong>AI-Powered Recommendations</strong>:
+                <ul>
+                    <li>AI systems analyze Semantic Bookmark metadata to suggest relevant resources.</li>
+                    <li>Example: A recommendation engine suggests articles based on tags and user ratings.</li>
+                </ul>
+            </li>
+            <li><strong>Interoperable Applications</strong>:
+                <ul>
+                    <li>Semantic Bookmarks integrate with other Semantic Web tools, such as knowledge graphs or data aggregators.</li>
+                    <li>Example: A browser plugin exports bookmarks to a Linked Data platform.</li>
+                </ul>
+            </li>
+        </ol>
+    </section>
+
+    <section>
+        <h2>Benefits</h2>
+        <ul>
+            <li><strong>Improved Discoverability</strong>: Rich metadata enables precise search and filtering.</li>
+            <li><strong>Enhanced Collaboration</strong>: Shared bookmarks include context, improving communication.</li>
+            <li><strong>Better Organization</strong>: Ontologies enable meaningful categorization and relationships.</li>
+            <li><strong>AI Integration</strong>: Machine-readable data supports intelligent applications, such as recommenders.</li>
+            <li><strong>Interoperability</strong>: Standardized formats ensure compatibility across platforms.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Implementation Guidelines</h2>
+        <ol>
+            <li><strong>Storage</strong>: Implementations SHOULD use databases or file systems that support <a href="[[RDF]]">RDF</a> (e.g., triplestores like Apache Jena or RDF files).</li>
+            <li><strong>Parsing</strong>: Applications MUST support parsing of at least one RDF serialization format.</li>
+            <li><strong>Validation</strong>: Metadata SHOULD be validated against chosen ontologies to ensure consistency.</li>
+            <li><strong>User Interface</strong>: Applications SHOULD provide intuitive interfaces for adding and editing metadata.</li>
+            <li><strong>Privacy</strong>: Implementations SHOULD include access controls for shared bookmarks.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2>Extensibility</h2>
+        <p>Developers MAY extend the Semantic Bookmark model by:</p>
+        <ul>
+            <li>Adding custom attributes using domain-specific ontologies.</li>
+            <li>Integrating additional serialization formats (e.g., N-Triples).</li>
+            <li>Supporting proprietary metadata fields, provided they do not conflict with core attributes.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Conformance</h2>
+        <p>An implementation conforms to this specification if it:</p>
+        <ul>
+            <li>Supports the core attributes defined in <a href="#data-model">Section 4.1</a>.</li>
+            <li>Uses at least one RDF serialization format (<a href="#serialization-formats">Section 5</a>).</li>
+            <li>Integrates with at least one standardized ontology (<a href="#ontology-integration">Section 4.3</a>).</li>
+            <li>Adheres to the functional requirements in <a href="#requirements">Section 3.1</a>.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Future Work</h2>
+        <ul>
+            <li>Define APIs for Semantic Bookmark creation, retrieval, and sharing.</li>
+            <li>Develop browser extensions or plugins for mainstream browsers.</li>
+            <li>Explore integration with emerging AI and knowledge graph technologies.</li>
+            <li>Standardize privacy and security mechanisms for shared bookmarks.</li>
+        </ul>
+    </section>
+
+    <section id="references" class="appendix">
+        <h2>References</h2>
+        <section id="normative-references">
+            <h3>Normative References</h3>
+            <dl>
+                <dt>[[RDF]]</dt>
+                <dd><a href="[[RDF]]">Resource Description Framework (RDF) 1.1 Concepts and Abstract Syntax</a>. W3C.</dd>
+                <dt>[[JSON-LD]]</dt>
+                <dd><a href="[[JSON-LD]]">JSON-LD 1.1</a>. W3C.</dd>
+                <dt>[[SCHEMA-ORG]]</dt>
+                <dd><a href="[[SCHEMA-ORG]]">Schema.org</a>. Schema.org.</dd>
+                <dt>[[DUBLIN-CORE]]</dt>
+                <dd><a href="[[DUBLIN-CORE]]">Dublin Core Metadata Initiative</a>. Dublin Core Metadata Initiative.</dd>
+            </dl>
+        </section>
+        <section id="informative-references">
+            <h3>Informative References</h3>
+            <dl>
+                <dt>[[BOOKMARK-MSDN]]</dt>
+                <dd><a href="[[BOOKMARK-MSDN]]">Bookmark (Microsoft)</a>. Microsoft.</dd>
+                <dt>[[BOOKMARK-WIKI]]</dt>
+                <dd><a href="[[BOOKMARK-WIKI]]">Bookmark (Wikipedia)</a>. Wikipedia.</dd>
+            </dl>
+        </section>
+    </section>
+
+    <section id="acknowledgments" class="appendix">
+        <h2>Acknowledgments</h2>
+        <p>This specification was inspired by advancements in Semantic Web technologies and the need for richer bookmarking systems. Contributions from the Semantic Web community and early adopters of Linked Data are gratefully acknowledged.</p>
+    </section>
+</body>
+</html>

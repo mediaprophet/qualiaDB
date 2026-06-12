@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>SPARQL-MM: Multimedia Extension for SPARQL 1.1</title>
+    <script src="https://www.w3.org/Tools/respec/respec-w3c" async class="remove"></script>
+    <script class="remove">
+      var respecConfig = {
+        specStatus: "unofficial",
+        shortName: "sparql-mm",
+        editors: [
+          {
+            name: "Thomas Kurz",
+            company: "Salzburg Research",
+            companyURL: "https://www.salzburgresearch.at/"
+          }
+        ],
+        github: "https://github.com/tkurz/sparql-mm",
+        publishDate: "2025-06-21",
+        edDraftURI: "https://tkurz.github.io/sparql-mm/spec/",
+        latestVersion: "https://tkurz.github.io/sparql-mm/spec/latest/",
+        abstract: "SPARQL-MM is an extension to SPARQL 1.1 that provides functions for querying multimedia data within RDF triplestores, focusing on temporal and spatial relationships of media fragments as defined by the W3C Media Fragments URI 1.0 specification. It supports integration with SPARQL 1.2 Federated Query for distributed multimedia data access.",
+        sotd: "This is an unofficial draft specification for SPARQL-MM, a multimedia extension for SPARQL 1.1. It is not endorsed by the W3C or any standards body.",
+        xref: ["sparql11-query", "sparql12-federated-query", "rdf11-concepts", "media-frags"],
+        localBiblio: {
+          "SPARQL-MM-GITHUB": {
+            title: "SPARQL-MM GitHub Repository",
+            href: "https://github.com/tkurz/sparql-mm",
+            authors: ["Thomas Kurz"],
+            publisher: "GitHub",
+            date: "2023"
+          },
+          "MA-ONT": {
+            title: "Media Annotations Ontology",
+            href: "http://www.w3.org/ns/ma-ont#",
+            publisher: "W3C",
+            date: "2012"
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <section id="abstract">
+      <p>
+        SPARQL-MM extends SPARQL 1.1 to support querying of multimedia data in RDF triplestores, enabling temporal and spatial operations on media fragments as defined by the W3C Media Fragments URI 1.0 specification [[media-frags]]. It is implemented for Sesame, integrates via Java Class Loader Technology, and supports SPARQL 1.2 Federated Query for querying distributed multimedia datasets.
+      </p>
+    </section>
+
+    <section id="sotd">
+      <p>
+        This document is an unofficial draft and subject to change. Feedback is welcome via the <a href="https://github.com/tkurz/sparql-mm/issues">GitHub repository</a>.
+      </p>
+    </section>
+
+    <section id="introduction">
+      <h2>Introduction</h2>
+      <p>
+        SPARQL-MM (Multimedia Extension for SPARQL 1.1) provides a set of functions to query multimedia data within RDF triplestores. It builds on the SPARQL 1.1 Query Language [[sparql11-query]], the SPARQL 1.2 Federated Query specification [[sparql12-federated-query]], the Media Annotations Ontology [[MA-ONT]], and the W3C Media Fragments URI 1.0 specification [[media-frags]]. The extension focuses on temporal and spatial relationships of media fragments, which are identified using URI syntax as specified in [[media-frags]]. It is implemented for the Sesame framework and available via Maven Central.
+      </p>
+      <p>
+        This specification outlines the syntax, semantics, and usage of SPARQL-MM functions, including support for federated queries and media fragment handling.
+      </p>
+    </section>
+
+    <section id="conformance">
+      <p>
+        Implementations of SPARQL-MM MUST conform to the SPARQL 1.1 Query Language specification [[sparql11-query]] and SHOULD support the Media Fragments URI 1.0 specification [[media-frags]] for media fragment identification. Support for SPARQL 1.2 Federated Query [[sparql12-federated-query]] is OPTIONAL but MUST adhere to the semantics described in this specification when implemented. All SPARQL-MM functions are OPTIONAL but MUST adhere to the semantics described herein when implemented.
+      </p>
+    </section>
+
+    <section id="namespace">
+      <h2>Namespace</h2>
+      <p>
+        The SPARQL-MM functions use the namespace:
+        <code><http://linkedmultimedia.org/sparql-mm/ns/2.0.0/function#></code>, prefixed as <code>mm:</code> in queries.
+      </p>
+    </section>
+
+    <section id="functions">
+      <h2>Functions</h2>
+      <p>
+        SPARQL-MM provides functions for temporal and spatial operations on media fragments, identified by the Media Annotations Ontology [[MA-ONT]] class <code>ma:MediaFragment</code> and represented using the URI syntax defined in the W3C Media Fragments URI 1.0 specification [[media-frags]].
+      </p>
+
+      <section id="temporal-functions">
+        <h3>Temporal Functions</h3>
+        <p>
+          Temporal functions operate on media fragments with temporal dimensions as defined in [[media-frags]], such as time ranges specified in URI fragments (e.g., <code>#t=10,20</code>).
+        </p>
+        <dl>
+          <dt><code>mm:precedes(?f1, ?f2)</code></dt>
+          <dd>
+            Returns true if the temporal extent of <code>?f1</code> precedes <code>?f2</code>, based on their temporal fragment specifications.
+            <pre class="example" title="Precedes Example">
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX mm: <http://linkedmultimedia.org/sparql-mm/ns/2.0.0/function#>
+SELECT ?t1 ?t2
+WHERE {
+  ?f1 rdfs:label ?t1 .
+  ?f2 rdfs:label ?t2 .
+  FILTER mm:precedes(?f1, ?f2)
+}
+ORDER BY ?t1 ?t2
+            </pre>
+          </dd>
+
+          <dt><code>mm:temporalIntermediate(?f1, ?f2)</code></dt>
+          <dd>
+            Returns a temporal bounding box between <code>?f1</code> and <code>?f2</code>, computed from their temporal fragment specifications.
+            <pre class="example" title="Temporal Intermediate Example">
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX mm: <http://linkedmultimedia.org/sparql-mm/ns/2.0.0/function#>
+SELECT ?f1 ?f2 (mm:temporalIntermediate(?f1, ?f2) AS ?box)
+WHERE {
+  ?f1 rdfs:label "a" .
+  ?f2 rdfs:label "b" .
+}
+            </pre>
+          </dd>
+
+          <dt><code>mm:duration(?f1)</code></dt>
+          <dd>
+            Returns the duration of <code>?f1</code> as an <code>xsd:duration</code>, derived from its temporal fragment specification.
+            <pre class="example" title="Duration Example">
+PREFIX ma: <http://www.w3.org/ns/ma-ont#>
+PREFIX mm: <http://linkedmultimedia.org/sparql-mm/ns/2.0.0/function#>
+SELECT ?f1
+WHERE {
+  ?f1 a ma:MediaFragment .
+}
+ORDER BY mm:duration(?f1)
+            </pre>
+          </dd>
+        </dl>
+      </section>
+
+      <section id="spatial-functions">
+        <h3>Spatial Functions</h3>
+        <p>
+          Spatial functions operate on media fragments with spatial dimensions as defined in [[media-frags]], such as rectangular regions specified in URI fragments (e.g., <code>#xywh=160,120,320,240</code>).
+        </p>
+        <dl>
+          <dt><code>mm:rightBeside(?f1, ?f2)</code></dt>
+          <dd>
+            Returns true if <code>?f1</code> is spatially to the right of <code>?f2</code>, based on their spatial fragment specifications.
+            <pre class="example" title="Right Beside Example">
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX mm: <http://linkedmultimedia.org/sparql-mm/ns/2.0.0/function#>
+SELECT ?t1 ?t2
+WHERE {
+  ?f1 rdfs:label ?t1 .
+  ?f2 rdfs:label ?t2 .
+  FILTER mm:rightBeside(?f1, ?f2)
+}
+ORDER BY ?t1 ?t2
+            </pre>
+          </dd>
+
+          <dt><code>mm:spatialIntersection(?f1, ?f2)</code></dt>
+          <dd>
+            Returns the spatial intersection of <code>?f1</code> and <code>?f2</code> as a bounding box, computed from their spatial fragment specifications.
+            <pre class="example" title="Spatial Intersection Example">
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX mm: <http://linkedmultimedia.org/sparql-mm/ns/2.0.0/function#>
+SELECT ?f1 ?f2 (mm:spatialIntersection(?f1, ?f2) AS ?box)
+WHERE {
+  ?f1 rdfs:label "a" .
+  ?f2 rdfs:label "b" .
+}
+            </pre>
+          </dd>
+
+          <dt><code>mm:boundingBox(?f1, ?f2)</code></dt>
+          <dd>
+            Returns a bounding box encompassing <code>?f1</code> and <code>?f2</code>, derived from their spatial fragment specifications.
+            <pre class="example" title="Bounding Box Example">
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX mm: <http://linkedmultimedia.org/sparql-mm/ns/2.0.0/function#>
+SELECT ?f1 ?f2 (mm:boundingBox(?f1, ?f2) AS ?box)
+WHERE {
+  ?f1 rdfs:label "a" .
+  ?f2 rdfs:label "b" .
+}
+            </pre>
+          </dd>
+        </dl>
+      </section>
+    </section>
+
+    <section id="federated-query-support">
+      <h2>Federated Query Support</h2>
+      <p>
+        SPARQL-MM supports the SPARQL 1.2 Federated Query specification [[sparql12-federated-query]], enabling queries over distributed RDF datasets containing multimedia data. The extension’s functions can be used within <code>SERVICE</code> clauses to apply temporal and spatial operations on media fragments, as defined in [[media-frags]], across remote endpoints that support SPARQL-MM.
+      </p>
+      <p>
+        Implementations MUST ensure that federated queries respect the semantics of SPARQL-MM functions and handle media fragment data consistently across endpoints. The following example demonstrates a federated query using SPARQL-MM functions:
+      </p>
+      <pre class="example" title="Federated Query Example">
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX mm: <http://linkedmultimedia.org/sparql-mm/ns/2.0.0/function#>
+SELECT ?t1 ?t2
+WHERE {
+  SERVICE <http://example.org/sparql> {
+    ?f1 rdfs:label ?t1 .
+    ?f2 rdfs:label ?t2 .
+    FILTER mm:precedes(?f1, ?f2)
+  }
+}
+ORDER BY ?t1 ?t2
+      </pre>
+      <p>
+        In this example, the <code>mm:precedes</code> function is applied to media fragments retrieved from a remote SPARQL endpoint, using temporal fragment specifications as per [[media-frags]]. Implementations SHOULD ensure that remote endpoints support SPARQL-MM functions or provide fallback mechanisms.
+      </p>
+    </section>
+
+    <section id="integration">
+      <h2>Integration</h2>
+      <p>
+        SPARQL-MM is implemented for the Sesame triplestore and can be integrated via Java Class Loader Technology. The package is available on Maven Central:
+      </p>
+      <pre class="example" title="Maven Dependency">
+<dependency>
+  <groupId>com.github.tkurz</groupId>
+  <artifactId>sparql-mm</artifactId>
+  <version>2.0</version>
+</dependency>
+      </pre>
+      <p>
+        Implementations MUST ensure compatibility with Sesame’s SPARQL engine, support the Media Annotations Ontology [[MA-ONT]] and the W3C Media Fragments URI 1.0 specification [[media-frags]] for media fragment identification, and optionally support SPARQL 1.2 Federated Query [[sparql12-federated-query]] for distributed queries.
+      </p>
+    </section>
+
+    <section id="examples">
+      <h2>Examples</h2>
+      <p>
+        Additional examples, including federated query use cases and media fragment handling as per [[media-frags]], are available in the <a href="https://github.com/tkurz/sparql-mm/tree/master/src/test">test suite</a> of the SPARQL-MM repository [[SPARQL-MM-GITHUB]].
+      </p>
+    </section>
+
+    <section id="acknowledgments">
+      <h2>Acknowledgments</h2>
+      <p>
+        Thanks to the contributors to the SPARQL-MM project and the broader Semantic Web community for their work on SPARQL, multimedia ontologies, media fragments, and federated query standards.
+      </p>
+    </section>
+  </body>
+</html>

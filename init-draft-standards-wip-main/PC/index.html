@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Permissive Commons with W3C Decentralized Identifiers (DIDs) for Semantic Web Systems</title>
+  <meta charset='utf-8'>
+  <script src='https://www.w3.org/Tools/respec/respec-w3c' class='remove'></script>
+  <script class='remove'>
+    var respecConfig = {
+      specStatus: "unofficial",
+      editors: [{
+        name: "Timothy C. Holborn",
+        company: "WebCivics",
+        url: "https://www.linkedin.com/in/ubiquitous/"},
+        {
+        name: "Grok 3",
+        company: "xAI",
+        url: "https://x.ai"
+      }],
+      publicationDate: "2025-06-20",
+      shortName: "permissive-commons-did",
+      github: "https://github.com/WebCivics/PermissiveCommonsOntologiesDocs",
+      license: "w3c-2020",
+      abstract: `
+        <p>This document explores the role of W3C Decentralized Identifiers (DIDs) as identifiers for Resource Description Framework (RDF) content in the context of Permissive Commons, a framework for decentralized, semantically rich, and permissively governed shared resources. DIDs replace HTTP URIs to reference RDF data stored across decentralized protocols such as InterPlanetary File System (IPFS), BitTorrent, blockchain, and Git, ensuring persistence, immutability, and accessibility. This aligns with Cool URIs and supports the semantic web's web of data, enhancing resilience and interoperability for knowledge ecosystems.</p>
+      `,
+      sotd: `
+        <p>This is an unofficial informational document inspired by the Permissive Commons concept as outlined in <a href='https://medium.com/webcivics/permissioned-commons-7fc33a1ce23e'>Holborn (2019)</a> and related repositories. It is not a W3C standard. Feedback is welcome via <a href='mailto:public-did-wg@w3.org'>public-did-wg@w3.org</a> or <a href='https://github.com/WebCivics/PermissiveCommonsOntologiesDocs'>GitHub issues</a>.</p>
+      `
+    };
+  </script>
+</head>
+<body>
+  <section id='abstract'>
+    <!-- Abstract is defined in respecConfig -->
+  </section>
+  <section id='sotd'>
+    <!-- Status of This Document is defined in respecConfig -->
+  </section>
+  <section id='introduction'>
+    <h2>Introduction</h2>
+    <p>Permissive Commons, as proposed by Holborn (2019), reimagines open data as a decentralized, permissively governed framework for shared knowledge resources, distinct from the broader, less structured "open data" paradigm. It emphasizes custodial governance, semantic web technologies, and decentralized protocols to support human-centric, trustworthy knowledge ecosystems. W3C Decentralized Identifiers (DIDs) serve as persistent, cryptographically verifiable identifiers for RDF content, replacing HTTP URIs to reference data stored on protocols like IPFS, BitTorrent, blockchain, and Git. This document explores how DIDs enable Permissive Commons, aligning with <a href='https://www.w3.org/TR/cooluris/'>Cool URIs</a> to ensure resilience and accessibility in the semantic web.</p>
+    <p>The <a href='https://github.com/WebizenAI/devdocs/tree/main/PermissiveCommons'>WebizenAI PermissiveCommons</a> and <a href='https://github.com/WebCivics/PermissiveCommonsOntologiesDocs'>WebCivics PermissiveCommonsOntologiesDocs</a> repositories outline technical and ontological frameworks for implementing Permissive Commons, emphasizing decentralized storage, version control, and permissioned access.</p>
+  </section>
+  <section id='background'>
+    <h2>Background</h2>
+    <section id='permissive-commons'>
+      <h3>Permissive Commons</h3>
+      <p>Permissive Commons, as defined by Holborn (2019), are shared resources governed by custodial frameworks that balance accessibility with controlled permissions, unlike open data's unrestricted access model. They support human-centric knowledge ecosystems by enabling decentralized, semantically rich data sharing with provenance and trust. Examples include community-managed facilities like farmers' cooperatives or civic amenities, extended to digital contexts via semantic web technologies.</p>
+    </section>
+    <section id='dids'>
+      <h3>W3C Decentralized Identifiers (DIDs)</h3>
+      <p>DIDs are globally unique URIs that resolve to DID documents, containing metadata and service endpoints for accessing RDF content across decentralized protocols. Designed as identifiers for entities, not identity, DIDs support various methods (e.g., <code>did:ipid</code>, <code>did:ethr</code>) and are independent of centralized registries. See <a href='https://www.w3.org/TR/did-core/'>W3C DID v1.0</a>.</p>
+    </section>
+    <section id='cool-uris'>
+      <h3>Cool URIs and the Semantic Web</h3>
+      <p>Cool URIs, per <a href='https://www.w3.org/TR/cooluris/'>W3C’s Cool URIs for the Semantic Web</a>, are persistent identifiers critical for RDF data in the web of data. DIDs enhance this by providing decentralized, tamper-resistant URIs, replacing HTTP URIs to ensure long-term accessibility and alignment with Permissive Commons' governance model.</p>
+    </section>
+  </section>
+  <section id='implications'>
+    <h2>Implications of DIDs for Permissive Commons</h2>
+    <section id='persistent-identifiers'>
+      <h3>Persistent Identifiers</h3>
+      <p>DIDs replace HTTP URIs in RDF triples, decoupling identifiers from centralized domain registries. This ensures persistence, aligning with Cool URI principles and supporting Permissive Commons' goal of trustworthy, long-term accessible knowledge resources.</p>
+    </section>
+    <section id='protocol-plurality'>
+      <h3>Support for Plurality of Protocols</h3>
+      <p>DIDs support multiple decentralized protocols (e.g., IPFS, blockchain, BitTorrent, Git), enabling RDF content to be stored and accessed flexibly. This aligns with Permissive Commons' emphasis on decentralized, interoperable systems, as outlined in <a href='https://github.com/WebizenAI/devdocs/tree/main/PermissiveCommons'>WebizenAI documentation</a>.</p>
+    </section>
+    <section id='custodial-governance'>
+      <h3>Custodial Governance</h3>
+      <p>Permissive Commons requires custodial governance to manage permissions (e.g., read, write, append). DIDs enable cryptographic verification of custodians, ensuring only authorized agents access or modify RDF content, as per Holborn’s vision of permissioned access over open data’s unrestricted model.</p>
+    </section>
+    <section id='semantic-web-interop'>
+      <h3>Semantic Web Interoperability</h3>
+      <p>DID documents, formatted as JSON-LD, integrate seamlessly with RDF and SPARQL, enabling semantic web applications to reference decentralized data. This supports Permissive Commons' goal of machine- and human-readable knowledge ecosystems.</p>
+    </section>
+  </section>
+  <section id='examples'>
+    <h2>Examples of DID-Referenced RDF Content</h2>
+    <p>The following examples illustrate DIDs referencing RDF content across decentralized protocols, replacing HTTP URIs to support Permissive Commons.</p>
+    <section id='ipfs-example'>
+      <h3>RDF on IPFS</h3>
+      <p>An RDF dataset for civic amenities (e.g., public toilets) is stored on IPFS, referenced by a <code>did:ipid</code> DID, governed by a local council.</p>
+      <pre class='example' title='DID Document for IPFS'>
+{
+  "@context": "https://www.w3.org/ns/did/v1",
+  "id": "did:ipid:QmCivicData123",
+  "service": [{
+    "id": "#civic-data",
+    "type": "LinkedDataResource",
+    "serviceEndpoint": "ipfs://QmCivicData123"
+  }],
+  "verificationMethod": [{
+    "id": "#key-1",
+    "type": "Ed25519VerificationKey2020",
+    "controller": "did:ipid:QmCivicData123",
+    "publicKeyMultibase": "z6Mkr..."
+  }]
+}
+      </pre>
+      <pre class='example' title='RDF Content (Turtle)'>
+@prefix ex: <http://example.org/civic#> .
+<did:ipid:QmCivicData123#Toilet> ex:location "Main St Park" ;
+                                ex:managedBy <did:ipid:QmCouncilAuthority> .
+      </pre>
+      <p><strong>Resilience</strong>: IPFS ensures immutability, with the DID providing a persistent identifier managed by a custodial authority.</p>
+    </section>
+    <section id='blockchain-example'>
+      <h3>RDF on Blockchain</h3>
+      <p>An RDF dataset for a health research ontology is stored on Ethereum, referenced by a <code>did:ethr</code> DID, with access restricted to authorized researchers.</p>
+      <pre class='example' title='DID Document for Ethereum'>
+{
+  "@context": "https://www.w3.org/ns/did/v1",
+  "id": "did:ethr:0xHealthData123",
+  "service": [{
+    "id": "#health-ontology",
+    "type": "LinkedDataResource",
+    "serviceEndpoint": "https://etherscan.io/tx/0xHealthData123"
+  }],
+  "verificationMethod": [{
+    "id": "#key-1",
+    "type": "EcdsaSecp256k1VerificationKey2019",
+    "controller": "did:ethr:0xHealthData123",
+    "publicKeyHex": "0x02b9..."
+  }]
+}
+      </pre>
+      <pre class='example' title='RDF Content (JSON-LD)'>
+{
+  "@context": "http://schema.org",
+  "@id": "did:ethr:0xHealthData123#Ontology",
+  "type": "MedicalCondition",
+  "name": "DiabetesStudy",
+  "custodian": "did:ethr:0xResearchInstitute"
+}
+      </pre>
+      <p><strong>Resilience</strong>: Ethereum ensures tamper-resistance, with the DID enforcing permissioned access for research purposes.</p>
+    </section>
+    <section id='bittorrent-example'>
+      <h3>RDF via BitTorrent</h3>
+      <p>An RDF ontology for environmental data is shared via BitTorrent, referenced by a <code>did:web</code> DID.</p>
+      <pre class='example' title='DID Document for BitTorrent'>
+{
+  "@context": "https://www.w3.org/ns/did/v1",
+  "id": "did:web:envdata.org:ontology",
+  "service": [{
+    "id": "#env-ontology",
+    "type": "LinkedDataResource",
+    "serviceEndpoint": "magnet:?xt=urn:btih:EnvData123..."
+  }],
+  "verificationMethod": [{
+    "id": "#key-1",
+    "type": "JsonWebKey2020",
+    "controller": "did:web:envdata.org:ontology",
+    "publicKeyJwk": {...}
+  }]
+}
+      </pre>
+      <pre class='example' title='RDF Content (RDF/XML)'>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:ex="http://example.org/env#">
+  <rdf:Description rdf:about="did:web:envdata.org:ontology#Species">
+    <ex:name>Coral Reef</ex:name>
+  </rdf:Description>
+</rdf:RDF>
+      </pre>
+      <p><strong>Resilience</strong>: BitTorrent ensures availability through peer-to-peer distribution, with the DID providing a stable identifier.</p>
+    </section>
+    <section id='git-example'>
+      <h3>RDF in Git</h3>
+      <p>An RDF vocabulary for social research is stored in a Git repository, referenced by a hypothetical <code>did:git</code> DID.</p>
+      <pre class='example' title='DID Document for Git'>
+{
+  "@context": "https://www.w3.org/ns/did/v1",
+  "id": "did:git:SocialVocab123",
+  "service": [{
+    "id": "#social-vocab",
+    "type": "LinkedDataResource",
+    "serviceEndpoint": "https://github.com/example/repo/commit/SocialVocab123"
+  }],
+  "verificationMethod": [{
+    "id": "#key-1",
+    "type": "Ed25519VerificationKey2020",
+    "controller": "did:git:SocialVocab123",
+    "publicKeyMultibase": "z6Mkr..."
+  }]
+}
+      </pre>
+      <pre class='example' title='RDF Content (Turtle)'>
+@prefix ex: <http://example.org/social#> .
+<did:git:SocialVocab123#Term> ex:definition "Social Interaction" .
+      </pre>
+      <p><strong>Resilience</strong>: Git’s distributed nature ensures versioned accessibility, with the DID providing a persistent identifier.</p>
+    </section>
+  </section>
+  <section id='benefits'>
+    <h2>Benefits for Permissive Commons</h2>
+    <section id='immutability'>
+      <h3>Content Immutability</h3>
+      <p>Content-addressing (IPFS, BitTorrent) and cryptographic hashing (blockchain, Git) ensure RDF content referenced by DIDs remains immutable, preserving semantic integrity and trust, as emphasized in <a href='https://medium.com/webcivics/permissioned-commons-7fc33a1ce23e'>Holborn (2019)</a>.</p>
+    </section>
+    <section id='availability'>
+      <h3>Redundancy and Availability</h3>
+      <p>Decentralized protocols distribute RDF content across nodes, ensuring availability. DIDs provide a unified identifier for resolution, supporting Permissive Commons’ goal of accessible knowledge ecosystems.</p>
+    </section>
+    <section id='custodial-trust'>
+      <h3>Custodial Trust and Governance</h3>
+      <p>DIDs enable cryptographic verification of custodians, ensuring permissioned access and governance, aligning with Permissive Commons’ emphasis on controlled, trustworthy resource sharing.</p>
+    </section>
+    <section id='semantic-trust'>
+      <h3>Semantic Trust</h3>
+      <p>By integrating with RDF and semantic web standards, DIDs support machine- and human-readable knowledge, enabling trustworthy inferencing and sense-making, as outlined in <a href='https://github.com/WebCivics/PermissiveCommonsOntologiesDocs'>WebCivics documentation</a>.</p>
+    </section>
+  </section>
+  <section id='challenges'>
+    <h2>Challenges and Considerations</h2>
+    <section id='scalability'>
+      <h3>Scalability and Performance</h3>
+      <p>Decentralized protocols vary in scalability (e.g., blockchain latency, IPFS seeding requirements). DID methods must optimize performance to support Permissive Commons’ widespread adoption.</p>
+    </section>
+    <section id='privacy'>
+      <h3>Privacy and Dignity</h3>
+      <p>Public DIDs and RDF content may expose sensitive data. Permissive Commons requires privacy-preserving mechanisms (e.g., zero-knowledge proofs) to protect human dignity, as highlighted by Holborn (2019).</p>
+    </section>
+    <section id='interop'>
+      <h3>Interoperability Across DID Methods</h3>
+      <p>Diverse DID methods may hinder seamless RDF integration. Standardization, as pursued in <a href='https://github.com/WebizenAI/devdocs/tree/main/PermissiveCommons'>WebizenAI efforts</a>, is critical for interoperability.</p>
+    </section>
+  </section>
+  <section id='future'>
+    <h2>Future Directions</h2>
+    <ul>
+      <li><strong>Standardized DID Methods</strong>: Develop DID methods for Git and BitTorrent to enhance RDF referencing, as suggested in WebizenAI documentation.</li>
+      <li><strong>Privacy Enhancements</strong>: Implement zero-knowledge proofs for permissioned access, supporting Holborn’s privacy vs. dignity framework.</li>
+      <li><strong>Micropayments Integration</strong>: Incorporate micropayments standards to incentivize contributions to Permissive Commons, as proposed in <a href='https://medium.com/webcivics/permissioned-commons-7fc33a1ce23e'>Holborn (2019)</a>.</li>
+      <li><strong>Ontological Frameworks</strong>: Expand ontologies for Permissive Commons, as outlined in <a href='https://github.com/WebCivics/PermissiveCommonsOntologiesDocs'>WebCivics repositories</a>, to support diverse use cases.</li>
+    </ul>
+  </section>
+  <section id='conclusion'>
+    <h2>Conclusion</h2>
+    <p>W3C DIDs, as decentralized identifiers, enable Permissive Commons by replacing HTTP URIs to reference RDF content across protocols like IPFS, blockchain, BitTorrent, and Git. This supports persistent, trustworthy, and permissioned knowledge ecosystems, aligning with Cool URIs and semantic web principles. By addressing custodial governance, immutability, and interoperability, DIDs advance Holborn’s vision of Permissive Commons, fostering human-centric, decentralized knowledge sharing.</p>
+  </section>
+  <section id='references'>
+    <h2>References</h2>
+    <ul class='biblio'>
+      <li><a href='https://www.w3.org/TR/did-core/'>W3C Decentralized Identifiers (DIDs) v1.0</a>, W3C Recommendation, July 2022.</li>
+      <li><a href='https://www.w3.org/TR/cooluris/'>Cool URIs for the Semantic Web</a>, W3C Interest Group Note, December 2008.</li>
+      <li><a href='https://medium.com/webcivics/permissioned-commons-7fc33a1ce23e'>Holborn, T. (2019). Permissioned Commons</a>, Medium.</li>
+      <li><a href='https://medium.com/webcivics/tech-for-permissive-commons-c0961b77249e'>Holborn, T. (2019). Tech for Permissive Commons</a>, Medium.</li>
+      <li><a href='https://github.com/WebizenAI/devdocs/tree/main/PermissiveCommons'>WebizenAI Permissive Commons Documentation</a>, GitHub.</li>
+      <li><a href='https://github.com/WebCivics/PermissiveCommonsOntologiesDocs'>WebCivics Permissive Commons Ontologies Documentation</a>, GitHub.</li>
+      <li><a href='https://ipfs.tech/'>InterPlanetary File System</a>, IPFS, 2023.</li>
+      <li><a href='https://w3c.github.io/did-use-cases/'>Use Cases and Requirements for Decentralized Identifiers</a>, W3C, 2019.</li>
+    </ul>
+  </section>
+  <section id='appendix'>
+    <h2>Appendix: Example DID Document</h2>
+    <pre class='example' title='Generic DID Document for Permissive Commons'>
+{
+  "@context": ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/v2"],
+  "id": "did:example:PermissiveCommons123",
+  "service": [
+    {
+      "id": "#rdf-ipfs",
+      "type": "LinkedDataResource",
+      "serviceEndpoint": "ipfs://QmCivicData123"
+    },
+    {
+      "id": "#rdf-blockchain",
+      "type": "LinkedDataResource",
+      "serviceEndpoint": "https://etherscan.io/tx/0xHealthData123"
+    },
+    {
+      "id": "#rdf-bittorrent",
+      "type": "LinkedDataResource",
+      "serviceEndpoint": "magnet:?xt=urn:btih:EnvData123..."
+    },
+    {
+      "id": "#rdf-git",
+      "type": "LinkedDataResource",
+      "serviceEndpoint": "https://github.com/example/repo/commit/SocialVocab123"
+    }
+  ],
+  "verificationMethod": [{
+    "id": "#key-1",
+    "type": "Ed25519VerificationKey2020",
+    "controller": "did:example:PermissiveCommons123",
+    "publicKeyMultibase": "z6Mkr..."
+  }]
+}
+    </pre>
+    <p>This DID references RDF content across multiple protocols, supporting Permissive Commons’ decentralized, permissioned framework.</p>
+  </section>
+</body>
+</html>

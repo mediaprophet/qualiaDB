@@ -1,6 +1,6 @@
 # Release Targets — Feature Matrix
 
-_Branch: `0.0.11` | Updated: 2026-06-12_
+_Branch: `0.0.11` | Updated: 2026-06-12 (cross-platform abstraction + specialized libs complete)_
 
 Five release artefacts are built or planned from this repository:
 
@@ -457,7 +457,7 @@ Grammar-constrained FSM token-filtering over LLM logit output.
 
 ## Specialized Libraries (`specialized_libs/`)
 
-These libraries have additional build dependencies and are conditionally compiled.
+All 9 modules fully enabled and tested (79/79 tests passing as of 2026-06-12).
 
 | Library | WASM (Browser) | WASM (Mobile PWA) | CLI | Desktop (Webizen) | Mobile Native | Status |
 |---|:---:|:---:|:---:|:---:|:---:|---|
@@ -467,7 +467,68 @@ These libraries have additional build dependencies and are conditionally compile
 | `financial` — TVM, portfolio risk | ✅ | ❌ | ✅ | ✅ | 🚧 | Compiled via SHACL engine |
 | `geospatial` — WKT, GeoSPARQL extensions | ✅ | ❌ | ✅ | ✅ | 🚧 | Compiled via SHACL engine |
 | `geometric` — SIMD geometric algebra kernel | ✅ | ❌ | ✅ | ✅ | 🚧 | Compiled via domains |
-| Extended biosciences / biomedical | ✅ | ❌ | ✅ | ✅ | 🚧 | Via `specialized_libs/` (some deps pending) |
+| `linear_algebra` — LU decomp, SVD, eigenvalues, ZK matrix proofs | ✅ | ❌ | ✅ | ✅ | 🚧 | ✅ All tests passing |
+| `statistical_computing` — descriptive stats, regression, hypothesis testing | ✅ | ❌ | ✅ | ✅ | 🚧 | ✅ All tests passing |
+| `cryptographic_library` — AES-256-GCM, Ed25519, key rotation | ✅ | ❌ | ✅ | ✅ | 🚧 | ✅ All tests passing |
+| `physics_simulation` — Burgers CFD, distributed sim, wave propagation | ✅ | ❌ | ✅ | ✅ | 🚧 | ✅ All tests passing |
+| `machine_learning` — gradient descent, neural net, decision tree, clustering | ✅ | ❌ | ✅ | ✅ | 🚧 | ✅ All tests passing |
+| `financial_modeling` — Black-Scholes, Monte Carlo VaR, portfolio optimisation | ✅ | ❌ | ✅ | ✅ | 🚧 | ✅ All tests passing |
+| `chemistry_modeling` — SMILES, reaction simulation, molecular dynamics | ✅ | ❌ | ✅ | ✅ | 🚧 | ✅ All tests passing |
+| `medical_computing` — Framingham/SOFA/CHA₂DS₂-VASc, clinical decision support | ✅ | ❌ | ✅ | ✅ | 🚧 | ✅ All tests passing |
+| `engineering_analysis` — FEA, structural/thermal analysis, CFD coupling | ✅ | ❌ | ✅ | ✅ | 🚧 | ✅ All tests passing |
+
+---
+
+## Cross-Platform Abstraction Layer
+
+Three new modules in `qualia-core-db` provide real platform-native implementations for storage, thread scheduling, and network filtering. 19 new tests, all passing.
+
+### Storage Backends (`storage_driver.rs`)
+
+| Driver | Platform | Mechanism | Capabilities |
+|---|---|---|---|
+| `MmapDriver` | All | `memmap2` file-backed | read, write, append, snapshot (file copy), prefetch hint, eviction hint |
+| `MmapApfsDriver` | macOS | madvise + clonefile + fcntl | `MADV_WILLNEED/FREE`, O(1) APFS `clonefile(2)` snapshot, `F_NOCACHE` WAL, `F_FULLFSYNC` |
+| `WinNvmeDriver` | Windows | DeviceIoControl | NVMe hardware probe (`IOCTL_STORAGE_QUERY_PROPERTY`); falls back to Mmap without admin |
+| `ZnsDriver` | Linux | ZNS NVMe zone-append | Wraps `ZnsZoneManager`; zone-append + Mmap overlay |
+
+`open_storage(data_dir)` is the platform factory — new code should call this instead of `ZnsZoneManager::new()` directly.
+
+**WSL2:** `running_under_wsl2()` detects via `/proc/version` contains "microsoft". `log_startup_diagnostics()` emits a startup warning to set `networkingMode=mirrored` in `.wslconfig` for port 4242 connectivity.
+
+### Thread QoS (`platform_scheduler.rs`)
+
+| `QosClass` | macOS | Linux | Windows |
+|---|---|---|---|
+| `UserInteractive` | `pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE)` | P-core affinity + nice -10 | `THREAD_PRIORITY_HIGHEST` |
+| `UserInitiated` | `QOS_CLASS_USER_INITIATED` | nice -5 | `THREAD_PRIORITY_ABOVE_NORMAL` |
+| `Default` | `QOS_CLASS_DEFAULT` | nice 0 | `THREAD_PRIORITY_NORMAL` |
+| `Utility` | `QOS_CLASS_UTILITY` | nice 10 | `THREAD_PRIORITY_BELOW_NORMAL` |
+| `Background` | `QOS_CLASS_BACKGROUND` | E-core affinity + nice 19 | `THREAD_PRIORITY_IDLE` |
+
+Use `bind_inference_thread()` → `UserInteractive` and `bind_background_thread()` → `Background` at thread start.
+
+### Network Filter (`ebpf_filter.rs`)
+
+| Filter | Platform | Mechanism | Notes |
+|---|---|---|---|
+| `EbpfLinuxFilter` | Linux | `bpf(SYS_bpf, BPF_PROG_LOAD)` cBPF socket filter | WSL2: logs note, continues |
+| `WfpFilter` | Windows | WFP BFE (`FwpmEngineOpen0` / `FwpmFilterAdd0`) | Handle stored as `isize`; `FwpmEngineOpen0` returns `u32` DWORD |
+| `MacNetworkExtFilter` | macOS | XPC bridge `com.qualiadb.netfilter` | Degrades to noop without Apple Network Extension entitlement |
+| `AndroidVpnFilter` | Android | VpnService TUN fd | Noop when fd=-1 |
+
+| Feature | WASM (Browser) | WASM (Mobile PWA) | CLI | Desktop (Webizen) | Mobile Native |
+|---|:---:|:---:|:---:|:---:|:---:|
+| `StorageDriver` trait + `open_storage()` factory | ❌ | ❌ | ✅ | ✅ | 🚧 |
+| macOS APFS clonefile / madvise / F_NOCACHE | ❌ | ❌ | ✅ macOS | ✅ macOS | 🚧 |
+| Windows NVMe DeviceIoControl probe | ❌ | ❌ | ✅ Win | ✅ Win | 🚧 |
+| ZNS zone-append storage | ❌ | ❌ | ✅ Linux | ✅ Linux | 🚧 |
+| Thread QoS binding (`bind_inference_thread`) | ❌ | ❌ | ✅ | ✅ | 🚧 |
+| Linux eBPF cBPF socket filter | ❌ | ❌ | ✅ Linux | ✅ Linux | 🚧 |
+| Windows WFP network filter | ❌ | ❌ | ✅ Win | ✅ Win | 🚧 |
+| macOS Network Extension XPC bridge | ❌ | ❌ | ✅ macOS | ✅ macOS | 🚧 |
+| Android VpnService TUN filter | ❌ | ❌ | ❌ | ❌ | 🚧 |
+| WSL2 detection + startup diagnostics | ❌ | ❌ | ✅ | ✅ | ❌ |
 
 ---
 
@@ -594,8 +655,10 @@ The mobile PWA is a **thin UI client** — it does not bundle `qualia-core-db`. 
 | SHACL extension modules | 149 | All |
 | git_bridge / Merkle-DAG | 8 | CLI + Desktop |
 | Browser test suite | 271 | WASM Browser |
+| Specialized libs (`specialized_libs/`) | 79 | CLI + Desktop |
+| Cross-platform abstraction (storage_driver / platform_scheduler / ebpf_filter) | 19 | CLI + Desktop |
 | Core + domains + other | ~74 | All |
-| **Total** | **640+** | |
+| **Total** | **738+** | |
 
 ---
 

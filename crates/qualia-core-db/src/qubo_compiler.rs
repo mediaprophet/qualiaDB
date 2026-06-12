@@ -147,6 +147,7 @@ pub fn serialize_matrix(matrix: &QuboMatrix) -> Vec<u8> {
 }
 
 /// Publish a solved matrix to the WebTorrent Commons
+#[cfg(not(target_arch = "wasm32"))]
 pub fn publish_to_commons(matrix: &mut QuboMatrix, storage_path: &std::path::Path) -> Result<String, String> {
     scrub_metadata(matrix);
     let bytes = serialize_matrix(matrix);

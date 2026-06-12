@@ -132,6 +132,53 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 **New source file**: `crates/qualia-cli/src/qpu.rs`
 **Modified**: `crates/qualia-cli/src/main.rs` — `Commands::Qpu` now always compiled, gated at runtime; `QpuAction` fully implemented
 
+### Added — Specialized Libraries: All 9 Enabled (2026-06-12)
+
+All `specialized_libs/` modules are now fully compiled and tested (79/79 tests passing). Previously blocked by build errors from prior sessions; all remaining stubs replaced with real implementations:
+
+- **`cryptographic_library`** — real AES-256-GCM (`aes-gcm 0.10`) + Ed25519 (`ed25519-dalek 2.1`); `generate_iv()` and `rotate_key()` use `rand::random::<[u8; N]>()` (rand 0.10 API)
+- **`linear_algebra`** — LU decomposition, matrix multiply, SVD, eigenvalue routines; ZK proof pipeline via `zk_proofs.rs`
+- **`statistical_computing`** — descriptive stats, regression, hypothesis testing, distribution samplers
+- **`physics_simulation`** — Burgers CFD solver (3 output fields per node: velocity / pressure / temperature), distributed simulation, wave propagation
+- **`machine_learning`** — gradient descent, neural network training, decision tree, clustering
+- **`financial_modeling`** — TVM, Black-Scholes, Monte Carlo VaR, portfolio optimisation
+- **`chemistry_modeling`** — SMILES descriptors, reaction simulation, molecular dynamics
+- **`medical_computing`** — Framingham / SOFA / CHA₂DS₂-VASc scoring, clinical decision support
+- **`engineering_analysis`** — FEA, structural analysis, thermal analysis, CFD coupling
+
+**Bug fixed** (`zk_proofs.rs`): `ZkProof.verification_key_id` was being set to the proving key ID (`"pk_circuit_..."`) but the verifying key was stored under `circuit_id`. Fixed to use `circuit_id.to_string()` — resolves `KeyNotFound` panic in `linear_algebra::private_matrix_multiply` test.
+
+### Added — Cross-Platform Abstraction Layer (2026-06-12)
+
+Three new modules added to `qualia-core-db` providing real platform-native implementations for storage, thread scheduling, and network filtering. Driven by `local/resolving_platform_issues.md`.
+
+**`storage_driver.rs`** — `StorageDriver` trait with four platform-specific backends:
+- `MmapDriver` — fully file-backed via `memmap2`; portable across all platforms; real file snapshot (per-file copy)
+- `MmapApfsDriver` (macOS) — `madvise(MADV_WILLNEED/FREE)` async prefetch/release; `clonefile(2)` O(1) APFS snapshot (zero extra disk); `fcntl(F_NOCACHE=48)` bypass for WAL sequential writes; `F_FULLFSYNC` flush-through Apple ANS write queue — all via libc behind `cfg!(target_os = "macos")`
+- `WinNvmeDriver` (Windows) — `CreateFileW("\\\\.\\\PhysicalDriveN")` + `DeviceIoControl(IOCTL_STORAGE_QUERY_PROPERTY = 0x002D_1400)` to probe NVMe hardware across drives 0–7; falls back to `MmapDriver` without admin privilege
+- `ZnsDriver` (Linux) — wraps existing `ZnsZoneManager` with zone-append + file overlay
+- `running_under_wsl2()` — detects WSL2 via `/proc/version` contains "microsoft"; `log_startup_diagnostics()` emits actionable warning for `networkingMode=mirrored` (required for port 4242 in WSL2)
+- `open_storage(data_dir)` — platform factory: Linux → ZNS or Mmap, Windows → WinNvme, macOS → MmapApfs, else → Mmap
+- `NetworkFilter` trait + `NoopFilter` + `open_network_filter()` delegating to `ebpf_filter`
+- 10 unit tests, all passing
+
+**`platform_scheduler.rs`** — `QosClass` enum + `bind_current_thread(class)` for thread placement:
+- macOS — `pthread_set_qos_class_self_np(qos_class, 0)` via custom FFI; maps `UserInteractive` → P-cores (efficiency), `Background` → E-cores (efficiency); correct for Apple Silicon AMP
+- Linux — `core_affinity` P/E-core split (lower-numbered = P-cores heuristic) + `libc::setpriority` nice levels (-10 for UserInteractive, 19 for Background)
+- Windows — `SetThreadPriority` via `windows` crate (HIGHEST → IDLE)
+- Convenience wrappers: `bind_inference_thread()` → UserInteractive; `bind_background_thread()` → Background
+- 3 unit tests, all passing
+
+**`ebpf_filter.rs`** — `NetworkFilter` trait with real per-platform implementations:
+- `EbpfLinuxFilter` (Linux) — real `bpf(SYS_bpf, BPF_PROG_LOAD)` syscall; cBPF pass-all bytecode; WSL2 note logged; `Drop` closes fd
+- `WfpFilter` (Windows) — `FwpmEngineOpen0` / `FwpmFilterAdd0` / `FwpmEngineClose0` WFP BFE session; handle stored as `isize` (Send+Sync safe); `FwpmEngineOpen0` returns `u32` DWORD (ERROR_SUCCESS = 0)
+- `MacNetworkExtFilter` (macOS) — `xpc_connection_create_mach_service("com.qualiadb.netfilter")`; degrades to noop gracefully when Apple Network Extension entitlement not installed; `Drop` calls `xpc_release`
+- `AndroidVpnFilter` (Android) — VpnService TUN fd bridge; noop when fd=-1
+- `open_platform_filter()` factory dispatches to the correct implementation per target
+- 6 unit tests, all passing
+
+**`ARCHITECTURE.md §43`** added: full cross-platform documentation — storage driver capability matrix, thread QoS usage conventions, network filter per-platform notes, mobile platform matrix (iOS/Android).
+
 ---
 
 ## [0.0.10] - 2026-06-11

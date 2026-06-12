@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Context Markup Language and Definitions (CML/CMLD)</title>
+  <script src="https://w3c.github.io/respec/builds/respec-w3c.js" class="remove" async></script>
+    <script class="remove">
+    var respecConfig = {
+      specStatus: "unofficial",
+      editors: [{
+        name: "Timothy C. Holborn",
+        company: "WebCivics",
+        url: "https://www.linkedin.com/in/ubiquitous/"},
+        {
+        name: "Grok 3",
+        company: "xAI",
+        url: "https://x.ai"
+      }],
+      processVersion: 2023,
+      shortName: "cmld",
+      edDraftURI: "https://example.com/cmld/",
+      github: "https://github.com/your-org/cmld",
+      includePermalinks: true,
+      license: "w3c-software-doc",
+      abstract: `
+        <p>
+      The Context Markup Language (CML) and Context Markup Definitions (CMLD) provide mechanisms to embed and reference machine-readable semantic context within web content, enabling software agents, such as Large Language Models (LLMs), to disambiguate terms accurately. CML uses inline HTML elements and attributes, while CMLD defines an external JSON-based format, both leveraging URIs and Decentralized Identifiers (DIDs) to support Human-Centric AI (HCAI) principles of accuracy, transparency, fairness, and trust for natural persons.
+        </p>
+      `,
+      sotd: `
+        <p>
+      This is an unofficial draft specification for CML and CMLD, proposed for discussion within a W3C Community Group. It has not been endorsed by the W3C or any official standards body. Feedback is welcome via the associated Community Group repository or mailing list.
+        </p>
+      `
+    };
+  </script>
+</head>
+<body>
+  <section id="abstract">
+    <p>
+      The Context Markup Language (CML) and Context Markup Definitions (CMLD) provide mechanisms to embed and reference machine-readable semantic context within web content, enabling software agents, such as Large Language Models (LLMs), to disambiguate terms accurately. CML uses inline HTML elements and attributes, while CMLD defines an external JSON-based format, both leveraging URIs and Decentralized Identifiers (DIDs) to support Human-Centric AI (HCAI) principles of accuracy, transparency, fairness, and trust for natural persons.
+    </p>
+  </section>
+
+  <section id="sotd">
+    <p>
+      This is an unofficial draft specification for CML and CMLD, proposed for discussion within a W3C Community Group. It has not been endorsed by the W3C or any official standards body. Feedback is welcome via the associated Community Group repository or mailing list.
+    </p>
+  </section>
+
+  <section>
+    <h2>Introduction</h2>
+    <p>
+      Software agents, particularly LLMs, struggle to disambiguate terms with multiple meanings (e.g., "thongs" as footwear or underwear, "physician" as a person or place). Existing semantic web standards like RDFa and JSON-LD are complex for authors and not optimized for LLMs or HCAI. The Context Markup Language (CML) provides inline HTML markup, while Context Markup Definitions (CMLD) offers an external JSON-based format, both using URIs and DIDs to ensure precise context, supporting HCAI principles of accuracy, transparency, and fairness.
+    </p>
+    <p>
+      CML embeds context directly in HTML for fine-grained disambiguation, while CMLD enables reusable, maintainable context definitions referenced by multiple documents. This specification defines the syntax, processing models, and HTML integration for both, with examples for web authors and agent developers.
+    </p>
+  </section>
+
+  <section>
+    <h2>Terminology</h2>
+    <p>
+      The key words <em>MUST</em>, <em>MUST NOT</em>, <em>REQUIRED</em>, <em>SHALL</em>, <em>SHALL NOT</em>, <em>SHOULD</em>, <em>SHOULD NOT</em>, <em>RECOMMENDED</em>, <em>MAY</em>, and <em>OPTIONAL</em> are to be interpreted as described in [[RFC2119]].
+    </p>
+    <dl>
+      <dt>CML</dt>
+      <dd>Context Markup Language, an inline HTML markup language for embedding semantic context.</dd>
+      <dt>CMLD</dt>
+      <dd>Context Markup Definitions, an external JSON-based format for context definitions.</dd>
+      <dt>Software Agent</dt>
+      <dd>A program, such as an LLM, that processes web content for tasks like disambiguation.</dd>
+      <dt>URI</dt>
+      <dd>A Uniform Resource Identifier, as defined in [[RFC3986]].</dd>
+      <dt>DID</dt>
+      <dd>A Decentralized Identifier, as defined in [[DID-CORE]].</dd>
+      <dt>Human-Centric AI (HCAI)</dt>
+      <dd>AI systems prioritizing the needs, rights, and well-being of natural persons, per [[EU-AI-ACT]].</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Namespace</h2>
+    <p>
+      The CML namespace is <code>https://w3c.github.io/context-markup/ns#</code>. CML elements and attributes <em>MUST</em> use this namespace to avoid conflicts with other vocabularies, including Chemical Markup Language. In HTML, CML elements are prefixed with <code>cml:</code> (e.g., <code>&lt;cml:context&gt;</code>).
+    </p>
+    <p class="note">
+      The namespace URI is a placeholder and will be finalized upon W3C Community Group adoption.
+    </p>
+  </section>
+
+  <section>
+    <h2>CML Syntax</h2>
+    <p>
+      CML introduces two HTML elements and one attribute for inline context:
+    </p>
+    <ul>
+      <li><code>&lt;cml:context&gt;</code>: Defines a context block for a term or phrase.</li>
+      <li><code>&lt;cml:link&gt;</code>: References an external context resource.</li>
+      <li><code>cml:href</code>: Links to URIs or DIDs, used with <code>&lt;cml:link&gt;</code> or HTML elements.</li>
+    </ul>
+
+    <section>
+      <h3><code>&lt;cml:context&gt;</code> Element</h3>
+      <p>
+        The <code>&lt;cml:context&gt;</code> element wraps a term and provides an RDF-like triple (subject, predicate, object).
+      </p>
+      <dl>
+        <dt>Attributes</dt>
+        <dd>
+          <ul>
+            <li><code>subject</code>: A URI or DID identifying the term’s concept (REQUIRED).</li>
+            <li><code>predicate</code>: A URI defining the relationship (REQUIRED).</li>
+            <li><code>object</code>: A literal or URI providing the context value (REQUIRED).</li>
+            <li><code>lang</code>: An optional language tag, per [[BCP47]].</li>
+          </ul>
+        </dd>
+      </dl>
+      <pre class="example" title="CML inline example for thongs">
+&lt;p&gt;
+  Wear &lt;cml:context subject="https://wikidata.org/entity/Q12955949" predicate="http://schema.org/definedAs" object="Flip-flops" lang="en"&gt;thongs&lt;/cml:context&gt; for a beach day.
+&lt;/p&gt;
+      </pre>
+    </section>
+
+    <section>
+      <h3><code>&lt;cml:link&gt;</code> Element and <code>cml:href</code> Attribute</h3>
+      <p>
+        The <code>&lt;cml:link&gt;</code> element or <code>cml:href</code> attribute references a context resource, as defined for link relations in [[HTML]].
+      </p>
+      <dl>
+        <dt>Attributes</dt>
+        <dd>
+          <ul>
+            <li><code>cml:href</code>: A URI or DID pointing to a context resource (REQUIRED).</li>
+            <li><code>rel</code>: An optional relationship type (e.g., <code>context</code>), per [[HTML]].</li>
+          </ul>
+        </dd>
+      </dl>
+      <pre class="example" title="CML link example for thongs">
+&lt;p&gt;
+  Buy our &lt;cml:link cml:href="https://wikidata.org/entity/Q380339" rel="context"&gt;thongs&lt;/cml:link&gt; for comfort.
+&lt;/p&gt;
+      </pre>
+    </section>
+  </section>
+
+  <section>
+    <h2>CMLD Syntax and File Extension</h2>
+    <p>
+      CMLD files are JSON documents with an array of context definitions, compatible with JSON-LD. They <em>MUST</em> use the <code>.ctx</code> extension for simplicity. Alternative extensions were considered:
+    </p>
+    <ul>
+      <li><code>.cmlx</code>: Variation of CML, less concise.</li>
+      <li><code>.semx</code>: Emphasizes "semantic," risks confusion.</li>
+      <li><code>.kmf</code>: "Knowledge Markup File," less intuitive.</li>
+      <li><code>.ictf</code>: "Intelligent Context Tag File," overly specific.</li>
+      <li><code>.mdf</code>: "Meaning Definition File," risks confusion with other formats.</li>
+      <li><code>.cxf</code>: "Context exchange," less descriptive.</li>
+      <li><code>.sml</code>: "Semantic Markup Language," risks conflict with existing languages.</li>
+      <li><code>.cmd</code>: Rejected due to confusion with command files.</li>
+    </ul>
+    <p class="note">
+      The <code>.ctx</code> extension is recommended, pending W3C Community Group finalization.
+    </p>
+    <pre class="example" title="CMLD file example">
+{
+  "@context": "https://w3c.github.io/context-markup/ns#",
+  "definitions": [
+    {
+      "id": "thongs-footwear",
+      "subject": "https://wikidata.org/entity/Q12955949",
+      "predicate": "http://schema.org/definedAs",
+      "object": "Flip-flops",
+      "lang": "en"
+    }
+  ]
+}
+    </pre>
+    <dl>
+      <dt><code>id</code></dt>
+      <dd>A unique identifier (REQUIRED).</dd>
+      <dt><code>subject</code></dt>
+      <dd>A URI or DID (REQUIRED).</dd>
+      <dt><code>predicate</code></dt>
+      <dd>A URI defining the relationship (REQUIRED).</dd>
+      <dt><code>object</code></dt>
+      <dd>A literal or URI (REQUIRED).</dd>
+      <dt><code>lang</code></dt>
+      <dd>An optional language tag, per [[BCP47]].</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>HTML Integration</h2>
+    <p>
+      CMLD files are referenced using a <code>&lt;link&gt;</code> element with a proposed <code>rel="context"</code> value. Terms are linked to definitions via a <code>data-cml-id</code> attribute, both custom extensions not in [[HTML]].
+    </p>
+    <pre class="example" title="HTML referencing CMLD file">
+&lt;head&gt;
+  &lt;link rel="context" href="context.ctx" type="application/json"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;p&gt;Wear &lt;span data-cml-id="thongs-footwear"&gt;thongs&lt;/span&gt; for a beach day.&lt;/p&gt;
+&lt;/body&gt;
+    </pre>
+  </section>
+
+  <section>
+    <h2>Processing Model</h2>
+    <section>
+      <h3>CML Processing</h3>
+      <p>
+        Agents processing CML <em>MUST</em>:
+      </p>
+      <ol>
+        <li>Identify <code>&lt;cml:context&gt;</code> and <code>&lt;cml:link&gt;</code> elements or <code>cml:href</code> attributes in the HTML DOM.</li>
+        <li>Extract attributes (<code>subject</code>, <code>predicate</code>, <code>object</code>, <code>cml:href</code>) and map to RDF triples or JSON objects.</li>
+        <li>Resolve URIs or DIDs, per [[DID-CORE]].</li>
+        <li>Use context for disambiguation, aligning with HCAI principles.</li>
+      </ol>
+      <p>
+        Agents <em>SHOULD</em> handle malformed tags gracefully.
+      </p>
+    </section>
+    <section>
+      <h3>CMLD Processing</h3>
+      <p>
+        Agents processing CMLD <em>MUST</em>:
+      </p>
+      <ol>
+        <li>Load the CMLD file via <code>&lt;link rel="context"&gt;</code>.</li>
+        <li>Parse the JSON and extract definitions.</li>
+        <li>Match <code>data-cml-id</code> attributes to definition <code>id</code>s.</li>
+        <li>Map attributes to RDF triples or JSON objects.</li>
+        <li>Resolve URIs or DIDs, per [[DID-CORE]].</li>
+        <li>Use context for disambiguation, aligning with HCAI principles.</li>
+      </ol>
+      <p>
+        Agents <em>SHOULD</em> handle malformed files or unmatched IDs gracefully.
+      </p>
+    </section>
+  </section>
+
+  <section>
+    <h2>Integration with Semantic Web and DIDs</h2>
+    <p>
+      CML and CMLD map to RDF triples, ensuring interoperability with RDFa and JSON-LD. URIs reference ontologies like Schema.org or Wikidata (e.g., <code>https://schema.org/Physician</code>, <code>https://wikidata.org/entity/Q12955949</code>). DIDs (e.g., <code>did:example:123</code>) link to DID documents, per [[DID-CORE]], supporting decentralized context.
+    </p>
+  </section>
+
+  <section>
+    <h2>Human-Centric AI Alignment</h2>
+    <p>
+      CML and CMLD support HCAI principles, per [[EU-AI-ACT]]:
+    </p>
+    <ul>
+      <li><strong>Accurate Meaning Inference</strong>: Inline and external context (e.g., disambiguating "thongs") ensures accurate LLM inferences, reducing errors in commerce or healthcare.</li>
+      <li><strong>Transparency and Explainability</strong>: URI- and DID-linked context enables LLMs to cite sources, meeting HCAI’s explainability requirements.</li>
+      <li><strong>Fairness and Inclusivity</strong>: Multi-lingual context (via <code>lang</code>) and diverse URIs reduce bias, respecting cultural differences.</li>
+      <li><strong>User Trust</strong>: Mitigating false assumptions fosters trust in AI systems.</li>
+      <li><strong>Mitigation of False Assumptions</strong>: Explicit context prevents misinformation, discrimination, or harm, enhancing ethical AI outcomes.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Examples</h2>
+    <section>
+      <h3>Disambiguating "thongs"</h3>
+      <p>CML inline:</p>
+      <pre class="example" title="CML inline for thongs">
+&lt;p&gt;
+  Wear &lt;cml:context subject="https://wikidata.org/entity/Q12955949" predicate="http://schema.org/definedAs" object="Flip-flops" lang="en"&gt;
+    &lt;a cml:href="did:example:Footwear123" href="https://example.com/flipflops"&gt;thongs&lt;/a&gt;
+  &lt;/cml:context&gt; for a beach day.
+&lt;/p&gt;
+&lt;p&gt;
+  Our &lt;cml:context subject="https://wikidata.org/entity/Q380339" predicate="http://schema.org/definedAs" object="Underwear"&gt;
+    &lt;cml:link cml:href="https://example.com/underwear" rel="context"&gt;thongs&lt;/cml:link&gt;
+  &lt;/cml:context&gt; offer comfort.
+&lt;/p&gt;
+      </pre>
+      <p>CMLD file (<code>context.ctx</code>):</p>
+      <pre class="example" title="CMLD file for thongs">
+{
+  "@context": "https://w3c.github.io/context-markup/ns#",
+  "definitions": [
+    {
+      "id": "thongs-footwear",
+      "subject": "https://wikidata.org/entity/Q12955949",
+      "predicate": "http://schema.org/definedAs",
+      "object": "Flip-flops",
+      "lang": "en"
+    },
+    {
+      "id": "thongs-underwear",
+      "subject": "https://wikidata.org/entity/Q380339",
+      "predicate": "http://schema.org/definedAs",
+      "object": "Underwear"
+    }
+  ]
+}
+      </pre>
+      <p>CMLD HTML:</p>
+      <pre class="example" title="CMLD HTML for thongs">
+&lt;head&gt;
+  &lt;link rel="context" href="context.ctx" type="application/json"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;p&gt;Wear &lt;span data-cml-id="thongs-footwear"&gt;thongs&lt;/span&gt; for a beach day.&lt;/p&gt;
+  &lt;p&gt;Our &lt;span data-cml-id="thongs-underwear"&gt;thongs&lt;/span&gt; offer comfort.&lt;/p&gt;
+&lt;/body&gt;
+      </pre>
+    </section>
+    <section>
+      <h3>Disambiguating "physician"</h3>
+      <p>CML inline:</p>
+      <pre class="example" title="CML inline for physician">
+&lt;p&gt;
+  Dr. Smith, a &lt;cml:context subject="https://wikidata.org/entity/Q39631" predicate="http://schema.org/definedAs" object="Medical doctor" lang="en"&gt;
+    &lt;a cml:href="did:example:Doc123" href="https://example.com/dr-smith"&gt;physician&lt;/a&gt;
+  &lt;/cml:context&gt;, specializes in cardiology.
+&lt;/p&gt;
+&lt;p&gt;
+  Visit our &lt;cml:context subject="https://schema.org/Physician" predicate="http://schema.org/definedAs" object="Medical practice"&gt;
+    &lt;cml:link cml:href="https://example.com/clinic" rel="context"&gt;physician&lt;/cml:link&gt;
+  &lt;/cml:context&gt; at 123 Main St.
+&lt;/p&gt;
+      </pre>
+      <p>CMLD file excerpt:</p>
+      <pre class="example" title="CMLD file for physician">
+{
+  "definitions": [
+    {
+      "id": "physician-person",
+      "subject": "https://wikidata.org/entity/Q39631",
+      "predicate": "http://schema.org/definedAs",
+      "object": "Medical doctor",
+      "lang": "en"
+    },
+    {
+      "id": "physician-place",
+      "subject": "https://schema.org/Physician",
+      "predicate": "http://schema.org/definedAs",
+      "object": "Medical practice"
+    }
+  ]
+}
+      </pre>
+      <p>CMLD HTML:</p>
+      <pre class="example" title="CMLD HTML for physician">
+&lt;p&gt;Dr. Smith, a &lt;span data-cml-id="physician-person"&gt;physician&lt;/span&gt;, specializes in cardiology.&lt;/p&gt;
+&lt;p&gt;Visit our &lt;span data-cml-id="physician-place"&gt;physician&lt;/span&gt; at 123 Main St.&lt;/p&gt;
+      </pre>
+    </section>
+    <section>
+      <h3>Disambiguating "bank"</h3>
+      <p>CML inline:</p>
+      <pre class="example" title="CML inline for bank">
+&lt;p&gt;
+  Deposit money at the &lt;cml:context subject="https://wikidata.org/entity/Q22687" predicate="http://schema.org/definedAs" object="Financial institution" lang="en"&gt;
+    &lt;a cml:href="did:example:Bank123" href="https://example.com/bank"&gt;bank&lt;/a&gt;
+  &lt;/cml:context&gt; on Main St.
+&lt;/p&gt;
+&lt;p&gt;
+  Fish along the &lt;cml:context subject="https://wikidata.org/entity/Q319686" predicate="http://schema.org/definedAs" object="Riverbank"&gt;
+    &lt;cml:link cml:href="https://example.com/riverbank" rel="context"&gt;bank&lt;/cml:link&gt;
+  &lt;/cml:context&gt; of the river.
+&lt;/p&gt;
+      </pre>
+      <p>CMLD file excerpt:</p>
+      <pre class="example" title="CMLD file for bank">
+{
+  "definitions": [
+    {
+      "id": "bank-financial",
+      "subject": "https://wikidata.org/entity/Q22687",
+      "predicate": "http://schema.org/definedAs",
+      "object": "Financial institution",
+      "lang": "en"
+    },
+    {
+      "id": "bank-river",
+      "subject": "https://wikidata.org/entity/Q319686",
+      "predicate": "http://schema.org/definedAs",
+      "object": "Riverbank"
+    }
+  ]
+}
+      </pre>
+      <p>CMLD HTML:</p>
+      <pre class="example" title="CMLD HTML for bank">
+&lt;p&gt;Deposit money at the &lt;span data-cml-id="bank-financial"&gt;bank&lt;/span&gt; on Main St.&lt;/p&gt;
+&lt;p&gt;Fish along the &lt;span data-cml-id="bank-river"&gt;bank&lt;/span&gt; of the river.&lt;/p&gt;
+      </pre>
+    </section>
+    <section>
+      <h3>Disambiguating "apple"</h3>
+      <p>CML inline:</p>
+      <pre class="example" title="CML inline for apple">
+&lt;p&gt;
+  Eat an &lt;cml:context subject="https://wikidata.org/entity/Q89" predicate="http://schema.org/definedAs" object="Fruit" lang="en"&gt;
+    &lt;a cml:href="did:example:Fruit123" href="https://example.com/apple-fruit"&gt;apple&lt;/a&gt;
+  &lt;/cml:context&gt; for a healthy snack.
+&lt;/p&gt;
+&lt;p&gt;
+  The new &lt;cml:context subject="https://wikidata.org/entity/Q312" predicate="http://schema.org/definedAs" object="Technology company"&gt;
+    &lt;cml:link cml:href="https://example.com/apple-inc" rel="context"&gt;Apple&lt;/cml:link&gt;
+  &lt;/cml:context&gt; phone is innovative.
+&lt;/p&gt;
+      </pre>
+      <p>CMLD file excerpt:</p>
+      <pre class="example" title="CMLD file for apple">
+{
+  "definitions": [
+    {
+      "id": "apple-fruit",
+      "subject": "https://wikidata.org/entity/Q89",
+      "predicate": "http://schema.org/definedAs",
+      "object": "Fruit",
+      "lang": "en"
+    },
+    {
+      "id": "apple-company",
+      "subject": "https://wikidata.org/entity/Q312",
+      "predicate": "http://schema.org/definedAs",
+      "object": "Technology company"
+    }
+  ]
+}
+      </pre>
+      <p>CMLD HTML:</p>
+      <pre class="example" title="CMLD HTML for apple">
+&lt;p&gt;Eat an &lt;span data-cml-id="apple-fruit"&gt;apple&lt;/span&gt; for a healthy snack.&lt;/p&gt;
+&lt;p&gt;The new &lt;span data-cml-id="apple-company"&gt;Apple&lt;/span&gt; phone is innovative.&lt;/p&gt;
+      </pre>
+    </section>
+  </section>
+
+  <section>
+    <h2>Implementation Considerations</h2>
+    <p>
+      CML and CMLD face adoption challenges:
+    </p>
+    <ul>
+      <li><strong>Adoption</strong>: Developers may prefer RDFa or JSON-LD. CMS plugins and authoring tools can drive uptake.</li>
+      <li><strong>Scalability</strong>: URI and DID resolution requires governance. Collaboration with semantic web and DID communities is essential.</li>
+      <li><strong>Interoperability</strong>: Mapping to RDF ensures compatibility with existing standards.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Security and Privacy Considerations</h2>
+    <p>
+      CML and CMLD introduce minimal security risks:
+    </p>
+    <ul>
+      <li>Agents <em>MUST</em> validate URIs and DIDs to prevent malicious redirects.</li>
+      <li>Authors <em>SHOULD</em> avoid sensitive information in <code>object</code> fields.</li>
+      <li><strong>Privacy</strong>: Inline CML and public CMLD files may expose author intent. Authors <em>SHOULD</em> anonymize definitions, and agents <em>MUST</em> secure DID resolutions per [[DID-CORE]].</li>
+      <li><strong>HCAI Compliance</strong>: Privacy protections align with HCAI requirements.</li>
+    </ul>
+  </section>
+
+  <section id="conformance">
+    <p>
+      Conformance requirements use [[RFC2119]] terminology. Implementations <em>MUST</em> conform to the syntax and processing models defined in this specification.
+    </p>
+  </section>
+
+  <section id="acknowledgments">
+    <p>
+      Thanks to the W3C Semantic Web Community, Decentralized Identifier Working Group, and HCAI researchers for inspiration. Special acknowledgment to Wikidata and Schema.org for context resources.
+    </p>
+  </section>
+
+  <script>
+    var respecConfig = {
+      specStatus: "unofficial",
+      shortName: "cml-cmld",
+      editors: [{
+        name: "Your Name",
+        url: "https://example.com",
+        company: "Your Organization",
+        companyURL: "https://example.com"
+      }],
+      github: "https://github.com/your-repo/cml-cmld-spec",
+      license: "w3c-software-doc",
+      wg: "Context Markup Language Community Group",
+      wgURI: "https://www.w3.org/community/cml/",
+      wgPublicList: "public-cml",
+      publishDate: "2025-06-20",
+      edDraftURI: "https://your-repo.github.io/cml-cmld-spec/",
+      localBiblio: {
+        "DID-CORE": {
+          title: "Decentralized Identifiers (DIDs) v1.0",
+          href: "https://www.w3.org/TR/did-core/",
+          authors: ["Drummond Reed", "Manu Sporny", "Markus Sabadello"],
+          publisher: "W3C",
+          date: "2022"
+        },
+        "EU-AI-ACT": {
+          title: "Artificial Intelligence Act",
+          href: "https://digital-strategy.ec.europa.eu/en/policies/artificial-intelligence-act",
+          publisher: "European Commission",
+          date: "2024"
+        },
+        "HTML": {
+          title: "HTML Standard",
+          href: "https://html.spec.whatwg.org/multipage/",
+          authors: ["WHATWG"],
+          publisher: "WHATWG",
+          date: "2025"
+        },
+        "RFC2119": {
+          title: "Key words for use in RFCs to Indicate Requirement Levels",
+          href: "https://tools.ietf.org/html/rfc2119",
+          authors: ["S. Bradner"],
+          publisher: "IETF",
+          date: "1997"
+        },
+        "RFC3986": {
+          title: "Uniform Resource Identifier (URI): Generic Syntax",
+          href: "https://tools.ietf.org/html/rfc3986",
+          authors: ["T. Berners-Lee", "R. Fielding", "L. Masinter"],
+          publisher: "IETF",
+          date: "2005"
+        },
+        "BCP47": {
+          title: "Tags for Identifying Languages",
+          href: "https://tools.ietf.org/html/bcp47",
+          authors: ["A. Phillips", "M. Davis"],
+          publisher: "IETF",
+          date: "2009"
+        }
+      }
+    };
+  </script>
+</body>
+</html>

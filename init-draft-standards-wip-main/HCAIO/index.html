@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Human-Centric AI Ontology (HCAI)</title>
+  <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove"></script>
+  <script class="remove">
+    var respecConfig = {
+      specStatus: "unofficial",
+      editors: [{
+        name: "Timothy C. Holborn",
+        company: "WebCivics",
+        url: "https://www.linkedin.com/in/ubiquitous/"},
+        {
+        name: "Grok 3",
+        company: "xAI",
+        url: "https://x.ai"
+      }],
+      publishDate: "2025-06-20",
+      shortName: "hcai-ontology",
+      group: "humancentricai",
+      github: "w3c/humancentricai",
+      license: "w3c-software-doc",
+      abstract: [
+        "The Human-Centric AI Ontology (HCAI) is a standalone vocabulary designed as an alternative to OWL and FOAF, addressing their limitations in representing natural persons and intrinsic human factors such as consciousness, emotions, and sociological dynamics. Unlike OWL's generic <code>owl:Thing</code> or FOAF's social metadata, HCAI models complex human attributes and allows integration with <code>owl:Thing</code>-based ontologies for tangible entities like assets and accounts."
+      ]
+    };
+  </script>
+</head>
+<body>
+  <section id="introduction">
+    <h2>Introduction</h2>
+    <p>
+      The HCAI Ontology replaces OWL and FOAF by providing a framework to represent natural persons through intrinsic qualities such as consciousness, emotions, psychological states, and sociological dynamics, which are not adequately captured as subclasses of <code>owl:Thing</code>. It also supports integration with <code>owl:Thing</code>-based ontologies for tangible entities (e.g., assets, accounts) to ensure interoperability with existing RDF ecosystems. This document provides comprehensive examples to illustrate these distinctions and relationships.
+    </p>
+  </section>
+
+  <section id="scope">
+    <h2>Scope</h2>
+    <p>
+      The HCAI Ontology is designed to:
+      <ul>
+        <li>Model human-centric attributes (consciousness, emotions, psychological states, sociological roles) as distinct from <code>owl:Thing</code>.</li>
+        <li>Support AI agents in understanding and reasoning about human factors in ethical, culturally sensitive ways.</li>
+        <li>Enable integration with <code>owl:Thing</code>-based ontologies for tangible entities like assets or accounts.</li>
+        <li>Ensure semantic interoperability for human-centric AI applications.</li>
+      </ul>
+    </p>
+  </section>
+
+  <section id="namespace">
+    <h2>Namespace</h2>
+    <p>
+      The namespace for the HCAI Ontology is:
+      <code>http://www.w3.org/ns/hcai#</code>
+    </p>
+    <p>
+      Prefix: <code>hcai:</code>
+    </p>
+  </section>
+
+  <section id="ontology">
+    <h2>Ontology Definition</h2>
+    <section id="classes">
+      <h3>Classes</h3>
+      <dl>
+        <dt><code>hcai:NaturalPerson</code></dt>
+        <dd>A human being defined by intrinsic qualities, including consciousness, emotions, and social roles, distinct from <code>owl:Thing</code> or <code>foaf:Person</code>.</dd>
+        <dt><code>hcai:Consciousness</code></dt>
+        <dd>The subjective awareness and self-reflective capacity of a natural person, encompassing perception, intention, and selfhood.</dd>
+        <dt><code>hcai:Soul</code></dt>
+        <dd>The metaphysical essence of a person, representing non-material aspects of identity and existence.</dd>
+        <dt><code>hcai:Emotion</code></dt>
+        <dd>An emotional state (e.g., love, fear, hope) experienced by a natural person.</dd>
+        <dt><code>hcai:PsychologicalState</code></dt>
+        <dd>A mental state or condition (e.g., resilience, anxiety) influencing a person's behavior or perception.</dd>
+        <dt><code>hcai:SociologicalRole</code></dt>
+        <dd>A socially defined role (e.g., caregiver, leader) shaped by cultural or societal context.</dd>
+        <dt><code>hcai:Relationship</code></dt>
+        <dd>An emotional or social bond between natural persons (e.g., friendship, kinship).</dd>
+        <dt><code>hcai:HumanExperience</code></dt>
+        <dd>A lived experience shaping a person's identity (e.g., trauma, cultural immersion).</dd>
+        <dt><code>hcai:ValueBelief</code></dt>
+        <dd>A deeply held belief or value (e.g., compassion, justice) guiding a person's actions.</dd>
+        <dt><code>hcai:TangibleEntity</code></dt>
+        <dd>A subclass of <code>owl:Thing</code> for tangible objects or resources (e.g., assets, accounts) owned or interacted with by a <code>hcai:NaturalPerson</code>.</dd>
+      </dl>
+    </section>
+    <section id="properties">
+      <h3>Properties</h3>
+      <dl>
+        <dt><code>hcai:hasConsciousness</code></dt>
+        <dd>
+          Links a <code>hcai:NaturalPerson</code> to their <code>hcai:Consciousness</code>.
+          <br>Domain: <code>hcai:NaturalPerson</code><br>Range: <code>hcai:Consciousness</code>
+        </dd>
+        <dt><code>hcai:hasSoul</code></dt>
+        <dd>
+          Links a <code>hcai:NaturalPerson</code> to their <code>hcai:Soul</code>.
+          <br>Domain: <code>hcai:NaturalPerson</code><br>Range: <code>hcai:Soul</code>
+        </dd>
+        <dt><code>hcai:experiencesEmotion</code></dt>
+        <dd>
+          Connects a <code>hcai:NaturalPerson</code> to a <code>hcai:Emotion</code>.
+          <br>Domain: <code>hcai:NaturalPerson</code><br>Range: <code>hcai:Emotion</code>
+        </dd>
+        <dt><code>hcai:hasPsychologicalState</code></dt>
+        <dd>
+          Associates a <code>hcai:NaturalPerson</code> with a <code>hcai:PsychologicalState</code>.
+          <br>Domain: <code>hcai:NaturalPerson</code><br>Range: <code>hcai:PsychologicalState</code>
+        </dd>
+        <dt><code>hcai:fulfillsRole</code></dt>
+        <dd>
+          Links a <code>hcai:NaturalPerson</code> to a <code>hcai:SociologicalRole</code>.
+          <br>Domain: <code>hcai:NaturalPerson</code><br>Range: <code>hcai:SociologicalRole</code>
+        </dd>
+        <dt><code>hcai:hasRelationship</code></dt>
+        <dd>
+          Associates a <code>hcai:NaturalPerson</code> with a <code>hcai:Relationship</code>.
+          <br>Domain: <code>hcai:NaturalPerson</code><br>Range: <code>hcai:Relationship</code>
+        </dd>
+        <dt><code>hcai:hasExperience</code></dt>
+        <dd>
+          Links a <code>hcai:NaturalPerson</code> to a <code>hcai:HumanExperience</code>.
+          <br>Domain: <code>hcai:NaturalPerson</code><br>Range: <code>hcai:HumanExperience</code>
+        </dd>
+        <dt><code>hcai:holdsBelief</code></dt>
+        <dd>
+          Connects a <code>hcai:NaturalPerson</code> to a <code>hcai:ValueBelief</code>.
+          <br>Domain: <code>hcai:NaturalPerson</code><br>Range: <code>hcai:ValueBelief</code>
+        </dd>
+        <dt><code>hcai:ownsEntity</code></dt>
+        <dd>
+          Links a <code>hcai:NaturalPerson</code> to a <code>hcai:TangibleEntity</code> (e.g., asset, account).
+          <br>Domain: <code>hcai:NaturalPerson</code><br>Range: <code>hcai:TangibleEntity</code>
+        </dd>
+        <dt><code>hcai:emotionType</code></dt>
+        <dd>
+          Specifies the type of an <code>hcai:Emotion</code> (e.g., "love", "anger").
+          <br>Domain: <code>hcai:Emotion</code><br>Range: <code>rdfs:Literal</code>
+        </dd>
+        <dt><code>hcai:psychologicalStateType</code></dt>
+        <dd>
+          Specifies the type of a <code>hcai:PsychologicalState</code> (e.g., "resilience", "depression").
+          <br>Domain: <code>hcai:PsychologicalState</code><br>Range: <code>rdfs:Literal</code>
+        </dd>
+        <dt><code>hcai:roleType</code></dt>
+        <dd>
+          Specifies the type of a <code>hcai:SociologicalRole</code> (e.g., "parent", "mentor").
+          <br>Domain: <code>hcai:SociologicalRole</code><br>Range: <code>rdfs:Literal</code>
+        </dd>
+        <dt><code>hcai:relationshipType</code></dt>
+        <dd>
+          Specifies the type of a <code>hcai:Relationship</code> (e.g., "familial", "professional").
+          <br>Domain: <code>hcai:Relationship</code><br>Range: <code>rdfs:Literal</code>
+        </dd>
+        <dt><code>hcai:experienceType</code></dt>
+        <dd>
+          Specifies the type of a <code>hcai:HumanExperience</code> (e.g., "trauma", "enlightenment").
+          <br>Domain: <code>hcai:HumanExperience</code><br>Range: <code>rdfs:Literal</code>
+        </dd>
+        <dt><code>hcai:beliefType</code></dt>
+        <dd>
+          Specifies the type of a <code>hcai:ValueBelief</code> (e.g., "justice", "empathy").
+          <br>Domain: <code>hcai:ValueBelief</code><br>Range: <code>rdfs:Literal</code>
+        </dd>
+      </dl>
+    </section>
+    <section id="axioms">
+      <h3>Axioms</h3>
+      <ul>
+        <li><code>hcai:NaturalPerson</code> is disjoint with <code>owl:Thing</code> and <code>foaf:Person</code>.</li>
+        <li>Every <code>hcai:NaturalPerson</code> has exactly one <code>hcai:Consciousness</code> and one <code>hcai:Soul</code>.</li>
+        <li><code>hcai:Relationship</code> is symmetric.</li>
+        <li><code>hcai:ownsEntity</code> connects to <code>hcai:TangibleEntity</code>, a subclass of <code>owl:Thing</code>.</li>
+        <li><code>hcai:HumanExperience</code> and <code>hcai:ValueBelief</code> are unique to each <code>hcai:NaturalPerson</code> (functional properties).</li>
+      </ul>
+    </section>
+  </section>
+
+  <section id="human-centric-examples">
+    <h2>Examples: Human-Centric Concepts</h2>
+    <p>
+      These examples illustrate human factors (consciousness, sociology, psychology, etc.) that are not adequately represented as subclasses of <code>owl:Thing</code> due to their intrinsic, non-tangible nature.
+    </p>
+    <pre class="turtle">
+@prefix hcai: <http://www.w3.org/ns/hcai#> .
+@prefix ex: <http://example.org/> .
+
+# Example 1: Consciousness and Self-Reflection
+ex:Jamal a hcai:NaturalPerson ;
+  hcai:hasConsciousness ex:JamalConsciousness ;
+  hcai:hasSoul ex:JamalSoul ;
+  hcai:hasExperience ex:JamalEnlightenment .
+
+ex:JamalConsciousness a hcai:Consciousness ;
+  hcai:description "Jamal's awareness of his purpose and identity after meditation" .
+
+ex:JamalSoul a hcai:Soul ;
+  hcai:description "Jamal's metaphysical essence, shaped by his spiritual journey" .
+
+ex:JamalEnlightenment a hcai:HumanExperience ;
+  hcai:experienceType "Spiritual Awakening" ;
+  hcai:description "Jamal's transformative retreat in 2024" .
+
+# Example 2: Emotions and Psychological State
+ex:Mia a hcai:NaturalPerson ;
+  hcai:experiencesEmotion ex:MiaJoy ;
+  hcai:hasPsychologicalState ex:MiaResilience .
+
+ex:MiaJoy a hcai:Emotion ;
+  hcai:emotionType "Joy" ;
+  hcai:context "Celebrating a family milestone" .
+
+ex:MiaResilience a hcai:PsychologicalState ;
+  hcai:psychologicalStateType "Resilience" ;
+  hcai:description "Mia's ability to recover from personal loss" .
+
+# Example 3: Sociological Role and Relationship
+ex:Priya a hcai:NaturalPerson ;
+  hcai:fulfillsRole ex:PriyaCaregiver ;
+  hcai:hasRelationship ex:PriyaSiblingBond ;
+  hcai:holdsBelief ex:PriyaCompassion .
+
+ex:PriyaCaregiver a hcai:SociologicalRole ;
+  hcai:roleType "Caregiver" ;
+  hcai:context "Priya's role in supporting her elderly parents" .
+
+ex:PriyaSiblingBond a hcai:Relationship ;
+  hcai:relationshipType "Familial" ;
+  hcai:hasParticipant ex:Ravi ;
+  hcai:description "Priya's close bond with her brother Ravi" .
+
+ex:PriyaCompassion a hcai:ValueBelief ;
+  hcai:beliefType "Compassion" ;
+  hcai:description "Priya's belief in empathetic action" .
+
+ex:Ravi a hcai:NaturalPerson .
+    </pre>
+  </section>
+
+  <section id="tangible-entity-examples">
+    <h2>Examples: Tangible Entities (Extending owl:Thing)</h2>
+    <p>
+      These examples show how tangible entities (e.g., assets, accounts) can be represented using <code>hcai:TangibleEntity</code>, a subclass of <code>owl:Thing</code>, to integrate with the HCAI Ontology.
+    </p>
+    <pre class="turtle">
+@prefix hcai: <http://www.w3.org/ns/hcai#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix ex: <http://example.org/> .
+
+# Example 1: Asset Ownership
+ex:Jamal a hcai:NaturalPerson ;
+  hcai:ownsEntity ex:JamalCar .
+
+ex:JamalCar a hcai:TangibleEntity , owl:Thing ;
+  hcai:description "Jamal's electric vehicle purchased in 2025" ;
+  hcai:entityType "Physical Asset" .
+
+# Example 2: Financial Account
+ex:Mia a hcai:NaturalPerson ;
+  hcai:ownsEntity ex:MiaBankAccount .
+
+ex:MiaBankAccount a hcai:TangibleEntity , owl:Thing ;
+  hcai:entityType "Financial Account" ;
+  hcai:description "Mia's savings account at a cooperative bank" .
+
+# Example 3: Digital Asset
+ex:Priya a hcai:NaturalPerson ;
+  hcai:ownsEntity ex:PriyaDigitalPortfolio .
+
+ex:PriyaDigitalPortfolio a hcai:TangibleEntity , owl:Thing ;
+  hcai:entityType "Digital Asset" ;
+  hcai:description "Priya's collection of digital artworks on a blockchain" .
+    </pre>
+  </section>
+
+  <section id="comparison">
+    <h2>Comparison with OWL and FOAF</h2>
+    <p>
+      OWL's <code>owl:Thing</code> is too generic to capture the nuanced, intrinsic qualities of human beings, such as consciousness, soul, or psychological states. FOAF's <code>foaf:Person</code> focuses on social metadata (e.g., <code>foaf:name</code>, <code>foaf:knows</code>), neglecting deeper human factors. HCAI introduces classes like <code>hcai:Consciousness</code>, <code>hcai:Soul</code>, and <code>hcai:ValueBelief</code> to model these aspects. For tangible entities, HCAI integrates with <code>owl:Thing</code> via <code>hcai:TangibleEntity</code>, enabling compatibility with existing RDF systems while prioritizing human-centric semantics.
+    </p>
+  </section>
+
+  <section id="conformance">
+    <h2>Conformance</h2>
+    <p>
+      The HCAI Ontology is a standalone vocabulary, independent of OWL and FOAF, but compatible with RDF and RDFS. Implementations should use reasoning engines supporting the defined classes, properties, and axioms. Tangible entities leverage <code>owl:Thing</code> for interoperability with existing ontologies.
+    </p>
+  </section>
+
+  <section id="acknowledgments">
+    <h2>Acknowledgments</h2>
+    <p>
+      This unofficial proposal by the W3C Human-Centric AI Community Group aims to redefine how AI systems represent natural persons, replacing OWL and FOAF with a human-focused ontology while supporting integration with tangible entities.
+    </p>
+  </section>
+</body>
+</html>

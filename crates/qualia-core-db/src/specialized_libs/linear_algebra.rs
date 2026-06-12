@@ -168,8 +168,9 @@ pub enum CachePolicy {
 /// Storage backend abstraction
 pub struct StorageBackend {
     backend_type: BackendType,
-    zns_manager: Arc<Mutex<crate::zns_storage::ZnsZoneManager>>,
+    zns_manager: Option<Arc<Mutex<crate::zns_storage::ZnsZoneManager>>>,
     csd_manager: Arc<Mutex<crate::csd_storage::CsdManager>>,
+    matrix_store: HashMap<String, Matrix>,
 }
 
 /// Backend types
@@ -244,6 +245,9 @@ pub enum DecompositionType {
     Eigen,
     Schur,
 }
+
+/// Operation scheduler
+pub struct OperationScheduler {}
 
 /// Execution engine
 pub struct ExecutionEngine {
@@ -1089,11 +1093,13 @@ impl LinearAlgebraLibrary {
 
         // Generate semantic proof
         let mut semantic_proof = self.privacy_engine.zk_proofs.lock().unwrap()
-            .generate_semantic_proof(statement, witness)?;
+            .generate_semantic_proof(statement, witness)
+            .map_err(|e| LinearAlgebraError::PrivacyError(format!("{:?}", e)))?;
 
         // Verify proof
         self.privacy_engine.zk_proofs.lock().unwrap()
-            .verify_semantic_proof(&mut semantic_proof)?;
+            .verify_semantic_proof(&mut semantic_proof)
+            .map_err(|e| LinearAlgebraError::PrivacyError(format!("{:?}", e)))?;
 
         // Perform the actual multiplication
         let result = self.matrix_multiply(left_id, right_id, result_id, 1.0, 0.0)?;
@@ -1273,10 +1279,14 @@ impl MatrixCache {
 
 impl StorageBackend {
     pub fn new() -> Self {
+        let zns_manager = crate::zns_storage::ZnsZoneManager::new("default_zone")
+            .ok()
+            .map(|m| Arc::new(Mutex::new(m)));
         Self {
-            backend_type: BackendType::Hybrid,
-            zns_manager: Arc::new(Mutex::new(crate::zns_storage::ZnsZoneManager::new("dummy_device").unwrap())),
+            backend_type: if zns_manager.is_some() { BackendType::Hybrid } else { BackendType::CSD },
+            zns_manager,
             csd_manager: Arc::new(Mutex::new(crate::csd_storage::CsdManager::new())),
+            matrix_store: HashMap::new(),
         }
     }
 
@@ -1284,33 +1294,15 @@ impl StorageBackend {
         Ok(())
     }
 
-    pub fn store_matrix_data(&self, matrix: &Matrix) -> Result<(), LinearAlgebraError> {
-        // Store matrix data using ZNS or CSD
+    pub fn store_matrix_data(&mut self, matrix: &Matrix) -> Result<(), LinearAlgebraError> {
+        self.matrix_store.insert(matrix.matrix_id.clone(), matrix.clone());
         Ok(())
     }
 
     pub fn get_matrix_data(&self, matrix_id: &str) -> Result<Matrix, LinearAlgebraError> {
-        // Get matrix data from storage
-        // For now, return dummy matrix
-        Ok(Matrix {
-            matrix_id: matrix_id.to_string(),
-            rows: 2,
-            cols: 2,
-            data_type: DataType::Float64,
-            data: vec![1.0, 2.0, 3.0, 4.0],
-            storage_format: StorageFormat::RowMajor,
-            metadata: MatrixMetadata {
-                matrix_id: matrix_id.to_string(),
-                rows: 2,
-                cols: 2,
-                data_type: DataType::Float64,
-                storage_format: StorageFormat::RowMajor,
-                compression: CompressionType::None,
-                created_at: 0,
-                last_accessed: 0,
-                access_count: 0,
-            },
-        })
+        self.matrix_store.get(matrix_id)
+            .cloned()
+            .ok_or_else(|| LinearAlgebraError::StorageError(format!("Matrix not found: {}", matrix_id)))
     }
 }
 

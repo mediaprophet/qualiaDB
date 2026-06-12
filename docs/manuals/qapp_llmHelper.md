@@ -67,14 +67,17 @@ match data_provider.send_intent(payload).await {
     }
 }
 ```
+
+### Optimistic State (Ghosting)
+When emitting an intent that alters physical or logical state, immediately put the component into a "Validating" or "Ghost" state locally. Wait for the daemon's response before permanently committing the change to the UI's state list. If a `SanctuaryGateTriggered` error or violation occurs, revert the ghost state and display the `McpSystemError` details.
 </graceful_degradation>
 
 ## 3. MCP Tool Integration
 <mcp_tools>
 QApps can dispatch complex intents (QPU, Logic, Bioinformatics, Clinical Risk) to the native Daemon via the `mcp_server.rs` endpoints.
 
-- **Available Tools:** `evaluate_modality`, `bioinformatics_align`, `chemical_descriptors`, `clinical_risk`, `execute_llm_inference`.
-- **DO:** Construct raw byte representations of arguments to send over the websocket to avoid JSON parsing overhead on the Daemon.
+- **Available Tools:** `evaluate_modality`, `bioinformatics_align`, `chemical_descriptors`, `clinical_risk`, `execute_llm_inference`, `validate_hardware_assembly`.
+- **DO:** Construct raw byte representations of arguments (e.g. `bincode`) to send over the websocket to avoid JSON parsing overhead on the Daemon.
 </mcp_tools>
 
 ## 4. Zero-Copy LoRA Multiplexing
@@ -103,3 +106,26 @@ QApps may need to participate in multi-party contracts or deontic logic Quins.
   ```
 - **CSP Compliance:** `wasm-unsafe-eval` is the only execution allowed.
 </security_constraints>
+
+## 7. Vanilla JS & WebGL Exceptions
+<webgl_exceptions>
+While Rust/Dioxus is the strictly mandated standard for QApps, **highly specialized 3D visualizers** (such as Anatomy) are granted an explicit exception to use Vanilla JS and WebGL.
+
+- **Graphing Libraries:** Allowed ONLY if visualization is the core purpose of the app (e.g., Babylon.js for anatomy rendering).
+- **Data Serialization:** Vanilla JS apps MUST STILL serialize `McpIntentFrame` payloads into raw binary (bincode) to avoid JSON overhead. **DO NOT** write manual vanilla JS packers; you MUST use the existing `qualia_core_db.wasm` (via `qualia.js`) to guarantee binary compliance.
+- **Dependency Bundling:** **DO NOT** use external CDNs or introduce NPM/Webpack toolchains. Download dependencies directly as pre-compiled `.min.js` files into a local `lib/` directory to preserve the zero-build-step, offline-capable static structure.
+</webgl_exceptions>
+
+## 8. Native Engine Capabilities
+<native_capabilities>
+The native Webizen Daemon (`qualia-core-db`) contains fully-wired, hardware-accelerated domain engines. **Do not assume these are stubs.** You can access all of the following natively via the MCP Intent bridge without writing custom JS solvers:
+
+- **Query Language Constraints:** 
+  - **N-Triples Only:** QualiaDB evaluates streaming N-Triples patterns directly across 48-byte `Super-Quin` memory slots. 
+  - **NO SPARQL:** Standard SPARQL is fundamentally unsupported due to string-allocation overhead. All QApp graph queries must be framed as strict `?subject ?predicate ?object .` patterns.
+- **Bioinformatics:** Zero-allocation SW (Smith-Waterman) alignment, protein sequence analysis, k-mer generation, FASTA parsing, and Tanimoto similarity scoring.
+- **Clinical Risk & Medical Logic:** Real-time computation of Framingham, CHA₂DS₂-VASc, and SCORE2 indices, alongside drug-interaction checks and contraindications utilizing native FHIR/LOINC ontology mapping.
+- **Organic Chemistry:** Native SMILES & InChI parsing, Molecular Weight (MW), LogP, TPSA, Lipinski's Rule of 5, Veber rules, Morgan fingerprints, Henderson-Hasselbalch equations, and atom economy/E-factor solvers.
+- **Physics & Simulation:** Thermodynamics MCMC (Markov Chain Monte Carlo), RK4 ODE solvers, DFT (Density Functional Theory) ground state estimations, and PINN (Physics-Informed Neural Network) binding affinity.
+- **Advanced Formal Logic:** Native evaluators for Deontic Logic (Obligations/Permissions), Epistemic Logic (Knowledge/Belief), and Linear Temporal Logic (LTL - Globally, Finally, Next, Until, Release) traces, executed completely within deterministic, bounded 42MB memory limits.
+</native_capabilities>

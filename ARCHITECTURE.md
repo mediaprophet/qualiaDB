@@ -1285,3 +1285,116 @@ Reading an LDP container from a Solid server (HTTP `GET` with `text/turtle`, par
 **Fifth Vector Routing**: Peer connections are bootstrapped via `daemon_swarm.rs`. DNSSEC TXT records provide `DnssecSemanticPayload` capabilities and a `routing_mask`. Before establishing a WireGuard tunnel, the incoming routing mask is evaluated against the node's `CompiledPermission` bitmask.
 
 **CRDT Bifurcation**: In `crdt.rs`, automatic Last-Writer-Wins (LWW) Lamport clock merging is restricted to Permissive Commons domains (e.g., `qp:`). Sovereign domains such as `wf:` (WellFair) require explicit Tri-Party Consent and bypass automated consensus merging to enforce Fiduciary Supremacy.
+
+---
+
+## 43. Cross-Platform Abstraction Layer
+
+_Implemented in `storage_driver.rs`, `platform_scheduler.rs`, `ebpf_filter.rs`._
+_Last updated: 2026-06-12_
+
+### 43-A. Storage Backend
+
+`open_storage(data_dir) → Box<dyn StorageDriver>` selects the best driver at runtime with no `#[cfg]` at call sites.
+
+| Platform | Driver | Requires | Capabilities |
+|---|---|---|---|
+| Linux + ZNS NVMe (non-WSL2) | `ZnsDriver` | Real ZNS NVMe hardware | Zone-append, 8 concurrent writers |
+| Windows x64 + Administrator | `WinNvmeDriver` | Admin + physical NVMe | `DeviceIoControl` IOCTL_STORAGE_QUERY_PROPERTY; zone-append when hardware confirmed |
+| macOS / iOS | `MmapApfsDriver` | None | `madvise(MADV_WILLNEED/FREE)`, `clonefile(2)` O(1) APFS snapshots, `fcntl(F_NOCACHE)` WAL writes |
+| WSL2 / Linux no-hardware | `MmapDriver` | None | File-backed `memmap2`, portable |
+| Android / other | `MmapDriver` | None | File-backed `memmap2`, portable |
+
+**`StorageDriver` trait methods:** `write`, `append`, `read`, `read_range`, `delete`, `snapshot`, `flush`, `prefetch_hint`, `eviction_hint`.
+
+**macOS APFS optimisations (all in `MmapApfsDriver`):**
+- `madvise(MADV_WILLNEED)` on every `read()` — Darwin UBC prefetches subsequent pages asynchronously.
+- `madvise(MADV_FREE)` on `eviction_hint()` / `delete()` — reclaim on pressure, no forced eviction.
+- `fcntl(F_NOCACHE, 1)` on every `append()` — WAL sequential writes bypass the unified buffer cache.
+- `clonefile(2)` in `snapshot()` — APFS Copy-on-Write; O(1) and zero extra disk space.
+- `F_FULLFSYNC` in `flush()` — guarantees durability through Apple Flash ANS write queue.
+
+**Windows NVMe (all in `WinNvmeDriver`):**
+- `CreateFileW("\\.\PhysicalDriveN", GENERIC_READ, ...)` iterates drives 0–7.
+- `DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY, ...)` — read-only, no admin required, confirms device existence.
+- When hardware is confirmed, `capabilities().zone_append = true` and `csd_dispatch = true`.
+- Falls back to file-backed overlay (identical to `MmapDriver`) when admin/hardware is absent.
+
+**WSL2 detection:**
+```rust
+// Detected via /proc/version containing "microsoft"
+pub fn running_under_wsl2() -> bool { ... }
+```
+When WSL2 is detected, `open_storage` skips ZNS probing and logs:
+```text
+Running inside WSL2. ZNS/CSD unavailable through Hyper-V. Port 4242 may
+not be reachable from the Windows LAN — enable networkingMode=mirrored in ~/.wslconfig.
+```
+
+---
+
+### 43-B. Thread QoS and Core Affinity
+
+`platform_scheduler::bind_current_thread(class: QosClass)` binds the calling thread to the appropriate processor class.
+
+| `QosClass` | macOS | Linux | Windows |
+|---|---|---|---|
+| `UserInteractive` | `QOS_CLASS_USER_INTERACTIVE` (P-cores) | P-cores via `core_affinity` + `nice -10` | `THREAD_PRIORITY_HIGHEST` |
+| `UserInitiated` | `QOS_CLASS_USER_INITIATED` | P-cores + `nice -5` | `THREAD_PRIORITY_ABOVE_NORMAL` |
+| `Default` | `QOS_CLASS_DEFAULT` | any | `THREAD_PRIORITY_NORMAL` |
+| `Utility` | `QOS_CLASS_UTILITY` | any + `nice 5` | `THREAD_PRIORITY_BELOW_NORMAL` |
+| `Background` | `QOS_CLASS_BACKGROUND` (E-cores) | E-cores + `nice 19` | `THREAD_PRIORITY_IDLE` |
+
+**Usage conventions:**
+- LLM inference thread, active SPARQL decode loop → `bind_inference_thread()` → `UserInteractive`.
+- WAL flush, Merkle DAG root, `ambient_orchestration.rs` → `bind_background_thread()` → `Background`.
+- macOS implementation uses `pthread_set_qos_class_self_np(qos_class, 0)` — the kernel scheduler then automatically directs the thread to P-cores or E-cores on Apple Silicon (M1/M2/M3/M4).
+- Linux P/E-core heuristic: lower-numbered cores are treated as P-cores; upper half as E-cores.
+
+---
+
+### 43-C. Network Filter
+
+`open_network_filter() → Box<dyn NetworkFilter>` selects the best enforcement mechanism.
+
+| Platform | Implementation | Notes |
+|---|---|---|
+| Linux (non-WSL2) | `EbpfLinuxFilter` | `bpf(BPF_PROG_LOAD)` cBPF socket filter; full enforcement |
+| Linux (WSL2) | `EbpfLinuxFilter` | Scoped to VM vNIC — host OS traffic invisible |
+| Windows x64 | `WfpFilter` | `FwpmEngineOpen0` / `FwpmFilterAdd0` (WFP Base Filtering Engine) |
+| macOS | `MacNetworkExtFilter` | XPC bridge to `NEFilterDataProvider` — requires Apple entitlement |
+| Android | `AndroidVpnFilter` | VpnService TUN fd; user-space packet interception |
+| iOS / other | `NoopFilter` | No kernel enforcement available |
+
+**Rule format:** `"proto:ip_prefix:port"` — e.g. `"tcp:10.0.0.0/8:4242"` or `"*:*:*"`.
+
+**Linux eBPF notes:**
+- Uses raw `bpf(2)` syscall via `libc::syscall(SYS_bpf, BPF_PROG_LOAD, ...)`.
+- Current bytecode: permissive cBPF pass-all; production deployment replaces with pre-compiled eBPF ELF (Deny/Allow maps updated via `BPF_MAP_UPDATE_ELEM`).
+- In WSL2 the eBPF filter loads and enforces correctly but only sees the Hyper-V VM vNIC — traffic on the Windows host is invisible.
+
+**Windows WFP notes:**
+- `FwpmEngineOpen0(local, RPC_C_AUTHN_DEFAULT, ...)` opens a dynamic BFE session.
+- `allow(rule)` → `FwpmFilterAdd0` with `FWP_ACTION_PERMIT`; `deny(rule)` → `FWP_ACTION_BLOCK`.
+- BFE (Base Filtering Engine service) is running by default on all modern Windows.
+- Does not use eBPF-for-Windows (future milestone); uses native WFP instead.
+
+**macOS Network Extension notes:**
+- Connects to `"com.qualiadb.netfilter"` via `xpc_connection_create_mach_service`.
+- Requires an App Extension bundle target implementing `NEFilterDataProvider` and `NEFilterControlProvider` (Swift/ObjC).
+- Requires entitlement: `com.apple.developer.network-extension.content-filter` (Apple Developer Program).
+- Without the entitlement the filter self-degrades to noop — the daemon still runs correctly.
+
+---
+
+### 43-D. Mobile Platforms
+
+| Feature | iOS | Android |
+|---|---|---|
+| Storage | `MmapApfsDriver` (shared Darwin kernel + APFS) | `MmapDriver` (ext4/F2FS mmap) |
+| Network filter | `MacNetworkExtFilter` (NEFilterDataProvider — entitlement required) | `AndroidVpnFilter` (VpnService TUN) |
+| Thread QoS | macOS QoS (`QOS_CLASS_*` via `pthread_set_qos_class_self_np`) | Linux affinity + nice |
+| LLM inference | `AgentBackend::Local` via WASM + webgpu_lora.wgsl (if GPU available) | Same |
+| ZNS/CSD | Not available (Apple ANS blocks raw NVMe) | Not available (no raw NVMe in user space) |
+| Offline mesh | BLE + acoustic mesh via `acoustic_ble_mesh.rs` | Same |
+| Port 4242 | Not needed (runs in-process or tethered to desktop daemon) | Same |

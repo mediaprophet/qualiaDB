@@ -1,0 +1,353 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Agent Discovery Protocol (ADP) Ontology</title>
+  <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove"></script>
+  <script class="remove">
+    var respecConfig = {
+      specStatus: "unofficial",
+      editors: [{
+        name: "Timothy Holborn",
+        company: "WebCivics",
+        url: "https://sailingdigital.com",
+        mailto: "timothy.holborn@gmail.com"
+      }],
+      shortName: "adp-ontology",
+      github: "WebCivics/ADP",
+      license: "w3c-software-doc",
+      wg: "Human Centric AI Community Group",
+      wgURI: "https://www.w3.org/community/humancentricai/",
+      otherLinks: [{
+        key: "Implementation",
+        data: [{
+          value: "WebCard Utility",
+          href: "https://webcivics.github.io/Webcard"
+        }]
+      }]
+    };
+  </script>
+</head>
+<body>
+  <section id="abstract">
+    <p>
+      The Agent Discovery Protocol (ADP) Ontology defines a vocabulary for
+      describing agents, their services, and related resources in a
+      decentralized web ecosystem. It leverages RDF, OWL, and SHACL to
+      enable machine-readable metadata for agent discovery, supporting
+      interoperability with WebID and Solid. The WebCard Utility is an
+      implementation of ADP, available at
+      <a href="https://webcivics.github.io/Webcard">https://webcivics.github.io/Webcard</a>.
+    </p>
+  </section>
+  <section id="sotd">
+    <p>
+      This is a Working Draft of the ADP Ontology for community review.
+      Feedback is welcome via the <a href="https://github.com/WebCivics/ADP">GitHub repository</a>.
+    </p>
+  </section>
+  <section>
+    <h2>Introduction</h2>
+    <p>
+      The Agent Discovery Protocol (ADP) facilitates the discovery of agents
+      (e.g., persons, organizations, or services) and their associated
+      resources on the web. This ontology provides a standardized vocabulary
+      to describe agents, services, metadata, and relationships, enabling
+      interoperable, decentralized applications. It builds on W3C standards
+      like RDF, OWL, WebID, and aligns with Solid for personal data
+      management. The WebCard Utility implements ADP, allowing users to
+      create and query profiles (e.g., for <a href="https://sailingdigital.com">sailingdigital.com</a>).
+    </p>
+    <section>
+      <h3>Scope</h3>
+      <p>
+        This ontology defines:
+        <ul>
+          <li>Classes for agents, services, and metadata.</li>
+          <li>Properties linking agents to resources and identities.</li>
+          <li>Constraints for data validation using SHACL.</li>
+          <li>Serializations in RDF Turtle and JSON-LD.</li>
+        </ul>
+      </p>
+    </section>
+  </section>
+  <section>
+    <h2>Terminology</h2>
+    <p>
+      This document uses the following terms:
+      <ul>
+        <li><strong>Agent</strong>: An entity (e.g., person, organization, or
+          service) identified by a URI, typically a domain or subdomain.</li>
+        <li><strong>Service</strong>: A discoverable resource (e.g., API, data
+          store) associated with an agent.</li>
+        <li><strong>Metadata</strong>: Descriptive information about an agent
+          or service (e.g., name, type).</li>
+        <li><strong>WebID</strong>: A URI identifying an agent, per the
+          WebID specification.</li>
+        <li><strong>Solid POD</strong>: A personal online data store, per the
+          Solid Protocol.</li>
+      </ul>
+    </p>
+  </section>
+  <section>
+    <h2>Ontology Definition</h2>
+    <section>
+      <h3>Namespace</h3>
+      <p>
+        The namespace for ADP is <code>https://webcivics.github.io/adp/ontdev/adp#</code>.
+        Prefixes used:
+      </p>
+      <pre>
+@prefix adp: &lt;https://webcivics.github.io/adp/ontdev/adp#&gt; .
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .
+@prefix owl: &lt;http://www.w3.org/2002/07/owl#&gt; .
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
+@prefix foaf: &lt;http://xmlns.com/foaf/0.1/&gt; .
+@prefix schema: &lt;https://schema.org/&gt; .
+@prefix sh: &lt;http://www.w3.org/ns/shacl#&gt; .
+      </pre>
+    </section>
+    <section>
+      <h3>Classes</h3>
+      <dl>
+        <dt><code>adp:Agent</code></dt>
+        <dd>An entity acting on the web, such as a person, organization, or
+          automated service. Subclass of <code>foaf:Agent</code>. Disjoint
+          with <code>adp:Service</code>.</dd>
+        <dt><code>adp:PersonAgent</code></dt>
+        <dd>An agent representing a natural person. Subclass of
+          <code>adp:Agent</code>, <code>foaf:Person</code>.</dd>
+        <dt><code>adp:OrganizationAgent</code></dt>
+        <dd>An agent representing an organization. Subclass of
+          <code>adp:Agent</code>, <code>foaf:Organization</code>.</dd>
+        <dt><code>adp:AutomatedAgent</code></dt>
+        <dd>An agent representing an automated service or bot. Subclass of
+          <code>adp:Agent</code>.</dd>
+        <dt><code>adp:EssentialService</code></dt>
+        <dd>An agent representing a humanitarian service. Subclass of
+          <code>adp:Agent</code>.</dd>
+        <dt><code>adp:ContentProvider</code></dt>
+        <dd>An agent representing a content provider (e.g., adult website).
+          Subclass of <code>adp:Agent</code>.</dd>
+        <dt><code>adp:Service</code></dt>
+        <dd>A resource provided by an agent, such as an API or data endpoint.
+          Subclass of <code>rdfs:Resource</code>.</dd>
+        <dt><code>adp:Metadata</code></dt>
+        <dd>Descriptive information about an agent or service. Subclass of
+          <code>rdfs:Resource</code>.</dd>
+        <dt><code>adp:SolidPod</code></dt>
+        <dd>A personal data store, per the Solid Protocol. Subclass of
+          <code>adp:Service</code>.</dd>
+      </dl>
+    </section>
+    <section>
+      <h3>Properties</h3>
+      <dl>
+        <dt><code>adp:hasService</code></dt>
+        <dd>Links an agent to a service it provides. Type:
+          <code>owl:ObjectProperty</code>. Domain: <code>adp:Agent</code>.
+          Range: <code>adp:Service</code>.</dd>
+        <dt><code>adp:hasMetadata</code></dt>
+        <dd>Associates metadata with an agent or service. Type:
+          <code>owl:ObjectProperty</code>. Domain:
+          <code>owl:unionOf (adp:Agent adp:Service)</code>. Range:
+          <code>adp:Metadata</code>.</dd>
+        <dt><code>adp:webid</code></dt>
+        <dd>Links an agent to its WebID URI. Type:
+          <code>owl:ObjectProperty</code>. Domain: <code>adp:Agent</code>.
+          Range: <code>foaf:Agent</code>.</dd>
+        <dt><code>adp:hasSolidPod</code></dt>
+        <dd>Links an agent to its Solid POD. Type:
+          <code>owl:ObjectProperty</code>. Domain: <code>adp:Agent</code>.
+          Range: <code>adp:SolidPod</code>.</dd>
+        <dt><code>adp:metadataType</code></dt>
+        <dd>Specifies the type of metadata (e.g., profile). Type:
+          <code>owl:DatatypeProperty</code>. Domain:
+          <code>adp:Metadata</code>. Range: <code>rdfs:Literal</code>.</dd>
+        <dt><code>adp:sparqlEndpoint</code>, <code>adp:serviceEndpoint</code>,
+          <code>adp:hasTwitterAccount</code>,
+          <code>adp:hasLinkedinAccount</code>,
+          <code>adp:hasGithubAccount</code>,
+          <code>adp:hasEcashAccount</code></dt>
+        <dd>Links an agent to specific services or accounts.</dd>
+      </dl>
+    </section>
+    <section>
+      <h3>Axioms and Constraints</h3>
+      <p>
+        The ontology includes SHACL shapes to ensure data integrity.
+      </p>
+      <pre>
+# SHACL Shape for adp:Agent
+adp:AgentShape a sh:NodeShape ;
+  sh:targetClass adp:Agent ;
+  sh:property [
+    sh:path adp:webid ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:nodeKind sh:IRI ;
+  ] ;
+  sh:property [
+    sh:path adp:hasMetadata ;
+    sh:minCount 1 ;
+  ] .
+
+# SHACL Shape for adp:Service
+adp:ServiceShape a sh:NodeShape ;
+  sh:targetClass adp:Service ;
+  sh:property [
+    sh:path adp:hasMetadata ;
+    sh:minCount 1 ;
+  ] .
+      </pre>
+    </section>
+    <section>
+      <h3>Serialization Examples</h3>
+      <p>
+        Below are examples in RDF Turtle and JSON-LD. The data for
+        <code>sailingdigital.com</code> can be queried using the WebCard
+        Utility API, e.g.,
+        <code>https://webcivics.github.io/Webcard/?domain=sailingdigital.com&amp;field=foaf:name</code>.
+      </p>
+      <section>
+        <h4>RDF Turtle</h4>
+        <pre>
+@prefix adp: &lt;https://webcivics.github.io/adp/ontdev/adp#&gt; .
+@prefix foaf: &lt;http://xmlns.com/foaf/0.1/&gt; .
+@prefix schema: &lt;https://schema.org/&gt; .
+
+&lt;https://sailingdigital.com&gt; a adp:PersonAgent ;
+  foaf:name "Timothy Holborn" ;
+  adp:webid &lt;https://ubiquitous.solidcommunity.net/profile/card#me&gt; ;
+  adp:hasTwitterAccount "SailingDigital" ;
+  adp:hasLinkedinAccount "ubiquitous" ;
+  adp:hasGithubAccount "timothy-holborn" ;
+  adp:hasMetadata [
+    a adp:Metadata ;
+    adp:metadataType "profile" ;
+    foaf:mbox &lt;mailto:timothy.holborn@gmail.com&gt;
+  ] .
+
+&lt;https://example.com/org&gt; a adp:OrganizationAgent ;
+  foaf:name "Example Corp" ;
+  adp:webid &lt;https://example.com/org#id&gt; ;
+  adp:hasService &lt;https://example.com/org/api&gt; .
+        </pre>
+      </section>
+      <section>
+        <h4>JSON-LD</h4>
+        <pre>
+{
+  "@context": {
+    "adp": "https://webcivics.github.io/adp/ontdev/adp#",
+    "foaf": "http://xmlns.com/foaf/0.1/",
+    "schema": "https://schema.org/",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#"
+  },
+  "@id": "https://sailingdigital.com",
+  "@type": "adp:PersonAgent",
+  "foaf:name": "Timothy Holborn",
+  "adp:webid": {"@id": "https://ubiquitous.solidcommunity.net/profile/card#me"},
+  "adp:hasTwitterAccount": "SailingDigital",
+  "adp:hasLinkedinAccount": "ubiquitous",
+  "adp:hasGithubAccount": "timothy-holborn",
+  "adp:hasMetadata": {
+    "@type": "adp:Metadata",
+    "adp:metadataType": "profile",
+    "foaf:mbox": "mailto:timothy.holborn@gmail.com"
+  }
+}
+        </pre>
+      </section>
+    </section>
+  </section>
+  <section>
+    <h2>Use Cases</h2>
+    <ul>
+      <li><strong>Personal Data Management</strong>: Query an agent’s domain
+        to discover their Solid POD for data access.</li>
+      <li><strong>Service Discovery</strong>: Retrieve an organization’s API
+        or SPARQL endpoints.</li>
+      <li><strong>Identity Verification</strong>: Validate an agent’s WebID
+        or Verifiable Credentials.</li>
+      <li><strong>AI Applications</strong>: Query metadata for AI agent
+        capabilities.</li>
+      <li><strong>Humanitarian Services</strong>: Identify essential services
+        for emergency access.</li>
+      <li><strong>Content Filtering</strong>: Flag adult content websites for
+        age restrictions.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Security and Privacy Considerations</h2>
+    <p>
+      Implementations MUST:
+      <ul>
+        <li>Use HTTPS for all ADP endpoints.</li>
+        <li>Support WebID-TLS or WebID-OIDC for authentication.</li>
+        <li>Enforce access controls for Solid PODs per the Solid Protocol.</li>
+        <li>Validate URIs to prevent spoofing.</li>
+        <li>Minimize PII and use selective disclosure with Verifiable
+          Credentials.</li>
+      </ul>
+    </p>
+  </section>
+  <section>
+    <h2>Conformance</h2>
+    <p>
+      Conforming implementations MUST support RDF Turtle and JSON-LD
+      serializations, adhere to SHACL constraints, and use the adp:
+      namespace.
+    </p>
+  </section>
+  <section>
+    <h2>Acknowledgements</h2>
+    <p>
+      Thanks to the W3C Semantic Web Interest Group, W3C Human Centric AI
+      Community Group, Solid Community, and WebCivics contributors.
+      Development was assisted by
+      <a href="https://x.ai/grok">xAI Grok 3</a> and
+      <a href="https://deepmind.google/technologies/gemini/">Google Gemini 2.5 Pro</a>.
+    </p>
+  </section>
+</body>
+</html>

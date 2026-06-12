@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>UN Human Rights Instruments Ontology</title>
+    <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove"></script>
+    <style>
+        /* UN-specific styling */
+        body {
+            font-family: Calibri, Arial, sans-serif;
+            color: #000;
+            background-color: #F5F6F5;
+        }
+        header {
+            background-color: #009EDB;
+            color: white;
+            padding: 1em;
+            display: flex;
+            align-items: center;
+        }
+        header img.un-logo {
+            width: 100px;
+            margin-right: 1em;
+        }
+        header h1 {
+            font-size: 1.8em;
+            margin: 0;
+        }
+        .un-metadata {
+            background-color: #E6F0FA;
+            padding: 1em;
+            margin-bottom: 1em;
+            border-left: 5px solid #009EDB;
+        }
+        h2, h3 {
+            color: #005566;
+        }
+        table.simple {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        table.simple th, table.simple td {
+            border: 1px solid #009EDB;
+            padding: 0.5em;
+            text-align: left;
+        }
+        table.simple th {
+            background-color: #E6F0FA;
+        }
+        pre {
+            background-color: #F5F6F5;
+            padding: 1em;
+            border: 1px solid #009EDB;
+            overflow-x: auto;
+        }
+        a {
+            color: #009EDB;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script class="remove">
+        var respecConfig = {
+            specStatus: "unofficial",
+            editors: [{
+                name: "Grok 3",
+                company: "xAI",
+                url: "https://x.ai"
+            }],
+            shortName: "un-human-rights-ontology",
+            subtitle: "Version 1.4",
+            publishDate: "2025-07-05",
+            github: "https://github.com/example/un-human-rights-ontology",
+            license: "document",
+            otherLinks: [{
+                key: "UN Document Metadata",
+                data: [{
+                    value: "Document Symbol",
+                    href: "A/RES/2025/UNHRi/1"
+                }, {
+                    value: "Creator",
+                    href: "Timothy Charles Holborn"
+                }, {
+                    value: "LinkedIn",
+                    href: "https://www.linkedin.com/in/ubiquitous/"
+                }, {
+                    value: "Agenda Item",
+                    href: "Promotion and protection of human rights"
+                }]
+            }],
+            localBiblio: {
+                "UDHR": {
+                    title: "Universal Declaration of Human Rights",
+                    href: "https://www.ohchr.org/en/human-rights/universal-declaration/translations/english",
+                    publisher: "United Nations"
+                },
+                "CRC": {
+                    title: "Convention on the Rights of the Child",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-rights-child",
+                    publisher: "United Nations"
+                },
+                "UDHGHR": {
+                    title: "Universal Declaration on the Human Genome and Human Rights",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-human-genome-and-human-rights",
+                    publisher: "UNESCO"
+                },
+                "ICCPR": {
+                    title: "International Covenant on Civil and Political Rights",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights",
+                    publisher: "United Nations"
+                },
+                "SLAVERY": {
+                    title: "Slavery Convention",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/slavery-convention",
+                    publisher: "United Nations"
+                },
+                "ICESCR": {
+                    title: "International Covenant on Economic, Social and Cultural Rights",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-economic-social-and-cultural-rights",
+                    publisher: "United Nations"
+                },
+                "CRPD": {
+                    title: "Convention on the Rights of Persons with Disabilities",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-rights-persons-disabilities",
+                    publisher: "United Nations"
+                },
+                "CAT": {
+                    title: "Convention against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading",
+                    publisher: "United Nations"
+                },
+                "C100": {
+                    title: "Equal Remuneration Convention, 1951 (No. 100)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/equal-remuneration-convention-1951-no-100",
+                    publisher: "International Labour Organization"
+                },
+                "UDCD": {
+                    title: "Universal Declaration on Cultural Diversity",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-cultural-diversity",
+                    publisher: "UNESCO"
+                },
+                "MILLENNIUM": {
+                    title: "United Nations Millennium Declaration",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration",
+                    publisher: "United Nations"
+                },
+                "SUPP-SLAVERY": {
+                    title: "Supplementary Convention on the Abolition of Slavery, the Slave Trade, and Institutions and Practices Similar to Slavery",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and",
+                    publisher: "United Nations"
+                },
+                "OP-ICESCR": {
+                    title: "Optional Protocol to the International Covenant on Economic, Social and Cultural Rights",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/optional-protocol-international-covenant-economic-social-and",
+                    publisher: "United Nations"
+                },
+                "CEDAW": {
+                    title: "Convention on the Elimination of All Forms of Discrimination against Women New York, 18 December 1979",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-elimination-all-forms-discrimination-against-women",
+                    publisher: "United Nations"
+                },
+                "CERD": {
+                    title: "International Convention on the Elimination of All Forms of Racial Discrimination",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-elimination-all-forms-racial",
+                    publisher: "United Nations"
+                },
+                "DSPD": {
+                    title: "Declaration on Social Progress and Development",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development",
+                    publisher: "United Nations"
+                },
+                "DEVAW": {
+                    title: "Declaration on the Elimination of Violence against Women",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-elimination-violence-against-women",
+                    publisher: "United Nations"
+                },
+                "DRPP": {
+                    title: "Declaration on the Right of Peoples to Peace",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-right-peoples-peace",
+                    publisher: "United Nations"
+                },
+                "PPMI": {
+                    title: "Principles for the Protection of Persons with Mental Illness and the Improvement of Mental Health Care",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement",
+                    publisher: "United Nations"
+                },
+                "C169": {
+                    title: "Indigenous and Tribal Peoples Convention, 1989 (No. 169)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/indigenous-and-tribal-peoples-convention-1989-no-169",
+                    publisher: "International Labour Organization"
+                },
+                "DSTP": {
+                    title: "Declaration on the Use of Scientific and Technological Progress in the Interests of Peace and for the Benefit of Mankind",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-use-scientific-and-technological-progress-interests",
+                    publisher: "United Nations"
+                },
+                "C122": {
+                    title: "Employment Policy Convention, 1964 (No. 122)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/employment-policy-convention-1964-no-122",
+                    publisher: "International Labour Organization"
+                },
+                "CPED": {
+                    title: "International Convention for the Protection of All Persons from Enforced Disappearance",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-all-persons-enforced",
+                    publisher: "United Nations"
+                },
+                "CMW": {
+                    title: "International Convention on the Protection of the Rights of All Migrant Workers and Members of Their Families",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers",
+                    publisher: "United Nations"
+                },
+                "OP-CAT": {
+                    title: "Optional Protocol to the Convention against Torture and other Cruel, Inhuman or Degrading Treatment or Punishment",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/optional-protocol-convention-against-torture-and-other-cruel",
+                    publisher: "United Nations"
+                },
+                "OP-CEDAW": {
+                    title: "Optional Protocol to the Convention on the Elimination of All Forms of Discrimination against Women",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/optional-protocol-convention-elimination-all-forms",
+                    publisher: "United Nations"
+                },
+                "OP-CRPD": {
+                    title: "Optional Protocol to the Convention on the Rights of Persons with Disabilities",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/optional-protocol-convention-rights-persons-disabilities",
+                    publisher: "United Nations"
+                },
+                "OP-CRC-CP": {
+                    title: "Optional Protocol to the Convention on the Rights of the Child on a Communications Procedure",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/optional-protocol-convention-rights-child-communications",
+                    publisher: "United Nations"
+                },
+                "OP-CRC-AC": {
+                    title: "Optional Protocol to the Convention on the Rights of the Child on the Involvement of Children in Armed Conflict",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/optional-protocol-convention-rights-child-involvement-children",
+                    publisher: "United Nations"
+                },
+                "OP-CRC-SC": {
+                    title: "Optional Protocol to the Convention on the Rights of the Child on the Sale of Children, Child Prostitution and Child Pornography",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/optional-protocol-convention-rights-child-sale-children-child",
+                    publisher: "United Nations"
+                },
+                "OP-ICCPR": {
+                    title: "Optional Protocol to the International Covenant on Civil and Political Rights",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/optional-protocol-international-covenant-civil-and-political",
+                    publisher: "United Nations"
+                },
+                "OP2-ICCPR": {
+                    title: "Second Optional Protocol to the International Covenant on Civil and Political Rights, aiming at the Abolition of the Death Penalty",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/second-optional-protocol-international-covenant-civil-and",
+                    publisher: "United Nations"
+                },
+                "C105": {
+                    title: "Abolition of Forced Labour Convention, 1957 (No. 105)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/abolition-forced-labour-convention-1957-no-105",
+                    publisher: "International Labour Organization"
+                },
+                "BPRR": {
+                    title: "Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-and-guidelines-right-remedy-and-reparation",
+                    publisher: "United Nations"
+                },
+                "BPTP": {
+                    title: "Basic Principles for the Treatment of Prisoners",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-treatment-prisoners",
+                    publisher: "United Nations"
+                },
+                "BPIJ": {
+                    title: "Basic Principles on the Independence of the Judiciary",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary",
+                    publisher: "United Nations"
+                },
+                "BPRL": {
+                    title: "Basic Principles on the Role of Lawyers",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-role-lawyers",
+                    publisher: "United Nations"
+                },
+                "BPUFF": {
+                    title: "Basic Principles on the Use of Force and Firearms by Law Enforcement Officials",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement",
+                    publisher: "United Nations"
+                },
+                "BPPD": {
+                    title: "Body of Principles for the Protection of All Persons under Any Form of Detention or Imprisonment",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/body-principles-protection-all-persons-under-any-form-detention",
+                    publisher: "United Nations"
+                },
+                "CCLEO": {
+                    title: "Code of Conduct for Law Enforcement Officials",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/code-conduct-law-enforcement-officials",
+                    publisher: "United Nations"
+                },
+                "CDE": {
+                    title: "Convention against Discrimination in Education",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-discrimination-education",
+                    publisher: "UNESCO"
+                },
+                "CSTP": {
+                    title: "Convention for the Suppression of the Traffic in Persons and of the Exploitation of the Prostitution of Others",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-suppression-traffic-persons-and-exploitation",
+                    publisher: "United Nations"
+                },
+                "CMAR": {
+                    title: "Convention on Consent to Marriage, Minimum Age for Marriage and Registration of Marriages",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and",
+                    publisher: "United Nations"
+                },
+                "CNSL": {
+                    title: "Convention on the Non-Applicability of Statutory Limitations to War Crimes and Crimes Against Humanity",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes",
+                    publisher: "United Nations"
+                },
+                "CPPG": {
+                    title: "Convention on the Prevention and Punishment of the Crime of Genocide",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-prevention-and-punishment-crime-genocide",
+                    publisher: "United Nations"
+                },
+                "CRS": {
+                    title: "Convention on the Reduction of Statelessness",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness",
+                    publisher: "United Nations"
+                },
+                "CSR": {
+                    title: "Convention relating to the Status of Refugees",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees",
+                    publisher: "United Nations"
+                },
+                "CSSP": {
+                    title: "Convention relating to the Status of Stateless Persons",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-stateless-persons",
+                    publisher: "United Nations"
+                },
+                "DBPJV": {
+                    title: "Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-basic-principles-justice-victims-crime-and-abuse",
+                    publisher: "United Nations"
+                },
+                "DCHA": {
+                    title: "Declaration of Commitment on HIV/AIDS",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids",
+                    publisher: "United Nations"
+                },
+                "DRRP": {
+                    title: "Declaration on Race and Racial Prejudice",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice",
+                    publisher: "UNESCO"
+                },
+                "DEID": {
+                    title: "Declaration on the Elimination of All Forms of Intolerance and of Discrimination Based on Religion or Belief",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-elimination-all-forms-intolerance-and-discrimination",
+                    publisher: "United Nations"
+                },
+                "DGICC": {
+                    title: "Declaration on the Granting of Independence to Colonial Countries and Peoples",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-granting-independence-colonial-countries-and-peoples",
+                    publisher: "United Nations"
+                },
+                "DHRIN": {
+                    title: "Declaration on the Human Rights of Individuals who are not nationals of the country in which they live",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-human-rights-individuals-who-are-not-nationals",
+                    publisher: "United Nations"
+                },
+                "DPT": {
+                    title: "Declaration on the Protection of All Persons from Being Subjected to Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-protection-all-persons-being-subjected-torture-and",
+                    publisher: "United Nations"
+                },
+                "DPED": {
+                    title: "Declaration on the Protection of All Persons from Enforced Disappearance",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-protection-all-persons-enforced-disappearance",
+                    publisher: "United Nations"
+                },
+                "DPWCE": {
+                    title: "Declaration on the Protection of Women and Children in Emergency and Armed Conflict",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-protection-women-and-children-emergency-and-armed",
+                    publisher: "United Nations"
+                },
+                "DRRIG": {
+                    title: "Declaration on the Right and Responsibility of Individuals, Groups and Organs of Society to Promote and Protect Universally Recognized Human Rights and Fundamental Freedoms",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-right-and-responsibility-individuals-groups-and",
+                    publisher: "United Nations"
+                },
+                "DRD": {
+                    title: "Declaration on the Right to Development",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-right-development",
+                    publisher: "United Nations"
+                },
+                "DRDP": {
+                    title: "Declaration on the Rights of Disabled Persons",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-rights-disabled-persons",
+                    publisher: "United Nations"
+                },
+                "DRMR": {
+                    title: "Declaration on the Rights of Mentally Retarded Persons",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-rights-mentally-retarded-persons",
+                    publisher: "United Nations"
+                },
+                "DRPN": {
+                    title: "Declaration on the Rights of Persons Belonging to National or Ethnic, Religious and Linguistic Minorities",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-rights-persons-belonging-national-or-ethnic",
+                    publisher: "United Nations"
+                },
+                "C111": {
+                    title: "Discrimination (Employment and Occupation) Convention, 1958 (No. 111)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/discrimination-employment-and-occupation-convention-1958-no-111",
+                    publisher: "International Labour Organization"
+                },
+                "C29": {
+                    title: "Forced Labour Convention, 1930 (No. 29)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/forced-labour-convention-1930-no-29",
+                    publisher: "International Labour Organization"
+                },
+                "C87": {
+                    title: "Freedom of Association and Protection of the Right to Organize Convention, 1948 (No. 87)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/freedom-association-and-protection-right-organize-convention",
+                    publisher: "International Labour Organization"
+                },
+                "RES1803": {
+                    title: "General Assembly resolution 1803 (XVII) of 14 December 1962, 'Permanent sovereignty over natural resources'",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent",
+                    publisher: "United Nations"
+                },
+                "GCIV": {
+                    title: "Geneva Convention relative to the Protection of Civilian Persons in Time of War",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/geneva-convention-relative-protection-civilian-persons-time-war",
+                    publisher: "United Nations"
+                },
+                "GCIII": {
+                    title: "Geneva Convention relative to the Treatment of Prisoners of War",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/geneva-convention-relative-treatment-prisoners-war",
+                    publisher: "United Nations"
+                },
+                "GACJS": {
+                    title: "Guidelines for Action on Children in the Criminal Justice System",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system",
+                    publisher: "United Nations"
+                },
+                "GRP": {
+                    title: "Guidelines on the Role of Prosecutors",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-role-prosecutors",
+                    publisher: "United Nations"
+                },
+                "ICM": {
+                    title: "International Convention against the Recruitment, Use, Financing and Training of Mercenaries",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and",
+                    publisher: "United Nations"
+                },
+                "C138": {
+                    title: "Minimum Age Convention, 1973 (No. 138)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138",
+                    publisher: "International Labour Organization"
+                },
+                "PICW": {
+                    title: "Principles of International Co-operation in the Detection, Arrest, Extradition and Punishment of Persons Guilty of War Crimes and Crimes Against Humanity",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-international-co-operation-detection-arrest",
+                    publisher: "United Nations"
+                },
+                "PME": {
+                    title: "Principles of Medical Ethics relevant to the Role of Health Personnel, particularly Physicians, in the Protection of Prisoners and Detainees against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-medical-ethics-relevant-role-health-personnel",
+                    publisher: "United Nations"
+                },
+                "PEIDT": {
+                    title: "Principles on the Effective Investigation and Documentation of Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and",
+                    publisher: "United Nations"
+                },
+                "PEIE": {
+                    title: "Principles on the Effective Prevention and Investigation of Extra-legal, Arbitrary and Summary Executions",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-prevention-and-investigation-extra-legal",
+                    publisher: "United Nations"
+                },
+                "PARIS": {
+                    title: "Principles relating to the Status of National Institutions (The Paris Principles)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-relating-status-national-institutions-paris",
+                    publisher: "United Nations"
+                },
+                "P1": {
+                    title: "Protocol Additional to the Geneva Conventions of 12 August 1949, and relating to the Protection of Victims of International Armed Conflicts (Protocol 1)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-additional-geneva-conventions-12-august-1949-and",
+                    publisher: "United Nations"
+                },
+                "P2": {
+                    title: "Protocol Additional to the Geneva Conventions of 12 August 1949, and Relating to the Protection of Victims of Non-International Armed Conflicts (Protocol II)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-additional-geneva-conventions-12-august-1949-and-0",
+                    publisher: "United Nations"
+                },
+                "PSM": {
+                    title: "Protocol against the Smuggling of Migrants by Land, Sea and Air, supplementing the United Nations Convention against Transnational Organized Crime",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-against-smuggling-migrants-land-sea-and-air",
+                    publisher: "United Nations"
+                },
+                "PSLAV": {
+                    title: "Protocol amending the Slavery Convention signed at Geneva on 25 September 1926",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-amending-slavery-convention-signed-geneva-25-september",
+                    publisher: "United Nations"
+                },
+                "PCDE": {
+                    title: "Protocol Instituting a Conciliation and Good Offices Commission to be responsible for seeking a settlement of any disputes which may arise between States Parties to the Convention against Discrimination in Education",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-instituting-conciliation-and-good-offices-commission-be",
+                    publisher: "UNESCO"
+                },
+                "PFL": {
+                    title: "Protocol of 2014 to the Forced Labour Convention, 1930",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-2014-forced-labour-convention-1930",
+                    publisher: "International Labour Organization"
+                },
+                "PRS": {
+                    title: "Protocol relating to the Status of Refugees",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees",
+                    publisher: "United Nations"
+                },
+                "PTP": {
+                    title: "Protocol to Prevent, Suppress and Punish Trafficking in Persons Especially Women and Children, supplementing the United Nations Convention against Transnational Organized Crime",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-prevent-suppress-and-punish-trafficking-persons",
+                    publisher: "United Nations"
+                },
+                "RCMAR": {
+                    title: "Recommendation on Consent to Marriage, Minimum Age for Marriage and Registration of Marriages",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/recommendation-consent-marriage-minimum-age-marriage-and",
+                    publisher: "United Nations"
+                },
+                "C98": {
+                    title: "Right to Organise and Collective Bargaining Convention, 1949 (No. 98)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/right-organise-and-collective-bargaining-convention-1949-no-98",
+                    publisher: "International Labour Organization"
+                },
+                "ICC": {
+                    title: "Rome Statute of the International Criminal Court",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court",
+                    publisher: "United Nations"
+                },
+                "SGDP": {
+                    title: "Safeguards guaranteeing protection of the rights of those facing the death penalty",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/safeguards-guaranteeing-protection-rights-those-facing-death",
+                    publisher: "United Nations"
+                },
+                "SREOP": {
+                    title: "Standard Rules on the Equalization of Opportunities for Persons with Disabilities",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities",
+                    publisher: "United Nations"
+                },
+                "ICTR": {
+                    title: "Statute of the International Criminal Tribunal for the Prosecution of Persons Responsible for Genocide and Other Serious Violations of International Humanitarian Law Committed in the Territory of Rwanda and Rwandan Citizens Responsible for Genocide and Other Such Violations Committed in the Territory of Neighbouring States, between 1 January 1994 and 31 December 1994",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/statute-international-criminal-tribunal-prosecution-persons",
+                    publisher: "United Nations"
+                },
+                "ICTY": {
+                    title: "Statute of the International Tribunal for the Prosecution of Persons Responsible for Serious Violations of International Humanitarian Law Committed in the Territory of the Former Yugoslavia since 1991 (International Tribunal for the Former Yugoslavia)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/statute-international-tribunal-prosecution-persons-responsible",
+                    publisher: "United Nations"
+                },
+                "UNGJD": {
+                    title: "United Nations Guidelines for the Prevention of Juvenile Delinquency (The Riyadh Guidelines)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-guidelines-prevention-juvenile-delinquency-riyadh",
+                    publisher: "United Nations"
+                },
+                "UNPOP": {
+                    title: "United Nations Principles for Older Persons",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons",
+                    publisher: "United Nations"
+                },
+                "UNPJDL": {
+                    title: "United Nations Rules for the Protection of Juveniles Deprived of their Liberty",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty",
+                    publisher: "United Nations"
+                },
+                "BANGKOK": {
+                    title: "United Nations Rules for the Treatment of Women Prisoners and Non-custodial Measures for Women Offenders (the Bangkok Rules)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial",
+                    publisher: "United Nations"
+                },
+                "TOKYO": {
+                    title: "United Nations Standard Minimum Rules for Non-custodial Measures (The Tokyo Rules)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-non-custodial-measures",
+                    publisher: "United Nations"
+                },
+                "BEIJING": {
+                    title: "United Nations Standard Minimum Rules for the Administration of Juvenile Justice (The Beijing Rules)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile",
+                    publisher: "United Nations"
+                },
+                "UDEHM": {
+                    title: "Universal Declaration on the Eradication of Hunger and Malnutrition",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition",
+                    publisher: "United Nations"
+                },
+                "VDPA": {
+                    title: "Vienna Declaration and Programme of Action",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action",
+                    publisher: "United Nations"
+                },
+                "C182": {
+                    title: "Worst Forms of Child Labour Convention, 1999 (No. 182)",
+                    href: "https://www.ohchr.org/en/instruments-mechanisms/instruments/worst-forms-child-labour-convention-1999-no-182",
+                    publisher: "International Labour Organization"
+                },
+                "OWL2": {
+                    title: "OWL 2 Web Ontology Language",
+                    href: "https://www.w3.org/TR/owl2-overview/",
+                    publisher: "W3C"
+                },
+                "RDF": {
+                    title: "RDF 1.1 Concepts and Abstract Syntax",
+                    href: "https://www.w3.org/TR/rdf11-concepts/",
+                    publisher: "W3C"
+                }
+            }
+        };
+    </script>
+</head>
+<body>
+    <header>
+        <img src="https://www.un.org/sites/un2.un.org/files/un_logo.png" alt="United Nations Logo" class="un-logo">
+        <h1>UN Human Rights Instruments Ontology</h1>
+    </header>
+    <div class="un-metadata">
+        <p><strong>Document Status:</strong> Unofficial Draft</p>
+        <p><strong>Creator:</strong> Timothy Charles Holborn</p>
+        <p><strong>Contact:</strong> <mailto:>tim@webcivics.org</mailto:tim></p>
+        <p><strong>LinkedIn:</strong> https://www.linkedin.com/in/ubiquitous/</p>
+        <p><strong>Publication Date:</strong> 2025-07-05</p>
+        <p><strong>Related Work:</strong> https://github.com/webcivics/ontologies</p>
+    </div>
+    <section id="preamble">
+        <h2>Preamble</h2>
+        <p>
+            Recognizing the importance of structured, machine-readable representations of UN Human Rights Instruments,
+            this ontology provides a linked-data framework for modeling provisions, rights, violations, and protection
+            mechanisms across 67 instruments listed by the UN OHCHR. It aims to facilitate interoperability, semantic
+            querying, and integration with UN data ecosystems.
+        </p>
+    </section>
+    <section id="operative-part">
+        <h2>Operative Part</h2>
+        <section id="abstract">
+            <h3>Abstract</h3>
+            <p>
+                This document specifies an upper-level ontology for UN Human Rights Instruments (UNHRi), encompassing
+                67 instruments, including treaties, conventions, declarations, and protocols. It provides a structured,
+                machine-readable framework for modeling provisions, rights, violations, and protection mechanisms, with
+                specific instrument provisions represented as literals. The ontology is extensible and supports semantic
+                web applications such as reasoning and querying.
+            </p>
+        </section>
+        <section id="sotd">
+            <h3>Status of This Document</h3>
+            <p>
+                This is an unofficial ontology specification for UN Human Rights Instruments, created for demonstration
+                purposes. It is not endorsed by the United Nations, UNESCO, or the International Labour Organization.
+            </p>
+        </section>
+        <section id="introduction">
+            <h3>Introduction</h3>
+            <p>
+                The UN Human Rights Instruments ontology (UNHRi) provides a generalized framework for modeling
+                human rights documents, including the Universal Declaration of Human Rights (UDHR), Convention on
+                the Rights of the Child (CRC), International Covenant on Civil and Political Rights (ICCPR), and
+                64 other instruments listed by the UN OHCHR. It defines classes for instruments, provisions, rights,
+                violations, and protection mechanisms, enabling interoperability and extensibility for semantic
+                web applications.
+            </p>
+            <section id="namespace">
+                <h4>Namespace</h4>
+                <p>
+                    The namespace for this ontology is <code>http://metadata.un.org/unhr#</code>. Prefixes used include:
+                </p>
+                <ul>
+                    <li><code>unhr:</code> <code>http://metadata.un.org/unhr#</code></li>
+                    <li><code>rdf:</code> <code>http://www.w3.org/1999/02/22-rdf-syntax-ns#</code></li>
+                    <li><code>rdfs:</code> <code>http://www.w3.org/2000/01/rdf-schema#</code></li>
+                    <li><code>owl:</code> <code>http://www.w3.org/2002/07/owl#</code></li>
+                    <li><code>xsd:</code> <code>http://www.w3.org/2001/XMLSchema#</code></li>
+                </ul>
+            </section>
+        </section>
+        <section id="ontology-structure">
+            <h3>Ontology Structure</h3>
+            <section id="classes">
+                <h4>Classes</h4>
+                <p>The ontology defines the following classes:</p>
+                <table class="simple">
+                    <thead>
+                        <tr>
+                            <th>Class</th>
+                            <th>Description</th>
+                            <th>URI</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>HumanRightsInstrument</code></td>
+                            <td>A UN human rights document (e.g., UDHR, CRC, ICCPR).</td>
+                            <td><code>unhr:HumanRightsInstrument</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>Provision</code></td>
+                            <td>An article or clause within an instrument.</td>
+                            <td><code>unhr:Article</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>Right</code></td>
+                            <td>A human right defined by an instrument.</td>
+                            <td><code>unhr:HumanRights</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>Violation</code></td>
+                            <td>An act or omission contravening a right.</td>
+                            <td><code>unhr:ActOmission</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>ProtectionMechanism</code></td>
+                            <td>A mechanism to promote or protect rights.</td>
+                            <td><code>unhr:HumanRightsProtectionMechanism</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>Person</code></td>
+                            <td>An individual entitled to rights.</td>
+                            <td><code>unhr:Person</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>Group</code></td>
+                            <td>A collective entitled to rights.</td>
+                            <td><code>unhr:Group</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>Child</code></td>
+                            <td>A person under a certain age, with specific rights.</td>
+                            <td><code>unhr:Child</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>Discrimination</code></td>
+                            <td>A violation involving unfair treatment based on specific grounds.</td>
+                            <td><code>unhr:Discrimination</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>ChildEducation</code></td>
+                            <td>Right to education for children.</td>
+                            <td><code>unhr:ChildEducation</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>Torture</code></td>
+                            <td>A violation involving torture or cruel treatment.</td>
+                            <td><code>unhr:Torture</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>Genocide</code></td>
+                            <td>A violation involving acts to destroy a group.</td>
+                            <td><code>unhr:Genocide</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+            <section id="properties">
+                <h4>Properties</h4>
+                <p>The ontology includes the following properties:</p>
+                <table class="simple">
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Type</th>
+                            <th>Domain</th>
+                            <th>Range</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>unhr:hasInstrumentName</code></td>
+                            <td>Data Property</td>
+                            <td><code>unhr:HumanRightsInstrument</code></td>
+                            <td><code>xsd:string</code></td>
+                            <td>Specifies the name of the instrument (e.g., "UDHR").</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:hasProvision</code></td>
+                            <td>Object Property</td>
+                            <td><code>unhr:HumanRightsInstrument</code></td>
+                            <td><code>unhr:Article</code></td>
+                            <td>Links an instrument to its provisions.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:hasArticleNumber</code></td>
+                            <td>Data Property</td>
+                            <td><code>unhr:Article</code></td>
+                            <td><code>xsd:integer</code></td>
+                            <td>Specifies the article or clause number.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:hasContent</code></td>
+                            <td>Data Property</td>
+                            <td><code>unhr:Article</code></td>
+                            <td><code>xsd:string</code></td>
+                            <td>Contains the textual content of a provision.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:definesRight</code></td>
+                            <td>Object Property</td>
+                            <td><code>unhr:Article</code></td>
+                            <td><code>unhr:HumanRights</code></td>
+                            <td>Links a provision to the right it defines.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:appliesTo</code></td>
+                            <td>Object Property</td>
+                            <td><code>unhr:HumanRights</code></td>
+                            <td><code>unhr:Person</code> or <code>unhr:Group</code> or <code>unhr:Child</code></td>
+                            <td>Links a right to its entitled entities.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:addressesViolation</code></td>
+                            <td>Object Property</td>
+                            <td><code>unhr:Article</code></td>
+                            <td><code>unhr:ActOmission</code></td>
+                            <td>Links a provision to a violation it addresses.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:hasProtectionMechanism</code></td>
+                            <td>Object Property</td>
+                            <td><code>unhr:Article</code> or <code>unhr:ActOmission</code></td>
+                            <td><code>unhr:HumanRightsProtectionMechanism</code></td>
+                            <td>Links a provision or violation to a protection mechanism.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+            <section id="instances">
+                <h4>Instances</h4>
+                <p>Examples of instances from various instruments:</p>
+                <table class="simple">
+                    <thead>
+                        <tr>
+                            <th>Instance</th>
+                            <th>Class</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>unhr:UDHR</code></td>
+                            <td><code>unhr:HumanRightsInstrument</code></td>
+                            <td>Universal Declaration of Human Rights.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:CRC</code></td>
+                            <td><code>unhr:HumanRightsInstrument</code></td>
+                            <td>Convention on the Rights of the Child.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:ICCPR</code></td>
+                            <td><code>unhr:HumanRightsInstrument</code></td>
+                            <td>International Covenant on Civil and Political Rights.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:CAT</code></td>
+                            <td><code>unhr:HumanRightsInstrument</code></td>
+                            <td>Convention against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:CPPG</code></td>
+                            <td><code>unhr:HumanRightsInstrument</code></td>
+                            <td>Convention on the Prevention and Punishment of the Crime of Genocide.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:VDPA</code></td>
+                            <td><code>unhr:HumanRightsInstrument</code></td>
+                            <td>Vienna Declaration and Programme of Action.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:UDHR_Article1</code></td>
+                            <td><code>unhr:Article</code></td>
+                            <td>UDHR Article 1: All human beings are born free and equal...</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:CRC_Article28</code></td>
+                            <td><code>unhr:Article</code></td>
+                            <td>CRC Article 28: Right to education for children.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:ICCPR_Article14</code></td>
+                            <td><code>unhr:Article</code></td>
+                            <td>ICCPR Article 14: Right to a fair trial.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:CAT_Article4</code></td>
+                            <td><code>unhr:Article</code></td>
+                            <td>CAT Article 4: Criminalization of torture.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:CPPG_Article2</code></td>
+                            <td><code>unhr:Article</code></td>
+                            <td>CPPG Article 2: Definition of genocide.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:VDPA_SectionI_1</code></td>
+                            <td><code>unhr:Article</code></td>
+                            <td>VDPA Section I, Paragraph 1: Reaffirmation of human rights commitments.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:Equality</code></td>
+                            <td><code>unhr:HumanRights</code></td>
+                            <td>Right to equality before the law.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:ChildEducation</code></td>
+                            <td><code>unhr:HumanRights</code></td>
+                            <td>Right to education for children.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:PublicTrial</code></td>
+                            <td><code>unhr:HumanRights</code></td>
+                            <td>Right to a fair and public trial.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:HumanRightsPromotion</code></td>
+                            <td><code>unhr:HumanRights</code></td>
+                            <td>Right to promote human rights.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:Discrimination</code></td>
+                            <td><code>unhr:ActOmission</code></td>
+                            <td>Violation involving unfair treatment.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:Torture</code></td>
+                            <td><code>unhr:ActOmission</code></td>
+                            <td>Violation involving torture or cruel treatment.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:Genocide</code></td>
+                            <td><code>unhr:ActOmission</code></td>
+                            <td>Violation involving acts to destroy a group.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:Slavery</code></td>
+                            <td><code>unhr:ActOmission</code></td>
+                            <td>Violation involving slavery or slave trade.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:DiscriminationProsecution</code></td>
+                            <td><code>unhr:HumanRightsProtectionMechanism</code></td>
+                            <td>Mechanism for prosecuting discrimination violations.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:TortureProsecution</code></td>
+                            <td><code>unhr:HumanRightsProtectionMechanism</code></td>
+                            <td>Mechanism for prosecuting torture violations.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:GenocideProsecution</code></td>
+                            <td><code>unhr:HumanRightsProtectionMechanism</code></td>
+                            <td>Mechanism for prosecuting genocide violations.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:SlaveryProsecution</code></td>
+                            <td><code>unhr:HumanRightsProtectionMechanism</code></td>
+                            <td>Mechanism for prosecuting slavery violations.</td>
+                        </tr>
+                        <tr>
+                            <td><code>unhr:HumanRightsProtectionMechanismInternationalCooperation</code></td>
+                            <td><code>unhr:HumanRightsProtectionMechanism</code></td>
+                            <td>Mechanism for international cooperation in human rights protection.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </section>
+        <section id="serialization">
+            <h3>Ontology Serialization</h3>
+            <p>An example of the ontology in Turtle format, covering multiple instruments:</p>
+            <pre>
+@prefix unhr: <http://metadata.un.org/unhr#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+unhr:HumanRightsInstrument a owl:Class ;
+    rdfs:label "Human Rights Instrument" ;
+    rdfs:comment "A UN human rights document, e.g., UDHR, CRC, ICCPR." .
+
+unhr:Article a owl:Class ;
+    rdfs:label "Provision" ;
+    rdfs:comment "An article or clause within a human rights instrument." .
+
+unhr:HumanRights a owl:Class ;
+    rdfs:label "Human Right" ;
+    rdfs:comment "A right defined by a human rights instrument." .
+
+unhr:ActOmission a owl:Class ;
+    rdfs:label "Violation" ;
+    rdfs:comment "An act or omission contravening a human right." .
+
+unhr:HumanRightsProtectionMechanism a owl:Class ;
+    rdfs:label "Protection Mechanism" ;
+    rdfs:comment "A mechanism to promote or protect human rights." .
+
+unhr:Child a owl:Class ;
+    rdfs:label "Child" ;
+    rdfs:comment "A person under a certain age, entitled to specific rights." .
+
+unhr:hasInstrumentName a owl:DatatypeProperty ;
+    rdfs:domain unhr:HumanRightsInstrument ;
+    rdfs:range xsd:string ;
+    rdfs:label "has instrument name" .
+
+unhr:hasProvision a owl:ObjectProperty ;
+    rdfs:domain unhr:HumanRightsInstrument ;
+    rdfs:range unhr:Article ;
+    rdfs:label "has provision" .
+
+unhr:hasArticleNumber a owl:DatatypeProperty ;
+    rdfs:domain unhr:Article ;
+    rdfs:range xsd:integer ;
+    rdfs:label "has article number" .
+
+unhr:hasContent a owl:DatatypeProperty ;
+    rdfs:domain unhr:Article ;
+    rdfs:range xsd:string ;
+    rdfs:label "has content" .
+
+unhr:definesRight a owl:ObjectProperty ;
+    rdfs:domain unhr:Article ;
+    rdfs:range unhr:HumanRights ;
+    rdfs:label "defines right" .
+
+unhr:appliesTo a owl:ObjectProperty ;
+    rdfs:domain unhr:HumanRights ;
+    rdfs:range [ a owl:Class ; owl:unionOf (unhr:Person unhr:Group unhr:Child) ] ;
+    rdfs:label "applies to" .
+
+unhr:addressesViolation a owl:ObjectProperty ;
+    rdfs:domain unhr:Article ;
+    rdfs:range unhr:ActOmission ;
+    rdfs:label "addresses violation" .
+
+unhr:hasProtectionMechanism a owl:ObjectProperty ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (unhr:Article unhr:ActOmission) ] ;
+    rdfs:range unhr:HumanRightsProtectionMechanism ;
+    rdfs:label "has protection mechanism" .
+
+unhr:UDHR a unhr:HumanRightsInstrument ;
+    unhr:hasInstrumentName "Universal Declaration of Human Rights" .
+
+unhr:CRC a unhr:HumanRightsInstrument ;
+    unhr:hasInstrumentName "Convention on the Rights of the Child" .
+
+unhr:ICCPR a unhr:HumanRightsInstrument ;
+    unhr:hasInstrumentName "International Covenant on Civil and Political Rights" .
+
+unhr:CAT a unhr:HumanRightsInstrument ;
+    unhr:hasInstrumentName "Convention against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment" .
+
+unhr:CPPG a unhr:HumanRightsInstrument ;
+    unhr:hasInstrumentName "Convention on the Prevention and Punishment of the Crime of Genocide" .
+
+unhr:VDPA a unhr:HumanRightsInstrument ;
+    unhr:hasInstrumentName "Vienna Declaration and Programme of Action" .
+
+unhr:UDHR_Article1 a unhr:Article ;
+    unhr:hasArticleNumber 1 ;
+    unhr:hasContent "All human beings are born free and equal in dignity and rights..." ;
+    unhr:definesRight unhr:Equality ;
+    unhr:addressesViolation unhr:Discrimination .
+
+unhr:CRC_Article28 a unhr:Article ;
+    unhr:hasArticleNumber 28 ;
+    unhr:hasContent "States Parties recognize the right of the child to education..." ;
+    unhr:definesRight unhr:ChildEducation ;
+    unhr:addressesViolation unhr:ChildEducationFreeFromDiscrimination .
+
+unhr:ICCPR_Article14 a unhr:Article ;
+    unhr:hasArticleNumber 14 ;
+    unhr:hasContent "All persons shall be equal before the courts and tribunals..." ;
+    unhr:definesRight unhr:PublicTrial ;
+    unhr:addressesViolation unhr:DueProcess .
+
+unhr:CAT_Article4 a unhr:Article ;
+    unhr:hasArticleNumber 4 ;
+    unhr:hasContent "Each State Party shall ensure that all acts of torture are offences under its criminal law..." ;
+    unhr:addressesViolation unhr:Torture ;
+    unhr:hasProtectionMechanism unhr:TortureProsecution .
+
+unhr:CPPG_Article2 a unhr:Article ;
+    unhr:hasArticleNumber 2 ;
+    unhr:hasContent "Genocide means any of the following acts committed with intent to destroy, in whole or in part, a national, ethnical, racial or religious group..." ;
+    unhr:addressesViolation unhr:Genocide ;
+    unhr:hasProtectionMechanism unhr:GenocideProsecution .
+
+unhr:VDPA_SectionI_1 a unhr:Article ;
+    unhr:hasArticleNumber 1 ;
+    unhr:hasContent "The World Conference on Human Rights reaffirms the solemn commitment of all States to fulfil their obligations to promote universal respect for, and observance and protection of, all human rights..." ;
+    unhr:definesRight unhr:HumanRightsPromotion ;
+    unhr:hasProtectionMechanism unhr:HumanRightsProtectionMechanismInternationalCooperation .
+
+unhr:Equality a unhr:HumanRights ;
+    rdfs:label "Equality" ;
+    unhr:appliesTo unhr:Person .
+
+unhr:ChildEducation a unhr:HumanRights ;
+    rdfs:label "Child Education" ;
+    unhr:appliesTo unhr:Child .
+
+unhr:PublicTrial a unhr:HumanRights ;
+    rdfs:label "Public Trial" ;
+    unhr:appliesTo unhr:Person .
+
+unhr:HumanRightsPromotion a unhr:HumanRights ;
+    rdfs:label "Human Rights Promotion" ;
+    unhr:appliesTo [ a owl:Class ; owl:unionOf (unhr:Person unhr:Group) ] .
+
+unhr:Discrimination a unhr:ActOmission ;
+    rdfs:label "Discrimination" ;
+    unhr:hasProtectionMechanism unhr:DiscriminationProsecution .
+
+unhr:Torture a unhr:ActOmission ;
+    rdfs:label "Torture" ;
+    unhr:hasProtectionMechanism unhr:TortureProsecution .
+
+unhr:Genocide a unhr:ActOmission ;
+    rdfs:label "Genocide" ;
+    unhr:hasProtectionMechanism unhr:GenocideProsecution .
+
+unhr:Slavery a unhr:ActOmission ;
+    rdfs:label "Slavery" ;
+    unhr:hasProtectionMechanism unhr:SlaveryProsecution .
+
+unhr:DiscriminationProsecution a unhr:HumanRightsProtectionMechanism ;
+    rdfs:label "Discrimination Prosecution" .
+
+unhr:TortureProsecution a unhr:HumanRightsProtectionMechanism ;
+    rdfs:label "Torture Prosecution" .
+
+unhr:GenocideProsecution a unhr:HumanRightsProtectionMechanism ;
+    rdfs:label "Genocide Prosecution" .
+
+unhr:SlaveryProsecution a unhr:HumanRightsProtectionMechanism ;
+    rdfs:label "Slavery Prosecution" .
+
+unhr:HumanRightsProtectionMechanismInternationalCooperation a unhr:HumanRightsProtectionMechanism ;
+    rdfs:label "International Cooperation for Human Rights Protection" .
+            </pre>
+        </section>
+        <section id="constraints">
+            <h3>Constraints and Axioms</h3>
+            <p>The ontology enforces the following constraints:</p>
+            <ul>
+                <li>Each <code>unhr:Article</code> must have exactly one <code>unhr:hasArticleNumber</code>.</li>
+                <li><code>unhr:Person</code>, <code>unhr:Group</code>, and <code>unhr:Child</code> are disjoint classes.</li>
+                <li>Each <code>unhr:HumanRightsInstrument</code> must have at least one <code>unhr:hasProvision</code>.</li>
+            </ul>
+        </section>
+        <section id="linked-data-usage">
+            <h3>Linked-Data Usage</h3>
+            <p>SPARQL query to retrieve provisions addressing specific violations across all instruments:</p>
+            <pre>
+PREFIX unhr: <http://metadata.un.org/unhr#>
+SELECT ?instrument ?provision ?content ?violation
+WHERE {
+    ?instrument a unhr:HumanRightsInstrument ;
+                unhr:hasProvision ?provision .
+    ?provision unhr:hasContent ?content ;
+               unhr:addressesViolation ?violation .
+    ?violation a unhr:ActOmission .
+}
+            </pre>
+            <p>SPARQL query to find rights and protection mechanisms for children across instruments:</p>
+            <pre>
+PREFIX unhr: <http://metadata.un.org/unhr#>
+SELECT ?right ?mechanism
+WHERE {
+    ?right a unhr:HumanRights ;
+           unhr:appliesTo unhr:Child ;
+           unhr:hasProtectionMechanism ?mechanism .
+}
+            </pre>
+        </section>
+        <section id="extensibility">
+            <h3>Extending the Ontology</h3>
+            <p>
+                To model a specific instrument, create instances of <code>unhr:HumanRightsInstrument</code>
+                and <code>unhr:Article</code>, and link them to rights, violations, or mechanisms. For example,
+                to add an article from the Vienna Declaration and Programme of Action:
+            </p>
+            <pre>
+unhr:VDPA a unhr:HumanRightsInstrument ;
+    unhr:hasInstrumentName "Vienna Declaration and Programme of Action" .
+
+unhr:VDPA_SectionI_1 a unhr:Article ;
+    unhr:hasArticleNumber 1 ;
+    unhr:hasContent "The World Conference on Human Rights reaffirms the solemn commitment of all States to fulfil their obligations to promote universal respect for, and observance and protection of, all human rights..." ;
+    unhr:definesRight unhr:HumanRightsPromotion ;
+    unhr:hasProtectionMechanism unhr:HumanRightsProtectionMechanismInternationalCooperation .
+            </pre>
+        </section>
+    </section>
+<section id="references">
+    <h2>References</h2>
+    <p>Normative references:</p>
+    <ul>
+        <li><a data-cite="UDHR">Universal Declaration of Human Rights</a></li>
+        <li><a data-cite="CRC">Convention on the Rights of the Child</a></li>
+        <li><a data-cite="UDHGHR">Universal Declaration on the Human Genome and Human Rights</a></li>
+        <li><a data-cite="ICCPR">International Covenant on Civil and Political Rights</a></li>
+        <li><a data-cite="SLAVERY">Slavery Convention</a></li>
+        <li><a data-cite="ICESCR">International Covenant on Economic, Social and Cultural Rights</a></li>
+        <li><a data-cite="CRPD">Convention on the Rights of Persons with Disabilities</a></li>
+        <li><a data-cite="CAT">Convention against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment</a></li>
+        <li><a data-cite="C100">Equal Remuneration Convention, 1951 (No. 100)</a></li>
+        <li><a data-cite="UDCD">Universal Declaration on Cultural Diversity</a></li>
+        <li><a data-cite="MILLENNIUM">United Nations Millennium Declaration</a></li>
+        <li><a data-cite="SUPP-SLAVERY">Supplementary Convention on the Abolition of Slavery, the Slave Trade, and Institutions and Practices Similar to Slavery</a></li>
+        <li><a data-cite="OP-ICESCR">Optional Protocol to the International Covenant on Economic, Social and Cultural Rights</a></li>
+        <li><a data-cite="CEDAW">Convention on the Elimination of All Forms of Discrimination against Women New York, 18 December 1979</a></li>
+        <li><a data-cite="CERD">International Convention on the Elimination of All Forms of Racial Discrimination</a></li>
+        <li><a data-cite="DSPD">Declaration on Social Progress and Development</a></li>
+        <li><a data-cite="DEVAW">Declaration on the Elimination of Violence against Women</a></li>
+        <li><a data-cite="DRPP">Declaration on the Right of Peoples to Peace</a></li>
+        <li><a data-cite="PPMI">Principles for the Protection of Persons with Mental Illness and the Improvement of Mental Health Care</a></li>
+        <li><a data-cite="C169">Indigenous and Tribal Peoples Convention, 1989 (No. 169)</a></li>
+        <li><a data-cite="DSTP">Declaration on the Use of Scientific and Technological Progress in the Interests of Peace and for the Benefit of Mankind</a></li>
+        <li><a data-cite="C122">Employment Policy Convention, 1964 (No. 122)</a></li>
+        <li><a data-cite="CPED">International Convention for the Protection of All Persons from Enforced Disappearance</a></li>
+        <li><a data-cite="CMW">International Convention on the Protection of the Rights of All Migrant Workers and Members of Their Families</a></li>
+        <li><a data-cite="OP-CAT">Optional Protocol to the Convention against Torture and other Cruel, Inhuman or Degrading Treatment or Punishment</a></li>
+        <li><a data-cite="OP-CEDAW">Optional Protocol to the Convention on the Elimination of All Forms of Discrimination against Women</a></li>
+        <li><a data-cite="OP-CRPD">Optional Protocol to the Convention on the Rights of Persons with Disabilities</a></li>
+        <li><a data-cite="OP-CRC-CP">Optional Protocol to the Convention on the Rights of the Child on a Communications Procedure</a></li>
+        <li><a data-cite="OP-CRC-AC">Optional Protocol to the Convention on the Rights of the Child on the Involvement of Children in Armed Conflict</a></li>
+        <li><a data-cite="OP-CRC-SC">Optional Protocol to the Convention on the Rights of the Child on the Sale of Children, Child Prostitution and Child Pornography</a></li>
+        <li><a data-cite="OP-ICCPR">Optional Protocol to the International Covenant on Civil and Political Rights</a></li>
+        <li><a data-cite="OP2-ICCPR">Second Optional Protocol to the International Covenant on Civil and Political Rights, aiming at the Abolition of the Death Penalty</a></li>
+        <li><a data-cite="C105">Abolition of Forced Labour Convention, 1957 (No. 105)</a></li>
+        <li><a data-cite="BPRR">Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law</a></li>
+        <li><a data-cite="BPTP">Basic Principles for the Treatment of Prisoners</a></li>
+        <li><a data-cite="BPIJ">Basic Principles on the Independence of the Judiciary</a></li>
+        <li><a data-cite="BPRL">Basic Principles on the Role of Lawyers</a></li>
+        <li><a data-cite="BPUFF">Basic Principles on the Use of Force and Firearms by Law Enforcement Officials</a></li>
+        <li><a data-cite="BPPD">Body of Principles for the Protection of All Persons under Any Form of Detention or Imprisonment</a></li>
+        <li><a data-cite="CCLEO">Code of Conduct for Law Enforcement Officials</a></li>
+        <li><a data-cite="CDE">Convention against Discrimination in Education</a></li>
+        <li><a data-cite="CSTP">Convention for the Suppression of the Traffic in Persons and of the Exploitation of the Prostitution of Others</a></li>
+        <li><a data-cite="CMAR">Convention on Consent to Marriage, Minimum Age for Marriage and Registration of Marriages</a></li>
+        <li><a data-cite="CNSL">Convention on the Non-Applicability of Statutory Limitations to War Crimes and Crimes Against Humanity</a></li>
+        <li><a data-cite="CPPG">Convention on the Prevention and Punishment of the Crime of Genocide</a></li>
+        <li><a data-cite="CRS">Convention on the Reduction of Statelessness</a></li>
+        <li><a data-cite="CSR">Convention relating to the Status of Refugees</a></li>
+        <li><a data-cite="CSSP">Convention relating to the Status of Stateless Persons</a></li>
+        <li><a data-cite="DBPJV">Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power</a></li>
+        <li><a data-cite="DCHA">Declaration of Commitment on HIV/AIDS</a></li>
+        <li><a data-cite="DRRP">Declaration on Race and Racial Prejudice</a></li>
+        <li><a data-cite="DEID">Declaration on the Elimination of All Forms of Intolerance and of Discrimination Based on Religion or Belief</a></li>
+        <li><a data-cite="DGICC">Declaration on the Granting of Independence to Colonial Countries and Peoples</a></li>
+        <li><a data-cite="DHRIN">Declaration on the Human Rights of Individuals who are not nationals of the country in which they live</a></li>
+        <li><a data-cite="DPT">Declaration on the Protection of All Persons from Being Subjected to Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment</a></li>
+        <li><a data-cite="DPED">Declaration on the Protection of All Persons from Enforced Disappearance</a></li>
+        <li><a data-cite="DPWCE">Declaration on the Protection of Women and Children in Emergency and Armed Conflict</a></li>
+        <li><a data-cite="DRRIG">Declaration on the Right and Responsibility of Individuals, Groups and Organs of Society to Promote and Protect Universally Recognized Human Rights and Fundamental Freedoms</a></li>
+        <li><a data-cite="DRD">Declaration on the Right to Development</a></li>
+        <li><a data-cite="DRDP">Declaration on the Rights of Disabled Persons</a></li>
+        <li><a data-cite="DRMR">Declaration on the Rights of Mentally Retarded Persons</a></li>
+        <li><a data-cite="DRPN">Declaration on the Rights of Persons Belonging to National or Ethnic, Religious and Linguistic Minorities</a></li>
+        <li><a data-cite="C111">Discrimination (Employment and Occupation) Convention, 1958 (No. 111)</a></li>
+        <li><a data-cite="C29">Forced Labour Convention, 1930 (No. 29)</a></li>
+        <li><a data-cite="C87">Freedom of Association and Protection of the Right to Organize Convention, 1948 (No. 87)</a></li>
+        <li><a data-cite="RES1803">General Assembly resolution 1803 (XVII) of 14 December 1962, 'Permanent sovereignty over natural resources'</a></li>
+        <li><a data-cite="GCIV">Geneva Convention relative to the Protection of Civilian Persons in Time of War</a></li>
+        <li><a data-cite="GCIII">Geneva Convention relative to the Treatment of Prisoners of War</a></li>
+        <li><a data-cite="GACJS">Guidelines for Action on Children in the Criminal Justice System</a></li>
+        <li><a data-cite="GRP">Guidelines on the Role of Prosecutors</a></li>
+        <li><a data-cite="ICM">International Convention against the Recruitment, Use, Financing and Training of Mercenaries</a></li>
+        <li><a data-cite="C138">Minimum Age Convention, 1973 (No. 138)</a></li>
+        <li><a data-cite="PICW">Principles of International Co-operation in the Detection, Arrest, Extradition and Punishment of Persons Guilty of War Crimes and Crimes Against Humanity</a></li>
+        <li><a data-cite="PME">Principles of Medical Ethics relevant to the Role of Health Personnel, particularly Physicians, in the Protection of Prisoners and Detainees against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment</a></li>
+        <li><a data-cite="PEIDT">Principles on the Effective Investigation and Documentation of Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment</a></li>
+        <li><a data-cite="PEIE">Principles on the Effective Prevention and Investigation of Extra-legal, Arbitrary and Summary Executions</a></li>
+        <li><a data-cite="PARIS">Principles relating to the Status of National Institutions (The Paris Principles)</a></li>
+        <li><a data-cite="P1">Protocol Additional to the Geneva Conventions of 12 August 1949, and relating to the Protection of Victims of International Armed Conflicts (Protocol 1)</a></li>
+        <li><a data-cite="P2">Protocol Additional to the Geneva Conventions of 12 August 1949, and Relating to the Protection of Victims of Non-International Armed Conflicts (Protocol II)</a></li>
+        <li><a data-cite="PSM">Protocol against the Smuggling of Migrants by Land, Sea and Air, supplementing the United Nations Convention against Transnational Organized Crime</a></li>
+        <li><a data-cite="PSLAV">Protocol amending the Slavery Convention signed at Geneva on 25 September 1926</a></li>
+        <li><a data-cite="PCDE">Protocol Instituting a Conciliation and Good Offices Commission to be responsible for seeking a settlement of any disputes which may arise between States Parties to the Convention against Discrimination in Education</a></li>
+        <li><a data-cite="PFL">Protocol of 2014 to the Forced Labour Convention, 1930</a></li>
+        <li><a data-cite="PRS">Protocol relating to the Status of Refugees</a></li>
+        <li><a data-cite="PTP">Protocol to Prevent, Suppress and Punish Trafficking in Persons Especially Women and Children, supplementing the United Nations Convention against Transnational Organized Crime</a></li>
+        <li><a data-cite="RCMAR">Recommendation on Consent to Marriage, Minimum Age for Marriage and Registration of Marriages</a></li>
+        <li><a data-cite="C98">Right to Organise and Collective Bargaining Convention, 1949 (No. 98)</a></li>
+        <li><a data-cite="ICC">Rome Statute of the International Criminal Court</a></li>
+        <li><a data-cite="SGDP">Safeguards guaranteeing protection of the rights of those facing the death penalty</a></li>
+        <li><a data-cite="SREOP">Standard Rules on the Equalization of Opportunities for Persons with Disabilities</a></li>
+        <li><a data-cite="ICTR">Statute of the International Criminal Tribunal for the Prosecution of Persons Responsible for Genocide and Other Serious Violations of International Humanitarian Law Committed in the Territory of Rwanda and Rwandan Citizens Responsible for Genocide and Other Such Violations Committed in the Territory of Neighbouring States, between 1 January 1994 and 31 December 1994</a></li>
+        <li><a data-cite="ICTY">Statute of the International Tribunal for the Prosecution of Persons Responsible for Serious Violations of International Humanitarian Law Committed in the Territory of the Former Yugoslavia since 1991 (International Tribunal for the Former Yugoslavia)</a></li>
+        <li><a data-cite="UNGJD">United Nations Guidelines for the Prevention of Juvenile Delinquency (The Riyadh Guidelines)</a></li>
+        <li><a data-cite="UNPOP">United Nations Principles for Older Persons</a></li>
+        <li><a data-cite="UNPJDL">United Nations Rules for the Protection of Juveniles Deprived of their Liberty</a></li>
+        <li><a data-cite="BANGKOK">United Nations Rules for the Treatment of Women Prisoners and Non-custodial Measures for Women Offenders (the Bangkok Rules)</a></li>
+        <li><a data-cite="TOKYO">United Nations Standard Minimum Rules for Non-custodial Measures (The Tokyo Rules)</a></li>
+        <li><a data-cite="BEIJING">United Nations Standard Minimum Rules for the Administration of Juvenile Justice (The Beijing Rules)</a></li>
+        <li><a data-cite="UDEHM">Universal Declaration on the Eradication of Hunger and Malnutrition</a></li>
+        <li><a data-cite="VDPA">Vienna Declaration and Programme of Action</a></li>
+        <li><a data-cite="C182">Worst Forms of Child Labour Convention, 1999 (No. 182)</a></li>
+        <li><a data-cite="OWL2">OWL 2 Web Ontology Language</a></li>
+        <li><a data-cite="RDF">RDF 1.1 Concepts and Abstract Syntax</a></li>
+    </ul>
+</section>

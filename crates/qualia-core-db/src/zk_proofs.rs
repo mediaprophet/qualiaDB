@@ -399,7 +399,7 @@ impl ZkProofSystem {
             circuit_id: circuit_id.to_string(),
             proof_data: proof,
             public_inputs,
-            verification_key_id: proving_key.key_id.clone(),
+            verification_key_id: circuit_id.to_string(),
             metadata,
         };
         

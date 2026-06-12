@@ -29,6 +29,7 @@ pub struct MolecularSimulator {
     force_field_calculator: ForceFieldCalculator,
     integrator: MolecularIntegrator,
     boundary_conditions: BoundaryConditions,
+    molecule_store: HashMap<String, Molecule>,
 }
 
 /// Simulation engine
@@ -87,6 +88,7 @@ pub enum BoundaryType {
     NonPeriodic,
     SemiPeriodic,
     Ewald,
+    Boiling,
 }
 
 /// Time step control
@@ -1084,7 +1086,7 @@ pub struct PropertyModelParameters {
 }
 
 /// Reference data
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReferenceData {
     pub molecule_id: String,
     pub property_value: f64,
@@ -1092,7 +1094,7 @@ pub struct ReferenceData {
 }
 
 /// Reference conditions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReferenceConditions {
     pub temperature: f64,
     pub pressure: f64,
@@ -1163,7 +1165,7 @@ pub struct MLModelParameters {
 }
 
 /// Model performance
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelPerformance {
     pub r_squared: f64,
     pub rmse: f64,
@@ -1322,17 +1324,6 @@ pub struct TrajectoryProperties {
     pub energy_drift: f64,
 }
 
-/// Reaction pathway
-#[derive(Debug, Clone)]
-pub struct ReactionPathway {
-    pub pathway_id: String,
-    pub reactants: Vec<String>,
-    pub products: Vec<String>,
-    pub intermediates: Vec<String>,
-    pub transition_states: Vec<String>,
-    pub energy_profile: EnergyProfile,
-}
-
 /// Energy profile
 #[derive(Debug, Clone)]
 pub struct EnergyProfile {
@@ -1362,7 +1353,7 @@ impl ChemistryModelingLibrary {
     }
 
     /// Initialize the library
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         // Initialize molecular simulator
         self.molecular_simulator.initialize()?;
 
@@ -1384,6 +1375,9 @@ impl ChemistryModelingLibrary {
 
         // Validate configuration
         self.molecular_simulator.validate_config(&config)?;
+
+        // Store molecule for retrieval
+        self.molecular_simulator.store_molecule(molecule.clone());
 
         // Run simulation
         let trajectory = self.molecular_simulator.run_simulation(&config, &molecule)?;
@@ -1507,17 +1501,22 @@ impl MolecularSimulator {
             force_field_calculator: ForceFieldCalculator::new(),
             integrator: MolecularIntegrator::new(),
             boundary_conditions: BoundaryConditions::new(),
+            molecule_store: HashMap::new(),
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn store_molecule(&mut self, molecule: Molecule) {
+        self.molecule_store.insert(molecule.molecule_id.clone(), molecule);
+    }
+
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.simulation_engine.initialize()?;
         self.force_field_calculator.initialize()?;
         self.integrator.initialize()?;
         Ok(())
     }
 
-    pub fn validate_config(&self, config: &SimulationConfig) -> Result<ChemistryError> {
+    pub fn validate_config(&self, config: &SimulationConfig) -> Result<(), ChemistryError> {
         if config.time_step <= 0.0 {
             return Err(ChemistryError::ValidationError("Time step must be positive".to_string()));
         }
@@ -1565,8 +1564,7 @@ impl MolecularSimulator {
     }
 
     pub fn get_molecule(&self, molecule_id: &str) -> Option<Molecule> {
-        // For now, return None
-        None
+        self.molecule_store.get(molecule_id).cloned()
     }
 }
 
@@ -1580,7 +1578,7 @@ impl SimulationEngine {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.time_step_control.initialize()?;
         self.ensemble_manager.initialize()?;
         self.temperature_controller.initialize()?;
@@ -1613,7 +1611,7 @@ impl TimeStepControl {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -1670,7 +1668,7 @@ impl EnsembleManager {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -1716,7 +1714,7 @@ impl TemperatureController {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -1751,7 +1749,7 @@ impl ForceFieldCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.interaction_calculator.initialize()?;
         self.energy_calculator.initialize()?;
         Ok(())
@@ -1831,7 +1829,7 @@ impl InteractionCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -2015,7 +2013,7 @@ impl EnergyCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -2060,7 +2058,7 @@ impl MolecularIntegrator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.constraint_handler.initialize()?;
         Ok(())
     }
@@ -2084,7 +2082,7 @@ impl ConstraintHandler {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -2127,14 +2125,14 @@ impl QuantumCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.wavefunction_calculator.initialize()?;
         self.energy_calculator.initialize()?;
         self.property_calculator.initialize()?;
         Ok(())
     }
 
-    pub fn validate_molecule(&self, molecule: &Molecule) -> Result<ChemistryError> {
+    pub fn validate_molecule(&self, molecule: &Molecule) -> Result<(), ChemistryError> {
         if molecule.atoms.is_empty() {
             return Err(ChemistryError::ValidationError("Molecule must have at least one atom".to_string()));
         }
@@ -2158,7 +2156,7 @@ impl WavefunctionCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -2206,7 +2204,7 @@ impl QuantumEnergyCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -2251,7 +2249,7 @@ impl QuantumPropertyCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -2292,13 +2290,13 @@ impl ReactionAnalyzer {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.kinetics_calculator.initialize()?;
         self.thermodynamics_calculator.initialize()?;
         Ok(())
     }
 
-    pub fn validate_reaction(&self, reaction: &Reaction) -> Result<ChemistryError> {
+    pub fn validate_reaction(&self, reaction: &Reaction) -> Result<(), ChemistryError> {
         if reaction.reactants.is_empty() {
             return Err(ChemistryError::ValidationError("Reaction must have at least one reactant".to_string()));
         }
@@ -2404,7 +2402,7 @@ impl KineticsCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -2497,7 +2495,7 @@ impl ThermodynamicsCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.equilibrium_calculator.initialize()?;
         self.phase_calculator.initialize()?;
         Ok(())
@@ -2526,7 +2524,7 @@ impl EquilibriumCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -2569,7 +2567,7 @@ impl PhaseCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -2655,12 +2653,12 @@ impl PropertyPredictor {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.descriptor_calculator.initialize()?;
         Ok(())
     }
 
-    pub fn validate_molecule(&self, molecule: &Molecule) -> Result<ChemistryError> {
+    pub fn validate_molecule(&self, molecule: &Molecule) -> Result<(), ChemistryError> {
         if molecule.atoms.is_empty() {
             return Err(ChemistryError::ValidationError("Molecule must have at least one atom".to_string()));
         }
@@ -2668,9 +2666,11 @@ impl PropertyPredictor {
     }
 
     pub fn predict(&mut self, molecule: &Molecule, properties: &[PropertyType]) -> Result<PredictedProperties, ChemistryError> {
-        // Predict properties
-        let predicted = PredictedProperties::new();
-
+        let mut predicted = PredictedProperties::new();
+        for prop in properties {
+            let key = format!("{:?}", prop);
+            predicted.properties.insert(key, 0.0);
+        }
         Ok(predicted)
     }
 }
@@ -2725,7 +2725,7 @@ impl DescriptorCalculator {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<ChemistryError> {
+    pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
@@ -2819,7 +2819,16 @@ impl ChemistryPerformanceMonitor {
     }
 
     pub fn get_metrics(&self) -> ChemistryPerformanceMetrics {
-        self.clone()
+        ChemistryPerformanceMetrics {
+            simulation_metrics: self.simulation_metrics.clone(),
+            quantum_metrics: self.quantum_metrics.clone(),
+            reaction_metrics: self.reaction_metrics.clone(),
+            property_metrics: self.property_metrics.clone(),
+            total_simulations: self.simulation_metrics.total_simulations,
+            average_computation_time: self.simulation_metrics.average_simulation_time,
+            average_accuracy: self.simulation_metrics.computational_efficiency,
+            convergence_rate: 0.0,
+        }
     }
 }
 
@@ -2986,6 +2995,56 @@ impl PredictedProperties {
     }
 }
 
+/// Reaction conditions for chemistry simulations
+#[derive(Debug, Clone)]
+pub struct ReactionConditions {
+    pub temperature: f64,
+    pub pressure: f64,
+    pub concentration: HashMap<String, f64>,
+}
+
+/// Kinetics analysis results
+#[derive(Debug, Clone)]
+pub struct KineticsResults {
+    pub rate_constant: f64,
+    pub activation_energy: f64,
+    pub reaction_order: u32,
+    pub half_life: f64,
+}
+
+/// Quantum chemistry properties
+#[derive(Debug, Clone)]
+pub struct QuantumProperties {
+    pub total_energy: f64,
+    pub homo_energy: f64,
+    pub lumo_energy: f64,
+    pub gap: f64,
+    pub dipole_moment: f64,
+    pub polarizability: f64,
+    pub mulliken_charges: Vec<f64>,
+}
+
+/// Predicted molecular properties
+#[derive(Debug, Clone)]
+pub struct PredictedProperties {
+    pub properties: HashMap<String, f64>,
+    pub confidence_intervals: HashMap<String, (f64, f64)>,
+    pub prediction_time: f64,
+}
+
+/// Chemistry library performance summary metrics
+#[derive(Debug, Clone)]
+pub struct ChemistryPerformanceMetrics {
+    pub simulation_metrics: SimulationMetrics,
+    pub quantum_metrics: QuantumMetrics,
+    pub reaction_metrics: ReactionMetrics,
+    pub property_metrics: PropertyMetrics,
+    pub total_simulations: u64,
+    pub average_computation_time: f64,
+    pub average_accuracy: f64,
+    pub convergence_rate: f64,
+}
+
 /// Chemistry error types
 #[derive(Debug, Clone)]
 pub enum ChemistryError {
@@ -3020,7 +3079,7 @@ mod tests {
 
     #[test]
     fn test_chemistry_library_creation() {
-        let library = ChemistryModelingLibrary::new();
+        let mut library = ChemistryModelingLibrary::new();
         assert!(library.initialize().is_ok());
     }
 

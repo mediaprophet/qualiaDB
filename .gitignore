@@ -73,4 +73,5 @@ private/
 local/
 legacy/
 ingest_raw.wal.tmp
-yago-tests/large-file-results/*.ttl
+yago-tests/ 
+reports/

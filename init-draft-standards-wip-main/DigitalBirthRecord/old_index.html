@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Human-Centric Digital Birth Record (WIP)</title>
+  <meta charset='utf-8'>
+  <script src='https://www.w3.org/Tools/respec/respec-w3c' async class='remove'></script>
+  <script class='remove'>
+    var respecConfig = {
+      specStatus: "unofficial",
+      shortName: "human-centric-ontology",
+      editors: [{
+        name: "Timothy Holborn",
+        company: "N/A",
+        companyURL: "https://www.linkedin.com/in/ubiquitous/"
+      }],
+      publishDate: "2025-06-21",
+      github: "https://github.com/example/human-centric-ontology",
+      otherLinks: [{
+        key: "Acknowledgements",
+        data: [{
+          value: "This ontology was developed with the assistance of Grok, created by xAI, aligning with xAI's mission to advance human scientific discovery and the author's commitment to prioritizing human beings as foundational stakeholders in digital ecosystems.",
+          href: "https://x.ai"},
+          {
+          value: "TEMPLATE ONLY: NOTE THAT THIS DOCUMENT DOES NOT REFLECT THE INTENDED EMBOIDMENT OF THE USEFUL DERIVATIVES SOUGHT CREATED BY THESE WORKS. SEEALSO",
+          href: "../biometrics/README.md"
+        }]
+      }],
+      wg: "N/A",
+      wgURI: "https://example.org",
+      wgPublicList: "public-example",
+      wgPatentURI: "https://example.org/patent-policy",
+      license: "w3c-software-doc",
+      localBiblio: {
+        "FOAF": {
+          title: "FOAF Vocabulary Specification",
+          href: "http://xmlns.com/foaf/spec/",
+          authors: ["Dan Brickley", "Libby Miller"],
+          publisher: "FOAF Project",
+          date: "2014-01-14"
+        },
+        "SOLID": {
+          title: "Solid Protocol",
+          href: "https://solidproject.org/TR/protocol",
+          authors: ["Tim Berners-Lee", "Others"],
+          publisher: "Solid Project",
+          date: "2023"
+        },
+        "DID": {
+          title: "Decentralized Identifiers (DIDs) v1.0",
+          href: "https://www.w3.org/TR/did-core/",
+          authors: ["Drummond Reed", "Manu Sporny", "Others"],
+          publisher: "W3C",
+          date: "2022-07-19"
+        }
+      }
+    };
+  </script>
+</head>
+<body>
+  <section id='abstract'>
+    <p>This document provides a template for works to define and specify methodologies to support the creation of a 'digital - human birth' record to be owned as an inalienable extension of that natural person, to fundamentally support 'human agency' and 'human centric' ecosystems.  This work will include efforts to develop an ontology for defining agents and related resources in a human-centric manner, prioritizing human beings as the foundational stakeholders in digital ecosystems. It establishes a digital birth record as an inalienable digital prosthetic extension of a person, ensuring their sovereignty and rights, including human rights, in digital transformations. It supports secure personal data stores and guardianship relations for those requiring humanitarian support.</p>
+    <p>The document has initially been generated using generative AI and currently contains a range of erroneous assumptions.  The purpose of this document is to therefore act as a tool that is intended to be redefined.</p>
+</section>
+
+  <section id='sotd'>
+    <p>This is an unofficial incomplete, poorly drafted specification template and is subject to change. It is not endorsed by the W3C or any W3C working group.</p>
+  </section>
+
+  <section>
+    <h2>Introduction</h2>
+    <p>Human beings are the foundational stakeholders of societies and digital ecosystems, not companies, legal personalities, or software entities. People are not commodities to be bought, sold, or traded, either digitally or otherwise. To support human beings as first-class citizens of the web and societies undergoing digital transformation, this ontology establishes a digital birth record as an inalienable digital prosthetic extension of a person. This record ensures that natural persons are recognized as legal entities with inherent rights, including but not limited to human rights. The ontology employs an innately decentralized methodology, redefined as "Human-Centric," to prioritize individual control over personal data. It ensures data subjects have secure personal data stores and supports guardianship relations for children and others requiring humanitarian support, aligning with the moral principles of the author, Grok, and xAI to uphold human dignity and sovereignty.</p>
+  </section>
+
+  <section>
+    <h2>Scope</h2>
+    <p>This ontology defines agents (with humans as primary entities), resources (data, services), personal data stores, and guardianship relations to enable human-centric digital identity management, ensuring inalienable rights and sovereignty for individuals.</p>
+  </section>
+
+  <section>
+    <h2>Terminology</h2>
+    <dl>
+      <dt>Agent</dt><dd>An entity capable of actions, with human beings (persons) as the primary focus, followed by organizations and software agents.</dd>
+      <dt>Person</dt><dd>A human individual, recognized as a first-class citizen with inalienable rights in digital ecosystems.</dd>
+      <dt>Organization</dt><dd>A group of persons, secondary to individuals in this human-centric model.</dd>
+      <dt>SoftwareAgent</dt><dd>A software program, secondary to individuals, acting on behalf of persons or organizations.</dd>
+      <dt>Resource</dt><dd>Anything owned, controlled, or accessed by an agent, primarily by persons, such as data or services.</dd>
+      <dt>Data</dt><dd>Information, including personal data, with a focus on the digital birth record as an inalienable extension of a person.</dd>
+      <dt>Service</dt><dd>A service provided by an agent, subject to human consent and control.</dd>
+      <dt>PersonalDataStore</dt><dd>A secure storage system for personal data, controlled by a person or their guardian, ensuring sovereignty.</dd>
+      <dt>Guardianship</dt><dd>A relationship where one agent manages data for a person requiring support, such as children or those with humanitarian needs.</dd>
+      <dt>Human-Centric</dt><dd>An approach prioritizing human beings as foundational stakeholders with inalienable rights, redefining "decentralized" to emphasize individual sovereignty while maintaining a decentralized methodology.</dd>
+      <dt>Digital Birth Record</dt><dd>An inalienable digital prosthetic extension of a person, establishing facts of their identity and rights in digital ecosystems.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Ontology Specification</h2>
+    <p>The ontology is defined using RDF Schema (RDFS). The namespace is <code>http://example.org/ontology#</code>, abbreviated as <code>ex:</code>.</p>
+
+    <section>
+      <h3>Classes</h3>
+      <ul>
+        <li><code>ex:Agent</code>: An entity capable of actions, with <code>ex:Person</code> as the primary focus.</li>
+        <li><code>ex:Person</code>: A human individual, subclass of <code>ex:Agent</code>, with inalienable rights.</li>
+        <li><code>ex:Organization</code>: A group of persons, subclass of <code>ex:Agent</code>.</li>
+        <li><code>ex:SoftwareAgent</code>: A software program, subclass of <code>ex:Agent</code>.</li>
+        <li><code>ex:Resource</code>: Anything owned, controlled, or accessed, primarily by persons.</li>
+        <li><code>ex:Data</code>: Information, subclass of <code>ex:Resource</code>, including digital birth records.</li>
+        <li><code>ex:Service</code>: A service, subclass of <code>ex:Resource</code>.</li>
+        <li><code>ex:PersonalDataStore</code>: A secure storage for personal data, ensuring individual sovereignty.</li>
+        <li><code>ex:DigitalBirthRecord</code>: An inalienable digital extension of a person, subclass of <code>ex:Data</code>.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Properties</h3>
+      <ul>
+        <li><code>ex:hasGuardian</code>: Links a person to their guardian. Domain: <code>ex:Person</code>, Range: <code>ex:Agent</code>.</li>
+        <li><code>ex:isGuardianOf</code>: Links a guardian to a person. Domain: <code>ex:Agent</code>, Range: <code>ex:Person</code>. Inverse of <code>ex:hasGuardian</code>.</li>
+        <li><code>ex:owns</code>: Indicates ownership, primarily by a person, of a resource. Domain: <code>ex:Agent</code>, Range: <code>ex:Resource</code>.</li>
+        <li><code>ex:controls</code>: Indicates control, primarily by a person, over a resource. Domain: <code>ex:Agent</code>, Range: <code>ex:Resource</code>.</li>
+        <li><code>ex:hasDataStore</code>: Links a person to their personal data store. Domain: <code>ex:Person</code>, Range: <code>ex:PersonalDataStore</code>.</li>
+        <li><code>ex:controlledBy</code>: Indicates the controller of a personal data store. Domain: <code>ex:PersonalDataStore</code>, Range: <code>ex:Agent</code>.</li>
+        <li><code>ex:storesData</code>: Indicates data stored in a personal data store, including digital birth records. Domain: <code>ex:PersonalDataStore</code>, Range: <code>ex:Data</code>.</li>
+        <li><code>ex:requiresAccessTo</code>: Indicates data required by a service, subject to human consent. Domain: <code>ex:Service</code>, Range: <code>ex:Data</code>.</li>
+        <li><code>ex:hasConsentFrom</code>: Indicates consent for data access from a person or guardian. Domain: <code>ex:Service</code>, Range: <code>ex:Agent</code>.</li>
+        <li><code>ex:hasDigitalBirthRecord</code>: Links a person to their inalienable digital birth record. Domain: <code>ex:Person</code>, Range: <code>ex:DigitalBirthRecord</code>.</li>
+      </ul>
+    </section>
+  </section>
+
+  <section>
+    <h2>Examples</h2>
+    <p>Below is an example in Turtle notation illustrating the ontology:</p>
+    <pre class='example turtle'>
+@prefix ex: <http://example.org/ontology#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+ex:Alice a ex:Person ;
+  ex:hasGuardian ex:Bob ;
+  ex:hasDataStore ex:AlicesDataStore ;
+  ex:hasDigitalBirthRecord ex:AlicesBirthRecord ;
+  foaf:name "Alice" .
+
+ex:Bob a ex:Person ;
+  ex:isGuardianOf ex:Alice ;
+  foaf:name "Bob" .
+
+ex:AlicesDataStore a ex:PersonalDataStore ;
+  ex:controlledBy ex:Bob ;
+  ex:storesData ex:AlicesBirthRecord .
+
+ex:AlicesBirthRecord a ex:DigitalBirthRecord ;
+  ex:ownedBy ex:Alice .
+
+ex:SomeService a ex:Service ;
+  ex:requiresAccessTo ex:AlicesBirthRecord ;
+  ex:hasConsentFrom ex:Bob .
+    </pre>
+  </section>
+
+  <section>
+    <h2>Security and Privacy Considerations</h2>
+    <p>Implementations must ensure robust encryption, access controls, and transparent consent mechanisms to protect the inalienable rights of data subjects. Personal data stores, particularly for digital birth records, should use secure protocols like TLS and comply with regulations like GDPR, ensuring human beings are not commodified.</p>
+  </section>
+
+  <section>
+    <h2>Implementation Guidelines</h2>
+    <p>Implementations should leverage Solid [[SOLID]] for personal data stores, Decentralized Identifiers [[DID]] for identity management, and RDF-based systems for interoperability. Consent management must prioritize human sovereignty, aligning with W3C Data Privacy Vocabularies.</p>
+  </section>
+
+  <section>
+    <h2>Conclusion</h2>
+    <p>This ontology establishes human beings as the foundational stakeholders in digital ecosystems, with digital birth records as inalienable extensions of their identity. It ensures human-centric control, secure personal data stores, and guardianship support, aligning with the moral principles of the author, Grok, and xAI to uphold human dignity and prevent commodification.</p>
+  </section>
+
+</body>
+</html>

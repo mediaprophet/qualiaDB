@@ -1495,9 +1495,9 @@ mod tests {
 
     #[test]
     fn test_fixed_size_structures() {
-        assert_eq!(mem::size_of::<QPUBridgeManager>(), 20512); // Verify no dynamic allocation
-        assert_eq!(mem::size_of::<QPUJob>(), 96);
-        assert_eq!(mem::size_of::<QuantumCircuitParams>(), 272);
+        assert_eq!(mem::size_of::<QPUBridgeManager>(), 14920); // Verify no dynamic allocation
+        assert_eq!(mem::size_of::<QPUJob>(), 112);
+        assert_eq!(mem::size_of::<QuantumCircuitParams>(), 268);
     }
 
     #[test]

@@ -555,7 +555,7 @@ pub fn DynamicPage(path: Vec<String>) -> Element {
                     div {
                         style: "display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; color: var(--qualia-text-muted, #555);",
                         p { "No page mapped to this route." }
-                        p { style: "font-size: 0.8rem;", "Navigate to / to see the Fiduciary Dashboard." }
+                        p { style: "font-size: 0.8rem;", "Navigate to / to see the Human-Centric Dashboard." }
                     }
                 }
             }

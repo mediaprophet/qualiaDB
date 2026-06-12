@@ -6396,6 +6396,7 @@ dependencies = [
  "http-body-util",
  "jni 0.21.1",
  "js-sys",
+ "libc",
  "libp2p",
  "log",
  "lz4_flex",

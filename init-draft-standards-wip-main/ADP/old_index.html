@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Agent Discovery Protocol (ADP) Ontology</title>
+  <script src="https://www.w3.org/Tools/respec/respec-w3c" class="remove" async></script>
+  <script class="remove">
+    var respecConfig = {
+      specStatus: "unofficial",
+      shortName: "adp-ontology",
+      publicationDate: "2025-06-20",
+      editors: [{
+        name: "Timothy C. Holborn",
+        company: "WebCivics",
+        url: "https://www.linkedin.com/in/ubiquitous/"
+      }],
+        authors: [{
+        name: "Timothy C. Holborn",
+        company: "WebCivics",
+        url: "https://www.linkedin.com/in/ubiquitous/"},
+        {
+        name: "Grok 3",
+        company: "xAI",
+        url: "https://x.ai"
+      }],
+      github: "https://github.com/WebCivics/ADP",
+      group: "semweb",
+      xref: ["RDF", "OWL", "SHACL", "WebID"],
+      license: "w3c-software-doc",
+      localBiblio: {
+        "WebID": {
+          title: "WebID 1.0",
+          href: "https://www.w3.org/2005/Incubator/webid/spec/",
+          publisher: "W3C"
+        },
+        "Solid": {
+          title: "Solid Protocol",
+          href: "https://solidproject.org/TR/protocol",
+          publisher: "Solid Community"
+        }
+      }
+    };
+  </script>
+</head>
+<body>
+  <section id="abstract">
+    <p>
+      The Agent Discovery Protocol (ADP) Ontology defines a vocabulary for describing agents, their services, and related resources in a decentralized web ecosystem. It leverages RDF, OWL, and SHACL to enable machine-readable metadata for agent discovery, supporting interoperability with WebID and Solid.
+    </p>
+  </section>
+
+  <section id="sotd">
+    <p>
+      This is a Working Draft of the ADP Ontology for community review. Feedback is welcome via the <a href="https://github.com/WebCivics/ADP/issues">GitHub repository</a>.
+    </p>
+  </section>
+
+  <section id="introduction">
+    <h2>Introduction</h2>
+    <p>
+      The Agent Discovery Protocol (ADP) facilitates the discovery of agents (e.g., persons, organizations, or services) and their associated resources on the web. This ontology provides a standardized vocabulary to describe agents, services, metadata, and relationships, enabling interoperable, decentralized applications. It builds on W3C standards like RDF, OWL, WebID, and aligns with Solid for personal data management.
+    </p>
+    <section id="scope">
+      <h3>Scope</h3>
+      <p>
+        This ontology defines:
+        <ul>
+          <li>Classes for agents, services, and metadata.</li>
+          <li>Properties linking agents to resources and identities.</li>
+          <li>Constraints for data validation using SHACL.</li>
+          <li>Serializations in RDF Turtle and JSON-LD.</li>
+        </ul>
+      </p>
+    </section>
+  </section>
+
+  <section id="terminology">
+    <h2>Terminology</h2>
+    <p>
+      This document uses the following terms:
+      <dl>
+        <dt>Agent</dt>
+        <dd>An entity (e.g., person, organization, or service) identified by a URI, typically a domain or subdomain.</dd>
+        <dt>Service</dt>
+        <dd>A discoverable resource (e.g., API, data store) associated with an agent.</dd>
+        <dt>Metadata</dt>
+        <dd>Descriptive information about an agent or service (e.g., name, type).</dd>
+        <dt>WebID</dt>
+        <dd>A URI identifying an agent, per the <a href="#biblio-WebID">WebID specification</a>.</dd>
+        <dt>Solid POD</dt>
+        <dd>A personal online data store, per the <a href="#biblio-Solid">Solid Protocol</a>.</dd>
+      </dl>
+    </p>
+  </section>
+
+  <section id="ontology">
+    <h2>Ontology Definition</h2>
+    <p>
+      The ADP Ontology is defined using OWL and serialized in RDF. It includes classes, properties, and constraints to describe agents and their resources.
+    </p>
+
+    <section id="namespace">
+      <h3>Namespace</h3>
+      <p>
+        The namespace for ADP is <code>http://w3id.org/adp#</code>. Prefixes used:
+        <pre class="nohighlight">
+@prefix adp: &lt;http://w3id.org/adp#&gt; .
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .
+@prefix owl: &lt;http://www.w3.org/2002/07/owl#&gt; .
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
+@prefix foaf: &lt;http://xmlns.com/foaf/0.1/&gt; .
+@prefix sh: &lt;http://www.w3.org/ns/shacl#&gt; .
+        </pre>
+      </p>
+    </section>
+
+    <section id="classes">
+      <h3>Classes</h3>
+      <dl>
+        <dt><code>adp:Agent</code></dt>
+        <dd>
+          <p>An entity acting on the web, such as a person, organization, or automated service.</p>
+          <ul>
+            <li><strong>rdfs:subClassOf</strong>: <code>foaf:Agent</code></li>
+            <li><strong>owl:disjointWith</strong>: <code>adp:Service</code></li>
+          </ul>
+        </dd>
+        <dt><code>adp:PersonAgent</code></dt>
+        <dd>
+          <p>An agent representing a natural person.</p>
+          <ul>
+            <li><strong>rdfs:subClassOf</strong>: <code>adp:Agent</code>, <code>foaf:Person</code></li>
+          </ul>
+        </dd>
+        <dt><code>adp:OrganizationAgent</code></dt>
+        <dd>
+          <p>An agent representing an organization.</p>
+          <ul>
+            <li><strong>rdfs:subClassOf</strong>: <code>adp:Agent</code>, <code>foaf:Organization</code></li>
+          </ul>
+        </dd>
+        <dt><code>adp:AutomatedAgent</code></dt>
+        <dd>
+          <p>An agent representing an automated service or bot.</p>
+          <ul>
+            <li><strong>rdfs:subClassOf</strong>: <code>adp:Agent</code></li>
+          </ul>
+        </dd>
+        <dt><code>adp:Service</code></dt>
+        <dd>
+          <p>A resource provided by an agent, such as an API or data endpoint.</p>
+          <ul>
+            <li><strong>rdfs:subClassOf</strong>: <code>rdfs:Resource</code></li>
+          </ul>
+        </dd>
+        <dt><code>adp:Metadata</code></dt>
+        <dd>
+          <p>Descriptive information about an agent or service.</p>
+          <ul>
+            <li><strong>rdfs:subClassOf</strong>: <code>rdfs:Resource</code></li>
+          </ul>
+        </dd>
+        <dt><code>adp:SolidPod</code></dt>
+        <dd>
+          <p>A personal data store associated with an agent, per the Solid Protocol.</p>
+          <ul>
+            <li><strong>rdfs:subClassOf</strong>: <code>adp:Service</code></li>
+          </ul>
+        </dd>
+      </dl>
+    </section>
+
+    <section id="properties">
+      <h3>Properties</h3>
+      <dl>
+        <dt><code>adp:hasService</code></dt>
+        <dd>
+          <p>Links an agent to a service it provides.</p>
+          <ul>
+            <li><strong>rdf:type</strong>: <code>owl:ObjectProperty</code></li>
+            <li><strong>rdfs:domain</strong>: <code>adp:Agent</code></li>
+            <li><strong>rdfs:range</strong>: <code>adp:Service</code></li>
+          </ul>
+        </dd>
+        <dt><code>adp:hasMetadata</code></dt>
+        <dd>
+          <p>Associates metadata with an agent or service.</p>
+          <ul>
+            <li><strong>rdf:type</strong>: <code>owl:ObjectProperty</code></li>
+            <li><strong>rdfs:domain</strong>: <code>owl:unionOf (adp:Agent adp:Service)</code></li>
+            <li><strong>rdfs:range</strong>: <code>adp:Metadata</code></li>
+          </ul>
+        </dd>
+        <dt><code>adp:webid</code></dt>
+        <dd>
+          <p>Links an agent to its WebID URI for identification.</p>
+          <ul>
+            <li><strong>rdf:type</strong>: <code>owl:ObjectProperty</code></li>
+            <li><strong>rdfs:domain</strong>: <code>adp:Agent</code></li>
+            <li><strong>rdfs:range</strong>: <code>foaf:Agent</code></li>
+          </ul>
+        </dd>
+        <dt><code>adp:hasSolidPod</code></dt>
+        <dd>
+          <p>Links an agent to its Solid POD.</p>
+          <ul>
+            <li><strong>rdf:type</strong>: <code>owl:ObjectProperty</code></li>
+            <li><strong>rdfs:domain</strong>: <code>adp:Agent</code></li>
+            <li><strong>rdfs:range</strong>: <code>adp:SolidPod</code></li>
+          </ul>
+        </dd>
+        <dt><code>adp:metadataType</code></dt>
+        <dd>
+          <p>Specifies the type of metadata (e.g., profile, access policy).</p>
+          <ul>
+            <li><strong>rdf:type</strong>: <code>owl:DatatypeProperty</code></li>
+            <li><strong>rdfs:domain</strong>: <code>adp:Metadata</code></li>
+            <li><strong>rdfs:range</strong>: <code>rdfs:Literal</code></li>
+          </ul>
+        </dd>
+      </dl>
+    </section>
+
+    <section id="axioms">
+      <h3>Axioms and Constraints</h3>
+      <p>
+        The ontology includes axioms to ensure data integrity, enforced via SHACL shapes.
+      </p>
+      <pre class="nohighlight">
+# SHACL Shape for adp:Agent
+adp:AgentShape a sh:NodeShape ;
+  sh:targetClass adp:Agent ;
+  sh:property [
+    sh:path adp:webid ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:nodeKind sh:IRI ;
+  ] ;
+  sh:property [
+    sh:path adp:hasMetadata ;
+    sh:minCount 1 ;
+  ] .
+
+# SHACL Shape for adp:Service
+adp:ServiceShape a sh:NodeShape ;
+  sh:targetClass adp:Service ;
+  sh:property [
+    sh:path adp:hasMetadata ;
+    sh:minCount 1 ;
+  ] .
+      </pre>
+    </section>
+
+    <section id="serialization">
+      <h3>Serialization Examples</h3>
+      <p>
+        Below are examples in RDF Turtle and JSON-LD.
+      </p>
+      <section id="turtle-example">
+        <h4>RDF Turtle</h4>
+        <pre class="nohighlight">
+@prefix adp: &lt;http://w3id.org/adp#&gt; .
+@prefix foaf: &lt;http://xmlns.com/foaf/0.1/&gt; .
+
+&lt;https://example.com/john&gt; a adp:PersonAgent ;
+  foaf:name "John Doe" ;
+  adp:webid &lt;https://example.com/john#me&gt; ;
+  adp:hasService &lt;https://example.com/api&gt; ;
+  adp:hasSolidPod &lt;https://example.com/john/pod&gt; ;
+  adp:hasMetadata [
+    a adp:Metadata ;
+    adp:metadataType "profile" ;
+    foaf:mbox &lt;mailto:john@example.com&gt;
+  ] .
+
+&lt;https://example.com/api&gt; a adp:Service ;
+  adp:hasMetadata [
+    a adp:Metadata ;
+    adp:metadataType "description" ;
+    rdfs:label "User API"
+  ] .
+
+&lt;https://example.com/org&gt; a adp:OrganizationAgent ;
+  foaf:name "Example Corp" ;
+  adp:webid &lt;https://example.com/org#id&gt; ;
+  adp:hasService &lt;https://example.com/org/api&gt; .
+        </pre>
+      </section>
+      <section id="jsonld-example">
+        <h4>JSON-LD</h4>
+        <pre class="nohighlight">
+{
+  "@context": {
+    "adp": "http://w3id.org/adp#",
+    "foaf": "http://xmlns.com/foaf/0.1/",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#"
+  },
+  "@id": "https://example.com/john",
+  "@type": "adp:PersonAgent",
+  "foaf:name": "John Doe",
+  "adp:webid": {"@id": "https://example.com/john#me"},
+  "adp:hasService": {"@id": "https://example.com/api"},
+  "adp:hasSolidPod": {"@id": "https://example.com/john/pod"},
+  "adp:hasMetadata": {
+    "@type": "adp:Metadata",
+    "adp:metadataType": "profile",
+    "foaf:mbox": "mailto:john@example.com"
+  }
+}
+        </pre>
+      </section>
+    </section>
+  </section>
+
+  <section id="use-cases">
+    <h2>Use Cases</h2>
+    <ul>
+      <li><strong>Personal Data Management</strong>: A user queries an agent’s domain to discover their Solid POD for data access.</li>
+      <li><strong>Service Discovery</strong>: An application retrieves an organization’s API endpoints via ADP metadata.</li>
+      <li><strong>Identity Verification</strong>: A service validates an agent’s WebID for authentication.</li>
+      <li><strong>AI Applications</strong>: A cognitive agent queries ADP metadata to build a knowledge graph.</li>
+    </ul>
+  </section>
+
+  <section id="security-privacy">
+    <h2>Security and Privacy Considerations</h2>
+    <p>
+      Implementations MUST:
+      <ul>
+        <li>Use HTTPS for all ADP endpoints.</li>
+        <li>Support WebID-TLS or WebID-OIDC for authentication.</li>
+        <li>Enforce access controls for Solid PODs per the Solid Protocol.</li>
+        <li>Validate URIs to prevent spoofing.</li>
+      </ul>
+    </p>
+  </section>
+
+  <section id="conformance">
+    <h2>Conformance</h2>
+    <p>
+      Conforming implementations MUST support RDF Turtle and JSON-LD serializations, adhere to SHACL constraints, and use the <code>adp:</code> namespace.
+    </p>
+  </section>
+
+  <section id="acknowledgements">
+    <h2>Acknowledgements</h2>
+    <p>
+      Thanks to the W3C Semantic Web Interest Group, Solid Community, and WebCivics contributors.
+    </p>
+  </section>
+</body>
+</html>

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Context Markup Language (CML)</title>
+  <script src="https://w3c.github.io/respec/builds/respec-w3c.js" class="remove" async></script>
+      <script class="remove">
+    var respecConfig = {
+      specStatus: "unofficial",
+      editors: [{
+        name: "Timothy C. Holborn",
+        company: "WebCivics",
+        url: "https://www.linkedin.com/in/ubiquitous/"},
+        {
+        name: "Grok 3",
+        company: "xAI",
+        url: "https://x.ai"
+      }],
+      processVersion: 2023,
+      shortName: "cml",
+      edDraftURI: "https://example.com/cml/",
+      github: "https://github.com/your-org/cml",
+      includePermalinks: true,
+      license: "w3c-software-doc",
+      abstract: `
+        <p>
+      The Context Markup Language (CML) is an HTML-based markup language designed to provide machine-readable semantic context for terms and concepts within web content, enhancing the ability of software agents, such as Large Language Models (LLMs), to disambiguate meaning. CML uses inline tags and attributes to link terms to semantic web URIs and Decentralized Identifiers (DIDs), supporting Human-Centric AI (HCAI) by ensuring accurate, transparent, and trustworthy inferences for natural persons.
+        </p>
+      `,
+      sotd: `
+        <p>
+      This is an unofficial draft specification for the Context Markup Language (CML), proposed for discussion within a W3C Community Group. It has not been endorsed by the W3C or any official standards body. Feedback is welcome via the associated Community Group repository or mailing list.
+        </p>
+      `
+    };
+  </script>
+</head>
+<body>
+  <section id="abstract">
+    <p>
+      The Context Markup Language (CML) is an HTML-based markup language designed to provide machine-readable semantic context for terms and concepts within web content, enhancing the ability of software agents, such as Large Language Models (LLMs), to disambiguate meaning. CML uses inline tags and attributes to link terms to semantic web URIs and Decentralized Identifiers (DIDs), supporting Human-Centric AI (HCAI) by ensuring accurate, transparent, and trustworthy inferences for natural persons.
+    </p>
+  </section>
+
+  <section id="sotd">
+    <p>
+      This is an unofficial draft specification for the Context Markup Language (CML), proposed for discussion within a W3C Community Group. It has not been endorsed by the W3C or any official standards body. Feedback is welcome via the associated Community Group repository or mailing list.
+    </p>
+  </section>
+
+  <section>
+    <h2>Introduction</h2>
+    <p>
+      Software agents, particularly LLMs, often struggle to disambiguate terms with multiple meanings (e.g., "thongs" as footwear or underwear, "physician" as a medical doctor or a clinic). Existing semantic web standards, such as RDFa and JSON-LD, provide machine-readable metadata but are complex for authors and not optimized for LLMs or HCAI principles. The Context Markup Language (CML) addresses these gaps by introducing a simple, inline HTML markup syntax that links terms to semantic web URIs and DIDs, enabling precise context for software agents while remaining accessible to web authors.
+    </p>
+    <p>
+      CML supports HCAI by ensuring accurate meaning inference, promoting transparency, and mitigating false assumptions that could harm natural persons. It complements existing semantic web standards, mapping to RDF where applicable, and supports decentralized web technologies through DID integration. This specification defines the CML syntax, namespace, and processing model, with examples for web authors and agent developers.
+    </p>
+  </section>
+
+  <section>
+    <h2>Terminology</h2>
+    <p>
+      The key words <em>MUST</em>, <em>MUST NOT</em>, <em>REQUIRED</em>, <em>SHALL</em>, <em>SHALL NOT</em>, <em>SHOULD</em>, <em>SHOULD NOT</em>, <em>RECOMMENDED</em>, <em>MAY</em>, and <em>OPTIONAL</em> in this document are to be interpreted as described in [[RFC2119]].
+    </p>
+    <dl>
+      <dt>CML</dt>
+      <dd>Context Markup Language, the markup language defined in this specification, distinct from Chemical Markup Language.</dd>
+      <dt>Software Agent</dt>
+      <dd>A program, such as an LLM, that processes web content to perform tasks like disambiguation or reasoning.</dd>
+      <dt>URI</dt>
+      <dd>A Uniform Resource Identifier, as defined in [[RFC3986]], used to reference semantic web resources.</dd>
+      <dt>DID</dt>
+      <dd>A Decentralized Identifier, as defined in [[DID-CORE]], used for decentralized context resolution.</dd>
+      <dt>Human-Centric AI (HCAI)</dt>
+      <dd>AI systems designed to prioritize the needs, rights, and well-being of natural persons, per ethical frameworks like the [[EU-AI-ACT]].</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Namespace</h2>
+    <p>
+      The CML namespace is <code>https://w3c.github.io/context-markup/ns#</code>. All CML elements and attributes <em>MUST</em> use this namespace to avoid conflicts with other HTML or XML vocabularies, including Chemical Markup Language. In HTML documents, CML elements are prefixed with <code>cml:</code> (e.g., <code>&lt;cml:context&gt;</code>).
+    </p>
+    <p class="note">
+      The namespace URI is a placeholder and will be finalized upon W3C Community Group adoption. It is distinct from namespaces used by Chemical Markup Language to prevent confusion.
+    </p>
+  </section>
+
+  <section>
+    <h2>Syntax</h2>
+    <p>
+      CML introduces two primary HTML elements and one attribute for embedding context within web content:
+    </p>
+    <ul>
+      <li><code>&lt;cml:context&gt;</code>: An inline element that defines a context block for a term or phrase.</li>
+      <li><code>&lt;cml:link&gt;</code>: An element that provides a reference to external context resources.</li>
+      <li><code>cml:href</code>: An attribute for linking to URIs or DIDs, used with <code>&lt;cml:link&gt;</code> or other HTML elements.</li>
+    </ul>
+
+    <section>
+      <h3><code>&lt;cml:context&gt;</code> Element</h3>
+      <p>
+        The <code>&lt;cml:context&gt;</code> element wraps a term or phrase and provides a machine-readable context block using attributes to form an RDF-like triple (subject, predicate, object).
+      </p>
+      <dl>
+        <dt>Attributes</dt>
+        <dd>
+          <ul>
+            <li><code>subject</code>: A URI or DID identifying the term’s concept (REQUIRED).</li>
+            <li><code>predicate</code>: A URI defining the relationship (e.g., <code>http://schema.org/definedAs</code>) (REQUIRED).</li>
+            <li><code>object</code>: A literal or URI providing the context value (REQUIRED).</li>
+            <li><code>lang</code>: An optional language tag (e.g., <code>en</code>) for the object, per [[BCP47]].</li>
+          </ul>
+        </dd>
+      </dl>
+      <p>Example:</p>
+      <pre class="example" title="Disambiguating 'thongs' as footwear">
+&lt;p&gt;
+  Wear &lt;cml:context subject="https://wikidata.org/entity/Q12955949" predicate="http://schema.org/definedAs" object="Flip-flops" lang="en"&gt;thongs&lt;/cml:context&gt; for a beach day.
+&lt;/p&gt;
+      </pre>
+      <p>
+        This example defines "thongs" as flip-flops (footwear), disambiguating it from underwear.
+      </p>
+    </section>
+
+    <section>
+      <h3><code>&lt;cml:link&gt;</code> Element and <code>cml:href</code> Attribute</h3>
+      <p>
+        The <code>&lt;cml:link&gt;</code> element or the <code>cml:href</code> attribute on HTML elements (e.g., <code>&lt;a&gt;</code>) references an external context resource, such as a knowledge base or DID document, as defined in [[HTML]] for link relations.
+      </p>
+      <dl>
+        <dt>Attributes</dt>
+        <dd>
+          <ul>
+            <li><code>cml:href</code>: A URI or DID pointing to a context resource (REQUIRED).</li>
+            <li><code>rel</code>: An optional relationship type (e.g., <code>context</code>), per [[HTML]].</li>
+          </ul>
+        </dd>
+      </dl>
+      <p>Example:</p>
+      <pre class="example" title="Linking 'thongs' to underwear definition">
+&lt;p&gt;
+  Buy our &lt;cml:link cml:href="https://wikidata.org/entity/Q380339" rel="context"&gt;thongs&lt;/cml:link&gt; for comfort.
+&lt;/p&gt;
+      </pre>
+      <p>
+        This example references "thongs" as underwear via a Wikidata URI.
+      </p>
+    </section>
+  </section>
+
+  <section>
+    <h2>Processing Model</h2>
+    <p>
+      Software agents processing CML <em>MUST</em> follow these steps:
+    </p>
+    <ol>
+      <li>Identify <code>&lt;cml:context&gt;</code> and <code>&lt;cml:link&gt;</code> elements or <code>cml:href</code> attributes within the HTML DOM.</li>
+      <li>Extract attributes (<code>subject</code>, <code>predicate</code>, <code>object</code>, <code>cml:href</code>) and map them to an internal representation (e.g., RDF triples or JSON objects).</li>
+      <li>Resolve URIs or DIDs to retrieve additional context, if available, per [[DID-CORE]].</li>
+      <li>Use the extracted context to inform disambiguation or reasoning tasks, ensuring alignment with HCAI principles like accuracy and transparency.</li>
+    </ol>
+    <p>
+      Agents <em>SHOULD</em> handle malformed CML tags gracefully, ignoring invalid attributes or unresolved URIs/DIDs.
+    </p>
+  </section>
+
+  <section>
+    <h2>Integration with Semantic Web and DIDs</h2>
+    <p>
+      CML aligns with semantic web standards:
+    </p>
+    <ul>
+      <li><code>&lt;cml:context&gt;</code> attributes map to RDF triples, enabling interoperability with RDFa and JSON-LD.</li>
+      <li>URIs reference ontologies like Schema.org or Wikidata (e.g., <code>https://schema.org/Physician</code>, <code>https://wikidata.org/entity/Q12955949</code>).</li>
+    </ul>
+    <p>
+      CML supports decentralized context:
+    </p>
+    <ul>
+      <li><code>cml:href="did:example:123"</code> links to a DID document, per [[DID-CORE]].</li>
+      <li>Agents can resolve DIDs to retrieve Verifiable Credentials or decentralized metadata.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Human-Centric AI Alignment</h2>
+    <p>
+      CML supports Human-Centric AI (HCAI) principles, ensuring AI systems prioritize the needs, rights, and well-being of natural persons, per frameworks like [[EU-AI-ACT]] and UNESCO’s AI Ethics Recommendation.
+    </p>
+    <ul>
+      <li><strong>Accurate Meaning Inference</strong>: CML’s inline context (e.g., disambiguating "thongs" as footwear or underwear) ensures LLMs infer meanings accurately, reducing errors in domains like commerce or healthcare.</li>
+      <li><strong>Transparency and Explainability</strong>: URI- and DID-linked annotations provide traceable context, enabling LLMs to cite sources (e.g., Wikidata) for their interpretations, aligning with HCAI’s explainability requirements.</li>
+      <li><strong>Fairness and Inclusivity</strong>: CML supports multi-lingual context (via <code>lang</code>) and diverse URIs, reducing bias by respecting cultural and linguistic differences (e.g., clarifying "bank" as a riverbank or financial institution).</li>
+      <li><strong>User Trust</strong>: By mitigating false assumptions, CML fosters trust in AI systems, ensuring reliable outputs for natural persons.</li>
+      <li><strong>Mitigation of False Assumptions</strong>: Without declarative context, LLMs may amplify biases or misinterpret terms, leading to misinformation, discrimination, or harm. CML prevents such issues by providing explicit context, enhancing ethical AI outcomes.</li>
+    </ul>
+    <p>
+      CML’s simplicity empowers content authors to contribute to semantic richness, democratizing HCAI benefits across diverse communities.
+    </p>
+  </section>
+
+  <section>
+    <h2>Examples</h2>
+    <section>
+      <h3>Disambiguating "thongs"</h3>
+      <pre class="example" title="Thongs as footwear vs. underwear">
+&lt;p&gt;
+  Wear &lt;cml:context subject="https://wikidata.org/entity/Q12955949" predicate="http://schema.org/definedAs" object="Flip-flops" lang="en"&gt;
+    &lt;a cml:href="did:example:Footwear123" href="https://example.com/flipflops"&gt;thongs&lt;/a&gt;
+  &lt;/cml:context&gt; for a beach day.
+&lt;/p&gt;
+&lt;p&gt;
+  Our &lt;cml:context subject="https://wikidata.org/entity/Q380339" predicate="http://schema.org/definedAs" object="Underwear"&gt;
+    &lt;cml:link cml:href="https://example.com/underwear" rel="context"&gt;thongs&lt;/cml:link&gt;
+  &lt;/cml:context&gt; offer maximum comfort.
+&lt;/p&gt;
+      </pre>
+      <p>
+        These examples clarify "thongs" as flip-flops (footwear) or underwear, with a DID for footwear and a URI for underwear.
+      </p>
+    </section>
+    <section>
+      <h3>Disambiguating "physician"</h3>
+      <pre class="example" title="Physician as person vs. place">
+&lt;p&gt;
+  Dr. Smith, a &lt;cml:context subject="https://wikidata.org/entity/Q39631" predicate="http://schema.org/definedAs" object="Medical doctor" lang="en"&gt;
+    &lt;a cml:href="did:example:Doc123" href="https://example.com/dr-smith"&gt;physician&lt;/a&gt;
+  &lt;/cml:context&gt;, specializes in cardiology.
+&lt;/p&gt;
+&lt;p&gt;
+  Visit our &lt;cml:context subject="https://schema.org/Physician" predicate="http://schema.org/definedAs" object="Medical practice"&gt;
+    &lt;cml:link cml:href="https://example.com/clinic" rel="context"&gt;physician&lt;/cml:link&gt;
+  &lt;/cml:context&gt; at 123 Main St.
+&lt;/p&gt;
+      </pre>
+      <p>
+        These examples clarify "physician" as a person (Wikidata) or a place (Schema.org), with a DID for decentralized context.
+      </p>
+    </section>
+    <section>
+      <h3>Disambiguating "bank"</h3>
+      <pre class="example" title="Bank as financial institution vs. riverbank">
+&lt;p&gt;
+  Deposit money at the &lt;cml:context subject="https://wikidata.org/entity/Q22687" predicate="http://schema.org/definedAs" object="Financial institution" lang="en"&gt;
+    &lt;a cml:href="did:example:Bank123" href="https://example.com/bank"&gt;bank&lt;/a&gt;
+  &lt;/cml:context&gt; on Main St.
+&lt;/p&gt;
+&lt;p&gt;
+  Fish along the &lt;cml:context subject="https://wikidata.org/entity/Q319686" predicate="http://schema.org/definedAs" object="Riverbank"&gt;
+    &lt;cml:link cml:href="https://example.com/riverbank" rel="context"&gt;bank&lt;/cml:link&gt;
+  &lt;/cml:context&gt; of the river.
+&lt;/p&gt;
+      </pre>
+      <p>
+        These examples clarify "bank" as a financial institution or a riverbank.
+      </p>
+    </section>
+    <section>
+      <h3>Disambiguating "apple"</h3>
+      <pre class="example" title="Apple as fruit vs. company">
+&lt;p&gt;
+  Eat an &lt;cml:context subject="https://wikidata.org/entity/Q89" predicate="http://schema.org/definedAs" object="Fruit" lang="en"&gt;
+    &lt;a cml:href="did:example:Fruit123" href="https://example.com/apple-fruit"&gt;apple&lt;/a&gt;
+  &lt;/cml:context&gt; for a healthy snack.
+&lt;/p&gt;
+&lt;p&gt;
+  The new &lt;cml:context subject="https://wikidata.org/entity/Q312" predicate="http://schema.org/definedAs" object="Technology company"&gt;
+    &lt;cml:link cml:href="https://example.com/apple-inc" rel="context"&gt;Apple&lt;/cml:link&gt;
+  &lt;/cml:context&gt; phone is innovative.
+&lt;/p&gt;
+      </pre>
+      <p>
+        These examples clarify "apple" as a fruit or a technology company.
+      </p>
+    </section>
+  </section>
+
+  <section>
+    <h2>Implementation Considerations</h2>
+    <p>
+      To ensure successful adoption, CML faces the following challenges:
+    </p>
+    <ul>
+      <li><strong>Adoption</strong>: Content creators and platforms may resist adopting a new standard due to learning curves or preference for existing formats (e.g., JSON-LD). Authoring tools (e.g., CMS plugins) and W3C advocacy can drive uptake.</li>
+      <li><strong>Scalability</strong>: Reliable URI and DID resolution requires governance (e.g., ontology maintenance, DID registries). Collaboration with semantic web and DID communities is essential.</li>
+      <li><strong>Interoperability</strong>: CML must align with RDF and existing standards to avoid fragmentation. Mapping <code>&lt;cml:context&gt;</code> to RDF triples ensures compatibility.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Security and Privacy Considerations</h2>
+    <p>
+      CML introduces minimal security risks, as it extends HTML with non-executable markup. However:
+    </p>
+    <ul>
+      <li>Agents <em>MUST</em> validate URIs and DIDs to prevent malicious redirects or data leaks.</li>
+      <li>Authors <em>SHOULD</em> avoid embedding sensitive information in <code>object</code> attributes, as public HTML may expose metadata.</li>
+      <li><strong>Privacy</strong>: CML’s inline context could reveal author intent or sensitive context (e.g., medical terms like "physician"). Authors <em>SHOULD</em> anonymize attributes where necessary, and agents <em>MUST</em> secure DID resolutions per [[DID-CORE]].</li>
+      <li><strong>HCAI Compliance</strong>: Privacy protections align with HCAI’s ethical requirements, ensuring user data is handled responsibly.</li>
+    </ul>
+  </section>
+
+  <section id="conformance">
+    <p>
+      Conformance requirements are expressed with a combination of descriptive assertions and RFC 2119 terminology. All CML implementations <em>MUST</em> conform to the syntax and processing model defined in this specification.
+    </p>
+  </section>
+
+  <section id="acknowledgments">
+    <p>
+      Thanks to the W3C Semantic Web Community, Decentralized Identifier Working Group, and HCAI researchers for inspiration and feedback. Special acknowledgment to the Wikidata and Schema.org communities for providing critical context resources.
+    </p>
+  </section>
+
+  <script>
+    var respecConfig = {
+      specStatus: "unofficial",
+      shortName: "cml",
+      editors: [{
+        name: "Your Name",
+        url: "https://example.com",
+        company: "Your Organization",
+        companyURL: "https://example.com"
+      }],
+      github: "https://github.com/your-repo/cml-spec",
+      license: "w3c-software-doc",
+      wg: "Context Markup Language Community Group",
+      wgURI: "https://www.w3.org/community/cml/",
+      wgPublicList: "public-cml",
+      publishDate: "2025-06-20",
+      edDraftURI: "https://your-repo.github.io/cml-spec/",
+      localBiblio: {
+        "DID-CORE": {
+          title: "Decentralized Identifiers (DIDs) v1.0",
+          href: "https://www.w3.org/TR/did-core/",
+          authors: ["Drummond Reed", "Manu Sporny", "Markus Sabadello"],
+          publisher: "W3C",
+          date: "2022"
+        },
+        "EU-AI-ACT": {
+          title: "Artificial Intelligence Act",
+          href: "https://digital-strategy.ec.europa.eu/en/policies/artificial-intelligence-act",
+          publisher: "European Commission",
+          date: "2024"
+        },
+        "HTML": {
+          title: "HTML Standard",
+          href: "https://html.spec.whatwg.org/multipage/",
+          authors: ["WHATWG"],
+          publisher: "WHATWG",
+          date: "2025"
+        },
+        "RFC2119": {
+          title: "Key words for use in RFCs to Indicate Requirement Levels",
+          href: "https://tools.ietf.org/html/rfc2119",
+          authors: ["S. Bradner"],
+          publisher: "IETF",
+          date: "1997"
+        },
+        "RFC3986": {
+          title: "Uniform Resource Identifier (URI): Generic Syntax",
+          href: "https://tools.ietf.org/html/rfc3986",
+          authors: ["T. Berners-Lee", "R. Fielding", "L. Masinter"],
+          publisher: "IETF",
+          date: "2005"
+        },
+        "BCP47": {
+          title: "Tags for Identifying Languages",
+          href: "https://tools.ietf.org/html/bcp47",
+          authors: ["A. Phillips", "M. Davis"],
+          publisher: "IETF",
+          date: "2009"
+        }
+      }
+    };
+  </script>
+</body>
+</html>
