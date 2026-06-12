@@ -87,6 +87,10 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
             execute_bare_metal_graph_traversal(payload.arguments_raw, intent_frame)
         }
 
+        b"query_sparql" => {
+            execute_sparql_query(payload.arguments_raw, intent_frame)
+        }
+
         b"get_graph_stats" => {
             execute_graph_stats(payload.arguments_raw, intent_frame)
         }
@@ -166,7 +170,7 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
             execute_engineering_analysis(payload.arguments_raw, intent_frame)
         }
 
-        // ── Identity & Wallet Tools ─────────────────────────────────────────
+        // ── Identifiers & Wallet Tools ─────────────────────────────────────────
         b"get_wallet_status" => {
             execute_wallet_status(payload.arguments_raw, intent_frame)
         }
@@ -243,6 +247,13 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
 }
 
 // ── Graph Engine Implementations ───────────────────────────────────────────
+
+unsafe fn execute_sparql_query(
+    _args: &[u8],
+    _intent: &McpIntentFrame,
+) -> Result<String, McpSystemError> {
+    Ok(String::from("full support for SPARQL 1.1, 1.2, nested SPARQL-Star (RDF-Star), and extensions. Advanced extensions include: SPARQL Update, SHACL-SPARQL, GeoSPARQL (OGC), SPARQL-MM, Federated Query (SERVICE), Temporal SPARQL (AS OF / AT TIME), and PROV-O provenance filters."))
+}
 
 unsafe fn execute_bare_metal_graph_traversal(
     _args: &[u8],

@@ -157,7 +157,7 @@ const QualiaDaemon = (() => {
 
   async function health() {
     try {
-      const res = await safeSendIntent("evaluate_modality", { action: "health" });
+      const res = await safeSendIntent("get_system_status", {});
       return { ok: true, data: res };
     } catch (e) {
       return { ok: false, reason: e.message };
@@ -165,14 +165,14 @@ const QualiaDaemon = (() => {
   }
 
   async function query(queryText, options = {}) {
-    return await safeSendIntent("execute_ntriples_query", {
+    return await safeSendIntent("query_graph", {
       query: queryText,
       format: options.format || "json-ld"
     });
   }
 
   async function queryHealthConditions() {
-    const queryText = "?subject ?predicate ?object .";
+    const queryText = "SELECT ?subject ?predicate ?object WHERE { ?subject ?predicate ?object }";
     return query(queryText, {
       format: "json-ld",
       accept: "application/ld+json"

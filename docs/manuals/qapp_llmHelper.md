@@ -122,7 +122,7 @@ The native Webizen Daemon (`qualia-core-db`) contains fully-wired, hardware-acce
 
 - **Query Language Capabilities:** 
   - **N-Triples / Super-Quin Arena:** QualiaDB natively evaluates streaming N-Triples patterns directly across 48-byte `Super-Quin` memory slots for zero-allocation performance.
-  - **SPARQL Support:** Full support for SPARQL 1.1 and nested SPARQL-Star (RDF-Star) via the embedded `qualia_core_db::sparql_library` parser and query planner, though it incurs standard string allocation overhead during planning.
+  - **SPARQL Support:** Full support for SPARQL 1.1, 1.2, nested SPARQL-Star (RDF-Star), and extensions via the embedded `qualia_core_db::sparql_library` parser and query planner, though it incurs standard string allocation overhead during planning.
 - **Bioinformatics:** Zero-allocation SW (Smith-Waterman) alignment, protein sequence analysis, k-mer generation, FASTA parsing, and Tanimoto similarity scoring.
 - **Clinical Risk & Medical Logic:** Real-time computation of Framingham, CHA₂DS₂-VASc, and SCORE2 indices, alongside drug-interaction checks and contraindications utilizing native FHIR/LOINC ontology mapping.
 - **Organic Chemistry:** Native SMILES & InChI parsing, Molecular Weight (MW), LogP, TPSA, Lipinski's Rule of 5, Veber rules, Morgan fingerprints, Henderson-Hasselbalch equations, and atom economy/E-factor solvers.

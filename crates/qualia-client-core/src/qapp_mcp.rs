@@ -125,6 +125,7 @@ pub fn describe_qapp_surface_schema_json() -> Result<String, String> {
             "inspect_qapp_readiness",
             "list_qapp_updates",
             "describe_qapp_surface_schema",
+            "query_sparql",
         ],
     };
     serde_json::to_string(&schema).map_err(|e| e.to_string())

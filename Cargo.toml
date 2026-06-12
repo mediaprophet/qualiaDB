@@ -8,3 +8,15 @@ members = [
     "crates/webizen-component-harvester", "crates/webizen-studio", "crates/qualia-mobile-harness",
 ]
 resolver = "2"
+
+# Profile for WASM web builds (qualia-mobile-harness).
+# wasm-opt on Windows crashes with STATUS_STACK_BUFFER_OVERRUN when the AST is
+# too large for its default 1 MB thread stack. Feeding it a smaller, LTO-pruned
+# binary prevents the overflow entirely. This profile must live at workspace root
+# because Cargo silently ignores [profile.*] in non-root crate Cargo.toml files.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = "symbols"

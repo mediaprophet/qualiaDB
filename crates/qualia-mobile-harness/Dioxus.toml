@@ -1,0 +1,13 @@
+[application]
+name = "qualia-mobile-harness"
+default_platform = "web"
+
+[web.app]
+base_path = ""
+
+# Use the workspace-level wasm-release profile so Cargo's LTO + opt-level="s"
+# prune the binary before wasm-opt sees it. Without this, wasm-opt crashes on
+# Windows with STATUS_STACK_BUFFER_OVERRUN (1 MB thread stack overflow during
+# recursive AST passes on the full-size unoptimized WASM binary).
+[build]
+profile = "wasm-release"
