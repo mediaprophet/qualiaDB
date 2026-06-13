@@ -1,7 +1,6 @@
 use dioxus::prelude::*;
 use uuid::Uuid;
-use wasm_bindgen::prelude::*;
-use web_sys::{window, WebSocket};
+use web_sys::window;
 
 pub fn use_telemetry() {
     use_effect(move || {
