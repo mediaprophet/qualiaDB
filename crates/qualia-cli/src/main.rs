@@ -1447,6 +1447,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 },
             );
             qualia_core_db::daemon::start_local_daemon_with_options(*port, is_dev, vault_arc).await;
+            println!("[Qualia Daemon] All subsystems active. Press Ctrl-C to shut down.");
+            tokio::signal::ctrl_c().await.expect("Failed to install Ctrl-C handler");
+            println!("[Qualia Daemon] Shutdown signal received. Goodbye.");
         }
         Commands::ExportSolid { input, output } => {
             println!("============================================================");

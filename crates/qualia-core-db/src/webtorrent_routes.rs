@@ -175,6 +175,6 @@ pub fn webtorrent_routes(daemon_port: u16) -> Router {
         .route("/unseed", post(unseed_handler))
         .route("/policy", get(policy_get_handler).post(policy_set_handler))
         .route("/sync", post(sync_handler))
-        .route("/webseed/:info_hash", get(webseed_handler))
+        .route("/webseed/{info_hash}", get(webseed_handler))
         .with_state(state)
 }

@@ -207,7 +207,7 @@ pub fn spawn_loopback_server(
                     
                     // Extensions
                     .route("/extensions/list", get(list_extensions_handler))
-                    .route("/extensions/query/:interface", get(query_extensions_handler))
+                    .route("/extensions/query/{interface}", get(query_extensions_handler))
                     .route("/extensions/register", post(register_extension_handler))
                     
                     // Mobile
@@ -219,7 +219,7 @@ pub fn spawn_loopback_server(
                     // External Routers
                     .with_state(server_state.clone())
                     .merge(crate::chat_relay_daemon::chat_relay_routes(server_state.storage_path.clone(), server_state.vault.clone()))
-                    .merge(crate::webtorrent_routes::webtorrent_routes(server_state.port))
+                    .nest("/torrent", crate::webtorrent_routes::webtorrent_routes(server_state.port))
                     .layer(csp_layer)
                     .layer(cors)
                     .layer(axum::middleware::from_fn(pna_middleware));
