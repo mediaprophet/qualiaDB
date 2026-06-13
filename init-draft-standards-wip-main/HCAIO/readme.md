@@ -37,7 +37,7 @@ hcai:SociologicalRole: Defines socially constructed roles (e.g., caregiver, lead
 
 hcai:Relationship: Represents emotional or social bonds (e.g., friendship, kinship).
 
-hcai:HumanExperience: Captures lived experiences shaping identity (e.g., cultural immersion).
+hcai:HumanExperience: Captures lived experiences shaping human agency (e.g., cultural immersion).
 
 hcai:ValueBelief: Models deeply held beliefs or values (e.g., compassion, justice).
 
@@ -121,3 +121,11 @@ This is an unofficial draft, published on June 20, 2025, to initiate discussion 
 Acknowledgments
 This project builds on the need for AI systems to prioritize human dignity, ethical reasoning, and cultural sensitivity. We thank the W3C Human-Centric AI Community Group for fostering an environment to explore these critical topics.
 
+
+
+## QualiaDB Engine Technical Implementation Note
+> [!NOTE]
+> In practice, the technical realization of these standards relies on the **QualiaDB engine architecture** to ensure robust, hardware-accelerated, zero-allocation enforcement:
+> - **Serialization:** While referencing generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (`.q42` file format) for execution. For data transmission, **CBOR-LD** is the primary serialization method.
+> - **Logic & Constraints:** Constraints are parsed via a native **N3 Streaming Parser** and enforced using explicit **Deontic Logic** operators (Obligate, Permit, Forbid).
+> - **Conflict & State:** CRDT and Paraconsistent Logic routers manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.

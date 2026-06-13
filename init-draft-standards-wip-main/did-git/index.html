@@ -40,7 +40,7 @@
   <section id="introduction">
     <h2>Introduction</h2>
     <p>
-      Decentralized Identifiers (DIDs) are a type of identifier that enables verifiable, decentralized digital identities, as defined by the <a href="https://www.w3.org/TR/did-core/">W3C DID Core Specification</a>. The <code>did:git</code> method leverages Git, a distributed version control system, to serve as the source of truth for DID documents. Git's decentralized nature, combined with its robust history tracking and cryptographic signing capabilities, makes it a suitable platform for managing DIDs without relying on a centralized authority.
+      Decentralized Identifiers (DIDs) are a type of identifier that enables verifiable, decentralized digital identifiers, as defined by the <a href="https://www.w3.org/TR/did-core/">W3C DID Core Specification</a>. The <code>did:git</code> method leverages Git, a distributed version control system, to serve as the source of truth for DID documents. Git's decentralized nature, combined with its robust history tracking and cryptographic signing capabilities, makes it a suitable platform for managing DIDs without relying on a centralized authority.
     </p>
     <p>
       This specification defines the structure, resolution, and management of <code>did:git</code> identifiers. It addresses the use of cryptographic mechanisms such as Pretty Good Privacy (PGP, implemented as GPG) and Secure Shell (SSH) for signing and verifying commits, ensuring the integrity and authenticity of DID documents stored in a Git repository. The method is designed to be platform-agnostic, applicable to any Git repository, and independent of specific hosting services like GitHub.
@@ -182,7 +182,7 @@
     <section id="gpg-signing">
       <h3>GPG Signing</h3>
       <p>
-        GPG (GNU Privacy Guard) is used to sign Git commits and tags, providing cryptographic assurance of the committer's identity. Key considerations include:
+        GPG (GNU Privacy Guard) is used to sign Git commits and tags, providing cryptographic assurance of the committer's human agency. Key considerations include:
         <ul>
           <li><strong>Key Management</strong>: GPG keys must be securely generated, stored, and managed. Private keys should be protected with strong passphrases and stored in secure environments (e.g., using hardware security modules like YubiKey).</li>[](https://developers.yubico.com/PGP/SSH_authentication/Windows.html)
           <li><strong>Key Expiration</strong>: GPG keys can be configured to expire, requiring periodic renewal. This enhances security but requires users to update their public keys on platforms or keyservers.</li>[](https://codex.so/gpg-verification-github)
@@ -198,7 +198,7 @@
         Since Git 2.34, SSH keys can be used to sign commits, offering an alternative to GPG. Key considerations include:
         <ul>
           <li><strong>Simplicity</strong>: SSH keys are easier to generate and manage for users already familiar with SSH authentication. Existing SSH keys can be reused for signing.</li>[](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key)
-          <li><strong>Limitations</strong>: Unlike GPG, SSH keys do not support expiration or revocation, which may reduce their suitability for long-term identity management. If an SSH key is marked as expired, all commits signed with it may appear unverified.</li>[](https://javorszky.co.uk/2024/05/28/back-to-signing-git-commits-with-gpg/)
+          <li><strong>Limitations</strong>: Unlike GPG, SSH keys do not support expiration or revocation, which may reduce their suitability for long-term credential management. If an SSH key is marked as expired, all commits signed with it may appear unverified.</li>[](https://javorszky.co.uk/2024/05/28/back-to-signing-git-commits-with-gpg/)
           <li><strong>Verification</strong>: Resolvers must verify SSH signatures using the committer’s public SSH key, which may be stored in the DID document or a trusted repository.</li>[](https://stackoverflow.com/questions/51412164/gpg-vs-ssh-keys)
           <li><strong>Dependencies</strong>: SSH signing requires Git 2.34 or later and OpenSSH 8.2p1 or later, which may not be available on older systems (e.g., Ubuntu 18.04).</li>[](https://sethmlarson.dev/switching-git-back-to-gpg-signing)
         </ul>
@@ -281,5 +281,18 @@
       This specification builds on prior work by the W3C Credentials Community Group and the Git community. Special thanks to contributors to the <code>did-git-spec</code> repository and the Linux Kernel documentation for their insights into Git and PGP integration.
     </p>
   </section>
+
+  <section id="qualia-engine-implementation" class="informative">
+    <h2>QualiaDB Engine Technical Implementation Note</h2>
+    <p>
+      In practice, the technical realization of these standards relies on the <strong>QualiaDB engine architecture</strong> to ensure robust, hardware-accelerated, zero-allocation enforcement:
+    </p>
+    <ul>
+      <li><strong>Serialization:</strong> While the standards reference generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (<code>.q42</code> file format) for execution. For data transmission across the wire, <strong>CBOR-LD</strong> is the primary serialization method.</li>
+      <li><strong>Logic & Constraints:</strong> Instead of generic validation, terms and constraints are parsed via a native <strong>N3 Streaming Parser</strong> and enforced using explicit <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid).</li>
+      <li><strong>Conflict & State Management:</strong> CRDT (Lamport Clock LWW) and Paraconsistent Logic routers are used to manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.</li>
+    </ul>
+  </section>
 </body>
+
 </html>

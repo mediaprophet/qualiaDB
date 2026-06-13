@@ -8,6 +8,7 @@ pub mod telemetry;
 
 use dioxus::prelude::*;
 use studio_canvas::DynamicPage;
+use theme_engine::ResolvedTheme;
 
 fn main() {
     dioxus::launch(App);
@@ -15,19 +16,59 @@ fn main() {
 
 #[derive(Clone, Routable, Debug, PartialEq)]
 pub enum Route {
-    // Fallback root path
+    #[layout(AppLayout)]
     #[route("/")]
-    Home {},
-    // Dynamic canvas paths
+    DashboardRoute {},
+
+    #[route("/qapps")]
+    QAppsRoute {},
+
+    #[route("/context-studio")]
+    ContextStudioRoute {},
+
+    #[route("/qapp-studio")]
+    StudioRoute {},
+
+    #[route("/qapp-studio/:app_id")]
+    StudioEditRoute { app_id: String },
+
+    #[route("/nexus")]
+    NexusRoute {},
+
+    #[end_layout]
+
     #[route("/:..path")]
     DynamicPage { path: Vec<String> },
 }
 
 #[component]
-fn Home() -> Element {
-    rsx! {
-        DynamicPage { path: vec![] }
-    }
+fn DashboardRoute() -> Element {
+    rsx! { components::dashboard::Dashboard {} }
+}
+
+#[component]
+fn ContextStudioRoute() -> Element {
+    rsx! { components::contextual_workspace::ContextualWorkspace {} }
+}
+
+#[component]
+fn QAppsRoute() -> Element {
+    rsx! { components::qapps::QApps {} }
+}
+
+#[component]
+fn StudioEditRoute(app_id: String) -> Element {
+    rsx! { DynamicPage { path: vec![], app_id: Some(app_id.clone()) } }
+}
+
+#[component]
+fn StudioRoute() -> Element {
+    rsx! { DynamicPage { path: vec![] } }
+}
+
+#[component]
+fn NexusRoute() -> Element {
+    rsx! { components::nexus::Nexus {} }
 }
 
 const SHOELACE_CSS: &str = "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/themes/dark.css";
@@ -35,59 +76,208 @@ const SHOELACE_JS: &str = "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace
 const INTER_FONT: &str = "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap";
 
 #[component]
+fn AppLayout() -> Element {
+    let theme_state = consume_context::<Signal<ResolvedTheme>>();
+    let t = theme_state();
+    let accent = t.tokens.get("accent").cloned().unwrap_or("#e07a5f".to_string());
+    let text = t.tokens.get("text").cloned().unwrap_or("#2d2824".to_string());
+    let text_muted = t.tokens.get("text-muted").cloned().unwrap_or("#8b8178".to_string());
+
+    rsx! {
+        div {
+            style: "display: flex; flex-direction: row; height: 100vh; width: 100%; overflow: hidden;",
+
+            // ── Left sidebar ──────────────────────────────────────────────
+            nav {
+                style: "width: 196px; flex-shrink: 0; height: 100vh; background: var(--qualia-surface); border-right: 1px solid var(--qualia-border); backdrop-filter: blur(20px); display: flex; flex-direction: column; padding: 1.25rem 0.75rem 1rem; gap: 0.2rem; transition: all 0.4s ease;",
+
+                // Logo
+                div {
+                    style: "display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.6rem; margin-bottom: 1.25rem;",
+                    a {
+                        href: "/",
+                        style: "display: flex; align-items: center; gap: 0.6rem; text-decoration: none;",
+                        div {
+                            style: "width: 30px; height: 30px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: white; flex-shrink: 0;",
+                            "⬡"
+                        }
+                        span { style: "font-weight: 700; font-size: 0.9rem; color: {text};", "Webizen" }
+                    }
+                }
+
+                Link {
+                    to: Route::DashboardRoute {},
+                    class: "nav-item",
+                    style: "color: {text};",
+                    sl-icon { "name": "grid-1x2", style: "font-size: 0.9rem;" }
+                    "Dashboard"
+                }
+                Link {
+                    to: Route::QAppsRoute {},
+                    class: "nav-item",
+                    style: "color: {text_muted};",
+                    sl-icon { "name": "grid", style: "font-size: 0.9rem;" }
+                    "QApps"
+                }
+                div {
+                    class: "nav-item",
+                    style: "color: {text_muted}; cursor: default;",
+                    sl-icon { "name": "robot", style: "font-size: 0.9rem;" }
+                    "Agents"
+                }
+                Link {
+                    to: Route::ContextStudioRoute {},
+                    class: "nav-item",
+                    style: "color: {text_muted};",
+                    sl-icon { "name": "diagram-3", style: "font-size: 0.9rem;" }
+                    "Context Studio"
+                }
+                Link {
+                    to: Route::StudioRoute {},
+                    class: "nav-item",
+                    style: "color: {text_muted};",
+                    sl-icon { "name": "layers", style: "font-size: 0.9rem;" }
+                    "QApp Studio"
+                }
+                div {
+                    class: "nav-item",
+                    style: "color: {text_muted}; cursor: default;",
+                    sl-icon { "name": "bar-chart-line", style: "font-size: 0.9rem;" }
+                    "Analytics"
+                }
+
+                div { style: "flex: 1;" }
+
+                div {
+                    class: "nav-item",
+                    style: "color: {text_muted}; cursor: default;",
+                    sl-icon { "name": "gear", style: "font-size: 0.9rem;" }
+                    "Settings"
+                }
+                div {
+                    class: "nav-item",
+                    style: "color: {text_muted}; cursor: default;",
+                    sl-icon { "name": "person-circle", style: "font-size: 0.9rem;" }
+                    "Account"
+                }
+            }
+
+            // ── Right: topbar + content ───────────────────────────────────
+            div {
+                style: "flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; min-width: 0;",
+
+                // Top bar
+                div {
+                    style: "padding: 0.75rem 1.5rem; background: var(--qualia-surface); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(16px); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; transition: all 0.4s ease;",
+
+                    div {
+                        style: "display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.05); border: 1px solid var(--qualia-border); border-radius: 10px; padding: 0.45rem 0.875rem; width: 240px;",
+                        sl-icon { "name": "search", style: "font-size: 0.8rem; color: var(--qualia-text-muted);" }
+                        input {
+                            r#type: "text",
+                            placeholder: "Search...",
+                            style: "background: transparent; border: none; outline: none; color: var(--qualia-text); font-size: 0.825rem; width: 100%; font-family: 'Inter', sans-serif;",
+                        }
+                    }
+
+                    div {
+                        style: "display: flex; align-items: center; gap: 0.875rem;",
+                        div { style: "width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981;" }
+                        span { style: "font-size: 0.775rem; color: var(--qualia-text-muted);", "Local Network" }
+                        div {
+                            style: "width: 30px; height: 30px; border-radius: 50%; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white; cursor: pointer;",
+                            "W"
+                        }
+                    }
+                }
+
+                // Route content
+                div {
+                    style: "flex: 1; overflow: hidden; display: flex;",
+                    Outlet::<Route> {}
+                }
+            }
+        }
+    }
+}
+
+#[component]
 fn App() -> Element {
     telemetry::use_telemetry();
 
+    let theme_state = use_signal(|| {
+        let catalog = theme_engine::builtin_theme_catalog();
+        let binding = theme_engine::ThemeBinding {
+            theme_id: Some("human-warmth".to_string()),
+            ..Default::default()
+        };
+        theme_engine::resolve_theme(Some(&binding), &catalog)
+    });
+
+    use_context_provider(|| theme_state);
+
+    let t = theme_state();
+    let bg = t.tokens.get("bg").cloned().unwrap_or("#fbf9f6".to_string());
+    let surface = t.tokens.get("surface").cloned().unwrap_or("rgba(255,255,255,0.72)".to_string());
+    let border = t.tokens.get("border").cloned().unwrap_or("rgba(220,210,200,0.55)".to_string());
+    let text = t.tokens.get("text").cloned().unwrap_or("#2d2824".to_string());
+    let text_muted = t.tokens.get("text-muted").cloned().unwrap_or("#8b8178".to_string());
+    let accent = t.tokens.get("accent").cloned().unwrap_or("#e07a5f".to_string());
+    let accent_glow = t.tokens.get("accent-glow").cloned().unwrap_or("rgba(224,122,95,0.18)".to_string());
+    let bg_gradient = t.tokens.get("bg-gradient").cloned()
+        .unwrap_or(format!("linear-gradient(160deg, {bg} 0%, {bg} 100%)"));
+
     rsx! {
-        // Inject Shoelace & Fonts
         document::Link { rel: "stylesheet", href: SHOELACE_CSS }
         document::Link { rel: "stylesheet", href: INTER_FONT }
-        document::Script { type: "module", src: SHOELACE_JS }
-        
-        // Premium Global Styles
+        document::Script { r#type: "module", src: SHOELACE_JS }
+        document::Link { rel: "icon", href: "https://www.webizen.org/favicon.ico" }
+        document::Title { "Webizen" }
+
         document::Style {
             "
-            :root {{
-                --qualia-bg: #09090b;
-                --qualia-surface: rgba(24, 24, 27, 0.7);
-                --qualia-border: rgba(63, 63, 70, 0.5);
-                --qualia-text: #f4f4f5;
-                --qualia-text-muted: #a1a1aa;
-                --qualia-accent: #06b6d4;
-                --qualia-accent-glow: rgba(6, 182, 212, 0.2);
+            * {{ box-sizing: border-box; }}
+            body {{ margin: 0; padding: 0; font-family: 'Inter', sans-serif; overflow: hidden; }}
+            .nav-item {{
+                transition: all 0.18s ease;
+                border-radius: 9px;
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                padding: 8px 12px;
+                font-size: 0.845rem;
+                font-weight: 500;
+                text-decoration: none;
+                cursor: pointer;
             }}
-            body {{
-                margin: 0;
-                padding: 0;
-                font-family: 'Inter', sans-serif;
-                background-color: var(--qualia-bg);
-                color: var(--qualia-text);
-                overflow: hidden;
+            .nav-item:hover {{ background: rgba(128,128,128,0.10); }}
+            .panel-card {{ transition: box-shadow 0.2s ease, transform 0.2s ease; }}
+            .panel-card:hover {{ transform: translateY(-2px); box-shadow: 0 20px 48px rgba(0,0,0,0.13) !important; }}
+            input[type=color] {{
+                -webkit-appearance: none;
+                width: 36px; height: 36px;
+                border: 2px solid var(--qualia-border);
+                border-radius: 8px;
+                cursor: pointer;
+                padding: 2px;
+                background: transparent;
             }}
-            /* Micro-animations */
-            .nav-link {{ transition: all 0.2s ease; }}
-            .nav-link:hover {{ background: rgba(255,255,255,0.05); transform: translateX(4px); color: var(--qualia-accent); }}
+            input[type=color]::-webkit-color-swatch-wrapper {{ padding: 0; }}
+            input[type=color]::-webkit-color-swatch {{ border: none; border-radius: 5px; }}
+            input[type=range] {{ -webkit-appearance: none; height: 4px; border-radius: 2px; outline: none; }}
+            input[type=range]::-webkit-slider-thumb {{
+                -webkit-appearance: none;
+                width: 16px; height: 16px;
+                border-radius: 50%;
+                background: var(--qualia-accent);
+                cursor: pointer;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+            }}
             "
         }
 
         div {
-            style: "width: 100vw; height: 100vh; display: flex; flex-direction: column; background: radial-gradient(circle at top, #1a1a24 0%, var(--qualia-bg) 50%);",
-            // Glassmorphism Header
-            div {
-                style: "padding: 1rem 1.5rem; border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(12px); background: rgba(9, 9, 11, 0.6); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 24px var(--qualia-accent-glow); z-index: 10;",
-                h1 { 
-                    style: "margin: 0; font-weight: 600; font-size: 1.25rem; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.5rem;",
-                    span { style: "color: var(--qualia-accent);", "⬡" }
-                    "Webizen Studio "
-                    span { style: "font-size: 0.85rem; font-weight: 400; color: var(--qualia-text-muted);", "(Human-Centric HUD)" }
-                }
-                div {
-                    style: "display: flex; gap: 1rem; align-items: center;",
-                    span { style: "font-size: 0.85rem; color: var(--qualia-text-muted);", "Human-Centric Edge Node: Active" }
-                    div { style: "width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;" }
-                }
-            }
-            // Main Routing Canvas
+            style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden;",
             Router::<Route> {}
         }
     }

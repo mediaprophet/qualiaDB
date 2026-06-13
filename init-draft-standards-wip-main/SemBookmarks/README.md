@@ -319,3 +319,14 @@ RDF Validator (https://www.w3.org/RDF/Validator/) for checking RDF syntax.
 JSON-LD Playground (https://json-ld.org/playground/) for validating JSON-LD.
 Extensibility: Semantic Bookmarks allow custom ontologies and attributes, ensuring flexibility for domain-specific use cases.
 If you need a specific format (e.g., a ReSpec document update) or further details on implementation, let me know!
+
+## QualiaDB Engine Technical Implementation Note
+> [!NOTE]
+> In practice, the technical realization of these standards relies on the **QualiaDB engine architecture** to ensure robust, hardware-accelerated, zero-allocation enforcement:
+> - **Serialization:** While referencing generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (`.q42` file format) for execution. For data transmission, **CBOR-LD** is the primary serialization method.
+> - **Logic & Constraints:** Constraints are parsed via a native **N3 Streaming Parser** and enforced using explicit **Deontic Logic** operators (Obligate, Permit, Forbid).
+> - **Conflict & State:** CRDT and Paraconsistent Logic routers manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.
+
+## QApp Architecture Mapping
+> [!NOTE]
+> **Contextual Workspace QApp & Graph Explorer:** Semantic bookmarks leverage the `context` field of the `NQuin` to slice and index multidimensional transclusions securely across the Webizen Studio canvas.

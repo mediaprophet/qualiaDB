@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webizen</title>
+  <!-- CSS needed for the loading screen -->
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #09090b;
+      color: #f4f4f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(6, 182, 212, 0.2);
+      border-top-color: #06b6d4;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    .logo {
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .logo span.hexagon {
+      color: #06b6d4;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      color: #a1a1aa;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    #main {
+      display: contents;
+    }
+  </style>
+</head>
+<body>
+  <div id="main">
+    <!-- Loading placeholder — replaced by WASM on boot -->
+    <div class="spinner"></div>
+    <div class="logo"><span class="hexagon">⬡</span> Webizen</div>
+    <div class="subtitle">Human-Centric Internet Initiating...</div>
+  </div>
+</body>
+</html>

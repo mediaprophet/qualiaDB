@@ -30,7 +30,7 @@
             ],
             publishDate: "2025-06-21",
             license: "w3c-software-doc",
-            abstract: "This specification defines a standardized framework for the decentralized management of biometric data, ensuring personal ownership, secure storage, and permissive discoverability and usage through privacy-preserving technologies. Leveraging semantic web standards (excluding OWL and Schema.org), it enables interoperable, secure, and user-controlled biometric systems that uphold the inalienable nature of biometric data as an extension of personal identity.",
+            abstract: "This specification defines a standardized framework for the decentralized management of biometric data, ensuring personal ownership, secure storage, and permissive discoverability and usage through privacy-preserving technologies. Leveraging semantic web standards (excluding OWL and Schema.org), it enables interoperable, secure, and user-controlled biometric systems that uphold the inalienable nature of biometric data as an extension of personal human agency.",
             sotd: "This is an unofficial draft specification intended for community review and feedback. It has not been endorsed by any standards body and is subject to change based on further development and input.",
             github: "https://github.com/decentralized-biometrics/spec",
             localBiblio: {
@@ -63,7 +63,7 @@
     <section id="abstract">
         <h2>Abstract</h2>
         <p>
-            This specification defines a standardized framework for the Human Centric management of biometric information (data), ensuring personal ownership, secure storage, and permissive discoverability and usage through privacy-preserving technologies. Leveraging semantic web standards (excluding OWL and Schema.org), it enables interoperable, secure, and user-controlled biometric systems that uphold the inalienable nature of biometric data as an extension of personal identity. The framework supports use cases in justice, healthcare, and identity verification while prioritizing privacy, security, and individual autonomy.
+            This specification defines a standardized framework for the Human Centric management of biometric information (data), ensuring personal ownership, secure storage, and permissive discoverability and usage through privacy-preserving technologies. Leveraging semantic web standards (excluding OWL and Schema.org), it enables interoperable, secure, and user-controlled biometric systems that uphold the inalienable nature of biometric data as an extension of personal human agency. The framework supports use cases in justice, healthcare, and identity verification while prioritizing privacy, security, and individual autonomy.
         </p>
     </section>
     <section id="sotd">
@@ -75,13 +75,13 @@
     <section id="introduction">
         <h2>Introduction</h2>
         <p>
-            Biometric data, such as fingerprints, facial recognition patterns, and iris scans, are unique identifiers inherently tied to an individual’s identity. As digital transformation accelerates, the management of biometric data raises significant concerns about privacy, security, and personal autonomy. Centralized systems often undermine individual control, increasing risks of misuse, unauthorized access, and data breaches.
+            Biometric data, such as fingerprints, facial recognition patterns, and iris scans, are unique identifiers inherently tied to an individual’s human agency. As digital transformation accelerates, the management of biometric data raises significant concerns about privacy, security, and personal autonomy. Centralized systems often undermine individual control, increasing risks of misuse, unauthorized access, and data breaches.
         </p>
         <p>
             This specification proposes a decentralized framework for biometric data management, where individuals retain ownership and control over their data, recognized as an inalienable extension of self. By utilizing semantic web standards (specifically RDF Schema and SPARQL extensions, excluding OWL and Schema.org), decentralized storage technologies, and cryptographic methods like zero-knowledge proofs, this framework ensures secure storage, consent-based discoverability, and privacy-preserving usage.
         </p>
         <p>
-            The framework aligns with human rights principles (e.g., <a href="https://www.ohchr.org/en/universal-declaration-of-human-rights">UDHR</a>, Article 12) and philosophical considerations of personal identity and autonomy, ensuring that digital transformation upholds the sanctity of natural persons.
+            The framework aligns with human rights principles (e.g., <a href="https://www.ohchr.org/en/universal-declaration-of-human-rights">UDHR</a>, Article 12) and philosophical considerations of personal human agency and autonomy, ensuring that digital transformation upholds the sanctity of natural persons.
         </p>
         <section id="goals">
             <h3>Goals</h3>
@@ -121,7 +121,7 @@
             <h3>Key Components</h3>
             <ul>
                 <li><strong>Personal Data Store (PDS):</strong> A decentralized, encrypted storage unit controlled by the individual or their guardian, hosting biometric records.</li>
-                <li><strong>Identity Provider:</strong> A service that authenticates identities using cryptographic proofs without accessing raw biometric data.</li>
+                <li><strong>human agency Provider:</strong> A service that authenticates identifiers using cryptographic proofs without accessing raw biometric data.</li>
                 <li><strong>Query Federation:</strong> A system for querying biometric data across PDSs using <a>SPARQL-Fed</a>, ensuring decentralized access.</li>
                 <li><strong>Consent Manager:</strong> A mechanism to manage and enforce user consent for data access, implemented via cryptographic signatures or smart contracts.</li>
             </ul>
@@ -254,7 +254,7 @@ WHERE {
         <ul>
             <li><strong>Justice and Law Enforcement:</strong> Biometric data access for identification, requiring a warrant or explicit consent.</li>
             <li><strong>Healthcare:</strong> Secure sharing of biometric data for personalized treatment, with patient consent.</li>
-            <li><strong>Identity Verification:</strong> Privacy-preserving authentication for services like banking or travel.</li>
+            <li><strong>Human Agency Verification:</strong> Privacy-preserving authentication for services like banking or travel.</li>
         </ul>
     </section>
     <section id="conformance">
@@ -326,8 +326,21 @@ WHERE {
     <section id="acknowledgments" class="appendix">
         <h2>Acknowledgments</h2>
         <p>
-            This specification is inspired by discussions on decentralized identity, privacy-preserving technologies, and human rights principles. Thanks to the semantic web community and contributors to open standards.
+            This specification is inspired by discussions on decentralized identifiers and verifiable claims, privacy-preserving technologies, and human rights principles. Thanks to the semantic web community and contributors to open standards.
         </p>
     </section>
+
+  <section id="qualia-engine-implementation" class="informative">
+    <h2>QualiaDB Engine Technical Implementation Note</h2>
+    <p>
+      In practice, the technical realization of these standards relies on the <strong>QualiaDB engine architecture</strong> to ensure robust, hardware-accelerated, zero-allocation enforcement:
+    </p>
+    <ul>
+      <li><strong>Serialization:</strong> While the standards reference generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (<code>.q42</code> file format) for execution. For data transmission across the wire, <strong>CBOR-LD</strong> is the primary serialization method.</li>
+      <li><strong>Logic & Constraints:</strong> Instead of generic validation, terms and constraints are parsed via a native <strong>N3 Streaming Parser</strong> and enforced using explicit <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid).</li>
+      <li><strong>Conflict & State Management:</strong> CRDT (Lamport Clock LWW) and Paraconsistent Logic routers are used to manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.</li>
+    </ul>
+  </section>
 </body>
+
 </html>

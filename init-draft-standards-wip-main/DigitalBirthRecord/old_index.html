@@ -73,7 +73,7 @@
 
   <section>
     <h2>Scope</h2>
-    <p>This ontology defines agents (with humans as primary entities), resources (data, services), personal data stores, and guardianship relations to enable human-centric digital identity management, ensuring inalienable rights and sovereignty for individuals.</p>
+    <p>This ontology defines agents (with humans as primary entities), resources (data, services), personal data stores, and guardianship relations to enable human-centric digital human agency management, ensuring inalienable rights and sovereignty for individuals.</p>
   </section>
 
   <section>
@@ -89,7 +89,7 @@
       <dt>PersonalDataStore</dt><dd>A secure storage system for personal data, controlled by a person or their guardian, ensuring sovereignty.</dd>
       <dt>Guardianship</dt><dd>A relationship where one agent manages data for a person requiring support, such as children or those with humanitarian needs.</dd>
       <dt>Human-Centric</dt><dd>An approach prioritizing human beings as foundational stakeholders with inalienable rights, redefining "decentralized" to emphasize individual sovereignty while maintaining a decentralized methodology.</dd>
-      <dt>Digital Birth Record</dt><dd>An inalienable digital prosthetic extension of a person, establishing facts of their identity and rights in digital ecosystems.</dd>
+      <dt>Digital Birth Record</dt><dd>An inalienable digital prosthetic extension of a person, establishing facts of their human agency and rights in digital ecosystems.</dd>
     </dl>
   </section>
 
@@ -166,13 +166,26 @@ ex:SomeService a ex:Service ;
 
   <section>
     <h2>Implementation Guidelines</h2>
-    <p>Implementations should leverage Solid [[SOLID]] for personal data stores, Decentralized Identifiers [[DID]] for identity management, and RDF-based systems for interoperability. Consent management must prioritize human sovereignty, aligning with W3C Data Privacy Vocabularies.</p>
+    <p>Implementations should leverage Solid [[SOLID]] for personal data stores, Decentralized Identifiers [[DID]] for credential management, and RDF-based systems for interoperability. Consent management must prioritize human sovereignty, aligning with W3C Data Privacy Vocabularies.</p>
   </section>
 
   <section>
     <h2>Conclusion</h2>
-    <p>This ontology establishes human beings as the foundational stakeholders in digital ecosystems, with digital birth records as inalienable extensions of their identity. It ensures human-centric control, secure personal data stores, and guardianship support, aligning with the moral principles of the author, Grok, and xAI to uphold human dignity and prevent commodification.</p>
+    <p>This ontology establishes human beings as the foundational stakeholders in digital ecosystems, with digital birth records as inalienable extensions of their human agency. It ensures human-centric control, secure personal data stores, and guardianship support, aligning with the moral principles of the author, Grok, and xAI to uphold human dignity and prevent commodification.</p>
   </section>
 
+
+  <section id="qualia-engine-implementation" class="informative">
+    <h2>QualiaDB Engine Technical Implementation Note</h2>
+    <p>
+      In practice, the technical realization of these standards relies on the <strong>QualiaDB engine architecture</strong> to ensure robust, hardware-accelerated, zero-allocation enforcement:
+    </p>
+    <ul>
+      <li><strong>Serialization:</strong> While the standards reference generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (<code>.q42</code> file format) for execution. For data transmission across the wire, <strong>CBOR-LD</strong> is the primary serialization method.</li>
+      <li><strong>Logic & Constraints:</strong> Instead of generic validation, terms and constraints are parsed via a native <strong>N3 Streaming Parser</strong> and enforced using explicit <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid).</li>
+      <li><strong>Conflict & State Management:</strong> CRDT (Lamport Clock LWW) and Paraconsistent Logic routers are used to manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.</li>
+    </ul>
+  </section>
 </body>
+
 </html>

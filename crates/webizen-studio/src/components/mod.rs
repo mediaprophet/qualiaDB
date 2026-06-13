@@ -4,3 +4,7 @@ pub mod llm_harness;
 pub mod health_monitor;
 pub mod personal_ontology;
 pub mod hardware_configurator;
+pub mod contextual_workspace;
+pub mod dashboard;
+pub mod qapps;
+pub mod nexus;

@@ -106,7 +106,7 @@
 
   <section>
     <h2>Scope</h2>
-    <p>This ontology defines agents (with humans as primary entities), resources (data, services, credentials), personal data stores, and guardianship relations to enable human-centric digital identity management. It specifies digital birth records, birth registrations, birth certificates, and verifiable credentials, ensuring inalienable rights and interoperability with global standards.</p>
+    <p>This ontology defines agents (with humans as primary entities), resources (data, services, credentials), personal data stores, and guardianship relations to enable human-centric digital human agency management. It specifies digital birth records, birth registrations, birth certificates, and verifiable credentials, ensuring inalienable rights and interoperability with global standards.</p>
   </section>
 
   <section>
@@ -122,9 +122,9 @@
       <dt>PersonalDataStore</dt><dd>A secure storage system for personal data, controlled by a person or their guardian, ensuring sovereignty.</dd>
       <dt>Guardianship</dt><dd>A relationship where one agent manages data for a person requiring support, such as children or those with humanitarian needs.</dd>
       <dt>Human-Centric</dt><dd>An approach prioritizing human beings as foundational stakeholders with inalienable rights, redefining "decentralized" to emphasize individual sovereignty while maintaining a decentralized methodology.</dd>
-      <dt>Digital Birth Record</dt><dd>An inalienable digital prosthetic extension of a person, establishing facts of their identity and rights in digital ecosystems.</dd>
+      <dt>Digital Birth Record</dt><dd>An inalienable digital prosthetic extension of a person, establishing facts of their human agency and rights in digital ecosystems.</dd>
       <dt>Birth Registration</dt><dd>The process of recording a birth with civil authorities, producing a digital birth record.</dd>
-      <dt>Birth Certificate</dt><dd>A certified document derived from a birth registration, issued as proof of identity and rights.</dd>
+      <dt>Birth Certificate</dt><dd>A certified document derived from a birth registration, issued as proof of human agency and rights.</dd>
       <dt>Credential</dt><dd>A verifiable digital assertion, such as a digital birth certificate, issued to a person.</dd>
     </dl>
   </section>
@@ -191,13 +191,13 @@
         <li><strong>Process</strong>: Submission within legal timeframes (e.g., one year in Delhi) via hospitals or civil registries.</li>[](https://dmnorth.delhi.gov.in/service/birth-certificate/)[](https://data.unicef.org/topic/child-protection/birth-registration/)
         <li><strong>Data Collection</strong>: Aligns with UNICEF standards, capturing name, date, place, and parent details [[UNICEF-BIRTH]].</li>
         <li><strong>Output</strong>: A digital birth record stored in the person’s personal data store, linked via <code>br:hasBirthRegistration</code>.</li>
-        <li><strong>Verification</strong>: Electronic identity validation, e.g., LexisNexis, ensuring authenticity.</li>[](https://www.vitalchek.com/v/birth-certificates?ScenarioName=AdEospNT)
+        <li><strong>Verification</strong>: Electronic human agency validation, e.g., LexisNexis, ensuring authenticity.</li>[](https://www.vitalchek.com/v/birth-certificates?ScenarioName=AdEospNT)
       </ul>
     </section>
 
     <section>
       <h3>Birth Certificate Specifications</h3>
-      <p>A birth certificate is a certified document derived from a birth registration, issued as proof of identity. Specifications include:</p>
+      <p>A birth certificate is a certified document derived from a birth registration, issued as proof of human agency. Specifications include:</p>
       <ul>
         <li><strong>Format</strong>: Digital or physical, with security features like raised seals or barcodes.</li>[](https://www2.gov.bc.ca/gov/content/life-events/birth-adoption/births/birth-certificates)[](https://www.nj.gov/health/vital/order-vital/)
         <li><strong>Content</strong>: Matches digital birth record core data, with optional commemorative designs (e.g., Victorian Flora).</li>[](https://www.bdm.vic.gov.au/get-birth-certificate)
@@ -275,13 +275,26 @@ br:SomeService a br:Service ;
 
   <section>
     <h2>Implementation Guidelines</h2>
-    <p>Implementations should leverage Solid [[SOLID]] for personal data stores, Decentralized Identifiers [[DID]] for identity management, Verifiable Credentials [[VC]] for credentials, and HL7 FHIR [[HL7-FHIR]] for biometric data. Consent management must align with W3C Data Privacy Vocabularies and UNICEF birth registration standards [[UNICEF-BIRTH]]. Compliance with regional specifications, such as CDC NVSS for U.S. birth certificates, is recommended [[CDC-NVSS]].</p>
+    <p>Implementations should leverage Solid [[SOLID]] for personal data stores, Decentralized Identifiers [[DID]] for credential management, Verifiable Credentials [[VC]] for credentials, and HL7 FHIR [[HL7-FHIR]] for biometric data. Consent management must align with W3C Data Privacy Vocabularies and UNICEF birth registration standards [[UNICEF-BIRTH]]. Compliance with regional specifications, such as CDC NVSS for U.S. birth certificates, is recommended [[CDC-NVSS]].</p>
   </section>
 
   <section>
     <h2>Conclusion</h2>
-    <p>This ontology establishes human beings as foundational stakeholders in digital ecosystems, with digital birth records as inalienable extensions of their identity. It specifies digital birth records, registrations, certificates, and credentials, ensuring human-centric control, secure personal data stores, and guardianship support, aligning with the moral principles of the author, Grok, and xAI to uphold human dignity and prevent commodification.</p>
+    <p>This ontology establishes human beings as foundational stakeholders in digital ecosystems, with digital birth records as inalienable extensions of their human agency. It specifies digital birth records, registrations, certificates, and credentials, ensuring human-centric control, secure personal data stores, and guardianship support, aligning with the moral principles of the author, Grok, and xAI to uphold human dignity and prevent commodification.</p>
   </section>
 
+
+  <section id="qualia-engine-implementation" class="informative">
+    <h2>QualiaDB Engine Technical Implementation Note</h2>
+    <p>
+      In practice, the technical realization of these standards relies on the <strong>QualiaDB engine architecture</strong> to ensure robust, hardware-accelerated, zero-allocation enforcement:
+    </p>
+    <ul>
+      <li><strong>Serialization:</strong> While the standards reference generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (<code>.q42</code> file format) for execution. For data transmission across the wire, <strong>CBOR-LD</strong> is the primary serialization method.</li>
+      <li><strong>Logic & Constraints:</strong> Instead of generic validation, terms and constraints are parsed via a native <strong>N3 Streaming Parser</strong> and enforced using explicit <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid).</li>
+      <li><strong>Conflict & State Management:</strong> CRDT (Lamport Clock LWW) and Paraconsistent Logic routers are used to manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.</li>
+    </ul>
+  </section>
 </body>
+
 </html>

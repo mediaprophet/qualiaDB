@@ -29,7 +29,7 @@ Sparql is a query language.
 - SPARQL 1.2 Update: https://w3c.github.io/sparql-update/spec/ 
 
 ### WebID
-- WebID 1.0 https://www.w3.org/2005/Incubator/webid/spec/identity/
+- WebID 1.0 https://www.w3.org/2005/Incubator/webid/spec/human agency/
 - The Cert Ontology 1.0:  https://www.w3.org/ns/auth/cert#
 - WebID-TLS https://www.w3.org/2005/Incubator/webid/spec/tls/
 - WebID-RSA: No Spec Found, but https://github.com/deiu/webid-rsa 
@@ -77,7 +77,7 @@ CogAI Chunks and Rules: https://w3c.github.io/cogai/
 
 When seeking to achieve support for semantic nuance, semantic web efforts have had several challenges.  One is the means to have and maintain **CoolURIs** [1](https://www.w3.org/Provider/Style/URI) [2](https://www.w3.org/TR/cooluris/).  Whilst attempts to improve suports were made via [WebDAV](https://en.wikipedia.org/wiki/WebDAV), it appears this only resulted in limited success.  
 
-Around 2014, as efforts to consider ecosystems options in environments where a range of relatively newly developed Decentralised Ledger Technology Protocols (DLTs) were being developed, particularly including blockchains (ie: bitcoin) but also both DHTs (Distributed Hash Tables) and hybrids, which are fundamental to the operation of internet (ie: DNS) but have a range of alternatives with different properties; the means to figure out how to provide some sort of harmonised solution, given no clear singular 'one stop shop' HTTP alternative, led to support for works that were believed to offer a path towards resolving this issue.  This was in-turn defined as [Decentralized IDentifier (DID)](https://en.wikipedia.org/wiki/Decentralized_identifier).  Whilst parties who became highly involved had already been working on 'Decentralised IDentity', which is illustrated throughout the consequential works in that area, a lesser considered - yet earlier intended purpose - was to provide the means to store important 'linked-data' (RDF) on non-http protocols, as to address both the namespace related, 'commons' needs for CoolURIs.  
+Around 2014, as efforts to consider ecosystems options in environments where a range of relatively newly developed Decentralised Ledger Technology Protocols (DLTs) were being developed, particularly including blockchains (ie: bitcoin) but also both DHTs (Distributed Hash Tables) and hybrids, which are fundamental to the operation of internet (ie: DNS) but have a range of alternatives with different properties; the means to figure out how to provide some sort of harmonised solution, given no clear singular 'one stop shop' HTTP alternative, led to support for works that were believed to offer a path towards resolving this issue.  This was in-turn defined as [Decentralized IDentifier (DID)](https://en.wikipedia.org/wiki/Decentralized_identifier).  Whilst parties who became highly involved had already been working on 'Decentralised human agency', which is illustrated throughout the consequential works in that area, a lesser considered - yet earlier intended purpose - was to provide the means to store important 'linked-data' (RDF) on non-http protocols, as to address both the namespace related, 'commons' needs for CoolURIs.  
 
 Whether and/or how these works now act as to support these purposes, is yet to be better clarified.
 

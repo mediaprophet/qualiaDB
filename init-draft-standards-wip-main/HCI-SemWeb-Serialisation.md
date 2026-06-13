@@ -19,7 +19,11 @@ N-Quads
 HDT 
 Notation3: https://en.wikipedia.org/wiki/Notation3 https://www.w3.org/DesignIssues/Notation3.html | https://www.w3.org/DesignIssues/Reify.html | https://www.w3.org/DesignIssues/N3Alternatives.html 
 HTML+RDFa:
-https://json-ld.github.io/cbor-ld-spec/
+CBOR-LD: https://json-ld.github.io/cbor-ld-spec/
+
+## The Qualia Engine Approach
+In practice, the **QualiaDB engine** processes all standard RDF and RDF-star formats natively. To overcome the verbosity and parsing overhead of textual serializations, the engine converts these representations into an optimized binary `.q42` file. 
+For data exchange—particularly across the wire—QualiaDB employs **CBOR-LD** as its primary serialization method. This approach leverages the concise nature of CBOR while retaining the semantic linkages required for Human-Centric AI. This balances the need for robust semantic precision (processing N3Logic, RDF-star) with the high-performance constraints required by edge-native agents.
 
 RDF/JSON: https://www.w3.org/DesignIssues/Reify.html 
 

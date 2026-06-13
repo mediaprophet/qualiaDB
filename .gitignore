@@ -1,6 +1,8 @@
 /target
 /crates/qualia-core-db/target
 /crates/qualia-cli/target
+/crates/webizen-desktop/target
+/crates/webizen-studio/dist
 *.rdf
 *.wal
 *.q42

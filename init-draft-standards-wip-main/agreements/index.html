@@ -203,8 +203,8 @@ sequenceDiagram
       <li><strong>Temporal Support:</strong> Allow agreements to include cooling-off periods, be varied, terminated, or linked to historical instruments with temporal metadata, supporting dynamic relationship changes and historical resource access.</li>
       <li><strong>Human Rights Alignment:</strong> Support value credentials encoding UN instruments (e.g., [[UDHR]], [[CRC]], [[ITPC]]) in RDF.</li>
       <li><strong>Accessibility:</strong> Ensure agreements are human-readable and machine-readable, supporting diverse user needs.</li>
-      <li><strong>Consent Validation:</strong> Address guardianship, coercion, capacity, and temporal considerations (e.g., emergency provisions, life-stage changes) to ensure valid consent.</li>
-      <li><strong>Conflict Detection:</strong> Provide logical inferencing to identify conflicts between agreements or terms, including temporal conflicts.</li>
+      <li><strong>Consent Validation:</strong> Address guardianship, coercion, capacity, and temporal considerations using robust logical frameworks (LTL).</li>
+      <li><strong>Conflict Detection:</strong> Employ <strong>Paraconsistent Logic</strong> routers to isolate contradictory Quins into sub-contexts without halting the broader system.</li>
     </ul>
   </section>
 
@@ -220,10 +220,10 @@ sequenceDiagram
       </p>
       <ul>
         <li><strong>Agreement Class:</strong> Defines the agreement, including parties, terms, and metadata (e.g., creation date, version).</li>
-        <li><strong>Terms:</strong> Express and implied terms, linked to value credentials or external instruments (e.g., [[UDHR]]).</li>
-        <li><strong>Signatures:</strong> Cryptographic signatures per [[W3C-Credential]] to ensure authenticity.</li>
+        <li><strong>Terms:</strong> Formulated using <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid), structured as <strong>N3 rules</strong> (Strict <code>=&gt;</code>, Defeasible <code>~&gt;</code>, Defeater <code>^&gt;</code>, Linear <code>-o</code>).</li>
+        <li><strong>Signatures:</strong> Handled via a <code>SuspendedTransactionQueue</code> for multi-party (M:N) signature gathering and Ed25519 Author-Scoped Merkle Roots.</li>
         <li><strong>Constituencies:</strong> References to related instruments, such as prior agreements or legal frameworks.</li>
-        <li><strong>Temporal Metadata:</strong> Timestamps, versioning, cooling-off period, validity periods, and historical access rules to support relationship changes and resource access under past terms.</li>
+        <li><strong>Temporal Metadata:</strong> Managed via <strong>Allen Interval Algebra</strong> and <strong>LTL Semantics</strong> (Globally, Finally, Next, Until, Release) for dynamic constraints.</li>
       </ul>
       <p>
         The following diagram illustrates the updated data model structure:
@@ -414,5 +414,18 @@ stateDiagram-v2
       This work is inspired by contributions from the W3C Human Centric AI Community Group, the Solid Community Group, and the W3C Credentials Community Group. Special thanks to contributors to the WebCivics repository and UN human rights frameworks.
     </p>
   </section>
+
+  <section id="qualia-engine-implementation" class="informative">
+    <h2>QualiaDB Engine Technical Implementation Note</h2>
+    <p>
+      In practice, the technical realization of these standards relies on the <strong>QualiaDB engine architecture</strong> to ensure robust, hardware-accelerated, zero-allocation enforcement:
+    </p>
+    <ul>
+      <li><strong>Serialization:</strong> While the standards reference generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (<code>.q42</code> file format) for execution. For data transmission across the wire, <strong>CBOR-LD</strong> is the primary serialization method.</li>
+      <li><strong>Logic & Constraints:</strong> Instead of generic validation, terms and constraints are parsed via a native <strong>N3 Streaming Parser</strong> and enforced using explicit <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid).</li>
+      <li><strong>Conflict & State Management:</strong> CRDT (Lamport Clock LWW) and Paraconsistent Logic routers are used to manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.</li>
+    </ul>
+  </section>
 </body>
+
 </html>

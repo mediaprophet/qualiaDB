@@ -28,7 +28,7 @@
 </head>
 <body>
   <section id="abstract">
-    <p>Digital transformation has reshaped societal operations, moving from physical documents to digital systems for identity and agency. This shift impacts human rights, as access to digital tools is essential for personhood. This document examines the role of socially-aware cloud storage, personal information processing apparatus, and domain names in supporting digital personhood, the Social Web, and Human-Centric AI, outlining objective purposes and challenges as of June 20, 2025.</p>
+    <p>Digital transformation has reshaped societal operations, moving from physical documents to digital systems for human agency and agency. This shift impacts human rights, as access to digital tools is essential for personhood. This document examines the role of socially-aware cloud storage, personal information processing apparatus, and domain names in supporting digital personhood, the Social Web, and Human-Centric AI, outlining objective purposes and challenges as of June 20, 2025.</p>
   </section>
 
   <section id="sotd">
@@ -46,12 +46,12 @@
 
   <section>
     <h2>Introduction and Context</h2>
-    <p>Digital transformation, as of June 20, 2025, has shifted societal reliance from physical evidence (e.g., printed documents) to digital systems for identity, agency, and service access. This impacts human rights, as digital infrastructure underpins personhood. Historically, printed documents like birth certificates established identity, but digital tools are now critical for exercising rights. This note explores the role of socially-aware cloud storage, personal information processing apparatus, and domain names in supporting the Social Web, Human-Centric AI, and a Human-Centric Internet.</p>
+    <p>Digital transformation, as of June 20, 2025, has shifted societal reliance from physical evidence (e.g., printed documents) to digital systems for human agency, agency, and service access. This impacts human rights, as digital infrastructure underpins personhood. Historically, printed documents like birth certificates established human agency, but digital tools are now critical for exercising rights. This note explores the role of socially-aware cloud storage, personal information processing apparatus, and domain names in supporting the Social Web, Human-Centric AI, and a Human-Centric Internet.</p>
   </section>
 
   <section>
     <h2>Digital Personhood and Human Rights</h2>
-    <p><dfn>Digital personhood</dfn> refers to an individual's ability to maintain a recognized digital identity, enabling participation in digital ecosystems while exercising agency and rights. According to the <a href="https://www.ohchr.org/en/topic/digital-space-and-human-rights">OHCHR</a>, digital technologies affect civil, political, economic, social, and cultural rights, both enhancing and undermining them. Exclusion from digital systems risks undermining rights like privacy, freedom of expression, and non-discrimination, as highlighted by the <a href="https://www.undp.org/rolhr/human-rights/digital-transformation">UNDP</a>.</p>
+    <p><dfn>Digital personhood</dfn> refers to an individual's ability to maintain a recognized digital human agency, enabling participation in digital ecosystems while exercising agency and rights. According to the <a href="https://www.ohchr.org/en/topic/digital-space-and-human-rights">OHCHR</a>, digital technologies affect civil, political, economic, social, and cultural rights, both enhancing and undermining them. Exclusion from digital systems risks undermining rights like privacy, freedom of expression, and non-discrimination, as highlighted by the <a href="https://www.undp.org/rolhr/human-rights/digital-transformation">UNDP</a>.</p>
   </section>
 
   <section>
@@ -88,7 +88,7 @@
         <tr>
           <td>Ensure Universal Access</td>
           <td>Provide affordable ICT access.</td>
-          <td>Subsidize internet/devices; promote open-source software; develop identity standards.</td>
+          <td>Subsidize internet/devices; promote open-source software; develop human agency standards.</td>
         </tr>
         <tr>
           <td>Empower User-Controlled Data</td>
@@ -96,7 +96,7 @@
           <td>Develop decentralized storage; provide encryption tools; support data portability.</td>
         </tr>
         <tr>
-          <td>Promote Digital Identity</td>
+          <td>Promote digital human agency</td>
           <td>Provide domain names for presence.</td>
           <td>Subsidize domains; integrate with decentralized IDs; educate on value.</td>
         </tr>
@@ -131,7 +131,7 @@
 
   <section>
     <h2>Conclusion</h2>
-    <p>Digital transformation redefines personhood to include digital access, identity, and agency. Tools like socially-aware cloud storage, PDS, and domain names are critical for the Social Web and Human-Centric AI. Addressing challenges through universal access and inclusive policies ensures an equitable digital future as of June 20, 2025.</p>
+    <p>Digital transformation redefines personhood to include digital access, human agency, and agency. Tools like socially-aware cloud storage, PDS, and domain names are critical for the Social Web and Human-Centric AI. Addressing challenges through universal access and inclusive policies ensures an equitable digital future as of June 20, 2025.</p>
   </section>
 
   <section class="appendix">
@@ -145,7 +145,7 @@
       <li><a href="https://legal.thomsonreuters.com/en/insights/articles/understanding-data-privacy-and-cloud-computing">Thomson Reuters: Cloud Data Privacy</a></li>
       <li><a href="https://www.pcloud.com/eu">pCloud: Secure Cloud Storage</a></li>
       <li><a href="https://www.ohchr.org/en/privacy-in-the-digital-age">OHCHR: Privacy in the Digital Age</a></li>
-      <li><a href="https://arxiv.org/abs/2011.02412">arXiv: Identity and Personhood in Digital Democracy</a></li>
+      <li><a href="https://arxiv.org/abs/2011.02412">arXiv: human agency and Personhood in Digital Democracy</a></li>
       <li><a href="https://press.un.org/en/2024/soc4915.doc.htm">UN: Human Rights-Based Technology Policies</a></li>
       <li><a href="https://www.undp.org/eurasia/publications/impact-digital-technology-human-rights-europe-and-central-asia">UNDP: Digital Technology and Human Rights</a></li>
       <li><a href="https://www.oecd.org/content/dam/oecd/en/publications/reports/2024/06/shaping-a-rights-oriented-digital-transformation_30378a18/86ee84e2-en.pdf">OECD: Rights-Oriented Digital Transformation</a></li>
@@ -154,5 +154,18 @@
       <li><a href="https://www.oecd.org/en/topics/sub-issues/human-rights-in-the-digital-age.html">OECD: Human Rights in the Digital Age</a></li>
     </ul>
   </section>
+
+  <section id="qualia-engine-implementation" class="informative">
+    <h2>QualiaDB Engine Technical Implementation Note</h2>
+    <p>
+      In practice, the technical realization of these standards relies on the <strong>QualiaDB engine architecture</strong> to ensure robust, hardware-accelerated, zero-allocation enforcement:
+    </p>
+    <ul>
+      <li><strong>Serialization:</strong> While the standards reference generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (<code>.q42</code> file format) for execution. For data transmission across the wire, <strong>CBOR-LD</strong> is the primary serialization method.</li>
+      <li><strong>Logic & Constraints:</strong> Instead of generic validation, terms and constraints are parsed via a native <strong>N3 Streaming Parser</strong> and enforced using explicit <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid).</li>
+      <li><strong>Conflict & State Management:</strong> CRDT (Lamport Clock LWW) and Paraconsistent Logic routers are used to manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.</li>
+    </ul>
+  </section>
 </body>
+
 </html>

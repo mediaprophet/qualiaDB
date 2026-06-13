@@ -69,7 +69,7 @@
         <dt><code>hcai:Consciousness</code></dt>
         <dd>The subjective awareness and self-reflective capacity of a natural person, encompassing perception, intention, and selfhood.</dd>
         <dt><code>hcai:Soul</code></dt>
-        <dd>The metaphysical essence of a person, representing non-material aspects of identity and existence.</dd>
+        <dd>The metaphysical essence of a person, representing non-material aspects of human agency and existence.</dd>
         <dt><code>hcai:Emotion</code></dt>
         <dd>An emotional state (e.g., love, fear, hope) experienced by a natural person.</dd>
         <dt><code>hcai:PsychologicalState</code></dt>
@@ -79,7 +79,7 @@
         <dt><code>hcai:Relationship</code></dt>
         <dd>An emotional or social bond between natural persons (e.g., friendship, kinship).</dd>
         <dt><code>hcai:HumanExperience</code></dt>
-        <dd>A lived experience shaping a person's identity (e.g., trauma, cultural immersion).</dd>
+        <dd>A lived experience shaping a person's human agency (e.g., trauma, cultural immersion).</dd>
         <dt><code>hcai:ValueBelief</code></dt>
         <dd>A deeply held belief or value (e.g., compassion, justice) guiding a person's actions.</dd>
         <dt><code>hcai:TangibleEntity</code></dt>
@@ -194,7 +194,7 @@ ex:Jamal a hcai:NaturalPerson ;
   hcai:hasExperience ex:JamalEnlightenment .
 
 ex:JamalConsciousness a hcai:Consciousness ;
-  hcai:description "Jamal's awareness of his purpose and identity after meditation" .
+  hcai:description "Jamal's awareness of his purpose and human agency after meditation" .
 
 ex:JamalSoul a hcai:Soul ;
   hcai:description "Jamal's metaphysical essence, shaped by his spiritual journey" .
@@ -295,5 +295,18 @@ ex:PriyaDigitalPortfolio a hcai:TangibleEntity , owl:Thing ;
       This unofficial proposal by the W3C Human-Centric AI Community Group aims to redefine how AI systems represent natural persons, replacing OWL and FOAF with a human-focused ontology while supporting integration with tangible entities.
     </p>
   </section>
+
+  <section id="qualia-engine-implementation" class="informative">
+    <h2>QualiaDB Engine Technical Implementation Note</h2>
+    <p>
+      In practice, the technical realization of these standards relies on the <strong>QualiaDB engine architecture</strong> to ensure robust, hardware-accelerated, zero-allocation enforcement:
+    </p>
+    <ul>
+      <li><strong>Serialization:</strong> While the standards reference generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (<code>.q42</code> file format) for execution. For data transmission across the wire, <strong>CBOR-LD</strong> is the primary serialization method.</li>
+      <li><strong>Logic & Constraints:</strong> Instead of generic validation, terms and constraints are parsed via a native <strong>N3 Streaming Parser</strong> and enforced using explicit <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid).</li>
+      <li><strong>Conflict & State Management:</strong> CRDT (Lamport Clock LWW) and Paraconsistent Logic routers are used to manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.</li>
+    </ul>
+  </section>
 </body>
+
 </html>

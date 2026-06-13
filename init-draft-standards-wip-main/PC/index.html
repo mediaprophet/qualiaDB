@@ -49,7 +49,7 @@
     </section>
     <section id='dids'>
       <h3>W3C Decentralized Identifiers (DIDs)</h3>
-      <p>DIDs are globally unique URIs that resolve to DID documents, containing metadata and service endpoints for accessing RDF content across decentralized protocols. Designed as identifiers for entities, not identity, DIDs support various methods (e.g., <code>did:ipid</code>, <code>did:ethr</code>) and are independent of centralized registries. See <a href='https://www.w3.org/TR/did-core/'>W3C DID v1.0</a>.</p>
+      <p>DIDs are globally unique URIs that resolve to DID documents, containing metadata and service endpoints for accessing RDF content across decentralized protocols. Designed as identifiers for entities, not human agency, DIDs support various methods (e.g., <code>did:ipid</code>, <code>did:ethr</code>) and are independent of centralized registries. See <a href='https://www.w3.org/TR/did-core/'>W3C DID v1.0</a>.</p>
     </section>
     <section id='cool-uris'>
       <h3>Cool URIs and the Semantic Web</h3>
@@ -291,5 +291,18 @@
     </pre>
     <p>This DID references RDF content across multiple protocols, supporting Permissive Commons’ decentralized, permissioned framework.</p>
   </section>
+
+  <section id="qualia-engine-implementation" class="informative">
+    <h2>QualiaDB Engine Technical Implementation Note</h2>
+    <p>
+      In practice, the technical realization of these standards relies on the <strong>QualiaDB engine architecture</strong> to ensure robust, hardware-accelerated, zero-allocation enforcement:
+    </p>
+    <ul>
+      <li><strong>Serialization:</strong> While the standards reference generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (<code>.q42</code> file format) for execution. For data transmission across the wire, <strong>CBOR-LD</strong> is the primary serialization method.</li>
+      <li><strong>Logic & Constraints:</strong> Instead of generic validation, terms and constraints are parsed via a native <strong>N3 Streaming Parser</strong> and enforced using explicit <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid).</li>
+      <li><strong>Conflict & State Management:</strong> CRDT (Lamport Clock LWW) and Paraconsistent Logic routers are used to manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.</li>
+    </ul>
+  </section>
 </body>
+
 </html>

@@ -73,3 +73,10 @@ Future iterations of the specification could:
 The SPARQL-MM specification provides a robust framework for querying multimedia data in RDF triplestores, with a focus on temporal and spatial relationships. By aligning with SPARQL 1.1, SPARQL 1.2 Federated Query, Media Annotations Ontology, and W3C Media Fragments URI 1.0, it ensures compatibility with Semantic Web standards. The updates in this draft address technical errors and enhance functionality, making SPARQL-MM a valuable tool for multimedia Semantic Web applications.
 
 **Date**: June 21, 2025
+
+## QualiaDB Engine Technical Implementation Note
+> [!NOTE]
+> In practice, the technical realization of these standards relies on the **QualiaDB engine architecture** to ensure robust, hardware-accelerated, zero-allocation enforcement:
+> - **Serialization:** While referencing generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (`.q42` file format) for execution. For data transmission, **CBOR-LD** is the primary serialization method.
+> - **Logic & Constraints:** Constraints are parsed via a native **N3 Streaming Parser** and enforced using explicit **Deontic Logic** operators (Obligate, Permit, Forbid).
+> - **Conflict & State:** CRDT and Paraconsistent Logic routers manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.

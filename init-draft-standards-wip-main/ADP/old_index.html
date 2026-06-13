@@ -66,7 +66,7 @@
         This ontology defines:
         <ul>
           <li>Classes for agents, services, and metadata.</li>
-          <li>Properties linking agents to resources and identities.</li>
+          <li>Properties linking agents to resources and identifiers.</li>
           <li>Constraints for data validation using SHACL.</li>
           <li>Serializations in RDF Turtle and JSON-LD.</li>
         </ul>
@@ -317,7 +317,7 @@ adp:ServiceShape a sh:NodeShape ;
     <ul>
       <li><strong>Personal Data Management</strong>: A user queries an agent’s domain to discover their Solid POD for data access.</li>
       <li><strong>Service Discovery</strong>: An application retrieves an organization’s API endpoints via ADP metadata.</li>
-      <li><strong>Identity Verification</strong>: A service validates an agent’s WebID for authentication.</li>
+      <li><strong>Human Agency Verification</strong>: A service validates an agent’s WebID for authentication.</li>
       <li><strong>AI Applications</strong>: A cognitive agent queries ADP metadata to build a knowledge graph.</li>
     </ul>
   </section>
@@ -348,5 +348,18 @@ adp:ServiceShape a sh:NodeShape ;
       Thanks to the W3C Semantic Web Interest Group, Solid Community, and WebCivics contributors.
     </p>
   </section>
+
+  <section id="qualia-engine-implementation" class="informative">
+    <h2>QualiaDB Engine Technical Implementation Note</h2>
+    <p>
+      In practice, the technical realization of these standards relies on the <strong>QualiaDB engine architecture</strong> to ensure robust, hardware-accelerated, zero-allocation enforcement:
+    </p>
+    <ul>
+      <li><strong>Serialization:</strong> While the standards reference generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (<code>.q42</code> file format) for execution. For data transmission across the wire, <strong>CBOR-LD</strong> is the primary serialization method.</li>
+      <li><strong>Logic & Constraints:</strong> Instead of generic validation, terms and constraints are parsed via a native <strong>N3 Streaming Parser</strong> and enforced using explicit <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid).</li>
+      <li><strong>Conflict & State Management:</strong> CRDT (Lamport Clock LWW) and Paraconsistent Logic routers are used to manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.</li>
+    </ul>
+  </section>
 </body>
+
 </html>

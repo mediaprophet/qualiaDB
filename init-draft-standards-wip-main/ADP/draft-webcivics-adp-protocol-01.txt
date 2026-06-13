@@ -127,7 +127,7 @@ Table of Contents
 
    - Personal Data Management: Discover a user’s Solid POD for data access.
    - Service Discovery: Retrieve an organization’s SPARQL or API endpoints.
-   - Identity Verification: Validate an agent’s WebID or credentials.
+   - Human Agency Verification: Validate an agent’s WebID or credentials.
    - AI Applications: Query metadata for AI agent capabilities.
    - Humanitarian Services: Identify essential services for emergency access.
    - Content Filtering: Flag adult content websites for age restrictions.

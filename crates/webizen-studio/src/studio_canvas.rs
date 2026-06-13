@@ -144,11 +144,367 @@ pub struct WebizenWorkspace {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Default pane layouts for known QApps
+// ─────────────────────────────────────────────────────────────
+
+fn p(cid: &str, x: u16, y: u16, w: u16, h: u16) -> PanePlacement {
+    PanePlacement {
+        component_id: cid.to_string(),
+        x, y, w, h,
+        data_bindings: vec![],
+        binds_rpc: None,
+        requires_capability: vec![],
+        ui_mode: None,
+        layer: LayerBehavior::Docked,
+        anchor: None,
+        min_w_points: 0,
+        min_h_points: 0,
+        supported_presentations: vec![],
+        theme: ThemeBinding::default(),
+    }
+}
+
+fn app_display_name(app_id: &str) -> &'static str {
+    match app_id {
+        "context-studio"     => "Context Studio",
+        "qapp-studio"        => "QApp Studio",
+        "profile-identity"   => "Profile & Identity",
+        "hardware-config"    => "Hardware Configurator",
+        "chat"               => "Neuro-Symbolic Chat",
+        "llm-harness"        => "LLM Model Harness",
+        "lora-manager"       => "LoRA Adapter Manager",
+        "agent-config"       => "Agent Configuration",
+        "inference-monitor"  => "Inference Monitor",
+        "model-lifecycle"    => "Model Lifecycle",
+        "ontology-builder"   => "Ontology Builder",
+        "sparql-explorer"    => "SPARQL Explorer",
+        "n3-logic-studio"    => "N3 Logic Studio",
+        "rdf-star-editor"    => "RDF-Star Editor",
+        "solid-browser"      => "Solid LDP Browser",
+        "physics-sim"        => "Physics Simulator",
+        "chemistry-modeler"  => "Chemistry Modeler",
+        "ode-lab"            => "ODE & Calculus Lab",
+        "matrix-lab"         => "Matrix & Linear Algebra",
+        "stats-lab"          => "Statistical Analysis Lab",
+        "bioinformatics-lab" => "Bioinformatics Lab",
+        "qpu-optimizer"      => "QPU Optimizer",
+        "quantum-dft"        => "Quantum DFT Lab",
+        "qaoa-explorer"      => "QAOA Explorer",
+        "qpu-providers"      => "QPU Provider Manager",
+        "health-vitals"      => "Health Vital Monitor",
+        "clinical-risk"      => "Clinical Risk Scorer",
+        "dicom-viewer"       => "DICOM Viewer",
+        "anatomy-browser"    => "Anatomy Context Browser",
+        "comorbidity"        => "Comorbidity Analyzer",
+        "portfolio"          => "Portfolio Analyzer",
+        "risk-engine"        => "Risk Engine",
+        "gbm-sim"            => "GBM Simulator",
+        "tax-schema"         => "Tax Schema Editor",
+        "agreements"         => "Agreements & Rights",
+        "key-vault"          => "Key Vault Manager",
+        "zk-studio"          => "ZK Proof Studio",
+        "deontic-editor"     => "Deontic Logic Editor",
+        "shacl-validator"    => "SHACL Validator",
+        "wal-inspector"      => "WAL Inspector",
+        "q42-volume"         => "Q42 Volume Manager",
+        "provenance-graph"   => "Provenance Graph",
+        "storage-config"     => "Storage Driver Config",
+        "webtorrent"         => "WebTorrent Seeder",
+        "p2p-dashboard"      => "P2P Node Dashboard",
+        "ebpf-filter"        => "eBPF Filter Manager",
+        "acoustic-ble"       => "Acoustic BLE Mesh",
+        "mcp-inspector"      => "MCP Tool Inspector",
+        "benchmark"          => "Benchmark Harness",
+        "cli-bridge"         => "CLI Bridge",
+        "extension-bus"      => "Extension Bus",
+        "nexus"              => "Nexus — Quantum Research Cooperative",
+        _                    => "QApp Editor",
+    }
+}
+
+// Grid is 96 × 64 points. Helper layout constants:
+//   Left 2/3:  x=0,  w=62
+//   Right 1/3: x=64, w=30
+//   Top half:  y=0,  h=30
+//   Bot half:  y=32, h=30
+//   Full:      x=0, y=0, w=94, h=62
+fn default_panes_for_app(app_id: &str) -> Vec<PanePlacement> {
+    match app_id {
+        "context-studio" => vec![
+            p("contextual-workspace",    0,  0, 62, 62),
+            p("neuro-symbolic-chat",    64,  0, 30, 30),
+            p("sparql-explorer",        64, 32, 30, 30),
+        ],
+        "chat" => vec![
+            p("neuro-symbolic-chat",     0,  0, 62, 62),
+            p("inference-monitor",      64,  0, 30, 30),
+            p("lora-manager",           64, 32, 30, 30),
+        ],
+        "llm-harness" => vec![
+            p("llm-harness",             0,  0, 56, 62),
+            p("inference-monitor",      58,  0, 36, 20),
+            p("model-lifecycle",        58, 22, 36, 20),
+            p("lora-manager",           58, 44, 36, 18),
+        ],
+        "lora-manager" => vec![
+            p("lora-manager",            0,  0, 56, 36),
+            p("llm-harness",             0, 38, 56, 24),
+            p("inference-monitor",      58,  0, 36, 30),
+            p("agent-config",           58, 32, 36, 30),
+        ],
+        "agent-config" => vec![
+            p("agent-config",            0,  0, 56, 40),
+            p("inference-monitor",      58,  0, 36, 30),
+            p("model-lifecycle",        58, 32, 36, 30),
+        ],
+        "inference-monitor" => vec![
+            p("inference-monitor",       0,  0, 94, 30),
+            p("system-diagnostics",      0, 32, 46, 30),
+            p("benchmark-harness",      48, 32, 46, 30),
+        ],
+        "model-lifecycle" => vec![
+            p("model-lifecycle",         0,  0, 56, 36),
+            p("llm-harness",            58,  0, 36, 20),
+            p("lora-manager",           58, 22, 36, 20),
+            p("inference-monitor",       0, 38, 56, 24),
+        ],
+        "ontology-builder" => vec![
+            p("contextual-workspace",    0,  0, 56, 62),
+            p("n3-logic-studio",        58,  0, 36, 30),
+            p("sparql-explorer",        58, 32, 36, 30),
+        ],
+        "sparql-explorer" => vec![
+            p("sparql-explorer",         0,  0, 62, 62),
+            p("provenance-graph",       64,  0, 30, 30),
+            p("n3-logic-studio",        64, 32, 30, 30),
+        ],
+        "n3-logic-studio" => vec![
+            p("n3-logic-studio",         0,  0, 62, 62),
+            p("shacl-validator",        64,  0, 30, 30),
+            p("deontic-logic-editor",   64, 32, 30, 30),
+        ],
+        "rdf-star-editor" => vec![
+            p("rdf-star-editor",         0,  0, 62, 62),
+            p("provenance-graph",       64,  0, 30, 30),
+            p("sparql-explorer",        64, 32, 30, 30),
+        ],
+        "solid-browser" => vec![
+            p("solid-ldp-browser",       0,  0, 62, 62),
+            p("sparql-explorer",        64,  0, 30, 30),
+            p("key-vault-manager",      64, 32, 30, 30),
+        ],
+        "physics-sim" => vec![
+            p("physics-simulator",       0,  0, 62, 62),
+            p("statistical-analysis",   64,  0, 30, 30),
+            p("ode-solver",             64, 32, 30, 30),
+        ],
+        "chemistry-modeler" => vec![
+            p("chemistry-modeler",       0,  0, 62, 62),
+            p("bioinformatics-lab",     64,  0, 30, 30),
+            p("statistical-analysis",   64, 32, 30, 30),
+        ],
+        "ode-lab" => vec![
+            p("ode-solver",              0,  0, 62, 62),
+            p("matrix-lab",             64,  0, 30, 30),
+            p("statistical-analysis",   64, 32, 30, 30),
+        ],
+        "matrix-lab" => vec![
+            p("matrix-lab",              0,  0, 62, 62),
+            p("ode-solver",             64,  0, 30, 30),
+            p("statistical-analysis",   64, 32, 30, 30),
+        ],
+        "stats-lab" => vec![
+            p("statistical-analysis",    0,  0, 62, 62),
+            p("matrix-lab",             64,  0, 30, 30),
+            p("provenance-graph",       64, 32, 30, 30),
+        ],
+        "bioinformatics-lab" => vec![
+            p("bioinformatics-lab",      0,  0, 62, 62),
+            p("chemistry-modeler",      64,  0, 30, 30),
+            p("statistical-analysis",   64, 32, 30, 30),
+        ],
+        "qpu-optimizer" => vec![
+            p("qpu-optimizer",           0,  0, 56, 36),
+            p("qaoa-explorer",           0, 38, 56, 24),
+            p("qpu-providers",          58,  0, 36, 30),
+            p("statistical-analysis",   58, 32, 36, 30),
+        ],
+        "quantum-dft" => vec![
+            p("quantum-dft",             0,  0, 62, 62),
+            p("qpu-optimizer",          64,  0, 30, 30),
+            p("qpu-providers",          64, 32, 30, 30),
+        ],
+        "qaoa-explorer" => vec![
+            p("qaoa-explorer",           0,  0, 62, 62),
+            p("qpu-optimizer",          64,  0, 30, 30),
+            p("statistical-analysis",   64, 32, 30, 30),
+        ],
+        "qpu-providers" => vec![
+            p("qpu-providers",           0,  0, 56, 40),
+            p("qpu-optimizer",          58,  0, 36, 30),
+            p("qaoa-explorer",          58, 32, 36, 30),
+        ],
+        "health-vitals" => vec![
+            p("health-vital-monitor",    0,  0, 46, 30),
+            p("clinical-risk-scorer",    0, 32, 46, 30),
+            p("dicom-viewer",           48,  0, 46, 30),
+            p("comorbidity-analyzer",   48, 32, 46, 30),
+        ],
+        "clinical-risk" => vec![
+            p("clinical-risk-scorer",    0,  0, 62, 62),
+            p("health-vital-monitor",   64,  0, 30, 30),
+            p("comorbidity-analyzer",   64, 32, 30, 30),
+        ],
+        "dicom-viewer" => vec![
+            p("dicom-viewer",            0,  0, 62, 62),
+            p("health-vital-monitor",   64,  0, 30, 30),
+            p("clinical-risk-scorer",   64, 32, 30, 30),
+        ],
+        "anatomy-browser" => vec![
+            p("health-vital-monitor",    0,  0, 46, 30),
+            p("dicom-viewer",           48,  0, 46, 30),
+            p("clinical-risk-scorer",    0, 32, 46, 30),
+            p("comorbidity-analyzer",   48, 32, 46, 30),
+        ],
+        "comorbidity" => vec![
+            p("comorbidity-analyzer",    0,  0, 62, 62),
+            p("clinical-risk-scorer",   64,  0, 30, 30),
+            p("health-vital-monitor",   64, 32, 30, 30),
+        ],
+        "portfolio" => vec![
+            p("portfolio-analyzer",      0,  0, 62, 36),
+            p("risk-engine",             0, 38, 62, 24),
+            p("gbm-simulator",          64,  0, 30, 30),
+            p("statistical-analysis",   64, 32, 30, 30),
+        ],
+        "risk-engine" => vec![
+            p("risk-engine",             0,  0, 62, 62),
+            p("portfolio-analyzer",     64,  0, 30, 30),
+            p("gbm-simulator",          64, 32, 30, 30),
+        ],
+        "gbm-sim" => vec![
+            p("gbm-simulator",           0,  0, 62, 62),
+            p("risk-engine",            64,  0, 30, 30),
+            p("statistical-analysis",   64, 32, 30, 30),
+        ],
+        "tax-schema" => vec![
+            p("shacl-validator",         0,  0, 56, 40),
+            p("deontic-logic-editor",   58,  0, 36, 30),
+            p("agreements-rights",      58, 32, 36, 30),
+        ],
+        "agreements" => vec![
+            p("agreements-rights",       0,  0, 62, 62),
+            p("deontic-logic-editor",   64,  0, 30, 30),
+            p("shacl-validator",        64, 32, 30, 30),
+        ],
+        "key-vault" => vec![
+            p("key-vault-manager",       0,  0, 62, 62),
+            p("zk-proof-studio",        64,  0, 30, 30),
+            p("agreements-rights",      64, 32, 30, 30),
+        ],
+        "zk-studio" => vec![
+            p("zk-proof-studio",         0,  0, 62, 62),
+            p("key-vault-manager",      64,  0, 30, 30),
+            p("deontic-logic-editor",   64, 32, 30, 30),
+        ],
+        "deontic-editor" => vec![
+            p("deontic-logic-editor",    0,  0, 62, 62),
+            p("shacl-validator",        64,  0, 30, 30),
+            p("agreements-rights",      64, 32, 30, 30),
+        ],
+        "shacl-validator" => vec![
+            p("shacl-validator",         0,  0, 62, 62),
+            p("n3-logic-studio",        64,  0, 30, 30),
+            p("deontic-logic-editor",   64, 32, 30, 30),
+        ],
+        "wal-inspector" => vec![
+            p("wal-inspector",           0,  0, 62, 36),
+            p("provenance-graph",       64,  0, 30, 62),
+            p("q42-volume-manager",      0, 38, 62, 24),
+        ],
+        "q42-volume" => vec![
+            p("q42-volume-manager",      0,  0, 62, 36),
+            p("wal-inspector",          64,  0, 30, 30),
+            p("storage-driver-config",  64, 32, 30, 30),
+            p("provenance-graph",        0, 38, 62, 24),
+        ],
+        "provenance-graph" => vec![
+            p("provenance-graph",        0,  0, 62, 62),
+            p("wal-inspector",          64,  0, 30, 30),
+            p("sparql-explorer",        64, 32, 30, 30),
+        ],
+        "storage-config" => vec![
+            p("storage-driver-config",   0,  0, 56, 40),
+            p("system-diagnostics",     58,  0, 36, 40),
+            p("wal-inspector",           0, 42, 56, 20),
+        ],
+        "webtorrent" => vec![
+            p("webtorrent-seeder",       0,  0, 62, 36),
+            p("p2p-dashboard",          64,  0, 30, 30),
+            p("ebpf-filter-manager",    64, 32, 30, 30),
+            p("provenance-graph",        0, 38, 62, 24),
+        ],
+        "p2p-dashboard" => vec![
+            p("p2p-dashboard",           0,  0, 62, 62),
+            p("webtorrent-seeder",      64,  0, 30, 30),
+            p("ebpf-filter-manager",    64, 32, 30, 30),
+        ],
+        "ebpf-filter" => vec![
+            p("ebpf-filter-manager",     0,  0, 62, 62),
+            p("p2p-dashboard",          64,  0, 30, 30),
+            p("system-diagnostics",     64, 32, 30, 30),
+        ],
+        "acoustic-ble" => vec![
+            p("acoustic-ble-mesh",       0,  0, 62, 62),
+            p("p2p-dashboard",          64,  0, 30, 30),
+            p("ebpf-filter-manager",    64, 32, 30, 30),
+        ],
+        "mcp-inspector" => vec![
+            p("mcp-inspector",           0,  0, 62, 62),
+            p("system-diagnostics",     64,  0, 30, 30),
+            p("benchmark-harness",      64, 32, 30, 30),
+        ],
+        "benchmark" => vec![
+            p("benchmark-harness",       0,  0, 62, 62),
+            p("inference-monitor",      64,  0, 30, 30),
+            p("system-diagnostics",     64, 32, 30, 30),
+        ],
+        "cli-bridge" => vec![
+            p("cli-bridge",              0,  0, 62, 62),
+            p("mcp-inspector",          64,  0, 30, 30),
+            p("system-diagnostics",     64, 32, 30, 30),
+        ],
+        "nexus" => vec![
+            p("nexus-canvas",            0,  0, 62, 62),
+            p("sparql-explorer",        64,  0, 30, 30),
+            p("provenance-graph",       64, 32, 30, 30),
+        ],
+        "extension-bus" => vec![
+            p("extension-bus",           0,  0, 56, 40),
+            p("system-diagnostics",     58,  0, 36, 30),
+            p("mcp-inspector",          58, 32, 36, 30),
+        ],
+        "profile-identity" => vec![
+            p("contextual-workspace",    0,  0, 62, 62),
+            p("key-vault-manager",      64,  0, 30, 30),
+            p("agreements-rights",      64, 32, 30, 30),
+        ],
+        "hardware-config" => vec![
+            p("system-diagnostics",      0,  0, 56, 40),
+            p("storage-driver-config",  58,  0, 36, 30),
+            p("agent-config",           58, 32, 36, 30),
+            p("benchmark-harness",       0, 42, 56, 20),
+        ],
+        _ => vec![],
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
 // The main DynamicPage component
 // ─────────────────────────────────────────────────────────────
 
 #[component]
-pub fn DynamicPage(path: Vec<String>) -> Element {
+pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) -> Element {
     let mock_quin = use_signal(|| NQuin {
         subject: 0,
         predicate: 0,
@@ -158,19 +514,39 @@ pub fn DynamicPage(path: Vec<String>) -> Element {
         parity: 0,
     });
 
-    let mut workspace = use_signal(WebizenWorkspace::default);
+    let app_id_init = app_id.clone();
+    let mut workspace = use_signal(move || {
+        let mut ws = WebizenWorkspace::default();
+        let (name, panes) = match app_id_init.as_deref() {
+            Some(aid) => (
+                app_display_name(aid).to_string(),
+                default_panes_for_app(aid),
+            ),
+            None => ("New Canvas".to_string(), vec![]),
+        };
+        ws.pages.push(Page {
+            url_path: "/".to_string(),
+            name,
+            panes,
+            layout_strategy: LayoutStrategy::default(),
+            presentation_mode: PresentationMode::default(),
+            coordinate_space: CoordinateSpace::default(),
+            pan_and_zoom: true,
+            theme: ThemeBinding::default(),
+        });
+        ws
+    });
     let selected_pane_index = use_signal(|| None::<usize>);
     let pane_palette = use_signal(builtin_pane_definitions);
 
     // ── Boot Rehydration ───────────────────────────────────
     use_effect(move || {
         spawn(async move {
-            // Use default if nothing loads
-            if workspace.read().pages.is_empty() {
-                if let Ok(res) = reqwest::get("http://127.0.0.1:8080/manifest").await {
-                    if let Ok(data) = res.json::<WebizenWorkspace>().await {
+            if let Ok(res) = reqwest::get("http://127.0.0.1:8080/manifest").await {
+                if let Ok(data) = res.json::<WebizenWorkspace>().await {
+                    if !data.pages.is_empty() {
                         workspace.set(data);
-                    }          
+                    }
                 }
             }
         });
@@ -423,6 +799,12 @@ pub fn DynamicPage(path: Vec<String>) -> Element {
                     }
 
                     // Group by category
+                    {render_palette_category(&pane_palette.read(), PaneCategory::Computational)}
+                    {render_palette_category(&pane_palette.read(), PaneCategory::Intelligence)}
+                    {render_palette_category(&pane_palette.read(), PaneCategory::Knowledge)}
+                    {render_palette_category(&pane_palette.read(), PaneCategory::Governance)}
+                    {render_palette_category(&pane_palette.read(), PaneCategory::Network)}
+                    {render_palette_category(&pane_palette.read(), PaneCategory::Data)}
                     {render_palette_category(&pane_palette.read(), PaneCategory::DataDisplay)}
                     {render_palette_category(&pane_palette.read(), PaneCategory::DataInput)}
                     {render_palette_category(&pane_palette.read(), PaneCategory::Layout)}

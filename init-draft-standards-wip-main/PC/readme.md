@@ -15,7 +15,7 @@ Background (#background)
 2.2 Permissive Commons (#permissive-commons)
 2.3 Cool URIs and the Semantic Web (#cool-uris-and-the-semantic-web)
 Implications of DIDs for Permissive Commons and Cool URIs (#implications-of-dids)
-3.1 Decentralized Identity and Content Persistence (#decentralized-identity-and-content-persistence)
+3.1 decentralized identifiers and verifiable claims and Content Persistence (#decentralized-human agency-and-content-persistence)
 3.2 Support for Plurality of Protocols (#support-for-plurality-of-protocols)
 3.3 Resilience Through Decentralized Storage (#resilience-through-decentralized-storage)
 3.4 Interoperability with Semantic Web Standards (#interoperability-with-semantic-web-standards)
@@ -38,7 +38,7 @@ References (#references)
 Appendix: Example DID Document (#appendix-example-did-document)
 
 1. Introduction <a name="introduction"></a>
-The W3C Decentralized Identifiers (DIDs) specification, finalized as a W3C Recommendation in July 2022, introduces a new type of identifier designed to enable verifiable, decentralized digital identity. Unlike traditional identifiers reliant on centralized registries, DIDs are globally unique, cryptographically verifiable, and resolvable across decentralized systems, making them ideal for supporting permissive commons and the principles of Cool URIs as outlined by W3C. This document examines how DIDs address the need for persistent, accessible, and interoperable identifiers in decentralized semantic web systems, particularly for RDF content stored or provided via DLT and decentralized protocols like blockchain, IPFS, BitTorrent, and Git. By ensuring content immutability and availability, DIDs enhance the resilience and meaning of referenced documents, aligning with the goals of the web of data.
+The W3C Decentralized Identifiers (DIDs) specification, finalized as a W3C Recommendation in July 2022, introduces a new type of identifier designed to enable verifiable, decentralized digital human agency. Unlike traditional identifiers reliant on centralized registries, DIDs are globally unique, cryptographically verifiable, and resolvable across decentralized systems, making them ideal for supporting permissive commons and the principles of Cool URIs as outlined by W3C. This document examines how DIDs address the need for persistent, accessible, and interoperable identifiers in decentralized semantic web systems, particularly for RDF content stored or provided via DLT and decentralized protocols like blockchain, IPFS, BitTorrent, and Git. By ensuring content immutability and availability, DIDs enhance the resilience and meaning of referenced documents, aligning with the goals of the web of data.
 
 2. Background <a name="background"></a>
 
@@ -53,8 +53,8 @@ Cool URIs, as described by W3C, are persistent, simple, and resolvable identifie
 
 3. Implications of DIDs for Permissive Commons and Cool URIs <a name="implications-of-dids"></a>
 
-3.1 Decentralized Identity and Content Persistence <a name="decentralized-identity-and-content-persistence"></a>
-DIDs enable decentralized identity management, allowing controllers to prove ownership without relying on centralized authorities. This aligns with Cool URI principles by ensuring that identifiers remain persistent and resolvable, even if the underlying infrastructure changes. For RDF content, DIDs provide a stable reference to data stored on decentralized systems, preserving the meaning and integrity of semantic web resources.
+3.1 decentralized identifiers and verifiable claims and Content Persistence <a name="decentralized-human agency-and-content-persistence"></a>
+DIDs enable decentralized credential management, allowing controllers to prove ownership without relying on centralized authorities. This aligns with Cool URI principles by ensuring that identifiers remain persistent and resolvable, even if the underlying infrastructure changes. For RDF content, DIDs provide a stable reference to data stored on decentralized systems, preserving the meaning and integrity of semantic web resources.
 
 3.2 Support for Plurality of Protocols <a name="support-for-plurality-of-protocols"></a>
 The DID specification is protocol-agnostic, supporting a variety of DID methods that integrate with different DLTs and decentralized systems. This flexibility allows RDF content to be stored and accessed via protocols like blockchain, IPFS, BitTorrent, or Git, depending on the use case. By not mandating a single protocol, DIDs foster interoperability and adaptability, key requirements for permissive commons and semantic web ecosystems.
@@ -285,3 +285,14 @@ json
 }
 This document references the same RDF content stored on IPFS, Ethereum, BitTorrent, and Git, maximizing resilience and accessibility.
 Note: This document is an informational draft generated for illustrative purposes. For normative specifications, refer to W3C DID v1.0 and related standards. Comments are welcome via public-did-wg@w3.org or GitHub issues at the W3C DID Working Group repository.
+
+## QualiaDB Engine Technical Implementation Note
+> [!NOTE]
+> In practice, the technical realization of these standards relies on the **QualiaDB engine architecture** to ensure robust, hardware-accelerated, zero-allocation enforcement:
+> - **Serialization:** While referencing generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (`.q42` file format) for execution. For data transmission, **CBOR-LD** is the primary serialization method.
+> - **Logic & Constraints:** Constraints are parsed via a native **N3 Streaming Parser** and enforced using explicit **Deontic Logic** operators (Obligate, Permit, Forbid).
+> - **Conflict & State:** CRDT and Paraconsistent Logic routers manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.
+
+## QApp Architecture Mapping
+> [!NOTE]
+> **QApp Vault & Capability Manager:** Permissive Commons routing utilizes Paraconsistent Logic to isolate contradictory rules without crashing the host, managed via `.qchk` capability profiles.
