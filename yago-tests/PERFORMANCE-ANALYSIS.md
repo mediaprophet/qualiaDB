@@ -2,7 +2,7 @@
 
 **Date**: 2026-06-12  
 **Test Environment**: Windows x64  
-**CLI Version**: 0.0.10  
+**CLI Version**: 0.0.12  
 **Test Suite**: Automated YAGO Ontology Tests
 
 ## Executive Summary
@@ -188,4 +188,4 @@ The system is well-suited for production use with semantic web technologies and 
 
 **Report Generated**: 2026-06-12 03:01:08 UTC  
 **Test Suite Version**: 1.0  
-**QualiaDB Version**: 0.0.10
+**QualiaDB Version**: 0.0.12

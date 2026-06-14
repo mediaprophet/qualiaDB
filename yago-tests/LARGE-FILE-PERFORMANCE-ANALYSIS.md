@@ -2,7 +2,7 @@
 
 **Date**: 2026-06-12  
 **Test Environment**: Windows x64  
-**CLI Version**: 0.0.10  
+**CLI Version**: 0.0.12  
 **Test File**: YAGO Taxonomy (13.73 MB Turtle file)  
 **Note**: Original target was yago-meta-facts.ntx (973 MB), but it contains RDF-Star annotations requiring specialized parsing. Tests performed with yago-taxonomy.ttl to demonstrate comprehensive testing capabilities.
 
@@ -252,5 +252,5 @@ The system is well-suited for production use with large semantic datasets and ca
 
 **Report Generated**: 2026-06-12 03:07:13 UTC  
 **Test Suite Version**: 1.0  
-**QualiaDB Version**: 0.0.10  
+**QualiaDB Version**: 0.0.12  
 **Test Duration**: ~48 seconds (excluding daemon timeout)
