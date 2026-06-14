@@ -10,6 +10,13 @@ on:
 permissions:
   contents: write   # needed to commit results back to the repo
 
+# Serialize benchmark runs: they commit generated result JSON back to main,
+# so overlapping runs race and produce rebase conflicts. Let an in-progress
+# run finish (queue, don't cancel) so its committed results are not lost.
+concurrency:
+  group: comparative-benchmarks
+  cancel-in-progress: false
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -138,7 +145,7 @@ jobs:
           with open('/tmp/bench_10k.nt', 'wb') as f:
               f.write(generate_ntriples(10000))
           EOF
-          cargo run --release -p qualia-cli -- ingest /tmp/bench_10k.nt || true
+          cargo run --release -p qualia-cli -- ingest semantic /tmp/bench_10k.nt || true
 
       - name: Run Qualia benchmark (10 k triples)
         run: |
@@ -155,7 +162,9 @@ jobs:
           git add docs/comparative_benchmark_results.json docs/llm_benchmark_results.json
           git diff --cached --quiet \
             || git commit -m "chore: update benchmark results [skip ci]"
-          git pull --rebase --autostash origin main
+          # During rebase our just-generated results are the replayed ("theirs")
+          # side; prefer them on any conflict so the latest numbers win.
+          git pull --rebase --autostash -X theirs origin main
           git push origin main
 
       - name: Upload comparative results artifact
@@ -242,7 +251,8 @@ jobs:
           git add docs/comparative_benchmark_results.schemaorg-30-current-https.json
           git diff --cached --quiet \
             || git commit -m "chore: update Schema.org comparative benchmark results [skip ci]"
-          git pull --rebase --autostash origin main
+          # Prefer our just-generated results on conflict (see note above).
+          git pull --rebase --autostash -X theirs origin main
           git push origin main
 
       - name: Upload Schema.org comparative results artifact
