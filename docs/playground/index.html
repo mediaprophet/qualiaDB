@@ -3,272 +3,318 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia Playground • Webizen VM + WASM</title>
+    <title>Qualia Playground · Live in-browser engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        body { font-family: 'Inter', system-ui, sans-serif; }
-        .glass-panel {
-            background: rgba(17, 23, 31, 0.82);
-            border: 1px solid rgba(148, 163, 184, 0.14);
-            box-shadow: 0 16px 60px rgba(2, 6, 23, 0.55);
-            backdrop-filter: blur(28px);
-            border-radius: 24px;
+        :root {
+            --bg: #070b12; --panel: rgba(17,23,31,.72); --border: rgba(148,163,184,.12);
+            --accent: #22d3ee; --mono: 'JetBrains Mono','Fira Code',ui-monospace,monospace;
         }
-        .glass-panel.light {
-            background: rgba(17, 23, 31, 0.76);
-            border-color: rgba(148, 163, 184, 0.12);
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter',system-ui,sans-serif; background: var(--bg); color: #e2e8f0;
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 12% 8%, rgba(34,211,238,.07), transparent 42%),
+                radial-gradient(circle at 88% 92%, rgba(167,139,250,.06), transparent 40%);
+        }
+        .glass-panel {
+            background: var(--panel); border: 1px solid var(--border);
+            box-shadow: 0 16px 50px rgba(2,6,23,.5), inset 0 1px 0 rgba(255,255,255,.04);
+            backdrop-filter: blur(24px); border-radius: 18px;
         }
         .status-pill {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            letter-spacing: 0.04em;
-            border-radius: 9999px;
-            padding: 0.35rem 0.85rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
+            font-family: var(--mono); font-size: .7rem; letter-spacing: .03em;
+            border-radius: 9999px; padding: .35rem .8rem; display: inline-flex; align-items: center; gap: .4rem;
         }
-        .status-pill span.dot {
-            width: 0.5rem;
-            height: 0.5rem;
-            border-radius: 9999px;
-            display: inline-block;
+        .status-pill .dot { width: .5rem; height: .5rem; border-radius: 9999px; display: inline-block; }
+
+        /* Tabs */
+        .tab-btn {
+            padding: .55rem 1.15rem; border-radius: 11px; font-size: .85rem; font-weight: 500;
+            color: #94a3b8; cursor: pointer; border: 1px solid transparent; transition: all .15s; white-space: nowrap;
         }
-        .metric-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 0.75rem;
+        .tab-btn:hover { color: #e2e8f0; background: rgba(255,255,255,.04); }
+        .tab-btn.tab-active { color: #fff; background: rgba(34,211,238,.12); border-color: rgba(34,211,238,.35); }
+
+        /* Editor + outputs */
+        textarea, .code-out {
+            background: rgba(6,9,15,.72); border: 1px solid rgba(148,163,184,.14);
+            border-radius: 14px; font-family: var(--mono); font-size: 12.5px; line-height: 1.7;
         }
-        textarea:focus-visible { outline: none; }
-        textarea::placeholder { color: rgba(226, 232, 240, 0.45); }
-        textarea {
-            background: rgba(10, 10, 15, 0.65);
-            border: 1px solid rgba(96, 165, 250, 0.18);
+        textarea:focus-visible { outline: none; border-color: rgba(34,211,238,.45); }
+        .code-out { white-space: pre; overflow: auto; }
+
+        /* Parsed quin rows */
+        .qrow {
+            display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .5rem;
+            padding: .5rem .6rem; border-bottom: 1px solid rgba(148,163,184,.07);
         }
-        .bytecode-container,
-        .json-rpc-container {
-            background: rgba(10, 10, 15, 0.65);
-            border: 1px solid rgba(148, 163, 184, 0.12);
+        .qrow:last-child { border-bottom: none; }
+        .qcell { display: flex; align-items: baseline; gap: .4rem; min-width: 0; }
+        .qlabel { font-family: var(--mono); font-size: 9px; color: #475569; border: 1px solid rgba(148,163,184,.2); border-radius: 4px; padding: 0 4px; flex-shrink: 0; }
+        .qval { font-family: var(--mono); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Solver cards */
+        .solver-card { display: flex; flex-direction: column; gap: .7rem; padding: 1.1rem 1.15rem; }
+        .solver-card h3 { font-size: .95rem; font-weight: 600; display: flex; align-items: center; gap: .5rem; }
+        .field { display: flex; flex-direction: column; gap: .2rem; }
+        .field label { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+        .field input, .field select, .solver-card textarea {
+            background: rgba(6,9,15,.7); border: 1px solid rgba(148,163,184,.16); border-radius: 8px;
+            padding: .35rem .55rem; font-family: var(--mono); font-size: 12px; color: #e2e8f0;
         }
-        .bytecode-container { color: #34d399; }
-        .json-rpc-container { color: #fbbf24; }
-        #quin-output {
-            background: rgba(10, 10, 15, 0.65);
-            border: 1px solid rgba(148, 163, 184, 0.12);
+        .field input:focus, .field select:focus { outline: none; border-color: rgba(34,211,238,.4); }
+        .run-btn {
+            margin-top: auto; padding: .5rem .9rem; border-radius: 10px; font-weight: 600; font-size: .82rem;
+            background: rgba(34,211,238,.14); color: #67e8f9; border: 1px solid rgba(34,211,238,.4);
+            cursor: pointer; transition: background .15s;
         }
-        .quin-row {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 0.75rem;
-            padding: 0.75rem 0;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+        .run-btn:hover { background: rgba(34,211,238,.24); }
+        .solver-out { font-size: 13px; padding-top: .4rem; border-top: 1px dashed rgba(148,163,184,.14); }
+        .solver-ms { font-family: var(--mono); font-size: 10px; color: #475569; }
+
+        .badge { font-family: var(--mono); font-size: 10px; padding: 2px 8px; border-radius: 6px; font-weight: 700; letter-spacing: .04em; }
+        .badge-ok { background: rgba(52,211,153,.14); color: #6ee7b7; }
+        .badge-no { background: rgba(251,113,133,.14); color: #fda4af; }
+        .chip { font-family: var(--mono); font-size: 11px; padding: 2px 7px; border-radius: 6px; }
+        .chip-true   { background: rgba(52,211,153,.13); color: #6ee7b7; }
+        .chip-false  { background: rgba(148,163,184,.12); color: #94a3b8; }
+        .chip-derive { background: rgba(34,211,238,.12); color: #67e8f9; }
+
+        .cap-chip {
+            display: flex; align-items: center; gap: .5rem; padding: .5rem .7rem; border-radius: 10px;
+            background: rgba(255,255,255,.025); border: 1px solid var(--border);
+            font-family: var(--mono); font-size: 11.5px; color: #cbd5e1;
         }
-        .quin-row:last-child { border-bottom: none; }
+        .cap-chip:hover { border-color: rgba(34,211,238,.3); background: rgba(34,211,238,.05); }
+
+        /* Boot overlay */
+        #boot-overlay {
+            position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 1.2rem;
+            background: rgba(7,11,18,.96); transition: opacity .4s;
+        }
+        .spinner { width: 46px; height: 46px; border-radius: 50%; border: 3px solid rgba(34,211,238,.15); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
     </style>
 </head>
-<body class="bg-zinc-950 text-slate-200 min-h-screen">
-    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+<body>
+    <!-- Boot overlay -->
+    <div id="boot-overlay">
+        <div class="spinner"></div>
+        <div id="boot-text" class="text-slate-400 text-sm font-mono">Booting qualia-core-db WASM engine…</div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(7,11,18,.9);backdrop-filter:blur(28px)">
         <div class="max-w-screen-2xl mx-auto px-6 md:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center gap-8">
                     <a href="../index.html" class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                        <div class="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
                             <span class="text-black font-bold text-xl">Q</span>
                         </div>
-                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-cyan-400 text-xl">DB</span></div>
                     </a>
                     <div class="hidden lg:flex items-center gap-6 text-sm">
                         <a href="../benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
                         <a href="../comparative_benchmarks.html" class="hover:text-white transition-colors">Comparative</a>
-                        <a href="../analytics.html" class="hover:text-white transition-colors">Analytics</a>
-                        <a href="../library.html" class="hover:text-white transition-colors">Library</a>
-                        <a href="../cooperativeproject/index.html" class="hover:text-white transition-colors">Projects</a>
                         <a href="index.html" class="text-white font-medium border-b border-cyan-400 pb-px">Playground</a>
-                        <a href="../api.html" class="hover:text-white transition-colors">API Docs</a>
                         <a href="../api-explorer/" class="hover:text-white transition-colors">API Explorer</a>
                         <a href="../tests/" class="hover:text-white transition-colors">Test Suite</a>
+                        <a href="../api.html" class="hover:text-white transition-colors">API Docs</a>
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
-                    <span id="wasm-engine-badge" class="status-pill bg-cyan-500/10 text-cyan-300 border border-cyan-500/40" title="Loaded from qualia_core_db_bg.wasm at compile time">
-                        <span class="dot bg-cyan-400"></span>
-                        Engine …
+                    <span id="wasm-engine-badge" class="status-pill bg-cyan-500/10 text-cyan-300 border border-cyan-500/40">
+                        <span class="dot bg-cyan-400"></span> Engine …
                     </span>
-                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
                        class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
-                        <i class="fab fa-github"></i><span>Releases</span>
+                        <i class="fab fa-github"></i><span class="hidden sm:inline">GitHub</span>
                     </a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-screen-2xl mx-auto px-6 md:px-10 pt-12 pb-20 space-y-12">
-        <section class="text-center space-y-6">
-            <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 text-sm">
-                <i class="fa-solid fa-bolt"></i>
-                <span>Interactive Webizen VM • Browser WASM • Native probe</span>
-            </div>
-            <div class="space-y-3">
-                <h1 class="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-[-2px]">Qualia Playground</h1>
-                <p class="text-lg md:text-xl text-white/70 max-w-3xl mx-auto">
-                    Compile N3Logic, Turtle-Star, or JSON-LD into Webizen bytecode, inspect the five-vector Quin output, and stream
-                    compute-cost receipts — all in a glassmorphism shell matched to the core docs aesthetic.
-                </p>
-            </div>
-
-            <div class="glass-panel light px-6 py-4 md:px-8 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-5 text-sm">
-                <div id="native-status-bar" class="flex flex-wrap items-center gap-3 justify-center md:justify-start">
-                    <span id="conn-badge" class="status-pill bg-amber-500/10 text-amber-300 border border-amber-400/30">
-                        <span class="dot bg-amber-400 animate-pulse"></span>
-                        WASM fallback mode
-                    </span>
-                    <a id="wake-btn" href="qualia://start" onclick="handleWakeClick(event)"
-                       class="status-pill border border-amber-300/40 text-amber-200 hover:bg-amber-500/10 transition-colors">
-                        <span class="dot bg-amber-300"></span>
-                        Wake Local Engine
-                    </a>
-                    <button id="webtorrent-btn" onclick="seedGraphToWebTorrent()"
-                            class="status-pill border border-fuchsia-400/40 text-fuchsia-200 hover:bg-fuchsia-500/10 transition-colors">
-                        <span class="dot bg-fuchsia-300"></span>
-                        WebTorrent Sync
-                    </button>
-                    <button id="install-btn-header" onclick="document.getElementById('install-modal').classList.remove('hidden')"
-                            class="status-pill border border-emerald-400/40 text-emerald-200 hover:bg-emerald-500/10 transition-colors">
-                        <span class="dot bg-emerald-300"></span>
-                        Install Native
-                    </button>
-                </div>
-                <div class="flex flex-wrap justify-center gap-3 text-xs uppercase tracking-wide text-slate-400">
-                    <span class="status-pill bg-blue-500/10 text-blue-300 border border-blue-400/30">Defeasible • Omnimodal</span>
-                    <span class="status-pill bg-purple-500/10 text-purple-300 border border-purple-400/30">Lazy SuperBlocks</span>
-                    <span class="status-pill bg-cyan-500/10 text-cyan-300 border border-cyan-400/30">Lightning RPC</span>
-                </div>
-            </div>
-
-            <div class="flex flex-wrap justify-center gap-3">
-                <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors" onclick="loadPreset('ambient')">Ambient Trace</button>
-                <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors" onclick="loadPreset('bilateral')">N3Logic Rule</button>
-                <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors" onclick="loadPreset('permissive')">Permissive Query</button>
-                <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors" onclick="loadPreset('spatiotemporal')">Spatiotemporal</button>
-                <button class="status-pill border border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/10 transition-colors" onclick="loadPreset('llm_vector')">LLM Vector Note</button>
-                <button class="status-pill border border-amber-400/40 text-amber-200 hover:bg-amber-500/10 transition-colors" onclick="loadPreset('hubmap')">HuBMAP 3D Ontology</button>
+    <main class="max-w-screen-2xl mx-auto px-5 md:px-8 pt-8 pb-16">
+        <!-- Hero -->
+        <section class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-semibold tracking-tight mb-3">Qualia Playground</h1>
+            <p class="text-slate-400 max-w-2xl mx-auto text-[15px]">
+                Every panel below runs the real <span class="text-cyan-300 font-mono text-sm">qualia-core-db</span> engine —
+                compiled from Rust to WebAssembly, executing entirely in your browser. No server, no mocks.
+            </p>
+            <div class="flex flex-wrap items-center justify-center gap-2.5 mt-5 text-xs">
+                <span class="status-pill bg-cyan-500/10 text-cyan-300 border border-cyan-500/30"><span class="dot bg-cyan-400"></span><span id="banner-version">v…</span></span>
+                <span class="status-pill bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"><i class="fa-solid fa-microchip"></i><span id="banner-caps">… capabilities</span></span>
+                <span class="status-pill bg-purple-500/10 text-purple-300 border border-purple-500/30"><i class="fa-solid fa-cube"></i><span id="banner-target">wasm32</span></span>
+                <span class="status-pill bg-amber-500/10 text-amber-300 border border-amber-500/30"><i class="fa-solid fa-bolt"></i>zero-copy NQuin</span>
             </div>
         </section>
 
-        <section class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
-            <div class="space-y-6">
-                <div class="glass-panel light p-6 md:p-7 h-full flex flex-col gap-4">
-                    <div class="flex items-center justify-between gap-4">
-                        <div>
-                            <h2 class="text-xl font-semibold text-cyan-300">Graph Input</h2>
-                            <p class="text-xs uppercase tracking-wide text-slate-500">Compile to Webizen bytecode</p>
-                        </div>
-                        <span id="latency-badge" class="status-pill bg-slate-800/80 text-slate-300 border border-slate-600">0ns</span>
-                    </div>
-                    <textarea id="jsonld-input" rows="12" class="w-full text-sm md:text-base text-slate-100 font-mono rounded-2xl px-4 py-4 focus:ring-2 focus:ring-cyan-400/40"
-                              placeholder="Enter N3Logic, Turtle-Star, or JSON-LD...">{
-  "@context": "https://mediaprophet.github.io/qualiaDB/qualia-context.jsonld",
-  "@graph": [
-    {
-      "@id": "qualia:guardian",
-      "type": "n3:Implication",
-      "antecedent": { "?x": "a", "object": "Person" },
-      "consequent": { "?x": "a", "object": "Mortal" },
-      "routing_tier": "Bilateral Micro-Commons (0b10)"
-    }
-  ]
-}</textarea>
-                    <div class="flex flex-wrap gap-3">
-                        <button onclick="compileToBytecode()" class="px-5 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold transition-colors">Compile & Execute</button>
-                        <button onclick="document.getElementById('jsonld-input').value = ''" class="px-5 py-2.5 rounded-2xl border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors">Clear</button>
+        <!-- Tabs -->
+        <div class="flex items-center justify-center gap-2 mb-6">
+            <button class="tab-btn tab-active" data-tab="compiler"><i class="fa-solid fa-code mr-1.5"></i>Compiler</button>
+            <button class="tab-btn" data-tab="solvers"><i class="fa-solid fa-flask mr-1.5"></i>Live Solvers</button>
+            <button class="tab-btn" data-tab="capabilities"><i class="fa-solid fa-layer-group mr-1.5"></i>Capabilities</button>
+        </div>
+
+        <!-- ── Compiler panel ──────────────────────────────────────────────── -->
+        <section data-panel="compiler" class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            <!-- Editor -->
+            <div class="glass-panel p-5 flex flex-col gap-3">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-lg font-semibold text-cyan-300">Query Input</h2>
+                    <span id="fmt-chip" class="status-pill bg-slate-800/70 text-slate-300 border border-slate-600">turtle</span>
+                    <div class="ml-auto flex gap-1.5">
+                        <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-preset="sparql">SPARQL</button>
+                        <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-preset="n3">N3</button>
+                        <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-preset="turtle">Turtle</button>
+                        <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-preset="ntriples">N-Triples</button>
                     </div>
                 </div>
-
-                <div class="glass-panel light p-6 md:p-7 h-full flex flex-col gap-4">
-                    <div class="flex items-center justify-between gap-4">
-                        <div>
-                            <h2 class="text-xl font-semibold text-emerald-300">Core 1 · Webizen Bytecode VM</h2>
-                            <p class="text-xs uppercase tracking-wide text-slate-500">MSB dispatch • Zero allocation</p>
-                        </div>
-                        <span class="status-pill bg-emerald-500/10 text-emerald-200 border border-emerald-400/30">Live Stack</span>
-                    </div>
-                    <pre id="bytecode-output" class="bytecode-container font-mono text-xs md:text-sm rounded-2xl p-4 h-72 overflow-auto">// Awaiting Compilation…</pre>
+                <textarea id="editor" rows="14" class="w-full text-slate-100 px-4 py-3" spellcheck="false"></textarea>
+                <div class="flex gap-2.5">
+                    <button id="btn-compile" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm transition-colors">
+                        <i class="fa-solid fa-bolt mr-1.5"></i>Compile to Bytecode
+                    </button>
+                    <button id="btn-parse" class="px-4 py-2 rounded-xl border border-emerald-400/40 text-emerald-200 hover:bg-emerald-500/10 text-sm transition-colors">
+                        <i class="fa-solid fa-diagram-project mr-1.5"></i>Parse Triples
+                    </button>
                 </div>
             </div>
 
-            <div class="space-y-6">
-                <div class="glass-panel light p-6 md:p-7 h-full flex flex-col gap-4">
-                    <div class="flex items-center justify-between gap-4">
-                        <div>
-                            <h2 class="text-xl font-semibold text-emerald-300">Physical 5-Vector Quins</h2>
-                            <p class="text-xs uppercase tracking-wide text-slate-500">Subject · Predicate · Object · Context · Metadata</p>
-                        </div>
-                        <span id="quin-count" class="status-pill bg-emerald-500/10 text-emerald-200 border border-emerald-400/30">0 Quins</span>
+            <!-- Outputs -->
+            <div class="flex flex-col gap-5">
+                <div class="glass-panel p-5 flex flex-col gap-2.5">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-base font-semibold text-emerald-300">Webizen Bytecode</h2>
+                        <span class="text-[11px] uppercase tracking-wide text-slate-500">real compiler output</span>
+                        <span id="op-count" class="ml-auto status-pill bg-emerald-500/10 text-emerald-200 border border-emerald-400/30">0 ops</span>
+                        <span id="compile-latency" class="status-pill bg-slate-800/70 text-slate-400 border border-slate-600">—</span>
                     </div>
-                    <div id="quin-output" class="rounded-2xl p-4 min-h-[18rem] max-h-[26rem] overflow-auto text-slate-200">
-                        <div class="text-slate-500 text-sm text-center py-12">Execute a statement to view hardware layout.</div>
-                    </div>
+                    <pre id="bytecode-output" class="code-out p-3.5 h-56 text-slate-300">; awaiting compilation…</pre>
                 </div>
+                <div class="glass-panel p-5 flex flex-col gap-2.5">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-base font-semibold text-amber-300">Parsed Triples</h2>
+                        <span class="text-[11px] uppercase tracking-wide text-slate-500">subject · predicate · object</span>
+                        <span id="quin-count" class="ml-auto status-pill bg-amber-500/10 text-amber-200 border border-amber-400/30">0 triples</span>
+                        <span id="parse-latency" class="status-pill bg-slate-800/70 text-slate-400 border border-slate-600">—</span>
+                    </div>
+                    <div id="quin-output" class="code-out p-2 h-56 text-slate-200" style="white-space:normal"></div>
+                </div>
+            </div>
+        </section>
 
-                <div class="glass-panel light p-6 md:p-7 h-full flex flex-col gap-4">
-                    <div class="flex items-center justify-between gap-4">
-                        <div>
-                            <h2 class="text-xl font-semibold text-amber-300">Permissive Commons Billing</h2>
-                            <p class="text-xs uppercase tracking-wide text-slate-500">Lightning RPC receipt</p>
-                        </div>
-                        <span class="status-pill bg-amber-500/10 text-amber-200 border border-amber-400/30">Telemetry Stream</span>
-                    </div>
-                    <pre id="billing-receipt" class="json-rpc-container font-mono text-xs md:text-sm rounded-2xl p-4 h-72 overflow-auto">// Execute a query to generate compute cost receipt</pre>
+        <!-- ── Solvers panel ───────────────────────────────────────────────── -->
+        <section data-panel="solvers" class="hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <!-- Drug-likeness (Lipinski) -->
+            <div class="glass-panel solver-card">
+                <h3 class="text-fuchsia-300"><i class="fa-solid fa-pills"></i>Drug-Likeness <span class="text-[10px] font-normal text-slate-500 ml-auto">Lipinski · SMILES</span></h3>
+                <div class="field"><label>SMILES</label><input id="lip-smiles" type="text" value="CC(=O)OC1=CC=CC=C1C(=O)O" spellcheck="false"></div>
+                <div class="flex gap-1.5 flex-wrap">
+                    <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-smiles="CC(=O)OC1=CC=CC=C1C(=O)O">Aspirin</button>
+                    <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-smiles="CN1C=NC2=C1C(=O)N(C(=O)N2C)C">Caffeine</button>
+                    <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-smiles="CC(C)CC1=CC=C(C=C1)C(C)C(=O)O">Ibuprofen</button>
                 </div>
+                <button id="btn-lip" class="run-btn">Evaluate</button>
+                <div id="lip-out" class="solver-out hidden"></div>
+            </div>
+            <!-- Black-Scholes -->
+            <div class="glass-panel solver-card">
+                <h3 class="text-amber-300"><i class="fa-solid fa-chart-line"></i>Black–Scholes</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="field"><label>Spot</label><input id="bs-spot" type="number" value="100"></div>
+                    <div class="field"><label>Strike</label><input id="bs-strike" type="number" value="105"></div>
+                    <div class="field"><label>Yrs</label><input id="bs-time" type="number" value="1" step="0.25"></div>
+                    <div class="field"><label>Rate %</label><input id="bs-rate" type="number" value="5"></div>
+                    <div class="field"><label>Vol %</label><input id="bs-vol" type="number" value="20"></div>
+                    <div class="field"><label>Type</label><select id="bs-type"><option value="call">Call</option><option value="put">Put</option></select></div>
+                </div>
+                <button id="btn-bs" class="run-btn">Price</button>
+                <div id="bs-out" class="solver-out hidden"></div>
+            </div>
+            <!-- PID -->
+            <div class="glass-panel solver-card">
+                <h3 class="text-cyan-300"><i class="fa-solid fa-sliders"></i>PID Controller</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="field"><label>Setpoint</label><input id="pid-set" type="number" value="100"></div>
+                    <div class="field"><label>Current</label><input id="pid-cur" type="number" value="60"></div>
+                    <div class="field"><label>Kp</label><input id="pid-kp" type="number" value="0.8" step="0.1"></div>
+                    <div class="field"><label>Ki</label><input id="pid-ki" type="number" value="0.2" step="0.1"></div>
+                    <div class="field"><label>Kd</label><input id="pid-kd" type="number" value="0.1" step="0.1"></div>
+                </div>
+                <button id="btn-pid" class="run-btn">Step</button>
+                <div id="pid-out" class="solver-out hidden"></div>
+            </div>
+            <!-- GBM -->
+            <div class="glass-panel solver-card">
+                <h3 class="text-emerald-300"><i class="fa-solid fa-wave-square"></i>Brownian Motion</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="field"><label>S₀</label><input id="gbm-s0" type="number" value="100"></div>
+                    <div class="field"><label>Drift %</label><input id="gbm-mu" type="number" value="7"></div>
+                    <div class="field"><label>Vol %</label><input id="gbm-vol" type="number" value="20"></div>
+                </div>
+                <button id="btn-gbm" class="run-btn">Simulate Path</button>
+                <div id="gbm-out" class="solver-out hidden"></div>
+            </div>
+            <!-- ODE -->
+            <div class="glass-panel solver-card">
+                <h3 class="text-cyan-300"><i class="fa-solid fa-square-root-variable"></i>RK4 ODE Decay</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="field"><label>k (rate)</label><input id="ode-k" type="number" value="0.5" step="0.1"></div>
+                    <div class="field"><label>y₀</label><input id="ode-y0" type="number" value="100"></div>
+                </div>
+                <button id="btn-ode" class="run-btn">Integrate</button>
+                <div id="ode-out" class="solver-out hidden"></div>
+            </div>
+            <!-- Framingham -->
+            <div class="glass-panel solver-card">
+                <h3 class="text-rose-300"><i class="fa-solid fa-heart-pulse"></i>Framingham CVD Risk <span class="text-[10px] font-normal text-slate-500 ml-auto">D'Agostino 2008</span></h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="field"><label>Age</label><input id="fr-age" type="number" value="55"></div>
+                    <div class="field"><label>Sex</label><select id="fr-sex"><option value="male">Male</option><option value="female">Female</option></select></div>
+                    <div class="field"><label>Total chol (mmol/L)</label><input id="fr-tc" type="number" value="5.5" step="0.1"></div>
+                    <div class="field"><label>HDL (mmol/L)</label><input id="fr-hdl" type="number" value="1.2" step="0.1"></div>
+                    <div class="field"><label>Systolic BP</label><input id="fr-sbp" type="number" value="140"></div>
+                    <div class="field flex-row items-center gap-2 pt-4"><input id="fr-bptx" type="checkbox" class="w-4 h-4"><label class="!normal-case">BP treated</label></div>
+                    <div class="field flex-row items-center gap-2 pt-4"><input id="fr-smoke" type="checkbox" class="w-4 h-4"><label class="!normal-case">Smoker</label></div>
+                    <div class="field flex-row items-center gap-2 pt-4"><input id="fr-dm" type="checkbox" class="w-4 h-4"><label class="!normal-case">Diabetic</label></div>
+                </div>
+                <button id="btn-fr" class="run-btn">Compute 10-Year Risk</button>
+                <div id="fr-out" class="solver-out hidden"></div>
+            </div>
+        </section>
+
+        <!-- ── Capabilities panel ──────────────────────────────────────────── -->
+        <section data-panel="capabilities" class="hidden">
+            <div class="glass-panel p-5">
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    <h2 class="text-lg font-semibold text-cyan-300">Engine Capabilities</h2>
+                    <span class="text-xs text-slate-500">live from <span class="font-mono">list_capabilities_wasm()</span></span>
+                    <span id="caps-shown" class="ml-auto status-pill bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">…</span>
+                </div>
+                <div class="relative mb-4">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                    <input id="caps-search" placeholder="Filter capabilities…" autocomplete="off"
+                           class="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-cyan-400/40">
+                </div>
+                <div id="caps-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2"></div>
             </div>
         </section>
     </main>
 
-    <div id="install-modal" class="hidden fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-        <div class="glass-panel light w-[92%] max-w-lg relative p-6 md:p-8">
-            <button class="absolute top-4 right-4 text-slate-400 hover:text-white" onclick="document.getElementById('install-modal').classList.add('hidden')">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-            <h2 class="text-2xl font-semibold text-cyan-300 mb-2">Install Qualia-DB</h2>
-            <p class="text-sm text-slate-400 mb-6">Run the Webizen VM, GPU sieve, and cooperative ledger locally for full performance.</p>
-            <div class="space-y-5">
-                <div>
-                    <div class="font-semibold text-slate-200 mb-2">1 · Install CLI (Rust)</div>
-                    <pre class="font-mono text-emerald-300 text-sm bg-black/50 border border-emerald-400/30 rounded-2xl px-4 py-3 overflow-x-auto">cargo install --git https://github.com/mediaprophet/qualiaDB.git qualia-cli</pre>
-                </div>
-                <div>
-                    <div class="font-semibold text-slate-200 mb-2">2 · Start the Zero-Allocation Daemon</div>
-                    <pre class="font-mono text-amber-200 text-sm bg-black/50 border border-amber-400/30 rounded-2xl px-4 py-3 overflow-x-auto">qualia-cli daemon --dev</pre>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
     <script type="module">
         import { bindEngineBadge } from '../js/qualia-wasm-runtime.js';
         bindEngineBadge('wasm-engine-badge', { base: '..' }, 'Engine ');
     </script>
-    <script src="playground.js"></script>
-    <script>
-        function seedGraphToWebTorrent() {
-            if (typeof WebTorrent === 'undefined') {
-                alert('WebTorrent failed to load.');
-                return;
-            }
-            const client = new WebTorrent();
-            const graphBlob = new Blob([document.getElementById('jsonld-input').value], { type: 'application/json' });
-            client.seed(graphBlob, { name: 'Qualia_Ledger.q42' }, function (torrent) {
-                console.log('Client is seeding:', torrent.infoHash);
-                const rpcBox = document.getElementById('billing-receipt');
-                rpcBox.innerHTML = `[WebTorrent Sync Initiated]\nMagnet URI Generated:\n${torrent.magnetURI}\n\nSeeding Subjective Graph to Permissive Commons via WebRTC...\n`;
-                rpcBox.style.color = '#22d3ee';
-            });
-        }
-    </script>
+    <script type="module" src="playground-app.js"></script>
 </body>
 </html>

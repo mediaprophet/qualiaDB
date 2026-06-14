@@ -2,4 +2,5 @@
 !.gitignore
 !index.html
 !package.json
+!playground-app.js
 
