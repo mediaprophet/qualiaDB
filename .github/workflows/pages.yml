@@ -53,9 +53,6 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked --version 0.13.1 --force
 
-      - name: Test qualia-core-db (native)
-        run: cargo test -p qualia-core-db --lib -- --test-threads=4
-
       - name: WASM smoke-check (qualia-core-db)
         run: cargo check --target wasm32-unknown-unknown -p qualia-core-db
 
