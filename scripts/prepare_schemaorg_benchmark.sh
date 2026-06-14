@@ -32,7 +32,8 @@ else
 fi
 
 echo "Ingesting N-Triples into native .q42..."
-(cd "$REPO_ROOT" && cargo run --release -p qualia-cli -- ingest --input "$NT_PATH" --output "$Q42_BASE")
+# `ingest semantic <file>` writes <file>.with_extension("q42") == $Q42_PATH
+(cd "$REPO_ROOT" && cargo run --release -p qualia-cli -- ingest semantic "$NT_PATH")
 
 echo "Compressing .q42 artifact for distribution..."
 (cd "$REPO_ROOT" && cargo run --release -p qualia-cli -- compress --input "$Q42_PATH" --output "$CQ42_PATH")
