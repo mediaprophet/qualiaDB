@@ -13,8 +13,8 @@
 #![no_std]
 
 // QPU integration — uses std + tokio; gated to non-WASM targets.
-#[cfg(not(target_arch = "wasm32"))]
-pub mod qpu;
+// #[cfg(not(target_arch = "wasm32"))]
+// pub mod qpu;
 
 pub mod calculus;
 pub mod linear_algebra;
