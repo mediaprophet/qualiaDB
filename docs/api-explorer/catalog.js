@@ -2912,6 +2912,787 @@ let root_hash = wal.checkpoint_to_dag(&mut dag_store, author_did, timestamp_ms)?
 `),
         ],
     },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MISSING LOGIC MODALITY CATALOG ENTRIES
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'modality.argumentation',
+        category: 'Logic Modalities',
+        name: 'Argumentation (Dung Frameworks)',
+        summary: 'Abstract argumentation framework (Dung 1995): arguments, attack relations, admissible sets, grounded extension, and preferred extensions. Used for Peace Infrastructure debate resolution. Bit constants ARGUMENT_BIT (55), ATTACK_BIT (54), DEFENSE_BIT (53) mark NQuin predicate roles.',
+        params: [
+            { name: 'arguments', type: 'Map<u64, Argument>',  desc: 'Argument set keyed by ID' },
+            { name: 'attacks',   type: 'Vec<Attack>',          desc: 'Attack relation: {attacker, target, strength}' },
+        ],
+        returns: 'Vec<u64> — grounded extension (minimal complete semantics)',
+        snippets: [
+            rs(`
+use qualia_core_db::modalities::argumentation::{ArgumentationFramework, Argument, Attack, AttackType};
+
+let mut fw = ArgumentationFramework::new();
+let a1 = Argument::new(1, "Climate change is anthropogenic".into(), vec![], conclusion_quin);
+let a2 = Argument::new(2, "Solar variability is the cause".into(), vec![], rebuttal_quin);
+fw.arguments.insert(1, a1);
+fw.arguments.insert(2, a2);
+fw.attacks.push(Attack { attacker: 1, target: 2, attack_type: AttackType::Rebuttal, strength: 0.9 });
+fw.attacks.push(Attack { attacker: 2, target: 1, attack_type: AttackType::Undercut,  strength: 0.3 });
+// Grounded extension: argument 1 wins (higher strength prevails)
+`),
+            js(`
+// JS reference — grounded extension (characteristic function fixpoint)
+const fw = { arguments: new Map([[1, { id: 1, strength: 0.9 }], [2, { id: 2, strength: 0.3 }]]),
+              attacks: [{ attacker: 1, target: 2 }] };
+`),
+        ],
+    },
+
+    {
+        id: 'modality.graph_theory',
+        category: 'Logic Modalities',
+        name: 'Graph Theory (QualiaGraph)',
+        summary: 'Graph algorithms over NQuin-derived edges: degree centrality, PageRank, BFS shortest path, and label-propagation community detection. QualiaGraph::from_quins() treats each NQuin as a directed edge (subject → object).',
+        params: [
+            { name: 'quins', type: '&[NQuin]', desc: 'Slice of NQuins — each becomes a directed edge subject→object' },
+        ],
+        returns: 'QualiaGraph with nodes HashMap<u64, GraphNode> and edges HashMap<(u64,u64), GraphEdge>',
+        snippets: [
+            rs(`
+use qualia_core_db::modalities::graph_theory::QualiaGraph;
+
+let mut graph = QualiaGraph::from_quins(&quins);
+graph.calculate_betweenness_centrality();
+// graph.nodes: each has .centrality_score, .degree, .community_id
+let communities = graph.detect_communities();
+`),
+            js(`
+// Build graph from NQuin array
+const edges = quins.map(q => [q.subject, q.object]);
+const adj   = new Map();
+for (const [s, o] of edges) {
+    if (!adj.has(s)) adj.set(s, []);
+    adj.get(s).push(o);
+}
+// Degree centrality
+const n = new Set([...edges.flat()]).size;
+for (const [src, nbrs] of adj) {
+    const dc = nbrs.length / (n - 1);
+    console.log(\`\${src.toString(16)}: DC=\${dc.toFixed(3)}\`);
+}
+`),
+        ],
+    },
+
+    {
+        id: 'modality.interval_reasoning',
+        category: 'Logic Modalities',
+        name: 'Interval Reasoning (Allen Algebra)',
+        summary: 'Allen\'s 13 base temporal relations (Before, After, Meets, MetBy, Overlaps, OverlappedBy, Starts, StartedBy, During, Contains, Ends, EndedBy, Equals) plus intersection, union, and gap operations. Used for WAL checkpoint scheduling and temporal graph constraint satisfaction.',
+        params: [
+            { name: 'a',   type: 'TemporalInterval', desc: '{id, start, end, duration} — all i64 Unix timestamps or relative ticks' },
+            { name: 'b',   type: 'TemporalInterval', desc: 'Second interval to relate' },
+        ],
+        returns: 'AllenRelation — one of the 13 base relations',
+        snippets: [
+            rs(`
+use qualia_core_db::modalities::interval_reasoning::{TemporalInterval, AllenRelation};
+
+let task    = TemporalInterval::new(1, 9 * 3600, 10 * 3600); // 09:00–10:00
+let meeting = TemporalInterval::new(2, 10 * 3600, 11 * 3600); // 10:00–11:00
+
+assert_eq!(task.allen_relation(&meeting), AllenRelation::Meets);
+
+let ix = task.intersection(&meeting); // None — they only touch
+let gap = task.gap(&meeting);         // Some(0)
+`),
+            js(`
+// Allen relation: determines temporal ordering
+function allen(a, b) {
+    if (a.end < b.start)             return 'Before';
+    if (b.end < a.start)             return 'After';
+    if (a.end === b.start)           return 'Meets';
+    if (a.start === b.start && a.end < b.end) return 'Starts';
+    if (a.start > b.start && a.end < b.end)   return 'During';
+    if (a.start === b.start && a.end === b.end) return 'Equals';
+    // ... all 13 cases
+}
+`),
+        ],
+    },
+
+    {
+        id: 'modality.diffusion',
+        category: 'Logic Modalities',
+        name: 'Discrete Diffusion (GPU Cellular Automaton)',
+        summary: 'GPU-accelerated diffusion passes over NQuin graphs via WGSL compute shaders. trigger_diffusion(graph_id) is the synchronous CLI gate (returns false for empty IDs). execute_diffusion_pass() dispatches an async wgpu pipeline that reads NQuins from a storage buffer, applies diffusion.wgsl per-thread, and writes results back. Each NQuin diffusion edge packs its weight in metadata bits 31:0.',
+        params: [
+            { name: 'graph_id', type: 'string',  desc: 'Named graph to diffuse — empty string is a no-op' },
+            { name: 'graph',    type: '&mut [NQuin]', desc: 'Mutable slice dispatched to the GPU compute pass' },
+        ],
+        returns: 'trigger_diffusion → bool; execute_diffusion_pass → Result<(), String>',
+        snippets: [
+            rs(`
+use qualia_core_db::modalities::diffusion::{trigger_diffusion, execute_diffusion_pass};
+
+// Synchronous gate
+if trigger_diffusion("semantic-mesh-001") {
+    // Async GPU pass (Tokio runtime required)
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(execute_diffusion_pass(&mut graph_quins)).expect("GPU diffusion failed");
+}
+`),
+            js(`
+// Diffusion weight convention: stored in NQuin metadata bits 31:0
+const DIFFUSION_BIT = 1n << 48n;
+function isDiffusionEdge(q) { return (q.predicate & DIFFUSION_BIT) !== 0n; }
+function getWeight(q)       { return Number(q.metadata & 0xFFFFFFFFn) / 1_000_000; }
+
+// CPU-side one-step propagation (mirrors GPU pass):
+function diffuseStep(graph, values) {
+    const next = new Map(values);
+    for (const q of graph.filter(isDiffusionEdge)) {
+        const w = getWeight(q);
+        next.set(q.object, (next.get(q.object) ?? 0) + w * (values.get(q.subject) ?? 0));
+    }
+    return next;
+}
+`),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MISSING WASM EXPORT ENTRIES
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'wasm.predict_receptor_binding',
+        category: 'WASM API',
+        name: 'predict_receptor_binding_wasm()',
+        summary: 'Quantum DFT receptor binding affinity prediction using the Physics-Informed Neural Network (PINN) pipeline. Returns a binding affinity in kcal/mol (negative = tighter binding per IUPAC convention). Backed by LocalLlmAgent + wgpu tensor pass rather than an external ML runtime.',
+        params: [],
+        returns: 'f64 — binding affinity in kcal/mol (negative values indicate binding)',
+        snippets: [
+            js(`
+import init, { predict_receptor_binding_wasm } from './qualia_core_db.js';
+await init();
+
+const affinity = predict_receptor_binding_wasm();
+// kcal/mol convention: negative = favourable binding
+console.log('Binding affinity:', affinity.toFixed(2), 'kcal/mol');
+console.log('Interpretation:', affinity < -7 ? 'strong binder' : 'weak binder');
+`),
+        ],
+        live: async (wasm) => {
+            if (!wasm?.predict_receptor_binding_wasm) return { error: 'WASM not loaded' };
+            const aff = wasm.predict_receptor_binding_wasm();
+            return { binding_affinity_kcal_mol: aff, interpretation: aff < -7 ? 'strong binder' : 'moderate' };
+        },
+        liveInputs: [],
+    },
+
+    {
+        id: 'wasm.resolve_lww',
+        category: 'WASM API',
+        name: 'resolve_lww_wasm()',
+        summary: 'Merges two conflicting NQuin records from offline-first sync using Last-Writer-Wins semantics. The Lamport clock is in metadata bits 63:32; on clock tie, higher object hash wins for deterministic resolution.',
+        params: [
+            { name: 'local',  type: 'QuinJson', desc: '{subject, predicate, object, context, metadata, parity}' },
+            { name: 'remote', type: 'QuinJson', desc: 'Conflicting remote NQuin record' },
+        ],
+        returns: 'QuinJson — the winning record',
+        snippets: [
+            js(`
+import init, { resolve_lww_wasm } from './qualia_core_db.js';
+await init();
+
+// Offline-first sync: Alice edited on phone (clock 1002), Bob on desktop (clock 1005)
+const local  = { subject: 1n, predicate: 2n, object: 10n, context: 0n, metadata: 1002n << 32n, parity: 0n };
+const remote = { subject: 1n, predicate: 2n, object: 20n, context: 0n, metadata: 1005n << 32n, parity: 0n };
+const winner = resolve_lww_wasm(local, remote);
+console.log('Winner object:', winner.object); // 20n — remote wins (higher clock)
+`),
+        ],
+        live: async (wasm, _n, inputs) => {
+            if (!wasm?.resolve_lww_wasm) return { error: 'WASM not loaded' };
+            const lc = BigInt(inputs.local_clock  || '1002') << 32n;
+            const rc = BigInt(inputs.remote_clock || '1005') << 32n;
+            const local  = { subject: 1n, predicate: 2n, object: 10n, context: 0n, metadata: lc, parity: 0n };
+            const remote = { subject: 1n, predicate: 2n, object: 20n, context: 0n, metadata: rc, parity: 0n };
+            return wasm.resolve_lww_wasm(local, remote);
+        },
+        liveInputs: [
+            { name: 'local_clock',  label: 'Local Lamport clock',  default: '1002' },
+            { name: 'remote_clock', label: 'Remote Lamport clock', default: '1005' },
+        ],
+    },
+
+    {
+        id: 'wasm.engine_version',
+        category: 'WASM API',
+        name: 'get_engine_version()',
+        summary: 'Returns the qualia-core-db crate version baked in at compile time. Identical to the version field returned by the native daemon\'s GET /health endpoint.',
+        params: [],
+        returns: 'string — semver string e.g. "0.0.12"',
+        snippets: [
+            js(`
+import init, { get_engine_version } from './qualia_core_db.js';
+await init();
+console.log(get_engine_version()); // "0.0.12"
+`),
+        ],
+        live: async (wasm) => {
+            if (!wasm?.get_engine_version) return { error: 'WASM not loaded' };
+            return { version: wasm.get_engine_version() };
+        },
+        liveInputs: [],
+    },
+
+    {
+        id: 'wasm.engine_info',
+        category: 'WASM API',
+        name: 'get_engine_info()',
+        summary: 'Returns structured engine metadata: version, engine name ("qualia-core-db"), build target ("wasm32"), and the full WASM_CAPABILITY_REGISTRY array. Useful for feature-detection in browser clients.',
+        params: [],
+        returns: '{ version, engine, target, capabilities: string[] }',
+        snippets: [
+            js(`
+import init, { get_engine_info } from './qualia_core_db.js';
+await init();
+const info = get_engine_info();
+console.log(info.engine);         // "qualia-core-db"
+console.log(info.capabilities);   // ["SHACL", "QueryEngine", "N3Parser", ...]
+`),
+        ],
+        live: async (wasm) => {
+            if (!wasm?.get_engine_info) return { error: 'WASM not loaded' };
+            return wasm.get_engine_info();
+        },
+        liveInputs: [],
+    },
+
+    {
+        id: 'wasm.list_capabilities',
+        category: 'WASM API',
+        name: 'list_capabilities_wasm()',
+        summary: 'Returns the WASM capability registry as a JSON array of string identifiers. Each string corresponds to a feature compiled into this WASM binary. Use this for runtime feature detection before calling optional exports.',
+        params: [],
+        returns: 'string[] — capability identifiers e.g. ["SHACL", "QueryEngine", "BlackScholes", ...]',
+        snippets: [
+            js(`
+import init, { list_capabilities_wasm } from './qualia_core_db.js';
+await init();
+const caps = list_capabilities_wasm();
+if (caps.includes('BlackScholes')) {
+    // Safe to call black_scholes_wasm()
+}
+`),
+        ],
+        live: async (wasm) => {
+            if (!wasm?.list_capabilities_wasm) return { error: 'WASM not loaded' };
+            return wasm.list_capabilities_wasm();
+        },
+        liveInputs: [],
+    },
+
+    {
+        id: 'wasm.infer',
+        category: 'WASM API',
+        name: 'infer_wasm()',
+        summary: 'Async LLM inference entry-point for the browser WASM build. Requires initialize_webgpu_engine() to be called first with a GGUF model ArrayBuffer. Currently returns a placeholder echo until the WebGPU tensor forward pass is fully wired (the Phase 8 bifurcated compute loop runs only on native targets).',
+        params: [
+            { name: 'prompt', type: 'string', desc: 'User prompt string' },
+        ],
+        returns: 'Promise<string> — generated text (placeholder in current build)',
+        snippets: [
+            js(`
+import init, { initialize_webgpu_engine, infer_wasm } from './qualia_core_db.js';
+await init();
+
+// Load GGUF model from OPFS (or fetch from network)
+const modelBytes = await (await fetch('/models/phi3-mini.gguf')).arrayBuffer();
+await initialize_webgpu_engine(new Uint8Array(modelBytes));
+
+const response = await infer_wasm('What is the capital of France?');
+console.log(response);
+`),
+        ],
+    },
+
+    {
+        id: 'wasm.initialize_webgpu',
+        category: 'WASM API',
+        name: 'initialize_webgpu_engine()',
+        summary: 'Initializes the WebGPU LLM inference engine from a raw GGUF model Uint8Array. Parses the GGUF header, builds the NQuin pointer map via GgufTensorIndex, and instantiates the wgpu device. Must be called before infer_wasm().',
+        params: [
+            { name: 'gguf_data', type: 'Uint8Array', desc: 'Raw bytes of a GGUF model file' },
+        ],
+        returns: 'Promise<void>',
+        snippets: [
+            js(`
+import init, { initialize_webgpu_engine } from './qualia_core_db.js';
+await init();
+
+const resp = await fetch('/models/phi3-mini-4k-q4.gguf');
+const buf  = await resp.arrayBuffer();
+await initialize_webgpu_engine(new Uint8Array(buf));
+console.log('WebGPU engine ready');
+`),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SPARQL LIBRARY CAPABILITIES
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'sparql.select',
+        category: 'SPARQL Engine',
+        name: 'SPARQL SELECT / ASK / DESCRIBE',
+        summary: 'Full SPARQL 1.1 SELECT queries over the native graph engine. The sparql_library/ module compiles queries through a 5-stage pipeline: lexer → AST (sparql_ast.rs) → planner (sparql_planner.rs) → executor (sparql_executor.rs) → results. On the browser, compile_query_to_json() exposes bytecode inspection; execution runs via the native daemon at localhost:4242/query.',
+        params: [
+            { name: 'query', type: 'string', desc: 'SPARQL 1.1 query string' },
+        ],
+        returns: '{ columns: string[], rows: Record<string, RdfTerm>[] }',
+        snippets: [
+            http('POST /query\nContent-Type: application/sparql-query\n\nSELECT ?s ?p ?o WHERE {\n  ?s ?p ?o .\n  FILTER (?p = <https://example.org/name>)\n}\nLIMIT 100'),
+            rs(`
+use qualia_core_db::sparql_library::{SparqlParser, SparqlExecutor};
+
+let ast = SparqlParser::parse("SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10")?;
+let plan = SparqlPlanner::plan(&ast)?;
+let results = SparqlExecutor::execute(&plan, &graph)?;
+`),
+            cli('q42 sparql "SELECT ?s ?o WHERE { ?s foaf:knows ?o }"'),
+        ],
+    },
+
+    {
+        id: 'sparql.update',
+        category: 'SPARQL Engine',
+        name: 'SPARQL UPDATE (INSERT / DELETE)',
+        summary: 'SPARQL 1.1 Update: INSERT DATA, DELETE DATA, INSERT/DELETE with WHERE pattern. All mutations are WAL-logged before committing to the graph. sparql_update.rs handles parsing; the executor validates permissions via N3Logic rights ontology before writing.',
+        params: [
+            { name: 'update', type: 'string', desc: 'SPARQL Update string' },
+        ],
+        returns: 'void (writes to WAL + graph)',
+        snippets: [
+            http('POST /query\nContent-Type: application/sparql-update\n\nINSERT DATA {\n  <https://example.org/alice> <http://xmlns.com/foaf/0.1/knows> <https://example.org/bob> .\n}'),
+            http('POST /query\nContent-Type: application/sparql-update\n\nDELETE WHERE { <https://example.org/alice> ?p ?o . }'),
+            rs(`
+use qualia_core_db::sparql_library::sparql_update::SparqlUpdate;
+SparqlUpdate::execute("INSERT DATA { <did:alice> <foaf:knows> <did:bob> . }", &mut graph)?;
+`),
+        ],
+    },
+
+    {
+        id: 'sparql.aggregates',
+        category: 'SPARQL Engine',
+        name: 'SPARQL Aggregates (COUNT / SUM / GROUP BY)',
+        summary: 'SPARQL 1.1 aggregate functions: COUNT, SUM, AVG, MIN, MAX, GROUP_CONCAT. sparql_aggregates.rs implements stack-allocated aggregation with GROUP BY support. External sorting via external_sort.rs handles result sets larger than the SlgArena ceiling.',
+        params: [
+            { name: 'query', type: 'string', desc: 'SPARQL query with aggregation' },
+        ],
+        returns: '{ group_key, aggregate_value }[]',
+        snippets: [
+            http('POST /query\nContent-Type: application/sparql-query\n\nSELECT ?type (COUNT(?s) AS ?count)\nWHERE { ?s rdf:type ?type }\nGROUP BY ?type\nORDER BY DESC(?count)'),
+            http('POST /query\nContent-Type: application/sparql-query\n\nSELECT (AVG(?score) AS ?avg_score)\nWHERE { ?patient q42:framinghamScore ?score }'),
+        ],
+    },
+
+    {
+        id: 'sparql.filters',
+        category: 'SPARQL Engine',
+        name: 'SPARQL FILTER / REGEX / BIND',
+        summary: 'SPARQL 1.1 FILTER clause evaluation via sparql_filter.rs. Supports arithmetic comparisons, string functions (regex, contains, str, strlen), type testing (isLiteral, isIRI, lang), and BIND for computed variables. Filter expressions are compiled to bytecode for efficient repeated evaluation.',
+        params: [
+            { name: 'query', type: 'string', desc: 'SPARQL query with FILTER/BIND' },
+        ],
+        returns: 'Same as SELECT result set, filtered',
+        snippets: [
+            http('POST /query\nContent-Type: application/sparql-query\n\nSELECT ?name ?score\nWHERE {\n  ?p foaf:name ?name ;\n     q42:riskScore ?score .\n  FILTER (?score > 10.0 && regex(?name, "^Alice"))\n  BIND (?score * 1.1 AS ?adjustedScore)\n}'),
+        ],
+    },
+
+    {
+        id: 'sparql.federated',
+        category: 'SPARQL Engine',
+        name: 'SPARQL Federated Queries (SERVICE)',
+        summary: 'SPARQL 1.1 Federated Query via SERVICE keyword. sparql_federated.rs proxies sub-queries to remote SPARQL endpoints and merges results locally. Outbound traffic to Remote backends requires a signed VC from the Principal (enforced by the Webizen VM pre-flight).',
+        params: [
+            { name: 'query',       type: 'string', desc: 'SPARQL query with SERVICE keyword' },
+            { name: 'remote_url',  type: 'string', desc: 'Remote SPARQL endpoint URI inside SERVICE clause' },
+        ],
+        returns: 'Joined result set from local + remote sources',
+        snippets: [
+            http('POST /query\nContent-Type: application/sparql-query\n\nSELECT ?name ?remoteProp\nWHERE {\n  ?person foaf:name ?name .\n  SERVICE <https://dbpedia.org/sparql> {\n    ?person dbo:birthPlace ?remoteProp .\n  }\n}'),
+            rs(`
+use qualia_core_db::sparql_library::sparql_federated::FederatedQueryPlanner;
+let plan = FederatedQueryPlanner::plan(&ast, &["https://dbpedia.org/sparql"])?;
+`),
+        ],
+    },
+
+    {
+        id: 'sparql.did_context',
+        category: 'SPARQL Engine',
+        name: 'DID-Scoped SPARQL Contexts',
+        summary: 'sparql_did.rs adds per-principal query context: every query runs against the principal\'s named graph partition. The DID hash is used as the default graph context, so ?s ?p ?o only matches triples the principal is authorized to see. Cross-principal reads require explicit GRAPH clauses with deontic permissions.',
+        params: [
+            { name: 'principal_did', type: 'string', desc: 'DID string — resolves to graph context via q_hash' },
+            { name: 'query',         type: 'string', desc: 'SPARQL query' },
+        ],
+        returns: 'Filtered result set scoped to principal\'s authorized partition',
+        snippets: [
+            http('POST /query\nX-Principal-DID: did:wellfare:alice\nContent-Type: application/sparql-query\n\nSELECT ?s ?p ?o\nWHERE { GRAPH <did:wellfare:alice> { ?s ?p ?o } }'),
+            rs(`
+use qualia_core_db::sparql_library::sparql_did::DidQueryContext;
+let ctx = DidQueryContext::new(q_hash("did:wellfare:alice"));
+let results = SparqlExecutor::execute_with_context(&plan, &graph, &ctx)?;
+`),
+        ],
+    },
+
+    {
+        id: 'sparql.websocket',
+        category: 'SPARQL Engine',
+        name: 'SPARQL WebSocket Streaming',
+        summary: 'sparql_websocket.rs provides real-time result streaming for long-running or live queries. The client sends a SPARQL query over a WebSocket connection; results are pushed as JSON-Lines as they are found rather than waiting for the full result set.',
+        params: [
+            { name: 'query', type: 'string', desc: 'SPARQL SELECT query to stream' },
+        ],
+        returns: 'JSON-Lines stream — one result binding per message',
+        snippets: [
+            js(`
+const ws = new WebSocket('ws://localhost:4242/query/stream');
+ws.send(JSON.stringify({
+    query: 'SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10000',
+    format: 'json-lines',
+}));
+ws.onmessage = ({ data }) => {
+    const row = JSON.parse(data);
+    console.log(row.s, row.p, row.o);
+};
+`),
+        ],
+    },
+
+    {
+        id: 'sparql.multimedia',
+        category: 'SPARQL Engine',
+        name: 'SPARQL-MM (Multimedia Extensions)',
+        summary: 'sparql_mm.rs implements W3C SPARQL-MM functions for querying video, image, and audio metadata stored as NQuins. Functions include ma:spatialRelation, ma:frameOfReference, ma:temporalClipping for media fragment handling. Useful for DICOM and multimodal AI pipelines.',
+        params: [
+            { name: 'query', type: 'string', desc: 'SPARQL query with SPARQL-MM function calls' },
+        ],
+        returns: 'Media-aware result set',
+        snippets: [
+            http('POST /query\nContent-Type: application/sparql-query\n\nPREFIX ma: <http://www.w3.org/ns/ma-ont#>\nSELECT ?clip ?frame\nWHERE {\n  ?video ma:hasFragment ?clip .\n  ?clip  ma:temporalClipping ?frame .\n  FILTER (ma:temporalRelation(?clip, ?frame) = "during")\n}'),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SPECIALIZED SCIENTIFIC LIBRARIES (native-only — no WASM bridge)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'specialized.cryptographic',
+        category: 'Specialized Libraries',
+        name: 'Cryptographic Library (ZK / ML-DSA / Ed25519)',
+        summary: 'specialized_libs/cryptographic_library.rs implements quantum-resistant post-quantum signatures (ML-DSA / Dilithium), ZK-SNARK and ZK-STARK proofs, Ed25519 key management, and AES-GCM encryption — all as zero-allocation Rust structs. These run natively only; no WASM bridge to avoid shipping key material to the browser.',
+        params: [
+            { name: 'key_type', type: 'enum', desc: 'Ed25519 / MlDsa65 / MlDsa87' },
+        ],
+        returns: 'KeyManager, SignatureEngine, EncryptionEngine, ProofEngine',
+        snippets: [
+            rs(`
+use qualia_core_db::specialized_libs::cryptographic_library::{KeyManager, SignatureEngine};
+
+// Generate ML-DSA (post-quantum) key pair
+let km = KeyManager::new();
+let (sk, vk) = km.generate_key_pair_ml_dsa()?;
+
+// Sign a NQuin batch root hash
+let sig = SignatureEngine::sign_ml_dsa(&payload_bytes, &sk)?;
+assert!(SignatureEngine::verify_ml_dsa(&payload_bytes, &sig, &vk)?);
+`),
+            cli('q42 key generate --type ml-dsa-65 --output my-key.q42k'),
+            cli('q42 sign --key my-key.q42k --payload graph.nq'),
+        ],
+    },
+
+    {
+        id: 'specialized.physics',
+        category: 'Specialized Libraries',
+        name: 'Physics Simulation (Thermodynamics / DFT)',
+        summary: 'specialized_libs/physics_simulation.rs implements MCMC thermodynamics sampling, Density Functional Theory (DFT) ground state computation, classical particle system dynamics, and quantum mechanics simulations. Uses stack-allocated arrays to stay within the SlgArena 42 MB ceiling.',
+        params: [
+            { name: 'temperature_k', type: 'f64', desc: 'System temperature in Kelvin' },
+            { name: 'n_atoms',       type: 'usize', desc: 'Number of atoms in the simulation' },
+        ],
+        returns: 'SimulationState { energy, entropy, temperature, pressure }',
+        snippets: [
+            rs(`
+use qualia_core_db::specialized_libs::physics_simulation::{
+    ThermodynamicsEngine, DftCalculator
+};
+
+// MCMC thermodynamics at 300 K
+let mut thermo = ThermodynamicsEngine::new(300.0, 64)?;
+let state = thermo.run_mcmc(10_000)?;
+println!("Free energy: {:.3} eV", state.gibbs_free_energy);
+
+// DFT ground state
+let dft = DftCalculator::new(atoms)?;
+let (energy, density) = dft.compute_ground_state()?;
+`),
+            cli('q42 science thermodynamics --temp 300 --atoms 64 --steps 10000'),
+        ],
+    },
+
+    {
+        id: 'specialized.machine_learning',
+        category: 'Specialized Libraries',
+        name: 'Machine Learning (Edge Neural Inference)',
+        summary: 'specialized_libs/machine_learning.rs implements stack-allocated neural network layers (dense, attention, normalization) that operate directly on NQuin feature vectors. ModelManager handles model lifecycle; InferenceEngine runs forward passes; TrainingEngine does on-device fine-tuning via gradient descent. Distinct from the GGUF LLM pipeline — these are domain-specific networks.',
+        params: [
+            { name: 'model_path', type: 'string', desc: 'Path to compiled model weights (q42 model format)' },
+        ],
+        returns: 'InferenceResult { predictions: Vec<f32>, confidence: f32 }',
+        snippets: [
+            rs(`
+use qualia_core_db::specialized_libs::machine_learning::{ModelManager, InferenceEngine};
+
+let mut mgr = ModelManager::new();
+let model   = mgr.load_model("models/risk-classifier.q42m")?;
+let engine  = InferenceEngine::new(model);
+
+// Run inference on a NQuin feature vector
+let features = extract_quin_features(&patient_quins);
+let result   = engine.infer(&features)?;
+println!("Risk class: {} (confidence {:.1}%)", result.class_label, result.confidence * 100.0);
+`),
+            cli('q42 ml infer --model risk-classifier.q42m --graph patient-graph.nq'),
+        ],
+    },
+
+    {
+        id: 'specialized.statistical',
+        category: 'Specialized Libraries',
+        name: 'Statistical Computing',
+        summary: 'specialized_libs/statistical_computing.rs implements Bayesian inference (MCMC, variational), frequentist hypothesis testing (t-test, chi-squared, ANOVA), survival analysis (Kaplan-Meier, Cox PH), and advanced distribution sampling — all stack-allocated for no-heap operation.',
+        params: [
+            { name: 'data', type: '&[f64]', desc: 'Slice of observations' },
+        ],
+        returns: 'StatisticalSummary { mean, variance, p_value, confidence_interval }',
+        snippets: [
+            rs(`
+use qualia_core_db::specialized_libs::statistical_computing::{
+    BayesianInference, HypothesisTesting, SurvivalAnalysis
+};
+
+// Bayesian posterior estimation
+let posterior = BayesianInference::mcmc_posterior(&observed, &prior, 5000)?;
+
+// Frequentist t-test
+let (t_stat, p_value) = HypothesisTesting::two_sample_t_test(&group_a, &group_b)?;
+
+// Kaplan-Meier survival curve
+let km = SurvivalAnalysis::kaplan_meier(&times, &events)?;
+`),
+            cli('q42 stats t-test --group-a data_a.csv --group-b data_b.csv'),
+        ],
+    },
+
+    {
+        id: 'specialized.engineering',
+        category: 'Specialized Libraries',
+        name: 'Engineering Analysis (FEA / CFD / Reliability)',
+        summary: 'specialized_libs/engineering_analysis.rs implements Finite Element Analysis (structural static + dynamic), Computational Fluid Dynamics (Burgers equation, laminar flow), thermal analysis, and structural reliability indexing (β-index, Monte Carlo first-order). Used by environmental monitoring and infrastructure applications.',
+        params: [
+            { name: 'mesh_nodes', type: 'usize', desc: 'Number of FEA mesh nodes' },
+        ],
+        returns: 'AnalysisResult { displacements, stresses, safety_factor }',
+        snippets: [
+            rs(`
+use qualia_core_db::specialized_libs::engineering_analysis::{
+    StructuralAnalyzer, FluidAnalyzer, ThermalAnalyzer
+};
+
+// Static structural FEA
+let structure = StructuralAnalyzer::new(mesh)?;
+let result = structure.solve_static_linear(&loads, &boundary_conditions)?;
+println!("Max displacement: {:.4} mm", result.max_displacement * 1000.0);
+
+// 1D Burgers CFD
+let cfd = FluidAnalyzer::new_1d_burgers(viscosity, grid_points)?;
+let flow = cfd.solve(initial_condition, dt, time_steps)?;
+`),
+            cli('q42 science fea --mesh structure.obj --loads loads.json --output results.json'),
+        ],
+    },
+
+    {
+        id: 'specialized.quantum_biology',
+        category: 'Specialized Libraries',
+        name: 'Quantum Biology',
+        summary: 'specialized_libs/quantum_biology.rs models non-trivial quantum effects in biological systems: photosynthetic quantum coherence (FMO complex), enzyme quantum tunneling, radical pair mechanism (avian magnetoreception), and quantum Zeno effects in protein folding. Uses Lindblad master equation for open quantum systems.',
+        params: [
+            { name: 'complex_type', type: 'enum', desc: 'FmoPhotosynthesis / EnzymeTunneling / RadicalPair' },
+        ],
+        returns: 'QuantumBioResult { coherence_time_ps, transfer_efficiency, quantum_advantage }',
+        snippets: [
+            rs(`
+use qualia_core_db::specialized_libs::quantum_biology::{FmoPhotosynthesisModel, QuantumTunneling};
+
+// FMO photosynthetic complex — quantum coherence window
+let fmo = FmoPhotosynthesisModel::new(7)?; // 7-site bacteriochlorophyll network
+let result = fmo.simulate_energy_transfer(300.0, 500e-12)?; // 300K, 500ps
+println!("Quantum advantage: {:.2}x over classical transfer", result.quantum_advantage);
+
+// Enzyme quantum tunneling through a barrier
+let tunnel = QuantumTunneling::proton_transfer(barrier_height_ev, barrier_width_angstrom)?;
+`),
+            cli('q42 science quantum-bio --model fmo --sites 7 --temperature 300'),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DOMAIN ONTOLOGIES
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'domain.geospatial',
+        category: 'Domain Ontologies',
+        name: 'Geospatial Domain (GeoSPARQL + KML)',
+        summary: 'domains/geospatial/spatial.rs bridges GeoSPARQL geometry types (Point, LineString, Polygon, MultiPolygon) and KML features to NQuin predicates. Spatial relations (within, intersects, distance) use q_hash-keyed geometry quins with WKT literal objects. Used with KmlBridge for ingesting geographic data.',
+        params: [
+            { name: 'wkt_geometry', type: 'string', desc: 'WKT geometry string e.g. "POINT(-122.4194 37.7749)"' },
+        ],
+        returns: 'NQuin — geometry triple with q_hash("geo:hasGeometry") predicate',
+        snippets: [
+            rs(`
+use qualia_core_db::domains::geospatial::spatial::GeospatialBridge;
+
+// Ingest a GeoJSON Point as NQuin
+let quin = GeospatialBridge::point_to_quin(
+    q_hash("did:place:sf-city-hall"),
+    -122.4194,
+    37.7749,
+    q_hash("ctx:geospatial-graph"),
+)?;
+
+// Spatial relation: is Point within Polygon?
+let within = GeospatialBridge::check_within(&point_quin, &polygon_quin)?;
+`),
+            http('POST /query\nContent-Type: application/sparql-query\n\nPREFIX geo: <http://www.opengis.net/ont/geosparql#>\nSELECT ?place\nWHERE {\n  ?place geo:hasGeometry ?g .\n  FILTER (geo:sfWithin(?g, "POLYGON((-123 37, -121 37, -121 38, -123 38, -123 37))"^^geo:wktLiteral))\n}'),
+            nt('<https://example.org/sf-city-hall> <http://www.opengis.net/ont/geosparql#hasGeometry> "POINT(-122.4194 37.7749)"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .'),
+        ],
+    },
+
+    {
+        id: 'domain.mathematical',
+        category: 'Domain Ontologies',
+        name: 'Mathematical Domain (Geometric Algebra)',
+        summary: 'domains/mathematical/geometric.rs implements a SIMD-accelerated Geometric Algebra kernel (G3 Clifford algebra) with multivector operations: grade projection, geometric product, outer product, inner product, and reversion. Runs on native targets with AVX2/NEON; falls back to scalar on WASM.',
+        params: [
+            { name: 'multivector', type: '[f32; 8]', desc: 'G3 multivector coefficients [scalar, e1, e2, e3, e12, e13, e23, e123]' },
+        ],
+        returns: 'GeometricProduct — another multivector',
+        snippets: [
+            rs(`
+use qualia_core_db::domains::mathematical::geometric::{Multivector, GeometricAlgebra};
+
+// G3 Clifford algebra: represent a rotation by angle θ around axis n
+let n = Multivector::vector(0.0, 1.0, 0.0);    // y-axis
+let theta: f32 = std::f32::consts::PI / 4.0;    // 45 degrees
+let rotor = GeometricAlgebra::rotor_from_angle_axis(theta, &n);
+let v = Multivector::vector(1.0, 0.0, 0.0);     // x unit vector
+let rotated = GeometricAlgebra::sandwich_product(&rotor, &v); // RṽR†
+`),
+        ],
+    },
+
+    {
+        id: 'domain.physical',
+        category: 'Domain Ontologies',
+        name: 'Physical Domain (Thermodynamics)',
+        summary: 'domains/physical/thermodynamics.rs provides first-principles thermodynamic property calculations: ideal gas PVT relations, enthalpy/entropy from heat capacities, Carnot efficiency, and equation-of-state (van der Waals) corrections. Results are serialised as NQuin metric quins with QUDT unit predicates.',
+        params: [
+            { name: 'temperature_k', type: 'f64', desc: 'Temperature in Kelvin' },
+            { name: 'pressure_pa',   type: 'f64', desc: 'Pressure in Pascals' },
+            { name: 'moles',         type: 'f64', desc: 'Amount of substance in mol' },
+        ],
+        returns: 'ThermodynamicState { volume, enthalpy, entropy, gibbs_free_energy }',
+        snippets: [
+            rs(`
+use qualia_core_db::domains::physical::thermodynamics::ThermodynamicCalculator;
+
+// Ideal gas: PV = nRT
+let state = ThermodynamicCalculator::ideal_gas_state(298.15, 101_325.0, 1.0)?;
+println!("Volume: {:.4} m³", state.volume);
+
+// Carnot efficiency
+let eta = ThermodynamicCalculator::carnot_efficiency(500.0, 300.0); // T_hot, T_cold
+println!("Carnot η = {:.1}%", eta * 100.0);
+`),
+            cli('q42 science thermodynamics --mode ideal-gas --temp 298.15 --pressure 101325 --moles 1'),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SOLVER CATALOG ENTRIES (linear algebra + optimization — currently native-only)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'solvers.linear_algebra',
+        category: 'Solvers',
+        name: 'Linear Algebra (LU / Eigen / Tensor)',
+        summary: 'StaticLuDecomposition (Doolittle LU with partial pivoting), FixedLanczosEigensolver (sparse eigenvalues), and ConstTensorContractor (Einstein summation) — all stack-allocated with a 4×4 matrix ceiling to stay within the zero-allocation ABI. Native-only: these are currently disabled from the WASM build due to build complexity.',
+        params: [
+            { name: 'matrix', type: 'Matrix4x4', desc: '4×4 f64 array [[f64; 4]; 4]' },
+            { name: 'b',      type: 'Vector4',   desc: 'Right-hand side [f64; 4]' },
+        ],
+        returns: 'Vector4 — solution x to Ax = b',
+        snippets: [
+            rs(`
+use qualia_core_db::solvers::linear_algebra::{StaticLuDecomposition, Matrix4x4, Vector4};
+use qualia_core_db::solvers::SolverConfig;
+
+let mut lu = StaticLuDecomposition::new(SolverConfig::default());
+let m = Matrix4x4 { data: [[2.0,1.0,0.0,0.0],[4.0,3.0,0.0,0.0],[0.0,0.0,1.0,2.0],[0.0,0.0,3.0,4.0]] };
+let b = Vector4 { data: [5.0, 11.0, 8.0, 18.0] };
+let x = lu.solve(&m, &b)?;
+// x ≈ [1.0, 3.0, 4.0, 2.0]
+`),
+        ],
+    },
+
+    {
+        id: 'solvers.optimization',
+        category: 'Solvers',
+        name: 'Optimization (Nelder-Mead / Newton-Raphson / L-M)',
+        summary: 'Three constrained optimization solvers: NelderMeadSimplex (derivative-free, 4-param), BoundedNewtonRaphson (1-param with bounds), and LevenbergMarquardtStack (nonlinear least squares). All use stack-allocated state and are bounded by SolverConfig::max_iterations. Native-only in current build.',
+        params: [
+            { name: 'initial_point', type: '[f64; 4]',        desc: 'Starting guess' },
+            { name: 'objective',     type: 'fn([f64;4])->f64', desc: 'Objective function to minimize' },
+        ],
+        returns: 'OptimizationResult { optimal_point, optimal_value, iterations }',
+        snippets: [
+            rs(`
+use qualia_core_db::solvers::optimization::{NelderMeadSimplex, BoundedNewtonRaphson};
+
+// Nelder-Mead: minimize f(x,y) = (x-1)² + (y-2)²
+let mut nm = NelderMeadSimplex::new([0.0, 0.0, 0.0, 0.0], SolverConfig::default());
+let result = nm.minimize(&|p| (p[0]-1.0).powi(2) + (p[1]-2.0).powi(2))?;
+
+// Newton-Raphson: find root of f(x) = x³ - x - 2 near x=2
+let mut nr = BoundedNewtonRaphson::new(2.0, -10.0, 10.0, SolverConfig::default());
+let root = nr.find_root(&|x| x.powi(3) - x - 2.0, &|x| 3.0*x.powi(2) - 1.0)?;
+`),
+        ],
+    },
 ];
 
 // ─── Index helpers ─────────────────────────────────────────────────────────────

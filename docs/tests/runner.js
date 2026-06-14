@@ -26,6 +26,10 @@ import { register as regDeontic }        from './suites/modality-deontic.js';
 import { register as regControlTheory }  from './suites/modality-control-theory.js';
 import { register as regCrdt }           from './suites/modality-crdt.js';
 import { register as regNeuroSymbolic }  from './suites/modality-neuro-symbolic.js';
+import { register as regArgumentation }  from './suites/modality-argumentation.js';
+import { register as regGraphTheory }    from './suites/modality-graph-theory.js';
+import { register as regIntervalReason } from './suites/modality-interval-reasoning.js';
+import { register as regDiffusion }      from './suites/modality-diffusion.js';
 import { register as regOntology }       from './suites/ontology-alignment.js';
 
 // WASM-backed (wasm + both)
@@ -153,6 +157,10 @@ function buildRunner(mode) {
     regControlTheory(r, c);
     regCrdt(r, c);
     regNeuroSymbolic(r, c);
+    regArgumentation(r, c);
+    regGraphTheory(r, c);
+    regIntervalReason(r, c);
+    regDiffusion(r, c);
     regOntology(r, c);
 
     if (mode === 'wasm' || mode === 'both') {
@@ -246,6 +254,10 @@ function suiteModule(name, path = []) {
         ['Modality: Control Theory', 'modality-control-theory.js'],
         ['Modality: LWW CRDT', 'modality-crdt.js'],
         ['Modality: Neuro-Symbolic', 'modality-neuro-symbolic.js'],
+        ['Modality: Argumentation', 'modality-argumentation.js'],
+        ['Modality: Graph Theory', 'modality-graph-theory.js'],
+        ['Modality: Interval Reasoning', 'modality-interval-reasoning.js'],
+        ['Modality: Diffusion', 'modality-diffusion.js'],
         ['Ontology:', 'ontology-alignment.js'],
         ['WASM: Query Engine', 'wasm-query-engine.js'],
         ['WASM: Bioinformatics', 'wasm-bioinformatics.js'],
