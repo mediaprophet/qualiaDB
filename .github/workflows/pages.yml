@@ -53,6 +53,12 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked --version 0.13.1 --force
 
+      - name: Test qualia-core-db (native)
+        run: cargo test -p qualia-core-db --lib -- --test-threads=4
+
+      - name: WASM smoke-check (qualia-core-db)
+        run: cargo check --target wasm32-unknown-unknown -p qualia-core-db
+
       - name: Build WASM (qualia-core-db)
         run: |
           wasm-pack build crates/qualia-core-db \
@@ -67,6 +73,7 @@ jobs:
         run: bash scripts/fetch_wordnet.sh --subset 100000 --playground
 
       - name: Prepare Schema.org benchmark artifacts for Pages
+        continue-on-error: true   # non-fatal: Pages deploys fine without Schema.org artifacts
         run: |
           bash scripts/prepare_schemaorg_benchmark.sh 30.0 current-https
 

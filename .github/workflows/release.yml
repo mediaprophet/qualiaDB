@@ -52,6 +52,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libssl-dev pkg-config
 
+      - name: Test qualia-core-db
+        run: cargo test -p qualia-core-db --lib -- --test-threads=4
+
       - name: Build qualia-cli
         run: cargo build --release -p qualia-cli
 
@@ -74,8 +77,31 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+# ── Job 2: WASM smoke-check (fast, catches wasm32 compile errors before full build) ──
+  check-wasm:
+    name: WASM smoke-check
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: wasm-check-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: wasm-check-cargo-
+      - name: WASM smoke-check
+        run: cargo check --target wasm32-unknown-unknown -p qualia-core-db
+
 # ── Job 3: qualia-core-db WASM ────────────────────────────────────────────────
   build-wasm:
+    needs: check-wasm
     name: WASM (qualia-core-db)
     runs-on: ubuntu-22.04
 
