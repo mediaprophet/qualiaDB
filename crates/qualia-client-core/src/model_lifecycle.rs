@@ -117,7 +117,7 @@ pub fn task_orchestrator() -> Arc<TaskOrchestrator> {
         .clone()
 }
 
-/// UI RAM ceiling for LLM arena pressure (matches 0.0.9 Flutter plan).
+/// UI RAM ceiling for LLM arena pressure (matches 0.0.12 Flutter plan).
 pub const MEMORY_FLOOR_MB: u32 = 512;
 
 static LLM_MEMORY_BYTES: AtomicU64 = AtomicU64::new(0);

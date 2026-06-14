@@ -23,7 +23,7 @@ pub mod science;
 /// 
 /// Edge-native, zero-allocation semantic graph and neuro-symbolic engine.
 #[derive(Parser, Debug)]
-#[command(name = "qualia-cli", version = "0.0.11", author = "Qualia-DB")]
+#[command(name = "qualia-cli", version = "0.0.12", author = "Qualia-DB")]
 #[command(about = "Manage, query, and evaluate Qualia-DB vaults and models", long_about = None)]
 pub struct Cli {
     /// Set verbosity level (-v for debug, -vv for trace opcodes)

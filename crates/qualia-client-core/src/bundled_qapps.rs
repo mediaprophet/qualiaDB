@@ -346,6 +346,6 @@ mod tests {
             return;
         }
         let v = read_qapp_version_from_dir(&anatomy);
-        assert_eq!(v.as_deref(), Some("0.0.8"));
+        assert_eq!(v.as_deref(), Some("0.0.12"));
     }
 }

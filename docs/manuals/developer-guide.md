@@ -1,6 +1,6 @@
 # Qualia-DB Developer Guide
 
-_Branch: `0.0.8-dev` | Last updated: 2026-06-07_
+_Branch: `0.0.12-dev` | Last updated: 2026-06-07_
 
 Qualia-DB is a bare-metal semantic graph database designed specifically for constrained personal environments (mobile devices, IoT, browsers). It enforces a strict 512 MB RAM floor and operates with absolute zero dynamic heap allocation during execution, making garbage-collection pauses mathematically impossible.
 

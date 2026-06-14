@@ -6,7 +6,7 @@
  *     from './js/qualia-wasm-runtime.js';
  *
  *   const mod = await initQualiaWasm({ base: '.' });
- *   console.log(getEngineVersion(mod)); // "0.0.9"
+ *   console.log(getEngineVersion(mod)); // "0.0.12"
  */
 
 let _mod = null;

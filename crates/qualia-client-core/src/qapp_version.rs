@@ -1,7 +1,7 @@
 //! Semver-style version parsing and comparison for `qapp.json` `version` fields.
 //!
-//! Supports `major.minor.patch` with optional `-pre` suffix (e.g. `0.0.8-dev`).
-//! A stable release (`0.0.8`) sorts newer than the same numeric pre-release (`0.0.8-dev`).
+//! Supports `major.minor.patch` with optional `-pre` suffix (e.g. `0.0.12-dev`).
+//! A stable release (`0.0.12`) sorts newer than the same numeric pre-release (`0.0.12-dev`).
 
 use std::cmp::Ordering;
 
@@ -15,7 +15,7 @@ pub struct ParsedVersion {
     pub pre_release: Option<String>,
 }
 
-/// Normalize user-facing version text (`v0.0.8-dev`, ` 0.0.8 `).
+/// Normalize user-facing version text (`v0.0.12-dev`, ` 0.0.12 `).
 pub fn normalize_version_label(raw: &str) -> String {
     let trimmed = raw.trim().trim_start_matches('v').trim();
     let core = trimmed.split('+').next().unwrap_or(trimmed);
@@ -83,25 +83,25 @@ mod tests {
 
     #[test]
     fn stable_beats_prerelease_at_same_numbers() {
-        assert!(is_version_newer("0.0.8", "0.0.8-dev"));
-        assert!(!is_version_newer("0.0.8-dev", "0.0.8"));
+        assert!(is_version_newer("0.0.12", "0.0.12-dev"));
+        assert!(!is_version_newer("0.0.12-dev", "0.0.12"));
     }
 
     #[test]
     fn patch_bump_is_newer() {
-        assert!(is_version_newer("0.0.9", "0.0.8"));
-        assert!(!is_version_newer("0.0.7", "0.0.8"));
+        assert!(is_version_newer("0.0.12", "0.0.12"));
+        assert!(!is_version_newer("0.0.12", "0.0.12"));
     }
 
     #[test]
     fn v_prefix_and_whitespace() {
-        assert!(parse_version(" v0.0.8 ").is_some());
-        assert!(is_version_newer("v0.0.8", "0.0.7"));
+        assert!(parse_version(" v0.0.12 ").is_some());
+        assert!(is_version_newer("v0.0.12", "0.0.12"));
     }
 
     #[test]
     fn equal_versions_not_newer() {
-        assert!(!is_version_newer("0.0.8", "0.0.8"));
-        assert!(!is_version_newer("0.0.8-dev", "0.0.8-dev"));
+        assert!(!is_version_newer("0.0.12", "0.0.12"));
+        assert!(!is_version_newer("0.0.12-dev", "0.0.12-dev"));
     }
 }

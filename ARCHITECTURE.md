@@ -1,6 +1,6 @@
 # QualiaDB Architecture
 
-_Branch: `0.0.11` | Last updated: 2026-06-12_
+_Branch: `0.0.12` | Last updated: 2026-06-14_
 
 QualiaDB is a zero-allocation, mechanically sympathetic semantic database and multi-agent collaboration ecosystem. It bridges the string-heavy reality of the Semantic Web with hardware-aligned execution paths, enforcing strict constraints to ensure bounded memory and deterministic performance.
 
@@ -607,7 +607,7 @@ Screens: Dashboard, Chat, Wallet, Address Book, Ontology Hub, Asset Library, **Q
 
 ### Tauri/React (`crates/qualia-desktop/` + `crates/qualia-client/`) — **legacy**
 
-Early desktop prototype. **Not built or released by CI** (Tauri removed from `release.yml` in v0.0.6). Retained in-tree for reference; do not treat as the active desktop shell. New UI work belongs in Flutter.
+Early desktop prototype. **Not built or released by CI** (Tauri removed from `release.yml` in v0.0.12). Retained in-tree for reference; do not treat as the active desktop shell. New UI work belongs in Flutter.
 
 ### CLI (`crates/qualia-cli/`) and WASM (`qualia-core-wasm`)
 
@@ -661,7 +661,7 @@ The ingest pipeline (`streaming_import_rdf`) has been successfully migrated to t
 
 ## 16. Test Status
 
-**640+ tests** as of `0.0.11-dev` (138 SPARQL, 149 SHACL extensions, 8 git_bridge, remainder across core, domains, CLI).
+**640+ tests** as of `0.0.12-dev` (138 SPARQL, 149 SHACL extensions, 8 git_bridge, remainder across core, domains, CLI).
 
 ---
 

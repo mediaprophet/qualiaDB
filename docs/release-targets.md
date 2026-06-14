@@ -1,6 +1,6 @@
 # Release Targets — Feature Matrix
 
-_Branch: `0.0.11` | Updated: 2026-06-12 (cross-platform abstraction + specialized libs complete)_
+_Branch: `0.0.12` | Updated: 2026-06-12 (cross-platform abstraction + specialized libs complete)_
 
 Five release artefacts are built or planned from this repository:
 
@@ -286,7 +286,7 @@ CG specifications: [Solid Protocol v0.11](https://solidproject.org/TR/protocol) 
 | QPU job provenance quins (WAL-logged) | ❌ | ❌ | ✅ | ✅ | 🚧 |
 | Provider credential management (`qpu configure/show/clear`) | ❌ | ❌ | ✅ | 🚧 | ❌ |
 
-> **CLI note:** All `qpu` subcommands require the `--enable-qpu` global flag (`qualia-cli --enable-qpu qpu <subcommand>`). Credentials are stored in `$QUALIA_DATA_DIR/qpu_config.json`. The compile-time `qpu_internal` feature gate has been replaced by this runtime flag as of 0.0.11. See `crates/qualia-cli/src/qpu.rs` for the implementation.
+> **CLI note:** All `qpu` subcommands require the `--enable-qpu` global flag (`qualia-cli --enable-qpu qpu <subcommand>`). Credentials are stored in `$QUALIA_DATA_DIR/qpu_config.json`. The compile-time `qpu_internal` feature gate has been replaced by this runtime flag as of 0.0.12. See `crates/qualia-cli/src/qpu.rs` for the implementation.
 
 ---
 

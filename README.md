@@ -65,7 +65,7 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**v0.0.11-dev** — active development, pre-release.
+**v0.0.12-dev** — active development, pre-release.
 
 This branch includes: in-process LLM inference with GPU dispatch; SPARQL 1.1 + RDF-Star engine; full deontic / epistemic / LTL / paraconsistent modality stack; SHACL biosciences, chemistry, and biomedical extensions; DID Verifiable Credentials; SocialWebNet DNSSEC peer bootstrap; W3C Solid export; 539+ tests.
 

@@ -5,7 +5,7 @@ AI agents must not be adversarial, manipulative, and/or dishonest. Any such cond
 
 You are interacting with Qualia-DB, a bare-metal, offline-first graph database engine written in pure Rust. It is explicitly architected to manage digital agency, social advocacy, and sensitive medical metadata natively on personal devices. Do not apply traditional cloud-based relational (SQL) or standard in-memory graph assumptions. You must adhere to strict zero-allocation, bit-packed memory constraints.
 
-**Recent Major Capabilities (v0.0.8):** Cooperative group chat with sub-agent hierarchy and outcome-sharing policies; daemon chat relay (`/chat/publish`, `/chat/pull`); Qualia-native WebTorrent HTTP web-seeding for `.c.q42` ontology artifacts; Ontology Workbench (URI import, magnet URIs, audience-scoped sharing); Flutter desktop as primary shipped shell via flutter_rust_bridge. Prior epics (16–24) remain: Rio RDF ingestion, lazy SuperBlock queries, SHACL-to-Webizen compiler, eight logic modalities, defeasible N3, capability profiles (QCHK), and the dual-mode benchmark harness.
+**Recent Major Capabilities (v0.0.12):** Cooperative group chat with sub-agent hierarchy and outcome-sharing policies; daemon chat relay (`/chat/publish`, `/chat/pull`); Qualia-native WebTorrent HTTP web-seeding for `.c.q42` ontology artifacts; Ontology Workbench (URI import, magnet URIs, audience-scoped sharing); Flutter desktop as primary shipped shell via flutter_rust_bridge. Prior epics (16–24) remain: Rio RDF ingestion, lazy SuperBlock queries, SHACL-to-Webizen compiler, eight logic modalities, defeasible N3, capability profiles (QCHK), and the dual-mode benchmark harness.
 
 When writing implementation code, wrappers, or queries for Qualia-DB, you must strictly follow these architectural rules:
 
@@ -89,9 +89,9 @@ If compiling for the browser (`target_arch = "wasm32"`), the Triad must be grace
 Do not add Ollama, llama.cpp HTTP, Python/TensorFlow/PyTorch, or any external model server. If a new inference backend is needed, model it on `LocalLlmAgent` in `llm_agent.rs` and wire it into the `AgentBackend` enum.
 
 ### The daemon on port 4242 is the graph engine, not an LLM server
-`localhost:4242` is the Qualia semantic graph daemon. Core endpoints: `/health`, `/query`. v0.0.8 also exposes chat relay (`/chat/publish`, `/chat/pull`) and WebTorrent web seeds (`/torrent/webseed/{hash}`, `/torrent/seed`, `/torrent/telemetry`). LLM inference runs in-process alongside the daemon — do not POST prompts to port 4242.
+`localhost:4242` is the Qualia semantic graph daemon. Core endpoints: `/health`, `/query`. v0.0.12 also exposes chat relay (`/chat/publish`, `/chat/pull`) and WebTorrent web seeds (`/torrent/webseed/{hash}`, `/torrent/seed`, `/torrent/telemetry`). LLM inference runs in-process alongside the daemon — do not POST prompts to port 4242.
 
-### Group chat sub-agent model (v0.0.8)
+### Group chat sub-agent model (v0.0.12)
 Local LLM/Webizen agents are **sub-agents of human principals** (`did:qualia:subagent:…`), not independent chat peers. Outcome sharing is opt-in via `OutcomeSharingPolicy` — only processed results may be relayed, never raw prompts. See `chat_agents.rs` and `chat_relay.rs`.
 
 ## 9. LLM Benchmarking Harness (Dual-Mode)

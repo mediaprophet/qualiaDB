@@ -6,7 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [0.0.11-dev] - 2026-06-12 (in progress)
+## [0.0.12] - 2026-06-14
+
+### Added — Surgical Patch Plan: Solver Unification & v3 Persistence
+- **Zero-allocation Solver Infrastructure**: Migrated SolverState and SolverConfig to use packed [u64; 4] payload arrays. Added .cost_value(), .satisfiable(), and .quantum_calls() accessors to strictly enforce 0-allocation bounds in qualia-core-db solvers without relying on brittle structure-size checks.
+- **v3 Streaming Volume Persistence (q42_volume.rs)**: Implemented a native StreamingVolumeAppender tailored to extreme memory constraints (off-grid architectures). It successfully replaces the unified volume builder's full-memory load by streaming directly to disk while natively maintaining v3 block indexing (idx, lock_dir, DAG Merkle bytes) incrementally at the end of the payload.
+- **Persistence Worker Wire-up**: Re-wired spawn_persistence_worker in webizen-desktop to stream simulation blocks via sector-aligned QUINS_PER_BLOCK chunks instead of monolithic buffers, strictly securing the legacy-free v3 architecture across local Desktop environments.
+- **Legacy Purge**: Eliminated trailing v2 scaffolding across the workspace, replacing is_v2_volume detection heuristics with is_unified_volume flags and terminating unsupported configurations.
+
 
 ### Added
 - Integrated native async `QTensorEngine` for WASM execution over WebGPU
@@ -181,11 +188,11 @@ Three new modules added to `qualia-core-db` providing real platform-native imple
 
 ---
 
-## [0.0.10] - 2026-06-11
+## [0.0.12] - 2026-06-11
 
 ### Summary
 
-v0.0.10 resolves all build errors (82 -> 0), ships a complete SPARQL 1.1/1.2 engine (138 tests),
+v0.0.12 resolves all build errors (82 -> 0), ships a complete SPARQL 1.1/1.2 engine (138 tests),
  (82 → 0), ships a complete SPARQL 1.1/1.2 engine (138 tests),
 implements the Q42 v3 format with Merkle-DAG and temporal SPARQL extensions (Phases 1–4),
 adds Zero-Copy LoRA Multiplexing, 8-provider QPU dispatch, platform-native GPU inference pipelines,
@@ -340,11 +347,11 @@ real implementations for previously-stubbed security and query primitives.
 
 ---
 
-## [0.0.9] — 2026-06-09
+## [0.0.12] — 2026-06-09
 
 ### Summary
 
-v0.0.9 addressed initial build error fixing phase, resolving 38 of 82 errors through straightforward corrections and module reorganization.
+v0.0.12 addressed initial build error fixing phase, resolving 38 of 82 errors through straightforward corrections and module reorganization.
 
 ### Fixed — Build Errors (Partial)
 
@@ -353,17 +360,17 @@ v0.0.9 addressed initial build error fixing phase, resolving 38 of 82 errors thr
 - **q42_lexicon.rs**: Implemented properly with all required types and methods
 - **Module reorganization**: Fixed imports across webizen.rs and related files
 
-### Remaining (Resolved in v0.0.10)
+### Remaining (Resolved in v0.0.12)
 
-- 44 build errors required architectural fixes (all resolved in v0.0.10)
+- 44 build errors required architectural fixes (all resolved in v0.0.12)
 
 ---
 
-## [0.0.8] — 2026-06-07
+## [0.0.12] — 2026-06-07
 
 ### Summary
 
-v0.0.8 ships cooperative group chat with sub-agent hierarchy, daemon-backed chat relay, Qualia-native WebTorrent HTTP web-seeding for ontology artifacts, and the Ontology Workbench import/share pipeline. Flutter desktop is the primary shipped shell.
+v0.0.12 ships cooperative group chat with sub-agent hierarchy, daemon-backed chat relay, Qualia-native WebTorrent HTTP web-seeding for ontology artifacts, and the Ontology Workbench import/share pipeline. Flutter desktop is the primary shipped shell.
 
 ### Added — Group Chat & Sub-Agents
 
@@ -386,12 +393,12 @@ v0.0.8 ships cooperative group chat with sub-agent hierarchy, daemon-backed chat
 
 ### Changed
 
-- API Explorer (`docs/api-explorer/`) updated for v0.0.8: chat relay, WebTorrent, Desktop Chat, and Ontology Workbench catalog entries.
+- API Explorer (`docs/api-explorer/`) updated for v0.0.12: chat relay, WebTorrent, Desktop Chat, and Ontology Workbench catalog entries.
 - Manuals and LLM helper docs refreshed for current inference stack and Flutter FRB surface.
 
 ---
 
-## [0.0.6-dev] — 2026-06-06
+## [0.0.12-dev] — 2026-06-06
 
 ### Summary
 

@@ -4135,7 +4135,7 @@ dependencies = [
 
 [[package]]
 name = "malloc_buf"
-version = "0.0.6"
+version = "0.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb"
 dependencies = [
@@ -5516,7 +5516,7 @@ checksum = "e0c5ccf5294c6ccd63a74f1565028353830a9c2f5eb0c682c355c471726a6e3f"
 
 [[package]]
 name = "qualia-cli"
-version = "0.0.11"
+version = "0.0.12"
 dependencies = [
  "atoi",
  "bytemuck",
@@ -5552,7 +5552,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-client-core"
-version = "0.0.11"
+version = "0.0.12"
 dependencies = [
  "base64 0.22.1",
  "bip39",
@@ -5589,7 +5589,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-core-db"
-version = "0.0.11"
+version = "0.0.12"
 dependencies = [
  "aes-gcm",
  "async-trait",
@@ -5693,7 +5693,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-mobile-harness"
-version = "0.0.11"
+version = "0.0.12"
 dependencies = [
  "dioxus",
  "futures-util",
@@ -5708,7 +5708,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-solid-bridge"
-version = "0.0.11"
+version = "0.0.12"
 dependencies = [
  "bytes",
  "core_affinity",

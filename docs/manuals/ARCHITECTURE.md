@@ -1,7 +1,7 @@
 # Qualia-DB Architecture
 
 > The 3-Core Triad, Webizen VM, Rights Ontology, and the Principal-Agent Ecosystem.
-> _Branch: `0.0.11-dev` | Last updated: 2026-06-10_
+> _Branch: `0.0.12-dev` | Last updated: 2026-06-10_
 
 Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favour of a specialised 3-Core Triad built with ruthless mechanical sympathy (512 MB RAM floor). Raw multi-modal data (audio, camera feeds) would immediately breach this floor, so the ecosystem forces an **Orchestration Sieve**: the Primary Agent must coordinate deterministic tools (OpenCV, Audio DSP) to strip noise, extract contours, and build optimised files *before* handing them to the local LLM or the database.
 

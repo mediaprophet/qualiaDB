@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-12 (Updated)  
 **Original Date:** 2026-06-06  
-**Branch:** `0.0.11`  
+**Branch:** `0.0.12`  
 **Purpose:** Context export for new chat sessions
 
 ---
@@ -25,7 +25,7 @@ Key themes:
 
 **Build:** ✅ Compiling successfully (0 errors)  
 **Test Count:** ~720 tests passing in qualia-core-db (includes 79 specialized_libs + 19 platform abstraction tests added 2026-06-12)  
-**Version:** 0.0.11
+**Version:** 0.0.12
 
 ---
 
@@ -81,7 +81,7 @@ Key themes:
 
 ## 5. For Detailed Historical Information
 
-See [CHANGELOG.md](../CHANGELOG.md) for detailed release notes through v0.0.8.
+See [CHANGELOG.md](../CHANGELOG.md) for detailed release notes through v0.0.12.
 
 See [to-do/](../to-do/) for current implementation tasks and priorities.
 

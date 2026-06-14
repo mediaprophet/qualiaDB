@@ -1,6 +1,6 @@
 {
   "name": "Anatomy",
-  "version": "0.0.8",
+  "version": "0.0.12",
   "required_shapes": [
     "schema:HealthCondition",
     "schema:MedicalRecord",
