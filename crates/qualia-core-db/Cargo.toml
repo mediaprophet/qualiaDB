@@ -154,6 +154,7 @@ dhat = "0.3.3"
 proptest = "1.11.0"
 tempfile = "3.10"
 serial_test = "3"
+pollster = "0.4.0"
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false

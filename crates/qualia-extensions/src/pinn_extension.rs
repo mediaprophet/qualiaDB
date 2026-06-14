@@ -1077,7 +1077,7 @@ mod tests {
         };
 
         // Load a mock model
-        let mock_model = PinnModel {
+        let mock_model = TernaryPinnModel {
             name: "mock_fluid_model".to_string(),
             domain: PhysicsDomain::FluidDynamics,
             model_path: "./mock_model.onnx".to_string(),
@@ -1091,11 +1091,17 @@ mod tests {
                     domain: "fluid_domain".to_string(),
                 },
             ],
+            quantization_config: TernaryQuantizationConfig {
+                sparsity_target: 0.5,
+                activation_bits: 2,
+                weight_bits: 2,
+                use_stochastic_rounding: false,
+            },
         };
 
-        extension.model_manager.load_model(mock_model).unwrap();
+        extension.model_manager.write().unwrap().load_model(mock_model).unwrap();
 
-        let result = extension.solve_pde(params).await.unwrap();
+        let result = extension.solve_pde_ternary(params).await.unwrap();
         assert_eq!(result.output_points.len(), 3);
         assert!(result.convergence_metrics.converged);
         assert!(result.execution_time_ms > 0);

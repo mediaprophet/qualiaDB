@@ -1,5 +1,0 @@
-[application]
-name = "webizen-studio"
-default_theme = "dark"
-
-[web.app]

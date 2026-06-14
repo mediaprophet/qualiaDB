@@ -365,7 +365,7 @@ fn build_sieve(
     #[cfg(not(target_arch = "wasm32"))]
     if let Some(path) = lex_path {
         let p = std::path::Path::new(path);
-        if crate::q42_volume::is_v2_volume(p).unwrap_or(false) {
+        if crate::q42_volume::is_unified_volume(p).unwrap_or(false) {
             if let Ok(vol) = crate::q42_volume::Q42Volume::open(p) {
                 if let Ok(view) = vol.lex_view() {
                     let s = crate::neuro_symbolic_sieve::NeuroSymbolicSieve::from_lex_and_tokenizer(

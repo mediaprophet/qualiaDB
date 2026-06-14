@@ -1,0 +1,19 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix rpp: <urn:qualia:ontology:rpp#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+rpp:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Declaration on the Right of Peoples to Peace" ;
+    dcterms:description "Proclaims that the peoples of our planet have a sacred right to peace." ;
+    hr:hasArticle rpp:Article1 .
+
+rpp:Article1 a hr:HumanRightsArticle ;
+    rdfs:label "Article 1" ;
+    dcterms:description "Proclaims solemnly that the peoples of our planet have a sacred right to peace." .
+
+<< hr:Peoples hr:hasRight hr:Peace >>
+    cml:semanticDefinition "The sacred right of all peoples to peace." ;
+    cml:deonticStatus hr:Inalienable .

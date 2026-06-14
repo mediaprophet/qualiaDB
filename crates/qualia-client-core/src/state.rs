@@ -64,6 +64,7 @@ pub struct AgentConfig {
     pub base_connectivity_cost_ilp: u64,
     pub daemon_host: String,
     pub daemon_port: u16,
+    pub inference_backend: String,
 }
 
 impl Default for AgentConfig {
@@ -74,6 +75,7 @@ impl Default for AgentConfig {
             base_connectivity_cost_ilp: 5000,
             daemon_host: "127.0.0.1".to_string(),
             daemon_port: 4242,
+            inference_backend: "local".to_string(),
         }
     }
 }
@@ -81,7 +83,7 @@ impl Default for AgentConfig {
 pub fn dirs_default_path() -> String {
     #[cfg(target_os = "windows")]
     {
-        std::env::var("APPDATA")
+        std::env::var("LOCALAPPDATA")
             .map(|d| format!("{}\\QualiaData", d))
             .unwrap_or_else(|_| "C:\\QualiaData".to_string())
     }
@@ -103,8 +105,8 @@ pub fn app_meta_dir() -> PathBuf {
     #[cfg(target_os = "windows")]
     {
         PathBuf::from(
-            std::env::var("APPDATA")
-                .unwrap_or_else(|_| "C:\\Users\\Default\\AppData\\Roaming".to_string()),
+            std::env::var("LOCALAPPDATA")
+                .unwrap_or_else(|_| "C:\\Users\\Default\\AppData\\Local".to_string()),
         )
         .join("Qualia")
     }
@@ -138,7 +140,10 @@ pub fn init_data_directories(storage_path: &str) {
     for sub in &[
         "Models",
         "Index",
-        "Qapps",
+        "qapps",
+        "library",
+        "ontologies",
+        "qlinks",
         "SemanticLibrary",
         "Identity",
         "Chats",

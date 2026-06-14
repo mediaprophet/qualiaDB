@@ -291,6 +291,36 @@ Each of those should become its own draft with its own conformance language.
 - Why: standardize the externally visible RDF / SHACL / DID surfaces before
   standardizing the internal machine model.
 
+## 12. HCAI Agreement Negotiation Protocol (HCAI-ANP)
+
+- Scope: the inbound-agent ingress contract — `did:web` / NS-encoded Frontdoor
+  discovery, the HCAI Agreement vocabulary and Duty-of-Care terms, the
+  sign-and-verify negotiation handshake, and the WebRTC session binding. The one
+  genuine multi-party interoperability surface carved out of the WebAI
+  Orchestration Layer (`devnotes/orchastration-webai.md`).
+- Why it is a candidate (not yet submittable): the identifier substrate and DNS
+  resolution exist, but the negotiation/binding layer (`dns_frontdoor.rs`,
+  `hcai_agreement.rs`) is proposed, not implemented, and no non-QualiaDB party
+  has completed a conformant negotiation yet.
+- First doc to write here: `hcai-agreement-negotiation-protocol.md` ✅ **DRAFTED (2026-06-13)**
+- Primary SDO: W3C (agreement vocabulary + `did:web` Frontdoor); secondary IETF /
+  DNS-AID (service-type registration)
+- Recommended format: Community Group Report for the vocabulary; short companion
+  Internet-Draft for the DNS service-type label
+- Why this fit: it is identifier-, linked-data-, and consent-rooted, and it
+  composes existing standard surfaces (`did:web`, DNS-AID, WebRTC, RDF/JSON-LD)
+  rather than inventing new transport.
+- Relationship to other items: it is the narrow, conformance-bearing inbound-agent
+  slice of the broad "Webizen protocol" (item 10); it deliberately excludes the
+  local defensive mechanisms (inference scheduling, anti-siphoning, billing
+  interdiction), which are Node-side implementation, not interop.
+- Exit criteria before submission:
+  - [ ] negotiation layer implemented (`dns_frontdoor.rs`, `hcai_agreement.rs`)
+  - [ ] agreement vocabulary namespace frozen and published
+  - [ ] canonicalisation + signature suite pinned with test vectors
+  - [ ] at least one non-QualiaDB agent completes a conformant negotiation
+  - [ ] privacy review against the Front Door DID isolation model
+
 ## Suggested file backlog for this folder
 
 - [x] `q42-format-internal-draft.md`
@@ -305,6 +335,7 @@ Each of those should become its own draft with its own conformance language.
 - [ ] `mcp-fiduciary-mediation-explainer.md`
 - [ ] `webizen-protocol-split.md`
 - [ ] `webizen-execution-model.md`
+- [x] `hcai-agreement-negotiation-protocol.md`
 
 ## Recommended order of work
 

@@ -1,0 +1,50 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix crpd: <urn:qualia:ontology:crpd#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+# -----------------------------------------------------------------------------
+# Base Instrument Definition
+# -----------------------------------------------------------------------------
+crpd:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Convention on the Rights of Persons with Disabilities" ;
+    dcterms:title "Convention on the Rights of Persons with Disabilities" ;
+    dcterms:description "An international human rights treaty intended to protect the rights and dignity of persons with disabilities." ;
+    hr:hasArticle crpd:Article1, crpd:Article2, crpd:Article3 .
+
+# -----------------------------------------------------------------------------
+# Article 1 - Purpose
+# -----------------------------------------------------------------------------
+crpd:Article1 a hr:HumanRightsArticle ;
+    rdfs:label "Article 1" ;
+    dcterms:description "The purpose of the present Convention is to promote, protect and ensure the full and equal enjoyment of all human rights and fundamental freedoms by all persons with disabilities, and to promote respect for their inherent dignity." .
+
+<< crpd:PersonsWithDisabilities hr:hasRight hr:FullAndEqualEnjoyment >>
+    cml:semanticDefinition "Ensuring barrier-free access to all fundamental human rights without exclusion." ;
+    cml:appliesToProperty hr:InherentDignity .
+
+# -----------------------------------------------------------------------------
+# Article 2 - Definitions
+# -----------------------------------------------------------------------------
+crpd:Article2 a hr:HumanRightsArticle ;
+    rdfs:label "Article 2" ;
+    dcterms:description "For the purposes of the present Convention: 'Reasonable accommodation' means necessary and appropriate modification and adjustments not imposing a disproportionate or undue burden..." .
+
+<< hr:Environment hr:requires crpd:ReasonableAccommodation >>
+    cml:semanticDefinition "Necessary and appropriate modification and adjustments not imposing a disproportionate or undue burden, where needed in a particular case, to ensure to persons with disabilities the enjoyment or exercise on an equal basis with others of all human rights." ;
+    cml:legalCondition "Proportionality (No undue burden)" .
+
+# -----------------------------------------------------------------------------
+# Article 3 - General Principles
+# -----------------------------------------------------------------------------
+crpd:Article3 a hr:HumanRightsArticle ;
+    rdfs:label "Article 3" ;
+    dcterms:description "The principles of the present Convention shall be: Respect for inherent dignity, individual autonomy including the freedom to make one's own choices, and independence of persons..." .
+
+<< crpd:PersonsWithDisabilities hr:entitledTo hr:IndividualAutonomy >>
+    cml:semanticDefinition "The fundamental right to make one's own choices and maintain independence of the person." .
+
+<< hr:Society hr:requires crpd:FullAndEffectiveParticipation >>
+    cml:semanticDefinition "The removal of structural and social barriers allowing full inclusion in society." .

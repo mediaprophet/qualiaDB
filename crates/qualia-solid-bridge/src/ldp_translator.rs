@@ -126,3 +126,20 @@ mod tests {
         assert!(bytecode.contains(&WebizenOpcode::HaltIfFalse));
     }
 }
+
+/// Translates a native 48-byte Super-Quin vector back to JSON-LD.
+pub fn quins_to_ldp(quins: &[NQuin]) -> serde_json::Value {
+    // Simplified for now. Converts NQuins back into semantic JSON-LD.
+    // In reality, this unpacks hashes to IRIs via the Lexicon dictionary.
+    let mut triples = Vec::new();
+    for q in quins {
+        triples.push(serde_json::json!({
+            "@id": format!("urn:hash:{}", q.subject),
+            "http://schema.org/predicate": q.predicate.to_string(),
+            "http://schema.org/object": q.object.to_string(),
+            "cml:context": q.context.to_string()
+        }));
+    }
+    serde_json::json!(triples)
+}
+

@@ -539,7 +539,7 @@ fn resolve_sieve_lex_path(
     for ont_id in &ordered_ids {
         let q42 = index.join(format!("{ont_id}.q42"));
         if q42.is_file() {
-            if qualia_core_db::q42_volume::is_v2_volume(&q42).ok() == Some(true) {
+            if qualia_core_db::q42_volume::is_unified_volume(&q42).ok() == Some(true) {
                 return Some(q42.to_string_lossy().into_owned());
             }
         }

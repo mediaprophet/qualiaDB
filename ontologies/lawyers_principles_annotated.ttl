@@ -1,0 +1,26 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix bprl: <urn:qualia:ontology:bprl#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+bprl:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Basic Principles on the Role of Lawyers" ;
+    dcterms:description "Formulated to assist Member States in their task of promoting and ensuring the proper role of lawyers." ;
+    hr:hasArticle bprl:Principle1, bprl:Principle16 .
+
+bprl:Principle1 a hr:HumanRightsArticle ;
+    rdfs:label "Principle 1" ;
+    dcterms:description "All persons are entitled to call upon the assistance of a lawyer of their choice to protect and establish their rights and to defend them in all stages of criminal proceedings." .
+
+<< hr:Person hr:entitledTo bprl:LawyerAssistance >>
+    cml:semanticDefinition "The right to independent legal counsel at all stages of criminal proceedings." ;
+    cml:deonticStatus hr:Inalienable .
+
+bprl:Principle16 a hr:HumanRightsArticle ;
+    rdfs:label "Principle 16" ;
+    dcterms:description "Governments shall ensure that lawyers are able to perform all of their professional functions without intimidation, hindrance, harassment or improper interference." .
+
+<< hr:StateParty hr:mustEnsure bprl:LawyerIndependence >>
+    cml:semanticDefinition "Protection of legal counsel from state or private intimidation." .

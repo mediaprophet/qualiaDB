@@ -250,6 +250,91 @@ pub fn write_vc_claim_quins(
     ]
 }
 
+use crate::modalities::logic::n3_parser::{Rule, RuleType, Term};
+use crate::modalities::logic::deontic::{OP_OBLIGATE, OP_PERMIT, OP_FORBID, DEFEATER_BIT};
+
+/// Compile an N3 rule into a norm Quin (or a defeater Quin if rule_type is Defeater).
+///
+/// Mapping:
+///   premise.triples[0].subject  → party_did_hash  (who is bound)
+///   premise.triples[0].predicate → property_path_hash  (what action/property)
+///   premise.triples[0].object   → action_object_hash  (target entity)
+///   rule.rule_type              → opcode + is_defeater flag
+///   conclusion.triples[0].subject → contract context hash
+///
+/// Returns None if the rule does not have the expected triple structure.
+pub fn compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u32) -> Option<crate::NQuin> {
+    if rule.premise.triples.is_empty() || rule.conclusion.triples.is_empty() {
+        return None;
+    }
+
+    let premise_triple = &rule.premise.triples[0];
+    let conclusion_triple = &rule.conclusion.triples[0];
+
+    // Helper to extract string from Term
+    let extract_str = |t: &Term| -> String {
+        match t {
+            Term::Uri(s) | Term::Variable(s) | Term::Literal(s) => s.clone(),
+        }
+    };
+
+    let party_did_hash = q_hash(&extract_str(&premise_triple.subject));
+    let property_path_hash = q_hash(&extract_str(&premise_triple.predicate));
+    let action_object_hash = q_hash(&extract_str(&premise_triple.object));
+    
+    let mapped_contract_hash = if contract_hash == 0 {
+        q_hash(&extract_str(&conclusion_triple.subject))
+    } else {
+        contract_hash
+    };
+
+    let mut opcode = OP_PERMIT;
+    let mut is_defeater = false;
+
+    let predicate_str = extract_str(&premise_triple.predicate).to_lowercase();
+
+    match rule.rule_type {
+        RuleType::Strict => {
+            if predicate_str.contains("obligate") || predicate_str.contains("must") || predicate_str.contains("shall") {
+                opcode = OP_OBLIGATE;
+            }
+        }
+        RuleType::Defeasible => {
+            if predicate_str.contains("permit") || predicate_str.contains("may") || predicate_str.contains("can") {
+                opcode = OP_PERMIT;
+            } else if predicate_str.contains("forbid") || predicate_str.contains("not") || predicate_str.contains("prohibit") {
+                opcode = OP_FORBID;
+            }
+        }
+        RuleType::Defeater => {
+            opcode = OP_PERMIT;
+            is_defeater = true;
+        }
+        RuleType::Linear => {
+            if predicate_str.contains("obligate") {
+                opcode = OP_OBLIGATE;
+            }
+        }
+    }
+
+    let mut quin = crate::NQuin::default();
+    quin.subject = party_did_hash;
+    
+    // Predicate: opcode in lower 8 bits, property hash shifted left 8 bits (masked to 55 bits), and DEFEATER_BIT if needed
+    let mut predicate_packed = ((property_path_hash & 0x007F_FFFF_FFFF_FFFF) << 8) | (opcode as u64);
+    if is_defeater {
+        predicate_packed |= DEFEATER_BIT;
+    }
+    quin.predicate = predicate_packed;
+    
+    quin.object = action_object_hash;
+    quin.context = mapped_contract_hash;
+    quin.metadata = expiry_unix32 as u64;
+    quin.parity = quin.subject ^ quin.predicate ^ quin.object ^ quin.context;
+
+    Some(quin)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -383,5 +468,57 @@ mod tests {
         
         let result = execute_program(&prog, &db, &mut out, Some(&context));
         assert_eq!(result, Err(VmError::HaltViolation));
+    }
+
+    #[test]
+    fn test_compile_n3_rule_to_norm() {
+        use crate::modalities::logic::n3_parser::{Rule, RuleType, Formula, Triple, Term};
+        
+        let make_rule = |rt: RuleType, pred: &str| -> Rule {
+            Rule {
+                id: None,
+                rule_type: rt,
+                weight: None,
+                premise: Formula {
+                    triples: vec![Triple {
+                        subject: Term::Uri("did:party".to_string()),
+                        predicate: Term::Uri(pred.to_string()),
+                        object: Term::Uri("did:target".to_string()),
+                    }],
+                },
+                conclusion: Formula {
+                    triples: vec![Triple {
+                        subject: Term::Uri("urn:contract".to_string()),
+                        predicate: Term::Uri("q42:boundBy".to_string()),
+                        object: Term::Uri("did:party".to_string()),
+                    }],
+                },
+            }
+        };
+
+        let contract_hash = 12345;
+        
+        // 1. Defeater
+        let defeater_rule = make_rule(RuleType::Defeater, "q42:permit");
+        let q = compile_n3_rule_to_norm(&defeater_rule, contract_hash, 0).unwrap();
+        assert_eq!(q.predicate & 0xFF, crate::modalities::logic::deontic::OP_PERMIT as u64);
+        assert_ne!(q.predicate & crate::modalities::logic::deontic::DEFEATER_BIT, 0);
+
+        // 2. Defeasible Permit
+        let permit_rule = make_rule(RuleType::Defeasible, "q42:permit");
+        let q2 = compile_n3_rule_to_norm(&permit_rule, contract_hash, 0).unwrap();
+        assert_eq!(q2.predicate & 0xFF, crate::modalities::logic::deontic::OP_PERMIT as u64);
+        assert_eq!(q2.predicate & crate::modalities::logic::deontic::DEFEATER_BIT, 0);
+
+        // 3. Strict Obligate
+        let obligate_rule = make_rule(RuleType::Strict, "q42:obligate");
+        let q3 = compile_n3_rule_to_norm(&obligate_rule, contract_hash, 0).unwrap();
+        assert_eq!(q3.predicate & 0xFF, crate::modalities::logic::deontic::OP_OBLIGATE as u64);
+        assert_eq!(q3.predicate & crate::modalities::logic::deontic::DEFEATER_BIT, 0);
+
+        // 4. Malformed
+        let mut malformed = make_rule(RuleType::Strict, "q42:obligate");
+        malformed.premise.triples.clear();
+        assert!(compile_n3_rule_to_norm(&malformed, contract_hash, 0).is_none());
     }
 }

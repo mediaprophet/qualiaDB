@@ -1,0 +1,19 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix istp: <urn:qualia:ontology:istp#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+istp:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Principles on the Effective Investigation and Documentation of Torture (Istanbul Protocol)" ;
+    dcterms:description "Guidelines for assessing individuals who allege torture and ill-treatment." ;
+    hr:hasArticle istp:Principle2 .
+
+istp:Principle2 a hr:HumanRightsArticle ;
+    rdfs:label "Principle 2" ;
+    dcterms:description "States shall ensure that complaints and reports of torture or ill-treatment are promptly and effectively investigated." .
+
+<< hr:StateParty hr:mustInvestigate hr:Torture >>
+    cml:semanticDefinition "The obligation to promptly and effectively investigate allegations of torture." ;
+    cml:deonticStatus hr:ObligationOfState .

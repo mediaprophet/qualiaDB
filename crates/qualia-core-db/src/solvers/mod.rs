@@ -75,14 +75,33 @@ pub struct SolverState {
     pub iteration: u32,
     pub error: f64,
     pub converged: bool,
-    /// Classical cost / energy value (optimization, quantum_optimizers)
-    pub cost_value: f64,
-    /// Satisfiability flag (symbolic_logic) — None = unknown, Some(true/false) = result
-    pub satisfiable: Option<bool>,
-    /// QPU call counter (quantum_optimizers)
-    pub quantum_calls: u32,
-    /// Solver-specific packed data
+    /// Solver-specific packed data:
+    /// - solver_data[0]: cost_value (f64 bits)
+    /// - solver_data[1]: satisfiable (u64 boolean)
+    /// - solver_data[2]: quantum_calls (u32 cast to u64)
     pub solver_data: [u64; 4],
+}
+
+impl SolverState {
+    pub fn cost_value(&self) -> f64 { f64::from_bits(self.solver_data[0]) }
+    pub fn set_cost_value(&mut self, val: f64) { self.solver_data[0] = val.to_bits(); }
+    pub fn satisfiable(&self) -> Option<bool> {
+        match self.solver_data[1] {
+            0 => None,
+            1 => Some(false),
+            _ => Some(true),
+        }
+    }
+    pub fn set_satisfiable(&mut self, val: Option<bool>) {
+        self.solver_data[1] = match val {
+            None => 0,
+            Some(false) => 1,
+            Some(true) => 2,
+        };
+    }
+    pub fn quantum_calls(&self) -> u32 { self.solver_data[2] as u32 }
+    pub fn set_quantum_calls(&mut self, val: u32) { self.solver_data[2] = val as u64; }
+    pub fn add_quantum_calls(&mut self, val: u32) { self.solver_data[2] += val as u64; }
 }
 
 impl Default for SolverState {
@@ -91,10 +110,7 @@ impl Default for SolverState {
             iteration: 0,
             error: f64::MAX,
             converged: false,
-            cost_value: f64::MAX,
-            satisfiable: None,
-            quantum_calls: 0,
-            solver_data: [0; 4],
+            solver_data: [f64::MAX.to_bits(), 0, 0, 0],
         }
     }
 }

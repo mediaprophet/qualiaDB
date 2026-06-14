@@ -1,0 +1,95 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix udhr: <urn:qualia:ontology:udhr#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix oa: <http://www.w3.org/ns/oa#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# -----------------------------------------------------------------------------
+# Base Instrument Definition
+# -----------------------------------------------------------------------------
+udhr:Instrument a udhr:HumanRightsInstrument ;
+    rdfs:label "Universal Declaration of Human Rights" ;
+    dcterms:title "Universal Declaration of Human Rights" ;
+    dcterms:description "The Universal Declaration of Human Rights (UDHR) is a milestone document in the history of human rights." ;
+    udhr:hasArticle udhr:Article1, udhr:Article2, udhr:Article3, udhr:Article4, udhr:Article5 .
+
+# -----------------------------------------------------------------------------
+# Article 1 - Annotated with RDF-Star (<< s p o >> syntax)
+# -----------------------------------------------------------------------------
+udhr:Article1 a udhr:HumanRightsArticle ;
+    rdfs:label "Article 1" ;
+    dcterms:description "All human beings are born free and equal in dignity and rights. They are endowed with reason and conscience and should act towards one another in a spirit of brotherhood." .
+
+# RDF-Star CML Annotations on the assertions in Article 1
+<< udhr:Humanity udhr:hasState udhr:Free >> 
+    cml:semanticDefinition "The absence of coercion or external constraint; autonomy of the person." ;
+    cml:temporalContext "At Birth" ;
+    cml:deonticStatus udhr:Inalienable .
+
+<< udhr:Humanity udhr:hasState udhr:Equal >> 
+    cml:semanticDefinition "Parity in fundamental worth and baseline rights, irrespective of status." ;
+    cml:appliesToProperty udhr:Dignity ;
+    cml:appliesToProperty udhr:Rights .
+
+<< udhr:Humanity udhr:endowedWith udhr:Reason >>
+    cml:semanticDefinition "The cognitive capacity to apprehend universal principles and engage in rational discourse." .
+
+<< udhr:Humanity udhr:endowedWith udhr:Conscience >>
+    cml:semanticDefinition "The internal moral compass; the capacity to distinguish right from wrong." .
+
+# -----------------------------------------------------------------------------
+# Article 2 - Equality and Anti-Discrimination
+# -----------------------------------------------------------------------------
+udhr:Article2 a udhr:HumanRightsArticle ;
+    rdfs:label "Article 2" ;
+    dcterms:description "Everyone is entitled to all the rights and freedoms set forth in this Declaration, without distinction of any kind, such as race, colour, sex, language, religion, political or other opinion, national or social origin, property, birth or other status." .
+
+# RDF-Star Annotations mapping specific protections
+<< udhr:Entitlement udhr:protectedAgainst udhr:Distinction >>
+    cml:semanticDefinition "The prohibition of arbitrary categorization that deprives an individual of human rights." ;
+    cml:includesCategory udhr:Race, udhr:Colour, udhr:Sex, udhr:Language, udhr:Religion, udhr:PoliticalOpinion .
+
+<< udhr:Entitlement udhr:appliesIrrespectiveOf udhr:JurisdictionalStatus >>
+    cml:semanticDefinition "Rights apply regardless of whether a territory is independent, trust, non-self-governing, or under sovereignty limitation." ;
+    cml:legalContext "International Law" .
+
+# -----------------------------------------------------------------------------
+# Article 3 - Life, Liberty, Security
+# -----------------------------------------------------------------------------
+udhr:Article3 a udhr:HumanRightsArticle ;
+    rdfs:label "Article 3" ;
+    dcterms:description "Everyone has the right to life, liberty and security of person." .
+
+<< udhr:Person udhr:hasRight udhr:Life >>
+    cml:semanticDefinition "The supreme right from which all other rights are derived; protection against arbitrary deprivation of life." ;
+    cml:deonticStatus udhr:Inalienable .
+
+<< udhr:Person udhr:hasRight udhr:Liberty >>
+    cml:semanticDefinition "Freedom of the person from arbitrary physical restraint or confinement." .
+
+<< udhr:Person udhr:hasRight udhr:Security >>
+    cml:semanticDefinition "Protection of bodily and mental integrity." .
+
+# -----------------------------------------------------------------------------
+# Article 4 - Prohibition of Slavery
+# -----------------------------------------------------------------------------
+udhr:Article4 a udhr:HumanRightsArticle ;
+    rdfs:label "Article 4" ;
+    dcterms:description "No one shall be held in slavery or servitude; slavery and the slave trade shall be prohibited in all their forms." .
+
+<< udhr:Slavery udhr:hasDeonticStatus udhr:Prohibited >>
+    cml:semanticDefinition "The status or condition of a person over whom any or all of the powers attaching to the right of ownership are exercised." ;
+    cml:legalStatus "Jus Cogens (Peremptory Norm)" .
+
+# -----------------------------------------------------------------------------
+# Article 5 - Prohibition of Torture
+# -----------------------------------------------------------------------------
+udhr:Article5 a udhr:HumanRightsArticle ;
+    rdfs:label "Article 5" ;
+    dcterms:description "No one shall be subjected to torture or to cruel, inhuman or degrading treatment or punishment." .
+
+<< udhr:Torture udhr:hasDeonticStatus udhr:Prohibited >>
+    cml:semanticDefinition "Any act by which severe pain or suffering, whether physical or mental, is intentionally inflicted on a person for such purposes as obtaining information or a confession." ;
+    cml:legalStatus "Jus Cogens (Peremptory Norm)" .

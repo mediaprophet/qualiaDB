@@ -184,6 +184,26 @@ pub struct QappHostExtension {
     pub ui_surfaces: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub notes: Vec<String>,
+    /// Named pages/views this QApp exposes. Empty = single-page (entrypoints.web).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pages: Vec<QappPage>,
+    /// Export targets: "embedded" | "wasm-mobile" | "tauri-desktop"
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub export_targets: Vec<String>,
+    /// did:git identity for this QApp repo (enables Gitmark validation + qualia:// sharing)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub did_git: Option<String>,
+}
+
+/// A single named view within a multi-page QApp.
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct QappPage {
+    pub name: String,
+    pub path: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub icon: String,
 }
 
 /// Developer-authored on-disk package manifest (`qapp.json`).

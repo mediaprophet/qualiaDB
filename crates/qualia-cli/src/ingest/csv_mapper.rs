@@ -34,7 +34,7 @@ pub fn stream_csv_to_quins(csv_path: &str, output_path: &str, profile: &mut supe
                                 object: val | (0b001 << 60), // INLINE_TAG_INTEGER
                                 context: 0,
                                 metadata: 0,
-                                parity: 0,
+                                parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, val | (0b001 << 60), 0, 0),
                             };
                             writer.push(quin).expect("Failed to write to SuperBlock");
                         },
@@ -62,7 +62,7 @@ pub fn stream_csv_to_quins(csv_path: &str, output_path: &str, profile: &mut supe
                                 object: packed_object,
                                 context: 0,
                                 metadata: 0,
-                                parity: 0,
+                                parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, packed_object, 0, 0),
                             };
                             writer.push(quin).expect("Failed to write to SuperBlock");
                         },
@@ -75,7 +75,7 @@ pub fn stream_csv_to_quins(csv_path: &str, output_path: &str, profile: &mut supe
                                 object: hash_token(s),
                                 context: 0,
                                 metadata: 0,
-                                parity: 0,
+                                parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, hash_token(s), 0, 0),
                             };
                             writer.push(quin).expect("Failed to write to SuperBlock");
                         }
@@ -88,7 +88,7 @@ pub fn stream_csv_to_quins(csv_path: &str, output_path: &str, profile: &mut supe
                                 object: (0b011u64 << 60) | millis,
                                 context: 0,
                                 metadata: 0,
-                                parity: 0,
+                                parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, (0b011u64 << 60) | millis, 0, 0),
                             };
                             writer.push(quin).expect("Failed to write to SuperBlock");
                         }

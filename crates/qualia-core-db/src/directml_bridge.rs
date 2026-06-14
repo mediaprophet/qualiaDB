@@ -376,6 +376,25 @@ pub fn probe_best_adapter_memory() -> windows::core::Result<AdapterMemoryInfo> {
     }
 }
 
+pub fn probe_npu_adapter_memory() -> windows::core::Result<AdapterMemoryInfo> {
+    unsafe {
+        let factory: IDXGIFactory4 = CreateDXGIFactory2(DXGI_CREATE_FACTORY_FLAGS(0))?;
+        let mut idx = 0u32;
+        loop {
+            match factory.EnumAdapters1(idx) {
+                Ok(a) => {
+                    let name = DmlDevice::adapter_name(&a).to_uppercase();
+                    if name.contains("NPU") || name.contains("NEURAL") {
+                        return Ok(DmlDevice::adapter_memory(&a));
+                    }
+                    idx += 1;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
+}
+
 // ─── D3D12 helpers ───────────────────────────────────────────────────────────
 
 unsafe fn commit_buffer(

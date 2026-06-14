@@ -32,7 +32,7 @@ pub struct WebGpuShader {
 }
 
 /// Types of compute shaders
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ShaderType {
     FluidDynamics,
     Electromagnetics,

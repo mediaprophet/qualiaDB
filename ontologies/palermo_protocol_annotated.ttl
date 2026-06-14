@@ -1,0 +1,19 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix pal: <urn:qualia:ontology:pal#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+pal:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Protocol to Prevent, Suppress and Punish Trafficking in Persons, Especially Women and Children" ;
+    dcterms:description "The Palermo Protocol, supplementing the UN Convention against Transnational Organized Crime." ;
+    hr:hasArticle pal:Article2 .
+
+pal:Article2 a hr:HumanRightsArticle ;
+    rdfs:label "Article 2" ;
+    dcterms:description "The purposes of this Protocol are: (a) To prevent and combat trafficking in persons; (b) To protect and assist the victims of such trafficking; (c) To promote cooperation among States Parties." .
+
+<< hr:StateParty hr:mustPrevent pal:TraffickingInPersons >>
+    cml:semanticDefinition "The obligation to prevent and combat human trafficking and assist victims." ;
+    cml:deonticStatus hr:ObligationOfState .

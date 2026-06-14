@@ -40,3 +40,4 @@ pub mod vision_ingest;
 
 pub use api::*;
 pub use state::*;
+pub mod dns_resolver;

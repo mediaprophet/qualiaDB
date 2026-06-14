@@ -30,7 +30,7 @@ pub fn finalize_c_q42(q42_path: &Path, c_q42_path: &Path) -> Result<CompressStat
     fs::copy(q42_path, c_q42_path).map_err(|e| e.to_string())?;
     let input_bytes = fs::metadata(q42_path).map_err(|e| e.to_string())?.len();
     let output_bytes = fs::metadata(c_q42_path).map_err(|e| e.to_string())?.len();
-    let blocks = if qualia_core_db::q42_volume::is_v2_volume(q42_path).unwrap_or(false) {
+    let blocks = if qualia_core_db::q42_volume::is_unified_volume(q42_path).unwrap_or(false) {
         qualia_core_db::q42_volume::Q42Volume::open(q42_path)
             .map(|v| v.block_count())
             .unwrap_or(1)

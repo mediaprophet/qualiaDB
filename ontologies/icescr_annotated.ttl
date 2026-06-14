@@ -1,0 +1,47 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix icescr: <urn:qualia:ontology:icescr#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+# -----------------------------------------------------------------------------
+# Base Instrument Definition
+# -----------------------------------------------------------------------------
+icescr:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "International Covenant on Economic, Social and Cultural Rights" ;
+    dcterms:title "International Covenant on Economic, Social and Cultural Rights" ;
+    dcterms:description "A multilateral treaty committing parties to work toward the granting of economic, social, and cultural rights (ESCR) to the Non-Self-Governing and Trust Territories and individuals." ;
+    hr:hasArticle icescr:Article1, icescr:Article2, icescr:Article3 .
+
+# -----------------------------------------------------------------------------
+# Article 1 - Self-Determination
+# -----------------------------------------------------------------------------
+icescr:Article1 a hr:HumanRightsArticle ;
+    rdfs:label "Article 1" ;
+    dcterms:description "All peoples have the right of self-determination. By virtue of that right they freely determine their political status and freely pursue their economic, social and cultural development." .
+
+<< hr:Peoples hr:hasRight icescr:SelfDetermination >>
+    cml:semanticDefinition "Identical to ICCPR Article 1; the collective right to political, economic, social, and cultural autonomy." ;
+    cml:deonticStatus hr:Inalienable .
+
+# -----------------------------------------------------------------------------
+# Article 2 - Progressive Realization
+# -----------------------------------------------------------------------------
+icescr:Article2 a hr:HumanRightsArticle ;
+    rdfs:label "Article 2" ;
+    dcterms:description "Each State Party to the present Covenant undertakes to take steps, individually and through international assistance and co-operation, especially economic and technical, to the maximum of its available resources, with a view to achieving progressively the full realization of the rights recognized in the present Covenant." .
+
+<< hr:StateParty hr:obligatedTo icescr:ProgressiveRealization >>
+    cml:semanticDefinition "The obligation to take continuous, deliberate, and targeted steps toward the full realization of ESCR, utilizing the maximum of available resources." ;
+    cml:legalCondition "Subject to available resources but requiring immediate non-discriminatory application." .
+
+# -----------------------------------------------------------------------------
+# Article 3 - Equality of Men and Women
+# -----------------------------------------------------------------------------
+icescr:Article3 a hr:HumanRightsArticle ;
+    rdfs:label "Article 3" ;
+    dcterms:description "The States Parties to the present Covenant undertake to ensure the equal right of men and women to the enjoyment of all economic, social and cultural rights set forth in the present Covenant." .
+
+<< hr:MenAndWomen hr:haveState hr:EqualEnjoyment >>
+    cml:semanticDefinition "Mandated parity in the enjoyment of all economic, social, and cultural rights." .

@@ -1,0 +1,19 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix mipp: <urn:qualia:ontology:mipp#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+mipp:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Principles for the Protection of Persons with Mental Illness and the Improvement of Mental Health Care" ;
+    dcterms:description "Guidelines for mental health care and protection of persons with mental illness." ;
+    hr:hasArticle mipp:Principle1 .
+
+mipp:Principle1 a hr:HumanRightsArticle ;
+    rdfs:label "Principle 1" ;
+    dcterms:description "All persons have the right to the best available mental health care, which shall be part of the health and social care system." .
+
+<< hr:Person hr:hasRight mipp:MentalHealthCare >>
+    cml:semanticDefinition "The right to the best available mental health care." ;
+    cml:deonticStatus hr:UniversalRight .

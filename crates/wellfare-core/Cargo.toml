@@ -1,0 +1,28 @@
+[package]
+name = "wellfare-core"
+version = "0.0.4-dev"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+csv = "1.3"
+serde = { version = "1.0", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+serde_json = "1.0"
+uuid = { version = "1.8", features = ["v4", "serde", "js"] }
+# oxigraph: in-memory RDF store + SPARQL 1.1 engine (W4/W5)
+# js feature: uses js-sys for random/time in WASM; compiles natively without it
+oxigraph = { version = "0.4", default-features = false, features = ["js"] }
+# qualia-core-db: reserved for W2/W3 wiring once the WASM-safe API is confirmed
+# (v0.0.1 depends on wgpu — keep as optional to avoid pulling wgpu into the WASM binary)
+qualia-core-db = { path = "../qualia-core-db", optional = true }
+
+[features]
+qualia = ["qualia-core-db"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+serde-wasm-bindgen = "0.5"
+js-sys = "0.3"

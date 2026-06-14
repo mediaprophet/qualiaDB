@@ -16,12 +16,52 @@ use crate::{q_hash, NQuin};
 const RIGHTS_GRAPH: u64 = q_hash("urn:qualia:ontology:rights");
 const COGAI_GRAPH: u64 = q_hash("urn:qualia:ontology:cogai");
 const EPISTEMIC_GRAPH: u64 = q_hash("urn:qualia:ontology:epistemic");
+const UDHR_GRAPH: u64 = q_hash("urn:qualia:ontology:udhr");
+const CRC_GRAPH: u64 = q_hash("urn:qualia:ontology:crc");
+const PLATFORMS_GRAPH: u64 = q_hash("urn:qualia:ontology:platforms");
+const EMOJI_GRAPH: u64 = q_hash("urn:qualia:ontology:emoji");
+const CRC_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:crc_annotated");
+const CRPD_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:crpd_annotated");
+const ICCPR_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:iccpr_annotated");
+const ICESCR_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:icescr_annotated");
+const UDHR_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:udhr_annotated");
+const CAT_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:cat_annotated");
+const LAWYERS_PRINCIPLES_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:lawyers_principles_annotated");
+const REMEDY_REPARATION_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:remedy_reparation_annotated");
+const RIGHT_DEVELOPMENT_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:right_development_annotated");
+const TORTURE_DECLARATION_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:torture_declaration_annotated");
+const HR_DEFENDERS_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:hr_defenders_annotated");
+const PEOPLES_PEACE_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:peoples_peace_annotated");
+const MENTAL_ILLNESS_PRINCIPLES_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:mental_illness_principles_annotated");
+const ISTANBUL_PROTOCOL_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:istanbul_protocol_annotated");
+const PALERMO_PROTOCOL_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:palermo_protocol_annotated");
+const COMMONWEALTH_CHARTER_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:commonwealth_charter_annotated");
 
 /// Files to load at startup, as `(filename, named_graph_context)` pairs.
 const STARTUP_ONTOLOGIES: &[(&str, u64)] = &[
     ("rights_ontology.ttl",    RIGHTS_GRAPH),
     ("cogai_shapes.ttl",       COGAI_GRAPH),
     ("epistemic_shapes.ttl",   EPISTEMIC_GRAPH),
+    ("udhr.ttl",               UDHR_GRAPH),
+    ("crc.ttl",                CRC_GRAPH),
+    ("platforms.ttl",          PLATFORMS_GRAPH),
+    ("emoji.n3",               EMOJI_GRAPH),
+    ("udhr_annotated.ttl",     UDHR_ANNOTATED_GRAPH),
+    ("crc_annotated.ttl",      CRC_ANNOTATED_GRAPH),
+    ("crpd_annotated.ttl",     CRPD_ANNOTATED_GRAPH),
+    ("iccpr_annotated.ttl",    ICCPR_ANNOTATED_GRAPH),
+    ("icescr_annotated.ttl",   ICESCR_ANNOTATED_GRAPH),
+    ("cat_annotated.ttl",      CAT_ANNOTATED_GRAPH),
+    ("lawyers_principles_annotated.ttl",      LAWYERS_PRINCIPLES_ANNOTATED_GRAPH),
+    ("remedy_reparation_annotated.ttl",       REMEDY_REPARATION_ANNOTATED_GRAPH),
+    ("right_development_annotated.ttl",       RIGHT_DEVELOPMENT_ANNOTATED_GRAPH),
+    ("torture_declaration_annotated.ttl",     TORTURE_DECLARATION_ANNOTATED_GRAPH),
+    ("hr_defenders_annotated.ttl",            HR_DEFENDERS_ANNOTATED_GRAPH),
+    ("peoples_peace_annotated.ttl",           PEOPLES_PEACE_ANNOTATED_GRAPH),
+    ("mental_illness_principles_annotated.ttl", MENTAL_ILLNESS_PRINCIPLES_ANNOTATED_GRAPH),
+    ("istanbul_protocol_annotated.ttl",       ISTANBUL_PROTOCOL_ANNOTATED_GRAPH),
+    ("palermo_protocol_annotated.ttl",        PALERMO_PROTOCOL_ANNOTATED_GRAPH),
+    ("commonwealth_charter_annotated.ttl",    COMMONWEALTH_CHARTER_ANNOTATED_GRAPH),
 ];
 
 /// Discover the ontologies directory.

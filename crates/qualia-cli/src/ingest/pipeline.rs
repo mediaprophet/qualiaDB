@@ -156,11 +156,10 @@ impl IngestionCellWorkerPool {
                 object: raw_quin.hash_object,
                 context: raw_quin.hash_context,
                 metadata: raw_quin.hash_metadata,
-                parity: 0,
+                parity: NQuin::calculate_parity(raw_quin.hash_subject, raw_quin.hash_predicate, raw_quin.hash_object, raw_quin.hash_context, raw_quin.hash_metadata),
             };
             
-            // Worker Core 3: Parity Generation (ECC matrix verification)
-            quin.parity = quin.subject ^ quin.predicate ^ quin.object ^ quin.context;
+            // Removed manual XOR calculation
             
             sorter.push(quin)?;
         }

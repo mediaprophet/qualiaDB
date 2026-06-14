@@ -1,0 +1,51 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix cat: <urn:qualia:ontology:cat#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+# -----------------------------------------------------------------------------
+# Base Instrument Definition
+# -----------------------------------------------------------------------------
+cat:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Convention against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment" ;
+    dcterms:title "Convention against Torture" ;
+    dcterms:description "An international human rights treaty that aims to prevent torture and other acts of cruel, inhuman, or degrading treatment or punishment around the world." ;
+    hr:hasArticle cat:Article1, cat:Article2, cat:Article3 .
+
+# -----------------------------------------------------------------------------
+# Article 1 - Definition of Torture
+# -----------------------------------------------------------------------------
+cat:Article1 a hr:HumanRightsArticle ;
+    rdfs:label "Article 1" ;
+    dcterms:description "For the purposes of this Convention, the term 'torture' means any act by which severe pain or suffering, whether physical or mental, is intentionally inflicted on a person for such purposes as obtaining from him or a third person information or a confession..." .
+
+<< cat:Torture hr:definedAs hr:InflictionOfSeverePain >>
+    cml:semanticDefinition "Intentional infliction of severe physical or mental pain or suffering." ;
+    cml:requiredIntent "To obtain information, confess, punish, intimidate, coerce, or for any reason based on discrimination." ;
+    cml:actorRequirement "Inflicted by or at the instigation of or with the consent or acquiescence of a public official or other person acting in an official capacity." .
+
+# -----------------------------------------------------------------------------
+# Article 2 - Absolute Prohibition
+# -----------------------------------------------------------------------------
+cat:Article2 a hr:HumanRightsArticle ;
+    rdfs:label "Article 2" ;
+    dcterms:description "No exceptional circumstances whatsoever, whether a state of war or a threat of war, internal political instability or any other public emergency, may be invoked as a justification of torture." .
+
+<< hr:StateParty hr:mustPrevent cat:Torture >>
+    cml:semanticDefinition "Absolute obligation to take effective legislative, administrative, judicial or other measures to prevent acts of torture in any territory under its jurisdiction." ;
+    cml:legalException "None (Jus Cogens). No exceptional circumstances justify torture, including war, instability, or orders from a superior officer." ;
+    cml:deonticStatus hr:AbsoluteObligation .
+
+# -----------------------------------------------------------------------------
+# Article 3 - Non-Refoulement
+# -----------------------------------------------------------------------------
+cat:Article3 a hr:HumanRightsArticle ;
+    rdfs:label "Article 3" ;
+    dcterms:description "No State Party shall expel, return ('refouler') or extradite a person to another State where there are substantial grounds for believing that he would be in danger of being subjected to torture." .
+
+<< hr:StateParty hr:prohibitedFrom cat:Refoulement >>
+    cml:semanticDefinition "The prohibition of expelling, returning, or extraditing a person to a jurisdiction where they face a substantial risk of torture." ;
+    cml:legalCondition "Requires competent authorities to take into account all relevant considerations including consistent patterns of gross, flagrant or mass violations of human rights in the receiving State." ;
+    cml:deonticStatus hr:Prohibition .

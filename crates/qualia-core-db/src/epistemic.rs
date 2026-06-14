@@ -138,14 +138,11 @@ pub fn classify_epistemic_state(
         if q.context != agent_ctx && q.context != OBJECTIVE_CONTEXT {
             continue;
         }
-        if q.subject != agent_did {
+        if q.subject != agent_did && q.subject != proposition_hash {
             continue;
         }
-        if q.object != proposition_hash && q.predicate != P_WAS_DERIVED_FROM {
-            // Only match direct proposition references or derivation edges
-            if q.object != proposition_hash {
-                continue;
-            }
+        if q.object != proposition_hash && q.predicate != P_WAS_DERIVED_FROM && q.predicate != P_INFERS_FROM {
+            continue;
         }
 
         let state = predicate_to_state(q.predicate);
@@ -173,7 +170,7 @@ fn higher(a: EpistemicState, b: EpistemicState) -> EpistemicState {
 fn predicate_to_state(predicate: u64) -> EpistemicState {
     if predicate == P_KNOWS_DIRECTLY {
         EpistemicState::ObjectiveKnowledge
-    } else if predicate == P_INFERS_FROM || predicate == P_WAS_DERIVED_FROM {
+    } else if predicate == P_INFERS_FROM {
         EpistemicState::InferredBelief
     } else if predicate == P_BELIEVES_VIA_HEARSAY {
         EpistemicState::HearsayBelief

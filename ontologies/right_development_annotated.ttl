@@ -1,0 +1,19 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix drd: <urn:qualia:ontology:drd#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+drd:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Declaration on the Right to Development" ;
+    dcterms:description "Proclaims the right to development as an inalienable human right." ;
+    hr:hasArticle drd:Article1 .
+
+drd:Article1 a hr:HumanRightsArticle ;
+    rdfs:label "Article 1" ;
+    dcterms:description "The right to development is an inalienable human right by virtue of which every human person and all peoples are entitled to participate in, contribute to, and enjoy economic, social, cultural and political development." .
+
+<< hr:Person hr:hasRight drd:Development >>
+    cml:semanticDefinition "The right to participate in and enjoy comprehensive development." ;
+    cml:deonticStatus hr:Inalienable .

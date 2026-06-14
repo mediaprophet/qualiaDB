@@ -1,6 +1,6 @@
 //! LZ4 block-stream compressor for browser-deployable dataset artifacts.
 //!
-//! Unified v2 `.q42` volumes already embed LZ4-compressed SuperBlocks; the
+//! Unified v3 `.q42` volumes already embed LZ4-compressed SuperBlocks; the
 //! compress command copies them unchanged. Legacy v1 raw SuperBlock streams are
 //! still converted to the framed transport format for the browser VFS:
 //!
@@ -34,13 +34,13 @@ pub struct CompressStats {
     pub ratio: f64,
 }
 
-/// Compress a `.q42` file. Unified v2 volumes are copied as-is; legacy v1
+/// Compress a `.q42` file. Unified v3 volumes are copied as-is; legacy v1
 /// SuperBlock streams are stripped and re-framed for the browser VFS.
 pub fn compress_q42(
     input: &Path,
     output: &Path,
 ) -> Result<CompressStats, Box<dyn std::error::Error>> {
-    if qualia_core_db::q42_volume::is_v2_volume(input)? {
+    if qualia_core_db::q42_volume::is_unified_volume(input)? {
         fs::copy(input, output)?;
         let input_bytes = fs::metadata(input)?.len();
         let output_bytes = fs::metadata(output)?.len();

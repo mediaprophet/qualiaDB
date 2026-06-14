@@ -95,7 +95,7 @@ pub fn ingest_ntriples(
             object: oh,
             context: 0,
             metadata: 0,
-            parity: sh ^ ph ^ oh,
+            parity: NQuin::calculate_parity(sh, ph, oh, 0, 0),
         })?;
         triples += 1;
     }
@@ -177,7 +177,7 @@ pub fn ingest_rdf_xml(
                 object: oh,
                 context: 0,
                 metadata: 0,
-                parity: sh ^ ph ^ oh,
+                parity: NQuin::calculate_parity(sh, ph, oh, 0, 0),
             }).map_err(|e| {
                 let io_err = std::io::Error::new(std::io::ErrorKind::Other, e.to_string());
                 parse_err = Some(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));

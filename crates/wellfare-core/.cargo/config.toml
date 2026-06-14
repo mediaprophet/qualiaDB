@@ -1,0 +1,10 @@
+[build]
+# Use MSVC toolchain for host builds (build scripts, proc-macros).
+# The crate itself targets wasm32-unknown-unknown via wasm-pack.
+rustflags = []
+
+[target.x86_64-pc-windows-gnu]
+linker = "lld-link"
+
+[target.x86_64-pc-windows-msvc]
+# MSVC is the stable host target on this machine

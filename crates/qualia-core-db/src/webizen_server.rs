@@ -153,6 +153,8 @@ pub fn spawn_loopback_server(
             rt.block_on(async move {
                 let allowed_origins: Vec<HeaderValue> = if server_state.dev {
                     vec![
+                        "http://localhost:8080".parse().unwrap(),
+                        "http://127.0.0.1:8080".parse().unwrap(),
                         "http://localhost:8788".parse().unwrap(),
                         "http://127.0.0.1:8788".parse().unwrap(),
                         "http://localhost:5173".parse().unwrap(),
@@ -163,16 +165,20 @@ pub fn spawn_loopback_server(
                     vec![OFFICIAL_WEB_HUB_ORIGIN.parse().unwrap()]
                 };
 
-                let cors = CorsLayer::new()
-                    .allow_origin(allowed_origins)
-                    .allow_methods(vec![Method::GET, Method::POST, Method::OPTIONS])
-                    .allow_headers(vec![
-                        header::CONTENT_TYPE,
-                        header::ACCEPT,
-                        HeaderName::from_static("x-qualia-token"),
-                        HeaderName::from_static("access-control-request-private-network")
-                    ])
-                    .expose_headers(vec![HeaderName::from_static("x-qualia-compute-cost")]);
+                let cors = if server_state.dev {
+                    CorsLayer::permissive()
+                } else {
+                    CorsLayer::new()
+                        .allow_origin(allowed_origins)
+                        .allow_methods(vec![Method::GET, Method::POST, Method::OPTIONS])
+                        .allow_headers(vec![
+                            header::CONTENT_TYPE,
+                            header::ACCEPT,
+                            HeaderName::from_static("x-qualia-token"),
+                            HeaderName::from_static("access-control-request-private-network")
+                        ])
+                        .expose_headers(vec![HeaderName::from_static("x-qualia-compute-cost")])
+                };
 
                 let csp_layer = SetResponseHeaderLayer::overriding(
                     header::CONTENT_SECURITY_POLICY,

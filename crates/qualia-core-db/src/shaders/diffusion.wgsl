@@ -9,6 +9,11 @@ var<storage, read_write> quins: array<u32>;
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let idx = global_id.x;
     
+    // Bounds check to handle graphs not perfectly divisible by workgroup size
+    if (idx >= arrayLength(&quins)) {
+        return;
+    }
+    
     // Diffusion pass: check neighboring graph nodes in memory
     // If a node is missing a predicted relationship, generate the Quin.
     // (MVP: Mocked diffusion logic)

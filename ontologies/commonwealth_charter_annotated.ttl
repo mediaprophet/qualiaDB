@@ -1,0 +1,37 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix cwc: <urn:qualia:ontology:cwc#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+# -----------------------------------------------------------------------------
+# Base Instrument Definition
+# -----------------------------------------------------------------------------
+cwc:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Charter of the Commonwealth" ;
+    dcterms:title "Charter of the Commonwealth" ;
+    dcterms:description "A document outlining the values and aspirations which unite the Commonwealth." ;
+    hr:hasArticle cwc:Article1, cwc:Article2 .
+
+# -----------------------------------------------------------------------------
+# Article 1 - Democracy
+# -----------------------------------------------------------------------------
+cwc:Article1 a hr:HumanRightsArticle ;
+    rdfs:label "Article I - Democracy" ;
+    dcterms:description "We recognise the inalienable right of individuals to participate in democratic processes, in particular through free and fair elections in shaping the society in which they live." .
+
+<< hr:Person hr:hasRight cwc:DemocraticParticipation >>
+    cml:semanticDefinition "The inalienable right to participate in democratic processes, including free and fair elections." ;
+    cml:deonticStatus hr:Inalienable .
+
+# -----------------------------------------------------------------------------
+# Article 2 - Human Rights
+# -----------------------------------------------------------------------------
+cwc:Article2 a hr:HumanRightsArticle ;
+    rdfs:label "Article II - Human Rights" ;
+    dcterms:description "We are committed to the Universal Declaration of Human Rights and other relevant human rights covenants and international instruments." .
+
+<< cwc:CommonwealthMember hr:committedTo hr:UniversalDeclarationOfHumanRights >>
+    cml:semanticDefinition "An explicit recognition and commitment to the UDHR and human rights frameworks." ;
+    cml:deonticStatus hr:ObligationOfState .

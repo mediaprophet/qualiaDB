@@ -842,6 +842,11 @@ impl ShaclCompiler {
             // ShaclConstraint::QualifierValue { path, value } => { ... }
             // ShaclConstraint::QualifierMinCount { path, min_count } => { ... }
             // ShaclConstraint::QualifierMaxCount { path, max_count } => { ... }
+            // Deontic & Epistemic
+            ShaclConstraint::DeonticObligate | ShaclConstraint::DeonticPermit | ShaclConstraint::DeonticForbid | ShaclConstraint::DeonticNotExpired { .. } => ops.push(SlgOpcode::NativeDeonticEval),
+            ShaclConstraint::EpistemicKnowledge { min_certainty } => ops.push(SlgOpcode::NativeEpistemicEval(*min_certainty)),
+            ShaclConstraint::EpistemicBelief { min_certainty } => ops.push(SlgOpcode::NativeEpistemicEval(*min_certainty)),
+            ShaclConstraint::CommonKnowledge => ops.push(SlgOpcode::NativeEpistemicEval(255)),
             // Physics
             ShaclConstraint::ThermoMetropolisStep => ops.push(SlgOpcode::NativeThermodynamics),
             ShaclConstraint::SolveOdeDynamics => ops.push(SlgOpcode::NativeOdeSolver),

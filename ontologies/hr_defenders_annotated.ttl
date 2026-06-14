@@ -1,0 +1,18 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix hrd: <urn:qualia:ontology:hrd#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+hrd:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Declaration on Human Rights Defenders" ;
+    dcterms:description "Declaration on the Right and Responsibility of Individuals, Groups and Organs of Society to Promote and Protect Universally Recognized Human Rights and Fundamental Freedoms." ;
+    hr:hasArticle hrd:Article1 .
+
+hrd:Article1 a hr:HumanRightsArticle ;
+    rdfs:label "Article 1" ;
+    dcterms:description "Everyone has the right, individually and in association with others, to promote and to strive for the protection and realization of human rights and fundamental freedoms at the national and international levels." .
+
+<< hr:Person hr:hasRight hrd:PromoteHumanRights >>
+    cml:semanticDefinition "The right to act as a human rights defender." .

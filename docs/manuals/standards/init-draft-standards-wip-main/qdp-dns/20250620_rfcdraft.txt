@@ -1,0 +1,335 @@
+plaintext
+Internet Engineering Task Force (IETF)                     WebCivics Team
+Internet-Draft                                            June 20, 2025
+Intended status: Standards Track
+Expires: December 22, 2025
+
+                      Agent Discovery Protocol (ADP)
+                   draft-webcivics-adp-protocol-00
+
+Abstract
+
+   The Agent Discovery Protocol (ADP) enables clients to discover services
+   and metadata associated with a domain or subdomain acting as an agent.
+   ADP uses HTTP and RDF to provide machine-readable descriptions,
+   leveraging W3C standards such as WebID and Solid for decentralized,
+   user-centric web ecosystems. This document specifies the protocol
+   elements, including discovery endpoints, request/response formats, and
+   authentication mechanisms.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering Task
+   Force (IETF). Note that other groups may also distribute working
+   documents as Internet-Drafts. The list of current Internet-Drafts is at
+   https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time. It is inappropriate to use Internet-Drafts as reference material
+   or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on December 22, 2025.
+
+Copyright Notice
+
+   Copyright (c) 2025 IETF Trust and the persons identified as the
+   document authors. All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document. Please review these documents carefully,
+   as they describe your rights and restrictions with respect to this
+   document.
+
+Table of Contents
+
+   1. Introduction
+   2. Terminology
+   3. Protocol Overview
+      3.1. Discovery Endpoint
+      3.2. Request Format
+      3.3. Response Format
+      3.4. Authentication
+      3.5. Error Handling
+   4. URI Structure
+   5. Security Considerations
+   6. IANA Considerations
+      6.1. Well-Known URI Registration
+      6.2. Media Type Registration
+   7. References
+      7.1. Normative References
+      7.2. Informative References
+   Appendix A. Example Implementation
+   Appendix B. Test Vectors
+   Acknowledgements
+
+1. Introduction
+
+   The Agent Discovery Protocol (ADP) enables clients to discover services
+   and metadata associated with an agent, identified by a domain or
+   subdomain. Agents may represent persons, organizations, or automated
+   services, and ADP provides a standardized mechanism to retrieve
+   machine-readable metadata using HTTP and RDF. The protocol builds on
+   W3C standards such as WebID, RDF, and Solid to support decentralized,
+   user-centric web applications.
+
+   This document defines the protocol mechanics, including the discovery
+   endpoint, HTTP request/response formats, authentication methods, and
+   error handling. ADP is designed for interoperability with existing web
+   standards, ensuring robust and secure agent discovery.
+
+2. Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   Terms defined:
+   - Agent: An entity (e.g., person, organization, service) identified by
+     a URI, typically a domain or subdomain.
+   - Service: A resource (e.g., API, data store) associated with an agent.
+   - Metadata: Descriptive information about an agent or service.
+   - WebID: A URI identifying an agent, per [WebID].
+   - Solid POD: A personal data store, per [Solid].
+
+3. Protocol Overview
+
+   ADP enables clients to query a domain’s discovery endpoint to retrieve
+   RDF metadata describing the agent and its associated services. The
+   protocol uses HTTP over TLS and supports WebID-based authentication.
+
+3.1. Discovery Endpoint
+
+   Agents MUST provide a discovery endpoint at
+   `https://<domain>/.well-known/adp`, as defined in [RFC5785]. This
+   endpoint returns RDF metadata describing the agent, its services, and
+   related resources.
+
+3.2. Request Format
+
+   Clients send an HTTP GET request to the discovery endpoint, specifying
+   an Accept header for RDF formats (e.g., `text/turtle`,
+   `application/ld+json`).
+
+   Example:
+      GET /.well-known/adp HTTP/1.1
+      Host: example.com
+      Accept: text/turtle
+
+3.3. Response Format
+
+   Servers MUST respond with RDF metadata in the requested format, using
+   the `adp:` namespace (`http://w3id.org/adp#`). The response describes
+   the agent, its services, and metadata.
+
+   Example:
+      HTTP/1.1 200 OK
+      Content-Type: text/turtle
+      Content-Length: 256
+
+      @prefix adp: <http://w3id.org/adp#> .
+      @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+      <https://example.com> a adp:Agent ;
+         foaf:name "Example Agent" ;
+         adp:webid <https://example.com#me> ;
+         adp:hasService <https://example.com/api> ;
+         adp:hasMetadata [
+            a adp:Metadata ;
+            adp:metadataType "profile" ;
+            foaf:mbox <mailto:contact@example.com>
+         ] .
+      <https://example.com/api> a adp:Service ;
+         adp:hasMetadata [
+            a adp:Metadata ;
+            adp:metadataType "description" ;
+            rdfs:label "User API"
+         ] .
+
+3.4. Authentication
+
+   Servers MAY require authentication using WebID-TLS [WebID-TLS] or
+   WebID-OIDC [WebID-OIDC]. Clients MUST support TLS 1.3 [RFC8446] for
+   secure communication. If authentication is required, servers respond
+   with HTTP 401 Unauthorized and appropriate challenge headers.
+
+   Example:
+      HTTP/1.1 401 Unauthorized
+      WWW-Authenticate: WebID-TLS realm="ADP Discovery"
+
+3.5. Error Handling
+
+   Servers MUST return appropriate HTTP status codes for errors:
+   - 400 Bad Request: Malformed request or unsupported Accept header.
+   - 401 Unauthorized: Authentication required.
+   - 404 Not Found: Discovery endpoint not available.
+   - 406 Not Acceptable: Requested RDF format not supported.
+   - 500 Internal Server Error: Server-side issue.
+
+   Clients MUST handle these responses gracefully.
+
+4. URI Structure
+
+   The discovery endpoint is located at `/.well-known/adp`. Sub-resources
+   MAY be defined (e.g., `/.well-known/adp/services`) for specific use
+   cases. All URIs MUST use HTTPS.
+
+   Example URIs:
+   - `https://example.com/.well-known/adp`
+   - `https://example.com/.well-known/adp/services`
+
+5. Security Considerations
+
+   Implementations MUST:
+   - Use HTTPS with TLS 1.3 [RFC8446] to prevent eavesdropping.
+   - Validate WebID URIs to mitigate spoofing.
+   - Support DNSSEC [RFC4033] to secure domain resolution.
+   - Implement access controls for sensitive metadata, per [Solid].
+   - Mitigate denial-of-service attacks by limiting response sizes.
+
+   Clients MUST verify server certificates and handle authentication
+   failures securely.
+
+6. IANA Considerations
+
+6.1. Well-Known URI Registration
+
+   This document registers the `adp` well-known URI in the "Well-Known
+   URIs" registry, per [RFC8615].
+
+   URI suffix: adp
+   Change controller: IETF
+   Specification document: This document
+   Related information: None
+
+6.2. Media Type Registration
+
+   This document references media types for RDF serializations:
+   - `text/turtle` [RFC3870]
+   - `application/ld+json` [RFC6839]
+
+   No new media types are registered.
+
+7. References
+
+7.1. Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC5785]  Nottingham, M. and E. Hammer-Lahav, "Defining Well-Known
+              Uniform Resource Identifiers (URIs)", RFC 5785,
+              DOI 10.17487/RFC5785, April 2010,
+              <https://www.rfc-editor.org/info/rfc5785>.
+
+   [RFC7230]  Fielding, R., Ed. and J. Reschke, Ed., "Hypertext Transfer
+              Protocol (HTTP/1.1): Message Syntax and Routing", RFC 7230,
+              DOI 10.17487/RFC7230, June 2014,
+              <https://www.rfc-editor.org/info/rfc7230>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC 2119
+              Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC8446]  Rescorla, E., "The Transport Layer Security (TLS) Protocol
+              Version 1.3", RFC 8446, DOI 10.17487/RFC8446, August 2018,
+              <https://www.rfc-editor.org/info/rfc8446>.
+
+   [RFC8615]  Nottingham, M., "Well-Known Uniform Resource Identifiers
+              (URIs)", RFC 8615, DOI 10.17487/RFC8615, May 2019,
+              <https://www.rfc-editor.org/info/rfc8615>.
+
+   [WebID]    W3C, "WebID 1.0", <https://www.w3.org/2005/Incubator/webid/spec/>.
+
+   [WebID-TLS] W3C, "WebID-TLS", <https://www.w3.org/2005/Incubator/webid/spec/tls/>.
+
+   [WebID-OIDC] W3C, "WebID-OIDC",
+                <https://www.w3.org/2005/Incubator/webid/spec/oidc/>.
+
+7.2. Informative References
+
+   [RFC4033]  Arends, R., Austein, R., Larson, M., Massey, D., and S.
+              Rose, "DNS Security Introduction and Requirements", RFC 4033,
+              DOI 10.17487/RFC4033, May 2005,
+              <https://www.rfc-editor.org/info/rfc4033>.
+
+   [RFC3870]  Swartz, A., "Resource Description Framework (RDF) Turtle",
+              <https://www.w3.org/TR/turtle/>.
+
+   [RFC6839]  Hansen, T. and A. Melnikov, "Additional Media Type Structured
+              Syntax Suffixes", RFC 6839, DOI 10.17487/RFC6839,
+              January 2013, <https://www.rfc-editor.org/info/rfc6839>.
+
+   [Solid]    Solid Community, "Solid Protocol",
+              <https://solidproject.org/TR/protocol>.
+
+Appendix A. Example Implementation
+
+   Below is a pseudocode example of a server implementing the ADP endpoint:
+Node.js-like pseudocode
+   const http = require('https');
+   const rdf = require('rdf-lib');
+   const server = http.createServer((req, res) => {
+      if (req.url === '/.well-known/adp' && req.method === 'GET') {
+         if (req.headers.accept.includes('text/turtle')) {
+            res.writeHead(200, {'Content-Type': 'text/turtle'});
+            const graph = rdf.createGraph();
+            graph.add('https://example.com', 'a', 'adp:Agent');
+            graph.add('https://example.com', 'foaf:name', '"Example Agent"');
+            graph.add('https://example.com', 'adp:hasService', 'https://example.com/api');
+            res.end(graph.serialize('text/turtle'));
+         } else {
+            res.writeHead(406);
+            res.end();
+         }
+      } else {
+         res.writeHead(404);
+         res.end();
+      }
+   });
+   server.listen(443);
+
+Appendix B. Test Vectors
+
+Test Case 1: Successful Discovery
+Request:
+   GET /.well-known/adp HTTP/1.1
+   Host: example.com
+   Accept: text/turtle
+
+Response:
+   HTTP/1.1 200 OK
+   Content-Type: text/turtle
+   @prefix adp: <http://w3id.org/adp#> .
+   <https://example.com> a adp:Agent ;
+      adp:webid <https://example.com#me> ;
+      adp:hasService <https://example.com/api> .
+
+Test Case 2: Authentication Required
+Request:
+   GET /.well-known/adp HTTP/1.1
+   Host: secure.example.com
+   Accept: text/turtle
+
+Response:
+   HTTP/1.1 401 Unauthorized
+   WWW-Authenticate: WebID-TLS realm="ADP Discovery"
+
+Acknowledgements
+
+The authors thank the W3C Semantic Web Interest Group, Solid Community,
+and IETF HTTP Working Group for their contributions and feedback.
+
+Authors' Addresses
+
+WebCivics Team
+Email: contact@webcivics.org
+URI: https://github.com/WebCivics/ADP

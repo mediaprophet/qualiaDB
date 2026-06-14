@@ -401,10 +401,13 @@ pub struct EngineTelemetryFields {
     pub kv_cache_used_mb: u32,
     pub vram_used_mb: u32,
     pub vram_total_mb: u32,
+    pub npu_used_mb: u32,
+    pub npu_total_mb: u32,
 }
 
 pub fn get_engine_telemetry_fields() -> EngineTelemetryFields {
     let (vram_used_mb, vram_total_mb) = probe_vram_usage_mb();
+    let (npu_used_mb, npu_total_mb) = probe_npu_usage_mb();
     EngineTelemetryFields {
         thermal_state: crate::model_lifecycle::get_thermal_state_label().to_string(),
         llm_memory_bytes: crate::model_lifecycle::get_llm_memory_bytes(),
@@ -416,6 +419,8 @@ pub fn get_engine_telemetry_fields() -> EngineTelemetryFields {
         kv_cache_used_mb: crate::model_lifecycle::get_kv_cache_used_mb(),
         vram_used_mb,
         vram_total_mb,
+        npu_used_mb,
+        npu_total_mb,
     }
 }
 
@@ -425,6 +430,18 @@ fn probe_vram_usage_mb() -> (u32, u32) {
         if let Ok(memory) = qualia_core_db::directml_bridge::probe_best_adapter_memory() {
             let used = memory.local_usage_bytes / (1024 * 1024);
             let total = memory.local_budget_bytes / (1024 * 1024);
+            return (used as u32, total as u32);
+        }
+    }
+    (0, 0)
+}
+
+fn probe_npu_usage_mb() -> (u32, u32) {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(memory) = qualia_core_db::directml_bridge::probe_npu_adapter_memory() {
+            let used = memory.shared_usage_bytes / (1024 * 1024); // NPUs often use shared memory
+            let total = memory.shared_budget_bytes / (1024 * 1024);
             return (used as u32, total as u32);
         }
     }

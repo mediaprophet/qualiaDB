@@ -1,0 +1,19 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix dpapt: <urn:qualia:ontology:dpapt#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+dpapt:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Declaration on the Protection of All Persons from Being Subjected to Torture" ;
+    dcterms:description "Precursor declaration to the Convention against Torture, outlining basic prohibitions." ;
+    hr:hasArticle dpapt:Article2 .
+
+dpapt:Article2 a hr:HumanRightsArticle ;
+    rdfs:label "Article 2" ;
+    dcterms:description "Any act of torture or other cruel, inhuman or degrading treatment or punishment is an offence to human dignity." .
+
+<< hr:Torture hr:isOffenseTo hr:HumanDignity >>
+    cml:semanticDefinition "Torture is an inherent violation of human dignity." ;
+    cml:deonticStatus hr:Prohibition .

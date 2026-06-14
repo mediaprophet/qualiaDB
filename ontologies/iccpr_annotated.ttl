@@ -1,0 +1,50 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix iccpr: <urn:qualia:ontology:iccpr#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+# -----------------------------------------------------------------------------
+# Base Instrument Definition
+# -----------------------------------------------------------------------------
+iccpr:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "International Covenant on Civil and Political Rights" ;
+    dcterms:title "International Covenant on Civil and Political Rights" ;
+    dcterms:description "A multilateral treaty that commits its parties to respect the civil and political rights of individuals." ;
+    hr:hasArticle iccpr:Article1, iccpr:Article2, iccpr:Article3 .
+
+# -----------------------------------------------------------------------------
+# Article 1 - Self-Determination
+# -----------------------------------------------------------------------------
+iccpr:Article1 a hr:HumanRightsArticle ;
+    rdfs:label "Article 1" ;
+    dcterms:description "All peoples have the right of self-determination. By virtue of that right they freely determine their political status and freely pursue their economic, social and cultural development." .
+
+<< hr:Peoples hr:hasRight iccpr:SelfDetermination >>
+    cml:semanticDefinition "The collective right of a people to freely determine their political status and pursue economic, social, and cultural development." ;
+    cml:deonticStatus hr:Inalienable .
+
+<< iccpr:SelfDetermination hr:includes iccpr:ResourceSovereignty >>
+    cml:semanticDefinition "The right to freely dispose of natural wealth and resources." .
+
+# -----------------------------------------------------------------------------
+# Article 2 - Non-Discrimination and Effective Remedy
+# -----------------------------------------------------------------------------
+iccpr:Article2 a hr:HumanRightsArticle ;
+    rdfs:label "Article 2" ;
+    dcterms:description "Each State Party to the present Covenant undertakes to respect and to ensure to all individuals within its territory and subject to its jurisdiction the rights recognized in the present Covenant." .
+
+<< hr:StateParty hr:obligatedToProvide iccpr:EffectiveRemedy >>
+    cml:semanticDefinition "The mandate that any person whose rights or freedoms are violated shall have an effective legal remedy, notwithstanding that the violation was committed by persons acting in an official capacity." ;
+    cml:deonticStatus hr:ObligationOfState .
+
+# -----------------------------------------------------------------------------
+# Article 3 - Equality of Men and Women
+# -----------------------------------------------------------------------------
+iccpr:Article3 a hr:HumanRightsArticle ;
+    rdfs:label "Article 3" ;
+    dcterms:description "The States Parties to the present Covenant undertake to ensure the equal right of men and women to the enjoyment of all civil and political rights set forth in the present Covenant." .
+
+<< hr:MenAndWomen hr:haveState hr:EqualEnjoyment >>
+    cml:semanticDefinition "Mandated parity in the enjoyment of all civil and political rights." .

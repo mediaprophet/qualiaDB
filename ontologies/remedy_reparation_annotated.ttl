@@ -1,0 +1,19 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix bprr: <urn:qualia:ontology:bprr#> .
+@prefix cml: <urn:qualia:ontology:cml#> .
+@prefix hr: <urn:qualia:ontology:hr#> .
+
+bprr:Instrument a hr:HumanRightsInstrument ;
+    rdfs:label "Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law" ;
+    dcterms:description "Guidelines for ensuring reparations and remedies for victims of severe violations." ;
+    hr:hasArticle bprr:Principle11 .
+
+bprr:Principle11 a hr:HumanRightsArticle ;
+    rdfs:label "Principle 11" ;
+    dcterms:description "Remedies for gross violations of international human rights law include the victim's right to: (a) Equal and effective access to justice; (b) Adequate, effective and prompt reparation for harm suffered; (c) Access to relevant information concerning violations and reparation mechanisms." .
+
+<< hr:Victim hr:hasRight bprr:Reparation >>
+    cml:semanticDefinition "The right to adequate, effective, and prompt reparation for harm suffered." ;
+    cml:includes bprr:Restitution, bprr:Compensation, bprr:Rehabilitation .

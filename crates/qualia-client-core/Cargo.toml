@@ -32,6 +32,7 @@ tiny_http = "0.12"
 bytemuck = "1.14"
 lz4_flex = "0.11"
 chrono = "0.4.45"
+uuid = { version = "1.23.3", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

@@ -199,7 +199,7 @@ impl Q42Lexicon {
     /// Load lexicon embedded in a unified v2 `.q42` volume or a legacy `.q42.lex` sidecar.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_for_q42(q42_path: &Path) -> std::io::Result<Self> {
-        if crate::q42_volume::is_v2_volume(q42_path)? {
+        if crate::q42_volume::is_unified_volume(q42_path)? {
             let vol = crate::q42_volume::Q42Volume::open(q42_path)?;
             return Self::load_from_lex_bytes(vol.lex_bytes());
         }

@@ -175,7 +175,7 @@ pub fn resolve_wordnet_q42(storage: &Path) -> Option<PathBuf> {
 }
 
 pub fn resolve_wordnet_lex(q42_path: &Path) -> Option<PathBuf> {
-    if qualia_core_db::q42_volume::is_v2_volume(q42_path).ok() == Some(true) {
+    if qualia_core_db::q42_volume::is_unified_volume(q42_path).ok() == Some(true) {
         return Some(q42_path.to_path_buf());
     }
     let lex = q42_path.with_extension("q42.lex");
