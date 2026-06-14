@@ -926,3 +926,6 @@ pub mod web_civics;
 
 pub mod domains;
 pub mod solvers;
+
+#[cfg(target_os = "linux")]
+extern crate io_uring;
