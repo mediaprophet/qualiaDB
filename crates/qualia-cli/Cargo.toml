@@ -40,3 +40,6 @@ csv = "1.3"
 atoi = "2.0"
 rand = "0.8"
 spargebra = "0.3"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+io-uring = "0.7.12"

@@ -140,6 +140,29 @@ impl BlockDirectoryEntry {
     }
 }
 
+/// Upgrade a v1/v2 `.q42` file to v3 by rewriting the version field and zeroing
+/// the new extension fields in the 256-byte header.  Data blocks are untouched.
+pub fn migrate_v2_to_v3(path: &Path) -> io::Result<()> {
+    use std::io::{Seek, SeekFrom};
+    let mut f = OpenOptions::new().read(true).write(true).open(path)?;
+    let mut header = [0u8; HEADER_SIZE];
+    f.read_exact(&mut header)?;
+    if &header[0..4] != &Q42_MAGIC {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "not a Q42 volume"));
+    }
+    let version = u16::from_le_bytes([header[4], header[5]]);
+    if version >= Q42_VERSION_V3 as u16 {
+        return Ok(()); // already v3
+    }
+    // Bump version to 3.
+    header[4..6].copy_from_slice(&(Q42_VERSION_V3 as u16).to_le_bytes());
+    // Zero out the v3 extension fields (bytes 88..256 within the header).
+    header[88..256].fill(0);
+    f.seek(SeekFrom::Start(0))?;
+    f.write_all(&header)?;
+    f.flush()
+}
+
 /// Returns true if `path` begins with a unified volume header.
 pub fn is_unified_volume(path: &Path) -> io::Result<bool> {
     let mut f = File::open(path)?;

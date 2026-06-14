@@ -237,7 +237,7 @@ pub fn current_qos_class() -> Option<u32> {
         // SAFETY: pthread_get_qos_class_np with null thread → calling thread.
         let rc = unsafe {
             darwin_qos::pthread_get_qos_class_np(
-                std::ptr::null_mut(),
+                libc::pthread_self(),
                 &mut cls,
                 &mut rel,
             )

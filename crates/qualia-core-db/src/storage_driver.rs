@@ -25,6 +25,8 @@ mod darwin {
     pub const MADV_WILLNEED: libc::c_int = 3;
     pub const MADV_FREE:     libc::c_int = 5;
 
+    pub use std::path::Path;
+
     extern "C" {
         /// APFS copy-on-write clone — O(1) and zero extra disk space.
         pub fn clonefile(

@@ -432,8 +432,7 @@ fn process_simd_chunk_neon(chunk: &[f64], step_size: f64) -> f64 {
             let vals = vld1q_f64(chunk.as_ptr().add(idx));
             // Apply Simpson's weights (simplified)
             let weighted = vmulq_f64(vals, vdupq_n_f64(1.0));
-            let h_sum = vaddq_f64(vgetq_lane_f64::<0>(weighted), vgetq_lane_f64::<1>(weighted));
-            sum += h_sum;
+            sum += vgetq_lane_f64::<0>(weighted) + vgetq_lane_f64::<1>(weighted);
         }
     }
     
@@ -479,10 +478,7 @@ fn issue_prefetch(data: &f64) {
     
     #[cfg(target_arch = "aarch64")]
     {
-        use core::arch::aarch64::__builtin_prefetch;
-        unsafe {
-            __builtin_prefetch(data as *const f64 as *const i8, 0, 3);
-        }
+        let _ = data; // prefetch is a no-op hint; aarch64 has no stable Rust intrinsic
     }
 }
 

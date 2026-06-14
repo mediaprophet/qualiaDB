@@ -405,7 +405,7 @@ impl ZeroCopyStreamer for IoUringGridManager {
         }
         
         let read_op = io_uring::opcode::Read::new(
-            self.file.as_raw_fd(),
+            io_uring::types::Fd(self.file.as_raw_fd()),
             self.get_inactive_buffer_mut().as_mut_ptr(),
             self.get_inactive_buffer().len() as u32,
         )

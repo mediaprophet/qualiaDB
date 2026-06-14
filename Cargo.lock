@@ -3309,6 +3309,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "io-uring"
+version = "0.7.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d09b98f7eace8982db770e4408e7470b028ce513ac28fecdc6bf4c30fe92b62"
+dependencies = [
+ "bitflags 2.13.0",
+ "cfg-if",
+ "libc",
+]
+
+[[package]]
 name = "ip_network"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5524,6 +5535,7 @@ dependencies = [
  "env_logger",
  "futures-util",
  "git2",
+ "io-uring",
  "log",
  "lz4_flex",
  "memmap2",
@@ -5614,6 +5626,7 @@ dependencies = [
  "hex",
  "hkdf",
  "http-body-util",
+ "io-uring",
  "jni 0.21.1",
  "js-sys",
  "libc",

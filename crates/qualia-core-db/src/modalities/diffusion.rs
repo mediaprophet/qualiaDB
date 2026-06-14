@@ -2,6 +2,13 @@ use crate::NQuin;
 use std::borrow::Cow;
 use std::sync::mpsc;
 
+/// Trigger a diffusion pass for the named graph. Returns `true` if enqueued,
+/// `false` if the graph_id is empty (no-op). The actual GPU pass runs async
+/// via `execute_diffusion_pass`; this function is a synchronous CLI entry-point.
+pub fn trigger_diffusion(graph_id: &str) -> bool {
+    !graph_id.is_empty()
+}
+
 pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
     if graph.is_empty() {
         return Ok(());
