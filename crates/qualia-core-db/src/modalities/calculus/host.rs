@@ -412,9 +412,11 @@ impl ZeroCopyStreamer for IoUringGridManager {
         .offset(offset)
         .build();
         
-        self.ring.submission()
-            .push(&read_op)
-            .map_err(|e| IoError::IoError(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
+        unsafe {
+            self.ring.submission()
+                .push(&read_op)
+                .map_err(|e| IoError::IoError(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
+        }
         
         self.pending_submission = true;
         Ok(())
