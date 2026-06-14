@@ -1905,6 +1905,1013 @@ const contextWindowQuin = {
         },
         liveInputs: [{ name: 'resource_id', label: 'Resource ID', default: 'phi3-mini-4k-instruct-q4' }],
     },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LOGIC MODALITIES — uncataloged additions
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'modality.deontic',
+        category: 'Logic Modalities',
+        name: 'Deontic Logic (O/P/F)',
+        summary: 'Obligation (0x10), Permission (0x11), Forbidding (0x12) norm compilation and evaluation. Norms are packed into a NQuin predicate field. An "unless" defeater sets bit 63 to cancel matching obligations at evaluation time.',
+        params: [
+            { name: 'party',          type: 'u64',    desc: 'DID hash of the norm subject (compiled from did: IRI via q_hash)' },
+            { name: 'opcode',         type: 'u8',     desc: 'Obligation=0x10 / Permission=0x11 / Forbidding=0x12' },
+            { name: 'property_path',  type: 'u64',    desc: 'q_hash of the rights property path e.g. q42:disclose' },
+            { name: 'action_object',  type: 'u64',    desc: 'Target resource or action hash' },
+            { name: 'contract',       type: 'u64',    desc: 'Contract identifier stored in context field' },
+            { name: 'expiry_unix32',  type: 'u32',    desc: 'Epoch expiry timestamp — 0 = never expires' },
+            { name: 'is_defeater',    type: 'bool',   desc: 'When true, sets bit 63 — marks this as an unless-clause' },
+        ],
+        returns: 'NQuin — compiled norm record with ECC parity',
+        snippets: [
+            js(`
+// Compile an obligation: Alice MUST disclose confidential data under NDA
+const OP_OBLIGATE = 0x10n;
+const DEFEATER_BIT = 1n << 63n;
+
+function compileNorm(party, opcode, path, obj, contract, expiry, isDefeater) {
+    let pred = ((BigInt(path) << 8n) & ~DEFEATER_BIT) | opcode;
+    if (isDefeater) pred |= DEFEATER_BIT;
+    return { subject: party, predicate: pred, object: obj, context: contract,
+             metadata: BigInt(expiry), parity: 0n };
+}
+
+const alice   = q_hash('did:alice');
+const disclose = q_hash('q42:disclose');
+const norm    = compileNorm(alice, OP_OBLIGATE, disclose,
+    q_hash('q42:data:confidential'), q_hash('contract:nda'), 4_000_000_000, false);
+
+// Add an unless-defeater: obligation is cancelled if Alice is a certified auditor
+const auditor = q_hash('q42:role:certified-auditor');
+const unless  = compileNorm(alice, 0x11n, disclose, auditor,
+    q_hash('contract:nda'), 4_000_000_000, true);
+`),
+            rs(`
+use qualia_core_db::deontic_logic::compile_n3_rule_to_norm;
+use qualia_core_db::modalities::logic::n3_parser::Rule;
+
+// Compile an N3 rule to a deontic norm Quin
+let rule = Rule { /* ... parsed from N3 logic */ };
+let norm_quin = compile_n3_rule_to_norm(&rule, contract_hash, expiry_unix32);
+`),
+        ],
+        live: async (_wasm, _native, inputs) => {
+            const FNV_OFFSET = 0xcbf29ce484222325n;
+            const FNV_PRIME  = 0x100000001b3n;
+            const MASK64     = 0xffffffffffffffffn;
+            function qh(s) {
+                let h = FNV_OFFSET;
+                for (const b of new TextEncoder().encode(s)) h = ((h ^ BigInt(b)) * FNV_PRIME) & MASK64;
+                return h;
+            }
+            const opcodeMap = { 'Obligate': 0x10n, 'Permit': 0x11n, 'Forbid': 0x12n };
+            const opcode = opcodeMap[inputs.opcode] ?? 0x10n;
+            const DEFEATER_BIT = 1n << 63n;
+            const party  = qh(inputs.party  || 'did:alice');
+            const path   = qh(inputs.target || 'q42:disclose');
+            let pred = ((path << 8n) & ~DEFEATER_BIT) | opcode;
+            return {
+                predicate_hex: '0x' + pred.toString(16).padStart(16, '0'),
+                opcode_hex: '0x' + opcode.toString(16),
+                party_hash:  '0x' + party.toString(16).padStart(16, '0'),
+            };
+        },
+        liveInputs: [
+            { name: 'party',  label: 'Party DID',        default: 'did:alice' },
+            { name: 'target', label: 'Property path',    default: 'q42:disclose' },
+            { name: 'opcode', label: 'Opcode',           default: 'Obligate', options: ['Obligate', 'Permit', 'Forbid'] },
+        ],
+    },
+
+    {
+        id: 'modality.agency',
+        category: 'Logic Modalities',
+        name: 'Agency & Fiduciary Stamps',
+        summary: 'Encodes the Principal ≠ Thing separation required by the Webizen governance model. stamp_fiduciary_metadata() embeds principal DID hash and agent routing lane bits into a NQuin metadata field. verify_human_agency() validates an Ed25519 signature over the author-scoped Merkle root.',
+        params: [
+            { name: 'principal_did_hash', type: 'u64', desc: 'q_hash of the principal DID — owner of the data' },
+            { name: 'agent_did_hash',     type: 'u64', desc: 'q_hash of the acting agent DID' },
+        ],
+        returns: 'void — modifies NQuin metadata field in-place',
+        snippets: [
+            rs(`
+use qualia_core_db::agency::{stamp_fiduciary_metadata, verify_human_agency};
+use qualia_core_db::q_hash;
+
+let principal = q_hash("did:wellfare:alice");
+let agent     = q_hash("did:wellfare:agent:care-assistant");
+
+// Stamp the NQuin so routing lanes carry fiduciary metadata
+stamp_fiduciary_metadata(&mut quin, principal, agent);
+
+// Later — verify the Merkle root signature
+let result = verify_human_agency(&frame, principal, &verifying_key, &signature);
+assert!(result.is_ok());
+`),
+            js(`
+// JS-side: fiduciary lane bits are in metadata bits 61-62
+const LANE_FIDUCIARY = 0b10n << 61n;
+const principalHash  = q_hash('did:wellfare:alice');
+
+quin.metadata = (quin.metadata & ~(0b11n << 61n)) | LANE_FIDUCIARY;
+quin.metadata = (quin.metadata & 0xFFFFFFFF00000000n) | (principalHash & 0xFFFFFFFFn);
+`),
+        ],
+    },
+
+    {
+        id: 'modality.comorbidity',
+        category: 'Logic Modalities',
+        name: 'Comorbidity Exacerbation Quins',
+        summary: 'Encodes organ-specific comorbidity risk compounding as RDF-Star nested Quin pairs. compile_exacerbation_quins() emits 2 NQuins: a primary directed edge (condition A → condition B) and a nested annotation carrying severity and patient context.',
+        params: [
+            { name: 'ante_condition',  type: 'u64', desc: 'Antecedent condition hash e.g. q_hash("condition:smoking")' },
+            { name: 'cons_condition',  type: 'u64', desc: 'Consequent condition hash e.g. q_hash("condition:pneumonia")' },
+            { name: 'patient_context', type: 'u64', desc: 'Patient graph context hash' },
+            { name: 'severity',        type: 'f32', desc: 'Exacerbation severity 0.0 – 1.0' },
+        ],
+        returns: '[NQuin; 2] — primary edge + nested severity annotation',
+        snippets: [
+            rs(`
+use qualia_core_db::{comorbidity_eval::compile_exacerbation_quins, q_hash};
+
+let mut out = [NQuin::default(); 2];
+let n = compile_exacerbation_quins(
+    q_hash("condition:smoking"),
+    q_hash("condition:pneumonia"),
+    q_hash("patient:p001"),
+    0.72,   // severity
+    &mut out,
+);
+// out[0] = primary edge: smoking → pneumonia in patient context
+// out[1] = nested annotation: bit 62 set, severity packed into metadata
+`),
+            js(`
+// Comorbidity edges are evaluated with deontic logic to gate treatment protocols.
+// A severity of 1.0 triggers obligate-high-risk norms downstream.
+const smoker    = q_hash('condition:smoking');
+const pneumonia = q_hash('condition:pneumonia');
+const NESTED_BIT = 1n << 62n;
+
+// Primary edge
+const edge = { subject: smoker, predicate: q_hash('q42:exacerbates'), object: pneumonia };
+// Nested annotation carries severity × 1000 in metadata low-32
+const annotation = { subject: smoker | NESTED_BIT, predicate: q_hash('q42:severity'),
+                      object: pneumonia, metadata: BigInt(Math.round(0.72 * 1000)) };
+`),
+        ],
+    },
+
+    {
+        id: 'modality.dicom',
+        category: 'Logic Modalities',
+        name: 'DICOM Split-Ingest',
+        summary: 'Ingests DICOM imaging studies by separating blob pixel data from semantic NQuin metadata. Each DICOM tag maps to a NQuin predicate via q_hash. Pixel blobs are stored by OPFS content-address; the NQuin object field holds only the hash pointer.',
+        params: [
+            { name: 'study_uid',   type: 'string', desc: 'DICOM Study Instance UID' },
+            { name: 'modality',    type: 'string', desc: 'CT / MR / US / XR' },
+            { name: 'blob_hash',   type: 'u64',    desc: 'OPFS content-address (q_hash of pixel bytes)' },
+            { name: 'series_date', type: 'u64',    desc: 'Unix timestamp of study acquisition' },
+        ],
+        returns: 'Vec<NQuin> — semantic annotation quins (no pixel data inline)',
+        snippets: [
+            js(`
+// DICOM split-ingest pattern in the browser
+const studyHash  = q_hash('urn:dicom:study:1.2.840.10008.5.1.4.1');
+const modalityH  = q_hash('dicom:modality:CT');
+const pixelData  = await file.arrayBuffer();
+const blobHash   = await crypto.subtle.digest('SHA-256', pixelData);
+const blobRef    = q_hash(new Uint8Array(blobHash));
+
+// Semantic NQuins — stored in graph; pixel data stays in OPFS
+const quins = [
+    makeQuin(studyHash, q_hash('rdf:type'),          q_hash('dicom:ImagingStudy')),
+    makeQuin(studyHash, q_hash('dicom:modality'),     modalityH),
+    makeQuin(studyHash, q_hash('dicom:pixelDataRef'), blobRef),   // pointer only
+];
+`),
+            rs(`
+// DicomMetadata::from_iri_hash() resolves tag predicates from q_hash values
+use qualia_core_db::dicom::DicomMetadata;
+let tag = DicomMetadata::from_iri_hash(q_hash("dicom:modality"));
+`),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GOVERNANCE & WEBIZEN
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'governance.propose_agreement',
+        category: 'Governance & Webizen',
+        name: 'webizen_propose_agreement()',
+        summary: 'Initiates a multi-party Webizen agreement. Returns a Lamport-stamped agreement ID (u64). All listed guardians must call sign_agreement() to ratify before the agreement activates.',
+        params: [
+            { name: 'guardians',            type: 'string[]', desc: 'DID strings of required co-signers' },
+            { name: 'principal',            type: 'string',   desc: 'Principal DID who the agreement serves' },
+            { name: 'domain',               type: 'string',   desc: 'Domain string — "health", "finance", "legal"' },
+            { name: 'required_signatures',  type: 'number',   desc: 'Minimum signature threshold (M-of-N)' },
+        ],
+        returns: 'BigInt — agreement ID (u64 Lamport-stamped)',
+        snippets: [
+            js(`
+import init, { webizen_propose_agreement } from './qualia_core_db.js';
+await init();
+
+const agreementId = webizen_propose_agreement(
+    ['did:wellfare:guardian1', 'did:wellfare:guardian2'],
+    'did:wellfare:alice',
+    'health',
+    2   // require both guardians
+);
+console.log('Agreement ID:', agreementId.toString());
+`),
+            cli(`q42 governance propose \\
+    --guardian did:wellfare:guardian1 \\
+    --guardian did:wellfare:guardian2 \\
+    --principal did:wellfare:alice \\
+    --domain health \\
+    --threshold 2`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.webizen_propose_agreement) return { error: 'WASM not loaded or function unavailable' };
+            const id = wasm.webizen_propose_agreement(
+                [inputs.guardian || 'did:wellfare:guardian1'],
+                inputs.principal || 'did:wellfare:alice',
+                inputs.domain    || 'health',
+                1
+            );
+            return { agreement_id: String(id), agreement_id_hex: '0x' + id.toString(16) };
+        },
+        liveInputs: [
+            { name: 'guardian',  label: 'Guardian DID',  default: 'did:wellfare:guardian1' },
+            { name: 'principal', label: 'Principal DID', default: 'did:wellfare:alice' },
+            { name: 'domain',    label: 'Domain',        default: 'health' },
+        ],
+    },
+
+    {
+        id: 'governance.sign_agreement',
+        category: 'Governance & Webizen',
+        name: 'webizen_sign_agreement()',
+        summary: 'Co-signs a pending Webizen agreement by agreement ID. When the required_signatures threshold is met the agreement is activated and its deontic norms become enforceable.',
+        params: [
+            { name: 'agreement_id', type: 'BigInt', desc: 'Agreement ID from webizen_propose_agreement()' },
+            { name: 'signing_key',  type: 'string', desc: 'Signer public key (base64) or DID key reference' },
+        ],
+        returns: 'void',
+        snippets: [
+            js(`
+import init, { webizen_propose_agreement, webizen_sign_agreement } from './qualia_core_db.js';
+await init();
+
+const id = webizen_propose_agreement(['did:wellfare:g1'], 'did:wellfare:alice', 'health', 1);
+webizen_sign_agreement(id, 'mock_key_or_did_key_ref');
+`),
+        ],
+    },
+
+    {
+        id: 'governance.enforce_rights',
+        category: 'Governance & Webizen',
+        name: 'enforce_rights_ontology()',
+        summary: 'Enforces the N3Logic Rights Ontology against a principal DID hash. DID hash 0 is always denied (reserved). Returns false if the principal lacks the required rights clearance for the current graph context.',
+        params: [
+            { name: 'principal_did_hash', type: 'BigInt (u64)', desc: 'FNV-1a hash of the principal DID string' },
+        ],
+        returns: 'bool — true if rights are satisfied',
+        snippets: [
+            js(`
+import init, { enforce_rights_ontology } from './qualia_core_db.js';
+await init();
+
+const FNV_OFFSET = 0xcbf29ce484222325n;
+const FNV_PRIME  = 0x100000001b3n;
+function q_hash(s) {
+    let h = FNV_OFFSET;
+    for (const b of new TextEncoder().encode(s)) h = ((h ^ BigInt(b)) * FNV_PRIME) & 0xffffffffffffffffn;
+    return h;
+}
+
+const allowed = enforce_rights_ontology(q_hash('did:wellfare:alice'));
+console.log('Access granted:', allowed);
+`),
+            rs(`
+use qualia_core_db::{webizen::enforce_rights_ontology, q_hash};
+let ok = enforce_rights_ontology(q_hash("did:wellfare:alice"));
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.enforce_rights_ontology) return { error: 'WASM not loaded or function unavailable' };
+            const hash = BigInt(inputs.did_hash || '0');
+            return { enforced: wasm.enforce_rights_ontology(hash) };
+        },
+        liveInputs: [
+            { name: 'did_hash', label: 'Principal DID hash (u64 decimal)', default: '12345678901234567890' },
+        ],
+    },
+
+    {
+        id: 'governance.prune_mesh',
+        category: 'Governance & Webizen',
+        name: 'prune_and_validate_mesh()',
+        summary: 'Prunes expired or invalidated Quins from a named semantic mesh and verifies its Merkle integrity. Mesh ID 0 is reserved and always returns false.',
+        params: [
+            { name: 'mesh_id', type: 'BigInt (u64)', desc: 'Semantic mesh identifier' },
+        ],
+        returns: 'bool — true if the mesh is valid after pruning',
+        snippets: [
+            js(`
+import init, { prune_and_validate_mesh } from './qualia_core_db.js';
+await init();
+const valid = prune_and_validate_mesh(1n);
+console.log('Mesh valid:', valid);
+`),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // WASM API — uncataloged additions
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'wasm.validate_fhir_observation',
+        category: 'WASM API',
+        name: 'validate_fhir_observation_wasm()',
+        summary: 'Validates a FHIR Observation resource against LOINC reference ranges. Returns an interpretation code: N (Normal), H (High), L (Low), A (Abnormal).',
+        params: [
+            { name: 'loinc_code',      type: 'string',    desc: 'LOINC code e.g. "2093-3" for total cholesterol' },
+            { name: 'value',           type: 'f64',       desc: 'Measured numeric value' },
+            { name: 'unit_ucum',       type: 'string',    desc: 'UCUM unit string e.g. "mmol/L"' },
+            { name: 'reference_low',   type: 'f64|null',  desc: 'Lower bound of normal range (optional)' },
+            { name: 'reference_high',  type: 'f64|null',  desc: 'Upper bound of normal range (optional)' },
+        ],
+        returns: '{ is_valid: bool, status: string, interpretation_code: string }',
+        snippets: [
+            js(`
+import init, { validate_fhir_observation_wasm } from './qualia_core_db.js';
+await init();
+
+const result = validate_fhir_observation_wasm({
+    loinc_code:     '2093-3',        // Total cholesterol
+    value:          5.2,
+    unit_ucum:      'mmol/L',
+    reference_low:  3.5,
+    reference_high: 5.0,
+});
+// { is_valid: true, status: '...', interpretation_code: 'H' }
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.validate_fhir_observation_wasm) return { error: 'WASM not loaded' };
+            return wasm.validate_fhir_observation_wasm({
+                loinc_code:     inputs.loinc  || '2093-3',
+                value:          parseFloat(inputs.value) || 5.2,
+                unit_ucum:      inputs.unit   || 'mmol/L',
+                reference_low:  parseFloat(inputs.low)  || 3.5,
+                reference_high: parseFloat(inputs.high) || 5.0,
+            });
+        },
+        liveInputs: [
+            { name: 'loinc', label: 'LOINC code',  default: '2093-3' },
+            { name: 'value', label: 'Value',        default: '5.2' },
+            { name: 'unit',  label: 'UCUM unit',    default: 'mmol/L' },
+            { name: 'low',   label: 'Ref low',      default: '3.5' },
+            { name: 'high',  label: 'Ref high',     default: '5.0' },
+        ],
+    },
+
+    {
+        id: 'wasm.check_drug_interactions',
+        category: 'WASM API',
+        name: 'check_drug_interactions_wasm()',
+        summary: 'Checks pharmacological interactions between a list of medications using q_hash fingerprinting against a compiled interaction graph.',
+        params: [
+            { name: 'medications', type: 'string[]', desc: 'Medication names — case-insensitive, hashed via q_hash internally' },
+        ],
+        returns: 'Array<{ mechanism: string, severity: string }>',
+        snippets: [
+            js(`
+import init, { check_drug_interactions_wasm } from './qualia_core_db.js';
+await init();
+
+const interactions = check_drug_interactions_wasm({
+    medications: ['warfarin', 'aspirin', 'ibuprofen'],
+});
+for (const ix of interactions) {
+    console.log(\`\${ix.severity}: \${ix.mechanism}\`);
+}
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.check_drug_interactions_wasm) return { error: 'WASM not loaded' };
+            const meds = (inputs.meds || 'warfarin, aspirin').split(',').map(s => s.trim());
+            return wasm.check_drug_interactions_wasm({ medications: meds });
+        },
+        liveInputs: [
+            { name: 'meds', label: 'Medications (comma-separated)', default: 'warfarin, aspirin, ibuprofen' },
+        ],
+    },
+
+    {
+        id: 'wasm.evaluate_lipinski',
+        category: 'WASM API',
+        name: 'evaluate_lipinski_wasm()',
+        summary: 'Evaluates Lipinski Rule of Five, Veber, Ghose, and Egan drug-likeness filters for oral bioavailability from a SMILES string.',
+        params: [
+            { name: 'smiles', type: 'string', desc: 'SMILES molecular representation' },
+        ],
+        returns: '{ lipinski_passes, lipinski_violations, veber_passes, ghose_passes, egan_passes, mw, logp, tpsa, hbd, hba, rot_bonds }',
+        snippets: [
+            js(`
+import init, { evaluate_lipinski_wasm } from './qualia_core_db.js';
+await init();
+
+const r = evaluate_lipinski_wasm({ smiles: 'CC(=O)Oc1ccccc1C(=O)O' }); // aspirin
+console.log('Lipinski passes:', r.lipinski_passes, '| MW:', r.mw.toFixed(1));
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.evaluate_lipinski_wasm) return { error: 'WASM not loaded' };
+            return wasm.evaluate_lipinski_wasm({ smiles: inputs.smiles || 'CC(=O)Oc1ccccc1C(=O)O' });
+        },
+        liveInputs: [{ name: 'smiles', label: 'SMILES', default: 'CC(=O)Oc1ccccc1C(=O)O' }],
+    },
+
+    {
+        id: 'wasm.detect_functional_groups',
+        category: 'WASM API',
+        name: 'detect_functional_groups_wasm()',
+        summary: 'Identifies functional groups (hydroxyl, carbonyl, amine, carboxyl, etc.) in a molecule from SMILES. Returns detected groups and pKa estimates for ionisable sites.',
+        params: [
+            { name: 'smiles', type: 'string', desc: 'SMILES string' },
+        ],
+        returns: '{ functional_groups: string[], pka_estimates: [group, pka, is_acid][] }',
+        snippets: [
+            js(`
+import init, { detect_functional_groups_wasm } from './qualia_core_db.js';
+await init();
+
+const r = detect_functional_groups_wasm({ smiles: 'CCO' }); // ethanol
+console.log('Groups:', r.functional_groups);
+console.log('pKa:', r.pka_estimates);
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.detect_functional_groups_wasm) return { error: 'WASM not loaded' };
+            return wasm.detect_functional_groups_wasm({ smiles: inputs.smiles || 'CCO' });
+        },
+        liveInputs: [{ name: 'smiles', label: 'SMILES', default: 'CCO' }],
+    },
+
+    {
+        id: 'wasm.compute_reaction_metrics',
+        category: 'WASM API',
+        name: 'compute_reaction_metrics_wasm()',
+        summary: 'Computes green chemistry metrics: atom economy, E-factor, process mass intensity (PMI), and reaction mass efficiency (RME).',
+        params: [
+            { name: 'reactant_smiles', type: 'string[]', desc: 'SMILES of each reactant' },
+            { name: 'product_smiles',  type: 'string',   desc: 'SMILES of desired product' },
+            { name: 'yield_fraction',  type: 'f64',      desc: 'Reaction yield 0.0–1.0' },
+            { name: 'solvent_kg',      type: 'f64',      desc: 'Solvent + auxiliary mass in kg' },
+            { name: 'product_kg',      type: 'f64',      desc: 'Collected product mass in kg' },
+        ],
+        returns: '{ atom_economy_pct, e_factor, process_mass_intensity, reaction_mass_efficiency_pct, yield_corrected_ae_pct }',
+        snippets: [
+            js(`
+import init, { compute_reaction_metrics_wasm } from './qualia_core_db.js';
+await init();
+
+const m = compute_reaction_metrics_wasm({
+    reactant_smiles: ['CCO'],        // ethanol
+    product_smiles:  'CC(=O)O',     // acetic acid
+    yield_fraction:  0.85,
+    solvent_kg:      10.0,
+    product_kg:      1.0,
+});
+console.log('Atom economy:', m.atom_economy_pct.toFixed(1) + '%');
+console.log('E-factor:',     m.e_factor.toFixed(2));
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.compute_reaction_metrics_wasm) return { error: 'WASM not loaded' };
+            return wasm.compute_reaction_metrics_wasm({
+                reactant_smiles: [inputs.reactant || 'CCO'],
+                product_smiles:  inputs.product   || 'CC(=O)O',
+                yield_fraction:  parseFloat(inputs.yld)     || 0.85,
+                solvent_kg:      parseFloat(inputs.solvent) || 10.0,
+                product_kg:      parseFloat(inputs.prod_kg) || 1.0,
+            });
+        },
+        liveInputs: [
+            { name: 'reactant', label: 'Reactant SMILES', default: 'CCO' },
+            { name: 'product',  label: 'Product SMILES',  default: 'CC(=O)O' },
+            { name: 'yld',      label: 'Yield',           default: '0.85' },
+            { name: 'solvent',  label: 'Solvent kg',      default: '10' },
+            { name: 'prod_kg',  label: 'Product kg',      default: '1' },
+        ],
+    },
+
+    {
+        id: 'wasm.compute_thermochemistry',
+        category: 'WASM API',
+        name: 'compute_thermochemistry_wasm()',
+        summary: 'Calculates Gibbs free energy (ΔG = ΔH − TΔS), equilibrium constant (Keq), Henderson-Hasselbalch pH, and Arrhenius rate constant. Supply only the fields you need — others may be null.',
+        params: [
+            { name: 'delta_h_j_mol',           type: 'f64',     desc: 'Enthalpy change in J/mol' },
+            { name: 'delta_s_j_mol_k',         type: 'f64',     desc: 'Entropy change in J/(mol·K)' },
+            { name: 'temp_k',                  type: 'f64',     desc: 'Temperature in Kelvin' },
+            { name: 'pka',                     type: 'f64|null', desc: 'pKa for Henderson-Hasselbalch (optional)' },
+            { name: 'conc_base',               type: 'f64|null', desc: '[A⁻] concentration — only when pka is set' },
+            { name: 'conc_acid',               type: 'f64|null', desc: '[HA] concentration — only when pka is set' },
+            { name: 'activation_energy_j_mol', type: 'f64|null', desc: 'Activation energy Ea in J/mol for Arrhenius' },
+            { name: 'pre_exponential_a',       type: 'f64|null', desc: 'Pre-exponential factor A for Arrhenius' },
+        ],
+        returns: '{ gibbs_energy_j_mol, equilibrium_constant, ph: f64|null, rate_constant: f64|null }',
+        snippets: [
+            js(`
+import init, { compute_thermochemistry_wasm } from './qualia_core_db.js';
+await init();
+
+// Gibbs + Keq for an exothermic reaction at 298 K
+const r = compute_thermochemistry_wasm({
+    delta_h_j_mol:   -100_000,
+    delta_s_j_mol_k: 50,
+    temp_k:          298.15,
+    pka: null, conc_base: null, conc_acid: null,
+    activation_energy_j_mol: null, pre_exponential_a: null,
+});
+console.log('ΔG =', r.gibbs_energy_j_mol.toFixed(0), 'J/mol');
+console.log('Keq =', r.equilibrium_constant.toExponential(2));
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.compute_thermochemistry_wasm) return { error: 'WASM not loaded' };
+            return wasm.compute_thermochemistry_wasm({
+                delta_h_j_mol:   parseFloat(inputs.dh) || -100000,
+                delta_s_j_mol_k: parseFloat(inputs.ds) || 50,
+                temp_k:          parseFloat(inputs.t)  || 298.15,
+                pka: null, conc_base: null, conc_acid: null,
+                activation_energy_j_mol: null, pre_exponential_a: null,
+            });
+        },
+        liveInputs: [
+            { name: 'dh', label: 'ΔH (J/mol)',   default: '-100000' },
+            { name: 'ds', label: 'ΔS (J/mol·K)', default: '50' },
+            { name: 't',  label: 'Temp (K)',      default: '298.15' },
+        ],
+    },
+
+    {
+        id: 'wasm.validate_fasta',
+        category: 'WASM API',
+        name: 'validate_fasta_wasm()',
+        summary: 'Validates a FASTA sequence record, auto-detects the alphabet (DNA / RNA / Protein), and reports any invalid characters.',
+        params: [
+            { name: 'header',   type: 'string', desc: 'FASTA header line (without the leading >)' },
+            { name: 'sequence', type: 'string', desc: 'Sequence string — case insensitive' },
+        ],
+        returns: '{ is_valid: bool, alphabet: string, invalid_chars: char[] }',
+        snippets: [
+            js(`
+import init, { validate_fasta_wasm } from './qualia_core_db.js';
+await init();
+
+const r = validate_fasta_wasm({
+    header:   'seq1 | Homo sapiens | BRCA1 exon 11',
+    sequence: 'ATCGATCGATCGTAGCTAGC',
+});
+console.log(r.is_valid, r.alphabet); // true, "Dna"
+`),
+            rs(`
+use qualia_core_db::domains::biological::bioinformatics::validate_fasta_record;
+
+let rec = validate_fasta_record("seq1 | BRCA1", b"ATCGATCG");
+assert!(rec.is_valid);
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.validate_fasta_wasm) return { error: 'WASM not loaded' };
+            return wasm.validate_fasta_wasm({
+                header:   inputs.header || 'seq1',
+                sequence: inputs.seq    || 'ATCGATCGATCG',
+            });
+        },
+        liveInputs: [
+            { name: 'header', label: 'Header', default: 'seq1 | Homo sapiens' },
+            { name: 'seq',    label: 'Sequence', default: 'ATCGATCGATCG' },
+        ],
+    },
+
+    {
+        id: 'wasm.simulate_gbm_path',
+        category: 'WASM API',
+        name: 'simulate_gbm_path_wasm()',
+        summary: 'Simulates a single Geometric Brownian Motion price path using the exact closed-form solution (S(t) = S₀·exp((μ−σ²/2)t + σ√t·Z)). Returns the path, final price, and min/max.',
+        params: [
+            { name: 'initial_price', type: 'f64', desc: 'Starting asset price S₀' },
+            { name: 'drift',         type: 'f64', desc: 'Expected annual return μ' },
+            { name: 'volatility',    type: 'f64', desc: 'Annual volatility σ' },
+            { name: 'time_horizon',  type: 'f64', desc: 'Time in years T' },
+            { name: 'steps',         type: 'u32', desc: 'Number of time steps (capped at 252)' },
+        ],
+        returns: '{ final_price: f64, min_price: f64, max_price: f64, path: f64[] }',
+        snippets: [
+            js(`
+import init, { simulate_gbm_path_wasm } from './qualia_core_db.js';
+await init();
+
+const r = simulate_gbm_path_wasm({
+    initial_price: 100.0,
+    drift:         0.08,   // 8% annual return
+    volatility:    0.20,   // 20% volatility
+    time_horizon:  1.0,
+    steps:         252,    // daily steps
+});
+console.log('Final price:', r.final_price.toFixed(2));
+console.log('Path length:', r.path.length);
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.simulate_gbm_path_wasm) return { error: 'WASM not loaded' };
+            return wasm.simulate_gbm_path_wasm({
+                initial_price: parseFloat(inputs.price) || 100,
+                drift:         parseFloat(inputs.drift) || 0.08,
+                volatility:    parseFloat(inputs.vol)   || 0.2,
+                time_horizon:  parseFloat(inputs.t)     || 1.0,
+                steps:         parseInt(inputs.steps)   || 252,
+            });
+        },
+        liveInputs: [
+            { name: 'price', label: 'Initial price', default: '100' },
+            { name: 'drift', label: 'Drift μ',       default: '0.08' },
+            { name: 'vol',   label: 'Volatility σ',  default: '0.2' },
+            { name: 't',     label: 'Years T',       default: '1' },
+            { name: 'steps', label: 'Steps',         default: '252' },
+        ],
+    },
+
+    {
+        id: 'wasm.black_scholes',
+        category: 'WASM API',
+        name: 'black_scholes_wasm()',
+        summary: 'Black-Scholes European option pricing with full Greeks (delta, gamma, vega, theta, rho). Uses the standard closed-form solution for European calls and puts.',
+        params: [
+            { name: 'spot',       type: 'f64',  desc: 'Underlying asset price S' },
+            { name: 'strike',     type: 'f64',  desc: 'Option strike price K' },
+            { name: 'rate',       type: 'f64',  desc: 'Risk-free interest rate r (annual, e.g. 0.05)' },
+            { name: 'vol',        type: 'f64',  desc: 'Implied volatility σ (annual, e.g. 0.2)' },
+            { name: 'time_years', type: 'f64',  desc: 'Time to expiration in years T' },
+            { name: 'is_call',    type: 'bool', desc: 'true for call option, false for put' },
+        ],
+        returns: '{ price, delta, gamma, vega, theta, rho }',
+        snippets: [
+            js(`
+import init, { black_scholes_wasm } from './qualia_core_db.js';
+await init();
+
+// ATM call: S=K=100, r=5%, σ=20%, T=1yr
+const opt = black_scholes_wasm({
+    spot: 100, strike: 100, rate: 0.05, vol: 0.2, time_years: 1.0, is_call: true,
+});
+console.log('Price:', opt.price.toFixed(2));
+console.log('Delta:', opt.delta.toFixed(4));
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.black_scholes_wasm) {
+                // Pure JS fallback — standard Black-Scholes
+                const S = parseFloat(inputs.spot)   || 100;
+                const K = parseFloat(inputs.strike) || 100;
+                const r = parseFloat(inputs.rate)   || 0.05;
+                const v = parseFloat(inputs.vol)    || 0.2;
+                const T = parseFloat(inputs.t)      || 1.0;
+                const call = inputs.type !== 'put';
+                function phi(x) {
+                    const a1=0.254829592, a2=-0.284496736, a3=1.421413741,
+                          a4=-1.453152027, a5=1.061405429, p=0.3275911;
+                    const sign = x < 0 ? -1 : 1;
+                    x = Math.abs(x);
+                    const t2 = 1/(1+p*x);
+                    const y = 1 - (((((a5*t2+a4)*t2)+a3)*t2+a2)*t2+a1)*t2*Math.exp(-x*x);
+                    return 0.5*(1+sign*y);
+                }
+                const d1 = (Math.log(S/K)+(r+v*v/2)*T)/(v*Math.sqrt(T));
+                const d2 = d1 - v*Math.sqrt(T);
+                const price = call
+                    ? S*phi(d1) - K*Math.exp(-r*T)*phi(d2)
+                    : K*Math.exp(-r*T)*phi(-d2) - S*phi(-d1);
+                const delta = call ? phi(d1) : phi(d1)-1;
+                const nd1   = Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI);
+                const gamma = nd1/(S*v*Math.sqrt(T));
+                const vega  = S*nd1*Math.sqrt(T)/100;
+                const theta = (-(S*nd1*v)/(2*Math.sqrt(T)) - r*K*Math.exp(-r*T)*(call?phi(d2):phi(-d2)))/365;
+                const rho   = call ? K*T*Math.exp(-r*T)*phi(d2)/100 : -K*T*Math.exp(-r*T)*phi(-d2)/100;
+                return { price: +price.toFixed(4), delta: +delta.toFixed(4),
+                         gamma: +gamma.toFixed(6), vega: +vega.toFixed(4),
+                         theta: +theta.toFixed(4), rho: +rho.toFixed(4),
+                         note: 'computed via JS fallback' };
+            }
+            return wasm.black_scholes_wasm({
+                spot:       parseFloat(inputs.spot)   || 100,
+                strike:     parseFloat(inputs.strike) || 100,
+                rate:       parseFloat(inputs.rate)   || 0.05,
+                vol:        parseFloat(inputs.vol)    || 0.2,
+                time_years: parseFloat(inputs.t)      || 1.0,
+                is_call:    inputs.type !== 'put',
+            });
+        },
+        liveInputs: [
+            { name: 'spot',   label: 'Spot S',    default: '100' },
+            { name: 'strike', label: 'Strike K',  default: '100' },
+            { name: 'rate',   label: 'Rate r',    default: '0.05' },
+            { name: 'vol',    label: 'Vol σ',     default: '0.2' },
+            { name: 't',      label: 'Years T',   default: '1' },
+            { name: 'type',   label: 'Type',      default: 'call', options: ['call', 'put'] },
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONTROL THEORY
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'control.pid_step',
+        category: 'Control Theory',
+        name: 'compute_pid_step_wasm()',
+        summary: 'Stateless PID controller step. Returns the control output, updated error, and updated integral for chaining into the next step. Based on control_feedback.rs PidParameters presets (conservative_power_system / aggressive_response).',
+        params: [
+            { name: 'setpoint',      type: 'f64', desc: 'Target value' },
+            { name: 'current_value', type: 'f64', desc: 'Current measured value' },
+            { name: 'prev_error',    type: 'f64', desc: 'Error from the previous step (0 for first step)' },
+            { name: 'integral',      type: 'f64', desc: 'Accumulated integral (0 for first step)' },
+            { name: 'kp',            type: 'f64', desc: 'Proportional gain' },
+            { name: 'ki',            type: 'f64', desc: 'Integral gain' },
+            { name: 'kd',            type: 'f64', desc: 'Derivative gain' },
+            { name: 'dt',            type: 'f64', desc: 'Time step in seconds' },
+        ],
+        returns: '{ output: f64, new_error: f64, new_integral: f64 }',
+        snippets: [
+            js(`
+import init, { compute_pid_step_wasm } from './qualia_core_db.js';
+await init();
+
+// Simulate 10 steps of power grid frequency stabilisation
+let error = 0, integral = 0;
+let value = 80;  // target = 100 (e.g. 100 Hz)
+for (let i = 0; i < 10; i++) {
+    const r = compute_pid_step_wasm({
+        setpoint: 100, current_value: value,
+        prev_error: error, integral,
+        kp: 0.5, ki: 0.1, kd: 0.05, dt: 1.0,
+    });
+    value += r.output;
+    error    = r.new_error;
+    integral = r.new_integral;
+    console.log(\`step \${i+1}: value=\${value.toFixed(2)}\`);
+}
+`),
+            rs(`
+use qualia_core_db::modalities::control_feedback::{ControlState, PidParameters};
+
+let params = PidParameters::conservative_power_system();
+let mut ctrl = ControlState::new(100.0, 80.0, params);
+ctrl.update(85.0, 1_000);   // new_value=85, time_ms=1000
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            // Always available — pure JS fallback
+            const sp  = parseFloat(inputs.sp)  || 100;
+            const cv  = parseFloat(inputs.cv)  || 80;
+            const kp  = parseFloat(inputs.kp)  || 0.5;
+            const ki  = parseFloat(inputs.ki)  || 0.1;
+            const kd  = parseFloat(inputs.kd)  || 0.05;
+            const err = sp - cv;
+            if (wasm?.compute_pid_step_wasm) {
+                return wasm.compute_pid_step_wasm({ setpoint: sp, current_value: cv,
+                    prev_error: 0, integral: 0, kp, ki, kd, dt: 1.0 });
+            }
+            return { output: +(kp * err).toFixed(4), new_error: +err.toFixed(4),
+                     new_integral: +err.toFixed(4), note: 'P-only JS fallback' };
+        },
+        liveInputs: [
+            { name: 'sp', label: 'Setpoint',      default: '100' },
+            { name: 'cv', label: 'Current value', default: '80' },
+            { name: 'kp', label: 'Kp',            default: '0.5' },
+            { name: 'ki', label: 'Ki',            default: '0.1' },
+            { name: 'kd', label: 'Kd',            default: '0.05' },
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SOLVERS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'solvers.sat',
+        category: 'Solvers',
+        name: 'solve_sat_wasm()',
+        summary: 'Bounded DPLL SAT solver. Accepts clauses as arrays of signed integer literals (positive = variable true, negative = variable negated). Returns satisfiability and a satisfying assignment.',
+        params: [
+            { name: 'clauses', type: 'number[][]', desc: 'Array of clauses; each clause is an array of integer literals' },
+        ],
+        returns: '{ satisfiable: bool, assignment: Record<string, bool> }',
+        snippets: [
+            js(`
+import init, { solve_sat_wasm } from './qualia_core_db.js';
+await init();
+
+// (x1 ∨ x2 ∨ ¬x3) ∧ (¬x1 ∨ x3) ∧ (x2 ∨ ¬x3)
+const result = solve_sat_wasm({
+    clauses: [[1, 2, -3], [-1, 3], [2, -3]],
+});
+console.log('SAT:', result.satisfiable);
+console.log('Assignment:', result.assignment);
+`),
+            rs(`
+use qualia_core_db::solvers::symbolic_logic::{BoundedSatSolver, Clause, Literal, SolverConfig};
+
+let mut solver = BoundedSatSolver::new(SolverConfig::default());
+solver.add_clause(Clause { literals: [Literal { var: 1, positive: true }, ...] })?;
+let state = solver.solve()?;
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.solve_sat_wasm) return { error: 'WASM not loaded — solve_sat_wasm not yet exported' };
+            try {
+                return wasm.solve_sat_wasm({ clauses: JSON.parse(inputs.clauses || '[[1,2]]') });
+            } catch (e) { return { error: e.message }; }
+        },
+        liveInputs: [
+            { name: 'clauses', label: 'Clauses (JSON array of arrays)', default: '[[1,2,-3],[-1,3],[2,-3]]' },
+        ],
+    },
+
+    {
+        id: 'solvers.forward_chain',
+        category: 'Solvers',
+        name: 'forward_chain_wasm()',
+        summary: 'Forward-chaining defeasible inference engine. Derives all provable conclusions from facts and rules, respecting defeater cancellation via ForwardChainingDefeasible in symbolic_logic.rs.',
+        params: [
+            { name: 'facts', type: 'string[]',                    desc: 'Initial fact propositions (string atoms)' },
+            { name: 'rules', type: '{head, body, defeaters}[]',   desc: 'Inference rules — head fires when all body facts hold and no defeater fires' },
+        ],
+        returns: '{ inferred: string[] }',
+        snippets: [
+            js(`
+import init, { forward_chain_wasm } from './qualia_core_db.js';
+await init();
+
+const kb = {
+    facts: ['bird', 'penguin'],
+    rules: [
+        { head: 'flies',    body: ['bird'],   defeaters: ['penguin'] },
+        { head: 'swims',    body: ['penguin'], defeaters: [] },
+    ],
+};
+const r = forward_chain_wasm(kb);
+console.log(r.inferred); // ['swims'] — penguin defeater cancels 'flies'
+`),
+            rs(`
+use qualia_core_db::solvers::symbolic_logic::{ForwardChainingDefeasible, DefeasibleRule, Fact};
+
+let mut engine = ForwardChainingDefeasible::new(SolverConfig::default());
+engine.add_fact(Fact { proposition: q_hash("bird"), ... })?;
+let state = engine.infer()?;
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            if (!wasm?.forward_chain_wasm) return { error: 'WASM not loaded — forward_chain_wasm not yet exported' };
+            try { return wasm.forward_chain_wasm(JSON.parse(inputs.kb)); }
+            catch (e) { return { error: e.message }; }
+        },
+        liveInputs: [
+            { name: 'kb', label: 'Knowledge base (JSON)', default: '{"facts":["bird","penguin"],"rules":[{"head":"flies","body":["bird"],"defeaters":["penguin"]},{"head":"swims","body":["penguin"],"defeaters":[]}]}' },
+        ],
+    },
+
+    {
+        id: 'solvers.ode_decay',
+        category: 'Solvers',
+        name: 'solve_ode_exponential_decay_wasm()',
+        summary: 'RK4 fourth-order Runge-Kutta solver for the canonical exponential decay ODE: dy/dt = −k·y. Returns full time and value arrays. Backed by RungeKutta4Static in solvers/calculus/mod.rs.',
+        params: [
+            { name: 'k',       type: 'f64', desc: 'Decay constant (must be > 0)' },
+            { name: 'y0',      type: 'f64', desc: 'Initial value y(t₀)' },
+            { name: 't0',      type: 'f64', desc: 'Start time' },
+            { name: 't_final', type: 'f64', desc: 'End time' },
+            { name: 'dt',      type: 'f64', desc: 'Time step (smaller = more accurate)' },
+        ],
+        returns: '{ t_values: f64[], y_values: f64[], final_y: f64 }',
+        snippets: [
+            js(`
+import init, { solve_ode_exponential_decay_wasm } from './qualia_core_db.js';
+await init();
+
+// Radioactive decay: half-life T½ = ln2/k
+const r = solve_ode_exponential_decay_wasm({
+    k: 0.5, y0: 100, t0: 0, t_final: 5, dt: 0.1,
+});
+console.log('Final value:', r.final_y.toFixed(2)); // ≈ 8.21 (analytical: 100·e^{-2.5})
+`),
+            rs(`
+use qualia_core_db::solvers::calculus::{RungeKutta4Static, SolverConfig};
+
+let mut rk4 = RungeKutta4Static::new(0.1, SolverConfig::default());
+let result = rk4.integrate(&|_t, y| [-0.5 * y[0], 0.0, 0.0, 0.0], 0.0, [100.0, 0.0, 0.0, 0.0], 5.0)?;
+`),
+        ],
+        live: async (wasm, _native, inputs) => {
+            const k  = parseFloat(inputs.k)  || 0.5;
+            const y0 = parseFloat(inputs.y0) || 100;
+            const tf = parseFloat(inputs.tf) || 5;
+            if (wasm?.solve_ode_exponential_decay_wasm) {
+                return wasm.solve_ode_exponential_decay_wasm({ k, y0, t0: 0, t_final: tf, dt: 0.1 });
+            }
+            // Analytical fallback
+            const final_y = y0 * Math.exp(-k * tf);
+            return { final_y: +final_y.toFixed(4), note: 'analytical solution (WASM not loaded)' };
+        },
+        liveInputs: [
+            { name: 'k',  label: 'Decay rate k',   default: '0.5' },
+            { name: 'y0', label: 'Initial value',  default: '100' },
+            { name: 'tf', label: 'Final time',     default: '5' },
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SEMANTIC WEB
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    {
+        id: 'semantic.rdf_star',
+        category: 'Semantic Web',
+        name: 'RDF-Star (Nested Triples)',
+        summary: 'RDF-Star support via the RdfStarParser and RdfStarSerializer traits in rdf_star.rs. Embedded triples are stored as virtual NQuin IDs — bit 62 of the subject field signals a nested-triple reference. The virtual ID is the FNV-1a hash of the serialised (s, p, o) components.',
+        params: [
+            { name: 'embedded_triple', type: '(u64, u64, u64)', desc: 'Subject, predicate, object of the triple being annotated' },
+            { name: 'annotation_pred', type: 'u64',             desc: 'Predicate of the meta-statement' },
+            { name: 'annotation_obj',  type: 'u64',             desc: 'Object of the meta-statement' },
+        ],
+        returns: 'u64 — virtual subject ID (bit 62 set)',
+        snippets: [
+            rs(`
+use qualia_core_db::rdf_star::RdfStarParser;
+
+// Parse an embedded triple << :Alice :knows :Bob >> :certainty 0.9
+let virtual_id = parser.parse_embedded_triple(input)?;
+// virtual_id has bit 62 set — signals nested reference in NQuin subject field
+`),
+            nt(`
+# RDF-Star (N-Triples*) — annotating a triple with a certainty score
+<< <https://example.org/Alice> <http://xmlns.com/foaf/0.1/knows> <https://example.org/Bob> >>
+    <https://example.org/certainty> "0.9"^^<http://www.w3.org/2001/XMLSchema#decimal> .
+`),
+            js(`
+// Nested triple bit convention — bit 62 marks a virtual RDF-Star subject
+const NESTED_BIT = 1n << 62n;
+const virtualId  = q_hash('alice:knows:bob') | NESTED_BIT;
+
+const annotation = {
+    subject:   virtualId,              // << alice knows bob >>
+    predicate: q_hash('ex:certainty'),
+    object:    q_hash('"0.9"^^xsd:decimal'),
+};
+`),
+        ],
+    },
+
+    {
+        id: 'semantic.wal',
+        category: 'Semantic Web',
+        name: 'WAL (Write-Ahead Log)',
+        summary: 'Crash-safe append-only WAL in wal.rs. append_mutation() synchronously fsync-flushes each NQuin. recover() replays uncommitted quins after restart. checkpoint_to_dag() commits the WAL into a Merkle DAG node and returns a 32-byte SHA3-256 root hash.',
+        params: [
+            { name: 'path', type: '&Path', desc: 'File path — typically data_dir/wal.log' },
+        ],
+        returns: 'WalLog struct with open, append_mutation, recover, truncate, checkpoint_to_dag',
+        snippets: [
+            rs(`
+use qualia_core_db::wal::WalLog;
+
+// Open (or create) the WAL
+let mut wal = WalLog::open("data/wal.log")?;
+
+// Append a mutation — synchronous flush, zero memory allocation
+wal.append_mutation(&quin)?;
+
+// Crash recovery — replay all uncommitted quins
+let pending = wal.recover()?;
+for q in &pending { graph.insert(q); }
+
+// Checkpoint: write a Merkle DAG node and truncate the WAL
+let root_hash = wal.checkpoint_to_dag(&mut dag_store, author_did, timestamp_ms)?;
+`),
+        ],
+    },
 ];
 
 // ─── Index helpers ─────────────────────────────────────────────────────────────

@@ -23,6 +23,9 @@ import { register as regAgency }         from './suites/modality-agency.js';
 import { register as regComorbidity }    from './suites/modality-comorbidity.js';
 import { register as regDicom }            from './suites/modality-dicom.js';
 import { register as regDeontic }        from './suites/modality-deontic.js';
+import { register as regControlTheory }  from './suites/modality-control-theory.js';
+import { register as regCrdt }           from './suites/modality-crdt.js';
+import { register as regNeuroSymbolic }  from './suites/modality-neuro-symbolic.js';
 import { register as regOntology }       from './suites/ontology-alignment.js';
 
 // WASM-backed (wasm + both)
@@ -36,11 +39,16 @@ import { register as regGovernance }     from './suites/wasm-governance.js';
 import { register as regWasmIngest }     from './suites/wasm-ingest.js';
 import { register as regProfiles }       from './suites/wasm-profiles.js';
 import { register as regResources }      from './suites/wasm-resources.js';
+import { register as regRdfStar }        from './suites/wasm-rdf-star.js';
+import { register as regSolvers }        from './suites/wasm-solvers.js';
+import { register as regFinanceExtras }  from './suites/wasm-finance-extras.js';
 
 // Native-only (native + both)
 import { register as regNativeDaemon }   from './suites/native-daemon.js';
 import { register as regNativeQuery }    from './suites/native-query.js';
 import { register as regNativeLive }     from './suites/native-live.js';
+import { register as regNativeChat }     from './suites/native-chat.js';
+import { register as regNativeTorrent }  from './suites/native-torrent.js';
 
 // Both-mode comparison (both only)
 import { register as regComparison }     from './suites/native-comparison.js';
@@ -142,6 +150,9 @@ function buildRunner(mode) {
     regComorbidity(r, c);
     regDicom(r, c);
     regDeontic(r, c);
+    regControlTheory(r, c);
+    regCrdt(r, c);
+    regNeuroSymbolic(r, c);
     regOntology(r, c);
 
     if (mode === 'wasm' || mode === 'both') {
@@ -155,12 +166,17 @@ function buildRunner(mode) {
         regWasmIngest(r, c);
         regProfiles(r, c);
         regResources(r, c);
+        regRdfStar(r, c);
+        regSolvers(r, c);
+        regFinanceExtras(r, c);
     }
 
     if (mode === 'native' || mode === 'both') {
         regNativeDaemon(r, c);
         regNativeQuery(r, c);
         regNativeLive(r, c);
+        regNativeChat(r, c);
+        regNativeTorrent(r, c);
     }
 
     if (mode === 'both') {
@@ -227,6 +243,9 @@ function suiteModule(name, path = []) {
         ['Comorbidity:', 'modality-comorbidity.js'],
         ['DICOM:', 'modality-dicom.js'],
         ['Deontic:', 'modality-deontic.js'],
+        ['Modality: Control Theory', 'modality-control-theory.js'],
+        ['Modality: LWW CRDT', 'modality-crdt.js'],
+        ['Modality: Neuro-Symbolic', 'modality-neuro-symbolic.js'],
         ['Ontology:', 'ontology-alignment.js'],
         ['WASM: Query Engine', 'wasm-query-engine.js'],
         ['WASM: Bioinformatics', 'wasm-bioinformatics.js'],
@@ -238,6 +257,11 @@ function suiteModule(name, path = []) {
         ['WASM: Ingest', 'wasm-ingest.js'],
         ['WASM: Capability Profiles', 'wasm-profiles.js'],
         ['WASM: Resource Catalog', 'wasm-resources.js'],
+        ['WASM: RDF-Star', 'wasm-rdf-star.js'],
+        ['WASM: Solvers', 'wasm-solvers.js'],
+        ['WASM: Finance Extras', 'wasm-finance-extras.js'],
+        ['Native: Chat', 'native-chat.js'],
+        ['Native: WebTorrent', 'native-torrent.js'],
         ['Native: Daemon', 'native-daemon.js'],
         ['Native: Dev-mode', 'native-daemon.js'],
         ['Native: Query', 'native-query.js'],
