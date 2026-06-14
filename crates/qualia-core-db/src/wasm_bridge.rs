@@ -129,15 +129,49 @@ pub struct FraminghamParams {
 #[wasm_bindgen]
 pub fn compute_framingham_risk_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: FraminghamParams = serde_wasm_bindgen::from_value(val)?;
-    // Mocked for WASM due to clinical_engine dependency removal
+
+    // D'Agostino et al. 2008 General Cardiovascular Risk Score (Framingham Heart
+    // Study, Circulation 117:743). Self-contained Cox model — no clinical_engine
+    // dependency. Cholesterol inputs are mmol/L; the model uses mg/dL (×38.67).
+    let tc_mgdl  = (p.total_cholesterol_mmol * 38.67).max(1.0);
+    let hdl_mgdl = (p.hdl_cholesterol_mmol * 38.67).max(1.0);
+    let ln_age = (p.age as f64).max(1.0).ln();
+    let ln_tc  = tc_mgdl.ln();
+    let ln_hdl = hdl_mgdl.ln();
+    let ln_sbp = p.systolic_bp.max(1.0).ln();
+
+    let (sum, mean, s0) = if p.sex_male {
+        let mut s = 3.06117 * ln_age
+            + 1.12370 * ln_tc
+            - 0.93263 * ln_hdl
+            + (if p.bp_treated { 1.99881 } else { 1.93303 }) * ln_sbp;
+        if p.current_smoker { s += 0.65451; }
+        if p.diabetic       { s += 0.57367; }
+        (s, 23.9802_f64, 0.88936_f64)
+    } else {
+        let mut s = 2.32888 * ln_age
+            + 1.20904 * ln_tc
+            - 0.70833 * ln_hdl
+            + (if p.bp_treated { 2.82263 } else { 2.76157 }) * ln_sbp;
+        if p.current_smoker { s += 0.52873; }
+        if p.diabetic       { s += 0.69154; }
+        (s, 26.1931_f64, 0.95012_f64)
+    };
+
+    // Risk = 1 − S0(10)^exp(Σβx − mean), expressed as a percentage.
+    let risk = ((1.0 - s0.powf((sum - mean).exp())) * 100.0).clamp(0.0, 100.0);
+    let category = if risk < 10.0 { "Low" }
+        else if risk < 20.0 { "Intermediate" }
+        else { "High" };
+
     #[derive(Serialize)]
     struct RiskResult {
         risk_10yr_pct: f64,
         category: String,
     }
     Ok(serde_wasm_bindgen::to_value(&RiskResult {
-        risk_10yr_pct: 0.0,
-        category: "Low".to_string(),
+        risk_10yr_pct: risk,
+        category: category.to_string(),
     })?)
 }
 
