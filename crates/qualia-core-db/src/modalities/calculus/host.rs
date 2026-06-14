@@ -285,6 +285,10 @@ impl Drop for IocpGridManager {
 
 #[cfg(target_os = "linux")]
 use libc::{c_void, mlock, O_DIRECT};
+#[cfg(target_os = "linux")]
+use std::os::unix::fs::OpenOptionsExt;
+#[cfg(target_os = "linux")]
+use std::os::unix::io::AsRawFd;
 
 /// Linux io_uring-based zero-copy streamer.
 ///
@@ -294,9 +298,7 @@ use libc::{c_void, mlock, O_DIRECT};
 pub struct IoUringGridManager {
     ring: io_uring::IoUring,
     file: File,
-    #[repr(C, align(4096))]
     buffer_a: DmaBuffer<DEFAULT_BUFFER_SIZE>,
-    #[repr(C, align(4096))]
     buffer_b: DmaBuffer<DEFAULT_BUFFER_SIZE>,
     active_buffer: BufferId,
     pending_submission: bool,
@@ -407,12 +409,12 @@ impl ZeroCopyStreamer for IoUringGridManager {
             self.get_inactive_buffer_mut().as_mut_ptr(),
             self.get_inactive_buffer().len() as u32,
         )
-        .offset(offset as i64)
+        .offset(offset)
         .build();
         
         self.ring.submission()
             .push(&read_op)
-            .map_err(IoError::IoError)?;
+            .map_err(|e| IoError::IoError(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
         
         self.pending_submission = true;
         Ok(())
@@ -425,10 +427,11 @@ impl ZeroCopyStreamer for IoUringGridManager {
         
         match self.ring.submit_and_wait(1) {
             Ok(_) => {
-                if let Some(cqe) = self.ring.completion().next() {
+                let cqe_result = self.ring.completion().next().map(|cqe| cqe.result());
+                if let Some(res) = cqe_result {
                     self.pending_submission = false;
                     
-                    if cqe.result() >= 0 {
+                    if res >= 0 {
                         self.swap_buffers();
                         Some(self.get_active_buffer())
                     } else {
