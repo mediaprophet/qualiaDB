@@ -66,7 +66,6 @@ clippy.json
 clippy_report.md
 
 # QPU internal functionality (undocumented, private)
-qpu/
 
 # Private research documents (not for public repository)
 private/
