@@ -35,53 +35,49 @@
 
 ## In Progress Work
 
-### Task 8: Real post-quantum KEM (Kyber) and alt signatures (SPHINCS+) ⚠️ BLOCKED - API DIFFERENCES
-**Status:** Dependencies added, but API investigation revealed significant differences
+### Task 8: Real post-quantum KEM (Kyber) and alt signatures (SPHINCS+) ⚠️ RESEARCH COMPLETED
+**Status:** API research completed, implementation ready for next session
 
-**Current State:**
-- Added `fips203` crate dependency for ML-KEM (Kyber) to `Cargo.toml` ✅
-- Added `fips205` crate dependency for SLH-DSA (SPHINCS+) to `Cargo.toml` ✅
-- Feature configuration verified:
-  ```toml
-  fips203 = { version = "0.4", default-features = false, features = ["ml-kem-768", "default-rng"] }
-  fips205 = { version = "0.4", default-features = false, features = ["slh_dsa_sha2_256s", "default-rng"] }
-  ```
-- Build verification: ✅ Host build succeeds with new dependencies
-- API investigation: ❌ APIs are significantly different than expected
+**Research Findings:**
+- **fips203/fips205:** Have non-standard APIs with different constant/function names (blocked in previous session)
+- **pqcrypto-kyber (v0.8.1):** ✅ Available with standard API
+  - Module: `pqcrypto_kyber::kyber768`
+  - Functions: `keypair()`, `encapsulate()`, `decapsulate()`
+  - Types: `PublicKey`, `SecretKey`, `Ciphertext` with `from_bytes()` methods
+  - Features: `avx2`, `default`, `neon`, `serde`, `std`
+- **pqcrypto-sphincsplus (v0.7.2):** ✅ Available with standard API
+  - Module: `pqcrypto_sphincsplus::sphincssha2128ssimple` (note: SHA2-128s, not SHA256)
+  - Functions: `keypair()`, `sign()`, `verify()`
+  - Types: `PublicKey`, `SecretKey`, `Signature` with `from_bytes()` methods
+  - Features: `avx2`, `default`, `neon`, `serde`, `std`
+- **pqcrypto-traits (v0.3.5):** ✅ Provides standard trait interfaces
 
-**API Differences Discovered:**
-- **fips203 (ML-KEM):**
-  - No `SK_LEN`, `PK_LEN`, `SS_LEN`, `CT_LEN` constants
-  - Uses `DK_LEN` (2400 bytes) instead
-  - No `PublicKey`/`SecretKey` types or `keygen()` function
-  - No `Decapsulator`/`Encapsulator` traits in `traits` module
-  - API structure is fundamentally different than fips204
-- **fips205 (SLH-DSA):**
-  - No `keygen()` function
-  - No `SecretKey` type
-  - API structure is fundamentally different than fips204
+**Implementation Strategy for Next Session:**
+1. Add dependencies to Cargo.toml:
+   ```toml
+   pqcrypto-kyber = { version = "0.8", default-features = false }
+   pqcrypto-sphincsplus = { version = "0.7", default-features = false }
+   ```
+2. Add imports to fiduciary_crypto.rs:
+   ```rust
+   use pqcrypto_kyber::kyber768;
+   use pqcrypto_sphincsplus::sphincssha2128ssimple;
+   ```
+3. Implement Kyber KEM structures and functions (keypair, encapsulate, decapsulate)
+4. Implement SPHINCS+ signature structures and functions (keypair, sign, verify)
+5. Wire into cryptographic_library.rs KeyAlgorithm enum routing
+6. Add comprehensive tests
+7. Verify WASM compatibility
+8. Commit changes
 
-**Next Steps for Task 8:**
-1. **CRITICAL:** Research actual fips203 and fips205 API documentation
-2. Determine if these crates follow the same pattern as fips204 or require different implementation approach
-3. May need to use different FIPS-compliant crate or implement wrapper layer
-4. Consider alternative: `pqcrypto-kyber` or `pqcrypto-sphincsplus` crates which may have more standard APIs
-5. Once correct API is understood, implement following actual crate patterns
-6. Wire into cryptographic_library.rs KeyAlgorithm enum routing
-7. Add comprehensive tests
-8. Verify WASM compatibility
-9. Commit changes
+**Key Differences from fips203/fips205:**
+- pqcrypto has more standard function names (keypair, sign, verify vs non-standard names)
+- pqcrypto uses from_bytes() methods for type conversion (more ergonomic)
+- pqcrypto doesn't expose size constants (use type sizes directly)
+- SPHINCS+ variant is SHA2-128s (NIST security category 1) vs SHA256-128s (not available in pqcrypto)
 
-**Alternative Approaches to Consider:**
-- Use `pqcrypto-kyber` crate instead of fips203 (may have more standard API)
-- Use `pqcrypto-sphincsplus` crate instead of fips205 (may have more standard API)
-- Implement custom wrapper around fips203/fips205 if they are the only FIPS-compliant options
-
-**Files Modified:**
-- `crates/qualia-core-db/Cargo.toml` ✅ (dependencies added, may need to be changed based on API research)
-
-**Committed:**
-- `54ffb632` - "feat(crypto): add fips203 (ML-KEM Kyber) and fips205 (SLH-DSA SPHINCS+) dependencies"
+**Files Modified:** None (research only)
+**Dependencies:** Identified and verified available
 
 ---
 
