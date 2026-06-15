@@ -49,6 +49,8 @@ hkdf = { version = "0.12", default-features = false }
 blake3 = { version = "1", default-features = false }
 chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
 fips204 = { version = "0.4", default-features = false, features = ["ml-dsa-65", "default-rng"] }
+fips203 = { version = "0.4", default-features = false, features = ["ml-kem-768", "default-rng"] }
+fips205 = { version = "0.4", default-features = false, features = ["slh_dsa_sha2_256s", "default-rng"] }
 quick-xml = "0.36"
 crossbeam-channel = "0.5"
 core_affinity = "0.8"
