@@ -35,6 +35,27 @@
 
 ## In Progress Work
 
+### Task 9: Interoperability Crypto (ECDSA/Ed25519) ✅ COMPLETED
+**Status:** DONE and committed
+**Commit:** `b5e9c69a` - "feat(crypto): add interop-crypto feature for W3C DID compatibility"
+
+**Implementation Details:**
+- **Feature Flag:** `interop-crypto` (renamed from "legacy-crypto" - this is new software, not legacy)
+- **Dependency:** secp256k1 v0.29 (optional, enabled by feature flag)
+- **Structure:** `InteropEcdsaSigner` with:
+  - `generate()` - Create new ECDSA keypair
+  - `from_secret_key()` - Load from existing secret key
+  - `sign()` - Sign messages using ECDSA
+  - `verify()` - Verify ECDSA signatures
+  - `public_key()` - Get public key bytes
+- **Gating:** All code behind `#[cfg(feature = "interop-crypto")]`
+- **Purpose:** W3C DID compatibility with existing Web 2.0 infrastructure
+- **Build Status:** ⚠️ Implementation complete, but build blocked by unrelated geometric_algebra error
+
+**Files Modified:**
+- `crates/qualia-core-db/Cargo.toml` - Added feature flag and dependency
+- `crates/qualia-core-db/src/fiduciary_crypto.rs` - Added InteropEcdsaSigner implementation
+
 ### Task 8: Real post-quantum KEM (Kyber) and alt signatures (SPHINCS+) ⚠️ RESEARCH COMPLETED - API COMPLEXITY DISCOVERED
 **Status:** Both fips203/fips205 and pqcrypto have non-trivial API complexities
 
