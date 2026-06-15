@@ -31,6 +31,7 @@ pub mod webizen_validator;
 pub mod webizen_identifiers;
 pub mod sparql_library;
 pub use sparql_library::*;
+pub mod semantic_culler;
 
 
 #[cfg(not(target_arch = "wasm32"))]
