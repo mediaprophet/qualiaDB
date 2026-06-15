@@ -35,49 +35,39 @@
 
 ## In Progress Work
 
-### Task 8: Real post-quantum KEM (Kyber) and alt signatures (SPHINCS+) ⚠️ RESEARCH COMPLETED
-**Status:** API research completed, implementation ready for next session
+### Task 8: Real post-quantum KEM (Kyber) and alt signatures (SPHINCS+) ⚠️ RESEARCH COMPLETED - API COMPLEXITY DISCOVERED
+**Status:** Both fips203/fips205 and pqcrypto have non-trivial API complexities
 
 **Research Findings:**
-- **fips203/fips205:** Have non-standard APIs with different constant/function names (blocked in previous session)
-- **pqcrypto-kyber (v0.8.1):** ✅ Available with standard API
-  - Module: `pqcrypto_kyber::kyber768`
-  - Functions: `keypair()`, `encapsulate()`, `decapsulate()`
-  - Types: `PublicKey`, `SecretKey`, `Ciphertext` with `from_bytes()` methods
-  - Features: `avx2`, `default`, `neon`, `serde`, `std`
-- **pqcrypto-sphincsplus (v0.7.2):** ✅ Available with standard API
-  - Module: `pqcrypto_sphincsplus::sphincssha2128ssimple` (note: SHA2-128s, not SHA256)
-  - Functions: `keypair()`, `sign()`, `verify()`
-  - Types: `PublicKey`, `SecretKey`, `Signature` with `from_bytes()` methods
-  - Features: `avx2`, `default`, `neon`, `serde`, `std`
-- **pqcrypto-traits (v0.3.5):** ✅ Provides standard trait interfaces
 
-**Implementation Strategy for Next Session:**
-1. Add dependencies to Cargo.toml:
-   ```toml
-   pqcrypto-kyber = { version = "0.8", default-features = false }
-   pqcrypto-sphincsplus = { version = "0.7", default-features = false }
-   ```
-2. Add imports to fiduciary_crypto.rs:
-   ```rust
-   use pqcrypto_kyber::kyber768;
-   use pqcrypto_sphincsplus::sphincssha2128ssimple;
-   ```
-3. Implement Kyber KEM structures and functions (keypair, encapsulate, decapsulate)
-4. Implement SPHINCS+ signature structures and functions (keypair, sign, verify)
-5. Wire into cryptographic_library.rs KeyAlgorithm enum routing
-6. Add comprehensive tests
-7. Verify WASM compatibility
-8. Commit changes
+**fips203/fips205 (FIPS-compliant):**
+- Non-standard APIs with different constant/function names
+- No `PublicKey`/`SecretKey` types with simple methods
+- Blocked in previous session
 
-**Key Differences from fips203/fips205:**
-- pqcrypto has more standard function names (keypair, sign, verify vs non-standard names)
-- pqcrypto uses from_bytes() methods for type conversion (more ergonomic)
-- pqcrypto doesn't expose size constants (use type sizes directly)
-- SPHINCS+ variant is SHA2-128s (NIST security category 1) vs SHA256-128s (not available in pqcrypto)
+**pqcrypto-kyber (v0.8.1):**
+- Available but uses trait-based API via `pqcrypto-traits`
+- Types don't have `as_ref()` or `from_bytes()` methods
+- Requires using `pqcrypto_traits::kem::PublicKey` trait
+- Encapsulation/decapsulation functions available
+- Would require significant wrapper implementation
+
+**pqcrypto-sphincsplus (v0.7.2):**
+- Available but API differs from expected pattern
+- No `Signature` type or `verify()` function in module
+- Variant is SHA2-128s (NIST security category 1)
+- Would require significant API research
+
+**Conclusion:**
+Both the fips and pqcrypto families have non-trivial API complexities that would require substantial implementation effort to create ergonomic wrappers. Given the time invested and the complexity discovered, this task requires deeper API research or consideration of alternative approaches.
+
+**Recommendation:**
+- Consider whether Task 8 is critical for v0.0.13 or can be deferred
+- If critical, dedicated research session needed to map exact API patterns
+- Alternative: Focus on Tasks 7 (ZK-Proofs) or 9 (Legacy Interop) which have clear product sign-offs
 
 **Files Modified:** None (research only)
-**Dependencies:** Identified and verified available
+**Dependencies:** Identified but not added
 
 ---
 
