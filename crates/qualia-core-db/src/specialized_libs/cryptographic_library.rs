@@ -1832,6 +1832,7 @@ pub struct EncryptedData {
     pub ciphertext: Vec<u8>,
     pub iv: Vec<u8>,
     pub tag: Vec<u8>,
+    pub aad: Vec<u8>,
     pub metadata: EncryptionMetadata,
 }
 
@@ -2966,6 +2967,7 @@ impl EncryptionEngine {
             ciphertext,
             iv,
             tag,
+            aad: additional_data.unwrap_or(b"").to_vec(),
             metadata: EncryptionMetadata {
                 key_id: key.key_id.clone(),
                 algorithm,
@@ -2980,12 +2982,13 @@ impl EncryptionEngine {
 
     pub fn decrypt_data(&mut self, key: &Key, encrypted_data: &EncryptedData) -> Result<Vec<u8>, CryptographicError> {
         // Dispatch on the algorithm the ciphertext was produced with.
+        let aad_ref = if encrypted_data.aad.is_empty() { None } else { Some(encrypted_data.aad.as_slice()) };
         let plaintext = self.decrypt_with_key(
             &key,
             &encrypted_data.ciphertext,
             &encrypted_data.iv,
             &encrypted_data.tag,
-            None,
+            aad_ref,
             &encrypted_data.algorithm,
         )?;
 
@@ -3949,20 +3952,39 @@ mod tests {
         library.initialize().unwrap();
         store_symmetric_key(&mut library, "cc_key");
 
-        // NOTE: the decrypt_data API does not persist/re-supply AAD, so (matching the
-        // AES tests) the round-trip is exercised without additional authenticated data.
+        // AAD is now persisted and re-supplied on decryption.
         let data = b"The quick brown fox jumps over the lazy dog";
+        let aad = b"authenticated additional data";
         let enc = library
-            .encrypt_data_with_algorithm("cc_key", data, None, EncryptionAlgorithm::ChaCha20Poly1305)
+            .encrypt_data_with_algorithm("cc_key", data, Some(aad), EncryptionAlgorithm::ChaCha20Poly1305)
             .unwrap();
         assert_eq!(enc.result.algorithm, EncryptionAlgorithm::ChaCha20Poly1305);
         assert_eq!(enc.result.iv.len(), 12);
         assert_eq!(enc.result.tag.len(), 16);
+        assert_eq!(enc.result.aad, aad.to_vec());
         assert_ne!(enc.result.ciphertext, data.to_vec());
 
-        // decrypt_data dispatches on the stored algorithm.
+        // decrypt_data dispatches on the stored algorithm and re-supplies AAD.
         let dec = library.decrypt_data("cc_key", &enc.result).unwrap();
         assert_eq!(dec.result, data);
+    }
+
+    #[test]
+    fn test_chacha20poly1305_wrong_aad_fails() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+        store_symmetric_key(&mut library, "cc_key_wrong_aad");
+
+        let data = b"authenticated data";
+        let aad = b"correct aad";
+        let enc = library
+            .encrypt_data_with_algorithm("cc_key_wrong_aad", data, Some(aad), EncryptionAlgorithm::ChaCha20Poly1305)
+            .unwrap()
+            .result;
+
+        // Tamper with the AAD - decryption should fail because AAD is authenticated.
+        enc.aad = b"wrong aad".to_vec();
+        assert!(library.decrypt_data("cc_key_wrong_aad", &enc).is_err());
     }
 
     #[test]
@@ -4110,3 +4132,5 @@ mod tests {
         assert_eq!(metrics.compliance_metrics.compliance_score, 1.0);
     }
 }
+
+
