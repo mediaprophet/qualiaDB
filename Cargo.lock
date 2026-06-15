@@ -586,6 +586,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "blake3"
+version = "1.8.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0aa83c34e62843d924f905e0f5c866eb1dd6545fc4d719e803d9ba6030371fce"
+dependencies = [
+ "arrayref",
+ "arrayvec",
+ "cc",
+ "cfg-if",
+ "constant_time_eq",
+ "cpufeatures 0.3.0",
+]
+
+[[package]]
 name = "block"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1126,6 +1140,12 @@ dependencies = [
  "quote",
  "unicode-xid",
 ]
+
+[[package]]
+name = "constant_time_eq"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 
 [[package]]
 name = "convert_case"
@@ -2186,6 +2206,18 @@ name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
+
+[[package]]
+name = "fips204"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9fb5a367b9846933e271a3c2a992930743f82ae5e8cb7faa780715a80fa0b15"
+dependencies = [
+ "rand_core 0.6.4",
+ "sha2",
+ "sha3",
+ "zeroize",
+]
 
 [[package]]
 name = "flate2"
@@ -5524,7 +5556,7 @@ checksum = "e0c5ccf5294c6ccd63a74f1565028353830a9c2f5eb0c682c355c471726a6e3f"
 
 [[package]]
 name = "qualia-cli"
-version = "0.0.12"
+version = "0.0.13"
 dependencies = [
  "atoi",
  "bytemuck",
@@ -5561,7 +5593,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-client-core"
-version = "0.0.12"
+version = "0.0.13"
 dependencies = [
  "base64 0.22.1",
  "bip39",
@@ -5598,14 +5630,16 @@ dependencies = [
 
 [[package]]
 name = "qualia-core-db"
-version = "0.0.12"
+version = "0.0.13"
 dependencies = [
  "aes-gcm",
  "async-trait",
  "axum",
  "base64 0.22.1",
+ "blake3",
  "boringtun",
  "bytemuck",
+ "chacha20poly1305",
  "chrono",
  "ciborium",
  "core_affinity",
@@ -5615,6 +5649,7 @@ dependencies = [
  "dhat",
  "ed25519-dalek",
  "fast_qr",
+ "fips204",
  "futures-channel",
  "futures-core",
  "futures-intrusive",
@@ -5677,7 +5712,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-extensions"
-version = "0.0.12"
+version = "0.0.13"
 dependencies = [
  "approx",
  "async-trait",
@@ -5703,7 +5738,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-mobile-harness"
-version = "0.0.12"
+version = "0.0.13"
 dependencies = [
  "dioxus",
  "futures-util",
@@ -5718,7 +5753,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-solid-bridge"
-version = "0.0.12"
+version = "0.0.13"
 dependencies = [
  "bytes",
  "core_affinity",

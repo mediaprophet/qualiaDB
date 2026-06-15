@@ -185,10 +185,13 @@ Five release artefacts are built or planned from this repository:
 | Capability Profiles (QCHK binary, 6 named profiles) | ✅ | ⚠️ Enforced by daemon | ✅ | ✅ | 🚧 |
 | `profile compile / list / inspect` | ❌ | ❌ | ✅ | ✅ Via Credential Manager | 🚧 |
 | ECC parity (real P-256 scalar validation) | ✅ | ❌ | ✅ | ✅ | 🚧 |
-| FiduciaryCrypto sign / verify (ed25519-dalek) | ✅ | ❌ | ✅ | ✅ | 🚧 |
+| Ed25519 sign / verify (`cryptographic_library.rs`, `wal.rs`, `webizen_identifiers.rs`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
+| AES-256-GCM / ChaCha20-Poly1305 / XChaCha20-Poly1305 AEAD (`cryptographic_library.rs`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
+| SHA-256 / SHA-512 / BLAKE3 hashing (`cryptographic_library.rs`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
+| HKDF-SHA256 key derivation (`cryptographic_library.rs`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | ZK structural validation (Pedersen commitment check) | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | Full ZK proof backend (bellman / arkworks) | ❌ Pending | ❌ | ❌ Pending | ❌ Pending | 🚧 |
-| ML-DSA (FIPS 204 compliant) | ❌ Pending | ❌ | ❌ Pending | ❌ Pending | 🚧 |
+| ML-DSA (FIPS 204 — real, ML-DSA-65 via `fips204` in `fiduciary_crypto.rs`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
 
 ---
 
@@ -209,8 +212,8 @@ W3C standards: [Decentralised Identifiers (DIDs) v1.0](https://www.w3.org/TR/did
 | `webizen dns-frontdoor` — `did:web` + DNS TXT records | ❌ | ❌ | ✅ | ✅ | 🚧 |
 | Verifiable Credentials (W3C VC Data Model v2) — Principal-signed | ❌ | ❌ | ✅ | ✅ | 🚧 |
 | Verifiable Claims — claims encoded as NQuin subject/predicate/object triples | ✅ | ❌ | ✅ | ✅ | 🚧 |
-| VC issuance — Ed25519 proof suite (`fiduciary_crypto.rs`) | ❌ | ❌ | ✅ | ✅ | 🚧 |
-| VC issuance — ML-DSA post-quantum proof suite | 🚧 | ❌ | 🚧 | 🚧 | 🚧 |
+| VC issuance — Ed25519 proof suite (`cryptographic_library.rs`) | ❌ | ❌ | ✅ | ✅ | 🚧 |
+| VC issuance — ML-DSA post-quantum proof suite (real ML-DSA-65 primitive in `fiduciary_crypto.rs`; VC-layer wiring pending) | 🚧 Primitive ready | ❌ | 🚧 Primitive ready | 🚧 Primitive ready | 🚧 |
 | VC presentation + verification | ❌ | ❌ | ✅ | ✅ | 🚧 |
 | VC selective disclosure (ZK proof over claims) | 🚧 | ❌ | 🚧 | 🚧 | 🚧 |
 | Credential Manager UI | ❌ | ❌ | ❌ | ✅ | 🚧 |
@@ -713,14 +716,17 @@ Capability-based sandboxing via WebAssembly Component Model (WASI Preview 3) for
 
 ## Post-Quantum Cryptography
 
-`fiduciary_crypto.rs` has the existing FiduciaryCrypto sign/verify (Ed25519). ML-DSA (FIPS 204) and full Halo2 zk-SNARKs are partially implemented or planned.
+`fiduciary_crypto.rs` provides **real post-quantum ML-DSA-65** (FIPS-204) via the `fips204`
+crate as of 0.0.12 (replacing the earlier SHA3 simulation). Ed25519 sign/verify lives in
+`cryptographic_library.rs`, `wal.rs`, and `webizen_identifiers.rs`. Full Halo2 zk-SNARKs
+remain structural-only / planned.
 
 | Feature | WASM (Browser) | WASM (Mobile PWA) | CLI | Desktop (Webizen) | Mobile Native |
 |---|:---:|:---:|:---:|:---:|:---:|
-| Ed25519 sign / verify (`fiduciary_crypto.rs`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
+| Ed25519 sign / verify (`cryptographic_library.rs`, `wal.rs`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | Pedersen commitment ZK validation (`zk_proofs.rs`) | ✅ | ❌ | ✅ | ✅ | 🚧 |
-| ML-DSA (Module Lattice-Based Digital Signature, FIPS 204) | ⚠️ Partial | ❌ | ⚠️ Partial | ⚠️ Partial | 🚧 |
-| ML-DSA: 2560-byte public key / 4627-byte signature storage in Quins | 🚧 | ❌ | 🚧 | 🚧 | 🚧 |
+| ML-DSA (Module Lattice-Based Digital Signature, FIPS 204) — **real, ML-DSA-65 via `fips204`** | ✅ | ❌ | ✅ | ✅ | 🚧 |
+| ML-DSA-65: 1952-byte public key / 3309-byte signature (interoperable FIPS-204 bytes) | ✅ | ❌ | ✅ | ✅ | 🚧 |
 | zk-SNARK semantic proofs (`zk_proofs.rs` Halo2 backend) | ⚠️ Structural only | ❌ | ⚠️ Structural only | ⚠️ Structural only | 🚧 |
 | zk-SNARK circuit compiler (Quin predicate → arithmetic circuit) | 🚧 | ❌ | 🚧 | 🚧 | 🚧 |
 | Privacy-preserving inference proofs (ZK proof of LLM output range) | 🚧 | ❌ | 🚧 | 🚧 | 🚧 |

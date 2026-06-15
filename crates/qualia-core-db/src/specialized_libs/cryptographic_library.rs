@@ -9,7 +9,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
-use crate::fiduciary_crypto::FiduciaryCrypto;
+use crate::fiduciary_crypto::{MlDsaSigner, MlDsaSignature, CryptoContext};
 use crate::zk_proofs::ZkProofSystem;
 use crate::zns_storage::ZnsZoneManager;
 use crate::ebpf_firewall::EbpfFirewall;
@@ -1906,13 +1906,55 @@ impl CryptographicLibrary {
     pub fn generate_mldsa_key_pair(&mut self, key_id: String, security_level: SecurityLevel) -> Result<CryptographicResult<(Key, Key)>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
-        // Generate ML-DSA key pair
-        let (private_key, public_key) = self.key_manager.generate_key_pair(
-            key_id.clone(),
-            KeyType::Private,
-            KeyAlgorithm::MLDSA,
-            security_level.clone(),
-        )?;
+        // Generate a real FIPS-204 ML-DSA-65 key pair (public key is produced alongside
+        // the secret key — it is NOT derivable from a 32-byte seed like Ed25519).
+        let (priv_k, pub_k) = MlDsaSigner::generate_keypair()
+            .map_err(|e| CryptographicError::SignatureError(format!("ML-DSA keygen failed: {e}")))?;
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let private_id = format!("{key_id}_private");
+        let public_id = format!("{key_id}_public");
+
+        let private_key = Key {
+            key_id: private_id.clone(),
+            key_type: KeyType::Private,
+            key_algorithm: KeyAlgorithm::MLDSA,
+            key_data: priv_k.sk_bytes.clone(),
+            metadata: KeyMetadata {
+                key_id: private_id,
+                key_type: KeyType::Private,
+                key_algorithm: KeyAlgorithm::MLDSA,
+                key_size: priv_k.sk_bytes.len(),
+                created_at: now,
+                expires_at: 0,
+                last_used: 0,
+                usage_count: 0,
+                security_level: security_level.clone(),
+                access_level: AccessLevel::Secret,
+            },
+        };
+        let public_key = Key {
+            key_id: public_id.clone(),
+            key_type: KeyType::Public,
+            key_algorithm: KeyAlgorithm::MLDSA,
+            key_data: pub_k.pk_bytes.clone(),
+            metadata: KeyMetadata {
+                key_id: public_id,
+                key_type: KeyType::Public,
+                key_algorithm: KeyAlgorithm::MLDSA,
+                key_size: pub_k.pk_bytes.len(),
+                created_at: now,
+                expires_at: 0,
+                last_used: 0,
+                usage_count: 0,
+                security_level: security_level.clone(),
+                access_level: AccessLevel::Public,
+            },
+        };
 
         // Store keys
         self.key_manager.store_key(private_key.clone())?;
@@ -2007,6 +2049,29 @@ impl CryptographicLibrary {
         })
     }
 
+    /// Encrypt data with an explicitly chosen AEAD algorithm
+    /// (AES-256-GCM, ChaCha20-Poly1305, or XChaCha20-Poly1305).
+    pub fn encrypt_data_with_algorithm(&mut self, key_id: &str, data: &[u8], additional_data: Option<&[u8]>, algorithm: EncryptionAlgorithm) -> Result<CryptographicResult<EncryptedData>, CryptographicError> {
+        let start_time = std::time::Instant::now();
+
+        let key = self.key_manager.get_key(key_id)?;
+        if key.key_type != KeyType::Symmetric {
+            return Err(CryptographicError::InvalidKey("Key must be symmetric for encryption".to_string()));
+        }
+
+        let encrypted_data = self.encryption_engine.encrypt_data_with(&key, data, additional_data, algorithm)?;
+
+        let execution_time = start_time.elapsed().as_millis() as u64;
+
+        Ok(CryptographicResult {
+            result: encrypted_data,
+            execution_time,
+            memory_usage: 0,
+            security_level: key.metadata.security_level,
+            compliance_status: ComplianceStatus::Compliant,
+        })
+    }
+
     /// Decrypt data with AES-256-GCM
     pub fn decrypt_data(&mut self, key_id: &str, encrypted_data: &EncryptedData) -> Result<CryptographicResult<Vec<u8>>, CryptographicError> {
         let start_time = std::time::Instant::now();
@@ -2039,6 +2104,23 @@ impl CryptographicLibrary {
 
         // Compute hash
         let hash_result = self.hash_engine.compute_hash("SHA256", data)?;
+
+        let execution_time = start_time.elapsed().as_millis() as u64;
+
+        Ok(CryptographicResult {
+            result: hash_result,
+            execution_time,
+            memory_usage: 0,
+            security_level: SecurityLevel::High,
+            compliance_status: ComplianceStatus::Compliant,
+        })
+    }
+
+    /// Compute hash with BLAKE3 (32-byte digest)
+    pub fn compute_hash_blake3(&mut self, data: &[u8]) -> Result<CryptographicResult<HashResult>, CryptographicError> {
+        let start_time = std::time::Instant::now();
+
+        let hash_result = self.hash_engine.compute_hash("BLAKE3", data)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -2650,14 +2732,35 @@ impl SignatureEngine {
         Ok(())
     }
 
+    /// Deterministic ML-DSA context used for fiduciary sign/verify in this library.
+    /// Sign and verify must use the same context, so it is fixed here.
+    fn fiduciary_context() -> CryptoContext {
+        CryptoContext {
+            domain: "qualia.fiduciary".to_string(),
+            purpose: "sign".to_string(),
+            timestamp: 0,
+            nonce: [0u8; 32],
+        }
+    }
+
     pub fn sign_data(&mut self, private_key: &Key, data: &[u8]) -> Result<Signature, CryptographicError> {
         let start_time = std::time::Instant::now();
 
-        // Compute hash of data
-        let hash = self.compute_data_hash(data)?;
-
-        // Sign hash
-        let signature_data = self.sign_hash(&private_key, &hash)?;
+        let signature_data = match private_key.key_algorithm {
+            KeyAlgorithm::MLDSA => {
+                // Real ML-DSA signs the message directly (it hashes internally); no
+                // SHA-256 prehash, and the key material is the full FIPS-204 secret key.
+                let ctx = Self::fiduciary_context();
+                let sig = MlDsaSigner::sign_with_secret(&private_key.key_data, data, &ctx)
+                    .map_err(|e| CryptographicError::SignatureError(format!("ML-DSA sign failed: {e}")))?;
+                sig.sig_bytes
+            }
+            _ => {
+                // Ed25519 over a SHA-256 digest of the data.
+                let hash = self.compute_data_hash(data)?;
+                self.sign_hash(&private_key, &hash)?
+            }
+        };
 
         let signature = Signature {
             signature_id: format!("sig_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
@@ -2677,11 +2780,18 @@ impl SignatureEngine {
     pub fn verify_signature(&mut self, public_key: &Key, signature: &Signature, data: &[u8]) -> Result<bool, CryptographicError> {
         let start_time = std::time::Instant::now();
 
-        // Compute hash of data
-        let hash = self.compute_data_hash(data)?;
-
-        // Verify signature
-        let is_valid = self.verify_hash_signature(&public_key, &signature.signature, &hash)?;
+        let is_valid = match public_key.key_algorithm {
+            KeyAlgorithm::MLDSA => {
+                let ctx = Self::fiduciary_context();
+                let sig = MlDsaSignature { sig_bytes: signature.signature.clone() };
+                MlDsaSigner::verify_with_public(&public_key.key_data, data, &sig, &ctx)
+                    .map_err(|e| CryptographicError::SignatureError(format!("ML-DSA verify failed: {e}")))?
+            }
+            _ => {
+                let hash = self.compute_data_hash(data)?;
+                self.verify_hash_signature(&public_key, &signature.signature, &hash)?
+            }
+        };
 
         // Store verification record
         let verification_record = VerificationRecord {
@@ -2829,24 +2939,37 @@ impl EncryptionEngine {
     }
 
     pub fn encrypt_data(&mut self, key: &Key, data: &[u8], additional_data: Option<&[u8]>) -> Result<EncryptedData, CryptographicError> {
+        self.encrypt_data_with(key, data, additional_data, EncryptionAlgorithm::AES256GCM)
+    }
+
+    /// Encrypt with an explicitly chosen AEAD algorithm
+    /// (AES-256-GCM, ChaCha20-Poly1305, or XChaCha20-Poly1305).
+    pub fn encrypt_data_with(&mut self, key: &Key, data: &[u8], additional_data: Option<&[u8]>, algorithm: EncryptionAlgorithm) -> Result<EncryptedData, CryptographicError> {
         let start_time = std::time::Instant::now();
 
-        // Generate IV
-        let iv = self.generate_iv()?;
+        // Generate a nonce sized for the chosen algorithm
+        let iv = self.generate_iv(&algorithm)?;
 
         // Encrypt data
-        let (ciphertext, tag) = self.encrypt_with_key(&key, data, &iv, additional_data)?;
+        let (ciphertext, tag) = self.encrypt_with_key(&key, data, &iv, additional_data, &algorithm)?;
+
+        let mode = match algorithm {
+            EncryptionAlgorithm::AES256GCM => EncryptionMode::GCM,
+            // ChaCha20 is a counter-mode stream cipher with a Poly1305 MAC; CTR is the
+            // closest honest descriptor in the (cosmetic) EncryptionMode enum.
+            _ => EncryptionMode::CTR,
+        };
 
         let encrypted_data = EncryptedData {
             data_id: format!("enc_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
-            algorithm: EncryptionAlgorithm::AES256GCM,
+            algorithm: algorithm.clone(),
             ciphertext,
             iv,
             tag,
             metadata: EncryptionMetadata {
                 key_id: key.key_id.clone(),
-                algorithm: EncryptionAlgorithm::AES256GCM,
-                mode: EncryptionMode::GCM,
+                algorithm,
+                mode,
                 padding: Some(EncryptionPadding::NoPadding),
                 created_at: start_time.elapsed().as_millis() as u64,
             },
@@ -2856,51 +2979,114 @@ impl EncryptionEngine {
     }
 
     pub fn decrypt_data(&mut self, key: &Key, encrypted_data: &EncryptedData) -> Result<Vec<u8>, CryptographicError> {
-        // Decrypt data
-        let plaintext = self.decrypt_with_key(&key, &encrypted_data.ciphertext, &encrypted_data.iv, &encrypted_data.tag, None)?;
+        // Dispatch on the algorithm the ciphertext was produced with.
+        let plaintext = self.decrypt_with_key(
+            &key,
+            &encrypted_data.ciphertext,
+            &encrypted_data.iv,
+            &encrypted_data.tag,
+            None,
+            &encrypted_data.algorithm,
+        )?;
 
         Ok(plaintext)
     }
 
-    fn generate_iv(&self) -> Result<Vec<u8>, CryptographicError> {
-        Ok(rand::random::<[u8; 12]>().to_vec())
+    /// Expected nonce length in bytes for the given AEAD algorithm.
+    fn nonce_len(algorithm: &EncryptionAlgorithm) -> usize {
+        match algorithm {
+            EncryptionAlgorithm::XChaCha20Poly1305 => 24,
+            _ => 12, // AES-256-GCM and ChaCha20-Poly1305
+        }
     }
 
-    fn encrypt_with_key(&self, key: &Key, data: &[u8], iv: &[u8], additional_data: Option<&[u8]>) -> Result<(Vec<u8>, Vec<u8>), CryptographicError> {
-        use aes_gcm::{Aes256Gcm, KeyInit, AeadInPlace};
+    fn generate_iv(&self, algorithm: &EncryptionAlgorithm) -> Result<Vec<u8>, CryptographicError> {
+        let len = Self::nonce_len(algorithm);
+        let mut iv = vec![0u8; len];
+        for b in iv.iter_mut() {
+            *b = rand::random::<u8>();
+        }
+        Ok(iv)
+    }
+
+    fn encrypt_with_key(&self, key: &Key, data: &[u8], iv: &[u8], additional_data: Option<&[u8]>, algorithm: &EncryptionAlgorithm) -> Result<(Vec<u8>, Vec<u8>), CryptographicError> {
         use aes_gcm::aead::generic_array::GenericArray;
         if key.key_data.len() < 32 {
-            return Err(CryptographicError::EncryptionError("AES key must be 32 bytes".to_string()));
+            return Err(CryptographicError::EncryptionError("AEAD key must be 32 bytes".to_string()));
         }
-        if iv.len() != 12 {
-            return Err(CryptographicError::EncryptionError("IV must be 12 bytes for GCM".to_string()));
+        let expected_nonce = Self::nonce_len(algorithm);
+        if iv.len() != expected_nonce {
+            return Err(CryptographicError::EncryptionError(format!("IV must be {expected_nonce} bytes for this algorithm")));
         }
-        let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
-        let nonce = GenericArray::from_slice(iv);
+        let aad = additional_data.unwrap_or(b"");
         let mut buffer = data.to_vec();
-        let tag = cipher.encrypt_in_place_detached(nonce, additional_data.unwrap_or(b""), &mut buffer)
-            .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?;
-        Ok((buffer, tag.to_vec()))
+        let tag = match algorithm {
+            EncryptionAlgorithm::AES256GCM => {
+                use aes_gcm::{Aes256Gcm, KeyInit, AeadInPlace};
+                let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
+                cipher.encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                    .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
+                    .to_vec()
+            }
+            EncryptionAlgorithm::ChaCha20Poly1305 => {
+                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, AeadInPlace};
+                let cipher = ChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
+                cipher.encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                    .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
+                    .to_vec()
+            }
+            EncryptionAlgorithm::XChaCha20Poly1305 => {
+                use chacha20poly1305::{XChaCha20Poly1305, KeyInit, AeadInPlace};
+                let cipher = XChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
+                cipher.encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                    .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
+                    .to_vec()
+            }
+            EncryptionAlgorithm::Custom(name) => {
+                return Err(CryptographicError::UnsupportedAlgorithm(format!("Custom cipher '{name}' not implemented")));
+            }
+        };
+        Ok((buffer, tag))
     }
 
-    fn decrypt_with_key(&self, key: &Key, ciphertext: &[u8], iv: &[u8], tag: &[u8], additional_data: Option<&[u8]>) -> Result<Vec<u8>, CryptographicError> {
-        use aes_gcm::{Aes256Gcm, KeyInit, AeadInPlace};
+    fn decrypt_with_key(&self, key: &Key, ciphertext: &[u8], iv: &[u8], tag: &[u8], additional_data: Option<&[u8]>, algorithm: &EncryptionAlgorithm) -> Result<Vec<u8>, CryptographicError> {
         use aes_gcm::aead::generic_array::GenericArray;
         if key.key_data.len() < 32 {
-            return Err(CryptographicError::DecryptionError("AES key must be 32 bytes".to_string()));
+            return Err(CryptographicError::DecryptionError("AEAD key must be 32 bytes".to_string()));
         }
-        if iv.len() != 12 {
-            return Err(CryptographicError::DecryptionError("IV must be 12 bytes for GCM".to_string()));
+        let expected_nonce = Self::nonce_len(algorithm);
+        if iv.len() != expected_nonce {
+            return Err(CryptographicError::DecryptionError(format!("IV must be {expected_nonce} bytes for this algorithm")));
         }
         if tag.len() != 16 {
-            return Err(CryptographicError::DecryptionError("GCM tag must be 16 bytes".to_string()));
+            return Err(CryptographicError::DecryptionError("AEAD tag must be 16 bytes".to_string()));
         }
-        let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
-        let nonce = GenericArray::from_slice(iv);
+        let aad = additional_data.unwrap_or(b"");
         let tag_arr = GenericArray::from_slice(tag);
         let mut buffer = ciphertext.to_vec();
-        cipher.decrypt_in_place_detached(nonce, additional_data.unwrap_or(b""), &mut buffer, tag_arr)
-            .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
+        match algorithm {
+            EncryptionAlgorithm::AES256GCM => {
+                use aes_gcm::{Aes256Gcm, KeyInit, AeadInPlace};
+                let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
+                cipher.decrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer, tag_arr)
+                    .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
+            }
+            EncryptionAlgorithm::ChaCha20Poly1305 => {
+                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, AeadInPlace};
+                let cipher = ChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
+                cipher.decrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer, tag_arr)
+                    .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
+            }
+            EncryptionAlgorithm::XChaCha20Poly1305 => {
+                use chacha20poly1305::{XChaCha20Poly1305, KeyInit, AeadInPlace};
+                let cipher = XChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
+                cipher.decrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer, tag_arr)
+                    .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
+            }
+            EncryptionAlgorithm::Custom(name) => {
+                return Err(CryptographicError::UnsupportedAlgorithm(format!("Custom cipher '{name}' not implemented")));
+            }
+        }
         Ok(buffer)
     }
 }
@@ -2921,6 +3107,20 @@ impl KeyDerivation {
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
+    }
+
+    /// Derive `output_length` bytes from input keying material using HKDF-SHA256.
+    ///
+    /// Uses the configured `derivation_parameters.salt` and `output_length`. `info`
+    /// is the application-specific context/label that domain-separates derived keys.
+    pub fn derive_hkdf(&self, ikm: &[u8], info: &[u8]) -> Result<Vec<u8>, CryptographicError> {
+        use hkdf::Hkdf;
+        use sha2::Sha256;
+        let hk = Hkdf::<Sha256>::new(Some(&self.derivation_parameters.salt), ikm);
+        let mut okm = vec![0u8; self.derivation_parameters.output_length];
+        hk.expand(info, &mut okm)
+            .map_err(|e| CryptographicError::EncryptionError(format!("HKDF expand failed: {e}")))?;
+        Ok(okm)
     }
 }
 
@@ -2989,6 +3189,9 @@ impl HashEngine {
                 let mut hasher = Sha512::new();
                 hasher.update(data);
                 hasher.finalize().to_vec()
+            }
+            "BLAKE3" => {
+                blake3::hash(data).as_bytes().to_vec()
             }
             _ => return Err(CryptographicError::UnsupportedAlgorithm("Hash algorithm not supported".to_string())),
         };
@@ -3718,6 +3921,96 @@ mod tests {
         assert_eq!(decrypted_data.result, data);
     }
 
+    fn store_symmetric_key(library: &mut CryptographicLibrary, key_id: &str) {
+        let key = Key {
+            key_id: key_id.to_string(),
+            key_type: KeyType::Symmetric,
+            key_algorithm: KeyAlgorithm::ChaCha20,
+            key_data: (0u8..32).collect(),
+            metadata: KeyMetadata {
+                key_id: key_id.to_string(),
+                key_type: KeyType::Symmetric,
+                key_algorithm: KeyAlgorithm::ChaCha20,
+                key_size: 32,
+                created_at: 0,
+                expires_at: 0,
+                last_used: 0,
+                usage_count: 0,
+                security_level: SecurityLevel::High,
+                access_level: AccessLevel::Secret,
+            },
+        };
+        library.key_manager.store_key(key).unwrap();
+    }
+
+    #[test]
+    fn test_chacha20poly1305_roundtrip() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+        store_symmetric_key(&mut library, "cc_key");
+
+        // NOTE: the decrypt_data API does not persist/re-supply AAD, so (matching the
+        // AES tests) the round-trip is exercised without additional authenticated data.
+        let data = b"The quick brown fox jumps over the lazy dog";
+        let enc = library
+            .encrypt_data_with_algorithm("cc_key", data, None, EncryptionAlgorithm::ChaCha20Poly1305)
+            .unwrap();
+        assert_eq!(enc.result.algorithm, EncryptionAlgorithm::ChaCha20Poly1305);
+        assert_eq!(enc.result.iv.len(), 12);
+        assert_eq!(enc.result.tag.len(), 16);
+        assert_ne!(enc.result.ciphertext, data.to_vec());
+
+        // decrypt_data dispatches on the stored algorithm.
+        let dec = library.decrypt_data("cc_key", &enc.result).unwrap();
+        assert_eq!(dec.result, data);
+    }
+
+    #[test]
+    fn test_xchacha20poly1305_roundtrip_uses_24byte_nonce() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+        store_symmetric_key(&mut library, "xcc_key");
+
+        let data = b"extended-nonce payload";
+        let enc = library
+            .encrypt_data_with_algorithm("xcc_key", data, None, EncryptionAlgorithm::XChaCha20Poly1305)
+            .unwrap();
+        assert_eq!(enc.result.iv.len(), 24);
+        let dec = library.decrypt_data("xcc_key", &enc.result).unwrap();
+        assert_eq!(dec.result, data);
+    }
+
+    #[test]
+    fn test_chacha20poly1305_tamper_fails() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+        store_symmetric_key(&mut library, "cc_key2");
+
+        let data = b"authenticated";
+        let mut enc = library
+            .encrypt_data_with_algorithm("cc_key2", data, None, EncryptionAlgorithm::ChaCha20Poly1305)
+            .unwrap()
+            .result;
+        // Flip a ciphertext bit; AEAD verification must reject it.
+        enc.ciphertext[0] ^= 0x01;
+        assert!(library.decrypt_data("cc_key2", &enc).is_err());
+    }
+
+    #[test]
+    fn test_hkdf_sha256_rfc5869_vector() {
+        // RFC 5869 Appendix A.1 Test Case 1 (HMAC-SHA256).
+        let mut kd = KeyDerivation::new();
+        kd.derivation_parameters.salt = (0u8..=0x0c).collect(); // 000102...0c (13 bytes)
+        kd.derivation_parameters.output_length = 42;
+        let ikm = vec![0x0bu8; 22];
+        let info: Vec<u8> = (0xf0u8..=0xf9).collect();
+        let okm = kd.derive_hkdf(&ikm, &info).unwrap();
+        assert_eq!(
+            hex::encode(&okm),
+            "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865"
+        );
+    }
+
     #[test]
     fn test_hash_computation() {
         let mut library = CryptographicLibrary::new();
@@ -3730,6 +4023,30 @@ mod tests {
         assert_eq!(hash_result.result.input_data, data);
         assert_eq!(hash_result.result.hash_value.len(), 32); // SHA256 output size
         assert!(hash_result.compliance_status == ComplianceStatus::Compliant);
+    }
+
+    #[test]
+    fn test_blake3_hash_computation() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+
+        // Known-answer test: BLAKE3 of the empty input is a stable, published vector.
+        let empty = library.compute_hash_blake3(b"").unwrap();
+        assert_eq!(empty.result.algorithm, "BLAKE3");
+        assert_eq!(empty.result.hash_value.len(), 32); // BLAKE3 default digest size
+        assert_eq!(
+            hex::encode(&empty.result.hash_value),
+            "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
+        );
+
+        // Determinism + distinctness from SHA-256 over the same input.
+        let data = b"Hello, World!";
+        let a = library.compute_hash_blake3(data).unwrap();
+        let b = library.compute_hash_blake3(data).unwrap();
+        assert_eq!(a.result.hash_value, b.result.hash_value);
+        let sha = library.compute_hash(data).unwrap();
+        assert_ne!(a.result.hash_value, sha.result.hash_value);
+        assert!(a.compliance_status == ComplianceStatus::Compliant);
     }
 
     #[test]

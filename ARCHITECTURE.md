@@ -497,7 +497,7 @@ W3C standards: [Decentralised Identifiers (DIDs) v1.0](https://www.w3.org/TR/did
 - **`did:web` resolution** — resolves `did:web:domain.example` by fetching the DID Document from `https://domain.example/.well-known/did.json`. Used by `webizen dns-frontdoor` to bind a Webizen identity to a domain name.
 - **Verifiable Credentials (VCs)** — credentials are encoded as NQuin graphs: the subject field holds the holder DID hash, the predicate encodes the claim type (`q_hash("vc:claim/…")`), the object holds the claim value hash, and the context field holds the issuer DID hash. The `metadata` 5th vector carries the Ed25519 proof signature anchor (first 8 bytes of the signature, with the full signature stored in an adjacent WAL entry).
 - **Verifiable Claims** — individual claims within a VC map directly to subject/predicate/object triples in the Quin graph. A VC is a named graph (context field = issuer DID) containing one or more claim Quins.
-- **VC issuance** — `fiduciary_crypto.rs` (§37) `sign_operation(quin, OperationType::VerifiableCredential)` produces the Ed25519 proof. ML-DSA post-quantum issuance is planned (§37).
+- **VC issuance** — the Ed25519 proof path lives in `cryptographic_library.rs` (`sign_data`). The ML-DSA-65 post-quantum signing primitive is now real (`fiduciary_crypto.rs`, §37); wiring it into VC-graph issuance is the remaining step.
 - **VC presentation + verification** — `verify_operation(proof_index)` checks the stored signature. Presentation proofs (holder binding) are a known gap — planned alongside ML-DSA.
 - **QCHK capability profiles** (`profiles.rs`) — binary capability grants that are themselves VC-shaped: a signed assertion from a Principal that a named agent may exercise a named set of capabilities.
 - **WebID interoperability** (`webizen_identifiers.rs`) — each `WebizenId` struct carries a `webid_hash: u64` (FNV-1a of the WebID URI string). The `IdentityRegistry` maps `webid_hash → WebizenId`, enabling lookup of a Webizen identitifier from a legacy HTTP/FOAF WebID profile URI. SocialWebNet (§38) supersedes WebID-TLS at the transport layer; WebID profile document discovery remains a complementary application-layer mechanism alongside `did:web`.
@@ -1030,7 +1030,9 @@ Full zero-knowledge backend requires arithmetic circuit compilation. Planned com
 
 ## 37. Fiduciary Cryptography (`fiduciary_crypto.rs`)
 
-Cryptographic signing layer that enforces non-repudiation for fiduciary operations. Current state: **Ed25519 implemented; ML-DSA (FIPS 204) partial**.
+Cryptographic signing layer that enforces non-repudiation for fiduciary operations. Current state: **Ed25519 implemented; ML-DSA-65 (FIPS 204) implemented — real, post-quantum, via the `fips204` crate (since 0.0.12)**.
+
+> Note: `fiduciary_crypto.rs` as shipped exposes `MlDsaSigner` (`generate_keypair` / `sign` / `verify`, plus byte-level `sign_with_secret` / `verify_with_public`) and the `FiduciaryCrypto` facade (`generate_key` / `sign` / `verify` / `hash_token`). The `sign_operation` / `FiduciaryProof` API described below is an earlier design sketch and does not match the current module surface; treat the bullet list under "Implemented" as illustrative of intent, not the literal API.
 
 ### Implemented
 
@@ -1040,13 +1042,26 @@ Cryptographic signing layer that enforces non-repudiation for fiduciary operatio
 - **`get_audit_trail()`** — returns a slice of all stored `FiduciaryProof` entries for WAL checkpointing.
 - ECC parity (real P-256 scalar validation via `p256` crate) wired to the Sentinel pre-flight gate.
 
-### Planned (ML-DSA / FIPS 204)
+### Implemented (ML-DSA / FIPS 204)
 
-Full post-quantum hardening requires the Module Lattice-Based Digital Signature Algorithm (per `local/architectural-enhancements/Fiduciary_Cryptography_Implementation_Spec.md`):
+Post-quantum signatures are **real** as of 0.0.12, using the Module-Lattice-Based Digital
+Signature Algorithm via the pure-Rust [`fips204`](https://crates.io/crates/fips204) crate
+(WASM-compatible). The earlier SHA3-based *simulation* has been removed.
 
-- **ML-DSA-87** — 2560-byte public key, 4627-byte signatures; quantum-resistant against Shor's algorithm
-- Key sizes do not fit in a single NQuin field — storage strategy: Merkle-tree of signature fragments encoded across multiple linked Quins
-- Drop-in replacement for all `sign_operation` / `verify_operation` call sites; Ed25519 remains the intermediate until FIPS 204 is stable in `pqcrypto` crate ecosystem
+- **ML-DSA-65** (NIST security category 3) — 1952-byte public key, 4032-byte secret key,
+  3309-byte signature. Bytes are standard FIPS-204 serialized form and interoperable with
+  any conformant ML-DSA implementation.
+- `MlDsaSigner::generate_keypair()` produces a real keypair; `sign` / `verify` (and the
+  byte-level `sign_with_secret` / `verify_with_public`) bind an application `CryptoContext`
+  via the FIPS-204 context string (SHA3-512 of domain‖purpose‖timestamp‖nonce).
+- In `cryptographic_library.rs`, `generate_mldsa_key_pair` now generates a real ML-DSA-65
+  keypair, and `sign_data` / `verify_signature` route `KeyAlgorithm::MLDSA` keys through it
+  (Ed25519 remains the path for `EdDSA`/other key algorithms).
+- **Still open:** the large keys/signatures do not fit in a single NQuin field — a storage
+  strategy (e.g. Merkle-tree of signature fragments across linked Quins) and the VC-issuance
+  wiring that anchors an ML-DSA proof into a credential graph remain to be built.
+- To select a stronger parameter set later (ML-DSA-87: 2592-byte pk / 4627-byte sig),
+  switch the `fips204::ml_dsa_65` import + the `ml-dsa-65` Cargo feature to `ml_dsa_87`.
 
 ### Integration points
 

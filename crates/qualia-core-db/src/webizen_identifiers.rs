@@ -106,9 +106,9 @@ impl WebizenRegistry {
         self.webid_to_webizen.get(&webid_hash).copied()
     }
     
-    /// Verify an Ed25519 signature
-    /// 
-    /// Note: This is a simplified stub. Real implementation would use ed25519-dalek crate.
+    /// Verify an Ed25519 signature over `message` using the Webizen's stored public key.
+    ///
+    /// Uses `ed25519-dalek` `verify_strict`. Results are memoised in `signature_cache`.
     pub fn verify_signature(
         &mut self,
         webizen_id: WebizenId,

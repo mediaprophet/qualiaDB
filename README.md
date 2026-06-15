@@ -69,7 +69,7 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 This branch includes: in-process LLM inference with GPU dispatch; SPARQL 1.1 + RDF-Star engine; full deontic / epistemic / LTL / paraconsistent modality stack; SHACL biosciences, chemistry, and biomedical extensions; DID Verifiable Credentials; SocialWebNet DNSSEC peer bootstrap; W3C Solid export; 539+ tests.
 
-Known gaps before v0.1.0: ML-DSA (FIPS 204 not yet complete), ZK proof backend, SPARQL engine build errors under resolution. See [TODO.md](TODO.md).
+Known gaps before v0.1.0: ML-DSA-65 (FIPS 204) signing is now **real** (via `fips204`), but VC-issuance wiring and multi-Quin storage of the large signatures remain; full ZK proof backend (currently commitment-only, not real zk-SNARKs). See [CRYPTO_IMPLEMENTATION_PLAN.md](CRYPTO_IMPLEMENTATION_PLAN.md), [docs/CRYPTO_STATUS_2026-06-15.md](docs/CRYPTO_STATUS_2026-06-15.md), and [TODO.md](TODO.md).
 
 Full release history: [CHANGELOG.md](CHANGELOG.md).
 

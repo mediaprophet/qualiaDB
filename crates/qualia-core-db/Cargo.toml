@@ -1,6 +1,6 @@
 [package]
 name = "qualia-core-db"
-version = "0.0.12"
+version = "0.0.13"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
@@ -46,6 +46,9 @@ sha2 = { version = "0.10", default-features = false }
 aes-gcm = { version = "0.10", default-features = false, features = ["aes", "alloc"] }
 x25519-dalek = { version = "2", default-features = false, features = ["static_secrets", "zeroize"] }
 hkdf = { version = "0.12", default-features = false }
+blake3 = { version = "1", default-features = false }
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+fips204 = { version = "0.4", default-features = false, features = ["ml-dsa-65", "default-rng"] }
 quick-xml = "0.36"
 crossbeam-channel = "0.5"
 core_affinity = "0.8"

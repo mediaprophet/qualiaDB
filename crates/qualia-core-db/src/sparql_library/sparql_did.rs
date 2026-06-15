@@ -187,9 +187,20 @@ impl<'a> SparqlDidHandler<'a> {
             return Err("Invalid DID: missing 0x8 prefix".to_string());
         }
 
-        // In production, sign using stack-allocated key frame
-        // For now, return placeholder signature
-        Ok(vec![0u8; 64])
+        // The SPARQL-DID handler is a read-side query shim: it resolves DIDs to u64
+        // pointers and deliberately strips heavy crypto payloads at the boundary
+        // (see `authenticate_did`). It holds NO private key material, so it cannot and
+        // must not produce a signature here. Signing is the responsibility of the
+        // identity / key-vault layer (e.g. `WebizenIdentityManager` over `key_vault`,
+        // or `CryptographicLibrary::sign_data`), which owns the secret keys.
+        //
+        // Fail closed rather than returning a forged all-zero signature that would
+        // falsely signal success to callers.
+        let _ = data;
+        Err("did:sign is not available in the SPARQL query layer: \
+             no private key is provisioned here. Sign via the identity/key-vault \
+             layer (WebizenIdentityManager / CryptographicLibrary::sign_data)."
+            .to_string())
     }
 
     /// Invalidate cache entry

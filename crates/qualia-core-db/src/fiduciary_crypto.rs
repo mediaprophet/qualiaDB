@@ -1,19 +1,27 @@
-//! Fiduciary Cryptography (ML-DSA) Implementation
-//! 
-//! This module provides post-quantum cryptographic signatures using ML-DSA (Module-Lattice-Based Digital Signature Algorithm).
-//! Designed for quantum-resistant security in specialized libraries and fiduciary applications.
+//! Fiduciary Cryptography (ML-DSA / FIPS-204) Implementation
+//!
+//! Post-quantum digital signatures using **real ML-DSA-65** (FIPS-204, NIST security
+//! category 3) via the pure-Rust `fips204` crate. Produced signatures are interoperable
+//! with any conformant FIPS-204 implementation. Pure Rust, WASM-compatible (uses
+//! `getrandom` for entropy).
+//!
+//! NOTE: revisions before 0.0.12 contained a SHA3-based *simulation* of ML-DSA for
+//! demonstration only. That fake lattice path has been removed and replaced with the
+//! standardized algorithm. The serialized key/signature byte layouts therefore changed.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use serde_bytes;
 use sha3::{Digest, Sha3_512};
+use fips204::ml_dsa_65;
+use fips204::traits::{KeyGen, SerDes, Signer, Verifier};
 
-/// ML-DSA signature parameters
-pub const ML_DSA_SECURITY_LEVEL: usize = 128; // Security level in bits
-pub const ML_DSA_PRIVATE_KEY_SIZE: usize = 32; // 256 bytes for ML-DSA-87
-pub const ML_DSA_PUBLIC_KEY_SIZE: usize = 1312; // 1312 bytes for ML-DSA-87
-pub const ML_DSA_SIGNATURE_SIZE: usize = 2420; // 2420 bytes for ML-DSA-87
+/// ML-DSA-65 parameters (FIPS-204, NIST security category 3).
+pub const ML_DSA_SECURITY_LEVEL: usize = 192; // approximate classical security bits
+pub const ML_DSA_PRIVATE_KEY_SIZE: usize = ml_dsa_65::SK_LEN; // 4032 bytes
+pub const ML_DSA_PUBLIC_KEY_SIZE: usize = ml_dsa_65::PK_LEN;  // 1952 bytes
+pub const ML_DSA_SIGNATURE_SIZE: usize = ml_dsa_65::SIG_LEN;  // 3309 bytes
 
 /// ML-DSA cryptographic signer
 pub struct MlDsaSigner {
@@ -22,40 +30,25 @@ pub struct MlDsaSigner {
     key_id: Option<String>,
 }
 
-/// ML-DSA private key
+/// ML-DSA-65 private (secret) key — FIPS-204 serialized form (`SK_LEN` = 4032 bytes).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MlDsaPrivateKey {
     #[serde(with = "serde_bytes")]
-    pub seed: [u8; 32],
-    #[serde(with = "serde_bytes")]
-    pub rho: [u8; 64],
-    #[serde(with = "serde_bytes")]
-    pub k: [u8; 64],
-    #[serde(with = "serde_bytes")]
-    pub tr: [u8; 64],
-    pub s1: Vec<u8>,
-    pub s2: Vec<u8>,
-    pub t0: Vec<u8>,
-    pub t1: Vec<u8>,
+    pub sk_bytes: Vec<u8>,
 }
 
-/// ML-DSA public key
+/// ML-DSA-65 public key — FIPS-204 serialized form (`PK_LEN` = 1952 bytes).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MlDsaPublicKey {
     #[serde(with = "serde_bytes")]
-    pub rho: [u8; 64],
-    pub t1: Vec<u8>,
-    #[serde(with = "serde_bytes")]
-    pub seed: [u8; 32],
+    pub pk_bytes: Vec<u8>,
 }
 
-/// ML-DSA signature
+/// ML-DSA-65 signature — FIPS-204 serialized form (`SIG_LEN` = 3309 bytes).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MlDsaSignature {
     #[serde(with = "serde_bytes")]
-    pub c_tilde: [u8; 64],
-    pub z: Vec<u8>,
-    pub h: Vec<u8>,
+    pub sig_bytes: Vec<u8>,
 }
 
 /// Key management for ML-DSA
@@ -124,56 +117,12 @@ pub struct AuditEntry {
 }
 
 impl MlDsaSigner {
-    /// Generate new ML-DSA key pair
+    /// Generate a new real ML-DSA-65 (FIPS-204) key pair.
     pub fn generate_keypair() -> Result<(MlDsaPrivateKey, MlDsaPublicKey), MlDsaError> {
-        // Generate seed
-        let mut seed = [0u8; 32];
-        Self::secure_random(&mut seed)?;
-
-        // Derive key components
-        let mut hasher = Sha3_512::new();
-        hasher.update(&seed);
-        let digest = hasher.finalize();
-        
-        let mut rho = [0u8; 64];
-        let mut k = [0u8; 64];
-        let mut tr = [0u8; 64];
-        
-        rho.copy_from_slice(&digest[0..64]);
-        k.copy_from_slice(&digest[64..128]);
-        tr.copy_from_slice(&digest[128..192]);
-
-        // Generate polynomial components
-        let s1 = Self::generate_polynomial(&rho, 0)?;
-        let s2 = Self::generate_polynomial(&rho, 1)?;
-        let t0 = Self::generate_polynomial(&rho, 2)?;
-        let t1 = Self::generate_polynomial(&rho, 3)?;
-
-        // Embed a commitment to s1 in the public key's t1 field:
-        // t1_pub[0..64] = SHA3-512(s1 || seed)  — allows verify_response_bounds to check z
-        let mut t1_pub = t1.clone();
-        let mut t1_commit = Sha3_512::new();
-        t1_commit.update(&s1);
-        t1_commit.update(&seed);
-        t1_pub[..64].copy_from_slice(&t1_commit.finalize());
-
-        let private_key = MlDsaPrivateKey {
-            seed,
-            rho,
-            k,
-            tr,
-            s1,
-            s2,
-            t0,
-            t1,
-        };
-
-        let public_key = MlDsaPublicKey {
-            rho,
-            t1: t1_pub,
-            seed,
-        };
-
+        let (pk, sk) = ml_dsa_65::try_keygen()
+            .map_err(|e| MlDsaError::KeyGenerationFailed(e.to_string()))?;
+        let private_key = MlDsaPrivateKey { sk_bytes: sk.into_bytes().to_vec() };
+        let public_key = MlDsaPublicKey { pk_bytes: pk.into_bytes().to_vec() };
         Ok((private_key, public_key))
     }
 
@@ -186,48 +135,18 @@ impl MlDsaSigner {
         }
     }
 
-    /// Sign message with ML-DSA
+    /// Sign `message` with this signer's ML-DSA-65 secret key.
+    ///
+    /// The `context` fields are bound to the signature via the FIPS-204 context string
+    /// (derived deterministically by `derive_ctx`). Sign and verify must use an equal
+    /// `CryptoContext`.
     pub fn sign(&self, message: &[u8], context: &CryptoContext) -> Result<MlDsaSignature, MlDsaError> {
-        // Create message digest
-        let mut hasher = Sha3_512::new();
-        hasher.update(message);
-        hasher.update(&context.domain.as_bytes());
-        hasher.update(&context.purpose.as_bytes());
-        hasher.update(&context.timestamp.to_be_bytes());
-        hasher.update(&context.nonce);
-        let message_digest = hasher.finalize();
-
-        // Generate signature
-        let signature = Self::ml_dsa_sign(
-            &self.private_key,
-            &self.public_key,
-            &message_digest,
-            &context,
-        )?;
-
-        Ok(signature)
+        Self::sign_with_secret(&self.private_key.sk_bytes, message, context)
     }
 
-    /// Verify signature
+    /// Verify an ML-DSA-65 signature over `message` against this signer's public key.
     pub fn verify(&self, message: &[u8], signature: &MlDsaSignature, context: &CryptoContext) -> Result<bool, MlDsaError> {
-        // Create message digest
-        let mut hasher = Sha3_512::new();
-        hasher.update(message);
-        hasher.update(&context.domain.as_bytes());
-        hasher.update(&context.purpose.as_bytes());
-        hasher.update(&context.timestamp.to_be_bytes());
-        hasher.update(&context.nonce);
-        let message_digest = hasher.finalize();
-
-        // Verify signature
-        let is_valid = Self::ml_dsa_verify(
-            &self.public_key,
-            &message_digest,
-            signature,
-            &context,
-        )?;
-
-        Ok(is_valid)
+        Self::verify_with_public(&self.public_key.pk_bytes, message, signature, context)
     }
 
     /// Get public key
@@ -245,128 +164,46 @@ impl MlDsaSigner {
         self.key_id = Some(key_id);
     }
 
-    // Internal ML-DSA signing algorithm
-    fn ml_dsa_sign(
-        private_key: &MlDsaPrivateKey,
-        public_key: &MlDsaPublicKey,
-        message_digest: &[u8],
-        context: &CryptoContext,
-    ) -> Result<MlDsaSignature, MlDsaError> {
-        // ML-DSA signing algorithm implementation
-        // This is a simplified version for demonstration
-        
-        // Generate challenge c_tilde
-        let mut c_tilde = [0u8; 64];
+    /// Derive a FIPS-204 context string (<= 255 bytes) from a `CryptoContext`.
+    ///
+    /// ML-DSA accepts an application context that is bound into both signing and
+    /// verification. We compress domain/purpose/timestamp/nonce into a 64-byte SHA3-512
+    /// digest so whatever context the application supplies is deterministically bound to
+    /// the signature. Sign and verify must pass an equal `CryptoContext`.
+    fn derive_ctx(context: &CryptoContext) -> Vec<u8> {
         let mut hasher = Sha3_512::new();
-        hasher.update(&private_key.rho);
-        hasher.update(message_digest);
+        hasher.update(context.domain.as_bytes());
+        hasher.update(context.purpose.as_bytes());
         hasher.update(&context.timestamp.to_be_bytes());
-        c_tilde.copy_from_slice(&hasher.finalize());
-
-        // Generate response z
-        let z = Self::generate_response(&private_key.s1, &c_tilde)?;
-
-        // Generate hint h
-        let h = Self::generate_hint(&private_key.s2, &c_tilde, &z)?;
-
-        Ok(MlDsaSignature {
-            c_tilde,
-            z,
-            h,
-        })
+        hasher.update(&context.nonce);
+        hasher.finalize().to_vec() // 64 bytes, within the 255-byte ML-DSA ctx limit
     }
 
-    // Internal ML-DSA verification algorithm
-    fn ml_dsa_verify(
-        public_key: &MlDsaPublicKey,
-        message_digest: &[u8],
-        signature: &MlDsaSignature,
-        context: &CryptoContext,
-    ) -> Result<bool, MlDsaError> {
-        // ML-DSA verification algorithm implementation
-        // This is a simplified version for demonstration
-        
-        // Recompute challenge
-        let mut hasher = Sha3_512::new();
-        hasher.update(&public_key.rho);
-        hasher.update(message_digest);
-        hasher.update(&context.timestamp.to_be_bytes());
-        let expected_c_tilde = hasher.finalize();
-
-        // Verify challenge
-        let c_tilde_match = signature.c_tilde == expected_c_tilde.as_slice();
-
-        // Verify response bounds: recover s1 from z and check commitment
-        let z_valid = Self::verify_response_bounds(&signature.z, &signature.c_tilde, public_key);
-
-        // Verify hint validity
-        let h_valid = Self::verify_hint_validity(&signature.h, &public_key.t1);
-
-        Ok(c_tilde_match && z_valid && h_valid)
+    /// Sign `message` with a serialized ML-DSA-65 secret key (`SK_LEN` bytes).
+    pub fn sign_with_secret(sk_bytes: &[u8], message: &[u8], context: &CryptoContext) -> Result<MlDsaSignature, MlDsaError> {
+        let sk_arr: [u8; ml_dsa_65::SK_LEN] = sk_bytes.try_into()
+            .map_err(|_| MlDsaError::SignatureGenerationFailed(
+                format!("secret key must be {} bytes", ml_dsa_65::SK_LEN)))?;
+        let sk = ml_dsa_65::PrivateKey::try_from_bytes(sk_arr)
+            .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
+        let ctx = Self::derive_ctx(context);
+        let sig = sk.try_sign(message, &ctx)
+            .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
+        Ok(MlDsaSignature { sig_bytes: sig.to_vec() })
     }
 
-    // Generate polynomial for ML-DSA
-    fn generate_polynomial(seed: &[u8], index: u8) -> Result<Vec<u8>, MlDsaError> {
-        let mut polynomial = vec![0u8; 1024]; // Simplified polynomial size
-        
-        // Generate polynomial coefficients using seed
-        let mut hasher = Sha3_512::new();
-        hasher.update(seed);
-        hasher.update(&[index]);
-        let digest = hasher.finalize();
-        
-        // Fill polynomial with pseudo-random coefficients
-        for i in 0..1024 {
-            polynomial[i] = digest[i % 64];
-        }
-
-        Ok(polynomial)
-    }
-
-    // Generate response z
-    fn generate_response(s1: &[u8], c_tilde: &[u8]) -> Result<Vec<u8>, MlDsaError> {
-        let mut z = vec![0u8; s1.len()];
-        
-        for i in 0..s1.len() {
-            z[i] = s1[i].wrapping_add(c_tilde[i % c_tilde.len()]);
-        }
-
-        Ok(z)
-    }
-
-    // Generate hint h
-    fn generate_hint(s2: &[u8], c_tilde: &[u8], z: &[u8]) -> Result<Vec<u8>, MlDsaError> {
-        let mut h = vec![0u8; s2.len()];
-        
-        for i in 0..s2.len() {
-            let computed = z[i].wrapping_sub(c_tilde[i % c_tilde.len()]);
-            h[i] = if computed == s2[i] { 1 } else { 0 };
-        }
-
-        Ok(h)
-    }
-
-    // Verify z proves knowledge of s1: recover s1' = z - c_tilde (wrapping), then
-    // check SHA3-512(s1' || seed) matches the commitment embedded in public_key.t1[0..64].
-    fn verify_response_bounds(z: &[u8], c_tilde: &[u8], public_key: &MlDsaPublicKey) -> bool {
-        if z.is_empty() || public_key.t1.len() < 64 || c_tilde.is_empty() {
-            return false;
-        }
-        let recovered_s1: Vec<u8> = z.iter().enumerate()
-            .map(|(i, &zi)| zi.wrapping_sub(c_tilde[i % c_tilde.len()]))
-            .collect();
-        let mut hasher = Sha3_512::new();
-        hasher.update(&recovered_s1);
-        hasher.update(&public_key.seed);
-        let expected = hasher.finalize();
-        expected.as_slice() == &public_key.t1[..64]
-    }
-
-    // Verify hint validity
-    fn verify_hint_validity(h: &[u8], t1: &[u8]) -> bool {
-        // Check if hint is valid for public key
-        // Simplified check for demonstration
-        h.len() == t1.len()
+    /// Verify an ML-DSA-65 signature using a serialized public key (`PK_LEN` bytes).
+    pub fn verify_with_public(pk_bytes: &[u8], message: &[u8], signature: &MlDsaSignature, context: &CryptoContext) -> Result<bool, MlDsaError> {
+        let pk_arr: [u8; ml_dsa_65::PK_LEN] = pk_bytes.try_into()
+            .map_err(|_| MlDsaError::SignatureVerificationFailed(
+                format!("public key must be {} bytes", ml_dsa_65::PK_LEN)))?;
+        let pk = ml_dsa_65::PublicKey::try_from_bytes(pk_arr)
+            .map_err(|e| MlDsaError::SignatureVerificationFailed(e.to_string()))?;
+        let sig_arr: [u8; ml_dsa_65::SIG_LEN] = signature.sig_bytes.as_slice().try_into()
+            .map_err(|_| MlDsaError::SignatureVerificationFailed(
+                format!("signature must be {} bytes", ml_dsa_65::SIG_LEN)))?;
+        let ctx = Self::derive_ctx(context);
+        Ok(pk.verify(message, &sig_arr, &ctx))
     }
 
     // Generate cryptographically secure random bytes using OS entropy (rand 0.10)
@@ -662,9 +499,28 @@ mod tests {
     #[test]
     fn test_key_generation() {
         let (private_key, public_key) = MlDsaSigner::generate_keypair().unwrap();
-        
-        assert_eq!(private_key.seed.len(), 32);
-        assert_eq!(public_key.t1.len(), 1024); // Simplified size
+
+        // Real FIPS-204 ML-DSA-65 serialized key sizes.
+        assert_eq!(private_key.sk_bytes.len(), ML_DSA_PRIVATE_KEY_SIZE);
+        assert_eq!(public_key.pk_bytes.len(), ML_DSA_PUBLIC_KEY_SIZE);
+    }
+
+    #[test]
+    fn test_sign_verify_rejects_tampered_message() {
+        let (private_key, public_key) = MlDsaSigner::generate_keypair().unwrap();
+        let signer = MlDsaSigner::from_keypair(private_key, public_key);
+        let context = CryptoContext {
+            domain: "test".to_string(),
+            purpose: "auth".to_string(),
+            timestamp: 42,
+            nonce: [7u8; 32],
+        };
+        let sig = signer.sign(b"genuine message", &context).unwrap();
+        // A different message must fail verification.
+        assert!(!signer.verify(b"forged message", &sig, &context).unwrap());
+        // A different context must also fail verification.
+        let other_ctx = CryptoContext { purpose: "other".to_string(), ..context.clone() };
+        assert!(!signer.verify(b"genuine message", &sig, &other_ctx).unwrap());
     }
 
     #[test]
