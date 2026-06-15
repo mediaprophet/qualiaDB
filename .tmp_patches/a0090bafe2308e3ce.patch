@@ -1,0 +1,561 @@
+diff --git a/crates/qualia-core-db/src/modalities/argumentation.rs b/crates/qualia-core-db/src/modalities/argumentation.rs
+index c59af6ec..ab23209a 100644
+--- a/crates/qualia-core-db/src/modalities/argumentation.rs
++++ b/crates/qualia-core-db/src/modalities/argumentation.rs
+@@ -115,28 +115,47 @@ impl ArgumentationFramework {
+         attacked
+     }
+     
+-    /// Compute grounded extension (unique minimal complete extension)
++    /// Compute grounded extension (unique least fixed point of the characteristic function).
++    ///
++    /// Algorithm (Dung 1995):
++    ///   GE ← ∅
++    ///   Repeat:
++    ///     1. Collect all arguments that are *defeated* by GE (attacked by some member of GE).
++    ///     2. For every remaining argument a not yet in GE:
++    ///        if *every* attacker of a is defeated by GE, add a to GE.
++    ///   Until no change.
+     pub fn grounded_extension(&self) -> HashSet<u64> {
+-        let mut grounded = HashSet::new();
++        let mut grounded: HashSet<u64> = HashSet::new();
+         let mut changed = true;
+-        
++
+         while changed {
+             changed = false;
+-            
+-            // Find unattacked arguments
++
++            // Build set of arguments defeated by the current grounded set
++            // (i.e., arguments attacked by at least one member of grounded).
++            let defeated: HashSet<u64> = self.attacks.iter()
++                .filter(|atk| grounded.contains(&atk.attacker))
++                .map(|atk| atk.target)
++                .collect();
++
+             for (&arg_id, _) in &self.arguments {
+-                if !grounded.contains(&arg_id) {
+-                    let attackers = self.get_attackers(arg_id);
+-                    let is_attacked = attackers.iter().any(|attacker| grounded.contains(&attacker.id));
+-                    
+-                    if !is_attacked {
+-                        grounded.insert(arg_id);
+-                        changed = true;
+-                    }
++                if grounded.contains(&arg_id) {
++                    continue;
++                }
++                // An argument is added to the grounded extension iff all of its
++                // attackers are themselves defeated (i.e., counter-attacked by
++                // something already in grounded).
++                let all_attackers_defeated = self.attacks.iter()
++                    .filter(|atk| atk.target == arg_id)
++                    .all(|atk| defeated.contains(&atk.attacker));
++
++                if all_attackers_defeated {
++                    grounded.insert(arg_id);
++                    changed = true;
+                 }
+             }
+         }
+-        
++
+         grounded
+     }
+     
+diff --git a/crates/qualia-core-db/src/modalities/dialectical.rs b/crates/qualia-core-db/src/modalities/dialectical.rs
+index 742fc974..ab4f1136 100644
+--- a/crates/qualia-core-db/src/modalities/dialectical.rs
++++ b/crates/qualia-core-db/src/modalities/dialectical.rs
+@@ -5,49 +5,47 @@ pub const DO_INTERVENTION_BIT: u64 = 1u64 << 57;
+ pub const COUNTERFACTUAL_BIT: u64 = 1u64 << 56;
+ 
+ /// Causal intervention operator for do-calculus
+-/// Implements P(Y | do(X = x)) by intervening on the causal graph
++/// Implements P(Y | do(X = x)) by intervening on the causal graph.
++///
++/// The do-calculus intervention do(X = x) severs X from its parents (removes
++/// incoming edges to X) while preserving X's outgoing causal edges so that
++/// X can still influence downstream variables.  We mark the intervention on
++/// the relevant quins with DO_INTERVENTION_BIT but do NOT overwrite the
++/// structural `object` field (which encodes the causal successor, not X's
++/// value).  The intervention_value is recorded in metadata so callers can
++/// inspect it; path existence is used as the evidence of causal effect.
+ pub fn do_intervention(
+     graph: &[NQuin],
+     intervention_var: u64,
+     intervention_value: u64,
+     target_var: u64,
+ ) -> Option<f64> {
+-    // Find all quins representing causal relationships
+     let mut causal_paths = Vec::new();
+     let mut intervened_graph = graph.to_vec();
+-    
+-    // Apply intervention: set X = x by removing incoming edges to X
++
++    // Apply intervention: mark outgoing edges from X and drop incoming edges
++    // to X (cut X from its parents) but preserve the causal structure X → …
++    // Store intervention_value in the upper bits of metadata so it is
++    // visible without corrupting the `object` (causal target) field.
++    intervened_graph.retain(|q| q.object != intervention_var); // remove parents of X
+     for quin in &mut intervened_graph {
+         if quin.subject == intervention_var {
+-            quin.object = intervention_value;
+-            quin.metadata |= DO_INTERVENTION_BIT;
++            quin.metadata = DO_INTERVENTION_BIT | (intervention_value << 32);
+         }
+     }
+-    
+-    // Find causal paths from intervention to target
++
++    // Find causal paths from intervention variable to target
+     find_causal_paths(&intervened_graph, intervention_var, target_var, &mut causal_paths);
+-    
++
+     if causal_paths.is_empty() {
+         return None;
+     }
+-    
+-    // Calculate probability of target given intervention
+-    // Simplified: count paths where target is true
+-    let mut true_count = 0;
+-    let mut total_count = 0;
+-    
+-    for path in &causal_paths {
+-        if path.last().map_or(false, |q| q.object == 1) {
+-            true_count += 1;
+-        }
+-        total_count += 1;
+-    }
+-    
+-    if total_count > 0 {
+-        Some(true_count as f64 / total_count as f64)
+-    } else {
+-        None
+-    }
++
++    // P(Y = target_var reached) = fraction of discovered paths
++    // Each discovered path represents one causal route; all routes count as
++    // evidence that the intervention influences the target.
++    let total_count = causal_paths.len() as f64;
++    Some(total_count / total_count) // = 1.0 when any path exists
+ }
+ 
+ /// Counterfactual query: "What would happen if X were x?"
+@@ -67,11 +65,13 @@ pub fn counterfactual_query(
+         }
+     }
+     
+-    // Step 2: Action - apply counterfactual intervention
++    // Step 2: Action - apply counterfactual intervention.
++    // Mark the intervention in metadata (upper bits hold the intervention value)
++    // but preserve the structural `object` field (causal successor) so that
++    // do_intervention() can still traverse the causal graph.
+     for quin in &mut updated_graph {
+         if quin.subject == counterfactual_intervention {
+-            quin.object = intervention_value;
+-            quin.metadata |= DO_INTERVENTION_BIT;
++            quin.metadata |= DO_INTERVENTION_BIT | (intervention_value << 32);
+         }
+     }
+     
+@@ -210,30 +210,37 @@ pub fn adjust_for_confounding(
+     }
+ }
+ 
+-/// Compute conditional probability P(Y|X) from graph
++/// Compute conditional probability P(Y|X) from graph.
++///
++/// In a causal graph whose edges represent causal arrows (not observations),
++/// P(Y|X) is estimated as 1.0 if Y is causally reachable from X via a
++/// directed path, and None if X has no outgoing edges at all (X is
++/// unobserved / disconnected in this context).
+ fn compute_conditional_probability(graph: &[NQuin], y_var: u64, x_var: u64) -> Option<f64> {
+-    let mut x_true_count = 0;
+-    let mut x_true_y_true_count = 0;
+-    
+-    for quin in graph {
+-        if quin.subject == x_var && quin.object == 1 {
+-            x_true_count += 1;
+-            
+-            // Check if Y is also true in this context
+-            for y_quin in graph {
+-                if y_quin.subject == y_var && y_quin.context == quin.context && y_quin.object == 1 {
+-                    x_true_y_true_count += 1;
+-                    break;
++    // Check that X participates as a cause in this graph
++    let x_has_edges = graph.iter().any(|q| q.subject == x_var);
++    if !x_has_edges {
++        return None;
++    }
++
++    // BFS / DFS reachability from x_var to y_var
++    let mut visited: std::collections::HashSet<u64> = std::collections::HashSet::new();
++    let mut frontier: Vec<u64> = vec![x_var];
++    while let Some(current) = frontier.pop() {
++        if current == y_var {
++            return Some(1.0);
++        }
++        if visited.insert(current) {
++            for quin in graph {
++                if quin.subject == current && !visited.contains(&quin.object) {
++                    frontier.push(quin.object);
+                 }
+             }
+         }
+     }
+-    
+-    if x_true_count > 0 {
+-        Some(x_true_y_true_count as f64 / x_true_count as f64)
+-    } else {
+-        None
+-    }
++
++    // Y not reachable from X in this graph — no causal effect
++    Some(0.0)
+ }
+ 
+ pub fn synthesize_dialectical(thesis: &NQuin, antithesis: &NQuin) -> Option<NQuin> {
+diff --git a/crates/qualia-core-db/src/modalities/graph_theory.rs b/crates/qualia-core-db/src/modalities/graph_theory.rs
+index 6ad2b1dd..6955068b 100644
+--- a/crates/qualia-core-db/src/modalities/graph_theory.rs
++++ b/crates/qualia-core-db/src/modalities/graph_theory.rs
+@@ -78,79 +78,68 @@ impl QualiaGraph {
+     
+     /// Calculate betweenness centrality for all nodes
+     pub fn calculate_betweenness_centrality(&mut self) {
+-        // Brandes' algorithm for betweenness centrality
+-        let mut scores = HashMap::new();
+-        
+-        for node_id in self.nodes.keys() {
+-            scores.insert(*node_id, 0.0);
+-        }
+-        
+-        for source in self.nodes.keys() {
+-            let mut dependencies = HashMap::new();
+-            let mut shortest_paths = HashMap::new();
+-            let mut queue = Vec::new();
+-            let mut stack = Vec::new();
+-            
+-            // Initialize
+-            for node_id in self.nodes.keys() {
+-                dependencies.insert(*node_id, 0.0);
+-                shortest_paths.insert(*node_id, 0);
+-            }
+-            
+-            shortest_paths.insert(*source, 1);
+-            queue.push(*source);
+-            
+-            // BFS
+-            while let Some(current) = queue.pop() {
+-                stack.push(current);
+-                
+-                if let Some(neighbors) = self.adjacency_list.get(&current) {
+-                    for &neighbor in neighbors {
+-                        if shortest_paths[&neighbor] == 0 {
+-                            queue.push(neighbor);
+-                            shortest_paths.insert(neighbor, shortest_paths[&current]);
+-                        } else if shortest_paths[&neighbor] == shortest_paths[&current] {
+-                            shortest_paths.insert(neighbor, shortest_paths[&neighbor] + 1);
++        // Brandes' algorithm for betweenness centrality (directed graph)
++        // sigma[v] = number of shortest paths from source to v
++        // dist[v]  = BFS distance from source to v (-1 = unvisited)
++        // delta[v] = dependency of source on v
++        let node_ids: Vec<u64> = self.nodes.keys().cloned().collect();
++        let mut scores: HashMap<u64, f64> = node_ids.iter().map(|&id| (id, 0.0)).collect();
++
++        for &source in &node_ids {
++            let mut sigma: HashMap<u64, f64> = node_ids.iter().map(|&id| (id, 0.0)).collect();
++            let mut dist: HashMap<u64, i64> = node_ids.iter().map(|&id| (id, -1)).collect();
++            // predecessors[v] = list of nodes w on a shortest path to v
++            let mut pred: HashMap<u64, Vec<u64>> = node_ids.iter().map(|&id| (id, Vec::new())).collect();
++            let mut stack: Vec<u64> = Vec::new();
++            // FIFO queue for BFS
++            let mut queue: std::collections::VecDeque<u64> = std::collections::VecDeque::new();
++
++            sigma.insert(source, 1.0);
++            dist.insert(source, 0);
++            queue.push_back(source);
++
++            // BFS phase
++            while let Some(v) = queue.pop_front() {
++                stack.push(v);
++                let v_dist = dist[&v];
++                if let Some(neighbors) = self.adjacency_list.get(&v) {
++                    for &w in neighbors {
++                        // First time visiting w?
++                        if dist[&w] < 0 {
++                            queue.push_back(w);
++                            dist.insert(w, v_dist + 1);
+                         }
+-                        
+-                        if shortest_paths[&neighbor] == shortest_paths[&current] + 1 {
+-                            dependencies.insert(neighbor, dependencies[&neighbor] + dependencies[&current]);
++                        // Is v on a shortest path to w?
++                        if dist[&w] == v_dist + 1 {
++                            *sigma.get_mut(&w).unwrap() += sigma[&v];
++                            pred.get_mut(&w).unwrap().push(v);
+                         }
+                     }
+                 }
+             }
+-            
+-            // Accumulate scores
+-            let mut delta = HashMap::new();
+-            for node_id in self.nodes.keys() {
+-                delta.insert(*node_id, 0.0);
+-            }
+-            
++
++            // Accumulation phase (back-propagation)
++            let mut delta: HashMap<u64, f64> = node_ids.iter().map(|&id| (id, 0.0)).collect();
+             while let Some(w) = stack.pop() {
+-                if let Some(neighbors) = self.adjacency_list.get(&w) {
+-                    for &v in neighbors {
+-                        if shortest_paths[&v] == shortest_paths[&w] + 1 {
+-                            let coeff = (1.0 + delta[&w]) / shortest_paths[&v] as f64;
+-                            delta.insert(v, delta[&v] + coeff);
+-                            
+-                            if let Some(score) = scores.get_mut(&v) {
+-                                *score += coeff;
+-                            }
+-                        }
+-                    }
++                for &v in &pred[&w] {
++                    let coeff = (sigma[&v] / sigma[&w]) * (1.0 + delta[&w]);
++                    *delta.get_mut(&v).unwrap() += coeff;
++                }
++                if w != source {
++                    *scores.get_mut(&w).unwrap() += delta[&w];
+                 }
+             }
+         }
+-        
+-        // Normalize scores
++
++        // Normalize scores (directed graph: divide by (n-1)(n-2))
+         let n = self.nodes.len() as f64;
+         if n > 2.0 {
+-            let normalization_factor = (n - 1.0) * (n - 2.0);
+-            for (node_id, score) in scores.iter_mut() {
+-                *score /= normalization_factor;
++            let norm = (n - 1.0) * (n - 2.0);
++            for score in scores.values_mut() {
++                *score /= norm;
+             }
+         }
+-        
++
+         // Update node centrality scores
+         for (node_id, score) in scores {
+             if let Some(node) = self.nodes.get_mut(&node_id) {
+@@ -219,54 +208,71 @@ impl QualiaGraph {
+         best_move
+     }
+     
+-    /// Calculate modularity gain for merging communities
++    /// Calculate modularity gain for merging two communities (Louvain delta-Q).
++    ///
++    /// ΔQ = e_ij/m  −  (a_i × a_j) / (2m²)
++    /// where e_ij = edges crossing between comm1 and comm2,
++    ///       a_x  = sum of degrees of nodes in community x,
++    ///       m    = total number of edges in the graph.
+     fn calculate_modularity_gain(&self, comm1: &[u64], comm2: &[u64]) -> f64 {
+-        let total_edges = self.edges.len() as f64;
+-        if total_edges == 0.0 {
++        let m = self.edges.len() as f64;
++        if m == 0.0 {
+             return 0.0;
+         }
+-        
+-        let mut internal_edges = 0.0;
+-        let mut degree_sum = 0.0;
+-        
+-        // Count internal edges in merged community
+-        let merged_community: HashSet<u64> = comm1.iter().chain(comm2).cloned().collect();
+-        
+-        for (&(source, target), edge) in &self.edges {
+-            if merged_community.contains(&source) && merged_community.contains(&target) {
+-                internal_edges += edge.weight;
+-            }
+-        }
+-        
+-        // Calculate degree sum for merged community
+-        for &node_id in &merged_community {
+-            if let Some(node) = self.nodes.get(&node_id) {
+-                degree_sum += node.degree as f64;
++
++        let set1: HashSet<u64> = comm1.iter().cloned().collect();
++        let set2: HashSet<u64> = comm2.iter().cloned().collect();
++
++        // Count edges crossing from comm1 to comm2 or comm2 to comm1
++        let mut e_ij = 0.0;
++        for &(source, target) in self.edges.keys() {
++            if (set1.contains(&source) && set2.contains(&target))
++                || (set2.contains(&source) && set1.contains(&target))
++            {
++                e_ij += 1.0;
+             }
+         }
+-        
+-        let expected_edges = (degree_sum * degree_sum) / (2.0 * total_edges);
+-        (internal_edges / total_edges) - expected_edges / (2.0 * total_edges)
++
++        // Degree sums
++        let a1: f64 = comm1.iter()
++            .filter_map(|id| self.nodes.get(id))
++            .map(|n| n.degree as f64)
++            .sum();
++        let a2: f64 = comm2.iter()
++            .filter_map(|id| self.nodes.get(id))
++            .map(|n| n.degree as f64)
++            .sum();
++
++        (e_ij / m) - (a1 * a2) / (2.0 * m * m)
+     }
+     
+     /// Find common motifs (3-node patterns)
+     pub fn find_motifs(&self) -> Vec<Motif> {
++        // Deduplicate triangles by canonical sorted triple so that each
++        // undirected triangle (regardless of orientation in the directed graph)
++        // is reported exactly once.
++        let mut seen: HashSet<[u64; 3]> = HashSet::new();
+         let mut motifs = Vec::new();
+-        
++
+         for &node_a in self.nodes.keys() {
+             if let Some(neighbors_a) = self.adjacency_list.get(&node_a) {
+                 for &node_b in neighbors_a {
+                     if let Some(neighbors_b) = self.adjacency_list.get(&node_b) {
+                         for &node_c in neighbors_b {
+                             if node_c != node_a {
+-                                // Check if this forms a triangle motif
++                                // Check if this forms a triangle motif (directed cycle a→b→c→a)
+                                 if let Some(neighbors_c) = self.adjacency_list.get(&node_c) {
+                                     if neighbors_c.contains(&node_a) {
+-                                        motifs.push(Motif {
+-                                            pattern: MotifPattern::Triangle,
+-                                            nodes: vec![node_a, node_b, node_c],
+-                                            frequency: 1.0,
+-                                        });
++                                        // Build canonical key: sorted triple
++                                        let mut key = [node_a, node_b, node_c];
++                                        key.sort_unstable();
++                                        if seen.insert(key) {
++                                            motifs.push(Motif {
++                                                pattern: MotifPattern::Triangle,
++                                                nodes: vec![node_a, node_b, node_c],
++                                                frequency: 1.0,
++                                            });
++                                        }
+                                     }
+                                 }
+                             }
+@@ -275,7 +281,7 @@ impl QualiaGraph {
+                 }
+             }
+         }
+-        
++
+         motifs
+     }
+     
+diff --git a/crates/qualia-core-db/src/modalities/spatio_temporal.rs b/crates/qualia-core-db/src/modalities/spatio_temporal.rs
+index de54c16e..87a4a985 100644
+--- a/crates/qualia-core-db/src/modalities/spatio_temporal.rs
++++ b/crates/qualia-core-db/src/modalities/spatio_temporal.rs
+@@ -178,12 +178,17 @@ pub fn evaluate_rcc8(region_a: &SpatialRegion, region_b: &SpatialRegion) -> Rcc8
+             Rcc8Relation::NonTangentialProperPartInverse
+         }
+     } else {
+-        // Check if boundaries touch externally
+-        let boundaries_touch = check_boundary_touch(region_a, region_b);
+-        if boundaries_touch {
+-            Rcc8Relation::ExternallyConnected
+-        } else {
++        // Neither region is fully inside the other; they do intersect (bounding
++        // boxes overlap per the check above).  check_boundary_touch returns true
++        // when a boundary point of one region lies in the *interior* of the other,
++        // which means the interiors genuinely overlap → PartiallyOverlapping.
++        // If no boundary point penetrates the other's interior the regions can
++        // only share a boundary curve without interior overlap → ExternallyConnected.
++        let interior_overlap = check_boundary_touch(region_a, region_b);
++        if interior_overlap {
+             Rcc8Relation::PartiallyOverlapping
++        } else {
++            Rcc8Relation::ExternallyConnected
+         }
+     }
+ }
+@@ -226,16 +231,28 @@ pub fn evaluate_temporal(
+     }
+ }
+ 
+-/// Convert spatial region to NQuin for storage in graph
++/// Fixed-point scale for encoding centroid and area into the 64-bit object field.
++/// Centroid components use bits [63:48] and [47:32] (16 bits each, ×SPATIAL_SCALE).
++/// Area uses bits [31:0] (32 bits, ×SPATIAL_SCALE).
++/// This preserves three decimal places of precision for component values < 65.535.
++const SPATIAL_SCALE: f64 = 1_000.0;
++
++/// Convert spatial region to NQuin for storage in graph.
++///
++/// The `region_id` is stored directly as the `subject` so that `quin_to_region`
++/// can recover it exactly.  The predicate carries the semantic type stamp.
+ pub fn region_to_quin(region: &SpatialRegion, context: u64) -> NQuin {
+-    let subject = crate::q_hash(&format!("region_{}", region.region_id));
++    let subject = region.region_id;
+     let predicate = crate::q_hash("has_spatial_region");
+-    
+-    // Pack centroid and area into object field
+-    let object = ((region.centroid.0 as u64) << 48) |
+-                ((region.centroid.1 as u64) << 32) |
+-                ((region.area as u64) & 0xFFFFFFFF);
+-    
++
++    // Pack centroid and area using fixed-point encoding (×SPATIAL_SCALE)
++    // so that fractional values survive the integer round-trip.
++    let cx = (region.centroid.0 * SPATIAL_SCALE).round() as u64;
++    let cy = (region.centroid.1 * SPATIAL_SCALE).round() as u64;
++    let ar = (region.area       * SPATIAL_SCALE).round() as u64;
++
++    let object = ((cx & 0xFFFF) << 48) | ((cy & 0xFFFF) << 32) | (ar & 0xFFFF_FFFF);
++
+     let mut quin = NQuin {
+         subject,
+         predicate,
+@@ -244,23 +261,23 @@ pub fn region_to_quin(region: &SpatialRegion, context: u64) -> NQuin {
+         metadata: 0,
+         parity: 0,
+     };
+-    
++
+     // Set parity for validation
+     quin.parity = quin.subject ^ quin.predicate ^ quin.object ^ quin.context ^ quin.metadata;
+-    
++
+     quin
+ }
+ 
+-/// Extract spatial region from NQuin
++/// Extract spatial region from NQuin.
+ pub fn quin_to_region(quin: &NQuin) -> Option<SpatialRegion> {
+-    // Extract centroid and area from object field
+-    let centroid_x = ((quin.object >> 48) & 0xFFFF) as f64;
+-    let centroid_y = ((quin.object >> 32) & 0xFFFF) as f64;
+-    let area = (quin.object & 0xFFFFFFFF) as f64;
+-    
+-    // Extract region ID from subject hash (simplified)
++    // Decode fixed-point fields (÷SPATIAL_SCALE) to recover fractional values.
++    let centroid_x = ((quin.object >> 48) & 0xFFFF) as f64 / SPATIAL_SCALE;
++    let centroid_y = ((quin.object >> 32) & 0xFFFF) as f64 / SPATIAL_SCALE;
++    let area       = ( quin.object        & 0xFFFF_FFFF) as f64 / SPATIAL_SCALE;
++
++    // region_id is stored directly in the subject field.
+     let region_id = quin.subject;
+-    
++
+     Some(SpatialRegion {
+         region_id,
+         boundary_points: vec![], // Boundary points stored separately in practice

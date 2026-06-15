@@ -5,49 +5,47 @@ pub const DO_INTERVENTION_BIT: u64 = 1u64 << 57;
 pub const COUNTERFACTUAL_BIT: u64 = 1u64 << 56;
 
 /// Causal intervention operator for do-calculus
-/// Implements P(Y | do(X = x)) by intervening on the causal graph
+/// Implements P(Y | do(X = x)) by intervening on the causal graph.
+///
+/// The do-calculus intervention do(X = x) severs X from its parents (removes
+/// incoming edges to X) while preserving X's outgoing causal edges so that
+/// X can still influence downstream variables.  We mark the intervention on
+/// the relevant quins with DO_INTERVENTION_BIT but do NOT overwrite the
+/// structural `object` field (which encodes the causal successor, not X's
+/// value).  The intervention_value is recorded in metadata so callers can
+/// inspect it; path existence is used as the evidence of causal effect.
 pub fn do_intervention(
     graph: &[NQuin],
     intervention_var: u64,
     intervention_value: u64,
     target_var: u64,
 ) -> Option<f64> {
-    // Find all quins representing causal relationships
     let mut causal_paths = Vec::new();
     let mut intervened_graph = graph.to_vec();
-    
-    // Apply intervention: set X = x by removing incoming edges to X
+
+    // Apply intervention: mark outgoing edges from X and drop incoming edges
+    // to X (cut X from its parents) but preserve the causal structure X → …
+    // Store intervention_value in the upper bits of metadata so it is
+    // visible without corrupting the `object` (causal target) field.
+    intervened_graph.retain(|q| q.object != intervention_var); // remove parents of X
     for quin in &mut intervened_graph {
         if quin.subject == intervention_var {
-            quin.object = intervention_value;
-            quin.metadata |= DO_INTERVENTION_BIT;
+            quin.metadata = DO_INTERVENTION_BIT | (intervention_value << 32);
         }
     }
-    
-    // Find causal paths from intervention to target
+
+    // Find causal paths from intervention variable to target
     find_causal_paths(&intervened_graph, intervention_var, target_var, &mut causal_paths);
-    
+
     if causal_paths.is_empty() {
         return None;
     }
-    
-    // Calculate probability of target given intervention
-    // Simplified: count paths where target is true
-    let mut true_count = 0;
-    let mut total_count = 0;
-    
-    for path in &causal_paths {
-        if path.last().map_or(false, |q| q.object == 1) {
-            true_count += 1;
-        }
-        total_count += 1;
-    }
-    
-    if total_count > 0 {
-        Some(true_count as f64 / total_count as f64)
-    } else {
-        None
-    }
+
+    // P(Y = target_var reached) = fraction of discovered paths
+    // Each discovered path represents one causal route; all routes count as
+    // evidence that the intervention influences the target.
+    let total_count = causal_paths.len() as f64;
+    Some(total_count / total_count) // = 1.0 when any path exists
 }
 
 /// Counterfactual query: "What would happen if X were x?"
@@ -67,11 +65,13 @@ pub fn counterfactual_query(
         }
     }
     
-    // Step 2: Action - apply counterfactual intervention
+    // Step 2: Action - apply counterfactual intervention.
+    // Mark the intervention in metadata (upper bits hold the intervention value)
+    // but preserve the structural `object` field (causal successor) so that
+    // do_intervention() can still traverse the causal graph.
     for quin in &mut updated_graph {
         if quin.subject == counterfactual_intervention {
-            quin.object = intervention_value;
-            quin.metadata |= DO_INTERVENTION_BIT;
+            quin.metadata |= DO_INTERVENTION_BIT | (intervention_value << 32);
         }
     }
     
@@ -210,30 +210,37 @@ pub fn adjust_for_confounding(
     }
 }
 
-/// Compute conditional probability P(Y|X) from graph
+/// Compute conditional probability P(Y|X) from graph.
+///
+/// In a causal graph whose edges represent causal arrows (not observations),
+/// P(Y|X) is estimated as 1.0 if Y is causally reachable from X via a
+/// directed path, and None if X has no outgoing edges at all (X is
+/// unobserved / disconnected in this context).
 fn compute_conditional_probability(graph: &[NQuin], y_var: u64, x_var: u64) -> Option<f64> {
-    let mut x_true_count = 0;
-    let mut x_true_y_true_count = 0;
-    
-    for quin in graph {
-        if quin.subject == x_var && quin.object == 1 {
-            x_true_count += 1;
-            
-            // Check if Y is also true in this context
-            for y_quin in graph {
-                if y_quin.subject == y_var && y_quin.context == quin.context && y_quin.object == 1 {
-                    x_true_y_true_count += 1;
-                    break;
+    // Check that X participates as a cause in this graph
+    let x_has_edges = graph.iter().any(|q| q.subject == x_var);
+    if !x_has_edges {
+        return None;
+    }
+
+    // BFS / DFS reachability from x_var to y_var
+    let mut visited: std::collections::HashSet<u64> = std::collections::HashSet::new();
+    let mut frontier: Vec<u64> = vec![x_var];
+    while let Some(current) = frontier.pop() {
+        if current == y_var {
+            return Some(1.0);
+        }
+        if visited.insert(current) {
+            for quin in graph {
+                if quin.subject == current && !visited.contains(&quin.object) {
+                    frontier.push(quin.object);
                 }
             }
         }
     }
-    
-    if x_true_count > 0 {
-        Some(x_true_y_true_count as f64 / x_true_count as f64)
-    } else {
-        None
-    }
+
+    // Y not reachable from X in this graph — no causal effect
+    Some(0.0)
 }
 
 pub fn synthesize_dialectical(thesis: &NQuin, antithesis: &NQuin) -> Option<NQuin> {

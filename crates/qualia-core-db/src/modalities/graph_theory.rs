@@ -78,79 +78,68 @@ impl QualiaGraph {
     
     /// Calculate betweenness centrality for all nodes
     pub fn calculate_betweenness_centrality(&mut self) {
-        // Brandes' algorithm for betweenness centrality
-        let mut scores = HashMap::new();
-        
-        for node_id in self.nodes.keys() {
-            scores.insert(*node_id, 0.0);
-        }
-        
-        for source in self.nodes.keys() {
-            let mut dependencies = HashMap::new();
-            let mut shortest_paths = HashMap::new();
-            let mut queue = Vec::new();
-            let mut stack = Vec::new();
-            
-            // Initialize
-            for node_id in self.nodes.keys() {
-                dependencies.insert(*node_id, 0.0);
-                shortest_paths.insert(*node_id, 0);
-            }
-            
-            shortest_paths.insert(*source, 1);
-            queue.push(*source);
-            
-            // BFS
-            while let Some(current) = queue.pop() {
-                stack.push(current);
-                
-                if let Some(neighbors) = self.adjacency_list.get(&current) {
-                    for &neighbor in neighbors {
-                        if shortest_paths[&neighbor] == 0 {
-                            queue.push(neighbor);
-                            shortest_paths.insert(neighbor, shortest_paths[&current]);
-                        } else if shortest_paths[&neighbor] == shortest_paths[&current] {
-                            shortest_paths.insert(neighbor, shortest_paths[&neighbor] + 1);
+        // Brandes' algorithm for betweenness centrality (directed graph)
+        // sigma[v] = number of shortest paths from source to v
+        // dist[v]  = BFS distance from source to v (-1 = unvisited)
+        // delta[v] = dependency of source on v
+        let node_ids: Vec<u64> = self.nodes.keys().cloned().collect();
+        let mut scores: HashMap<u64, f64> = node_ids.iter().map(|&id| (id, 0.0)).collect();
+
+        for &source in &node_ids {
+            let mut sigma: HashMap<u64, f64> = node_ids.iter().map(|&id| (id, 0.0)).collect();
+            let mut dist: HashMap<u64, i64> = node_ids.iter().map(|&id| (id, -1)).collect();
+            // predecessors[v] = list of nodes w on a shortest path to v
+            let mut pred: HashMap<u64, Vec<u64>> = node_ids.iter().map(|&id| (id, Vec::new())).collect();
+            let mut stack: Vec<u64> = Vec::new();
+            // FIFO queue for BFS
+            let mut queue: std::collections::VecDeque<u64> = std::collections::VecDeque::new();
+
+            sigma.insert(source, 1.0);
+            dist.insert(source, 0);
+            queue.push_back(source);
+
+            // BFS phase
+            while let Some(v) = queue.pop_front() {
+                stack.push(v);
+                let v_dist = dist[&v];
+                if let Some(neighbors) = self.adjacency_list.get(&v) {
+                    for &w in neighbors {
+                        // First time visiting w?
+                        if dist[&w] < 0 {
+                            queue.push_back(w);
+                            dist.insert(w, v_dist + 1);
                         }
-                        
-                        if shortest_paths[&neighbor] == shortest_paths[&current] + 1 {
-                            dependencies.insert(neighbor, dependencies[&neighbor] + dependencies[&current]);
+                        // Is v on a shortest path to w?
+                        if dist[&w] == v_dist + 1 {
+                            *sigma.get_mut(&w).unwrap() += sigma[&v];
+                            pred.get_mut(&w).unwrap().push(v);
                         }
                     }
                 }
             }
-            
-            // Accumulate scores
-            let mut delta = HashMap::new();
-            for node_id in self.nodes.keys() {
-                delta.insert(*node_id, 0.0);
-            }
-            
+
+            // Accumulation phase (back-propagation)
+            let mut delta: HashMap<u64, f64> = node_ids.iter().map(|&id| (id, 0.0)).collect();
             while let Some(w) = stack.pop() {
-                if let Some(neighbors) = self.adjacency_list.get(&w) {
-                    for &v in neighbors {
-                        if shortest_paths[&v] == shortest_paths[&w] + 1 {
-                            let coeff = (1.0 + delta[&w]) / shortest_paths[&v] as f64;
-                            delta.insert(v, delta[&v] + coeff);
-                            
-                            if let Some(score) = scores.get_mut(&v) {
-                                *score += coeff;
-                            }
-                        }
-                    }
+                for &v in &pred[&w] {
+                    let coeff = (sigma[&v] / sigma[&w]) * (1.0 + delta[&w]);
+                    *delta.get_mut(&v).unwrap() += coeff;
+                }
+                if w != source {
+                    *scores.get_mut(&w).unwrap() += delta[&w];
                 }
             }
         }
-        
-        // Normalize scores
+
+        // Normalize scores (directed graph: divide by (n-1)(n-2))
         let n = self.nodes.len() as f64;
         if n > 2.0 {
-            let normalization_factor = (n - 1.0) * (n - 2.0);
-            for (node_id, score) in scores.iter_mut() {
-                *score /= normalization_factor;
+            let norm = (n - 1.0) * (n - 2.0);
+            for score in scores.values_mut() {
+                *score /= norm;
             }
         }
-        
+
         // Update node centrality scores
         for (node_id, score) in scores {
             if let Some(node) = self.nodes.get_mut(&node_id) {
@@ -219,54 +208,71 @@ impl QualiaGraph {
         best_move
     }
     
-    /// Calculate modularity gain for merging communities
+    /// Calculate modularity gain for merging two communities (Louvain delta-Q).
+    ///
+    /// ΔQ = e_ij/m  −  (a_i × a_j) / (2m²)
+    /// where e_ij = edges crossing between comm1 and comm2,
+    ///       a_x  = sum of degrees of nodes in community x,
+    ///       m    = total number of edges in the graph.
     fn calculate_modularity_gain(&self, comm1: &[u64], comm2: &[u64]) -> f64 {
-        let total_edges = self.edges.len() as f64;
-        if total_edges == 0.0 {
+        let m = self.edges.len() as f64;
+        if m == 0.0 {
             return 0.0;
         }
-        
-        let mut internal_edges = 0.0;
-        let mut degree_sum = 0.0;
-        
-        // Count internal edges in merged community
-        let merged_community: HashSet<u64> = comm1.iter().chain(comm2).cloned().collect();
-        
-        for (&(source, target), edge) in &self.edges {
-            if merged_community.contains(&source) && merged_community.contains(&target) {
-                internal_edges += edge.weight;
+
+        let set1: HashSet<u64> = comm1.iter().cloned().collect();
+        let set2: HashSet<u64> = comm2.iter().cloned().collect();
+
+        // Count edges crossing from comm1 to comm2 or comm2 to comm1
+        let mut e_ij = 0.0;
+        for &(source, target) in self.edges.keys() {
+            if (set1.contains(&source) && set2.contains(&target))
+                || (set2.contains(&source) && set1.contains(&target))
+            {
+                e_ij += 1.0;
             }
         }
-        
-        // Calculate degree sum for merged community
-        for &node_id in &merged_community {
-            if let Some(node) = self.nodes.get(&node_id) {
-                degree_sum += node.degree as f64;
-            }
-        }
-        
-        let expected_edges = (degree_sum * degree_sum) / (2.0 * total_edges);
-        (internal_edges / total_edges) - expected_edges / (2.0 * total_edges)
+
+        // Degree sums
+        let a1: f64 = comm1.iter()
+            .filter_map(|id| self.nodes.get(id))
+            .map(|n| n.degree as f64)
+            .sum();
+        let a2: f64 = comm2.iter()
+            .filter_map(|id| self.nodes.get(id))
+            .map(|n| n.degree as f64)
+            .sum();
+
+        (e_ij / m) - (a1 * a2) / (2.0 * m * m)
     }
     
     /// Find common motifs (3-node patterns)
     pub fn find_motifs(&self) -> Vec<Motif> {
+        // Deduplicate triangles by canonical sorted triple so that each
+        // undirected triangle (regardless of orientation in the directed graph)
+        // is reported exactly once.
+        let mut seen: HashSet<[u64; 3]> = HashSet::new();
         let mut motifs = Vec::new();
-        
+
         for &node_a in self.nodes.keys() {
             if let Some(neighbors_a) = self.adjacency_list.get(&node_a) {
                 for &node_b in neighbors_a {
                     if let Some(neighbors_b) = self.adjacency_list.get(&node_b) {
                         for &node_c in neighbors_b {
                             if node_c != node_a {
-                                // Check if this forms a triangle motif
+                                // Check if this forms a triangle motif (directed cycle a→b→c→a)
                                 if let Some(neighbors_c) = self.adjacency_list.get(&node_c) {
                                     if neighbors_c.contains(&node_a) {
-                                        motifs.push(Motif {
-                                            pattern: MotifPattern::Triangle,
-                                            nodes: vec![node_a, node_b, node_c],
-                                            frequency: 1.0,
-                                        });
+                                        // Build canonical key: sorted triple
+                                        let mut key = [node_a, node_b, node_c];
+                                        key.sort_unstable();
+                                        if seen.insert(key) {
+                                            motifs.push(Motif {
+                                                pattern: MotifPattern::Triangle,
+                                                nodes: vec![node_a, node_b, node_c],
+                                                frequency: 1.0,
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -275,7 +281,7 @@ impl QualiaGraph {
                 }
             }
         }
-        
+
         motifs
     }
     

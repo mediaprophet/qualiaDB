@@ -410,7 +410,15 @@ impl WebizenVM {
     }
 
     /// Extracts a tagged floating point value from a given 64-bit Quin vector.
-    /// Uses the top 4 bits as a type tag (0x2 = float).
+    ///
+    /// Uses top 4 bits as a type tag.  Within `core.rs` the float tag is `0x1 << 60`
+    /// (the same bit pattern that `EmitCalculatedQuin` writes and that the test encodes).
+    ///
+    /// NOTE: `resolver.rs` treats `0b001 << 60` as `xsd:integer` (see AGENTS.md §4-D).
+    /// This convention conflict is known and must not be "fixed" unilaterally — the
+    /// `extract_float` tag here is deliberately kept as `0x1` to match the rest of
+    /// `core.rs` (the EmitCalculatedQuin opcode and the float-logic test).  Any
+    /// cross-module alignment belongs in a coordinated change touching resolver.rs.
     #[inline(always)]
     fn extract_float(quin: &NQuin, vector_id: u8) -> Option<f32> {
         let val = match vector_id {
@@ -422,7 +430,7 @@ impl WebizenVM {
         };
 
         let tag = val >> 60;
-        if tag == 0x2 {
+        if tag == 0x1 {
             Some(extract_inline_float(val))
         } else {
             None

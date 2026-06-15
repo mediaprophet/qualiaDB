@@ -115,28 +115,47 @@ impl ArgumentationFramework {
         attacked
     }
     
-    /// Compute grounded extension (unique minimal complete extension)
+    /// Compute grounded extension (unique least fixed point of the characteristic function).
+    ///
+    /// Algorithm (Dung 1995):
+    ///   GE ← ∅
+    ///   Repeat:
+    ///     1. Collect all arguments that are *defeated* by GE (attacked by some member of GE).
+    ///     2. For every remaining argument a not yet in GE:
+    ///        if *every* attacker of a is defeated by GE, add a to GE.
+    ///   Until no change.
     pub fn grounded_extension(&self) -> HashSet<u64> {
-        let mut grounded = HashSet::new();
+        let mut grounded: HashSet<u64> = HashSet::new();
         let mut changed = true;
-        
+
         while changed {
             changed = false;
-            
-            // Find unattacked arguments
+
+            // Build set of arguments defeated by the current grounded set
+            // (i.e., arguments attacked by at least one member of grounded).
+            let defeated: HashSet<u64> = self.attacks.iter()
+                .filter(|atk| grounded.contains(&atk.attacker))
+                .map(|atk| atk.target)
+                .collect();
+
             for (&arg_id, _) in &self.arguments {
-                if !grounded.contains(&arg_id) {
-                    let attackers = self.get_attackers(arg_id);
-                    let is_attacked = attackers.iter().any(|attacker| grounded.contains(&attacker.id));
-                    
-                    if !is_attacked {
-                        grounded.insert(arg_id);
-                        changed = true;
-                    }
+                if grounded.contains(&arg_id) {
+                    continue;
+                }
+                // An argument is added to the grounded extension iff all of its
+                // attackers are themselves defeated (i.e., counter-attacked by
+                // something already in grounded).
+                let all_attackers_defeated = self.attacks.iter()
+                    .filter(|atk| atk.target == arg_id)
+                    .all(|atk| defeated.contains(&atk.attacker));
+
+                if all_attackers_defeated {
+                    grounded.insert(arg_id);
+                    changed = true;
                 }
             }
         }
-        
+
         grounded
     }
     

@@ -178,12 +178,17 @@ pub fn evaluate_rcc8(region_a: &SpatialRegion, region_b: &SpatialRegion) -> Rcc8
             Rcc8Relation::NonTangentialProperPartInverse
         }
     } else {
-        // Check if boundaries touch externally
-        let boundaries_touch = check_boundary_touch(region_a, region_b);
-        if boundaries_touch {
-            Rcc8Relation::ExternallyConnected
-        } else {
+        // Neither region is fully inside the other; they do intersect (bounding
+        // boxes overlap per the check above).  check_boundary_touch returns true
+        // when a boundary point of one region lies in the *interior* of the other,
+        // which means the interiors genuinely overlap → PartiallyOverlapping.
+        // If no boundary point penetrates the other's interior the regions can
+        // only share a boundary curve without interior overlap → ExternallyConnected.
+        let interior_overlap = check_boundary_touch(region_a, region_b);
+        if interior_overlap {
             Rcc8Relation::PartiallyOverlapping
+        } else {
+            Rcc8Relation::ExternallyConnected
         }
     }
 }
@@ -226,16 +231,28 @@ pub fn evaluate_temporal(
     }
 }
 
-/// Convert spatial region to NQuin for storage in graph
+/// Fixed-point scale for encoding centroid and area into the 64-bit object field.
+/// Centroid components use bits [63:48] and [47:32] (16 bits each, ×SPATIAL_SCALE).
+/// Area uses bits [31:0] (32 bits, ×SPATIAL_SCALE).
+/// This preserves three decimal places of precision for component values < 65.535.
+const SPATIAL_SCALE: f64 = 1_000.0;
+
+/// Convert spatial region to NQuin for storage in graph.
+///
+/// The `region_id` is stored directly as the `subject` so that `quin_to_region`
+/// can recover it exactly.  The predicate carries the semantic type stamp.
 pub fn region_to_quin(region: &SpatialRegion, context: u64) -> NQuin {
-    let subject = crate::q_hash(&format!("region_{}", region.region_id));
+    let subject = region.region_id;
     let predicate = crate::q_hash("has_spatial_region");
-    
-    // Pack centroid and area into object field
-    let object = ((region.centroid.0 as u64) << 48) |
-                ((region.centroid.1 as u64) << 32) |
-                ((region.area as u64) & 0xFFFFFFFF);
-    
+
+    // Pack centroid and area using fixed-point encoding (×SPATIAL_SCALE)
+    // so that fractional values survive the integer round-trip.
+    let cx = (region.centroid.0 * SPATIAL_SCALE).round() as u64;
+    let cy = (region.centroid.1 * SPATIAL_SCALE).round() as u64;
+    let ar = (region.area       * SPATIAL_SCALE).round() as u64;
+
+    let object = ((cx & 0xFFFF) << 48) | ((cy & 0xFFFF) << 32) | (ar & 0xFFFF_FFFF);
+
     let mut quin = NQuin {
         subject,
         predicate,
@@ -244,23 +261,23 @@ pub fn region_to_quin(region: &SpatialRegion, context: u64) -> NQuin {
         metadata: 0,
         parity: 0,
     };
-    
+
     // Set parity for validation
     quin.parity = quin.subject ^ quin.predicate ^ quin.object ^ quin.context ^ quin.metadata;
-    
+
     quin
 }
 
-/// Extract spatial region from NQuin
+/// Extract spatial region from NQuin.
 pub fn quin_to_region(quin: &NQuin) -> Option<SpatialRegion> {
-    // Extract centroid and area from object field
-    let centroid_x = ((quin.object >> 48) & 0xFFFF) as f64;
-    let centroid_y = ((quin.object >> 32) & 0xFFFF) as f64;
-    let area = (quin.object & 0xFFFFFFFF) as f64;
-    
-    // Extract region ID from subject hash (simplified)
+    // Decode fixed-point fields (÷SPATIAL_SCALE) to recover fractional values.
+    let centroid_x = ((quin.object >> 48) & 0xFFFF) as f64 / SPATIAL_SCALE;
+    let centroid_y = ((quin.object >> 32) & 0xFFFF) as f64 / SPATIAL_SCALE;
+    let area       = ( quin.object        & 0xFFFF_FFFF) as f64 / SPATIAL_SCALE;
+
+    // region_id is stored directly in the subject field.
     let region_id = quin.subject;
-    
+
     Some(SpatialRegion {
         region_id,
         boundary_points: vec![], // Boundary points stored separately in practice

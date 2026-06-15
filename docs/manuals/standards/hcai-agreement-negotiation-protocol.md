@@ -564,7 +564,13 @@ Node protects itself; HCAI-ANP is only how a Node lets an agent in.
 ## 14. Open Questions
 
 1. Should `requiredProof` permit suites beyond `Ed25519Signature2020` (e.g. a
-   post-quantum suite) in v1, given `QUANTUM_RESEARCH_SPEC.md`?
+   post-quantum suite) in v1, given `QUANTUM_RESEARCH_SPEC.md`? *(Update: as of
+   `qualia-core-db` 0.0.13 a real post-quantum signature primitive — ML-DSA-65
+   (FIPS-204, via the `fips204` crate in `fiduciary_crypto.rs`) — is implemented and
+   available. This question is therefore no longer blocked on the primitive existing;
+   the remaining work is defining a VC proof suite that binds it and a multi-Quin
+   carriage for the ~3309-byte signature — see `CRYPTO_IMPLEMENTATION_PLAN.md` Task 6.
+   `Ed25519Signature2020` remains the pinned v1 suite until that suite is specified.)*
 2. Should the agreement vocabulary be published under a stable `webizen.network`
    namespace before any external submission, or under a neutral W3CG namespace?
 3. Should `sessionTtlSeconds` be negotiable by the agent, or strictly

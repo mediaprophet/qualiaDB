@@ -717,12 +717,20 @@ mod tests {
 
     #[test]
     fn test_checksum_corruption_detected() {
+        // Use rank=1 so tensor dimensions are consistent with the header:
+        //   lora_a: [rank × n_in] = [1 × 4] = 4 elements
+        //   lora_b: [n_out × rank] = [4 × 1] = 4 elements
+        // The earlier test_bad_magic_rejected used rank=4 with the same small tensors
+        // (1×4 and 4×1), which makes the header declare 16 elements per matrix but only
+        // 4 are present — parse_adapter rejects that with DimensionMismatch before it
+        // ever reaches the checksum.  rank=1 makes header and payload agree so the
+        // checksum is actually verified, and the byte flip produces ChecksumMismatch.
         let mut bytes = encode_adapter(
-            ContextType::Medical, 0, 4, 1.0,
+            ContextType::Medical, 0, 1, 1.0,
             &LoRATensor::new(vec![0.0f32; 4].into_boxed_slice(), 1, 4),
             &LoRATensor::new(vec![0.0f32; 4].into_boxed_slice(), 4, 1),
         );
-        // Flip a payload byte
+        // Flip a payload byte to corrupt the data without touching the stored checksum
         *bytes.last_mut().unwrap() ^= 0xFF;
         assert!(matches!(parse_adapter(&bytes, ContextType::Medical), Err(LoRAError::ChecksumMismatch)));
     }

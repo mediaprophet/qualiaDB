@@ -687,6 +687,9 @@ pub mod tests {
             let str_off = blob.len() as u64;
             let b = text.as_bytes();
             let len = b.len().min(65535) as u16;
+            // Q42LEX string payload format: [LEX_TAG_STRING=0x01][len_lo][len_hi][utf8...]
+            // Must match Q42LexMmap::read_string_at which checks the tag byte first.
+            blob.push(0x01u8); // LEX_TAG_STRING
             blob.extend_from_slice(&len.to_le_bytes());
             blob.extend_from_slice(&b[..len as usize]);
             index.extend_from_slice(&hash.to_le_bytes());

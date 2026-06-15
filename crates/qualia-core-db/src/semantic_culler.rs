@@ -6,49 +6,10 @@
 //! fiduciary_crypto for cryptographic verification of agency permissions.
 
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use crate::zk_proofs::{ZkProofSystem, SemanticProof, MathematicalStatement, StatementType, FieldElement};
 use crate::fiduciary_crypto::{FiduciaryCrypto, MlDsaSignature, CryptoContext};
-
-#[cfg(feature = "zk-culling")]
-use ark_bls12_381::{Bls12_381, Fr};
-#[cfg(feature = "zk-culling")]
-use ark_groth16::{Groth16, PreparedVerifyingKey, Proof};
-#[cfg(feature = "zk-culling")]
-use ark_snark::SNARK;
-
-/// Cache the Verifying Key at boot to prevent GC allocation spikes
-#[cfg(feature = "zk-culling")]
-static DEONTIC_VK: OnceLock<PreparedVerifyingKey<Bls12_381>> = OnceLock::new();
-
-#[cfg(feature = "zk-culling")]
-/// Initialize the Deontic gateway with a verifying key
-pub fn initialize_deontic_gateway(vk: PreparedVerifyingKey<Bls12_381>) -> Result<(), String> {
-    DEONTIC_VK.set(vk).map_err(|_| "Deontic VK already initialized".to_string())
-}
-
-#[cfg(feature = "zk-culling")]
-/// Executes before NQuins cross the PCIe bus
-/// Constant-time ~3ms verification with fast-fail drop condition
-pub fn verify_nquin_access(
-    proof: &Proof<Bls12_381>,
-    public_inputs: &[Fr],
-    nquin_buffer: &mut [u8],
-) -> bool {
-    let vk = DEONTIC_VK.get().expect("Deontic VK not initialized");
-    
-    // Constant-time ~3ms verification
-    match Groth16::<Bls12_381>::verify_with_processed_vk(vk, public_inputs, proof) {
-        Ok(true) => true, // Access granted
-        _ => {
-            // FAST-FAIL: Drop the memory immediately
-            // Zero out the semantic payload to prevent hardware cache leaks
-            nquin_buffer.fill(0);
-            false
-        }
-    }
-}
 
 /// Semantic culler for agency-driven data filtering
 pub struct SemanticCuller {

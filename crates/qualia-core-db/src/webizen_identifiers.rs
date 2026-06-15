@@ -37,7 +37,7 @@ pub struct WebizenIdentity {
 impl WebizenIdentity {
     /// Create a new Webizen identity
     pub fn new(webid_hash: u64, public_key: [u64; 4]) -> Self {
-        let webizen_id = TAG_WEBIZEN | (webid_hash & 0x0FFF_FFFF_FFFF_FFFF);
+        let webizen_id = (TAG_WEBIZEN << 60) | (webid_hash & 0x0FFF_FFFF_FFFF_FFFF);
         Self {
             webizen_id,
             webid_hash,
@@ -118,8 +118,11 @@ impl WebizenRegistry {
         let identity = self.webizen_slots.get(&webizen_id)
             .ok_or_else(|| "Webizen not found".to_string())?;
         
-        // Check cache
-        let cache_key = (webizen_id, message.to_vec());
+        // Check cache. The signature is part of the key: a different signature
+        // over the same message must not reuse a prior verdict.
+        let mut cache_input = message.to_vec();
+        cache_input.extend_from_slice(signature);
+        let cache_key = (webizen_id, cache_input);
         if let Some(&cached) = self.signature_cache.get(&cache_key) {
             return Ok(cached);
         }
@@ -313,17 +316,39 @@ mod webizen_tests {
     }
 
     #[test]
-    fn test_verify_signature_stub() {
+    fn test_verify_signature_roundtrip() {
+        use ed25519_dalek::{Signer, SigningKey};
+
         let mut registry = WebizenRegistry::new();
-        let public_key = [1u64, 2, 3, 4];
+
+        // Derive a real Ed25519 keypair from a fixed seed.
+        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
+        let vk_bytes = signing_key.verifying_key().to_bytes();
+
+        // Pack the 32-byte verifying key into [u64; 4] little-endian, matching
+        // the repacking done in `verify_signature`.
+        let mut public_key = [0u64; 4];
+        for (i, slot) in public_key.iter_mut().enumerate() {
+            let mut chunk = [0u8; 8];
+            chunk.copy_from_slice(&vk_bytes[i * 8..(i + 1) * 8]);
+            *slot = u64::from_le_bytes(chunk);
+        }
+
         let identity = WebizenIdentity::new(0x123456789ABCDEF0, public_key);
         let id = identity.webizen_id;
         registry.register_webizen(identity).unwrap();
-        
+
         let message = b"test message";
-        let signature = b"test signature";
-        
-        // Stub always returns true
-        assert!(registry.verify_signature(id, message, signature).is_ok());
+        let good_sig = signing_key.sign(message).to_bytes();
+
+        // A valid signature over the message verifies true.
+        assert_eq!(registry.verify_signature(id, message, &good_sig), Ok(true));
+
+        // A signature over a different message must not verify.
+        let other_sig = signing_key.sign(b"other message").to_bytes();
+        assert_eq!(registry.verify_signature(id, message, &other_sig), Ok(false));
+
+        // A malformed (wrong-length) signature is a hard error.
+        assert!(registry.verify_signature(id, message, b"too short").is_err());
     }
 }

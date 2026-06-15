@@ -21,7 +21,12 @@ pub struct ControlState {
 }
 
 impl ControlState {
-    /// Create a new control state
+    /// Create a new control state.
+    ///
+    /// `last_time` is initialised to 0 so that the first `update()` call with any
+    /// non-zero `current_time` produces a well-defined `dt`.  Callers that need
+    /// wall-clock alignment should call `state.last_time = current_unix_secs` after
+    /// construction.
     pub fn new(setpoint: f64, initial_value: f64) -> Self {
         let error = setpoint - initial_value;
         Self {
@@ -31,10 +36,7 @@ impl ControlState {
             integral: 0.0,
             derivative: 0.0,
             last_error: error,
-            last_time: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
+            last_time: 0,
         }
     }
     
@@ -43,14 +45,17 @@ impl ControlState {
         self.process_variable = new_value;
         self.last_error = self.error;
         self.error = self.setpoint - new_value;
-        
-        // Calculate derivative (rate of change)
-        let dt = (current_time - self.last_time) as f64;
+
+        // Calculate derivative (rate of change).
+        // Use saturating_sub to avoid u64 underflow panic when current_time is behind
+        // last_time (e.g. in unit tests that supply a synthetic timestamp of 1 while
+        // last_time was initialised from the real wall clock).
+        let dt = current_time.saturating_sub(self.last_time) as f64;
         if dt > 0.0 {
             self.derivative = (self.error - self.last_error) / dt;
             self.integral += self.error * dt;
         }
-        
+
         self.last_time = current_time;
     }
     
@@ -276,10 +281,13 @@ impl PowerSystemController {
         let voltage_error = (self.system_state.battery_voltage - 12.6).abs();
         let soc_low = self.system_state.battery_soc < 20.0;
         let high_temp = self.system_state.ambient_temperature > 35.0;
-        
-        if voltage_error > 1.0 || soc_low || high_temp {
+
+        // Warning: any deviation > 0.5 V (≈ 4% on a 12.6 V LiFePO4 cell) is significant,
+        // as is low SoC or high ambient temperature.
+        // Caution: smaller deviations between 0.2 V and 0.5 V.
+        if voltage_error > 0.5 || soc_low || high_temp {
             SystemHealth::Warning
-        } else if voltage_error > 0.5 {
+        } else if voltage_error > 0.2 {
             SystemHealth::Caution
         } else {
             SystemHealth::Good
