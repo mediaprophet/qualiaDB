@@ -62,17 +62,22 @@ impl ConstraintSynthesizer<Fr> for DeonticAccessCircuit {
         // Enforce that the combination of user attributes maps to the policy root
         // This is a placeholder constraint - real implementation would verify
         // a Merkle proof or cryptographic commitment structure
+        // For Phase 1, we use a simple equality: did + role + action == root
+        // This will be replaced with proper Merkle proof verification in Phase 2
         cs.enforce_constraint(
             || "user attributes map to policy root",
             did_var + role_var + action_var,
+            ark_relations::r1cs::NS::one(),
             root_var,
         )?;
         
         // Phase 1: Temporal constraint placeholder
         // Real implementation would check timestamp against current time
+        // For Phase 1, we use a trivial constraint: time == time
         cs.enforce_constraint(
             || "timestamp is within valid range",
             time_var,
+            ark_relations::r1cs::NS::one(),
             time_var,
         )?;
         
