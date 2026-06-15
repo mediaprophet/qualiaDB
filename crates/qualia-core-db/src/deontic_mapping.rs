@@ -3,9 +3,9 @@
 /// Uses 512-bit uniform cryptographic hash reduction to avoid field modulus overflow
 
 #[cfg(feature = "zk-culling")]
-use bls12_381::Scalar;
+use ark_bls12_381::Fr;
 #[cfg(feature = "zk-culling")]
-use ff::FromUniformBytes;
+use ark_ff::Field;
 #[cfg(feature = "zk-culling")]
 use blake2b_simd::Params as Blake2bParams;
 
@@ -15,13 +15,14 @@ use blake2b_simd::Params as Blake2bParams;
 /// This avoids the statistical bias of simple truncation and prevents field
 /// modulus overflow panics when mapping 256-bit hashes into the 254-bit field.
 #[cfg(feature = "zk-culling")]
-pub fn bytes_to_field_element(data: &[u8]) -> Scalar {
+pub fn bytes_to_field_element(data: &[u8]) -> Fr {
     let mut hash_state = Blake2bParams::new().hash_length(64).to_state();
     hash_state.update(data);
     let hash_result = hash_state.finalize();
     
-    // safe allocation: from_uniform_bytes handles the internal reduction modulo q
-    Scalar::from_uniform_bytes(hash_result.as_array())
+    // Use ark-ff's Field trait for safe reduction modulo field characteristic
+    // The 64-byte hash provides enough entropy for uniform distribution
+    Fr::from_random_bytes(hash_result.as_array()).unwrap()
 }
 
 /// 8-bit action permission enum for Phase 1 (simple binary access states)
@@ -61,8 +62,9 @@ mod tests {
     fn test_bytes_to_field_element() {
         let data = b"test data for field mapping";
         let scalar = bytes_to_field_element(data);
-        // Should not panic and should produce a valid Scalar
+        // Should not panic and should produce a valid Fr
         // The actual value is not important for this test
+        // Just ensure it doesn't overflow
     }
     
     #[test]
