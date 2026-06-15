@@ -3977,7 +3977,7 @@ mod tests {
 
         let data = b"authenticated data";
         let aad = b"correct aad";
-        let enc = library
+        let mut enc = library
             .encrypt_data_with_algorithm("cc_key_wrong_aad", data, Some(aad), EncryptionAlgorithm::ChaCha20Poly1305)
             .unwrap()
             .result;
