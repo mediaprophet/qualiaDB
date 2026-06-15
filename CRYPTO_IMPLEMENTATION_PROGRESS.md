@@ -119,6 +119,44 @@ Both the fips and pqcrypto families have non-trivial API complexities that would
 
 ---
 
+### Task 7: Real zero-knowledge proofs (ZK-SNARKs for Deontic Culling) ⚠️ FIELD MAPPING BREAKTHROUGH ACHIEVED
+**Status:** Critical field mapping breakthrough implemented, bellman API complexity requires dedicated session
+**Commit:** `56161497` - "feat(crypto): add deontic field mapping helper with secure hash reduction"
+
+**Critical Breakthrough - Field Mapping Strategy:**
+- **Problem:** BLS12-381 scalar field (Fr) has ~254-bit capacity vs 256-bit (32-byte) hashes
+- **Solution Implemented:** 64-byte BLAKE2b hash with `ff::FromUniformBytes` for secure field mapping
+- **Advantages:** No statistical bias, no modulus overflow panics, handles reduction automatically
+- **Implementation:** `deontic_mapping.rs` with `bytes_to_field_element()` helper
+- **ActionPermission:** 8-bit enum for Phase 1 (simple binary access states) - 1 constraint vs 32+ for bit-fields
+- **Module:** Added to lib.rs with `#[cfg(feature = "zk-culling")]` gate
+
+**Bellman API Complexity Discovered:**
+- pairing crate does not expose `bls12_381` in root (requires specific import path)
+- bellman API requires different module structure than expected
+- Would require dedicated API mapping session or alternative approach
+
+**CRITICAL SECURITY INSIGHT - Toxic Waste Vulnerability:**
+- Groth16 requires "toxic waste" (α, β, γ, δ, x) to be permanently destroyed after key generation
+- Using deterministic seed (ChaCha20Rng) for setup would preserve toxic waste
+- If seed compromised, attacker can forge arbitrary ZK proofs
+- **FIX:** Use `OsRng` (true hardware entropy) for ephemeral setup
+- Let RNG drop out of scope after parameter generation (toxic waste destroyed)
+- Back up generated keys (PK, VK), NOT the seed
+
+**Next Session Options:**
+1. **Dedicated bellman API mapping** - Map exact import paths and method signatures
+2. **Pivot to arkworks** - Unified ecosystem with consistent traits, heavier dependency
+3. **Hybrid approach** - Use arkworks for development, optimize to bellman later
+
+**Recommendation:** The field mapping helper is crate-agnostic and works with either bellman or arkworks. Consider arkworks for development velocity given API complexity.
+
+**Files Modified:**
+- `crates/qualia-core-db/src/deontic_mapping.rs` - Field mapping helper (NEW, 78 lines)
+- `crates/qualia-core-db/src/lib.rs` - Module registration
+
+**Dependencies Added:** blake2b_simd v1.0.4 (can be used with either bellman or arkworks)
+
 ### Task 7: Real zero-knowledge proofs (ZK-SNARKs for Deontic Culling) ⚠️ RESEARCH COMPLETED - API COMPLEXITY DISCOVERED
 **Status:** API research completed, implementation requires dedicated session
 
