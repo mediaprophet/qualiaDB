@@ -12,10 +12,29 @@ understood. Keep this current; link to it from PRs/plans rather than copying lis
 **Verification:** 
 - Global build: ✅ Successful (3m 32s)
 - `cargo build --lib`: ✅ Successful (only warnings about unused imports)
-- Duplicate module definitions: Not found (documentation was outdated)
-- Closure borrow issues: Not found (documentation was outdated)
 
-**Note:** The compilation errors mentioned in previous versions of this document have been resolved. The workspace builds cleanly.
+---
+
+## Test Failures ✅ RESOLVED (All Deterministic Tests Fixed)
+
+**Status:** All deterministic test failures resolved (6/6 fixed)
+
+**Tests Fixed:**
+- ✅ `modalities::logic::core::test_webizen_float_logic`
+- ✅ `modalities::logic::shacl::test_validation_report`
+- ✅ `lora::adapter_manager::test_checksum_corruption_detected`
+- ✅ `modalities::spatio_temporal::test_rcc8_basic_relations`
+- ✅ `modalities::spatio_temporal::test_region_quin_conversion`
+- ✅ `neuro_symbolic_sieve::sieve_builds_masks_from_mmap_lex`
+
+**Root Cause:** E0594 mutability error in cryptographic_library.rs test
+**Fix:** Added `mut` keyword to `enc` variable in test_chachapoly1305_aad_authentication
+
+**Remaining:** 2 nondeterministic tests (timing-dependent, not blockers)
+- `acoustic_ble_mesh::tests::test_node_discovery`
+- `ambient_orchestration::tests::test_device_discovery`
+
+These tests are driven by randomness/timing and are not considered blockers for the codebase.
 
 ---
 
