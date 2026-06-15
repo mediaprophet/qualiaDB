@@ -174,11 +174,20 @@ impl IocpGridManager {
             .ok_or_else(|| IoError::InvalidState("Invalid UTF-8 path".to_string()))?;
         
         unsafe {
-            let handle = crate::directml_bridge::iocp_create_ffi(
+            let mut handle = std::ptr::null_mut();
+            let status = crate::directml_bridge::iocp_create_ffi(
                 path_str.as_ptr(),
                 path_str.len(),
-            ).map_err(|e| IoError::IoError(io::Error::new(io::ErrorKind::Other, format!("{:?}", e))))?;
-            
+                &mut handle,
+            );
+
+            if status != crate::directml_bridge::DmlStatus::Success {
+                return Err(IoError::IoError(io::Error::new(
+                    io::ErrorKind::Other,
+                    status.message(),
+                )));
+            }
+
             Ok(Self {
                 handle,
                 buffer_a: DmaBuffer::new(),
@@ -229,8 +238,13 @@ impl ZeroCopyStreamer for IocpGridManager {
         }
         
         unsafe {
-            crate::directml_bridge::iocp_async_read_ffi(self.handle, offset)
-                .map_err(|e| IoError::IoError(io::Error::new(io::ErrorKind::Other, format!("{:?}", e))))?;
+            let status = crate::directml_bridge::iocp_async_read_ffi(self.handle, offset);
+            if status != crate::directml_bridge::DmlStatus::Success {
+                return Err(IoError::IoError(io::Error::new(
+                    io::ErrorKind::Other,
+                    status.message(),
+                )));
+            }
         }
         
         self.pending_read = true;

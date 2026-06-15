@@ -1107,10 +1107,24 @@ mod tests {
         let mut manager = AmbientOrchestrationManager::new();
         
         let devices = manager.discover_devices().unwrap();
-        assert_eq!(devices.len(), 10); // 10 dummy devices
-        
-        let device_status = manager.get_device_status(&devices[0]);
-        assert!(device_status.is_some());
+        assert!(!devices.is_empty());
+        assert!(devices.len() <= 9);
+        assert_eq!(devices.len(), manager.list_devices().len());
+        assert!(devices.iter().any(|id| id == "local_host"));
+
+        let host = manager.devices.get("local_host").unwrap();
+        assert!(host.capabilities.compute_units >= 1);
+
+        let cpu_core_count = devices
+            .iter()
+            .filter(|id| id.starts_with("cpu_core_"))
+            .count();
+        assert_eq!(devices.len(), cpu_core_count + 1);
+
+        for device_id in &devices {
+            let device_status = manager.get_device_status(device_id);
+            assert!(device_status.is_some());
+        }
     }
 
     #[test]

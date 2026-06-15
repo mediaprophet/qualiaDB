@@ -92,6 +92,7 @@ impl WebizenVM {
     }
 
     pub fn load_bytecode(&mut self, instructions: &[WebizenOpcode]) {
+        self.bytecode_buffer.fill(None);
         for (i, &op) in instructions.iter().enumerate().take(64) {
             self.bytecode_buffer[i] = Some(op);
         }
@@ -438,26 +439,29 @@ impl WebizenVM {
     }
 
     /// Prunes neural hallucinations: If a Defeasible claim is contradicted by a hard physical fact, it is removed.
-    pub fn prune_defeasible_claims(qualia_graph: &mut Vec<NQuin>) {
-        // A claim is defeasible if bit 60 is set.
-        let mut deterministic_subjects = std::collections::HashSet::new();
+    pub fn prune_defeasible_claims(qualia_graph: &mut [NQuin]) -> usize {
+        let mut retained = 0;
 
-        // Pass 1: Gather hard facts (metadata bit 60 is NOT set)
-        for quin in qualia_graph.iter() {
-            if (quin.metadata & (1 << 60)) == 0 {
-                // Subject has a deterministic fact
-                deterministic_subjects.insert(quin.subject);
+        for read_idx in 0..qualia_graph.len() {
+            let quin = qualia_graph[read_idx];
+            let is_defeasible = (quin.metadata & (1 << 60)) != 0;
+            let has_hard_fact_for_subject = qualia_graph.iter().any(|candidate| {
+                candidate.subject == quin.subject && (candidate.metadata & (1 << 60)) == 0
+            });
+
+            if is_defeasible && has_hard_fact_for_subject {
+                continue;
             }
+
+            qualia_graph[retained] = quin;
+            retained += 1;
         }
 
-        // Pass 2: Remove defeasible claims contradicted by hard facts
-        qualia_graph.retain(|quin| {
-            let is_defeasible = (quin.metadata & (1 << 60)) != 0;
-            if is_defeasible && deterministic_subjects.contains(&quin.subject) {
-                return false; // Prune neural hallucination due to hard fact conflict
-            }
-            true
-        });
+        for slot in &mut qualia_graph[retained..] {
+            *slot = NQuin::default();
+        }
+
+        retained
     }
 }
 
@@ -474,59 +478,77 @@ pub fn extract_inline_float(object_vector: u64) -> f32 {
 pub struct WebizenCompiler;
 
 impl WebizenCompiler {
-    /// Mocks the translation of a SHACL constraint into Webizen Bytecode.
+    const MOCK_CONSTRAINT: [WebizenOpcode; 4] = [
+        WebizenOpcode::MatchPredicate(100), // Predicate 100 = 'age'
+        WebizenOpcode::HaltIfFalse,
+        // (A true engine would have a GreaterThan opcode here, using MatchObject for now)
+        WebizenOpcode::MatchObject(18),
+        WebizenOpcode::HaltIfFalse,
+    ];
+
+    const DIAGNOSTIC_CONSTRAINT: [WebizenOpcode; 6] = [
+        WebizenOpcode::MatchPredicate(100), // e.g. "has_symptom"
+        WebizenOpcode::MatchObject(200),    // e.g. "Fever"
+        WebizenOpcode::HaltIfFalse,
+        WebizenOpcode::BindRegister {
+            vector_id: 0,
+            register_index: 0,
+        },
+        WebizenOpcode::BindRegister {
+            vector_id: 3,
+            register_index: 1,
+        },
+        // Emits a Diagnosis Quin
+        WebizenOpcode::EmitQuin {
+            subject_reg: 0,
+            predicate: 300,
+            object: 400,
+            context_reg: 1,
+        },
+    ];
+
+    /// Provides a deterministic SHACL constraint fixture as Webizen bytecode.
     /// Example: `[Shape] sh:property [ sh:path ex:age ; sh:minInclusive 18 ]`
-    pub fn compile_mock_constraint() -> Vec<WebizenOpcode> {
-        vec![
-            WebizenOpcode::MatchPredicate(100), // Predicate 100 = 'age'
-            WebizenOpcode::HaltIfFalse,
-            // (A true engine would have a GreaterThan opcode here, using MatchObject for now)
-            WebizenOpcode::MatchObject(18),
-            WebizenOpcode::HaltIfFalse,
-        ]
+    pub fn compile_mock_constraint() -> &'static [WebizenOpcode] {
+        &Self::MOCK_CONSTRAINT
     }
 
     /// Compiles a medical N3 constraint for Differential Diagnostics.
     /// Example: IF Subject has symptom SNOMED:Fever => Yield Diagnosis Potential
-    pub fn compile_diagnostic_constraint() -> Vec<WebizenOpcode> {
-        vec![
-            WebizenOpcode::MatchPredicate(100), // e.g. "has_symptom"
-            WebizenOpcode::MatchObject(200),    // e.g. "Fever"
-            WebizenOpcode::HaltIfFalse,
-            WebizenOpcode::BindRegister {
-                vector_id: 0,
-                register_index: 0,
-            },
-            WebizenOpcode::BindRegister {
-                vector_id: 3,
-                register_index: 1,
-            },
-            // Emits a Diagnosis Quin
-            WebizenOpcode::EmitQuin {
-                subject_reg: 0,
-                predicate: 300,
-                object: 400,
-                context_reg: 1,
-            },
-        ]
+    pub fn compile_diagnostic_constraint() -> &'static [WebizenOpcode] {
+        &Self::DIAGNOSTIC_CONSTRAINT
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiagnosticError {
+    OutputBufferFull,
 }
 
 /// The Informatics Subsystem (Differential Diagnostics)
 /// Executes N3Logic bytecode constraints over a subset of Quins (e.g., from a .q42 file)
 /// to derive deterministic inferences natively on the edge, replacing the legacy WebAssembly/Prolog engine.
-pub fn execute_differential_diagnostics(qualia_graph: &[NQuin]) -> Vec<NQuin> {
-    let mut inferences = Vec::new();
+pub fn execute_differential_diagnostics(
+    qualia_graph: &[NQuin],
+    out: &mut [NQuin],
+) -> Result<usize, DiagnosticError> {
+    let mut written = 0;
     let mut vm = WebizenVM::new();
     let diagnostic_rules = WebizenCompiler::compile_diagnostic_constraint();
-    vm.load_bytecode(&diagnostic_rules);
+    vm.load_bytecode(diagnostic_rules);
 
     for quin in qualia_graph {
         if let Some(inferred_quin) = vm.execute_implication(quin) {
-            inferences.push(inferred_quin);
+            if written >= out.len() {
+                return Err(DiagnosticError::OutputBufferFull);
+            }
+
+            out[written] = inferred_quin;
+            written += 1;
         }
     }
-    inferences
+
+    Ok(written)
 }
 
 #[cfg(test)]
@@ -692,5 +714,80 @@ mod tests {
             true,
             "VM failed to execute continuous float bounds"
         );
+    }
+
+    #[test]
+    fn test_prune_defeasible_claims_partitions_in_place() {
+        let hard_fact = NQuin {
+            subject: 1,
+            predicate: 10,
+            object: 100,
+            context: 7,
+            metadata: 0,
+            parity: 0,
+        };
+        let defeasible_same_subject = NQuin {
+            subject: 1,
+            predicate: 11,
+            object: 101,
+            context: 7,
+            metadata: 1 << 60,
+            parity: 0,
+        };
+        let defeasible_other_subject = NQuin {
+            subject: 2,
+            predicate: 12,
+            object: 102,
+            context: 7,
+            metadata: 1 << 60,
+            parity: 0,
+        };
+
+        let mut graph = [hard_fact, defeasible_same_subject, defeasible_other_subject];
+        let retained = WebizenVM::prune_defeasible_claims(&mut graph);
+
+        assert_eq!(retained, 2);
+        assert_eq!(graph[0], hard_fact);
+        assert_eq!(graph[1], defeasible_other_subject);
+        assert_eq!(graph[2], NQuin::default());
+    }
+
+    #[test]
+    fn test_execute_differential_diagnostics_writes_to_output_buffer() {
+        let trigger_quin = NQuin {
+            subject: 123,
+            predicate: 100,
+            object: 200,
+            context: 789,
+            metadata: 0b01 << 61,
+            parity: 0,
+        };
+        let mut out = [NQuin::default(); 1];
+
+        let written = execute_differential_diagnostics(&[trigger_quin], &mut out).unwrap();
+
+        assert_eq!(written, 1);
+        assert_eq!(out[0].subject, 123);
+        assert_eq!(out[0].predicate, 300);
+        assert_eq!(out[0].object, 400);
+        assert_eq!(out[0].context, 789);
+    }
+
+    #[test]
+    fn test_execute_differential_diagnostics_reports_output_overflow() {
+        let trigger = NQuin {
+            subject: 123,
+            predicate: 100,
+            object: 200,
+            context: 789,
+            metadata: 0,
+            parity: 0,
+        };
+        let inputs = [trigger, NQuin { subject: 456, ..trigger }];
+        let mut out = [NQuin::default(); 1];
+
+        let result = execute_differential_diagnostics(&inputs, &mut out);
+
+        assert_eq!(result, Err(DiagnosticError::OutputBufferFull));
     }
 }

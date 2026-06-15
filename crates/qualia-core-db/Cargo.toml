@@ -64,6 +64,7 @@ ark-serialize = { version = "0.4", default-features = false, optional = true }
 ark-ec = { version = "0.4", default-features = false, optional = true }
 thiserror = { version = "1.0", optional = true }
 sha2 = { version = "0.10", default-features = false }
+pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
 aes-gcm = { version = "0.10", default-features = false, features = ["aes", "alloc"] }
 x25519-dalek = { version = "2", default-features = false, features = ["static_secrets", "zeroize"] }
 hkdf = { version = "0.12", default-features = false }
@@ -164,8 +165,7 @@ reqwest = { version = "0.13.4", features = ["json", "rustls"] }
 boringtun = "0.7.1"
 rcgen = "0.14.8"
 # DNSSEC and WireGuard dependencies for SocialWebNet bootstrapping
-trust-dns = { version = "0.23.2", features = ["dnssec", "dns-over-rustls"] }
-trust-dns-resolver = "0.23.2"
+trust-dns-resolver = { version = "0.23.2", features = ["dnssec-ring", "dns-over-rustls"] }
 # wireguard-rs = "0.1.1" # Currently unavailable - commented out
 base64 = "0.22"
 sha3 = "0.10"

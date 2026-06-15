@@ -1575,7 +1575,6 @@ impl PrivacyEngine {
     }
 
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
-        self.zk_proofs.lock().unwrap();
         self.homomorphic_operations.initialize()?;
         self.secure_aggregation.initialize()?;
         self.differential_privacy.initialize()?;

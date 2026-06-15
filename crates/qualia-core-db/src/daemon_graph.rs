@@ -144,13 +144,14 @@ pub fn extend_with_ontology_quins(quins: Vec<crate::NQuin>) {
     if quins.is_empty() { return; }
     let lock = graph_lock();
     if let Ok(mut guard) = lock.write() {
-        let existing: std::collections::HashSet<(u64, u64, u64)> = guard
+        let mut existing: std::collections::HashSet<(u64, u64, u64)> = guard
             .iter()
             .map(|q| (q.subject, q.predicate, q.context))
             .collect();
         for q in quins {
-            if !existing.contains(&(q.subject, q.predicate, q.context)) {
-                guard.push(q);
+            let key = (q.subject, q.predicate, q.context);
+            if existing.insert(key) {
+                push_quin(&mut guard, q);
             }
         }
     }
@@ -205,15 +206,27 @@ pub fn condition_label_for_subject_hash(subject: u64) -> Option<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
-    #[test]
-    fn seed_graph_has_health_quins() {
-        init_daemon_graph("/tmp/qualia-test-graph");
-        assert!(graph_quin_count() >= 8);
+    fn reset_graph_for_test() {
+        let lock = graph_lock();
+        let mut guard = lock.write().expect("daemon graph poisoned");
+        guard.clear();
     }
 
     #[test]
+    #[serial]
+    fn seed_graph_has_health_quins() {
+        reset_graph_for_test();
+        init_daemon_graph("/tmp/qualia-test-graph");
+        assert!(graph_quin_count() >= 8);
+        reset_graph_for_test();
+    }
+
+    #[test]
+    #[serial]
     fn replace_graph_from_flat_bytes_round_trip() {
+        reset_graph_for_test();
         let quin = triple_quin(
             "http://q.test/s/0",
             "http://q.test/p/0",
@@ -224,5 +237,26 @@ mod tests {
         let count = replace_graph_from_flat_bytes(bytes).expect("load flat quin");
         assert_eq!(count, 1);
         assert_eq!(graph_quin_count(), 1);
+        reset_graph_for_test();
+    }
+
+    #[test]
+    #[serial]
+    fn extend_with_ontology_quins_deduplicates_within_single_batch() {
+        reset_graph_for_test();
+        let quin = triple_quin(
+            "http://q.test/s/duplicate",
+            "http://q.test/p/duplicate",
+            "http://q.test/o/first",
+            "did:qualia:test",
+        );
+
+        extend_with_ontology_quins(vec![quin, quin]);
+
+        let guard = graph_read_guard();
+        assert_eq!(guard.len(), 1);
+        assert_eq!(guard[0], quin);
+        drop(guard);
+        reset_graph_for_test();
     }
 }

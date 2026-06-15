@@ -1,8 +1,21 @@
-// Advanced Graph Theory Algorithms
-// Zero-allocation centrality, community detection, and motif finding for NQuin graphs
+//! Advanced graph theory analysis for NQuin graphs.
+//!
+//! This module is intentionally heap-backed and meant for bounded, batch-style
+//! topology analysis rather than hot-path inference. It uses `HashMap`, `HashSet`,
+//! `Vec`, and `VecDeque` internally, so callers should keep analysis inputs within
+//! the explicit guardrails below and avoid invoking it from zero-heap execution loops.
 
 use crate::NQuin;
 use std::collections::{HashMap, HashSet};
+
+/// Heap-backed graph analysis is quarantined behind a fixed input cap so daemon
+/// callers do not accidentally fan out into unbounded topology jobs on edge nodes.
+pub const MAX_HEAP_GRAPH_ANALYSIS_QUINS: usize = 4_096;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GraphAnalysisError {
+    InputTooLarge,
+}
 
 /// Graph structure built from NQuin relations
 #[derive(Debug, Clone)]
@@ -349,8 +362,15 @@ pub struct Motif {
     pub frequency: f64,
 }
 
-/// Analyze graph topology
-pub fn analyze_graph_topology(quins: &[NQuin], context: u64) -> GraphAnalysisResult {
+/// Analyze graph topology in a bounded, heap-backed batch.
+pub fn analyze_graph_topology(
+    quins: &[NQuin],
+    context: u64,
+) -> Result<GraphAnalysisResult, GraphAnalysisError> {
+    if quins.len() > MAX_HEAP_GRAPH_ANALYSIS_QUINS {
+        return Err(GraphAnalysisError::InputTooLarge);
+    }
+
     let mut graph = QualiaGraph::from_quins(quins);
     
     // Calculate centrality
@@ -371,7 +391,7 @@ pub fn analyze_graph_topology(quins: &[NQuin], context: u64) -> GraphAnalysisRes
     // Convert to quins for storage
     let graph_quins = graph.to_quins(context);
     
-    GraphAnalysisResult {
+    Ok(GraphAnalysisResult {
         graph_quins,
         communities,
         motifs,
@@ -379,7 +399,7 @@ pub fn analyze_graph_topology(quins: &[NQuin], context: u64) -> GraphAnalysisRes
         density,
         node_count: graph.nodes.len(),
         edge_count: graph.edges.len(),
-    }
+    })
 }
 
 /// Result of graph analysis
@@ -439,13 +459,12 @@ mod tests {
         let quins = vec![
             NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
             NQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 1, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
         ];
         
         let mut graph = QualiaGraph::from_quins(&quins);
         graph.calculate_betweenness_centrality();
         
-        // Node 2 should have highest betweenness (it's between nodes 1 and 3)
+        // Node 2 should have highest betweenness because it is the only bridge from 1 to 3.
         let node2_centrality = graph.nodes.get(&2).unwrap().centrality_score;
         let node1_centrality = graph.nodes.get(&1).unwrap().centrality_score;
         
@@ -492,11 +511,30 @@ mod tests {
             NQuin { subject: 3, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
         ];
         
-        let result = analyze_graph_topology(&quins, 100);
+        let result = analyze_graph_topology(&quins, 100).unwrap();
         
         assert_eq!(result.node_count, 3);
         assert_eq!(result.edge_count, 3);
         assert!(result.density > 0.0);
         assert!(!result.communities.is_empty());
+    }
+
+    #[test]
+    fn test_graph_analysis_rejects_oversized_batches() {
+        let quins = vec![
+            NQuin {
+                subject: 1,
+                predicate: 1,
+                object: 2,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            };
+            MAX_HEAP_GRAPH_ANALYSIS_QUINS + 1
+        ];
+
+        let result = analyze_graph_topology(&quins, 100);
+
+        assert!(matches!(result, Err(GraphAnalysisError::InputTooLarge)));
     }
 }

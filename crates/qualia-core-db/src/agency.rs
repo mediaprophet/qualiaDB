@@ -1,6 +1,10 @@
 use crate::NQuin;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use pbkdf2::pbkdf2_hmac;
 use sha2::{Digest, Sha256};
+
+const PBKDF2_ITERATIONS: u32 = 310_000;
+const LANE_KEY_LENGTH: usize = 32;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum AgencyError {
@@ -96,16 +100,9 @@ pub fn sign_graph_mutation(signing_key: &SigningKey, quin: &NQuin) -> Signature 
 /// Derives a 32-byte AES-256-GCM key from the user's PIN for Deniable Encryption (Sanctuary Mode).
 /// By passing different PINs, different keys are derived, which unlocks different DB Lanes.
 /// The decoy lane operates exactly identically to the sanctuary lane.
-pub fn derive_lane_key(pin: &str, salt: &[u8]) -> [u8; 32] {
-    // In production, this uses PBKDF2-HMAC-SHA256 with 310,000 iterations
-    // to resist brute-forcing of the 4-digit PIN.
-    let mut hasher = Sha256::new();
-    hasher.update(pin.as_bytes());
-    hasher.update(salt);
-
-    let result = hasher.finalize();
-    let mut key = [0u8; 32];
-    key.copy_from_slice(&result);
+pub fn derive_lane_key(pin: &str, salt: &[u8]) -> [u8; LANE_KEY_LENGTH] {
+    let mut key = [0u8; LANE_KEY_LENGTH];
+    pbkdf2_hmac::<Sha256>(pin.as_bytes(), salt, PBKDF2_ITERATIONS, &mut key);
     key
 }
 
@@ -159,5 +156,21 @@ mod tests {
             verify_human_agency(&frame, author_did_alice, &verifying_key, &alice_sig),
             Err(AgencyError::InvalidSignature)
         );
+    }
+
+    #[test]
+    fn derive_lane_key_is_deterministic_and_salt_bound() {
+        let pin = "1234";
+        let salt_a = b"sanctuary";
+        let salt_b = b"decoy";
+
+        let key_a1 = derive_lane_key(pin, salt_a);
+        let key_a2 = derive_lane_key(pin, salt_a);
+        let key_b = derive_lane_key(pin, salt_b);
+        let key_c = derive_lane_key("4321", salt_a);
+
+        assert_eq!(key_a1, key_a2);
+        assert_ne!(key_a1, key_b);
+        assert_ne!(key_a1, key_c);
     }
 }

@@ -566,8 +566,7 @@ pub fn execute_vm_frame(
                     step_size, num_steps
                 );
                 
-                // Use the new ode_solver module for RK4 integration
-                #[cfg(feature = "calculus")]
+                // Calculus is a core capability in this crate, so RK4 dispatch stays wired.
                 {
                     use crate::modalities::calculus::ode_solver::{ExponentialDecay, Rk4Solver};
                     
@@ -575,25 +574,27 @@ pub fn execute_vm_frame(
                     let mut solver = Rk4Solver::new(system, step_size);
                     
                     // Execute chained RK4 steps
-                    let mut quin = frame.current_quin.clone();
+                    let mut quin = frame_to_quin(frame);
                     for _ in 0..num_steps {
                         quin = solver.step_quin(quin, step_size);
                     }
                     
-                    frame.current_quin = quin;
+                    frame.subject_reg = quin.subject;
+                    frame.predicate_reg = quin.predicate;
+                    frame.object_reg = quin.object;
+                    frame.context_reg = quin.context;
                     
                     vm_log!(
                         "✅ Webizen completed {} RK4 steps. Final state: t={}, y={}",
                         num_steps,
-                        f64::from_bits(frame.current_quin.metadata),
-                        f64::from_bits(frame.current_quin.object)
+                        f64::from_bits(quin.metadata),
+                        f64::from_bits(quin.object)
                     );
                 }
                 
-                #[cfg(not(feature = "calculus"))]
-                {
+                /* Legacy fallback removed: calculus is always available in this crate.
                     vm_log!("⚠️  Calculus feature not enabled, RK4 step skipped");
-                }
+                */
             }
             SlgOpcode::NativeQuantumDft => {
                 // Mock execution of Kohn-Sham density functional approximation

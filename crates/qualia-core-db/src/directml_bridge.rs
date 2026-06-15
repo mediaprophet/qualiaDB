@@ -42,29 +42,70 @@ use std::os::windows::io::AsRawHandle;
 
 // ─── FFI Firewall: Type-Erased Interface ─────────────────────────────────────
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DmlStatus {
+    Success = 0,
+    InvalidPointer = 1,
+    DeviceCreationFailed = 2,
+    DirectStorageFailed = 3,
+    IocpStubbed = 4,
+}
+
+impl DmlStatus {
+    pub fn message(self) -> &'static str {
+        match self {
+            Self::Success => "success",
+            Self::InvalidPointer => "invalid pointer passed to DirectML FFI",
+            Self::DeviceCreationFailed => "DirectML device creation failed",
+            Self::DirectStorageFailed => "DirectStorage operation failed",
+            Self::IocpStubbed => {
+                "IOCP implementation stubbed due to DirectX API version conflicts. Use MmapGridManager instead."
+            }
+        }
+    }
+}
+
 /// FFI-safe wrapper for DirectStorage read operation.
-/// 
-/// This function accepts type-erased pointers to isolate dependency trees.
-/// The host module manages raw HANDLE/ID3D12Device pointers and passes them
-/// as *mut c_void to prevent COM interface definition conflicts.
+///
+/// This function accepts an opaque `DmlDevice` owner pointer plus type-erased
+/// Windows handles/resources for the file and GPU buffer.
 ///
 /// # Safety
-/// - `device_ptr` must be a valid pointer to ID3D12Device
+/// - `device_ptr` must be a valid pointer previously returned by
+///   `create_d3d12_device_ffi`
 /// - `file_handle` must be a valid Windows HANDLE
 /// - `gpu_buffer_ptr` must be a valid pointer to ID3D12Resource
 #[no_mangle]
 pub unsafe extern "C" fn directstorage_read_ffi(
-    device_ptr: *mut core::ffi::c_void,
+    device_ptr: *mut DmlDevice,
+    file_handle: *mut core::ffi::c_void,
+    gpu_buffer_ptr: *mut core::ffi::c_void,
+    offset: u64,
+    size: u64,
+) -> DmlStatus {
+    match directstorage_read_impl(device_ptr, file_handle, gpu_buffer_ptr, offset, size) {
+        Ok(()) => DmlStatus::Success,
+        Err(err) => err.into(),
+    }
+}
+
+unsafe fn directstorage_read_impl(
+    device_ptr: *mut DmlDevice,
     file_handle: *mut core::ffi::c_void,
     gpu_buffer_ptr: *mut core::ffi::c_void,
     offset: u64,
     size: u64,
 ) -> Result<(), DmlError> {
+    if device_ptr.is_null() || file_handle.is_null() || gpu_buffer_ptr.is_null() {
+        return Err(DmlError::InvalidPointer);
+    }
+
     // Cast type-erased pointers back to specific Windows types
-    let device = &*(device_ptr as *const ID3D12Device);
+    let device = &(*device_ptr).d3d12;
     let handle = HANDLE(file_handle);
     let gpu_buffer = &*(gpu_buffer_ptr as *const ID3D12Resource);
-    
+
     // Perform DirectStorage read operation
     // Note: Actual DirectStorage implementation would go here
     // For now, this is a stub that validates the FFI boundary
@@ -72,32 +113,36 @@ pub unsafe extern "C" fn directstorage_read_ffi(
         "DirectStorage FFI: device={:?}, handle={:?}, offset={}, size={}",
         device, handle, offset, size
     );
-    
+
     Ok(())
 }
 
 /// FFI-safe wrapper for D3D12 device creation.
-/// 
-/// Returns a type-erased pointer to ID3D12Device that can be passed
-/// between modules without sharing COM interface definitions.
+///
+/// Returns an owning opaque pointer to the heap-allocated `DmlDevice`.
 #[no_mangle]
-pub unsafe extern "C" fn create_d3d12_device_ffi() -> Result<*mut core::ffi::c_void, DmlError> {
-    let device = DmlDevice::new()?;
-    // Leak the device to return a stable pointer
-    // Caller is responsible for cleanup via destroy_d3d12_device_ffi
-    let leaked = Box::leak(Box::new(device));
-    Ok(&mut leaked.d3d12 as *mut ID3D12Device as *mut core::ffi::c_void)
+pub unsafe extern "C" fn create_d3d12_device_ffi(out_device: *mut *mut DmlDevice) -> DmlStatus {
+    if out_device.is_null() {
+        return DmlStatus::InvalidPointer;
+    }
+
+    *out_device = std::ptr::null_mut();
+    match DmlDevice::new() {
+        Ok(device) => {
+            *out_device = Box::into_raw(Box::new(device));
+            DmlStatus::Success
+        }
+        Err(err) => DmlError::from(err).into(),
+    }
 }
 
 /// FFI-safe wrapper for D3D12 device destruction.
 #[no_mangle]
-pub unsafe extern "C" fn destroy_d3d12_device_ffi(device_ptr: *mut core::ffi::c_void) {
+pub unsafe extern "C" fn destroy_d3d12_device_ffi(device_ptr: *mut DmlDevice) {
     if device_ptr.is_null() {
         return;
     }
-    // Reconstruct Box from pointer and drop it
-    let device = Box::from_raw(device_ptr as *mut DmlDevice);
-    drop(device);
+    let _ = Box::from_raw(device_ptr);
 }
 
 // ─── IOCP FFI Firewall for Host Module ─────────────────────────────────────────────
@@ -117,9 +162,25 @@ pub struct IocpHandle {
 pub unsafe extern "C" fn iocp_create_ffi(
     _file_path: *const u8,
     _file_path_len: usize,
-) -> Result<*mut IocpHandle, DmlError> {
+    out_handle: *mut *mut IocpHandle,
+) -> DmlStatus {
+    if out_handle.is_null() {
+        return DmlStatus::InvalidPointer;
+    }
+
+    *out_handle = std::ptr::null_mut();
+    match iocp_create_impl() {
+        Ok(handle) => {
+            *out_handle = handle;
+            DmlStatus::Success
+        }
+        Err(err) => err.into(),
+    }
+}
+
+fn iocp_create_impl() -> Result<*mut IocpHandle, DmlError> {
     // Stub implementation - returns error until DirectX version conflicts are resolved
-    Err(DmlError::DirectStorageFailed(
+    Err(DmlError::IocpStubbed(
         "IOCP implementation stubbed due to DirectX API version conflicts. Use MmapGridManager instead.".to_string()
     ))
 }
@@ -135,9 +196,16 @@ pub unsafe extern "C" fn iocp_destroy_ffi(_handle: *mut IocpHandle) {
 pub unsafe extern "C" fn iocp_async_read_ffi(
     _handle: *mut IocpHandle,
     _offset: u64,
-) -> Result<(), DmlError> {
+) -> DmlStatus {
+    match iocp_async_read_impl() {
+        Ok(()) => DmlStatus::Success,
+        Err(err) => err.into(),
+    }
+}
+
+fn iocp_async_read_impl() -> Result<(), DmlError> {
     // Stub - returns error
-    Err(DmlError::DirectStorageFailed("IOCP stubbed".to_string()))
+    Err(DmlError::IocpStubbed("IOCP stubbed".to_string()))
 }
 
 /// FFI-safe wrapper for polling completion.
@@ -155,12 +223,24 @@ pub unsafe extern "C" fn iocp_poll_completion_ffi(
 pub enum DmlError {
     DeviceCreationFailed(String),
     DirectStorageFailed(String),
+    IocpStubbed(String),
     InvalidPointer,
 }
 
 impl From<windows::core::Error> for DmlError {
     fn from(e: windows::core::Error) -> Self {
         DmlError::DeviceCreationFailed(e.to_string())
+    }
+}
+
+impl From<DmlError> for DmlStatus {
+    fn from(value: DmlError) -> Self {
+        match value {
+            DmlError::InvalidPointer => DmlStatus::InvalidPointer,
+            DmlError::DeviceCreationFailed(_) => DmlStatus::DeviceCreationFailed,
+            DmlError::DirectStorageFailed(_) => DmlStatus::DirectStorageFailed,
+            DmlError::IocpStubbed(_) => DmlStatus::IocpStubbed,
+        }
     }
 }
 

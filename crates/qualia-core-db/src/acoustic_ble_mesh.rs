@@ -1367,6 +1367,7 @@ impl AcousticNetwork {
                 battery_level: 100.0 - (i as f64 * 10.0),
             };
 
+            self.nodes.insert(node.node_id.clone(), node.clone());
             discovered_nodes.push(node);
         }
 
@@ -1432,6 +1433,7 @@ impl BleNetwork {
                 battery_level: 100.0 - (i as f64 * 5.0),
             };
 
+            self.nodes.insert(node.node_id.clone(), node.clone());
             discovered_nodes.push(node);
         }
 
