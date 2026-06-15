@@ -629,6 +629,96 @@ impl MlDsaVcProof {
     }
 }
 
+
+// ── Interoperability Cryptographic Algorithms (W3C DID Compatibility) ────
+#[cfg(feature = "interop-crypto")]
+use secp256k1::{Secp256k1, SecretKey, PublicKey, Message, ecdsa};
+
+/// Interoperability ECDSA secp256k1 signer for W3C DID compatibility
+#[cfg(feature = "interop-crypto")]
+#[derive(Debug, Clone)]
+pub struct InteropEcdsaSigner {
+    secret_key: Option<Vec<u8>>,
+    public_key: Option<Vec<u8>>,
+    key_id: Option<String>,
+}
+
+#[cfg(feature = "interop-crypto")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InteropEcdsaSignature {
+    #[serde(with = "serde_bytes")]
+    pub sig_bytes: Vec<u8>,
+}
+
+#[cfg(feature = "interop-crypto")]
+impl InteropEcdsaSigner {
+    /// Generate a new ECDSA keypair
+    pub fn generate() -> Result<Self, MlDsaError> {
+        let secp = Secp256k1::new();
+        let (secret_key, public_key) = secp.generate_keypair(&mut rand::rngs::ThreadRng::default());
+        
+        Ok(Self {
+            secret_key: Some(secret_key.secret_bytes().to_vec()),
+            public_key: Some(public_key.serialize().to_vec()),
+            key_id: None,
+        })
+    }
+    
+    /// Create signer from existing secret key
+    pub fn from_secret_key(sk_bytes: &[u8]) -> Result<Self, MlDsaError> {
+        let secp = Secp256k1::new();
+        let secret_key = SecretKey::from_slice(sk_bytes)
+            .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
+        let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+        
+        Ok(Self {
+            secret_key: Some(sk_bytes.to_vec()),
+            public_key: Some(public_key.serialize().to_vec()),
+            key_id: None,
+        })
+    }
+    
+    /// Sign a message using ECDSA
+    pub fn sign(&self, message: &[u8]) -> Result<InteropEcdsaSignature, MlDsaError> {
+        let secp = Secp256k1::new();
+        let secret_key = self.secret_key.as_ref()
+            .ok_or_else(|| MlDsaError::SignatureGenerationFailed("No secret key".to_string()))?;
+        let sk = SecretKey::from_slice(secret_key)
+            .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
+        
+        let msg = Message::from_digest_slice(message)
+            .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
+        
+        let sig = secp.sign_ecdsa(&msg, &sk);
+        
+        Ok(InteropEcdsaSignature {
+            sig_bytes: sig.serialize_compact().to_vec(),
+        })
+    }
+    
+    /// Verify an ECDSA signature
+    pub fn verify(&self, message: &[u8], signature: &InteropEcdsaSignature) -> Result<bool, MlDsaError> {
+        let secp = Secp256k1::new();
+        let public_key = self.public_key.as_ref()
+            .ok_or_else(|| MlDsaError::SignatureVerificationFailed("No public key".to_string()))?;
+        let pk = PublicKey::from_slice(public_key)
+            .map_err(|e| MlDsaError::SignatureVerificationFailed(e.to_string()))?;
+        
+        let msg = Message::from_digest_slice(message)
+            .map_err(|e| MlDsaError::SignatureVerificationFailed(e.to_string()))?;
+        
+        let sig = ecdsa::Signature::from_compact(&signature.sig_bytes)
+            .map_err(|e| MlDsaError::SignatureVerificationFailed(e.to_string()))?;
+        
+        Ok(secp.verify_ecdsa(&msg, &sig, &pk).is_ok())
+    }
+    
+    /// Get the public key
+    pub fn public_key(&self) -> Option<&[u8]> {
+        self.public_key.as_deref()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
