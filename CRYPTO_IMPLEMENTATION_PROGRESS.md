@@ -149,7 +149,24 @@ Both the fips and pqcrypto families have non-trivial API complexities that would
 2. **Pivot to arkworks** - Unified ecosystem with consistent traits, heavier dependency
 3. **Hybrid approach** - Use arkworks for development, optimize to bellman later
 
-**Recommendation:** The field mapping helper is crate-agnostic and works with either bellman or arkworks. Consider arkworks for development velocity given API complexity.
+**Recommendation:** Pivoting to arkworks ecosystem for unified, maintainable ZK infrastructure. The field mapping helper is crate-agnostic and works with either approach. arkworks provides better developer velocity, active maintenance, and future-proofing for potential upgrades to PLONK/Marlin.
+
+**Arkworks Pivot - Staged for Next Session:**
+- Dependencies staged: ark-bls12-381, ark-groth16, ark-relations, ark-snark, ark-ff, ark-serialize
+- Field mapping updated to use ark-ff::Field trait
+- Circuit boilerplate created using ark-relations::r1cs::ConstraintSynthesizer
+- Ephemeral setup function with OsRng for toxic waste destruction
+- Verifier structure prepared for pre-PCIe gateway integration
+
+**Files Added (Staged):**
+- `crates/qualia-core-db/src/deontic_circuit.rs` - arkworks circuit boilerplate (NEW, 167 lines)
+- Module registration in lib.rs
+
+**Next Session:**
+1. Build with arkworks dependencies
+2. Implement constraint logic in DeonticAccessCircuit
+3. Wire verifier into semantic_culler.rs for pre-PCIe gateway
+4. Test ephemeral setup and key serialization
 
 **Files Modified:**
 - `crates/qualia-core-db/src/deontic_mapping.rs` - Field mapping helper (NEW, 78 lines)
