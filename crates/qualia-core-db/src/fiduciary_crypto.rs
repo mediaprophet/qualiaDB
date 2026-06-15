@@ -492,6 +492,143 @@ impl std::fmt::Display for MlDsaError {
 
 impl std::error::Error for MlDsaError {}
 
+
+// ── ML-DSA Verifiable Credential Issuance ─────────────────────────────────────
+
+/// Predicate hash for VC ML-DSA proof head
+const P_VC_PROOF_MLDSA: u64 = crate::q_hash("vc:proof/mldsa");
+/// Predicate hash for VC ML-DSA proof fragment
+const P_VC_PROOF_MLDSA_FRAG: u64 = crate::q_hash("vc:proof/mldsa/frag");
+
+/// ML-DSA VC proof fragment layout for multi-Quin storage
+/// A 3309-byte ML-DSA signature spans ~414 NQuins (8 bytes per object field)
+#[derive(Debug, Clone)]
+pub struct MlDsaVcProof {
+    pub head_quin: crate::NQuin,
+    pub fragment_quins: Vec<crate::NQuin>,
+}
+
+impl MlDsaVcProof {
+    /// Issue an ML-DSA-signed Verifiable Credential by fragmenting the signature
+    /// across multiple NQuins following the Merkle-DAG pattern.
+    pub fn issue_vc_mldsa(
+        claim_quins: &[crate::NQuin],
+        issuer_sk: &[u8],
+        issuer_did_hash: u64,
+        context: &CryptoContext,
+    ) -> Result<Self, MlDsaError> {
+        // 1. Serialize the claim graph to canonical bytes for signing
+        let claim_bytes = Self::serialize_claims(claim_quins);
+        
+        // 2. Sign with ML-DSA
+        let signature = MlDsaSigner::sign_with_secret(issuer_sk, &claim_bytes, context)?;
+        
+        // 3. Fragment the signature into NQuin-sized chunks (8 bytes per object field)
+        let sig_bytes = signature.sig_bytes;
+        let total_len = sig_bytes.len();
+        let fragment_count = (total_len + 7) / 8; // Ceiling division by 8
+        
+        let mut fragment_quins = Vec::with_capacity(fragment_count);
+        
+        for i in 0..fragment_count {
+            let start = i * 8;
+            let end = (start + 8).min(total_len);
+            let chunk = &sig_bytes[start..end];
+            
+            // Pack 8 bytes into a u64
+            let mut object: u64 = 0;
+            for (j, &byte) in chunk.iter().enumerate() {
+                object |= (byte as u64) << (j * 8);
+            }
+            
+            // Create fragment Quin
+            let fragment = crate::NQuin {
+                subject: issuer_did_hash,
+                predicate: P_VC_PROOF_MLDSA_FRAG,
+                object,
+                context: issuer_did_hash,
+                metadata: (i as u64) << 32 | (fragment_count as u64), // fragment index | count
+                parity: 0, // TODO: compute proper parity
+            };
+            
+            fragment_quins.push(fragment);
+        }
+        
+        // 4. Create head Quin with metadata about the fragments
+        let head_object = ((total_len as u64) << 32) | (fragment_count as u64);
+        let head = crate::NQuin {
+            subject: issuer_did_hash,
+            predicate: P_VC_PROOF_MLDSA,
+            object: head_object,
+            context: issuer_did_hash,
+            metadata: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            parity: 0, // TODO: compute proper parity
+        };
+        
+        Ok(Self {
+            head_quin: head,
+            fragment_quins,
+        })
+    }
+    
+    /// Verify an ML-DSA-signed VC by reassembling the signature fragments
+    pub fn verify_vc_mldsa(
+        &self,
+        claim_quins: &[crate::NQuin],
+        issuer_pk: &[u8],
+        context: &CryptoContext,
+    ) -> Result<bool, MlDsaError> {
+        // 1. Reassemble the signature from fragments
+        let mut signature_bytes = Vec::new();
+        let mut fragment_count = 0;
+        
+        for fragment in &self.fragment_quins {
+            // Extract fragment metadata
+            fragment_count = (fragment.metadata >> 32) as u32;
+            
+            // Extract 8 bytes from object field
+            for j in 0..8 {
+                let byte = ((fragment.object >> (j * 8)) & 0xFF) as u8;
+                signature_bytes.push(byte);
+            }
+        }
+        
+        // Trim to actual signature size (3309 bytes for ML-DSA-65)
+        if signature_bytes.len() > ml_dsa_65::SIG_LEN {
+            signature_bytes.truncate(ml_dsa_65::SIG_LEN);
+        }
+        
+        // 2. Verify the signature
+        let signature = MlDsaSignature {
+            sig_bytes: signature_bytes,
+        };
+        
+        // 3. Serialize the claim graph for verification
+        let claim_bytes = Self::serialize_claims(claim_quins);
+        
+        // 4. Verify with ML-DSA
+        MlDsaSigner::verify_with_public(issuer_pk, &claim_bytes, &signature, context)
+    }
+    
+    /// Serialize claim Quins to canonical bytes for signing
+    fn serialize_claims(claims: &[crate::NQuin]) -> Vec<u8> {
+        // Simple serialization: concatenate all NQuin bytes
+        let mut bytes = Vec::new();
+        for quin in claims {
+            bytes.extend_from_slice(unsafe {
+                std::slice::from_raw_parts(
+                    quin as *const _ as *const u8,
+                    std::mem::size_of::<crate::NQuin>(),
+                )
+            });
+        }
+        bytes
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -567,5 +704,134 @@ mod tests {
         let is_valid = crypto.verify(message, &signature, Some("test_key"), "test".to_string(), "auth".to_string()).unwrap();
         
         assert!(is_valid);
+    }
+
+    #[test]
+    fn test_vc_issuance_roundtrip() {
+        // Generate ML-DSA keypair
+        let (private_key, public_key) = MlDsaSigner::generate_keypair().unwrap();
+        let issuer_did_hash = 12345u64;
+        
+        // Create a simple claim graph (one Quin)
+        let claim_quins = vec![
+            crate::NQuin {
+                subject: issuer_did_hash,
+                predicate: crate::q_hash("test:hasRole"),
+                object: crate::q_hash("test:Admin"),
+                context: issuer_did_hash,
+                metadata: 0,
+                parity: 0,
+            }
+        ];
+        
+        // Create context for signing
+        let context = CryptoContext {
+            domain: "test".to_string(),
+            purpose: "vc-issuance".to_string(),
+            timestamp: 0,
+            nonce: [0u8; 32],
+        };
+        
+        // Issue VC
+        let proof = MlDsaVcProof::issue_vc_mldsa(
+            &claim_quins,
+            &private_key.sk_bytes,
+            issuer_did_hash,
+            &context,
+        ).unwrap();
+        
+        // Verify VC
+        let is_valid = proof.verify_vc_mldsa(
+            &claim_quins,
+            &public_key.pk_bytes,
+            &context,
+        ).unwrap();
+        
+        assert!(is_valid, "VC verification should succeed");
+    }
+    
+    #[test]
+    fn test_vc_tampered_fragment_fails() {
+        let (private_key, public_key) = MlDsaSigner::generate_keypair().unwrap();
+        let issuer_did_hash = 12345u64;
+        
+        let claim_quins = vec![
+            crate::NQuin {
+                subject: issuer_did_hash,
+                predicate: crate::q_hash("test:hasRole"),
+                object: crate::q_hash("test:Admin"),
+                context: issuer_did_hash,
+                metadata: 0,
+                parity: 0,
+            }
+        ];
+        
+        let context = CryptoContext {
+            domain: "test".to_string(),
+            purpose: "vc-issuance".to_string(),
+            timestamp: 0,
+            nonce: [0u8; 32],
+        };
+        
+        let mut proof = MlDsaVcProof::issue_vc_mldsa(
+            &claim_quins,
+            &private_key.sk_bytes,
+            issuer_did_hash,
+            &context,
+        ).unwrap();
+        
+        // Tamper with a fragment
+        if !proof.fragment_quins.is_empty() {
+            proof.fragment_quins[0].object ^= 0xFF; // Flip bits
+        }
+        
+        let is_valid = proof.verify_vc_mldsa(
+            &claim_quins,
+            &public_key.pk_bytes,
+            &context,
+        ).unwrap();
+        
+        assert!(!is_valid, "Tampered fragment should fail verification");
+    }
+    
+    #[test]
+    fn test_vc_wrong_key_fails() {
+        let (private_key, _public_key) = MlDsaSigner::generate_keypair().unwrap();
+        let (wrong_private, wrong_public) = MlDsaSigner::generate_keypair().unwrap();
+        let issuer_did_hash = 12345u64;
+        
+        let claim_quins = vec![
+            crate::NQuin {
+                subject: issuer_did_hash,
+                predicate: crate::q_hash("test:hasRole"),
+                object: crate::q_hash("test:Admin"),
+                context: issuer_did_hash,
+                metadata: 0,
+                parity: 0,
+            }
+        ];
+        
+        let context = CryptoContext {
+            domain: "test".to_string(),
+            purpose: "vc-issuance".to_string(),
+            timestamp: 0,
+            nonce: [0u8; 32],
+        };
+        
+        let proof = MlDsaVcProof::issue_vc_mldsa(
+            &claim_quins,
+            &private_key.sk_bytes,
+            issuer_did_hash,
+            &context,
+        ).unwrap();
+        
+        // Try to verify with wrong public key
+        let is_valid = proof.verify_vc_mldsa(
+            &claim_quins,
+            &wrong_public.pk_bytes,
+            &context,
+        ).unwrap();
+        
+        assert!(!is_valid, "Wrong public key should fail verification");
     }
 }
