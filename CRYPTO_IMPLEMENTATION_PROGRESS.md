@@ -153,8 +153,24 @@ Both the fips and pqcrypto families have non-trivial API complexities that would
 - Consider alternative ZK libraries with simpler APIs (arkworks)
 - May need to fix geometric_algebra error first
 
+**CRITICAL SECURITY INSIGHT - Toxic Waste Vulnerability:**
+- Groth16 requires "toxic waste" (α, β, γ, δ, x) to be permanently destroyed after key generation
+- Using deterministic seed (ChaCha20Rng) for setup would preserve toxic waste
+- If seed is compromised, attacker can forge arbitrary proofs
+- **FIX:** Use `OsRng` (true hardware entropy) for ephemeral setup
+- Let RNG drop out of scope after parameter generation
+- Back up generated keys (PK, VK), NOT the seed
+- This maintains local-first ethos without compromising zero-knowledge security
+
+**Next Session Implementation Sequence:**
+1. `deontic_mapping.rs` - `hash_to_fr_secure()` using `ff::FromUniformBytes` + 64-byte BLAKE2b
+2. `DeonticAccessCircuit` - `bellman::Circuit` trait with 5 variables
+3. Ephemeral Setup CLI - `OsRng` parameter generation (toxic waste destroyed on scope exit)
+4. Storage Layer - Serialize PK/VK to encrypted config
+5. PCIe Gateway - `lazy_static` for `PreparedVerifyingKey`, ~3ms fast-fail
+
 **Files Modified:** None (research only)
-**Dependencies:** bellman v0.14 identified but not integrated
+**Dependencies:** bellman v0.14, pairing, ff identified but not integrated
 **Status:** BLOCKED - Requires product sign-off
 **Priority:** LOW (large, multi-day project)
 
