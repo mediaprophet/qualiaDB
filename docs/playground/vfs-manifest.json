@@ -1298,7 +1298,7 @@
       "profile": "w3c",
       "label": "GeoNames",
       "icon": "\ud83c\udf0d",
-      "description": "GeoNames GeoNames \u00b7 geonames.ttl",
+      "description": "GeoNames geography ontology \u00b7 geonames.ttl \u00b7 ~1.4k triples",
       "url": "data/geonames/geonames.q42",
       "lexUrl": "data/geonames/geonames.q42.lex",
       "bidxUrl": "data/geonames/geonames.q42.bidx",
@@ -1324,6 +1324,40 @@
         {
           "label": "Subclass chain",
           "pattern": "<http://www.geonames.org/ontology#Feature> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "dublincore",
+      "profile": "w3c",
+      "label": "Dublin Core",
+      "icon": "\ud83d\udcda",
+      "description": "DCMI metadata terms \u00b7 dct.ttl \u00b7 combined Dublin Core export",
+      "url": "data/dublincore/dct.q42",
+      "lexUrl": "data/dublincore/dct.q42.lex",
+      "bidxUrl": "data/dublincore/dct.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "CC-BY 4.0",
+      "homepage": "https://www.dublincore.org/specifications/dublin-core/dcmi-terms/",
+      "namespace": "http://purl.org/dc/terms/",
+      "prefix": "dc",
+      "defaultSearch": "title",
+      "quickExamples": [
+        "title",
+        "creator",
+        "subject",
+        "description",
+        "Agent"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect title",
+          "pattern": "<http://purl.org/dc/terms/title> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/dc/terms/title> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
       ]
     }

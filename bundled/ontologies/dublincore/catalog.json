@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "source": "bundled/ontologies/dublincore",
+  "license": "CC-BY 4.0",
+  "ontologies": [
+    {
+      "file": "dct.ttl",
+      "id": "dublincore",
+      "label": "Dublin Core",
+      "icon": "📚",
+      "prefix": "dc",
+      "namespace": "http://purl.org/dc/terms/",
+      "defaultSearch": "title",
+      "quickExamples": ["title", "creator", "subject", "description", "Agent"],
+      "homepage": "https://www.dublincore.org/specifications/dublin-core/dcmi-terms/",
+      "primary": true
+    }
+  ]
+}

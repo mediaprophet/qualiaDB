@@ -35,6 +35,15 @@ GROUP_CONFIG = {
         "homepage": "https://www.geonames.org/ontology/",
         "description": lambda e: f"GeoNames geography ontology · {e['file']} · ~1.4k triples",
     },
+    "dublincore": {
+        "src": REPO / "bundled/ontologies/dublincore",
+        "out": REPO / "docs/data/dublincore",
+        "url_prefix": "data/dublincore",
+        "profile": "w3c",
+        "license": "CC-BY 4.0",
+        "homepage": "https://www.dublincore.org/",
+        "description": lambda e: f"DCMI metadata terms · {e['file']} · combined Dublin Core export",
+    },
 }
 
 

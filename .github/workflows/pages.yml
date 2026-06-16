@@ -95,6 +95,12 @@ jobs:
           bash scripts/prepare_geonames_ontologies.sh
           ls -lh docs/data/geonames/*.q42
 
+      - name: Build Dublin Core ontology volume for Ontology Demo
+        continue-on-error: true
+        run: |
+          bash scripts/prepare_dublincore_ontologies.sh
+          ls -lh docs/data/dublincore/*.q42
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:

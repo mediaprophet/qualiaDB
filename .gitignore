@@ -37,6 +37,11 @@
 !docs/data/geonames/**/*.q42.lex
 !docs/data/geonames/**/*.q42.bidx
 
+# Ontology demo — Dublin Core volume under docs/data/dublincore
+!docs/data/dublincore/**/*.q42
+!docs/data/dublincore/**/*.q42.lex
+!docs/data/dublincore/**/*.q42.bidx
+
 # Claude Code session files (dev-machine only)
 .claude/
 
