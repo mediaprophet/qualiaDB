@@ -22,7 +22,7 @@ cuda_gds = []
 # Interoperability cryptographic algorithms for W3C DID compatibility
 # Enables secp256k1 (ECDSA) for interoperability with existing Web 2.0 infrastructure
 # This feature can be disabled for pure post-quantum environments
-interop-crypto = ["secp256k1"]
+interop-crypto = ["secp256k1", "rsa"]
 
 # Sanctuary lane cryptography with 48-byte PBKDF2 derivation
 # Enables PBKDF2 and AEAD ciphers for sanctuary volume encryption
@@ -38,9 +38,10 @@ tensor-npu = []  # Enable NPU acceleration (Neural Engine)
 
 # Zero-knowledge proofs for Deontic Culling layer
 # Using arkworks ecosystem for unified, maintainable ZK infrastructure
-zk-culling = ["ark-bls12-381", "ark-groth16", "ark-relations", "ark-snark", "ark-ff", "ark-serialize", "ark-ec"]
+zk-culling = ["ark-bls12-381", "ark-groth16", "ark-relations", "ark-snark", "ark-ff", "ark-serialize", "ark-ec", "ark-std"]
 
-# Post-quantum KEM serialization shimpq-kem = ["thiserror"]
+# Post-quantum KEM encapsulation + fixed-size serialization shim
+pq-kem = ["thiserror"]
 
 # QPU internal functionality (undocumented, private)
 # This feature gate enables internal QPU modules that are not publicly documented
@@ -65,15 +66,17 @@ bytemuck = { version = "1.14", features = ["derive"] }
 half = "2.4"
 log = "0.4"
 ed25519-dalek = { version = "2.1", default-features = false }
-secp256k1 = { version = "0.29", default-features = false, optional = true }
+secp256k1 = { version = "0.29", default-features = false, features = ["std", "rand"], optional = true }
 # arkworks ecosystem for zero-knowledge proofs
-ark-bls12-381 = { version = "0.4", default-features = false, optional = true }
+ark-bls12-381 = { version = "0.4", default-features = false, features = ["curve"], optional = true }
 ark-groth16 = { version = "0.4", default-features = false, optional = true }
 ark-relations = { version = "0.4", default-features = false, optional = true }
 ark-snark = { version = "0.4", default-features = false, optional = true }
 ark-ff = { version = "0.4", default-features = false, optional = true }
 ark-serialize = { version = "0.4", default-features = false, optional = true }
 ark-ec = { version = "0.4", default-features = false, optional = true }
+ark-std = { version = "0.4", default-features = false, features = ["std"], optional = true }
+rsa = { version = "0.9", default-features = false, features = ["sha2", "pem", "u64_digit"], optional = true }
 thiserror = { version = "1.0", optional = true }
 sha2 = { version = "0.10", default-features = false }
 pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"], optional = true }
@@ -84,7 +87,7 @@ x25519-dalek = { version = "2", default-features = false, features = ["static_se
 hkdf = { version = "0.12", default-features = false }
 blake3 = { version = "1", default-features = false }
 fips204 = { version = "0.4", default-features = false, features = ["ml-dsa-65", "default-rng"] }
-fips203 = { version = "0.4", default-features = false, features = ["ml-kem-768", "default-rng"] }
+fips203 = { version = "0.4", default-features = false, features = ["ml-kem-512", "ml-kem-768", "ml-kem-1024", "default-rng"] }
 fips205 = { version = "0.4", default-features = false, features = ["slh_dsa_sha2_256s", "default-rng"] }
 quick-xml = "0.31"
 crossbeam-channel = "0.5"
@@ -97,6 +100,7 @@ rio_api = "0.8"
 lz4_flex = "0.11"
 rtrb = "0.3.4"
 rand = "0.10.1"
+rand_core = { version = "0.6", features = ["getrandom"] }
 hex = "0.4.3"
 sha1 = "0.10"
 sha3 = "0.10"

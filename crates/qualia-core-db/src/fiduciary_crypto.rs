@@ -541,31 +541,45 @@ impl MlDsaVcProof {
                 object |= (byte as u64) << (j * 8);
             }
             
-            // Create fragment Quin
+            let metadata = (i as u64) << 32 | (fragment_count as u64);
+            let parity = crate::NQuin::calculate_parity(
+                issuer_did_hash,
+                P_VC_PROOF_MLDSA_FRAG,
+                object,
+                issuer_did_hash,
+                metadata,
+            );
             let fragment = crate::NQuin {
                 subject: issuer_did_hash,
                 predicate: P_VC_PROOF_MLDSA_FRAG,
                 object,
                 context: issuer_did_hash,
-                metadata: (i as u64) << 32 | (fragment_count as u64), // fragment index | count
-                parity: 0, // TODO: compute proper parity
+                metadata,
+                parity,
             };
-            
+
             fragment_quins.push(fragment);
         }
-        
-        // 4. Create head Quin with metadata about the fragments
+
         let head_object = ((total_len as u64) << 32) | (fragment_count as u64);
+        let head_metadata = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let head_parity = crate::NQuin::calculate_parity(
+            issuer_did_hash,
+            P_VC_PROOF_MLDSA,
+            head_object,
+            issuer_did_hash,
+            head_metadata,
+        );
         let head = crate::NQuin {
             subject: issuer_did_hash,
             predicate: P_VC_PROOF_MLDSA,
             object: head_object,
             context: issuer_did_hash,
-            metadata: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            parity: 0, // TODO: compute proper parity
+            metadata: head_metadata,
+            parity: head_parity,
         };
         
         Ok(Self {
@@ -581,24 +595,33 @@ impl MlDsaVcProof {
         issuer_pk: &[u8],
         context: &CryptoContext,
     ) -> Result<bool, MlDsaError> {
-        // 1. Reassemble the signature from fragments
-        let mut signature_bytes = Vec::new();
-        let mut fragment_count = 0;
-        
-        for fragment in &self.fragment_quins {
-            // Extract fragment metadata
-            fragment_count = (fragment.metadata >> 32) as u32;
-            
-            // Extract 8 bytes from object field
-            for j in 0..8 {
+        let total_len = (self.head_quin.object >> 32) as usize;
+        let expected_fragments = (self.head_quin.object & 0xFFFF_FFFF) as usize;
+        if expected_fragments != self.fragment_quins.len() {
+            return Ok(false);
+        }
+
+        let mut ordered = self.fragment_quins.clone();
+        ordered.sort_by_key(|fragment| fragment.metadata >> 32);
+
+        let mut signature_bytes = Vec::with_capacity(total_len);
+        for fragment in &ordered {
+            let fragment_index = (fragment.metadata >> 32) as usize;
+            let fragment_count = (fragment.metadata & 0xFFFF_FFFF) as usize;
+            if fragment_count != expected_fragments || fragment_index >= expected_fragments {
+                return Ok(false);
+            }
+
+            let start = fragment_index * 8;
+            let chunk_len = 8.min(total_len.saturating_sub(start));
+            for j in 0..chunk_len {
                 let byte = ((fragment.object >> (j * 8)) & 0xFF) as u8;
                 signature_bytes.push(byte);
             }
         }
-        
-        // Trim to actual signature size (3309 bytes for ML-DSA-65)
-        if signature_bytes.len() > ml_dsa_65::SIG_LEN {
-            signature_bytes.truncate(ml_dsa_65::SIG_LEN);
+
+        if signature_bytes.len() != total_len {
+            return Ok(false);
         }
         
         // 2. Verify the signature
@@ -654,8 +677,10 @@ pub struct InteropEcdsaSignature {
 impl InteropEcdsaSigner {
     /// Generate a new ECDSA keypair
     pub fn generate() -> Result<Self, MlDsaError> {
+        use secp256k1::rand::rngs::OsRng;
         let secp = Secp256k1::new();
-        let (secret_key, public_key) = secp.generate_keypair(&mut rand::rngs::ThreadRng::default());
+        let mut rng = OsRng;
+        let (secret_key, public_key) = secp.generate_keypair(&mut rng);
         
         Ok(Self {
             secret_key: Some(secret_key.secret_bytes().to_vec()),
@@ -670,12 +695,31 @@ impl InteropEcdsaSigner {
         let secret_key = SecretKey::from_slice(sk_bytes)
             .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
         let public_key = PublicKey::from_secret_key(&secp, &secret_key);
-        
+
         Ok(Self {
             secret_key: Some(sk_bytes.to_vec()),
             public_key: Some(public_key.serialize().to_vec()),
             key_id: None,
         })
+    }
+
+    /// Create a verify-only signer from a serialized secp256k1 public key.
+    pub fn from_public_key(pk_bytes: &[u8]) -> Result<Self, MlDsaError> {
+        let secp = Secp256k1::new();
+        let public_key = PublicKey::from_slice(pk_bytes)
+            .map_err(|e| MlDsaError::SignatureVerificationFailed(e.to_string()))?;
+        Ok(Self {
+            secret_key: None,
+            public_key: Some(public_key.serialize().to_vec()),
+            key_id: None,
+        })
+    }
+
+    /// Export the serialized secret key bytes when this signer holds a private key.
+    pub fn export_secret_key(&self) -> Result<Vec<u8>, MlDsaError> {
+        self.secret_key
+            .clone()
+            .ok_or_else(|| MlDsaError::KeyGenerationFailed("No secret key available".to_string()))
     }
     
     /// Sign a message using ECDSA

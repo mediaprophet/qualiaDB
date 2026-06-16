@@ -1,32 +1,22 @@
 // ── Post-Quantum KEM Serialization Shim ───────────────────────────────────────
-/// Internal abstraction layer for post-quantum key encapsulation mechanisms
-/// Insulates the database from volatile upstream crate APIs
-/// 
-/// This module provides fixed-size, zero-heap compatible wrappers for
-/// post-quantum KEM operations, ensuring the NQuin architecture remains
-/// insulated from API changes in upstream crates like pqcrypto or fips203.
+/// Internal abstraction layer for post-quantum key encapsulation mechanisms.
+/// Insulates the database from volatile upstream crate APIs and exposes fixed-size
+/// wrappers compatible with the NQuin zero-heap discipline.
 
 #[cfg(feature = "pq-kem")]
-use serde::{Serialize, Deserialize};
+use fips203::traits::{Decaps, Encaps, KeyGen, SerDes};
 
-/// Fixed-size KEM ciphertext variants
-/// These provide compile-time memory layout guarantees for zero-heap discipline
+/// Fixed-size KEM ciphertext variants.
 #[cfg(feature = "pq-kem")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KemCiphertext {
-    /// Kyber512 ciphertext (768 bytes)
     Kyber512([u8; 768]),
-    
-    /// Kyber768 ciphertext (1088 bytes)
     Kyber768([u8; 1088]),
-    
-    /// Kyber1024 ciphertext (1568 bytes)
     Kyber1024([u8; 1568]),
 }
 
 #[cfg(feature = "pq-kem")]
 impl KemCiphertext {
-    /// Get the byte representation of the ciphertext
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             KemCiphertext::Kyber512(bytes) => bytes,
@@ -34,8 +24,7 @@ impl KemCiphertext {
             KemCiphertext::Kyber1024(bytes) => bytes,
         }
     }
-    
-    /// Create ciphertext from bytes
+
     pub fn from_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         match variant {
             KemVariant::Kyber512 => {
@@ -75,32 +64,26 @@ impl KemCiphertext {
     }
 }
 
-/// KEM variant identifier
+/// KEM variant identifier.
 #[cfg(feature = "pq-kem")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KemVariant {
     Kyber512,
     Kyber768,
     Kyber1024,
 }
 
-/// Fixed-size KEM public key variants
+/// Fixed-size KEM public key variants.
 #[cfg(feature = "pq-kem")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KemPublicKey {
-    /// Kyber512 public key (800 bytes)
     Kyber512([u8; 800]),
-    
-    /// Kyber768 public key (1184 bytes)
     Kyber768([u8; 1184]),
-    
-    /// Kyber1024 public key (1568 bytes)
     Kyber1024([u8; 1568]),
 }
 
 #[cfg(feature = "pq-kem")]
 impl KemPublicKey {
-    /// Get the byte representation of the public key
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             KemPublicKey::Kyber512(bytes) => bytes,
@@ -108,8 +91,7 @@ impl KemPublicKey {
             KemPublicKey::Kyber1024(bytes) => bytes,
         }
     }
-    
-    /// Create public key from bytes
+
     pub fn from_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         match variant {
             KemVariant::Kyber512 => {
@@ -149,23 +131,17 @@ impl KemPublicKey {
     }
 }
 
-/// Fixed-size KEM secret key variants
+/// Fixed-size KEM secret key variants.
 #[cfg(feature = "pq-kem")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KemSecretKey {
-    /// Kyber512 secret key (1632 bytes)
     Kyber512([u8; 1632]),
-    
-    /// Kyber768 secret key (2400 bytes)
     Kyber768([u8; 2400]),
-    
-    /// Kyber1024 secret key (3168 bytes)
     Kyber1024([u8; 3168]),
 }
 
 #[cfg(feature = "pq-kem")]
 impl KemSecretKey {
-    /// Get the byte representation of the secret key
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             KemSecretKey::Kyber512(bytes) => bytes,
@@ -173,8 +149,7 @@ impl KemSecretKey {
             KemSecretKey::Kyber1024(bytes) => bytes,
         }
     }
-    
-    /// Create secret key from bytes
+
     pub fn from_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         match variant {
             KemVariant::Kyber512 => {
@@ -214,28 +189,29 @@ impl KemSecretKey {
     }
 }
 
-/// KEM-specific errors
+/// Fixed-size shared secret (ML-KEM SSK_LEN = 32 for all parameter sets).
+#[cfg(feature = "pq-kem")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KemSharedSecret(pub [u8; 32]);
+
+/// KEM-specific errors.
 #[cfg(feature = "pq-kem")]
 #[derive(Debug, thiserror::Error)]
 pub enum KemError {
     #[error("Invalid length: expected {expected}, got {actual}")]
     InvalidLength { expected: usize, actual: usize },
-    
+
     #[error("Invalid variant")]
     InvalidVariant,
-    
+
     #[error("KEM operation failed: {0}")]
     OperationFailed(String),
 }
 
-/// Post-quantum serialization trait
-/// Enforces uniform serialization boundary across all KEM implementations
+/// Post-quantum serialization trait.
 #[cfg(feature = "pq-kem")]
 pub trait PostQuantumSerialize {
-    /// Convert to fixed-size byte array
     fn to_fixed_bytes(&self) -> &[u8];
-    
-    /// Convert from fixed-size byte array
     fn from_fixed_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError>
     where
         Self: Sized;
@@ -246,7 +222,7 @@ impl PostQuantumSerialize for KemCiphertext {
     fn to_fixed_bytes(&self) -> &[u8] {
         self.as_bytes()
     }
-    
+
     fn from_fixed_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         Self::from_bytes(variant, bytes)
     }
@@ -257,7 +233,7 @@ impl PostQuantumSerialize for KemPublicKey {
     fn to_fixed_bytes(&self) -> &[u8] {
         self.as_bytes()
     }
-    
+
     fn from_fixed_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         Self::from_bytes(variant, bytes)
     }
@@ -268,9 +244,112 @@ impl PostQuantumSerialize for KemSecretKey {
     fn to_fixed_bytes(&self) -> &[u8] {
         self.as_bytes()
     }
-    
+
     fn from_fixed_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         Self::from_bytes(variant, bytes)
+    }
+}
+
+/// Generate an ML-KEM-768 keypair (Kyber768).
+#[cfg(feature = "pq-kem")]
+pub fn generate_kyber768_keypair() -> Result<(KemPublicKey, KemSecretKey), KemError> {
+    use fips203::ml_kem_768;
+    let (ek, dk) = ml_kem_768::KG::try_keygen()
+        .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+    let ek_bytes = ek.into_bytes();
+    let dk_bytes = dk.into_bytes();
+    Ok((
+        KemPublicKey::Kyber768(ek_bytes),
+        KemSecretKey::Kyber768(dk_bytes),
+    ))
+}
+
+/// Encapsulate a shared secret against a public key.
+#[cfg(feature = "pq-kem")]
+pub fn encapsulate(
+    public_key: &KemPublicKey,
+) -> Result<(KemSharedSecret, KemCiphertext), KemError> {
+    match public_key {
+        KemPublicKey::Kyber512(pk_bytes) => {
+            use fips203::ml_kem_512;
+            let ek = ml_kem_512::EncapsKey::try_from_bytes(*pk_bytes)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            let (ssk, ct) = ek
+                .try_encaps()
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            Ok((
+                KemSharedSecret(ssk.into_bytes()),
+                KemCiphertext::Kyber512(ct.into_bytes()),
+            ))
+        }
+        KemPublicKey::Kyber768(pk_bytes) => {
+            use fips203::ml_kem_768;
+            let ek = ml_kem_768::EncapsKey::try_from_bytes(*pk_bytes)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            let (ssk, ct) = ek
+                .try_encaps()
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            Ok((
+                KemSharedSecret(ssk.into_bytes()),
+                KemCiphertext::Kyber768(ct.into_bytes()),
+            ))
+        }
+        KemPublicKey::Kyber1024(pk_bytes) => {
+            use fips203::ml_kem_1024;
+            let ek = ml_kem_1024::EncapsKey::try_from_bytes(*pk_bytes)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            let (ssk, ct) = ek
+                .try_encaps()
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            Ok((
+                KemSharedSecret(ssk.into_bytes()),
+                KemCiphertext::Kyber1024(ct.into_bytes()),
+            ))
+        }
+    }
+}
+
+/// Decapsulate a shared secret from a ciphertext using a secret key.
+#[cfg(feature = "pq-kem")]
+pub fn decapsulate(
+    secret_key: &KemSecretKey,
+    ciphertext: &KemCiphertext,
+) -> Result<KemSharedSecret, KemError> {
+    match (secret_key, ciphertext) {
+        (KemSecretKey::Kyber512(sk_bytes), KemCiphertext::Kyber512(ct_bytes)) => {
+            use fips203::ml_kem_512;
+            let dk = ml_kem_512::DecapsKey::try_from_bytes(*sk_bytes)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            let ct = ml_kem_512::CipherText::try_from_bytes(*ct_bytes)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            let ssk = dk
+                .try_decaps(&ct)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            Ok(KemSharedSecret(ssk.into_bytes()))
+        }
+        (KemSecretKey::Kyber768(sk_bytes), KemCiphertext::Kyber768(ct_bytes)) => {
+            use fips203::ml_kem_768;
+            let dk = ml_kem_768::DecapsKey::try_from_bytes(*sk_bytes)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            let ct = ml_kem_768::CipherText::try_from_bytes(*ct_bytes)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            let ssk = dk
+                .try_decaps(&ct)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            Ok(KemSharedSecret(ssk.into_bytes()))
+        }
+        (KemSecretKey::Kyber1024(sk_bytes), KemCiphertext::Kyber1024(ct_bytes)) => {
+            use fips203::ml_kem_1024;
+            let dk = ml_kem_1024::DecapsKey::try_from_bytes(*sk_bytes)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            let ct = ml_kem_1024::CipherText::try_from_bytes(*ct_bytes)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            let ssk = dk
+                .try_decaps(&ct)
+                .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+            Ok(KemSharedSecret(ssk.into_bytes()))
+        }
+        _ => Err(KemError::InvalidVariant),
     }
 }
 
@@ -285,18 +364,26 @@ mod tests {
         let ciphertext = KemCiphertext::from_bytes(KemVariant::Kyber512, &data).unwrap();
         assert_eq!(ciphertext.as_bytes(), &data[..]);
     }
-    
+
     #[test]
     fn test_kem_public_key_roundtrip() {
         let data = vec![99u8; 800];
         let pubkey = KemPublicKey::from_bytes(KemVariant::Kyber512, &data).unwrap();
         assert_eq!(pubkey.as_bytes(), &data[..]);
     }
-    
+
     #[test]
     fn test_invalid_length() {
         let data = vec![42u8; 100];
         let result = KemCiphertext::from_bytes(KemVariant::Kyber512, &data);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_kyber768_encaps_decaps_roundtrip() {
+        let (pk, sk) = generate_kyber768_keypair().unwrap();
+        let (ssk_enc, ct) = encapsulate(&pk).unwrap();
+        let ssk_dec = decapsulate(&sk, &ct).unwrap();
+        assert_eq!(ssk_enc.0, ssk_dec.0);
     }
 }

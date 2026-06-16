@@ -88,6 +88,10 @@ pub mod ebpf_filter;
 #[cfg(feature = "sanctuary-crypto")]
 pub mod sanctuary_crypto;
 pub mod fiduciary_crypto;
+#[cfg(feature = "pq-kem")]
+pub mod pq_kem_shim;
+#[cfg(feature = "zk-culling")]
+pub mod deontic_circuit;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ebpf_firewall;
 #[cfg(not(target_arch = "wasm32"))]
