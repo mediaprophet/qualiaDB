@@ -124,7 +124,7 @@
     },
     {
       "label": "WordNet",
-      "href": "wordnet.html",
+      "href": "playground/wordnet-demo.html",
       "icon": "fa-book-open",
       "group": "Data"
     }

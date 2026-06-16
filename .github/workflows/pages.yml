@@ -71,6 +71,12 @@ jobs:
         run: |
           bash scripts/prepare_schemaorg_benchmark.sh 30.0 current-https
 
+      - name: Build WordNet subset for Pages demo
+        continue-on-error: true
+        run: |
+          bash scripts/fetch_wordnet.sh --subset 100000 --playground
+          ls -lh docs/playground/wordnet.q42
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:

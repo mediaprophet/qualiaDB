@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "comment": "Qualia-DB VFS mount manifest. Add entries here to expose datasets to the browser engine.",
+  "datasets": [
+    {
+      "id": "wordnet",
+      "label": "Open English WordNet 2025",
+      "icon": "📚",
+      "description": "OEWN 2025 edition · CC-BY 4.0 · GitHub Pages serves a 100k-triple CI subset; run scripts/fetch_wordnet.sh locally for the full graph",
+      "url": "wordnet.q42",
+      "lexUrl": "wordnet.q42.lex.lz4",
+      "bidxUrl": "wordnet.q42.bidx",
+      "compressed": false,
+      "source": "remote",
+      "license": "CC-BY 4.0",
+      "homepage": "https://wordnet.princeton.edu",
+      "sampleQueries": [
+        { "label": "Find 'dog'",      "pattern": "?s ?p \"dog\"" },
+        { "label": "Find 'cat'",      "pattern": "?s ?p \"cat\"" },
+        { "label": "Find 'computer'", "pattern": "?s ?p \"computer\"" },
+        { "label": "Find 'water'",    "pattern": "?s ?p \"water\"" },
+        { "label": "Find 'mind'",     "pattern": "?s ?p \"mind\"" }
+      ]
+    }
+  ]
+}

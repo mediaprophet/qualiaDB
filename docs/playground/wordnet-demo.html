@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WordNet Graph Demo — Qualia-DB</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .demo-header { max-width: 860px; margin: 3rem auto 1.5rem; text-align: center; }
+  .demo-header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
+  .demo-header p  { color: var(--text-muted); margin-top: .5rem; line-height: 1.6; }
+
+  .search-card {
+    max-width: 860px; margin: 0 auto 1.5rem;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 1.5rem;
+  }
+
+  .search-row { display: flex; gap: .75rem; }
+  .search-row input {
+    flex: 1; padding: .65rem 1rem;
+    background: var(--code-bg); border: 1px solid var(--panel-border);
+    border-radius: 8px; color: var(--text-main); font-size: 1rem; outline: none;
+  }
+  .search-row input:focus { border-color: var(--primary); }
+  .search-row button {
+    padding: .65rem 1.4rem; background: var(--primary); color: #0f172a;
+    font-weight: 700; border: none; border-radius: 8px; cursor: pointer;
+    font-size: .95rem; white-space: nowrap;
+  }
+  .search-row button:disabled { opacity: .4; cursor: default; }
+
+  .presets { margin-top: .9rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+  .preset-btn {
+    padding: .35rem .85rem; background: rgba(56,189,248,.08);
+    border: 1px solid rgba(56,189,248,.2); border-radius: 20px;
+    color: var(--primary); font-size: .82rem; cursor: pointer; transition: background .15s;
+  }
+  .preset-btn:hover { background: rgba(56,189,248,.15); }
+
+  .status-bar {
+    max-width: 860px; margin: 0 auto .75rem;
+    display: flex; align-items: center; gap: .75rem;
+    font-size: .8rem; color: var(--text-muted);
+  }
+  .badge {
+    padding: .2rem .65rem; border-radius: 20px; font-size: .75rem; font-weight: 600;
+  }
+  .badge.green  { background: rgba(16,185,129,.15); color: var(--success); border: 1px solid rgba(16,185,129,.3); }
+  .badge.amber  { background: rgba(245,158,11,.1);  color: #fbbf24;        border: 1px solid rgba(245,158,11,.3); }
+  .badge.blue   { background: rgba(56,189,248,.1);  color: var(--primary); border: 1px solid rgba(56,189,248,.2); }
+
+  .results-grid {
+    max-width: 860px; margin: 0 auto 1.5rem;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  }
+  @media (max-width: 700px) { .results-grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 1rem;
+  }
+  .panel h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-muted); margin-bottom: .75rem; }
+
+  .triple-list { font-size: .82rem; line-height: 1.7; }
+  .triple-row { padding: .3rem 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+  .triple-row:last-child { border-bottom: none; }
+  .triple-s { color: var(--primary); }
+  .triple-p { color: #a78bfa; }
+  .triple-o { color: #34d399; }
+  .triple-label { font-size: .72rem; color: var(--text-muted); margin-right: .3rem; }
+
+  .stats-table { width: 100%; font-size: .82rem; border-collapse: collapse; }
+  .stats-table td { padding: .35rem 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+  .stats-table td:first-child { color: var(--text-muted); }
+  .stats-table td:last-child  { text-align: right; font-family: monospace; }
+
+  .upload-section {
+    max-width: 860px; margin: 0 auto 2rem;
+    background: var(--panel-bg); border: 1px dashed var(--panel-border);
+    border-radius: 10px; padding: 1.2rem 1.5rem;
+  }
+  .upload-section h3 { font-size: .85rem; color: var(--text-muted); margin-bottom: .6rem; }
+  .upload-row { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+  .upload-row input[type=file] { color: var(--text-muted); font-size: .82rem; }
+  #ingest-status { font-size: .8rem; color: var(--primary); }
+
+  .no-results { text-align: center; color: var(--text-muted); padding: 1.5rem;
+    font-size: .88rem; font-style: italic; }
+
+  /* ── System Health Console ── */
+  #health-console {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 200;
+    background: rgba(10, 15, 30, 0.94);
+    border: 1px solid rgba(56,189,248,.22);
+    border-radius: 10px; padding: .7rem 1rem;
+    font-family: monospace; font-size: .72rem;
+    color: #94a3b8; min-width: 260px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 32px rgba(0,0,0,.5);
+    transition: opacity .2s;
+  }
+  #health-console.collapsed #hc-body { display: none; }
+  .hc-title {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: .5rem;
+  }
+  .hc-title span { color: #38bdf8; font-weight: 700; letter-spacing: .1em; font-size: .7rem; }
+  .hc-toggle {
+    background: none; border: none; color: #475569; cursor: pointer;
+    font-size: .68rem; padding: 0; line-height: 1;
+  }
+  .hc-row {
+    display: flex; justify-content: space-between; gap: 1rem;
+    padding: .18rem 0; border-bottom: 1px solid rgba(255,255,255,.04);
+  }
+  .hc-row:last-child { border-bottom: none; }
+  .hc-label { color: #475569; white-space: nowrap; }
+  .hc-val   { color: #e2e8f0; text-align: right; font-weight: 500; }
+  .hc-val.green  { color: #10b981; }
+  .hc-val.amber  { color: #fbbf24; }
+  .hc-val.dim    { color: #475569; }
+  .hc-pulse {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: #10b981; margin-right: .3rem;
+    animation: hc-blink 2s ease-in-out infinite;
+  }
+  .hc-pulse.amber { background: #fbbf24; }
+  @keyframes hc-blink {
+    0%, 100% { opacity: 1; } 50% { opacity: .3; }
+  }
+</style>
+    <script src="js/menu-loader.js"></script></head>
+<body>
+
+<nav class="top-nav">
+  <span class="nav-brand">Qualia-DB</span>
+  <div class="nav-links">
+    <a href="index.html">Playground</a>
+    <a href="benchmark.html">Benchmark</a>
+    <a href="wordnet-demo.html" style="color:var(--text-main)">WordNet</a>
+  </div>
+</nav>
+
+<!-- Header -->
+<div class="demo-header">
+  <h1>WordNet Graph Query Demo</h1>
+  <p>
+    The Webizen VM runs live in your browser via WebAssembly, querying the
+    <a href="https://github.com/globalwordnet/english-wordnet" style="color:var(--primary)">Open English WordNet</a>
+    dataset pre-ingested into the binary <code>.q42</code> format.
+    No server. No SQL. 48-byte records, FNV-1a hashing, HTTP Range requests.
+  </p>
+</div>
+
+<!-- Dataset Mount selector -->
+<div class="search-card" style="margin-bottom:.75rem;padding:1rem 1.5rem">
+  <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+    <span style="font-size:.78rem;color:var(--text-muted);white-space:nowrap">Dataset</span>
+    <select id="dataset-select"
+      style="flex:1;min-width:220px;background:var(--code-bg);border:1px solid var(--panel-border);
+             border-radius:8px;color:var(--text-main);padding:.45rem .75rem;font-size:.88rem;outline:none">
+      <option value="">— select a dataset —</option>
+    </select>
+    <button id="mount-btn" onclick="mountDataset()" disabled
+      style="padding:.45rem 1.1rem;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);
+             border-radius:8px;color:var(--primary);font-size:.85rem;font-weight:600;cursor:pointer;
+             white-space:nowrap">
+      Mount
+    </button>
+    <span id="mount-badge" class="badge amber" style="white-space:nowrap">No dataset mounted</span>
+  </div>
+  <div id="dataset-description" style="font-size:.76rem;color:var(--text-muted);margin-top:.55rem;min-height:1rem"></div>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <span id="vfs-badge" class="badge amber">VFS loading…</span>
+  <span id="lex-badge" class="badge amber">Lexicon loading…</span>
+  <span id="wasm-badge" class="badge amber">WASM loading…</span>
+  <span id="latency-badge" class="badge blue" style="margin-left:auto"></span>
+</div>
+
+<!-- Query card: N-Triples pattern + SPARQL BGP tabs -->
+<div class="search-card">
+  <!-- Mode tabs -->
+  <div style="display:flex;gap:0;margin-bottom:1rem;border-bottom:1px solid var(--panel-border)">
+    <button id="tab-nt" onclick="setQueryMode('nt')"
+      style="background:none;border:none;border-bottom:2px solid var(--primary);
+             color:var(--primary);padding:.35rem 1rem;font-size:.82rem;font-weight:600;cursor:pointer">
+      N-Triples Pattern
+    </button>
+    <button id="tab-sparql" onclick="setQueryMode('sparql')"
+      style="background:none;border:none;border-bottom:2px solid transparent;
+             color:var(--text-muted);padding:.35rem 1rem;font-size:.82rem;font-weight:600;cursor:pointer">
+      SPARQL BGP
+    </button>
+  </div>
+
+  <!-- N-Triples mode -->
+  <div id="mode-nt">
+    <div class="search-row">
+      <input id="query-input" type="text"
+        placeholder='?s ?p "dog"   or   <did:q42:z6Mk…> ?p ?o' />
+      <button id="search-btn" onclick="runQuery()" disabled>Search</button>
+    </div>
+    <div class="presets">
+      <span style="font-size:.78rem;color:var(--text-muted);margin-right:.25rem;align-self:center">Presets:</span>
+      <button class="preset-btn" onclick="preset('dog')">dog</button>
+      <button class="preset-btn" onclick="preset('cat')">cat</button>
+      <button class="preset-btn" onclick="preset('run')">run</button>
+      <button class="preset-btn" onclick="preset('computer')">computer</button>
+      <button class="preset-btn" onclick="preset('happy')">happy</button>
+      <button class="preset-btn" onclick="preset('water')">water</button>
+    </div>
+  </div>
+
+  <!-- SPARQL BGP mode (single triple pattern only — engine constraint) -->
+  <div id="mode-sparql" style="display:none">
+    <textarea id="sparql-input" rows="4"
+      style="width:100%;background:var(--code-bg);border:1px solid var(--panel-border);
+             border-radius:8px;color:var(--text-main);padding:.75rem;font-family:monospace;
+             font-size:.85rem;resize:vertical;outline:none"
+      placeholder="SELECT ?s ?p WHERE {&#10;  ?s ?p &quot;dog&quot;&#10;}"></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.6rem">
+      <span style="font-size:.72rem;color:var(--text-muted)">
+        Single Basic Graph Pattern only — engine constraint
+      </span>
+      <button onclick="runSparql()"
+        style="padding:.45rem 1.1rem;background:var(--primary);color:#0f172a;
+               font-weight:700;border:none;border-radius:8px;cursor:pointer;font-size:.85rem">
+        Execute BGP
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Results -->
+<div class="results-grid">
+  <div class="panel" style="grid-column: 1 / -1">
+    <h3>Matching triples — <span id="match-count">—</span></h3>
+    <div id="triple-list" class="triple-list">
+      <div class="no-results">Enter a word above to query the WordNet graph.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>VM Execution Stats</h3>
+    <table class="stats-table" id="stats-table">
+      <tr><td>VM Cycles</td><td>—</td></tr>
+      <tr><td>Direct Jump Ops (did:q42)</td><td>—</td></tr>
+      <tr><td>Lexicon Lookup Ops</td><td>—</td></tr>
+      <tr><td>Blocks Scanned</td><td>—</td></tr>
+      <tr><td>Triples in Dataset</td><td>—</td></tr>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h3>Raw Quin (first match)</h3>
+    <pre id="raw-quin" style="font-size:.73rem;color:var(--text-muted);line-height:1.8;overflow-x:auto">—</pre>
+  </div>
+
+  <!-- Compute cost widget -->
+  <div class="panel" style="grid-column: 1 / -1">
+    <h3>Permissive Commons Billing</h3>
+    <div id="cost-widget" style="display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:220px">
+        <table style="width:100%;font-size:.82rem;border-collapse:collapse" id="cost-table">
+          <tr><td style="color:var(--text-muted);padding:.3rem 0">VM Cycles</td><td style="text-align:right;font-family:monospace">—</td></tr>
+          <tr><td style="color:var(--text-muted);padding:.3rem 0">Cost (μsat)</td><td style="text-align:right;font-family:monospace">—</td></tr>
+          <tr><td style="color:var(--text-muted);padding:.3rem 0">Cost (sat)</td><td style="text-align:right;font-family:monospace">—</td></tr>
+          <tr><td style="color:var(--text-muted);padding:.3rem 0">Cost (USD ≈)</td><td style="text-align:right;font-family:monospace">—</td></tr>
+        </table>
+      </div>
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.5rem">Unit price</div>
+        <input type="range" id="cost-rate-slider" min="0" max="4" value="3" step="1"
+          style="width:100%;accent-color:var(--primary)"
+          oninput="updateCostRate(this.value)" />
+        <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-muted);margin-top:.2rem">
+          <span>0.001</span><span>0.01</span><span>0.1</span><span>1</span><span>10</span>
+        </div>
+        <div id="rate-label" style="font-size:.78rem;color:var(--primary);margin-top:.4rem;text-align:center">
+          1 μsat / 1 000 VM ops
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload / OPFS ingest -->
+<div class="upload-section">
+  <h3>Upload your own N-Triples dataset (stored in your browser's private vault)</h3>
+  <div class="upload-row">
+    <input type="file" id="nt-file" accept=".nt,.n3,.txt" />
+    <button class="preset-btn" onclick="startIngest()" style="padding:.4rem 1rem">Ingest into browser vault</button>
+    <span id="ingest-status"></span>
+  </div>
+</div>
+
+<!-- System Health Console overlay -->
+<div id="health-console">
+  <div class="hc-title">
+    <span>SYS HEALTH</span>
+    <button class="hc-toggle" onclick="toggleHealthConsole()" title="collapse">▼</button>
+  </div>
+  <div id="hc-body">
+    <div class="hc-row">
+      <span class="hc-label">COMPUTE COST</span>
+      <span id="hc-cost"   class="hc-val dim">—</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-label">VM CYCLES</span>
+      <span id="hc-cycles" class="hc-val dim">—</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-label">VFS MOUNT</span>
+      <span id="hc-vfs"    class="hc-val dim">none</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-label">LATENCY</span>
+      <span id="hc-lat"    class="hc-val dim">—</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-label">DAEMON</span>
+      <span id="hc-daemon" class="hc-val dim">…</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-label">BIDX</span>
+      <span id="hc-bidx"  class="hc-val dim">not loaded</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-label">NET REQUESTS</span>
+      <span id="hc-net"   class="hc-val dim">—</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-label">OPFS HITS</span>
+      <span id="hc-opfs"  class="hc-val dim">—</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-label">FAULT LATENCY</span>
+      <span id="hc-fault" class="hc-val dim">—</span>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { fnv1a64, hashToken, parseBigDecimal, toHex16, hasMsb } from './hash.js';
+import { VFS, VFSProvider, BLOCK_SIZE, QUIN_SIZE } from './vfs.js';
+
+// ---------------------------------------------------------------------------
+// Cost widget state
+// ---------------------------------------------------------------------------
+
+const COST_RATES = [0.001, 0.01, 0.1, 1, 10]; // μsat / 1 000 VM ops
+let costRateIdx  = 3; // default: 1 μsat / 1k ops
+const BTC_USD    = 70_000;
+
+function updateCostRate(sliderVal) {
+  costRateIdx = Number(sliderVal);
+  document.getElementById('rate-label').textContent =
+    `${COST_RATES[costRateIdx]} μsat / 1 000 VM ops`;
+}
+window.updateCostRate = updateCostRate;
+
+function renderCostPanel(cycles) {
+  const price   = COST_RATES[costRateIdx];
+  const muSat   = cycles * price / 1_000;
+  const sat     = muSat / 1_000_000;
+  const usd     = sat * BTC_USD / 1e8;
+  const rows    = document.querySelectorAll('#cost-table tr');
+  const vals = [
+    cycles.toLocaleString(),
+    muSat.toFixed(4) + ' μsat',
+    sat.toFixed(9)   + ' sat',
+    '$' + usd.toExponential(2),
+  ];
+  rows.forEach((r, i) => {
+    const cells = r.querySelectorAll('td');
+    if (cells[1]) cells[1].textContent = vals[i] ?? '—';
+  });
+}
+
+// ---------------------------------------------------------------------------
+// WASM bootstrap
+// ---------------------------------------------------------------------------
+
+let wasmReady = false;
+let execQuery  = null;
+
+async function loadWasm() {
+  try {
+    const mod = await import('./qualia_core_db.js');
+    if (typeof mod.execute_ntriples_query === 'function') {
+      execQuery = mod.execute_ntriples_query;
+      wasmReady = true;
+      setBadge('wasm-badge', 'WASM Ready', 'green');
+    } else {
+      setBadge('wasm-badge', 'WASM (legacy — rebuild needed)', 'amber');
+    }
+  } catch (e) {
+    setBadge('wasm-badge', 'WASM unavailable — JS fallback active', 'amber');
+    console.warn('[WordNet] WASM load failed:', e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// VFS + manifest bootstrap
+// ---------------------------------------------------------------------------
+
+let provider = null;
+let activeVfs = null;
+let dbBytes   = null;
+
+async function loadManifest() {
+  provider = await VFSProvider.fromManifest('./vfs-manifest.json');
+  const sel = document.getElementById('dataset-select');
+  for (const ds of provider.available) {
+    const opt = document.createElement('option');
+    opt.value       = ds.id;
+    opt.textContent = `${ds.icon ?? ''} ${ds.label}`;
+    sel.appendChild(opt);
+  }
+  if (provider.available.length > 0) {
+    sel.value = provider.available[0].id;
+    updateDatasetDescription();
+    document.getElementById('mount-btn').disabled = false;
+  }
+
+  // Auto-mount if there's exactly one dataset and wordnet.q42 is present.
+  if (provider.available.length === 1) {
+    await mountDataset();
+  }
+}
+
+function updateDatasetDescription() {
+  const id  = document.getElementById('dataset-select').value;
+  const ds  = provider?.available.find(d => d.id === id);
+  document.getElementById('dataset-description').textContent = ds?.description ?? '';
+}
+
+window.mountDataset = async function mountDataset() {
+  const id = document.getElementById('dataset-select').value;
+  if (!id || !provider) return;
+  const ds = provider.available.find(d => d.id === id);
+
+  setBadge('mount-badge', `Mounting ${ds?.label ?? id}…`, 'amber');
+  setBadge('vfs-badge',   'VFS loading…', 'amber');
+  setBadge('lex-badge',   'Lexicon loading…', 'amber');
+
+  try {
+    activeVfs = await provider.mount(id, { loadLex: true });
+
+    if (ds.compressed) {
+      // Compressed LZ4 block-stream: fetch + decompress once (no Range support).
+      setBadge('vfs-badge', 'Decompressing…', 'amber');
+      try {
+        dbBytes = await activeVfs.readAllDecompressed();
+        const tripleCount = Math.floor(dbBytes.length / QUIN_SIZE);
+        setBadge('vfs-badge', `VFS Ready — ${(dbBytes.length/1024/1024).toFixed(1)} MB decompressed`, 'green');
+        updateStatsRow(4, 'Triples in Dataset', tripleCount.toLocaleString());
+      } catch (e) {
+        setBadge('vfs-badge', `Decompress failed: ${e.message}`, 'amber');
+      }
+    } else {
+      // Uncompressed SuperBlock format — demand-paging via HTTP Range requests.
+      // init() performed a header-first Range boot (bytes=0-1023) to build
+      // the BlockOffsetMap; no bulk load is ever issued for this path.
+      const bom      = activeVfs.blockOffsetMap;
+      const blockCount = bom ? bom.count : 0;
+      if (blockCount > 0) {
+        const sizeMb       = (bom.totalBytes / 1024 / 1024).toFixed(1);
+        const approxTriples = blockCount * 850;
+        setBadge('vfs-badge',
+          `VFS Ready — ${blockCount.toLocaleString()} blocks · ${sizeMb} MB · demand-paging`,
+          'green');
+        updateStatsRow(4, 'Triples in Dataset', `~${approxTriples.toLocaleString()}`);
+      } else {
+        setBadge('vfs-badge',
+          'VFS header probe failed — check that ' + ds.url + ' is reachable', 'amber');
+      }
+    }
+
+    if (activeVfs.lexLoaded) {
+      setBadge('lex-badge', `Lexicon — ${activeVfs._lexMap.size.toLocaleString()} entries`, 'green');
+    } else {
+      setBadge('lex-badge', 'No lexicon (hashes only)', 'amber');
+    }
+
+    hcSet('hc-bidx',
+      activeVfs.bidxLoaded
+        ? `${activeVfs.blockCount.toLocaleString()} ranges · O(log N)`
+        : 're-run fetch_wordnet.sh to generate .bidx',
+      activeVfs.bidxLoaded ? 'green' : 'amber');
+
+    setBadge('mount-badge', `Mounted: ${ds?.label ?? id}`, 'green');
+
+    // Populate sample query presets from manifest
+    if (ds?.sampleQueries?.length) {
+      const presetBar = document.querySelector('.presets');
+      presetBar.innerHTML = '<span style="font-size:.78rem;color:var(--text-muted);margin-right:.25rem;align-self:center">Presets:</span>';
+      for (const sq of ds.sampleQueries) {
+        const b = document.createElement('button');
+        b.className   = 'preset-btn';
+        b.textContent = sq.label;
+        b.onclick     = () => {
+          document.getElementById('query-input').value = sq.pattern;
+          runQuery();
+        };
+        presetBar.appendChild(b);
+      }
+    }
+
+    document.getElementById('search-btn').disabled = false;
+    hcSet('hc-vfs', hcVfsLabel(), activeVfs || dbBytes ? 'green' : 'amber');
+  } catch (e) {
+    setBadge('mount-badge', 'Mount failed: ' + e.message, 'amber');
+    console.error('[WordNet] Mount failed:', e);
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Query mode tabs
+// ---------------------------------------------------------------------------
+
+let queryMode = 'nt';
+
+window.setQueryMode = function setQueryMode(mode) {
+  queryMode = mode;
+  document.getElementById('mode-nt').style.display     = mode === 'nt'     ? '' : 'none';
+  document.getElementById('mode-sparql').style.display = mode === 'sparql' ? '' : 'none';
+
+  const tabNt     = document.getElementById('tab-nt');
+  const tabSparql = document.getElementById('tab-sparql');
+  tabNt.style.borderBottomColor     = mode === 'nt'     ? 'var(--primary)' : 'transparent';
+  tabNt.style.color                  = mode === 'nt'     ? 'var(--primary)' : 'var(--text-muted)';
+  tabSparql.style.borderBottomColor = mode === 'sparql' ? 'var(--primary)' : 'transparent';
+  tabSparql.style.color              = mode === 'sparql' ? 'var(--primary)' : 'var(--text-muted)';
+};
+
+// ---------------------------------------------------------------------------
+// SPARQL BGP parser (single-triple WHERE clause only)
+// ---------------------------------------------------------------------------
+
+function parseSparqlBgp(sparql) {
+  const m = sparql.match(/WHERE\s*\{([^}]+)\}/i);
+  if (!m) return null;
+  // Strip trailing dot and collapse whitespace
+  return m[1].trim().replace(/\s*\.\s*$/, '');
+}
+
+window.runSparql = async function runSparql() {
+  const raw = document.getElementById('sparql-input').value.trim();
+  const pattern = parseSparqlBgp(raw);
+  if (!pattern) {
+    showError('Could not parse a single BGP triple from the WHERE clause.');
+    return;
+  }
+  const start = performance.now();
+  await executeQuery(pattern, start);
+};
+
+// ---------------------------------------------------------------------------
+// Query execution
+// ---------------------------------------------------------------------------
+
+window.runQuery = async function runQuery() {
+  const raw = document.getElementById('query-input').value.trim();
+  if (!raw) return;
+  const start = performance.now();
+  const btn = document.getElementById('search-btn');
+  btn.disabled = true; btn.textContent = 'Querying…';
+  try { await executeQuery(raw, start); }
+  finally { btn.disabled = false; btn.textContent = 'Search'; }
+};
+
+async function executeQuery(raw, startTime) {
+  const pattern = /^[<?]/.test(raw) ? raw : `?s ?p "${raw}"`;
+
+  let result;
+
+  if (dbBytes && dbBytes.length > 0) {
+    // Pre-loaded buffer (compressed dataset or user-uploaded OPFS data).
+    // The flat-quin layout has no SuperBlock headers — pass directly to WASM/JS.
+    if (wasmReady && execQuery) {
+      result = JSON.parse(execQuery(pattern, dbBytes, 200));
+    } else {
+      result = jsFallbackQuery(pattern, dbBytes, 200);
+    }
+  } else if (activeVfs) {
+    // Demand-paging path: scan SuperBlocks one-by-one via HTTP Range / OPFS.
+    if (activeVfs.blockCount === 0) {
+      showError('Dataset not reachable. Check the file URL or run scripts/fetch_wordnet.sh.');
+      return;
+    }
+    activeVfs.resetTelemetry();
+    result = await streamingQuery(pattern, activeVfs, 200);
+  } else {
+    showError('No dataset mounted. Select a dataset above and click Mount.');
+    return;
+  }
+
+  const elapsed = Math.round((performance.now() - startTime) * 1000);
+  document.getElementById('latency-badge').textContent = `${elapsed} µs`;
+
+  if (result.error) { showError(result.error); return; }
+
+  const cycles = Number(result.vm_cycles ?? 0);
+  const totalQuins = dbBytes
+    ? dbBytes.length / QUIN_SIZE
+    : (activeVfs?.blockCount ?? 1) * 850;
+  renderResults(result, totalQuins);
+  renderCostPanel(cycles);
+  updateHealthConsole(cycles, result.matches.length, elapsed, result._costHeader ?? null, result._bidxUsed ?? null);
+}
+
+/**
+ * Block-streaming query for demand-paged datasets (uncompressed SuperBlock format).
+ *
+ * Resolution order:
+ *   1. BIDX lookup  — if the index is loaded and a bound hash exists, binary-
+ *                     search the block ranges and fetch only 1-3 candidate blocks.
+ *   2. Full scan    — if BIDX is absent or the query has no bound term, iterate
+ *                     all blocks in 32-concurrent batches (OPFS-first, then Range).
+ *
+ * Each SuperBlock has a 160-byte header followed by up to 850 × 48-byte Quins;
+ * zero-filled padding quins at the tail of the last block are skipped.
+ *
+ * @returns {{ matches, vm_cycles, direct_jump_ops, lexicon_lookup_ops, _bidxUsed: boolean }}
+ */
+async function streamingQuery(pattern, vfs, maxResults) {
+  const CONCURRENCY  = 32;
+  const HEADER_BYTES = 160;
+
+  const tokens = pattern.trim().split(/\s+/).filter(t => t !== '.');
+  if (tokens.length < 3) {
+    return { matches: [], vm_cycles: 0, direct_jump_ops: 0, lexicon_lookup_ops: 0, _bidxUsed: false };
+  }
+  const [sT, pT, oT] = tokens;
+  const sH = sT.startsWith('?') ? null : hashToken(sT);
+  const pH = pT.startsWith('?') ? null : hashToken(pT);
+  const oH = oT.startsWith('?') ? null : hashToken(oT);
+
+  // ── BIDX-guided lookup (O(log N)) ──────────────────────────────────────
+  // The BIDX is sorted by object hash.  Prefer oH for the lookup; fall back
+  // to sH (future: secondary subject index) or full scan.
+  let candidateBlocks = null;
+  if (oH !== null) candidateBlocks = vfs.lookupBlocks(oH);
+  // sH / pH lookups would need a separate subject/predicate-sorted BIDX;
+  // leave as full-scan for now.
+
+  const bidxUsed  = candidateBlocks !== null;
+  const blockList = candidateBlocks ?? Array.from({ length: vfs.blockCount }, (_, i) => i);
+
+  const matches = [];
+  let cycles = 0, dj = 0, lx = 0;
+
+  // ── Scan selected blocks in parallel batches ───────────────────────────
+  for (let base = 0; base < blockList.length && matches.length < maxResults; base += CONCURRENCY) {
+    const slice   = blockList.slice(base, base + CONCURRENCY);
+    const fetches = slice.map(bi => vfs.readBlock(bi).catch(() => null));
+    const blocks  = await Promise.all(fetches);
+
+    for (const blockBytes of blocks) {
+      if (!blockBytes || matches.length >= maxResults) break;
+
+      const view      = new DataView(blockBytes.buffer, blockBytes.byteOffset);
+      const quinSlots = Math.floor((blockBytes.length - HEADER_BYTES) / QUIN_SIZE);
+
+      for (let qi = 0; qi < quinSlots && matches.length < maxResults; qi++) {
+        const b = HEADER_BYTES + qi * QUIN_SIZE;
+        const s = getU64(view, b),      p = getU64(view, b + 8),
+              o = getU64(view, b + 16), c = getU64(view, b + 24),
+              m = getU64(view, b + 32);
+
+        if (s === 0n && p === 0n && o === 0n) continue; // zero-padding
+
+        let ok = true;
+        if (sH !== null) { cycles++; hasMsb(sH) ? dj++ : lx++; if (s !== sH) ok = false; }
+        if (ok && pH !== null) { cycles++; hasMsb(pH) ? dj++ : lx++; if (p !== pH) ok = false; }
+        if (ok && oH !== null) { cycles++; hasMsb(oH) ? dj++ : lx++; if (o !== oH) ok = false; }
+        if (ok) matches.push({
+          s: String(s), p: String(p), o: String(o), c: String(c), m: String(m),
+        });
+      }
+    }
+  }
+  return { matches, vm_cycles: cycles, direct_jump_ops: dj, lexicon_lookup_ops: lx, _bidxUsed: bidxUsed };
+}
+
+async function getDbBytes() {
+  if (dbBytes) return dbBytes;
+  if (!activeVfs) return null;
+  try { return await activeVfs.readBlock(0); } catch (_) { return null; }
+}
+
+// ---------------------------------------------------------------------------
+// JS fallback scan
+// ---------------------------------------------------------------------------
+
+function jsFallbackQuery(pattern, bytes, maxResults) {
+  const tokens = pattern.trim().split(/\s+/).filter(t => t !== '.');
+  if (tokens.length < 3) return { matches: [], vm_cycles: 0, direct_jump_ops: 0, lexicon_lookup_ops: 0 };
+  const [sT, pT, oT] = tokens;
+  const sH = sT.startsWith('?') ? null : hashToken(sT);
+  const pH = pT.startsWith('?') ? null : hashToken(pT);
+  const oH = oT.startsWith('?') ? null : hashToken(oT);
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const quins = Math.floor(bytes.length / QUIN_SIZE);
+  const matches = [];
+  let cycles = 0, dj = 0, lx = 0;
+
+  for (let i = 0; i < quins && matches.length < maxResults; i++) {
+    const b = i * QUIN_SIZE;
+    const s = getU64(view, b),     p = getU64(view, b+8),
+          o = getU64(view, b+16),  c = getU64(view, b+24),
+          m = getU64(view, b+32);
+    let ok = true;
+    if (sH !== null) { cycles++; hasMsb(sH) ? dj++ : lx++; if (s !== sH) ok = false; }
+    if (ok && pH !== null) { cycles++; hasMsb(pH) ? dj++ : lx++; if (p !== pH) ok = false; }
+    if (ok && oH !== null) { cycles++; hasMsb(oH) ? dj++ : lx++; if (o !== oH) ok = false; }
+    if (ok) matches.push({ s: String(s), p: String(p), o: String(o), c: String(c), m: String(m) });
+  }
+  return { matches, vm_cycles: cycles, direct_jump_ops: dj, lexicon_lookup_ops: lx };
+}
+
+function getU64(view, off) {
+  return BigInt(view.getUint32(off, true)) | (BigInt(view.getUint32(off+4, true)) << 32n);
+}
+
+// ---------------------------------------------------------------------------
+// Rendering helpers
+// ---------------------------------------------------------------------------
+
+function renderResults(result, totalQuins) {
+  const vfs = activeVfs;
+  document.getElementById('match-count').textContent = `${result.matches.length} triple(s)`;
+
+  const list = document.getElementById('triple-list');
+  if (result.matches.length === 0) {
+    list.innerHTML = '<div class="no-results">No matching triples found.</div>';
+  } else {
+    list.innerHTML = result.matches.map(q => {
+      const sh = parseBigDecimal(q.s), ph = parseBigDecimal(q.p), oh = parseBigDecimal(q.o);
+      const sl = vfs ? esc(vfs.lookup(sh)) : toHex16(sh);
+      const pl = vfs ? esc(vfs.lookup(ph)) : toHex16(ph);
+      const ol = vfs ? esc(vfs.lookup(oh)) : toHex16(oh);
+      return `<div class="triple-row">
+        <span class="triple-label">S</span><span class="triple-s">${sl}</span>&nbsp;
+        <span class="triple-label">P</span><span class="triple-p">${pl}</span>&nbsp;
+        <span class="triple-label">O</span><span class="triple-o">${ol}</span>
+      </div>`;
+    }).join('');
+  }
+
+  updateStatsRow(0, 'VM Cycles',                result.vm_cycles.toLocaleString());
+  updateStatsRow(1, 'Direct Jump Ops (did:q42)', result.direct_jump_ops.toLocaleString());
+  updateStatsRow(2, 'Lexicon Lookup Ops',         result.lexicon_lookup_ops.toLocaleString());
+  updateStatsRow(3, 'Blocks Scanned',            Math.ceil(totalQuins / 850).toLocaleString());
+
+  if (result.matches.length > 0) {
+    const q = result.matches[0];
+    document.getElementById('raw-quin').textContent =
+      `S: 0x${toHex16(parseBigDecimal(q.s))}\nP: 0x${toHex16(parseBigDecimal(q.p))}\n` +
+      `O: 0x${toHex16(parseBigDecimal(q.o))}\nC: 0x${toHex16(parseBigDecimal(q.c))}\n` +
+      `M: 0x${toHex16(parseBigDecimal(q.m))}`;
+  }
+}
+
+function showError(msg) {
+  document.getElementById('triple-list').innerHTML =
+    `<div class="no-results" style="color:var(--error)">${esc(msg)}</div>`;
+  document.getElementById('match-count').textContent = 'error';
+}
+
+function updateStatsRow(idx, label, value) {
+  const rows = document.querySelectorAll('#stats-table tr');
+  if (rows[idx]) rows[idx].innerHTML = `<td>${label}</td><td>${value}</td>`;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ---------------------------------------------------------------------------
+// Preset word search
+// ---------------------------------------------------------------------------
+
+window.preset = function preset(word) {
+  document.getElementById('query-input').value = `?s ?p "${word}"`;
+  runQuery();
+};
+
+// ---------------------------------------------------------------------------
+// Upload / OPFS ingest
+// ---------------------------------------------------------------------------
+
+let ingestWorker = null;
+
+window.startIngest = function startIngest() {
+  const file = document.getElementById('nt-file').files?.[0];
+  if (!file) { alert('Please select an .nt file first.'); return; }
+  const status = document.getElementById('ingest-status');
+  status.textContent = 'Starting…';
+  if (ingestWorker) ingestWorker.terminate();
+  ingestWorker = new Worker('./ingest_worker.js');
+  ingestWorker.onmessage = ({ data }) => {
+    if (data.type === 'progress') {
+      status.textContent = `${data.triples.toLocaleString()} triples, ${data.blocks} blocks…`;
+    } else if (data.type === 'done') {
+      status.textContent = `Done — ${data.triples.toLocaleString()} triples, ${data.lexEntries.toLocaleString()} lexicon entries.`;
+      setTimeout(() => location.reload(), 1500);
+    } else if (data.type === 'error') {
+      status.textContent = 'Error: ' + data.message;
+    }
+  };
+  ingestWorker.postMessage({ type: 'ingest', file });
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function setBadge(id, text, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className   = `badge ${cls}`;
+}
+
+document.getElementById('dataset-select')
+  .addEventListener('change', updateDatasetDescription);
+
+// ---------------------------------------------------------------------------
+// System Health Console
+// ---------------------------------------------------------------------------
+
+function hcVfsLabel() {
+  if (dbBytes)    return `In-memory (${(dbBytes.length / 1024).toFixed(0)} KB)`;
+  if (activeVfs)  return activeVfs._opfsRoot ? 'OPFS + HTTP Range' : 'Remote HTTP Range';
+  return 'none';
+}
+
+window.toggleHealthConsole = function toggleHealthConsole() {
+  const el  = document.getElementById('health-console');
+  const btn = el.querySelector('.hc-toggle');
+  el.classList.toggle('collapsed');
+  btn.textContent = el.classList.contains('collapsed') ? '▲' : '▼';
+};
+
+function hcSet(id, text, cls = '') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className   = 'hc-val' + (cls ? ' ' + cls : '');
+}
+
+function updateHealthConsole(vmCycles, matchCount, latencyUs, costHeader, bidxUsed) {
+  const costText = costHeader
+    ? costHeader
+    : `${matchCount}+${vmCycles.toLocaleString()}`;
+  hcSet('hc-cost',   costText,                           'green');
+  hcSet('hc-cycles', vmCycles.toLocaleString() + ' ops', vmCycles > 0 ? 'green' : 'dim');
+  hcSet('hc-lat',    latencyUs + ' µs',                  'green');
+  hcSet('hc-vfs',    hcVfsLabel(), activeVfs || dbBytes ? 'green' : 'amber');
+
+  if (activeVfs) {
+    // BIDX row: persist the "loaded" state; update with per-query lookup info
+    if (activeVfs.bidxLoaded) {
+      hcSet('hc-bidx',
+        bidxUsed == null
+          ? `${activeVfs.blockCount.toLocaleString()} ranges · O(log N)`
+          : bidxUsed
+            ? 'BIDX HIT · O(log N)'
+            : 'full scan (no object bound)',
+        'green');
+    }
+
+    const t = activeVfs.telemetry;
+    hcSet('hc-net',
+      t.netRequests > 0 ? `${t.netRequests} × 40KB range` : '0',
+      t.netRequests > 0 ? 'amber' : 'dim');
+    hcSet('hc-opfs',
+      t.opfsHits > 0 ? `${t.opfsHits} blocks` : '0',
+      t.opfsHits > 0 ? 'green' : 'dim');
+    hcSet('hc-fault',
+      t.lastFaultMs > 0 ? `${t.lastFaultMs.toFixed(0)} ms last` : '—',
+      t.lastFaultMs > 0 ? 'green' : 'dim');
+  }
+}
+
+async function pollDaemonHealth() {
+  const el = document.getElementById('hc-daemon');
+  try {
+    const r = await fetch('http://127.0.0.1:4242/health', {
+      signal: AbortSignal.timeout(800),
+    });
+    if (r.ok) {
+      const data = await r.json().catch(() => ({}));
+      const ver  = data.version ? ` v${data.version}` : '';
+      if (el) {
+        el.innerHTML = `<span class="hc-pulse"></span>ACTIVE${ver}`;
+        el.className = 'hc-val green';
+      }
+    } else {
+      hcSet('hc-daemon', 'HTTP ' + r.status, 'amber');
+    }
+  } catch {
+    if (el) {
+      el.innerHTML = '<span class="hc-pulse amber"></span>WASM-only';
+      el.className = 'hc-val dim';
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+
+await Promise.all([loadWasm(), loadManifest()]);
+pollDaemonHealth();
+setInterval(pollDaemonHealth, 15_000);
+</script>
+</body>
+</html>

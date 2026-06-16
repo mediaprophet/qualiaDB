@@ -7,14 +7,17 @@ include:
   - "*.q42"
   - "*.lex"
   - "*.wasm"
+  - "playground/*.html"
   - "playground/*.js"
   - "playground/*.wasm"
+  - "playground/*.json"
+  - "playground/*.css"
+  - "playground/wordnet.q42"
   - "js/*.js"
   - "tests/**/*.js"
 
-# Exclude large WordNet data artefacts from Jekyll processing (served as raw files).
+# Exclude large local-only WordNet sidecars (unified v2 .q42 embeds lex+bidx).
 exclude:
-  - "playground/wordnet.q42"
   - "playground/wordnet.c.q42"
   - "playground/wordnet.q42.lex"
   - "playground/wordnet.q42.lex.lz4"
