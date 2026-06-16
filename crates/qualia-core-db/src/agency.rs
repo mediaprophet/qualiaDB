@@ -1,10 +1,7 @@
 use crate::NQuin;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
-#[cfg(feature = "sanctuary-crypto")]
-use pbkdf2::pbkdf2_hmac;
 use sha2::{Digest, Sha256};
 
-const PBKDF2_ITERATIONS: u32 = 310_000;
 const LANE_KEY_LENGTH: usize = 32;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -101,11 +98,13 @@ pub fn sign_graph_mutation(signing_key: &SigningKey, quin: &NQuin) -> Signature 
 /// Derives a 32-byte AES-256-GCM key from the user's PIN for Deniable Encryption (Sanctuary Mode).
 /// By passing different PINs, different keys are derived, which unlocks different DB Lanes.
 /// The decoy lane operates exactly identically to the sanctuary lane.
-#[cfg(feature = "sanctuary-crypto")]
+#[cfg(all(feature = "sanctuary-crypto", not(target_arch = "wasm32")))]
 pub fn derive_lane_key(pin: &str, salt: &[u8]) -> [u8; LANE_KEY_LENGTH] {
-    let mut key = [0u8; LANE_KEY_LENGTH];
-    pbkdf2_hmac::<Sha256>(pin.as_bytes(), salt, PBKDF2_ITERATIONS, &mut key);
-    key
+    crate::sanctuary_crypto::derive_lane_cipher_key(
+        pin.as_bytes(),
+        salt,
+        crate::sanctuary_crypto::DEFAULT_PBKDF2_ITERATIONS,
+    )
 }
 
 #[cfg(test)]
@@ -160,6 +159,7 @@ mod tests {
         );
     }
 
+    #[cfg(all(feature = "sanctuary-crypto", not(target_arch = "wasm32")))]
     #[test]
     fn derive_lane_key_is_deterministic_and_salt_bound() {
         let pin = "1234";
@@ -174,5 +174,13 @@ mod tests {
         assert_eq!(key_a1, key_a2);
         assert_ne!(key_a1, key_b);
         assert_ne!(key_a1, key_c);
+        assert_eq!(
+            key_a1,
+            crate::sanctuary_crypto::derive_lane_cipher_key(
+                pin.as_bytes(),
+                salt_a,
+                crate::sanctuary_crypto::DEFAULT_PBKDF2_ITERATIONS,
+            )
+        );
     }
 }

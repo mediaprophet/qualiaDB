@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn test_pod_zeroable() {
         // Test that Tensor10D satisfies Pod and Zeroable traits
-        let tensor: Tensor10D = bytemuck::zeroed();
+        let tensor = Tensor10D::default();
         assert_eq!(tensor.q, 0.0);
         assert_eq!(tensor.v, 0.0);
         

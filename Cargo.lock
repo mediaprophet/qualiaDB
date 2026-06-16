@@ -5804,6 +5804,7 @@ dependencies = [
 name = "qualia-core-db"
 version = "0.0.13"
 dependencies = [
+ "aead",
  "aes-gcm",
  "ark-bls12-381",
  "ark-ec",

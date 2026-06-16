@@ -1,19 +1,117 @@
 //! In-process graph backing store for the loopback daemon `/query` route.
 //!
-//! Phase 1: fixed-capacity `Vec<NQuin>` seeded with Anatomy health demo
-//! triples and optionally extended from `{storage_path}/Index/*.q42` headers.
+//! The live daemon graph is a fixed-capacity, zero-heap store backed by a
+//! caller-invisible `[NQuin; MAX_GRAPH_QUINS]` buffer. Cold-path ontology and
+//! file ingestion may still allocate while parsing, but the resident graph used
+//! by `/query` no longer relies on `Vec` or `HashSet`.
 
 use crate::{q_hash, NQuin};
+use std::ops::Index;
 use std::path::Path;
-use std::sync::{OnceLock, RwLock};
+use std::sync::RwLock;
 
 /// Bench datasets (Schema.org ~18K quins) must fit for browser/native parity.
-const MAX_GRAPH_QUINS: usize = 65_536;
+pub const MAX_GRAPH_QUINS: usize = 65_536;
 
-static GRAPH: OnceLock<RwLock<Vec<NQuin>>> = OnceLock::new();
+#[derive(Debug)]
+pub struct DaemonGraphStore {
+    quins: [NQuin; MAX_GRAPH_QUINS],
+    len: usize,
+}
 
-fn graph_lock() -> &'static RwLock<Vec<NQuin>> {
-    GRAPH.get_or_init(|| RwLock::new(Vec::new()))
+impl DaemonGraphStore {
+    pub const fn new() -> Self {
+        Self {
+            quins: [NQuin {
+                subject: 0,
+                predicate: 0,
+                object: 0,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            }; MAX_GRAPH_QUINS],
+            len: 0,
+        }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    #[inline]
+    pub fn as_slice(&self) -> &[NQuin] {
+        &self.quins[..self.len]
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        for quin in &mut self.quins[..self.len] {
+            *quin = NQuin::default();
+        }
+        self.len = 0;
+    }
+
+    #[inline]
+    pub fn push(&mut self, quin: NQuin) -> bool {
+        if self.len >= MAX_GRAPH_QUINS {
+            return false;
+        }
+        self.quins[self.len] = quin;
+        self.len += 1;
+        true
+    }
+
+    #[inline]
+    pub fn extend_from_slice(&mut self, quins: &[NQuin]) -> usize {
+        let remaining = MAX_GRAPH_QUINS.saturating_sub(self.len);
+        let to_copy = quins.len().min(remaining);
+        if to_copy == 0 {
+            return 0;
+        }
+        self.quins[self.len..self.len + to_copy].copy_from_slice(&quins[..to_copy]);
+        self.len += to_copy;
+        to_copy
+    }
+
+    #[inline]
+    fn contains_subject_predicate_context(&self, subject: u64, predicate: u64, context: u64) -> bool {
+        self.as_slice().iter().any(|q| {
+            q.subject == subject && q.predicate == predicate && q.context == context
+        })
+    }
+
+    fn push_unique(&mut self, quin: NQuin) -> bool {
+        if self.contains_subject_predicate_context(quin.subject, quin.predicate, quin.context) {
+            return false;
+        }
+        self.push(quin)
+    }
+}
+
+impl Default for DaemonGraphStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Index<usize> for DaemonGraphStore {
+    type Output = NQuin;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.as_slice()[index]
+    }
+}
+
+static GRAPH: RwLock<DaemonGraphStore> = RwLock::new(DaemonGraphStore::new());
+
+fn graph_lock() -> &'static RwLock<DaemonGraphStore> {
+    &GRAPH
 }
 
 #[inline]
@@ -21,7 +119,6 @@ fn triple_quin(subject: &str, predicate: &str, object: &str, context: &str) -> N
     let subject = q_hash(subject);
     let predicate = q_hash(predicate);
     let object = q_hash(object);
-    // Keep sensitivity lane public — q_hash may set bits [56..63].
     let context = q_hash(context) & 0x00FF_FFFF_FFFF_FFFF;
     NQuin {
         subject,
@@ -33,14 +130,12 @@ fn triple_quin(subject: &str, predicate: &str, object: &str, context: &str) -> N
     }
 }
 
-fn push_quin(store: &mut Vec<NQuin>, quin: NQuin) {
-    if store.len() < MAX_GRAPH_QUINS {
-        store.push(quin);
-    }
+fn push_quin(store: &mut DaemonGraphStore, quin: NQuin) {
+    let _ = store.push(quin);
 }
 
 /// Seed representative health-condition triples for Anatomy app development.
-fn seed_anatomy_health_graph(store: &mut Vec<NQuin>) {
+fn seed_anatomy_health_graph(store: &mut DaemonGraphStore) {
     const BIO: &str = "https://qualia.anatomy.example/ontology/bio#";
     const ORGAN: &str = "https://qualia.anatomy.example/ontology/organ#";
     const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
@@ -75,7 +170,6 @@ fn seed_anatomy_health_graph(store: &mut Vec<NQuin>) {
                 USER_CTX,
             ),
         );
-        // Secondary impact edge for graph richness (re-use primary system).
         push_quin(
             store,
             triple_quin(
@@ -88,7 +182,7 @@ fn seed_anatomy_health_graph(store: &mut Vec<NQuin>) {
     }
 }
 
-fn try_load_index_dir(store: &mut Vec<NQuin>, storage_path: &str) {
+fn try_load_index_dir(store: &mut DaemonGraphStore, storage_path: &str) {
     let index = Path::new(storage_path).join("Index");
     let Ok(entries) = std::fs::read_dir(&index) else {
         return;
@@ -105,24 +199,19 @@ fn try_load_index_dir(store: &mut Vec<NQuin>, storage_path: &str) {
         {
             continue;
         }
-        // Compatibility path: some local datasets are still legacy framed
-        // compressed artifacts even though canonical raw `.q42` is block-based.
         if let Ok(quins) = crate::q42_reader::read_c_q42_quins(&path) {
-            for quin in quins {
-                push_quin(store, quin);
-            }
+            store.extend_from_slice(&quins);
         }
     }
 }
 
 /// Initialise or refresh the daemon graph from storage path.
 pub fn init_daemon_graph(storage_path: &str) {
-    let mut store = Vec::with_capacity(64);
-    seed_anatomy_health_graph(&mut store);
-    try_load_index_dir(&mut store, storage_path);
     let lock = graph_lock();
     if let Ok(mut guard) = lock.write() {
-        *guard = store;
+        guard.clear();
+        seed_anatomy_health_graph(&mut guard);
+        try_load_index_dir(&mut guard, storage_path);
     }
 }
 
@@ -132,38 +221,34 @@ pub fn graph_quin_count() -> usize {
 }
 
 /// Read guard over the live graph (lock is process-static via `OnceLock`).
-pub fn graph_read_guard() -> std::sync::RwLockReadGuard<'static, Vec<NQuin>> {
+pub fn graph_read_guard() -> std::sync::RwLockReadGuard<'static, DaemonGraphStore> {
     graph_lock().read().expect("daemon graph poisoned")
 }
 
 /// Extend the live graph with ontology quins from `qualia-core-db::ontology_loader`.
-///
-/// Called at daemon startup after `init_daemon_graph`.  Quins are deduplicated by
-/// `(subject, predicate, context)` to avoid re-seeding across restarts.
 pub fn extend_with_ontology_quins(quins: Vec<crate::NQuin>) {
-    if quins.is_empty() { return; }
+    extend_with_ontology_quins_slice(&quins);
+}
+
+/// Zero-heap resident update path for ontology insertion.
+pub fn extend_with_ontology_quins_slice(quins: &[crate::NQuin]) {
+    if quins.is_empty() {
+        return;
+    }
     let lock = graph_lock();
     if let Ok(mut guard) = lock.write() {
-        let mut existing: std::collections::HashSet<(u64, u64, u64)> = guard
-            .iter()
-            .map(|q| (q.subject, q.predicate, q.context))
-            .collect();
-        for q in quins {
-            let key = (q.subject, q.predicate, q.context);
-            if existing.insert(key) {
-                push_quin(&mut guard, q);
-            }
+        for &q in quins {
+            let _ = guard.push_unique(q);
         }
     }
 }
 
 /// Replace the in-memory graph with flat 48-byte NQuin bytes (browser bench_load).
 pub fn replace_graph_from_flat_bytes(bytes: &[u8]) -> Result<usize, &'static str> {
+    let lock = graph_lock();
+    let mut guard = lock.write().map_err(|_| "daemon graph poisoned")?;
     if bytes.is_empty() {
-        let lock = graph_lock();
-        if let Ok(mut guard) = lock.write() {
-            guard.clear();
-        }
+        guard.clear();
         return Ok(0);
     }
     if bytes.len() % 48 != 0 {
@@ -174,14 +259,12 @@ pub fn replace_graph_from_flat_bytes(bytes: &[u8]) -> Result<usize, &'static str
         return Err("graph exceeds daemon MAX_GRAPH_QUINS");
     }
     let quins: &[NQuin] = bytemuck::cast_slice(bytes);
-    let lock = graph_lock();
-    let mut guard = lock.write().map_err(|_| "daemon graph poisoned")?;
     guard.clear();
     guard.extend_from_slice(quins);
     Ok(quin_count)
 }
 
-/// Known condition subject hashes for Anatomy graph → label mapping.
+/// Known condition subject hashes for Anatomy graph -> label mapping.
 pub fn condition_label_for_subject_hash(subject: u64) -> Option<&'static str> {
     const BIO: &str = "https://qualia.anatomy.example/ontology/bio#";
     const TABLE: [(&str, &str); 8] = [
@@ -251,7 +334,7 @@ mod tests {
             "did:qualia:test",
         );
 
-        extend_with_ontology_quins(vec![quin, quin]);
+        extend_with_ontology_quins_slice(&[quin, quin]);
 
         let guard = graph_read_guard();
         assert_eq!(guard.len(), 1);

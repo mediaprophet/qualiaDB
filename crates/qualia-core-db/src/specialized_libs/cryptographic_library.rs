@@ -6,13 +6,10 @@
 //! - Hardware-Sympathetic Storage (ZNS) for secure key storage
 //! - Allocation Firewall (eBPF) for kernel-level cryptographic operations
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use crate::fiduciary_crypto::{CryptoContext, MlDsaSignature, MlDsaSigner};
+use crate::q_hash;
 use serde::{Deserialize, Serialize};
-use crate::fiduciary_crypto::{MlDsaSigner, MlDsaSignature, CryptoContext};
-use crate::zk_proofs::ZkProofSystem;
-use crate::zns_storage::ZnsZoneManager;
-use crate::ebpf_firewall::EbpfFirewall;
+use std::collections::HashMap;
 
 /// Cryptographic Library Manager
 pub struct CryptographicLibrary {
@@ -22,6 +19,23 @@ pub struct CryptographicLibrary {
     hash_engine: HashEngine,
     proof_engine: ProofEngine,
     security_monitor: SecurityMonitor,
+}
+
+/// Compact identifier view for key catalogs in zero-heap call paths.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KeyHandle {
+    pub key_id_hash: u64,
+    pub key_type_tag: u8,
+    pub algorithm_tag: u8,
+    pub security_level_tag: u8,
+}
+
+/// Layout metadata for caller-owned encryption buffers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InlineEncryptionLayout {
+    pub ciphertext_len: usize,
+    pub iv_len: usize,
+    pub tag_len: usize,
 }
 
 /// Key manager for secure key storage and management
@@ -2073,6 +2087,45 @@ impl CryptographicLibrary {
         })
     }
 
+    /// Encrypt into caller-owned buffers for zero-heap hot paths.
+    pub fn encrypt_data_into(
+        &mut self,
+        key_id: &str,
+        data: &[u8],
+        additional_data: Option<&[u8]>,
+        algorithm: EncryptionAlgorithm,
+        iv_out: &mut [u8],
+        ciphertext_out: &mut [u8],
+        tag_out: &mut [u8],
+    ) -> Result<CryptographicResult<InlineEncryptionLayout>, CryptographicError> {
+        let start_time = std::time::Instant::now();
+
+        let key = self.key_manager.get_key(key_id)?;
+        if key.key_type != KeyType::Symmetric {
+            return Err(CryptographicError::InvalidKey("Key must be symmetric for encryption".to_string()));
+        }
+
+        let layout = self.encryption_engine.encrypt_data_into(
+            &key,
+            data,
+            additional_data,
+            algorithm,
+            iv_out,
+            ciphertext_out,
+            tag_out,
+        )?;
+
+        let execution_time = start_time.elapsed().as_millis() as u64;
+
+        Ok(CryptographicResult {
+            result: layout,
+            execution_time,
+            memory_usage: 0,
+            security_level: key.metadata.security_level,
+            compliance_status: ComplianceStatus::Compliant,
+        })
+    }
+
     /// Decrypt data with AES-256-GCM
     pub fn decrypt_data(&mut self, key_id: &str, encrypted_data: &EncryptedData) -> Result<CryptographicResult<Vec<u8>>, CryptographicError> {
         let start_time = std::time::Instant::now();
@@ -2092,6 +2145,32 @@ impl CryptographicLibrary {
 
         Ok(CryptographicResult {
             result: decrypted_data,
+            execution_time,
+            memory_usage: 0,
+            security_level: key.metadata.security_level,
+            compliance_status: ComplianceStatus::Compliant,
+        })
+    }
+
+    /// Decrypt into a caller-owned buffer for zero-heap hot paths.
+    pub fn decrypt_data_into(
+        &mut self,
+        key_id: &str,
+        encrypted_data: &EncryptedData,
+        out: &mut [u8],
+    ) -> Result<CryptographicResult<usize>, CryptographicError> {
+        let start_time = std::time::Instant::now();
+
+        let key = self.key_manager.get_key(key_id)?;
+        if key.key_type != KeyType::Symmetric {
+            return Err(CryptographicError::InvalidKey("Key must be symmetric for decryption".to_string()));
+        }
+
+        let written = self.encryption_engine.decrypt_data_into(&key, encrypted_data, out)?;
+        let execution_time = start_time.elapsed().as_millis() as u64;
+
+        Ok(CryptographicResult {
+            result: written,
             execution_time,
             memory_usage: 0,
             security_level: key.metadata.security_level,
@@ -2180,6 +2259,11 @@ impl CryptographicLibrary {
         self.key_manager.list_keys()
     }
 
+    /// List compact key handles into a caller-owned buffer.
+    pub fn list_keys_into(&self, out: &mut [KeyHandle]) -> Result<usize, CryptographicError> {
+        self.key_manager.list_keys_into(out)
+    }
+
     /// Get key information
     pub fn get_key_info(&self, key_id: &str) -> Option<KeyMetadata> {
         self.key_manager.get_key_metadata(key_id)
@@ -2256,6 +2340,10 @@ impl KeyManager {
 
     pub fn list_keys(&self) -> Vec<String> {
         self.key_storage.list_keys()
+    }
+
+    pub fn list_keys_into(&self, out: &mut [KeyHandle]) -> Result<usize, CryptographicError> {
+        self.key_storage.list_keys_into(out)
     }
 
     pub fn get_key_metadata(&self, key_id: &str) -> Option<KeyMetadata> {
@@ -2344,6 +2432,28 @@ impl KeyStorage {
             keys.extend(zone.keys.keys().cloned());
         }
         keys
+    }
+
+    pub fn list_keys_into(&self, out: &mut [KeyHandle]) -> Result<usize, CryptographicError> {
+        let total_keys = self.zones.values().map(|zone| zone.keys.len()).sum::<usize>();
+        if out.len() < total_keys {
+            return Err(CryptographicError::BufferTooSmall("key handle output buffer too small".to_string()));
+        }
+
+        let mut written = 0usize;
+        for zone in self.zones.values() {
+            for metadata in zone.keys.values() {
+                out[written] = KeyHandle {
+                    key_id_hash: q_hash(&metadata.key_id),
+                    key_type_tag: key_type_tag(&metadata.key_type),
+                    algorithm_tag: key_algorithm_tag(&metadata.key_algorithm),
+                    security_level_tag: security_level_tag(&metadata.security_level),
+                };
+                written += 1;
+            }
+        }
+
+        Ok(written)
     }
 
     fn select_best_zone(&self, key: &Key) -> Result<String, CryptographicError> {
@@ -2948,11 +3058,11 @@ impl EncryptionEngine {
     pub fn encrypt_data_with(&mut self, key: &Key, data: &[u8], additional_data: Option<&[u8]>, algorithm: EncryptionAlgorithm) -> Result<EncryptedData, CryptographicError> {
         let start_time = std::time::Instant::now();
 
-        // Generate a nonce sized for the chosen algorithm
-        let iv = self.generate_iv(&algorithm)?;
-
-        // Encrypt data
-        let (ciphertext, tag) = self.encrypt_with_key(&key, data, &iv, additional_data, &algorithm)?;
+        let iv_len = Self::nonce_len(&algorithm);
+        let mut iv = vec![0u8; iv_len];
+        let mut ciphertext = vec![0u8; data.len()];
+        let mut tag = vec![0u8; 16];
+        self.encrypt_data_into(key, data, additional_data, algorithm.clone(), &mut iv, &mut ciphertext, &mut tag)?;
 
         let mode = match algorithm {
             EncryptionAlgorithm::AES256GCM => EncryptionMode::GCM,
@@ -2980,19 +3090,73 @@ impl EncryptionEngine {
         Ok(encrypted_data)
     }
 
+    pub fn encrypt_data_into(
+        &mut self,
+        key: &Key,
+        data: &[u8],
+        additional_data: Option<&[u8]>,
+        algorithm: EncryptionAlgorithm,
+        iv_out: &mut [u8],
+        ciphertext_out: &mut [u8],
+        tag_out: &mut [u8],
+    ) -> Result<InlineEncryptionLayout, CryptographicError> {
+        let iv_len = Self::nonce_len(&algorithm);
+        if iv_out.len() < iv_len {
+            return Err(CryptographicError::BufferTooSmall("IV output buffer too small".to_string()));
+        }
+        if ciphertext_out.len() < data.len() {
+            return Err(CryptographicError::BufferTooSmall("ciphertext output buffer too small".to_string()));
+        }
+        if tag_out.len() < 16 {
+            return Err(CryptographicError::BufferTooSmall("authentication tag output buffer too small".to_string()));
+        }
+
+        self.generate_iv_into(&algorithm, &mut iv_out[..iv_len])?;
+        ciphertext_out[..data.len()].copy_from_slice(data);
+        self.encrypt_with_key_in_place(
+            key,
+            &mut ciphertext_out[..data.len()],
+            &iv_out[..iv_len],
+            additional_data,
+            &algorithm,
+            &mut tag_out[..16],
+        )?;
+
+        Ok(InlineEncryptionLayout {
+            ciphertext_len: data.len(),
+            iv_len,
+            tag_len: 16,
+        })
+    }
+
     pub fn decrypt_data(&mut self, key: &Key, encrypted_data: &EncryptedData) -> Result<Vec<u8>, CryptographicError> {
         // Dispatch on the algorithm the ciphertext was produced with.
-        let aad_ref = if encrypted_data.aad.is_empty() { None } else { Some(encrypted_data.aad.as_slice()) };
-        let plaintext = self.decrypt_with_key(
-            &key,
+        let mut plaintext = vec![0u8; encrypted_data.ciphertext.len()];
+        let written = self.decrypt_data_into(key, encrypted_data, &mut plaintext)?;
+        plaintext.truncate(written);
+        Ok(plaintext)
+    }
+
+    pub fn decrypt_data_into(
+        &mut self,
+        key: &Key,
+        encrypted_data: &EncryptedData,
+        out: &mut [u8],
+    ) -> Result<usize, CryptographicError> {
+        let aad_ref = if encrypted_data.aad.is_empty() {
+            None
+        } else {
+            Some(encrypted_data.aad.as_slice())
+        };
+        self.decrypt_with_key_into(
+            key,
             &encrypted_data.ciphertext,
             &encrypted_data.iv,
             &encrypted_data.tag,
             aad_ref,
             &encrypted_data.algorithm,
-        )?;
-
-        Ok(plaintext)
+            out,
+        )
     }
 
     /// Expected nonce length in bytes for the given AEAD algorithm.
@@ -3006,13 +3170,37 @@ impl EncryptionEngine {
     fn generate_iv(&self, algorithm: &EncryptionAlgorithm) -> Result<Vec<u8>, CryptographicError> {
         let len = Self::nonce_len(algorithm);
         let mut iv = vec![0u8; len];
-        for b in iv.iter_mut() {
-            *b = rand::random::<u8>();
-        }
+        self.generate_iv_into(algorithm, &mut iv)?;
         Ok(iv)
     }
 
+    fn generate_iv_into(&self, algorithm: &EncryptionAlgorithm, out: &mut [u8]) -> Result<(), CryptographicError> {
+        let len = Self::nonce_len(algorithm);
+        if out.len() < len {
+            return Err(CryptographicError::BufferTooSmall("IV output buffer too small".to_string()));
+        }
+        for b in out[..len].iter_mut() {
+            *b = rand::random::<u8>();
+        }
+        Ok(())
+    }
+
     fn encrypt_with_key(&self, key: &Key, data: &[u8], iv: &[u8], additional_data: Option<&[u8]>, algorithm: &EncryptionAlgorithm) -> Result<(Vec<u8>, Vec<u8>), CryptographicError> {
+        let mut buffer = data.to_vec();
+        let mut tag = vec![0u8; 16];
+        self.encrypt_with_key_in_place(key, &mut buffer, iv, additional_data, algorithm, &mut tag)?;
+        Ok((buffer, tag))
+    }
+
+    fn encrypt_with_key_in_place(
+        &self,
+        key: &Key,
+        buffer: &mut [u8],
+        iv: &[u8],
+        additional_data: Option<&[u8]>,
+        algorithm: &EncryptionAlgorithm,
+        tag_out: &mut [u8],
+    ) -> Result<(), CryptographicError> {
         use aes_gcm::aead::generic_array::GenericArray;
         if key.key_data.len() < 32 {
             return Err(CryptographicError::EncryptionError("AEAD key must be 32 bytes".to_string()));
@@ -3021,38 +3209,56 @@ impl EncryptionEngine {
         if iv.len() != expected_nonce {
             return Err(CryptographicError::EncryptionError(format!("IV must be {expected_nonce} bytes for this algorithm")));
         }
+        if tag_out.len() < 16 {
+            return Err(CryptographicError::BufferTooSmall("authentication tag output buffer too small".to_string()));
+        }
         let aad = additional_data.unwrap_or(b"");
-        let mut buffer = data.to_vec();
         let tag = match algorithm {
             EncryptionAlgorithm::AES256GCM => {
-                use aes_gcm::{Aes256Gcm, KeyInit, AeadInPlace};
+                use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit};
                 let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                cipher
+                    .encrypt_in_place_detached(GenericArray::from_slice(iv), aad, buffer)
                     .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
-                    .to_vec()
             }
             EncryptionAlgorithm::ChaCha20Poly1305 => {
-                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, AeadInPlace};
+                use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit};
                 let cipher = ChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                cipher
+                    .encrypt_in_place_detached(GenericArray::from_slice(iv), aad, buffer)
                     .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
-                    .to_vec()
             }
             EncryptionAlgorithm::XChaCha20Poly1305 => {
-                use chacha20poly1305::{XChaCha20Poly1305, KeyInit, AeadInPlace};
+                use chacha20poly1305::{AeadInPlace, KeyInit, XChaCha20Poly1305};
                 let cipher = XChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                cipher
+                    .encrypt_in_place_detached(GenericArray::from_slice(iv), aad, buffer)
                     .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
-                    .to_vec()
             }
             EncryptionAlgorithm::Custom(name) => {
                 return Err(CryptographicError::UnsupportedAlgorithm(format!("Custom cipher '{name}' not implemented")));
             }
         };
-        Ok((buffer, tag))
+        tag_out[..16].copy_from_slice(tag.as_slice());
+        Ok(())
     }
 
     fn decrypt_with_key(&self, key: &Key, ciphertext: &[u8], iv: &[u8], tag: &[u8], additional_data: Option<&[u8]>, algorithm: &EncryptionAlgorithm) -> Result<Vec<u8>, CryptographicError> {
+        let mut buffer = ciphertext.to_vec();
+        self.decrypt_with_key_into(key, ciphertext, iv, tag, additional_data, algorithm, &mut buffer)?;
+        Ok(buffer)
+    }
+
+    fn decrypt_with_key_into(
+        &self,
+        key: &Key,
+        ciphertext: &[u8],
+        iv: &[u8],
+        tag: &[u8],
+        additional_data: Option<&[u8]>,
+        algorithm: &EncryptionAlgorithm,
+        out: &mut [u8],
+    ) -> Result<usize, CryptographicError> {
         use aes_gcm::aead::generic_array::GenericArray;
         if key.key_data.len() < 32 {
             return Err(CryptographicError::DecryptionError("AEAD key must be 32 bytes".to_string()));
@@ -3064,33 +3270,40 @@ impl EncryptionEngine {
         if tag.len() != 16 {
             return Err(CryptographicError::DecryptionError("AEAD tag must be 16 bytes".to_string()));
         }
+        if out.len() < ciphertext.len() {
+            return Err(CryptographicError::BufferTooSmall("plaintext output buffer too small".to_string()));
+        }
         let aad = additional_data.unwrap_or(b"");
         let tag_arr = GenericArray::from_slice(tag);
-        let mut buffer = ciphertext.to_vec();
+        out[..ciphertext.len()].copy_from_slice(ciphertext);
+        let buffer = &mut out[..ciphertext.len()];
         match algorithm {
             EncryptionAlgorithm::AES256GCM => {
-                use aes_gcm::{Aes256Gcm, KeyInit, AeadInPlace};
+                use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit};
                 let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.decrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer, tag_arr)
+                cipher
+                    .decrypt_in_place_detached(GenericArray::from_slice(iv), aad, buffer, tag_arr)
                     .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
             }
             EncryptionAlgorithm::ChaCha20Poly1305 => {
-                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, AeadInPlace};
+                use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit};
                 let cipher = ChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.decrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer, tag_arr)
+                cipher
+                    .decrypt_in_place_detached(GenericArray::from_slice(iv), aad, buffer, tag_arr)
                     .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
             }
             EncryptionAlgorithm::XChaCha20Poly1305 => {
-                use chacha20poly1305::{XChaCha20Poly1305, KeyInit, AeadInPlace};
+                use chacha20poly1305::{AeadInPlace, KeyInit, XChaCha20Poly1305};
                 let cipher = XChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.decrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer, tag_arr)
+                cipher
+                    .decrypt_in_place_detached(GenericArray::from_slice(iv), aad, buffer, tag_arr)
                     .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
             }
             EncryptionAlgorithm::Custom(name) => {
                 return Err(CryptographicError::UnsupportedAlgorithm(format!("Custom cipher '{name}' not implemented")));
             }
         }
-        Ok(buffer)
+        Ok(ciphertext.len())
     }
 }
 
@@ -3117,13 +3330,21 @@ impl KeyDerivation {
     /// Uses the configured `derivation_parameters.salt` and `output_length`. `info`
     /// is the application-specific context/label that domain-separates derived keys.
     pub fn derive_hkdf(&self, ikm: &[u8], info: &[u8]) -> Result<Vec<u8>, CryptographicError> {
+        let mut okm = vec![0u8; self.derivation_parameters.output_length];
+        self.derive_hkdf_into(ikm, info, &mut okm)?;
+        Ok(okm)
+    }
+
+    pub fn derive_hkdf_into(&self, ikm: &[u8], info: &[u8], out: &mut [u8]) -> Result<(), CryptographicError> {
         use hkdf::Hkdf;
         use sha2::Sha256;
+        if out.len() < self.derivation_parameters.output_length {
+            return Err(CryptographicError::BufferTooSmall("HKDF output buffer too small".to_string()));
+        }
         let hk = Hkdf::<Sha256>::new(Some(&self.derivation_parameters.salt), ikm);
-        let mut okm = vec![0u8; self.derivation_parameters.output_length];
-        hk.expand(info, &mut okm)
+        hk.expand(info, &mut out[..self.derivation_parameters.output_length])
             .map_err(|e| CryptographicError::EncryptionError(format!("HKDF expand failed: {e}")))?;
-        Ok(okm)
+        Ok(())
     }
 }
 
@@ -3754,6 +3975,44 @@ impl SecurityPerformanceMetrics {
     }
 }
 
+fn key_type_tag(key_type: &KeyType) -> u8 {
+    match key_type {
+        KeyType::Private => 0x01,
+        KeyType::Public => 0x02,
+        KeyType::Symmetric => 0x03,
+        KeyType::Shared => 0x04,
+        KeyType::Master => 0x05,
+        KeyType::Derived => 0x06,
+    }
+}
+
+fn key_algorithm_tag(algorithm: &KeyAlgorithm) -> u8 {
+    match algorithm {
+        KeyAlgorithm::MLDSA => 0x01,
+        KeyAlgorithm::Kyber => 0x02,
+        KeyAlgorithm::NTRU => 0x03,
+        KeyAlgorithm::SPHINCS => 0x04,
+        KeyAlgorithm::RSA => 0x05,
+        KeyAlgorithm::ECDSA => 0x06,
+        KeyAlgorithm::EdDSA => 0x07,
+        KeyAlgorithm::AES => 0x08,
+        KeyAlgorithm::ChaCha20 => 0x09,
+        KeyAlgorithm::SHA256 => 0x0A,
+        KeyAlgorithm::SHA512 => 0x0B,
+        KeyAlgorithm::BLAKE3 => 0x0C,
+    }
+}
+
+fn security_level_tag(level: &SecurityLevel) -> u8 {
+    match level {
+        SecurityLevel::Low => 0x01,
+        SecurityLevel::Medium => 0x02,
+        SecurityLevel::High => 0x03,
+        SecurityLevel::Critical => 0x04,
+        SecurityLevel::TopSecret => 0x05,
+    }
+}
+
 /// Cryptographic error types
 #[derive(Debug, Clone)]
 pub enum CryptographicError {
@@ -3767,6 +4026,7 @@ pub enum CryptographicError {
     ProofError(String),
     SecurityError(String),
     ComplianceError(String),
+    BufferTooSmall(String),
 }
 
 impl std::fmt::Display for CryptographicError {
@@ -3782,6 +4042,7 @@ impl std::fmt::Display for CryptographicError {
             CryptographicError::ProofError(msg) => write!(f, "Proof error: {}", msg),
             CryptographicError::SecurityError(msg) => write!(f, "Security error: {}", msg),
             CryptographicError::ComplianceError(msg) => write!(f, "Compliance error: {}", msg),
+            CryptographicError::BufferTooSmall(msg) => write!(f, "Buffer too small: {}", msg),
         }
     }
 }

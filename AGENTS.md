@@ -754,3 +754,22 @@ cargo check -p qualia-core-db
 # Full workspace
 cargo test
 ```
+
+---
+
+### 2026-06-16 - Codex (Zero-heap graph, storage, mesh, and crypto refactor)
+
+**Completed:**
+- Reworked `daemon_graph.rs` into a fixed-capacity resident store with deterministic deduplication and no `Vec`/`HashSet` residency in the live daemon graph path.
+- Added buffer-first hot-path APIs to `semantic_culler.rs`, `ambient_orchestration.rs`, `csd_storage.rs`, and `acoustic_ble_mesh.rs`, while preserving compatibility wrappers for existing call sites.
+- Added zero-heap encryption/decryption and compact key-listing APIs in `specialized_libs/cryptographic_library.rs`, including caller-owned output buffers for AEAD and HKDF operations.
+- Promoted `modalities/graph_theory.rs` to a dual-path design: bounded fixed-array analysis for the 10D/edge path, plus quarantined heap-backed batch analysis for compatibility.
+- Added bounded graph analysis coverage and resolved the daemon-graph stack overflow by moving the resident store out of stack-initialized construction.
+
+**Verification:**
+- `cargo test -p qualia-core-db --lib`
+
+**Notes for future agents:**
+1. The preferred graph-analysis entry point is now `analyze_graph_topology_bounded`; treat `analyze_graph_topology` as a cold-path compatibility tool only.
+2. The new `*_into` APIs are the intended zero-heap surface for orchestration code. The legacy `Vec`-returning wrappers remain for migration safety, not as the final architecture.
+3. `HANDOVER.md` was not present in the workspace during this session, so the older handoff step could not be applied there.

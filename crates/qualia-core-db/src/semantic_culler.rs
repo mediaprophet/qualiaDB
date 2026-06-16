@@ -5,18 +5,33 @@
 //! reach the WebGPU staging buffers. It integrates with zk_proofs and
 //! fiduciary_crypto for cryptographic verification of agency permissions.
 
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use crate::zk_proofs::{ZkProofSystem, SemanticProof, MathematicalStatement, StatementType, FieldElement};
 use crate::fiduciary_crypto::{FiduciaryCrypto, MlDsaSignature, CryptoContext};
 
 /// Semantic culler for agency-driven data filtering
 pub struct SemanticCuller {
-    zk_system: Arc<Mutex<ZkProofSystem>>,
-    fiduciary_crypto: Arc<Mutex<FiduciaryCrypto>>,
+    zk_system: ZkProofSystem,
+    fiduciary_crypto: FiduciaryCrypto,
     agency_policies: HashMap<String, AgencyPolicy>,
     culling_stats: CullingStats,
+}
+
+/// Zero-heap verdict for hot-path filtering.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CullingVerdict {
+    pub quin_hash: u64,
+    pub semantic_id: u64,
+    pub allowed: bool,
+    pub reason: CullingReason,
+    pub proof_valid: u8,
+    pub signature_valid: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CullingError {
+    OutputBufferFull,
 }
 
 /// Agency policy for data access control
@@ -115,7 +130,7 @@ pub struct CullingResult {
 }
 
 /// Reasons for culling decisions
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CullingReason {
     SemanticFilterMatch,
     TemporalConstraintViolation,
@@ -150,8 +165,8 @@ impl SemanticCuller {
     /// Create new semantic culler
     pub fn new() -> Self {
         Self {
-            zk_system: Arc::new(Mutex::new(ZkProofSystem::new())),
-            fiduciary_crypto: Arc::new(Mutex::new(FiduciaryCrypto::new())),
+            zk_system: ZkProofSystem::new(),
+            fiduciary_crypto: FiduciaryCrypto::new(),
             agency_policies: HashMap::new(),
             culling_stats: CullingStats::default(),
         }
@@ -164,16 +179,67 @@ impl SemanticCuller {
 
     /// Cull a batch of Quins based on agency policies
     pub fn cull_quins(&mut self, agency_id: &str, quins: Vec<Quin>) -> Vec<CullingResult> {
-        let policy = self.agency_policies.get(agency_id).cloned();
+        let policy_ptr = self
+            .agency_policies
+            .get(agency_id)
+            .map(|policy| policy as *const AgencyPolicy);
         
-        let results: Vec<CullingResult> = quins.into_iter().map(|quin| {
-            self.cull_single_quin(agency_id, &quin, policy.as_ref())
-        }).collect();
+        let results: Vec<CullingResult> = quins
+            .iter()
+            .map(|quin| {
+                let policy = policy_ptr.map(|ptr| unsafe { &*ptr });
+                self.cull_single_quin(agency_id, quin, policy)
+            })
+            .collect();
 
         // Update statistics
         self.update_stats(&results);
 
         results
+    }
+
+    /// Zero-heap batch culling API for hot-path callers.
+    pub fn cull_quins_into(
+        &mut self,
+        agency_id: &str,
+        quins: &[Quin],
+        out: &mut [CullingVerdict],
+    ) -> Result<usize, CullingError> {
+        let policy_ptr = self
+            .agency_policies
+            .get(agency_id)
+            .map(|policy| policy as *const AgencyPolicy);
+        if out.len() < quins.len() {
+            return Err(CullingError::OutputBufferFull);
+        }
+
+        let mut written = 0usize;
+        for quin in quins {
+            let policy = policy_ptr.map(|ptr| unsafe { &*ptr });
+            let result = self.cull_single_quin(agency_id, quin, policy);
+            out[written] = CullingVerdict {
+                quin_hash: crate::q_hash(&quin.quin_id),
+                semantic_id: quin.semantic_id,
+                allowed: result.allowed,
+                reason: result.reason.clone(),
+                proof_valid: result
+                    .verification_data
+                    .as_ref()
+                    .and_then(|data| data.proof_valid)
+                    .map(bool_to_flag)
+                    .unwrap_or(0xFF),
+                signature_valid: result
+                    .verification_data
+                    .as_ref()
+                    .and_then(|data| data.signature_valid)
+                    .map(bool_to_flag)
+                    .unwrap_or(0xFF),
+            };
+            written += 1;
+        }
+
+        self.update_stats_from_verdicts(&out[..written]);
+        Ok(written)
     }
 
     /// Cull a single Quin
@@ -344,7 +410,7 @@ impl SemanticCuller {
     }
 
     /// Check cryptographic verification
-    fn check_cryptographic_verification(&self, quin: &Quin, policy: &AgencyPolicy) -> Option<VerificationData> {
+    fn check_cryptographic_verification(&mut self, quin: &Quin, policy: &AgencyPolicy) -> Option<VerificationData> {
         let mut proof_valid = None;
         let mut signature_valid = None;
         let start_time = std::time::Instant::now();
@@ -359,8 +425,8 @@ impl SemanticCuller {
 
         if requires_proof {
             if let Some(ref proof) = quin.proof {
-                let mut zk_system = self.zk_system.lock().unwrap();
-                match zk_system.verify_semantic_proof(&mut proof.clone()) {
+                let mut proof_copy = proof.clone();
+                match self.zk_system.verify_semantic_proof(&mut proof_copy) {
                     Ok(_) => proof_valid = Some(true),
                     Err(_) => proof_valid = Some(false),
                 }
@@ -371,7 +437,6 @@ impl SemanticCuller {
 
         if requires_signature {
             if let Some(ref signature) = quin.signature {
-                let fiduciary_crypto = self.fiduciary_crypto.lock().unwrap();
                 let message = format!("{}:{}:{}", quin.quin_id, quin.semantic_id, quin.timestamp);
                 let context = CryptoContext {
                     domain: "webizen_culling".to_string(),
@@ -381,7 +446,7 @@ impl SemanticCuller {
                 };
                 
                 // Use default key for verification
-                match fiduciary_crypto.verify(message.as_bytes(), signature, None, context.domain, context.purpose) {
+                match self.fiduciary_crypto.verify(message.as_bytes(), signature, None, context.domain, context.purpose) {
                     Ok(valid) => signature_valid = Some(valid),
                     Err(_) => signature_valid = Some(false),
                 }
@@ -433,6 +498,28 @@ impl SemanticCuller {
         }
     }
 
+    fn update_stats_from_verdicts(&mut self, results: &[CullingVerdict]) {
+        self.culling_stats.total_processed += results.len() as u64;
+
+        for result in results {
+            if result.allowed {
+                self.culling_stats.total_allowed += 1;
+            } else {
+                self.culling_stats.total_denied += 1;
+
+                match result.reason {
+                    CullingReason::SemanticFilterMatch => self.culling_stats.semantic_filtered += 1,
+                    CullingReason::TemporalConstraintViolation => self.culling_stats.temporal_filtered += 1,
+                    CullingReason::DeonticRuleViolation => self.culling_stats.deontic_filtered += 1,
+                    CullingReason::ProofVerificationFailed | CullingReason::SignatureVerificationFailed => {
+                        self.culling_stats.crypto_filtered += 1;
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
     /// Get culling statistics
     pub fn get_stats(&self) -> &CullingStats {
         &self.culling_stats
@@ -445,8 +532,6 @@ impl SemanticCuller {
 
     /// Generate a semantic proof for a Quin
     pub fn generate_proof_for_quin(&mut self, quin: &Quin) -> Result<SemanticProof, String> {
-        let mut zk_system = self.zk_system.lock().unwrap();
-        
         let statement = MathematicalStatement {
             statement_id: quin.quin_id.clone(),
             statement_type: StatementType::Equality,
@@ -458,17 +543,15 @@ impl SemanticCuller {
         let mut witness = HashMap::new();
         witness.insert("intensity".to_string(), FieldElement { value: [0u8; 32] });
 
-        zk_system.generate_semantic_proof(statement, witness)
+        self.zk_system.generate_semantic_proof(statement, witness)
             .map_err(|e| format!("Proof generation failed: {:?}", e))
     }
 
     /// Sign a Quin with fiduciary crypto
     pub fn sign_quin(&mut self, quin: &Quin, key_id: Option<&str>) -> Result<MlDsaSignature, String> {
-        let fiduciary_crypto = self.fiduciary_crypto.lock().unwrap();
-        
         let message = format!("{}:{}:{}", quin.quin_id, quin.semantic_id, quin.timestamp);
         
-        fiduciary_crypto.sign(
+        self.fiduciary_crypto.sign(
             message.as_bytes(),
             key_id,
             "webizen_quin".to_string(),
@@ -489,6 +572,10 @@ impl VerificationData {
             (None, None) => true,
         }
     }
+}
+
+fn bool_to_flag(value: bool) -> u8 {
+    if value { 1 } else { 0 }
 }
 
 impl Default for CullingStats {

@@ -22,6 +22,26 @@
 # Python bytecode cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.py,cover
+
+# Python virtualenvs, test caches, and packaging outputs
+.python-version
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+htmlcov/
+site/
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
 
 # WordNet build artefacts (large downloaded data, not source)
 scripts/.wordnet_build/

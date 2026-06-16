@@ -3,14 +3,14 @@
 //! This module provides computational storage pushdown using NVMe CSD (Computational Storage Device).
 //! Designed for hardware-accelerated mathematical computations and query processing.
 
+use crate::q_hash;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::fs::{File, OpenOptions};
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 
 #[cfg(windows)]
-use std::os::windows::io::{AsRawHandle, RawHandle};
+use std::os::windows::io::AsRawHandle;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 
@@ -20,6 +20,25 @@ pub struct CsdManager {
     functions: HashMap<String, CsdFunction>,
     scheduler: CsdScheduler,
     performance_monitor: CsdPerformanceMonitor,
+}
+
+/// Compact, zero-heap view of a discovered CSD device.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CsdDeviceHandle {
+    pub device_id_hash: u64,
+    pub max_concurrent_operations: u32,
+    pub max_data_size: u64,
+    pub memory_size: u64,
+    pub compute_units: u32,
+}
+
+/// Compact, zero-heap view of a registered computational function.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CsdFunctionHandle {
+    pub function_id_hash: u64,
+    pub operation_tag: u8,
+    pub parameter_count: u16,
+    pub bytecode_len: u32,
 }
 
 /// CSD device information
@@ -304,6 +323,27 @@ impl CsdManager {
         Ok(discovered_devices)
     }
 
+    /// Discover devices into a caller-owned fixed buffer.
+    pub fn discover_devices_into(&mut self, out: &mut [CsdDeviceHandle]) -> Result<usize, CsdError> {
+        let mut written = 0;
+
+        for i in 0..16 {
+            let device_path = format!("/dev/nvme{}", i);
+            if Path::new(&device_path).exists() {
+                if let Ok(device) = self.probe_device(&device_path) {
+                    if written >= out.len() {
+                        return Err(CsdError::BufferTooSmall("device discovery output buffer exhausted".to_string()));
+                    }
+                    out[written] = Self::device_handle(&device);
+                    written += 1;
+                    self.devices.insert(device.device_id.clone(), device);
+                }
+            }
+        }
+
+        Ok(written)
+    }
+
     /// Probe CSD device
     fn probe_device(&self, device_path: &str) -> Result<CsdDevice, CsdError> {
         let device_file = OpenOptions::new()
@@ -373,54 +413,45 @@ impl CsdManager {
 
     /// Execute matrix multiplication
     pub fn matrix_multiply(&mut self, device_id: &str, a: &[f32], b: &[f32], dimensions: (usize, usize, usize)) -> Result<Vec<f32>, CsdError> {
-        // Create matrix multiplication operation
-        let operation_id = self.generate_operation_id();
-        
-        let operation = CsdOperationRequest {
-            operation_id,
-            function_id: "matrix_multiply".to_string(),
-            device_id: device_id.to_string(),
-            inputs: vec![
-                OperationInput {
-                    name: "matrix_a".to_string(),
-                    data: self.f32_slice_to_bytes(a),
-                    location: DataLocation::HostMemory,
-                },
-                OperationInput {
-                    name: "matrix_b".to_string(),
-                    data: self.f32_slice_to_bytes(b),
-                    location: DataLocation::HostMemory,
-                },
-                OperationInput {
-                    name: "dimensions".to_string(),
-                    data: self.serialize_dimensions(dimensions),
-                    location: DataLocation::HostMemory,
-                },
-            ],
-            outputs: vec![
-                OperationOutput {
-                    name: "result".to_string(),
-                    size: ((dimensions.0 * dimensions.2) * 4) as u64, // 4 bytes per f32
-                    location: DataLocation::HostMemory,
-                },
-            ],
-            priority: OperationPriority::Normal,
-            deadline: None,
-        };
+        let mut result = vec![0.0f32; dimensions.0 * dimensions.2];
+        let written = self.matrix_multiply_into(device_id, a, b, dimensions, &mut result)?;
+        result.truncate(written);
+        Ok(result)
+    }
 
-        // Execute operation
-        self.execute_operation(operation)?;
-
-        // Wait for completion
-        let completion = self.wait_for_completion(operation_id)?;
-
-        // Parse result
-        if let Some(output) = completion.outputs.first() {
-            let result = self.bytes_to_f32_slice(&completion.outputs[0]);
-            Ok(result)
-        } else {
-            Err(CsdError::NoOutput("No output generated".to_string()))
+    /// Execute matrix multiplication into a caller-owned output buffer.
+    pub fn matrix_multiply_into(
+        &mut self,
+        device_id: &str,
+        a: &[f32],
+        b: &[f32],
+        dimensions: (usize, usize, usize),
+        out: &mut [f32],
+    ) -> Result<usize, CsdError> {
+        self.ensure_device_exists(device_id)?;
+        let (rows_a, shared, cols_b) = dimensions;
+        if a.len() != rows_a * shared {
+            return Err(CsdError::InvalidOperation("matrix A dimensions do not match input length".to_string()));
         }
+        if b.len() != shared * cols_b {
+            return Err(CsdError::InvalidOperation("matrix B dimensions do not match input length".to_string()));
+        }
+        let required = rows_a * cols_b;
+        if out.len() < required {
+            return Err(CsdError::BufferTooSmall("matrix multiply output buffer too small".to_string()));
+        }
+
+        for row in 0..rows_a {
+            for col in 0..cols_b {
+                let mut sum = 0.0f32;
+                for inner in 0..shared {
+                    sum += a[row * shared + inner] * b[inner * cols_b + col];
+                }
+                out[row * cols_b + col] = sum;
+            }
+        }
+
+        Ok(required)
     }
 
     /// Execute vector dot product
@@ -467,49 +498,64 @@ impl CsdManager {
 
     /// Execute convolution operation
     pub fn convolution(&mut self, device_id: &str, input: &[f32], kernel: &[f32], dimensions: (usize, usize, usize, usize)) -> Result<Vec<f32>, CsdError> {
-        let operation_id = self.generate_operation_id();
-        
-        let operation = CsdOperationRequest {
-            operation_id,
-            function_id: "convolution".to_string(),
-            device_id: device_id.to_string(),
-            inputs: vec![
-                OperationInput {
-                    name: "input".to_string(),
-                    data: self.f32_slice_to_bytes(input),
-                    location: DataLocation::HostMemory,
-                },
-                OperationInput {
-                    name: "kernel".to_string(),
-                    data: self.f32_slice_to_bytes(kernel),
-                    location: DataLocation::HostMemory,
-                },
-                OperationInput {
-                    name: "dimensions".to_string(),
-                    data: self.serialize_convolution_dimensions(dimensions),
-                    location: DataLocation::HostMemory,
-                },
-            ],
-            outputs: vec![
-                OperationOutput {
-                    name: "result".to_string(),
-                    size: (dimensions.0 * dimensions.1 * 4) as u64, // 4 bytes per f32
-                    location: DataLocation::HostMemory,
-                },
-            ],
-            priority: OperationPriority::Normal,
-            deadline: None,
-        };
+        let mut result = vec![0.0f32; dimensions.0 * dimensions.1];
+        let written = self.convolution_into(device_id, input, kernel, dimensions, &mut result)?;
+        result.truncate(written);
+        Ok(result)
+    }
 
-        self.execute_operation(operation)?;
-        let completion = self.wait_for_completion(operation_id)?;
-
-        if let Some(output) = completion.outputs.first() {
-            let result = self.bytes_to_f32_slice(&output);
-            Ok(result)
-        } else {
-            Err(CsdError::NoOutput("No output generated".to_string()))
+    /// Execute a same-shape 2D convolution into a caller-owned output buffer.
+    pub fn convolution_into(
+        &mut self,
+        device_id: &str,
+        input: &[f32],
+        kernel: &[f32],
+        dimensions: (usize, usize, usize, usize),
+        out: &mut [f32],
+    ) -> Result<usize, CsdError> {
+        self.ensure_device_exists(device_id)?;
+        let (width, height, kernel_width, kernel_height) = dimensions;
+        if input.len() != width * height {
+            return Err(CsdError::InvalidOperation("convolution input dimensions do not match input length".to_string()));
         }
+        if kernel.len() != kernel_width * kernel_height {
+            return Err(CsdError::InvalidOperation("convolution kernel dimensions do not match kernel length".to_string()));
+        }
+        let required = width * height;
+        if out.len() < required {
+            return Err(CsdError::BufferTooSmall("convolution output buffer too small".to_string()));
+        }
+
+        let kernel_x_radius = kernel_width / 2;
+        let kernel_y_radius = kernel_height / 2;
+
+        for y in 0..height {
+            for x in 0..width {
+                let mut acc = 0.0f32;
+                for ky in 0..kernel_height {
+                    let Some(input_y) = y.checked_add(ky).and_then(|value| value.checked_sub(kernel_y_radius)) else {
+                        continue;
+                    };
+                    if input_y >= height {
+                        continue;
+                    }
+                    for kx in 0..kernel_width {
+                        let Some(input_x) = x.checked_add(kx).and_then(|value| value.checked_sub(kernel_x_radius)) else {
+                            continue;
+                        };
+                        if input_x >= width {
+                            continue;
+                        }
+                        let input_index = input_y * width + input_x;
+                        let kernel_index = ky * kernel_width + kx;
+                        acc += input[input_index] * kernel[kernel_index];
+                    }
+                }
+                out[y * width + x] = acc;
+            }
+        }
+
+        Ok(required)
     }
 
     /// Get device statistics
@@ -527,9 +573,37 @@ impl CsdManager {
         self.devices.keys().cloned().collect()
     }
 
+    /// List available devices into a compact caller-owned buffer.
+    pub fn list_devices_into(&self, out: &mut [CsdDeviceHandle]) -> Result<usize, CsdError> {
+        if out.len() < self.devices.len() {
+            return Err(CsdError::BufferTooSmall("device listing output buffer too small".to_string()));
+        }
+
+        let mut written = 0;
+        for device in self.devices.values() {
+            out[written] = Self::device_handle(device);
+            written += 1;
+        }
+        Ok(written)
+    }
+
     /// List available functions
     pub fn list_functions(&self) -> Vec<String> {
         self.functions.keys().cloned().collect()
+    }
+
+    /// List available functions into a compact caller-owned buffer.
+    pub fn list_functions_into(&self, out: &mut [CsdFunctionHandle]) -> Result<usize, CsdError> {
+        if out.len() < self.functions.len() {
+            return Err(CsdError::BufferTooSmall("function listing output buffer too small".to_string()));
+        }
+
+        let mut written = 0;
+        for function in self.functions.values() {
+            out[written] = Self::function_handle(function);
+            written += 1;
+        }
+        Ok(written)
     }
 
     // Internal methods
@@ -565,6 +639,14 @@ impl CsdManager {
         }
 
         Ok(())
+    }
+
+    fn ensure_device_exists(&self, device_id: &str) -> Result<(), CsdError> {
+        if self.devices.contains_key(device_id) {
+            Ok(())
+        } else {
+            Err(CsdError::DeviceNotFound(device_id.to_string()))
+        }
     }
 
     /// Wait for operation completion
@@ -630,6 +712,38 @@ impl CsdManager {
         bytes.extend_from_slice(&(dimensions.2 as u32).to_le_bytes());
         bytes.extend_from_slice(&(dimensions.3 as u32).to_le_bytes());
         bytes
+    }
+
+    fn device_handle(device: &CsdDevice) -> CsdDeviceHandle {
+        CsdDeviceHandle {
+            device_id_hash: q_hash(&device.device_id),
+            max_concurrent_operations: device.capabilities.max_concurrent_operations,
+            max_data_size: device.capabilities.max_data_size,
+            memory_size: device.capabilities.memory_size,
+            compute_units: device.capabilities.compute_units,
+        }
+    }
+
+    fn function_handle(function: &CsdFunction) -> CsdFunctionHandle {
+        CsdFunctionHandle {
+            function_id_hash: q_hash(&function.function_id),
+            operation_tag: Self::operation_tag(&function.operation),
+            parameter_count: function.parameters.len() as u16,
+            bytecode_len: function.bytecode.len() as u32,
+        }
+    }
+
+    fn operation_tag(operation: &CsdOperationType) -> u8 {
+        match operation {
+            CsdOperationType::MatrixMultiply => 0x01,
+            CsdOperationType::VectorDotProduct => 0x02,
+            CsdOperationType::Convolution => 0x03,
+            CsdOperationType::Filter => 0x04,
+            CsdOperationType::Aggregate => 0x05,
+            CsdOperationType::Sort => 0x06,
+            CsdOperationType::Search => 0x07,
+            CsdOperationType::Custom(_) => 0xFF,
+        }
     }
 }
 
@@ -885,6 +999,7 @@ pub enum CsdError {
     NoOutput(String),
     ExecutionError(String),
     ConfigurationError(String),
+    BufferTooSmall(String),
 }
 
 impl std::fmt::Display for CsdError {
@@ -898,6 +1013,7 @@ impl std::fmt::Display for CsdError {
             CsdError::NoOutput(msg) => write!(f, "No output: {}", msg),
             CsdError::ExecutionError(msg) => write!(f, "Execution error: {}", msg),
             CsdError::ConfigurationError(msg) => write!(f, "Configuration error: {}", msg),
+            CsdError::BufferTooSmall(msg) => write!(f, "Buffer too small: {}", msg),
         }
     }
 }

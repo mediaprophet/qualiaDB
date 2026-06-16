@@ -1,9 +1,11 @@
 //! Advanced graph theory analysis for NQuin graphs.
 //!
-//! This module is intentionally heap-backed and meant for bounded, batch-style
-//! topology analysis rather than hot-path inference. It uses `HashMap`, `HashSet`,
-//! `Vec`, and `VecDeque` internally, so callers should keep analysis inputs within
-//! the explicit guardrails below and avoid invoking it from zero-heap execution loops.
+//! This module exposes two graph-analysis tiers:
+//! - `analyze_graph_topology_bounded` is the preferred zero-heap path for 10D tensor
+//!   orchestration and edge inference. It uses fixed-capacity arrays only.
+//! - `analyze_graph_topology` is the quarantined compatibility path for bounded,
+//!   batch-style topology jobs. It still uses `HashMap`, `HashSet`, `Vec`, and
+//!   `VecDeque`, so callers must keep it off hot paths and within the input cap below.
 
 use crate::NQuin;
 use std::collections::{HashMap, HashSet};
@@ -15,6 +17,352 @@ pub const MAX_HEAP_GRAPH_ANALYSIS_QUINS: usize = 4_096;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GraphAnalysisError {
     InputTooLarge,
+    NodeCapacityExceeded,
+    OutputBufferFull,
+}
+
+/// Preferred zero-heap node cap for edge-safe topology analysis.
+pub const MAX_BOUNDED_GRAPH_ANALYSIS_NODES: usize = 128;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CommunitySpan {
+    pub start: u16,
+    pub len: u16,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TopNodeScore {
+    pub node_id: u64,
+    pub centrality_score: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MotifRecord {
+    pub pattern: MotifPattern,
+    pub node_a: u64,
+    pub node_b: u64,
+    pub node_c: u64,
+    pub frequency: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BoundedGraphAnalysisSummary {
+    pub density: f32,
+    pub node_count: u16,
+    pub edge_count: u16,
+    pub community_count: u16,
+    pub motif_count: u16,
+    pub top_node_count: u16,
+    pub graph_quin_count: u16,
+}
+
+#[derive(Debug, Clone)]
+struct BoundedQualiaGraph {
+    node_ids: [u64; MAX_BOUNDED_GRAPH_ANALYSIS_NODES],
+    centrality_scores: [f32; MAX_BOUNDED_GRAPH_ANALYSIS_NODES],
+    degrees: [u16; MAX_BOUNDED_GRAPH_ANALYSIS_NODES],
+    adjacency: [[u8; MAX_BOUNDED_GRAPH_ANALYSIS_NODES]; MAX_BOUNDED_GRAPH_ANALYSIS_NODES],
+    node_count: usize,
+    edge_count: usize,
+}
+
+impl BoundedQualiaGraph {
+    fn from_quins(quins: &[NQuin]) -> Result<Self, GraphAnalysisError> {
+        let mut graph = Self {
+            node_ids: [0; MAX_BOUNDED_GRAPH_ANALYSIS_NODES],
+            centrality_scores: [0.0; MAX_BOUNDED_GRAPH_ANALYSIS_NODES],
+            degrees: [0; MAX_BOUNDED_GRAPH_ANALYSIS_NODES],
+            adjacency: [[0; MAX_BOUNDED_GRAPH_ANALYSIS_NODES]; MAX_BOUNDED_GRAPH_ANALYSIS_NODES],
+            node_count: 0,
+            edge_count: 0,
+        };
+
+        for quin in quins {
+            let source = graph.get_or_insert_node(quin.subject)?;
+            let target = graph.get_or_insert_node(quin.object)?;
+            if graph.adjacency[source][target] == 0 {
+                graph.adjacency[source][target] = 1;
+                graph.degrees[source] = graph.degrees[source].saturating_add(1);
+                graph.edge_count += 1;
+            }
+        }
+
+        Ok(graph)
+    }
+
+    fn get_or_insert_node(&mut self, node_id: u64) -> Result<usize, GraphAnalysisError> {
+        for index in 0..self.node_count {
+            if self.node_ids[index] == node_id {
+                return Ok(index);
+            }
+        }
+
+        if self.node_count >= MAX_BOUNDED_GRAPH_ANALYSIS_NODES {
+            return Err(GraphAnalysisError::NodeCapacityExceeded);
+        }
+
+        let index = self.node_count;
+        self.node_ids[index] = node_id;
+        self.node_count += 1;
+        Ok(index)
+    }
+
+    fn calculate_betweenness_centrality(&mut self) {
+        let n = self.node_count;
+        if n < 2 {
+            return;
+        }
+
+        let mut scores = [0f32; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        let mut sigma = [0f32; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        let mut dist = [-1i16; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        let mut delta = [0f32; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        let mut queue = [0usize; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        let mut stack = [0usize; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+
+        for source in 0..n {
+            sigma[..n].fill(0.0);
+            dist[..n].fill(-1);
+            delta[..n].fill(0.0);
+
+            let mut queue_head = 0usize;
+            let mut queue_tail = 0usize;
+            let mut stack_len = 0usize;
+
+            sigma[source] = 1.0;
+            dist[source] = 0;
+            queue[queue_tail] = source;
+            queue_tail += 1;
+
+            while queue_head < queue_tail {
+                let v = queue[queue_head];
+                queue_head += 1;
+                stack[stack_len] = v;
+                stack_len += 1;
+
+                for w in 0..n {
+                    if self.adjacency[v][w] == 0 {
+                        continue;
+                    }
+                    if dist[w] < 0 {
+                        dist[w] = dist[v] + 1;
+                        queue[queue_tail] = w;
+                        queue_tail += 1;
+                    }
+                    if dist[w] == dist[v] + 1 {
+                        sigma[w] += sigma[v];
+                    }
+                }
+            }
+
+            while stack_len > 0 {
+                stack_len -= 1;
+                let w = stack[stack_len];
+                for v in 0..n {
+                    if self.adjacency[v][w] == 0 || dist[v] != dist[w] - 1 || sigma[w] == 0.0 {
+                        continue;
+                    }
+                    delta[v] += (sigma[v] / sigma[w]) * (1.0 + delta[w]);
+                }
+                if w != source {
+                    scores[w] += delta[w];
+                }
+            }
+        }
+
+        let norm = if n > 2 {
+            ((n - 1) * (n - 2)) as f32
+        } else {
+            1.0
+        };
+        for (index, score) in scores.iter().take(n).enumerate() {
+            self.centrality_scores[index] = if norm > 0.0 { *score / norm } else { *score };
+        }
+    }
+
+    fn density(&self) -> f32 {
+        if self.node_count < 2 {
+            return 0.0;
+        }
+        let possible_edges = (self.node_count * (self.node_count - 1)) as f32;
+        self.edge_count as f32 / possible_edges
+    }
+
+    fn write_communities(
+        &self,
+        community_nodes_out: &mut [u64],
+        community_spans_out: &mut [CommunitySpan],
+    ) -> Result<usize, GraphAnalysisError> {
+        let mut visited = [false; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        let mut stack = [0usize; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        let mut nodes_written = 0usize;
+        let mut communities_written = 0usize;
+
+        for start in 0..self.node_count {
+            if visited[start] {
+                continue;
+            }
+            if communities_written >= community_spans_out.len() {
+                return Err(GraphAnalysisError::OutputBufferFull);
+            }
+            let span_start = nodes_written;
+            let mut stack_len = 0usize;
+            stack[stack_len] = start;
+            stack_len += 1;
+            visited[start] = true;
+
+            while stack_len > 0 {
+                stack_len -= 1;
+                let node = stack[stack_len];
+                if nodes_written >= community_nodes_out.len() {
+                    return Err(GraphAnalysisError::OutputBufferFull);
+                }
+                community_nodes_out[nodes_written] = self.node_ids[node];
+                nodes_written += 1;
+
+                for neighbor in 0..self.node_count {
+                    let linked = self.adjacency[node][neighbor] != 0 || self.adjacency[neighbor][node] != 0;
+                    if linked && !visited[neighbor] {
+                        visited[neighbor] = true;
+                        stack[stack_len] = neighbor;
+                        stack_len += 1;
+                    }
+                }
+            }
+
+            community_spans_out[communities_written] = CommunitySpan {
+                start: span_start as u16,
+                len: (nodes_written - span_start) as u16,
+            };
+            communities_written += 1;
+        }
+
+        Ok(communities_written)
+    }
+
+    fn write_motifs(&self, motifs_out: &mut [MotifRecord]) -> Result<usize, GraphAnalysisError> {
+        let mut written = 0usize;
+
+        for a in 0..self.node_count {
+            for b in 0..self.node_count {
+                if self.adjacency[a][b] == 0 {
+                    continue;
+                }
+                for c in 0..self.node_count {
+                    if c == a || self.adjacency[b][c] == 0 || self.adjacency[c][a] == 0 {
+                        continue;
+                    }
+
+                    let mut canonical = [self.node_ids[a], self.node_ids[b], self.node_ids[c]];
+                    canonical.sort_unstable();
+                    if motifs_out[..written].iter().any(|m| {
+                        let mut existing = [m.node_a, m.node_b, m.node_c];
+                        existing.sort_unstable();
+                        existing == canonical
+                    }) {
+                        continue;
+                    }
+
+                    if written >= motifs_out.len() {
+                        return Err(GraphAnalysisError::OutputBufferFull);
+                    }
+                    motifs_out[written] = MotifRecord {
+                        pattern: MotifPattern::Triangle,
+                        node_a: self.node_ids[a],
+                        node_b: self.node_ids[b],
+                        node_c: self.node_ids[c],
+                        frequency: 1.0,
+                    };
+                    written += 1;
+                }
+            }
+        }
+
+        Ok(written)
+    }
+
+    fn write_top_nodes(&self, out: &mut [TopNodeScore]) -> usize {
+        let count = out.len().min(self.node_count);
+        if count == 0 {
+            return 0;
+        }
+
+        let mut scratch = [TopNodeScore {
+            node_id: 0,
+            centrality_score: f32::MIN,
+        }; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        for i in 0..self.node_count {
+            scratch[i] = TopNodeScore {
+                node_id: self.node_ids[i],
+                centrality_score: self.centrality_scores[i],
+            };
+        }
+        scratch[..self.node_count].sort_by(|a, b| {
+            b.centrality_score
+                .partial_cmp(&a.centrality_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        out[..count].copy_from_slice(&scratch[..count]);
+        count
+    }
+
+    fn write_graph_quins(
+        &self,
+        context: u64,
+        out: &mut [NQuin],
+    ) -> Result<usize, GraphAnalysisError> {
+        if out.len() < self.node_count {
+            return Err(GraphAnalysisError::OutputBufferFull);
+        }
+
+        for i in 0..self.node_count {
+            let mut quin = NQuin {
+                subject: self.node_ids[i],
+                predicate: crate::q_hash("has_centrality_score"),
+                object: (self.centrality_scores[i] as f64 * 1000.0) as u64,
+                context,
+                metadata: self.degrees[i] as u64,
+                parity: 0,
+            };
+            quin.parity = quin.subject ^ quin.predicate ^ quin.object ^ quin.context;
+            out[i] = quin;
+        }
+
+        Ok(self.node_count)
+    }
+}
+
+/// Zero-heap topology analysis aligned with the 10D tensor hot-path constraints.
+pub fn analyze_graph_topology_bounded(
+    quins: &[NQuin],
+    context: u64,
+    graph_quins_out: &mut [NQuin],
+    community_nodes_out: &mut [u64],
+    community_spans_out: &mut [CommunitySpan],
+    motifs_out: &mut [MotifRecord],
+    top_nodes_out: &mut [TopNodeScore],
+) -> Result<BoundedGraphAnalysisSummary, GraphAnalysisError> {
+    if quins.len() > MAX_HEAP_GRAPH_ANALYSIS_QUINS {
+        return Err(GraphAnalysisError::InputTooLarge);
+    }
+
+    let mut graph = BoundedQualiaGraph::from_quins(quins)?;
+    graph.calculate_betweenness_centrality();
+
+    let graph_quin_count = graph.write_graph_quins(context, graph_quins_out)?;
+    let community_count = graph.write_communities(community_nodes_out, community_spans_out)?;
+    let motif_count = graph.write_motifs(motifs_out)?;
+    let top_node_count = graph.write_top_nodes(top_nodes_out);
+
+    Ok(BoundedGraphAnalysisSummary {
+        density: graph.density(),
+        node_count: graph.node_count as u16,
+        edge_count: graph.edge_count as u16,
+        community_count: community_count as u16,
+        motif_count: motif_count as u16,
+        top_node_count: top_node_count as u16,
+        graph_quin_count: graph_quin_count as u16,
+    })
 }
 
 /// Graph structure built from NQuin relations
@@ -346,7 +694,7 @@ impl QualiaGraph {
 }
 
 /// Motif pattern types
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MotifPattern {
     Triangle,
     Chain,
@@ -536,5 +884,46 @@ mod tests {
         let result = analyze_graph_topology(&quins, 100);
 
         assert!(matches!(result, Err(GraphAnalysisError::InputTooLarge)));
+    }
+
+    #[test]
+    fn test_bounded_graph_analysis_zero_heap_path() {
+        let quins = vec![
+            NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
+            NQuin { subject: 3, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
+        ];
+        let mut graph_quins = [NQuin::default(); 16];
+        let mut community_nodes = [0u64; 16];
+        let mut community_spans = [CommunitySpan { start: 0, len: 0 }; 8];
+        let mut motifs = [MotifRecord {
+            pattern: MotifPattern::Triangle,
+            node_a: 0,
+            node_b: 0,
+            node_c: 0,
+            frequency: 0.0,
+        }; 8];
+        let mut top_nodes = [TopNodeScore {
+            node_id: 0,
+            centrality_score: 0.0,
+        }; 8];
+
+        let summary = analyze_graph_topology_bounded(
+            &quins,
+            100,
+            &mut graph_quins,
+            &mut community_nodes,
+            &mut community_spans,
+            &mut motifs,
+            &mut top_nodes,
+        )
+        .unwrap();
+
+        assert_eq!(summary.node_count, 3);
+        assert_eq!(summary.edge_count, 3);
+        assert_eq!(summary.community_count, 1);
+        assert_eq!(summary.motif_count, 1);
+        assert!(summary.top_node_count >= 1);
+        assert!(summary.density > 0.0);
     }
 }

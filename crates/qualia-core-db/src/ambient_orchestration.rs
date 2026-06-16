@@ -4,7 +4,6 @@
 //! using NNAPI/CoreML integration. Designed for edge optimization and power-efficient processing.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
@@ -30,7 +29,7 @@ pub struct AmbientDevice {
 }
 
 /// Device types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum DeviceType {
     Mobile,
     Tablet,
@@ -71,7 +70,7 @@ pub enum Framework {
 }
 
 /// Device state
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum DeviceState {
     Active,
     Idle,
@@ -418,7 +417,7 @@ pub struct Task {
 }
 
 /// Task types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum TaskType {
     NeuralInference,
     ModelTraining,
@@ -428,7 +427,7 @@ pub enum TaskType {
 }
 
 /// Task priorities
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum TaskPriority {
     Low,
     Normal,
@@ -507,6 +506,24 @@ pub struct AmbientGlobalMetrics {
     pub device_utilization: f64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AmbientDeviceHandle {
+    pub device_id_hash: u64,
+    pub device_type: DeviceType,
+    pub compute_units: u32,
+    pub memory_size: u64,
+    pub state: DeviceState,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TaskHandle {
+    pub task_id_hash: u64,
+    pub task_type: TaskType,
+    pub priority: TaskPriority,
+    pub compute_units: u32,
+    pub memory: u64,
+}
+
 impl AmbientOrchestrationManager {
     /// Create new ambient orchestration manager
     pub fn new() -> Self {
@@ -532,10 +549,32 @@ impl AmbientOrchestrationManager {
 
     /// Discover ambient devices using sysinfo to enumerate real local hardware.
     pub fn discover_devices(&mut self) -> Result<Vec<String>, AmbientError> {
+        let mut handles = [AmbientDeviceHandle {
+            device_id_hash: 0,
+            device_type: DeviceType::Embedded,
+            compute_units: 0,
+            memory_size: 0,
+            state: DeviceState::Offline,
+        }; 9];
+        let written = self.discover_devices_into(&mut handles)?;
+        let mut discovered = Vec::with_capacity(written);
+        for handle in handles.into_iter().take(written) {
+            if handle.device_id_hash == crate::q_hash("local_host") {
+                discovered.push("local_host".to_string());
+            } else {
+                discovered.push(format!("cpu_core_{}", discovered.len().saturating_sub(1)));
+            }
+        }
+        Ok(discovered)
+    }
+
+    /// Zero-heap device discovery snapshots for hot-path schedulers.
+    pub fn discover_devices_into(&mut self, out: &mut [AmbientDeviceHandle]) -> Result<usize, AmbientError> {
         use sysinfo::System;
 
         let sys = System::new_all();
-        let mut discovered = Vec::new();
+        let mut discovered = 0usize;
+        self.devices.clear();
 
         let cpus = sys.cpus();
         let cpu_count = cpus.len().max(1);
@@ -578,7 +617,11 @@ impl AmbientOrchestrationManager {
             },
         };
         if self.register_device(host).is_ok() {
-            discovered.push(host_id);
+            if discovered >= out.len() {
+                return Err(AmbientError::InsufficientResources("device output buffer full".to_string()));
+            }
+            out[discovered] = self.snapshot_device_handle("local_host").unwrap();
+            discovered += 1;
         }
 
         // Register up to 8 individual logical CPU cores for fine-grained scheduling
@@ -613,7 +656,11 @@ impl AmbientOrchestrationManager {
                 },
             };
             if self.register_device(core).is_ok() {
-                discovered.push(core_id);
+                if discovered >= out.len() {
+                    return Err(AmbientError::InsufficientResources("device output buffer full".to_string()));
+                }
+                out[discovered] = self.snapshot_device_handle(&core_id).unwrap();
+                discovered += 1;
             }
         }
 
@@ -633,11 +680,25 @@ impl AmbientOrchestrationManager {
 
     /// Execute neural inference task
     pub fn execute_neural_inference(&mut self, device_id: &str, model_data: &[u8], input_data: &[u8]) -> Result<Vec<u8>, AmbientError> {
+        let mut out = vec![0u8; 1024];
+        let written = self.execute_neural_inference_into(device_id, model_data, input_data, &mut out)?;
+        out.truncate(written);
+        Ok(out)
+    }
+
+    /// Zero-heap neural inference API using caller-owned output storage.
+    pub fn execute_neural_inference_into(
+        &mut self,
+        device_id: &str,
+        model_data: &[u8],
+        input_data: &[u8],
+        out: &mut [u8],
+    ) -> Result<usize, AmbientError> {
         // Clone device to release the borrow on self.devices before calling the helper
         let device = self.devices.get(device_id)
             .ok_or_else(|| AmbientError::DeviceNotFound(device_id.to_string()))?
             .clone();
-        self.execute_inference_on_device(&device, model_data, input_data)
+        self.execute_inference_on_device(&device, model_data, input_data, out)
     }
 
     /// Execute sub-threshold computation
@@ -672,9 +733,26 @@ impl AmbientOrchestrationManager {
         self.devices.keys().cloned().collect()
     }
 
+    pub fn list_devices_into(&self, out: &mut [AmbientDeviceHandle]) -> Result<usize, AmbientError> {
+        if out.len() < self.devices.len() {
+            return Err(AmbientError::InsufficientResources("device output buffer full".to_string()));
+        }
+
+        let mut written = 0usize;
+        for device_id in self.devices.keys() {
+            out[written] = self.snapshot_device_handle(device_id).unwrap();
+            written += 1;
+        }
+        Ok(written)
+    }
+
     /// Get pending tasks
     pub fn get_pending_tasks(&self) -> Vec<Task> {
         self.task_scheduler.get_pending_tasks()
+    }
+
+    pub fn get_pending_tasks_into(&self, out: &mut [TaskHandle]) -> Result<usize, AmbientError> {
+        self.task_scheduler.get_pending_tasks_into(out)
     }
 
     /// Optimize orchestration policy
@@ -720,13 +798,17 @@ impl AmbientOrchestrationManager {
     }
 
     /// Execute inference on device
-    fn execute_inference_on_device(&self, device: &AmbientDevice, model_data: &[u8], input_data: &[u8]) -> Result<Vec<u8>, AmbientError> {
+    fn execute_inference_on_device(&self, device: &AmbientDevice, model_data: &[u8], input_data: &[u8], out: &mut [u8]) -> Result<usize, AmbientError> {
         // In real implementation, would use NNAPI/CoreML for inference
         // For now, simulate inference
+        let _ = (device, model_data, input_data);
         thread::sleep(Duration::from_millis(100)); // Simulate 100ms inference
-        
-        // Return dummy result
-        Ok(vec![0u8; 1024])
+
+        if out.len() < 1024 {
+            return Err(AmbientError::InsufficientResources("inference output buffer too small".to_string()));
+        }
+        out[..1024].fill(0);
+        Ok(1024)
     }
 
     /// Execute computation on device
@@ -740,6 +822,16 @@ impl AmbientOrchestrationManager {
             execution_time: Duration::from_millis(50),
             power_consumed: 0.1,
             thermal_impact: 0.5,
+        })
+    }
+
+    fn snapshot_device_handle(&self, device_id: &str) -> Option<AmbientDeviceHandle> {
+        self.devices.get(device_id).map(|device| AmbientDeviceHandle {
+            device_id_hash: crate::q_hash(&device.device_id),
+            device_type: device.device_type.clone(),
+            compute_units: device.capabilities.compute_units,
+            memory_size: device.capabilities.memory_size,
+            state: device.current_state.clone(),
         })
     }
 }
@@ -839,6 +931,24 @@ impl TaskScheduler {
     /// Get pending tasks
     pub fn get_pending_tasks(&self) -> Vec<Task> {
         self.task_queue.pending_tasks.clone()
+    }
+
+    pub fn get_pending_tasks_into(&self, out: &mut [TaskHandle]) -> Result<usize, AmbientError> {
+        if out.len() < self.task_queue.pending_tasks.len() {
+            return Err(AmbientError::InsufficientResources("task output buffer full".to_string()));
+        }
+
+        for (index, task) in self.task_queue.pending_tasks.iter().enumerate() {
+            out[index] = TaskHandle {
+                task_id_hash: crate::q_hash(&task.task_id),
+                task_type: task.task_type.clone(),
+                priority: task.priority.clone(),
+                compute_units: task.resource_requirements.compute_units,
+                memory: task.resource_requirements.memory,
+            };
+        }
+
+        Ok(self.task_queue.pending_tasks.len())
     }
 }
 
