@@ -1,4 +1,4 @@
-//! WASM-bindgen API surface — exposes Qualia engine functions to JavaScript.
+﻿//! WASM-bindgen API surface — exposes Qualia engine functions to JavaScript.
 //!
 //! All functions are `#[cfg(target_arch = "wasm32")]` and only compiled into
 //! the browser/OPFS build.  Native desktop builds use direct Rust FFI.
@@ -496,10 +496,7 @@ pub fn validate_shacl_constraint_wasm(val: JsValue) -> Result<JsValue, JsValue> 
     let shape = compiler.compile(
         crate::modalities::logic::shacl::ShaclTarget::TargetNode("wasm:target".to_string()),
         "wasm:property",
-        crate::modalities::logic::shacl::ShaclCompiler::parse_constraint_pub(
-            &p.constraint_type,
-            p.value as f32,
-        ),
+        match p.constraint_type.as_str() { "minInclusive" => crate::modalities::logic::shacl::ShaclConstraint::MinInclusive(p.value), "maxInclusive" => crate::modalities::logic::shacl::ShaclConstraint::MaxInclusive(p.value), "minExclusive" => crate::modalities::logic::shacl::ShaclConstraint::MinExclusive(p.value), "maxExclusive" => crate::modalities::logic::shacl::ShaclConstraint::MaxExclusive(p.value), "minCount" => crate::modalities::logic::shacl::ShaclConstraint::MinCount(p.value as u32), "maxCount" => crate::modalities::logic::shacl::ShaclConstraint::MaxCount(p.value as u32), "minLength" => crate::modalities::logic::shacl::ShaclConstraint::MinLength(p.value as u32), "maxLength" => crate::modalities::logic::shacl::ShaclConstraint::MaxLength(p.value as u32), _ => crate::modalities::logic::shacl::ShaclConstraint::MinInclusive(p.value), },
         crate::modalities::logic::shacl::ShaclSeverity::Violation,
     );
     let passes = shape.evaluate_numeric(p.target_value);
@@ -1353,14 +1350,14 @@ pub struct JsonParseParams {
 #[cfg(target_arch = "wasm32")]
 #[derive(Deserialize)]
 pub struct JsonFieldMapping {
-    pub json_key: String,
+    pub source_key: String,
     pub predicate_hash: u64,
     pub datatype: String, // "integer", "float", "datetime", "string"
 }
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn parse_json_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+pub fn parse_json_mapping_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     use crate::sparql_library::parsers::json_parser::{JsonMappingProfile, JsonFieldMapping as CoreJsonFieldMapping, JsonDatatype, parse_json_to_quins};
     use std::io::Cursor;
     
@@ -1369,7 +1366,7 @@ pub fn parse_json_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let profile = JsonMappingProfile {
         base_class_hash: p.base_class_hash,
         fields: p.field_mappings.iter().map(|f| CoreJsonFieldMapping {
-            json_key: f.json_key.clone(),
+            source_key: f.source_key.clone(),
             predicate_hash: f.predicate_hash,
             datatype: match f.datatype.as_str() {
                 "integer" => JsonDatatype::Integer,
@@ -1430,7 +1427,7 @@ pub fn serialize_csv_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     }).collect();
     
     let profile = CsvSerializationProfile {
-        field_names: p.field_names,
+        headers: p.field_names,
         predicate_hashes: p.predicate_hashes,
         datatypes: p.datatypes.iter().map(|d| match d.as_str() {
             "integer" => CoreCsvDatatype::Integer,
@@ -1554,6 +1551,7 @@ pub fn serialize_rdf_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         rdf_data: String::from_utf8(rdf_output).map_err(|e| JsValue::from_str(&e.to_string()))?,
     })?)
 }
+
 
 
 
