@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "source": "bundled/ontologies/w3c",
+  "license": "W3C",
+  "ontologies": [
+    { "file": "skos.ttl", "id": "w3c-skos", "label": "SKOS Core", "icon": "🏷️", "prefix": "skos", "namespace": "http://www.w3.org/2004/02/skos/core#", "defaultSearch": "Concept", "quickExamples": ["Concept", "ConceptScheme", "prefLabel", "broader", "narrower"] },
+    { "file": "shacl.ttl", "id": "w3c-shacl", "label": "SHACL", "icon": "✅", "prefix": "sh", "namespace": "http://www.w3.org/ns/shacl#", "defaultSearch": "Shape", "quickExamples": ["Shape", "NodeShape", "PropertyShape", "targetClass", "path"] },
+    { "file": "prov.ttl", "id": "w3c-prov", "label": "PROV-O", "icon": "📜", "prefix": "prov", "namespace": "http://www.w3.org/ns/prov#", "defaultSearch": "Activity", "quickExamples": ["Activity", "Agent", "Entity", "wasGeneratedBy", "wasAttributedTo"] },
+    { "file": "odrl.ttl", "id": "w3c-odrl", "label": "ODRL", "icon": "⚖️", "prefix": "odrl", "namespace": "http://www.w3.org/ns/odrl/2/", "defaultSearch": "Policy", "quickExamples": ["Policy", "Permission", "Prohibition", "Duty", "target"] },
+    { "file": "dcat.ttl", "id": "w3c-dcat", "label": "DCAT", "icon": "📂", "prefix": "dcat", "namespace": "http://www.w3.org/ns/dcat#", "defaultSearch": "Dataset", "quickExamples": ["Dataset", "Distribution", "Catalog", "theme", "keyword"] },
+    { "file": "org.ttl", "id": "w3c-org", "label": "ORG", "icon": "🏢", "prefix": "org", "namespace": "http://www.w3.org/ns/org#", "defaultSearch": "Organization", "quickExamples": ["Organization", "FormalOrganization", "Membership", "Role", "site"] },
+    { "file": "sosa.ttl", "id": "w3c-sosa", "label": "SOSA", "icon": "📡", "prefix": "sosa", "namespace": "http://www.w3.org/ns/sosa/", "defaultSearch": "Sensor", "quickExamples": ["Sensor", "Observation", "Platform", "FeatureOfInterest", "observedProperty"] },
+    { "file": "ssn.ttl", "id": "w3c-ssn", "label": "SSN", "icon": "🌡️", "prefix": "ssn", "namespace": "http://www.w3.org/ns/ssn/", "defaultSearch": "FeatureOfInterest", "quickExamples": ["FeatureOfInterest", "Observation", "Sensor", "Property", "hasProperty"] },
+    { "file": "owl.ttl", "id": "w3c-owl", "label": "OWL", "icon": "🦉", "prefix": "owl", "namespace": "http://www.w3.org/2002/07/owl#", "defaultSearch": "Class", "quickExamples": ["Class", "ObjectProperty", "DatatypeProperty", "Restriction", "equivalentClass"] },
+    { "file": "rdf.ttl", "id": "w3c-rdf", "label": "RDF", "icon": "🔗", "prefix": "rdf", "namespace": "http://www.w3.org/1999/02/22-rdf-syntax-ns#", "defaultSearch": "type", "quickExamples": ["type", "Property", "List", "first", "rest"] },
+    { "file": "rdfs.ttl", "id": "w3c-rdfs", "label": "RDFS", "icon": "📖", "prefix": "rdfs", "namespace": "http://www.w3.org/2000/01/rdf-schema#", "defaultSearch": "label", "quickExamples": ["label", "comment", "subClassOf", "domain", "range"] },
+    { "file": "time.ttl", "id": "w3c-time", "label": "OWL-Time", "icon": "🕐", "prefix": "time", "namespace": "http://www.w3.org/2006/time#", "defaultSearch": "Instant", "quickExamples": ["Instant", "Interval", "DateTime", "Duration", "hasBeginning"] },
+    { "file": "vcard.ttl", "id": "w3c-vcard", "label": "vCard RDF", "icon": "👤", "prefix": "vcard", "namespace": "http://www.w3.org/2006/vcard/ns#", "defaultSearch": "Person", "quickExamples": ["Person", "Organization", "Email", "Tel", "fn"] },
+    { "file": "geo.ttl", "id": "w3c-geo", "label": "W3C Basic Geo", "icon": "🌍", "prefix": "geo", "namespace": "http://www.w3.org/2003/01/geo/wgs84_pos#", "defaultSearch": "Point", "quickExamples": ["Point", "lat", "long", "location", "SpatialThing"] },
+    { "file": "wgs84_pos.ttl", "id": "w3c-wgs84", "label": "WGS84 Position", "icon": "📍", "prefix": "geo", "namespace": "http://www.w3.org/2003/01/geo/wgs84_pos#", "defaultSearch": "Point", "quickExamples": ["Point", "lat", "long", "location"] },
+    { "file": "csvw.ttl", "id": "w3c-csvw", "label": "CSVW", "icon": "📊", "prefix": "csvw", "namespace": "http://www.w3.org/ns/csvw#", "defaultSearch": "Table", "quickExamples": ["Table", "Column", "Schema", "Row", "cells"] },
+    { "file": "http.ttl", "id": "w3c-http", "label": "HTTP in RDF", "icon": "🌐", "prefix": "http", "namespace": "http://www.w3.org/2011/http#", "defaultSearch": "Connection", "quickExamples": ["Connection", "Request", "Response", "Method", "StatusCode"] },
+    { "file": "httpcodes.ttl", "id": "w3c-httpcodes", "label": "HTTP Status Codes", "icon": "🔢", "prefix": "codes", "namespace": "http://www.w3.org/2011/http-statusCodes#", "defaultSearch": "NotFound", "quickExamples": ["NotFound", "OK", "InternalServerError", "MovedPermanently"] },
+    { "file": "ical.ttl", "id": "w3c-ical", "label": "iCalendar RDF", "icon": "📅", "prefix": "ical", "namespace": "http://www.w3.org/2002/12/cal/icaltzd#", "defaultSearch": "Vevent", "quickExamples": ["Vevent", "Vcalendar", "dtstart", "summary", "location"] },
+    { "file": "flow.ttl", "id": "w3c-flow", "label": "FLOW", "icon": "🔀", "prefix": "flow", "namespace": "http://www.w3.org/2005/01/wf/flow#", "defaultSearch": "Task", "quickExamples": ["Task", "Flow", "Action", "output", "input"] },
+    { "file": "rdfa.ttl", "id": "w3c-rdfa", "label": "RDFa", "icon": "📄", "prefix": "rdfa", "namespace": "http://www.w3.org/ns/rdfa#", "defaultSearch": "usesVocabulary", "quickExamples": ["usesVocabulary", "prefixMapping", "Processor", "defaultVocabulary"] },
+    { "file": "xsd.ttl", "id": "w3c-xsd", "label": "XSD", "icon": "🔣", "prefix": "xsd", "namespace": "http://www.w3.org/2001/XMLSchema#", "defaultSearch": "string", "quickExamples": ["string", "integer", "dateTime", "boolean", "decimal"] },
+    { "file": "meeting.ttl", "id": "w3c-meeting", "label": "Meeting Ontology", "icon": "🤝", "prefix": "meeting", "namespace": "http://www.w3.org/2002/12/cal/ical-ad#", "defaultSearch": "Meeting", "quickExamples": ["Meeting", "Participant", "Agenda", "minutes"] },
+    { "file": "timezone.ttl", "id": "w3c-timezone", "label": "Timezone", "icon": "🌐", "prefix": "tz", "namespace": "http://www.w3.org/2006/timezone#", "defaultSearch": "Timezone", "quickExamples": ["Timezone", "Standard", "Daylight", "tzid"] }
+  ]
+}

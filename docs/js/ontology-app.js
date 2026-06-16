@@ -88,6 +88,47 @@ const UI_PROFILES = {
         defaultSearch: 'Person',
         ingestNote: 'bash scripts/prepare_schemaorg_benchmark.sh 30.0 current-https',
     },
+    w3c: {
+        title: 'W3C Vocabulary',
+        subtitle: 'W3C Semantic Web ontologies from bundled TTL sources',
+        searchLabel: 'Search Term or Class',
+        searchPlaceholder: 'e.g., Concept, Shape, Activity',
+        searchButton: 'Lookup Term',
+        stat1: 'Lexicon Entries',
+        stat2: 'Est. Terms',
+        stat3: 'Relation Types',
+        stat4: 'Superclass Depth',
+        categoryTitle: 'Vocabulary Browser',
+        categories: [
+            { id: 'terms', label: 'Key Terms', icon: 'fa-star', color: 'blue' },
+            { id: 'classes', label: 'Classes', icon: 'fa-shapes', color: 'emerald' },
+            { id: 'properties', label: 'Properties', icon: 'fa-tag', color: 'purple' },
+        ],
+        quickExamples: ['Concept', 'Shape', 'Activity', 'Dataset', 'Sensor'],
+        graphPlaceholder: 'Enter class or property to visualize',
+        graphToggles: [
+            { id: 'show-superclass', label: 'Superclasses', key: 'superClass', color: '#3b82f6', default: true },
+            { id: 'show-subclasses', label: 'Subclasses', key: 'subClasses', color: '#10b981', default: true },
+            { id: 'show-domains', label: 'Domains', key: 'domains', color: '#8b5cf6', default: true },
+            { id: 'show-labels', label: 'Labels', key: 'labels', color: '#ec4899', default: false },
+        ],
+        relationMap: [
+            ['superClass', 'Superclass', 'relation-hypernym'],
+            ['subClasses', 'Subclasses', 'relation-hyponym'],
+            ['domains', 'Domains', 'relation-synonym'],
+            ['ranges', 'Ranges', 'relation-similar'],
+            ['labels', 'Labels', 'relation-part'],
+            ['definitions', 'Definitions', 'relation-part'],
+        ],
+        sparqlExamples: [
+            { id: 'type', label: 'Inspect a term', icon: 'purple' },
+            { id: 'subclass', label: 'Subclass BGP', icon: 'blue' },
+            { id: 'label', label: 'Label lookup', icon: 'emerald' },
+            { id: 'wildcard', label: 'Wildcard BGP', icon: 'amber' },
+        ],
+        defaultSearch: 'Concept',
+        ingestNote: 'bash scripts/prepare_w3c_ontologies.sh',
+    },
 };
 
 const SPARQL_TEMPLATES = {
@@ -124,9 +165,49 @@ SELECT ?super WHERE {
   ?s ?p ?o
 }`,
     },
+    w3c: {
+        type: `SELECT ?p ?o WHERE {
+  <http://www.w3.org/2004/02/skos/core#Concept> ?p ?o
+}`,
+        subclass: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?super WHERE {
+  <http://www.w3.org/2004/02/skos/core#Concept> rdfs:subClassOf ?super .
+}`,
+        label: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?s ?label WHERE {
+  ?s rdfs:label ?label .
+}`,
+        wildcard: `SELECT ?s ?p ?o WHERE {
+  ?s ?p ?o
+}`,
+    },
 };
 
 function $(id) { return document.getElementById(id); }
+
+function datasetUiHints() {
+    const ds = engine.activeDataset ?? {};
+    const base = ui();
+    return {
+        ...base,
+        title: ds.label ?? base.title,
+        quickExamples: ds.quickExamples?.length ? ds.quickExamples : base.quickExamples,
+        defaultSearch: ds.defaultSearch ?? base.defaultSearch,
+    };
+}
+
+function w3cSparqlTemplates() {
+    const ds = engine.activeDataset ?? {};
+    const term = ds.defaultSearch ?? 'Resource';
+    const iri = engine.normalizeIri(term);
+    const fullIri = iri.startsWith('http') ? iri : `${ds.namespace ?? ''}${term}`;
+    return {
+        type: `SELECT ?p ?o WHERE {\n  <${fullIri}> ?p ?o\n}`,
+        subclass: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nSELECT ?super WHERE {\n  <${fullIri}> rdfs:subClassOf ?super .\n}`,
+        label: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nSELECT ?s ?label WHERE {\n  ?s rdfs:label "${term}" .\n}`,
+        wildcard: `SELECT ?s ?p ?o WHERE {\n  ?s ?p ?o\n}`,
+    };
+}
 
 function ui() {
     return UI_PROFILES[engine.profile] ?? UI_PROFILES.wordnet;
@@ -190,10 +271,13 @@ function renderDatasetPicker() {
     const container = $('dataset-picker');
     if (!container || !engine.datasets.length) return;
 
-    container.innerHTML = engine.datasets.map(d => {
+    const primary = engine.datasets.filter(d => d.group !== 'w3c');
+    const w3c = engine.datasets.filter(d => d.group === 'w3c');
+
+    const card = (d) => {
         const active = d.id === engine.activeDataset?.id;
         const profile = d.profile ?? 'wordnet';
-        const icon = d.icon ?? (profile === 'schemaorg' ? '🌐' : '📚');
+        const icon = d.icon ?? (profile === 'schemaorg' ? '🌐' : profile === 'w3c' ? '📘' : '📚');
         return `
             <button type="button"
                 class="dataset-btn flex-1 min-w-[140px] px-4 py-3 rounded-2xl text-left transition-all ${active
@@ -204,15 +288,41 @@ function renderDatasetPicker() {
                 <div class="text-sm font-semibold">${esc(d.label ?? d.id)}</div>
                 <div class="text-xs text-white/50 mt-0.5">${esc(d.description?.slice(0, 72) ?? profile)}</div>
             </button>`;
-    }).join('');
+    };
+
+    let html = `<div class="flex flex-wrap gap-3 w-full">${primary.map(card).join('')}</div>`;
+
+    if (w3c.length) {
+        const activeId = engine.activeDataset?.id ?? '';
+        html += `
+            <div class="glass-strong rounded-2xl p-4 w-full mt-1">
+                <div class="text-xs text-white/60 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-blue-400"></i>
+                    <span>W3C Ontologies (${w3c.length})</span>
+                </div>
+                <select id="w3c-select" class="w-full bg-zinc-900 border border-white/20 rounded-xl px-3 py-2 text-sm">
+                    <option value="">Select a W3C vocabulary…</option>
+                    ${w3c.map(d => `<option value="${esc(d.id)}" ${d.id === activeId ? 'selected' : ''}>${d.icon ?? '📘'} ${esc(d.label ?? d.id)}</option>`).join('')}
+                </select>
+            </div>`;
+    }
+
+    container.innerHTML = html;
 
     container.querySelectorAll('.dataset-btn').forEach(btn => {
         btn.addEventListener('click', () => switchDataset(btn.dataset.dataset));
     });
+
+    const w3cSelect = $('w3c-select');
+    if (w3cSelect) {
+        w3cSelect.addEventListener('change', () => {
+            if (w3cSelect.value) switchDataset(w3cSelect.value);
+        });
+    }
 }
 
 function applyProfileUi() {
-    const p = ui();
+    const p = datasetUiHints();
     $('page-title').textContent = 'Ontology Demo';
     $('page-subtitle').innerHTML = `
         Browse <strong>${esc(p.title)}</strong> and other mounted vocabularies live in your browser via
@@ -279,9 +389,10 @@ async function switchDataset(datasetId) {
         applyProfileUi();
         updateStats(stats);
         setStatus(`${stats.label} · ${stats.blocks.toLocaleString()} blocks · WASM ready`);
-        showSparqlExample(ui().sparqlExamples[0]?.id ?? 'wildcard');
-        $('entity-search').value = ui().defaultSearch;
-        $('graph-term').value = ui().defaultSearch;
+        const hints = datasetUiHints();
+        showSparqlExample(hints.sparqlExamples[0]?.id ?? 'wildcard');
+        $('entity-search').value = hints.defaultSearch;
+        $('graph-term').value = hints.defaultSearch;
         $('category-words').innerHTML = '<div class="text-xs text-white/60 text-center py-4">Select a category to browse samples</div>';
         $('entity-result').classList.add('hidden');
         await lookupEntity();
@@ -349,13 +460,17 @@ window.filterByCategory = async function filterByCategory(category, btn) {
     const rows = [];
     for (const sample of samples) {
         let found = false;
-        if (engine.profile === 'schemaorg') {
+        if (engine.profile === 'schemaorg' || engine.profile === 'w3c') {
             const iri = engine.normalizeIri(sample);
             const hit = await engine.query(`<${iri}> ?p ?o`, 1);
             found = hit.matches.length > 0;
             if (!found) {
                 const labelHit = await engine.query(`?s ?p "${sample}"`, 1);
                 found = labelHit.matches.length > 0;
+            }
+            if (!found) {
+                const rdfsHit = await engine.query(`?s <http://www.w3.org/2000/01/rdf-schema#label> "${sample}"`, 1);
+                found = rdfsHit.matches.length > 0;
             }
         } else {
             const hit = await engine.query(`?s ?p "${sample}"`, 1);
@@ -372,7 +487,9 @@ window.filterByCategory = async function filterByCategory(category, btn) {
 };
 
 window.showSparqlExample = function showSparqlExample(kind) {
-    const templates = SPARQL_TEMPLATES[engine.profile] ?? SPARQL_TEMPLATES.wordnet;
+    const templates = engine.profile === 'w3c'
+        ? w3cSparqlTemplates()
+        : (SPARQL_TEMPLATES[engine.profile] ?? SPARQL_TEMPLATES.wordnet);
     const query = templates[kind] ?? templates.wildcard;
     $('sparql-output').classList.remove('hidden');
     $('sparql-code').textContent = query;
@@ -502,9 +619,10 @@ async function boot() {
         applyProfileUi();
         updateStats(stats);
         setStatus(`${stats.label} · ${stats.blocks.toLocaleString()} blocks · WASM ready`);
-        showSparqlExample(ui().sparqlExamples[0]?.id ?? 'wildcard');
-        $('entity-search').value = ui().defaultSearch;
-        $('graph-term').value = ui().defaultSearch;
+        const hints = datasetUiHints();
+        showSparqlExample(hints.sparqlExamples[0]?.id ?? 'wildcard');
+        $('entity-search').value = hints.defaultSearch;
+        $('graph-term').value = hints.defaultSearch;
         await lookupEntity();
     } catch (e) {
         console.error(e);

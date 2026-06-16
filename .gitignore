@@ -22,6 +22,11 @@
 !docs/data/schemaorg/**/*.q42.lex
 !docs/data/schemaorg/**/*.q42.bidx
 
+# Ontology demo — W3C volumes under docs/data/w3c (CI + local)
+!docs/data/w3c/**/*.q42
+!docs/data/w3c/**/*.q42.lex
+!docs/data/w3c/**/*.q42.bidx
+
 # Claude Code session files (dev-machine only)
 .claude/
 

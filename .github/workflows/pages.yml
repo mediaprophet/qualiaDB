@@ -77,6 +77,12 @@ jobs:
           bash scripts/fetch_wordnet.sh --subset 100000 --playground
           ls -lh docs/playground/wordnet.q42
 
+      - name: Build W3C ontology volumes for Ontology Demo
+        continue-on-error: true
+        run: |
+          bash scripts/prepare_w3c_ontologies.sh
+          ls -lh docs/data/w3c/*.q42 | head
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:

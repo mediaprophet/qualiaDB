@@ -6,8 +6,8 @@
       "id": "wordnet",
       "profile": "wordnet",
       "label": "Open English WordNet 2025",
-      "icon": "📚",
-      "description": "OEWN 2025 edition · CC-BY 4.0 · GitHub Pages serves a 100k-triple CI subset; run scripts/fetch_wordnet.sh locally for the full graph",
+      "icon": "\ud83d\udcda",
+      "description": "OEWN 2025 edition \u00b7 CC-BY 4.0 \u00b7 GitHub Pages serves a 100k-triple CI subset; run scripts/fetch_wordnet.sh locally for the full graph",
       "url": "wordnet.q42",
       "lexUrl": "wordnet.q42.lex.lz4",
       "bidxUrl": "wordnet.q42.bidx",
@@ -16,19 +16,34 @@
       "license": "CC-BY 4.0",
       "homepage": "https://wordnet.princeton.edu",
       "sampleQueries": [
-        { "label": "Find 'dog'",      "pattern": "?s ?p \"dog\"" },
-        { "label": "Find 'cat'",      "pattern": "?s ?p \"cat\"" },
-        { "label": "Find 'computer'", "pattern": "?s ?p \"computer\"" },
-        { "label": "Find 'water'",    "pattern": "?s ?p \"water\"" },
-        { "label": "Find 'mind'",     "pattern": "?s ?p \"mind\"" }
+        {
+          "label": "Find 'dog'",
+          "pattern": "?s ?p \"dog\""
+        },
+        {
+          "label": "Find 'cat'",
+          "pattern": "?s ?p \"cat\""
+        },
+        {
+          "label": "Find 'computer'",
+          "pattern": "?s ?p \"computer\""
+        },
+        {
+          "label": "Find 'water'",
+          "pattern": "?s ?p \"water\""
+        },
+        {
+          "label": "Find 'mind'",
+          "pattern": "?s ?p \"mind\""
+        }
       ]
     },
     {
       "id": "schemaorg-30",
       "profile": "schemaorg",
       "label": "Schema.org 30.0",
-      "icon": "🌐",
-      "description": "Schema.org vocabulary release 30.0 · ~18k triples · built by scripts/prepare_schemaorg_benchmark.sh in CI",
+      "icon": "\ud83c\udf10",
+      "description": "Schema.org vocabulary release 30.0 \u00b7 ~18k triples \u00b7 built by scripts/prepare_schemaorg_benchmark.sh in CI",
       "url": "data/schemaorg/30.0/schemaorg-current-https.q42",
       "lexUrl": "data/schemaorg/30.0/schemaorg-current-https.q42.lex",
       "bidxUrl": "data/schemaorg/30.0/schemaorg-current-https.q42.bidx",
@@ -37,11 +52,861 @@
       "license": "CC-BY 4.0",
       "homepage": "https://schema.org",
       "sampleQueries": [
-        { "label": "Person type",       "pattern": "<https://schema.org/Person> ?p ?o" },
-        { "label": "Organization",      "pattern": "<https://schema.org/Organization> ?p ?o" },
-        { "label": "CreativeWork",      "pattern": "<https://schema.org/CreativeWork> ?p ?o" },
-        { "label": "video type",        "pattern": "<https://schema.org/video> ?p ?o" },
-        { "label": "name property",     "pattern": "?s ?p \"name\"" }
+        {
+          "label": "Person type",
+          "pattern": "<https://schema.org/Person> ?p ?o"
+        },
+        {
+          "label": "Organization",
+          "pattern": "<https://schema.org/Organization> ?p ?o"
+        },
+        {
+          "label": "CreativeWork",
+          "pattern": "<https://schema.org/CreativeWork> ?p ?o"
+        },
+        {
+          "label": "video type",
+          "pattern": "<https://schema.org/video> ?p ?o"
+        },
+        {
+          "label": "name property",
+          "pattern": "?s ?p \"name\""
+        }
+      ]
+    },
+    {
+      "id": "w3c-skos",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "SKOS Core",
+      "icon": "\ud83c\udff7\ufe0f",
+      "description": "W3C SKOS Core vocabulary \u00b7 skos.ttl",
+      "url": "data/w3c/skos.q42",
+      "lexUrl": "data/w3c/skos.q42.lex",
+      "bidxUrl": "data/w3c/skos.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2004/02/skos/core#",
+      "prefix": "skos",
+      "defaultSearch": "Concept",
+      "quickExamples": [
+        "Concept",
+        "ConceptScheme",
+        "prefLabel",
+        "broader",
+        "narrower"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Concept",
+          "pattern": "<http://www.w3.org/2004/02/skos/core#Concept> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2004/02/skos/core#Concept> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-shacl",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "SHACL",
+      "icon": "\u2705",
+      "description": "W3C SHACL vocabulary \u00b7 shacl.ttl",
+      "url": "data/w3c/shacl.q42",
+      "lexUrl": "data/w3c/shacl.q42.lex",
+      "bidxUrl": "data/w3c/shacl.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/shacl#",
+      "prefix": "sh",
+      "defaultSearch": "Shape",
+      "quickExamples": [
+        "Shape",
+        "NodeShape",
+        "PropertyShape",
+        "targetClass",
+        "path"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Shape",
+          "pattern": "<http://www.w3.org/ns/shacl#Shape> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/shacl#Shape> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-prov",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "PROV-O",
+      "icon": "\ud83d\udcdc",
+      "description": "W3C PROV-O vocabulary \u00b7 prov.ttl",
+      "url": "data/w3c/prov.q42",
+      "lexUrl": "data/w3c/prov.q42.lex",
+      "bidxUrl": "data/w3c/prov.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/prov#",
+      "prefix": "prov",
+      "defaultSearch": "Activity",
+      "quickExamples": [
+        "Activity",
+        "Agent",
+        "Entity",
+        "wasGeneratedBy",
+        "wasAttributedTo"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Activity",
+          "pattern": "<http://www.w3.org/ns/prov#Activity> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/prov#Activity> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-odrl",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "ODRL",
+      "icon": "\u2696\ufe0f",
+      "description": "W3C ODRL vocabulary \u00b7 odrl.ttl",
+      "url": "data/w3c/odrl.q42",
+      "lexUrl": "data/w3c/odrl.q42.lex",
+      "bidxUrl": "data/w3c/odrl.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/odrl/2/",
+      "prefix": "odrl",
+      "defaultSearch": "Policy",
+      "quickExamples": [
+        "Policy",
+        "Permission",
+        "Prohibition",
+        "Duty",
+        "target"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Policy",
+          "pattern": "<http://www.w3.org/ns/odrl/2/Policy> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/odrl/2/Policy> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-dcat",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "DCAT",
+      "icon": "\ud83d\udcc2",
+      "description": "W3C DCAT vocabulary \u00b7 dcat.ttl",
+      "url": "data/w3c/dcat.q42",
+      "lexUrl": "data/w3c/dcat.q42.lex",
+      "bidxUrl": "data/w3c/dcat.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/dcat#",
+      "prefix": "dcat",
+      "defaultSearch": "Dataset",
+      "quickExamples": [
+        "Dataset",
+        "Distribution",
+        "Catalog",
+        "theme",
+        "keyword"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Dataset",
+          "pattern": "<http://www.w3.org/ns/dcat#Dataset> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/dcat#Dataset> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-org",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "ORG",
+      "icon": "\ud83c\udfe2",
+      "description": "W3C ORG vocabulary \u00b7 org.ttl",
+      "url": "data/w3c/org.q42",
+      "lexUrl": "data/w3c/org.q42.lex",
+      "bidxUrl": "data/w3c/org.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/org#",
+      "prefix": "org",
+      "defaultSearch": "Organization",
+      "quickExamples": [
+        "Organization",
+        "FormalOrganization",
+        "Membership",
+        "Role",
+        "site"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Organization",
+          "pattern": "<http://www.w3.org/ns/org#Organization> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/org#Organization> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-sosa",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "SOSA",
+      "icon": "\ud83d\udce1",
+      "description": "W3C SOSA vocabulary \u00b7 sosa.ttl",
+      "url": "data/w3c/sosa.q42",
+      "lexUrl": "data/w3c/sosa.q42.lex",
+      "bidxUrl": "data/w3c/sosa.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/sosa/",
+      "prefix": "sosa",
+      "defaultSearch": "Sensor",
+      "quickExamples": [
+        "Sensor",
+        "Observation",
+        "Platform",
+        "FeatureOfInterest",
+        "observedProperty"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Sensor",
+          "pattern": "<http://www.w3.org/ns/sosa/Sensor> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/sosa/Sensor> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-ssn",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "SSN",
+      "icon": "\ud83c\udf21\ufe0f",
+      "description": "W3C SSN vocabulary \u00b7 ssn.ttl",
+      "url": "data/w3c/ssn.q42",
+      "lexUrl": "data/w3c/ssn.q42.lex",
+      "bidxUrl": "data/w3c/ssn.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/ssn/",
+      "prefix": "ssn",
+      "defaultSearch": "FeatureOfInterest",
+      "quickExamples": [
+        "FeatureOfInterest",
+        "Observation",
+        "Sensor",
+        "Property",
+        "hasProperty"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect FeatureOfInterest",
+          "pattern": "<http://www.w3.org/ns/ssn/FeatureOfInterest> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/ssn/FeatureOfInterest> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-owl",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "OWL",
+      "icon": "\ud83e\udd89",
+      "description": "W3C OWL vocabulary \u00b7 owl.ttl",
+      "url": "data/w3c/owl.q42",
+      "lexUrl": "data/w3c/owl.q42.lex",
+      "bidxUrl": "data/w3c/owl.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2002/07/owl#",
+      "prefix": "owl",
+      "defaultSearch": "Class",
+      "quickExamples": [
+        "Class",
+        "ObjectProperty",
+        "DatatypeProperty",
+        "Restriction",
+        "equivalentClass"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Class",
+          "pattern": "<http://www.w3.org/2002/07/owl#Class> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2002/07/owl#Class> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-rdf",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "RDF",
+      "icon": "\ud83d\udd17",
+      "description": "W3C RDF vocabulary \u00b7 rdf.ttl",
+      "url": "data/w3c/rdf.q42",
+      "lexUrl": "data/w3c/rdf.q42.lex",
+      "bidxUrl": "data/w3c/rdf.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+      "prefix": "rdf",
+      "defaultSearch": "type",
+      "quickExamples": [
+        "type",
+        "Property",
+        "List",
+        "first",
+        "rest"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect type",
+          "pattern": "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-rdfs",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "RDFS",
+      "icon": "\ud83d\udcd6",
+      "description": "W3C RDFS vocabulary \u00b7 rdfs.ttl",
+      "url": "data/w3c/rdfs.q42",
+      "lexUrl": "data/w3c/rdfs.q42.lex",
+      "bidxUrl": "data/w3c/rdfs.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2000/01/rdf-schema#",
+      "prefix": "rdfs",
+      "defaultSearch": "label",
+      "quickExamples": [
+        "label",
+        "comment",
+        "subClassOf",
+        "domain",
+        "range"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect label",
+          "pattern": "<http://www.w3.org/2000/01/rdf-schema#label> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2000/01/rdf-schema#label> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-time",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "OWL-Time",
+      "icon": "\ud83d\udd50",
+      "description": "W3C OWL-Time vocabulary \u00b7 time.ttl",
+      "url": "data/w3c/time.q42",
+      "lexUrl": "data/w3c/time.q42.lex",
+      "bidxUrl": "data/w3c/time.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2006/time#",
+      "prefix": "time",
+      "defaultSearch": "Instant",
+      "quickExamples": [
+        "Instant",
+        "Interval",
+        "DateTime",
+        "Duration",
+        "hasBeginning"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Instant",
+          "pattern": "<http://www.w3.org/2006/time#Instant> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2006/time#Instant> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-vcard",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "vCard RDF",
+      "icon": "\ud83d\udc64",
+      "description": "W3C vCard RDF vocabulary \u00b7 vcard.ttl",
+      "url": "data/w3c/vcard.q42",
+      "lexUrl": "data/w3c/vcard.q42.lex",
+      "bidxUrl": "data/w3c/vcard.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2006/vcard/ns#",
+      "prefix": "vcard",
+      "defaultSearch": "Person",
+      "quickExamples": [
+        "Person",
+        "Organization",
+        "Email",
+        "Tel",
+        "fn"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Person",
+          "pattern": "<http://www.w3.org/2006/vcard/ns#Person> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2006/vcard/ns#Person> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-geo",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "W3C Basic Geo",
+      "icon": "\ud83c\udf0d",
+      "description": "W3C W3C Basic Geo vocabulary \u00b7 geo.ttl",
+      "url": "data/w3c/geo.q42",
+      "lexUrl": "data/w3c/geo.q42.lex",
+      "bidxUrl": "data/w3c/geo.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2003/01/geo/wgs84_pos#",
+      "prefix": "geo",
+      "defaultSearch": "Point",
+      "quickExamples": [
+        "Point",
+        "lat",
+        "long",
+        "location",
+        "SpatialThing"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Point",
+          "pattern": "<http://www.w3.org/2003/01/geo/wgs84_pos#Point> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2003/01/geo/wgs84_pos#Point> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-wgs84",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "WGS84 Position",
+      "icon": "\ud83d\udccd",
+      "description": "W3C WGS84 Position vocabulary \u00b7 wgs84_pos.ttl",
+      "url": "data/w3c/wgs84_pos.q42",
+      "lexUrl": "data/w3c/wgs84_pos.q42.lex",
+      "bidxUrl": "data/w3c/wgs84_pos.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2003/01/geo/wgs84_pos#",
+      "prefix": "geo",
+      "defaultSearch": "Point",
+      "quickExamples": [
+        "Point",
+        "lat",
+        "long",
+        "location"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Point",
+          "pattern": "<http://www.w3.org/2003/01/geo/wgs84_pos#Point> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2003/01/geo/wgs84_pos#Point> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-csvw",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "CSVW",
+      "icon": "\ud83d\udcca",
+      "description": "W3C CSVW vocabulary \u00b7 csvw.ttl",
+      "url": "data/w3c/csvw.q42",
+      "lexUrl": "data/w3c/csvw.q42.lex",
+      "bidxUrl": "data/w3c/csvw.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/csvw#",
+      "prefix": "csvw",
+      "defaultSearch": "Table",
+      "quickExamples": [
+        "Table",
+        "Column",
+        "Schema",
+        "Row",
+        "cells"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Table",
+          "pattern": "<http://www.w3.org/ns/csvw#Table> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/csvw#Table> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-http",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "HTTP in RDF",
+      "icon": "\ud83c\udf10",
+      "description": "W3C HTTP in RDF vocabulary \u00b7 http.ttl",
+      "url": "data/w3c/http.q42",
+      "lexUrl": "data/w3c/http.q42.lex",
+      "bidxUrl": "data/w3c/http.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2011/http#",
+      "prefix": "http",
+      "defaultSearch": "Connection",
+      "quickExamples": [
+        "Connection",
+        "Request",
+        "Response",
+        "Method",
+        "StatusCode"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Connection",
+          "pattern": "<http://www.w3.org/2011/http#Connection> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2011/http#Connection> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-httpcodes",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "HTTP Status Codes",
+      "icon": "\ud83d\udd22",
+      "description": "W3C HTTP Status Codes vocabulary \u00b7 httpcodes.ttl",
+      "url": "data/w3c/httpcodes.q42",
+      "lexUrl": "data/w3c/httpcodes.q42.lex",
+      "bidxUrl": "data/w3c/httpcodes.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2011/http-statusCodes#",
+      "prefix": "codes",
+      "defaultSearch": "NotFound",
+      "quickExamples": [
+        "NotFound",
+        "OK",
+        "InternalServerError",
+        "MovedPermanently"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect NotFound",
+          "pattern": "<http://www.w3.org/2011/http-statusCodes#NotFound> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2011/http-statusCodes#NotFound> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-ical",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "iCalendar RDF",
+      "icon": "\ud83d\udcc5",
+      "description": "W3C iCalendar RDF vocabulary \u00b7 ical.ttl",
+      "url": "data/w3c/ical.q42",
+      "lexUrl": "data/w3c/ical.q42.lex",
+      "bidxUrl": "data/w3c/ical.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2002/12/cal/icaltzd#",
+      "prefix": "ical",
+      "defaultSearch": "Vevent",
+      "quickExamples": [
+        "Vevent",
+        "Vcalendar",
+        "dtstart",
+        "summary",
+        "location"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Vevent",
+          "pattern": "<http://www.w3.org/2002/12/cal/icaltzd#Vevent> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2002/12/cal/icaltzd#Vevent> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-flow",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "FLOW",
+      "icon": "\ud83d\udd00",
+      "description": "W3C FLOW vocabulary \u00b7 flow.ttl",
+      "url": "data/w3c/flow.q42",
+      "lexUrl": "data/w3c/flow.q42.lex",
+      "bidxUrl": "data/w3c/flow.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2005/01/wf/flow#",
+      "prefix": "flow",
+      "defaultSearch": "Task",
+      "quickExamples": [
+        "Task",
+        "Flow",
+        "Action",
+        "output",
+        "input"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Task",
+          "pattern": "<http://www.w3.org/2005/01/wf/flow#Task> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2005/01/wf/flow#Task> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-rdfa",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "RDFa",
+      "icon": "\ud83d\udcc4",
+      "description": "W3C RDFa vocabulary \u00b7 rdfa.ttl",
+      "url": "data/w3c/rdfa.q42",
+      "lexUrl": "data/w3c/rdfa.q42.lex",
+      "bidxUrl": "data/w3c/rdfa.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/rdfa#",
+      "prefix": "rdfa",
+      "defaultSearch": "usesVocabulary",
+      "quickExamples": [
+        "usesVocabulary",
+        "prefixMapping",
+        "Processor",
+        "defaultVocabulary"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect usesVocabulary",
+          "pattern": "<http://www.w3.org/ns/rdfa#usesVocabulary> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/rdfa#usesVocabulary> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-xsd",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "XSD",
+      "icon": "\ud83d\udd23",
+      "description": "W3C XSD vocabulary \u00b7 xsd.ttl",
+      "url": "data/w3c/xsd.q42",
+      "lexUrl": "data/w3c/xsd.q42.lex",
+      "bidxUrl": "data/w3c/xsd.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2001/XMLSchema#",
+      "prefix": "xsd",
+      "defaultSearch": "string",
+      "quickExamples": [
+        "string",
+        "integer",
+        "dateTime",
+        "boolean",
+        "decimal"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect string",
+          "pattern": "<http://www.w3.org/2001/XMLSchema#string> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2001/XMLSchema#string> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-meeting",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "Meeting Ontology",
+      "icon": "\ud83e\udd1d",
+      "description": "W3C Meeting Ontology vocabulary \u00b7 meeting.ttl",
+      "url": "data/w3c/meeting.q42",
+      "lexUrl": "data/w3c/meeting.q42.lex",
+      "bidxUrl": "data/w3c/meeting.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2002/12/cal/ical-ad#",
+      "prefix": "meeting",
+      "defaultSearch": "Meeting",
+      "quickExamples": [
+        "Meeting",
+        "Participant",
+        "Agenda",
+        "minutes"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Meeting",
+          "pattern": "<http://www.w3.org/2002/12/cal/ical-ad#Meeting> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2002/12/cal/ical-ad#Meeting> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "w3c-timezone",
+      "group": "w3c",
+      "profile": "w3c",
+      "label": "Timezone",
+      "icon": "\ud83c\udf10",
+      "description": "W3C Timezone vocabulary \u00b7 timezone.ttl",
+      "url": "data/w3c/timezone.q42",
+      "lexUrl": "data/w3c/timezone.q42.lex",
+      "bidxUrl": "data/w3c/timezone.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2006/timezone#",
+      "prefix": "tz",
+      "defaultSearch": "Timezone",
+      "quickExamples": [
+        "Timezone",
+        "Standard",
+        "Daylight",
+        "tzid"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Timezone",
+          "pattern": "<http://www.w3.org/2006/timezone#Timezone> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2006/timezone#Timezone> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
       ]
     }
   ]

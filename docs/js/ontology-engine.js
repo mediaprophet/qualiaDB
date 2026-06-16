@@ -29,6 +29,16 @@ const REL_PROFILES = {
         ['comments', /comment|description/i],
         ['superseded', /supersededby/i],
     ],
+    w3c: [
+        ['superClass', /subclassof|subClassOf/i],
+        ['subClasses', /subclassof/i],
+        ['domains', /domain/i],
+        ['ranges', /range/i],
+        ['inverse', /inverseof/i],
+        ['labels', /label|preflabel|altlabel/i],
+        ['comments', /comment|definition|description/i],
+        ['definitions', /definition|skos:definition/i],
+    ],
 };
 
 const CATEGORY_SAMPLES = {
@@ -42,6 +52,11 @@ const CATEGORY_SAMPLES = {
         classes: ['Person', 'Organization', 'Event', 'Place', 'Product', 'CreativeWork', 'Thing'],
         properties: ['name', 'description', 'url', 'image', 'author', 'datePublished', 'location'],
         types: ['Intangible', 'StructuredValue', 'Action', 'MedicalEntity', 'Offer', 'Review'],
+    },
+    w3c: {
+        classes: ['Class', 'Resource', 'Property', 'Ontology'],
+        properties: ['label', 'comment', 'subClassOf', 'domain', 'range'],
+        terms: ['Concept', 'Shape', 'Activity', 'Dataset', 'Sensor'],
     },
 };
 
@@ -188,6 +203,16 @@ export class OntologyEngine {
             const local = t.replace(/^schema:/i, '');
             return `https://schema.org/${local}`;
         }
+        if (this.profile === 'w3c') {
+            const ns = this.activeDataset?.namespace;
+            const px = this.activeDataset?.prefix;
+            if (ns && px) {
+                const local = t.replace(new RegExp(`^${px}:`, 'i'), '').replace(/^<|>$/g, '');
+                if (!local.includes('/') && !local.startsWith('http')) {
+                    return `${ns}${local}`;
+                }
+            }
+        }
         return t;
     }
 
@@ -212,8 +237,8 @@ export class OntologyEngine {
         const raw = term.trim();
         if (!raw) throw new Error('Empty search term');
 
-        if (this.profile === 'schemaorg') {
-            return this._lookupSchemaOrg(raw);
+        if (this.profile === 'schemaorg' || this.profile === 'w3c') {
+            return this._lookupVocabulary(raw);
         }
         return this._lookupWordNet(raw);
     }
@@ -235,28 +260,32 @@ export class OntologyEngine {
         return { term: lemma, found: true, entities, profile: 'wordnet' };
     }
 
-    async _lookupSchemaOrg(term) {
+    async _lookupVocabulary(term) {
+        const profile = this.profile;
         const iri = this.normalizeIri(term);
         let edges = await this.query(`<${iri}> ?p ?o`, 256);
 
         if (!edges.matches.length) {
-            const short = iri.split('/').pop() ?? term;
+            const short = iri.split(/[/#]/).pop() ?? term;
             edges = await this.query(`?s ?p "${short}"`, 64);
             if (!edges.matches.length) {
-                return { term, found: false, entities: [], profile: 'schemaorg' };
+                edges = await this.query(`?s <http://www.w3.org/2000/01/rdf-schema#label> "${short}"`, 64);
+            }
+            if (!edges.matches.length) {
+                return { term, found: false, entities: [], profile };
             }
             const entities = [];
             const seen = new Set();
             for (const hit of edges.matches) {
                 if (seen.has(hit.s)) continue;
                 seen.add(hit.s);
-                entities.push(await this._expandEntity(hit.s, 'schemaorg'));
+                entities.push(await this._expandEntity(hit.s, profile));
             }
-            return { term, found: true, entities, profile: 'schemaorg' };
+            return { term, found: true, entities, profile };
         }
 
-        const entity = await this._expandFromEdges(iri, edges.matches, 'schemaorg');
-        return { term, found: true, entities: [entity], profile: 'schemaorg' };
+        const entity = await this._expandFromEdges(iri, edges.matches, profile);
+        return { term, found: true, entities: [entity], profile };
     }
 
     async _expandEntity(subjectHash, profile) {
@@ -281,13 +310,18 @@ export class OntologyEngine {
 
         const summary = relations.glosses?.[0]
             ?? relations.comments?.[0]
+            ?? relations.definitions?.[0]
             ?? relations.labels?.[0]
             ?? relations.other.find(t => t.length > 8 && !t.startsWith('http'))
             ?? '';
 
+        const posTag = profile === 'wordnet'
+            ? guessPos(iri, relations.lemmas ?? [])
+            : (profile === 'w3c' ? 'w3c:term' : 'schema:type');
+
         return {
             iri,
-            pos: profile === 'wordnet' ? guessPos(iri, relations.lemmas ?? []) : 'schema:type',
+            pos: posTag,
             gloss: summary,
             relations,
             edgeCount: matches.length,
@@ -298,7 +332,7 @@ export class OntologyEngine {
         const lookup = await this.lookupEntity(term);
         if (!lookup.found || !lookup.entities.length) return 0;
 
-        const relKey = this.profile === 'schemaorg' ? 'superClass' : 'hypernyms';
+        const relKey = (this.profile === 'schemaorg' || this.profile === 'w3c') ? 'superClass' : 'hypernyms';
         let depth = 0;
         let frontier = lookup.entities[0].relations[relKey]?.slice(0, 4) ?? [];
         const visited = new Set();
@@ -311,7 +345,7 @@ export class OntologyEngine {
                 visited.add(iri);
                 const token = iri.startsWith('http') ? `<${iri}>` : `"${iri.replace(/"/g, '\\"')}"`;
                 const edges = await this.query(`${token} ?p ?o`, 48);
-                const predRe = this.profile === 'schemaorg' ? /subclassof/i : /hypernym/i;
+                const predRe = (this.profile === 'schemaorg' || this.profile === 'w3c') ? /subclassof/i : /hypernym/i;
                 for (const edge of edges.matches) {
                     if (!predRe.test(this.labelFor(edge.p))) continue;
                     const obj = this.labelFor(edge.o);
@@ -352,6 +386,9 @@ export class OntologyEngine {
     }
 
     getCategorySamples(category) {
+        const ds = this.activeDataset;
+        if (ds?.categorySamples?.[category]) return ds.categorySamples[category];
+        if (category === 'terms' && ds?.quickExamples?.length) return ds.quickExamples;
         const profile = this.profile;
         return CATEGORY_SAMPLES[profile]?.[category] ?? [];
     }
