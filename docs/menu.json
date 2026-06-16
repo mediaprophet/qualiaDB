@@ -9,99 +9,118 @@
     {
       "label": "Home",
       "href": "index.html",
-      "icon": "fa-home"
-    },
-    {
-      "label": "Benchmark",
-      "href": "benchmark.html",
-      "icon": "fa-gauge-high"
-    },
-    {
-      "label": "Comparative",
-      "href": "comparative_benchmarks.html",
-      "icon": "fa-chart-line"
+      "icon": "fa-home",
+      "group": "Core"
     },
     {
       "label": "Features",
       "href": "advanced-features.html",
-      "icon": "fa-cubes"
-    },
-    {
-      "label": "SPARQL",
-      "href": "sparql-showcase.html",
-      "icon": "fa-database"
-    },
-    {
-      "label": "Analytics",
-      "href": "analytics.html",
-      "icon": "fa-chart-pie"
-    },
-    {
-      "label": "Library",
-      "href": "library.html",
-      "icon": "fa-book"
-    },
-    {
-      "label": "Sciences",
-      "href": "science-playground.html",
-      "icon": "fa-flask"
-    },
-    {
-      "label": "Edge LLM",
-      "href": "edge-llm.html",
-      "icon": "fa-brain"
-    },
-    {
-      "label": "Online LLM",
-      "href": "online-llm-demo.html",
-      "icon": "fa-cloud"
-    },
-    {
-      "label": "Playground",
-      "href": "playground/index.html",
-      "icon": "fa-play"
+      "icon": "fa-cubes",
+      "group": "Core"
     },
     {
       "label": "API Docs",
       "href": "api.html",
-      "icon": "fa-code"
+      "icon": "fa-code",
+      "group": "Core"
+    },
+    {
+      "label": "Benchmark",
+      "href": "benchmark.html",
+      "icon": "fa-gauge-high",
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Comparative",
+      "href": "comparative_benchmarks.html",
+      "icon": "fa-chart-line",
+      "group": "Benchmarks"
+    },
+    {
+      "label": "SPARQL",
+      "href": "sparql-showcase.html",
+      "icon": "fa-database",
+      "group": "SPARQL"
+    },
+    {
+      "label": "SPARQL Examples",
+      "href": "sparql-examples.html",
+      "icon": "fa-terminal",
+      "group": "SPARQL"
+    },
+    {
+      "label": "Analytics",
+      "href": "analytics.html",
+      "icon": "fa-chart-pie",
+      "group": "Analytics"
+    },
+    {
+      "label": "Library",
+      "href": "library.html",
+      "icon": "fa-book",
+      "group": "Analytics"
+    },
+    {
+      "label": "Sciences",
+      "href": "science-playground.html",
+      "icon": "fa-flask",
+      "group": "Sciences"
+    },
+    {
+      "label": "Scientific Computing",
+      "href": "scientific-computing.html",
+      "icon": "fa-calculator",
+      "group": "Sciences"
+    },
+    {
+      "label": "Edge LLM",
+      "href": "edge-llm.html",
+      "icon": "fa-brain",
+      "group": "LLM"
+    },
+    {
+      "label": "Online LLM",
+      "href": "online-llm-demo.html",
+      "icon": "fa-cloud",
+      "group": "LLM"
+    },
+    {
+      "label": "LLM Showcase",
+      "href": "edge-llm-showcase.html",
+      "icon": "fa-microchip",
+      "group": "LLM"
+    },
+    {
+      "label": "Playground",
+      "href": "playground/index.html",
+      "icon": "fa-play",
+      "group": "Tools"
     },
     {
       "label": "API Explorer",
       "href": "api-explorer/",
       "icon": "fa-compass",
-      "highlight": true
+      "highlight": true,
+      "group": "Tools"
     },
     {
       "label": "Test Suite",
       "href": "tests/",
       "icon": "fa-vial",
-      "highlight": true
+      "highlight": true,
+      "group": "Tools"
     },
     {
       "label": "Data Formats",
       "href": "data-formats.html",
-      "icon": "fa-file-code"
+      "icon": "fa-file-code",
+      "group": "Data"
     },
     {
       "label": "Zero-Heap",
       "href": "zero-heap-compliance.html",
-      "icon": "fa-memory"
-    },
-    {
-      "label": "SPARQL Examples",
-      "href": "sparql-examples.html",
-      "icon": "fa-terminal"
-    },
-    {
-      "label": "LLM Showcase",
-      "href": "edge-llm-showcase.html",
-      "icon": "fa-microchip"
-    },
-    {
-      "label": "Scientific Computing",
-      "href": "scientific-computing.html",
-      "icon": "fa-calculator"
+      "icon": "fa-memory",
+      "group": "Data"
     }
   ],
   "footer": {
