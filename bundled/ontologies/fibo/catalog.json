@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "source": "bundled/ontologies/fibo/rdf",
+  "license": "MIT",
+  "homepage": "https://spec.edmcouncil.org/fibo/",
+  "ontologies": [
+    { "domain": "FND", "id": "fibo-fnd", "label": "FIBO Foundations", "icon": "🏛️", "prefix": "fibo", "namespace": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/", "defaultSearch": "Contract", "quickExamples": ["Contract", "Agreement", "Organization", "Currency", "Party"] },
+    { "domain": "FBC", "id": "fibo-fbc", "label": "FIBO Financial Business", "icon": "🏦", "prefix": "fibo", "namespace": "https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/", "defaultSearch": "FinancialInstrument", "quickExamples": ["FinancialInstrument", "Debt", "EquityInstrument", "Security", "Loan"] },
+    { "domain": "SEC", "id": "fibo-sec", "label": "FIBO Securities", "icon": "📈", "prefix": "fibo", "namespace": "https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/", "defaultSearch": "Security", "quickExamples": ["Security", "Bond", "EquityInstrument", "DebtInstrument", "Fund"] },
+    { "domain": "BE", "id": "fibo-be", "label": "FIBO Business Entities", "icon": "🏢", "prefix": "fibo", "namespace": "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/", "defaultSearch": "LegalEntity", "quickExamples": ["LegalEntity", "Corporation", "Partnership", "Trust", "LimitedLiabilityCompany"] },
+    { "domain": "DER", "id": "fibo-der", "label": "FIBO Derivatives", "icon": "📉", "prefix": "fibo", "namespace": "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/DerivativesContracts/", "defaultSearch": "Derivative", "quickExamples": ["Derivative", "Option", "Future", "Swap", "Forward"] },
+    { "domain": "IND", "id": "fibo-ind", "label": "FIBO Indices & Indicators", "icon": "📊", "prefix": "fibo", "namespace": "https://spec.edmcouncil.org/fibo/ontology/IND/InterestRates/InterestRates/", "defaultSearch": "InterestRate", "quickExamples": ["InterestRate", "ExchangeRate", "MarketIndex", "EconomicIndicator", "BenchmarkRate"] },
+    { "domain": "LOAN", "id": "fibo-loan", "label": "FIBO Loans", "icon": "🏠", "prefix": "fibo", "namespace": "https://spec.edmcouncil.org/fibo/ontology/LOAN/LoansGeneral/Loans/", "defaultSearch": "Loan", "quickExamples": ["Loan", "Mortgage", "ConsumerLoan", "CommercialLoan", "Collateral"] },
+    { "domain": "CAE", "id": "fibo-cae", "label": "FIBO Corporate Actions", "icon": "⚡", "prefix": "fibo", "namespace": "https://spec.edmcouncil.org/fibo/ontology/CAE/CorporateEvents/CorporateActions/", "defaultSearch": "CorporateAction", "quickExamples": ["CorporateAction", "Dividend", "StockSplit", "Merger", "Acquisition"] },
+    { "domain": "MD", "id": "fibo-md", "label": "FIBO Market Data", "icon": "🕐", "prefix": "fibo", "namespace": "https://spec.edmcouncil.org/fibo/ontology/MD/TemporalCore/SecurityTradingStatuses/", "defaultSearch": "TradingStatus", "quickExamples": ["TradingStatus", "CreditStatus", "Price", "Yield", "Duration"] },
+    { "domain": "BP", "id": "fibo-bp", "label": "FIBO Business Process", "icon": "⚙️", "prefix": "fibo", "namespace": "https://spec.edmcouncil.org/fibo/ontology/BP/Process/", "defaultSearch": "Process", "quickExamples": ["Process", "Activity", "Task", "Event", "Role"] }
+  ]
+}

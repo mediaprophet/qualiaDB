@@ -4,6 +4,7 @@
 /crates/webizen-desktop/target
 /crates/webizen-studio/dist
 *.rdf
+!bundled/ontologies/fibo/rdf/**/*.rdf
 *.wal
 *.q42
 *.n3
@@ -41,6 +42,13 @@
 !docs/data/dublincore/**/*.q42
 !docs/data/dublincore/**/*.q42.lex
 !docs/data/dublincore/**/*.q42.bidx
+
+# Ontology demo — FIBO domain volumes (sources under bundled/ontologies/fibo/rdf)
+!docs/data/fibo/**/*.q42
+!docs/data/fibo/**/*.q42.lex
+!docs/data/fibo/**/*.q42.bidx
+docs/data/fibo/.build/
+docs/data/fibo/**/*.nt
 
 # Claude Code session files (dev-machine only)
 .claude/

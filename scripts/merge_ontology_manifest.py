@@ -44,6 +44,15 @@ GROUP_CONFIG = {
         "homepage": "https://www.dublincore.org/",
         "description": lambda e: f"DCMI metadata terms · {e['file']} · combined Dublin Core export",
     },
+    "fibo": {
+        "src": REPO / "bundled/ontologies/fibo",
+        "out": REPO / "docs/data/fibo",
+        "url_prefix": "data/fibo",
+        "profile": "w3c",
+        "license": "MIT",
+        "homepage": "https://spec.edmcouncil.org/fibo/",
+        "description": lambda e: f"EDMC FIBO {e['label']} · {e.get('domain', '')} domain",
+    },
 }
 
 
@@ -52,7 +61,10 @@ def build_entries(group: str) -> list:
     catalog = json.loads((cfg["src"] / "catalog.json").read_text(encoding="utf-8"))
     built = []
     for entry in catalog.get("ontologies", []):
-        base = Path(entry["file"]).stem
+        if entry.get("domain"):
+            base = entry["domain"].lower()
+        else:
+            base = Path(entry["file"]).stem
         if not (cfg["out"] / f"{base}.q42").is_file():
             continue
         term = entry.get("defaultSearch", "Resource")

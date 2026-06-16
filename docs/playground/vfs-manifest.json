@@ -1360,6 +1360,356 @@
           "pattern": "<http://purl.org/dc/terms/title> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
       ]
+    },
+    {
+      "id": "fibo-fnd",
+      "profile": "w3c",
+      "label": "FIBO Foundations",
+      "icon": "\ud83c\udfdb\ufe0f",
+      "description": "EDMC FIBO FIBO Foundations \u00b7 FND domain",
+      "url": "data/fibo/fnd.q42",
+      "lexUrl": "data/fibo/fnd.q42.lex",
+      "bidxUrl": "data/fibo/fnd.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "MIT",
+      "homepage": "https://spec.edmcouncil.org/fibo/",
+      "namespace": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/",
+      "prefix": "fibo",
+      "defaultSearch": "Contract",
+      "quickExamples": [
+        "Contract",
+        "Agreement",
+        "Organization",
+        "Currency",
+        "Party"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Contract",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "fibo"
+    },
+    {
+      "id": "fibo-fbc",
+      "profile": "w3c",
+      "label": "FIBO Financial Business",
+      "icon": "\ud83c\udfe6",
+      "description": "EDMC FIBO FIBO Financial Business \u00b7 FBC domain",
+      "url": "data/fibo/fbc.q42",
+      "lexUrl": "data/fibo/fbc.q42.lex",
+      "bidxUrl": "data/fibo/fbc.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "MIT",
+      "homepage": "https://spec.edmcouncil.org/fibo/",
+      "namespace": "https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/",
+      "prefix": "fibo",
+      "defaultSearch": "FinancialInstrument",
+      "quickExamples": [
+        "FinancialInstrument",
+        "Debt",
+        "EquityInstrument",
+        "Security",
+        "Loan"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect FinancialInstrument",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/FinancialInstrument> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/FinancialInstrument> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "fibo"
+    },
+    {
+      "id": "fibo-sec",
+      "profile": "w3c",
+      "label": "FIBO Securities",
+      "icon": "\ud83d\udcc8",
+      "description": "EDMC FIBO FIBO Securities \u00b7 SEC domain",
+      "url": "data/fibo/sec.q42",
+      "lexUrl": "data/fibo/sec.q42.lex",
+      "bidxUrl": "data/fibo/sec.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "MIT",
+      "homepage": "https://spec.edmcouncil.org/fibo/",
+      "namespace": "https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/",
+      "prefix": "fibo",
+      "defaultSearch": "Security",
+      "quickExamples": [
+        "Security",
+        "Bond",
+        "EquityInstrument",
+        "DebtInstrument",
+        "Fund"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Security",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/Security> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/Security> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "fibo"
+    },
+    {
+      "id": "fibo-be",
+      "profile": "w3c",
+      "label": "FIBO Business Entities",
+      "icon": "\ud83c\udfe2",
+      "description": "EDMC FIBO FIBO Business Entities \u00b7 BE domain",
+      "url": "data/fibo/be.q42",
+      "lexUrl": "data/fibo/be.q42.lex",
+      "bidxUrl": "data/fibo/be.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "MIT",
+      "homepage": "https://spec.edmcouncil.org/fibo/",
+      "namespace": "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/",
+      "prefix": "fibo",
+      "defaultSearch": "LegalEntity",
+      "quickExamples": [
+        "LegalEntity",
+        "Corporation",
+        "Partnership",
+        "Trust",
+        "LimitedLiabilityCompany"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect LegalEntity",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/LegalEntity> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/LegalEntity> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "fibo"
+    },
+    {
+      "id": "fibo-der",
+      "profile": "w3c",
+      "label": "FIBO Derivatives",
+      "icon": "\ud83d\udcc9",
+      "description": "EDMC FIBO FIBO Derivatives \u00b7 DER domain",
+      "url": "data/fibo/der.q42",
+      "lexUrl": "data/fibo/der.q42.lex",
+      "bidxUrl": "data/fibo/der.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "MIT",
+      "homepage": "https://spec.edmcouncil.org/fibo/",
+      "namespace": "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/DerivativesContracts/",
+      "prefix": "fibo",
+      "defaultSearch": "Derivative",
+      "quickExamples": [
+        "Derivative",
+        "Option",
+        "Future",
+        "Swap",
+        "Forward"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Derivative",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/DerivativesContracts/Derivative> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/DerivativesContracts/Derivative> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "fibo"
+    },
+    {
+      "id": "fibo-ind",
+      "profile": "w3c",
+      "label": "FIBO Indices & Indicators",
+      "icon": "\ud83d\udcca",
+      "description": "EDMC FIBO FIBO Indices & Indicators \u00b7 IND domain",
+      "url": "data/fibo/ind.q42",
+      "lexUrl": "data/fibo/ind.q42.lex",
+      "bidxUrl": "data/fibo/ind.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "MIT",
+      "homepage": "https://spec.edmcouncil.org/fibo/",
+      "namespace": "https://spec.edmcouncil.org/fibo/ontology/IND/InterestRates/InterestRates/",
+      "prefix": "fibo",
+      "defaultSearch": "InterestRate",
+      "quickExamples": [
+        "InterestRate",
+        "ExchangeRate",
+        "MarketIndex",
+        "EconomicIndicator",
+        "BenchmarkRate"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect InterestRate",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/IND/InterestRates/InterestRates/InterestRate> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/IND/InterestRates/InterestRates/InterestRate> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "fibo"
+    },
+    {
+      "id": "fibo-loan",
+      "profile": "w3c",
+      "label": "FIBO Loans",
+      "icon": "\ud83c\udfe0",
+      "description": "EDMC FIBO FIBO Loans \u00b7 LOAN domain",
+      "url": "data/fibo/loan.q42",
+      "lexUrl": "data/fibo/loan.q42.lex",
+      "bidxUrl": "data/fibo/loan.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "MIT",
+      "homepage": "https://spec.edmcouncil.org/fibo/",
+      "namespace": "https://spec.edmcouncil.org/fibo/ontology/LOAN/LoansGeneral/Loans/",
+      "prefix": "fibo",
+      "defaultSearch": "Loan",
+      "quickExamples": [
+        "Loan",
+        "Mortgage",
+        "ConsumerLoan",
+        "CommercialLoan",
+        "Collateral"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Loan",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/LOAN/LoansGeneral/Loans/Loan> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/LOAN/LoansGeneral/Loans/Loan> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "fibo"
+    },
+    {
+      "id": "fibo-cae",
+      "profile": "w3c",
+      "label": "FIBO Corporate Actions",
+      "icon": "\u26a1",
+      "description": "EDMC FIBO FIBO Corporate Actions \u00b7 CAE domain",
+      "url": "data/fibo/cae.q42",
+      "lexUrl": "data/fibo/cae.q42.lex",
+      "bidxUrl": "data/fibo/cae.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "MIT",
+      "homepage": "https://spec.edmcouncil.org/fibo/",
+      "namespace": "https://spec.edmcouncil.org/fibo/ontology/CAE/CorporateEvents/CorporateActions/",
+      "prefix": "fibo",
+      "defaultSearch": "CorporateAction",
+      "quickExamples": [
+        "CorporateAction",
+        "Dividend",
+        "StockSplit",
+        "Merger",
+        "Acquisition"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect CorporateAction",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/CAE/CorporateEvents/CorporateActions/CorporateAction> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/CAE/CorporateEvents/CorporateActions/CorporateAction> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "fibo"
+    },
+    {
+      "id": "fibo-md",
+      "profile": "w3c",
+      "label": "FIBO Market Data",
+      "icon": "\ud83d\udd50",
+      "description": "EDMC FIBO FIBO Market Data \u00b7 MD domain",
+      "url": "data/fibo/md.q42",
+      "lexUrl": "data/fibo/md.q42.lex",
+      "bidxUrl": "data/fibo/md.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "MIT",
+      "homepage": "https://spec.edmcouncil.org/fibo/",
+      "namespace": "https://spec.edmcouncil.org/fibo/ontology/MD/TemporalCore/SecurityTradingStatuses/",
+      "prefix": "fibo",
+      "defaultSearch": "TradingStatus",
+      "quickExamples": [
+        "TradingStatus",
+        "CreditStatus",
+        "Price",
+        "Yield",
+        "Duration"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect TradingStatus",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/MD/TemporalCore/SecurityTradingStatuses/TradingStatus> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/MD/TemporalCore/SecurityTradingStatuses/TradingStatus> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "fibo"
+    },
+    {
+      "id": "fibo-bp",
+      "profile": "w3c",
+      "label": "FIBO Business Process",
+      "icon": "\u2699\ufe0f",
+      "description": "EDMC FIBO FIBO Business Process \u00b7 BP domain",
+      "url": "data/fibo/bp.q42",
+      "lexUrl": "data/fibo/bp.q42.lex",
+      "bidxUrl": "data/fibo/bp.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "MIT",
+      "homepage": "https://spec.edmcouncil.org/fibo/",
+      "namespace": "https://spec.edmcouncil.org/fibo/ontology/BP/Process/",
+      "prefix": "fibo",
+      "defaultSearch": "Process",
+      "quickExamples": [
+        "Process",
+        "Activity",
+        "Task",
+        "Event",
+        "Role"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Process",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/BP/Process/Process> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://spec.edmcouncil.org/fibo/ontology/BP/Process/Process> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "fibo"
     }
   ]
 }

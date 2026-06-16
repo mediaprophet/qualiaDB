@@ -101,6 +101,13 @@ jobs:
           bash scripts/prepare_dublincore_ontologies.sh
           ls -lh docs/data/dublincore/*.q42
 
+      - name: Build FIBO domain volumes for Ontology Demo
+        continue-on-error: true
+        run: |
+          pip install rdflib
+          bash scripts/prepare_fibo_ontologies.sh
+          ls -lh docs/data/fibo/*.q42 | head
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:

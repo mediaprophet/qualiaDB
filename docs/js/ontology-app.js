@@ -271,9 +271,10 @@ function renderDatasetPicker() {
     const container = $('dataset-picker');
     if (!container || !engine.datasets.length) return;
 
-    const primary = engine.datasets.filter(d => d.group !== 'w3c' && d.group !== 'purl');
+    const primary = engine.datasets.filter(d => d.group !== 'w3c' && d.group !== 'purl' && d.group !== 'fibo');
     const w3c = engine.datasets.filter(d => d.group === 'w3c');
     const purl = engine.datasets.filter(d => d.group === 'purl');
+    const fibo = engine.datasets.filter(d => d.group === 'fibo');
 
     const card = (d) => {
         const active = d.id === engine.activeDataset?.id;
@@ -296,7 +297,7 @@ function renderDatasetPicker() {
     const renderSelect = (group, id, title, count) => {
         if (!count) return '';
         const activeId = engine.activeDataset?.id ?? '';
-        const items = group === 'w3c' ? w3c : purl;
+        const items = group === 'w3c' ? w3c : group === 'purl' ? purl : fibo;
         return `
             <div class="glass-strong rounded-2xl p-4 w-full mt-1">
                 <div class="text-xs text-white/60 mb-2 flex items-center gap-2">
@@ -312,6 +313,7 @@ function renderDatasetPicker() {
 
     html += renderSelect('w3c', 'w3c-select', 'W3C Ontologies', w3c.length);
     html += renderSelect('purl', 'purl-select', 'PURL.org Vocabularies', purl.length);
+    html += renderSelect('fibo', 'fibo-select', 'FIBO (EDMC)', fibo.length);
 
     container.innerHTML = html;
 
@@ -319,7 +321,7 @@ function renderDatasetPicker() {
         btn.addEventListener('click', () => switchDataset(btn.dataset.dataset));
     });
 
-    for (const selId of ['w3c-select', 'purl-select']) {
+    for (const selId of ['w3c-select', 'purl-select', 'fibo-select']) {
         const sel = $(selId);
         if (sel) {
             sel.addEventListener('change', () => {
