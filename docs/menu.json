@@ -25,7 +25,7 @@
       "group": "Core"
     },
     {
-      "label": "Benchmark",
+      "label": "Benchmark Hub",
       "href": "benchmark.html",
       "icon": "fa-gauge-high",
       "group": "Benchmarks"
@@ -34,6 +34,12 @@
       "label": "Comparative",
       "href": "comparative_benchmarks.html",
       "icon": "fa-chart-line",
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Browser Harness",
+      "href": "playground/benchmark.html",
+      "icon": "fa-code",
       "group": "Benchmarks"
     },
     {

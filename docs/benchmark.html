@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB • Live Benchmark Suite v0.0.15</title>
+    <title>Qualia-DB • Benchmark Hub v0.0.15</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -36,6 +36,13 @@
         .wasm-chip { font-size: 0.65rem; padding: 0.2rem 0.55rem; border-radius: 9999px; font-weight: 700; letter-spacing: 0.04em; }
         .result-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
         .nav-active { color: white; border-bottom: 2px solid #3b82f6; }
+        .section-label { font-size: 0.7rem; letter-spacing: 0.8px; text-transform: uppercase; font-weight: 700; color: #64748b; }
+        .glass { background: rgba(17, 23, 31, 0.72); backdrop-filter: blur(24px); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 24px; }
+        .data-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        .data-table th { font-weight: 700; color: #64748b; font-size: 0.68rem; letter-spacing: 0.6px; text-transform: uppercase; padding: 14px 18px; text-align: right; }
+        .data-table th:first-child { text-align: left; }
+        .data-table td { padding: 14px 18px; font-size: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+        .engine-row:hover td { background: rgba(255,255,255,0.03); }
     </style>
     <script src="js/menu-loader.js"></script>
 </head>
@@ -101,8 +108,15 @@
             <i class="fas fa-tachometer-alt"></i>
             <span>WASM-only · Zero-Heap · v0.0.15</span>
         </div>
-        <h1 class="text-5xl font-semibold tracking-tighter mb-3">Live Benchmark Suite</h1>
-        <p class="text-white/60 max-w-xl mx-auto">Real-time performance testing under 512MB edge constraints — running natively in your browser via <code class="text-cyan-400">qualia_core_db_bg.wasm</code> with zero-heap compliance.</p>
+        <h1 class="text-5xl font-semibold tracking-tighter mb-3">Benchmark Hub</h1>
+        <p class="text-white/60 max-w-2xl mx-auto">CI platform suite (graph, Sentinel, streaming, ontology) plus interactive browser probes. Not graph-only anymore — see <a href="comparative_benchmarks.html" class="text-cyan-400 hover:underline">comparative benchmarks</a> for multi-engine graph shoot-outs.</p>
+    </div>
+
+    <div class="flex flex-wrap gap-3 justify-center mb-8">
+        <a href="comparative_benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-chart-line mr-2 text-blue-400"></i>Comparative engines</a>
+        <a href="comparative_benchmarks.html?view=platform" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-microchip mr-2 text-amber-400"></i>Platform suite (CI)</a>
+        <a href="playground/benchmark.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-code mr-2 text-emerald-400"></i>Transparent harness</a>
+        <a href="benchmark_visualizer.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-satellite-dish mr-2 text-violet-400"></i>Telemetry visualizer</a>
     </div>
 
     <!-- Performance Metrics Dashboard -->
@@ -127,7 +141,10 @@
 
     <!-- Tab bar -->
     <div class="flex flex-wrap gap-2 mb-8 justify-center">
-        <button class="tab-btn active" data-tab="graph" onclick="switchTab('graph',this)" id="tab-graph-btn">
+        <button class="tab-btn active" data-tab="ci" onclick="switchTab('ci',this)" id="tab-ci-btn">
+            <i class="fas fa-server mr-1.5"></i>CI Platform Suite
+        </button>
+        <button class="tab-btn" data-tab="graph" onclick="switchTab('graph',this)" id="tab-graph-btn">
             <i class="fas fa-project-diagram mr-1.5"></i>Graph Operations
         </button>
         <button class="tab-btn" data-tab="scientific" onclick="switchTab('scientific',this)" id="tab-scientific-btn">
@@ -148,15 +165,32 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════
+         TAB 0 — CI PLATFORM SUITE (real JSON from qualia-cli bench)
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-ci" class="tab-pane active">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2">
+                <i class="fas fa-server text-emerald-400"></i>
+                CI Platform Suite
+            </h3>
+            <p class="text-white/60 text-sm mb-4">Live measurements from <code class="text-cyan-400">qualia-cli bench --suite full</code> committed as <code class="text-cyan-400">llm_benchmark_results.json</code>. Includes graph primitives, Sentinel governance, lazy streaming, and WordNet/SHACL highlights.</p>
+            <div id="ci-suite-root" class="text-sm text-white/50 font-mono">Loading CI results…</div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
          TAB 1 — GRAPH OPERATIONS
     ═══════════════════════════════════════════════════ -->
-    <div id="tab-graph" class="tab-pane active">
+    <div id="tab-graph" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
                 <i class="fas fa-project-diagram text-emerald-400"></i>
                 Graph Operation Benchmarks
             </h3>
-            <p class="text-white/60 text-sm mb-6">Core semantic graph operations — point lookup, two-hop traversal, predicate filtering, and ingestion performance.</p>
+            <p class="text-white/60 text-sm mb-4">Core semantic graph operations — point lookup, two-hop traversal, predicate filtering, and ingestion performance.</p>
+            <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">
+                <i class="fas fa-info-circle mr-1"></i> Interactive demo — uses simulated timings unless your local daemon is online. For audited numbers use the <strong>CI Platform Suite</strong> tab or <a href="comparative_benchmarks.html" class="underline">comparative benchmarks</a>.
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
@@ -211,7 +245,8 @@
                 <i class="fas fa-flask text-emerald-400"></i>
                 Scientific Computing Primitives
             </h3>
-            <p class="text-white/60 text-sm mb-6">Native scientific primitives integrated with the semantic graph — thermodynamics, ODE solvers, bioinformatics, and clinical risk calculations.</p>
+            <p class="text-white/60 text-sm mb-4">Native scientific primitives integrated with the semantic graph — thermodynamics, ODE solvers, bioinformatics, and clinical risk calculations.</p>
+            <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">Browser microbench demo — models expected engine classes; run native CLI for audited scientific primitive timings.</div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -533,6 +568,19 @@ LIMIT 100</textarea>
 </div>
 
 <script type="module">
+    import { fetchJson, renderPlatformSuite } from './js/benchmark-shared.js';
+
+    async function loadCiSuite() {
+        const root = document.getElementById('ci-suite-root');
+        if (!root) return;
+        try {
+            const data = await fetchJson('./llm_benchmark_results.json');
+            renderPlatformSuite(root, data);
+        } catch (err) {
+            root.innerHTML = `<span class="text-red-400">CI results not found (${err.message}). Run: cargo run --release -p qualia-cli -- bench --suite full</span>`;
+        }
+    }
+
     // Load from document-relative playground/ (not js/playground/) — matches scientific-computing.html
     async function loadWasmEngine() {
         const dot = document.getElementById('wasm-dot');
@@ -556,6 +604,7 @@ LIMIT 100</textarea>
             mainContent.style.display = 'block';
             window.qualiaWasm = module;
             initializeCharts();
+            loadCiSuite();
         } catch (err) {
             console.error('WASM initialization error:', err);
             dot.className = 'w-2 h-2 rounded-full bg-slate-500';
@@ -563,6 +612,7 @@ LIMIT 100</textarea>
             loadingOverlay.style.display = 'none';
             errorOverlay.classList.remove('hidden');
             errorMessage.textContent = err?.message || String(err);
+            loadCiSuite();
         }
     }
 
