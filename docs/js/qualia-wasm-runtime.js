@@ -54,7 +54,7 @@ export async function initQualiaWasm(opts = {}) {
             _info = readInfo(module);
         } catch (e) {
             console.warn('[qualia-wasm-runtime] init failed:', e.message);
-            _mod = {};
+            _mod = { __initError: e };
         }
         return _mod;
     })();
@@ -120,8 +120,16 @@ export async function bindEngineBadge(elementId, opts = {}, prefix = 'WASM v') {
     } else {
         el.textContent = 'WASM unavailable';
         el.classList.add('qualia-wasm-offline');
+        if (mod?.__initError) {
+            el.title = mod.__initError.message || String(mod.__initError);
+        }
     }
     return ver;
+}
+
+/** @returns {Error|null} last init failure, if any */
+export function getWasmInitError(mod = _mod) {
+    return mod?.__initError ?? null;
 }
 
 /** Reset cached module (for tests / hot reload). */

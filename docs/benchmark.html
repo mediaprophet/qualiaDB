@@ -533,38 +533,40 @@ LIMIT 100</textarea>
 </div>
 
 <script type="module">
-    import { bindEngineBadge } from './js/qualia-wasm-runtime.js';
-
-    // Initialize WASM engine
-    bindEngineBadge('wasm-text').then(ver => {
+    // Load from document-relative playground/ (not js/playground/) — matches scientific-computing.html
+    async function loadWasmEngine() {
         const dot = document.getElementById('wasm-dot');
         const badge = document.getElementById('wasm-badge');
         const loadingOverlay = document.getElementById('loading-overlay');
         const mainContent = document.getElementById('main-content');
         const errorOverlay = document.getElementById('error-overlay');
+        const errorMessage = document.getElementById('error-message');
 
-        if (ver) {
+        try {
+            const module = await import('./playground/qualia_core_db.js');
+            await module.default();
+            const ver = typeof module.get_engine_version === 'function'
+                ? module.get_engine_version()
+                : null;
+
             dot.className = 'w-2 h-2 rounded-full bg-cyan-400';
-            document.getElementById('wasm-text').textContent = `WASM v${ver}`;
+            document.getElementById('wasm-text').textContent = ver ? `WASM v${ver}` : 'WASM Ready';
             badge.className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
             loadingOverlay.style.display = 'none';
             mainContent.style.display = 'block';
+            window.qualiaWasm = module;
             initializeCharts();
-        } else {
+        } catch (err) {
+            console.error('WASM initialization error:', err);
             dot.className = 'w-2 h-2 rounded-full bg-slate-500';
             document.getElementById('wasm-text').textContent = 'WASM offline';
             loadingOverlay.style.display = 'none';
             errorOverlay.classList.remove('hidden');
-            document.getElementById('error-message').textContent = 'Failed to load WASM engine. Please check your network connection.';
+            errorMessage.textContent = err?.message || String(err);
         }
-    }).catch(err => {
-        console.error('WASM initialization error:', err);
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const errorOverlay = document.getElementById('error-overlay');
-        loadingOverlay.style.display = 'none';
-        errorOverlay.classList.remove('hidden');
-        document.getElementById('error-message').textContent = err.message || 'Unknown error loading WASM engine';
-    });
+    }
+
+    loadWasmEngine();
 </script>
 
 <script>
