@@ -41,6 +41,7 @@ import { register as regEconomics }      from './suites/wasm-economics.js';
 import { register as regShacl }          from './suites/wasm-shacl.js';
 import { register as regGovernance }     from './suites/wasm-governance.js';
 import { register as regWasmIngest }     from './suites/wasm-ingest.js';
+import { register as regDataFormats }    from './suites/wasm-data-formats.js';
 import { register as regProfiles }       from './suites/wasm-profiles.js';
 import { register as regResources }      from './suites/wasm-resources.js';
 import { register as regRdfStar }        from './suites/wasm-rdf-star.js';
@@ -268,6 +269,7 @@ function suiteModule(name, path = []) {
         ['WASM: SHACL', 'wasm-shacl.js'],
         ['WASM: Governance', 'wasm-governance.js'],
         ['WASM: Ingest', 'wasm-ingest.js'],
+        ['WASM: Data Format', 'wasm-data-formats.js'],
         ['WASM: Capability Profiles', 'wasm-profiles.js'],
         ['WASM: Resource Catalog', 'wasm-resources.js'],
         ['WASM: RDF-Star', 'wasm-rdf-star.js'],
@@ -462,11 +464,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         detected = d;
         if (d.wasm) {
             try {
+                ctx.wasm = await loadWasm();
                 detected.wasmCoverage = await getWasmCoverage();
                 detected.wasmVersion = await getWasmVersion();
-            } catch (_) {}
+            } catch (_) {
+                ctx.wasm = null;
+            }
+        } else {
+            ctx.wasm = null;
         }
-        ctx.wasm = null;
         ctx.native = d.native ? new NativeClient('http://127.0.0.1:4242', d.token) : null;
         ctx.isMobile = d.isMobile;
         updateModeUI();

@@ -383,7 +383,7 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 3px; }
     </style>
-    <script src="js/menu-loader.js"></script></head>
+    <script src="../js/menu-loader.js"></script></head>
 <body class="bg-[#0a0e17] text-slate-200">
 
     <!-- Unified Navigation -->
@@ -499,8 +499,20 @@
 </main>
 
 <script type="module">
-    import { bindEngineBadge } from '../js/qualia-wasm-runtime.js';
-    bindEngineBadge('nav-engine-version', {}, 'Engine v');
+    import { getWasmVersion } from './wasm-loader.js';
+
+    (async () => {
+        const el = document.getElementById('nav-engine-version');
+        if (!el) return;
+        try {
+            const ver = await getWasmVersion();
+            el.textContent = ver ? `Engine v${ver}` : 'Engine offline';
+            el.title = ver ? `qualia-core-db ${ver}` : 'WASM failed to load from docs/playground/';
+        } catch (e) {
+            el.textContent = 'Engine offline';
+            el.title = e?.message || String(e);
+        }
+    })();
 </script>
 <script type="module" src="runner.js"></script>
 </body>

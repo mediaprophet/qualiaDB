@@ -78,17 +78,27 @@ async function loadWasmInNode() {
     return module;
 }
 
+function playgroundUrls() {
+    const root = new URL('../playground/', import.meta.url);
+    return {
+        jsUrl: new URL('qualia_core_db.js', root).href,
+        wasmUrl: new URL('qualia_core_db_bg.wasm', root).href,
+    };
+}
+
 async function loadWasmInBrowser() {
     const badge = typeof document !== 'undefined'
         ? document.getElementById('wasm-badge')
         : null;
 
-    const jsUrl = '../playground/qualia_core_db.js';
-    const wasmUrl = '../playground/qualia_core_db_bg.wasm';
+    const { jsUrl, wasmUrl } = playgroundUrls();
 
     try {
         const module = await import(jsUrl);
         const response = await fetch(wasmUrl);
+        if (!response.ok) {
+            throw new Error(`WASM fetch failed: ${response.status} ${wasmUrl}`);
+        }
         const total = parseInt(response.headers.get('content-length'), 10) || 465124;
         let loaded = 0;
 
@@ -109,7 +119,8 @@ async function loadWasmInBrowser() {
         return module;
     } catch (e) {
         console.warn('[wasm-loader] WASM init failed:', e.message);
-        return initQualiaWasm().catch(() => ({}));
+        const { jsUrl, wasmUrl } = playgroundUrls();
+        return initQualiaWasm({ jsUrl, wasmUrl }).catch(() => ({}));
     }
 }
 

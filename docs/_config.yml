@@ -10,6 +10,7 @@ include:
   - "playground/*.js"
   - "playground/*.wasm"
   - "js/*.js"
+  - "tests/**/*.js"
 
 # Exclude large WordNet data artefacts from Jekyll processing (served as raw files).
 exclude:
