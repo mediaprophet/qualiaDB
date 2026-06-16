@@ -122,10 +122,12 @@ pub fn derive_xchacha_nonce(volume_tweak: &[u8; 16], chunk_index_or_offset: u64)
 /// * `volume_tweak` - 16-byte volume root tweak from PBKDF2 derivation
 /// * `chunk_index` - Chunk index or byte offset for nonce derivation
 /// * `plaintext` - Data to encrypt
+/// * `ciphertext_out` - Output buffer for ciphertext (must be same size as plaintext)
+/// * `tag_out` - Output buffer for authentication tag (must be 16 bytes)
 /// * `additional_data` - Additional authenticated data (AAD)
 ///
 /// # Returns
-/// * `Ok((ciphertext, tag, nonce))` - Encrypted data with authentication tag and used nonce
+/// * `Ok(bytes_written)` - Number of bytes written to ciphertext_out
 /// * `Err(String)` - Encryption failure
 #[cfg(feature = "sanctuary-crypto")]
 pub fn encrypt_sanctuary_chunk(
@@ -133,12 +135,21 @@ pub fn encrypt_sanctuary_chunk(
     volume_tweak: &[u8; 16],
     chunk_index: u64,
     plaintext: &[u8],
+    ciphertext_out: &mut [u8],
+    tag_out: &mut [u8],
     additional_data: Option<&[u8]>,
-) -> Result<(Vec<u8>, Vec<u8>, [u8; 12]), String> {
+) -> Result<usize, String> {
     use aes_gcm::{
         aead::{Aead, KeyInit},
         Aes256Gcm, Nonce,
     };
+    
+    if ciphertext_out.len() < plaintext.len() {
+        return Err("Ciphertext output buffer too small".to_string());
+    }
+    if tag_out.len() < 16 {
+        return Err("Tag output buffer too small (must be 16 bytes)".to_string());
+    }
     
     // Derive nonce for this chunk
     let nonce = derive_chunk_nonce(volume_tweak, chunk_index);
@@ -163,10 +174,10 @@ pub fn encrypt_sanctuary_chunk(
     }
     
     let tag_start = ciphertext.len() - 16;
-    let data = ciphertext[..tag_start].to_vec();
-    let tag = ciphertext[tag_start..].to_vec();
+    ciphertext_out[..plaintext.len()].copy_from_slice(&ciphertext[..plaintext.len()]);
+    tag_out[..16].copy_from_slice(&ciphertext[tag_start..]);
     
-    Ok((data, tag, nonce))
+    Ok(plaintext.len())
 }
 
 /// Decrypt data using sanctuary lane cryptography with derived nonce
@@ -176,11 +187,12 @@ pub fn encrypt_sanctuary_chunk(
 /// * `volume_tweak` - 16-byte volume root tweak from PBKDF2 derivation
 /// * `chunk_index` - Chunk index or byte offset for nonce derivation
 /// * `ciphertext` - Encrypted data
-/// * `tag` - Authentication tag
+/// * `tag` - Authentication tag (16 bytes)
+/// * `plaintext_out` - Output buffer for decrypted data (must be same size as ciphertext)
 /// * `additional_data` - Additional authenticated data (AAD)
 ///
 /// # Returns
-/// * `Ok(plaintext)` - Decrypted data
+/// * `Ok(bytes_written)` - Number of bytes written to plaintext_out
 /// * `Err(String)` - Decryption failure
 #[cfg(feature = "sanctuary-crypto")]
 pub fn decrypt_sanctuary_chunk(
@@ -189,12 +201,20 @@ pub fn decrypt_sanctuary_chunk(
     chunk_index: u64,
     ciphertext: &[u8],
     tag: &[u8],
+    plaintext_out: &mut [u8],
     additional_data: Option<&[u8]>,
-) -> Result<Vec<u8>, String> {
+) -> Result<usize, String> {
     use aes_gcm::{
         aead::{Aead, KeyInit},
         Aes256Gcm, Nonce,
     };
+    
+    if plaintext_out.len() < ciphertext.len() {
+        return Err("Plaintext output buffer too small".to_string());
+    }
+    if tag.len() != 16 {
+        return Err("Tag must be exactly 16 bytes".to_string());
+    }
     
     // Derive nonce for this chunk
     let nonce = derive_chunk_nonce(volume_tweak, chunk_index);
@@ -205,24 +225,35 @@ pub fn decrypt_sanctuary_chunk(
     let cipher = Aes256Gcm::new(key);
     
     // Combine ciphertext and tag for decryption
-    let mut encrypted = ciphertext.to_vec();
-    encrypted.extend_from_slice(tag);
+    let mut encrypted = [0u8; 4096]; // Stack buffer for typical chunk sizes
+    if ciphertext.len() + 16 > encrypted.len() {
+        return Err("Ciphertext too large for stack buffer".to_string());
+    }
+    encrypted[..ciphertext.len()].copy_from_slice(ciphertext);
+    encrypted[ciphertext.len()..ciphertext.len() + 16].copy_from_slice(tag);
+    let encrypted_len = ciphertext.len() + 16;
     
     // Decrypt with AAD if provided
     let plaintext = if let Some(aad) = additional_data {
-        cipher.decrypt(nonce_obj, aead::Payload { msg: &encrypted, aad })
+        cipher.decrypt(nonce_obj, aead::Payload { msg: &encrypted[..encrypted_len], aad })
             .map_err(|e| format!("AES-256-GCM decryption failed: {}", e))?
     } else {
-        cipher.decrypt(nonce_obj, encrypted.as_ref())
+        cipher.decrypt(nonce_obj, &encrypted[..encrypted_len])
             .map_err(|e| format!("AES-256-GCM decryption failed: {}", e))?
     };
     
-    Ok(plaintext)
+    if plaintext_out.len() < plaintext.len() {
+        return Err("Plaintext output buffer too small for decrypted data".to_string());
+    }
+    
+    plaintext_out[..plaintext.len()].copy_from_slice(&plaintext);
+    Ok(plaintext.len())
 }
 
 #[cfg(test)]
 #[cfg(feature = "sanctuary-crypto")]
 mod tests {
+    use super::*;
     
     #[test]
     fn test_sanctuary_key_derivation() {
@@ -280,5 +311,90 @@ mod tests {
             let nonce = derive_chunk_nonce(&volume_tweak, i);
             assert!(nonces.insert(nonce), "Duplicate nonce found at index {}", i);
         }
+    }
+    
+    #[test]
+    fn test_zero_heap_encrypt_decrypt() {
+        let pin = b"test_pin";
+        let salt = b"test_salt";
+        let iterations = 1000;
+        
+        let key_material = derive_sanctuary_key_material(pin, salt, iterations).unwrap();
+        let volume_tweak = key_material.volume_tweak;
+        let cipher_key = key_material.cipher_key;
+        
+        let plaintext = b"Hello, zero-heap world!";
+        let chunk_index = 0u64;
+        
+        // Zero-heap encryption
+        let mut ciphertext = [0u8; 1024];
+        let mut tag = [0u8; 16];
+        let bytes_written = encrypt_sanctuary_chunk(
+            &cipher_key,
+            &volume_tweak,
+            chunk_index,
+            plaintext,
+            &mut ciphertext,
+            &mut tag,
+            None,
+        ).unwrap();
+        
+        assert_eq!(bytes_written, plaintext.len());
+        
+        // Zero-heap decryption
+        let mut decrypted = [0u8; 1024];
+        let decrypted_len = decrypt_sanctuary_chunk(
+            &cipher_key,
+            &volume_tweak,
+            chunk_index,
+            &ciphertext[..bytes_written],
+            &tag,
+            &mut decrypted,
+            None,
+        ).unwrap();
+        
+        assert_eq!(&decrypted[..decrypted_len], plaintext);
+    }
+    
+    #[test]
+    fn test_zero_heap_with_aad() {
+        let pin = b"test_pin";
+        let salt = b"test_salt";
+        let iterations = 1000;
+        
+        let key_material = derive_sanctuary_key_material(pin, salt, iterations).unwrap();
+        let volume_tweak = key_material.volume_tweak;
+        let cipher_key = key_material.cipher_key;
+        
+        let plaintext = b"Secret message";
+        let aad = b"Additional authenticated data";
+        let chunk_index = 1u64;
+        
+        // Zero-heap encryption with AAD
+        let mut ciphertext = [0u8; 1024];
+        let mut tag = [0u8; 16];
+        let bytes_written = encrypt_sanctuary_chunk(
+            &cipher_key,
+            &volume_tweak,
+            chunk_index,
+            plaintext,
+            &mut ciphertext,
+            &mut tag,
+            Some(aad),
+        ).unwrap();
+        
+        // Zero-heap decryption with AAD
+        let mut decrypted = [0u8; 1024];
+        let decrypted_len = decrypt_sanctuary_chunk(
+            &cipher_key,
+            &volume_tweak,
+            chunk_index,
+            &ciphertext[..bytes_written],
+            &tag,
+            &mut decrypted,
+            Some(aad),
+        ).unwrap();
+        
+        assert_eq!(&decrypted[..decrypted_len], plaintext);
     }
 }
