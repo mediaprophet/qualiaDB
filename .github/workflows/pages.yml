@@ -89,6 +89,12 @@ jobs:
           bash scripts/prepare_purl_ontologies.sh
           ls -lh docs/data/purl/*.q42 | head
 
+      - name: Build GeoNames ontology volume for Ontology Demo
+        continue-on-error: true
+        run: |
+          bash scripts/prepare_geonames_ontologies.sh
+          ls -lh docs/data/geonames/*.q42
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:

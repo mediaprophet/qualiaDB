@@ -26,6 +26,15 @@ GROUP_CONFIG = {
         "homepage": "https://purl.org/",
         "description": lambda e: f"PURL {e['label']} vocabulary · {e['file']}",
     },
+    "geonames": {
+        "src": REPO / "bundled/ontologies/geonames",
+        "out": REPO / "docs/data/geonames",
+        "url_prefix": "data/geonames",
+        "profile": "w3c",
+        "license": "CC-BY 3.0",
+        "homepage": "https://www.geonames.org/ontology/",
+        "description": lambda e: f"GeoNames geography ontology · {e['file']} · ~1.4k triples",
+    },
 }
 
 
@@ -39,9 +48,8 @@ def build_entries(group: str) -> list:
             continue
         term = entry.get("defaultSearch", "Resource")
         ns = entry["namespace"]
-        built.append({
+        ds = {
             "id": entry["id"],
-            "group": group,
             "profile": cfg["profile"],
             "label": entry["label"],
             "icon": entry.get("icon", "📘"),
@@ -67,14 +75,21 @@ def build_entries(group: str) -> list:
                     ),
                 },
             ],
-        })
+        }
+        if not entry.get("primary"):
+            ds["group"] = group
+        built.append(ds)
     return built
 
 
 def merge_group(group: str) -> int:
     built = build_entries(group)
+    built_ids = {d["id"] for d in built}
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    stripped = [d for d in manifest.get("datasets", []) if d.get("group") != group]
+    stripped = [
+        d for d in manifest.get("datasets", [])
+        if d.get("group") != group and d.get("id") not in built_ids
+    ]
     manifest["datasets"] = stripped + built
     MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"manifest: {len(built)} {group} datasets")

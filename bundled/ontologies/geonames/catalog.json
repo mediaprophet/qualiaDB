@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "source": "bundled/ontologies/geonames",
+  "license": "CC-BY 3.0",
+  "ontologies": [
+    {
+      "file": "geonames.ttl",
+      "id": "geonames",
+      "label": "GeoNames",
+      "icon": "🌍",
+      "prefix": "gn",
+      "namespace": "http://www.geonames.org/ontology#",
+      "defaultSearch": "Feature",
+      "quickExamples": ["Feature", "GeonamesFeature", "name", "countryCode", "population"],
+      "homepage": "https://www.geonames.org/ontology/",
+      "primary": true
+    }
+  ]
+}

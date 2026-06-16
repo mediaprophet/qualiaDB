@@ -14,8 +14,12 @@ case "$GROUP" in
     SRC_DIR="${PURL_TTL_DIR:-$REPO_ROOT/bundled/ontologies/purl}"
     OUT_DIR="$REPO_ROOT/docs/data/purl"
     ;;
+  geonames)
+    SRC_DIR="${GEONAMES_TTL_DIR:-$REPO_ROOT/bundled/ontologies/geonames}"
+    OUT_DIR="$REPO_ROOT/docs/data/geonames"
+    ;;
   *)
-    echo "Unknown group: $GROUP (expected: w3c, purl)" >&2
+    echo "Unknown group: $GROUP (expected: w3c, purl, geonames)" >&2
     exit 1
     ;;
 esac

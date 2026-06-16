@@ -32,6 +32,11 @@
 !docs/data/purl/**/*.q42.lex
 !docs/data/purl/**/*.q42.bidx
 
+# Ontology demo — GeoNames volume under docs/data/geonames
+!docs/data/geonames/**/*.q42
+!docs/data/geonames/**/*.q42.lex
+!docs/data/geonames/**/*.q42.bidx
+
 # Claude Code session files (dev-machine only)
 .claude/
 

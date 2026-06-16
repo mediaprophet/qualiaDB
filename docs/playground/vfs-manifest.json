@@ -1292,6 +1292,40 @@
           "pattern": "<http://purl.org/vocab/vann/preferredNamespacePrefix> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
       ]
+    },
+    {
+      "id": "geonames",
+      "profile": "w3c",
+      "label": "GeoNames",
+      "icon": "\ud83c\udf0d",
+      "description": "GeoNames GeoNames \u00b7 geonames.ttl",
+      "url": "data/geonames/geonames.q42",
+      "lexUrl": "data/geonames/geonames.q42.lex",
+      "bidxUrl": "data/geonames/geonames.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "CC-BY 3.0",
+      "homepage": "https://www.geonames.org/ontology/",
+      "namespace": "http://www.geonames.org/ontology#",
+      "prefix": "gn",
+      "defaultSearch": "Feature",
+      "quickExamples": [
+        "Feature",
+        "GeonamesFeature",
+        "name",
+        "countryCode",
+        "population"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Feature",
+          "pattern": "<http://www.geonames.org/ontology#Feature> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.geonames.org/ontology#Feature> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
     }
   ]
 }
