@@ -83,6 +83,12 @@ jobs:
           bash scripts/prepare_w3c_ontologies.sh
           ls -lh docs/data/w3c/*.q42 | head
 
+      - name: Build PURL ontology volumes for Ontology Demo
+        continue-on-error: true
+        run: |
+          bash scripts/prepare_purl_ontologies.sh
+          ls -lh docs/data/purl/*.q42 | head
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:

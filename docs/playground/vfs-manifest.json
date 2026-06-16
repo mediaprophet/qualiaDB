@@ -908,6 +908,390 @@
           "pattern": "<http://www.w3.org/2006/timezone#Timezone> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
       ]
+    },
+    {
+      "id": "purl-bibo",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "BIBO",
+      "icon": "\ud83d\udcd6",
+      "description": "PURL BIBO vocabulary \u00b7 bibo.ttl",
+      "url": "data/purl/bibo.q42",
+      "lexUrl": "data/purl/bibo.q42.lex",
+      "bidxUrl": "data/purl/bibo.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://purl.org/ontology/bibo/",
+      "prefix": "bibo",
+      "defaultSearch": "Article",
+      "quickExamples": [
+        "Article",
+        "Book",
+        "Journal",
+        "Document",
+        "Chapter"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Article",
+          "pattern": "<http://purl.org/ontology/bibo/Article> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/ontology/bibo/Article> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "purl-consent",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "Consent Ontology",
+      "icon": "\ud83d\udee1\ufe0f",
+      "description": "PURL Consent Ontology vocabulary \u00b7 consent.ttl",
+      "url": "data/purl/consent.q42",
+      "lexUrl": "data/purl/consent.q42.lex",
+      "bidxUrl": "data/purl/consent.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://purl.org/adaptcentre/openscience/ontologies/consent#",
+      "prefix": "consent",
+      "defaultSearch": "Consent",
+      "quickExamples": [
+        "Consent",
+        "Permission",
+        "Activity",
+        "Purpose",
+        "Condition"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Consent",
+          "pattern": "<http://purl.org/adaptcentre/openscience/ontologies/consent#Consent> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/adaptcentre/openscience/ontologies/consent#Consent> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "purl-cube",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "Data Cube",
+      "icon": "\ud83d\udcca",
+      "description": "PURL Data Cube vocabulary \u00b7 cube.ttl",
+      "url": "data/purl/cube.q42",
+      "lexUrl": "data/purl/cube.q42.lex",
+      "bidxUrl": "data/purl/cube.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://purl.org/linked-data/cube#",
+      "prefix": "qb",
+      "defaultSearch": "Dataset",
+      "quickExamples": [
+        "Dataset",
+        "Observation",
+        "Measure",
+        "DimensionProperty",
+        "ComponentSpecification"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Dataset",
+          "pattern": "<http://purl.org/linked-data/cube#Dataset> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/linked-data/cube#Dataset> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "purl-dcam",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "DCAM",
+      "icon": "\ud83c\udff7\ufe0f",
+      "description": "PURL DCAM vocabulary \u00b7 dcam.ttl",
+      "url": "data/purl/dcam.q42",
+      "lexUrl": "data/purl/dcam.q42.lex",
+      "bidxUrl": "data/purl/dcam.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://purl.org/dc/dcam/",
+      "prefix": "dcam",
+      "defaultSearch": "VocabularyEncodingScheme",
+      "quickExamples": [
+        "VocabularyEncodingScheme",
+        "domainIncludes",
+        "rangeIncludes",
+        "memberOf"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect VocabularyEncodingScheme",
+          "pattern": "<http://purl.org/dc/dcam/VocabularyEncodingScheme> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/dc/dcam/VocabularyEncodingScheme> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "purl-dcelements",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "Dublin Core Elements",
+      "icon": "\ud83d\udccb",
+      "description": "PURL Dublin Core Elements vocabulary \u00b7 dcelements.ttl",
+      "url": "data/purl/dcelements.q42",
+      "lexUrl": "data/purl/dcelements.q42.lex",
+      "bidxUrl": "data/purl/dcelements.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://purl.org/dc/elements/1.1/",
+      "prefix": "dc11",
+      "defaultSearch": "title",
+      "quickExamples": [
+        "title",
+        "creator",
+        "subject",
+        "description",
+        "date"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect title",
+          "pattern": "<http://purl.org/dc/elements/1.1/title> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/dc/elements/1.1/title> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "purl-dcmitype",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "DCMI Type",
+      "icon": "\ud83d\uddc2\ufe0f",
+      "description": "PURL DCMI Type vocabulary \u00b7 dcmitype.ttl",
+      "url": "data/purl/dcmitype.q42",
+      "lexUrl": "data/purl/dcmitype.q42.lex",
+      "bidxUrl": "data/purl/dcmitype.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://purl.org/dc/dcmitype/",
+      "prefix": "dcmitype",
+      "defaultSearch": "Collection",
+      "quickExamples": [
+        "Collection",
+        "Dataset",
+        "Event",
+        "Image",
+        "Text"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Collection",
+          "pattern": "<http://purl.org/dc/dcmitype/Collection> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/dc/dcmitype/Collection> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "purl-dcterms",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "Dublin Core Terms",
+      "icon": "\ud83d\udcda",
+      "description": "PURL Dublin Core Terms vocabulary \u00b7 dcterms.ttl",
+      "url": "data/purl/dcterms.q42",
+      "lexUrl": "data/purl/dcterms.q42.lex",
+      "bidxUrl": "data/purl/dcterms.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://purl.org/dc/terms/",
+      "prefix": "dcterms",
+      "defaultSearch": "Agent",
+      "quickExamples": [
+        "Agent",
+        "BibliographicResource",
+        "Location",
+        "RightsStatement",
+        "title"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Agent",
+          "pattern": "<http://purl.org/dc/terms/Agent> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/dc/terms/Agent> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "purl-music",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "Music Ontology",
+      "icon": "\ud83c\udfb5",
+      "description": "PURL Music Ontology vocabulary \u00b7 music.ttl",
+      "url": "data/purl/music.q42",
+      "lexUrl": "data/purl/music.q42.lex",
+      "bidxUrl": "data/purl/music.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://purl.org/ontology/mo/",
+      "prefix": "mo",
+      "defaultSearch": "Track",
+      "quickExamples": [
+        "Track",
+        "Album",
+        "Artist",
+        "Performance",
+        "Signal"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Track",
+          "pattern": "<http://purl.org/ontology/mo/Track> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/ontology/mo/Track> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "purl-pplan",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "P-Plan",
+      "icon": "\ud83d\udcdd",
+      "description": "PURL P-Plan vocabulary \u00b7 p-plan.ttl",
+      "url": "data/purl/p-plan.q42",
+      "lexUrl": "data/purl/p-plan.q42.lex",
+      "bidxUrl": "data/purl/p-plan.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://purl.org/net/p-plan#",
+      "prefix": "pplan",
+      "defaultSearch": "Plan",
+      "quickExamples": [
+        "Plan",
+        "Step",
+        "Activity",
+        "Entity",
+        "Variable"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect Plan",
+          "pattern": "<http://purl.org/net/p-plan#Plan> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/net/p-plan#Plan> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "purl-resume",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "Resume RDF",
+      "icon": "\ud83d\udc54",
+      "description": "PURL Resume RDF vocabulary \u00b7 resume.ttl",
+      "url": "data/purl/resume.q42",
+      "lexUrl": "data/purl/resume.q42.lex",
+      "bidxUrl": "data/purl/resume.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://rdfs.org/resume-rdf/cv.rdfs#",
+      "prefix": "cv",
+      "defaultSearch": "CV",
+      "quickExamples": [
+        "CV",
+        "Person",
+        "Education",
+        "WorkExperience",
+        "Skill"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect CV",
+          "pattern": "<http://rdfs.org/resume-rdf/cv.rdfs#CV> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://rdfs.org/resume-rdf/cv.rdfs#CV> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
+    },
+    {
+      "id": "purl-vann",
+      "group": "purl",
+      "profile": "w3c",
+      "label": "VANN",
+      "icon": "\ud83d\udd16",
+      "description": "PURL VANN vocabulary \u00b7 vann.ttl",
+      "url": "data/purl/vann.q42",
+      "lexUrl": "data/purl/vann.q42.lex",
+      "bidxUrl": "data/purl/vann.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "various",
+      "homepage": "https://purl.org/",
+      "namespace": "http://purl.org/vocab/vann/",
+      "prefix": "vann",
+      "defaultSearch": "preferredNamespacePrefix",
+      "quickExamples": [
+        "preferredNamespacePrefix",
+        "preferredNamespaceUri",
+        "example",
+        "usageNote",
+        "termGroup"
+      ],
+      "sampleQueries": [
+        {
+          "label": "Inspect preferredNamespacePrefix",
+          "pattern": "<http://purl.org/vocab/vann/preferredNamespacePrefix> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://purl.org/vocab/vann/preferredNamespacePrefix> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ]
     }
   ]
 }

@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
-# Ingest bundled W3C TTL ontologies into .q42 volumes for the Ontology Demo.
+# Ingest bundled TTL ontologies (w3c, purl, …) into .q42 volumes for the Ontology Demo.
 set -euo pipefail
 
+GROUP="${1:-w3c}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC_DIR="${W3C_TTL_DIR:-$REPO_ROOT/bundled/ontologies/w3c}"
-CATALOG="$SRC_DIR/catalog.json"
-OUT_DIR="$REPO_ROOT/docs/data/w3c"
-MANIFEST="$REPO_ROOT/docs/playground/vfs-manifest.json"
 
+case "$GROUP" in
+  w3c)
+    SRC_DIR="${W3C_TTL_DIR:-$REPO_ROOT/bundled/ontologies/w3c}"
+    OUT_DIR="$REPO_ROOT/docs/data/w3c"
+    ;;
+  purl)
+    SRC_DIR="${PURL_TTL_DIR:-$REPO_ROOT/bundled/ontologies/purl}"
+    OUT_DIR="$REPO_ROOT/docs/data/purl"
+    ;;
+  *)
+    echo "Unknown group: $GROUP (expected: w3c, purl)" >&2
+    exit 1
+    ;;
+esac
+
+CATALOG="$SRC_DIR/catalog.json"
 mkdir -p "$OUT_DIR"
 
 if [[ ! -f "$CATALOG" ]]; then
@@ -15,7 +28,7 @@ if [[ ! -f "$CATALOG" ]]; then
   exit 1
 fi
 
-echo "W3C ontology preparation"
+echo "$GROUP ontology preparation"
 echo "  Source dir : $SRC_DIR"
 echo "  Output dir : $OUT_DIR"
 
@@ -38,5 +51,5 @@ while IFS= read -r file; do
   count=$((count + 1))
 done < <(python3 -c "import json,sys; print('\n'.join(e['file'] for e in json.load(open(sys.argv[1])).get('ontologies',[])))" "$CATALOG")
 
-python3 "$REPO_ROOT/scripts/merge_ontology_manifest.py" w3c
-echo "Sync complete — $count W3C ontologies under docs/data/w3c/"
+python3 "$REPO_ROOT/scripts/merge_ontology_manifest.py" "$GROUP"
+echo "Sync complete — $count $GROUP ontologies under $OUT_DIR/"

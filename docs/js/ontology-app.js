@@ -271,8 +271,9 @@ function renderDatasetPicker() {
     const container = $('dataset-picker');
     if (!container || !engine.datasets.length) return;
 
-    const primary = engine.datasets.filter(d => d.group !== 'w3c');
+    const primary = engine.datasets.filter(d => d.group !== 'w3c' && d.group !== 'purl');
     const w3c = engine.datasets.filter(d => d.group === 'w3c');
+    const purl = engine.datasets.filter(d => d.group === 'purl');
 
     const card = (d) => {
         const active = d.id === engine.activeDataset?.id;
@@ -292,20 +293,25 @@ function renderDatasetPicker() {
 
     let html = `<div class="flex flex-wrap gap-3 w-full">${primary.map(card).join('')}</div>`;
 
-    if (w3c.length) {
+    const renderSelect = (group, id, title, count) => {
+        if (!count) return '';
         const activeId = engine.activeDataset?.id ?? '';
-        html += `
+        const items = group === 'w3c' ? w3c : purl;
+        return `
             <div class="glass-strong rounded-2xl p-4 w-full mt-1">
                 <div class="text-xs text-white/60 mb-2 flex items-center gap-2">
                     <i class="fa-solid fa-layer-group text-blue-400"></i>
-                    <span>W3C Ontologies (${w3c.length})</span>
+                    <span>${title} (${count})</span>
                 </div>
-                <select id="w3c-select" class="w-full bg-zinc-900 border border-white/20 rounded-xl px-3 py-2 text-sm">
-                    <option value="">Select a W3C vocabulary…</option>
-                    ${w3c.map(d => `<option value="${esc(d.id)}" ${d.id === activeId ? 'selected' : ''}>${d.icon ?? '📘'} ${esc(d.label ?? d.id)}</option>`).join('')}
+                <select id="${id}" class="w-full bg-zinc-900 border border-white/20 rounded-xl px-3 py-2 text-sm">
+                    <option value="">Select a ${title.toLowerCase()}…</option>
+                    ${items.map(d => `<option value="${esc(d.id)}" ${d.id === activeId ? 'selected' : ''}>${d.icon ?? '📘'} ${esc(d.label ?? d.id)}</option>`).join('')}
                 </select>
             </div>`;
-    }
+    };
+
+    html += renderSelect('w3c', 'w3c-select', 'W3C Ontologies', w3c.length);
+    html += renderSelect('purl', 'purl-select', 'PURL.org Vocabularies', purl.length);
 
     container.innerHTML = html;
 
@@ -313,11 +319,13 @@ function renderDatasetPicker() {
         btn.addEventListener('click', () => switchDataset(btn.dataset.dataset));
     });
 
-    const w3cSelect = $('w3c-select');
-    if (w3cSelect) {
-        w3cSelect.addEventListener('change', () => {
-            if (w3cSelect.value) switchDataset(w3cSelect.value);
-        });
+    for (const selId of ['w3c-select', 'purl-select']) {
+        const sel = $(selId);
+        if (sel) {
+            sel.addEventListener('change', () => {
+                if (sel.value) switchDataset(sel.value);
+            });
+        }
     }
 }
 

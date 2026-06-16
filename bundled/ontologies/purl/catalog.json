@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "source": "bundled/ontologies/purl",
+  "license": "various",
+  "ontologies": [
+    { "file": "bibo.ttl", "id": "purl-bibo", "label": "BIBO", "icon": "📖", "prefix": "bibo", "namespace": "http://purl.org/ontology/bibo/", "defaultSearch": "Article", "quickExamples": ["Article", "Book", "Journal", "Document", "Chapter"] },
+    { "file": "consent.ttl", "id": "purl-consent", "label": "Consent Ontology", "icon": "🛡️", "prefix": "consent", "namespace": "http://purl.org/adaptcentre/openscience/ontologies/consent#", "defaultSearch": "Consent", "quickExamples": ["Consent", "Permission", "Activity", "Purpose", "Condition"] },
+    { "file": "cube.ttl", "id": "purl-cube", "label": "Data Cube", "icon": "📊", "prefix": "qb", "namespace": "http://purl.org/linked-data/cube#", "defaultSearch": "Dataset", "quickExamples": ["Dataset", "Observation", "Measure", "DimensionProperty", "ComponentSpecification"] },
+    { "file": "dcam.ttl", "id": "purl-dcam", "label": "DCAM", "icon": "🏷️", "prefix": "dcam", "namespace": "http://purl.org/dc/dcam/", "defaultSearch": "VocabularyEncodingScheme", "quickExamples": ["VocabularyEncodingScheme", "domainIncludes", "rangeIncludes", "memberOf"] },
+    { "file": "dcelements.ttl", "id": "purl-dcelements", "label": "Dublin Core Elements", "icon": "📋", "prefix": "dc11", "namespace": "http://purl.org/dc/elements/1.1/", "defaultSearch": "title", "quickExamples": ["title", "creator", "subject", "description", "date"] },
+    { "file": "dcmitype.ttl", "id": "purl-dcmitype", "label": "DCMI Type", "icon": "🗂️", "prefix": "dcmitype", "namespace": "http://purl.org/dc/dcmitype/", "defaultSearch": "Collection", "quickExamples": ["Collection", "Dataset", "Event", "Image", "Text"] },
+    { "file": "dcterms.ttl", "id": "purl-dcterms", "label": "Dublin Core Terms", "icon": "📚", "prefix": "dcterms", "namespace": "http://purl.org/dc/terms/", "defaultSearch": "Agent", "quickExamples": ["Agent", "BibliographicResource", "Location", "RightsStatement", "title"] },
+    { "file": "music.ttl", "id": "purl-music", "label": "Music Ontology", "icon": "🎵", "prefix": "mo", "namespace": "http://purl.org/ontology/mo/", "defaultSearch": "Track", "quickExamples": ["Track", "Album", "Artist", "Performance", "Signal"] },
+    { "file": "p-plan.ttl", "id": "purl-pplan", "label": "P-Plan", "icon": "📝", "prefix": "pplan", "namespace": "http://purl.org/net/p-plan#", "defaultSearch": "Plan", "quickExamples": ["Plan", "Step", "Activity", "Entity", "Variable"] },
+    { "file": "resume.ttl", "id": "purl-resume", "label": "Resume RDF", "icon": "👔", "prefix": "cv", "namespace": "http://rdfs.org/resume-rdf/cv.rdfs#", "defaultSearch": "CV", "quickExamples": ["CV", "Person", "Education", "WorkExperience", "Skill"] },
+    { "file": "vann.ttl", "id": "purl-vann", "label": "VANN", "icon": "🔖", "prefix": "vann", "namespace": "http://purl.org/vocab/vann/", "defaultSearch": "preferredNamespacePrefix", "quickExamples": ["preferredNamespacePrefix", "preferredNamespaceUri", "example", "usageNote", "termGroup"] }
+  ]
+}

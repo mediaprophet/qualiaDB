@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Merge bundled ontology catalog entries into docs/playground/vfs-manifest.json."""
+import json
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+MANIFEST = REPO / "docs/playground/vfs-manifest.json"
+
+GROUP_CONFIG = {
+    "w3c": {
+        "src": REPO / "bundled/ontologies/w3c",
+        "out": REPO / "docs/data/w3c",
+        "url_prefix": "data/w3c",
+        "profile": "w3c",
+        "license": "W3C",
+        "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+        "description": lambda e: f"W3C {e['label']} vocabulary · {e['file']}",
+    },
+    "purl": {
+        "src": REPO / "bundled/ontologies/purl",
+        "out": REPO / "docs/data/purl",
+        "url_prefix": "data/purl",
+        "profile": "w3c",
+        "license": "PURL.org",
+        "homepage": "https://purl.org/",
+        "description": lambda e: f"PURL {e['label']} vocabulary · {e['file']}",
+    },
+}
+
+
+def build_entries(group: str) -> list:
+    cfg = GROUP_CONFIG[group]
+    catalog = json.loads((cfg["src"] / "catalog.json").read_text(encoding="utf-8"))
+    built = []
+    for entry in catalog.get("ontologies", []):
+        base = Path(entry["file"]).stem
+        if not (cfg["out"] / f"{base}.q42").is_file():
+            continue
+        term = entry.get("defaultSearch", "Resource")
+        ns = entry["namespace"]
+        built.append({
+            "id": entry["id"],
+            "group": group,
+            "profile": cfg["profile"],
+            "label": entry["label"],
+            "icon": entry.get("icon", "📘"),
+            "description": cfg["description"](entry),
+            "url": f"{cfg['url_prefix']}/{base}.q42",
+            "lexUrl": f"{cfg['url_prefix']}/{base}.q42.lex",
+            "bidxUrl": f"{cfg['url_prefix']}/{base}.q42.bidx",
+            "compressed": False,
+            "source": "bundled",
+            "license": entry.get("license", catalog.get("license", cfg["license"])),
+            "homepage": entry.get("homepage", cfg["homepage"]),
+            "namespace": ns,
+            "prefix": entry["prefix"],
+            "defaultSearch": term,
+            "quickExamples": entry.get("quickExamples", []),
+            "sampleQueries": [
+                {"label": f"Inspect {term}", "pattern": f"<{ns}{term}> ?p ?o"},
+                {
+                    "label": "Subclass chain",
+                    "pattern": (
+                        f"<{ns}{term}> "
+                        "<http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+                    ),
+                },
+            ],
+        })
+    return built
+
+
+def merge_group(group: str) -> int:
+    built = build_entries(group)
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    stripped = [d for d in manifest.get("datasets", []) if d.get("group") != group]
+    manifest["datasets"] = stripped + built
+    MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(f"manifest: {len(built)} {group} datasets")
+    return len(built)
+
+
+if __name__ == "__main__":
+    groups = sys.argv[1:] or ["w3c"]
+    for g in groups:
+        if g not in GROUP_CONFIG:
+            raise SystemExit(f"Unknown group: {g} (expected: {', '.join(GROUP_CONFIG)})")
+        merge_group(g)

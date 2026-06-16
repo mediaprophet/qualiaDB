@@ -27,6 +27,11 @@
 !docs/data/w3c/**/*.q42.lex
 !docs/data/w3c/**/*.q42.bidx
 
+# Ontology demo — PURL.org volumes under docs/data/purl
+!docs/data/purl/**/*.q42
+!docs/data/purl/**/*.q42.lex
+!docs/data/purl/**/*.q42.bidx
+
 # Claude Code session files (dev-machine only)
 .claude/
 
