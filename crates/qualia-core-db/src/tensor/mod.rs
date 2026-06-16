@@ -11,6 +11,7 @@ pub mod spacetime;
 pub mod spectral;
 pub mod quantum;
 pub mod hardware_tier;
+pub mod gsr;
 
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
