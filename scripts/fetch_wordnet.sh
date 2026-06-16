@@ -2,7 +2,7 @@
 # fetch_wordnet.sh
 #
 # Downloads Open English WordNet, ingests via qualia-cli, and installs a unified
-# v2 `wordnet.q42` under Local_LIbraries/wordnet/ (override with QUALIA_WORDNET_DIR).
+# v3 `wordnet.q42` under Local_LIbraries/wordnet/ (override with QUALIA_WORDNET_DIR).
 # Copies to docs/playground/ when --playground is passed (GitHub Pages CI).
 #
 # Requirements:
@@ -45,7 +45,7 @@ done
 
 mkdir -p "$DATA_DIR" "$WORK_DIR"
 
-echo "=== Qualia-DB WordNet Ingestor (Q42 v2 unified volume) ==="
+echo "=== Qualia-DB WordNet Ingestor (Q42 v3 unified volume) ==="
 echo "  Release  : ${OEWN_VERSION}"
 echo "  Work dir : ${WORK_DIR}"
 echo "  Data dir : ${DATA_DIR}"
@@ -80,7 +80,7 @@ if [[ -n "$SUBSET_LINES" ]]; then
     Q42_OUT="${OUTPUT_BASE}.q42"
 fi
 
-echo "[3/3] Building qualia-cli and ingesting unified v2 volume..."
+echo "[3/3] Building qualia-cli and ingesting unified v3 volume..."
 cargo build --release -p qualia-cli --quiet
 
 ./target/release/qualia-cli ingest semantic "$INGEST_INPUT"
@@ -105,7 +105,7 @@ fi
 
 echo ""
 echo "=== Done ==="
-echo "  ${DATA_DIR}/wordnet.q42 — unified v2 volume ($(( Q42_BYTES / 1024 / 1024 )) MB)"
+echo "  ${DATA_DIR}/wordnet.q42 — unified v3 volume ($(( Q42_BYTES / 1024 / 1024 )) MB)"
 if [[ "$COPY_PLAYGROUND" == true ]]; then
 echo "  ${PLAYGROUND_DIR}/wordnet.q42 — playground mirror"
 fi

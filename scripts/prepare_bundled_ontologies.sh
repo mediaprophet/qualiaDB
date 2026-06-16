@@ -56,12 +56,10 @@ while IFS= read -r file; do
   base="${file%.*}"
   echo "  ingest: $file -> $base.q42"
   (cd "$REPO_ROOT" && cargo run --release -p qualia-cli -- ingest semantic "$ttl")
-  for ext in "" ".lex" ".bidx"; do
-    src="$SRC_DIR/$base.q42$ext"
-    if [[ -f "$src" ]]; then
-      cp "$src" "$OUT_DIR/$base.q42$ext"
-    fi
-  done
+  src="$SRC_DIR/$base.q42"
+  if [[ -f "$src" ]]; then
+    cp "$src" "$OUT_DIR/$base.q42"
+  fi
   count=$((count + 1))
 done < <(python3 -c "import json,sys; sys.stdout.write('\n'.join(e['file'] for e in json.load(open(sys.argv[1])).get('ontologies',[])))" "$CATALOG")
 

@@ -85,8 +85,6 @@ def build_entries(group: str) -> list:
             "icon": entry.get("icon", "📘"),
             "description": cfg["description"](entry),
             "url": f"{cfg['url_prefix']}/{base}.q42",
-            "lexUrl": f"{cfg['url_prefix']}/{base}.q42.lex",
-            "bidxUrl": f"{cfg['url_prefix']}/{base}.q42.bidx",
             "compressed": False,
             "source": "bundled",
             "license": entry.get("license", catalog.get("license", cfg["license"])),

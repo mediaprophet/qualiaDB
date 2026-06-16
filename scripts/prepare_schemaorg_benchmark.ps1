@@ -2,8 +2,7 @@
 param(
     [string]$Release = "30.0",
     [string]$Variant = "current-https",
-    [string]$DataRoot = "data/schemaorg",
-    [switch]$Compress
+    [string]$DataRoot = "data/schemaorg"
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,9 +12,7 @@ $releaseDir = Join-Path $repoRoot (Join-Path $DataRoot $Release)
 $docsReleaseDir = Join-Path $repoRoot (Join-Path "docs/data/schemaorg" $Release)
 $baseName = "schemaorg-$Variant"
 $ntPath = Join-Path $releaseDir "$baseName.nt"
-$q42Base = Join-Path $releaseDir $baseName
-$q42Path = "$q42Base.q42"
-$compressedQ42Path = "$q42Base.c.q42"
+$q42Path = Join-Path $releaseDir "$baseName.q42"
 $rawUrl = "https://raw.githubusercontent.com/schemaorg/schemaorg/main/data/releases/$Release/$baseName.nt"
 
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
@@ -33,13 +30,10 @@ if (-not (Test-Path $ntPath)) {
     Write-Host "NT source already present, reusing local file." -ForegroundColor DarkGray
 }
 
-Write-Host "Ingesting N-Triples into native .q42..." -ForegroundColor Yellow
-cargo run --release -p qualia-cli --bin qualia-cli -- ingest --input $ntPath --output $q42Base
-
-if ($Compress.IsPresent) {
-    Write-Host "Compressing .q42 artifact for browser/native transport..." -ForegroundColor Yellow
-    cargo run --release -p qualia-cli --bin qualia-cli -- compress --input $q42Path --output $compressedQ42Path
-}
+Write-Host "Ingesting N-Triples into unified v3 .q42..." -ForegroundColor Yellow
+Push-Location $repoRoot
+cargo run --release -p qualia-cli -- ingest semantic $ntPath
+Pop-Location
 
 if (Test-Path $ntPath) {
     $ntMb = [math]::Round((Get-Item $ntPath).Length / 1MB, 2)
@@ -47,25 +41,12 @@ if (Test-Path $ntPath) {
 }
 if (Test-Path $q42Path) {
     $qMb = [math]::Round((Get-Item $q42Path).Length / 1MB, 2)
-    Write-Host "  .q42 size  : $qMb MB (Qualia native SuperBlocks)" -ForegroundColor DarkGray
-}
-if (Test-Path $compressedQ42Path) {
-    $cMb = [math]::Round((Get-Item $compressedQ42Path).Length / 1MB, 2)
-    Write-Host "  .c.q42 size: $cMb MB (LZ4 distribution artifact)" -ForegroundColor DarkGray
+    Write-Host "  .q42 size  : $qMb MB (v3 unified volume — lex + bidx + LZ4 blocks embedded)" -ForegroundColor DarkGray
 }
 
 Write-Host "Syncing benchmark artifacts into docs/data for GitHub Pages and local site testing..." -ForegroundColor Yellow
 Copy-Item -Force $ntPath $docsReleaseDir
 Copy-Item -Force $q42Path $docsReleaseDir
-if (Test-Path $compressedQ42Path) {
-    Copy-Item -Force $compressedQ42Path $docsReleaseDir
-}
-if (Test-Path "$q42Path.bidx") {
-    Copy-Item -Force "$q42Path.bidx" $docsReleaseDir
-}
-if (Test-Path "$q42Path.lex") {
-    Copy-Item -Force "$q42Path.lex" $docsReleaseDir
-}
 
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Green

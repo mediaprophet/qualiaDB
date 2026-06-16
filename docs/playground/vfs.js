@@ -2,18 +2,26 @@
  * Qualia-DB Virtual File System (VFS)
  *
  * Unified block I/O abstraction for the browser-side Webizen VM.
- * Implements the "Pre-fetch Synchronous" model: JS fetches raw SuperBlock bytes
- * before calling the WASM VM, avoiding SharedArrayBuffer / COOP+COEP headers
- * that GitHub Pages cannot serve.
+ * Implements demand-paging: JS fetches only the bytes needed before calling
+ * the WASM VM, avoiding SharedArrayBuffer / COOP+COEP headers that GitHub
+ * Pages cannot serve.
+ *
+ * Q42 v3 unified volume (preferred):
+ *   [0..256)       Q42VolumeHeader (magic "Q42\\0", version 3)
+ *   [lex_offset]   Q42LEX blob (structural vocabulary)
+ *   [bidx_offset]  BIDX blob (10D block routing index)
+ *   [block_dir]    BlockDirectoryEntry × block_count (16 bytes each)
+ *   [data_offset]  LZ4-compressed SuperBlock payloads
+ *
+ * Boot: `Range: bytes=0-8191` fetches the preamble (header + lex + bidx +
+ * block directory).  Subsequent `readBlock(i)` issues targeted Range
+ * requests for individual compressed SuperBlocks.
+ *
+ * All pre-release datasets use v3. Non-v3 files are rejected at mount time.
  *
  * Priority order for readBlock():
  *   1. OPFS local vault  — user-provided or previously cached data
- *   2. HTTP Range request — hosted .q42 file on GitHub Pages / CDN
- *
- * .q42-lex side-car format (for reverse hash → string lookup):
- *   Header  (32 bytes): magic[8] | entry_count:u64LE | strings_offset:u64LE | version:u64LE
- *   Index   (entry_count × 16 bytes, sorted by hash): hash:u64LE | str_off:u64LE
- *   Strings (variable): for each entry — length:u16LE + UTF-8 bytes
+ *   2. HTTP Range request — LZ4-compressed SuperBlock from block directory
  */
 
 import { parseBigDecimal } from './hash.js';
@@ -75,7 +83,12 @@ export class VFSProvider {
         const entry = this.available.find(d => d.id === datasetId);
         if (!entry) throw new Error(`VFSProvider: unknown dataset "${datasetId}"`);
 
-        const vfs = new VFS(entry.url, entry.lexUrl, entry.compressed ?? false, entry.bidxUrl ?? null);
+        const vfs = new VFS(
+            entry.url,
+            entry.lexUrl ?? null,
+            entry.compressed ?? false,
+            entry.bidxUrl ?? null,
+        );
         await vfs.init({ loadLex: opts.loadLex ?? true });
 
         this._mounted.set(datasetId, vfs);
@@ -99,8 +112,114 @@ export const BLOCK_SIZE      = 40_960;  // bytes per QualiaSuperBlock
 export const QUIN_SIZE       = 48;      // bytes per QualiaQuin
 export const QUINS_PER_BLOCK = 850;
 
+const Q42_MAGIC       = 0x51; // 'Q'
+const Q42_MAGIC2      = 0x34; // '4'
+const Q42_MAGIC3      = 0x32; // '2'
+const Q42_MAGIC4      = 0x00;
+const Q42_VERSION_V3  = 3;
+const HEADER_SIZE     = 256;
+const DIR_ENTRY_SIZE  = 16;
+/** Initial Range fetch — covers lex+bidx+block_dir for typical ontology volumes. */
+const PREAMBLE_PROBE  = 8191;
+
 // ---------------------------------------------------------------------------
-// BlockOffsetMap — index-free, fixed-stride offset registry
+// Q42 v3 volume header + block directory (embedded lex/bidx preamble)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse the 256-byte Q42 v3 volume header.
+ * @param {DataView} dv — view over at least 256 bytes at offset 0
+ * @returns {object|null}
+ */
+function parseQ42Header(dv) {
+    if (dv.byteLength < HEADER_SIZE) return null;
+    if (dv.getUint8(0) !== Q42_MAGIC || dv.getUint8(1) !== Q42_MAGIC2 ||
+        dv.getUint8(2) !== Q42_MAGIC3 || dv.getUint8(3) !== Q42_MAGIC4) {
+        return null;
+    }
+    const version = dv.getUint16(4, true);
+    if (version !== Q42_VERSION_V3) return null;
+
+    return {
+        version,
+        flags:            dv.getUint16(6, true),
+        lexOffset:        Number(dv.getBigUint64(8,  true)),
+        lexLength:        Number(dv.getBigUint64(16, true)),
+        bidxOffset:       Number(dv.getBigUint64(24, true)),
+        bidxLength:       Number(dv.getBigUint64(32, true)),
+        blockDirOffset:   Number(dv.getBigUint64(40, true)),
+        blockDirLength:   Number(dv.getBigUint64(48, true)),
+        dataOffset:       Number(dv.getBigUint64(56, true)),
+        dataLength:       Number(dv.getBigUint64(64, true)),
+        blockCount:       Number(dv.getBigUint64(72, true)),
+        blockSize:        dv.getUint32(80, true),
+        quinsPerBlock:    dv.getUint32(84, true),
+    };
+}
+
+/**
+ * Parse block-directory entries from a preamble buffer.
+ * @param {Uint8Array} buf
+ * @param {object} header
+ * @returns {Array<{relOffset:number, compLen:number, uncompLen:number}>}
+ */
+function parseBlockDirectory(buf, header) {
+    const entries = [];
+    const base = header.blockDirOffset;
+    for (let i = 0; i < header.blockCount; i++) {
+        const off = base + i * DIR_ENTRY_SIZE;
+        const dv = new DataView(buf.buffer, buf.byteOffset + off, DIR_ENTRY_SIZE);
+        entries.push({
+            relOffset:  Number(dv.getBigUint64(0, true)),
+            compLen:    dv.getUint32(8,  true),
+            uncompLen:  dv.getUint32(12, true),
+        });
+    }
+    return entries;
+}
+
+/**
+ * Maps block indices to LZ4-compressed byte ranges in a v3 unified volume.
+ * The preamble (header + lex + bidx + block directory) is fetched once via
+ * HTTP Range; subsequent reads target only the compressed SuperBlock payloads.
+ */
+export class V3BlockOffsetMap {
+    /**
+     * @param {object} header — parsed Q42VolumeHeader
+     * @param {Array} dirEntries — BlockDirectoryEntry list
+     * @param {number} totalBytes — full file size
+     */
+    constructor(header, dirEntries, totalBytes) {
+        this._header     = header;
+        this._entries    = dirEntries;
+        this._total      = totalBytes;
+        this._blockSize  = header.blockSize || BLOCK_SIZE;
+    }
+
+    get count() { return this._entries.length; }
+    get totalBytes() { return this._total; }
+    get dataOffset() { return this._header.dataOffset; }
+    get blockSize() { return this._blockSize; }
+
+    /**
+     * Compressed byte range for HTTP Range fetch of block `index`.
+     * @param {number} index
+     * @returns {{ start: number, end: number, size: number, uncompLen: number }}
+     */
+    compressedRange(index) {
+        const e = this._entries[index];
+        const start = this._header.dataOffset + e.relOffset;
+        return {
+            start,
+            end:       start + e.compLen - 1,
+            size:      e.compLen,
+            uncompLen: e.uncompLen,
+        };
+    }
+}
+
+// ---------------------------------------------------------------------------
+// BlockOffsetMap — index-free, fixed-stride offset registry (legacy v1)
 // ---------------------------------------------------------------------------
 
 /**
@@ -191,6 +310,19 @@ function _decodeLz4Block(src, uncompLen) {
 }
 
 /**
+ * Decompress a single lz4_flex `compress_prepend_size` payload.
+ * First 4 bytes = uncompressed length (u32 LE), remainder = raw LZ4 block.
+ *
+ * @param {Uint8Array} raw
+ * @param {number} [expectedUncompLen]
+ * @returns {Uint8Array}
+ */
+function _decompressLz4PrependSize(raw, expectedUncompLen) {
+    const uncompLen = expectedUncompLen ?? _readU32LE(raw, 0);
+    return _decodeLz4Block(raw.subarray(4), uncompLen);
+}
+
+/**
  * Decompress a full LZ4 block-stream (as produced by qualia-cli compress).
  * Returns a flat Uint8Array of all decompressed bytes concatenated.
  *
@@ -236,22 +368,26 @@ export class VFS {
      * @param {boolean}      [compressed] — true when remoteUrl is an LZ4 block stream
      * @param {string|null}  [bidxUrl]    — URL of the .q42.bidx block-index side-car
      */
-    constructor(remoteUrl, lexUrl, compressed = false, bidxUrl = null) {
+    constructor(remoteUrl, lexUrl = null, compressed = false, bidxUrl = null) {
         this._remoteUrl      = remoteUrl;
-        this._lexUrl         = lexUrl ?? (remoteUrl + '.lex');
-        this._bidxUrl        = bidxUrl ?? (remoteUrl + '.bidx');
+        /** Side-car URLs — null means rely on embedded v3 preamble or skip. */
+        this._lexUrl         = lexUrl;
+        this._bidxUrl        = bidxUrl;
         this._compressed     = compressed;
         /** @type {Map<bigint, string>} */
         this._lexMap         = new Map();
         this._lexLoaded      = false;
         this._opfsRoot       = null;
         this._totalBytes     = 0;
-        /** @type {BlockOffsetMap|null} */
+        /** @type {BlockOffsetMap|V3BlockOffsetMap|null} */
         this._blockOffsetMap = null;
         /** @type {BigUint64Array|null}  — interleaved [min0,max0, min1,max1, …] */
         this._blockRanges    = null;
         this._bidxLoaded     = false;
         this._rangeWarned    = false;
+        /** True when lex+bidx were parsed from the embedded v3 preamble. */
+        this._embeddedPreamble = false;
+        this._volumeV3       = false;
         this._telemetry      = { netRequests: 0, opfsHits: 0, lastFaultMs: 0, totalFaultMs: 0 };
     }
 
@@ -262,10 +398,10 @@ export class VFS {
     /**
      * Initialise the VFS.
      *
-     * Boot sequence (all run concurrently after OPFS init):
-     *   1. Header-first Range: bytes=0-1023 → `BlockOffsetMap` (file size)
-     *   2. Lexicon side-car fetch → hash → string map
-     *   3. BIDX side-car fetch   → block range index for O(log N) lookup
+     * Boot sequence:
+     *   1. Preamble Range fetch (bytes=0-N) — v3: embedded lex+bidx+block_dir;
+     *      legacy: file-size probe only
+     *   2. Side-car lex/bidx fetch — only when preamble did not embed them
      *
      * Telemetry is reset after boot so init probes are not counted as
      * query-level network fetches.
@@ -279,53 +415,48 @@ export class VFS {
             this._opfsRoot = null;
         }
 
-        await Promise.all([
-            this._bootFromHeader(),
-            loadLex ? this._loadLexicon() : Promise.resolve(),
-            this._loadBidx(),
-        ]);
+        await this._bootFromHeader();
+
+        const sidecars = [];
+        if (loadLex && !this._lexLoaded) sidecars.push(this._loadLexicon());
+        if (!this._bidxLoaded) sidecars.push(this._loadBidx());
+        if (sidecars.length) await Promise.all(sidecars);
 
         this.resetTelemetry();
     }
+
+    /** True when this volume uses the v3 unified format (embedded lex/bidx). */
+    get embeddedPreamble() { return this._embeddedPreamble; }
+    get volumeV3() { return this._volumeV3; }
 
     /** True once the BIDX has been loaded and `lookupBlocks()` is operative. */
     get bidxLoaded() { return this._bidxLoaded; }
 
     /**
-     * Fetch bytes 0-1023 of the remote file.
+     * Fetch the volume preamble and build routing tables.
      *
-     * The `Content-Range` response header has the form
-     * `bytes 0-1023/<total>`, giving us the total file size without a
-     * separate HEAD request.  A HEAD fallback is used when the server does
-     * not return `Content-Range` (e.g. a static server that answers 200
-     * instead of 206 for range requests).
+     * v3 unified volumes pack lex, bidx, and the block directory at the
+     * front of the file.  A single Range request (`bytes=0-N`) gives the
+     * client everything needed to route targeted SuperBlock fetches without
+     * downloading the tensor payload.
+     *
+     * Legacy volumes (no Q42 magic) fall back to fixed-stride BlockOffsetMap
+     * plus optional side-car lex/bidx URLs.
      */
     async _bootFromHeader() {
+        let preamble = null;
+
+        // Probe: fetch enough bytes to cover a typical embedded preamble.
         try {
-            const ctrl = new AbortController();
             const resp = await fetch(this._remoteUrl, {
-                headers: { Range: 'bytes=0-1023' },
-                signal:  ctrl.signal,
+                headers: { Range: `bytes=0-${PREAMBLE_PROBE}` },
             });
             if (resp.ok || resp.status === 206) {
-                const cr = resp.headers.get('Content-Range');
-                if (cr) {
-                    // "bytes 0-1023/268361728"
-                    const m = cr.match(/\/(\d+)$/);
-                    if (m) this._totalBytes = parseInt(m[1], 10);
-                }
-                if (!this._totalBytes) {
-                    // Server returned 200 (no partial-content support) —
-                    // fall back to Content-Length of the full response.
-                    const cl = resp.headers.get('Content-Length');
-                    if (cl) this._totalBytes = parseInt(cl, 10);
-                }
+                this._totalBytes = this._parseContentLength(resp);
+                preamble = new Uint8Array(await resp.arrayBuffer());
             }
-            // Abort the body — we only needed the headers.
-            ctrl.abort();
-        } catch (_) { /* offline or abort — try HEAD fallback below */ }
+        } catch (_) { /* offline — try HEAD below */ }
 
-        // HEAD fallback for servers that reject Range requests entirely.
         if (!this._totalBytes) {
             try {
                 const head = await fetch(this._remoteUrl, { method: 'HEAD' });
@@ -334,13 +465,75 @@ export class VFS {
             } catch (_) { /* fully offline */ }
         }
 
-        if (this._totalBytes > 0) {
-            this._blockOffsetMap = new BlockOffsetMap(this._totalBytes, BLOCK_SIZE);
-            console.log(
-                `[VFS] BlockOffsetMap: ${this._blockOffsetMap.count} blocks` +
-                ` × ${BLOCK_SIZE} B = ${(this._totalBytes / 1024 / 1024).toFixed(1)} MB`
+        if (!preamble || preamble.length < HEADER_SIZE) {
+            throw new Error(
+                '[VFS] Could not read Q42 v3 header — re-ingest with qualia-cli (ingest semantic)'
             );
         }
+
+        const hdrDv = new DataView(preamble.buffer, preamble.byteOffset, HEADER_SIZE);
+        const header = parseQ42Header(hdrDv);
+
+        if (!header) {
+            throw new Error(
+                '[VFS] File is not a Q42 v3 unified volume — run qualia-cli ingest or q42 migrate meta'
+            );
+        }
+
+        // v3: extend preamble if the probe window was too small.
+        const preambleEnd = header.dataOffset;
+        if (preamble.length < preambleEnd) {
+            try {
+                const resp = await fetch(this._remoteUrl, {
+                    headers: { Range: `bytes=0-${preambleEnd - 1}` },
+                });
+                if (resp.ok || resp.status === 206) {
+                    this._totalBytes = this._parseContentLength(resp) || this._totalBytes;
+                    preamble = new Uint8Array(await resp.arrayBuffer());
+                }
+            } catch (e) {
+                console.warn('[VFS] Extended preamble fetch failed:', e.message);
+            }
+        }
+
+        if (preamble.length < preambleEnd) {
+            throw new Error(
+                `[VFS] Preamble truncated (need ${preambleEnd} B, got ${preamble.length} B)`
+            );
+        }
+
+        this._volumeV3 = true;
+        this._embeddedPreamble = true;
+
+        const dirEntries = parseBlockDirectory(preamble, header);
+        this._blockOffsetMap = new V3BlockOffsetMap(
+            header, dirEntries, this._totalBytes || preambleEnd + header.dataLength
+        );
+
+        this._parseLexiconBytes(
+            preamble.subarray(header.lexOffset, header.lexOffset + header.lexLength)
+        );
+        this._parseBidxBytes(
+            preamble.subarray(header.bidxOffset, header.bidxOffset + header.bidxLength),
+            header.blockCount
+        );
+
+        console.log(
+            `[VFS] v3 preamble: lex=${header.lexLength} B, bidx=${header.bidxLength} B,` +
+            ` ${header.blockCount} blocks, data@${header.dataOffset}` +
+            ` (${(this._totalBytes / 1024).toFixed(1)} KB total)`
+        );
+    }
+
+    /** Extract total file size from Content-Range or Content-Length. */
+    _parseContentLength(resp) {
+        const cr = resp.headers.get('Content-Range');
+        if (cr) {
+            const m = cr.match(/\/(\d+)$/);
+            if (m) return parseInt(m[1], 10);
+        }
+        const cl = resp.headers.get('Content-Length');
+        return cl ? parseInt(cl, 10) : 0;
     }
 
     /** Number of SuperBlocks in the file (derived from BlockOffsetMap). */
@@ -392,47 +585,53 @@ export class VFS {
      * are non-overlapping and sorted ascending (ingestor sorts by object hash).
      */
     async _loadBidx() {
+        if (this._bidxLoaded || !this._bidxUrl) return;
         try {
             const resp = await fetch(this._bidxUrl);
-            if (!resp.ok) return; // BIDX is optional
-            const raw = new Uint8Array(await resp.arrayBuffer());
-            if (raw.length < 16) return;
-
-            // Verify magic
-            const magic = String.fromCharCode(raw[0], raw[1], raw[2], raw[3]);
-            if (magic !== 'BIDX') {
-                console.warn('[VFS] .bidx magic mismatch — skipping BIDX load');
-                return;
-            }
-
-            const dv         = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
-            const blockCount = dv.getUint32(8, true); // LE
-
-            // Sanity-check against BlockOffsetMap
-            if (this._blockOffsetMap && blockCount !== this._blockOffsetMap.count) {
-                console.warn(
-                    `[VFS] BIDX block_count ${blockCount} ≠ file block_count ` +
-                    `${this._blockOffsetMap.count} — BIDX is stale, skipping`
-                );
-                return;
-            }
-
-            // Slice the range data directly from the buffer — zero-copy
-            const rangesBytes = raw.byteLength - 16;
-            if (rangesBytes !== blockCount * 16) {
-                console.warn('[VFS] BIDX size mismatch — skipping BIDX load');
-                return;
-            }
-            this._blockRanges = new BigUint64Array(
-                raw.buffer,
-                raw.byteOffset + 16,
-                blockCount * 2
-            );
-            this._bidxLoaded = true;
-            console.log(`[VFS] BIDX loaded: ${blockCount} block ranges`);
+            if (!resp.ok) return;
+            this._parseBidxBytes(new Uint8Array(await resp.arrayBuffer()));
         } catch (e) {
-            console.warn('[VFS] BIDX load failed:', e.message);
+            console.warn('[VFS] BIDX side-car load failed:', e.message);
         }
+    }
+
+    /**
+     * Parse BIDX bytes (embedded preamble or side-car) into `_blockRanges`.
+     * @param {Uint8Array} raw
+     * @param {number} [expectedBlockCount]
+     */
+    _parseBidxBytes(raw, expectedBlockCount) {
+        if (this._bidxLoaded || raw.length < 16) return;
+
+        const magic = String.fromCharCode(raw[0], raw[1], raw[2], raw[3]);
+        if (magic !== 'BIDX') {
+            console.warn('[VFS] BIDX magic mismatch — skipping');
+            return;
+        }
+
+        const dv         = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+        const blockCount = expectedBlockCount ?? dv.getUint32(8, true);
+
+        if (this._blockOffsetMap && blockCount !== this._blockOffsetMap.count) {
+            console.warn(
+                `[VFS] BIDX block_count ${blockCount} ≠ file block_count ` +
+                `${this._blockOffsetMap.count} — BIDX is stale, skipping`
+            );
+            return;
+        }
+
+        const rangesBytes = raw.byteLength - 16;
+        if (rangesBytes !== blockCount * 16) {
+            console.warn('[VFS] BIDX size mismatch — skipping');
+            return;
+        }
+        this._blockRanges = new BigUint64Array(
+            raw.buffer,
+            raw.byteOffset + 16,
+            blockCount * 2
+        );
+        this._bidxLoaded = true;
+        console.log(`[VFS] BIDX loaded: ${blockCount} block ranges`);
     }
 
     /**
@@ -497,12 +696,17 @@ export class VFS {
             if (cached) return cached;
         }
 
-        // 2. HTTP Range request — exact byte range from BlockOffsetMap
-        const { start, size } = this._blockOffsetMap
-            ? this._blockOffsetMap.range(blockIndex)
-            : { start: blockIndex * BLOCK_SIZE, size: BLOCK_SIZE };
+        let bytes;
 
-        const bytes = await this._fetchRangeBlock(start, size);
+        if (!this._volumeV3 || !this._blockOffsetMap) {
+            throw new Error('[VFS] readBlock called before v3 volume mount');
+        }
+        const { start, size, uncompLen } =
+            this._blockOffsetMap.compressedRange(blockIndex);
+        const compressed = await this._fetchRangeBlock(start, size);
+        const decoded = _decompressLz4PrependSize(compressed, uncompLen);
+        bytes = new Uint8Array(BLOCK_SIZE);
+        bytes.set(decoded.subarray(0, Math.min(decoded.length, BLOCK_SIZE)));
 
         // 3. Persist to OPFS for future queries (fire-and-forget)
         if (this._opfsRoot) {
@@ -655,33 +859,41 @@ export class VFS {
     // -------------------------------------------------------------------------
 
     async _loadLexicon() {
-        let buf;
+        if (this._lexLoaded || !this._lexUrl) return;
         try {
             const resp = await fetch(this._lexUrl);
-            if (!resp.ok) return; // lexicon optional
-            const raw = new Uint8Array(await resp.arrayBuffer());
-            // Decompress if the lex URL ends in .lz4
-            const decompressed = this._lexUrl.endsWith('.lz4')
-                ? decompressLz4Stream(raw)
-                : raw;
-            buf = new DataView(decompressed.buffer, decompressed.byteOffset, decompressed.byteLength);
-        } catch (_) { return; }
+            if (!resp.ok) return;
+            let raw = new Uint8Array(await resp.arrayBuffer());
+            if (this._lexUrl.endsWith('.lz4')) {
+                raw = decompressLz4Stream(raw);
+            }
+            this._parseLexiconBytes(raw);
+        } catch (_) { /* lexicon optional */ }
+    }
 
-        // Verify magic
+    /**
+     * Parse Q42LEX bytes (embedded preamble or side-car) into `_lexMap`.
+     * @param {Uint8Array} raw
+     */
+    _parseLexiconBytes(raw) {
+        if (this._lexLoaded || raw.length < 32) return;
+
+        const buf = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
         const magic = String.fromCharCode(
-            ...new Uint8Array(buf.buffer, 0, 8)
+            buf.getUint8(0), buf.getUint8(1), buf.getUint8(2), buf.getUint8(3),
+            buf.getUint8(4), buf.getUint8(5), buf.getUint8(6), buf.getUint8(7),
         );
         if (!magic.startsWith('Q42LEX')) {
-            console.warn('[VFS] .q42-lex magic mismatch — skipping lexicon load');
+            console.warn('[VFS] Q42LEX magic mismatch — skipping lexicon load');
             return;
         }
 
-        const entryCount     = buf.getBigUint64(8,  true); // LE
-        const stringsOffset  = buf.getBigUint64(16, true); // LE
-        const indexStart     = 32;
+        const entryCount    = buf.getBigUint64(8,  true);
+        const stringsOffset = buf.getBigUint64(16, true);
+        const indexStart    = 32;
 
         const stringsBase = Number(stringsOffset);
-        const strBlob = new Uint8Array(buf.buffer, stringsBase);
+        const strBlob = new Uint8Array(raw.buffer, raw.byteOffset + stringsBase, raw.length - stringsBase);
         const td = new TextDecoder('utf-8');
 
         for (let i = 0n; i < entryCount; i++) {
@@ -690,9 +902,20 @@ export class VFS {
             const strOff = buf.getBigUint64(base + 8, true);
 
             const off = Number(strOff);
-            const len = strBlob[off] | (strBlob[off + 1] << 8); // u16 LE
-            const str = td.decode(strBlob.subarray(off + 2, off + 2 + len));
-
+            const tag = strBlob[off];
+            let len, strStart;
+            // v3 embedded lex uses a 1-byte type tag before u16 length.
+            if (tag === 0x01 || tag === 0x03) {
+                len = strBlob[off + 1] | (strBlob[off + 2] << 8);
+                strStart = off + 3;
+            } else if (tag === 0x02) {
+                continue; // embedded triple — no string label
+            } else {
+                // Legacy side-car: u16 length at offset, no tag byte.
+                len = strBlob[off] | (strBlob[off + 1] << 8);
+                strStart = off + 2;
+            }
+            const str = td.decode(strBlob.subarray(strStart, strStart + len));
             this._lexMap.set(hash, str);
         }
 

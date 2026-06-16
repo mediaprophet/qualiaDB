@@ -40,12 +40,10 @@ while IFS= read -r file; do
   base="${file%.*}"
   echo "  ingest: $file -> $base.q42"
   (cd "$REPO_ROOT" && cargo run --release -p qualia-cli -- ingest semantic "$src")
-  for ext in "" ".lex" ".bidx"; do
-    artifact="$SRC_DIR/$base.q42$ext"
-    if [[ -f "$artifact" ]]; then
-      cp "$artifact" "$OUT_DIR/$base.q42$ext"
-    fi
-  done
+  artifact="$SRC_DIR/$base.q42"
+  if [[ -f "$artifact" ]]; then
+    cp "$artifact" "$OUT_DIR/$base.q42"
+  fi
   count=$((count + 1))
 done < <(python3 -c "import json,sys; sys.stdout.write('\n'.join(e['file'] for e in json.load(open(sys.argv[1])).get('ontologies',[])))" "$CATALOG")
 

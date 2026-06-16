@@ -11,9 +11,7 @@ RELEASE_DIR="$REPO_ROOT/$DATA_ROOT/$RELEASE"
 DOCS_RELEASE_DIR="$REPO_ROOT/docs/data/schemaorg/$RELEASE"
 BASE_NAME="schemaorg-$VARIANT"
 NT_PATH="$RELEASE_DIR/$BASE_NAME.nt"
-Q42_BASE="$RELEASE_DIR/$BASE_NAME"
-Q42_PATH="$Q42_BASE.q42"
-CQ42_PATH="$Q42_BASE.c.q42"
+Q42_PATH="$RELEASE_DIR/$BASE_NAME.q42"
 RAW_URL="https://raw.githubusercontent.com/schemaorg/schemaorg/main/data/releases/$RELEASE/$BASE_NAME.nt"
 
 mkdir -p "$RELEASE_DIR"
@@ -35,19 +33,9 @@ echo "Ingesting N-Triples into native .q42..."
 # `ingest semantic <file>` writes <file>.with_extension("q42") == $Q42_PATH
 (cd "$REPO_ROOT" && cargo run --release -p qualia-cli -- ingest semantic "$NT_PATH")
 
-echo "Compressing .q42 artifact for distribution..."
-(cd "$REPO_ROOT" && cargo run --release -p qualia-cli -- compress --input "$Q42_PATH" --output "$CQ42_PATH")
-
 echo "Syncing benchmark artifacts into docs/data for GitHub Pages and local site testing..."
 cp "$NT_PATH" "$DOCS_RELEASE_DIR/"
 cp "$Q42_PATH" "$DOCS_RELEASE_DIR/"
-cp "$CQ42_PATH" "$DOCS_RELEASE_DIR/"
-if [[ -f "$Q42_PATH.bidx" ]]; then
-  cp "$Q42_PATH.bidx" "$DOCS_RELEASE_DIR/"
-fi
-if [[ -f "$Q42_PATH.lex" ]]; then
-  cp "$Q42_PATH.lex" "$DOCS_RELEASE_DIR/"
-fi
 
 echo "Done. Run:"
 echo "  python benchmarks/harness.py --all --dataset-profile schemaorg-30-current-https --output docs/comparative_benchmark_results.schemaorg-30-current-https.json"

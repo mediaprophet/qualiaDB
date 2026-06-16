@@ -1,11 +1,47 @@
-// Menu loader for consistent navigation across all QualiaDB documentation pages
-// Loads menu.json and renders navigation dynamically with responsive dropdowns
+// QualiaDB site navigation — loads menu.json, renders desktop dropdowns + mobile drawer.
+// Resolves paths from any docs subdirectory via the script tag location.
+
+function docsRootFromScript() {
+    const script = document.querySelector('script[src*="menu-loader.js"]');
+    if (!script) return '';
+    return script.getAttribute('src').replace(/js\/menu-loader\.js.*$/, '') || '';
+}
+
+function resolveHref(href) {
+    if (!href || href.startsWith('http') || href.startsWith('#')) return href;
+    const root = docsRootFromScript();
+    return root + href;
+}
+
+function normalizeIcon(icon) {
+    if (!icon) return '';
+    if (icon.includes('fa-')) {
+        if (icon.startsWith('fa-solid') || icon.startsWith('fa-regular') || icon.startsWith('fab ') || icon.startsWith('fas ')) {
+            return icon;
+        }
+        return `fa-solid ${icon}`;
+    }
+    return icon;
+}
+
+function pageMatchesHref(href) {
+    const target = resolveHref(href);
+    try {
+        const targetUrl = new URL(target, window.location.href);
+        if (targetUrl.pathname === window.location.pathname) return true;
+        // Directory entries (trailing slash)
+        if (href.endsWith('/') && window.location.pathname.startsWith(targetUrl.pathname)) return true;
+    } catch (_) { /* ignore */ }
+    const leaf = href.split('/').pop() || href;
+    return window.location.pathname.endsWith('/' + leaf) || window.location.pathname.endsWith(leaf);
+}
 
 async function loadMenu() {
+    const root = docsRootFromScript();
     try {
-        const response = await fetch('menu.json');
-        const menu = await response.json();
-        renderMenu(menu);
+        const response = await fetch(root + 'menu.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        renderMenu(await response.json());
     } catch (error) {
         console.error('Failed to load menu:', error);
         renderFallbackMenu();
@@ -13,240 +49,199 @@ async function loadMenu() {
 }
 
 function renderMenu(menu) {
-    // Try multiple selectors for different page layouts
-    const navSelectors = [
-        'nav .hidden.md\\:flex',
-        'nav .flex.items-center.gap-6.text-sm',
-        'nav .flex.items-center.gap-6'
-    ];
-
-    let nav = null;
-    for (const selector of navSelectors) {
-        nav = document.querySelector(selector);
-        if (nav) break;
-    }
-
-    if (!nav) {
-        console.warn('Could not find navigation element');
+    const navHost = document.getElementById('dynamic-nav') || findLegacyNavHost();
+    if (!navHost) {
+        console.warn('menu-loader: no #dynamic-nav element');
         return;
     }
 
-    // Get current page for active state
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    const navBar = navHost.closest('nav');
+    if (navBar) navBar.classList.add('relative', 'z-50');
 
-    // Group navigation items by their group field
-    const groupedItems = {};
-    menu.navigation.forEach(item => {
-        const group = item.group || 'Other';
-        if (!groupedItems[group]) {
-            groupedItems[group] = [];
-        }
-        groupedItems[group].push(item);
-    });
+    navHost.className = 'relative flex items-center text-sm flex-1 justify-end md:justify-start md:flex-none md:gap-2';
 
-    // Build the navigation HTML with dropdowns
-    let navHTML = '';
+    const grouped = {};
+    for (const item of menu.navigation) {
+        const group = item.group || 'More';
+        (grouped[group] ||= []).push(item);
+    }
 
-    // Add hamburger menu button (hidden on desktop)
-    navHTML += `
-        <button id="mobile-menu-btn" class="md:hidden text-gray-300 hover:text-white p-2">
-            <i class="fa-solid fa-bars text-xl"></i>
+    let html = `
+        <button type="button" id="mobile-menu-btn" aria-label="Open menu"
+            class="md:hidden text-slate-300 hover:text-white p-2 rounded-lg border border-white/10">
+            <i class="fa-solid fa-bars text-lg"></i>
         </button>
+        <div id="desktop-nav" class="hidden md:flex items-center gap-4 lg:gap-6 text-sm">
     `;
 
-    // Desktop navigation with dropdowns
-    navHTML += `<div id="desktop-nav" class="hidden md:flex items-center gap-6 text-sm">`;
-
-    for (const [groupName, items] of Object.entries(groupedItems)) {
+    for (const [groupName, items] of Object.entries(grouped)) {
         if (items.length === 1) {
-            // Single item - render as regular link
             const item = items[0];
-            const isActive = item.href === currentPage ? 'nav-active font-medium' : '';
-            const highlight = item.highlight ? 'text-cyan-400' : 'hover:text-white';
-            const icon = item.icon ? `<i class="${item.icon} mr-1"></i>` : '';
-            navHTML += `<a href="${item.href}" class="${highlight} ${isActive} transition-colors flex items-center">${icon}${item.label}</a>`;
+            const active = pageMatchesHref(item.href) ? 'nav-active font-medium text-white' : '';
+            const tone = item.highlight ? 'text-cyan-400 hover:text-cyan-300' : 'text-slate-300 hover:text-white';
+            const icon = item.icon ? `<i class="${normalizeIcon(item.icon)} mr-1"></i>` : '';
+            html += `<a href="${resolveHref(item.href)}" class="${tone} ${active} transition-colors inline-flex items-center whitespace-nowrap">${icon}${item.label}</a>`;
         } else {
-            // Multiple items - render as dropdown
-            navHTML += `
+            html += `
                 <div class="relative group">
-                    <button class="text-gray-300 hover:text-white transition-colors flex items-center gap-1">
+                    <button type="button" class="text-slate-300 hover:text-white transition-colors inline-flex items-center gap-1 whitespace-nowrap">
                         ${groupName}
-                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                        <i class="fa-solid fa-chevron-down text-[10px]"></i>
                     </button>
-                    <div class="absolute left-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div class="absolute left-0 mt-2 min-w-[12rem] bg-slate-900/98 border border-slate-700 rounded-xl shadow-xl
+                                opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100
+                                group-focus-within:visible transition-all duration-150 z-[60]">
                         <div class="py-2">
                             ${items.map(item => {
-                                const isActive = item.href === currentPage ? 'nav-active font-medium' : '';
-                                const highlight = item.highlight ? 'text-cyan-400' : 'hover:text-white';
-                                const icon = item.icon ? `<i class="${item.icon} mr-2"></i>` : '';
-                                return `<a href="${item.href}" class="${highlight} ${isActive} block px-4 py-2 transition-colors flex items-center">${icon}${item.label}</a>`;
+                                const active = pageMatchesHref(item.href) ? 'nav-active font-medium text-white' : '';
+                                const tone = item.highlight ? 'text-cyan-400 hover:text-cyan-300' : 'text-slate-300 hover:text-white';
+                                const icon = item.icon ? `<i class="${normalizeIcon(item.icon)} mr-2 w-4"></i>` : '';
+                                return `<a href="${resolveHref(item.href)}" class="${tone} ${active} block px-4 py-2 transition-colors flex items-center">${icon}${item.label}</a>`;
                             }).join('')}
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
         }
     }
 
-    navHTML += `</div>`;
+    html += `</div>`;
 
-    // Mobile navigation (hidden on desktop)
-    navHTML += `
-        <div id="mobile-nav" class="hidden md:hidden absolute top-full left-0 right-0 bg-gray-900 border-t border-gray-700">
-            <div class="py-4 px-4 space-y-2">
-    `;
+    navHost.innerHTML = html;
 
-    for (const [groupName, items] of Object.entries(groupedItems)) {
-        if (items.length === 1) {
-            // Single item - render as regular link
-            const item = items[0];
-            const isActive = item.href === currentPage ? 'nav-active font-medium' : '';
-            const highlight = item.highlight ? 'text-cyan-400' : 'hover:text-white';
-            const icon = item.icon ? `<i class="${item.icon} mr-2"></i>` : '';
-            navHTML += `<a href="${item.href}" class="${highlight} ${isActive} block px-4 py-2 rounded transition-colors flex items-center">${icon}${item.label}</a>`;
-        } else {
-            // Multiple items - render as collapsible section
-            navHTML += `
-                <div class="mobile-dropdown">
-                    <button class="mobile-dropdown-btn w-full text-left px-4 py-2 text-gray-300 hover:text-white rounded transition-colors flex items-center justify-between">
-                        <span class="flex items-center">
-                            <i class="fa-solid fa-folder mr-2"></i>
-                            ${groupName}
-                        </span>
-                        <i class="fa-solid fa-chevron-down text-xs transition-transform"></i>
+    // Full-width mobile drawer attached to nav bar
+    let mobileNav = document.getElementById('mobile-nav');
+    if (!mobileNav) {
+        mobileNav = document.createElement('div');
+        mobileNav.id = 'mobile-nav';
+        const anchor = navBar?.querySelector(':scope > div') || navBar;
+        (anchor || document.body).appendChild(mobileNav);
+    }
+
+    mobileNav.className = 'hidden md:hidden absolute left-0 right-0 top-full z-[60] bg-slate-950/98 border-t border-slate-700 shadow-2xl max-h-[70vh] overflow-y-auto';
+    mobileNav.innerHTML = `<div class="py-3 px-4 space-y-1 max-w-screen-2xl mx-auto">${
+        Object.entries(grouped).map(([groupName, items]) => {
+            if (items.length === 1) {
+                const item = items[0];
+                const active = pageMatchesHref(item.href) ? 'nav-active font-medium text-white' : '';
+                const tone = item.highlight ? 'text-cyan-400' : 'text-slate-200 hover:text-white';
+                const icon = item.icon ? `<i class="${normalizeIcon(item.icon)} mr-2"></i>` : '';
+                return `<a href="${resolveHref(item.href)}" class="${tone} ${active} block px-3 py-2.5 rounded-lg">${icon}${item.label}</a>`;
+            }
+            return `
+                <div class="mobile-dropdown border-b border-slate-800/80 pb-2 mb-2 last:border-0">
+                    <button type="button" class="mobile-dropdown-btn w-full text-left px-3 py-2 text-slate-400 text-xs uppercase tracking-wider flex items-center justify-between">
+                        <span>${groupName}</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] transition-transform"></i>
                     </button>
-                    <div class="mobile-dropdown-content hidden pl-4 mt-1 space-y-1">
+                    <div class="mobile-dropdown-content hidden pl-1 mt-1 space-y-0.5">
                         ${items.map(item => {
-                            const isActive = item.href === currentPage ? 'nav-active font-medium' : '';
-                            const highlight = item.highlight ? 'text-cyan-400' : 'hover:text-white';
-                            const icon = item.icon ? `<i class="${item.icon} mr-2"></i>` : '';
-                            return `<a href="${item.href}" class="${highlight} ${isActive} block px-4 py-2 rounded transition-colors flex items-center">${icon}${item.label}</a>`;
+                            const active = pageMatchesHref(item.href) ? 'nav-active font-medium text-white' : '';
+                            const tone = item.highlight ? 'text-cyan-400' : 'text-slate-200 hover:text-white';
+                            const icon = item.icon ? `<i class="${normalizeIcon(item.icon)} mr-2"></i>` : '';
+                            return `<a href="${resolveHref(item.href)}" class="${tone} ${active} block px-3 py-2.5 rounded-lg">${icon}${item.label}</a>`;
                         }).join('')}
                     </div>
-                </div>
-            `;
+                </div>`;
+        }).join('')
+    }</div>`;
+
+    wireMobileMenu();
+    updateBrand(menu);
+    updateFooter(menu);
+}
+
+function findLegacyNavHost() {
+    const selectors = [
+        'nav .hidden.md\\:flex',
+        'nav .flex.items-center.gap-6.text-sm',
+        'nav .flex.items-center.gap-x-1.text-sm',
+    ];
+    for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el) {
+            el.id = 'dynamic-nav';
+            return el;
         }
     }
+    return null;
+}
 
-    navHTML += `
-            </div>
-        </div>
-    `;
+function wireMobileMenu() {
+    const btn = document.getElementById('mobile-menu-btn');
+    const panel = document.getElementById('mobile-nav');
+    if (!btn || !panel) return;
 
-    nav.innerHTML = navHTML;
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        panel.classList.toggle('hidden');
+        const open = !panel.classList.contains('hidden');
+        btn.innerHTML = open
+            ? '<i class="fa-solid fa-xmark text-lg"></i>'
+            : '<i class="fa-solid fa-bars text-lg"></i>';
+    });
 
-    // Add mobile menu toggle functionality
-    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-    const mobileNav = document.getElementById('mobile-nav');
+    document.addEventListener('click', (e) => {
+        if (!btn.contains(e.target) && !panel.contains(e.target)) {
+            panel.classList.add('hidden');
+            btn.innerHTML = '<i class="fa-solid fa-bars text-lg"></i>';
+        }
+    });
 
-    if (mobileMenuBtn && mobileNav) {
-        mobileMenuBtn.addEventListener('click', () => {
-            mobileNav.classList.toggle('hidden');
-        });
-
-        // Close mobile menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!mobileMenuBtn.contains(e.target) && !mobileNav.contains(e.target)) {
-                mobileNav.classList.add('hidden');
-            }
-        });
-    }
-
-    // Add mobile dropdown toggle functionality
-    const mobileDropdownBtns = document.querySelectorAll('.mobile-dropdown-btn');
-    mobileDropdownBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const content = btn.nextElementSibling;
-            const icon = btn.querySelector('.fa-chevron-down');
-            content.classList.toggle('hidden');
-            icon.classList.toggle('rotate-180');
+    panel.querySelectorAll('a').forEach((a) => {
+        a.addEventListener('click', () => {
+            panel.classList.add('hidden');
+            btn.innerHTML = '<i class="fa-solid fa-bars text-lg"></i>';
         });
     });
 
-    // Update brand
-    const brandLink = document.querySelector('nav a[href="index.html"], nav a[href^="index.html"]');
-    if (brandLink) {
-        brandLink.innerHTML = `
-            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
-                <span class="text-black font-bold text-xl">${menu.brand.icon}</span>
-            </div>
-            <div><span class="font-semibold tracking-tight text-xl">${menu.brand.name}</span><span class="text-blue-400 text-xl">DB</span></div>
-        `;
-    }
+    document.querySelectorAll('.mobile-dropdown-btn').forEach((dropBtn) => {
+        dropBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const content = dropBtn.nextElementSibling;
+            const chevron = dropBtn.querySelector('.fa-chevron-down');
+            content?.classList.toggle('hidden');
+            chevron?.classList.toggle('rotate-180');
+        });
+    });
+}
 
-    // Update footer links if footer exists
+function updateBrand(menu) {
+    const brandLink = document.querySelector('nav a[href*="index.html"]');
+    if (!brandLink || !menu.brand) return;
+    brandLink.href = resolveHref('index.html');
+    brandLink.innerHTML = `
+        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center shrink-0">
+            <span class="text-black font-bold text-xl">${menu.brand.icon}</span>
+        </div>
+        <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">${menu.brand.name.replace('DB', '')}</span><span class="text-blue-400 text-xl">DB</span></div>
+    `;
+}
+
+function updateFooter(menu) {
+    if (!menu.footer?.links) return;
     const footerLinks = document.querySelector('footer .flex');
-    if (footerLinks) {
-        footerLinks.innerHTML = menu.footer.links.map(link => `
-            <a href="${link.href}" class="hover:text-white transition-colors flex items-center gap-2">
-                <i class="${link.icon}"></i><span>${link.label}</span>
-            </a>
-        `).join('');
-    }
-
-    // Update page title with version
-    const versionDisplay = document.querySelector('[data-version]');
-    if (versionDisplay) {
-        versionDisplay.textContent = menu.version;
-    }
+    if (!footerLinks) return;
+    footerLinks.innerHTML = menu.footer.links.map((link) => `
+        <a href="${resolveHref(link.href)}" class="hover:text-white transition-colors flex items-center gap-2" target="${link.href.startsWith('http') ? '_blank' : '_self'}">
+            <i class="${normalizeIcon(link.icon)}"></i><span>${link.label}</span>
+        </a>
+    `).join('');
 }
 
 function renderFallbackMenu() {
-    // Fallback hardcoded menu if JSON fails to load
-    const navSelectors = [
-        'nav .hidden.md\\:flex',
-        'nav .flex.items-center.gap-6.text-sm',
-        'nav .flex.items-center.gap-6'
-    ];
-
-    let nav = null;
-    for (const selector of navSelectors) {
-        nav = document.querySelector(selector);
-        if (nav) break;
-    }
-
-    if (!nav) return;
-
-    nav.innerHTML = `
-        <button id="mobile-menu-btn" class="md:hidden text-gray-300 hover:text-white p-2">
-            <i class="fa-solid fa-bars text-xl"></i>
-        </button>
-        <div id="desktop-nav" class="hidden md:flex items-center gap-6 text-sm">
-            <a href="index.html" class="hover:text-white transition-colors">Home</a>
-            <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
-            <a href="advanced-features.html" class="hover:text-white transition-colors">Features</a>
-            <a href="api.html" class="hover:text-white transition-colors">API Docs</a>
-            <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
-        </div>
-        <div id="mobile-nav" class="hidden md:hidden absolute top-full left-0 right-0 bg-gray-900 border-t border-gray-700">
-            <div class="py-4 px-4 space-y-2">
-                <a href="index.html" class="hover:text-white transition-colors block px-4 py-2 rounded">Home</a>
-                <a href="benchmark.html" class="hover:text-white transition-colors block px-4 py-2 rounded">Benchmark</a>
-                <a href="advanced-features.html" class="hover:text-white transition-colors block px-4 py-2 rounded">Features</a>
-                <a href="api.html" class="hover:text-white transition-colors block px-4 py-2 rounded">API Docs</a>
-                <a href="manuals/" class="hover:text-white transition-colors block px-4 py-2 rounded">Manuals</a>
-            </div>
-        </div>
-    `;
-
-    // Add mobile menu toggle functionality
-    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-    const mobileNav = document.getElementById('mobile-nav');
-
-    if (mobileMenuBtn && mobileNav) {
-        mobileMenuBtn.addEventListener('click', () => {
-            mobileNav.classList.toggle('hidden');
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!mobileMenuBtn.contains(e.target) && !mobileNav.contains(e.target)) {
-                mobileNav.classList.add('hidden');
-            }
-        });
-    }
+    renderMenu({
+        brand: { name: 'QualiaDB', icon: 'Q' },
+        navigation: [
+            { label: 'Home', href: 'index.html', group: 'Core' },
+            { label: 'Benchmark', href: 'benchmark.html', group: 'Benchmarks' },
+            { label: 'Ontology', href: 'ontology.html', group: 'Data' },
+            { label: 'API Docs', href: 'api.html', group: 'Core' },
+            { label: 'Manuals', href: 'manuals/index.html', group: 'Core' },
+        ],
+        footer: { links: [] },
+    });
 }
 
-// Load menu on page load
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadMenu);
 } else {

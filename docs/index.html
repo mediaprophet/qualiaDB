@@ -15,16 +15,16 @@
     <script src="js/menu-loader.js"></script></head>
 <body class="bg-zinc-950 text-zinc-200">
     <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
-        <div class="max-w-screen-2xl mx-auto px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-8">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16 gap-4">
+                <div class="flex items-center gap-4 sm:gap-8 min-w-0 flex-1">
                     <a href="index.html" class="flex items-center gap-3">
                         <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
                             <span class="text-black font-bold text-xl">Q</span>
                         </div>
                         <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
                     </a>
-                    <div id="dynamic-nav" class="hidden md:flex items-center gap-6 text-sm">
+                    <div id="dynamic-nav" class="relative flex items-center text-sm">
                         <!-- Navigation loaded dynamically by menu-loader.js -->
                     </div>
                 </div>
@@ -87,6 +87,11 @@
             <a href="playground/compare.html" class="feature-card glass-strong rounded-3xl p-6 block">
                 <div class="font-semibold text-xl mb-2">RDF ↔ .q42 Comparator</div>
                 <p class="text-white/70 text-sm">Instantly see compression ratio, semantic fidelity, and parse-time speedup. Zero upload required.</p>
+            </a>
+
+            <a href="ontology.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                <div class="font-semibold text-xl mb-2">Ontology Demo</div>
+                <p class="text-white/70 text-sm">Browse 100+ bundled vocabularies — Schema.org, W3C, FIBO, GeoNames — via Q42 v3 demand-paging in the browser.</p>
             </a>
 
             <a href="playground/index.html" class="feature-card glass-strong rounded-3xl p-6 block">

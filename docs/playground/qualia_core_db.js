@@ -475,6 +475,30 @@ export function parse_cbor_ld_wasm(payload) {
 }
 
 /**
+ * @param {any} val
+ * @returns {any}
+ */
+export function parse_csv_wasm(val) {
+    const ret = wasm.parse_csv_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function parse_json_mapping_wasm(val) {
+    const ret = wasm.parse_json_mapping_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} payload
  * @returns {any}
  */
@@ -567,6 +591,18 @@ export function run_semantic_simulation(val) {
 }
 
 /**
+ * @param {any} val
+ * @returns {any}
+ */
+export function serialize_csv_wasm(val) {
+    const ret = wasm.serialize_csv_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Continuous Mathematical Serialization into Float64Array
  * @param {Float64Array} data
  * @returns {Float64Array}
@@ -588,6 +624,30 @@ export function serialize_float_array(data) {
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.serialize_float_array(ptr0, len0);
     return ret;
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function serialize_json_wasm(val) {
+    const ret = wasm.serialize_json_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {any} val
+ * @returns {any}
+ */
+export function serialize_rdf_wasm(val) {
+    const ret = wasm.serialize_rdf_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -1696,17 +1756,17 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 310, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 334, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h3afbf35b5669c0b1);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 411, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 458, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 310, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 334, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h3afbf35b5669c0b1_2);
             return ret;
         },

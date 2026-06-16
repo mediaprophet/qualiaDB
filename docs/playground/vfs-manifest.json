@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "comment": "Qualia-DB VFS mount manifest. Add entries here to expose datasets to the browser engine.",
+  "comment": "Qualia-DB VFS mount manifest. All datasets use Q42 v3 unified volumes (lex + bidx + LZ4 blocks embedded in file preamble).",
   "datasets": [
     {
       "id": "wordnet",
@@ -9,8 +9,6 @@
       "icon": "\ud83d\udcda",
       "description": "OEWN 2025 edition \u00b7 CC-BY 4.0 \u00b7 GitHub Pages serves a 100k-triple CI subset; run scripts/fetch_wordnet.sh locally for the full graph",
       "url": "wordnet.q42",
-      "lexUrl": "wordnet.q42.lex.lz4",
-      "bidxUrl": "wordnet.q42.bidx",
       "compressed": false,
       "source": "remote",
       "license": "CC-BY 4.0",
@@ -45,8 +43,6 @@
       "icon": "\ud83c\udf10",
       "description": "Schema.org vocabulary release 30.0 \u00b7 ~18k triples \u00b7 built by scripts/prepare_schemaorg_benchmark.sh in CI",
       "url": "data/schemaorg/30.0/schemaorg-current-https.q42",
-      "lexUrl": "data/schemaorg/30.0/schemaorg-current-https.q42.lex",
-      "bidxUrl": "data/schemaorg/30.0/schemaorg-current-https.q42.bidx",
       "compressed": false,
       "source": "remote",
       "license": "CC-BY 4.0",
@@ -76,14 +72,11 @@
     },
     {
       "id": "w3c-skos",
-      "group": "w3c",
       "profile": "w3c",
       "label": "SKOS Core",
       "icon": "\ud83c\udff7\ufe0f",
       "description": "W3C SKOS Core vocabulary \u00b7 skos.ttl",
       "url": "data/w3c/skos.q42",
-      "lexUrl": "data/w3c/skos.q42.lex",
-      "bidxUrl": "data/w3c/skos.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -107,18 +100,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2004/02/skos/core#Concept> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-shacl",
-      "group": "w3c",
       "profile": "w3c",
       "label": "SHACL",
       "icon": "\u2705",
       "description": "W3C SHACL vocabulary \u00b7 shacl.ttl",
       "url": "data/w3c/shacl.q42",
-      "lexUrl": "data/w3c/shacl.q42.lex",
-      "bidxUrl": "data/w3c/shacl.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -142,18 +133,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/ns/shacl#Shape> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-prov",
-      "group": "w3c",
       "profile": "w3c",
       "label": "PROV-O",
       "icon": "\ud83d\udcdc",
       "description": "W3C PROV-O vocabulary \u00b7 prov.ttl",
       "url": "data/w3c/prov.q42",
-      "lexUrl": "data/w3c/prov.q42.lex",
-      "bidxUrl": "data/w3c/prov.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -177,18 +166,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/ns/prov#Activity> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-odrl",
-      "group": "w3c",
       "profile": "w3c",
       "label": "ODRL",
       "icon": "\u2696\ufe0f",
       "description": "W3C ODRL vocabulary \u00b7 odrl.ttl",
       "url": "data/w3c/odrl.q42",
-      "lexUrl": "data/w3c/odrl.q42.lex",
-      "bidxUrl": "data/w3c/odrl.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -212,18 +199,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/ns/odrl/2/Policy> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-dcat",
-      "group": "w3c",
       "profile": "w3c",
       "label": "DCAT",
       "icon": "\ud83d\udcc2",
       "description": "W3C DCAT vocabulary \u00b7 dcat.ttl",
       "url": "data/w3c/dcat.q42",
-      "lexUrl": "data/w3c/dcat.q42.lex",
-      "bidxUrl": "data/w3c/dcat.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -247,18 +232,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/ns/dcat#Dataset> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-org",
-      "group": "w3c",
       "profile": "w3c",
       "label": "ORG",
       "icon": "\ud83c\udfe2",
       "description": "W3C ORG vocabulary \u00b7 org.ttl",
       "url": "data/w3c/org.q42",
-      "lexUrl": "data/w3c/org.q42.lex",
-      "bidxUrl": "data/w3c/org.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -282,18 +265,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/ns/org#Organization> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-sosa",
-      "group": "w3c",
       "profile": "w3c",
       "label": "SOSA",
       "icon": "\ud83d\udce1",
       "description": "W3C SOSA vocabulary \u00b7 sosa.ttl",
       "url": "data/w3c/sosa.q42",
-      "lexUrl": "data/w3c/sosa.q42.lex",
-      "bidxUrl": "data/w3c/sosa.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -317,18 +298,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/ns/sosa/Sensor> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-ssn",
-      "group": "w3c",
       "profile": "w3c",
       "label": "SSN",
       "icon": "\ud83c\udf21\ufe0f",
       "description": "W3C SSN vocabulary \u00b7 ssn.ttl",
       "url": "data/w3c/ssn.q42",
-      "lexUrl": "data/w3c/ssn.q42.lex",
-      "bidxUrl": "data/w3c/ssn.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -352,18 +331,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/ns/ssn/FeatureOfInterest> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-owl",
-      "group": "w3c",
       "profile": "w3c",
       "label": "OWL",
       "icon": "\ud83e\udd89",
       "description": "W3C OWL vocabulary \u00b7 owl.ttl",
       "url": "data/w3c/owl.q42",
-      "lexUrl": "data/w3c/owl.q42.lex",
-      "bidxUrl": "data/w3c/owl.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -387,18 +364,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2002/07/owl#Class> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-rdf",
-      "group": "w3c",
       "profile": "w3c",
       "label": "RDF",
       "icon": "\ud83d\udd17",
       "description": "W3C RDF vocabulary \u00b7 rdf.ttl",
       "url": "data/w3c/rdf.q42",
-      "lexUrl": "data/w3c/rdf.q42.lex",
-      "bidxUrl": "data/w3c/rdf.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -422,18 +397,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-rdfs",
-      "group": "w3c",
       "profile": "w3c",
       "label": "RDFS",
       "icon": "\ud83d\udcd6",
       "description": "W3C RDFS vocabulary \u00b7 rdfs.ttl",
       "url": "data/w3c/rdfs.q42",
-      "lexUrl": "data/w3c/rdfs.q42.lex",
-      "bidxUrl": "data/w3c/rdfs.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -457,18 +430,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2000/01/rdf-schema#label> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-time",
-      "group": "w3c",
       "profile": "w3c",
       "label": "OWL-Time",
       "icon": "\ud83d\udd50",
       "description": "W3C OWL-Time vocabulary \u00b7 time.ttl",
       "url": "data/w3c/time.q42",
-      "lexUrl": "data/w3c/time.q42.lex",
-      "bidxUrl": "data/w3c/time.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -492,18 +463,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2006/time#Instant> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-vcard",
-      "group": "w3c",
       "profile": "w3c",
       "label": "vCard RDF",
       "icon": "\ud83d\udc64",
       "description": "W3C vCard RDF vocabulary \u00b7 vcard.ttl",
       "url": "data/w3c/vcard.q42",
-      "lexUrl": "data/w3c/vcard.q42.lex",
-      "bidxUrl": "data/w3c/vcard.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -527,18 +496,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2006/vcard/ns#Person> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-geo",
-      "group": "w3c",
       "profile": "w3c",
       "label": "W3C Basic Geo",
       "icon": "\ud83c\udf0d",
       "description": "W3C W3C Basic Geo vocabulary \u00b7 geo.ttl",
       "url": "data/w3c/geo.q42",
-      "lexUrl": "data/w3c/geo.q42.lex",
-      "bidxUrl": "data/w3c/geo.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -562,18 +529,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2003/01/geo/wgs84_pos#Point> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-wgs84",
-      "group": "w3c",
       "profile": "w3c",
       "label": "WGS84 Position",
       "icon": "\ud83d\udccd",
       "description": "W3C WGS84 Position vocabulary \u00b7 wgs84_pos.ttl",
       "url": "data/w3c/wgs84_pos.q42",
-      "lexUrl": "data/w3c/wgs84_pos.q42.lex",
-      "bidxUrl": "data/w3c/wgs84_pos.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -596,18 +561,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2003/01/geo/wgs84_pos#Point> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-csvw",
-      "group": "w3c",
       "profile": "w3c",
       "label": "CSVW",
       "icon": "\ud83d\udcca",
       "description": "W3C CSVW vocabulary \u00b7 csvw.ttl",
       "url": "data/w3c/csvw.q42",
-      "lexUrl": "data/w3c/csvw.q42.lex",
-      "bidxUrl": "data/w3c/csvw.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -631,18 +594,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/ns/csvw#Table> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-http",
-      "group": "w3c",
       "profile": "w3c",
       "label": "HTTP in RDF",
       "icon": "\ud83c\udf10",
       "description": "W3C HTTP in RDF vocabulary \u00b7 http.ttl",
       "url": "data/w3c/http.q42",
-      "lexUrl": "data/w3c/http.q42.lex",
-      "bidxUrl": "data/w3c/http.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -666,18 +627,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2011/http#Connection> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-httpcodes",
-      "group": "w3c",
       "profile": "w3c",
       "label": "HTTP Status Codes",
       "icon": "\ud83d\udd22",
       "description": "W3C HTTP Status Codes vocabulary \u00b7 httpcodes.ttl",
       "url": "data/w3c/httpcodes.q42",
-      "lexUrl": "data/w3c/httpcodes.q42.lex",
-      "bidxUrl": "data/w3c/httpcodes.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -700,18 +659,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2011/http-statusCodes#NotFound> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-ical",
-      "group": "w3c",
       "profile": "w3c",
       "label": "iCalendar RDF",
       "icon": "\ud83d\udcc5",
       "description": "W3C iCalendar RDF vocabulary \u00b7 ical.ttl",
       "url": "data/w3c/ical.q42",
-      "lexUrl": "data/w3c/ical.q42.lex",
-      "bidxUrl": "data/w3c/ical.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -735,18 +692,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2002/12/cal/icaltzd#Vevent> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-flow",
-      "group": "w3c",
       "profile": "w3c",
       "label": "FLOW",
       "icon": "\ud83d\udd00",
       "description": "W3C FLOW vocabulary \u00b7 flow.ttl",
       "url": "data/w3c/flow.q42",
-      "lexUrl": "data/w3c/flow.q42.lex",
-      "bidxUrl": "data/w3c/flow.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -770,18 +725,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2005/01/wf/flow#Task> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-rdfa",
-      "group": "w3c",
       "profile": "w3c",
       "label": "RDFa",
       "icon": "\ud83d\udcc4",
       "description": "W3C RDFa vocabulary \u00b7 rdfa.ttl",
       "url": "data/w3c/rdfa.q42",
-      "lexUrl": "data/w3c/rdfa.q42.lex",
-      "bidxUrl": "data/w3c/rdfa.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -804,18 +757,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/ns/rdfa#usesVocabulary> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-xsd",
-      "group": "w3c",
       "profile": "w3c",
       "label": "XSD",
       "icon": "\ud83d\udd23",
       "description": "W3C XSD vocabulary \u00b7 xsd.ttl",
       "url": "data/w3c/xsd.q42",
-      "lexUrl": "data/w3c/xsd.q42.lex",
-      "bidxUrl": "data/w3c/xsd.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -839,18 +790,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2001/XMLSchema#string> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-meeting",
-      "group": "w3c",
       "profile": "w3c",
       "label": "Meeting Ontology",
       "icon": "\ud83e\udd1d",
       "description": "W3C Meeting Ontology vocabulary \u00b7 meeting.ttl",
       "url": "data/w3c/meeting.q42",
-      "lexUrl": "data/w3c/meeting.q42.lex",
-      "bidxUrl": "data/w3c/meeting.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -873,18 +822,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2002/12/cal/ical-ad#Meeting> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "w3c-timezone",
-      "group": "w3c",
       "profile": "w3c",
       "label": "Timezone",
       "icon": "\ud83c\udf10",
       "description": "W3C Timezone vocabulary \u00b7 timezone.ttl",
       "url": "data/w3c/timezone.q42",
-      "lexUrl": "data/w3c/timezone.q42.lex",
-      "bidxUrl": "data/w3c/timezone.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -907,18 +854,16 @@
           "label": "Subclass chain",
           "pattern": "<http://www.w3.org/2006/timezone#Timezone> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "w3c"
     },
     {
       "id": "purl-bibo",
-      "group": "purl",
       "profile": "w3c",
       "label": "BIBO",
       "icon": "\ud83d\udcd6",
       "description": "PURL BIBO vocabulary \u00b7 bibo.ttl",
       "url": "data/purl/bibo.q42",
-      "lexUrl": "data/purl/bibo.q42.lex",
-      "bidxUrl": "data/purl/bibo.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -942,18 +887,16 @@
           "label": "Subclass chain",
           "pattern": "<http://purl.org/ontology/bibo/Article> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "purl-consent",
-      "group": "purl",
       "profile": "w3c",
       "label": "Consent Ontology",
       "icon": "\ud83d\udee1\ufe0f",
       "description": "PURL Consent Ontology vocabulary \u00b7 consent.ttl",
       "url": "data/purl/consent.q42",
-      "lexUrl": "data/purl/consent.q42.lex",
-      "bidxUrl": "data/purl/consent.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -977,18 +920,16 @@
           "label": "Subclass chain",
           "pattern": "<http://purl.org/adaptcentre/openscience/ontologies/consent#Consent> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "purl-cube",
-      "group": "purl",
       "profile": "w3c",
       "label": "Data Cube",
       "icon": "\ud83d\udcca",
       "description": "PURL Data Cube vocabulary \u00b7 cube.ttl",
       "url": "data/purl/cube.q42",
-      "lexUrl": "data/purl/cube.q42.lex",
-      "bidxUrl": "data/purl/cube.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -1012,18 +953,16 @@
           "label": "Subclass chain",
           "pattern": "<http://purl.org/linked-data/cube#Dataset> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "purl-dcam",
-      "group": "purl",
       "profile": "w3c",
       "label": "DCAM",
       "icon": "\ud83c\udff7\ufe0f",
       "description": "PURL DCAM vocabulary \u00b7 dcam.ttl",
       "url": "data/purl/dcam.q42",
-      "lexUrl": "data/purl/dcam.q42.lex",
-      "bidxUrl": "data/purl/dcam.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -1046,18 +985,16 @@
           "label": "Subclass chain",
           "pattern": "<http://purl.org/dc/dcam/VocabularyEncodingScheme> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "purl-dcelements",
-      "group": "purl",
       "profile": "w3c",
       "label": "Dublin Core Elements",
       "icon": "\ud83d\udccb",
       "description": "PURL Dublin Core Elements vocabulary \u00b7 dcelements.ttl",
       "url": "data/purl/dcelements.q42",
-      "lexUrl": "data/purl/dcelements.q42.lex",
-      "bidxUrl": "data/purl/dcelements.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -1081,18 +1018,16 @@
           "label": "Subclass chain",
           "pattern": "<http://purl.org/dc/elements/1.1/title> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "purl-dcmitype",
-      "group": "purl",
       "profile": "w3c",
       "label": "DCMI Type",
       "icon": "\ud83d\uddc2\ufe0f",
       "description": "PURL DCMI Type vocabulary \u00b7 dcmitype.ttl",
       "url": "data/purl/dcmitype.q42",
-      "lexUrl": "data/purl/dcmitype.q42.lex",
-      "bidxUrl": "data/purl/dcmitype.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -1116,18 +1051,16 @@
           "label": "Subclass chain",
           "pattern": "<http://purl.org/dc/dcmitype/Collection> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "purl-dcterms",
-      "group": "purl",
       "profile": "w3c",
       "label": "Dublin Core Terms",
       "icon": "\ud83d\udcda",
       "description": "PURL Dublin Core Terms vocabulary \u00b7 dcterms.ttl",
       "url": "data/purl/dcterms.q42",
-      "lexUrl": "data/purl/dcterms.q42.lex",
-      "bidxUrl": "data/purl/dcterms.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -1151,18 +1084,16 @@
           "label": "Subclass chain",
           "pattern": "<http://purl.org/dc/terms/Agent> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "purl-music",
-      "group": "purl",
       "profile": "w3c",
       "label": "Music Ontology",
       "icon": "\ud83c\udfb5",
       "description": "PURL Music Ontology vocabulary \u00b7 music.ttl",
       "url": "data/purl/music.q42",
-      "lexUrl": "data/purl/music.q42.lex",
-      "bidxUrl": "data/purl/music.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -1186,18 +1117,16 @@
           "label": "Subclass chain",
           "pattern": "<http://purl.org/ontology/mo/Track> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "purl-pplan",
-      "group": "purl",
       "profile": "w3c",
       "label": "P-Plan",
       "icon": "\ud83d\udcdd",
       "description": "PURL P-Plan vocabulary \u00b7 p-plan.ttl",
       "url": "data/purl/p-plan.q42",
-      "lexUrl": "data/purl/p-plan.q42.lex",
-      "bidxUrl": "data/purl/p-plan.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -1221,18 +1150,16 @@
           "label": "Subclass chain",
           "pattern": "<http://purl.org/net/p-plan#Plan> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "purl-resume",
-      "group": "purl",
       "profile": "w3c",
       "label": "Resume RDF",
       "icon": "\ud83d\udc54",
       "description": "PURL Resume RDF vocabulary \u00b7 resume.ttl",
       "url": "data/purl/resume.q42",
-      "lexUrl": "data/purl/resume.q42.lex",
-      "bidxUrl": "data/purl/resume.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -1256,18 +1183,16 @@
           "label": "Subclass chain",
           "pattern": "<http://rdfs.org/resume-rdf/cv.rdfs#CV> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "purl-vann",
-      "group": "purl",
       "profile": "w3c",
       "label": "VANN",
       "icon": "\ud83d\udd16",
       "description": "PURL VANN vocabulary \u00b7 vann.ttl",
       "url": "data/purl/vann.q42",
-      "lexUrl": "data/purl/vann.q42.lex",
-      "bidxUrl": "data/purl/vann.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "various",
@@ -1291,7 +1216,8 @@
           "label": "Subclass chain",
           "pattern": "<http://purl.org/vocab/vann/preferredNamespacePrefix> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
         }
-      ]
+      ],
+      "group": "purl"
     },
     {
       "id": "geonames",
@@ -1300,8 +1226,6 @@
       "icon": "\ud83c\udf0d",
       "description": "GeoNames geography ontology \u00b7 geonames.ttl \u00b7 ~1.4k triples",
       "url": "data/geonames/geonames.q42",
-      "lexUrl": "data/geonames/geonames.q42.lex",
-      "bidxUrl": "data/geonames/geonames.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "CC-BY 3.0",
@@ -1334,8 +1258,6 @@
       "icon": "\ud83d\udcda",
       "description": "DCMI metadata terms \u00b7 dct.ttl \u00b7 combined Dublin Core export",
       "url": "data/dublincore/dct.q42",
-      "lexUrl": "data/dublincore/dct.q42.lex",
-      "bidxUrl": "data/dublincore/dct.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "CC-BY 4.0",
@@ -1368,8 +1290,6 @@
       "icon": "\ud83c\udfdb\ufe0f",
       "description": "EDMC FIBO FIBO Foundations \u00b7 FND domain",
       "url": "data/fibo/fnd.q42",
-      "lexUrl": "data/fibo/fnd.q42.lex",
-      "bidxUrl": "data/fibo/fnd.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "MIT",
@@ -1403,8 +1323,6 @@
       "icon": "\ud83c\udfe6",
       "description": "EDMC FIBO FIBO Financial Business \u00b7 FBC domain",
       "url": "data/fibo/fbc.q42",
-      "lexUrl": "data/fibo/fbc.q42.lex",
-      "bidxUrl": "data/fibo/fbc.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "MIT",
@@ -1438,8 +1356,6 @@
       "icon": "\ud83d\udcc8",
       "description": "EDMC FIBO FIBO Securities \u00b7 SEC domain",
       "url": "data/fibo/sec.q42",
-      "lexUrl": "data/fibo/sec.q42.lex",
-      "bidxUrl": "data/fibo/sec.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "MIT",
@@ -1473,8 +1389,6 @@
       "icon": "\ud83c\udfe2",
       "description": "EDMC FIBO FIBO Business Entities \u00b7 BE domain",
       "url": "data/fibo/be.q42",
-      "lexUrl": "data/fibo/be.q42.lex",
-      "bidxUrl": "data/fibo/be.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "MIT",
@@ -1508,8 +1422,6 @@
       "icon": "\ud83d\udcc9",
       "description": "EDMC FIBO FIBO Derivatives \u00b7 DER domain",
       "url": "data/fibo/der.q42",
-      "lexUrl": "data/fibo/der.q42.lex",
-      "bidxUrl": "data/fibo/der.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "MIT",
@@ -1543,8 +1455,6 @@
       "icon": "\ud83d\udcca",
       "description": "EDMC FIBO FIBO Indices & Indicators \u00b7 IND domain",
       "url": "data/fibo/ind.q42",
-      "lexUrl": "data/fibo/ind.q42.lex",
-      "bidxUrl": "data/fibo/ind.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "MIT",
@@ -1578,8 +1488,6 @@
       "icon": "\ud83c\udfe0",
       "description": "EDMC FIBO FIBO Loans \u00b7 LOAN domain",
       "url": "data/fibo/loan.q42",
-      "lexUrl": "data/fibo/loan.q42.lex",
-      "bidxUrl": "data/fibo/loan.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "MIT",
@@ -1613,8 +1521,6 @@
       "icon": "\u26a1",
       "description": "EDMC FIBO FIBO Corporate Actions \u00b7 CAE domain",
       "url": "data/fibo/cae.q42",
-      "lexUrl": "data/fibo/cae.q42.lex",
-      "bidxUrl": "data/fibo/cae.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "MIT",
@@ -1648,8 +1554,6 @@
       "icon": "\ud83d\udd50",
       "description": "EDMC FIBO FIBO Market Data \u00b7 MD domain",
       "url": "data/fibo/md.q42",
-      "lexUrl": "data/fibo/md.q42.lex",
-      "bidxUrl": "data/fibo/md.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "MIT",
@@ -1683,8 +1587,6 @@
       "icon": "\u2699\ufe0f",
       "description": "EDMC FIBO FIBO Business Process \u00b7 BP domain",
       "url": "data/fibo/bp.q42",
-      "lexUrl": "data/fibo/bp.q42.lex",
-      "bidxUrl": "data/fibo/bp.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "MIT",
@@ -1718,8 +1620,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Activitystreams Owl \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/activitystreams-owl.q42",
-      "lexUrl": "data/w3c-archives/activitystreams-owl.q42.lex",
-      "bidxUrl": "data/w3c-archives/activitystreams-owl.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -1747,8 +1647,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Adms \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/adms.q42",
-      "lexUrl": "data/w3c-archives/adms.q42.lex",
-      "bidxUrl": "data/w3c-archives/adms.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -1776,8 +1674,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Auth Acl \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/auth-acl.q42",
-      "lexUrl": "data/w3c-archives/auth-acl.q42.lex",
-      "bidxUrl": "data/w3c-archives/auth-acl.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -1805,8 +1701,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Auth Cert \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/auth-cert.q42",
-      "lexUrl": "data/w3c-archives/auth-cert.q42.lex",
-      "bidxUrl": "data/w3c-archives/auth-cert.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -1834,8 +1728,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Auth Rsa \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/auth-rsa.q42",
-      "lexUrl": "data/w3c-archives/auth-rsa.q42.lex",
-      "bidxUrl": "data/w3c-archives/auth-rsa.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -1863,8 +1755,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Dpv Nace \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/dpv-nace.q42",
-      "lexUrl": "data/w3c-archives/dpv-nace.q42.lex",
-      "bidxUrl": "data/w3c-archives/dpv-nace.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -1892,8 +1782,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Dqv \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/dqv.q42",
-      "lexUrl": "data/w3c-archives/dqv.q42.lex",
-      "bidxUrl": "data/w3c-archives/dqv.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -1921,8 +1809,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Duv \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/duv.q42",
-      "lexUrl": "data/w3c-archives/duv.q42.lex",
-      "bidxUrl": "data/w3c-archives/duv.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -1950,8 +1836,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Dx Profiles \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/dx-profiles.q42",
-      "lexUrl": "data/w3c-archives/dx-profiles.q42.lex",
-      "bidxUrl": "data/w3c-archives/dx-profiles.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -1979,8 +1863,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Earl \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/earl.q42",
-      "lexUrl": "data/w3c-archives/earl.q42.lex",
-      "bidxUrl": "data/w3c-archives/earl.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2008,8 +1890,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Entailment Entailment \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/entailment-entailment.q42",
-      "lexUrl": "data/w3c-archives/entailment-entailment.q42.lex",
-      "bidxUrl": "data/w3c-archives/entailment-entailment.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2037,8 +1917,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Footprints \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/footprints.q42",
-      "lexUrl": "data/w3c-archives/footprints.q42.lex",
-      "bidxUrl": "data/w3c-archives/footprints.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2066,8 +1944,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Formats Json Ld \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/formats-json-ld.q42",
-      "lexUrl": "data/w3c-archives/formats-json-ld.q42.lex",
-      "bidxUrl": "data/w3c-archives/formats-json-ld.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2095,8 +1971,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Formats Overview \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/formats-overview.q42",
-      "lexUrl": "data/w3c-archives/formats-overview.q42.lex",
-      "bidxUrl": "data/w3c-archives/formats-overview.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2124,8 +1998,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Json Schema \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/json-schema.q42",
-      "lexUrl": "data/w3c-archives/json-schema.q42.lex",
-      "bidxUrl": "data/w3c-archives/json-schema.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2153,8 +2025,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives LDP \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/ldp.q42",
-      "lexUrl": "data/w3c-archives/ldp.q42.lex",
-      "bidxUrl": "data/w3c-archives/ldp.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2182,8 +2052,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Lemon Lexicog \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/lemon-lexicog.q42",
-      "lexUrl": "data/w3c-archives/lemon-lexicog.q42.lex",
-      "bidxUrl": "data/w3c-archives/lemon-lexicog.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2211,8 +2079,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Lemon Lime \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/lemon-lime.q42",
-      "lexUrl": "data/w3c-archives/lemon-lime.q42.lex",
-      "bidxUrl": "data/w3c-archives/lemon-lime.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2240,8 +2106,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Lemon Ontolex \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/lemon-ontolex.q42",
-      "lexUrl": "data/w3c-archives/lemon-ontolex.q42.lex",
-      "bidxUrl": "data/w3c-archives/lemon-ontolex.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2269,8 +2133,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Lemon Synsem \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/lemon-synsem.q42",
-      "lexUrl": "data/w3c-archives/lemon-synsem.q42.lex",
-      "bidxUrl": "data/w3c-archives/lemon-synsem.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2298,8 +2160,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Lemon Vartrans \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/lemon-vartrans.q42",
-      "lexUrl": "data/w3c-archives/lemon-vartrans.q42.lex",
-      "bidxUrl": "data/w3c-archives/lemon-vartrans.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2327,8 +2187,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Locn \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/locn.q42",
-      "lexUrl": "data/w3c-archives/locn.q42.lex",
-      "bidxUrl": "data/w3c-archives/locn.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2356,8 +2214,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Mblog \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/mblog.q42",
-      "lexUrl": "data/w3c-archives/mblog.q42.lex",
-      "bidxUrl": "data/w3c-archives/mblog.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2385,8 +2241,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Mics \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/mics.q42",
-      "lexUrl": "data/w3c-archives/mics.q42.lex",
-      "bidxUrl": "data/w3c-archives/mics.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2414,8 +2268,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Mls \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/mls.q42",
-      "lexUrl": "data/w3c-archives/mls.q42.lex",
-      "bidxUrl": "data/w3c-archives/mls.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2443,8 +2295,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Open Annotation \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/oa.q42",
-      "lexUrl": "data/w3c-archives/oa.q42.lex",
-      "bidxUrl": "data/w3c-archives/oa.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2472,8 +2322,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Person \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/person.q42",
-      "lexUrl": "data/w3c-archives/person.q42.lex",
-      "bidxUrl": "data/w3c-archives/person.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2501,8 +2349,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Pim Ab \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/pim-ab.q42",
-      "lexUrl": "data/w3c-archives/pim-ab.q42.lex",
-      "bidxUrl": "data/w3c-archives/pim-ab.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2530,8 +2376,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Pim Arduino \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/pim-arduino.q42",
-      "lexUrl": "data/w3c-archives/pim-arduino.q42.lex",
-      "bidxUrl": "data/w3c-archives/pim-arduino.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2559,8 +2403,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Pim Arg \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/pim-arg.q42",
-      "lexUrl": "data/w3c-archives/pim-arg.q42.lex",
-      "bidxUrl": "data/w3c-archives/pim-arg.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2588,8 +2430,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Pim Fit \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/pim-fit.q42",
-      "lexUrl": "data/w3c-archives/pim-fit.q42.lex",
-      "bidxUrl": "data/w3c-archives/pim-fit.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2617,8 +2457,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Pim Gpx \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/pim-gpx.q42",
-      "lexUrl": "data/w3c-archives/pim-gpx.q42.lex",
-      "bidxUrl": "data/w3c-archives/pim-gpx.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2646,8 +2484,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Pim Noaa \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/pim-noaa.q42",
-      "lexUrl": "data/w3c-archives/pim-noaa.q42.lex",
-      "bidxUrl": "data/w3c-archives/pim-noaa.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2675,8 +2511,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Pim Pay \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/pim-pay.q42",
-      "lexUrl": "data/w3c-archives/pim-pay.q42.lex",
-      "bidxUrl": "data/w3c-archives/pim-pay.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2704,8 +2538,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Pim Trip \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/pim-trip.q42",
-      "lexUrl": "data/w3c-archives/pim-trip.q42.lex",
-      "bidxUrl": "data/w3c-archives/pim-trip.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2733,8 +2565,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Pim Tripinvoice \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/pim-tripinvoice.q42",
-      "lexUrl": "data/w3c-archives/pim-tripinvoice.q42.lex",
-      "bidxUrl": "data/w3c-archives/pim-tripinvoice.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2762,8 +2592,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Posix Stat \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/posix-stat.q42",
-      "lexUrl": "data/w3c-archives/posix-stat.q42.lex",
-      "bidxUrl": "data/w3c-archives/posix-stat.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2791,8 +2619,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Posix Sysctl \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/posix-sysctl.q42",
-      "lexUrl": "data/w3c-archives/posix-sysctl.q42.lex",
-      "bidxUrl": "data/w3c-archives/posix-sysctl.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2820,8 +2646,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives R2RML \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/r2rml.q42",
-      "lexUrl": "data/w3c-archives/r2rml.q42.lex",
-      "bidxUrl": "data/w3c-archives/r2rml.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2849,8 +2673,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Regorg \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/regorg.q42",
-      "lexUrl": "data/w3c-archives/regorg.q42.lex",
-      "bidxUrl": "data/w3c-archives/regorg.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2878,8 +2700,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Shapetrees \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/shapetrees.q42",
-      "lexUrl": "data/w3c-archives/shapetrees.q42.lex",
-      "bidxUrl": "data/w3c-archives/shapetrees.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2907,8 +2727,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives ShEx \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/shex.q42",
-      "lexUrl": "data/w3c-archives/shex.q42.lex",
-      "bidxUrl": "data/w3c-archives/shex.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2936,8 +2754,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Solid Oidc \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/solid-oidc.q42",
-      "lexUrl": "data/w3c-archives/solid-oidc.q42.lex",
-      "bidxUrl": "data/w3c-archives/solid-oidc.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2965,8 +2781,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Sparql \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/sparql.q42",
-      "lexUrl": "data/w3c-archives/sparql.q42.lex",
-      "bidxUrl": "data/w3c-archives/sparql.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -2994,8 +2808,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Spec \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/spec.q42",
-      "lexUrl": "data/w3c-archives/spec.q42.lex",
-      "bidxUrl": "data/w3c-archives/spec.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -3023,8 +2835,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Td \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/td.q42",
-      "lexUrl": "data/w3c-archives/td.q42.lex",
-      "bidxUrl": "data/w3c-archives/td.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -3052,8 +2862,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Time Gregorian \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/time-gregorian.q42",
-      "lexUrl": "data/w3c-archives/time-gregorian.q42.lex",
-      "bidxUrl": "data/w3c-archives/time-gregorian.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -3081,8 +2889,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Webmention \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/webmention.q42",
-      "lexUrl": "data/w3c-archives/webmention.q42.lex",
-      "bidxUrl": "data/w3c-archives/webmention.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -3110,8 +2916,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Wot Security \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/wot-security.q42",
-      "lexUrl": "data/w3c-archives/wot-security.q42.lex",
-      "bidxUrl": "data/w3c-archives/wot-security.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",
@@ -3139,8 +2943,6 @@
       "icon": "\ud83d\udce6",
       "description": "W3C archives Wsdl Rdf \u00b7 deduped from ns.w3.org mirror",
       "url": "data/w3c-archives/wsdl-rdf.q42",
-      "lexUrl": "data/w3c-archives/wsdl-rdf.q42.lex",
-      "bidxUrl": "data/w3c-archives/wsdl-rdf.q42.bidx",
       "compressed": false,
       "source": "bundled",
       "license": "W3C",

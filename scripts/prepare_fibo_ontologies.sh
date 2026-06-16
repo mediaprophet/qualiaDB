@@ -57,10 +57,6 @@ for entry in catalog.get("ontologies", []):
         raise SystemExit(f"ingest did not produce {q42_src}")
     dest = out_dir / f"{base}.q42"
     dest.write_bytes(q42_src.read_bytes())
-    for ext in (".lex", ".bidx"):
-        side = Path(str(q42_src) + ext)
-        if side.is_file():
-            (out_dir / f"{base}.q42{ext}").write_bytes(side.read_bytes())
     count += 1
 
 print(f"  built {count} domain volumes")

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QualiaDB Manuals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="../js/menu-loader.js"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-200 min-h-screen">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16 gap-4">
+                <a href="../index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div class="hidden sm:block"><span class="font-semibold text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-3xl mx-auto px-6 py-12">
+        <h1 class="text-3xl font-semibold mb-2">Documentation &amp; Manuals</h1>
+        <p class="text-slate-400 mb-8">Architecture references, developer guides, and draft standards.</p>
+        <ul class="space-y-3">
+            <li><a class="text-cyan-400 hover:underline" href="GETTING_STARTED.md">Getting Started</a></li>
+            <li><a class="text-cyan-400 hover:underline" href="ARCHITECTURE.md">Architecture</a></li>
+            <li><a class="text-cyan-400 hover:underline" href="DEVELOPMENT.md">Development</a></li>
+            <li><a class="text-cyan-400 hover:underline" href="developer-guide.md">Developer Guide</a></li>
+            <li><a class="text-cyan-400 hover:underline" href="wasm-api.md">WASM API</a></li>
+            <li><a class="text-cyan-400 hover:underline" href="standards/q42-format-internal-draft.md">Q42 Format (v3)</a></li>
+            <li><a class="text-cyan-400 hover:underline" href="standards/">Standards drafts</a></li>
+            <li><a class="text-cyan-400 hover:underline" href="query-engine/qualia-shacl-extensions.html">SHACL extensions</a></li>
+        </ul>
+    </main>
+</body>
+</html>

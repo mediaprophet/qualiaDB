@@ -132,15 +132,15 @@
     0%, 100% { opacity: 1; } 50% { opacity: .3; }
   }
 </style>
-    <script src="js/menu-loader.js"></script></head>
+    <script src="../js/menu-loader.js"></script></head>
 <body>
 
-<nav class="top-nav">
-  <span class="nav-brand">Qualia-DB</span>
-  <div class="nav-links">
-    <a href="index.html">Playground</a>
-    <a href="benchmark.html">Benchmark</a>
-    <a href="wordnet-demo.html" style="color:var(--text-main)">WordNet</a>
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.92);backdrop-filter:blur(24px)">
+  <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+    <div class="flex items-center justify-between h-14 gap-4">
+      <a href="../index.html" class="flex items-center gap-2 shrink-0 font-semibold text-sm" style="color:var(--text-main)">QualiaDB</a>
+      <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+    </div>
   </div>
 </nav>
 
@@ -465,9 +465,8 @@ window.mountDataset = async function mountDataset() {
         setBadge('vfs-badge', `Decompress failed: ${e.message}`, 'amber');
       }
     } else {
-      // Uncompressed SuperBlock format — demand-paging via HTTP Range requests.
-      // init() performed a header-first Range boot (bytes=0-1023) to build
-      // the BlockOffsetMap; no bulk load is ever issued for this path.
+      // Q42 v3 unified volume — preamble Range boot loads lex+bidx+block_dir;
+      // readBlock() demand-pages individual LZ4 SuperBlocks.
       const bom      = activeVfs.blockOffsetMap;
       const blockCount = bom ? bom.count : 0;
       if (blockCount > 0) {
@@ -492,7 +491,7 @@ window.mountDataset = async function mountDataset() {
     hcSet('hc-bidx',
       activeVfs.bidxLoaded
         ? `${activeVfs.blockCount.toLocaleString()} ranges · O(log N)`
-        : 're-run fetch_wordnet.sh to generate .bidx',
+        : activeVfs.embeddedPreamble ? 'embedded in preamble' : 'BIDX not loaded',
       activeVfs.bidxLoaded ? 'green' : 'amber');
 
     setBadge('mount-badge', `Mounted: ${ds?.label ?? id}`, 'green');

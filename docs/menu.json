@@ -9,7 +9,7 @@
     {
       "label": "Home",
       "href": "index.html",
-      "icon": "fa-home",
+      "icon": "fa-house",
       "group": "Core"
     },
     {
@@ -25,6 +25,12 @@
       "group": "Core"
     },
     {
+      "label": "Manuals",
+      "href": "manuals/index.html",
+      "icon": "fa-book",
+      "group": "Core"
+    },
+    {
       "label": "Benchmark Hub",
       "href": "benchmark.html",
       "icon": "fa-gauge-high",
@@ -37,9 +43,15 @@
       "group": "Benchmarks"
     },
     {
+      "label": "Visualizer",
+      "href": "benchmark_visualizer.html",
+      "icon": "fa-chart-area",
+      "group": "Benchmarks"
+    },
+    {
       "label": "Browser Harness",
       "href": "playground/benchmark.html",
-      "icon": "fa-code",
+      "icon": "fa-vial",
       "group": "Benchmarks"
     },
     {
@@ -49,7 +61,7 @@
       "group": "SPARQL"
     },
     {
-      "label": "SPARQL Examples",
+      "label": "Examples",
       "href": "sparql-examples.html",
       "icon": "fa-terminal",
       "group": "SPARQL"
@@ -61,19 +73,13 @@
       "group": "Analytics"
     },
     {
-      "label": "Library",
-      "href": "library.html",
-      "icon": "fa-book",
-      "group": "Analytics"
-    },
-    {
       "label": "Sciences",
       "href": "science-playground.html",
       "icon": "fa-flask",
       "group": "Sciences"
     },
     {
-      "label": "Scientific Computing",
+      "label": "Sci Computing",
       "href": "scientific-computing.html",
       "icon": "fa-calculator",
       "group": "Sciences"
@@ -103,6 +109,12 @@
       "group": "Tools"
     },
     {
+      "label": "RDF Compare",
+      "href": "playground/compare.html",
+      "icon": "fa-scale-balanced",
+      "group": "Tools"
+    },
+    {
       "label": "API Explorer",
       "href": "api-explorer/",
       "icon": "fa-compass",
@@ -112,7 +124,7 @@
     {
       "label": "Test Suite",
       "href": "tests/",
-      "icon": "fa-vial",
+      "icon": "fa-vial-circle-check",
       "highlight": true,
       "group": "Tools"
     },
@@ -132,6 +144,13 @@
       "label": "Ontology Demo",
       "href": "ontology.html",
       "icon": "fa-book-open",
+      "highlight": true,
+      "group": "Data"
+    },
+    {
+      "label": "WordNet",
+      "href": "ontology.html?dataset=wordnet",
+      "icon": "fa-language",
       "group": "Data"
     }
   ],
@@ -140,16 +159,16 @@
       {
         "label": "GitHub",
         "href": "https://github.com/mediaprophet/qualiaDB/releases",
-        "icon": "fa-github"
+        "icon": "fa-brands fa-github"
       },
       {
         "label": "Manuals",
-        "href": "manuals/",
+        "href": "manuals/index.html",
         "icon": "fa-book-open"
       },
       {
         "label": "Standards",
-        "href": "manuals/standards/",
+        "href": "manuals/standards/index.html",
         "icon": "fa-ruler"
       }
     ]

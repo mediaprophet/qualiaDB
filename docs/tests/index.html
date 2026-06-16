@@ -388,29 +388,16 @@
 
     <!-- Unified Navigation -->
     <nav class="glass-strong border-b border-white/10 sticky top-0 z-50">
-        <div class="max-w-screen-2xl mx-auto px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-8">
-                    <div class="flex items-center gap-3">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16 gap-4">
+                <div class="flex items-center gap-4 sm:gap-8 min-w-0 flex-1">
+                    <a href="../index.html" class="flex items-center gap-3 shrink-0">
                         <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
                             <span class="text-black font-bold text-xl">Q</span>
                         </div>
-                        <div>
-                            <span class="font-semibold tracking-tight text-xl">Qualia</span>
-                            <span class="text-blue-400 text-xl">DB</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center gap-6 text-sm">
-                        <a href="../index.html" class="hover:text-white transition-colors">Home</a>
-                        <a href="../cooperativeproject/index.html" class="hover:text-white transition-colors">Projects</a>
-                        <a href="../comparative_benchmarks.html" class="hover:text-white transition-colors">Comparative</a>
-                        <a href="../benchmark.html" class="hover:text-white transition-colors">Live Benchmarks</a>
-                        <a href="../benchmark_visualizer.html" class="hover:text-white transition-colors">Visualizer</a>
-                        <a href="../cost_model.html" class="hover:text-white transition-colors">Cost Model</a>
-                        <a href="../api.html" class="hover:text-white transition-colors">API Docs</a>
-                        <a href="index.html" class="nav-active font-medium">Test Suite</a>
-                    </div>
+                        <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
                 </div>
 
                 <div class="flex items-center gap-4">
