@@ -65,10 +65,6 @@ jobs:
             --out-name qualia_core_db \
             --no-typescript
 
-      - name: Build WordNet dataset (100 k-triple subset for Pages demo)
-        continue-on-error: true   # non-fatal: Pages deploys fine without WordNet data
-        run: bash scripts/fetch_wordnet.sh --subset 100000 --playground
-
       - name: Prepare Schema.org benchmark artifacts for Pages
         continue-on-error: true   # non-fatal: Pages deploys fine without Schema.org artifacts
         run: |
