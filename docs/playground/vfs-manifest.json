@@ -1710,6 +1710,1456 @@
         }
       ],
       "group": "fibo"
+    },
+    {
+      "id": "w3c-arch-activitystreams-owl",
+      "profile": "w3c",
+      "label": "Activitystreams Owl",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Activitystreams Owl \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/activitystreams-owl.q42",
+      "lexUrl": "data/w3c-archives/activitystreams-owl.q42.lex",
+      "bidxUrl": "data/w3c-archives/activitystreams-owl.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/activitystreams#",
+      "prefix": "activitystre",
+      "defaultSearch": "Activitystreams Owl",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Activitystreams Owl",
+          "pattern": "<http://www.w3.org/ns/activitystreams#Activitystreams Owl> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/activitystreams#Activitystreams Owl> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-adms",
+      "profile": "w3c",
+      "label": "Adms",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Adms \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/adms.q42",
+      "lexUrl": "data/w3c-archives/adms.q42.lex",
+      "bidxUrl": "data/w3c-archives/adms.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/adms#",
+      "prefix": "adms",
+      "defaultSearch": "Adms",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Adms",
+          "pattern": "<http://www.w3.org/ns/adms#Adms> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/adms#Adms> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-auth-acl",
+      "profile": "w3c",
+      "label": "Auth Acl",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Auth Acl \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/auth-acl.q42",
+      "lexUrl": "data/w3c-archives/auth-acl.q42.lex",
+      "bidxUrl": "data/w3c-archives/auth-acl.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/auth/acl#",
+      "prefix": "acl",
+      "defaultSearch": "Acl",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Acl",
+          "pattern": "<http://www.w3.org/ns/auth/acl#Acl> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/auth/acl#Acl> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-auth-cert",
+      "profile": "w3c",
+      "label": "Auth Cert",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Auth Cert \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/auth-cert.q42",
+      "lexUrl": "data/w3c-archives/auth-cert.q42.lex",
+      "bidxUrl": "data/w3c-archives/auth-cert.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "https://www.w3.org/ns/auth/cert#",
+      "prefix": "cert",
+      "defaultSearch": "about",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect about",
+          "pattern": "<https://www.w3.org/ns/auth/cert#about> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://www.w3.org/ns/auth/cert#about> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-auth-rsa",
+      "profile": "w3c",
+      "label": "Auth Rsa",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Auth Rsa \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/auth-rsa.q42",
+      "lexUrl": "data/w3c-archives/auth-rsa.q42.lex",
+      "bidxUrl": "data/w3c-archives/auth-rsa.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "https://www.w3.org/ns/auth/rsa#",
+      "prefix": "rsa",
+      "defaultSearch": "about",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect about",
+          "pattern": "<https://www.w3.org/ns/auth/rsa#about> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://www.w3.org/ns/auth/rsa#about> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-dpv-nace",
+      "profile": "w3c",
+      "label": "Dpv Nace",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Dpv Nace \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/dpv-nace.q42",
+      "lexUrl": "data/w3c-archives/dpv-nace.q42.lex",
+      "bidxUrl": "data/w3c-archives/dpv-nace.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2005/xpath-functions#",
+      "prefix": "xpathfunctio",
+      "defaultSearch": "Dpv Nace",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Dpv Nace",
+          "pattern": "<http://www.w3.org/2005/xpath-functions#Dpv Nace> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2005/xpath-functions#Dpv Nace> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-dqv",
+      "profile": "w3c",
+      "label": "Dqv",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Dqv \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/dqv.q42",
+      "lexUrl": "data/w3c-archives/dqv.q42.lex",
+      "bidxUrl": "data/w3c-archives/dqv.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/dqv#",
+      "prefix": "dqv",
+      "defaultSearch": "Dqv",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Dqv",
+          "pattern": "<http://www.w3.org/ns/dqv#Dqv> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/dqv#Dqv> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-duv",
+      "profile": "w3c",
+      "label": "Duv",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Duv \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/duv.q42",
+      "lexUrl": "data/w3c-archives/duv.q42.lex",
+      "bidxUrl": "data/w3c-archives/duv.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/duv#",
+      "prefix": "duv",
+      "defaultSearch": "Duv",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Duv",
+          "pattern": "<http://www.w3.org/ns/duv#Duv> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/duv#Duv> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-dx-profiles",
+      "profile": "w3c",
+      "label": "Dx Profiles",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Dx Profiles \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/dx-profiles.q42",
+      "lexUrl": "data/w3c-archives/dx-profiles.q42.lex",
+      "bidxUrl": "data/w3c-archives/dx-profiles.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/dx/prof/",
+      "prefix": "prof",
+      "defaultSearch": "Profiles",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Profiles",
+          "pattern": "<http://www.w3.org/ns/dx/prof/Profiles> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/dx/prof/Profiles> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-earl",
+      "profile": "w3c",
+      "label": "Earl",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Earl \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/earl.q42",
+      "lexUrl": "data/w3c-archives/earl.q42.lex",
+      "bidxUrl": "data/w3c-archives/earl.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "https://www.w3.org/ns/earl#",
+      "prefix": "earl",
+      "defaultSearch": "Earl",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Earl",
+          "pattern": "<https://www.w3.org/ns/earl#Earl> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://www.w3.org/ns/earl#Earl> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-entailment-entailment",
+      "profile": "w3c",
+      "label": "Entailment Entailment",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Entailment Entailment \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/entailment-entailment.q42",
+      "lexUrl": "data/w3c-archives/entailment-entailment.q42.lex",
+      "bidxUrl": "data/w3c-archives/entailment-entailment.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2007/08/pyRdfa/distiller#",
+      "prefix": "distiller",
+      "defaultSearch": "Entailment",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Entailment",
+          "pattern": "<http://www.w3.org/2007/08/pyRdfa/distiller#Entailment> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2007/08/pyRdfa/distiller#Entailment> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-footprints",
+      "profile": "w3c",
+      "label": "Footprints",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Footprints \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/footprints.q42",
+      "lexUrl": "data/w3c-archives/footprints.q42.lex",
+      "bidxUrl": "data/w3c-archives/footprints.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/footprints#",
+      "prefix": "footprints",
+      "defaultSearch": "Footprints",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Footprints",
+          "pattern": "<http://www.w3.org/ns/footprints#Footprints> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/footprints#Footprints> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-formats-json-ld",
+      "profile": "w3c",
+      "label": "Formats Json Ld",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Formats Json Ld \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/formats-json-ld.q42",
+      "lexUrl": "data/w3c-archives/formats-json-ld.q42.lex",
+      "bidxUrl": "data/w3c-archives/formats-json-ld.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/formats/",
+      "prefix": "formats",
+      "defaultSearch": "Json Ld",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Json Ld",
+          "pattern": "<http://www.w3.org/ns/formats/Json Ld> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/formats/Json Ld> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-formats-overview",
+      "profile": "w3c",
+      "label": "Formats Overview",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Formats Overview \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/formats-overview.q42",
+      "lexUrl": "data/w3c-archives/formats-overview.q42.lex",
+      "bidxUrl": "data/w3c-archives/formats-overview.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/sosa-prov/",
+      "prefix": "sosaprov",
+      "defaultSearch": "Overview",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Overview",
+          "pattern": "<http://www.w3.org/ns/sosa-prov/Overview> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/sosa-prov/Overview> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-json-schema",
+      "profile": "w3c",
+      "label": "Json Schema",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Json Schema \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/json-schema.q42",
+      "lexUrl": "data/w3c-archives/json-schema.q42.lex",
+      "bidxUrl": "data/w3c-archives/json-schema.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2003/06/sw-vocab-status/ns#",
+      "prefix": "ns",
+      "defaultSearch": "Json Schema",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Json Schema",
+          "pattern": "<http://www.w3.org/2003/06/sw-vocab-status/ns#Json Schema> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2003/06/sw-vocab-status/ns#Json Schema> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-ldp",
+      "profile": "w3c",
+      "label": "LDP",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives LDP \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/ldp.q42",
+      "lexUrl": "data/w3c-archives/ldp.q42.lex",
+      "bidxUrl": "data/w3c-archives/ldp.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/ldp#",
+      "prefix": "ldp",
+      "defaultSearch": "LDP",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect LDP",
+          "pattern": "<http://www.w3.org/ns/ldp#LDP> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/ldp#LDP> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-lemon-lexicog",
+      "profile": "w3c",
+      "label": "Lemon Lexicog",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Lemon Lexicog \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/lemon-lexicog.q42",
+      "lexUrl": "data/w3c-archives/lemon-lexicog.q42.lex",
+      "bidxUrl": "data/w3c-archives/lemon-lexicog.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/lemon/lexicog#",
+      "prefix": "lexicog",
+      "defaultSearch": "about",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect about",
+          "pattern": "<http://www.w3.org/ns/lemon/lexicog#about> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/lemon/lexicog#about> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-lemon-lime",
+      "profile": "w3c",
+      "label": "Lemon Lime",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Lemon Lime \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/lemon-lime.q42",
+      "lexUrl": "data/w3c-archives/lemon-lime.q42.lex",
+      "bidxUrl": "data/w3c-archives/lemon-lime.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/lemon/lime#",
+      "prefix": "lime",
+      "defaultSearch": "about",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect about",
+          "pattern": "<http://www.w3.org/ns/lemon/lime#about> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/lemon/lime#about> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-lemon-ontolex",
+      "profile": "w3c",
+      "label": "Lemon Ontolex",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Lemon Ontolex \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/lemon-ontolex.q42",
+      "lexUrl": "data/w3c-archives/lemon-ontolex.q42.lex",
+      "bidxUrl": "data/w3c-archives/lemon-ontolex.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/lemon/ontolex#",
+      "prefix": "ontolex",
+      "defaultSearch": "about",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect about",
+          "pattern": "<http://www.w3.org/ns/lemon/ontolex#about> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/lemon/ontolex#about> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-lemon-synsem",
+      "profile": "w3c",
+      "label": "Lemon Synsem",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Lemon Synsem \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/lemon-synsem.q42",
+      "lexUrl": "data/w3c-archives/lemon-synsem.q42.lex",
+      "bidxUrl": "data/w3c-archives/lemon-synsem.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/lemon/synsem#",
+      "prefix": "synsem",
+      "defaultSearch": "about",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect about",
+          "pattern": "<http://www.w3.org/ns/lemon/synsem#about> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/lemon/synsem#about> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-lemon-vartrans",
+      "profile": "w3c",
+      "label": "Lemon Vartrans",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Lemon Vartrans \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/lemon-vartrans.q42",
+      "lexUrl": "data/w3c-archives/lemon-vartrans.q42.lex",
+      "bidxUrl": "data/w3c-archives/lemon-vartrans.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/lemon/vartrans#",
+      "prefix": "vartrans",
+      "defaultSearch": "about",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect about",
+          "pattern": "<http://www.w3.org/ns/lemon/vartrans#about> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/lemon/vartrans#about> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-locn",
+      "profile": "w3c",
+      "label": "Locn",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Locn \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/locn.q42",
+      "lexUrl": "data/w3c-archives/locn.q42.lex",
+      "bidxUrl": "data/w3c-archives/locn.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/locn#",
+      "prefix": "locn",
+      "defaultSearch": "Locn",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Locn",
+          "pattern": "<http://www.w3.org/ns/locn#Locn> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/locn#Locn> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-mblog",
+      "profile": "w3c",
+      "label": "Mblog",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Mblog \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/mblog.q42",
+      "lexUrl": "data/w3c-archives/mblog.q42.lex",
+      "bidxUrl": "data/w3c-archives/mblog.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/mblog#",
+      "prefix": "mblog",
+      "defaultSearch": "Mblog",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Mblog",
+          "pattern": "<http://www.w3.org/ns/mblog#Mblog> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/mblog#Mblog> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-mics",
+      "profile": "w3c",
+      "label": "Mics",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Mics \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/mics.q42",
+      "lexUrl": "data/w3c-archives/mics.q42.lex",
+      "bidxUrl": "data/w3c-archives/mics.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/mics#",
+      "prefix": "mics",
+      "defaultSearch": "Mics",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Mics",
+          "pattern": "<http://www.w3.org/ns/mics#Mics> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/mics#Mics> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-mls",
+      "profile": "w3c",
+      "label": "Mls",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Mls \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/mls.q42",
+      "lexUrl": "data/w3c-archives/mls.q42.lex",
+      "bidxUrl": "data/w3c-archives/mls.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/mls#",
+      "prefix": "mls",
+      "defaultSearch": "Mls",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Mls",
+          "pattern": "<http://www.w3.org/ns/mls#Mls> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/mls#Mls> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-oa",
+      "profile": "w3c",
+      "label": "Open Annotation",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Open Annotation \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/oa.q42",
+      "lexUrl": "data/w3c-archives/oa.q42.lex",
+      "bidxUrl": "data/w3c-archives/oa.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/oa#",
+      "prefix": "oa",
+      "defaultSearch": "Open Annotation",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Open Annotation",
+          "pattern": "<http://www.w3.org/ns/oa#Open Annotation> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/oa#Open Annotation> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-person",
+      "profile": "w3c",
+      "label": "Person",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Person \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/person.q42",
+      "lexUrl": "data/w3c-archives/person.q42.lex",
+      "bidxUrl": "data/w3c-archives/person.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/person#",
+      "prefix": "person",
+      "defaultSearch": "Person",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Person",
+          "pattern": "<http://www.w3.org/ns/person#Person> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/person#Person> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-pim-ab",
+      "profile": "w3c",
+      "label": "Pim Ab",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Pim Ab \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/pim-ab.q42",
+      "lexUrl": "data/w3c-archives/pim-ab.q42.lex",
+      "bidxUrl": "data/w3c-archives/pim-ab.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "https://www.w3.org/ns/pim/ab#",
+      "prefix": "ab",
+      "defaultSearch": "Ab",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Ab",
+          "pattern": "<https://www.w3.org/ns/pim/ab#Ab> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://www.w3.org/ns/pim/ab#Ab> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-pim-arduino",
+      "profile": "w3c",
+      "label": "Pim Arduino",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Pim Arduino \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/pim-arduino.q42",
+      "lexUrl": "data/w3c-archives/pim-arduino.q42.lex",
+      "bidxUrl": "data/w3c-archives/pim-arduino.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/pim/arduino#",
+      "prefix": "arduino",
+      "defaultSearch": "Arduino",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Arduino",
+          "pattern": "<http://www.w3.org/ns/pim/arduino#Arduino> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/pim/arduino#Arduino> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-pim-arg",
+      "profile": "w3c",
+      "label": "Pim Arg",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Pim Arg \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/pim-arg.q42",
+      "lexUrl": "data/w3c-archives/pim-arg.q42.lex",
+      "bidxUrl": "data/w3c-archives/pim-arg.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/pim/arg#",
+      "prefix": "arg",
+      "defaultSearch": "Arg",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Arg",
+          "pattern": "<http://www.w3.org/ns/pim/arg#Arg> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/pim/arg#Arg> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-pim-fit",
+      "profile": "w3c",
+      "label": "Pim Fit",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Pim Fit \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/pim-fit.q42",
+      "lexUrl": "data/w3c-archives/pim-fit.q42.lex",
+      "bidxUrl": "data/w3c-archives/pim-fit.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2000/10/swap/pim/doc#",
+      "prefix": "doc",
+      "defaultSearch": "Fit",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Fit",
+          "pattern": "<http://www.w3.org/2000/10/swap/pim/doc#Fit> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2000/10/swap/pim/doc#Fit> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-pim-gpx",
+      "profile": "w3c",
+      "label": "Pim Gpx",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Pim Gpx \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/pim-gpx.q42",
+      "lexUrl": "data/w3c-archives/pim-gpx.q42.lex",
+      "bidxUrl": "data/w3c-archives/pim-gpx.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/pim/gpx#",
+      "prefix": "gpx",
+      "defaultSearch": "Gpx",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Gpx",
+          "pattern": "<http://www.w3.org/ns/pim/gpx#Gpx> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/pim/gpx#Gpx> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-pim-noaa",
+      "profile": "w3c",
+      "label": "Pim Noaa",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Pim Noaa \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/pim-noaa.q42",
+      "lexUrl": "data/w3c-archives/pim-noaa.q42.lex",
+      "bidxUrl": "data/w3c-archives/pim-noaa.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/pim/noaa#",
+      "prefix": "noaa",
+      "defaultSearch": "Noaa",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Noaa",
+          "pattern": "<http://www.w3.org/ns/pim/noaa#Noaa> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/pim/noaa#Noaa> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-pim-pay",
+      "profile": "w3c",
+      "label": "Pim Pay",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Pim Pay \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/pim-pay.q42",
+      "lexUrl": "data/w3c-archives/pim-pay.q42.lex",
+      "bidxUrl": "data/w3c-archives/pim-pay.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/pim/pay#",
+      "prefix": "pay",
+      "defaultSearch": "Pay",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Pay",
+          "pattern": "<http://www.w3.org/ns/pim/pay#Pay> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/pim/pay#Pay> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-pim-trip",
+      "profile": "w3c",
+      "label": "Pim Trip",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Pim Trip \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/pim-trip.q42",
+      "lexUrl": "data/w3c-archives/pim-trip.q42.lex",
+      "bidxUrl": "data/w3c-archives/pim-trip.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/2002/12/cal/ical#",
+      "prefix": "ical",
+      "defaultSearch": "Trip",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Trip",
+          "pattern": "<http://www.w3.org/2002/12/cal/ical#Trip> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/2002/12/cal/ical#Trip> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-pim-tripinvoice",
+      "profile": "w3c",
+      "label": "Pim Tripinvoice",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Pim Tripinvoice \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/pim-tripinvoice.q42",
+      "lexUrl": "data/w3c-archives/pim-tripinvoice.q42.lex",
+      "bidxUrl": "data/w3c-archives/pim-tripinvoice.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/pim/trip#",
+      "prefix": "trip",
+      "defaultSearch": "Tripinvoice",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Tripinvoice",
+          "pattern": "<http://www.w3.org/ns/pim/trip#Tripinvoice> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/pim/trip#Tripinvoice> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-posix-stat",
+      "profile": "w3c",
+      "label": "Posix Stat",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Posix Stat \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/posix-stat.q42",
+      "lexUrl": "data/w3c-archives/posix-stat.q42.lex",
+      "bidxUrl": "data/w3c-archives/posix-stat.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "https://www.w3.org/ns/posix/stat#",
+      "prefix": "stat",
+      "defaultSearch": "Stat",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Stat",
+          "pattern": "<https://www.w3.org/ns/posix/stat#Stat> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://www.w3.org/ns/posix/stat#Stat> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-posix-sysctl",
+      "profile": "w3c",
+      "label": "Posix Sysctl",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Posix Sysctl \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/posix-sysctl.q42",
+      "lexUrl": "data/w3c-archives/posix-sysctl.q42.lex",
+      "bidxUrl": "data/w3c-archives/posix-sysctl.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "https://www.w3.org/ns/posix/sysctl#",
+      "prefix": "sysctl",
+      "defaultSearch": "Sysctl",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Sysctl",
+          "pattern": "<https://www.w3.org/ns/posix/sysctl#Sysctl> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://www.w3.org/ns/posix/sysctl#Sysctl> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-r2rml",
+      "profile": "w3c",
+      "label": "R2RML",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives R2RML \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/r2rml.q42",
+      "lexUrl": "data/w3c-archives/r2rml.q42.lex",
+      "bidxUrl": "data/w3c-archives/r2rml.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/r2rml#",
+      "prefix": "r2rml",
+      "defaultSearch": "R2RML",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect R2RML",
+          "pattern": "<http://www.w3.org/ns/r2rml#R2RML> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/r2rml#R2RML> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-regorg",
+      "profile": "w3c",
+      "label": "Regorg",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Regorg \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/regorg.q42",
+      "lexUrl": "data/w3c-archives/regorg.q42.lex",
+      "bidxUrl": "data/w3c-archives/regorg.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/regorg#",
+      "prefix": "regorg",
+      "defaultSearch": "Regorg",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Regorg",
+          "pattern": "<http://www.w3.org/ns/regorg#Regorg> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/regorg#Regorg> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-shapetrees",
+      "profile": "w3c",
+      "label": "Shapetrees",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Shapetrees \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/shapetrees.q42",
+      "lexUrl": "data/w3c-archives/shapetrees.q42.lex",
+      "bidxUrl": "data/w3c-archives/shapetrees.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/shapetrees#",
+      "prefix": "shapetrees",
+      "defaultSearch": "Shapetrees",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Shapetrees",
+          "pattern": "<http://www.w3.org/ns/shapetrees#Shapetrees> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/shapetrees#Shapetrees> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-shex",
+      "profile": "w3c",
+      "label": "ShEx",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives ShEx \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/shex.q42",
+      "lexUrl": "data/w3c-archives/shex.q42.lex",
+      "bidxUrl": "data/w3c-archives/shex.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/shex#",
+      "prefix": "shex",
+      "defaultSearch": "ShEx",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect ShEx",
+          "pattern": "<http://www.w3.org/ns/shex#ShEx> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/shex#ShEx> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-solid-oidc",
+      "profile": "w3c",
+      "label": "Solid Oidc",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Solid Oidc \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/solid-oidc.q42",
+      "lexUrl": "data/w3c-archives/solid-oidc.q42.lex",
+      "bidxUrl": "data/w3c-archives/solid-oidc.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/solid/oidc#",
+      "prefix": "oidc",
+      "defaultSearch": "Oidc",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Oidc",
+          "pattern": "<http://www.w3.org/ns/solid/oidc#Oidc> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/solid/oidc#Oidc> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-sparql",
+      "profile": "w3c",
+      "label": "Sparql",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Sparql \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/sparql.q42",
+      "lexUrl": "data/w3c-archives/sparql.q42.lex",
+      "bidxUrl": "data/w3c-archives/sparql.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/sparql#",
+      "prefix": "sparql",
+      "defaultSearch": "Sparql",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Sparql",
+          "pattern": "<http://www.w3.org/ns/sparql#Sparql> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/sparql#Sparql> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-spec",
+      "profile": "w3c",
+      "label": "Spec",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Spec \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/spec.q42",
+      "lexUrl": "data/w3c-archives/spec.q42.lex",
+      "bidxUrl": "data/w3c-archives/spec.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/spec#",
+      "prefix": "spec",
+      "defaultSearch": "Spec",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Spec",
+          "pattern": "<http://www.w3.org/ns/spec#Spec> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/spec#Spec> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-td",
+      "profile": "w3c",
+      "label": "Td",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Td \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/td.q42",
+      "lexUrl": "data/w3c-archives/td.q42.lex",
+      "bidxUrl": "data/w3c-archives/td.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "https://www.w3.org/2019/wot/td#",
+      "prefix": "td",
+      "defaultSearch": "Td",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Td",
+          "pattern": "<https://www.w3.org/2019/wot/td#Td> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://www.w3.org/2019/wot/td#Td> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-time-gregorian",
+      "profile": "w3c",
+      "label": "Time Gregorian",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Time Gregorian \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/time-gregorian.q42",
+      "lexUrl": "data/w3c-archives/time-gregorian.q42.lex",
+      "bidxUrl": "data/w3c-archives/time-gregorian.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/time/gregorian/",
+      "prefix": "gregorian",
+      "defaultSearch": "Gregorian",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Gregorian",
+          "pattern": "<http://www.w3.org/ns/time/gregorian/Gregorian> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/time/gregorian/Gregorian> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-webmention",
+      "profile": "w3c",
+      "label": "Webmention",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Webmention \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/webmention.q42",
+      "lexUrl": "data/w3c-archives/webmention.q42.lex",
+      "bidxUrl": "data/w3c-archives/webmention.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/webmention#",
+      "prefix": "webmention",
+      "defaultSearch": "Webmention",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Webmention",
+          "pattern": "<http://www.w3.org/ns/webmention#Webmention> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/webmention#Webmention> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-wot-security",
+      "profile": "w3c",
+      "label": "Wot Security",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Wot Security \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/wot-security.q42",
+      "lexUrl": "data/w3c-archives/wot-security.q42.lex",
+      "bidxUrl": "data/w3c-archives/wot-security.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "https://www.w3.org/2019/wot/security#",
+      "prefix": "security",
+      "defaultSearch": "Wot Security",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect Wot Security",
+          "pattern": "<https://www.w3.org/2019/wot/security#Wot Security> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<https://www.w3.org/2019/wot/security#Wot Security> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
+    },
+    {
+      "id": "w3c-arch-wsdl-rdf",
+      "profile": "w3c",
+      "label": "Wsdl Rdf",
+      "icon": "\ud83d\udce6",
+      "description": "W3C archives Wsdl Rdf \u00b7 deduped from ns.w3.org mirror",
+      "url": "data/w3c-archives/wsdl-rdf.q42",
+      "lexUrl": "data/w3c-archives/wsdl-rdf.q42.lex",
+      "bidxUrl": "data/w3c-archives/wsdl-rdf.q42.bidx",
+      "compressed": false,
+      "source": "bundled",
+      "license": "W3C",
+      "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+      "namespace": "http://www.w3.org/ns/wsdl-rdf#",
+      "prefix": "wsdlrdf",
+      "defaultSearch": "about",
+      "quickExamples": [],
+      "sampleQueries": [
+        {
+          "label": "Inspect about",
+          "pattern": "<http://www.w3.org/ns/wsdl-rdf#about> ?p ?o"
+        },
+        {
+          "label": "Subclass chain",
+          "pattern": "<http://www.w3.org/ns/wsdl-rdf#about> <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o"
+        }
+      ],
+      "group": "w3c-archives"
     }
   ]
 }

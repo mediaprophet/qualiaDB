@@ -83,6 +83,12 @@ jobs:
           bash scripts/prepare_w3c_ontologies.sh
           ls -lh docs/data/w3c/*.q42 | head
 
+      - name: Build W3C archives ontology volumes for Ontology Demo
+        continue-on-error: true
+        run: |
+          bash scripts/prepare_w3c_archives.sh
+          ls -lh docs/data/w3c-archives/*.q42 | head
+
       - name: Build PURL ontology volumes for Ontology Demo
         continue-on-error: true
         run: |

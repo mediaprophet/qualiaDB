@@ -22,8 +22,12 @@ case "$GROUP" in
     SRC_DIR="${DUBLINCORE_TTL_DIR:-$REPO_ROOT/bundled/ontologies/dublincore}"
     OUT_DIR="$REPO_ROOT/docs/data/dublincore"
     ;;
+  w3c-archives)
+    SRC_DIR="${W3C_ARCHIVES_BUNDLE_DIR:-$REPO_ROOT/bundled/ontologies/w3c-archives}"
+    OUT_DIR="$REPO_ROOT/docs/data/w3c-archives"
+    ;;
   *)
-    echo "Unknown group: $GROUP (expected: w3c, purl, geonames, dublincore)" >&2
+    echo "Unknown group: $GROUP (expected: w3c, purl, geonames, dublincore, w3c-archives)" >&2
     exit 1
     ;;
 esac
@@ -42,12 +46,14 @@ echo "  Output dir : $OUT_DIR"
 
 count=0
 while IFS= read -r file; do
+  file="${file//$'\r'/}"
+  [[ -z "$file" ]] && continue
   ttl="$SRC_DIR/$file"
   if [[ ! -f "$ttl" ]] || [[ ! -s "$ttl" ]]; then
     echo "  skip (missing/empty): $file"
     continue
   fi
-  base="${file%.ttl}"
+  base="${file%.*}"
   echo "  ingest: $file -> $base.q42"
   (cd "$REPO_ROOT" && cargo run --release -p qualia-cli -- ingest semantic "$ttl")
   for ext in "" ".lex" ".bidx"; do
@@ -57,7 +63,7 @@ while IFS= read -r file; do
     fi
   done
   count=$((count + 1))
-done < <(python3 -c "import json,sys; print('\n'.join(e['file'] for e in json.load(open(sys.argv[1])).get('ontologies',[])))" "$CATALOG")
+done < <(python3 -c "import json,sys; sys.stdout.write('\n'.join(e['file'] for e in json.load(open(sys.argv[1])).get('ontologies',[])))" "$CATALOG")
 
 python3 "$REPO_ROOT/scripts/merge_ontology_manifest.py" "$GROUP"
 echo "Sync complete — $count $GROUP ontologies under $OUT_DIR/"

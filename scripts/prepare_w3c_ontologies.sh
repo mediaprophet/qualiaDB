@@ -21,6 +21,8 @@ echo "  Output dir : $OUT_DIR"
 
 count=0
 while IFS= read -r file; do
+  file="${file//$'\r'/}"
+  [[ -z "$file" ]] && continue
   ttl="$SRC_DIR/$file"
   if [[ ! -f "$ttl" ]] || [[ ! -s "$ttl" ]]; then
     echo "  skip (missing/empty): $file"
@@ -36,7 +38,7 @@ while IFS= read -r file; do
     fi
   done
   count=$((count + 1))
-done < <(python3 -c "import json,sys; print('\n'.join(e['file'] for e in json.load(open(sys.argv[1])).get('ontologies',[])))" "$CATALOG")
+done < <(python3 -c "import json,sys; sys.stdout.write('\n'.join(e['file'] for e in json.load(open(sys.argv[1])).get('ontologies',[])))" "$CATALOG")
 
 python3 "$REPO_ROOT/scripts/merge_ontology_manifest.py" w3c
 echo "Sync complete — $count W3C ontologies under docs/data/w3c/"

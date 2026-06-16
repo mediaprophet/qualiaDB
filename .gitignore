@@ -28,6 +28,12 @@
 !docs/data/w3c/**/*.q42.lex
 !docs/data/w3c/**/*.q42.bidx
 
+# Ontology demo — W3C archives (deduped ns.w3.org mirror)
+!docs/data/w3c-archives/**/*.q42
+!docs/data/w3c-archives/**/*.q42.lex
+!docs/data/w3c-archives/**/*.q42.bidx
+!bundled/ontologies/w3c-archives/**
+
 # Ontology demo — PURL.org volumes under docs/data/purl
 !docs/data/purl/**/*.q42
 !docs/data/purl/**/*.q42.lex

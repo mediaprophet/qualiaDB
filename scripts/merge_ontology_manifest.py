@@ -53,6 +53,15 @@ GROUP_CONFIG = {
         "homepage": "https://spec.edmcouncil.org/fibo/",
         "description": lambda e: f"EDMC FIBO {e['label']} · {e.get('domain', '')} domain",
     },
+    "w3c-archives": {
+        "src": REPO / "bundled/ontologies/w3c-archives",
+        "out": REPO / "docs/data/w3c-archives",
+        "url_prefix": "data/w3c-archives",
+        "profile": "w3c",
+        "license": "W3C",
+        "homepage": "https://www.w3.org/standards/semanticweb/ontology",
+        "description": lambda e: f"W3C archives {e['label']} · deduped from ns.w3.org mirror",
+    },
 }
 
 
