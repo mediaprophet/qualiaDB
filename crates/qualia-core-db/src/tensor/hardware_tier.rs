@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// Hardware capability tiers for 10D tensor operations
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum HardwareTier {
     /// Tier 0: Strict Edge / Battery Reserve
     /// Mobile CPUs, Raspberry Pi, basecamps on night-time battery reserves

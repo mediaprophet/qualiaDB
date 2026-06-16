@@ -27,7 +27,7 @@ pub struct QuboProblem {
 
 /// GSR resolution result
 #[repr(C)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct GsrResult {
     /// Problem identifier
     pub problem_id: String,

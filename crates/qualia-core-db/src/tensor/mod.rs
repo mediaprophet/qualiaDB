@@ -12,6 +12,7 @@ pub mod spectral;
 pub mod quantum;
 pub mod hardware_tier;
 pub mod gsr;
+pub mod q42_integration;
 
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
@@ -100,12 +101,6 @@ impl Tensor10D {
         self.q == 0.0
     }
     
-    /// Returns true if this is a parallel context tensor (q > 0)
-    #[inline]
-    pub fn is_parallel_context(&self) -> bool {
-        self.q > 0.0
-    }
-    
     /// Calculates Euclidean distance between spatial coordinates (x, y, z)
     #[inline]
     pub fn spatial_distance(&self, other: &Self) -> f32 {
@@ -115,22 +110,61 @@ impl Tensor10D {
         (dx * dx + dy * dy + dz * dz).sqrt()
     }
     
-    /// Calculates full 10D distance (all coordinates)
+    /// Calculates full 10D distance considering topological adjustments
     #[inline]
     pub fn full_distance(&self, other: &Self) -> f32 {
-        let dq = self.q - other.q;
-        let dv = self.v - other.v;
-        let dw = self.w - other.w;
-        let dx = self.x - other.x;
-        let dy = self.y - other.y;
-        let dz = self.z - other.z;
-        let dt = self.t - other.t;
-        let dalpha = self.alpha - other.alpha;
-        let dmu = self.mu - other.mu;
-        let dsigma = self.sigma - other.sigma;
-        
-        (dq * dq + dv * dv + dw * dw + dx * dx + dy * dy + dz * dz + 
-         dt * dt + dalpha * dalpha + dmu * dmu + dsigma * dsigma).sqrt()
+        // Use topological class to determine distance metric
+        match self.v as u32 {
+            0 => self.euclidean_distance(other),  // Euclidean
+            1 => self.cyclic_distance(other),    // Cyclic/Toroidal
+            2 => self.hyperbolic_distance(other), // Hyperbolic/Tree
+            _ => self.boundary_distance(other),   // Boundary Cliques
+        }
+    }
+    
+    /// Euclidean distance (standard straight-line)
+    #[inline]
+    fn euclidean_distance(&self, other: &Self) -> f32 {
+        let spatial = self.spatial_distance(other);
+        let temporal = (self.t - other.t).abs();
+        let spectral = ((self.alpha - other.alpha).powi(2) + 
+                       (self.mu - other.mu).powi(2) + 
+                       (self.sigma - other.sigma).powi(2)).sqrt();
+        (spatial.powi(2) + temporal.powi(2) + spectral.powi(2)).sqrt()
+    }
+    
+    /// Cyclic distance (modulo arithmetic for toroidal topology)
+    #[inline]
+    fn cyclic_distance(&self, other: &Self) -> f32 {
+        let dx = (self.x - other.x).abs().min(1.0 - (self.x - other.x).abs());
+        let dy = (self.y - other.y).abs().min(1.0 - (self.y - other.y).abs());
+        let dz = (self.z - other.z).abs().min(1.0 - (self.z - other.z).abs());
+        (dx * dx + dy * dy + dz * dz).sqrt()
+    }
+    
+    /// Hyperbolic distance (exponential hierarchy)
+    #[inline]
+    fn hyperbolic_distance(&self, other: &Self) -> f32 {
+        let dx = (self.x - other.x).abs();
+        let dy = (self.y - other.y).abs();
+        let dz = (self.z - other.z).abs();
+        (dx.exp() + dy.exp() + dz.exp()).ln()
+    }
+    
+    /// Boundary clique distance (byte comparison)
+    #[inline]
+    fn boundary_distance(&self, other: &Self) -> f32 {
+        if self.v == other.v {
+            0.0
+        } else {
+            1.0
+        }
+    }
+    
+    /// Returns true if this is a parallel context tensor (q > 0)
+    #[inline]
+    pub fn is_parallel_context(&self) -> bool {
+        self.q > 0.0
     }
 }
 
