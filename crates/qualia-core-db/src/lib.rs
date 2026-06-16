@@ -84,6 +84,8 @@ pub mod platform_scheduler;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ebpf_filter;
 #[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "sanctuary-crypto")]
+pub mod sanctuary_crypto;
 pub mod fiduciary_crypto;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ebpf_firewall;

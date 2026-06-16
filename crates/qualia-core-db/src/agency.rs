@@ -1,5 +1,6 @@
 use crate::NQuin;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+#[cfg(feature = "sanctuary-crypto")]
 use pbkdf2::pbkdf2_hmac;
 use sha2::{Digest, Sha256};
 
@@ -100,6 +101,7 @@ pub fn sign_graph_mutation(signing_key: &SigningKey, quin: &NQuin) -> Signature 
 /// Derives a 32-byte AES-256-GCM key from the user's PIN for Deniable Encryption (Sanctuary Mode).
 /// By passing different PINs, different keys are derived, which unlocks different DB Lanes.
 /// The decoy lane operates exactly identically to the sanctuary lane.
+#[cfg(feature = "sanctuary-crypto")]
 pub fn derive_lane_key(pin: &str, salt: &[u8]) -> [u8; LANE_KEY_LENGTH] {
     let mut key = [0u8; LANE_KEY_LENGTH];
     pbkdf2_hmac::<Sha256>(pin.as_bytes(), salt, PBKDF2_ITERATIONS, &mut key);
