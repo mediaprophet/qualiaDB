@@ -125,8 +125,7 @@
                                     <i class="fas fa-server"></i>
                                     <span class="font-medium">Native</span>
                                 </button>
-                                <button onclick="selectMode('wasm')" id="btn-wasm"
-                                        class="flex-1 py-4 px-4 glass rounded-2xl flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 transition-all active:scale-[0.985]">
+                                <button onclick="selectMode('wasm')" id="btn-wasm" class="flex-1 py-4 px-4 glass rounded-2xl flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 transition-all active:scale-[0.985] !border-blue-500 bg-blue-500/10">
                                     <i class="fas fa-globe"></i>
                                     <span class="font-medium">WASM</span>
                                 </button>
@@ -257,7 +256,7 @@
     </script>
 
     <script>
-        let currentMode = 'native';
+        let currentMode = 'wasm';
         let daemonOnline = false;
         const DATASET_PROFILE_HELP = {
             'synthetic-10k': 'Synthetic 10K graph. Native loads flat quins into the daemon via WebSocket bench_load, then queries over WS.',
@@ -682,7 +681,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('btn-native').classList.add('!border-blue-500', 'bg-blue-500/10');
+            document.getElementById('btn-wasm').classList.add('!border-blue-500', 'bg-blue-500/10');
             document.getElementById('datasetProfile')?.addEventListener('change', updateDatasetProfileHelp);
             document.getElementById('wasmStorageFormat')?.addEventListener('change', updateDatasetProfileHelp);
             updateDatasetProfileHelp();
@@ -757,3 +756,6 @@
     </script>
 </body>
 </html>
+
+
+
