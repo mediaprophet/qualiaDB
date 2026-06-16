@@ -75,14 +75,8 @@ layout: null
                         </div>
                         <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
                     </a>
-                    <div class="hidden md:flex items-center gap-6 text-sm">
-                        <a href="index.html" class="hover:text-white transition-colors">Home</a>
-                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
-                        <a href="library.html" class="hover:text-white transition-colors">Library</a>
-                        <a href="docuquin-pipeline.html" class="text-white font-medium border-b border-amber-400 pb-px">DocuQuin</a>
-                        <a href="cooperativeproject/index.html" class="hover:text-white transition-colors">Projects</a>
-                        <a href="api.html" class="hover:text-white transition-colors">API Docs</a>
-                        <a href="tests/index.html" class="hover:text-white transition-colors">Test Suite</a>
+                    <div id="dynamic-nav" class="hidden md:flex items-center gap-6 text-sm">
+                        <!-- Navigation loaded dynamically by menu-loader.js -->
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
@@ -398,7 +392,8 @@ layout: null
             `;
 
             document.getElementById('provenance-info').innerHTML = 
-                `Normalized from <strong>${lastAnalysis.model}</strong> • Context: ${time} • ${juris} • Ready for merge`;
+                
+ormalized from <strong>${lastAnalysis.model}</strong> • Context: ${time} • ${juris} • Ready for merge`;
         }
 
         function downloadQ42() {
