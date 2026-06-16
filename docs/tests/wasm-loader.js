@@ -109,7 +109,7 @@ async function loadWasmInBrowser() {
         return module;
     } catch (e) {
         console.warn('[wasm-loader] WASM init failed:', e.message);
-        return initQualiaWasm({ base: '..' }).catch(() => ({}));
+        return initQualiaWasm().catch(() => ({}));
     }
 }
 

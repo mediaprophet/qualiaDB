@@ -1,12 +1,15 @@
 /**
  * Shared Qualia WASM runtime loader for docs pages.
  *
+ * Paths resolve from this module's location (`docs/js/`), so the default
+ * `base: '..'` reaches the Jekyll site root and then `playground/`.
+ *
  * Usage:
  *   import { initQualiaWasm, getEngineVersion, getEngineInfo, bindEngineBadge }
  *     from './js/qualia-wasm-runtime.js';
  *
- *   const mod = await initQualiaWasm({ base: '.' });
- *   console.log(getEngineVersion(mod)); // "0.0.12"
+ *   const mod = await initQualiaWasm();
+ *   console.log(getEngineVersion(mod)); // "0.0.15"
  */
 
 let _mod = null;
@@ -15,16 +18,22 @@ let _version = null;
 let _info = null;
 
 function resolvePaths(opts = {}) {
-    const base = (opts.base ?? '.').replace(/\/?$/, '/');
-    const jsUrl = opts.jsUrl ?? `${base}playground/qualia_core_db.js`;
-    const wasmUrl = opts.wasmUrl ?? `${base}playground/qualia_core_db_bg.wasm`;
+    if (opts.jsUrl && opts.wasmUrl) {
+        return { jsUrl: opts.jsUrl, wasmUrl: opts.wasmUrl };
+    }
+    // Default: docs site root (parent of docs/js/)
+    const siteRoot = new URL(opts.base ?? '..', import.meta.url);
+    const jsUrl = opts.jsUrl ?? new URL('playground/qualia_core_db.js', siteRoot).href;
+    const wasmUrl = opts.wasmUrl ?? new URL('playground/qualia_core_db_bg.wasm', siteRoot).href;
     return { jsUrl, wasmUrl };
 }
 
 /**
  * Lazy-load and initialise the wasm-pack build.
  * @param {object} [opts]
- * @param {string} [opts.base] — path prefix to docs root (e.g. '.' or '..')
+ * @param {string} [opts.base] — URL segment relative to docs/js/ (default `'..'` = site root)
+ * @param {string} [opts.jsUrl] — absolute or fully-resolved glue script URL
+ * @param {string} [opts.wasmUrl] — absolute or fully-resolved wasm binary URL
  * @returns {Promise<object>} wasm-bindgen module exports
  */
 export async function initQualiaWasm(opts = {}) {

@@ -64,6 +64,7 @@ jobs:
             --out-dir ../../docs/playground \
             --out-name qualia_core_db \
             --no-typescript
+          ls -la docs/playground/qualia_core_db.js docs/playground/qualia_core_db_bg.wasm
 
       - name: Prepare Schema.org benchmark artifacts for Pages
         continue-on-error: true   # non-fatal: Pages deploys fine without Schema.org artifacts

@@ -536,7 +536,7 @@ LIMIT 100</textarea>
     import { bindEngineBadge } from './js/qualia-wasm-runtime.js';
 
     // Initialize WASM engine
-    bindEngineBadge('wasm-text', { base: '.' }, '').then(ver => {
+    bindEngineBadge('wasm-text').then(ver => {
         const dot = document.getElementById('wasm-dot');
         const badge = document.getElementById('wasm-badge');
         const loadingOverlay = document.getElementById('loading-overlay');

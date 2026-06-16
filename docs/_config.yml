@@ -8,6 +8,8 @@ include:
   - "*.lex"
   - "*.wasm"
   - "playground/*.js"
+  - "playground/*.wasm"
+  - "js/*.js"
 
 # Exclude large WordNet data artefacts from Jekyll processing (served as raw files).
 exclude:

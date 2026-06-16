@@ -310,7 +310,7 @@ function showTab(name) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function boot() {
-    MOD = await initQualiaWasm({ base: '..' });
+    MOD = await initQualiaWasm();
 
     const ok = MOD && typeof MOD.compile_query_to_json === 'function';
     const overlay = $('boot-overlay');
