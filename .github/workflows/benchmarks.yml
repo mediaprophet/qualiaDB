@@ -77,6 +77,11 @@ jobs:
             --output docs/comparative_benchmark_results.json
 
       # ── Comunica (SPARQL JS engine) ───────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Install Comunica Node.js dependencies
         run: cd benchmarks/comunica && npm install --prefer-offline
 
@@ -208,6 +213,11 @@ jobs:
 
       - name: Install Python benchmark dependencies
         run: pip install --quiet -r benchmarks/requirements.txt
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Install Comunica and WASM-Prolog Node dependencies
         run: |

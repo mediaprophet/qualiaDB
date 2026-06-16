@@ -79,6 +79,11 @@ jobs:
         with:
           enablement: true
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Build Rust documentation
         run: cargo doc --no-deps -p qualia-core-db -p qualia-cli -p qualia-client-core
 
