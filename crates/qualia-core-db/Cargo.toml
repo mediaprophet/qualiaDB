@@ -26,7 +26,7 @@ interop-crypto = ["secp256k1"]
 
 # Sanctuary lane cryptography with 48-byte PBKDF2 derivation
 # Enables PBKDF2 and AEAD ciphers for sanctuary volume encryption
-sanctuary-crypto = ["pbkdf2", "aes-gcm", "chacha20poly1305"]
+sanctuary-crypto = ["pbkdf2", "aes-gcm", "chacha20poly1305", "aead"]
 
 # Zero-knowledge proofs for Deontic Culling layer
 # Using arkworks ecosystem for unified, maintainable ZK infrastructure
@@ -70,6 +70,7 @@ thiserror = { version = "1.0", optional = true }
 sha2 = { version = "0.10", default-features = false }
 pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"], optional = true }
 aes-gcm = { version = "0.10", default-features = false, features = ["aes", "alloc"], optional = true }
+aead = { version = "0.5", default-features = false, optional = true }
 chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"], optional = true }
 x25519-dalek = { version = "2", default-features = false, features = ["static_secrets", "zeroize"] }
 hkdf = { version = "0.12", default-features = false }

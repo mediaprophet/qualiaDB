@@ -114,6 +114,112 @@ pub fn derive_xchacha_nonce(volume_tweak: &[u8; 16], chunk_index_or_offset: u64)
     nonce_bytes
 }
 
+/// Encrypt data using sanctuary lane cryptography with derived nonce
+/// This integrates with the existing AEAD ciphers while using implicit nonce derivation
+///
+/// # Arguments
+/// * `cipher_key` - 32-byte cipher key from PBKDF2 derivation
+/// * `volume_tweak` - 16-byte volume root tweak from PBKDF2 derivation
+/// * `chunk_index` - Chunk index or byte offset for nonce derivation
+/// * `plaintext` - Data to encrypt
+/// * `additional_data` - Additional authenticated data (AAD)
+///
+/// # Returns
+/// * `Ok((ciphertext, tag, nonce))` - Encrypted data with authentication tag and used nonce
+/// * `Err(String)` - Encryption failure
+#[cfg(feature = "sanctuary-crypto")]
+pub fn encrypt_sanctuary_chunk(
+    cipher_key: &[u8; 32],
+    volume_tweak: &[u8; 16],
+    chunk_index: u64,
+    plaintext: &[u8],
+    additional_data: Option<&[u8]>,
+) -> Result<(Vec<u8>, Vec<u8>, [u8; 12]), String> {
+    use aes_gcm::{
+        aead::{Aead, KeyInit},
+        Aes256Gcm, Nonce,
+    };
+    
+    // Derive nonce for this chunk
+    let nonce = derive_chunk_nonce(volume_tweak, chunk_index);
+    let nonce_obj = Nonce::from_slice(&nonce);
+    
+    // Initialize cipher
+    let key = aes_gcm::Key::<Aes256Gcm>::from_slice(cipher_key);
+    let cipher = Aes256Gcm::new(key);
+    
+    // Encrypt with AAD if provided
+    let ciphertext = if let Some(aad) = additional_data {
+        cipher.encrypt(nonce_obj, aead::Payload { msg: plaintext, aad })
+            .map_err(|e| format!("AES-256-GCM encryption failed: {}", e))?
+    } else {
+        cipher.encrypt(nonce_obj, plaintext)
+            .map_err(|e| format!("AES-256-GCM encryption failed: {}", e))?
+    };
+    
+    // Split ciphertext and tag (AES-GCM appends 16-byte tag)
+    if ciphertext.len() < 16 {
+        return Err("Ciphertext too short to contain tag".to_string());
+    }
+    
+    let tag_start = ciphertext.len() - 16;
+    let data = ciphertext[..tag_start].to_vec();
+    let tag = ciphertext[tag_start..].to_vec();
+    
+    Ok((data, tag, nonce))
+}
+
+/// Decrypt data using sanctuary lane cryptography with derived nonce
+///
+/// # Arguments
+/// * `cipher_key` - 32-byte cipher key from PBKDF2 derivation
+/// * `volume_tweak` - 16-byte volume root tweak from PBKDF2 derivation
+/// * `chunk_index` - Chunk index or byte offset for nonce derivation
+/// * `ciphertext` - Encrypted data
+/// * `tag` - Authentication tag
+/// * `additional_data` - Additional authenticated data (AAD)
+///
+/// # Returns
+/// * `Ok(plaintext)` - Decrypted data
+/// * `Err(String)` - Decryption failure
+#[cfg(feature = "sanctuary-crypto")]
+pub fn decrypt_sanctuary_chunk(
+    cipher_key: &[u8; 32],
+    volume_tweak: &[u8; 16],
+    chunk_index: u64,
+    ciphertext: &[u8],
+    tag: &[u8],
+    additional_data: Option<&[u8]>,
+) -> Result<Vec<u8>, String> {
+    use aes_gcm::{
+        aead::{Aead, KeyInit},
+        Aes256Gcm, Nonce,
+    };
+    
+    // Derive nonce for this chunk
+    let nonce = derive_chunk_nonce(volume_tweak, chunk_index);
+    let nonce_obj = Nonce::from_slice(&nonce);
+    
+    // Initialize cipher
+    let key = aes_gcm::Key::<Aes256Gcm>::from_slice(cipher_key);
+    let cipher = Aes256Gcm::new(key);
+    
+    // Combine ciphertext and tag for decryption
+    let mut encrypted = ciphertext.to_vec();
+    encrypted.extend_from_slice(tag);
+    
+    // Decrypt with AAD if provided
+    let plaintext = if let Some(aad) = additional_data {
+        cipher.decrypt(nonce_obj, aead::Payload { msg: &encrypted, aad })
+            .map_err(|e| format!("AES-256-GCM decryption failed: {}", e))?
+    } else {
+        cipher.decrypt(nonce_obj, encrypted.as_ref())
+            .map_err(|e| format!("AES-256-GCM decryption failed: {}", e))?
+    };
+    
+    Ok(plaintext)
+}
+
 #[cfg(test)]
 #[cfg(feature = "sanctuary-crypto")]
 mod tests {
