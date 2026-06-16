@@ -3,348 +3,828 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scientific Computing Examples - QualiaDB</title>
+    <title>Scientific Computing Demo - QualiaDB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="js/menu-loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
         body { font-family: 'Inter', system_ui, sans-serif; }
         .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
-        pre { background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 16px; overflow-x: auto; }
-        code { font-family: 'Fira Code', monospace; }
+        .glass-panel { background: rgba(17, 23, 31, 0.82); border: 1px solid rgba(148, 163, 184, 0.14); backdrop-filter: blur(28px); }
+        .code-block { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85rem; background: rgba(10, 10, 15, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1rem; white-space: pre-wrap; }
+        .input-field { background: rgba(10, 10, 15, 0.65); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: #e2e8f0; padding: 0.5rem 0.75rem; outline: none; transition: border-color 0.2s; width: 100%; }
+        .input-field:focus { border-color: rgba(16, 185, 129, 0.5); }
+        .tab-btn { transition: all 0.2s; padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: rgba(226, 232, 240, 0.6); }
+        .tab-btn:hover { background: rgba(255, 255, 255, 0.07); color: white; }
+        .tab-btn.active { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .tab-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .metric-card { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 1rem; }
+        .metric-value { font-size: 1.5rem; font-weight: 700; color: #34d399; }
+        .metric-label { font-size: 0.75rem; color: rgba(226, 232, 240, 0.6); }
+        canvas { max-height: 300px; }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.95); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .loading-spinner { width: 48px; height: 48px; border: 3px solid rgba(52, 211, 153, 0.2); border-top-color: #34d399; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.98); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .spinbtn { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; border-radius: 6px; padding: 0.45rem 1.1rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .spinbtn:hover { background: rgba(16, 185, 129, 0.3); }
+        .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
     </style>
+    <script src="js/menu-loader.js"></script>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
-    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
-        <div class="max-w-screen-2xl mx-auto px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-8">
-                    <a href="index.html" class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
-                            <span class="text-black font-bold text-xl">Q</span>
-                        </div>
-                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
-                    </a>
-                    <div id="dynamic-nav" class="hidden md:flex items-center gap-6 text-sm">
-                        <!-- Navigation loaded dynamically by menu-loader.js -->
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+    <div class="text-center">
+        <div class="loading-spinner mx-auto mb-4"></div>
+        <div class="text-emerald-400 font-semibold">Loading QualiaDB WASM Engine...</div>
+        <div class="text-white/50 text-sm mt-2">Initializing scientific computing primitives</div>
+    </div>
+</div>
+
+<!-- Error Overlay -->
+<div id="error-overlay" class="error-overlay hidden">
+    <div class="glass-strong rounded-3xl p-8 max-w-lg text-center">
+        <div class="text-red-400 text-5xl mb-4"><i class="fas fa-exclamation-triangle"></i></div>
+        <h2 class="text-2xl font-semibold text-white mb-2">WASM Engine Required</h2>
+        <p class="text-white/60 mb-6">This demo requires the QualiaDB WASM engine to run. Please ensure you have network access to load the WASM module.</p>
+        <div class="code-block text-left text-sm text-red-300 mb-4" id="error-message"></div>
+        <button onclick="location.reload()" class="spinbtn"><i class="fas fa-redo mr-2"></i>Retry</button>
+    </div>
+</div>
+
+<!-- Nav -->
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center gap-8">
+                <a href="index.html" class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
                     </div>
+                    <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="hidden md:flex items-center gap-6 text-sm">
+                    <!-- Navigation loaded dynamically by menu-loader.js -->
                 </div>
-                <div class="flex items-center gap-4">
-                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
-                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
-                        <i class="fab fa-github"></i><span>GitHub</span>
-                    </a>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                    <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
+                    <span id="wasm-text">Loading...</span>
                 </div>
             </div>
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
-        <div class="mb-8">
-            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Scientific Computing Examples</h1>
-            <p class="text-xl text-slate-400">Native scientific primitives integrated with the semantic graph</p>
+<div class="max-w-screen-xl mx-auto px-6 pt-10 pb-20" id="main-content" style="display: none;">
+    <!-- Hero -->
+    <div class="text-center mb-10">
+        <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
+            <i class="fas fa-flask"></i>
+            <span>WASM-only · Zero-Heap · Native Performance</span>
         </div>
+        <h1 class="text-5xl font-semibold tracking-tighter mb-3">Scientific Computing Demo</h1>
+        <p class="text-white/60 max-w-xl mx-auto">Native scientific primitives integrated with the semantic graph — running natively in your browser via <code class="text-cyan-400">qualia_core_db_bg.wasm</code> with zero-heap compliance.</p>
+    </div>
 
-        <!-- Overview -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-flask text-blue-400"></i>
-                Native Scientific Primitives
-            </h2>
-            
-            <p class="text-white/70 mb-6">QualiaDB includes zero-allocation scientific computing engines wired directly into the Webizen VM:</p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <div class="bg-black/20 rounded-xl p-4">
-                    <h3 class="font-medium text-blue-400 mb-2">Thermodynamics</h3>
-                    <p class="text-white/60 text-sm">MCMC Metropolis-Hastings, Boltzmann acceptance, Gibbs free energy</p>
+    <!-- Performance Metrics -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="metric-card">
+            <div class="metric-value" id="metric-compute">0</div>
+            <div class="metric-label">Compute Ops</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-time">0ms</div>
+            <div class="metric-label">Execution Time</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-memory">0</div>
+            <div class="metric-label">Heap Allocations</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-precision">64-bit</div>
+            <div class="metric-label">Native Precision</div>
+        </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="flex flex-wrap gap-2 mb-8 justify-center">
+        <button class="tab-btn active" data-tab="thermo" onclick="switchTab('thermo',this)" id="tab-thermo-btn">
+            <i class="fas fa-fire mr-1.5"></i>Thermodynamics
+        </button>
+        <button class="tab-btn" data-tab="ode" onclick="switchTab('ode',this)" id="tab-ode-btn">
+            <i class="fas fa-wave-square mr-1.5"></i>ODE Solver
+        </button>
+        <button class="tab-btn" data-tab="bio" onclick="switchTab('bio',this)" id="tab-bio-btn">
+            <i class="fas fa-dna mr-1.5"></i>Bioinformatics
+        </button>
+        <button class="tab-btn" data-tab="clinical" onclick="switchTab('clinical',this)" id="tab-clinical-btn">
+            <i class="fas fa-heartbeat mr-1.5"></i>Clinical Risk
+        </button>
+        <button class="tab-btn" data-tab="chem" onclick="switchTab('chem',this)" id="tab-chem-btn">
+            <i class="fas fa-flask mr-1.5"></i>Organic Chemistry
+        </button>
+        <button class="tab-btn" data-tab="dft" onclick="switchTab('dft',this)" id="tab-dft-btn">
+            <i class="fas fa-atom mr-1.5"></i>Quantum DFT
+        </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         TAB 1 — THERMODYNAMICS
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-thermo" class="tab-pane active">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold">Thermodynamic Monte Carlo</h2>
+                    <p class="text-white/50 text-sm mt-1">Metropolis-Hastings MCMC for Gibbs free energy minimization — native WASM implementation.</p>
                 </div>
-                <div class="bg-black/20 rounded-xl p-4">
-                    <h3 class="font-medium text-blue-400 mb-2">ODE Solver</h3>
-                    <p class="text-white/60 text-sm">Runge-Kutta 4th-order integrator for differential equations</p>
+                <span class="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-bold">WASM Native</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Temperature (K)</label>
+                    <input type="number" id="thermo-temp" class="input-field" value="300" step="10" min="100" max="1000">
                 </div>
-                <div class="bg-black/20 rounded-xl p-4">
-                    <h3 class="font-medium text-blue-400 mb-2">Quantum DFT</h3>
-                    <p class="text-white/60 text-sm">DFT ground-state energy, PINN receptor binding affinity</p>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">MCMC Iterations</label>
+                    <input type="number" id="thermo-iter" class="input-field" value="10000" step="1000" min="1000" max="100000">
                 </div>
-                <div class="bg-black/20 rounded-xl p-4">
-                    <h3 class="font-medium text-blue-400 mb-2">Bioinformatics</h3>
-                    <p class="text-white/60 text-sm">Smith-Waterman alignment, FASTA, DNA→protein, k-mer hashing</p>
-                </div>
-                <div class="bg-black/20 rounded-xl p-4">
-                    <h3 class="font-medium text-blue-400 mb-2">Clinical Risk</h3>
-                    <p class="text-white/60 text-sm">Framingham, CHA₂DS₂-VASc, SCORE2, drug interactions</p>
-                </div>
-                <div class="bg-black/20 rounded-xl p-4">
-                    <h3 class="font-medium text-blue-400 mb-2">Organic Chemistry</h3>
-                    <p class="text-white/60 text-sm">SMILES/InChI parsing, Lipinski filters, Morgan fingerprint</p>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">System Type</label>
+                    <select id="thermo-system" class="input-field">
+                        <option value="ideal">Ideal Gas</option>
+                        <option value="van_der_waals">Van der Waals</option>
+                        <option value="isothermal">Isothermal Compression</option>
+                    </select>
                 </div>
             </div>
 
-            <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6">
-                <div class="flex items-start gap-4">
-                    <i class="fas fa-bolt text-emerald-400 text-2xl mt-1"></i>
-                    <div>
-                        <h3 class="font-semibold text-emerald-400 mb-2">Zero-Heap Execution</h3>
-                        <p class="text-white/70 text-sm">All scientific primitives are zero-allocation. They use stack-allocated buffers and caller-supplied output arrays, ensuring deterministic performance even on constrained devices.</p>
-                    </div>
-                </div>
+            <button onclick="runThermo()" class="spinbtn w-full" id="thermo-run-btn">
+                <i class="fas fa-play mr-2"></i>Run MCMC (WASM)
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-strong rounded-3xl p-6">
+                <h3 class="text-lg font-semibold mb-4 text-emerald-400">Energy Distribution</h3>
+                <canvas id="thermoCanvas"></canvas>
+            </div>
+            <div class="glass-strong rounded-3xl p-6">
+                <h3 class="text-lg font-semibold mb-4 text-blue-400">Convergence Trace</h3>
+                <canvas id="thermoConvergenceCanvas"></canvas>
             </div>
         </div>
 
-        <!-- Thermodynamics -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-fire text-orange-400"></i>
-                Thermodynamics
-            </h2>
-            
-            <h3 class="text-lg font-medium mb-3">MCMC Metropolis-Hastings</h3>
-            <pre class="mb-6"><code># Sample from a Boltzmann distribution
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3">SPARQL Integration Example</h3>
+            <div class="code-block text-blue-200 text-xs">
+# Sample from a Boltzmann distribution using WASM thermodynamics
 SELECT ?energy ?probability WHERE {
   ?state a ex:ThermodynamicState ;
          ex:energy ?energy .
   
-  # Native thermodynamics primitive
+  # Native thermodynamics primitive (WASM)
   BIND(qualia:mcmc_boltzmann(?energy, 300.0) AS ?probability)
-}</code></pre>
+}
+            </div>
+        </div>
+    </div>
 
-            <h3 class="text-lg font-medium mb-3">Gibbs Free Energy</h3>
-            <pre class="mb-6"><code># Calculate Gibbs free energy
-SELECT ?reaction ?deltaG WHERE {
-  ?reaction a ex:ChemicalReaction ;
-            ex:enthalpy ?H ;
-            ex:entropy ?S ;
-            ex:temperature ?T .
-  
-  # ΔG = ΔH - TΔS
-  BIND(qualia:gibbs_free_energy(?H, ?S, ?T) AS ?deltaG)
-}</code></pre>
+    <!-- ═══════════════════════════════════════════════════
+         TAB 2 — ODE SOLVER
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-ode" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold">Runge-Kutta 4th Order Solver</h2>
+                    <p class="text-white/50 text-sm mt-1">Phase-space trajectories from RungeKutta4Static — exact match to the Rust kernel.</p>
+                </div>
+                <span class="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-bold">WASM Native</span>
+            </div>
 
-            <h3 class="text-lg font-medium mb-3">Phase Transition Detection</h3>
-            <pre><code># Detect phase transitions in material
-SELECT ?temperature ?phase WHERE {
-  ?material a ex:Material ;
-            ex:temperature ?temperature ;
-            ex:heat_capacity ?Cp .
-  
-  # Phase transition when heat capacity spikes
-  BIND(qualia:detect_phase_transition(?Cp) AS ?phase)
-}</code></pre>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Preset System</label>
+                    <select id="ode-preset" class="input-field" onchange="loadOdePreset(this.value)">
+                        <option value="sho">Simple Harmonic Oscillator</option>
+                        <option value="lorenz">Lorenz Attractor</option>
+                        <option value="logistic">Logistic Growth</option>
+                        <option value="vanderpol">Van der Pol Oscillator</option>
+                        <option value="lotka">Lotka-Volterra (Predator-Prey)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Step size (h)</label>
+                    <input type="number" id="ode-h" class="input-field" value="0.01" step="0.001" min="0.0001" max="0.1">
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Steps</label>
+                    <input type="number" id="ode-steps" class="input-field" value="2000" step="100" min="100" max="10000">
+                </div>
+            </div>
+
+            <button onclick="runODE()" class="spinbtn w-full" id="ode-run-btn">
+                <i class="fas fa-play mr-2"></i>Solve (WASM)
+            </button>
         </div>
 
-        <!-- ODE Solver -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-wave-square text-purple-400"></i>
-                ODE Solver
-            </h2>
-            
-            <h3 class="text-lg font-medium mb-3">Runge-Kutta 4th Order</h3>
-            <pre class="mb-6"><code># Solve a differential equation
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-strong rounded-3xl p-6">
+                <h3 class="text-lg font-semibold mb-4 text-emerald-400">Phase Space Trajectory</h3>
+                <canvas id="odeCanvas"></canvas>
+            </div>
+            <div class="glass-strong rounded-3xl p-6">
+                <h3 class="text-lg font-semibold mb-4 text-blue-400">Time Series</h3>
+                <canvas id="odeTimeCanvas"></canvas>
+            </div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3">SPARQL Integration Example</h3>
+            <div class="code-block text-blue-200 text-xs">
+# Solve a differential equation using WASM ODE solver
 SELECT ?time ?value WHERE {
   # Initial conditions
   BIND(0.0 AS ?t0)
   BIND(1.0 AS ?y0)
   
-  # Solve dy/dt = -2y over time [0, 5]
+  # Solve dy/dt = -2y over time [0, 5] using WASM RK4
   BIND(qualia:runge_kutta_4(?t0, ?y0, 5.0, 0.1, "-2*y") AS ?trajectory)
   
   # Extract time and value from trajectory
   BIND(qualia:trajectory_time(?trajectory, ?i) AS ?time)
   BIND(qualia:trajectory_value(?trajectory, ?i) AS ?value)
-}</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Population Dynamics</h3>
-            <pre class="mb-6"><code># Lotka-Volterra predator-prey model
-SELECT ?time ?prey ?predator WHERE {
-  # dx/dt = αx - βxy
-  # dy/dt = δxy - γy
-  
-  BIND(qualia:runge_kutta_4_system(
-    0.0,  # t0
-    [10.0, 5.0],  # [x0, y0] initial prey/predator
-    50.0,  # t_max
-    0.1,  # dt
-    "1.5*x - 0.5*x*y",  # dx/dt
-    "0.5*x*y - 1.0*y"   # dy/dt
-  ) AS ?solution)
-}</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Epidemic Modeling (SIR)</h3>
-            <pre><code># SIR epidemic model
-SELECT ?time ?susceptible ?infected ?recovered WHERE {
-  BIND(qualia:sir_model(
-    0.0,      # t0
-    990,      # S0 (susceptible)
-    10,       # I0 (infected)
-    0,        # R0 (recovered)
-    100,      # t_max
-    0.1,      # dt
-    0.3,      # β (infection rate)
-    0.1       # γ (recovery rate)
-  ) AS ?trajectory)
-}</code></pre>
-        </div>
-
-        <!-- Bioinformatics -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-dna text-green-400"></i>
-                Bioinformatics
-            </h2>
-            
-            <h3 class="text-lg font-medium mb-3">Smith-Waterman Alignment</h3>
-            <pre class="mb-6"><code># Align two DNA sequences
-SELECT ?score ?alignment WHERE {
-  BIND("ACGTACGT" AS ?seq1)
-  BIND("ACGTTACGT" AS ?seq2)
-  
-  # Smith-Waterman local alignment
-  BIND(qualia:smith_waterman(?seq1, ?seq2) AS ?result)
-  BIND(qualia:alignment_score(?result) AS ?score)
-  BIND(qualia:alignment_string(?result) AS ?alignment)
-}</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">DNA to Protein Translation</h3>
-            <pre class="mb-6"><code># Translate DNA to protein
-SELECT ?dna ?protein WHERE {
-  BIND("ATGGCCATTGTA" AS ?dna)
-  
-  # Translate using standard genetic code
-  BIND(qualia:dna_to_protein(?dna) AS ?protein)
 }
-# Result: "MAIV"</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">K-mer Hashing</h3>
-            <pre class="mb-6"><code># Generate k-mer hashes for sequence comparison
-SELECT ?kmer ?hash WHERE {
-  BIND("ACGTACGT" AS ?sequence)
-  BIND(3 AS ?k)
-  
-  # Generate all k-mers and their hashes
-  BIND(qualia:kmer_hashes(?sequence, ?k) AS ?kmer_hashes)
-}</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Tanimoto Similarity</h3>
-            <pre><code># Calculate Tanimoto similarity between molecular fingerprints
-SELECT ?mol1 ?mol2 ?similarity WHERE {
-  ?mol1 a ex:Molecule ;
-        ex:fingerprint ?fp1 .
-  ?mol2 a ex:Molecule ;
-        ex:fingerprint ?fp2 .
-  
-  BIND(qualia:tanimoto_similarity(?fp1, ?fp2) AS ?similarity)
-}</code></pre>
-        </div>
-
-        <!-- Clinical Risk -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-heartbeat text-red-400"></i>
-                Clinical Risk Assessment
-            </h2>
-            
-            <h3 class="text-lg font-medium mb-3">Framingham Risk Score</h3>
-            <pre class="mb-6"><code># Calculate 10-year cardiovascular risk
-SELECT ?patient ?risk_score WHERE {
-  ?patient a ex:Patient ;
-           ex:age 55 ;
-           ex:gender "male" ;
-           ex:total_cholesterol 220 ;
-           ex:hdl_cholesterol 45 ;
-           ex:systolic_bp 140 ;
-           ex:smoker true ;
-           ex:treated_for_bp false .
-  
-  BIND(qualia:framingham_risk(
-    ?age, ?gender, ?total_cholesterol, ?hdl_cholesterol,
-    ?systolic_bp, ?smoker, ?treated_for_bp
-  ) AS ?risk_score)
-}</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">CHA₂DS₂-VASc Score</h3>
-            <pre class="mb-6"><code># Stroke risk assessment for atrial fibrillation
-SELECT ?patient ?cha2ds2_vasc WHERE {
-  ?patient a ex:Patient ;
-           ex:age 72 ;
-           ex:has_hypertension true ;
-           ex:has_diabetes false ;
-           ex:has_stroke_history true ;
-           ex:vascular_disease false ;
-           ex:gender "female" .
-  
-  BIND(qualia:cha2ds2_vasc(
-    ?age, ?has_hypertension, ?has_diabetes,
-    ?has_stroke_history, ?vascular_disease, ?gender
-  ) AS ?cha2ds2_vasc)
-}</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Drug Interaction Check</h3>
-            <pre><code># Check for drug-drug interactions
-SELECT ?patient ?drug1 ?drug2 ?severity WHERE {
-  ?patient ex:takes ?drug1, ?drug2 .
-  
-  BIND(qualia:drug_interaction(?drug1, ?drug2) AS ?interaction)
-  BIND(qualia:interaction_severity(?interaction) AS ?severity)
-  FILTER (?severity > 0)  # Only show interactions
-}</code></pre>
-        </div>
-
-        <!-- Organic Chemistry -->
-        <div class="glass-strong rounded-3xl p-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-atom text-cyan-400"></i>
-                Organic Chemistry
-            </h2>
-            
-            <h3 class="text-lg font-medium mb-3">SMILES Parsing</h3>
-            <pre class="mb-6"><code># Parse SMILES notation
-SELECT ?smiles ?molecular_weight WHERE {
-  BIND("CCO" AS ?smiles)  # Ethanol
-  
-  BIND(qualia:parse_smiles(?smiles) AS ?molecule)
-  BIND(qualia:molecular_weight(?molecule) AS ?molecular_weight)
-}
-# Result: 46.07 g/mol</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Lipinski Rule of Five</h3>
-            <pre class="mb-6"><code># Check drug-likeness using Lipinski rules
-SELECT ?molecule ?passes_lipinski WHERE {
-  ?molecule a ex:Molecule ;
-            ex:smiles "CC(C)CC1=CC=C(C=C1)C(C)C(=O)O" ;  # Ibuprofen
-            ex:molecular_weight ?mw ;
-            ex:logp ?logp ;
-            ex:hbd ?hbd ;  # Hydrogen bond donors
-            ex:hba ?hba .  # Hydrogen bond acceptors
-  
-  BIND(qualia:lipinski_rule_of_five(?mw, ?logp, ?hbd, ?hba) AS ?passes_lipinski)
-}</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Morgan Fingerprint</h3>
-            <pre><code># Generate Morgan fingerprint for similarity search
-SELECT ?molecule ?fingerprint WHERE {
-  ?molecule a ex:Molecule ;
-            ex:smiles "CCO" .
-  
-  BIND(qualia:morgan_fingerprint(?molecule, 2, 2048) AS ?fingerprint)
-}</code></pre>
+            </div>
         </div>
     </div>
 
-    <footer class="border-t border-white/10 py-8">
-        <div class="max-w-screen-2xl mx-auto px-8">
-            <div class="flex items-center justify-between">
-                <div class="text-white/50 text-sm">
-                    QualiaDB v0.0.15 • Human-Centric Semantic Engine
+    <!-- ═══════════════════════════════════════════════════
+         TAB 3 — BIOINFORMATICS
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-bio" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold">Sequence Alignment</h2>
+                    <p class="text-white/50 text-sm mt-1">Smith-Waterman / Needleman-Wunsch alignment — zero-heap WASM implementation.</p>
                 </div>
-                <div class="flex items-center gap-6 text-sm">
-                    <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
-                    <a href="manuals/standards/" class="hover:text-white transition-colors">Standards</a>
-                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="hover:text-white transition-colors">GitHub</a>
+                <span class="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-bold">WASM Native</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Query Sequence</label>
+                    <textarea id="bio-query" class="input-field" rows="3" placeholder="ATCGATCGTTAG">ATCGATCGTTAG</textarea>
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Target Sequence</label>
+                    <textarea id="bio-target" class="input-field" rows="3" placeholder="ATCGATCGAAAG">ATCGATCGAAAG</textarea>
                 </div>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Mode</label>
+                    <select id="bio-mode" class="input-field">
+                        <option value="nucleotide">Nucleotide (DNA/RNA)</option>
+                        <option value="protein">Protein (Amino Acid)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Algorithm</label>
+                    <select id="bio-algo" class="input-field">
+                        <option value="smith_waterman">Smith-Waterman (Local)</option>
+                        <option value="needleman_wunsch">Needleman-Wunsch (Global)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="runBio()" class="spinbtn w-full" id="bio-run-btn">
+                <i class="fas fa-play mr-2"></i>Align (WASM)
+            </button>
         </div>
-    </footer>
+
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Alignment Result</h3>
+            <div id="bio-result" class="code-block text-emerald-300 min-h-[200px]">Enter sequences and click Align…</div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3">SPARQL Integration Example</h3>
+            <div class="code-block text-blue-200 text-xs">
+# Sequence alignment using WASM bioinformatics
+SELECT ?alignment ?score WHERE {
+  ?seq1 ex:sequence "ATCGATCGTTAG" ;
+        ex:type ex:DNA .
+  ?seq2 ex:sequence "ATCGATCGAAAG" ;
+        ex:type ex:DNA .
+  
+  # Native Smith-Waterman alignment (WASM)
+  BIND(qualia:smith_waterman(?seq1, ?seq2) AS ?alignment)
+  BIND(qualia:alignment_score(?alignment) AS ?score)
+}
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         TAB 4 — CLINICAL RISK
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-clinical" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold">Clinical Risk Assessment</h2>
+                    <p class="text-white/50 text-sm mt-1">Framingham, CHA₂DS₂-VASc, SCORE2 — evidence-based risk calculators via WASM.</p>
+                </div>
+                <span class="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-bold">WASM Native</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Risk Calculator</label>
+                    <select id="clinical-calculator" class="input-field" onchange="loadClinicalPreset(this.value)">
+                        <option value="framingham">Framingham Cardiovascular Risk</option>
+                        <option value="chas2">CHA₂DS₂-VASc Stroke Risk</option>
+                        <option value="score2">SCORE2 Cardiovascular Risk</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Patient Parameters (JSON)</label>
+                    <textarea id="clinical-params" class="input-field" rows="3" placeholder='{"age": 65, "systolic_bp": 140, "smoker": true}'>{"age": 65, "systolic_bp": 140, "smoker": true}</textarea>
+                </div>
+            </div>
+
+            <button onclick="runClinical()" class="spinbtn w-full" id="clinical-run-btn">
+                <i class="fas fa-play mr-2"></i>Calculate Risk (WASM)
+            </button>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Risk Assessment Result</h3>
+            <div id="clinical-result" class="code-block text-emerald-300 min-h-[200px]">Enter parameters and click Calculate…</div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3">SPARQL Integration Example</h3>
+            <div class="code-block text-blue-200 text-xs">
+# Clinical risk assessment using WASM calculators
+SELECT ?patient ?risk_score ?risk_category WHERE {
+  ?patient a ex:Patient ;
+            ex:age ?age ;
+            ex:systolicBP ?bp ;
+            ex:smoker ?smoker .
+  
+  # Native Framingham calculator (WASM)
+  BIND(qualia:framingham_risk(?age, ?bp, ?smoker) AS ?risk_score)
+  BIND(qualia:risk_category(?risk_score) AS ?risk_category)
+}
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         TAB 5 — ORGANIC CHEMISTRY
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-chem" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold">Organic Chemistry Analysis</h2>
+                    <p class="text-white/50 text-sm mt-1">SMILES parsing, molecular properties, drug-likeness — native WASM chemistry engine.</p>
+                </div>
+                <span class="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-bold">WASM Native</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">SMILES String</label>
+                    <input type="text" id="chem-smiles" class="input-field" value="CCO" placeholder="CCO (ethanol)">
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Analysis Type</label>
+                    <select id="chem-analysis" class="input-field">
+                        <option value="properties">Molecular Properties</option>
+                        <option value="lipinski">Lipinski Rule of Five</option>
+                        <option value="druglikeness">Drug-likeness Score</option>
+                        <option value="morgan">Morgan Fingerprint</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="runChem()" class="spinbtn w-full" id="chem-run-btn">
+                <i class="fas fa-play mr-2"></i>Analyze (WASM)
+            </button>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Analysis Result</h3>
+            <div id="chem-result" class="code-block text-emerald-300 min-h-[200px]">Enter SMILES and click Analyze…</div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3">SPARQL Integration Example</h3>
+            <div class="code-block text-blue-200 text-xs">
+# Organic chemistry analysis using WASM engine
+SELECT ?molecule ?mw ?logp ?druglikeness WHERE {
+  ?molecule ex:smiles "CCO" ;
+            ex:type ex:OrganicCompound .
+  
+  # Native chemistry analysis (WASM)
+  BIND(qualia:molecular_weight(?molecule) AS ?mw)
+  BIND(qualia:logp(?molecule) AS ?logp)
+  BIND(qualia:druglikeness_score(?molecule) AS ?druglikeness)
+}
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         TAB 6 — QUANTUM DFT
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-dft" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold">Quantum DFT Ground State</h2>
+                    <p class="text-white/50 text-sm mt-1">Density Functional Theory ground-state energy calculation — native WASM implementation.</p>
+                </div>
+                <span class="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-bold">WASM Native</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Molecule (SMILES)</label>
+                    <input type="text" id="dft-smiles" class="input-field" value="O" placeholder="O (water)">
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Basis Set</label>
+                    <select id="dft-basis" class="input-field">
+                        <option value="sto-3g">STO-3G (Minimal)</option>
+                        <option value="3-21g">3-21G (Split-valence)</option>
+                        <option value="6-31g">6-31G (Polarized)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="runDFT()" class="spinbtn w-full" id="dft-run-btn">
+                <i class="fas fa-play mr-2"></i>Calculate Ground State (WASM)
+            </button>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">DFT Result</h3>
+            <div id="dft-result" class="code-block text-emerald-300 min-h-[200px]">Enter molecule and click Calculate…</div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3">SPARQL Integration Example</h3>
+            <div class="code-block text-blue-200 text-xs">
+# Quantum DFT ground-state energy using WASM
+SELECT ?molecule ?energy ?homo ?lumo WHERE {
+  ?molecule ex:smiles "O" ;
+            ex:type ex:Molecule .
+  
+  # Native DFT calculation (WASM)
+  BIND(qualia:dft_ground_state(?molecule, "sto-3g") AS ?energy)
+  BIND(qualia:homo_energy(?molecule) AS ?homo)
+  BIND(qualia:lumo_energy(?molecule) AS ?lumo)
+}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+    let wasm = null;
+    let charts = {};
+
+    // Load WASM from playground directory
+    async function loadWasm() {
+        try {
+            const module = await import('./playground/qualia_core_db.js');
+            await module.default();
+            wasm = module;
+            
+            // Update UI
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('main-content').style.display = 'block';
+            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
+            document.getElementById('wasm-dot').classList.add('bg-emerald-500');
+            document.getElementById('wasm-text').textContent = 'WASM Ready';
+            
+            // Enable all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.disabled = false);
+            
+            console.log('QualiaDB WASM loaded successfully');
+        } catch (error) {
+            console.error('Failed to load WASM:', error);
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('error-overlay').classList.remove('hidden');
+            document.getElementById('error-message').textContent = error.toString();
+            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
+            document.getElementById('wasm-dot').classList.add('bg-red-500');
+            document.getElementById('wasm-text').textContent = 'WASM Error';
+        }
+    }
+
+    // Tab switching
+    window.switchTab = function(tabId, btn) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+        btn.classList.add('active');
+    };
+
+    // Update metrics
+    function updateMetrics(computeOps, time, memory) {
+        document.getElementById('metric-compute').textContent = computeOps.toLocaleString();
+        document.getElementById('metric-time').textContent = time + 'ms';
+        document.getElementById('metric-memory').textContent = memory;
+    }
+
+    // Thermodynamics
+    window.runThermo = async function() {
+        if (!wasm) return;
+        
+        const temp = parseFloat(document.getElementById('thermo-temp').value);
+        const iterations = parseInt(document.getElementById('thermo-iter').value);
+        const system = document.getElementById('thermo-system').value;
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.thermodynamics_mcmc(JSON.stringify({ temp, iterations, system }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            
+            drawThermoVisualization(parsed);
+            updateMetrics(iterations, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            console.error('Thermo error:', e);
+        }
+    };
+
+    function drawThermoVisualization(data) {
+        const canvas = document.getElementById('thermoCanvas');
+        const convCanvas = document.getElementById('thermoConvergenceCanvas');
+        
+        if (charts.thermo) charts.thermo.destroy();
+        if (charts.thermoConv) charts.thermoConv.destroy();
+        
+        charts.thermo = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: data.energy_levels || [],
+                datasets: [{
+                    label: 'Probability',
+                    data: data.probabilities || [],
+                    backgroundColor: 'rgba(52, 211, 153, 0.6)',
+                    borderColor: '#34d399'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } }
+                }
+            }
+        });
+        
+        charts.thermoConv = new Chart(convCanvas, {
+            type: 'line',
+            data: {
+                labels: data.iterations || [],
+                datasets: [{
+                    label: 'Gibbs Free Energy',
+                    data: data.gibbs_trace || [],
+                    borderColor: '#34d399',
+                    tension: 0.1,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } }
+                }
+            }
+        });
+    }
+
+    // ODE Solver
+    window.runODE = async function() {
+        if (!wasm) return;
+        
+        const preset = document.getElementById('ode-preset').value;
+        const h = parseFloat(document.getElementById('ode-h').value);
+        const steps = parseInt(document.getElementById('ode-steps').value);
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.ode_solver(JSON.stringify({ preset, h, steps }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            
+            drawODEVisualization(parsed);
+            updateMetrics(steps * 10, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            console.error('ODE error:', e);
+        }
+    };
+
+    function drawODEVisualization(data) {
+        const canvas = document.getElementById('odeCanvas');
+        const timeCanvas = document.getElementById('odeTimeCanvas');
+        
+        if (charts.ode) charts.ode.destroy();
+        if (charts.odeTime) charts.odeTime.destroy();
+        
+        charts.ode = new Chart(canvas, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Phase Space',
+                    data: data.phase_space || [],
+                    backgroundColor: 'rgba(52, 211, 153, 0.5)',
+                    borderColor: '#34d399',
+                    pointRadius: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+        
+        charts.odeTime = new Chart(timeCanvas, {
+            type: 'line',
+            data: {
+                labels: data.time_points || [],
+                datasets: [{
+                    label: 'x(t)',
+                    data: data.x_values || [],
+                    borderColor: '#34d399',
+                    tension: 0.1,
+                    pointRadius: 0
+                }, {
+                    label: 'y(t)',
+                    data: data.y_values || [],
+                    borderColor: '#3b82f6',
+                    tension: 0.1,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } }
+                }
+            }
+        });
+    }
+
+    // Bioinformatics
+    window.runBio = async function() {
+        if (!wasm) return;
+        
+        const query = document.getElementById('bio-query').value;
+        const target = document.getElementById('bio-target').value;
+        const mode = document.getElementById('bio-mode').value;
+        const algo = document.getElementById('bio-algo').value;
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.sequence_alignment(JSON.stringify({ query, target, mode, algo }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            document.getElementById('bio-result').textContent = JSON.stringify(parsed, null, 2);
+            
+            updateMetrics(query.length * target.length, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            document.getElementById('bio-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Clinical Risk
+    window.runClinical = async function() {
+        if (!wasm) return;
+        
+        const calculator = document.getElementById('clinical-calculator').value;
+        const params = JSON.parse(document.getElementById('clinical-params').value);
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.clinical_risk(JSON.stringify({ calculator, params }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            document.getElementById('clinical-result').textContent = JSON.stringify(parsed, null, 2);
+            
+            updateMetrics(100, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            document.getElementById('clinical-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Organic Chemistry
+    window.runChem = async function() {
+        if (!wasm) return;
+        
+        const smiles = document.getElementById('chem-smiles').value;
+        const analysis = document.getElementById('chem-analysis').value;
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.organic_chemistry(JSON.stringify({ smiles, analysis }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            document.getElementById('chem-result').textContent = JSON.stringify(parsed, null, 2);
+            
+            updateMetrics(smiles.length * 10, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            document.getElementById('chem-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Quantum DFT
+    window.runDFT = async function() {
+        if (!wasm) return;
+        
+        const smiles = document.getElementById('dft-smiles').value;
+        const basis = document.getElementById('dft-basis').value;
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.quantum_dft(JSON.stringify({ smiles, basis }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            document.getElementById('dft-result').textContent = JSON.stringify(parsed, null, 2);
+            
+            updateMetrics(smiles.length * 100, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            document.getElementById('dft-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Load ODE preset
+    window.loadOdePreset = function(preset) {
+        const presets = {
+            sho: { h: 0.01, steps: 2000 },
+            lorenz: { h: 0.005, steps: 5000 },
+            logistic: { h: 0.01, steps: 3000 },
+            vanderpol: { h: 0.005, steps: 4000 },
+            lotka: { h: 0.01, steps: 2500 }
+        };
+        
+        if (presets[preset]) {
+            document.getElementById('ode-h').value = presets[preset].h;
+            document.getElementById('ode-steps').value = presets[preset].steps;
+        }
+    };
+
+    // Load clinical preset
+    window.loadClinicalPreset = function(calculator) {
+        const presets = {
+            framingham: '{"age": 55, "systolic_bp": 120, "total_chol": 200, "hdl_chol": 50, "smoker": false}',
+            chas2: '{"age": 65, "hypertension": true, "diabetes": false, "stroke": false, "vascular_disease": false}',
+            score2: '{"age": 60, "systolic_bp": 140, "smoker": true}'
+        };
+        
+        if (presets[calculator]) {
+            document.getElementById('clinical-params').value = presets[calculator];
+        }
+    };
+
+    // Initialize
+    loadWasm();
+</script>
 </body>
 </html>

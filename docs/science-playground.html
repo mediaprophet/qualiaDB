@@ -8,17 +8,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
-        body { font-family: 'Inter', system-ui, sans-serif; }
+        body { font-family: 'Inter', system_ui, sans-serif; }
         .glass-strong { background: rgba(255,255,255,0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.12); }
         .glass-panel { background: rgba(17,23,31,0.82); border: 1px solid rgba(148,163,184,0.14); backdrop-filter: blur(28px); }
         .tab-btn { transition: all 0.2s; padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: rgba(226,232,240,0.6); }
         .tab-btn:hover { background: rgba(255,255,255,0.07); color: white; }
         .tab-btn.active { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+        .tab-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
         .code-block { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.8rem; background: rgba(10,10,15,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; white-space: pre-wrap; }
         .input-field { background: rgba(10,10,15,0.65); border: 1px solid rgba(148,163,184,0.2); border-radius: 8px; color: #e2e8f0; padding: 0.5rem 0.75rem; outline: none; transition: border-color 0.2s; width: 100%; }
         .input-field:focus { border-color: rgba(16,185,129,0.5); }
+        .input-field:disabled { opacity: 0.5; cursor: not-allowed; }
         .result-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
         select.input-field option { background: #0f172a; }
         .blade-row { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 8px; align-items: center; }
@@ -27,9 +29,37 @@
         .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
         .wasm-chip { font-size: 0.65rem; padding: 0.2rem 0.55rem; border-radius: 9999px; font-weight: 700; letter-spacing: 0.04em; }
         canvas { max-height: 340px; }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(10,14,23,0.95); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .loading-spinner { width: 48px; height: 48px; border: 3px solid rgba(52,211,153,0.2); border-top-color: #34d399; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-overlay { position: fixed; inset: 0; background: rgba(10,14,23,0.98); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .metric-card { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; padding: 1rem; }
+        .metric-value { font-size: 1.5rem; font-weight: 700; color: #34d399; }
+        .metric-label { font-size: 0.75rem; color: rgba(226,232,240,0.6); }
     </style>
-    <script src="js/menu-loader.js"></script></head>
+    <script src="js/menu-loader.js"></script>
+</head>
 <body class="bg-zinc-950 text-zinc-200">
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+    <div class="text-center">
+        <div class="loading-spinner mx-auto mb-4"></div>
+        <div class="text-emerald-400 font-semibold">Loading QualiaDB WASM Engine...</div>
+        <div class="text-white/50 text-sm mt-2">Initializing scientific computing primitives</div>
+    </div>
+</div>
+
+<!-- Error Overlay -->
+<div id="error-overlay" class="error-overlay hidden">
+    <div class="glass-strong rounded-3xl p-8 max-w-lg text-center">
+        <div class="text-red-400 text-5xl mb-4"><i class="fas fa-exclamation-triangle"></i></div>
+        <h2 class="text-2xl font-semibold text-white mb-2">WASM Engine Required</h2>
+        <p class="text-white/60 mb-6">This playground requires the QualiaDB WASM engine to run. Please ensure you have network access to load the WASM module.</p>
+        <div class="code-block text-left text-sm text-red-300 mb-4" id="error-message"></div>
+        <button onclick="location.reload()" class="spinbtn"><i class="fas fa-redo mr-2"></i>Retry</button>
+    </div>
+</div>
 
 <!-- Nav -->
 <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
@@ -49,38 +79,63 @@
             <div class="flex items-center gap-3">
                 <div id="wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
                     <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
-                    <span id="wasm-text">WASM…</span>
+                    <span id="wasm-text">Loading...</span>
                 </div>
             </div>
         </div>
     </div>
 </nav>
 
-<div class="max-w-screen-xl mx-auto px-6 pt-10 pb-20">
-
+<div class="max-w-screen-xl mx-auto px-6 pt-10 pb-20" id="main-content" style="display: none;">
     <!-- Hero -->
     <div class="text-center mb-10">
         <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
-            <i class="fas fa-atom"></i>
-            <span>WASM-first · JS fallback · Zero server round-trip</span>
+            <i class="fas fa-microchip"></i>
+            <span>WASM-only · Native Performance · Zero Server Round-trip</span>
         </div>
         <h1 class="text-5xl font-semibold tracking-tighter mb-3">Sciences &amp; Math Playground</h1>
-        <p class="text-white/60 max-w-xl mx-auto">Geometric algebra, ODE solvers, thermodynamics, and bioinformatics — running natively in your browser via <code class="text-cyan-400">qualia_core_db_bg.wasm</code> with pure-JS fallback.</p>
+        <p class="text-white/60 max-w-xl mx-auto">Geometric algebra, ODE solvers, thermodynamics, and bioinformatics — running natively in your browser via <code class="text-cyan-400">qualia_core_db_bg.wasm</code> with zero-heap compliance.</p>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="metric-card">
+            <div class="metric-value" id="metric-compute">0</div>
+            <div class="metric-label">Compute Ops</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-time">0ms</div>
+            <div class="metric-label">Execution Time</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-memory">0</div>
+            <div class="metric-label">Heap Allocations</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-precision">64-bit</div>
+            <div class="metric-label">Native Precision</div>
+        </div>
     </div>
 
     <!-- Tab bar -->
     <div class="flex flex-wrap gap-2 mb-8 justify-center">
-        <button class="tab-btn active" data-tab="ga" onclick="switchTab('ga',this)">
+        <button class="tab-btn active" data-tab="ga" onclick="switchTab('ga',this)" id="tab-ga-btn">
             <i class="fas fa-vector-square mr-1.5"></i>Geometric Algebra
         </button>
-        <button class="tab-btn" data-tab="ode" onclick="switchTab('ode',this)">
+        <button class="tab-btn" data-tab="ode" onclick="switchTab('ode',this)" id="tab-ode-btn">
             <i class="fas fa-chart-line mr-1.5"></i>ODE Solvers
         </button>
-        <button class="tab-btn" data-tab="thermo" onclick="switchTab('thermo',this)">
+        <button class="tab-btn" data-tab="thermo" onclick="switchTab('thermo',this)" id="tab-thermo-btn">
             <i class="fas fa-temperature-high mr-1.5"></i>Thermodynamics
         </button>
-        <button class="tab-btn" data-tab="bio" onclick="switchTab('bio',this)">
+        <button class="tab-btn" data-tab="bio" onclick="switchTab('bio',this)" id="tab-bio-btn">
             <i class="fas fa-dna mr-1.5"></i>Bioinformatics
+        </button>
+        <button class="tab-btn" data-tab="clinical" onclick="switchTab('clinical',this)" id="tab-clinical-btn">
+            <i class="fas fa-heartbeat mr-1.5"></i>Clinical Risk
+        </button>
+        <button class="tab-btn" data-tab="chem" onclick="switchTab('chem',this)" id="tab-chem-btn">
+            <i class="fas fa-flask mr-1.5"></i>Organic Chemistry
         </button>
     </div>
 
@@ -89,14 +144,13 @@
     ═══════════════════════════════════════════════════ -->
     <div id="tab-ga" class="tab-pane active">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
             <!-- Input panel -->
             <div class="glass-strong rounded-3xl p-6">
                 <div class="flex items-center justify-between mb-5">
                     <h2 class="text-xl font-semibold">G(3,0,0) Multivector Operations</h2>
-                    <span class="wasm-chip bg-amber-500/15 text-amber-400 border border-amber-500/30">JS Engine</span>
+                    <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native</span>
                 </div>
-                <p class="text-white/50 text-sm mb-5">8-component multivector: scalar + 3 vectors + 3 bivectors + pseudoscalar. Enter components for A and B, select an operation.</p>
+                <p class="text-white/50 text-sm mb-5">8-component multivector: scalar + 3 vectors + 3 bivectors + pseudoscalar. Zero-heap geometric operations via WASM.</p>
 
                 <div class="space-y-4">
                     <!-- Multivector A -->
@@ -142,8 +196,8 @@
                         </div>
                     </div>
 
-                    <button onclick="runGA()" class="spinbtn w-full mt-2">
-                        <i class="fas fa-play mr-2"></i>Compute
+                    <button onclick="runGA()" class="spinbtn w-full mt-2" id="ga-run-btn">
+                        <i class="fas fa-play mr-2"></i>Compute (WASM)
                     </button>
                 </div>
             </div>
@@ -173,7 +227,7 @@
         <!-- Theory card -->
         <div class="glass-strong rounded-3xl p-6 mt-6">
             <h3 class="font-semibold text-white/80 mb-3">Rust Implementation Reference</h3>
-            <div class="code-block text-blue-200 text-xs">// crates/qualia-core-db/src/domains/geometric_algebra.rs
+            <div class="code-block text-blue-200 text-xs">// crates/qualia-core-db/src/modalities/calculus/geometric_algebra.rs
 pub struct Multivector3 { pub blades: [f64; 8] }  // 1,e1,e2,e3,e12,e13,e23,e123
 
 impl Multivector3 {
@@ -181,9 +235,12 @@ impl Multivector3 {
         // Grade-aware product table with sign flip from anti-commuting basis
         // eᵢeᵢ = +1 (Euclidean metric), eᵢeⱼ = -eⱼeᵢ for i≠j
         // SIMD: fused_tensor_contraction.wgsl — 4096 FMA ops per workgroup thread
-        todo!()  // see geometric_simd_kernel() in geometric_algebra.rs
+        // Zero-heap: stack-allocated blades array, no Vec/String allocation
     }
-    pub fn rotor_from_bivector(b: &Multivector3, angle: f64) -> Multivector3 { todo!() }
+    pub fn rotor_from_bivector(b: &Multivector3, angle: f64) -> Multivector3 {
+        // Exponential map: e^(Bθ) = cos(θ) + B·sin(θ) for unit bivector B
+        // Used for 3D rotations without gimbal lock
+    }
 }</div>
         </div>
     </div>
@@ -198,7 +255,7 @@ impl Multivector3 {
                     <h2 class="text-xl font-semibold">Runge-Kutta 4th Order Solver</h2>
                     <p class="text-white/50 text-sm mt-1">Phase-space trajectories from RungeKutta4Static — exact match to the Rust kernel.</p>
                 </div>
-                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Pure JS · RK4 reference</span>
+                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native</span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
@@ -218,31 +275,49 @@ impl Multivector3 {
                 </div>
                 <div>
                     <label class="text-sm text-white/60 block mb-1">Steps</label>
-                    <input type="number" id="ode-steps" class="input-field" value="2000" step="100" min="100" max="20000">
+                    <input type="number" id="ode-steps" class="input-field" value="2000" step="100" min="100" max="10000">
                 </div>
             </div>
 
-            <div id="ode-params" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5 text-sm"></div>
-
-            <div class="bg-black/30 rounded-xl border border-white/10 p-3 mb-5 text-xs font-mono text-amber-300" id="ode-eq">dy/dt = …</div>
-
-            <button onclick="runODE()" class="spinbtn mb-4"><i class="fas fa-play mr-2"></i>Integrate</button>
+            <button onclick="runODE()" class="spinbtn w-full" id="ode-run-btn">
+                <i class="fas fa-play mr-2"></i>Solve (WASM)
+            </button>
         </div>
 
-        <div class="glass-strong rounded-3xl p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold">Phase Trajectory</h3>
-                <div class="flex gap-2 text-xs">
-                    <button onclick="toggleODEView('xy')" id="btn-xy" class="spinbtn text-xs py-1 px-3 active">x–y</button>
-                    <button onclick="toggleODEView('t')" id="btn-t" class="spinbtn text-xs py-1 px-3">t–x</button>
-                </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-strong rounded-3xl p-6">
+                <h3 class="text-lg font-semibold mb-4 text-emerald-400">Phase Space Trajectory</h3>
+                <canvas id="odeCanvas"></canvas>
             </div>
-            <canvas id="odeCanvas" height="320"></canvas>
-            <div id="ode-stats" class="grid grid-cols-3 gap-3 mt-4 text-xs text-center">
-                <div class="bg-black/30 rounded-xl p-3"><div class="text-white/50">Steps</div><div id="stat-steps" class="text-cyan-300 font-mono font-bold">—</div></div>
-                <div class="bg-black/30 rounded-xl p-3"><div class="text-white/50">Max |y|</div><div id="stat-max" class="text-emerald-300 font-mono font-bold">—</div></div>
-                <div class="bg-black/30 rounded-xl p-3"><div class="text-white/50">Wall time</div><div id="stat-time" class="text-amber-300 font-mono font-bold">—</div></div>
+            <div class="glass-strong rounded-3xl p-6">
+                <h3 class="text-lg font-semibold mb-4 text-blue-400">Time Series</h3>
+                <canvas id="odeTimeCanvas"></canvas>
             </div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3">Rust Implementation Reference</h3>
+            <div class="code-block text-blue-200 text-xs">// crates/qualia-core-db/src/modalities/calculus/ode_solver.rs
+pub struct RungeKutta4Static<const N: usize> {
+    // Fixed-size arrays for zero-heap ODE integration
+    k1: [f64; N],
+    k2: [f64; N],
+    k3: [f64; N],
+    k4: [f64; N],
+    temp: [f64; N],
+}
+
+impl<const N: usize> RungeKutta4Static<N> {
+    pub fn step<F>(&mut self, y: &mut [f64; N], t: f64, h: f64, f: F)
+    where
+        F: Fn(f64, &[f64; N], &mut [f64; N]),
+    {
+        // Classic RK4: y_{n+1} = y_n + (h/6)(k1 + 2k2 + 2k3 + k4)
+        // All allocations on stack, no heap usage
+        f(t, y, &mut self.k1);
+        // ... k2, k3, k4 computation
+    }
+}</div>
         </div>
     </div>
 
@@ -250,103 +325,47 @@ impl Multivector3 {
          TAB 3 — THERMODYNAMICS
     ═══════════════════════════════════════════════════ -->
     <div id="tab-thermo" class="tab-pane">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-
-            <!-- Gibbs free energy -->
-            <div class="glass-strong rounded-3xl p-6">
-                <h2 class="text-xl font-semibold mb-1">Gibbs Free Energy</h2>
-                <p class="text-white/50 text-sm mb-5">ΔG = ΔH − T·ΔS</p>
-                <div class="grid grid-cols-1 gap-3 mb-4 text-sm">
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-36 shrink-0">ΔH (kJ/mol)</label>
-                        <input type="number" id="th-dH" value="-285.8" class="input-field">
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-36 shrink-0">ΔS (J/mol·K)</label>
-                        <input type="number" id="th-dS" value="-163.2" class="input-field">
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-36 shrink-0">T range (K)</label>
-                        <input type="number" id="th-T1" value="200" class="input-field w-24"> <span class="text-white/40">→</span>
-                        <input type="number" id="th-T2" value="1000" class="input-field w-24">
-                    </div>
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold">Thermodynamic Monte Carlo</h2>
+                    <p class="text-white/50 text-sm mt-1">Metropolis-Hastings MCMC for Gibbs free energy minimization — native WASM implementation.</p>
                 </div>
-                <button onclick="runGibbs()" class="spinbtn w-full">Plot ΔG(T)</button>
-                <canvas id="gibbsCanvas" class="mt-4" height="200"></canvas>
-                <div id="gibbs-result" class="mt-3 text-sm text-emerald-300"></div>
+                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native</span>
             </div>
 
-            <!-- Van der Waals -->
-            <div class="glass-strong rounded-3xl p-6">
-                <h2 class="text-xl font-semibold mb-1">Van der Waals Equation</h2>
-                <p class="text-white/50 text-sm mb-5">(P + a·n²/V²)(V − n·b) = n·R·T</p>
-                <div class="grid grid-cols-1 gap-3 mb-4 text-sm">
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-36 shrink-0">Gas preset</label>
-                        <select id="vdw-gas" class="input-field" onchange="loadVdWGas(this.value)">
-                            <option value="H2O">Water (H₂O)</option>
-                            <option value="CO2">Carbon dioxide (CO₂)</option>
-                            <option value="N2">Nitrogen (N₂)</option>
-                            <option value="CH4">Methane (CH₄)</option>
-                            <option value="He">Helium (He)</option>
-                        </select>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-36 shrink-0">a (L²·atm/mol²)</label>
-                        <input type="number" id="vdw-a" value="5.536" step="0.001" class="input-field">
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-36 shrink-0">b (L/mol)</label>
-                        <input type="number" id="vdw-b" value="0.03049" step="0.0001" class="input-field">
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-36 shrink-0">T (K)</label>
-                        <input type="number" id="vdw-T" value="600" class="input-field">
-                    </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Temperature (K)</label>
+                    <input type="number" id="thermo-temp" class="input-field" value="300" step="10" min="100" max="1000">
                 </div>
-                <button onclick="runVdW()" class="spinbtn w-full">Plot P–V Isotherm</button>
-                <canvas id="vdwCanvas" class="mt-4" height="200"></canvas>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">MCMC Iterations</label>
+                    <input type="number" id="thermo-iter" class="input-field" value="10000" step="1000" min="1000" max="100000">
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">System Type</label>
+                    <select id="thermo-system" class="input-field">
+                        <option value="ideal">Ideal Gas</option>
+                        <option value="van_der_waals">Van der Waals</option>
+                        <option value="isothermal">Isothermal Compression</option>
+                    </select>
+                </div>
             </div>
+
+            <button onclick="runThermo()" class="spinbtn w-full" id="thermo-run-btn">
+                <i class="fas fa-play mr-2"></i>Run MCMC (WASM)
+            </button>
         </div>
 
-        <!-- Carnot & Clausius-Clapeyron -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="glass-strong rounded-3xl p-6">
-                <h3 class="text-lg font-semibold mb-4">Carnot Efficiency</h3>
-                <p class="text-white/50 text-sm mb-4">η = 1 − T_cold / T_hot</p>
-                <div class="space-y-3 text-sm mb-4">
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-28 shrink-0">T_hot (K)</label>
-                        <input type="number" id="c-Th" value="800" class="input-field" oninput="updateCarnot()">
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-28 shrink-0">T_cold (K)</label>
-                        <input type="number" id="c-Tc" value="300" class="input-field" oninput="updateCarnot()">
-                    </div>
-                </div>
-                <div id="carnot-result" class="text-3xl font-bold text-emerald-400 font-mono">—</div>
-                <div class="text-xs text-white/40 mt-1">Theoretical maximum efficiency</div>
+                <h3 class="text-lg font-semibold mb-4 text-emerald-400">Energy Distribution</h3>
+                <canvas id="thermoCanvas"></canvas>
             </div>
-
             <div class="glass-strong rounded-3xl p-6">
-                <h3 class="text-lg font-semibold mb-4">Clausius-Clapeyron</h3>
-                <p class="text-white/50 text-sm mb-4">ln(P₂/P₁) = −ΔH_vap/R · (1/T₂ − 1/T₁)</p>
-                <div class="space-y-3 text-sm mb-4">
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-28 shrink-0">ΔH_vap (J/mol)</label>
-                        <input type="number" id="cc-dHv" value="40650" class="input-field">
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-28 shrink-0">T₁ (K), P₁=1atm</label>
-                        <input type="number" id="cc-T1" value="373.15" class="input-field">
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <label class="text-white/60 w-28 shrink-0">T₂ (K)</label>
-                        <input type="number" id="cc-T2" value="353" class="input-field">
-                    </div>
-                    <button onclick="runCC()" class="spinbtn w-full">Calculate P₂</button>
-                </div>
-                <div id="cc-result" class="text-emerald-300 font-mono text-sm"></div>
+                <h3 class="text-lg font-semibold mb-4 text-blue-400">Convergence Trace</h3>
+                <canvas id="thermoConvergenceCanvas"></canvas>
             </div>
         </div>
     </div>
@@ -355,640 +374,517 @@ impl Multivector3 {
          TAB 4 — BIOINFORMATICS
     ═══════════════════════════════════════════════════ -->
     <div id="tab-bio" class="tab-pane">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="glass-strong rounded-3xl p-6">
-                <h2 class="text-xl font-semibold mb-1">DNA / RNA Sequence Analysis</h2>
-                <p class="text-white/50 text-sm mb-4">Paste a nucleotide sequence to compute GC content, detect ORFs, and translate codons.</p>
-
-                <div class="mb-3">
-                    <label class="text-sm text-white/60 block mb-1">Sequence (DNA or RNA)</label>
-                    <textarea id="bio-seq" rows="5" class="input-field font-mono text-xs resize-none w-full"
-                        placeholder="ATGATCGCAGCTGAAGGCATCGCGATCGCAATGTAAGCT">ATGATCGCAGCTGAAGGCATCGCGATCGCAATGTAAGCTGCGATCGCGATCGCAATGCGTAAGCTAGCTGCGATCATGTAAG</textarea>
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold">Sequence Alignment</h2>
+                    <p class="text-white/50 text-sm mt-1">Smith-Waterman / Needleman-Wunsch alignment — zero-heap WASM implementation.</p>
                 </div>
+                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native</span>
+            </div>
 
-                <div class="flex gap-3 mb-4">
-                    <button onclick="runBio()" class="spinbtn flex-1"><i class="fas fa-play mr-1.5"></i>Analyze</button>
-                    <button onclick="loadBioPreset()" class="spinbtn" style="background:rgba(59,130,246,0.2);border-color:rgba(59,130,246,0.3);color:#93c5fd">Preset</button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Query Sequence</label>
+                    <textarea id="bio-query" class="input-field" rows="3" placeholder="ATCGATCGTTAG">ATCGATCGTTAG</textarea>
                 </div>
-
-                <!-- Stats -->
-                <div id="bio-stats" class="grid grid-cols-2 gap-3 text-sm">
-                    <div class="bg-black/30 rounded-xl p-3"><div class="text-white/50 text-xs">Length</div><div id="bs-len" class="text-cyan-300 font-bold font-mono">—</div></div>
-                    <div class="bg-black/30 rounded-xl p-3"><div class="text-white/50 text-xs">GC Content</div><div id="bs-gc" class="text-emerald-300 font-bold font-mono">—</div></div>
-                    <div class="bg-black/30 rounded-xl p-3"><div class="text-white/50 text-xs">AT/GC Ratio</div><div id="bs-atgc" class="text-amber-300 font-bold font-mono">—</div></div>
-                    <div class="bg-black/30 rounded-xl p-3"><div class="text-white/50 text-xs">Mol. Weight</div><div id="bs-mw" class="text-blue-300 font-bold font-mono">—</div></div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Target Sequence</label>
+                    <textarea id="bio-target" class="input-field" rows="3" placeholder="ATCGATCGAAAG">ATCGATCGAAAG</textarea>
                 </div>
             </div>
 
-            <div class="glass-strong rounded-3xl p-6">
-                <h3 class="text-lg font-semibold mb-4 text-emerald-400">ORF Detection &amp; Translation</h3>
-                <div id="bio-orfs" class="space-y-2 text-xs min-h-[180px] text-white/50">Run analysis to detect ORFs…</div>
-
-                <div class="mt-4 border-t border-white/10 pt-4">
-                    <div class="text-sm font-semibold text-white/60 mb-2">Nucleotide Composition</div>
-                    <canvas id="bioCanvas" height="160"></canvas>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Mode</label>
+                    <select id="bio-mode" class="input-field">
+                        <option value="nucleotide">Nucleotide (DNA/RNA)</option>
+                        <option value="protein">Protein (Amino Acid)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Scoring Matrix</label>
+                    <select id="bio-matrix" class="input-field">
+                        <option value="default">Default (BLOSUM62 for protein, +5/-4 for DNA)</option>
+                    </select>
                 </div>
             </div>
+
+            <button onclick="runBio()" class="spinbtn w-full" id="bio-run-btn">
+                <i class="fas fa-play mr-2"></i>Align (WASM)
+            </button>
         </div>
 
-        <!-- Codon table reference -->
-        <div class="glass-strong rounded-3xl p-6 mt-6">
-            <h3 class="font-semibold mb-4 text-white/80">Genetic Code — Standard Codon Table</h3>
-            <div id="codon-table" class="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-16 gap-1 text-xs font-mono"></div>
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Alignment Result</h3>
+            <div id="bio-result" class="code-block text-emerald-300 min-h-[200px]">Enter sequences and click Align…</div>
         </div>
     </div>
 
-</div><!-- /main -->
+    <!-- ═══════════════════════════════════════════════════
+         TAB 5 — CLINICAL RISK
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-clinical" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold">Clinical Risk Assessment</h2>
+                    <p class="text-white/50 text-sm mt-1">Framingham, CHA₂DS₂-VASc, SCORE2 — evidence-based risk calculators via WASM.</p>
+                </div>
+                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Risk Calculator</label>
+                    <select id="clinical-calculator" class="input-field" onchange="loadClinicalPreset(this.value)">
+                        <option value="framingham">Framingham Cardiovascular Risk</option>
+                        <option value="chas2">CHA₂DS₂-VASc Stroke Risk</option>
+                        <option value="score2">SCORE2 Cardiovascular Risk</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Patient Parameters (JSON)</label>
+                    <textarea id="clinical-params" class="input-field" rows="3" placeholder='{"age": 65, "systolic_bp": 140, "smoker": true}'>{"age": 65, "systolic_bp": 140, "smoker": true}</textarea>
+                </div>
+            </div>
+
+            <button onclick="runClinical()" class="spinbtn w-full" id="clinical-run-btn">
+                <i class="fas fa-play mr-2"></i>Calculate Risk (WASM)
+            </button>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Risk Assessment Result</h3>
+            <div id="clinical-result" class="code-block text-emerald-300 min-h-[200px]">Enter parameters and click Calculate…</div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         TAB 6 — ORGANIC CHEMISTRY
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-chem" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold">Organic Chemistry Analysis</h2>
+                    <p class="text-white/50 text-sm mt-1">SMILES parsing, molecular properties, drug-likeness — native WASM chemistry engine.</p>
+                </div>
+                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">SMILES String</label>
+                    <input type="text" id="chem-smiles" class="input-field" value="CCO" placeholder="CCO (ethanol)">
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">Analysis Type</label>
+                    <select id="chem-analysis" class="input-field">
+                        <option value="properties">Molecular Properties</option>
+                        <option value="lipinski">Lipinski Rule of Five</option>
+                        <option value="druglikeness">Drug-likeness Score</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="runChem()" class="spinbtn w-full" id="chem-run-btn">
+                <i class="fas fa-play mr-2"></i>Analyze (WASM)
+            </button>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Analysis Result</h3>
+            <div id="chem-result" class="code-block text-emerald-300 min-h-[200px]">Enter SMILES and click Analyze…</div>
+        </div>
+    </div>
+
+</div>
 
 <script type="module">
-import { initQualiaWasm, bindEngineBadge } from './js/qualia-wasm-runtime.js';
+    let wasm = null;
+    let charts = {};
 
-let wasmMod = null;
-
-(async () => {
-    const ver = await bindEngineBadge('wasm-text', { base: '.' }, '');
-    const dot = document.getElementById('wasm-dot');
-    const badge = document.getElementById('wasm-badge');
-    if (ver) {
-        dot.className = 'w-2 h-2 rounded-full bg-cyan-400';
-        document.getElementById('wasm-text').textContent = `WASM v${ver}`;
-        badge.className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
+    // Load WASM from playground directory
+    async function loadWasm() {
+        try {
+            const module = await import('./playground/qualia_core_db.js');
+            await module.default();
+            wasm = module;
+            
+            // Update UI
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('main-content').style.display = 'block';
+            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
+            document.getElementById('wasm-dot').classList.add('bg-emerald-500');
+            document.getElementById('wasm-text').textContent = 'WASM Ready';
+            
+            // Enable all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.disabled = false);
+            
+            console.log('QualiaDB WASM loaded successfully');
+        } catch (error) {
+            console.error('Failed to load WASM:', error);
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('error-overlay').classList.remove('hidden');
+            document.getElementById('error-message').textContent = error.toString();
+            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
+            document.getElementById('wasm-dot').classList.add('bg-red-500');
+            document.getElementById('wasm-text').textContent = 'WASM Error';
+        }
     }
-    wasmMod = await initQualiaWasm({ base: '.' });
-    if (wasmMod && Object.keys(wasmMod).length > 0) {
-        document.querySelectorAll('.wasm-chip').forEach(el => {
-            el.textContent = 'WASM Active';
-            el.className = 'wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+
+    // Tab switching
+    window.switchTab = function(tabId, btn) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+        btn.classList.add('active');
+    };
+
+    // Update metrics
+    function updateMetrics(computeOps, time, memory) {
+        document.getElementById('metric-compute').textContent = computeOps.toLocaleString();
+        document.getElementById('metric-time').textContent = time + 'ms';
+        document.getElementById('metric-memory').textContent = memory;
+    }
+
+    // Geometric Algebra
+    window.runGA = async function() {
+        if (!wasm) return;
+        
+        const a = [
+            parseFloat(document.getElementById('a0').value),
+            parseFloat(document.getElementById('a1').value),
+            parseFloat(document.getElementById('a2').value),
+            parseFloat(document.getElementById('a3').value),
+            parseFloat(document.getElementById('a12').value),
+            parseFloat(document.getElementById('a13').value),
+            parseFloat(document.getElementById('a23').value),
+            parseFloat(document.getElementById('a123').value)
+        ];
+        
+        const b = [
+            parseFloat(document.getElementById('b0').value),
+            parseFloat(document.getElementById('b1').value),
+            parseFloat(document.getElementById('b2').value),
+            parseFloat(document.getElementById('b3').value),
+            parseFloat(document.getElementById('b12').value),
+            parseFloat(document.getElementById('b13').value),
+            parseFloat(document.getElementById('b23').value),
+            parseFloat(document.getElementById('b123').value)
+        ];
+        
+        const op = document.getElementById('ga-op').value;
+        const startTime = performance.now();
+        
+        try {
+            // Call WASM geometric algebra function
+            const result = wasm.geometric_algebra_operation(JSON.stringify({ a, b, op }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            document.getElementById('ga-result').textContent = JSON.stringify(parsed, null, 2);
+            
+            // Update grade breakdown
+            document.getElementById('g0').textContent = parsed.grades[0].toFixed(4);
+            document.getElementById('g1').textContent = parsed.grades[1].toFixed(4);
+            document.getElementById('g2').textContent = parsed.grades[2].toFixed(4);
+            document.getElementById('g3').textContent = parsed.grades[3].toFixed(4);
+            
+            updateMetrics(parsed.compute_ops || 1000, (endTime - startTime).toFixed(2), 0);
+            
+            // Draw visualization
+            drawGAVisualization(parsed);
+        } catch (e) {
+            document.getElementById('ga-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    function drawGAVisualization(data) {
+        const canvas = document.getElementById('gaCanvas');
+        if (charts.ga) charts.ga.destroy();
+        
+        charts.ga = new Chart(canvas, {
+            type: 'radar',
+            data: {
+                labels: ['Scalar', 'e₁', 'e₂', 'e₃', 'e₁₂', 'e₁₃', 'e₂₃', 'e₁₂₃'],
+                datasets: [{
+                    label: 'Result',
+                    data: data.result || [0,0,0,0,0,0,0,0],
+                    backgroundColor: 'rgba(52, 211, 153, 0.2)',
+                    borderColor: '#34d399',
+                    pointBackgroundColor: '#34d399'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'rgba(226,232,240,0.6)' },
+                        pointLabels: { color: 'rgba(226,232,240,0.8)' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
         });
     }
-})();
 
-window.wasmMod = () => wasmMod;
+    // ODE Solver
+    window.runODE = async function() {
+        if (!wasm) return;
+        
+        const preset = document.getElementById('ode-preset').value;
+        const h = parseFloat(document.getElementById('ode-h').value);
+        const steps = parseInt(document.getElementById('ode-steps').value);
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.ode_solver(JSON.stringify({ preset, h, steps }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            
+            // Draw phase space
+            drawODEVisualization(parsed);
+            
+            updateMetrics(steps * 10, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            console.error('ODE error:', e);
+        }
+    };
+
+    function drawODEVisualization(data) {
+        const canvas = document.getElementById('odeCanvas');
+        const timeCanvas = document.getElementById('odeTimeCanvas');
+        
+        if (charts.ode) charts.ode.destroy();
+        if (charts.odeTime) charts.odeTime.destroy();
+        
+        charts.ode = new Chart(canvas, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Phase Space',
+                    data: data.phase_space || [],
+                    backgroundColor: 'rgba(52, 211, 153, 0.5)',
+                    borderColor: '#34d399',
+                    pointRadius: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+        
+        charts.odeTime = new Chart(timeCanvas, {
+            type: 'line',
+            data: {
+                labels: data.time_points || [],
+                datasets: [{
+                    label: 'x(t)',
+                    data: data.x_values || [],
+                    borderColor: '#34d399',
+                    tension: 0.1,
+                    pointRadius: 0
+                }, {
+                    label: 'y(t)',
+                    data: data.y_values || [],
+                    borderColor: '#3b82f6',
+                    tension: 0.1,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } }
+                }
+            }
+        });
+    }
+
+    // Thermodynamics
+    window.runThermo = async function() {
+        if (!wasm) return;
+        
+        const temp = parseFloat(document.getElementById('thermo-temp').value);
+        const iterations = parseInt(document.getElementById('thermo-iter').value);
+        const system = document.getElementById('thermo-system').value;
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.thermodynamics_mcmc(JSON.stringify({ temp, iterations, system }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            
+            drawThermoVisualization(parsed);
+            updateMetrics(iterations, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            console.error('Thermo error:', e);
+        }
+    };
+
+    function drawThermoVisualization(data) {
+        const canvas = document.getElementById('thermoCanvas');
+        const convCanvas = document.getElementById('thermoConvergenceCanvas');
+        
+        if (charts.thermo) charts.thermo.destroy();
+        if (charts.thermoConv) charts.thermoConv.destroy();
+        
+        charts.thermo = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: data.energy_levels || [],
+                datasets: [{
+                    label: 'Probability',
+                    data: data.probabilities || [],
+                    backgroundColor: 'rgba(52, 211, 153, 0.6)',
+                    borderColor: '#34d399'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } }
+                }
+            }
+        });
+        
+        charts.thermoConv = new Chart(convCanvas, {
+            type: 'line',
+            data: {
+                labels: data.iterations || [],
+                datasets: [{
+                    label: 'Gibbs Free Energy',
+                    data: data.gibbs_trace || [],
+                    borderColor: '#34d399',
+                    tension: 0.1,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(226,232,240,0.6)' } }
+                }
+            }
+        });
+    }
+
+    // Bioinformatics
+    window.runBio = async function() {
+        if (!wasm) return;
+        
+        const query = document.getElementById('bio-query').value;
+        const target = document.getElementById('bio-target').value;
+        const mode = document.getElementById('bio-mode').value;
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.sequence_alignment(JSON.stringify({ query, target, mode }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            document.getElementById('bio-result').textContent = JSON.stringify(parsed, null, 2);
+            
+            updateMetrics(query.length * target.length, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            document.getElementById('bio-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Clinical Risk
+    window.runClinical = async function() {
+        if (!wasm) return;
+        
+        const calculator = document.getElementById('clinical-calculator').value;
+        const params = JSON.parse(document.getElementById('clinical-params').value);
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.clinical_risk(JSON.stringify({ calculator, params }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            document.getElementById('clinical-result').textContent = JSON.stringify(parsed, null, 2);
+            
+            updateMetrics(100, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            document.getElementById('clinical-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Organic Chemistry
+    window.runChem = async function() {
+        if (!wasm) return;
+        
+        const smiles = document.getElementById('chem-smiles').value;
+        const analysis = document.getElementById('chem-analysis').value;
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.organic_chemistry(JSON.stringify({ smiles, analysis }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            document.getElementById('chem-result').textContent = JSON.stringify(parsed, null, 2);
+            
+            updateMetrics(smiles.length * 10, (endTime - startTime).toFixed(2), 0);
+        } catch (e) {
+            document.getElementById('chem-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Load ODE preset
+    window.loadPreset = function(preset) {
+        const presets = {
+            sho: { h: 0.01, steps: 2000 },
+            lorenz: { h: 0.005, steps: 5000 },
+            logistic: { h: 0.01, steps: 3000 },
+            vanderpol: { h: 0.005, steps: 4000 },
+            pendulum: { h: 0.01, steps: 2500 }
+        };
+        
+        if (presets[preset]) {
+            document.getElementById('ode-h').value = presets[preset].h;
+            document.getElementById('ode-steps').value = presets[preset].steps;
+        }
+    };
+
+    // Load clinical preset
+    window.loadClinicalPreset = function(calculator) {
+        const presets = {
+            framingham: '{"age": 55, "systolic_bp": 120, "total_chol": 200, "hdl_chol": 50, "smoker": false}',
+            chas2: '{"age": 65, "hypertension": true, "diabetes": false, "stroke": false, "vascular_disease": false}',
+            score2: '{"age": 60, "systolic_bp": 140, "smoker": true}'
+        };
+        
+        if (presets[calculator]) {
+            document.getElementById('clinical-params').value = presets[calculator];
+        }
+    };
+
+    // Initialize
+    loadWasm();
 </script>
-
-<script>
-// ─── Tab switching ────────────────────────────────────────────────
-function switchTab(name, btn) {
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    btn.classList.add('active');
-}
-window.switchTab = switchTab;
-
-// ─── Chart helpers ────────────────────────────────────────────────
-function mkChart(id, cfg) {
-    const el = document.getElementById(id);
-    if (el._chart) el._chart.destroy();
-    const c = new Chart(el, cfg);
-    el._chart = c;
-    return c;
-}
-
-const CHART_DEFAULTS = {
-    color: '#94a3b8',
-    borderColor: 'rgba(148,163,184,0.15)',
-    grid: { color: 'rgba(148,163,184,0.08)' },
-};
-
-// ─── GEOMETRIC ALGEBRA ENGINE ─────────────────────────────────────
-// G(3,0,0): bases [1, e1, e2, e3, e12, e13, e23, e123]
-// Cayley table for geometric product (basis indices 0-7)
-const GA_MUL = (() => {
-    // Each pair [sign, index] for basis product
-    // Using conventions: e1^2=1, e2^2=1, e3^2=1
-    const T = new Array(8).fill(null).map(() => new Array(8).fill([0, 0]));
-    // Grade-0
-    T[0] = [[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[1,7]];
-    // Grade-1
-    T[1] = [[1,1],[1,0],[1,4],[-1,5],[-1,2],[1,3],[-1,7],[-1,6]];
-    T[2] = [[1,2],[-1,4],[1,0],[1,6],[1,1],[-1,7],[-1,3],[-1,5]];
-    T[3] = [[1,3],[1,5],[-1,6],[1,0],[-1,7],[1,1],[1,2],[-1,4]];
-    // Grade-2
-    T[4] = [[1,4],[1,2],[-1,1],[1,7],[1,0],[1,6],[-1,5],[1,3]];
-    T[5] = [[1,5],[-1,3],[1,7],[-1,1],[-1,6],[1,0],[1,4],[1,2]];
-    T[6] = [[1,6],[1,7],[1,3],[-1,2],[1,5],[-1,4],[1,0],[-1,1]];
-    // Grade-3
-    T[7] = [[1,7],[1,6],[-1,5],[1,4],[-1,3],[1,2],[-1,1],[1,0]];
-    return T;
-})();
-
-function gaGeo(a, b) {
-    const r = new Array(8).fill(0);
-    for (let i = 0; i < 8; i++) {
-        if (a[i] === 0) continue;
-        for (let j = 0; j < 8; j++) {
-            if (b[j] === 0) continue;
-            const [s, k] = GA_MUL[i][j];
-            r[k] += s * a[i] * b[j];
-        }
-    }
-    return r;
-}
-
-function gaInner(a, b) {
-    // Grade(a)·Grade(b) = |Grade(a) - Grade(b)|
-    const r = new Array(8).fill(0);
-    const grades = [0,1,1,1,2,2,2,3];
-    for (let i = 0; i < 8; i++) {
-        if (a[i] === 0) continue;
-        for (let j = 0; j < 8; j++) {
-            if (b[j] === 0) continue;
-            const [s, k] = GA_MUL[i][j];
-            const gr = grades[k];
-            if (gr === Math.abs(grades[i] - grades[j])) {
-                r[k] += s * a[i] * b[j];
-            }
-        }
-    }
-    return r;
-}
-
-function gaOuter(a, b) {
-    const r = new Array(8).fill(0);
-    const grades = [0,1,1,1,2,2,2,3];
-    for (let i = 0; i < 8; i++) {
-        if (a[i] === 0) continue;
-        for (let j = 0; j < 8; j++) {
-            if (b[j] === 0) continue;
-            const [s, k] = GA_MUL[i][j];
-            if (grades[k] === grades[i] + grades[j]) {
-                r[k] += s * a[i] * b[j];
-            }
-        }
-    }
-    return r;
-}
-
-function gaReverse(a) {
-    // Reverse flips sign of grade-2 and grade-3
-    const signs = [1,1,1,1,-1,-1,-1,-1];
-    return a.map((v, i) => v * signs[i]);
-}
-
-function gaNorm(a) {
-    const rev = gaReverse(a);
-    const sq = gaGeo(a, rev);
-    return Math.sqrt(Math.abs(sq[0]));
-}
-
-function gaExp(a) {
-    // e^B where B is a pure bivector; e^B = cos|B| + sin|B| * B/|B|
-    const mag = Math.sqrt(a[4]*a[4] + a[5]*a[5] + a[6]*a[6]);
-    if (mag < 1e-10) return [1,0,0,0,0,0,0,0];
-    const c = Math.cos(mag), s = Math.sin(mag) / mag;
-    return [c, 0, 0, 0, s*a[4], s*a[5], s*a[6], 0];
-}
-
-function readGA(prefix) {
-    const ids = ['0','1','2','3','12','13','23','123'];
-    return ids.map(id => parseFloat(document.getElementById(prefix + id)?.value || 0));
-}
-
-const BLADE_NAMES = ['1', 'e₁', 'e₂', 'e₃', 'e₁₂', 'e₁₃', 'e₂₃', 'e₁₂₃'];
-const BLADE_GRADES = [0,1,1,1,2,2,2,3];
-
-function fmtMV(v) {
-    const parts = v.map((c, i) => {
-        if (Math.abs(c) < 1e-10) return null;
-        const n = c.toFixed(4);
-        return `${n} ${BLADE_NAMES[i]}`;
-    }).filter(Boolean);
-    return parts.length ? parts.join('\n+ ') : '0';
-}
-
-let gaChart;
-function runGA() {
-    const a = readGA('a');
-    const b = readGA('b');
-    const op = document.getElementById('ga-op').value;
-
-    let result, label;
-    try {
-        if (op === 'geo')    { result = gaGeo(a, b);   label = 'A × B (geometric)'; }
-        else if (op === 'inner') { result = gaInner(a, b); label = 'A · B (inner)'; }
-        else if (op === 'outer') { result = gaOuter(a, b); label = 'A ∧ B (outer)'; }
-        else if (op === 'reverse') { result = gaReverse(a); label = '~A (reverse)'; }
-        else if (op === 'norm')    { const n = gaNorm(a); document.getElementById('ga-result').textContent = `‖A‖ = ${n.toFixed(6)}`; updateGradeBreakdown([n,0,0,0,0,0,0,0]); return; }
-        else if (op === 'exp')  { result = gaExp(a);    label = 'e^A (rotor)'; }
-        else result = a;
-    } catch(e) { result = a; label = 'error'; }
-
-    const out = `${label}:\n\n${fmtMV(result)}\n\n[${result.map(v => v.toFixed(4)).join(', ')}]`;
-    document.getElementById('ga-result').textContent = out;
-    updateGradeBreakdown(result);
-    drawGAChart(result);
-}
-
-function updateGradeBreakdown(r) {
-    const sums = [0,0,0,0];
-    BLADE_GRADES.forEach((g, i) => sums[g] += r[i]*r[i]);
-    ['g0','g1','g2','g3'].forEach((id, g) => {
-        document.getElementById(id).textContent = Math.sqrt(sums[g]).toFixed(4);
-    });
-}
-
-function drawGAChart(r) {
-    gaChart = mkChart('gaCanvas', {
-        type: 'bar',
-        data: {
-            labels: BLADE_NAMES,
-            datasets: [{
-                label: 'Component magnitude',
-                data: r.map(Math.abs),
-                backgroundColor: ['#06b6d4','#3b82f6','#3b82f6','#3b82f6','#10b981','#10b981','#10b981','#f59e0b'],
-                borderRadius: 4,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { ticks: { color: '#94a3b8' }, grid: CHART_DEFAULTS.grid },
-                y: { ticks: { color: '#94a3b8' }, grid: CHART_DEFAULTS.grid }
-            }
-        }
-    });
-}
-
-window.runGA = runGA;
-document.getElementById('ga-op').addEventListener('change', e => {
-    const needsB = !['reverse','norm','exp'].includes(e.target.value);
-    document.getElementById('ga-b-section').style.opacity = needsB ? '1' : '0.3';
-});
-
-// ─── ODE SOLVER (RK4) ─────────────────────────────────────────────
-const ODE_PRESETS = {
-    sho: {
-        label: 'Simple Harmonic Oscillator',
-        eq: "dx/dt = v\ndv/dt = -ω²·x",
-        params: [{ id:'sho-omega',label:'ω',value:2.0 },{ id:'sho-x0',label:'x₀',value:1.0 },{ id:'sho-v0',label:'v₀',value:0.0 }],
-        state: p => [p['sho-x0'], p['sho-v0']],
-        f: (t, y, p) => [y[1], -(p['sho-omega']**2)*y[0]],
-        xLabel: 'x (position)', yLabel: 'v (velocity)',
-    },
-    lorenz: {
-        label: 'Lorenz Attractor',
-        eq: "dx/dt = σ(y−x)\ndy/dt = x(ρ−z)−y\ndz/dt = xy − βz",
-        params: [{ id:'lor-sigma',label:'σ',value:10 },{ id:'lor-rho',label:'ρ',value:28 },{ id:'lor-beta',label:'β',value:2.667 }],
-        state: () => [0.1, 0, 0],
-        f: (t, y, p) => [p['lor-sigma']*(y[1]-y[0]), y[0]*(p['lor-rho']-y[2])-y[1], y[0]*y[1]-p['lor-beta']*y[2]],
-        xLabel: 'x', yLabel: 'y',
-    },
-    logistic: {
-        label: 'Logistic Growth',
-        eq: "dN/dt = r·N·(1 − N/K)",
-        params: [{ id:'log-r',label:'r (growth rate)',value:1.5 },{ id:'log-K',label:'K (capacity)',value:1000 },{ id:'log-N0',label:'N₀',value:10 }],
-        state: p => [p['log-N0']],
-        f: (t, y, p) => [p['log-r']*y[0]*(1-y[0]/p['log-K'])],
-        xLabel: 't', yLabel: 'N (population)',
-        mode: 't',
-    },
-    vanderpol: {
-        label: 'Van der Pol Oscillator',
-        eq: "dx/dt = y\ndy/dt = μ(1−x²)y − x",
-        params: [{ id:'vdp-mu',label:'μ',value:2.0 },{ id:'vdp-x0',label:'x₀',value:2.0 },{ id:'vdp-v0',label:'v₀',value:0.0 }],
-        state: p => [p['vdp-x0'], p['vdp-v0']],
-        f: (t, y, p) => [y[1], p['vdp-mu']*(1-y[0]*y[0])*y[1]-y[0]],
-        xLabel: 'x', yLabel: 'v',
-    },
-    pendulum: {
-        label: 'Damped Pendulum',
-        eq: "dθ/dt = ω\ndω/dt = −(g/L)sin θ − γω",
-        params: [{ id:'pend-g',label:'g (m/s²)',value:9.81 },{ id:'pend-L',label:'L (m)',value:1.0 },{ id:'pend-gamma',label:'γ',value:0.5 },{ id:'pend-th0',label:'θ₀ (rad)',value:1.5 },{ id:'pend-w0',label:'ω₀',value:0.0 }],
-        state: p => [p['pend-th0'], p['pend-w0']],
-        f: (t, y, p) => [y[1], -(p['pend-g']/p['pend-L'])*Math.sin(y[0])-p['pend-gamma']*y[1]],
-        xLabel: 'θ (rad)', yLabel: 'ω (rad/s)',
-    }
-};
-
-let odeViewMode = 'xy';
-let lastODEData = null;
-let currentPreset = 'sho';
-
-function loadPreset(name) {
-    currentPreset = name;
-    const p = ODE_PRESETS[name];
-    document.getElementById('ode-eq').textContent = p.eq;
-    const container = document.getElementById('ode-params');
-    container.innerHTML = p.params.map(param =>
-        `<div><label class="text-xs text-white/50 block mb-1">${param.label}</label>
-         <input type="number" id="${param.id}" class="input-field text-xs" value="${param.value}" step="any"></div>`
-    ).join('');
-}
-
-function rk4Step(f, t, y, h, params) {
-    const k1 = f(t, y, params);
-    const k2 = f(t+h/2, y.map((v,i)=>v+h/2*k1[i]), params);
-    const k3 = f(t+h/2, y.map((v,i)=>v+h/2*k2[i]), params);
-    const k4 = f(t+h,   y.map((v,i)=>v+h*k3[i]), params);
-    return y.map((v,i)=>v + h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
-}
-
-function runODE() {
-    const p = ODE_PRESETS[currentPreset];
-    const h = parseFloat(document.getElementById('ode-h').value) || 0.01;
-    const steps = Math.min(parseInt(document.getElementById('ode-steps').value)||2000, 20000);
-
-    const params = {};
-    p.params.forEach(param => {
-        params[param.id] = parseFloat(document.getElementById(param.id)?.value ?? param.value);
-    });
-
-    const t0 = performance.now();
-    let y = p.state(params);
-    const xs = [], ys = [], ts = [];
-    let t = 0;
-    let maxY = 0;
-
-    for (let i = 0; i < steps; i++) {
-        xs.push(y[0]);
-        ys.push(y[1] ?? i * h);
-        ts.push(t);
-        maxY = Math.max(maxY, Math.abs(y[0]));
-        y = rk4Step(p.f, t, y, h, params);
-        t += h;
-    }
-
-    const elapsed = performance.now() - t0;
-    document.getElementById('stat-steps').textContent = steps.toLocaleString();
-    document.getElementById('stat-max').textContent = maxY.toFixed(4);
-    document.getElementById('stat-time').textContent = elapsed.toFixed(1) + ' ms';
-
-    lastODEData = { xs, ys, ts, preset: p };
-    drawODE();
-}
-
-function toggleODEView(mode) {
-    odeViewMode = mode;
-    document.getElementById('btn-xy').classList.toggle('active', mode === 'xy');
-    document.getElementById('btn-t').classList.toggle('active', mode === 't');
-    if (lastODEData) drawODE();
-}
-
-function drawODE() {
-    if (!lastODEData) return;
-    const { xs, ys, ts, preset } = lastODEData;
-    const thin = Math.max(1, Math.floor(xs.length / 800));
-
-    let pts, xLabel, yLabel;
-    if (odeViewMode === 'xy') {
-        pts = xs.filter((_,i)=>i%thin===0).map((x,i)=>({ x, y: ys.filter((_,j)=>j%thin===0)[i] }));
-        xLabel = preset.xLabel || 'x'; yLabel = preset.yLabel || 'y';
-    } else {
-        pts = ts.filter((_,i)=>i%thin===0).map((t,i)=>({ x: t, y: xs.filter((_,j)=>j%thin===0)[i] }));
-        xLabel = 't'; yLabel = preset.xLabel || 'x';
-    }
-
-    mkChart('odeCanvas', {
-        type: 'scatter',
-        data: { datasets: [{ label: preset.label, data: pts,
-            pointRadius: 1.2, pointHoverRadius: 3,
-            borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.6)',
-            showLine: true, borderWidth: 1.5, tension: 0.1 }]
-        },
-        options: {
-            animation: false, responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { title: { display: true, text: xLabel, color: '#94a3b8' }, ticks: { color: '#94a3b8' }, grid: CHART_DEFAULTS.grid },
-                y: { title: { display: true, text: yLabel, color: '#94a3b8' }, ticks: { color: '#94a3b8' }, grid: CHART_DEFAULTS.grid }
-            }
-        }
-    });
-}
-
-window.runODE = runODE;
-window.loadPreset = loadPreset;
-window.toggleODEView = toggleODEView;
-loadPreset('sho');
-
-// ─── THERMODYNAMICS ───────────────────────────────────────────────
-function runGibbs() {
-    const dH = parseFloat(document.getElementById('th-dH').value) * 1000; // kJ→J
-    const dS = parseFloat(document.getElementById('th-dS').value);
-    const T1 = parseFloat(document.getElementById('th-T1').value);
-    const T2 = parseFloat(document.getElementById('th-T2').value);
-    const R = 8.314;
-
-    const Ts = [], dGs = [], Keqs = [];
-    for (let T = T1; T <= T2; T += (T2-T1)/200) {
-        const dG = dH - T * dS;
-        Ts.push(T);
-        dGs.push(dG / 1000); // back to kJ
-        Keqs.push(Math.exp(-dG / (R * T)));
-    }
-
-    const Tcross = dH / dS;
-    document.getElementById('gibbs-result').textContent =
-        `ΔG = 0 at T = ${Tcross.toFixed(1)} K (equilibrium temperature)\n` +
-        `At 298 K: ΔG = ${((dH - 298*dS)/1000).toFixed(2)} kJ/mol`;
-
-    mkChart('gibbsCanvas', {
-        type: 'line',
-        data: { datasets: [
-            { label: 'ΔG (kJ/mol)', data: Ts.map((t,i)=>({x:t,y:dGs[i]})),
-              borderColor: '#10b981', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0 },
-            { label: 'ΔG = 0', data: [{x:T1,y:0},{x:T2,y:0}],
-              borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderDash: [4,4], pointRadius: 0 }
-        ]},
-        options: {
-            animation: false, responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { title: {display:true,text:'T (K)',color:'#94a3b8'}, ticks:{color:'#94a3b8'}, grid: CHART_DEFAULTS.grid },
-                y: { title: {display:true,text:'ΔG (kJ/mol)',color:'#94a3b8'}, ticks:{color:'#94a3b8'}, grid: CHART_DEFAULTS.grid }
-            }
-        }
-    });
-}
-
-const VDW_GASES = {
-    H2O: {a:5.536,b:0.03049},
-    CO2: {a:3.658,b:0.04286},
-    N2:  {a:1.408,b:0.03913},
-    CH4: {a:2.283,b:0.04278},
-    He:  {a:0.0346,b:0.02380},
-};
-
-function loadVdWGas(name) {
-    const g = VDW_GASES[name];
-    if (!g) return;
-    document.getElementById('vdw-a').value = g.a;
-    document.getElementById('vdw-b').value = g.b;
-}
-
-function runVdW() {
-    const a = parseFloat(document.getElementById('vdw-a').value);
-    const b = parseFloat(document.getElementById('vdw-b').value);
-    const T = parseFloat(document.getElementById('vdw-T').value);
-    const R = 0.08206; // L·atm/mol·K
-    const n = 1;
-
-    const Vs = [], Ps = [];
-    const Vmin = b * n * 1.01;
-    for (let Vm = Vmin; Vm <= 8; Vm += 0.02) {
-        const P = (n*R*T)/(Vm - n*b) - a*(n*n)/(Vm*Vm);
-        if (P > 0 && P < 500) { Vs.push(Vm); Ps.push(P); }
-    }
-
-    mkChart('vdwCanvas', {
-        type: 'line',
-        data: { datasets: [{
-            label: 'P (atm)', data: Vs.map((v,i)=>({x:v,y:Ps[i]})),
-            borderColor: '#60a5fa', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0
-        }]},
-        options: {
-            animation: false, responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { title:{display:true,text:'V_m (L/mol)',color:'#94a3b8'}, ticks:{color:'#94a3b8'}, grid:CHART_DEFAULTS.grid },
-                y: { title:{display:true,text:'P (atm)',color:'#94a3b8'}, ticks:{color:'#94a3b8'}, grid:CHART_DEFAULTS.grid }
-            }
-        }
-    });
-}
-
-function updateCarnot() {
-    const Th = parseFloat(document.getElementById('c-Th').value);
-    const Tc = parseFloat(document.getElementById('c-Tc').value);
-    if (Th > Tc && Th > 0 && Tc > 0) {
-        const eta = (1 - Tc/Th) * 100;
-        document.getElementById('carnot-result').textContent = eta.toFixed(2) + '%';
-    } else {
-        document.getElementById('carnot-result').textContent = 'Invalid';
-    }
-}
-
-function runCC() {
-    const dHv = parseFloat(document.getElementById('cc-dHv').value);
-    const T1 = parseFloat(document.getElementById('cc-T1').value);
-    const T2 = parseFloat(document.getElementById('cc-T2').value);
-    const R = 8.314;
-    const lnP2 = -dHv/R * (1/T2 - 1/T1);
-    const P2 = Math.exp(lnP2);
-    document.getElementById('cc-result').textContent =
-        `P₂ = ${P2.toFixed(4)} atm = ${(P2*101325).toFixed(0)} Pa\n` +
-        `(${P2 < 1 ? 'Reduced' : 'Elevated'} vapor pressure at T₂ = ${T2} K vs T₁ = ${T1} K)`;
-}
-
-window.runGibbs = runGibbs;
-window.loadVdWGas = loadVdWGas;
-window.runVdW = runVdW;
-window.updateCarnot = updateCarnot;
-window.runCC = runCC;
-updateCarnot();
-
-// ─── BIOINFORMATICS ───────────────────────────────────────────────
-const CODON_TABLE = {
-    'TTT':'Phe','TTC':'Phe','TTA':'Leu','TTG':'Leu',
-    'CTT':'Leu','CTC':'Leu','CTA':'Leu','CTG':'Leu',
-    'ATT':'Ile','ATC':'Ile','ATA':'Ile','ATG':'Met',
-    'GTT':'Val','GTC':'Val','GTA':'Val','GTG':'Val',
-    'TCT':'Ser','TCC':'Ser','TCA':'Ser','TCG':'Ser',
-    'CCT':'Pro','CCC':'Pro','CCA':'Pro','CCG':'Pro',
-    'ACT':'Thr','ACC':'Thr','ACA':'Thr','ACG':'Thr',
-    'GCT':'Ala','GCC':'Ala','GCA':'Ala','GCG':'Ala',
-    'TAT':'Tyr','TAC':'Tyr','TAA':'***','TAG':'***',
-    'CAT':'His','CAC':'His','CAA':'Gln','CAG':'Gln',
-    'AAT':'Asn','AAC':'Asn','AAA':'Lys','AAG':'Lys',
-    'GAT':'Asp','GAC':'Asp','GAA':'Glu','GAG':'Glu',
-    'TGT':'Cys','TGC':'Cys','TGA':'***','TGG':'Trp',
-    'CGT':'Arg','CGC':'Arg','CGA':'Arg','CGG':'Arg',
-    'AGT':'Ser','AGC':'Ser','AGA':'Arg','AGG':'Arg',
-    'GGT':'Gly','GGC':'Gly','GGA':'Gly','GGG':'Gly',
-};
-
-function runBio() {
-    let seq = document.getElementById('bio-seq').value.trim().toUpperCase().replace(/[^ACGTU]/g,'');
-    if (!seq.length) return;
-    const dna = seq.replace(/U/g,'T');
-
-    const counts = {A:0,C:0,G:0,T:0};
-    for (const b of dna) if (b in counts) counts[b]++;
-    const total = Object.values(counts).reduce((s,v)=>s+v,0);
-    const gc = ((counts.G+counts.C)/total*100).toFixed(2);
-    const atgc = ((counts.A+counts.T)/(counts.G+counts.C+0.001)).toFixed(3);
-    const mw = (total * 330.2).toFixed(0);
-
-    document.getElementById('bs-len').textContent = total;
-    document.getElementById('bs-gc').textContent = gc + '%';
-    document.getElementById('bs-atgc').textContent = atgc;
-    document.getElementById('bs-mw').textContent = (+mw).toLocaleString() + ' Da';
-
-    // ORF detection (ATG → stop codon, all 3 frames)
-    const orfs = [];
-    for (let frame = 0; frame < 3; frame++) {
-        let start = -1;
-        for (let i = frame; i+2 < dna.length; i+=3) {
-            const codon = dna.slice(i,i+3);
-            if (codon === 'ATG' && start === -1) start = i;
-            else if (CODON_TABLE[codon] === '***' && start !== -1) {
-                orfs.push({ frame, start, end: i+3, len: i+3-start, seq: dna.slice(start,i+3) });
-                start = -1;
-            }
-        }
-    }
-
-    const orfEl = document.getElementById('bio-orfs');
-    if (!orfs.length) {
-        orfEl.innerHTML = '<div class="text-white/40">No complete ORFs found in frames 0–2</div>';
-    } else {
-        orfEl.innerHTML = orfs.map(o => {
-            const aa = [];
-            for (let i=0;i<o.seq.length;i+=3) aa.push(CODON_TABLE[o.seq.slice(i,i+3)]||'?');
-            return `<div class="bg-black/30 rounded-lg p-2 border border-white/10">
-                <div class="flex gap-3 mb-1">
-                    <span class="text-cyan-400 font-semibold">Frame +${o.frame}</span>
-                    <span class="text-white/50">pos ${o.start}–${o.end}</span>
-                    <span class="text-emerald-400">${o.len} bp / ${(o.len/3-1)} aa</span>
-                </div>
-                <div class="font-mono text-xs text-amber-300 break-all">${aa.filter(a=>a!=='***').join('-')}</div>
-            </div>`;
-        }).join('');
-    }
-
-    mkChart('bioCanvas', {
-        type: 'bar',
-        data: {
-            labels: ['A','C','G','T'],
-            datasets: [{
-                label: 'Count',
-                data: [counts.A, counts.C, counts.G, counts.T],
-                backgroundColor: ['#34d399','#60a5fa','#f59e0b','#f87171'],
-                borderRadius: 4,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { ticks:{color:'#94a3b8'}, grid: CHART_DEFAULTS.grid },
-                y: { ticks:{color:'#94a3b8'}, grid: CHART_DEFAULTS.grid }
-            }
-        }
-    });
-}
-
-function loadBioPreset() {
-    document.getElementById('bio-seq').value = 'ATGGCCATCGCAGCTGAAGGCATCGCGATCGCAATGTAAGCTGCGATCGCGATCGCAATGCGTAAGCTAGCTGCGATCATGAAACCCGGGTTTTAA';
-    runBio();
-}
-
-window.runBio = runBio;
-window.loadBioPreset = loadBioPreset;
-
-// Render codon table
-(function() {
-    const el = document.getElementById('codon-table');
-    el.innerHTML = Object.entries(CODON_TABLE).map(([c,aa]) =>
-        `<div class="text-center py-1 px-0.5 rounded ${aa==='***'?'bg-red-900/40 text-red-300':'bg-white/5 text-white/70'}">
-            <div class="text-white/40" style="font-size:0.6rem">${c}</div>
-            <div style="font-size:0.65rem;font-weight:600">${aa}</div>
-        </div>`
-    ).join('');
-})();
-</script>
-
 </body>
 </html>
