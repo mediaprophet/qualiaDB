@@ -2627,11 +2627,14 @@ impl KeyGenerator {
                 #[cfg(feature = "interop-crypto")]
                 {
                     use rsa::{RsaPrivateKey, pkcs8::EncodePrivateKey};
-                    let priv_key = RsaPrivateKey::new(&mut rand::rng(), 2048)
+                    use rand_core::OsRng;
+                    let mut rng = OsRng;
+                    let priv_key = RsaPrivateKey::new(&mut rng, 2048)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
                     Ok(priv_key
                         .to_pkcs8_der()
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?
+                        .as_bytes()
                         .to_vec())
                 }
                 #[cfg(not(feature = "interop-crypto"))]
@@ -2647,11 +2650,9 @@ impl KeyGenerator {
                     use crate::fiduciary_crypto::InteropEcdsaSigner;
                     let signer = InteropEcdsaSigner::generate()
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
-                    signer
-                        .export_secret_key()
-                        .ok_or_else(|| {
-                            CryptographicError::SignatureError("ECDSA keygen produced no secret key".to_string())
-                        })
+                    signer.export_secret_key().map_err(|e| {
+                        CryptographicError::SignatureError(e.to_string())
+                    })
                 }
                 #[cfg(not(feature = "interop-crypto"))]
                 {
@@ -3009,9 +3010,10 @@ impl SignatureEngine {
                     })?;
                 let sk = slh_dsa_sha2_256s::PrivateKey::try_from_bytes(&sk_arr)
                     .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
-                sk.try_sign(data, b"", true)
-                    .map_err(|e| CryptographicError::SignatureError(e.to_string()))?
-                    .to_vec()
+                let sig = sk
+                    .try_sign(data, b"", true)
+                    .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
+                sig.to_vec()
             }
             KeyAlgorithm::ECDSA => {
                 #[cfg(feature = "interop-crypto")]
@@ -3036,7 +3038,7 @@ impl SignatureEngine {
                 {
                     use rsa::{RsaPrivateKey, pkcs8::DecodePrivateKey};
                     use rsa::pkcs1v15::SigningKey;
-                    use rsa::signature::Signer;
+                    use rsa::signature::{SignatureEncoding, Signer};
                     use sha2::Sha256;
                     let priv_key = RsaPrivateKey::from_pkcs8_der(&private_key.key_data)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
@@ -3133,7 +3135,7 @@ impl SignatureEngine {
                     let verifying_key = VerifyingKey::<Sha256>::new(pub_key);
                     let sig = RsaSignature::try_from(signature.signature.as_slice())
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
-                    Ok(verifying_key.verify(data, &sig).is_ok())
+                    verifying_key.verify(data, &sig).is_ok()
                 }
                 #[cfg(not(feature = "interop-crypto"))]
                 {
