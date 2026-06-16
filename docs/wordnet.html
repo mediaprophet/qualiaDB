@@ -4,42 +4,242 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WordNet • Qualia-DB</title>
-    <meta http-equiv="refresh" content="0; url=playground/wordnet-demo.html">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="js/menu-loader.js"></script>
-    <script>location.replace('playground/wordnet-demo.html');</script>
     <style>
-        body {
-            font-family: Inter, system-ui, sans-serif;
-            background: #0a0e17;
-            color: #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 2rem;
-        }
-        .card {
-            max-width: 32rem;
-            text-align: center;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e17; }
+        .font-display { font-family: 'Space Grotesk', sans-serif; font-weight: 600; }
+        .glass-strong {
             background: rgba(17, 23, 31, 0.88);
+            backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
             border: 1px solid rgba(148, 163, 184, 0.18);
-            border-radius: 1.5rem;
-            padding: 2rem;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
         }
-        a { color: #60a5fa; }
-        p { color: #94a3b8; line-height: 1.6; }
+        .relation-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin: 2px;
+        }
+        .relation-hypernym { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .relation-hyponym { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .relation-synonym { background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+        .relation-part { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .relation-similar { background: rgba(236, 72, 153, 0.2); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
+        #graph-canvas { background: rgba(0, 0, 0, 0.3); border-radius: 12px; }
+        .category-btn { transition: all 0.2s; }
+        .category-btn:hover { transform: translateY(-2px); }
+        .category-btn.active { outline: 2px solid #3b82f6; }
+        pre { background: rgba(0, 0, 0, 0.4); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 12px; }
+        code { font-family: 'Fira Code', monospace; }
+        .loading-overlay {
+            position: fixed; inset: 0; background: rgba(10, 14, 23, 0.92);
+            display: none; align-items: center; justify-content: center; z-index: 100;
+        }
+        .loading-spinner {
+            width: 40px; height: 40px; border: 3px solid rgba(96, 165, 250, 0.2);
+            border-top-color: #60a5fa; border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
-<body>
-    <div class="card">
-        <h1>WordNet Semantic Browser</h1>
-        <p>
-            This page now opens the full <strong>Open English WordNet 2025</strong> browser
-            (100k-triple subset on GitHub Pages; full graph when built locally).
-        </p>
-        <p>The previous <code>wordnet.html</code> view only embedded a 76-word teaching demo.</p>
-        <p><a href="playground/wordnet-demo.html">Continue to WordNet browser</a></p>
+<body class="bg-[#0a0e17] text-slate-200">
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="text-center">
+            <div class="loading-spinner mx-auto mb-3"></div>
+            <div id="loading-label" class="text-blue-400 text-sm font-medium">Loading Open English WordNet…</div>
+        </div>
     </div>
+
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div id="dynamic-nav" class="hidden md:flex items-center gap-6 text-sm"></div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="engine-status" class="text-xs px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Initialising…</span>
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-8 pb-16">
+        <div class="mb-8">
+            <h1 class="font-display text-3xl font-semibold">WordNet Semantic Browser</h1>
+            <p class="text-white/60 mt-1 max-w-3xl">
+                Live <strong>Open English WordNet</strong> queries in your browser via
+                <code class="text-cyan-400">qualia_core_db_bg.wasm</code> over a
+                <code class="text-cyan-400">.q42</code> volume (ingested from OEWN TTL/NT by
+                <code class="text-cyan-400">qualia-cli</code> — see <code>scripts/fetch_wordnet.sh</code>).
+            </p>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="glass-strong rounded-2xl p-4">
+                <div class="text-xs text-white/60">Lexicon Entries</div>
+                <div id="stat-words" class="text-2xl font-semibold text-blue-400 mt-1">--</div>
+            </div>
+            <div class="glass-strong rounded-2xl p-4">
+                <div class="text-xs text-white/60">Est. Synsets</div>
+                <div id="stat-synsets" class="text-2xl font-semibold text-purple-400 mt-1">--</div>
+            </div>
+            <div class="glass-strong rounded-2xl p-4">
+                <div class="text-xs text-white/60">Relation Types</div>
+                <div id="stat-relations" class="text-2xl font-semibold text-emerald-400 mt-1">--</div>
+            </div>
+            <div class="glass-strong rounded-2xl p-4">
+                <div class="text-xs text-white/60">Hypernym Depth</div>
+                <div id="stat-depth" class="text-2xl font-semibold text-amber-400 mt-1">--</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="glass-strong rounded-3xl p-6">
+                <div class="font-semibold mb-4 flex items-center gap-x-2">
+                    <i class="fa-solid fa-search"></i><span>Word Lookup</span>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs text-white/60 block mb-1.5">Search Word</label>
+                        <input type="text" id="word-search" placeholder="e.g., dog, happy, run"
+                               class="w-full bg-zinc-900 border border-white/20 rounded-2xl px-4 py-2 text-sm"
+                               onkeyup="if(event.key==='Enter') lookupWord()">
+                    </div>
+                    <button onclick="lookupWord()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-2xl font-semibold text-sm flex items-center justify-center gap-x-2">
+                        <i class="fa-solid fa-magnifying-glass"></i><span>Lookup Word</span>
+                    </button>
+                </div>
+                <div id="word-result" class="mt-4 hidden">
+                    <div class="border-t border-white/10 pt-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span id="result-word" class="text-lg font-semibold"></span>
+                            <span id="result-pos" class="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full"></span>
+                        </div>
+                        <p id="result-definition" class="text-sm text-white/70 mb-3"></p>
+                        <div id="result-relations" class="space-y-2"></div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-white/10">
+                    <div class="text-xs text-white/60 mb-2">Quick Examples</div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="quickLookup('dog')" class="text-xs px-3 py-1 bg-white/5 hover:bg-white/10 rounded-full">dog</button>
+                        <button onclick="quickLookup('happy')" class="text-xs px-3 py-1 bg-white/5 hover:bg-white/10 rounded-full">happy</button>
+                        <button onclick="quickLookup('run')" class="text-xs px-3 py-1 bg-white/5 hover:bg-white/10 rounded-full">run</button>
+                        <button onclick="quickLookup('beautiful')" class="text-xs px-3 py-1 bg-white/5 hover:bg-white/10 rounded-full">beautiful</button>
+                        <button onclick="quickLookup('computer')" class="text-xs px-3 py-1 bg-white/5 hover:bg-white/10 rounded-full">computer</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-strong rounded-3xl p-6">
+                <div class="font-semibold mb-4 flex items-center gap-x-2">
+                    <i class="fa-solid fa-folder-tree"></i><span>Category Browser</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <button onclick="filterByCategory('noun', this)" class="category-btn px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl text-sm font-medium">
+                        <i class="fa-solid fa-cube mr-1"></i> Nouns
+                    </button>
+                    <button onclick="filterByCategory('verb', this)" class="category-btn px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-xl text-sm font-medium">
+                        <i class="fa-solid fa-bolt mr-1"></i> Verbs
+                    </button>
+                    <button onclick="filterByCategory('adjective', this)" class="category-btn px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-xl text-sm font-medium">
+                        <i class="fa-solid fa-palette mr-1"></i> Adjectives
+                    </button>
+                    <button onclick="filterByCategory('adverb', this)" class="category-btn px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-sm font-medium">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Adverbs
+                    </button>
+                </div>
+                <div id="category-words" class="space-y-2 max-h-64 overflow-y-auto">
+                    <div class="text-xs text-white/60 text-center py-4">Select a category to browse sample lemmas</div>
+                </div>
+            </div>
+
+            <div class="glass-strong rounded-3xl p-6">
+                <div class="font-semibold mb-4 flex items-center gap-x-2">
+                    <i class="fa-solid fa-database"></i><span>SPARQL Integration</span>
+                </div>
+                <div class="space-y-3 mb-3">
+                    <button onclick="showSparqlExample('synonyms')" class="w-full text-left px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-sm">
+                        <i class="fa-solid fa-code mr-2 text-purple-400"></i> Find lemma matches
+                    </button>
+                    <button onclick="showSparqlExample('hypernyms')" class="w-full text-left px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-sm">
+                        <i class="fa-solid fa-code mr-2 text-blue-400"></i> Hypernym BGP template
+                    </button>
+                    <button onclick="showSparqlExample('hyponyms')" class="w-full text-left px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-sm">
+                        <i class="fa-solid fa-code mr-2 text-emerald-400"></i> Hyponym BGP template
+                    </button>
+                    <button onclick="showSparqlExample('stats')" class="w-full text-left px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-sm">
+                        <i class="fa-solid fa-code mr-2 text-amber-400"></i> Wildcard BGP
+                    </button>
+                </div>
+                <textarea id="sparql-editor" rows="5"
+                    class="w-full bg-zinc-900 border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-emerald-200"
+                    placeholder="SELECT ?s ?p WHERE { ?s ?p &quot;dog&quot; }"></textarea>
+                <button onclick="runSparqlQuery()" class="mt-2 w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-semibold">
+                    Execute SPARQL BGP
+                </button>
+                <p class="text-xs text-white/40 mt-2">Single Basic Graph Pattern per query (Webizen VM constraint).</p>
+                <div id="sparql-output" class="mt-4 hidden">
+                    <pre id="sparql-code" class="text-xs text-emerald-300 mb-2"></pre>
+                    <pre id="sparql-results" class="text-xs text-white/70 whitespace-pre-wrap"></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <div class="font-semibold mb-4 flex items-center gap-x-2">
+                <i class="fa-solid fa-circle-nodes"></i><span>Semantic Relations Graph</span>
+            </div>
+            <div class="flex gap-4 mb-4">
+                <input type="text" id="graph-word" placeholder="Enter word to visualize"
+                       class="flex-1 bg-zinc-900 border border-white/20 rounded-2xl px-4 py-2 text-sm"
+                       onkeyup="if(event.key==='Enter') visualizeGraph()">
+                <button onclick="visualizeGraph()" class="px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-2xl font-semibold text-sm">
+                    <i class="fa-solid fa-diagram-project mr-2"></i> Visualize
+                </button>
+            </div>
+            <div class="flex flex-wrap gap-4 mb-4 text-xs text-white/60">
+                <label class="flex items-center gap-2"><input type="checkbox" id="show-hypernyms" checked class="rounded"><span>Hypernyms</span></label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="show-hyponyms" checked class="rounded"><span>Hyponyms</span></label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="show-synonyms" checked class="rounded"><span>Synonyms</span></label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="show-similar" class="rounded"><span>Similar</span></label>
+            </div>
+            <canvas id="graph-canvas" width="1000" height="400" class="w-full"></canvas>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <div class="font-semibold mb-2 flex items-center gap-x-2">
+                <i class="fa-solid fa-file-import"></i><span>Build your own .q42 from N-Triples</span>
+            </div>
+            <p class="text-sm text-white/60 mb-4">
+                For the full OEWN graph locally, run
+                <code class="text-cyan-400">bash scripts/fetch_wordnet.sh --playground</code>
+                (downloads TTL, ingests to <code>playground/wordnet.q42</code>).
+                Or upload a custom <code>.nt</code> file to pack into your browser OPFS vault.
+            </p>
+            <div class="flex flex-wrap items-center gap-3">
+                <input type="file" id="nt-file" accept=".nt,.n3,.txt" class="text-sm text-white/70">
+                <button onclick="startNtIngest()" class="px-4 py-2 bg-white/10 hover:bg-white/15 rounded-xl text-sm font-medium">Ingest .nt to browser vault</button>
+                <span id="ingest-status" class="text-xs text-cyan-400"></span>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/wordnet-app.js"></script>
 </body>
 </html>

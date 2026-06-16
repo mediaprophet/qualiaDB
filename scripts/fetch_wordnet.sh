@@ -83,9 +83,8 @@ fi
 echo "[3/3] Building qualia-cli and ingesting unified v2 volume..."
 cargo build --release -p qualia-cli --quiet
 
-./target/release/qualia-cli ingest \
-    --input  "$INGEST_INPUT" \
-    --output "$OUTPUT_BASE"
+./target/release/qualia-cli ingest semantic "$INGEST_INPUT"
+Q42_OUT="${INGEST_INPUT%.*}.q42"
 
 if [[ ! -f "$Q42_OUT" ]]; then
     echo "ERROR: ${Q42_OUT} was not created." >&2
