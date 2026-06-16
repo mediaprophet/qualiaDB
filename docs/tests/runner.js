@@ -172,6 +172,7 @@ function buildRunner(mode) {
         regShacl(r, c);
         regGovernance(r, c);
         regWasmIngest(r, c);
+        regDataFormats(r, c);
         regProfiles(r, c);
         regResources(r, c);
         regRdfStar(r, c);
@@ -496,3 +497,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     runAll('wasm');
 });
+
+

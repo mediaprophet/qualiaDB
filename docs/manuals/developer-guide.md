@@ -1,6 +1,6 @@
 # Qualia-DB Developer Guide
 
-_Branch: `0.0.12-dev` | Last updated: 2026-06-07_
+_Branch: `0.0.15` | Last updated: 2026-06-18_
 
 Qualia-DB is a bare-metal semantic graph database designed specifically for constrained personal environments (mobile devices, IoT, browsers). It enforces a strict 512 MB RAM floor and operates with absolute zero dynamic heap allocation during execution, making garbage-collection pauses mathematically impossible.
 
@@ -60,7 +60,7 @@ Qualia-DB runs LLM inference entirely in-process. There is **no Ollama**, no Pyt
 | 1 | `gguf_sharder.rs` · `GgufTokenizer` | Parses the GGUF v2/v3 KV metadata section to extract the full vocabulary list, BOS token ID, and EOS token ID. `encode(text)` uses greedy longest-match tokenisation with a single-byte fallback. `decode(ids)` handles SentencePiece `▁` prefixes and `<0x##>` byte-literal tokens. Defaults to a 256-entry byte-level tokeniser when the model file is absent. |
 | 2 | `gguf_sharder.rs` · `GGufSharder` | Parses GGUF magic + tensor count; generates `NQuin` pointer maps (byte offsets, modality flag `0b1001` in upper 4 bits of the object field). |
 | 3 | `gguf_bridge.rs` · `QTensorEngine` | `load_gguf(path)` memory-maps the GGUF file via `memmap2`. `dispatch_fused_transformer_block(tensor, activations)` dispatches GEMM to DirectML 1.15 (Windows), Accelerate `cblas_sgemm` (macOS AMX), or the wgpu/WGSL fallback. All three produce a `Vec<f32>` logit vector. |
-| 4 | `llm_agent.rs` · `LocalLlmAgent::infer_local_model` | Autoregressive decode loop. Initialises `QTensorEngine` + `GgufTokenizer` inside the spawned LLM thread. Per step: pseudo-embedding from token ID → `dispatch_fused_transformer_block` → argmax logit → `LogitSummary` pushed to SPSC ring → Sentinel anomaly check → optional `DenyRollback` → sample next token → accumulate → stop at EOS / `MAX_OUTPUT_TOKENS`. |
+| 4 | `llm_agent.rs` · `LocalLlmAgent::infer_local_model` | Autoregressive decode loop. Initialises `QTensorEngine` + `GgufTokenizer` inside the spawned LLM thread. Per step: real token embedding via `GgufTensorIndex::dequantize_token_embedding_into` → `dispatch_fused_transformer_block` → argmax logit → `LogitSummary` pushed to SPSC ring → Sentinel anomaly check → optional `DenyRollback` → sample next token → accumulate → stop at EOS / `MAX_OUTPUT_TOKENS`. |
 | 5 | `orchestrator.rs` · `TaskOrchestrator::orchestrate_inference` | Mandatory governance gate: `validate_intent` (Rights Ontology pre-flight) → `LocalLlmAgent::infer` → `validate_output` (≥ 1 provenance Quin required). |
 
 ### Phase 8 Bifurcated Compute

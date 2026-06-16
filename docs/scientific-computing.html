@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scientific Computing Examples - QualiaDB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="js/menu-loader.js"></script>
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        pre { background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 16px; overflow-x: auto; }
+        code { font-family: 'Fira Code', monospace; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div class="hidden md:flex items-center gap-6 text-sm">
+                        <a href="index.html" class="hover:text-white transition-colors">Home</a>
+                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="advanced-features.html" class="hover:text-white transition-colors">Features</a>
+                        <a href="api.html" class="hover:text-white transition-colors">API Docs</a>
+                        <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
+        <div class="mb-8">
+            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Scientific Computing Examples</h1>
+            <p class="text-xl text-slate-400">Native scientific primitives integrated with the semantic graph</p>
+        </div>
+
+        <!-- Overview -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-flask text-blue-400"></i>
+                Native Scientific Primitives
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB includes zero-allocation scientific computing engines wired directly into the Webizen VM:</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-blue-400 mb-2">Thermodynamics</h3>
+                    <p class="text-white/60 text-sm">MCMC Metropolis-Hastings, Boltzmann acceptance, Gibbs free energy</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-blue-400 mb-2">ODE Solver</h3>
+                    <p class="text-white/60 text-sm">Runge-Kutta 4th-order integrator for differential equations</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-blue-400 mb-2">Quantum DFT</h3>
+                    <p class="text-white/60 text-sm">DFT ground-state energy, PINN receptor binding affinity</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-blue-400 mb-2">Bioinformatics</h3>
+                    <p class="text-white/60 text-sm">Smith-Waterman alignment, FASTA, DNA→protein, k-mer hashing</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-blue-400 mb-2">Clinical Risk</h3>
+                    <p class="text-white/60 text-sm">Framingham, CHA₂DS₂-VASc, SCORE2, drug interactions</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-blue-400 mb-2">Organic Chemistry</h3>
+                    <p class="text-white/60 text-sm">SMILES/InChI parsing, Lipinski filters, Morgan fingerprint</p>
+                </div>
+            </div>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6">
+                <div class="flex items-start gap-4">
+                    <i class="fas fa-bolt text-emerald-400 text-2xl mt-1"></i>
+                    <div>
+                        <h3 class="font-semibold text-emerald-400 mb-2">Zero-Heap Execution</h3>
+                        <p class="text-white/70 text-sm">All scientific primitives are zero-allocation. They use stack-allocated buffers and caller-supplied output arrays, ensuring deterministic performance even on constrained devices.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thermodynamics -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-fire text-orange-400"></i>
+                Thermodynamics
+            </h2>
+            
+            <h3 class="text-lg font-medium mb-3">MCMC Metropolis-Hastings</h3>
+            <pre class="mb-6"><code># Sample from a Boltzmann distribution
+SELECT ?energy ?probability WHERE {
+  ?state a ex:ThermodynamicState ;
+         ex:energy ?energy .
+  
+  # Native thermodynamics primitive
+  BIND(qualia:mcmc_boltzmann(?energy, 300.0) AS ?probability)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Gibbs Free Energy</h3>
+            <pre class="mb-6"><code># Calculate Gibbs free energy
+SELECT ?reaction ?deltaG WHERE {
+  ?reaction a ex:ChemicalReaction ;
+            ex:enthalpy ?H ;
+            ex:entropy ?S ;
+            ex:temperature ?T .
+  
+  # ΔG = ΔH - TΔS
+  BIND(qualia:gibbs_free_energy(?H, ?S, ?T) AS ?deltaG)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Phase Transition Detection</h3>
+            <pre><code># Detect phase transitions in material
+SELECT ?temperature ?phase WHERE {
+  ?material a ex:Material ;
+            ex:temperature ?temperature ;
+            ex:heat_capacity ?Cp .
+  
+  # Phase transition when heat capacity spikes
+  BIND(qualia:detect_phase_transition(?Cp) AS ?phase)
+}</code></pre>
+        </div>
+
+        <!-- ODE Solver -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-wave-square text-purple-400"></i>
+                ODE Solver
+            </h2>
+            
+            <h3 class="text-lg font-medium mb-3">Runge-Kutta 4th Order</h3>
+            <pre class="mb-6"><code># Solve a differential equation
+SELECT ?time ?value WHERE {
+  # Initial conditions
+  BIND(0.0 AS ?t0)
+  BIND(1.0 AS ?y0)
+  
+  # Solve dy/dt = -2y over time [0, 5]
+  BIND(qualia:runge_kutta_4(?t0, ?y0, 5.0, 0.1, "-2*y") AS ?trajectory)
+  
+  # Extract time and value from trajectory
+  BIND(qualia:trajectory_time(?trajectory, ?i) AS ?time)
+  BIND(qualia:trajectory_value(?trajectory, ?i) AS ?value)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Population Dynamics</h3>
+            <pre class="mb-6"><code># Lotka-Volterra predator-prey model
+SELECT ?time ?prey ?predator WHERE {
+  # dx/dt = αx - βxy
+  # dy/dt = δxy - γy
+  
+  BIND(qualia:runge_kutta_4_system(
+    0.0,  # t0
+    [10.0, 5.0],  # [x0, y0] initial prey/predator
+    50.0,  # t_max
+    0.1,  # dt
+    "1.5*x - 0.5*x*y",  # dx/dt
+    "0.5*x*y - 1.0*y"   # dy/dt
+  ) AS ?solution)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Epidemic Modeling (SIR)</h3>
+            <pre><code># SIR epidemic model
+SELECT ?time ?susceptible ?infected ?recovered WHERE {
+  BIND(qualia:sir_model(
+    0.0,      # t0
+    990,      # S0 (susceptible)
+    10,       # I0 (infected)
+    0,        # R0 (recovered)
+    100,      # t_max
+    0.1,      # dt
+    0.3,      # β (infection rate)
+    0.1       # γ (recovery rate)
+  ) AS ?trajectory)
+}</code></pre>
+        </div>
+
+        <!-- Bioinformatics -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-dna text-green-400"></i>
+                Bioinformatics
+            </h2>
+            
+            <h3 class="text-lg font-medium mb-3">Smith-Waterman Alignment</h3>
+            <pre class="mb-6"><code># Align two DNA sequences
+SELECT ?score ?alignment WHERE {
+  BIND("ACGTACGT" AS ?seq1)
+  BIND("ACGTTACGT" AS ?seq2)
+  
+  # Smith-Waterman local alignment
+  BIND(qualia:smith_waterman(?seq1, ?seq2) AS ?result)
+  BIND(qualia:alignment_score(?result) AS ?score)
+  BIND(qualia:alignment_string(?result) AS ?alignment)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">DNA to Protein Translation</h3>
+            <pre class="mb-6"><code># Translate DNA to protein
+SELECT ?dna ?protein WHERE {
+  BIND("ATGGCCATTGTA" AS ?dna)
+  
+  # Translate using standard genetic code
+  BIND(qualia:dna_to_protein(?dna) AS ?protein)
+}
+# Result: "MAIV"</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">K-mer Hashing</h3>
+            <pre class="mb-6"><code># Generate k-mer hashes for sequence comparison
+SELECT ?kmer ?hash WHERE {
+  BIND("ACGTACGT" AS ?sequence)
+  BIND(3 AS ?k)
+  
+  # Generate all k-mers and their hashes
+  BIND(qualia:kmer_hashes(?sequence, ?k) AS ?kmer_hashes)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Tanimoto Similarity</h3>
+            <pre><code># Calculate Tanimoto similarity between molecular fingerprints
+SELECT ?mol1 ?mol2 ?similarity WHERE {
+  ?mol1 a ex:Molecule ;
+        ex:fingerprint ?fp1 .
+  ?mol2 a ex:Molecule ;
+        ex:fingerprint ?fp2 .
+  
+  BIND(qualia:tanimoto_similarity(?fp1, ?fp2) AS ?similarity)
+}</code></pre>
+        </div>
+
+        <!-- Clinical Risk -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-heartbeat text-red-400"></i>
+                Clinical Risk Assessment
+            </h2>
+            
+            <h3 class="text-lg font-medium mb-3">Framingham Risk Score</h3>
+            <pre class="mb-6"><code># Calculate 10-year cardiovascular risk
+SELECT ?patient ?risk_score WHERE {
+  ?patient a ex:Patient ;
+           ex:age 55 ;
+           ex:gender "male" ;
+           ex:total_cholesterol 220 ;
+           ex:hdl_cholesterol 45 ;
+           ex:systolic_bp 140 ;
+           ex:smoker true ;
+           ex:treated_for_bp false .
+  
+  BIND(qualia:framingham_risk(
+    ?age, ?gender, ?total_cholesterol, ?hdl_cholesterol,
+    ?systolic_bp, ?smoker, ?treated_for_bp
+  ) AS ?risk_score)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">CHA₂DS₂-VASc Score</h3>
+            <pre class="mb-6"><code># Stroke risk assessment for atrial fibrillation
+SELECT ?patient ?cha2ds2_vasc WHERE {
+  ?patient a ex:Patient ;
+           ex:age 72 ;
+           ex:has_hypertension true ;
+           ex:has_diabetes false ;
+           ex:has_stroke_history true ;
+           ex:vascular_disease false ;
+           ex:gender "female" .
+  
+  BIND(qualia:cha2ds2_vasc(
+    ?age, ?has_hypertension, ?has_diabetes,
+    ?has_stroke_history, ?vascular_disease, ?gender
+  ) AS ?cha2ds2_vasc)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Drug Interaction Check</h3>
+            <pre><code># Check for drug-drug interactions
+SELECT ?patient ?drug1 ?drug2 ?severity WHERE {
+  ?patient ex:takes ?drug1, ?drug2 .
+  
+  BIND(qualia:drug_interaction(?drug1, ?drug2) AS ?interaction)
+  BIND(qualia:interaction_severity(?interaction) AS ?severity)
+  FILTER (?severity > 0)  # Only show interactions
+}</code></pre>
+        </div>
+
+        <!-- Organic Chemistry -->
+        <div class="glass-strong rounded-3xl p-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-atom text-cyan-400"></i>
+                Organic Chemistry
+            </h2>
+            
+            <h3 class="text-lg font-medium mb-3">SMILES Parsing</h3>
+            <pre class="mb-6"><code># Parse SMILES notation
+SELECT ?smiles ?molecular_weight WHERE {
+  BIND("CCO" AS ?smiles)  # Ethanol
+  
+  BIND(qualia:parse_smiles(?smiles) AS ?molecule)
+  BIND(qualia:molecular_weight(?molecule) AS ?molecular_weight)
+}
+# Result: 46.07 g/mol</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Lipinski Rule of Five</h3>
+            <pre class="mb-6"><code># Check drug-likeness using Lipinski rules
+SELECT ?molecule ?passes_lipinski WHERE {
+  ?molecule a ex:Molecule ;
+            ex:smiles "CC(C)CC1=CC=C(C=C1)C(C)C(=O)O" ;  # Ibuprofen
+            ex:molecular_weight ?mw ;
+            ex:logp ?logp ;
+            ex:hbd ?hbd ;  # Hydrogen bond donors
+            ex:hba ?hba .  # Hydrogen bond acceptors
+  
+  BIND(qualia:lipinski_rule_of_five(?mw, ?logp, ?hbd, ?hba) AS ?passes_lipinski)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Morgan Fingerprint</h3>
+            <pre><code># Generate Morgan fingerprint for similarity search
+SELECT ?molecule ?fingerprint WHERE {
+  ?molecule a ex:Molecule ;
+            ex:smiles "CCO" .
+  
+  BIND(qualia:morgan_fingerprint(?molecule, 2, 2048) AS ?fingerprint)
+}</code></pre>
+        </div>
+    </div>
+
+    <footer class="border-t border-white/10 py-8">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between">
+                <div class="text-white/50 text-sm">
+                    QualiaDB v0.0.15 • Human-Centric Semantic Engine
+                </div>
+                <div class="flex items-center gap-6 text-sm">
+                    <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
+                    <a href="manuals/standards/" class="hover:text-white transition-colors">Standards</a>
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="hover:text-white transition-colors">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

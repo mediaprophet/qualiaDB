@@ -2,7 +2,7 @@
 //!
 //! Accepts a single N-Triples pattern line such as
 //!   `<http://example.org/Alice> <schema:knows> ?who .`
-//! and compiles it into a flat bytecode program that `webizen_bytecode::execute_program`
+//! and compiles it into a flat bytecode program that `webizen::bytecode::execute_program`
 //! can run directly against a `&[NQuin]` slice without any heap allocation.
 //!
 //! # Bytecode encoding

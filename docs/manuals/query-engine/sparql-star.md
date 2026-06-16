@@ -127,7 +127,7 @@ Grammar/Parsing: Leverage an existing, resilient parsing library (like oxigraph/
 
 How are you currently handling your string-to-ID mappings (dictionary) inside your engine? If you are using a global key-value store or an in-memory trie, we can look at how to structure the virtual IDs for embedded triples without causing lock contention during bulk writes.
 
-Here are the direct answers to your architectural questions regarding the implementation of SPARQL-Star within the current QualiaDB 0.0.12-dev codebase.
+Here are the direct answers to your architectural questions regarding the implementation of SPARQL-Star within the current QualiaDB 0.0.15-dev codebase.
 
 1. Internal Format Mapping
 You must use Virtual Node IDs. Do not attempt to pack the triple components into the existing NQuin. A single field in the 48-byte NQuin is exactly 8 bytes (u64). An embedded triple requires 24 bytes (three u64 IDs).
@@ -237,7 +237,7 @@ The file `crates/qualia-cli/src/parsers/turtle_star.rs` is a **minimal placehold
 
 ---
 
-# SPARQL-Star Implementation Status - QualiaDB 0.0.12-dev
+# SPARQL-Star Implementation Status - QualiaDB 0.0.15-dev
 
 **Date:** 2025-01-XX  
 **Status:** ✅ 100% Complete (38/38 tasks)

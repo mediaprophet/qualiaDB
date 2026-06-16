@@ -1,6 +1,6 @@
 [package]
 name = "qualia-cli"
-version = "0.0.13"
+version = "0.0.15"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 default-run = "qualia-cli"
@@ -43,3 +43,4 @@ spargebra = "0.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 io-uring = "0.7.12"
+

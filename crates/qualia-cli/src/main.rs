@@ -5,22 +5,23 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::PathBuf;
 
+pub mod bench;
 mod benchmark_env;
+pub mod compress;
+pub mod evaluate;
+pub mod ingest;
 mod llm_lifecycle;
 mod llm_testing;
-pub mod compress;
-pub mod ingest;
-pub mod query;
+pub mod mcp;
 pub mod qpu;
+pub mod query;
 pub mod resources;
-pub mod telemetry_server;
-pub mod bench;
-pub mod evaluate;
-pub mod solve;
 pub mod science;
+pub mod solve;
+pub mod telemetry_server;
 
 /// Qualia-DB Command Line Interface
-/// 
+///
 /// Edge-native, zero-allocation semantic graph and neuro-symbolic engine.
 #[derive(Parser, Debug)]
 #[command(name = "qualia-cli", version = "0.0.12", author = "Qualia-DB")]
@@ -123,6 +124,11 @@ pub enum Commands {
         /// Enable Sleep-Cycle Swarm AI Compute
         #[arg(long)]
         compute_swarm: bool,
+    },
+    /// Run the MCP server directly, including stdio and background service modes
+    Mcp {
+        #[command(subcommand)]
+        action: mcp::McpAction,
     },
     /// Webizen Mode: Integrates did-method-git and human agency
     Webizen {
@@ -251,7 +257,10 @@ pub enum ExtensionAction {
 #[derive(Subcommand, Debug)]
 pub enum EvaluateModality {
     /// Evaluate active obligations and normative contracts
-    Deontic { dataset: PathBuf, contract_hash: u64 },
+    Deontic {
+        dataset: PathBuf,
+        contract_hash: u64,
+    },
     /// Evaluate agent belief states and trust graphs
     Epistemic { dataset: PathBuf, agent_hash: u64 },
     /// Isolate and route contradiction boundaries
@@ -321,25 +330,38 @@ pub enum EvaluateModality {
     SpatioTemporal {
         /// Action: rcc8 | temporal-before | temporal-meets | temporal-overlaps | temporal-during
         action: String,
-        #[arg(long, default_value = "0")] ax1: f64,
-        #[arg(long, default_value = "1")] ay1: f64,
-        #[arg(long, default_value = "1")] ax2: f64,
-        #[arg(long, default_value = "0")] ay2: f64,
-        #[arg(long, default_value = "2")] bx1: f64,
-        #[arg(long, default_value = "3")] by1: f64,
-        #[arg(long, default_value = "3")] bx2: f64,
-        #[arg(long, default_value = "2")] by2: f64,
+        #[arg(long, default_value = "0")]
+        ax1: f64,
+        #[arg(long, default_value = "1")]
+        ay1: f64,
+        #[arg(long, default_value = "1")]
+        ax2: f64,
+        #[arg(long, default_value = "0")]
+        ay2: f64,
+        #[arg(long, default_value = "2")]
+        bx1: f64,
+        #[arg(long, default_value = "3")]
+        by1: f64,
+        #[arg(long, default_value = "3")]
+        bx2: f64,
+        #[arg(long, default_value = "2")]
+        by2: f64,
     },
     /// Allen interval algebra: contains, overlaps, intersection, union, gap
     Interval {
         /// Action: contains | overlaps | intersection | union | gap
         action: String,
-        #[arg(long, default_value = "0")]  start1: i64,
-        #[arg(long, default_value = "10")] end1: i64,
-        #[arg(long, default_value = "5")]  start2: i64,
-        #[arg(long, default_value = "15")] end2: i64,
+        #[arg(long, default_value = "0")]
+        start1: i64,
+        #[arg(long, default_value = "10")]
+        end1: i64,
+        #[arg(long, default_value = "5")]
+        start2: i64,
+        #[arg(long, default_value = "15")]
+        end2: i64,
         /// Point for 'contains' check
-        #[arg(long, default_value = "7")]  point: i64,
+        #[arg(long, default_value = "7")]
+        point: i64,
     },
     /// Graph topology analysis: density, communities, motifs, centrality
     GraphTopology {
@@ -358,11 +380,16 @@ pub enum EvaluateModality {
     },
     /// PID control feedback: compute single-step output from Kp/Ki/Kd + error
     ControlFeedback {
-        #[arg(long)] kp: f64,
-        #[arg(long)] ki: f64,
-        #[arg(long)] kd: f64,
-        #[arg(long)] setpoint: f64,
-        #[arg(long)] measurement: f64,
+        #[arg(long)]
+        kp: f64,
+        #[arg(long)]
+        ki: f64,
+        #[arg(long)]
+        kd: f64,
+        #[arg(long)]
+        setpoint: f64,
+        #[arg(long)]
+        measurement: f64,
     },
     /// Neuro-symbolic constrained inference (token-level SHACL sieve)
     NeuroSymbolic {
@@ -383,11 +410,11 @@ pub enum ShaclAction {
 #[derive(Subcommand, Debug)]
 pub enum GovernanceAction {
     /// Append a raw mutation directly to the Write-Ahead Log
-    WalAppend { 
+    WalAppend {
         #[arg(long)]
-        quin: String, 
+        quin: String,
         #[arg(long)]
-        sign: String 
+        sign: String,
     },
     /// Ratify a suspended transaction (M-of-N consensus)
     Ratify { agreement_did: String },
@@ -426,34 +453,53 @@ pub enum SolveAction {
 pub enum OdeAction {
     /// RK4 exponential decay: dy/dt = -λy
     Rk4 {
-        #[arg(long, default_value = "1.0")] lambda: f64,
-        #[arg(long, default_value = "0.0")] t_start: f64,
-        #[arg(long, default_value = "5.0")] t_end: f64,
-        #[arg(long, default_value = "1.0")] y0: f64,
-        #[arg(long, default_value = "0.01")] step_size: f64,
+        #[arg(long, default_value = "1.0")]
+        lambda: f64,
+        #[arg(long, default_value = "0.0")]
+        t_start: f64,
+        #[arg(long, default_value = "5.0")]
+        t_end: f64,
+        #[arg(long, default_value = "1.0")]
+        y0: f64,
+        #[arg(long, default_value = "0.01")]
+        step_size: f64,
     },
     /// RK4 harmonic oscillator: dy/dt = -ω²·y
     Harmonic {
-        #[arg(long, default_value = "1.0")] omega: f64,
-        #[arg(long, default_value = "0.0")] t_start: f64,
-        #[arg(long, default_value = "6.28")] t_end: f64,
-        #[arg(long, default_value = "1.0")] y0: f64,
-        #[arg(long, default_value = "0.01")] step_size: f64,
+        #[arg(long, default_value = "1.0")]
+        omega: f64,
+        #[arg(long, default_value = "0.0")]
+        t_start: f64,
+        #[arg(long, default_value = "6.28")]
+        t_end: f64,
+        #[arg(long, default_value = "1.0")]
+        y0: f64,
+        #[arg(long, default_value = "0.01")]
+        step_size: f64,
     },
     /// Boundary-value problem via shooting method (f'=-y)
     Bvp {
-        #[arg(long, default_value = "0.0")] t_start: f64,
-        #[arg(long, default_value = "1.0")] t_end: f64,
-        #[arg(long, default_value = "1.0")] y_left: f64,
-        #[arg(long, default_value = "0.0")] y_right: f64,
-        #[arg(long, default_value = "1e-6")] threshold: f64,
+        #[arg(long, default_value = "0.0")]
+        t_start: f64,
+        #[arg(long, default_value = "1.0")]
+        t_end: f64,
+        #[arg(long, default_value = "1.0")]
+        y_left: f64,
+        #[arg(long, default_value = "0.0")]
+        y_right: f64,
+        #[arg(long, default_value = "1e-6")]
+        threshold: f64,
     },
     /// Quantum harmonic mass spectrum
     QuantumSpectrum {
-        #[arg(long, default_value = "1.22e19")] planck_mass: f64,
-        #[arg(long, default_value = "0.1")] coupling: f64,
-        #[arg(long, default_value = "10")] max_n: u64,
-        #[arg(long, default_value = "1.0")] frequency: f64,
+        #[arg(long, default_value = "1.22e19")]
+        planck_mass: f64,
+        #[arg(long, default_value = "0.1")]
+        coupling: f64,
+        #[arg(long, default_value = "10")]
+        max_n: u64,
+        #[arg(long, default_value = "1.0")]
+        frequency: f64,
     },
 }
 
@@ -461,14 +507,19 @@ pub enum OdeAction {
 pub enum QuantumSolveAction {
     /// QAOA angle optimizer (demo MaxCut-like cost)
     Qaoa {
-        #[arg(long, default_value = "3")] depth: u8,
-        #[arg(long, default_value = "0.1,0.2,0.3")] beta: String,
-        #[arg(long, default_value = "0.5,0.5,0.5")] gamma: String,
+        #[arg(long, default_value = "3")]
+        depth: u8,
+        #[arg(long, default_value = "0.1,0.2,0.3")]
+        beta: String,
+        #[arg(long, default_value = "0.5,0.5,0.5")]
+        gamma: String,
     },
     /// SPSA optimizer (demo quadratic cost)
     Spsa {
-        #[arg(long, default_value = "4")] num_params: u8,
-        #[arg(long, default_value = "1.0,2.0,3.0,4.0")] initial: String,
+        #[arg(long, default_value = "4")]
+        num_params: u8,
+        #[arg(long, default_value = "1.0,2.0,3.0,4.0")]
+        initial: String,
     },
 }
 
@@ -477,14 +528,17 @@ pub enum SymbolicSolveAction {
     /// Defeasible forward-chaining inference
     Defeasible {
         /// Comma-separated variable indices for initial facts (e.g. "1,2,3")
-        #[arg(long, default_value = "1,2")] facts: String,
+        #[arg(long, default_value = "1,2")]
+        facts: String,
         /// Semicolon-separated rules of form "ant1,ant2:cons" (e.g. "1,2:3;3:4")
-        #[arg(long, default_value = "1,2:3")] rules: String,
+        #[arg(long, default_value = "1,2:3")]
+        rules: String,
     },
     /// Bounded SAT (DPLL)
     Sat {
         /// Pipe-separated clauses of comma-separated literals (e.g. "1,-2,3|4,-5")
-        #[arg(long, default_value = "1,-2|2,3|-1,3")] clauses: String,
+        #[arg(long, default_value = "1,-2|2,3|-1,3")]
+        clauses: String,
     },
 }
 
@@ -492,26 +546,34 @@ pub enum SymbolicSolveAction {
 pub enum LinalgAction {
     /// Multiply two 4×4 matrices (pass 16 comma-separated f64 values each)
     Multiply {
-        #[arg(long)] matrix_a: String,
-        #[arg(long)] matrix_b: String,
+        #[arg(long)]
+        matrix_a: String,
+        #[arg(long)]
+        matrix_b: String,
     },
     /// Compute the determinant of a 4×4 matrix (16 comma-separated f64 values)
     Determinant {
-        #[arg(long)] matrix: String,
+        #[arg(long)]
+        matrix: String,
     },
     /// Solve Ax=b (pass 16 f64 for A, 4 f64 for b)
     SolveSystem {
-        #[arg(long)] matrix: String,
-        #[arg(long)] vector: String,
+        #[arg(long)]
+        matrix: String,
+        #[arg(long)]
+        vector: String,
     },
     /// Compute lowest N eigenvalues of a 4×4 matrix via Lanczos
     Eigenvalues {
-        #[arg(long)] matrix: String,
-        #[arg(long, default_value = "4")] count: usize,
+        #[arg(long)]
+        matrix: String,
+        #[arg(long, default_value = "4")]
+        count: usize,
     },
     /// Contract a 3×3×3 tensor (27 comma-separated f64 values) to a scalar
     TensorContract {
-        #[arg(long)] tensor: String,
+        #[arg(long)]
+        tensor: String,
     },
 }
 
@@ -519,21 +581,30 @@ pub enum LinalgAction {
 pub enum OptimizeAction {
     /// Nelder-Mead simplex minimizer (4-parameter, comma-separated initial guess)
     Simplex {
-        #[arg(long)] initial: String,
-        #[arg(long, default_value = "200")] iterations: u32,
+        #[arg(long)]
+        initial: String,
+        #[arg(long, default_value = "200")]
+        iterations: u32,
     },
     /// Newton-Raphson root finder (bounded)
     Root {
-        #[arg(long)] initial: f64,
-        #[arg(long)] lower: f64,
-        #[arg(long)] upper: f64,
-        #[arg(long, default_value = "1e-8")] tolerance: f64,
+        #[arg(long)]
+        initial: f64,
+        #[arg(long)]
+        lower: f64,
+        #[arg(long)]
+        upper: f64,
+        #[arg(long, default_value = "1e-8")]
+        tolerance: f64,
     },
     /// Levenberg-Marquardt curve fitting (4-parameter; pass x-data and y-data as comma-separated lists)
     CurveFit {
-        #[arg(long)] initial_params: String,
-        #[arg(long)] x_data: String,
-        #[arg(long)] y_data: String,
+        #[arg(long)]
+        initial_params: String,
+        #[arg(long)]
+        x_data: String,
+        #[arg(long)]
+        y_data: String,
     },
 }
 
@@ -583,17 +654,23 @@ pub enum ChemAction {
     /// Thermochemistry: arrhenius | gibbs | henderson-hasselbalch
     Thermo {
         reaction: String,
-        #[arg(long)] a: f64,
-        #[arg(long)] b: f64,
-        #[arg(long)] c: f64,
+        #[arg(long)]
+        a: f64,
+        #[arg(long)]
+        b: f64,
+        #[arg(long)]
+        c: f64,
     },
     /// Drug-likeness filters (Lipinski, Veber, Ghose, Egan, BBB)
     DrugLike { smiles: String },
     /// Henderson-Hasselbalch + ionisation fraction
     Pka {
-        #[arg(long)] pka: f64,
-        #[arg(long)] conc_base: f64,
-        #[arg(long)] conc_acid: f64,
+        #[arg(long)]
+        pka: f64,
+        #[arg(long)]
+        conc_base: f64,
+        #[arg(long)]
+        conc_acid: f64,
     },
 }
 
@@ -603,12 +680,14 @@ pub enum BioAction {
     Align {
         query: String,
         target: String,
-        #[arg(long, default_value = "dna")] mode: String,
+        #[arg(long, default_value = "dna")]
+        mode: String,
     },
     /// k-mer frequency table
     Kmer {
         sequence: String,
-        #[arg(long, default_value = "4")] k: usize,
+        #[arg(long, default_value = "4")]
+        k: usize,
     },
     /// Translate a DNA sequence to protein (standard genetic code)
     Translate { dna: String },
@@ -619,8 +698,10 @@ pub enum BioAction {
     /// Compute a MinHash sketch for a DNA/protein sequence
     Minhash {
         sequence: String,
-        #[arg(long, default_value = "4")] k: usize,
-        #[arg(long, default_value = "128")] size: usize,
+        #[arg(long, default_value = "4")]
+        k: usize,
+        #[arg(long, default_value = "128")]
+        size: usize,
     },
 }
 
@@ -629,7 +710,8 @@ pub enum GeoAction {
     /// Embed an H3 index into a graph context quin
     EmbedH3 {
         /// H3 index (decimal or 0x-prefixed hex)
-        #[arg(long)] index: u64,
+        #[arg(long)]
+        index: u64,
     },
 }
 
@@ -637,17 +719,24 @@ pub enum GeoAction {
 pub enum ThermoAction {
     /// Gibbs free energy: ΔG = ΔH − T·ΔS
     Gibbs {
-        #[arg(long)] enthalpy: f64,
-        #[arg(long)] entropy: f64,
-        #[arg(long)] temp: f64,
+        #[arg(long)]
+        enthalpy: f64,
+        #[arg(long)]
+        entropy: f64,
+        #[arg(long)]
+        temp: f64,
     },
     /// Metropolis-Hastings acceptance step
     Anneal {
-        #[arg(long, default_value = "300.0")] initial_temp: f64,
-        #[arg(long, default_value = "1")] particles: usize,
-        #[arg(long)] proposed_energy: f64,
+        #[arg(long, default_value = "300.0")]
+        initial_temp: f64,
+        #[arg(long, default_value = "1")]
+        particles: usize,
+        #[arg(long)]
+        proposed_energy: f64,
         /// Uniform random value in [0,1] for the acceptance criterion
-        #[arg(long, default_value = "0.5")] random: f64,
+        #[arg(long, default_value = "0.5")]
+        random: f64,
     },
 }
 
@@ -655,13 +744,17 @@ pub enum ThermoAction {
 pub enum GeometricAction {
     /// Cross product a×b and dot product a·b (3D vectors, comma-separated)
     Cross {
-        #[arg(long)] a: String,
-        #[arg(long)] b: String,
+        #[arg(long)]
+        a: String,
+        #[arg(long)]
+        b: String,
     },
     /// Angle θ between two 3D vectors (radians + degrees)
     Angle {
-        #[arg(long)] a: String,
-        #[arg(long)] b: String,
+        #[arg(long)]
+        a: String,
+        #[arg(long)]
+        b: String,
     },
 }
 
@@ -669,37 +762,59 @@ pub enum GeometricAction {
 pub enum ClinicalAction {
     /// Framingham 10-year CVD risk
     Framingham {
-        #[arg(long)] age: u8,
-        #[arg(long)] sex_male: bool,
-        #[arg(long)] total_chol: f64,
-        #[arg(long)] hdl_chol: f64,
-        #[arg(long)] systolic_bp: f64,
-        #[arg(long)] bp_treated: bool,
-        #[arg(long)] smoker: bool,
-        #[arg(long)] diabetic: bool,
+        #[arg(long)]
+        age: u8,
+        #[arg(long)]
+        sex_male: bool,
+        #[arg(long)]
+        total_chol: f64,
+        #[arg(long)]
+        hdl_chol: f64,
+        #[arg(long)]
+        systolic_bp: f64,
+        #[arg(long)]
+        bp_treated: bool,
+        #[arg(long)]
+        smoker: bool,
+        #[arg(long)]
+        diabetic: bool,
     },
     /// SOFA (Sequential Organ Failure Assessment) score
     Sofa {
-        #[arg(long)] pao2_fio2: f64,
-        #[arg(long)] platelets: f64,
-        #[arg(long)] bilirubin: f64,
-        #[arg(long)] map: f64,
-        #[arg(long)] gcs: u8,
-        #[arg(long)] creatinine: f64,
+        #[arg(long)]
+        pao2_fio2: f64,
+        #[arg(long)]
+        platelets: f64,
+        #[arg(long)]
+        bilirubin: f64,
+        #[arg(long)]
+        map: f64,
+        #[arg(long)]
+        gcs: u8,
+        #[arg(long)]
+        creatinine: f64,
     },
     /// CKD-EPI eGFR + Cockcroft-Gault CrCl
     Ckd {
-        #[arg(long)] age: u8,
-        #[arg(long)] sex_male: bool,
-        #[arg(long)] weight_kg: f64,
-        #[arg(long)] creatinine: f64,
+        #[arg(long)]
+        age: u8,
+        #[arg(long)]
+        sex_male: bool,
+        #[arg(long)]
+        weight_kg: f64,
+        #[arg(long)]
+        creatinine: f64,
     },
     /// 1-compartment IV bolus PK model
     Pk {
-        #[arg(long)] dose_mg: f64,
-        #[arg(long)] vd_l: f64,
-        #[arg(long)] cl_l_hr: f64,
-        #[arg(long)] time_hr: f64,
+        #[arg(long)]
+        dose_mg: f64,
+        #[arg(long)]
+        vd_l: f64,
+        #[arg(long)]
+        cl_l_hr: f64,
+        #[arg(long)]
+        time_hr: f64,
     },
     /// Drug-drug interaction screening (comma-separated drug names)
     DrugInteractions { drug_names: String },
@@ -709,29 +824,46 @@ pub enum ClinicalAction {
 pub enum EconomicsAction {
     /// Simulate a single GBM path
     Gbm {
-        #[arg(long, default_value = "100.0")] price: f64,
-        #[arg(long, default_value = "0.05")] drift: f64,
-        #[arg(long, default_value = "0.2")] vol: f64,
-        #[arg(long, default_value = "1.0")] horizon: f64,
-        #[arg(long, default_value = "252")] steps: usize,
+        #[arg(long, default_value = "100.0")]
+        price: f64,
+        #[arg(long, default_value = "0.05")]
+        drift: f64,
+        #[arg(long, default_value = "0.2")]
+        vol: f64,
+        #[arg(long, default_value = "1.0")]
+        horizon: f64,
+        #[arg(long, default_value = "252")]
+        steps: usize,
     },
     /// Monte Carlo Value at Risk (95%)
     Var {
-        #[arg(long, default_value = "100.0")] price: f64,
-        #[arg(long, default_value = "0.05")] drift: f64,
-        #[arg(long, default_value = "0.2")] vol: f64,
-        #[arg(long, default_value = "1.0")] horizon: f64,
-        #[arg(long, default_value = "252")] steps: usize,
-        #[arg(long, default_value = "1000")] paths: usize,
+        #[arg(long, default_value = "100.0")]
+        price: f64,
+        #[arg(long, default_value = "0.05")]
+        drift: f64,
+        #[arg(long, default_value = "0.2")]
+        vol: f64,
+        #[arg(long, default_value = "1.0")]
+        horizon: f64,
+        #[arg(long, default_value = "252")]
+        steps: usize,
+        #[arg(long, default_value = "1000")]
+        paths: usize,
     },
     /// Macroeconomic MV=PQ flow simulation
     Macro {
-        #[arg(long, default_value = "1000.0")] m0: f64,
-        #[arg(long, default_value = "1.0")]    p0: f64,
-        #[arg(long, default_value = "2.0")]    velocity: f64,
-        #[arg(long, default_value = "500.0")]  real_gdp: f64,
-        #[arg(long, default_value = "10.0")]   horizon: f64,
-        #[arg(long, default_value = "100")]    steps: usize,
+        #[arg(long, default_value = "1000.0")]
+        m0: f64,
+        #[arg(long, default_value = "1.0")]
+        p0: f64,
+        #[arg(long, default_value = "2.0")]
+        velocity: f64,
+        #[arg(long, default_value = "500.0")]
+        real_gdp: f64,
+        #[arg(long, default_value = "10.0")]
+        horizon: f64,
+        #[arg(long, default_value = "100")]
+        steps: usize,
     },
 }
 
@@ -797,7 +929,10 @@ pub enum QpuAction {
         /// Provider ID (ibm | dwave | ionq | rigetti | azure | braket | google | quantinuum)
         provider: String,
         // ── Universal ────────────────────────────────────────────────────────
-        #[arg(long, help = "API key / bearer token (IBM, D-Wave, IonQ, Rigetti, Quantinuum)")]
+        #[arg(
+            long,
+            help = "API key / bearer token (IBM, D-Wave, IonQ, Rigetti, Quantinuum)"
+        )]
         api_key: Option<String>,
         #[arg(long, help = "Custom API endpoint URL (overrides provider default)")]
         endpoint: Option<String>,
@@ -841,10 +976,16 @@ pub enum QpuAction {
         #[arg(long, help = "Rigetti QPU ID (e.g. Ankaa-2)")]
         qpu_id: Option<String>,
         // ── IonQ ─────────────────────────────────────────────────────────────
-        #[arg(long, help = "IonQ backend (ionq_sim | ionq_qpu | qpu.aria-1 | qpu.forte-1)")]
+        #[arg(
+            long,
+            help = "IonQ backend (ionq_sim | ionq_qpu | qpu.aria-1 | qpu.forte-1)"
+        )]
         backend: Option<String>,
         // ── Quantinuum ───────────────────────────────────────────────────────
-        #[arg(long, help = "Quantinuum machine (H1-1 | H1-2 | H2-1 | H1-1E | H1-1SC)")]
+        #[arg(
+            long,
+            help = "Quantinuum machine (H1-1 | H1-2 | H2-1 | H1-1E | H1-1SC)"
+        )]
         machine: Option<String>,
     },
 
@@ -927,15 +1068,15 @@ enum WebizenAction {
 #[derive(Subcommand, Debug)]
 pub enum QueryDialect {
     /// Execute a standard SPARQL 1.1 Query
-    Sparql { 
-        vault: PathBuf, 
+    Sparql {
+        vault: PathBuf,
         query_string: Option<String>,
         #[arg(short, long)]
         file: Option<PathBuf>,
     },
     /// Execute a nested SPARQL-Star Query (RDF-Star)
-    SparqlStar { 
-        vault: PathBuf, 
+    SparqlStar {
+        vault: PathBuf,
         query_string: Option<String>,
         #[arg(short, long)]
         file: Option<PathBuf>,
@@ -946,21 +1087,21 @@ pub enum QueryDialect {
 pub enum IngestFormat {
     /// Ingest standard Semantic Web formats (N-Triples, RDF/XML, Turtle)
     Semantic { file: PathBuf },
-    
+
     /// Ingest a CSV file using a semantic mapping definition
-    Csv { 
-        file: PathBuf, 
+    Csv {
+        file: PathBuf,
         /// JSON mapping file defining how columns map to Predicate URIs
         #[arg(long)]
-        map: PathBuf 
+        map: PathBuf,
     },
-    
+
     /// Ingest a massive JSON export (e.g. Samsung Health) via streaming
-    Json { 
-        file: PathBuf, 
+    Json {
+        file: PathBuf,
         /// JSON mapping file defining how object keys map to Predicate URIs
         #[arg(long)]
-        map: PathBuf 
+        map: PathBuf,
     },
 }
 
@@ -1118,19 +1259,26 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
     // 1. Parse
     let (query, ctx) = match qualia_core_db::sparql_parser::parse_sparql(query_str) {
         Ok(pair) => pair,
-        Err(e) => { eprintln!("SPARQL parse error: {e}"); return; }
+        Err(e) => {
+            eprintln!("SPARQL parse error: {e}");
+            return;
+        }
     };
 
     // 2. Plan
     let plan = match QueryPlanner::plan(&query, &ctx) {
         Ok(p) => p,
-        Err(e) => { eprintln!("SPARQL plan error: {e}"); return; }
+        Err(e) => {
+            eprintln!("SPARQL plan error: {e}");
+            return;
+        }
     };
 
     // 3. Open vault (memmap, zero heap copy)
     let vault_file = std::fs::File::open(vault).ok();
     // Safety: read-only mapping of a .q42 vault written by the ingest pipeline.
-    let vault_mmap = vault_file.as_ref()
+    let vault_mmap = vault_file
+        .as_ref()
         .and_then(|f| unsafe { memmap2::Mmap::map(f).ok() });
     let quins: &[qualia_core_db::NQuin] = vault_mmap
         .as_deref()
@@ -1138,7 +1286,10 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
         .unwrap_or(&[]);
 
     if quins.is_empty() {
-        eprintln!("Warning: vault '{}' is empty or could not be opened.", vault.display());
+        eprintln!(
+            "Warning: vault '{}' is empty or could not be opened.",
+            vault.display()
+        );
     }
 
     // 4. Execute
@@ -1163,7 +1314,7 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
-    
+
     let log_level = match cli.verbose {
         0 => "info",
         1 => "debug",
@@ -1171,7 +1322,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     std::env::set_var("RUST_LOG", log_level);
     let _ = env_logger::try_init();
-    
+
     if cli.verbose >= 1 {
         // Fallback for the old log_stream
         llm_lifecycle::init_log_stream(true);
@@ -1208,20 +1359,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 LlmAction::Evict { model_id } => {
                     llm_lifecycle::run_evict(model_id)?;
                 }
-                LlmAction::Test { vault_path, models, quantization, verbose } => {
-                    llm_testing::run_test_models(vault_path.clone(), models.clone(), quantization.clone(), *verbose)?;
+                LlmAction::Test {
+                    vault_path,
+                    models,
+                    quantization,
+                    verbose,
+                } => {
+                    llm_testing::run_test_models(
+                        vault_path.clone(),
+                        models.clone(),
+                        quantization.clone(),
+                        *verbose,
+                    )?;
                 }
                 LlmAction::Validate { vault_path, strict } => {
                     llm_testing::run_validate_models(vault_path.clone(), *strict)?;
                 }
-                LlmAction::ComprehensiveTest { vault_path, model, verbose } => {
-                    llm_testing::run_comprehensive_llm_test(vault_path.clone(), model.clone(), *verbose)?;
+                LlmAction::ComprehensiveTest {
+                    vault_path,
+                    model,
+                    verbose,
+                } => {
+                    llm_testing::run_comprehensive_llm_test(
+                        vault_path.clone(),
+                        model.clone(),
+                        *verbose,
+                    )?;
                 }
-                LlmAction::Benchmark { vault_path, models, iterations, warmup } => {
-                    llm_testing::run_benchmark_models(vault_path.clone(), models.clone(), *iterations, *warmup)?;
+                LlmAction::Benchmark {
+                    vault_path,
+                    models,
+                    iterations,
+                    warmup,
+                } => {
+                    llm_testing::run_benchmark_models(
+                        vault_path.clone(),
+                        models.clone(),
+                        *iterations,
+                        *warmup,
+                    )?;
                 }
-                LlmAction::Report { vault_path, output, format } => {
-                    llm_testing::run_generate_report(vault_path.clone(), output.clone(), format.clone())?;
+                LlmAction::Report {
+                    vault_path,
+                    output,
+                    format,
+                } => {
+                    llm_testing::run_generate_report(
+                        vault_path.clone(),
+                        output.clone(),
+                        format.clone(),
+                    )?;
                 }
             }
         }
@@ -1253,7 +1440,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("============================================================");
             }
             ShaclAction::Validate { dataset, shapes } => {
-                println!("Validating {:?} against SHACL shapes in {:?}...", dataset, shapes);
+                println!(
+                    "Validating {:?} against SHACL shapes in {:?}...",
+                    dataset, shapes
+                );
                 // Zero-copy memmap2 SHACL validation will go here
             }
         },
@@ -1277,7 +1467,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     f.read_exact(&mut magic)?;
                     let version = u16::from_le_bytes([magic[4], magic[5]]);
                     if version >= 3 {
-                        println!("[dry-run] {} is already v3 — no migration needed.", path.display());
+                        println!(
+                            "[dry-run] {} is already v3 — no migration needed.",
+                            path.display()
+                        );
                     } else {
                         println!("[dry-run] {} is v{version} — would migrate to v3 (Lamport bits [60:32]→[31:0], header bump).", path.display());
                     }
@@ -1448,8 +1641,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             qualia_core_db::daemon::start_local_daemon_with_options(*port, is_dev, vault_arc).await;
             println!("[Qualia Daemon] All subsystems active. Press Ctrl-C to shut down.");
-            tokio::signal::ctrl_c().await.expect("Failed to install Ctrl-C handler");
+            tokio::signal::ctrl_c()
+                .await
+                .expect("Failed to install Ctrl-C handler");
             println!("[Qualia Daemon] Shutdown signal received. Goodbye.");
+        }
+        Commands::Mcp { action } => {
+            mcp::handle(action, cli.enable_qpu).await;
         }
         Commands::ExportSolid { input, output } => {
             println!("============================================================");
@@ -1517,7 +1715,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  Input   : {}", input.display());
             println!("  Dataset : {}", dataset.display());
             println!("============================================================");
-            
+
             match qualia_core_db::ingest::verify_integrity(input.clone(), dataset.clone()) {
                 Ok(true) => {
                     println!("\n✅ Integrity Check Passed: 100% Exact Match!");
@@ -1551,7 +1749,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Commands::Query { dialect } => match dialect {
-            QueryDialect::Sparql { vault, query_string, file } => {
+            QueryDialect::Sparql {
+                vault,
+                query_string,
+                file,
+            } => {
                 let qs = if let Some(q) = query_string {
                     q.clone()
                 } else if let Some(f) = file {
@@ -1562,7 +1764,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 run_sparql_query(&vault, &qs);
             }
-            QueryDialect::SparqlStar { vault, query_string, file } => {
+            QueryDialect::SparqlStar {
+                vault,
+                query_string,
+                file,
+            } => {
                 let qs = if let Some(q) = query_string {
                     q.clone()
                 } else if let Some(f) = file {
@@ -2546,7 +2752,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let part = reqwest::multipart::Part::bytes(file_data)
                         .file_name(file.file_name().unwrap_or_default().to_string_lossy().to_string());
                     let form = reqwest::multipart::Form::new().part("file", part);
-                    
+
                     match client.post("http://127.0.0.1:5001/api/v0/add").multipart(form).send().await {
                         Ok(res) => {
                             if res.status().is_success() {
@@ -2696,24 +2902,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     qpu::run_list_providers();
                 }
                 QpuAction::Configure {
-                    provider, api_key, endpoint,
-                    hub, group, project, instance,
-                    subscription_id, resource_group, workspace, location,
-                    access_key_id, secret_access_key, region, s3_bucket,
-                    project_id, processor_id, service_account_key_path,
-                    user_id, qpu_id, backend, machine,
+                    provider,
+                    api_key,
+                    endpoint,
+                    hub,
+                    group,
+                    project,
+                    instance,
+                    subscription_id,
+                    resource_group,
+                    workspace,
+                    location,
+                    access_key_id,
+                    secret_access_key,
+                    region,
+                    s3_bucket,
+                    project_id,
+                    processor_id,
+                    service_account_key_path,
+                    user_id,
+                    qpu_id,
+                    backend,
+                    machine,
                 } => {
                     qpu::run_configure(
-                        &data_dir, provider,
-                        api_key.as_deref(), endpoint.as_deref(),
-                        hub.as_deref(), group.as_deref(), project.as_deref(), instance.as_deref(),
-                        subscription_id.as_deref(), resource_group.as_deref(),
-                        workspace.as_deref(), location.as_deref(),
-                        access_key_id.as_deref(), secret_access_key.as_deref(),
-                        region.as_deref(), s3_bucket.as_deref(),
-                        project_id.as_deref(), processor_id.as_deref(),
+                        &data_dir,
+                        provider,
+                        api_key.as_deref(),
+                        endpoint.as_deref(),
+                        hub.as_deref(),
+                        group.as_deref(),
+                        project.as_deref(),
+                        instance.as_deref(),
+                        subscription_id.as_deref(),
+                        resource_group.as_deref(),
+                        workspace.as_deref(),
+                        location.as_deref(),
+                        access_key_id.as_deref(),
+                        secret_access_key.as_deref(),
+                        region.as_deref(),
+                        s3_bucket.as_deref(),
+                        project_id.as_deref(),
+                        processor_id.as_deref(),
                         service_account_key_path.as_deref(),
-                        user_id.as_deref(), qpu_id.as_deref(),
+                        user_id.as_deref(),
+                        qpu_id.as_deref(),
                         backend.as_deref(),
                         machine.as_deref(),
                     );
@@ -2727,7 +2960,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 QpuAction::TestConnection { provider } => {
                     qpu::run_test_connection(&data_dir, provider);
                 }
-                QpuAction::Submit { provider, problem_type, qubits, shots } => {
+                QpuAction::Submit {
+                    provider,
+                    problem_type,
+                    qubits,
+                    shots,
+                } => {
                     qpu::run_submit(&data_dir, provider, problem_type, *qubits, *shots);
                 }
             }
@@ -2744,40 +2982,84 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         Commands::Evaluate { modality } => match modality {
-            EvaluateModality::Deontic { dataset, contract_hash } => {
+            EvaluateModality::Deontic {
+                dataset,
+                contract_hash,
+            } => {
                 evaluate::run_deontic(dataset, *contract_hash);
             }
-            EvaluateModality::Epistemic { dataset, agent_hash } => {
+            EvaluateModality::Epistemic {
+                dataset,
+                agent_hash,
+            } => {
                 evaluate::run_epistemic(dataset, *agent_hash);
             }
             EvaluateModality::Paraconsistent { dataset } => {
                 evaluate::run_paraconsistent(dataset);
             }
-            EvaluateModality::Ltl { dataset, formula_type, hash_a, hash_b } => {
+            EvaluateModality::Ltl {
+                dataset,
+                formula_type,
+                hash_a,
+                hash_b,
+            } => {
                 evaluate::run_ltl(dataset, formula_type, *hash_a, *hash_b);
             }
-            EvaluateModality::Asp { dataset, base_index } => {
+            EvaluateModality::Asp {
+                dataset,
+                base_index,
+            } => {
                 evaluate::run_asp(dataset, *base_index);
             }
-            EvaluateModality::Dl { dataset, sub_class, super_class } => {
+            EvaluateModality::Dl {
+                dataset,
+                sub_class,
+                super_class,
+            } => {
                 evaluate::run_dl(dataset, *sub_class, *super_class);
             }
             EvaluateModality::Probabilistic { weight, threshold } => {
                 evaluate::run_probabilistic(*weight, *threshold);
             }
-            EvaluateModality::LinearLogic { dataset, quin_index } => {
+            EvaluateModality::LinearLogic {
+                dataset,
+                quin_index,
+            } => {
                 evaluate::run_linear_logic(dataset, *quin_index);
             }
-            EvaluateModality::Dialectical { dataset, var1, var2 } => {
+            EvaluateModality::Dialectical {
+                dataset,
+                var1,
+                var2,
+            } => {
                 evaluate::run_dialectical(dataset, *var1, *var2);
             }
             EvaluateModality::Diffusion { graph_id } => {
                 evaluate::run_diffusion(graph_id);
             }
-            EvaluateModality::SpatioTemporal { action, ax1, ay1, ax2, ay2, bx1, by1, bx2, by2 } => {
-                evaluate::run_spatio_temporal(action, *ax1, *ay1, *ax2, *ay2, *bx1, *by1, *bx2, *by2);
+            EvaluateModality::SpatioTemporal {
+                action,
+                ax1,
+                ay1,
+                ax2,
+                ay2,
+                bx1,
+                by1,
+                bx2,
+                by2,
+            } => {
+                evaluate::run_spatio_temporal(
+                    action, *ax1, *ay1, *ax2, *ay2, *bx1, *by1, *bx2, *by2,
+                );
             }
-            EvaluateModality::Interval { action, start1, end1, start2, end2, point } => {
+            EvaluateModality::Interval {
+                action,
+                start1,
+                end1,
+                start2,
+                end2,
+                point,
+            } => {
                 evaluate::run_interval(action, *start1, *end1, *start2, *end2, *point);
             }
             EvaluateModality::GraphTopology { dataset, context } => {
@@ -2786,7 +3068,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             EvaluateModality::Argumentation { demo, dataset } => {
                 evaluate::run_argumentation(*demo, dataset.as_deref());
             }
-            EvaluateModality::ControlFeedback { kp, ki, kd, setpoint, measurement } => {
+            EvaluateModality::ControlFeedback {
+                kp,
+                ki,
+                kd,
+                setpoint,
+                measurement,
+            } => {
                 evaluate::run_control_feedback(*kp, *ki, *kd, *setpoint, *measurement);
             }
             EvaluateModality::NeuroSymbolic { demo: _ } => {
@@ -2812,27 +3100,62 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             },
             SolveAction::Optimize { action } => match action {
-                OptimizeAction::Simplex { initial, iterations } => {
+                OptimizeAction::Simplex {
+                    initial,
+                    iterations,
+                } => {
                     solve::run_simplex(initial, *iterations);
                 }
-                OptimizeAction::Root { initial, lower, upper, tolerance } => {
+                OptimizeAction::Root {
+                    initial,
+                    lower,
+                    upper,
+                    tolerance,
+                } => {
                     solve::run_root(*initial, *lower, *upper, *tolerance);
                 }
-                OptimizeAction::CurveFit { initial_params, x_data, y_data } => {
+                OptimizeAction::CurveFit {
+                    initial_params,
+                    x_data,
+                    y_data,
+                } => {
                     solve::run_curve_fit(initial_params, x_data, y_data);
                 }
             },
             SolveAction::Ode { action } => match action {
-                OdeAction::Rk4 { lambda, t_start, t_end, y0, step_size } => {
+                OdeAction::Rk4 {
+                    lambda,
+                    t_start,
+                    t_end,
+                    y0,
+                    step_size,
+                } => {
                     solve::run_ode_rk4(*lambda, *t_start, *t_end, *y0, *step_size);
                 }
-                OdeAction::Harmonic { omega, t_start, t_end, y0, step_size } => {
+                OdeAction::Harmonic {
+                    omega,
+                    t_start,
+                    t_end,
+                    y0,
+                    step_size,
+                } => {
                     solve::run_ode_harmonic(*omega, *t_start, *t_end, *y0, *step_size);
                 }
-                OdeAction::Bvp { t_start, t_end, y_left, y_right, threshold } => {
+                OdeAction::Bvp {
+                    t_start,
+                    t_end,
+                    y_left,
+                    y_right,
+                    threshold,
+                } => {
                     solve::run_ode_bvp(*t_start, *t_end, *y_left, *y_right, *threshold);
                 }
-                OdeAction::QuantumSpectrum { planck_mass, coupling, max_n, frequency } => {
+                OdeAction::QuantumSpectrum {
+                    planck_mass,
+                    coupling,
+                    max_n,
+                    frequency,
+                } => {
                     solve::run_ode_quantum_spectrum(*planck_mass, *coupling, *max_n, *frequency);
                 }
             },
@@ -2840,7 +3163,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 QuantumSolveAction::Qaoa { depth, beta, gamma } => {
                     solve::run_quantum_qaoa(*depth, beta, gamma);
                 }
-                QuantumSolveAction::Spsa { num_params, initial } => {
+                QuantumSolveAction::Spsa {
+                    num_params,
+                    initial,
+                } => {
                     solve::run_quantum_spsa(*num_params, initial);
                 }
             },
@@ -2856,25 +3182,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Science { action } => match action {
             ScienceAction::Chem { action } => match action {
                 ChemAction::Smiles { smiles } => science::run_chem_smiles(smiles),
-                ChemAction::Thermo { reaction, a, b, c } => science::run_chem_thermo(reaction, *a, *b, *c),
+                ChemAction::Thermo { reaction, a, b, c } => {
+                    science::run_chem_thermo(reaction, *a, *b, *c)
+                }
                 ChemAction::DrugLike { smiles } => science::run_chem_druglike(smiles),
-                ChemAction::Pka { pka, conc_base, conc_acid } => science::run_chem_pka(*pka, *conc_base, *conc_acid),
+                ChemAction::Pka {
+                    pka,
+                    conc_base,
+                    conc_acid,
+                } => science::run_chem_pka(*pka, *conc_base, *conc_acid),
             },
             ScienceAction::Bio { action } => match action {
-                BioAction::Align { query, target, mode } => science::run_bio_align(query, target, mode),
+                BioAction::Align {
+                    query,
+                    target,
+                    mode,
+                } => science::run_bio_align(query, target, mode),
                 BioAction::Kmer { sequence, k } => science::run_bio_kmer(sequence, *k),
                 BioAction::Translate { dna } => science::run_bio_translate(dna),
                 BioAction::Isoelectric { protein } => science::run_bio_isoelectric(protein),
-                BioAction::Jaccard { sketch_a, sketch_b } => science::run_bio_jaccard(sketch_a, sketch_b),
-                BioAction::Minhash { sequence, k, size } => science::run_bio_minhash(sequence, *k, *size),
+                BioAction::Jaccard { sketch_a, sketch_b } => {
+                    science::run_bio_jaccard(sketch_a, sketch_b)
+                }
+                BioAction::Minhash { sequence, k, size } => {
+                    science::run_bio_minhash(sequence, *k, *size)
+                }
             },
             ScienceAction::Geo { action } => match action {
                 GeoAction::EmbedH3 { index } => science::run_geo_embed_h3(*index),
             },
             ScienceAction::Thermo { action } => match action {
-                ThermoAction::Gibbs { enthalpy, entropy, temp } => science::run_thermo_gibbs(*enthalpy, *entropy, *temp),
-                ThermoAction::Anneal { initial_temp, particles, proposed_energy, random } => {
-                    science::run_thermo_anneal(*initial_temp, *particles, *proposed_energy, *random);
+                ThermoAction::Gibbs {
+                    enthalpy,
+                    entropy,
+                    temp,
+                } => science::run_thermo_gibbs(*enthalpy, *entropy, *temp),
+                ThermoAction::Anneal {
+                    initial_temp,
+                    particles,
+                    proposed_energy,
+                    random,
+                } => {
+                    science::run_thermo_anneal(
+                        *initial_temp,
+                        *particles,
+                        *proposed_energy,
+                        *random,
+                    );
                 }
             },
             ScienceAction::Geometric { action } => match action {
@@ -2882,16 +3236,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 GeometricAction::Angle { a, b } => science::run_geometric_angle(a, b),
             },
             ScienceAction::Clinical { action } => match action {
-                ClinicalAction::Framingham { age, sex_male, total_chol, hdl_chol, systolic_bp, bp_treated, smoker, diabetic } => {
-                    science::run_clinical_framingham(*age, *sex_male, *total_chol, *hdl_chol, *systolic_bp, *bp_treated, *smoker, *diabetic);
+                ClinicalAction::Framingham {
+                    age,
+                    sex_male,
+                    total_chol,
+                    hdl_chol,
+                    systolic_bp,
+                    bp_treated,
+                    smoker,
+                    diabetic,
+                } => {
+                    science::run_clinical_framingham(
+                        *age,
+                        *sex_male,
+                        *total_chol,
+                        *hdl_chol,
+                        *systolic_bp,
+                        *bp_treated,
+                        *smoker,
+                        *diabetic,
+                    );
                 }
-                ClinicalAction::Sofa { pao2_fio2, platelets, bilirubin, map, gcs, creatinine } => {
-                    science::run_clinical_sofa(*pao2_fio2, *platelets, *bilirubin, *map, *gcs, *creatinine);
+                ClinicalAction::Sofa {
+                    pao2_fio2,
+                    platelets,
+                    bilirubin,
+                    map,
+                    gcs,
+                    creatinine,
+                } => {
+                    science::run_clinical_sofa(
+                        *pao2_fio2,
+                        *platelets,
+                        *bilirubin,
+                        *map,
+                        *gcs,
+                        *creatinine,
+                    );
                 }
-                ClinicalAction::Ckd { age, sex_male, weight_kg, creatinine } => {
+                ClinicalAction::Ckd {
+                    age,
+                    sex_male,
+                    weight_kg,
+                    creatinine,
+                } => {
                     science::run_clinical_ckd(*age, *sex_male, *weight_kg, *creatinine);
                 }
-                ClinicalAction::Pk { dose_mg, vd_l, cl_l_hr, time_hr } => {
+                ClinicalAction::Pk {
+                    dose_mg,
+                    vd_l,
+                    cl_l_hr,
+                    time_hr,
+                } => {
                     science::run_clinical_pk(*dose_mg, *vd_l, *cl_l_hr, *time_hr);
                 }
                 ClinicalAction::DrugInteractions { drug_names } => {
@@ -2899,13 +3295,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             },
             ScienceAction::Economics { action } => match action {
-                EconomicsAction::Gbm { price, drift, vol, horizon, steps } => {
+                EconomicsAction::Gbm {
+                    price,
+                    drift,
+                    vol,
+                    horizon,
+                    steps,
+                } => {
                     science::run_economics_gbm(*price, *drift, *vol, *horizon, *steps);
                 }
-                EconomicsAction::Var { price, drift, vol, horizon, steps, paths } => {
+                EconomicsAction::Var {
+                    price,
+                    drift,
+                    vol,
+                    horizon,
+                    steps,
+                    paths,
+                } => {
                     science::run_economics_var(*price, *drift, *vol, *horizon, *steps, *paths);
                 }
-                EconomicsAction::Macro { m0, p0, velocity, real_gdp, horizon, steps } => {
+                EconomicsAction::Macro {
+                    m0,
+                    p0,
+                    velocity,
+                    real_gdp,
+                    horizon,
+                    steps,
+                } => {
                     science::run_economics_macro(*m0, *p0, *velocity, *real_gdp, *horizon, *steps);
                 }
             },

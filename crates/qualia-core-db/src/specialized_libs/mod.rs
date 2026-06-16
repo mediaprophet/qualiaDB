@@ -13,3 +13,8 @@ pub mod financial_modeling;
 pub mod chemistry_modeling;
 pub mod medical_computing;
 pub mod engineering_analysis;
+pub mod quantum_biology;
+
+// Shared zero-heap utilities
+pub mod shared;
+pub use shared::{FixedArray, FixedStack, RingBuffer, FixedQueue};

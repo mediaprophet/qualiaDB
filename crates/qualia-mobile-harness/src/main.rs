@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use wasm_bindgen::prelude::*;
-use web_sys::{HtmlVideoElement, WebSocket, MessageEvent};
+use web_sys::{WebSocket, MessageEvent};
 
 fn main() {
     dioxus::launch(App);

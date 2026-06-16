@@ -517,6 +517,15 @@ dependencies = [
 
 [[package]]
 name = "atoi"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "616896e05fc0e2649463a93a15183c6a16bf03413a7af88ef1285ddedfa9cda5"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "atoi"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f28d99ec8bfea296261ca1af174f24225171fea9664ba9003cbebee704810528"
@@ -5728,9 +5737,9 @@ checksum = "e0c5ccf5294c6ccd63a74f1565028353830a9c2f5eb0c682c355c471726a6e3f"
 
 [[package]]
 name = "qualia-cli"
-version = "0.0.13"
+version = "0.0.15"
 dependencies = [
- "atoi",
+ "atoi 2.0.0",
  "bytemuck",
  "chrono",
  "clap",
@@ -5765,7 +5774,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-client-core"
-version = "0.0.13"
+version = "0.0.15"
 dependencies = [
  "base64 0.22.1",
  "bip39",
@@ -5802,7 +5811,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-core-db"
-version = "0.0.13"
+version = "0.0.15"
 dependencies = [
  "aead",
  "aes-gcm",
@@ -5814,6 +5823,7 @@ dependencies = [
  "ark-serialize",
  "ark-snark",
  "async-trait",
+ "atoi 0.4.0",
  "axum",
  "base64 0.22.1",
  "blake3",
@@ -5825,6 +5835,7 @@ dependencies = [
  "core_affinity",
  "criterion 0.8.2",
  "crossbeam-channel",
+ "csv",
  "dashmap 6.2.1",
  "dhat",
  "ed25519-dalek",
@@ -5856,7 +5867,7 @@ dependencies = [
  "pbkdf2",
  "pollster",
  "proptest",
- "quick-xml 0.36.2",
+ "quick-xml 0.31.0",
  "rand 0.10.1",
  "rand_distr",
  "rayon",
@@ -5896,7 +5907,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-extensions"
-version = "0.0.13"
+version = "0.0.15"
 dependencies = [
  "approx",
  "async-trait",
@@ -5922,7 +5933,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-mobile-harness"
-version = "0.0.13"
+version = "0.0.15"
 dependencies = [
  "dioxus",
  "futures-util",
@@ -5937,7 +5948,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-solid-bridge"
-version = "0.0.13"
+version = "0.0.15"
 dependencies = [
  "bytes",
  "core_affinity",
@@ -5981,6 +5992,15 @@ dependencies = [
  "quick-protobuf",
  "thiserror 1.0.69",
  "unsigned-varint 0.8.0",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.31.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1004a344b30a54e2ee58d66a71b32d2db2feb0a31f9a2d302bf0536f15de2a33"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]

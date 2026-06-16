@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Format Parsing - QualiaDB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="js/menu-loader.js"></script>
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        pre { background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 16px; overflow-x: auto; }
+        code { font-family: 'Fira Code', monospace; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div class="hidden md:flex items-center gap-6 text-sm">
+                        <a href="index.html" class="hover:text-white transition-colors">Home</a>
+                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="advanced-features.html" class="hover:text-white transition-colors">Features</a>
+                        <a href="api.html" class="hover:text-white transition-colors">API Docs</a>
+                        <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
+        <div class="mb-8">
+            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Data Format Parsing</h1>
+            <p class="text-xl text-slate-400">Comprehensive examples of parsing CSV, JSON, RDF, and other formats into QualiaDB</p>
+        </div>
+
+        <!-- CSV Parsing -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-file-csv text-green-400"></i>
+                CSV Parsing
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB can ingest CSV files and convert them to semantic triples. Here's how to parse a CSV with person data:</p>
+            
+            <h3 class="text-lg font-medium mb-3">Input CSV (people.csv)</h3>
+            <pre class="mb-6"><code>name,age,city
+Alice Smith,30,New York
+Bob Jones,35,Los Angeles
+Carol White,28,Chicago</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Conversion Command</h3>
+            <pre class="mb-6"><code>qualia ingest --format csv people.csv people.q42 --mapping "name=ex:name,age=ex:age,city=ex:city"</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Resulting Triples (Turtle)</h3>
+            <pre class="mb-6"><code>@prefix ex: <http://example.org/> .
+
+_:row1 a ex:Person ;
+    ex:name "Alice Smith" ;
+    ex:age 30 ;
+    ex:city "New York" .
+
+_:row2 a ex:Person ;
+    ex:name "Bob Jones" ;
+    ex:age 35 ;
+    ex:city "Los Angeles" .
+
+_:row3 a ex:Person ;
+    ex:name "Carol White" ;
+    ex:age 28 ;
+    ex:city "Chicago" .</code></pre>
+        </div>
+
+        <!-- JSON Parsing -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-file-code text-yellow-400"></i>
+                JSON / JSON-LD Parsing
+            </h2>
+            
+            <p class="text-white/70 mb-6">JSON-LD is the preferred JSON format for semantic data. QualiaDB supports both plain JSON and JSON-LD:</p>
+            
+            <h3 class="text-lg font-medium mb-3">Input JSON-LD (data.jsonld)</h3>
+            <pre class="mb-6"><code>{
+  "@context": {
+    "name": "http://example.org/name",
+    "age": "http://example.org/age",
+    "knows": "http://example.org/knows"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org/alice",
+      "@type": "Person",
+      "name": "Alice Smith",
+      "age": 30,
+      "knows": "http://example.org/bob"
+    },
+    {
+      "@id": "http://example.org/bob",
+      "@type": "Person",
+      "name": "Bob Jones",
+      "age": 35
+    }
+  ]
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Conversion Command</h3>
+            <pre class="mb-6"><code>qualia ingest data.jsonld data.q42</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Plain JSON with Schema</h3>
+            <p class="text-white/70 mb-3">For plain JSON, provide a JSON-LD context to map keys to predicates:</p>
+            <pre class="mb-6"><code>{
+  "context": {
+    "name": "http://example.org/name",
+    "age": "http://example.org/age"
+  },
+  "data": [
+    {"name": "Alice", "age": 30},
+    {"name": "Bob", "age": 35}
+  ]
+}</code></pre>
+        </div>
+
+        <!-- RDF Parsing -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-project-diagram text-blue-400"></i>
+                RDF Format Parsing
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB supports multiple RDF serializations:</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h3 class="text-lg font-medium mb-3">Turtle (.ttl)</h3>
+                    <pre><code>@prefix ex: <http://example.org/> .
+
+ex:alice a ex:Person ;
+    ex:name "Alice" ;
+    ex:age 30 .</code></pre>
+                </div>
+                <div>
+                    <h3 class="text-lg font-medium mb-3">N-Triples (.nt)</h3>
+                    <pre><code><http://example.org/alice> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/Person> .
+<http://example.org/alice> <http://example.org/name> "Alice" .
+<http://example.org/alice> <http://example.org/age> "30"^^<http://www.w3.org/2001/XMLSchema#integer> .</code></pre>
+                </div>
+                <div>
+                    <h3 class="text-lg font-medium mb-3">RDF/XML (.rdf)</h3>
+                    <pre><code><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:ex="http://example.org/">
+  <rdf:Description rdf:about="http://example.org/alice">
+    <rdf:type rdf:resource="http://example.org/Person"/>
+    <ex:name>Alice</ex:name>
+    <ex:age>30</ex:age>
+  </rdf:Description>
+</rdf:RDF></code></pre>
+                </div>
+                <div>
+                    <h3 class="text-lg font-medium mb-3">N-Quads (.nq)</h3>
+                    <pre><code><http://example.org/alice> <http://example.org/name> "Alice" <http://example.org/graph1> .
+<http://example.org/alice> <http://example.org/age> "30"^^<http://www.w3.org/2001/XMLSchema#integer> <http://example.org/graph1> .</code></pre>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-medium mb-3">Ingest Commands</h3>
+            <pre><code># Turtle
+qualia ingest data.ttl data.q42
+
+# N-Triples
+qualia ingest data.nt data.q42
+
+# RDF/XML
+qualia ingest data.rdf data.q42
+
+# N-Quads (with named graphs)
+qualia ingest data.nq data.q42</code></pre>
+        </div>
+
+        <!-- CBOR-LD -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-microchip text-purple-400"></i>
+                CBOR-LD (Native Format)
+            </h2>
+            
+            <p class="text-white/70 mb-6">CBOR-LD is QualiaDB's native binary format. It provides the most efficient storage and zero-allocation parsing:</p>
+            
+            <h3 class="text-lg font-medium mb-3">Why CBOR-LD?</h3>
+            <ul class="list-disc list-inside text-white/70 space-y-2 mb-6">
+                <li>Binary format (smaller than text)</li>
+                <li>Zero-allocation parsing (direct to Quin structs)</li>
+                <li>Self-describing (includes data types)</li>
+                <li>Web-friendly (can be used in browser)</li>
+            </ul>
+
+            <h3 class="text-lg font-medium mb-3">Export to CBOR-LD</h3>
+            <pre class="mb-6"><code>qualia export --format cbor-ld data.q42 data.cborld</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Import from CBOR-LD</h3>
+            <pre><code>qualia ingest data.cborld data.q42</code></pre>
+        </div>
+
+        <!-- Performance Comparison -->
+        <div class="glass-strong rounded-3xl p-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-tachometer-alt text-cyan-400"></i>
+                Performance Comparison
+            </h2>
+            
+            <p class="text-white/70 mb-6">Benchmark results for ingesting a 100K triple dataset (WordNet subset):</p>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-white/10">
+                            <th class="py-3 px-4">Format</th>
+                            <th class="py-3 px-4">File Size</th>
+                            <th class="py-3 px-4">Ingest Time</th>
+                            <th class="py-3 px-4">Memory Usage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">Turtle</td>
+                            <td class="py-3 px-4">15.2 MB</td>
+                            <td class="py-3 px-4">2.3s</td>
+                            <td class="py-3 px-4">45 MB</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">N-Triples</td>
+                            <td class="py-3 px-4">18.7 MB</td>
+                            <td class="py-3 px-4">1.8s</td>
+                            <td class="py-3 px-4">38 MB</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">JSON-LD</td>
+                            <td class="py-3 px-4">22.1 MB</td>
+                            <td class="py-3 px-4">3.1s</td>
+                            <td class="py-3 px-4">52 MB</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">CBOR-LD</td>
+                            <td class="py-3 px-4">8.4 MB</td>
+                            <td class="py-3 px-4">0.9s</td>
+                            <td class="py-3 px-4">28 MB</td>
+                        </tr>
+                        <tr class="bg-emerald-500/10">
+                            <td class="py-3 px-4 font-medium">.q42 (Native)</td>
+                            <td class="py-3 px-4 font-medium">2.1 MB</td>
+                            <td class="py-3 px-4 font-medium">0.0s (mmap)</td>
+                            <td class="py-3 px-4 font-medium">12 MB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="text-white/50 text-sm mt-4">* Benchmarks run on 512 MB constraint, measured with native CLI</p>
+        </div>
+    </div>
+
+    <footer class="border-t border-white/10 py-8">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between">
+                <div class="text-white/50 text-sm">
+                    QualiaDB v0.0.15 • Human-Centric Semantic Engine
+                </div>
+                <div class="flex items-center gap-6 text-sm">
+                    <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
+                    <a href="manuals/standards/" class="hover:text-white transition-colors">Standards</a>
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="hover:text-white transition-colors">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

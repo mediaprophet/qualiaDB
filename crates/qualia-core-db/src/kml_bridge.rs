@@ -57,7 +57,7 @@ impl std::error::Error for KmlError {}
 /// The lexicon map (hash → string) for any literal values is returned alongside.
 pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap<u64, String>), KmlError> {
     let mut reader = Reader::from_reader(bytes);
-    reader.config_mut().trim_text(true);
+    reader.trim_text(true);
 
     let mut quins: Vec<NQuin> = Vec::new();
     let mut lexicon: std::collections::HashMap<u64, String> = std::collections::HashMap::new();

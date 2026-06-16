@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPARQL Query Examples - QualiaDB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="js/menu-loader.js"></script>
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        pre { background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 16px; overflow-x: auto; }
+        code { font-family: 'Fira Code', monospace; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div class="hidden md:flex items-center gap-6 text-sm">
+                        <a href="index.html" class="hover:text-white transition-colors">Home</a>
+                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="advanced-features.html" class="hover:text-white transition-colors">Features</a>
+                        <a href="api.html" class="hover:text-white transition-colors">API Docs</a>
+                        <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
+        <div class="mb-8">
+            <h1 class="text-5xl font-semibold tracking-tighter mb-4">SPARQL Query Examples</h1>
+            <p class="text-xl text-slate-400">Comprehensive examples of SPARQL queries in QualiaDB, including extensions</p>
+        </div>
+
+        <!-- Basic Queries -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-search text-blue-400"></i>
+                Basic SPARQL Queries
+            </h2>
+            
+            <h3 class="text-lg font-medium mb-3">SELECT: Simple Triple Pattern</h3>
+            <pre class="mb-6"><code>SELECT ?s ?p ?o WHERE {
+  ?s ?p ?o
+} LIMIT 10</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">SELECT: Filter by Type</h3>
+            <pre class="mb-6"><code>SELECT ?person ?name WHERE {
+  ?person a ex:Person ;
+           ex:name ?name .
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">SELECT: Multiple Patterns</h3>
+            <pre class="mb-6"><code>SELECT ?person ?name ?age WHERE {
+  ?person a ex:Person ;
+           ex:name ?name ;
+           ex:age ?age .
+  FILTER (?age > 30)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">ASK: Existence Check</h3>
+            <pre><code>ASK {
+  ?person ex:name "Alice" .
+}</code></pre>
+        </div>
+
+        <!-- Property Paths -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-route text-green-400"></i>
+                Property Paths
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB supports SPARQL 1.1 property paths:</p>
+            
+            <h3 class="text-lg font-medium mb-3">Sequence Path (/)</h3>
+            <pre class="mb-6"><code># Find friends of friends
+SELECT ?person ?friendOfFriend WHERE {
+  ?person ex:knows/ex:knows ?friendOfFriend .
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Inverse Path (^)</h3>
+            <pre class="mb-6"><code># Find who knows Alice
+SELECT ?knower WHERE {
+  ?knower ^ex:knows ex:alice .
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Alternative Path (|)</h3>
+            <pre class="mb-6"><code># Find people connected by any relationship
+SELECT ?person ?related WHERE {
+  ?person (ex:knows|ex:worksWith|ex:relatedTo) ?related .
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Zero or More (*)</h3>
+            <pre><code># Find all descendants in a hierarchy
+SELECT ?ancestor ?descendant WHERE {
+  ?ancestor ex:parent* ?descendant .
+}</code></pre>
+        </div>
+
+        <!-- SPARQL-Star -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-star text-yellow-400"></i>
+                SPARQL-Star (RDF-Star)
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB supports SPARQL-Star for annotating triples:</p>
+            
+            <h3 class="text-lg font-medium mb-3">Nested Triple Pattern</h3>
+            <pre class="mb-6"><code># Find triples with confidence scores
+SELECT ?s ?p ?o ?confidence WHERE {
+  << ?s ?p ?o >> ex:confidence ?confidence .
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Annotating Query Results</h3>
+            <pre class="mb-6"><code># Return annotated triples
+SELECT ?triple ?source WHERE {
+  ?triple a ex:Statement ;
+          ex:source ?source .
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Filtering on Annotations</h3>
+            <pre><code># Find high-confidence relationships
+SELECT ?s ?p ?o WHERE {
+  << ?s ?p ?o >> ex:confidence ?conf .
+  FILTER (?conf > 0.9)
+}</code></pre>
+        </div>
+
+        <!-- Aggregates -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-calculator text-purple-400"></i>
+                Aggregates
+            </h2>
+            
+            <p class="text-white/70 mb-6">Standard SPARQL 1.1 aggregates:</p>
+            
+            <h3 class="text-lg font-medium mb-3">COUNT</h3>
+            <pre class="mb-6"><code>SELECT (COUNT(?person) AS ?count) WHERE {
+  ?person a ex:Person .
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">GROUP BY</h3>
+            <pre class="mb-6"><code>SELECT ?city (COUNT(?person) AS ?population) WHERE {
+  ?person a ex:Person ;
+           ex:city ?city .
+} GROUP BY ?city</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">AVG, MIN, MAX, SUM</h3>
+            <pre class="mb-6"><code>SELECT (AVG(?age) AS ?avgAge)
+       (MIN(?age) AS ?minAge)
+       (MAX(?age) AS ?maxAge)
+       (SUM(?salary) AS ?totalSalary) WHERE {
+  ?person ex:age ?age ;
+           ex:salary ?salary .
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">HAVING</h3>
+            <pre><code>SELECT ?city (COUNT(?person) AS ?population) WHERE {
+  ?person a ex:Person ;
+           ex:city ?city .
+} GROUP BY ?city
+HAVING (?population > 1000)</code></pre>
+        </div>
+
+        <!-- QualiaDB Extensions -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-bolt text-cyan-400"></i>
+                QualiaDB Extensions
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB-specific SPARQL extensions:</p>
+            
+            <h3 class="text-lg font-medium mb-3">AS OF (Temporal Query)</h3>
+            <pre class="mb-6"><code># Query data as of a specific date
+SELECT ?person ?name WHERE {
+  ?person ex:name ?name .
+} AS OF "2024-01-01"^^xsd:dateTime</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">AT TIME (Millisecond Timestamp)</h3>
+            <pre class="mb-6"><code># Query data at a specific millisecond timestamp
+SELECT ?person ?name WHERE {
+  ?person ex:name ?name .
+} AT TIME 1704067200000</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">SERVICE (Federated Query)</h3>
+            <pre class="mb-6"><code># Query remote SPARQL endpoint
+SELECT ?s ?p ?o WHERE {
+  SERVICE <https://dbpedia.org/sparql> {
+    ?s ?p ?o .
+    FILTER (?s = <http://dbpedia.org/resource/QualiaDB>)
+  }
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">GeoSPARQL (Spatial)</h3>
+            <pre><code># Find locations within a radius
+SELECT ?location ?name WHERE {
+  ?location a ex:Location ;
+            ex:name ?name ;
+            geo:asWKT ?wkt .
+  FILTER (geof:distance(?wkt, "POINT(-122.4194 37.7749)"^^geo:wktLiteral) < 10.0)
+}</code></pre>
+        </div>
+
+        <!-- UPDATE Operations -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-edit text-orange-400"></i>
+                SPARQL UPDATE
+            </h2>
+            
+            <p class="text-white/70 mb-6">SPARQL 1.1 UPDATE operations:</p>
+            
+            <h3 class="text-lg font-medium mb-3">INSERT DATA</h3>
+            <pre class="mb-6"><code>INSERT DATA {
+  ex:alice a ex:Person ;
+           ex:name "Alice Smith" ;
+           ex:age 30 .
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">DELETE DATA</h3>
+            <pre class="mb-6"><code>DELETE DATA {
+  ex:alice ex:age 30 .
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">DELETE WHERE</h3>
+            <pre class="mb-6"><code>DELETE WHERE {
+  ?person ex:age ?age .
+  FILTER (?age < 18)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">INSERT WHERE</h3>
+            <pre class="mb-6"><code>INSERT {
+  ?person ex:adult true .
+}
+WHERE {
+  ?person ex:age ?age .
+  FILTER (?age >= 18)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">DELETE INSERT</h3>
+            <pre><code>DELETE {
+  ?person ex:age ?oldAge .
+}
+INSERT {
+  ?person ex:age ?newAge .
+}
+WHERE {
+  ?person ex:age ?oldAge .
+  BIND (?oldAge + 1 AS ?newAge)
+}</code></pre>
+        </div>
+
+        <!-- SHACL Integration -->
+        <div class="glass-strong rounded-3xl p-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-shield-alt text-red-400"></i>
+                SHACL Integration
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB integrates SHACL validation with SPARQL:</p>
+            
+            <h3 class="text-lg font-medium mb-3">SHACL-SPARQL Constraints</h3>
+            <pre class="mb-6"><code>ex:PersonShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:property [
+    sh:path ex:age ;
+    sh:datatype xsd:integer ;
+    sh:minInclusive 0 ;
+    sh:maxInclusive 150 ;
+    sh:sparql [
+      sh:select """
+        SELECT $this ($this AS ?value)
+        WHERE {
+          FILTER NOT EXISTS {
+            $this ex:age ?age .
+            FILTER (?age >= 18)
+          }
+        }
+      """ ;
+    ]
+  ] .</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Validate with SPARQL</h3>
+            <pre><code># Validate data against SHACL shapes
+SELECT ?node ?constraint ?message WHERE {
+  ?node a ex:Person .
+  # SHACL validation logic
+}</code></pre>
+        </div>
+    </div>
+
+    <footer class="border-t border-white/10 py-8">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between">
+                <div class="text-white/50 text-sm">
+                    QualiaDB v0.0.15 • Human-Centric Semantic Engine
+                </div>
+                <div class="flex items-center gap-6 text-sm">
+                    <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
+                    <a href="manuals/standards/" class="hover:text-white transition-colors">Standards</a>
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="hover:text-white transition-colors">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

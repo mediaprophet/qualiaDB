@@ -1,6 +1,6 @@
 [package]
 name = "qualia-extensions"
-version = "0.0.13"
+version = "0.0.15"
 edition = "2021"
 description = "Advanced computational extensions for QualiaDB"
 license = "MIT"
@@ -68,3 +68,4 @@ path = "src/bin/cli.rs"
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+

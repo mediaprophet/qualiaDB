@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edge LLM Capabilities - QualiaDB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="js/menu-loader.js"></script>
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        pre { background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 16px; overflow-x: auto; }
+        code { font-family: 'Fira Code', monospace; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div class="hidden md:flex items-center gap-6 text-sm">
+                        <a href="index.html" class="hover:text-white transition-colors">Home</a>
+                        <a href="benchmark.html" class="hover:text-white transition-colors">Benchmark</a>
+                        <a href="advanced-features.html" class="hover:text-white transition-colors">Features</a>
+                        <a href="api.html" class="hover:text-white transition-colors">API Docs</a>
+                        <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
+        <div class="mb-8">
+            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Edge LLM Capabilities</h1>
+            <p class="text-xl text-slate-400">Native, in-process LLM inference with zero cloud dependencies</p>
+        </div>
+
+        <!-- Architecture Overview -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-microchip text-blue-400"></i>
+                Native Inference Architecture
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB runs LLM inference entirely in-process. No Ollama, no Python runtime, no external HTTP server:</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-blue-400 mb-2">GGUF Model Loading</h3>
+                    <p class="text-white/60 text-sm">Memory-mapped GGUF files via `memmap2` - zero heap allocation</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-blue-400 mb-2">GPU Dispatch</h3>
+                    <p class="text-white/60 text-sm">DirectML (Windows), Accelerate (macOS), wgpu/Vulkan (Linux)</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-blue-400 mb-2">Phase 8 Bifurcation</h3>
+                    <p class="text-white/60 text-sm">SPSC ring buffers for real-time governance interception</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-blue-400 mb-2">128 MB RAM Cap</h3>
+                    <p class="text-white/60 text-sm">Strict memory limit for edge device compatibility</p>
+                </div>
+            </div>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6">
+                <div class="flex items-start gap-4">
+                    <i class="fas fa-shield-halved text-emerald-400 text-2xl mt-1"></i>
+                    <div>
+                        <h3 class="font-semibold text-emerald-400 mb-2">Privacy & Security</h3>
+                        <p class="text-white/70 text-sm">All inference happens locally on your device. No data ever leaves your machine. The Webizen Sentinel validates every token in real-time to prevent hallucinations and enforce fiduciary boundaries.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Supported Models -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-cubes text-green-400"></i>
+                Supported Models
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB supports GGUF format models from various sources:</p>
+            
+            <div class="space-y-4 mb-6">
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-green-400 mb-2">Llama 3.2 Family</h3>
+                    <p class="text-white/60 text-sm">1B, 3B, 8B parameters - Optimized for edge deployment</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-green-400 mb-2">SmolLM2</h3>
+                    <p class="text-white/60 text-sm">135M, 360M, 1.7B parameters - Ultra-lightweight for mobile</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-green-400 mb-2">Mistral / Mixtral</h3>
+                    <p class="text-white/60 text-sm">7B, 8x7B MoE - High-quality reasoning</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-4">
+                    <h3 class="font-medium text-green-400 mb-2">Phi-3 / Phi-3 Mini</h3>
+                    <p class="text-white/60 text-sm">3.8B, 4B parameters - Microsoft's compact models</p>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-medium mb-3">Download Models</h3>
+            <pre><code># List available models
+qualia resources list llms
+
+# Download a model
+qualia resources download llama-3.2-3b-instruct
+
+# The model is stored in your data directory and memory-mapped on demand</code></pre>
+        </div>
+
+        <!-- Phase 8 Bifurcated Compute -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-network-wired text-purple-400"></i>
+                Phase 8 Bifurcated Compute
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB's unique governance architecture uses two wait-free SPSC ring buffers:</p>
+            
+            <div class="bg-black/30 rounded-2xl p-6 mb-6">
+                <pre class="text-sm"><code>LLM Engine thread  ──LogitSummary──►  LogitStream (cap 1024)  ──►  Webizen Sentinel
+                   ◄──DenyRollback──  ControlStream (cap 16)  ◄──  (calling thread)</code></pre>
+            </div>
+
+            <h3 class="text-lg font-medium mb-3">How It Works</h3>
+            <ol class="list-decimal list-inside text-white/70 space-y-2 mb-6">
+                <li>LLM thread embeds current token and calls GPU dispatch</li>
+                <li>Argmax + anomaly flag packed into fixed-size LogitSummary (no heap)</li>
+                <li>Sentinel reads summary in real-time</li>
+                <li>If anomaly detected (e.g., 0x99 byte for anachronism), injects DenyRollback</li>
+                <li>LLM thread substitutes safe neighbour token and continues</li>
+                <li>Loop ends at EOS token or MAX_OUTPUT_TOKENS (2048)</li>
+            </ol>
+
+            <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6">
+                <div class="flex items-start gap-4">
+                    <i class="fas fa-exclamation-triangle text-amber-400 text-2xl mt-1"></i>
+                    <div>
+                        <h3 class="font-semibold text-amber-400 mb-2">Mid-Generation Correction</h3>
+                        <p class="text-white/70 text-sm">Unlike post-hoc filtering, QualiaDB can correct the LLM mid-generation. If the Sentinel detects a violation of the Rights Ontology or a factual error, it immediately triggers a rollback before the token is committed to the output stream.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code Example -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-code text-cyan-400"></i>
+                Using the LLM API
+            </h2>
+            
+            <h3 class="text-lg font-medium mb-3">Rust API</h3>
+            <pre class="mb-6"><code>use qualia_core_db::llm_agent::LocalLlmAgent;
+
+async fn run_inference() -> Result<String, Error> {
+    let agent = LocalLlmAgent::new("llama-3.2-3b-instruct.gguf")?;
+    
+    let prompt = "Explain the architecture of QualiaDB.";
+    let graph_context = "{}"; // JSON serialized semantic graph
+    
+    let output = agent.infer(prompt, graph_context).await?;
+    
+    Ok(output)
+}</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">CLI</h3>
+            <pre class="mb-6"><code># Run inference with the CLI
+qualia llm infer --model llama-3.2-3b-instruct "Explain quantum computing"</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Daemon API</h3>
+            <pre><code>curl -X POST http://localhost:4242/llm/infer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama-3.2-3b-instruct",
+    "prompt": "Explain the architecture of QualiaDB",
+    "max_tokens": 512
+  }'</code></pre>
+        </div>
+
+        <!-- Performance -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-tachometer-alt text-yellow-400"></i>
+                Performance Characteristics
+            </h2>
+            
+            <p class="text-white/70 mb-6">Benchmark results on various hardware:</p>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-white/10">
+                            <th class="py-3 px-4">Hardware</th>
+                            <th class="py-3 px-4">Model</th>
+                            <th class="py-3 px-4">Tokens/sec</th>
+                            <th class="py-3 px-4">Memory</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">M1 MacBook Pro</td>
+                            <td class="py-3 px-4">Llama 3.2 3B</td>
+                            <td class="py-3 px-4">~45 t/s</td>
+                            <td class="py-3 px-4">~3.2 GB</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">RTX 3060 (Windows)</td>
+                            <td class="py-3 px-4">Llama 3.2 3B</td>
+                            <td class="py-3 px-4">~120 t/s</td>
+                            <td class="py-3 px-4">~2.8 GB</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">Ryzen 7 5800X (Linux)</td>
+                            <td class="py-3 px-4">SmolLM2 1.7B</td>
+                            <td class="py-3 px-4">~25 t/s</td>
+                            <td class="py-3 px-4">~1.8 GB</td>
+                        </tr>
+                        <tr class="bg-emerald-500/10">
+                            <td class="py-3 px-4 font-medium">iPhone 15 Pro</td>
+                            <td class="py-3 px-4 font-medium">SmolLM2 360M</td>
+                            <td class="py-3 px-4 font-medium">~12 t/s</td>
+                            <td class="py-3 px-4 font-medium">~800 MB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="text-white/50 text-sm mt-4">* Performance varies with quantization, context length, and thermal throttling</p>
+        </div>
+
+        <!-- Integration with Graph -->
+        <div class="glass-strong rounded-3xl p-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-project-diagram text-red-400"></i>
+                Integration with Semantic Graph
+            </h2>
+            
+            <p class="text-white/70 mb-6">The LLM is deeply integrated with QualiaDB's semantic graph:</p>
+            
+            <h3 class="text-lg font-medium mb-3">Graph-Aware Inference</h3>
+            <pre class="mb-6"><code># The LLM can query the graph during generation
+prompt = """
+Based on the following information from my knowledge graph:
+- I have 3 children: Alice (age 10), Bob (age 8), Carol (age 5)
+- Alice is allergic to peanuts
+- Bob has asthma
+
+What should I pack for a family camping trip?
+"""</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">SPARQL Generation</h3>
+            <pre class="mb-6"><code># LLM can generate SPARQL queries
+prompt = "Find all people over 30 who live in New York"
+# LLM generates:
+# SELECT ?person ?name WHERE {
+#   ?person a ex:Person ; ex:name ?name ; ex:age ?age ; ex:city "New York" .
+#   FILTER (?age > 30)
+# }</code></pre>
+
+            <h3 class="text-lg font-medium mb-3">Structured Output (JSON-LD)</h3>
+            <pre><code># LLM can output structured JSON-LD
+prompt = "Extract information about Alice and return as JSON-LD"
+# LLM generates:
+# {
+#   "@context": "http://example.org/",
+#   "@graph": [{
+#     "@id": "ex:alice",
+#     "@type": "Person",
+#     "name": "Alice Smith",
+#     "age": 30
+#   }]
+# }</code></pre>
+        </div>
+    </div>
+
+    <footer class="border-t border-white/10 py-8">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between">
+                <div class="text-white/50 text-sm">
+                    QualiaDB v0.0.15 • Human-Centric Semantic Engine
+                </div>
+                <div class="flex items-center gap-6 text-sm">
+                    <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
+                    <a href="manuals/standards/" class="hover:text-white transition-colors">Standards</a>
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="hover:text-white transition-colors">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

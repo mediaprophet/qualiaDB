@@ -1277,3 +1277,284 @@ pub async fn initialize_webgpu_engine(gguf_data: js_sys::Uint8Array) -> Result<(
     let arc: std::sync::Arc<[u8]> = vec.into();
     crate::gguf_bridge::initialize_webgpu_engine(arc).await.map_err(|e| js_sys::Error::new(&e))
 }
+
+// --- Data Format: CSV Parser -----------------------------------------------------
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct CsvParseParams {
+    pub csv_data: String,
+    pub base_class_hash: u64,
+    pub field_mappings: Vec<CsvFieldMapping>,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct CsvFieldMapping {
+    pub source_key: String,
+    pub predicate_hash: u64,
+    pub datatype: String, // "integer", "float", "datetime", "string"
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn parse_csv_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    use crate::sparql_library::parsers::csv_parser::{CsvMappingProfile, CsvColumnMapping, CsvDatatype, parse_csv_to_quins};
+    use std::io::Cursor;
+    
+    let p: CsvParseParams = serde_wasm_bindgen::from_value(val)?;
+    
+    let mut profile = CsvMappingProfile {
+        base_class_hash: p.base_class_hash,
+        fields: p.field_mappings.iter().map(|f| CsvColumnMapping {
+            source_key: f.source_key.clone(),
+            column_index: None,
+            predicate_hash: f.predicate_hash,
+            datatype: match f.datatype.as_str() {
+                "integer" => CsvDatatype::Integer,
+                "float" => CsvDatatype::Float,
+                "datetime" => CsvDatatype::DateTime,
+                _ => CsvDatatype::StringRef,
+            },
+        }).collect(),
+    };
+    
+    let mut quins = Vec::new();
+    let cursor = Cursor::new(p.csv_data.as_bytes());
+    
+    parse_csv_to_quins(cursor, &mut profile, |quin| {
+        quins.push(quin);
+    }).map_err(|e| JsValue::from_str(&e))?;
+    
+    #[derive(Serialize)]
+    struct ParseResult {
+        quin_count: usize,
+        quins: Vec<[u64; 6]>, // Serialize NQuin as array of 6 u64
+    }
+    
+    let quin_arrays: Vec<[u64; 6]> = quins.iter().map(|q| [q.subject, q.predicate, q.object, q.context, q.metadata, q.parity]).collect();
+    
+    Ok(serde_wasm_bindgen::to_value(&ParseResult {
+        quin_count: quins.len(),
+        quins: quin_arrays,
+    })?)
+}
+
+// --- Data Format: JSON Parser ----------------------------------------------------
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct JsonParseParams {
+    pub json_data: String,
+    pub base_class_hash: u64,
+    pub field_mappings: Vec<JsonFieldMapping>,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct JsonFieldMapping {
+    pub json_key: String,
+    pub predicate_hash: u64,
+    pub datatype: String, // "integer", "float", "datetime", "string"
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn parse_json_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    use crate::sparql_library::parsers::json_parser::{JsonMappingProfile, JsonFieldMapping as CoreJsonFieldMapping, JsonDatatype, parse_json_to_quins};
+    use std::io::Cursor;
+    
+    let p: JsonParseParams = serde_wasm_bindgen::from_value(val)?;
+    
+    let profile = JsonMappingProfile {
+        base_class_hash: p.base_class_hash,
+        fields: p.field_mappings.iter().map(|f| CoreJsonFieldMapping {
+            json_key: f.json_key.clone(),
+            predicate_hash: f.predicate_hash,
+            datatype: match f.datatype.as_str() {
+                "integer" => JsonDatatype::Integer,
+                "float" => JsonDatatype::Float,
+                "datetime" => JsonDatatype::DateTime,
+                _ => JsonDatatype::StringRef,
+            },
+        }).collect(),
+    };
+    
+    let mut quins = Vec::new();
+    let cursor = Cursor::new(p.json_data.as_bytes());
+    
+    parse_json_to_quins(cursor, &profile, |quin| {
+        quins.push(quin);
+    }).map_err(|e| JsValue::from_str(&e))?;
+    
+    #[derive(Serialize)]
+    struct ParseResult {
+        quin_count: usize,
+        quins: Vec<[u64; 6]>,
+    }
+    
+    let quin_arrays: Vec<[u64; 6]> = quins.iter().map(|q| [q.subject, q.predicate, q.object, q.context, q.metadata, q.parity]).collect();
+    
+    Ok(serde_wasm_bindgen::to_value(&ParseResult {
+        quin_count: quins.len(),
+        quins: quin_arrays,
+    })?)
+}
+
+// --- Data Format: CSV Serializer -------------------------------------------------
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct CsvSerializeParams {
+    pub quins: Vec<[u64; 6]>,
+    pub field_names: Vec<String>,
+    pub predicate_hashes: Vec<u64>,
+    pub datatypes: Vec<String>,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn serialize_csv_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    use crate::sparql_library::serialisers::csv_serializer::{CsvSerializationProfile, CsvDatatype as CoreCsvDatatype, serialize_quins_to_csv};
+    use crate::NQuin;
+    
+    let p: CsvSerializeParams = serde_wasm_bindgen::from_value(val)?;
+    
+    let quins: Vec<NQuin> = p.quins.iter().map(|arr| NQuin {
+        subject: arr[0],
+        predicate: arr[1],
+        object: arr[2],
+        context: arr[3],
+        metadata: arr[4],
+        parity: arr[5],
+    }).collect();
+    
+    let profile = CsvSerializationProfile {
+        field_names: p.field_names,
+        predicate_hashes: p.predicate_hashes,
+        datatypes: p.datatypes.iter().map(|d| match d.as_str() {
+            "integer" => CoreCsvDatatype::Integer,
+            "float" => CoreCsvDatatype::Float,
+            "datetime" => CoreCsvDatatype::DateTime,
+            _ => CoreCsvDatatype::StringRef,
+        }).collect(),
+    };
+    
+    let mut csv_output = Vec::new();
+    serialize_quins_to_csv(&mut csv_output, &quins, &profile)
+        .map_err(|e| JsValue::from_str(&e))?;
+    
+    #[derive(Serialize)]
+    struct SerializeResult {
+        csv_data: String,
+    }
+    
+    Ok(serde_wasm_bindgen::to_value(&SerializeResult {
+        csv_data: String::from_utf8(csv_output).map_err(|e| JsValue::from_str(&e.to_string()))?,
+    })?)
+}
+
+// --- Data Format: JSON Serializer ------------------------------------------------
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct JsonSerializeParams {
+    pub quins: Vec<[u64; 6]>,
+    pub field_names: Vec<String>,
+    pub predicate_hashes: Vec<u64>,
+    pub datatypes: Vec<String>,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn serialize_json_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    use crate::sparql_library::serialisers::json_serializer::{JsonSerializationProfile, JsonDatatype as CoreJsonDatatype, serialize_quins_to_json};
+    use crate::NQuin;
+    
+    let p: JsonSerializeParams = serde_wasm_bindgen::from_value(val)?;
+    
+    let quins: Vec<NQuin> = p.quins.iter().map(|arr| NQuin {
+        subject: arr[0],
+        predicate: arr[1],
+        object: arr[2],
+        context: arr[3],
+        metadata: arr[4],
+        parity: arr[5],
+    }).collect();
+    
+    let profile = JsonSerializationProfile {
+        field_names: p.field_names,
+        predicate_hashes: p.predicate_hashes,
+        datatypes: p.datatypes.iter().map(|d| match d.as_str() {
+            "integer" => CoreJsonDatatype::Integer,
+            "float" => CoreJsonDatatype::Float,
+            "datetime" => CoreJsonDatatype::DateTime,
+            _ => CoreJsonDatatype::StringRef,
+        }).collect(),
+    };
+    
+    let mut json_output = Vec::new();
+    serialize_quins_to_json(&mut json_output, &quins, &profile)
+        .map_err(|e| JsValue::from_str(&e))?;
+    
+    #[derive(Serialize)]
+    struct SerializeResult {
+        json_data: String,
+    }
+    
+    Ok(serde_wasm_bindgen::to_value(&SerializeResult {
+        json_data: String::from_utf8(json_output).map_err(|e| JsValue::from_str(&e.to_string()))?,
+    })?)
+}
+
+// --- Data Format: RDF Serializer ------------------------------------------------
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+pub struct RdfSerializeParams {
+    pub quins: Vec<[u64; 6]>,
+    pub format: String, // "nt", "turtle", "nquads", "trig", "n3", "jsonld"
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn serialize_rdf_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    use crate::sparql_library::serialisers::rdf_serializers::{serialize_to_ntriples, serialize_to_turtle, serialize_to_nquads, serialize_to_trig, serialize_to_n3, serialize_to_jsonld};
+    use crate::NQuin;
+    
+    let p: RdfSerializeParams = serde_wasm_bindgen::from_value(val)?;
+    
+    let quins: Vec<NQuin> = p.quins.iter().map(|arr| NQuin {
+        subject: arr[0],
+        predicate: arr[1],
+        object: arr[2],
+        context: arr[3],
+        metadata: arr[4],
+        parity: arr[5],
+    }).collect();
+    
+    let mut rdf_output = Vec::new();
+    
+    match p.format.as_str() {
+        "nt" => serialize_to_ntriples(&mut rdf_output, &quins),
+        "turtle" => serialize_to_turtle(&mut rdf_output, &quins),
+        "nquads" => serialize_to_nquads(&mut rdf_output, &quins),
+        "trig" => serialize_to_trig(&mut rdf_output, &quins),
+        "n3" => serialize_to_n3(&mut rdf_output, &quins),
+        "jsonld" => serialize_to_jsonld(&mut rdf_output, &quins),
+        _ => return Err(JsValue::from_str("Invalid RDF format")),
+    }.map_err(|e| JsValue::from_str(&e))?;
+    
+    #[derive(Serialize)]
+    struct SerializeResult {
+        rdf_data: String,
+    }
+    
+    Ok(serde_wasm_bindgen::to_value(&SerializeResult {
+        rdf_data: String::from_utf8(rdf_output).map_err(|e| JsValue::from_str(&e.to_string()))?,
+    })?)
+}
+
+
+
+

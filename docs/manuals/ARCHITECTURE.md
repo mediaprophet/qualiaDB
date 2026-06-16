@@ -1,7 +1,7 @@
 # Qualia-DB Architecture
 
 > The 3-Core Triad, Webizen VM, Rights Ontology, and the Principal-Agent Ecosystem.
-> _Branch: `0.0.13` | Last updated: 2026-06-16_
+> _Branch: `0.0.15` | Last updated: 2026-06-18_
 
 Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favour of a specialised 3-Core Triad built with ruthless mechanical sympathy (512 MB RAM floor). Raw multi-modal data (audio, camera feeds) would immediately breach this floor, so the ecosystem forces an **Orchestration Sieve**: the Primary Agent must coordinate deterministic tools (OpenCV, Audio DSP) to strip noise, extract contours, and build optimised files *before* handing them to the local LLM or the database.
 
@@ -126,7 +126,7 @@ Per decode step:
 4. On the next step, the LLM thread pops `ControlStream`. If a rollback is pending, it substitutes a safe neighbour token instead of the argmax.
 5. Loop ends at EOS token or `MAX_OUTPUT_TOKENS` (2048).
 
-> **Note — embedding lookup implemented in Phase 9.** The current decode loop uses a deterministic pseudo-embedding (sin-based from token ID) The GgufTensorIndex now parses the tensor-info section and performs dequantize_token_embedding_into() for real token embeddings. The GPU compute, SPSC ring, governance pipeline, and tokeniser are all real. See the `HANDOVER.md` "Immediate next tasks" for the embedding lookup work item.
+> **Note — embedding lookup fully implemented.** The decode loop uses real token embeddings via `GgufTensorIndex::dequantize_token_embedding_into()` which parses the GGUF tensor-info section and dequantizes per-token embeddings into caller-supplied buffers. The GPU compute, SPSC ring, governance pipeline, and tokeniser are all fully functional.
 
 ### AgentBackend Variants
 

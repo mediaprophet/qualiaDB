@@ -12,7 +12,13 @@ pub use core::{WebizenVM, WebizenCompiler, WebizenOpcode};
 // ─── Deontic Logic ───────────────────────────────────────────────────────────
 
 pub mod deontic;
-pub use deontic::{OP_OBLIGATE, OP_PERMIT, OP_FORBID, DEFEATER_BIT, MAX_DEFEATER_SLOTS};
+pub use deontic::{
+    OP_OBLIGATE, OP_PERMIT, OP_FORBID, DEFEATER_BIT, MAX_DEFEATER_SLOTS,
+    compile_norm_quin, evaluate_deontic_contract, defeater_fingerprint,
+    harvest_defeater_fingerprints, norm_has_active_defeater,
+    extract_deontic_opcode, extract_expiry_unix32, DeonticStatus, DeonticVerdict,
+    DeonticError, compile_n3_rule_to_norm
+};
 
 // ─── QUBO Compilation ─────────────────────────────────────────────────────────
 
@@ -22,13 +28,19 @@ pub mod qubo;
 
 pub mod n3_compiler;
 pub mod n3_parser;
-pub use n3_compiler::{N3OutputMode, AgentIntentFrame, MAX_CONTEXT_NAMESPACE_SLOTS, MAX_INTENT_SCOPE_SLOTS};
+pub use n3_compiler::{
+    N3OutputMode, AgentIntentFrame, MAX_CONTEXT_NAMESPACE_SLOTS, MAX_INTENT_SCOPE_SLOTS,
+    N3CompileError, SentinelError, N3CompiledProgram, validate_rule_against_shapes
+};
 pub use n3_parser::{N3Parser, N3Event, Rule, RuleType, Term};
 
 // ─── SHACL Constraint Compilation ───────────────────────────────────────────────
 
 pub mod shacl;
-pub use shacl::{ShaclCompiler, ShaclConstraint, ShaclSeverity, CompiledShape};
+pub use shacl::{
+    ShaclCompiler, ShaclConstraint, ShaclSeverity, CompiledShape,
+    ProteinScoringMatrix, ClinicalRiskModel, CalcComputeTarget, NodeKindType, PropertyPath
+};
 
 // ─── SHACL Extensions for New Client Features ───────────────────────────────────
 
@@ -151,6 +163,3 @@ pub const OP_RELEASE: u8 = 0x44;
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 
 // Re-export commonly used types from submodules
-pub use shacl::ProteinScoringMatrix;
-pub use shacl::ClinicalRiskModel;
-pub use shacl::CalcComputeTarget;

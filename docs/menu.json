@@ -1,0 +1,126 @@
+{
+  "version": "0.0.15",
+  "brand": {
+    "name": "QualiaDB",
+    "tagline": "Human-Centric Semantic Engine",
+    "icon": "Q"
+  },
+  "navigation": [
+    {
+      "label": "Home",
+      "href": "index.html",
+      "icon": "fa-home"
+    },
+    {
+      "label": "Benchmark",
+      "href": "benchmark.html",
+      "icon": "fa-gauge-high"
+    },
+    {
+      "label": "Comparative",
+      "href": "comparative_benchmarks.html",
+      "icon": "fa-chart-line"
+    },
+    {
+      "label": "Features",
+      "href": "advanced-features.html",
+      "icon": "fa-cubes"
+    },
+    {
+      "label": "SPARQL",
+      "href": "sparql-showcase.html",
+      "icon": "fa-database"
+    },
+    {
+      "label": "Analytics",
+      "href": "analytics.html",
+      "icon": "fa-chart-pie"
+    },
+    {
+      "label": "Library",
+      "href": "library.html",
+      "icon": "fa-book"
+    },
+    {
+      "label": "Sciences",
+      "href": "science-playground.html",
+      "icon": "fa-flask"
+    },
+    {
+      "label": "Edge LLM",
+      "href": "edge-llm.html",
+      "icon": "fa-brain"
+    },
+    {
+      "label": "Online LLM",
+      "href": "online-llm-demo.html",
+      "icon": "fa-cloud"
+    },
+    {
+      "label": "Playground",
+      "href": "playground/index.html",
+      "icon": "fa-play"
+    },
+    {
+      "label": "API Docs",
+      "href": "api.html",
+      "icon": "fa-code"
+    },
+    {
+      "label": "API Explorer",
+      "href": "api-explorer/",
+      "icon": "fa-compass",
+      "highlight": true
+    },
+    {
+      "label": "Test Suite",
+      "href": "tests/",
+      "icon": "fa-vial",
+      "highlight": true
+    },
+    {
+      "label": "Data Formats",
+      "href": "data-formats.html",
+      "icon": "fa-file-code"
+    },
+    {
+      "label": "Zero-Heap",
+      "href": "zero-heap-compliance.html",
+      "icon": "fa-memory"
+    },
+    {
+      "label": "SPARQL Examples",
+      "href": "sparql-examples.html",
+      "icon": "fa-terminal"
+    },
+    {
+      "label": "LLM Showcase",
+      "href": "edge-llm-showcase.html",
+      "icon": "fa-microchip"
+    },
+    {
+      "label": "Scientific Computing",
+      "href": "scientific-computing.html",
+      "icon": "fa-calculator"
+    }
+  ],
+  "footer": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/mediaprophet/qualiaDB/releases",
+        "icon": "fa-github"
+      },
+      {
+        "label": "Manuals",
+        "href": "manuals/",
+        "icon": "fa-book-open"
+      },
+      {
+        "label": "Standards",
+        "href": "manuals/standards/",
+        "icon": "fa-ruler"
+      }
+    ]
+  }
+}

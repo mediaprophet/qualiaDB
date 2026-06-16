@@ -17,3 +17,12 @@ pub mod sparql_tests;
 pub mod external_sort;
 pub mod parsers;
 pub mod serialisers;
+
+// Re-export parsers
+pub use parsers::csv_parser::*;
+pub use parsers::json_parser::*;
+
+// Re-export serializers
+pub use serialisers::csv_serializer::*;
+pub use serialisers::json_serializer::*;
+pub use serialisers::rdf_serializers::*;

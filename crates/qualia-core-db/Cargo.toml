@@ -1,6 +1,6 @@
 [package]
 name = "qualia-core-db"
-version = "0.0.13"
+version = "0.0.15"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
@@ -86,7 +86,7 @@ blake3 = { version = "1", default-features = false }
 fips204 = { version = "0.4", default-features = false, features = ["ml-dsa-65", "default-rng"] }
 fips203 = { version = "0.4", default-features = false, features = ["ml-kem-768", "default-rng"] }
 fips205 = { version = "0.4", default-features = false, features = ["slh_dsa_sha2_256s", "default-rng"] }
-quick-xml = "0.36"
+quick-xml = "0.31"
 crossbeam-channel = "0.5"
 core_affinity = "0.8"
 num_cpus = "1.16"
@@ -101,6 +101,8 @@ hex = "0.4.3"
 sha1 = "0.10"
 sha3 = "0.10"
 urlencoding = "2.1"
+csv = "1.3"
+atoi = "0.4"
 ciborium = "0.2.2"
 chrono = { version = "0.4", features = ["serde", "wasmbind"] }
 async-trait = "0.1.89"
@@ -208,4 +210,8 @@ harness = false
 [[bench]]
 name = "ram_usage"
 harness = false
+
+
+csv = "1.3"
+atoi = "0.4"
 

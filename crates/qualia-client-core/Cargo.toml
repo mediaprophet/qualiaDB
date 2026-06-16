@@ -1,6 +1,6 @@
 [package]
 name = "qualia-client-core"
-version = "0.0.13"
+version = "0.0.15"
 edition = "2021"
 
 [dependencies]
@@ -39,3 +39,4 @@ winreg = "0.52"
 
 [dev-dependencies]
 dhat = "0.3.3"
+

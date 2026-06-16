@@ -47,7 +47,20 @@ pub mod host;
 pub mod gpu;
 
 pub mod ode_solver;
+pub use ode_solver::{
+    ShootingMethod, BvpSystem, Rk4Solver, ExponentialDecay, OdeSystem,
+    ChaoitonProfile, LinearDecayBvp, StepSizeAnalyzer, CoupledBoltzmann,
+    QuantizationMapper, StandardModelMasses, HarmonicOscillator,
+    create_ode_step_quin, extract_ode_state, pack_ode_state
+};
 pub mod tensor_provenance;
+pub use tensor_provenance::{TensorState, TensorProvenance};
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use host::{PAGE_SIZE, DEFAULT_BUFFER_SIZE, IoError, DmaBuffer};
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use gpu::{GpuError, GpuIntegrator, PlatformGpuIntegrator, WebGpuIntegrator};
 
 // ─── Opcodes ─────────────────────────────────────────────────────────────────────
 //

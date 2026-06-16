@@ -55,8 +55,6 @@ fn ip_is_restricted(ip: std::net::IpAddr) -> bool {
     }
 }
 
-
-
 fn ws_query_error_json(id: u64, err: QueryExecError) -> serde_json::Value {
     match err {
         QueryExecError::EmptyQuery => json!({
@@ -120,8 +118,6 @@ fn decode_bench_load_b64(b64: &str) -> Result<Vec<u8>, &'static str> {
     }
     Ok(out)
 }
-
-
 
 /// Fractal-sharding topology configured at daemon boot (`qualia-cli daemon --workers N`).
 #[derive(Clone, Copy, Debug, Default, serde::Serialize)]
@@ -237,11 +233,9 @@ fn negotiate_format(
 /// `warp::http::Response<String>` implements `warp::Reply`, so every branch of
 /// the query handler can return the same concrete type.
 
-
 /// Build a successful query response that includes the `X-Qualia-Compute-Cost`
 /// telemetry header.  The header value is `{match_count}+{vm_cycles}` — the
 /// number of results found and the total VM opcodes decoded to find them.
-
 
 // ---------------------------------------------------------------------------
 // Daemon entry points
@@ -256,7 +250,6 @@ pub async fn start_local_daemon(
 }
 
 /// Starts the native loopback daemon with WebSocket and REST handoff routes.
-
 use tokio::sync::mpsc;
 
 pub async fn start_local_daemon_with_options(
@@ -264,23 +257,28 @@ pub async fn start_local_daemon_with_options(
     dev: bool,
     vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>,
 ) -> mpsc::Sender<String> {
-
     let storage_path = std::env::var("QUALIA_STORAGE_PATH").unwrap_or_else(|_| {
         std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
             .map(|h| format!("{h}/.qualia"))
             .unwrap_or_else(|_| ".qualia".to_string())
     });
-    
+
     // Create Isolated Paths for Ontological Path Isolation
     let sovereign_path = std::path::Path::new(&storage_path).join("sovereign");
     let commons_path = std::path::Path::new(&storage_path).join("commons");
     if let Err(e) = std::fs::create_dir_all(&sovereign_path) {
-        eprintln!("[Qualia Daemon] FATAL: Failed to create sovereign storage path: {}", e);
+        eprintln!(
+            "[Qualia Daemon] FATAL: Failed to create sovereign storage path: {}",
+            e
+        );
         std::process::exit(1); // Graceful fail on volume disconnect
     }
     if let Err(e) = std::fs::create_dir_all(&commons_path) {
-        eprintln!("[Qualia Daemon] FATAL: Failed to create commons storage path: {}", e);
+        eprintln!(
+            "[Qualia Daemon] FATAL: Failed to create commons storage path: {}",
+            e
+        );
         std::process::exit(1);
     }
     crate::daemon_graph::init_daemon_graph(&storage_path);
@@ -294,20 +292,14 @@ pub async fn start_local_daemon_with_options(
         vault,
     };
 
-    if dev {
-        tokio::spawn(async move {
-            crate::mcp_server::start_mcp_listener().await;
-        });
-    }
-
     // -----------------------------------------------------------------------
     // WebSocket bridge — handshake + query metrics + bench_load
     // -----------------------------------------------------------------------
-    
+
     let (control_tx, mut control_rx) = mpsc::channel::<String>(16);
 
     let state = crate::webizen_server::spawn_loopback_server(port, dev, security.vault.clone());
-    
+
     // Wire up control channel
     let state_clone = state.clone();
     tokio::spawn(async move {
@@ -322,10 +314,17 @@ pub async fn start_local_daemon_with_options(
     println!("============================================================");
     println!("Qualia-DB Unified Axum Daemon Booting");
     println!("Listening on 127.0.0.1:{}", port);
-    println!("  Mode:      {}", if security.dev { "dev bypass" } else { "token required" });
+    println!(
+        "  Mode:      {}",
+        if security.dev {
+            "dev bypass"
+        } else {
+            "token required"
+        }
+    );
     println!("============================================================");
 
-tokio::spawn(async move {
+    tokio::spawn(async move {
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
         loop {
             interval.tick().await;
@@ -473,13 +472,13 @@ tokio::spawn(async move {
                                         }
 
                                         let response = if is_authorized {
-                                            crate::p2p::protocol::QualiaResponse::SyncAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "SyncAck".to_string(), did_q42: 0, routing_constraints: 0, 
+                                            crate::p2p::protocol::QualiaResponse::SyncAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "SyncAck".to_string(), did_q42: 0, routing_constraints: 0,
                                                 success: true,
                                                 message: "Sync Approved".to_string(),
                                                 blocks_sent: 42,
                                             }
                                         } else {
-                                            crate::p2p::protocol::QualiaResponse::SyncAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "SyncAck".to_string(), did_q42: 0, routing_constraints: 0, 
+                                            crate::p2p::protocol::QualiaResponse::SyncAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "SyncAck".to_string(), did_q42: 0, routing_constraints: 0,
                                                 success: false,
                                                 message: "RequiresGatekeeperChallenge".to_string(),
                                                 blocks_sent: 0,
@@ -552,8 +551,9 @@ tokio::spawn(async move {
             let task_detected = false; // Set to true to test
             if task_detected {
                 println!("[Semantic Task Engine] Detected MonteCarloSimulation Task.");
-                let (mean, var) =
-                    crate::domains::financial::economics::run_monte_carlo_var(100.0, 0.05, 0.20, 1.0, 252, 100_000);
+                let (mean, var) = crate::domains::financial::economics::run_monte_carlo_var(
+                    100.0, 0.05, 0.20, 1.0, 252, 100_000,
+                );
                 println!(
                     "[Semantic Task Engine] Simulation Complete. Mean: {:.2}, 95% VaR: {:.2}",
                     mean, var
@@ -622,8 +622,6 @@ tokio::spawn(async move {
             }
         }
     });
-
-    
 
     control_tx
 }
