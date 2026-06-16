@@ -123,8 +123,8 @@
       "group": "Data"
     },
     {
-      "label": "WordNet",
-      "href": "wordnet.html",
+      "label": "Ontology Demo",
+      "href": "ontology.html",
       "icon": "fa-book-open",
       "group": "Data"
     }

@@ -4,6 +4,7 @@
   "datasets": [
     {
       "id": "wordnet",
+      "profile": "wordnet",
       "label": "Open English WordNet 2025",
       "icon": "📚",
       "description": "OEWN 2025 edition · CC-BY 4.0 · GitHub Pages serves a 100k-triple CI subset; run scripts/fetch_wordnet.sh locally for the full graph",
@@ -20,6 +21,27 @@
         { "label": "Find 'computer'", "pattern": "?s ?p \"computer\"" },
         { "label": "Find 'water'",    "pattern": "?s ?p \"water\"" },
         { "label": "Find 'mind'",     "pattern": "?s ?p \"mind\"" }
+      ]
+    },
+    {
+      "id": "schemaorg-30",
+      "profile": "schemaorg",
+      "label": "Schema.org 30.0",
+      "icon": "🌐",
+      "description": "Schema.org vocabulary release 30.0 · ~18k triples · built by scripts/prepare_schemaorg_benchmark.sh in CI",
+      "url": "data/schemaorg/30.0/schemaorg-current-https.q42",
+      "lexUrl": "data/schemaorg/30.0/schemaorg-current-https.q42.lex",
+      "bidxUrl": "data/schemaorg/30.0/schemaorg-current-https.q42.bidx",
+      "compressed": false,
+      "source": "remote",
+      "license": "CC-BY 4.0",
+      "homepage": "https://schema.org",
+      "sampleQueries": [
+        { "label": "Person type",       "pattern": "<https://schema.org/Person> ?p ?o" },
+        { "label": "Organization",      "pattern": "<https://schema.org/Organization> ?p ?o" },
+        { "label": "CreativeWork",      "pattern": "<https://schema.org/CreativeWork> ?p ?o" },
+        { "label": "video type",        "pattern": "<https://schema.org/video> ?p ?o" },
+        { "label": "name property",     "pattern": "?s ?p \"name\"" }
       ]
     }
   ]

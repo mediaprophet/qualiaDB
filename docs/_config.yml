@@ -13,6 +13,11 @@ include:
   - "playground/*.json"
   - "playground/*.css"
   - "playground/wordnet.q42"
+  - "data/**/*.q42"
+  - "data/**/*.c.q42"
+  - "data/**/*.nt"
+  - "data/**/*.lex"
+  - "data/**/*.bidx"
   - "js/*.js"
   - "tests/**/*.js"
 

@@ -16,6 +16,12 @@
 !docs/playground/wordnet.q42.lex.lz4
 !docs/playground/wordnet.q42.bidx
 
+# Ontology demo — Schema.org volume served from docs/data (CI + local)
+!docs/data/schemaorg/**/*.q42
+!docs/data/schemaorg/**/*.c.q42
+!docs/data/schemaorg/**/*.q42.lex
+!docs/data/schemaorg/**/*.q42.bidx
+
 # Claude Code session files (dev-machine only)
 .claude/
 

@@ -1,0 +1,521 @@
+import { OntologyEngine, esc } from './ontology-engine.js';
+
+const engine = new OntologyEngine();
+let lastLookup = null;
+let graphNodes = [];
+let graphEdges = [];
+
+const UI_PROFILES = {
+    wordnet: {
+        title: 'WordNet',
+        subtitle: 'Open English WordNet lemmas and synset relations',
+        searchLabel: 'Search Word',
+        searchPlaceholder: 'e.g., dog, happy, run',
+        searchButton: 'Lookup Word',
+        stat1: 'Lexicon Entries',
+        stat2: 'Est. Synsets',
+        stat3: 'Relation Types',
+        stat4: 'Hypernym Depth',
+        categoryTitle: 'POS Browser',
+        categories: [
+            { id: 'noun', label: 'Nouns', icon: 'fa-cube', color: 'blue' },
+            { id: 'verb', label: 'Verbs', icon: 'fa-bolt', color: 'emerald' },
+            { id: 'adjective', label: 'Adjectives', icon: 'fa-palette', color: 'purple' },
+            { id: 'adverb', label: 'Adverbs', icon: 'fa-wand-magic-sparkles', color: 'amber' },
+        ],
+        quickExamples: ['dog', 'happy', 'run', 'beautiful', 'computer'],
+        graphPlaceholder: 'Enter word to visualize',
+        graphToggles: [
+            { id: 'show-hypernyms', label: 'Hypernyms', key: 'hypernyms', color: '#3b82f6', default: true },
+            { id: 'show-hyponyms', label: 'Hyponyms', key: 'hyponyms', color: '#10b981', default: true },
+            { id: 'show-synonyms', label: 'Synonyms', key: 'synonyms', color: '#8b5cf6', default: true },
+            { id: 'show-similar', label: 'Similar', key: 'similar', color: '#ec4899', default: false },
+        ],
+        relationMap: [
+            ['hypernyms', 'Hypernyms', 'relation-hypernym'],
+            ['hyponyms', 'Hyponyms', 'relation-hyponym'],
+            ['synonyms', 'Synonyms', 'relation-synonym'],
+            ['similar', 'Similar', 'relation-similar'],
+            ['lemmas', 'Lemmas', 'relation-part'],
+        ],
+        sparqlExamples: [
+            { id: 'lemma', label: 'Find lemma matches', icon: 'purple' },
+            { id: 'hypernyms', label: 'Hypernym BGP template', icon: 'blue' },
+            { id: 'hyponyms', label: 'Hyponym BGP template', icon: 'emerald' },
+            { id: 'wildcard', label: 'Wildcard BGP', icon: 'amber' },
+        ],
+        defaultSearch: 'dog',
+        ingestNote: 'bash scripts/fetch_wordnet.sh --playground',
+    },
+    schemaorg: {
+        title: 'Schema.org',
+        subtitle: 'Schema.org 30.0 vocabulary — classes, properties, and domains',
+        searchLabel: 'Search Type or Property',
+        searchPlaceholder: 'e.g., Person, Organization, name',
+        searchButton: 'Lookup Term',
+        stat1: 'Lexicon Entries',
+        stat2: 'Est. Types',
+        stat3: 'Relation Types',
+        stat4: 'Superclass Depth',
+        categoryTitle: 'Vocabulary Browser',
+        categories: [
+            { id: 'classes', label: 'Classes', icon: 'fa-shapes', color: 'blue' },
+            { id: 'properties', label: 'Properties', icon: 'fa-tag', color: 'emerald' },
+            { id: 'types', label: 'Type Families', icon: 'fa-sitemap', color: 'purple' },
+        ],
+        quickExamples: ['Person', 'Organization', 'Event', 'CreativeWork', 'name'],
+        graphPlaceholder: 'Enter type or property to visualize',
+        graphToggles: [
+            { id: 'show-superclass', label: 'Superclasses', key: 'superClass', color: '#3b82f6', default: true },
+            { id: 'show-subclasses', label: 'Subclasses', key: 'subClasses', color: '#10b981', default: true },
+            { id: 'show-domains', label: 'Domains', key: 'domains', color: '#8b5cf6', default: true },
+            { id: 'show-ranges', label: 'Ranges', key: 'ranges', color: '#ec4899', default: false },
+        ],
+        relationMap: [
+            ['superClass', 'Superclass', 'relation-hypernym'],
+            ['subClasses', 'Subclasses', 'relation-hyponym'],
+            ['domains', 'Domains', 'relation-synonym'],
+            ['ranges', 'Ranges', 'relation-similar'],
+            ['labels', 'Labels', 'relation-part'],
+            ['comments', 'Comments', 'relation-part'],
+        ],
+        sparqlExamples: [
+            { id: 'type', label: 'Inspect a type', icon: 'purple' },
+            { id: 'subclass', label: 'Subclass BGP', icon: 'blue' },
+            { id: 'property', label: 'Property lookup', icon: 'emerald' },
+            { id: 'wildcard', label: 'Wildcard BGP', icon: 'amber' },
+        ],
+        defaultSearch: 'Person',
+        ingestNote: 'bash scripts/prepare_schemaorg_benchmark.sh 30.0 current-https',
+    },
+};
+
+const SPARQL_TEMPLATES = {
+    wordnet: {
+        lemma: `PREFIX wn: <https://en-wordnet.oed.com/schema/>
+SELECT ?s ?p WHERE {
+  ?s ?p "dog"
+}`,
+        hypernyms: `PREFIX wn: <https://en-wordnet.oed.com/schema/>
+SELECT ?parent WHERE {
+  ?synset wn:hypernym ?parent .
+}`,
+        hyponyms: `PREFIX wn: <https://en-wordnet.oed.com/schema/>
+SELECT ?child WHERE {
+  ?synset wn:hyponym ?child .
+}`,
+        wildcard: `SELECT ?s ?p ?o WHERE {
+  ?s ?p ?o
+}`,
+    },
+    schemaorg: {
+        type: `PREFIX schema: <https://schema.org/>
+SELECT ?p ?o WHERE {
+  <https://schema.org/Person> ?p ?o
+}`,
+        subclass: `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?super WHERE {
+  <https://schema.org/Person> rdfs:subClassOf ?super .
+}`,
+        property: `SELECT ?s ?p ?o WHERE {
+  ?s ?p "name"
+}`,
+        wildcard: `SELECT ?s ?p ?o WHERE {
+  ?s ?p ?o
+}`,
+    },
+};
+
+function $(id) { return document.getElementById(id); }
+
+function ui() {
+    return UI_PROFILES[engine.profile] ?? UI_PROFILES.wordnet;
+}
+
+function setStatus(text, ok = true) {
+    const el = $('engine-status');
+    if (!el) return;
+    el.textContent = text;
+    el.className = ok
+        ? 'text-xs px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+        : 'text-xs px-3 py-1 rounded-full bg-red-500/15 text-red-300 border border-red-500/25';
+}
+
+function setLoading(show, msg = 'Loading ontology…') {
+    const overlay = $('loading-overlay');
+    if (!overlay) return;
+    overlay.style.display = show ? 'flex' : 'none';
+    const label = $('loading-label');
+    if (label) label.textContent = msg;
+}
+
+function shortLabel(value) {
+    if (!value) return '';
+    if (value.startsWith('http')) {
+        const tail = value.split(/[/#]/).pop() ?? value;
+        return tail.length > 28 ? tail.slice(0, 25) + '…' : tail;
+    }
+    return value.length > 32 ? value.slice(0, 29) + '…' : value;
+}
+
+function renderRelationTags(relations) {
+    const blocks = [];
+    for (const [key, label, cls] of ui().relationMap) {
+        const items = relations[key] ?? [];
+        if (!items.length) continue;
+        const tags = items.slice(0, 12).map(w =>
+            `<span class="relation-tag ${cls}">${esc(shortLabel(w))}</span>`
+        ).join('');
+        const more = items.length > 12
+            ? `<span class="text-xs text-white/40">+${items.length - 12} more</span>`
+            : '';
+        blocks.push(`<div><div class="text-xs text-white/50 mb-1">${label}</div><div class="flex flex-wrap gap-1">${tags}${more}</div></div>`);
+    }
+    return blocks.join('');
+}
+
+function updateStats(stats, depth = null) {
+    const p = ui();
+    $('stat-1').textContent = stats.terms ? stats.terms.toLocaleString() : '—';
+    $('stat-2').textContent = stats.entities ? stats.entities.toLocaleString() : '—';
+    $('stat-3').textContent = String(stats.relations ?? '—');
+    $('stat-4').textContent = depth != null ? String(depth) : (stats.depth ?? '—');
+    $('stat-1-label').textContent = p.stat1;
+    $('stat-2-label').textContent = p.stat2;
+    $('stat-3-label').textContent = p.stat3;
+    $('stat-4-label').textContent = p.stat4;
+}
+
+function renderDatasetPicker() {
+    const container = $('dataset-picker');
+    if (!container || !engine.datasets.length) return;
+
+    container.innerHTML = engine.datasets.map(d => {
+        const active = d.id === engine.activeDataset?.id;
+        const profile = d.profile ?? 'wordnet';
+        const icon = d.icon ?? (profile === 'schemaorg' ? '🌐' : '📚');
+        return `
+            <button type="button"
+                class="dataset-btn flex-1 min-w-[140px] px-4 py-3 rounded-2xl text-left transition-all ${active
+                    ? 'bg-blue-600/30 border-2 border-blue-500/60'
+                    : 'bg-white/5 border border-white/10 hover:bg-white/10'}"
+                data-dataset="${esc(d.id)}">
+                <div class="text-lg mb-1">${icon}</div>
+                <div class="text-sm font-semibold">${esc(d.label ?? d.id)}</div>
+                <div class="text-xs text-white/50 mt-0.5">${esc(d.description?.slice(0, 72) ?? profile)}</div>
+            </button>`;
+    }).join('');
+
+    container.querySelectorAll('.dataset-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchDataset(btn.dataset.dataset));
+    });
+}
+
+function applyProfileUi() {
+    const p = ui();
+    $('page-title').textContent = 'Ontology Demo';
+    $('page-subtitle').innerHTML = `
+        Browse <strong>${esc(p.title)}</strong> and other mounted vocabularies live in your browser via
+        <code class="text-cyan-400">qualia_core_db_bg.wasm</code> over
+        <code class="text-cyan-400">.q42</code> volumes.`;
+    $('search-label').textContent = p.searchLabel;
+    $('entity-search').placeholder = p.searchPlaceholder;
+    $('search-button-label').textContent = p.searchButton;
+    $('category-title').textContent = p.categoryTitle;
+    $('graph-term').placeholder = p.graphPlaceholder;
+    $('ingest-note').textContent = p.ingestNote;
+
+    const quickDiv = $('quick-examples');
+    if (quickDiv) {
+        quickDiv.innerHTML = p.quickExamples.map(term =>
+            `<button type="button" onclick="quickLookup('${esc(term)}')" class="text-xs px-3 py-1 bg-white/5 hover:bg-white/10 rounded-full">${esc(term)}</button>`
+        ).join('');
+    }
+
+    const catGrid = $('category-grid');
+    if (catGrid) {
+        const colors = {
+            blue: 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400',
+            emerald: 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400',
+            purple: 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-400',
+            amber: 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-400',
+        };
+        catGrid.innerHTML = p.categories.map(c => `
+            <button type="button" onclick="filterByCategory('${c.id}', this)"
+                class="category-btn px-3 py-2 ${colors[c.color]} rounded-xl text-sm font-medium">
+                <i class="fa-solid ${c.icon} mr-1"></i> ${esc(c.label)}
+            </button>`).join('');
+    }
+
+    const sparqlBtns = $('sparql-examples');
+    if (sparqlBtns) {
+        const iconColors = { purple: 'text-purple-400', blue: 'text-blue-400', emerald: 'text-emerald-400', amber: 'text-amber-400' };
+        sparqlBtns.innerHTML = p.sparqlExamples.map(ex => `
+            <button type="button" onclick="showSparqlExample('${ex.id}')"
+                class="w-full text-left px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-sm">
+                <i class="fa-solid fa-code mr-2 ${iconColors[ex.icon]}"></i> ${esc(ex.label)}
+            </button>`).join('');
+    }
+
+    const toggles = $('graph-toggles');
+    if (toggles) {
+        toggles.innerHTML = p.graphToggles.map(t => `
+            <label class="flex items-center gap-2">
+                <input type="checkbox" id="${t.id}" data-rel-key="${t.key}" ${t.default ? 'checked' : ''} class="rounded graph-toggle">
+                <span>${esc(t.label)}</span>
+            </label>`).join('');
+    }
+}
+
+async function switchDataset(datasetId) {
+    if (!datasetId || datasetId === engine.activeDataset?.id) return;
+    setLoading(true, `Mounting ${datasetId}…`);
+    try {
+        const stats = await engine.mountDataset(datasetId);
+        const url = new URL(location.href);
+        url.searchParams.set('dataset', datasetId);
+        history.replaceState({}, '', url);
+        renderDatasetPicker();
+        applyProfileUi();
+        updateStats(stats);
+        setStatus(`${stats.label} · ${stats.blocks.toLocaleString()} blocks · WASM ready`);
+        showSparqlExample(ui().sparqlExamples[0]?.id ?? 'wildcard');
+        $('entity-search').value = ui().defaultSearch;
+        $('graph-term').value = ui().defaultSearch;
+        $('category-words').innerHTML = '<div class="text-xs text-white/60 text-center py-4">Select a category to browse samples</div>';
+        $('entity-result').classList.add('hidden');
+        await lookupEntity();
+    } catch (e) {
+        console.error(e);
+        setStatus(e.message || 'Failed to mount dataset', false);
+    } finally {
+        setLoading(false);
+    }
+}
+
+window.lookupEntity = async function lookupEntity() {
+    if (!engine.vfs) return;
+    const term = $('entity-search').value.trim();
+    if (!term) return;
+
+    setLoading(true, `Looking up "${term}"…`);
+    try {
+        const result = await engine.lookupEntity(term);
+        lastLookup = result;
+        const resultDiv = $('entity-result');
+        const entityLabel = engine.profile === 'wordnet' ? 'lemma' : 'term';
+
+        if (!result.found || !result.entities.length) {
+            resultDiv.classList.remove('hidden');
+            $('result-term').textContent = term;
+            $('result-type').textContent = 'not found';
+            $('result-summary').textContent = `No ${entityLabel} matched in the mounted graph.`;
+            $('result-relations').innerHTML = '';
+            return;
+        }
+
+        const entity = result.entities[0];
+        resultDiv.classList.remove('hidden');
+        $('result-term').textContent = shortLabel(entity.iri) || term;
+        $('result-type').textContent = entity.pos;
+        $('result-summary').textContent = entity.gloss || `${entity.edgeCount} relations in graph.`;
+        $('result-relations').innerHTML = renderRelationTags(entity.relations);
+
+        const depth = await engine.hierarchyDepth(term);
+        updateStats(engine.getStats(), depth);
+        $('graph-term').value = term;
+        visualizeGraphFromLookup(result);
+    } catch (e) {
+        console.error(e);
+        alert(e.message || String(e));
+    } finally {
+        setLoading(false);
+    }
+};
+
+window.quickLookup = function quickLookup(term) {
+    $('entity-search').value = term;
+    lookupEntity();
+};
+
+window.filterByCategory = async function filterByCategory(category, btn) {
+    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    const wordsDiv = $('category-words');
+    const samples = engine.getCategorySamples(category);
+    wordsDiv.innerHTML = '<div class="text-xs text-white/60 text-center py-4">Checking samples…</div>';
+
+    const rows = [];
+    for (const sample of samples) {
+        let found = false;
+        if (engine.profile === 'schemaorg') {
+            const iri = engine.normalizeIri(sample);
+            const hit = await engine.query(`<${iri}> ?p ?o`, 1);
+            found = hit.matches.length > 0;
+            if (!found) {
+                const labelHit = await engine.query(`?s ?p "${sample}"`, 1);
+                found = labelHit.matches.length > 0;
+            }
+        } else {
+            const hit = await engine.query(`?s ?p "${sample}"`, 1);
+            found = hit.matches.length > 0;
+        }
+        rows.push(`
+            <div class="flex items-center justify-between p-2 bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer ${found ? '' : 'opacity-40'}"
+                 onclick="quickLookup('${esc(sample)}')">
+                <span class="text-sm">${esc(sample)}</span>
+                <span class="text-xs text-white/40">${found ? 'in graph' : 'missing'}</span>
+            </div>`);
+    }
+    wordsDiv.innerHTML = rows.join('');
+};
+
+window.showSparqlExample = function showSparqlExample(kind) {
+    const templates = SPARQL_TEMPLATES[engine.profile] ?? SPARQL_TEMPLATES.wordnet;
+    const query = templates[kind] ?? templates.wildcard;
+    $('sparql-output').classList.remove('hidden');
+    $('sparql-code').textContent = query;
+    $('sparql-editor').value = query;
+};
+
+window.runSparqlQuery = async function runSparqlQuery() {
+    const sparql = $('sparql-editor').value.trim();
+    if (!sparql) return;
+    $('sparql-output').classList.remove('hidden');
+    $('sparql-code').textContent = sparql;
+
+    setLoading(true, 'Executing SPARQL BGP…');
+    try {
+        const result = await engine.querySparql(sparql, 100);
+        const lines = result.matches.map(m =>
+            `S: ${engine.labelFor(m.s)}  P: ${engine.labelFor(m.p)}  O: ${engine.labelFor(m.o)}`
+        );
+        $('sparql-results').textContent = lines.length
+            ? `BGP: ${result.bgp}\n\n${lines.join('\n')}\n\n(${result.matches.length} matches, ${result.vm_cycles} VM cycles)`
+            : `BGP: ${result.bgp}\n\nNo matches.`;
+    } catch (e) {
+        $('sparql-results').textContent = e.message || String(e);
+    } finally {
+        setLoading(false);
+    }
+};
+
+function visualizeGraphFromLookup(lookup) {
+    if (!lookup?.found || !lookup.entities.length) return;
+    const entity = lookup.entities[0];
+    const rel = entity.relations;
+    const centerId = shortLabel(entity.iri) || lookup.term;
+
+    graphNodes = [{ id: centerId, x: 500, y: 200, level: 0, color: '#ffffff' }];
+    graphEdges = [];
+
+    document.querySelectorAll('.graph-toggle').forEach(input => {
+        if (!input.checked) return;
+        const key = input.dataset.relKey;
+        const toggle = ui().graphToggles.find(t => t.key === key);
+        if (!toggle) return;
+        const items = rel[key] ?? [];
+        items.slice(0, 8).forEach((item, i) => {
+            const id = shortLabel(item) || `${key}-${i}`;
+            const angle = (i / Math.max(items.length, 1)) * Math.PI * 2;
+            graphNodes.push({
+                id,
+                x: 500 + Math.cos(angle) * 180,
+                y: 200 + Math.sin(angle) * 120,
+                level: 1,
+                color: toggle.color,
+            });
+            graphEdges.push({ from: centerId, to: id, color: toggle.color, type: key });
+        });
+    });
+    drawGraph();
+}
+
+window.visualizeGraph = async function visualizeGraph() {
+    const term = $('graph-term').value.trim();
+    if (!term) return;
+    $('entity-search').value = term;
+    await lookupEntity();
+};
+
+function drawGraph() {
+    const canvas = $('graph-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    graphEdges.forEach(edge => {
+        const from = graphNodes.find(n => n.id === edge.from);
+        const to = graphNodes.find(n => n.id === edge.to);
+        if (!from || !to) return;
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.strokeStyle = edge.color;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.6;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    });
+
+    graphNodes.forEach(node => {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 20, 0, Math.PI * 2);
+        ctx.fillStyle = node.color;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '12px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText(node.id, node.x, node.y + 35);
+    });
+}
+
+window.startNtIngest = function startNtIngest() {
+    const file = $('nt-file')?.files?.[0];
+    if (!file) {
+        alert('Select an N-Triples (.nt) file first.');
+        return;
+    }
+    const status = $('ingest-status');
+    status.textContent = 'Ingesting into browser vault…';
+    const worker = new Worker(new URL('../playground/ingest_worker.js', import.meta.url));
+    worker.onmessage = ({ data }) => {
+        if (data.type === 'progress') {
+            status.textContent = `${data.triples.toLocaleString()} triples, ${data.blocks} blocks…`;
+        } else if (data.type === 'done') {
+            status.textContent = `Done — reload to query ${data.triples.toLocaleString()} triples from OPFS.`;
+        } else if (data.type === 'error') {
+            status.textContent = 'Error: ' + data.message;
+        }
+    };
+    worker.postMessage({ type: 'ingest', file });
+};
+
+async function boot() {
+    setLoading(true);
+    try {
+        const stats = await engine.init();
+        renderDatasetPicker();
+        applyProfileUi();
+        updateStats(stats);
+        setStatus(`${stats.label} · ${stats.blocks.toLocaleString()} blocks · WASM ready`);
+        showSparqlExample(ui().sparqlExamples[0]?.id ?? 'wildcard');
+        $('entity-search').value = ui().defaultSearch;
+        $('graph-term').value = ui().defaultSearch;
+        await lookupEntity();
+    } catch (e) {
+        console.error(e);
+        setStatus(e.message || 'Engine failed to load', false);
+        $('stat-1').textContent = '!';
+    } finally {
+        setLoading(false);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', boot);
+
+// Back-compat aliases for wordnet.html if it still loads this module
+window.lookupWord = lookupEntity;
