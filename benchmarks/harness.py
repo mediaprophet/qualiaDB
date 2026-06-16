@@ -71,11 +71,6 @@ ENGINE_META = {
         "focus": "Pre-compiled SuperBlock load — same graph, no RDF text parse",
         "install": "cargo build --release -p qualia-cli (q42_comparative_bench)",
     },
-    "qualia_cq42": {
-        "label": "Qualia (.c.q42 artifact)",
-        "focus": "LZ4 distribution artifact — decompress + subject index (browser/WebTorrent path)",
-        "install": "cargo build --release -p qualia-cli + scripts/prepare_schemaorg_benchmark.ps1 -Compress",
-    },
     "qualia_nt": {
         "label": "Qualia (N-Triples parse)",
         "focus": "Same RDF .nt source as Oxigraph/Comunica — parse text into quins in-process",
@@ -83,14 +78,14 @@ ENGINE_META = {
     },
 }
 
-QUALIA_FORMAT_ENGINES = ("qualia_nt", "qualia_q42", "qualia_cq42")
+QUALIA_FORMAT_ENGINES = ("qualia_nt", "qualia_q42")
 
 METHODOLOGY = (
     f"Each engine is run in complete isolation. 512 MB ceiling enforced. "
     f"Latency: {DEFAULT_WARMUP} warmup + {DEFAULT_SAMPLES} samples (p50/p95/p99). "
     "RDF engines (Oxigraph, SurrealDB, Comunica, WASM-Prolog, Qualia WASM) load N-Triples text. "
-    "Schema.org profile adds three Qualia format rows on the same ontology: "
-    "N-Triples parse (qualia_nt), native .q42 SuperBlocks (qualia_q42), and .c.q42 LZ4 distribution (qualia_cq42). "
+    "Schema.org profile adds two Qualia format rows on the same ontology: "
+    "N-Triples parse (qualia_nt) and native .q42 SuperBlocks (qualia_q42). "
     "Qualia daemon row (when present) measured via local daemon on port 4242. "
     "Qualia WASM uses execute_ntriples_query on flat QualiaQuin bytes in Node."
 )
@@ -105,8 +100,7 @@ def _qualia_format_engines(dataset_profile: dict) -> list[str]:
         engines.append("qualia_nt")
     if info.get("native_q42_available"):
         engines.append("qualia_q42")
-    if info.get("compressed_q42_available"):
-        engines.append("qualia_cq42")
+
     return engines
 
 
@@ -135,8 +129,6 @@ def normalize_result(engine: str, raw: dict, dataset_profile: dict) -> dict:
         result.setdefault("measurement_path", "daemon_http_query")
     elif engine == "qualia_q42":
         result.setdefault("measurement_path", "in_process_q42_superblock")
-    elif engine == "qualia_cq42":
-        result.setdefault("measurement_path", "in_process_cq42_decompress")
     elif engine == "qualia_nt":
         result.setdefault("measurement_path", "in_process_ntriples_parse")
     elif engine == "comunica":
@@ -168,8 +160,6 @@ def run_engine(engine: str, n: int, enforce_memory_limit: bool, dataset_profile:
         from qualia.runner import benchmark_set
     elif engine == "qualia_q42":
         from qualia.artifact_runner import benchmark_set_q42 as benchmark_set
-    elif engine == "qualia_cq42":
-        from qualia.artifact_runner import benchmark_set_cq42 as benchmark_set
     elif engine == "qualia_nt":
         from qualia.artifact_runner import benchmark_set_nt as benchmark_set
     else:

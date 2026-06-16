@@ -1,10 +1,9 @@
 """
 Qualia format runners for the comparative harness (Schema.org profile).
 
-Three in-process rows via q42_comparative_bench:
+Two in-process rows via q42_comparative_bench:
   qualia_nt   — N-Triples parse (same RDF text as Oxigraph / Comunica / WASM-Prolog)
   qualia_q42  — native SuperBlock .q42 artifact
-  qualia_cq42 — LZ4 .c.q42 distribution artifact
 """
 import json
 import os
@@ -19,7 +18,7 @@ _BENCH_BIN = os.path.join(_REPO_ROOT, "target", "release", "q42_comparative_benc
 _BENCH_BIN_UNIX = os.path.join(_REPO_ROOT, "target", "release", "q42_comparative_bench")
 
 _PREP_CMD = (
-    "scripts/prepare_schemaorg_benchmark.ps1 -Release 30.0 -Variant current-https -Compress"
+    "scripts/prepare_schemaorg_benchmark.ps1 -Release 30.0 -Variant current-https"
 )
 
 
@@ -114,18 +113,4 @@ def benchmark_set_q42(n: int = 10_000, enforce_memory_limit: bool = True, datase
     info = dataset.get("dataset_info") or {}
     q42_path = info.get("native_q42_path")
     result = _run_bench("qualia_q42", q42_path, "superblock", dataset)
-    if info.get("compressed_q42_available") and not result.get("error"):
-        result["note"] = (
-            result.get("note", "")
-            + f" Distribution artifact: {info.get('compressed_q42_path')} "
-            f"({info.get('compressed_q42_file_mb', '?')} MB)."
-        ).strip()
     return result
-
-
-def benchmark_set_cq42(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
-    if dataset is None:
-        dataset = {"n_triples": n, "queries": {}, "dataset_info": {}}
-    info = dataset.get("dataset_info") or {}
-    cq42_path = info.get("compressed_q42_path")
-    return _run_bench("qualia_cq42", cq42_path, "cq42", dataset)
