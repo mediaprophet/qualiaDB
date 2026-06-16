@@ -126,6 +126,9 @@
         <button class="tab-btn" data-tab="operations" onclick="switchTab('operations',this)" id="tab-operations-btn">
             <i class="fas fa-calculator mr-1.5"></i>Spatial Ops
         </button>
+        <button class="tab-btn" data-tab="q42" onclick="switchTab('q42',this)" id="tab-q42-btn">
+            <i class="fas fa-atom mr-1.5"></i>Q42 10D Tensor
+        </button>
     </div>
 
     <!-- Tab 1: 3D Viewer -->
@@ -356,6 +359,141 @@ parity:    XOR fold
     </div>
 
 </div>
+
+    <!-- Tab 5: Q42 10D Tensor -->
+    <div id="tab-q42" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-atom text-emerald-400"></i>
+                Q42 10D Volumetric Tensor System
+            </h2>
+
+            <p class="text-white/70 mb-6">The Q42 10D Volumetric Tensor is a 10-dimensional coordinate system <code class="text-emerald-300">[q, v, w, x, y, z, t, α, μ, σ]</code> that encodes semantic concepts, rules, states, and multi-modal data into a quantized geometric structure executable via SIMD, GPU texture units, or Ground-State Resolvers.</p>
+
+            <div class="glass-panel p-6 rounded-xl mb-6">
+                <h3 class="text-lg font-semibold text-emerald-400 mb-4">10D Coordinate System Overview</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-black/30 p-4 rounded-lg border border-white/10">
+                        <div class="text-emerald-300 font-mono text-sm mb-2">q (Quantum Context)</div>
+                        <p class="text-white/60 text-xs">10th dimension for epistemic superposition, parallel realities, and wavefunction collapse mechanics</p>
+                    </div>
+                    <div class="bg-black/30 p-4 rounded-lg border border-white/10">
+                        <div class="text-emerald-300 font-mono text-sm mb-2">v (Topological Variety)</div>
+                        <p class="text-white/60 text-xs">Geometric physics rules: Euclidean, Cyclic, Hyperbolic, or Sovereign Boundary Cliques</p>
+                    </div>
+                    <div class="bg-black/30 p-4 rounded-lg border border-white/10">
+                        <div class="text-emerald-300 font-mono text-sm mb-2">w (Manifold Index)</div>
+                        <p class="text-white/60 text-xs">Multi-head bifurcation for separate knowledge universes (Medical, Legal, Personal, etc.)</p>
+                    </div>
+                    <div class="bg-black/30 p-4 rounded-lg border border-white/10">
+                        <div class="text-emerald-300 font-mono text-sm mb-2">x, y, z (Semantic Topology)</div>
+                        <p class="text-white/60 text-xs">3D spatial embedding where related concepts cluster as semantic nebulas</p>
+                    </div>
+                    <div class="bg-black/30 p-4 rounded-lg border border-white/10">
+                        <div class="text-emerald-300 font-mono text-sm mb-2">t (Temporal State)</div>
+                        <p class="text-white/60 text-xs">Explicit time/version dimension for immutable provenance ledger</p>
+                    </div>
+                    <div class="bg-black/30 p-4 rounded-lg border border-white/10">
+                        <div class="text-emerald-300 font-mono text-sm mb-2">α (Amplitude)</div>
+                        <p class="text-white/60 text-xs">Dynamic range, confidence weight, or energy density (HDR sovereignty)</p>
+                    </div>
+                    <div class="bg-black/30 p-4 rounded-lg border border-white/10">
+                        <div class="text-emerald-300 font-mono text-sm mb-2">μ (Modulation)</div>
+                        <p class="text-white/60 text-xs">Phase, metadata carrier, steganographic DID layer, WDM analog</p>
+                    </div>
+                    <div class="bg-black/30 p-4 rounded-lg border border-white/10">
+                        <div class="text-emerald-300 font-mono text-sm mb-2">σ (Spectral Signature)</div>
+                        <p class="text-white/60 text-xs">Chromatic, timbral, or multi-band spectral profile / logical class index</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <h3 class="text-lg font-semibold text-emerald-400 mb-4">Tensor Structure & Visualization</h3>
+            <p class="text-white/70 mb-4">The 10D tensor treats the entire knowledge base as a pre-compiled, quantized physics engine. Queries become geometric projections, distance calculations, temporal slices, context collapses, and spectral blends.</p>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="text-sm font-semibold text-emerald-300 mb-3">Dimensional Relationships</h4>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-blue-500 rounded"></div>
+                            <span class="text-white/70">Control Dimensions (q, v, w): Structure & routing</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-green-500 rounded"></div>
+                            <span class="text-white/70">Spacetime (x, y, z, t): Geometric substrate</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-purple-500 rounded"></div>
+                            <span class="text-white/70">Spectral Payload (α, μ, σ): Attribute channels</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="text-sm font-semibold text-emerald-300 mb-3">Hardware Dispatch</h4>
+                    <div class="space-y-2 text-xs text-white/70">
+                        <div><i class="fas fa-microchip mr-2 text-emerald-400"></i>SIMD: CPU vector operations</div>
+                        <div><i class="fas fa-cube mr-2 text-emerald-400"></i>GPU: Texture array layers (w as batch index)</div>
+                        <div><i class="fas fa-network-wired mr-2 text-emerald-400"></i>GSR: Async QPU mesh aggregation</div>
+                        <div><i class="fas fa-memory mr-2 text-emerald-400"></i>Zero-heap: 42MB SlgArena ceiling</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <h3 class="text-lg font-semibold text-emerald-400 mb-4">Relation to 3D Viewer & Quin Encoding</h3>
+            <p class="text-white/70 mb-4">The 3D viewer in this page demonstrates the (x, y, z) spatial embedding dimension. In the full Q42 system:</p>
+            <ul class="list-disc list-inside text-white/60 text-sm space-y-2 mb-4">
+                <li>Each vertex in the 3D viewer represents a semantic concept at coordinates (x, y, z)</li>
+                <li>The 48-byte QualiaQuin encoding packs all 10 dimensions into 6 × u64 fields</li>
+                <li>Related concepts cluster in semantic space (distance < threshold = related)</li>
+                <li>Temporal dimension (t) creates immutable historical ledgers for provenance</li>
+                <li>Spectral payload (α, μ, σ) encodes multi-modal data (visual, audio, sensor)</li>
+            </ul>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold text-emerald-400 mb-4">SPARQL Integration Example</h3>
+            <p class="text-white/70 mb-4">Query 10D tensor data using SPARQL with Q42-specific predicates:</p>
+            <div class="code-block text-blue-200 text-xs">
+PREFIX q42: &lt;http://qualia.db/q42#&gt;
+PREFIX geo: &lt;http://www.opengis.net/ont/geosparql#&gt;
+
+SELECT ?concept ?q ?v ?w ?x ?y ?z ?t ?alpha ?mu ?sigma WHERE {
+  ?concept a q42:SemanticConcept ;
+           q42:quantumContext ?q ;
+           q42:topologicalVariety ?v ;
+           q42:manifoldIndex ?w ;
+           q42:semanticX ?x ;
+           q42:semanticY ?y ;
+           q42:semanticZ ?z ;
+           q42:temporalState ?t ;
+           q42:amplitude ?alpha ;
+           q42:modulation ?mu ;
+           q42:spectralSignature ?sigma .
+
+  # Filter by manifold (e.g., medical domain w=0)
+  FILTER(?w = 0)
+
+  # Spatial proximity query (Euclidean distance)
+  FILTER(
+    ((?x - 5.0) * (?x - 5.0) +
+     (?y - 3.0) * (?y - 3.0) +
+     (?z - 2.0) * (?z - 2.0)) < 1.0
+  )
+
+  # Temporal slice (provenance at specific time)
+  FILTER(?t = 2024)
+}
+ORDER BY ?alpha
+LIMIT 100
+            </div>
+        </div>
+    </div>
+
 
 <script type="module">
     let wasm = null;
