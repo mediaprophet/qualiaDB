@@ -99,6 +99,7 @@ rtrb = "0.3.4"
 rand = "0.10.1"
 hex = "0.4.3"
 sha1 = "0.10"
+sha3 = "0.10"
 urlencoding = "2.1"
 ciborium = "0.2.2"
 chrono = { version = "0.4", features = ["serde", "wasmbind"] }
@@ -181,7 +182,6 @@ rcgen = "0.14.8"
 trust-dns-resolver = { version = "0.23.2", features = ["dnssec-ring", "dns-over-rustls"] }
 # wireguard-rs = "0.1.1" # Currently unavailable - commented out
 base64 = "0.22"
-sha3 = "0.10"
 getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
 getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
 getrandom = { version = "0.4", features = ["wasm_js"] }

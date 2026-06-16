@@ -92,7 +92,6 @@ pub mod fiduciary_crypto;
 pub mod ebpf_firewall;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod csd_storage;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod zk_proofs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ambient_orchestration;

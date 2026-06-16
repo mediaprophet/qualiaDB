@@ -288,7 +288,13 @@ pub fn run_graph_topology(dataset: &Path, context: u64) {
     };
     let quins = cast_quins(&mmap);
 
-    let result = analyze_graph_topology(quins, context);
+    let result = match analyze_graph_topology(quins, context) {
+        Ok(result) => result,
+        Err(err) => {
+            eprintln!("Graph topology analysis failed: {err:?}");
+            return;
+        }
+    };
     println!("Graph topology analysis (context=0x{context:x}):");
     println!("  Nodes        : {}", result.node_count);
     println!("  Edges        : {}", result.edge_count);
