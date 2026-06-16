@@ -1,16 +1,18 @@
-# QualiaDB Cryptography — Status & Agent Guide (2026-06-15)
+# QualiaDB Cryptography — Status & Agent Guide (2026-06-15, Updated for 0.0.15)
 
 **Audience:** agents/engineers working in **both** `C:\Projects\qualiaDB` and
 `C:\Projects\webizen-browser`. This is the single source of truth for "what crypto is
 real vs. scaffolding" after the 0.0.12 crypto pass. If older docs or your memory say
 "ML-DSA is a SHA3 simulation" or "BLAKE3 is declared but not wired" — that is now stale.
 
+**Last Updated:** 2026-06-15 (Implementation from 0.0.12, confirmed present in 0.0.15)
+
 Canonical companion: [`CRYPTO_IMPLEMENTATION_PLAN.md`](../CRYPTO_IMPLEMENTATION_PLAN.md)
 (the work order + remaining backlog).
 
 ---
 
-## TL;DR — what changed in crate `qualia-core-db` 0.0.12
+## TL;DR — what changed in crate `qualia-core-db` 0.0.12 (confirmed present in 0.0.15)
 
 | Area | Before | Now |
 |------|--------|-----|
@@ -21,6 +23,8 @@ Canonical companion: [`CRYPTO_IMPLEMENTATION_PLAN.md`](../CRYPTO_IMPLEMENTATION_
 | **`sign_with_did`** | returned a forged all-zero 64-byte signature | ✅ fails closed (`Err`) — query layer has no keys |
 
 **Verification:** 21/21 crypto tests pass; host build + `wasm32-unknown-unknown` build both green.
+
+**Version Status:** This implementation from 0.0.12 remains present and functional in 0.0.15. No breaking changes to the crypto layer have been made between these versions.
 
 ---
 
