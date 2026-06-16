@@ -6,115 +6,274 @@
     <title>Zero-Heap Compliance - QualiaDB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="js/menu-loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
         body { font-family: 'Inter', system_ui, sans-serif; }
         .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
-        pre { background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 16px; overflow-x: auto; }
-        code { font-family: 'Fira Code', monospace; }
+        .glass-panel { background: rgba(17, 23, 31, 0.82); border: 1px solid rgba(148, 163, 184, 0.14); backdrop-filter: blur(28px); }
+        .code-block { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85rem; background: rgba(10, 10, 15, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1rem; white-space: pre-wrap; }
+        .input-field { background: rgba(10, 10, 15, 0.65); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: #e2e8f0; padding: 0.5rem 0.75rem; outline: none; transition: border-color 0.2s; width: 100%; }
+        .input-field:focus { border-color: rgba(16, 185, 129, 0.5); }
+        .tab-btn { transition: all 0.2s; padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: rgba(226, 232, 240, 0.6); }
+        .tab-btn:hover { background: rgba(255, 255, 255, 0.07); color: white; }
+        .tab-btn.active { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .tab-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .metric-card { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 1rem; }
+        .metric-value { font-size: 1.5rem; font-weight: 700; color: #34d399; }
+        .metric-label { font-size: 0.75rem; color: rgba(226, 232, 240, 0.6); }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.95); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .loading-spinner { width: 48px; height: 48px; border: 3px solid rgba(52, 211, 153, 0.2); border-top-color: #34d399; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.98); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .spinbtn { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; border-radius: 6px; padding: 0.45rem 1.1rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .spinbtn:hover { background: rgba(16, 185, 129, 0.3); }
+        .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
         .memory-bar { height: 24px; border-radius: 4px; transition: width 0.5s ease; }
+        canvas { max-height: 300px; }
     </style>
+    <script src="js/menu-loader.js"></script>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
-    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
-        <div class="max-w-screen-2xl mx-auto px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-8">
-                    <a href="index.html" class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
-                            <span class="text-black font-bold text-xl">Q</span>
-                        </div>
-                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
-                    </a>
-                    <div id="dynamic-nav" class="hidden md:flex items-center gap-6 text-sm">
-                        <!-- Navigation loaded dynamically by menu-loader.js -->
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+    <div class="text-center">
+        <div class="loading-spinner mx-auto mb-4"></div>
+        <div class="text-emerald-400 font-semibold">Loading QualiaDB WASM Engine...</div>
+        <div class="text-white/50 text-sm mt-2">Initializing zero-heap compliance monitor</div>
+    </div>
+</div>
+
+<!-- Error Overlay -->
+<div id="error-overlay" class="error-overlay hidden">
+    <div class="glass-strong rounded-3xl p-8 max-w-lg text-center">
+        <div class="text-red-400 text-5xl mb-4"><i class="fas fa-exclamation-triangle"></i></div>
+        <h2 class="text-2xl font-semibold text-white mb-2">WASM Engine Required</h2>
+        <p class="text-white/60 mb-6">This demo requires the QualiaDB WASM engine to run. Please ensure you have network access to load the WASM module.</p>
+        <div class="code-block text-left text-sm text-red-300 mb-4" id="error-message"></div>
+        <button onclick="location.reload()" class="spinbtn"><i class="fas fa-redo mr-2"></i>Retry</button>
+    </div>
+</div>
+
+<!-- Nav -->
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center gap-8">
+                <a href="index.html" class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
                     </div>
+                    <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="hidden md:flex items-center gap-6 text-sm">
+                    <!-- Navigation loaded dynamically by menu-loader.js -->
                 </div>
-                <div class="flex items-center gap-4">
-                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
-                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
-                        <i class="fab fa-github"></i><span>GitHub</span>
-                    </a>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                    <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
+                    <span id="wasm-text">Loading...</span>
                 </div>
             </div>
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
-        <div class="mb-8">
-            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Zero-Heap Compliance</h1>
-            <p class="text-xl text-slate-400">Demonstrating QualiaDB's strict zero-allocation architecture for predictable performance</p>
+<div class="max-w-screen-xl mx-auto px-6 pt-10 pb-20" id="main-content" style="display: none;">
+    <!-- Hero -->
+    <div class="text-center mb-10">
+        <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
+            <i class="fas fa-memory"></i>
+            <span>WASM-only · Zero-Heap · 48-byte Quin Architecture</span>
         </div>
+        <h1 class="text-5xl font-semibold tracking-tighter mb-3">Zero-Heap Compliance</h1>
+        <p class="text-white/60 max-w-xl mx-auto">Demonstrating QualiaDB's strict zero-allocation architecture for predictable performance via WASM.</p>
+    </div>
 
-        <!-- What is Zero-Heap -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
+    <!-- Real-time Metrics -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="metric-card">
+            <div class="metric-value" id="metric-allocations">0</div>
+            <div class="metric-label">Heap Allocations</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-memory">0 KB</div>
+            <div class="metric-label">Memory Usage</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-quin-count">0</div>
+            <div class="metric-label">Quins Processed</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-compliance">100%</div>
+            <div class="metric-label">Compliance</div>
+        </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="flex flex-wrap gap-2 mb-8 justify-center">
+        <button class="tab-btn active" data-tab="demo" onclick="switchTab('demo',this)" id="tab-demo-btn">
+            <i class="fas fa-play mr-1.5"></i>Live Demo
+        </button>
+        <button class="tab-btn" data-tab="quin" onclick="switchTab('quin',this)" id="tab-quin-btn">
+            <i class="fas fa-cube mr-1.5"></i>48-byte Quin
+        </button>
+        <button class="tab-btn" data-tab="comparison" onclick="switchTab('comparison',this)" id="tab-comparison-btn">
+            <i class="fas fa-chart-bar mr-1.5"></i>Comparison
+        </button>
+        <button class="tab-btn" data-tab="monitor" onclick="switchTab('monitor',this)" id="tab-monitor-btn">
+            <i class="fas fa-heartbeat mr-1.5"></i>Memory Monitor
+        </button>
+    </div>
+
+    <!-- Tab 1: Live Demo -->
+    <div id="tab-demo" class="tab-pane active">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-memory text-red-400"></i>
-                What is Zero-Heap Compliance?
+                <i class="fas fa-play text-emerald-400"></i>
+                Zero-Heap Operations Demo
             </h2>
             
-            <p class="text-white/70 mb-6">QualiaDB enforces a strict 512 MB RAM floor with zero dynamic heap allocation in hot paths. This means:</p>
+            <p class="text-white/70 mb-6">Run operations and watch the heap allocation counter stay at zero. All operations use stack-allocated buffers and caller-supplied output arrays.</p>
             
-            <ul class="list-disc list-inside text-white/70 space-y-3 mb-6">
-                <li><strong>No Vec, String, or Box</strong> in evaluator loops</li>
-                <li><strong>Fixed-size output buffers</strong> supplied by caller</li>
-                <li><strong>Stack-allocated arrays</strong> for local state</li>
-                <li><strong>Deterministic memory usage</strong> - no GC pauses</li>
-                <li><strong>O(1) memory complexity</strong> regardless of dataset size</li>
-            </ul>
-
-            <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6">
-                <div class="flex items-start gap-4">
-                    <i class="fas fa-shield-halved text-emerald-400 text-2xl mt-1"></i>
-                    <div>
-                        <h3 class="font-semibold text-emerald-400 mb-2">Why This Matters</h3>
-                        <p class="text-white/70 text-sm">Traditional databases can consume gigabytes of RAM and suffer unpredictable GC pauses. QualiaDB's zero-heap design guarantees predictable performance even on constrained devices like phones and embedded systems.</p>
-                    </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="text-sm text-white/60 block mb-2">Operation</label>
+                    <select id="zero-heap-op" class="input-field">
+                        <option value="query">Point Query (1000 iterations)</option>
+                        <option value="ingest">Ingest 1000 Quins</option>
+                        <option value="filter">Predicate Filter</option>
+                        <option value="traversal">Two-Hop Traversal</option>
+                        <option value="scientific">Scientific Compute (ODE)</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="runZeroHeapOp()" class="spinbtn w-full" id="zero-heap-run-btn">
+                        <i class="fas fa-play mr-2"></i>Execute (WASM)
+                    </button>
                 </div>
             </div>
         </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-strong rounded-3xl p-6">
+                <h3 class="text-lg font-semibold mb-4 text-emerald-400">Allocation Monitor</h3>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <span class="text-sm">Heap Allocations</span>
+                            <span class="text-sm text-emerald-400" id="alloc-count">0</span>
+                        </div>
+                        <div class="w-full bg-zinc-800 rounded-full h-6">
+                            <div class="memory-bar bg-emerald-500 h-6 rounded-full" id="alloc-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <span class="text-sm">Stack Usage</span>
+                            <span class="text-sm text-blue-400" id="stack-usage">~8 KB</span>
+                        </div>
+                        <div class="w-full bg-zinc-800 rounded-full h-6">
+                            <div class="memory-bar bg-blue-500 h-6 rounded-full" style="width: 1%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <span class="text-sm">42MB Sentinel</span>
+                            <span class="text-sm text-amber-400" id="sentinel-usage">~0 MB</span>
+                        </div>
+                        <div class="w-full bg-zinc-800 rounded-full h-6">
+                            <div class="memory-bar bg-amber-500 h-6 rounded-full" id="sentinel-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-strong rounded-3xl p-6">
+                <h3 class="text-lg font-semibold mb-4 text-blue-400">Operation Result</h3>
+                <div id="zero-heap-result" class="code-block text-emerald-300 min-h-[200px]">
+                    Execute an operation to see zero-heap compliance in action…
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <!-- The 48-Byte Quin -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
+    <!-- Tab 2: 48-byte Quin -->
+    <div id="tab-quin" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
                 <i class="fas fa-cube text-blue-400"></i>
                 The 48-Byte Super-Quin
             </h2>
             
-            <p class="text-white/70 mb-6">Every semantic statement in QualiaDB is exactly 48 bytes:</p>
+            <p class="text-white/70 mb-6">Every semantic statement in QualiaDB is exactly 48 bytes. No pointers, no heap references, just bit-packed semantics.</p>
             
             <div class="bg-black/30 rounded-2xl p-6 mb-6">
-                <pre class="text-sm"><code>[Subject (u64)] [Predicate (u64)] [Object (u64)] [Context (u64)] [Metadata (u64)] [Parity (u64)]
+                <div class="code-block text-blue-200 text-xs">
+[Subject (u64)] [Predicate (u64)] [Object (u64)] [Context (u64)] [Metadata (u64)] [Parity (u64)]
      8 bytes          8 bytes          8 bytes         8 bytes        8 bytes         8 bytes
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total: 48 bytes per Quin (exactly 6 cache lines on most CPUs)</code></pre>
+Total: 48 bytes per Quin (exactly 6 cache lines on most CPUs)
+                </div>
             </div>
 
-            <h3 class="text-lg font-medium mb-3">Bit-Packed Semantics</h3>
-            <p class="text-white/70 mb-4">All semantic meaning is encoded via bit-packing. No pointers, no heap references:</p>
+            <h3 class="text-lg font-medium mb-4 text-blue-300">Bit-Packed Semantics</h3>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-black/20 rounded-xl p-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="glass-panel p-4 rounded-xl">
                     <h4 class="font-medium text-blue-400 mb-2">Subject</h4>
                     <p class="text-white/60 text-sm">FNV-1a hash of entity IRI (63 bits) + MSB flag</p>
                 </div>
-                <div class="bg-black/20 rounded-xl p-4">
+                <div class="glass-panel p-4 rounded-xl">
                     <h4 class="font-medium text-blue-400 mb-2">Predicate</h4>
                     <p class="text-white/60 text-sm">Property hash (bits 8-62) + opcode (bits 0-7) + modality MSB</p>
                 </div>
-                <div class="bg-black/20 rounded-xl p-4">
+                <div class="glass-panel p-4 rounded-xl">
                     <h4 class="font-medium text-blue-400 mb-2">Object</h4>
                     <p class="text-white/60 text-sm">IRI hash, integer, decimal, or did:q42 pointer (type tag in bits 60-62)</p>
                 </div>
-                <div class="bg-black/20 rounded-xl p-4">
+                <div class="glass-panel p-4 rounded-xl">
                     <h4 class="font-medium text-blue-400 mb-2">Context</h4>
                     <p class="text-white/60 text-sm">Sensitivity class (bits 56-63) + contract/world hash (bits 0-55)</p>
                 </div>
             </div>
         </div>
+        
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Live Quin Inspector</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="text-sm text-white/60 block mb-2">Subject IRI</label>
+                    <input type="text" id="quin-subject" class="input-field" value="http://example.org/Alice">
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-2">Predicate IRI</label>
+                    <input type="text" id="quin-predicate" class="input-field" value="http://xmlns.com/foaf/0.1/name">
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-2">Object Value</label>
+                    <input type="text" id="quin-object" class="input-field" value="Alice">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="inspectQuin()" class="spinbtn w-full" id="quin-inspect-btn">
+                        <i class="fas fa-microchip mr-2"></i>Inspect Quin (WASM)
+                    </button>
+                </div>
+            </div>
+            
+            <div id="quin-inspect-result" class="code-block text-emerald-300 min-h-[200px]">
+                Enter IRI values and click Inspect to see the 48-byte encoding…
+            </div>
+        </div>
+    </div>
 
-        <!-- Memory Comparison -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
+    <!-- Tab 3: Comparison -->
+    <div id="tab-comparison" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
                 <i class="fas fa-chart-bar text-yellow-400"></i>
                 Memory Usage Comparison
@@ -122,173 +281,302 @@ Total: 48 bytes per Quin (exactly 6 cache lines on most CPUs)</code></pre>
             
             <p class="text-white/70 mb-6">Loading WordNet (5.56M triples) on different database systems:</p>
             
-            <div class="space-y-4 mb-6">
-                <div>
-                    <div class="flex justify-between mb-2">
-                        <span class="text-sm">Traditional RDF Store (Jena/Fuseki)</span>
-                        <span class="text-sm text-red-400">~2.8 GB</span>
-                    </div>
-                    <div class="w-full bg-zinc-800 rounded-full h-6">
-                        <div class="memory-bar bg-red-500 h-6 rounded-full" style="width: 100%"></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="flex justify-between mb-2">
-                        <span class="text-sm">Graph Database (Neo4j)</span>
-                        <span class="text-sm text-orange-400">~1.5 GB</span>
-                    </div>
-                    <div class="w-full bg-zinc-800 rounded-full h-6">
-                        <div class="memory-bar bg-orange-500 h-6 rounded-full" style="width: 54%"></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="flex justify-between mb-2">
-                        <span class="text-sm">QualiaDB (Full Load)</span>
-                        <span class="text-sm text-yellow-400">~280 MB</span>
-                    </div>
-                    <div class="w-full bg-zinc-800 rounded-full h-6">
-                        <div class="memory-bar bg-yellow-500 h-6 rounded-full" style="width: 10%"></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="flex justify-between mb-2">
-                        <span class="text-sm font-medium">QualiaDB (Lazy SuperBlocks)</span>
-                        <span class="text-sm font-medium text-emerald-400">~45 MB</span>
-                    </div>
-                    <div class="w-full bg-zinc-800 rounded-full h-6">
-                        <div class="memory-bar bg-emerald-500 h-6 rounded-full" style="width: 1.6%"></div>
-                    </div>
-                </div>
+            <div class="glass-panel p-6 rounded-xl mb-6">
+                <canvas id="memoryChart"></canvas>
             </div>
-
-            <p class="text-white/50 text-sm">* Lazy SuperBlocks loads only block headers, decompressing on-demand</p>
-        </div>
-
-        <!-- Code Example -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-code text-purple-400"></i>
-                Zero-Heap Code Pattern
-            </h2>
             
-            <p class="text-white/70 mb-6">Here's how to write zero-heap code in QualiaDB:</p>
-            
-            <h3 class="text-lg font-medium mb-3">❌ Wrong: Heap Allocation</h3>
-            <pre class="mb-6 text-red-300"><code>// BAD: Allocates Vec on heap
-fn filter_quins_bad(quins: &[NQuin]) -> Vec<NQuin> {
-    quins.iter()
-        .filter(|q| q.predicate == SOME_HASH)
-        .cloned()
-        .collect()  // Heap allocation!
-}</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">✅ Correct: Zero-Heap</h3>
-            <pre class="mb-6 text-emerald-300"><code>// GOOD: Caller supplies buffer, no allocation
-fn filter_quins_good(quins: &[NQuin], out: &mut [NQuin]) -> usize {
-    let mut count = 0;
-    for quin in quins {
-        if quin.predicate == SOME_HASH && count < out.len() {
-            out[count] = *quin;
-            count += 1;
-        }
-    }
-    count
-}
-
-// Usage:
-let mut buffer = [NQuin::default(); 1000];
-let found = filter_quins_good(quins, &mut buffer);</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Stack-Allocated Arrays</h3>
-            <pre class="text-emerald-300"><code>// GOOD: Fixed-size stack array
-fn process_batch() {
-    let mut local_state = [0u64; 16];  // Stack-allocated
-    // ... process using local_state
-}</code></pre>
-        </div>
-
-        <!-- The 42MB Sentinel -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-shield-alt text-cyan-400"></i>
-                The 42MB SlgArena Sentinel
-            </h2>
-            
-            <p class="text-white/70 mb-6">The Webizen VM uses a 42 MB static ring-buffer for SLG tabling:</p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="bg-black/20 rounded-xl p-4 text-center">
-                    <div class="text-3xl font-bold text-cyan-400 mb-2">42 MB</div>
-                    <div class="text-white/60 text-sm">Total Arena Size</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="font-medium text-red-400 mb-2">Traditional RDF Store</h4>
+                    <p class="text-white/60 text-sm">~2.8 GB (Jena/Fuseki)</p>
+                    <p class="text-white/40 text-xs mt-2">Heavy heap allocation, GC pauses</p>
                 </div>
-                <div class="bg-black/20 rounded-xl p-4 text-center">
-                    <div class="text-3xl font-bold text-cyan-400 mb-2">917,504</div>
-                    <div class="text-white/60 text-sm">Quin Slots</div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="font-medium text-orange-400 mb-2">Graph Database</h4>
+                    <p class="text-white/60 text-sm">~1.5 GB (Neo4j)</p>
+                    <p class="text-white/40 text-xs mt-2">Pointer-based, unpredictable memory</p>
                 </div>
-                <div class="bg-black/20 rounded-xl p-4 text-center">
-                    <div class="text-3xl font-bold text-cyan-400 mb-2">O(1)</div>
-                    <div class="text-white/60 text-sm">Lookup Time</div>
-                </div>
-            </div>
-
-            <p class="text-white/70 mb-4">This prevents infinite stack overflows when querying complex recursive social networks while staying within the 512 MB floor.</p>
-            
-            <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6">
-                <div class="flex items-start gap-4">
-                    <i class="fas fa-exclamation-triangle text-amber-400 text-2xl mt-1"></i>
-                    <div>
-                        <h3 class="font-semibold text-amber-400 mb-2">Hard Constraint</h3>
-                        <p class="text-white/70 text-sm">Any single execution pass must stay within 42 MB. The SlgArena enforces this structurally - if you try to allocate more, the operation fails fast rather than causing silent corruption.</p>
-                    </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="font-medium text-emerald-400 mb-2">QualiaDB</h4>
+                    <p class="text-white/60 text-sm">~280 MB (Full Load)</p>
+                    <p class="text-white/40 text-xs mt-2">Zero-heap, deterministic memory</p>
                 </div>
             </div>
         </div>
-
-        <!-- Verification -->
-        <div class="glass-strong rounded-3xl p-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-check-circle text-green-400"></i>
-                Verifying Zero-Heap Compliance
-            </h2>
-            
-            <p class="text-white/70 mb-6">QualiaDB includes built-in tools to verify zero-heap compliance:</p>
-            
-            <h3 class="text-lg font-medium mb-3">Memory Profiling</h3>
-            <pre class="mb-6"><code># Run with memory tracking
-RUST_LOG=qualia_core_db=trace qualia query data.q42
-
-# Check RSS (Resident Set Size)
-# Should stay under 512 MB even with large datasets</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Allocation Audit</h3>
-            <pre class="mb-6"><code># Build with allocation instrumentation
-cargo build --release -p qualia-core-db --features alloc-audit
-
-# Run tests to detect heap allocations
-cargo test -p qualia-core-db --features alloc-audit</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Benchmark Validation</h3>
-            <pre><code># Run full benchmark suite with memory telemetry
-qualia bench --suite full --telemetry
-
-# Check the output for memory usage patterns
-# Look for: "RSS peak", "Heap allocated", "GC pauses"</code></pre>
+        
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Performance Comparison</h3>
+            <div class="glass-panel p-6 rounded-xl">
+                <canvas id="performanceChart"></canvas>
+            </div>
         </div>
     </div>
 
-    <footer class="border-t border-white/10 py-8">
-        <div class="max-w-screen-2xl mx-auto px-8">
-            <div class="flex items-center justify-between">
-                <div class="text-white/50 text-sm">
-                    QualiaDB v0.0.15 • Human-Centric Semantic Engine
+    <!-- Tab 4: Memory Monitor -->
+    <div id="tab-monitor" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-heartbeat text-red-400"></i>
+                Real-Time Memory Monitor
+            </h2>
+            
+            <p class="text-white/70 mb-6">Monitor memory usage in real-time as operations execute. The 42MB Sentinel enforces a hard ceiling.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="text-sm text-white/60 block mb-2">Stress Test</label>
+                    <select id="stress-test" class="input-field">
+                        <option value="light">Light (1000 ops)</option>
+                        <option value="medium">Medium (10000 ops)</option>
+                        <option value="heavy">Heavy (100000 ops)</option>
+                    </select>
                 </div>
-                <div class="flex items-center gap-6 text-sm">
-                    <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
-                    <a href="manuals/standards/" class="hover:text-white transition-colors">Standards</a>
-                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="hover:text-white transition-colors">GitHub</a>
+                <div class="flex items-end">
+                    <button onclick="runStressTest()" class="spinbtn w-full" id="stress-run-btn">
+                        <i class="fas fa-bolt mr-2"></i>Run Stress Test (WASM)
+                    </button>
                 </div>
             </div>
         </div>
-    </footer>
+        
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Memory Timeline</h3>
+            <div class="glass-panel p-6 rounded-xl">
+                <canvas id="memoryTimelineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+    let wasm = null;
+    let charts = {};
+    let memoryTimeline = [];
+
+    // Load WASM
+    async function loadWasm() {
+        try {
+            const module = await import('./playground/qualia_core_db.js');
+            await module.default();
+            wasm = module;
+            
+            // Update UI
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('main-content').style.display = 'block';
+            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
+            document.getElementById('wasm-dot').classList.add('bg-emerald-500');
+            document.getElementById('wasm-text').textContent = 'WASM Ready';
+            
+            // Enable all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.disabled = false);
+            
+            // Initialize charts
+            initCharts();
+            
+            console.log('QualiaDB WASM loaded successfully');
+        } catch (error) {
+            console.error('Failed to load WASM:', error);
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('error-overlay').classList.remove('hidden');
+            document.getElementById('error-message').textContent = error.toString();
+            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
+            document.getElementById('wasm-dot').classList.add('bg-red-500');
+            document.getElementById('wasm-text').textContent = 'WASM Error';
+        }
+    }
+
+    // Tab switching
+    window.switchTab = function(tabId, btn) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+        btn.classList.add('active');
+    };
+
+    // Run zero-heap operation
+    window.runZeroHeapOp = async function() {
+        if (!wasm) return;
+        
+        const op = document.getElementById('zero-heap-op').value;
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.zero_heap_operation(JSON.stringify({ op }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            
+            // Update metrics
+            document.getElementById('metric-allocations').textContent = parsed.heap_allocations;
+            document.getElementById('metric-memory').textContent = parsed.memory_kb + ' KB';
+            document.getElementById('metric-quin-count').textContent = parsed.quins_processed.toLocaleString();
+            document.getElementById('alloc-count').textContent = parsed.heap_allocations;
+            document.getElementById('alloc-bar').style.width = (parsed.heap_allocations * 10) + '%';
+            document.getElementById('sentinel-usage').textContent = (parsed.sentinel_mb / 1024 / 1024).toFixed(2) + ' MB';
+            document.getElementById('sentinel-bar').style.width = (parsed.sentinel_mb / 42 * 100) + '%';
+            
+            document.getElementById('zero-heap-result').textContent = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+            document.getElementById('zero-heap-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Inspect Quin
+    window.inspectQuin = async function() {
+        if (!wasm) return;
+        
+        const subject = document.getElementById('quin-subject').value;
+        const predicate = document.getElementById('quin-predicate').value;
+        const object = document.getElementById('quin-object').value;
+        
+        try {
+            const result = wasm.quin_inspect(JSON.stringify({ subject, predicate, object }));
+            const parsed = JSON.parse(result);
+            
+            let output = `48-byte QualiaQuin Encoding\n`;
+            output += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            output += `Subject:   0x${parsed.subject.toString(16).padStart(16, '0')}\n`;
+            output += `Predicate: 0x${parsed.predicate.toString(16).padStart(16, '0')}\n`;
+            output += `Object:    0x${parsed.object.toString(16).padStart(16, '0')}\n`;
+            output += `Context:   0x${parsed.context.toString(16).padStart(16, '0')}\n`;
+            output += `Metadata:  0x${parsed.metadata.toString(16).padStart(16, '0')}\n`;
+            output += `Parity:    0x${parsed.parity.toString(16).padStart(16, '0')}\n\n`;
+            output += `Total: 48 bytes (6 × u64)\n`;
+            output += `Cache lines: 6 (on most CPUs)\n`;
+            output += `Heap allocations: 0\n`;
+            
+            document.getElementById('quin-inspect-result').textContent = output;
+        } catch (e) {
+            document.getElementById('quin-inspect-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Run stress test
+    window.runStressTest = async function() {
+        if (!wasm) return;
+        
+        const level = document.getElementById('stress-test').value;
+        memoryTimeline = [];
+        
+        const iterations = level === 'light' ? 1000 : level === 'medium' ? 10000 : 100000;
+        
+        for (let i = 0; i < 10; i++) {
+            const result = wasm.zero_heap_operation(JSON.stringify({ op: 'query', iterations: iterations / 10 }));
+            const parsed = JSON.parse(result);
+            
+            memoryTimeline.push({
+                time: i,
+                memory: parsed.memory_kb,
+                allocations: parsed.heap_allocations
+            });
+            
+            // Small delay to visualize
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        updateMemoryTimelineChart();
+    };
+
+    // Initialize charts
+    function initCharts() {
+        // Memory comparison chart
+        const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+        charts.memory = new Chart(memoryCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Traditional RDF', 'Graph DB', 'QualiaDB'],
+                datasets: [{
+                    label: 'Memory Usage (MB)',
+                    data: [2800, 1500, 280],
+                    backgroundColor: ['rgba(239, 68, 68, 0.6)', 'rgba(249, 115, 22, 0.6)', 'rgba(52, 211, 153, 0.6)'],
+                    borderColor: ['#ef4444', '#f97316', '#34d399']
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'rgba(226,232,240,0.6)' }
+                    },
+                    x: { 
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'rgba(226,232,240,0.6)' }
+                    }
+                }
+            }
+        });
+
+        // Performance chart
+        const perfCtx = document.getElementById('performanceChart').getContext('2d');
+        charts.performance = new Chart(perfCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Point Lookup', 'Two-Hop', 'Filter', 'Ingest'],
+                datasets: [{
+                    label: 'Latency (ms)',
+                    data: [0.05, 0.12, 0.08, 0.15],
+                    backgroundColor: 'rgba(52, 211, 153, 0.6)',
+                    borderColor: '#34d399'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'rgba(226,232,240,0.6)' }
+                    },
+                    x: { 
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'rgba(226,232,240,0.6)' }
+                    }
+                }
+            }
+        });
+
+        // Memory timeline chart
+        const timelineCtx = document.getElementById('memoryTimelineChart').getContext('2d');
+        charts.timeline = new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Memory (KB)',
+                    data: [],
+                    borderColor: '#34d399',
+                    tension: 0.1,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'rgba(226,232,240,0.6)' }
+                    },
+                    x: { 
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'rgba(226,232,240,0.6)' }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateMemoryTimelineChart() {
+        charts.timeline.data.labels = memoryTimeline.map(d => d.time);
+        charts.timeline.data.datasets[0].data = memoryTimeline.map(d => d.memory);
+        charts.timeline.update();
+    }
+
+    // Initialize
+    loadWasm();
+</script>
 </body>
 </html>

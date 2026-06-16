@@ -3,76 +3,370 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spatial • Qualia-DB</title>
+    <title>Spatial Mathematics & GeoSPARQL - QualiaDB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { font-family: 'Inter', system_ui, sans-serif; }
         .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        .glass-panel { background: rgba(17, 23, 31, 0.82); border: 1px solid rgba(148, 163, 184, 0.14); backdrop-filter: blur(28px); }
+        .code-block { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.8rem; background: rgba(10, 10, 15, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1rem; white-space: pre-wrap; }
+        .input-field { background: rgba(10, 10, 15, 0.65); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: #e2e8f0; padding: 0.5rem 0.75rem; outline: none; transition: border-color 0.2s; width: 100%; }
+        .input-field:focus { border-color: rgba(16, 185, 129, 0.5); }
+        .tab-btn { transition: all 0.2s; padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: rgba(226, 232, 240, 0.6); }
+        .tab-btn:hover { background: rgba(255, 255, 255, 0.07); color: white; }
+        .tab-btn.active { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .tab-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .metric-card { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 1rem; }
+        .metric-value { font-size: 1.5rem; font-weight: 700; color: #34d399; }
+        .metric-label { font-size: 0.75rem; color: rgba(226, 232, 240, 0.6); }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.95); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .loading-spinner { width: 48px; height: 48px; border: 3px solid rgba(52, 211, 153, 0.2); border-top-color: #34d399; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.98); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .spinbtn { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; border-radius: 6px; padding: 0.45rem 1.1rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .spinbtn:hover { background: rgba(16, 185, 129, 0.3); }
+        .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
+        #canvas-container { border-radius: 16px; overflow: hidden; }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="js/menu-loader.js"></script></head>
+    <script src="js/menu-loader.js"></script>
+</head>
 <body class="bg-zinc-950 text-zinc-200">
-    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
-        <div class="max-w-screen-2xl mx-auto px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-8">
-                    <a href="index.html" class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
-                            <span class="text-black font-bold text-xl">Q</span>
-                        </div>
-                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
-                    </a>
-                    <div id="dynamic-nav" class="hidden md:flex items-center gap-6 text-sm">
-                        <!-- Navigation loaded dynamically by menu-loader.js -->
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+    <div class="text-center">
+        <div class="loading-spinner mx-auto mb-4"></div>
+        <div class="text-emerald-400 font-semibold">Loading QualiaDB WASM Engine...</div>
+        <div class="text-white/50 text-sm mt-2">Initializing spatial mathematics primitives</div>
+    </div>
+</div>
+
+<!-- Error Overlay -->
+<div id="error-overlay" class="error-overlay hidden">
+    <div class="glass-strong rounded-3xl p-8 max-w-lg text-center">
+        <div class="text-red-400 text-5xl mb-4"><i class="fas fa-exclamation-triangle"></i></div>
+        <h2 class="text-2xl font-semibold text-white mb-2">WASM Engine Required</h2>
+        <p class="text-white/60 mb-6">This demo requires the QualiaDB WASM engine to run. Please ensure you have network access to load the WASM module.</p>
+        <div class="code-block text-left text-sm text-red-300 mb-4" id="error-message"></div>
+        <button onclick="location.reload()" class="spinbtn"><i class="fas fa-redo mr-2"></i>Retry</button>
+    </div>
+</div>
+
+<!-- Nav -->
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center gap-8">
+                <a href="index.html" class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
                     </div>
+                    <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="hidden md:flex items-center gap-6 text-sm">
+                    <!-- Navigation loaded dynamically by menu-loader.js -->
                 </div>
-                <div class="flex items-center gap-4">
-                    <div id="daemon-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
-                        <div class="w-2 h-2 rounded-full bg-slate-500" id="daemon-dot"></div>
-                        <span id="daemon-text">Checking...</span>
-                    </div>
-                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
-                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
-                        <i class="fab fa-github"></i><span>GitHub</span>
-                    </a>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                    <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
+                    <span id="wasm-text">Loading...</span>
                 </div>
             </div>
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <div class="max-w-screen-2xl mx-auto px-8 pt-8">
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="font-display text-3xl font-semibold">Spatial Mathematics & CGAL</h1>
-                <p class="text-white/60">Encoding 3D geometries directly into native 48-byte .q42 ledgers</p>
-            </div>
-            <button onclick="generateNewGeometry()" class="px-5 py-2 bg-pink-600 hover:bg-pink-500 rounded-2xl text-sm font-semibold flex items-center gap-x-2">
-                <i class="fa-solid fa-sync"></i>
-                <span>Generate New Mesh</span>
-            </button>
+<div class="max-w-screen-xl mx-auto px-6 pt-10 pb-20" id="main-content" style="display: none;">
+    <!-- Hero -->
+    <div class="text-center mb-10">
+        <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
+            <i class="fas fa-cube"></i>
+            <span>WASM-only · GeoSPARQL · 48-byte Quin Encoding</span>
         </div>
+        <h1 class="text-5xl font-semibold tracking-tighter mb-3">Spatial Mathematics & GeoSPARQL</h1>
+        <p class="text-white/60 max-w-xl mx-auto">Encoding 3D geometries directly into native 48-byte QualiaQuin ledgers with real spatial operations via WASM.</p>
+    </div>
 
+    <!-- Performance Metrics -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="metric-card">
+            <div class="metric-value" id="metric-vertices">0</div>
+            <div class="metric-label">Vertices</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-quins">0</div>
+            <div class="metric-label">Quins Encoded</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-memory">0 KB</div>
+            <div class="metric-label">Memory Usage</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="metric-time">0ms</div>
+            <div class="metric-label">Encoding Time</div>
+        </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="flex flex-wrap gap-2 mb-8 justify-center">
+        <button class="tab-btn active" data-tab="viewer" onclick="switchTab('viewer',this)" id="tab-viewer-btn">
+            <i class="fas fa-cube mr-1.5"></i>3D Viewer
+        </button>
+        <button class="tab-btn" data-tab="geosparql" onclick="switchTab('geosparql',this)" id="tab-geosparql-btn">
+            <i class="fas fa-map-marker-alt mr-1.5"></i>GeoSPARQL
+        </button>
+        <button class="tab-btn" data-tab="encoding" onclick="switchTab('encoding',this)" id="tab-encoding-btn">
+            <i class="fas fa-microchip mr-1.5"></i>Quin Encoding
+        </button>
+        <button class="tab-btn" data-tab="operations" onclick="switchTab('operations',this)" id="tab-operations-btn">
+            <i class="fas fa-calculator mr-1.5"></i>Spatial Ops
+        </button>
+    </div>
+
+    <!-- Tab 1: 3D Viewer -->
+    <div id="tab-viewer" class="tab-pane active">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- 3D Viewer -->
             <div class="lg:col-span-2 glass-strong rounded-3xl overflow-hidden" style="height: 520px;" id="canvas-container"></div>
 
-            <!-- Hex Dump / Info -->
+            <!-- Controls -->
             <div class="glass-strong rounded-3xl p-6">
-                <div class="font-semibold mb-3 flex items-center gap-x-2">
-                    <i class="fa-solid fa-microchip"></i>
-                    <span>.q42 Binary Encoding</span>
+                <h3 class="text-lg font-semibold mb-4 text-emerald-400">Geometry Controls</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm text-white/60 block mb-2">Geometry Type</label>
+                        <select id="geo-type" class="input-field" onchange="generateGeometry()">
+                            <option value="icosahedron">Icosahedron</option>
+                            <option value="cube">Cube</option>
+                            <option value="sphere">Sphere</option>
+                            <option value="torus">Torus</option>
+                            <option value="knot">Torus Knot</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm text-white/60 block mb-2">Detail Level</label>
+                        <input type="range" id="geo-detail" class="w-full" min="0" max="5" value="2" onchange="generateGeometry()">
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm text-white/60 block mb-2">Display Mode</label>
+                        <select id="display-mode" class="input-field" onchange="updateDisplayMode()">
+                            <option value="wireframe">Wireframe</option>
+                            <option value="points">Points</option>
+                            <option value="solid">Solid</option>
+                            <option value="hybrid">Hybrid</option>
+                        </select>
+                    </div>
+                    
+                    <button onclick="encodeToQuins()" class="spinbtn w-full" id="encode-btn">
+                        <i class="fas fa-microchip mr-2"></i>Encode to Quins (WASM)
+                    </button>
                 </div>
-                <pre id="hexdump" class="text-xs font-mono bg-black/60 p-4 rounded-2xl overflow-auto h-[420px] text-emerald-400"></pre>
+                
+                <div class="mt-6 p-4 bg-black/30 rounded-xl border border-white/10">
+                    <div class="text-xs text-white/50 mb-2 font-semibold">Encoding Status</div>
+                    <div id="encoding-status" class="text-sm text-emerald-300">Ready to encode</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script>
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    <!-- Tab 2: GeoSPARQL -->
+    <div id="tab-geosparql" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-map-marker-alt text-emerald-400"></i>
+                GeoSPARQL Operations
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB supports GeoSPARQL spatial predicates for querying geometric relationships. These operations run natively in WASM with zero-heap compliance.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="text-sm text-white/60 block mb-2">Geometry A (WKT)</label>
+                    <textarea id="geo-a" class="input-field" rows="3" placeholder="POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))">POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))</textarea>
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-2">Geometry B (WKT)</label>
+                    <textarea id="geo-b" class="input-field" rows="3" placeholder="POINT(5 5)">POINT(5 5)</textarea>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label class="text-sm text-white/60 block mb-2">Spatial Operation</label>
+                    <select id="spatial-op" class="input-field">
+                        <option value="within">sfWithin (A within B)</option>
+                        <option value="contains">sfContains (A contains B)</option>
+                        <option value="intersects">sfIntersects (A ∩ B ≠ ∅)</option>
+                        <option value="touches">sfTouches (A touches B)</option>
+                        <option value="overlaps">sfOverlaps (A overlaps B)</option>
+                        <option value="distance">Distance (A to B)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-2">CRS (Coordinate Reference)</label>
+                    <select id="geo-crs" class="input-field">
+                        <option value="4326">WGS84 (EPSG:4326)</option>
+                        <option value="3857">Web Mercator (EPSG:3857)</option>
+                        <option value="27700">British National Grid</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="runSpatialOp()" class="spinbtn w-full" id="spatial-run-btn">
+                        <i class="fas fa-play mr-2"></i>Execute (WASM)
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Spatial Operation Result</h3>
+            <div id="spatial-result" class="code-block text-emerald-300 min-h-[200px]">Execute a spatial operation to see results…</div>
+        </div>
+        
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3">SPARQL Integration Example</h3>
+            <div class="code-block text-blue-200 text-xs">
+PREFIX geo: &lt;http://www.opengis.net/ont/geosparql#&gt;
+
+SELECT ?feature ?result WHERE {
+  ?feature geo:hasGeometry ?geomA .
+  ?target geo:hasGeometry ?geomB .
+  
+  # Native GeoSPARQL operation (WASM)
+  BIND(geo:sfWithin(?geomA, ?geomB) AS ?result)
+}
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Quin Encoding -->
+    <div id="tab-encoding" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-microchip text-emerald-400"></i>
+                48-byte QualiaQuin Encoding
+            </h2>
+            
+            <p class="text-white/70 mb-6">Spatial geometries are encoded as sequences of 48-byte QualiaQuins. Each vertex becomes a Quin with the position packed into the object field.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Vertex Quin Layout</h4>
+                    <div class="code-block text-xs text-emerald-200">
+subject:   q_hash(geometry_id)
+predicate: q_hash("geo:hasVertex")
+object:    (x << 40) | (y << 20) | z  [60-bit packed]
+context:   q_hash(graph_id)
+metadata:  vertex_index
+parity:    XOR fold
+                    </div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Face Quin Layout</h4>
+                    <div class="code-block text-xs text-emerald-200">
+subject:   q_hash(geometry_id)
+predicate: q_hash("geo:hasFace")
+object:    (v1 << 40) | (v2 << 20) | v3  [vertex indices]
+context:   q_hash(graph_id)
+metadata:  face_index
+parity:    XOR fold
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Live Encoding Dump</h3>
+            <div id="quin-dump" class="code-block text-emerald-300 min-h-[300px] max-h-[500px] overflow-y-auto">
+                Generate geometry and click "Encode to Quins" to see the actual QualiaQuin encoding…
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 4: Spatial Operations -->
+    <div id="tab-operations" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-calculator text-emerald-400"></i>
+                Native Spatial Operations
+            </h2>
+            
+            <p class="text-white/70 mb-6">QualiaDB provides native WASM implementations of common spatial operations from CGAL and computational geometry libraries.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Bounding Box</h4>
+                    <p class="text-white/60 text-xs">Compute axis-aligned bounding box for geometry</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Convex Hull</h4>
+                    <p class="text-white/60 text-xs">Compute convex hull using QuickHull algorithm</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Triangulation</h4>
+                    <p class="text-white/60 text-xs">Delaunay triangulation of point set</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Intersection</h4>
+                    <p class="text-white/60 text-xs">Compute intersection of two geometries</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Union</h4>
+                    <p class="text-white/60 text-xs">Compute union of two geometries</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Buffer</h4>
+                    <p class="text-white/60 text-xs">Compute buffer zone around geometry</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass-strong rounded-3xl p-6">
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Spatial Operation Demo</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="text-sm text-white/60 block mb-2">Operation</label>
+                    <select id="native-op" class="input-field">
+                        <option value="bbox">Bounding Box</option>
+                        <option value="convex_hull">Convex Hull</option>
+                        <option value="triangulate">Triangulation</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="runNativeOp()" class="spinbtn w-full" id="native-run-btn">
+                        <i class="fas fa-play mr-2"></i>Execute (WASM)
+                    </button>
+                </div>
+            </div>
+            
+            <div id="native-result" class="code-block text-emerald-300 min-h-[200px]">
+                Select an operation and execute to see results…
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+    let wasm = null;
+    let scene, camera, renderer, meshGroup;
+    let container = document.getElementById('canvas-container');
+
+    // Initialize Three.js
+    function initThreeJS() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(renderer.domElement);
 
@@ -82,36 +376,9 @@
         light.position.set(10, 20, 10);
         scene.add(light);
 
-        let meshGroup = new THREE.Group();
+        meshGroup = new THREE.Group();
         scene.add(meshGroup);
         camera.position.set(0, 8, 18);
-
-        function generateNewGeometry() {
-            while (meshGroup.children.length > 0) meshGroup.remove(meshGroup.children[0]);
-
-            const geo = new THREE.IcosahedronGeometry(7, 2);
-            const wire = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.4 }));
-            const points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xff266e, size: 0.18 }));
-
-            meshGroup.add(wire);
-            meshGroup.add(points);
-
-            document.getElementById('hexdump').textContent = 
-`Q42 Spatial Encoding
-Vertices: ${geo.attributes.position.count}
-Triangles: ${geo.index ? geo.index.count / 3 : 'N/A'}
-Memory: ~${(geo.attributes.position.count * 48 / 1024).toFixed(1)} KB
-
-[48-byte Quin layout]
-S P O C M Parity
-... (simulated dump)`;
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            meshGroup.rotation.y += 0.003;
-            renderer.render(scene, camera);
-        }
 
         window.addEventListener('resize', () => {
             camera.aspect = container.clientWidth / container.clientHeight;
@@ -119,24 +386,226 @@ S P O C M Parity
             renderer.setSize(container.clientWidth, container.clientHeight);
         });
 
-        generateNewGeometry();
         animate();
+    }
 
-        async function checkDaemon() {
-            try {
-                const res = await fetch('http://localhost:4242/health', { signal: AbortSignal.timeout(2000) });
-                if (res.ok) {
-                    const d = await res.json();
-                    document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
-                    document.getElementById('daemon-badge').className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-                }
-            } catch(e) {
-                document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
-                document.getElementById('daemon-text').textContent = 'Daemon Offline';
+    function animate() {
+        requestAnimationFrame(animate);
+        if (meshGroup) {
+            meshGroup.rotation.y += 0.003;
+        }
+        renderer.render(scene, camera);
+    }
+
+    // Generate geometry
+    window.generateGeometry = function() {
+        while (meshGroup.children.length > 0) meshGroup.remove(meshGroup.children[0]);
+
+        const type = document.getElementById('geo-type').value;
+        const detail = parseInt(document.getElementById('geo-detail').value);
+        let geo;
+
+        switch(type) {
+            case 'icosahedron':
+                geo = new THREE.IcosahedronGeometry(7, detail);
+                break;
+            case 'cube':
+                geo = new THREE.BoxGeometry(10, 10, 10, detail + 1, detail + 1, detail + 1);
+                break;
+            case 'sphere':
+                geo = new THREE.SphereGeometry(7, detail * 8 + 8, detail * 6 + 6);
+                break;
+            case 'torus':
+                geo = new THREE.TorusGeometry(5, 2, detail * 8 + 8, detail * 6 + 6);
+                break;
+            case 'knot':
+                geo = new THREE.TorusKnotGeometry(4, 1.5, detail * 32 + 32, detail * 8 + 8);
+                break;
+        }
+
+        updateDisplayMode(geo);
+        
+        // Update metrics
+        const vertexCount = geo.attributes.position.count;
+        document.getElementById('metric-vertices').textContent = vertexCount.toLocaleString();
+        document.getElementById('metric-quins').textContent = (vertexCount * 2).toLocaleString();
+        document.getElementById('metric-memory').textContent = ((vertexCount * 48 * 2) / 1024).toFixed(1) + ' KB';
+    };
+
+    window.updateDisplayMode = function(geo) {
+        if (!geo) {
+            const type = document.getElementById('geo-type').value;
+            const detail = parseInt(document.getElementById('geo-detail').value);
+            switch(type) {
+                case 'icosahedron':
+                    geo = new THREE.IcosahedronGeometry(7, detail);
+                    break;
+                case 'cube':
+                    geo = new THREE.BoxGeometry(10, 10, 10, detail + 1, detail + 1, detail + 1);
+                    break;
+                case 'sphere':
+                    geo = new THREE.SphereGeometry(7, detail * 8 + 8, detail * 6 + 6);
+                    break;
+                case 'torus':
+                    geo = new THREE.TorusGeometry(5, 2, detail * 8 + 8, detail * 6 + 6);
+                    break;
+                case 'knot':
+                    geo = new THREE.TorusKnotGeometry(4, 1.5, detail * 32 + 32, detail * 8 + 8);
+                    break;
             }
         }
-        checkDaemon();
-    </script>
+
+        const mode = document.getElementById('display-mode').value;
+        while (meshGroup.children.length > 0) meshGroup.remove(meshGroup.children[0]);
+
+        switch(mode) {
+            case 'wireframe':
+                const wire = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.4 }));
+                meshGroup.add(wire);
+                break;
+            case 'points':
+                const points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xff266e, size: 0.18 }));
+                meshGroup.add(points);
+                break;
+            case 'solid':
+                const solid = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.3, wireframe: false }));
+                meshGroup.add(solid);
+                break;
+            case 'hybrid':
+                const wire2 = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.4 }));
+                const points2 = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xff266e, size: 0.18 }));
+                meshGroup.add(wire2);
+                meshGroup.add(points2);
+                break;
+        }
+    };
+
+    // Encode to Quins
+    window.encodeToQuins = async function() {
+        if (!wasm) {
+            document.getElementById('encoding-status').textContent = 'WASM not loaded';
+            return;
+        }
+
+        const type = document.getElementById('geo-type').value;
+        const detail = parseInt(document.getElementById('geo-detail').value);
+        const startTime = performance.now();
+
+        try {
+            const result = wasm.spatial_encode(JSON.stringify({ type, detail }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            
+            document.getElementById('encoding-status').textContent = `Encoded ${parsed.quin_count} Quins in ${(endTime - startTime).toFixed(2)}ms`;
+            document.getElementById('metric-time').textContent = (endTime - startTime).toFixed(2) + 'ms';
+            
+            // Display Quin dump
+            let dump = `Q42 Spatial Encoding\n`;
+            dump += `Vertices: ${parsed.vertex_count}\n`;
+            dump += `Quins: ${parsed.quin_count}\n`;
+            dump += `Memory: ${parsed.memory_kb} KB\n\n`;
+            dump += `[First 10 Quins]\n`;
+            parsed.quins.slice(0, 10).forEach((quin, i) => {
+                dump += `Quin ${i}:\n`;
+                dump += `  Subject:   0x${quin.subject.toString(16).padStart(16, '0')}\n`;
+                dump += `  Predicate: 0x${quin.predicate.toString(16).padStart(16, '0')}\n`;
+                dump += `  Object:    0x${quin.object.toString(16).padStart(16, '0')}\n`;
+                dump += `  Context:   0x${quin.context.toString(16).padStart(16, '0')}\n`;
+                dump += `  Metadata:  0x${quin.metadata.toString(16).padStart(16, '0')}\n`;
+                dump += `  Parity:    0x${quin.parity.toString(16).padStart(16, '0')}\n\n`;
+            });
+            
+            document.getElementById('quin-dump').textContent = dump;
+        } catch (e) {
+            document.getElementById('encoding-status').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Run spatial operation
+    window.runSpatialOp = async function() {
+        if (!wasm) return;
+        
+        const geoA = document.getElementById('geo-a').value;
+        const geoB = document.getElementById('geo-b').value;
+        const op = document.getElementById('spatial-op').value;
+        const crs = document.getElementById('geo-crs').value;
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.geosparql_operation(JSON.stringify { geoA, geoB, op, crs }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            document.getElementById('spatial-result').textContent = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+            document.getElementById('spatial-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Run native operation
+    window.runNativeOp = async function() {
+        if (!wasm) return;
+        
+        const op = document.getElementById('native-op').value;
+        
+        const startTime = performance.now();
+        
+        try {
+            const result = wasm.spatial_operation(JSON.stringify({ op }));
+            const endTime = performance.now();
+            
+            const parsed = JSON.parse(result);
+            document.getElementById('native-result').textContent = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+            document.getElementById('native-result').textContent = 'Error: ' + e.message;
+        }
+    };
+
+    // Tab switching
+    window.switchTab = function(tabId, btn) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+        btn.classList.add('active');
+    };
+
+    // Load WASM
+    async function loadWasm() {
+        try {
+            const module = await import('./playground/qualia_core_db.js');
+            await module.default();
+            wasm = module;
+            
+            // Update UI
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('main-content').style.display = 'block';
+            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
+            document.getElementById('wasm-dot').classList.add('bg-emerald-500');
+            document.getElementById('wasm-text').textContent = 'WASM Ready';
+            
+            // Enable all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.disabled = false);
+            
+            // Initialize Three.js
+            initThreeJS();
+            generateGeometry();
+            
+            console.log('QualiaDB WASM loaded successfully');
+        } catch (error) {
+            console.error('Failed to load WASM:', error);
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('error-overlay').classList.remove('hidden');
+            document.getElementById('error-message').textContent = error.toString();
+            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
+            document.getElementById('wasm-dot').classList.add('bg-red-500');
+            document.getElementById('wasm-text').textContent = 'WASM Error';
+        }
+    }
+
+    // Initialize
+    loadWasm();
+</script>
 </body>
 </html>
