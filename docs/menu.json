@@ -121,6 +121,12 @@
       "href": "zero-heap-compliance.html",
       "icon": "fa-memory",
       "group": "Data"
+    },
+    {
+      "label": "WordNet",
+      "href": "wordnet.html",
+      "icon": "fa-book-open",
+      "group": "Data"
     }
   ],
   "footer": {
