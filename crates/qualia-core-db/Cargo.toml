@@ -32,6 +32,10 @@ sanctuary-crypto = ["pbkdf2"]
 # Enables 10D tensor coordinate system [q, v, w, x, y, z, t, α, μ, σ]
 tensor-10d = []
 
+# Hardware acceleration features for tensor operations
+tensor-gpu = []  # Enable GPU acceleration (CUDA/Metal/Vulkan)
+tensor-npu = []  # Enable NPU acceleration (Neural Engine)
+
 # Zero-knowledge proofs for Deontic Culling layer
 # Using arkworks ecosystem for unified, maintainable ZK infrastructure
 zk-culling = ["ark-bls12-381", "ark-groth16", "ark-relations", "ark-snark", "ark-ff", "ark-serialize", "ark-ec"]
