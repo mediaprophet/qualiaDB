@@ -1,7 +1,7 @@
 # Qualia-DB Architecture
 
 > The 3-Core Triad, Webizen VM, Rights Ontology, and the Principal-Agent Ecosystem.
-> _Branch: `0.0.12-dev` | Last updated: 2026-06-10_
+> _Branch: `0.0.13` | Last updated: 2026-06-16_
 
 Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favour of a specialised 3-Core Triad built with ruthless mechanical sympathy (512 MB RAM floor). Raw multi-modal data (audio, camera feeds) would immediately breach this floor, so the ecosystem forces an **Orchestration Sieve**: the Primary Agent must coordinate deterministic tools (OpenCV, Audio DSP) to strip noise, extract contours, and build optimised files *before* handing them to the local LLM or the database.
 
@@ -18,6 +18,37 @@ Supported ingest formats: CogAI Cognitive AI Chunks (`.chk` text — W3C CG ACT-
 
 ### 2. GPU Sieve (Geometric Pruning)
 Graph nodes are mapped into Minkowski space within continuous 128 KB memory-mapped `QualiaSuperBlocks`. The GPU calculates bounding-hull collisions to retrieve data at sub-microsecond speeds without loading unrelated blocks. The WGSL compute shader (`shaders/fused_tensor_contraction.wgsl`) runs 64 threads/workgroup across DirectML / Vulkan / Metal / WebGPU via `wgpu`.
+
+
+### 2.5. 10D Volumetric Tensor System (Zero-Heap Geometric Processing)
+The 10D tensor system [q, v, w, x, y, z, t, α, μ, σ] provides absolute mechanical sympathy across heterogeneous hardware (edge phones to A2000 GPUs to scarce QPUs). It maps neuro-symbolic human-centric logic into raw geometric physics simulations executable via SIMD, GPU texture units, or asynchronous Ground-State Resolvers.
+
+**Coordinate System:**
+- **q (Quantum Context)**: Manages epistemic superposition (q=0 ground truth, q>0 parallel contexts)
+- **v (Topological Class)**: Dynamic distance metrics (Euclidean, Cyclic, Hyperbolic, Boundary Cliques)
+- **w (Manifold Index)**: Multi-head attention for knowledge universe bifurcation (Medical, Legal, Personal, etc.)
+- **x, y, z (Semantic Topology)**: 3D spatial coordinates for semantic clustering
+- **t (Temporal State)**: Provenance ledger for immutable historical queries
+- **α, μ, σ (Spectral-Logical Payload)**: EM spectrum foundation (Amplitude, Modulation, Spectral Signature)
+
+**Hardware-Tier Dispatching:**
+- **Tier 0 (Edge)**: SIMD-only execution (ARM NEON/x86 AVX2), aggressive quantization, <5W power
+- **Tier 1 (Mainstream)**: Hybrid CPU/NPU, minor heap buffering permitted
+- **Tier 2 (High-Performance)**: GPU VRAM mapping, parallel Texture Mapping Units
+- **Tier 3 (QPU)**: Asynchronous quantum context resolution via Ground-State Resolvers
+
+**Zero-Heap Guarantees:**
+- Stack-allocated Tensor10D structure (40 bytes, Pod, Zeroable)
+- Caller-supplied buffers for all hot-path operations
+- No Vec/HashMap/Box allocations in execution paths
+- O(1) lookups via pre-computed topology and geometric distance calculations
+
+**Ground-State Resolver (GSR):**
+- Async QPU communication for quantum context resolution
+- Classical exhaustion fallback (exhaustive search n≤16, greedy for larger)
+- Proof-of-demand mesh aggregation and axiom caching
+- Epistemic frame evolution with TTL-based cache cleanup
+
 
 ### 3. The Webizen VM (Logic Unification + Advanced Compilation)
 Data filtering is not enough — human-centric databases must execute logic. Nested N3 implication rules, SHACL shapes, and defeasible logic are compiled by the `WebizenCompiler` (and a dedicated `shacl_compiler`) into compact L1-cache bytecodes. The VM supports:

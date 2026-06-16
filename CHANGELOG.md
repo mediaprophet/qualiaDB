@@ -6,6 +6,38 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.13] - 2026-06-16
+
+### Added — 10D Volumetric Tensor System with Zero-Heap Guarantees
+- **10D Tensor Coordinate System [q, v, w, x, y, z, t, α, μ, σ]**: Implemented complete 10-dimensional volumetric tensor architecture for Q42 volumes. Zero-heap compatible, stack-allocated structure using fixed-size f32 values for GPU/SIMD compatibility and quantization.
+- **Quantum Context (q)**: Manages epistemic superposition with q=0 for ground truth and q>0 for parallel contexts, pending GSR resolutions.
+- **Topological Classes (v)**: Implements dynamic distance metrics (Euclidean, Cyclic/Toroidal, Hyperbolic/Tree, Boundary Cliques) for geometric "physics rules" in different regions of the manifold.
+- **Manifold Bifurcation (w)**: Multi-head attention identifier isolating separate knowledge universes (Medical, Legal, Personal, Environmental, Socioeconomic) in same memory block for parallel bifurcation and cross-manifold correlation.
+- **Spacetime Dimensions (x, y, z, t)**: 3D semantic topology coordinates with temporal state/provenance ledger for immutable historical queries.
+- **Spectral-Logical Payload [α, μ, σ]**: EM spectrum foundation replacing simple RGB color space with Amplitude (confidence weight), Modulation (phase/metadata carrier), and Spectral Signature (logical class index).
+- **Ground-State Resolver (GSR) Integration**: Async QPU communication for quantum context resolution with classical exhaustion fallback (exhaustive search n≤16, greedy for larger problems), proof-of-demand mesh aggregation, and axiom caching for epistemic frame evolution.
+- **Hardware-Tier Dispatching**: Telemetry-aware routing across 4 capability tiers (Edge, Mainstream, High-Performance, QPU) with power-aware and thermal-aware throttling, supporting SIMD-only, Hybrid CPU/NPU, GPU VRAM, and QPU async execution strategies.
+- **Q42 Volume Integration**: Bridge layer between NQuin (48-byte) and Tensor10D (40-byte) systems with semantic mapping, tensor search, temporal queries, and manifold queries.
+
+### Changed — Zero-Heap Guarantees
+- **Sanctuary Crypto Refactoring**: Eliminated Vec allocations in `encrypt_sanctuary_chunk()` and `decrypt_sanctuary_chunk()` by changing from returning `Vec<u8>` to accepting caller-supplied `&mut [u8]` buffers. Return type changed to `Result<usize, String>` for bytes written.
+- **Stack-Allocated Buffers**: Implemented 4KB stack-allocated buffers for typical chunk sizes in cryptographic operations.
+- **Zero-Heap API Pattern**: Caller-supplied fixed-capacity buffers prevent dynamic memory allocation in hot paths.
+
+### Added — Cryptographic Infrastructure
+- **48-byte PBKDF2 Key Derivation**: Enhanced key derivation splitting into 32-byte cipher key and 16-byte volume root tweak.
+- **Implicit Domain-Separated Nonce Derivation**: XOR-based nonce derivation using volume root tweak and chunk index/offset.
+- **AEAD Cipher Integration**: Integrated AES-256-GCM with zero-heap guarantees for sanctuary lane cryptography.
+
+### Added — Feature Flags
+- **tensor-10d**: Enables 10D tensor coordinate system and all tensor operations
+- **tensor-gpu**: Enables GPU acceleration (CUDA/Metal/Vulkan) for tensor operations
+- **tensor-npu**: Enables NPU acceleration (Neural Engine) for tensor operations
+
+### Added — Documentation
+- **Q42_PIPELINE_CONTAINER_SPEC.md**: Comprehensive architectural specification defining 10D tensor system, pipeline-to-container architecture, hardware capability tiers, zero-heap execution constraints, and implementation phases.
+
+---
 ## [0.0.12] - 2026-06-14
 
 ### Added — Surgical Patch Plan: Solver Unification & v3 Persistence
@@ -188,6 +220,38 @@ Three new modules added to `qualia-core-db` providing real platform-native imple
 
 ---
 
+## [0.0.13] - 2026-06-16
+
+### Added — 10D Volumetric Tensor System with Zero-Heap Guarantees
+- **10D Tensor Coordinate System [q, v, w, x, y, z, t, α, μ, σ]**: Implemented complete 10-dimensional volumetric tensor architecture for Q42 volumes. Zero-heap compatible, stack-allocated structure using fixed-size f32 values for GPU/SIMD compatibility and quantization.
+- **Quantum Context (q)**: Manages epistemic superposition with q=0 for ground truth and q>0 for parallel contexts, pending GSR resolutions.
+- **Topological Classes (v)**: Implements dynamic distance metrics (Euclidean, Cyclic/Toroidal, Hyperbolic/Tree, Boundary Cliques) for geometric "physics rules" in different regions of the manifold.
+- **Manifold Bifurcation (w)**: Multi-head attention identifier isolating separate knowledge universes (Medical, Legal, Personal, Environmental, Socioeconomic) in same memory block for parallel bifurcation and cross-manifold correlation.
+- **Spacetime Dimensions (x, y, z, t)**: 3D semantic topology coordinates with temporal state/provenance ledger for immutable historical queries.
+- **Spectral-Logical Payload [α, μ, σ]**: EM spectrum foundation replacing simple RGB color space with Amplitude (confidence weight), Modulation (phase/metadata carrier), and Spectral Signature (logical class index).
+- **Ground-State Resolver (GSR) Integration**: Async QPU communication for quantum context resolution with classical exhaustion fallback (exhaustive search n≤16, greedy for larger problems), proof-of-demand mesh aggregation, and axiom caching for epistemic frame evolution.
+- **Hardware-Tier Dispatching**: Telemetry-aware routing across 4 capability tiers (Edge, Mainstream, High-Performance, QPU) with power-aware and thermal-aware throttling, supporting SIMD-only, Hybrid CPU/NPU, GPU VRAM, and QPU async execution strategies.
+- **Q42 Volume Integration**: Bridge layer between NQuin (48-byte) and Tensor10D (40-byte) systems with semantic mapping, tensor search, temporal queries, and manifold queries.
+
+### Changed — Zero-Heap Guarantees
+- **Sanctuary Crypto Refactoring**: Eliminated Vec allocations in `encrypt_sanctuary_chunk()` and `decrypt_sanctuary_chunk()` by changing from returning `Vec<u8>` to accepting caller-supplied `&mut [u8]` buffers. Return type changed to `Result<usize, String>` for bytes written.
+- **Stack-Allocated Buffers**: Implemented 4KB stack-allocated buffers for typical chunk sizes in cryptographic operations.
+- **Zero-Heap API Pattern**: Caller-supplied fixed-capacity buffers prevent dynamic memory allocation in hot paths.
+
+### Added — Cryptographic Infrastructure
+- **48-byte PBKDF2 Key Derivation**: Enhanced key derivation splitting into 32-byte cipher key and 16-byte volume root tweak.
+- **Implicit Domain-Separated Nonce Derivation**: XOR-based nonce derivation using volume root tweak and chunk index/offset.
+- **AEAD Cipher Integration**: Integrated AES-256-GCM with zero-heap guarantees for sanctuary lane cryptography.
+
+### Added — Feature Flags
+- **tensor-10d**: Enables 10D tensor coordinate system and all tensor operations
+- **tensor-gpu**: Enables GPU acceleration (CUDA/Metal/Vulkan) for tensor operations
+- **tensor-npu**: Enables NPU acceleration (Neural Engine) for tensor operations
+
+### Added — Documentation
+- **Q42_PIPELINE_CONTAINER_SPEC.md**: Comprehensive architectural specification defining 10D tensor system, pipeline-to-container architecture, hardware capability tiers, zero-heap execution constraints, and implementation phases.
+
+---
 ## [0.0.12] - 2026-06-11
 
 ### Summary
@@ -347,6 +411,38 @@ real implementations for previously-stubbed security and query primitives.
 
 ---
 
+## [0.0.13] - 2026-06-16
+
+### Added — 10D Volumetric Tensor System with Zero-Heap Guarantees
+- **10D Tensor Coordinate System [q, v, w, x, y, z, t, α, μ, σ]**: Implemented complete 10-dimensional volumetric tensor architecture for Q42 volumes. Zero-heap compatible, stack-allocated structure using fixed-size f32 values for GPU/SIMD compatibility and quantization.
+- **Quantum Context (q)**: Manages epistemic superposition with q=0 for ground truth and q>0 for parallel contexts, pending GSR resolutions.
+- **Topological Classes (v)**: Implements dynamic distance metrics (Euclidean, Cyclic/Toroidal, Hyperbolic/Tree, Boundary Cliques) for geometric "physics rules" in different regions of the manifold.
+- **Manifold Bifurcation (w)**: Multi-head attention identifier isolating separate knowledge universes (Medical, Legal, Personal, Environmental, Socioeconomic) in same memory block for parallel bifurcation and cross-manifold correlation.
+- **Spacetime Dimensions (x, y, z, t)**: 3D semantic topology coordinates with temporal state/provenance ledger for immutable historical queries.
+- **Spectral-Logical Payload [α, μ, σ]**: EM spectrum foundation replacing simple RGB color space with Amplitude (confidence weight), Modulation (phase/metadata carrier), and Spectral Signature (logical class index).
+- **Ground-State Resolver (GSR) Integration**: Async QPU communication for quantum context resolution with classical exhaustion fallback (exhaustive search n≤16, greedy for larger problems), proof-of-demand mesh aggregation, and axiom caching for epistemic frame evolution.
+- **Hardware-Tier Dispatching**: Telemetry-aware routing across 4 capability tiers (Edge, Mainstream, High-Performance, QPU) with power-aware and thermal-aware throttling, supporting SIMD-only, Hybrid CPU/NPU, GPU VRAM, and QPU async execution strategies.
+- **Q42 Volume Integration**: Bridge layer between NQuin (48-byte) and Tensor10D (40-byte) systems with semantic mapping, tensor search, temporal queries, and manifold queries.
+
+### Changed — Zero-Heap Guarantees
+- **Sanctuary Crypto Refactoring**: Eliminated Vec allocations in `encrypt_sanctuary_chunk()` and `decrypt_sanctuary_chunk()` by changing from returning `Vec<u8>` to accepting caller-supplied `&mut [u8]` buffers. Return type changed to `Result<usize, String>` for bytes written.
+- **Stack-Allocated Buffers**: Implemented 4KB stack-allocated buffers for typical chunk sizes in cryptographic operations.
+- **Zero-Heap API Pattern**: Caller-supplied fixed-capacity buffers prevent dynamic memory allocation in hot paths.
+
+### Added — Cryptographic Infrastructure
+- **48-byte PBKDF2 Key Derivation**: Enhanced key derivation splitting into 32-byte cipher key and 16-byte volume root tweak.
+- **Implicit Domain-Separated Nonce Derivation**: XOR-based nonce derivation using volume root tweak and chunk index/offset.
+- **AEAD Cipher Integration**: Integrated AES-256-GCM with zero-heap guarantees for sanctuary lane cryptography.
+
+### Added — Feature Flags
+- **tensor-10d**: Enables 10D tensor coordinate system and all tensor operations
+- **tensor-gpu**: Enables GPU acceleration (CUDA/Metal/Vulkan) for tensor operations
+- **tensor-npu**: Enables NPU acceleration (Neural Engine) for tensor operations
+
+### Added — Documentation
+- **Q42_PIPELINE_CONTAINER_SPEC.md**: Comprehensive architectural specification defining 10D tensor system, pipeline-to-container architecture, hardware capability tiers, zero-heap execution constraints, and implementation phases.
+
+---
 ## [0.0.12] — 2026-06-09
 
 ### Summary
@@ -366,6 +462,38 @@ v0.0.12 addressed initial build error fixing phase, resolving 38 of 82 errors th
 
 ---
 
+## [0.0.13] - 2026-06-16
+
+### Added — 10D Volumetric Tensor System with Zero-Heap Guarantees
+- **10D Tensor Coordinate System [q, v, w, x, y, z, t, α, μ, σ]**: Implemented complete 10-dimensional volumetric tensor architecture for Q42 volumes. Zero-heap compatible, stack-allocated structure using fixed-size f32 values for GPU/SIMD compatibility and quantization.
+- **Quantum Context (q)**: Manages epistemic superposition with q=0 for ground truth and q>0 for parallel contexts, pending GSR resolutions.
+- **Topological Classes (v)**: Implements dynamic distance metrics (Euclidean, Cyclic/Toroidal, Hyperbolic/Tree, Boundary Cliques) for geometric "physics rules" in different regions of the manifold.
+- **Manifold Bifurcation (w)**: Multi-head attention identifier isolating separate knowledge universes (Medical, Legal, Personal, Environmental, Socioeconomic) in same memory block for parallel bifurcation and cross-manifold correlation.
+- **Spacetime Dimensions (x, y, z, t)**: 3D semantic topology coordinates with temporal state/provenance ledger for immutable historical queries.
+- **Spectral-Logical Payload [α, μ, σ]**: EM spectrum foundation replacing simple RGB color space with Amplitude (confidence weight), Modulation (phase/metadata carrier), and Spectral Signature (logical class index).
+- **Ground-State Resolver (GSR) Integration**: Async QPU communication for quantum context resolution with classical exhaustion fallback (exhaustive search n≤16, greedy for larger problems), proof-of-demand mesh aggregation, and axiom caching for epistemic frame evolution.
+- **Hardware-Tier Dispatching**: Telemetry-aware routing across 4 capability tiers (Edge, Mainstream, High-Performance, QPU) with power-aware and thermal-aware throttling, supporting SIMD-only, Hybrid CPU/NPU, GPU VRAM, and QPU async execution strategies.
+- **Q42 Volume Integration**: Bridge layer between NQuin (48-byte) and Tensor10D (40-byte) systems with semantic mapping, tensor search, temporal queries, and manifold queries.
+
+### Changed — Zero-Heap Guarantees
+- **Sanctuary Crypto Refactoring**: Eliminated Vec allocations in `encrypt_sanctuary_chunk()` and `decrypt_sanctuary_chunk()` by changing from returning `Vec<u8>` to accepting caller-supplied `&mut [u8]` buffers. Return type changed to `Result<usize, String>` for bytes written.
+- **Stack-Allocated Buffers**: Implemented 4KB stack-allocated buffers for typical chunk sizes in cryptographic operations.
+- **Zero-Heap API Pattern**: Caller-supplied fixed-capacity buffers prevent dynamic memory allocation in hot paths.
+
+### Added — Cryptographic Infrastructure
+- **48-byte PBKDF2 Key Derivation**: Enhanced key derivation splitting into 32-byte cipher key and 16-byte volume root tweak.
+- **Implicit Domain-Separated Nonce Derivation**: XOR-based nonce derivation using volume root tweak and chunk index/offset.
+- **AEAD Cipher Integration**: Integrated AES-256-GCM with zero-heap guarantees for sanctuary lane cryptography.
+
+### Added — Feature Flags
+- **tensor-10d**: Enables 10D tensor coordinate system and all tensor operations
+- **tensor-gpu**: Enables GPU acceleration (CUDA/Metal/Vulkan) for tensor operations
+- **tensor-npu**: Enables NPU acceleration (Neural Engine) for tensor operations
+
+### Added — Documentation
+- **Q42_PIPELINE_CONTAINER_SPEC.md**: Comprehensive architectural specification defining 10D tensor system, pipeline-to-container architecture, hardware capability tiers, zero-heap execution constraints, and implementation phases.
+
+---
 ## [0.0.12] — 2026-06-07
 
 ### Summary

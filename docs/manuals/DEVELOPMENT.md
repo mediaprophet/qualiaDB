@@ -2,7 +2,7 @@
 
 Build, test, benchmark, and contribute to QualiaDB / Webizen.
 
-_Branch: `0.0.12-dev` | Last updated: 2026-06-11_
+_Branch: `0.0.13` | Last updated: 2026-06-16_
 
 ---
 
@@ -45,6 +45,35 @@ wasm-pack build --target no-modules --out-dir ../../docs/playground
 ```
 
 For embedding in an external web project, use `--target web` instead.
+
+
+### Feature Flags
+
+The 10D tensor system and related components can be enabled via Cargo feature flags:
+
+```bash
+# Enable 10D tensor coordinate system
+cargo build --features tensor-10d
+
+# Enable GPU acceleration (CUDA/Metal/Vulkan)
+cargo build --features tensor-gpu
+
+# Enable NPU acceleration (Neural Engine)
+cargo build --features tensor-npu
+
+# Enable all tensor features
+cargo build --features tensor-10d,tensor-gpu,tensor-npu
+
+# Enable sanctuary cryptography
+cargo build --features sanctuary-crypto
+```
+
+**Feature Descriptions:**
+- `tensor-10d`: Enables the 10D tensor coordinate system [q, v, w, x, y, z, t, α, μ, σ] and all tensor operations
+- `tensor-gpu`: Enables GPU acceleration for tensor operations via CUDA, Metal, or Vulkan
+- `tensor-npu`: Enables NPU acceleration for tensor operations (Apple Neural Engine, etc.)
+- `sanctuary-crypto`: Enables sanctuary lane cryptography with PBKDF2 key derivation and AEAD ciphers
+
 
 ### Cross-platform CI builds (recommended for releases)
 
