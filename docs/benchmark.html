@@ -152,7 +152,7 @@
                             <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-3">Dataset Profile</label>
                             <select id="datasetProfile" class="w-full glass px-5 py-4 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="synthetic-10k">Synthetic 10K triples</option>
-                                <option value="schemaorg-30-current-https">Schema.org 30.0 (NT + q42 + c.q42)</option>
+                                <option value="schemaorg-30-current-https">Schema.org 30.0 (NT + q42)</option>
                             </select>
                             <p id="dataset-profile-help" class="mt-3 text-xs leading-relaxed text-slate-500">
                                 WASM mode loads the selected storage format into flat QualiaQuin bytes before querying.
@@ -165,7 +165,7 @@
                                 <option value="synthetic">Synthetic generated NT</option>
                                 <option value="nt">N-Triples (.nt) — parse in browser</option>
                                 <option value="q42">Native .q42 SuperBlocks</option>
-                                <option value="cq42">Compressed .c.q42 (LZ4)</option>
+
                                 <option value="pipeline">Empty DB (pipeline cost only)</option>
                             </select>
                             <p id="wasm-storage-help" class="mt-3 text-xs leading-relaxed text-slate-500">
@@ -260,7 +260,7 @@
         let daemonOnline = false;
         const DATASET_PROFILE_HELP = {
             'synthetic-10k': 'Synthetic 10K graph. Native loads flat quins into the daemon via WebSocket bench_load, then queries over WS.',
-            'schemaorg-30-current-https': 'Schema.org 30.0 (~18K triples). Native and WASM both load the same NT/q42/c.q42 artifacts before benchmarking.',
+            'schemaorg-30-current-https': 'Schema.org 30.0 (~18K triples). Native and WASM both load the same NT/q42 artifacts before benchmarking.',
         };
 
         function formatLatency(ms) {

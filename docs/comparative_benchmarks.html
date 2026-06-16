@@ -202,7 +202,7 @@
                     <label for="dataset-profile-select" class="text-[11px] uppercase tracking-[1.5px] text-slate-500">Dataset profile</label>
                     <select id="dataset-profile-select" class="rounded-2xl border border-slate-700 bg-[#111f31] px-4 py-2 text-sm text-slate-200 focus:outline-none">
                         <option value="synthetic-10k">Synthetic 10K</option>
-                        <option value="schemaorg-30-current-https">Schema.org 30.0 (NT + q42 + c.q42)</option>
+                        <option value="schemaorg-30-current-https">Schema.org 30.0 (NT + q42)</option>
                     </select>
                 </div>
                 <div id="last-updated" class="font-mono text-xs text-slate-500 px-1">
@@ -347,7 +347,7 @@
                 prepCommand: null,
             },
             'schemaorg-30-current-https': {
-                label: 'Schema.org 30.0 (NT + q42 + c.q42)',
+                label: 'Schema.org 30.0 (NT + q42)',
                 resultsPath: './comparative_benchmark_results.schemaorg-30-current-https.json',
                 runCommand: 'python benchmarks/harness.py --all --dataset-profile schemaorg-30-current-https --output docs/comparative_benchmark_results.schemaorg-30-current-https.json',
                 prepCommand: 'powershell -ExecutionPolicy Bypass -File scripts/prepare_schemaorg_benchmark.ps1 -Release 30.0 -Variant current-https -Compress',
@@ -452,7 +452,7 @@
         }
 
         function isQualiaEngineKey(key) {
-            return ['qualia', 'qualia_wasm', 'qualia_q42', 'qualia_cq42', 'qualia_nt'].includes(key);
+            return ['qualia', 'qualia_wasm', 'qualia_q42', 'qualia_nt'].includes(key);
         }
 
         function getEngineColor(engine) {
@@ -464,7 +464,7 @@
                 'qualia': 'bg-amber-400',
                 'qualia_wasm': 'bg-cyan-400',
                 'qualia_q42': 'bg-yellow-300',
-                'qualia_cq42': 'bg-lime-300',
+
                 'qualia_nt': 'bg-amber-200',
             };
             return colors[engine] || 'bg-slate-400';
@@ -476,7 +476,7 @@
             const fmt = engine.dataset_format || 'rdf';
             const suffixByEngine = {
                 qualia_q42: '.q42',
-                qualia_cq42: '.c.q42',
+
                 qualia_nt: '.nt',
             };
             const suffix = suffixByEngine[engine.engine]
@@ -548,15 +548,15 @@
                 if (datasetInfo.native_q42_file_mb != null) {
                     msg += ` Native .q42: ${datasetInfo.native_q42_file_mb.toFixed(2)} MB.`;
                 }
-                if (datasetInfo.compressed_q42_file_mb != null) {
-                    msg += ` Compressed .c.q42: ${datasetInfo.compressed_q42_file_mb.toFixed(2)} MB.`;
+
+
                 }
                 if (datasetInfo.native_q42_available) {
                     msg += ` Native ${datasetInfo.native_format || 'q42'} artifact detected.`;
                 } else if (datasetInfo.native_format) {
                     msg += ` Native ${datasetInfo.native_format} artifact not present in this workspace yet.`;
                 }
-                msg += ' RDF engines load the .nt source; Qualia adds qualia_nt (same .nt parse), qualia_q42 (SuperBlocks), and qualia_cq42 (LZ4 distribution).';
+                msg += ' RDF engines load the .nt source; Qualia adds qualia_nt (same .nt parse) and qualia_q42 (SuperBlocks).';
                 warnings.push(msg);
             }
 
@@ -671,7 +671,7 @@
                             ${engine.engine === 'qualia' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-amber-400 font-mono tracking-wider">DAEMON</span>' : ''}
                             ${engine.engine === 'qualia_wasm' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-cyan-950 text-cyan-300 font-mono tracking-wider">WASM</span>' : ''}
                             ${engine.engine === 'qualia_q42' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-yellow-300 font-mono tracking-wider">.Q42</span>' : ''}
-                            ${engine.engine === 'qualia_cq42' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-lime-950 text-lime-300 font-mono tracking-wider">.C.Q42</span>' : ''}
+
                             ${engine.engine === 'qualia_nt' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-amber-200 font-mono tracking-wider">.NT</span>' : ''}
                             ${status ? `<span class="ml-2 text-[10px] px-2 py-px rounded font-mono tracking-wider ${status.className}">${status.label}</span>` : ''}
                         </div>
@@ -805,7 +805,7 @@
                                 ${key === 'qualia' ? '<div class="text-xs text-amber-400 mt-0.5">Native daemon • port 4242</div>' : ''}
                                 ${key === 'qualia_wasm' ? '<div class="text-xs text-cyan-300/80 mt-0.5">Node WASM • execute_ntriples_query on flat quins</div>' : ''}
                                 ${key === 'qualia_q42' ? '<div class="text-xs text-yellow-300/80 mt-0.5">In-process .q42 SuperBlock load</div>' : ''}
-                                ${key === 'qualia_cq42' ? '<div class="text-xs text-lime-300/80 mt-0.5">In-process .c.q42 LZ4 decompress + index</div>' : ''}
+
                                 ${key === 'qualia_nt' ? '<div class="text-xs text-amber-200/80 mt-0.5">In-process N-Triples parse (same RDF as Oxigraph)</div>' : ''}
                             </div>
                         </div>

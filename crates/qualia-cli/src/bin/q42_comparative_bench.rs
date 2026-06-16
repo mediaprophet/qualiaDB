@@ -1,14 +1,12 @@
 //! Comparative harness helper: load Qualia dataset artifacts and benchmark point / two-hop / filter.
 //!
-//! Supports the three Schema.org profile inputs:
+//! Supports the two Schema.org profile inputs:
 //!   - N-Triples (same RDF text as Oxigraph / Comunica / WASM-Prolog)
 //!   - `.q42` SuperBlock artifact (qualia-cli ingest output)
-//!   - `.c.q42` LZ4 distribution artifact (browser / WebTorrent deploy)
 //!
 //! Usage:
 //!   q42_comparative_bench --input path.nt --format ntriples --engine qualia_nt --queries-json '{...}'
 //!   q42_comparative_bench --input path.q42 --format superblock --engine qualia_q42 --queries-json '{...}'
-//!   q42_comparative_bench --input path.c.q42 --format cq42 --engine qualia_cq42 --queries-json '{...}'
 //!
 //! `--q42` is a legacy alias for `--input` with `--format superblock`.
 
@@ -20,7 +18,6 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use qualia_core_db::mini_parser::hash_token;
-use qualia_core_db::q42_reader::read_c_q42_quins;
 use qualia_core_db::{q_hash, NQuin, QUINS_PER_BLOCK};
 use sysinfo::System;
 
@@ -32,7 +29,6 @@ const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum InputFormat {
     Superblock,
-    Cq42,
     Ntriples,
 }
 
@@ -112,7 +108,6 @@ fn read_ntriples_quins(path: &Path) -> std::io::Result<Vec<NQuin>> {
 fn load_quins(path: &Path, format: InputFormat) -> std::io::Result<Vec<NQuin>> {
     match format {
         InputFormat::Superblock => read_cli_superblock_quins(path),
-        InputFormat::Cq42 => read_c_q42_quins(path),
         InputFormat::Ntriples => read_ntriples_quins(path),
     }
 }
@@ -169,7 +164,6 @@ fn build_index(quins: &[NQuin]) -> HashMap<u64, Vec<(u64, u64)>> {
 fn parse_format(raw: &str) -> Option<InputFormat> {
     match raw {
         "superblock" | "q42" => Some(InputFormat::Superblock),
-        "cq42" | "c.q42" => Some(InputFormat::Cq42),
         "ntriples" | "nt" => Some(InputFormat::Ntriples),
         _ => None,
     }
@@ -181,16 +175,8 @@ fn infer_format(path: &Path, engine: &str) -> InputFormat {
             return InputFormat::Ntriples;
         }
     }
-    if path
-        .file_name()
-        .and_then(|s| s.to_str())
-        .is_some_and(|n| n.ends_with(".c.q42"))
-    {
-        return InputFormat::Cq42;
-    }
     match engine {
         "qualia_nt" => InputFormat::Ntriples,
-        "qualia_cq42" => InputFormat::Cq42,
         _ => InputFormat::Superblock,
     }
 }
@@ -198,7 +184,6 @@ fn infer_format(path: &Path, engine: &str) -> InputFormat {
 fn dataset_format_label(format: InputFormat) -> &'static str {
     match format {
         InputFormat::Superblock => "q42",
-        InputFormat::Cq42 => "c.q42",
         InputFormat::Ntriples => "ntriples",
     }
 }
@@ -206,7 +191,6 @@ fn dataset_format_label(format: InputFormat) -> &'static str {
 fn measurement_path(format: InputFormat) -> &'static str {
     match format {
         InputFormat::Superblock => "in_process_q42_superblock",
-        InputFormat::Cq42 => "in_process_cq42_decompress",
         InputFormat::Ntriples => "in_process_ntriples_parse",
     }
 }
@@ -215,9 +199,6 @@ fn default_note(format: InputFormat) -> &'static str {
     match format {
         InputFormat::Superblock => {
             "Loads qualia-cli SuperBlock .q42 and queries an in-memory subject index."
-        }
-        InputFormat::Cq42 => {
-            "Decompresses .c.q42 LZ4 distribution blocks and queries an in-memory subject index."
         }
         InputFormat::Ntriples => {
             "Parses N-Triples text (same RDF source as Oxigraph/Comunica) into quins and queries an in-memory subject index."

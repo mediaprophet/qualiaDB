@@ -45,7 +45,6 @@
         "warmup_samples": 10
       },
       "native_q42_file_mb": 0.395,
-      "compressed_q42_file_mb": 0.395,
       "schema_version": 2,
       "dataset": "schemaorg-30-current-https",
       "dataset_profile": "schemaorg-30-current-https",
@@ -67,16 +66,12 @@
         "native_q42_base_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https",
         "native_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42",
         "native_q42_available": true,
-        "compressed_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.c.q42",
-        "compressed_q42_available": true,
         "n_triples": 17949,
         "missing_source": false,
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 0.395,
-        "native_q42_file_bytes": 413708,
-        "compressed_q42_file_mb": 0.395,
-        "compressed_q42_file_bytes": 413708
+        "native_q42_file_bytes": 413708
       }
     },
     "qualia_q42": {
@@ -99,7 +94,7 @@
       "ingestion_ms": 2.191,
       "measurement_path": "in_process_q42_superblock",
       "n_triples": 7682,
-      "note": "Loads qualia-cli SuperBlock .q42 and queries an in-memory subject index. Distribution artifact: /home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.c.q42 (0.395 MB).",
+      "note": "Loads qualia-cli SuperBlock .q42 and queries an in-memory subject index. Distribution artifact: /home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42 (0.395 MB).",
       "peak_rss_mb": 4.64,
       "point": {
         "max": 7.000000000000001e-05,
@@ -124,7 +119,6 @@
         "warmup_samples": 10
       },
       "native_q42_file_mb": 0.395,
-      "compressed_q42_file_mb": 0.395,
       "schema_version": 2,
       "dataset": "schemaorg-30-current-https",
       "dataset_profile": "schemaorg-30-current-https",
@@ -146,63 +140,13 @@
         "native_q42_base_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https",
         "native_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42",
         "native_q42_available": true,
-        "compressed_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.c.q42",
-        "compressed_q42_available": true,
         "n_triples": 17949,
         "missing_source": false,
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 0.395,
-        "native_q42_file_bytes": 413708,
-        "compressed_q42_file_mb": 0.395,
-        "compressed_q42_file_bytes": 413708
+        "native_q42_file_bytes": 413708
       }
-    },
-    "qualia_cq42": {
-      "engine": "qualia_cq42",
-      "n_triples": 17949,
-      "error": "q42_comparative_bench exit 1: {\n  \"dataset_file_bytes\": 413708,\n  \"dataset_file_mb\": 0.395,\n  \"dataset_format\": \"c.q42\",\n  \"engine\": \"qualia_cq42\",\n  \"error\": \"load Cq42 failed: 0 is not a valid match offset\"\n}",
-      "dataset_file_bytes": 2354659,
-      "dataset_file_mb": 2.246,
-      "dataset_format": "ntriples",
-      "native_q42_file_mb": 0.395,
-      "compressed_q42_file_mb": 0.395,
-      "schema_version": 2,
-      "dataset": "schemaorg-30-current-https",
-      "dataset_profile": "schemaorg-30-current-https",
-      "dataset_label": "Schema.org 30.0 current HTTPS",
-      "timestamp": "2026-06-14T23:04:03.253630Z",
-      "meta": {
-        "label": "Qualia (.c.q42 artifact)",
-        "focus": "LZ4 distribution artifact \u2014 decompress + subject index (browser/WebTorrent path)",
-        "install": "cargo build --release -p qualia-cli + scripts/prepare_schemaorg_benchmark.ps1 -Compress"
-      },
-      "dataset_info": {
-        "label": "Schema.org 30.0 current HTTPS",
-        "release": "30.0",
-        "variant": "current-https",
-        "source_format": "ntriples",
-        "source_url": "https://raw.githubusercontent.com/schemaorg/schemaorg/main/data/releases/30.0/schemaorg-current-https.nt",
-        "source_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.nt",
-        "native_format": "q42",
-        "native_q42_base_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https",
-        "native_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42",
-        "native_q42_available": true,
-        "compressed_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.c.q42",
-        "compressed_q42_available": true,
-        "n_triples": 17949,
-        "missing_source": false,
-        "source_file_mb": 2.246,
-        "source_file_bytes": 2354659,
-        "native_q42_file_mb": 0.395,
-        "native_q42_file_bytes": 413708,
-        "compressed_q42_file_mb": 0.395,
-        "compressed_q42_file_bytes": 413708
-      },
-      "measurement_path": "in_process_cq42_decompress",
-      "point": null,
-      "twohop": null,
-      "filter": null
     },
     "oxigraph": {
       "engine": "oxigraph",
@@ -248,7 +192,6 @@
       "dataset_file_mb": 2.246,
       "dataset_format": "ntriples",
       "native_q42_file_mb": 0.395,
-      "compressed_q42_file_mb": 0.395,
       "schema_version": 2,
       "dataset": "schemaorg-30-current-https",
       "dataset_profile": "schemaorg-30-current-https",
@@ -270,16 +213,12 @@
         "native_q42_base_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https",
         "native_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42",
         "native_q42_available": true,
-        "compressed_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.c.q42",
-        "compressed_q42_available": true,
         "n_triples": 17949,
         "missing_source": false,
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 0.395,
-        "native_q42_file_bytes": 413708,
-        "compressed_q42_file_mb": 0.395,
-        "compressed_q42_file_bytes": 413708
+        "native_q42_file_bytes": 413708
       },
       "measurement_path": "in_process_subprocess"
     },
@@ -308,16 +247,12 @@
         "native_q42_base_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https",
         "native_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42",
         "native_q42_available": true,
-        "compressed_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.c.q42",
-        "compressed_q42_available": true,
         "n_triples": 17949,
         "missing_source": false,
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 0.395,
-        "native_q42_file_bytes": 413708,
-        "compressed_q42_file_mb": 0.395,
-        "compressed_q42_file_bytes": 413708
+        "native_q42_file_bytes": 413708
       },
       "measurement_path": "in_process_subprocess",
       "point": null,
@@ -326,8 +261,7 @@
       "dataset_file_bytes": 2354659,
       "dataset_file_mb": 2.246,
       "dataset_format": "ntriples",
-      "native_q42_file_mb": 0.395,
-      "compressed_q42_file_mb": 0.395
+      "native_q42_file_mb": 0.395
     },
     "comunica": {
       "engine": "comunica",
@@ -355,16 +289,12 @@
         "native_q42_base_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https",
         "native_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42",
         "native_q42_available": true,
-        "compressed_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.c.q42",
-        "compressed_q42_available": true,
         "n_triples": 17949,
         "missing_source": false,
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 0.395,
-        "native_q42_file_bytes": 413708,
-        "compressed_q42_file_mb": 0.395,
-        "compressed_q42_file_bytes": 413708
+        "native_q42_file_bytes": 413708
       },
       "measurement_path": "wasm_js_subprocess",
       "point": null,
@@ -373,8 +303,7 @@
       "dataset_file_bytes": 2354659,
       "dataset_file_mb": 2.246,
       "dataset_format": "ntriples",
-      "native_q42_file_mb": 0.395,
-      "compressed_q42_file_mb": 0.395
+      "native_q42_file_mb": 0.395
     },
     "wasm_prolog": {
       "engine": "wasm_prolog",
@@ -402,16 +331,12 @@
         "native_q42_base_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https",
         "native_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42",
         "native_q42_available": true,
-        "compressed_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.c.q42",
-        "compressed_q42_available": true,
         "n_triples": 17949,
         "missing_source": false,
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 0.395,
-        "native_q42_file_bytes": 413708,
-        "compressed_q42_file_mb": 0.395,
-        "compressed_q42_file_bytes": 413708
+        "native_q42_file_bytes": 413708
       },
       "measurement_path": "wasm_js_subprocess",
       "point": null,
@@ -420,8 +345,7 @@
       "dataset_file_bytes": 2354659,
       "dataset_file_mb": 2.246,
       "dataset_format": "ntriples",
-      "native_q42_file_mb": 0.395,
-      "compressed_q42_file_mb": 0.395
+      "native_q42_file_mb": 0.395
     },
     "qualia_wasm": {
       "engine": "qualia_wasm",
@@ -449,16 +373,12 @@
         "native_q42_base_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https",
         "native_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42",
         "native_q42_available": true,
-        "compressed_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.c.q42",
-        "compressed_q42_available": true,
         "n_triples": 17949,
         "missing_source": false,
         "source_file_mb": 2.246,
         "source_file_bytes": 2354659,
         "native_q42_file_mb": 0.395,
-        "native_q42_file_bytes": 413708,
-        "compressed_q42_file_mb": 0.395,
-        "compressed_q42_file_bytes": 413708
+        "native_q42_file_bytes": 413708
       },
       "measurement_path": "wasm_node_in_process",
       "point": null,
@@ -467,8 +387,7 @@
       "dataset_file_bytes": 2354659,
       "dataset_file_mb": 2.246,
       "dataset_format": "ntriples",
-      "native_q42_file_mb": 0.395,
-      "compressed_q42_file_mb": 0.395
+      "native_q42_file_mb": 0.395
     }
   },
   "last_updated": "2026-06-14T23:04:03.253630Z",
@@ -487,18 +406,14 @@
     "native_q42_base_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https",
     "native_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.q42",
     "native_q42_available": true,
-    "compressed_q42_path": "/home/runner/work/qualiaDB/qualiaDB/data/schemaorg/30.0/schemaorg-current-https.c.q42",
-    "compressed_q42_available": true,
     "n_triples": 17949,
     "missing_source": false,
     "source_file_mb": 2.246,
     "source_file_bytes": 2354659,
     "native_q42_file_mb": 0.395,
-    "native_q42_file_bytes": 413708,
-    "compressed_q42_file_mb": 0.395,
-    "compressed_q42_file_bytes": 413708
+    "native_q42_file_bytes": 413708
   },
-  "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). RDF engines (Oxigraph, SurrealDB, Comunica, WASM-Prolog, Qualia WASM) load N-Triples text. Schema.org profile adds three Qualia format rows on the same ontology: N-Triples parse (qualia_nt), native .q42 SuperBlocks (qualia_q42), and .c.q42 LZ4 distribution (qualia_cq42). Qualia daemon row (when present) measured via local daemon on port 4242. Qualia WASM uses execute_ntriples_query on flat QualiaQuin bytes in Node.",
+  "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). RDF engines (Oxigraph, SurrealDB, Comunica, WASM-Prolog, Qualia WASM) load N-Triples text. Schema.org profile adds two Qualia format rows on the same ontology: N-Triples parse (qualia_nt) and native .q42 SuperBlocks (qualia_q42). Qualia daemon row (when present) measured via local daemon on port 4242. Qualia WASM uses execute_ntriples_query on flat QualiaQuin bytes in Node.",
   "execution_environment": {
     "runner": "github-actions-comparative-harness",
     "engine_version": null,

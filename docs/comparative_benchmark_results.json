@@ -75,8 +75,6 @@
         "native_q42_base_path": null,
         "native_q42_path": null,
         "native_q42_available": false,
-        "compressed_q42_path": null,
-        "compressed_q42_available": false,
         "n_triples": 10000,
         "source_file_mb": 0.646,
         "source_file_bytes": 677780
@@ -146,8 +144,6 @@
         "native_q42_base_path": null,
         "native_q42_path": null,
         "native_q42_available": false,
-        "compressed_q42_path": null,
-        "compressed_q42_available": false,
         "n_triples": 10000,
         "source_file_mb": 0.646,
         "source_file_bytes": 677780
@@ -219,8 +215,6 @@
         "native_q42_base_path": null,
         "native_q42_path": null,
         "native_q42_available": false,
-        "compressed_q42_path": null,
-        "compressed_q42_available": false,
         "n_triples": 10000,
         "source_file_mb": 0.646,
         "source_file_bytes": 677780
@@ -294,8 +288,6 @@
         "native_q42_base_path": null,
         "native_q42_path": null,
         "native_q42_available": false,
-        "compressed_q42_path": null,
-        "compressed_q42_available": false,
         "n_triples": 10000,
         "source_file_mb": 0.646,
         "source_file_bytes": 677780
@@ -336,8 +328,6 @@
         "native_q42_base_path": null,
         "native_q42_path": null,
         "native_q42_available": false,
-        "compressed_q42_path": null,
-        "compressed_q42_available": false,
         "n_triples": 10000,
         "source_file_mb": 0.646,
         "source_file_bytes": 677780
@@ -417,15 +407,13 @@
         "native_q42_base_path": null,
         "native_q42_path": null,
         "native_q42_available": false,
-        "compressed_q42_path": null,
-        "compressed_q42_available": false,
         "n_triples": 10000,
         "source_file_mb": 0.646,
         "source_file_bytes": 677780
       }
     }
   },
-  "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). RDF engines (Oxigraph, SurrealDB, Comunica, WASM-Prolog, Qualia WASM) load N-Triples text. Schema.org profile adds three Qualia format rows on the same ontology: N-Triples parse (qualia_nt), native .q42 SuperBlocks (qualia_q42), and .c.q42 LZ4 distribution (qualia_cq42). Qualia daemon row (when present) measured via local daemon on port 4242. Qualia WASM uses execute_ntriples_query on flat QualiaQuin bytes in Node.",
+  "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). RDF engines (Oxigraph, SurrealDB, Comunica, WASM-Prolog, Qualia WASM) load N-Triples text. Schema.org profile adds two Qualia format rows on the same ontology: N-Triples parse (qualia_nt) and native .q42 SuperBlocks (qualia_q42). Qualia daemon row (when present) measured via local daemon on port 4242. Qualia WASM uses execute_ntriples_query on flat QualiaQuin bytes in Node.",
   "execution_environment": {
     "runner": "github-actions-comparative-harness",
     "engine_version": "0.0.12",
@@ -475,8 +463,6 @@
     "native_q42_base_path": null,
     "native_q42_path": null,
     "native_q42_available": false,
-    "compressed_q42_path": null,
-    "compressed_q42_available": false,
     "n_triples": 10000,
     "source_file_mb": 0.646,
     "source_file_bytes": 677780
