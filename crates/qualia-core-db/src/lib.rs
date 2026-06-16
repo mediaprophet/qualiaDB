@@ -25,6 +25,7 @@ pub mod shacl_compiler;
 pub mod modalities;
 pub mod neuro_symbolic_sieve;
 pub mod profiles;
+pub mod tensor;
 pub mod geometric_algebra;
 pub mod rdf_star;
 pub mod webizen_validator;
