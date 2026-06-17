@@ -83,10 +83,13 @@
             <h1 id="page-title" class="font-display text-3xl font-semibold">Ontology Demo</h1>
             <p id="page-subtitle" class="text-white/60 mt-1 max-w-3xl">
                 Live vocabulary queries in your browser via WASM over <code class="text-cyan-400">.q42</code> volumes.
+                Each dataset is a separate mount — W3C entries are vocabulary schemas (small by design);
+                Princeton WordNet (~127 MB, 5.56M triples), Schema.org, and FIBO are the larger knowledge graphs.
             </p>
         </div>
 
-        <div id="dataset-picker" class="flex flex-wrap gap-3 mb-8"></div>
+        <div id="dataset-picker" class="flex flex-wrap gap-3 mb-4"></div>
+        <div id="dataset-info" class="glass-strong rounded-2xl px-4 py-3 mb-8 text-sm text-white/60 hidden"></div>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div class="glass-strong rounded-2xl p-4">
@@ -151,16 +154,22 @@
 
             <div class="glass-strong rounded-3xl p-6">
                 <div class="font-semibold mb-4 flex items-center gap-x-2">
-                    <i class="fa-solid fa-database"></i><span>SPARQL Integration</span>
+                    <i class="fa-solid fa-database"></i><span>SPARQL Query</span>
                 </div>
                 <div id="sparql-examples" class="space-y-3 mb-3"></div>
                 <textarea id="sparql-editor" rows="5"
                     class="w-full bg-zinc-900 border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-emerald-200"
                     placeholder="SELECT ?s ?p WHERE { ?s ?p &quot;dog&quot; }"></textarea>
                 <button onclick="runSparqlQuery()" class="mt-2 w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-semibold">
-                    Execute SPARQL BGP
+                    Execute on mounted .q42
                 </button>
-                <p class="text-xs text-white/40 mt-2">Single Basic Graph Pattern per query (Webizen VM constraint).</p>
+                <p class="text-xs text-white/40 mt-2">
+                    Browser path: WASM extracts the first triple pattern from <code>WHERE { }</code> and scans the mounted volume.
+                Full SELECT, PREFIX, FILTER, and RDF-Star run on the native daemon —
+                <a href="sparql-showcase.html" class="text-emerald-400 hover:underline">SPARQL Showcase</a>
+                (<code>qualia-cli daemon --dev</code> → <code>POST :4242/query</code>).
+                Downloaded <code>.q42</code> volumes are cached in browser storage (OPFS) for offline revisit.
+                </p>
                 <div id="sparql-output" class="mt-4 hidden">
                     <pre id="sparql-code" class="text-xs text-emerald-300 mb-2"></pre>
                     <pre id="sparql-results" class="text-xs text-white/70 whitespace-pre-wrap"></pre>

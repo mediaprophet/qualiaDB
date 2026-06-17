@@ -5,13 +5,13 @@
     {
       "id": "wordnet",
       "profile": "wordnet",
-      "label": "Open English WordNet 2025",
+      "label": "Princeton WordNet 3.1",
       "icon": "\ud83d\udcda",
-      "description": "OEWN 2025 edition \u00b7 CC-BY 4.0 \u00b7 GitHub Pages serves a 100k-triple CI subset; run scripts/fetch_wordnet.sh locally for the full graph",
-      "url": "wordnet.q42",
+      "description": "Princeton WordNet 3.1 RDF \u00b7 5,558,748 triples \u00b7 ~127 MB .q42 (523 MB RDF/XML) \u00b7 scripts/ingest_princeton_wordnet.ps1",
+      "url": "data/wordnet/princeton.q42",
       "compressed": false,
       "source": "remote",
-      "license": "CC-BY 4.0",
+      "license": "WordNet License",
       "homepage": "https://wordnet.princeton.edu",
       "sampleQueries": [
         {

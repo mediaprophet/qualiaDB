@@ -430,7 +430,7 @@
 
         <span id="status-label">Initialising…</span>
         <button id="run-btn">▶ Run</button>
-        <label id="manual-label" title="Activate WordNet integration tests — requires docs/playground/wordnet.q42 (run scripts/fetch_wordnet.sh first)">
+        <label id="manual-label" title="Activate WordNet integration tests — requires docs/playground/wordnet.q42 (run scripts/ingest_princeton_wordnet.ps1 first)">
             <input type="checkbox" id="manual-toggle"> Manual
         </label>
     </div>
@@ -471,7 +471,7 @@
         <p class="catalog-note">
             Expandable suites below mirror the live runner layout for the selected mode.
             Manual WordNet ingest tests: enable <strong>Manual</strong> checkbox or <code>?manual=1</code>
-            (requires <code>docs/playground/wordnet.q42</code>).
+            (requires full Princeton <code>docs/data/wordnet/princeton.q42</code> or <code>docs/playground/wordnet.q42</code>).
             <span id="catalog-stats"></span>
         </p>
         <div id="suite-catalog"></div>

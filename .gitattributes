@@ -1,0 +1,2 @@
+# Large binary graph volumes — stored via Git LFS (not in git object DB).
+*.q42 filter=lfs diff=lfs merge=lfs -text

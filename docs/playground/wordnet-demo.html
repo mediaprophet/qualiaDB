@@ -148,10 +148,10 @@
 <div class="demo-header">
   <h1>WordNet Graph Query Demo</h1>
   <p>
-    The Webizen VM runs live in your browser via WebAssembly, querying the
-    <a href="https://github.com/globalwordnet/english-wordnet" style="color:var(--primary)">Open English WordNet</a>
-    dataset pre-ingested into the binary <code>.q42</code> format.
-    No server. No SQL. 48-byte records, FNV-1a hashing, HTTP Range requests.
+    The Webizen VM runs live in your browser via WebAssembly, querying
+    <a href="https://wordnet.princeton.edu" style="color:var(--primary)">Princeton WordNet 3.1</a>
+    (5.56M triples, ~127&nbsp;MB <code>.q42</code> from 523&nbsp;MB RDF/XML).
+    No server. No SQL. 48-byte records, FNV-1a hashing, HTTP Range demand-paging.
   </p>
 </div>
 
@@ -348,7 +348,7 @@
 
 <script type="module">
 import { fnv1a64, hashToken, parseBigDecimal, toHex16, hasMsb } from './hash.js';
-import { VFS, VFSProvider, BLOCK_SIZE, QUIN_SIZE } from './vfs.js';
+import { VFS, VFSProvider, BLOCK_SIZE, QUIN_SIZE, formatOpfsCacheLabel } from './vfs.js';
 
 // ---------------------------------------------------------------------------
 // Cost widget state
@@ -441,6 +441,27 @@ function updateDatasetDescription() {
   document.getElementById('dataset-description').textContent = ds?.description ?? '';
 }
 
+let _opfsWatchTimer = null;
+
+function watchOpfsCache(vfs) {
+  if (_opfsWatchTimer) clearInterval(_opfsWatchTimer);
+  if (!vfs?.opfsCache?.prefetching) return;
+  _opfsWatchTimer = setInterval(() => {
+    const c = vfs.opfsCache;
+    if (!c.prefetching) {
+      clearInterval(_opfsWatchTimer);
+      _opfsWatchTimer = null;
+    }
+    const bom = vfs.blockOffsetMap;
+    const blockCount = bom ? bom.count : 0;
+    const sizeMb = bom ? (bom.totalBytes / 1024 / 1024).toFixed(1) : '?';
+    setBadge('vfs-badge',
+      `VFS Ready — ${blockCount.toLocaleString()} blocks · ${sizeMb} MB · demand-paging` +
+      formatOpfsCacheLabel(c),
+      c.complete ? 'green' : 'amber');
+  }, 1500);
+}
+
 window.mountDataset = async function mountDataset() {
   const id = document.getElementById('dataset-select').value;
   if (!id || !provider) return;
@@ -472,9 +493,11 @@ window.mountDataset = async function mountDataset() {
       if (blockCount > 0) {
         const sizeMb       = (bom.totalBytes / 1024 / 1024).toFixed(1);
         const approxTriples = blockCount * 850;
+        const cacheNote = formatOpfsCacheLabel(activeVfs.opfsCache);
         setBadge('vfs-badge',
-          `VFS Ready — ${blockCount.toLocaleString()} blocks · ${sizeMb} MB · demand-paging`,
+          `VFS Ready — ${blockCount.toLocaleString()} blocks · ${sizeMb} MB · demand-paging${cacheNote}`,
           'green');
+        watchOpfsCache(activeVfs);
         updateStatsRow(4, 'Triples in Dataset', `~${approxTriples.toLocaleString()}`);
       } else {
         setBadge('vfs-badge',

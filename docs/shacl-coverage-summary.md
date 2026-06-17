@@ -1,7 +1,21 @@
 # SHACL Coverage Summary for QualiaDB Modalities
 
-**Date:** 2026-06-10  
+**Date:** 2026-06-17 (runtime tier updated)  
 **Scope:** Complete coverage analysis for all modalities in `crates/qualia-core-db/src/modalities`
+
+## Runtime Enforcement (2026-06-17)
+
+SHACL shapes now compile to real `SlgOpcode` bytecode and execute in the Webizen VM — not stub checks.
+
+| Layer | Status | Key files |
+|-------|--------|-----------|
+| Shape compiler | ✅ | `modalities/logic/shacl/shacl_compiler.rs`, `shacl_extension_bridge.rs` |
+| VM opcodes | ✅ | `webizen.rs` — `CheckNodeShape`, `CheckNotShape`, `CheckObjectDatatype`, `SoftCheckNodeShape`, `RequireAnyShape` |
+| Deontic / epistemic | ✅ | `shacl_compiler.rs` → `evaluate_deontic_contract` / `evaluate_epistemic_frame` |
+| `sh:sparql` constraints | ✅ | `sparql_library/sparql_shacl.rs` — passed query executed against graph |
+| Daemon / MCP query path | ✅ | `daemon_query.rs` routes SELECT/ASK/PREFIX/RDF-Star through `sparql_library` |
+
+**Vocabulary vs runtime:** Bundled W3C `.ttl` / `.q42` files in `docs/data/w3c/` are TBox vocabulary schemas (typically 1–4 KB each). They define SHACL/RDF terms for browsing — not populated instance graphs for validation demos. Use WordNet, Schema.org, or FIBO for larger mounted graphs; use the daemon resident graph for shape enforcement over ingested data.
 
 ## Overview
 

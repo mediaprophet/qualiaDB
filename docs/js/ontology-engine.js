@@ -173,7 +173,7 @@ export class OntologyEngine {
             entry.compressed ?? false,
             entry.bidxUrl ? this.resolveManifestUrl(entry.bidxUrl) : null,
         );
-        await this.vfs.init({ loadLex: true });
+        await this.vfs.init({ loadLex: true, cacheKey: datasetId, prefetchToOpfs: true });
         return this.getStats();
     }
 
@@ -228,7 +228,7 @@ export class OntologyEngine {
 
     async querySparql(sparql, maxResults = 200) {
         const bgp = parseSparqlBgp(sparql);
-        if (!bgp) throw new Error('Could not parse a single BGP triple from WHERE { }');
+        if (!bgp) throw new Error('Could not extract a triple pattern from WHERE { }. Browser WASM scans one pattern; full SPARQL runs on qualia-cli daemon :4242/query.');
         const result = await this.query(bgp, maxResults);
         return { ...result, bgp };
     }

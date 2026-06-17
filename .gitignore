@@ -10,7 +10,8 @@
 *.n3
 !bundled/qapps/**/*.n3
 
-# Keep published WordNet CI subset (v3 unified volume) trackable in docs/playground
+# Princeton WordNet 3.1 full graph (LFS) — canonical + playground mirror
+!docs/data/wordnet/**/*.q42
 !docs/playground/wordnet.q42
 
 # Ontology demo — Schema.org volume served from docs/data (CI + local)

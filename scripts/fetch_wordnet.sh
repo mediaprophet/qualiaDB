@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # fetch_wordnet.sh
 #
-# Downloads Open English WordNet, ingests via qualia-cli, and installs a unified
-# v3 `wordnet.q42` under Local_LIbraries/wordnet/ (override with QUALIA_WORDNET_DIR).
-# Copies to docs/playground/ when --playground is passed (GitHub Pages CI).
+# Downloads Open English WordNet (OEWN 2025 TTL), ingests via qualia-cli, and installs a
+# unified v3 `wordnet.q42` under Local_LIbraries/wordnet/ (override with QUALIA_WORDNET_DIR).
+#
+# For the full Princeton WordNet 3.1 graph (~5.56M triples, ~75 MB .q42), use instead:
+#   scripts/ingest_princeton_wordnet.ps1   (or .sh with QUALIA_PRINCETON_RDF set)
+#
+# Copies to docs/playground/ when --playground is passed (GitHub Pages CI fallback subset).
 #
 # Requirements:
 #   - curl or wget
@@ -14,6 +18,7 @@
 #   bash scripts/fetch_wordnet.sh
 #   bash scripts/fetch_wordnet.sh --subset 50000
 #   bash scripts/fetch_wordnet.sh --subset 100000 --playground
+#   bash scripts/fetch_wordnet.sh --subset 1500000   # ~1M parsed triples (~10 MB .q42)
 
 set -euo pipefail
 

@@ -39,6 +39,53 @@ import { parseBigDecimal } from './hash.js';
  *   const vfs = await provider.mount('wordnet');
  *   const bytes = await vfs.readAll();
  */
+/** Resolve manifest dataset paths from docs/ root (data/…) or playground-local files. */
+export function resolveManifestDatasetUrl(path) {
+    if (!path || path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (path.startsWith('data/')) return new URL(`../${path}`, import.meta.url).href;
+    return new URL(path, import.meta.url).href;
+}
+
+const OPFS_DATASETS_DIR = 'qualia-datasets';
+const OPFS_VOLUME_FILE  = 'volume.q42';
+const OPFS_CACHE_META   = 'cache.json';
+
+function sanitizeCacheKey(key) {
+    return String(key || 'default').replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+function cacheKeyFromUrl(url) {
+    try {
+        const u = new URL(url);
+        const slug = u.pathname.replace(/^\/+/, '').replace(/\//g, '_');
+        return sanitizeCacheKey(slug || 'default');
+    } catch (_) {
+        return 'default';
+    }
+}
+
+/** Human-readable OPFS cache line for demo UI badges. */
+export function formatOpfsCacheLabel(cache) {
+    if (!cache) return '';
+    if (cache.complete) {
+        const mb = (cache.bytesCached / 1024 / 1024).toFixed(1);
+        return ` · ${mb} MB in browser storage`;
+    }
+    if (cache.prefetching) {
+        const pct = cache.totalBytes
+            ? Math.min(99, Math.round((cache.bytesCached / cache.totalBytes) * 100))
+            : 0;
+        return pct > 0
+            ? ` · caching ${pct}% to browser storage…`
+            : ' · caching to browser storage…';
+    }
+    if (cache.bytesCached > 0) {
+        const mb = (cache.bytesCached / 1024 / 1024).toFixed(1);
+        return ` · ${mb} MB cached locally`;
+    }
+    return '';
+}
+
 export class VFSProvider {
     constructor(manifest) {
         /** @type {{ version: number, datasets: Array }} */
@@ -84,12 +131,16 @@ export class VFSProvider {
         if (!entry) throw new Error(`VFSProvider: unknown dataset "${datasetId}"`);
 
         const vfs = new VFS(
-            entry.url,
+            resolveManifestDatasetUrl(entry.url),
             entry.lexUrl ?? null,
             entry.compressed ?? false,
             entry.bidxUrl ?? null,
         );
-        await vfs.init({ loadLex: opts.loadLex ?? true });
+        await vfs.init({
+            loadLex: opts.loadLex ?? true,
+            cacheKey: datasetId,
+            prefetchToOpfs: opts.prefetchToOpfs ?? true,
+        });
 
         this._mounted.set(datasetId, vfs);
         console.log(`[VFSProvider] Mounted "${datasetId}" → ${entry.url}`);
@@ -378,6 +429,19 @@ export class VFS {
         this._lexMap         = new Map();
         this._lexLoaded      = false;
         this._opfsRoot       = null;
+        /** @type {FileSystemDirectoryHandle|null} */
+        this._opfsVault      = null;
+        /** @type {FileSystemDirectoryHandle|null} */
+        this._opfsBlocks     = null;
+        this._cacheKey       = cacheKeyFromUrl(remoteUrl);
+        this._prefetching    = false;
+        this._opfsCacheStatus = {
+            complete: false,
+            bytesCached: 0,
+            totalBytes: 0,
+            prefetching: false,
+            source: 'none',
+        };
         this._totalBytes     = 0;
         /** @type {BlockOffsetMap|V3BlockOffsetMap|null} */
         this._blockOffsetMap = null;
@@ -406,13 +470,19 @@ export class VFS {
      * Telemetry is reset after boot so init probes are not counted as
      * query-level network fetches.
      *
-     * @param {{ loadLex?: boolean }} [opts]
+     * @param {{ loadLex?: boolean, cacheKey?: string, prefetchToOpfs?: boolean }} [opts]
      */
-    async init({ loadLex = true } = {}) {
+    async init({ loadLex = true, cacheKey = null, prefetchToOpfs = true } = {}) {
+        if (cacheKey) this._cacheKey = sanitizeCacheKey(cacheKey);
         try {
             this._opfsRoot = await navigator.storage.getDirectory();
+            const datasets = await this._opfsRoot.getDirectoryHandle(OPFS_DATASETS_DIR, { create: true });
+            this._opfsVault = await datasets.getDirectoryHandle(this._cacheKey, { create: true });
+            this._opfsBlocks = await this._opfsVault.getDirectoryHandle('blocks', { create: true });
         } catch (_) {
             this._opfsRoot = null;
+            this._opfsVault = null;
+            this._opfsBlocks = null;
         }
 
         await this._bootFromHeader();
@@ -422,8 +492,16 @@ export class VFS {
         if (!this._bidxLoaded) sidecars.push(this._loadBidx());
         if (sidecars.length) await Promise.all(sidecars);
 
+        await this._refreshOpfsCacheStatus();
+        if (prefetchToOpfs && !this._opfsCacheStatus.complete) {
+            this._prefetchVolumeToOpfs();
+        }
+
         this.resetTelemetry();
     }
+
+    /** OPFS volume cache status for UI telemetry. */
+    get opfsCache() { return { ...this._opfsCacheStatus }; }
 
     /** True when this volume uses the v3 unified format (embedded lex/bidx). */
     get embeddedPreamble() { return this._embeddedPreamble; }
@@ -446,16 +524,32 @@ export class VFS {
     async _bootFromHeader() {
         let preamble = null;
 
-        // Probe: fetch enough bytes to cover a typical embedded preamble.
-        try {
-            const resp = await fetch(this._remoteUrl, {
-                headers: { Range: `bytes=0-${PREAMBLE_PROBE}` },
-            });
-            if (resp.ok || resp.status === 206) {
-                this._totalBytes = this._parseContentLength(resp);
-                preamble = new Uint8Array(await resp.arrayBuffer());
-            }
-        } catch (_) { /* offline — try HEAD below */ }
+        // Probe: OPFS volume first (offline revisit), then HTTP Range.
+        preamble = await this._readOpfsVolumeRange(0, PREAMBLE_PROBE + 1);
+        if (preamble?.length) {
+            this._opfsCacheStatus.source = 'opfs';
+            try {
+                const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE);
+                this._totalBytes = (await fh.getFile()).size;
+            } catch (_) { /* size unknown until header parse */ }
+        }
+
+        if (!preamble?.length) {
+            try {
+                const resp = await fetch(this._remoteUrl, {
+                    headers: { Range: `bytes=0-${PREAMBLE_PROBE}` },
+                });
+                if (resp.ok || resp.status === 206) {
+                    this._totalBytes = this._parseContentLength(resp);
+                    preamble = new Uint8Array(await resp.arrayBuffer());
+                    if (resp.status === 200 && preamble.length > PREAMBLE_PROBE + 1) {
+                        await this._writeOpfsVolume(preamble);
+                    } else {
+                        await this._writeOpfsVolumeRange(0, preamble);
+                    }
+                }
+            } catch (_) { /* offline — try HEAD below */ }
+        }
 
         if (!this._totalBytes) {
             try {
@@ -483,16 +577,22 @@ export class VFS {
         // v3: extend preamble if the probe window was too small.
         const preambleEnd = header.dataOffset;
         if (preamble.length < preambleEnd) {
-            try {
-                const resp = await fetch(this._remoteUrl, {
-                    headers: { Range: `bytes=0-${preambleEnd - 1}` },
-                });
-                if (resp.ok || resp.status === 206) {
-                    this._totalBytes = this._parseContentLength(resp) || this._totalBytes;
-                    preamble = new Uint8Array(await resp.arrayBuffer());
+            const cached = await this._readOpfsVolumeRange(0, preambleEnd);
+            if (cached?.length >= preambleEnd) {
+                preamble = cached;
+            } else {
+                try {
+                    const resp = await fetch(this._remoteUrl, {
+                        headers: { Range: `bytes=0-${preambleEnd - 1}` },
+                    });
+                    if (resp.ok || resp.status === 206) {
+                        this._totalBytes = this._parseContentLength(resp) || this._totalBytes;
+                        preamble = new Uint8Array(await resp.arrayBuffer());
+                        await this._writeOpfsVolumeRange(0, preamble);
+                    }
+                } catch (e) {
+                    console.warn('[VFS] Extended preamble fetch failed:', e.message);
                 }
-            } catch (e) {
-                console.warn('[VFS] Extended preamble fetch failed:', e.message);
             }
         }
 
@@ -518,10 +618,12 @@ export class VFS {
             header.blockCount
         );
 
+        this._opfsCacheStatus.totalBytes = this._totalBytes;
         console.log(
             `[VFS] v3 preamble: lex=${header.lexLength} B, bidx=${header.bidxLength} B,` +
             ` ${header.blockCount} blocks, data@${header.dataOffset}` +
-            ` (${(this._totalBytes / 1024).toFixed(1)} KB total)`
+            ` (${(this._totalBytes / 1024).toFixed(1)} KB total)` +
+            (this._opfsCacheStatus.complete ? ' · OPFS cache hit' : '')
         );
     }
 
@@ -690,8 +792,8 @@ export class VFS {
      * @returns {Promise<Uint8Array>} raw block bytes (BLOCK_SIZE bytes)
      */
     async readBlock(blockIndex) {
-        // 1. OPFS local vault
-        if (this._opfsRoot) {
+        // 1. OPFS local vault (decoded superblock cache)
+        if (this._opfsBlocks) {
             const cached = await this._readOpfsBlock(blockIndex);
             if (cached) return cached;
         }
@@ -709,7 +811,7 @@ export class VFS {
         bytes.set(decoded.subarray(0, Math.min(decoded.length, BLOCK_SIZE)));
 
         // 3. Persist to OPFS for future queries (fire-and-forget)
-        if (this._opfsRoot) {
+        if (this._opfsBlocks) {
             this.writeBlock(blockIndex, bytes).catch(() => {});
         }
         return bytes;
@@ -723,10 +825,10 @@ export class VFS {
      * @returns {Promise<boolean>}
      */
     async is_cached(blockId) {
-        if (!this._opfsRoot) return false;
+        if (!this._opfsBlocks) return false;
         try {
             const fileName = `block_${blockId.toString().padStart(8, '0')}.qblk`;
-            await this._opfsRoot.getFileHandle(fileName);
+            await this._opfsBlocks.getFileHandle(fileName);
             return true;
         } catch (_) {
             return false;
@@ -770,9 +872,9 @@ export class VFS {
      * @param {Uint8Array} bytes  — must be exactly BLOCK_SIZE bytes
      */
     async writeBlock(blockIndex, bytes) {
-        if (!this._opfsRoot) throw new Error('OPFS unavailable');
+        if (!this._opfsBlocks) throw new Error('OPFS unavailable');
         const fileName = `block_${blockIndex.toString().padStart(8, '0')}.qblk`;
-        const fh = await this._opfsRoot.getFileHandle(fileName, { create: true });
+        const fh = await this._opfsBlocks.getFileHandle(fileName, { create: true });
         const writable = await fh.createWritable();
         await writable.write(bytes);
         await writable.close();
@@ -801,6 +903,12 @@ export class VFS {
     // -------------------------------------------------------------------------
 
     async _fetchRangeBlock(offset, size) {
+        const cached = await this._readOpfsVolumeRange(offset, size);
+        if (cached?.length === size) {
+            this._telemetry.opfsHits++;
+            return cached;
+        }
+
         const t0 = performance.now();
         const hi = offset + size - 1;
         const resp = await fetch(this._remoteUrl, {
@@ -831,7 +939,14 @@ export class VFS {
                     'express/serve-static) for true block streaming.'
                 );
             }
+            await this._writeOpfsVolume(raw);
             return raw.subarray(offset, offset + size);
+        }
+
+        if (resp.status === 200 && raw.byteLength === size) {
+            await this._writeOpfsVolumeRange(offset, raw);
+        } else {
+            await this._writeOpfsVolumeRange(offset, raw);
         }
         return raw;
     }
@@ -841,9 +956,10 @@ export class VFS {
     // -------------------------------------------------------------------------
 
     async _readOpfsBlock(blockIndex) {
+        if (!this._opfsBlocks) return null;
         try {
             const fileName = `block_${blockIndex.toString().padStart(8, '0')}.qblk`;
-            const fh = await this._opfsRoot.getFileHandle(fileName);
+            const fh = await this._opfsBlocks.getFileHandle(fileName);
             const file = await fh.getFile();
             const buf  = await file.arrayBuffer();
             if (buf.byteLength === BLOCK_SIZE) {
@@ -852,6 +968,132 @@ export class VFS {
             }
         } catch (_) { /* file doesn't exist */ }
         return null;
+    }
+
+    async _readOpfsVolumeRange(offset, size) {
+        if (!this._opfsVault || !size) return null;
+        try {
+            const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE);
+            const file = await fh.getFile();
+            if (file.size < offset + size) return null;
+            return new Uint8Array(await file.slice(offset, offset + size).arrayBuffer());
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async _writeOpfsVolume(bytes) {
+        if (!this._opfsVault) return;
+        const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE, { create: true });
+        const writable = await fh.createWritable();
+        await writable.write(bytes);
+        await writable.close();
+        await this._writeCacheManifest({
+            url: this._remoteUrl,
+            size: bytes.byteLength,
+            cachedAt: Date.now(),
+            complete: this._totalBytes ? bytes.byteLength === this._totalBytes : true,
+        });
+        await this._refreshOpfsCacheStatus();
+    }
+
+    async _writeOpfsVolumeRange(offset, bytes) {
+        if (!this._opfsVault) return;
+        try {
+            const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE, { create: true });
+            if (typeof fh.createSyncAccessHandle === 'function') {
+                const access = await fh.createSyncAccessHandle({ mode: 'readwrite' });
+                try {
+                    access.write(bytes, { at: offset });
+                    access.flush();
+                } finally {
+                    access.close();
+                }
+            } else {
+                const existing = await this._readOpfsVolumeRange(0, Math.max(offset + bytes.length, this._totalBytes || 0));
+                const out = existing?.length
+                    ? existing
+                    : new Uint8Array(Math.max(offset + bytes.length, this._totalBytes || offset + bytes.length));
+                out.set(bytes, offset);
+                await this._writeOpfsVolume(out);
+                return;
+            }
+            await this._writeCacheManifest({
+                url: this._remoteUrl,
+                size: this._totalBytes || offset + bytes.length,
+                cachedAt: Date.now(),
+                complete: false,
+            });
+            await this._refreshOpfsCacheStatus();
+        } catch (e) {
+            console.warn('[VFS] OPFS range write failed:', e.message);
+        }
+    }
+
+    async _writeCacheManifest(meta) {
+        if (!this._opfsVault) return;
+        const fh = await this._opfsVault.getFileHandle(OPFS_CACHE_META, { create: true });
+        const writable = await fh.createWritable();
+        await writable.write(JSON.stringify(meta));
+        await writable.close();
+    }
+
+    async _refreshOpfsCacheStatus() {
+        if (!this._opfsVault) return;
+        try {
+            const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE);
+            const file = await fh.getFile();
+            const complete = this._totalBytes > 0 && file.size === this._totalBytes;
+            this._opfsCacheStatus = {
+                complete,
+                bytesCached: file.size,
+                totalBytes: this._totalBytes || file.size,
+                prefetching: this._prefetching,
+                source: complete ? 'opfs' : (file.size > 0 ? 'opfs-partial' : 'network'),
+            };
+        } catch (_) {
+            this._opfsCacheStatus.bytesCached = 0;
+            this._opfsCacheStatus.complete = false;
+        }
+    }
+
+    async _prefetchVolumeToOpfs() {
+        if (!this._opfsVault || this._prefetching) return;
+        if (await this._isVolumeFullyCached()) {
+            await this._refreshOpfsCacheStatus();
+            return;
+        }
+        this._prefetching = true;
+        this._opfsCacheStatus.prefetching = true;
+        try {
+            console.log(`[VFS] Caching ${this._cacheKey} to browser storage (OPFS)…`);
+            const resp = await fetch(this._remoteUrl);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const buf = new Uint8Array(await resp.arrayBuffer());
+            await this._writeOpfsVolume(buf);
+            this._totalBytes = buf.byteLength;
+            console.log(
+                `[VFS] OPFS cache complete: ${(buf.byteLength / 1024 / 1024).toFixed(1)} MB` +
+                ` (${this._cacheKey})`
+            );
+        } catch (e) {
+            console.warn('[VFS] OPFS full-volume prefetch failed:', e.message);
+        } finally {
+            this._prefetching = false;
+            this._opfsCacheStatus.prefetching = false;
+            await this._refreshOpfsCacheStatus();
+        }
+    }
+
+    async _isVolumeFullyCached() {
+        if (!this._opfsVault || !this._totalBytes) return false;
+        try {
+            const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE);
+            const file = await fh.getFile();
+            return file.size === this._totalBytes;
+        } catch (_) {
+            return false;
+        }
     }
 
     // -------------------------------------------------------------------------

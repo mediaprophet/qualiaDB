@@ -1,4 +1,5 @@
 import { OntologyEngine, esc } from './ontology-engine.js';
+import { formatOpfsCacheLabel } from '../playground/vfs.js';
 
 const engine = new OntologyEngine();
 let lastLookup = null;
@@ -7,8 +8,8 @@ let graphEdges = [];
 
 const UI_PROFILES = {
     wordnet: {
-        title: 'WordNet',
-        subtitle: 'Open English WordNet lemmas and synset relations',
+        title: 'Princeton WordNet',
+        subtitle: 'Princeton WordNet 3.1 — ~5.56M triples, lemmas and synset relations',
         searchLabel: 'Search Word',
         searchPlaceholder: 'e.g., dog, happy, run',
         searchButton: 'Lookup Word',
@@ -40,12 +41,12 @@ const UI_PROFILES = {
         ],
         sparqlExamples: [
             { id: 'lemma', label: 'Find lemma matches', icon: 'purple' },
-            { id: 'hypernyms', label: 'Hypernym BGP template', icon: 'blue' },
-            { id: 'hyponyms', label: 'Hyponym BGP template', icon: 'emerald' },
-            { id: 'wildcard', label: 'Wildcard BGP', icon: 'amber' },
+            { id: 'hypernyms', label: 'Hypernym pattern', icon: 'blue' },
+            { id: 'hyponyms', label: 'Hyponym pattern', icon: 'emerald' },
+            { id: 'wildcard', label: 'Wildcard scan', icon: 'amber' },
         ],
         defaultSearch: 'dog',
-        ingestNote: 'bash scripts/fetch_wordnet.sh --playground',
+        ingestNote: 'powershell scripts/ingest_princeton_wordnet.ps1',
     },
     schemaorg: {
         title: 'Schema.org',
@@ -81,16 +82,16 @@ const UI_PROFILES = {
         ],
         sparqlExamples: [
             { id: 'type', label: 'Inspect a type', icon: 'purple' },
-            { id: 'subclass', label: 'Subclass BGP', icon: 'blue' },
+            { id: 'subclass', label: 'Subclass pattern', icon: 'blue' },
             { id: 'property', label: 'Property lookup', icon: 'emerald' },
-            { id: 'wildcard', label: 'Wildcard BGP', icon: 'amber' },
+            { id: 'wildcard', label: 'Wildcard scan', icon: 'amber' },
         ],
         defaultSearch: 'Person',
         ingestNote: 'bash scripts/prepare_schemaorg_benchmark.sh 30.0 current-https',
     },
     w3c: {
         title: 'W3C Vocabulary',
-        subtitle: 'W3C Semantic Web ontologies from bundled TTL sources',
+        subtitle: 'W3C vocabulary schemas (class/property TBox only — typically 1–4 KB per .q42, not instance data)',
         searchLabel: 'Search Term or Class',
         searchPlaceholder: 'e.g., Concept, Shape, Activity',
         searchButton: 'Lookup Term',
@@ -122,12 +123,12 @@ const UI_PROFILES = {
         ],
         sparqlExamples: [
             { id: 'type', label: 'Inspect a term', icon: 'purple' },
-            { id: 'subclass', label: 'Subclass BGP', icon: 'blue' },
+            { id: 'subclass', label: 'Subclass pattern', icon: 'blue' },
             { id: 'label', label: 'Label lookup', icon: 'emerald' },
-            { id: 'wildcard', label: 'Wildcard BGP', icon: 'amber' },
+            { id: 'wildcard', label: 'Wildcard scan', icon: 'amber' },
         ],
         defaultSearch: 'Concept',
-        ingestNote: 'bash scripts/prepare_w3c_ontologies.sh',
+        ingestNote: 'bash scripts/prepare_bundled_ontologies.sh w3c',
     },
 };
 
@@ -230,6 +231,21 @@ function setLoading(show, msg = 'Loading ontology…') {
     if (label) label.textContent = msg;
 }
 
+let _opfsWatchTimer = null;
+
+function watchOpfsCache(vfs) {
+    if (_opfsWatchTimer) clearInterval(_opfsWatchTimer);
+    if (!vfs?.opfsCache?.prefetching) return;
+    _opfsWatchTimer = setInterval(() => {
+        const c = vfs.opfsCache;
+        if (!c.prefetching) {
+            clearInterval(_opfsWatchTimer);
+            _opfsWatchTimer = null;
+        }
+        setStatus(`Dataset mounted · WASM ready${formatOpfsCacheLabel(c)}`);
+    }, 1500);
+}
+
 function shortLabel(value) {
     if (!value) return '';
     if (value.startsWith('http')) {
@@ -265,6 +281,35 @@ function updateStats(stats, depth = null) {
     $('stat-2-label').textContent = p.stat2;
     $('stat-3-label').textContent = p.stat3;
     $('stat-4-label').textContent = p.stat4;
+}
+
+function updateDatasetInfo(stats) {
+    const el = $('dataset-info');
+    if (!el) return;
+    const d = engine.activeDataset;
+    if (!d) {
+        el.classList.add('hidden');
+        return;
+    }
+    const profile = d.profile ?? 'wordnet';
+    const estTriples = stats?.triples ? `~${stats.triples.toLocaleString()} est. triples` : '';
+    const blocks = stats?.blocks ? `${stats.blocks.toLocaleString()} blocks` : '';
+    const sizeHint = profile === 'w3c' || profile === 'purl'
+        ? 'Vocabulary schema (TBox) — small file size is expected.'
+        : profile === 'fibo'
+        ? 'FIBO domain slice — financial ontology TBox + axioms.'
+        : profile === 'schemaorg'
+        ? 'Full Schema.org release vocabulary (~18k triples).'
+        : 'Full Princeton WordNet 3.1 knowledge graph (~127 MB .q42, 5.56M triples). Build via scripts/ingest_princeton_wordnet.ps1.';
+    el.innerHTML = `
+        <div class="flex flex-wrap items-start gap-x-3 gap-y-1">
+            <span class="text-white/80 font-medium">${esc(d.label ?? d.id)}</span>
+            ${blocks ? `<span class="text-white/40">·</span><span>${blocks}</span>` : ''}
+            ${estTriples ? `<span class="text-white/40">·</span><span>${estTriples}</span>` : ''}
+        </div>
+        <p class="text-xs text-white/50 mt-1">${esc(d.description ?? sizeHint)}</p>
+        <p class="text-xs text-white/40 mt-1">${esc(sizeHint)}</p>`;
+    el.classList.remove('hidden');
 }
 
 function renderDatasetPicker() {
@@ -315,10 +360,10 @@ function renderDatasetPicker() {
             </div>`;
     };
 
-    html += renderSelect('w3c', 'w3c-select', 'W3C Ontologies', w3c.length);
-    html += renderSelect('w3c-archives', 'w3c-archives-select', 'W3C Archives (deduped)', w3cArchives.length);
+    html += renderSelect('w3c', 'w3c-select', 'W3C Vocabularies (schema only)', w3c.length);
+    html += renderSelect('w3c-archives', 'w3c-archives-select', 'W3C Archives (schema only)', w3cArchives.length);
     html += renderSelect('purl', 'purl-select', 'PURL.org Vocabularies', purl.length);
-    html += renderSelect('fibo', 'fibo-select', 'FIBO (EDMC)', fibo.length);
+    html += renderSelect('fibo', 'fibo-select', 'FIBO Domains (EDMC)', fibo.length);
 
     container.innerHTML = html;
 
@@ -403,7 +448,9 @@ async function switchDataset(datasetId) {
         renderDatasetPicker();
         applyProfileUi();
         updateStats(stats);
-        setStatus(`${stats.label} · ${stats.blocks.toLocaleString()} blocks · WASM ready`);
+        updateDatasetInfo(stats);
+        setStatus(`${stats.label} · ${stats.blocks.toLocaleString()} blocks · WASM ready${formatOpfsCacheLabel(engine.vfs?.opfsCache)}`);
+        watchOpfsCache(engine.vfs);
         const hints = datasetUiHints();
         showSparqlExample(hints.sparqlExamples[0]?.id ?? 'wildcard');
         $('entity-search').value = hints.defaultSearch;
@@ -517,15 +564,15 @@ window.runSparqlQuery = async function runSparqlQuery() {
     $('sparql-output').classList.remove('hidden');
     $('sparql-code').textContent = sparql;
 
-    setLoading(true, 'Executing SPARQL BGP…');
+    setLoading(true, 'Scanning mounted .q42…');
     try {
         const result = await engine.querySparql(sparql, 100);
         const lines = result.matches.map(m =>
             `S: ${engine.labelFor(m.s)}  P: ${engine.labelFor(m.p)}  O: ${engine.labelFor(m.o)}`
         );
         $('sparql-results').textContent = lines.length
-            ? `BGP: ${result.bgp}\n\n${lines.join('\n')}\n\n(${result.matches.length} matches, ${result.vm_cycles} VM cycles)`
-            : `BGP: ${result.bgp}\n\nNo matches.`;
+            ? `Pattern: ${result.bgp}\n\n${lines.join('\n')}\n\n(${result.matches.length} matches, ${result.vm_cycles} VM cycles)`
+            : `Pattern: ${result.bgp}\n\nNo matches.`;
     } catch (e) {
         $('sparql-results').textContent = e.message || String(e);
     } finally {
@@ -633,7 +680,9 @@ async function boot() {
         renderDatasetPicker();
         applyProfileUi();
         updateStats(stats);
-        setStatus(`${stats.label} · ${stats.blocks.toLocaleString()} blocks · WASM ready`);
+        updateDatasetInfo(stats);
+        setStatus(`${stats.label} · ${stats.blocks.toLocaleString()} blocks · WASM ready${formatOpfsCacheLabel(engine.vfs?.opfsCache)}`);
+        watchOpfsCache(engine.vfs);
         const hints = datasetUiHints();
         showSparqlExample(hints.sparqlExamples[0]?.id ?? 'wildcard');
         $('entity-search').value = hints.defaultSearch;

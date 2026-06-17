@@ -11,7 +11,8 @@
 //
 // MANUAL TESTS (WordNet integration):
 //   Requires docs/playground/wordnet.q42 — build with:
-//     bash scripts/fetch_wordnet.sh --subset 100000
+//     powershell scripts/ingest_princeton_wordnet.ps1
+//   (full Princeton ~75 MB) or bash scripts/fetch_wordnet.sh --subset 100000 for CI fallback
 //     wasm-pack build crates/qualia-core-db --target web \
 //       --out-dir ../../docs/playground --no-typescript
 //   Activate: append ?manual=1 to the URL, or set window.MANUAL_TESTS = true in console.
@@ -263,12 +264,12 @@ export function register(runner) {
             runner.expect(r.ok).toBeTruthy();
         });
 
-        runner.it('wordnet.q42 is > 50 MB and < 100 MB — confirms 85% compression (manual)', async () => {
+        runner.it('wordnet.q42 is > 50 MB and < 200 MB — confirms Princeton full ingest (manual)', async () => {
             if (!manualWordNetEnabled()) return;
             const r = await fetch('/playground/wordnet.q42', { method: 'HEAD' });
             const size = parseInt(r.headers.get('content-length') || '0');
             runner.expect(size).toBeGreaterThan(50 * 1024 * 1024);
-            runner.expect(size).toBeLessThan(100 * 1024 * 1024);
+            runner.expect(size).toBeLessThan(200 * 1024 * 1024);
         });
 
         runner.it('wordnet.c.q42 is smaller than wordnet.q42 (LZ4 compression active) (manual)', async () => {
