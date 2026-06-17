@@ -175,7 +175,8 @@ async function initQualiaLayer() {
         onDaemonLinkState(() => updateDaemonBadge('wasm-text', 'wasm-dot', portal));
         const onTensorLoaded = ({ nodes }) => {
             if (nodes > 0) {
-                document.getElementById('metric-vertices')?.textContent = nodes.toLocaleString();
+                const vertEl = document.getElementById('metric-vertices');
+                if (vertEl) vertEl.textContent = nodes.toLocaleString();
                 lastTensorBuffer = getLastDaemonTensorBuffer();
             }
             updateDaemonBadge('wasm-text', 'wasm-dot', portal);
@@ -225,7 +226,8 @@ function bindPortalNavigation(portal, canvas) {
                     portal.navigate_to_node(idx);
                     portal.collapse_node_q(idx);
                     pulseTelemetry('logic_flashes', 0.9);
-                    document.getElementById('metric-selected')?.textContent = String(idx);
+                    const selEl = document.getElementById('metric-selected');
+                    if (selEl) selEl.textContent = String(idx);
                 } catch (e) {
                     console.warn('navigation', e);
                 }
@@ -298,7 +300,8 @@ function bindStandpointControls(portal) {
                 identifierDid: did,
             }).then(({ nodes }) => {
                 if (nodes > 0) {
-                    document.getElementById('metric-vertices')?.textContent = nodes.toLocaleString();
+                    const vertEl = document.getElementById('metric-vertices');
+                    if (vertEl) vertEl.textContent = nodes.toLocaleString();
                     lastTensorBuffer = getLastDaemonTensorBuffer();
                 }
                 updateDaemonBadge('wasm-text', 'wasm-dot', portal);
