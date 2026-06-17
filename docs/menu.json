@@ -98,6 +98,30 @@
       "group": "Tools"
     },
     {
+      "label": "Phone Console",
+      "href": "phone-console.html",
+      "icon": "fa-mobile-screen",
+      "group": "Tools"
+    },
+    {
+      "label": "Neuro-Symbolic",
+      "href": "playground/neuro-symbolic.html",
+      "icon": "fa-brain",
+      "group": "Tools"
+    },
+    {
+      "label": "Semantic Drift",
+      "href": "playground/semantics.html",
+      "icon": "fa-wave-square",
+      "group": "Tools"
+    },
+    {
+      "label": "3D Anatomy",
+      "href": "playground/anatomy.html",
+      "icon": "fa-heart-pulse",
+      "group": "Tools"
+    },
+    {
       "label": "Edge LLM",
       "href": "edge-llm.html",
       "icon": "fa-brain",
@@ -177,6 +201,12 @@
       "label": "WordNet",
       "href": "ontology.html?dataset=wordnet",
       "icon": "fa-language",
+      "group": "Data"
+    },
+    {
+      "label": "WordNet Demo",
+      "href": "playground/wordnet-demo.html",
+      "icon": "fa-diagram-project",
       "group": "Data"
     }
   ],

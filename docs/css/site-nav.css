@@ -6,12 +6,7 @@
 }
 
 #desktop-nav {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
-}
-
-#desktop-nav::-webkit-scrollbar {
-    height: 4px;
+    overflow: visible;
 }
 
 #desktop-nav .nav-group {
@@ -45,7 +40,8 @@
 }
 
 #desktop-nav .nav-group:hover .nav-dropdown,
-#desktop-nav .nav-group:focus-within .nav-dropdown {
+#desktop-nav .nav-group:focus-within .nav-dropdown,
+#desktop-nav .nav-group.nav-open .nav-dropdown {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;

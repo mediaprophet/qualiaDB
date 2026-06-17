@@ -3,12 +3,24 @@
 
 function docsRootFromScript() {
     const script = document.querySelector('script[src*="menu-loader.js"]');
-    if (!script) return '';
-    const src = script.getAttribute('src') || '';
-    if (src.startsWith('http') || src.startsWith('/')) {
-        return src.replace(/js\/menu-loader\.js.*$/, '');
+    let root = '';
+    if (script) {
+        const src = script.getAttribute('src') || '';
+        if (src.startsWith('http') || src.startsWith('/')) {
+            root = src.replace(/js\/menu-loader\.js.*$/, '');
+        } else {
+            root = src.replace(/js\/menu-loader\.js.*$/, '') || '';
+        }
     }
-    return src.replace(/js\/menu-loader\.js.*$/, '') || '';
+    // GitHub Pages serves under /qualiaDB/ — infer when script path is page-relative.
+    const pagesBase = window.location.pathname.match(/^(.*\/qualiaDB\/)/);
+    if (pagesBase) {
+        const base = pagesBase[1];
+        if (!root || (!root.startsWith('/') && !root.startsWith('http'))) {
+            return base;
+        }
+    }
+    return root;
 }
 
 function ensureSiteNavCss() {
@@ -73,7 +85,7 @@ function renderMenu(menu) {
     const navBar = navHost.closest('nav');
     if (navBar) navBar.classList.add('relative', 'z-50');
 
-    navHost.className = 'relative flex items-center gap-2 text-sm shrink-0 min-w-0 max-w-full';
+    navHost.className = 'relative flex items-center gap-2 text-sm min-w-0 flex-1 justify-center lg:justify-start px-2 max-w-full';
 
     const grouped = {};
     for (const item of menu.navigation) {
@@ -86,7 +98,7 @@ function renderMenu(menu) {
             class="lg:hidden shrink-0 text-slate-300 hover:text-white p-2 rounded-lg border border-white/10">
             <i class="fa-solid fa-bars text-lg"></i>
         </button>
-        <div id="desktop-nav" class="hidden lg:flex flex-nowrap items-center gap-3 xl:gap-5 text-sm overflow-x-auto max-w-full">
+        <div id="desktop-nav" class="hidden lg:flex flex-nowrap items-center gap-2 xl:gap-4 text-sm max-w-full">
     `;
 
     for (const [groupName, items] of Object.entries(grouped)) {
@@ -156,6 +168,7 @@ function renderMenu(menu) {
     }</div>`;
 
     wireMobileMenu();
+    wireDesktopDropdowns();
     updateBrand(menu);
     updateFooter(menu);
 }
@@ -174,6 +187,26 @@ function findLegacyNavHost() {
         }
     }
     return null;
+}
+
+function wireDesktopDropdowns() {
+    const desktop = document.getElementById('desktop-nav');
+    if (!desktop) return;
+
+    desktop.querySelectorAll('.nav-group > button').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const group = btn.closest('.nav-group');
+            if (!group) return;
+            const open = group.classList.contains('nav-open');
+            desktop.querySelectorAll('.nav-group').forEach((g) => g.classList.remove('nav-open'));
+            if (!open) group.classList.add('nav-open');
+        });
+    });
+
+    document.addEventListener('click', () => {
+        desktop.querySelectorAll('.nav-group').forEach((g) => g.classList.remove('nav-open'));
+    });
 }
 
 function wireMobileMenu() {

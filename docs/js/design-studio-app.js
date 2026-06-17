@@ -51,13 +51,13 @@ function telemetryToFloats(partial) {
 }
 
 function showLoading(show) {
-  $("loading-overlay")?.classList.toggle("hidden", !show);
+  $("loading-overlay")?.classList.toggle("ds-hidden", !show);
   $("main-content")?.style && ($("main-content").style.display = show ? "none" : "");
 }
 
 function showError(msg) {
   $("error-message").textContent = msg || "WASM init failed";
-  $("error-overlay")?.classList.remove("hidden");
+  $("error-overlay")?.classList.remove("ds-hidden");
   showLoading(false);
 }
 
