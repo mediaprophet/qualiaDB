@@ -32,6 +32,7 @@
         .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
         #canvas-container { border-radius: 16px; overflow: hidden; }
     </style>
+    <link rel="stylesheet" href="css/site-nav.css">
     <script src="js/menu-loader.js"></script>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
@@ -58,24 +59,18 @@
 
 <!-- Nav -->
 <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
-    <div class="max-w-screen-2xl mx-auto px-8">
-        <div class="flex items-center justify-between h-16">
-            <div class="flex items-center gap-8">
-                <a href="index.html" class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
-                        <span class="text-black font-bold text-xl">Q</span>
-                    </div>
-                    <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
-                </a>
-                <div id="dynamic-nav" class="relative flex items-center text-sm">
-                    <!-- Navigation loaded dynamically by menu-loader.js -->
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+        <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+            <a href="index.html" class="flex items-center gap-3 shrink-0">
+                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                    <span class="text-black font-bold text-xl">Q</span>
                 </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <div id="wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
-                    <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
-                    <span id="wasm-text">Loading...</span>
-                </div>
+                <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+            </a>
+            <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+            <div id="wasm-badge" class="hidden sm:flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
+                <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
+                <span id="wasm-text">Loading...</span>
             </div>
         </div>
     </div>
@@ -358,8 +353,6 @@ parity:    XOR fold
         </div>
     </div>
 
-</div>
-
     <!-- Tab 5: Q42 10D Tensor -->
     <div id="tab-q42" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
@@ -494,256 +487,17 @@ LIMIT 100
         </div>
     </div>
 
+</div>
 
 <script type="module">
-    let wasm = null;
-    let scene, camera, renderer, meshGroup;
-    let container = document.getElementById('canvas-container');
+    import { bootSpatialPage } from './js/spatial-demo.js';
 
-    // Initialize Three.js
-    function initThreeJS() {
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.1, 1000);
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(renderer.domElement);
-
-        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambient);
-        const light = new THREE.PointLight(0xff266e, 1.5, 200);
-        light.position.set(10, 20, 10);
-        scene.add(light);
-
-        meshGroup = new THREE.Group();
-        scene.add(meshGroup);
-        camera.position.set(0, 8, 18);
-
-        window.addEventListener('resize', () => {
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        });
-
-        animate();
-    }
-
-    function animate() {
-        requestAnimationFrame(animate);
-        if (meshGroup) {
-            meshGroup.rotation.y += 0.003;
-        }
-        renderer.render(scene, camera);
-    }
-
-    // Generate geometry
-    window.generateGeometry = function() {
-        while (meshGroup.children.length > 0) meshGroup.remove(meshGroup.children[0]);
-
-        const type = document.getElementById('geo-type').value;
-        const detail = parseInt(document.getElementById('geo-detail').value);
-        let geo;
-
-        switch(type) {
-            case 'icosahedron':
-                geo = new THREE.IcosahedronGeometry(7, detail);
-                break;
-            case 'cube':
-                geo = new THREE.BoxGeometry(10, 10, 10, detail + 1, detail + 1, detail + 1);
-                break;
-            case 'sphere':
-                geo = new THREE.SphereGeometry(7, detail * 8 + 8, detail * 6 + 6);
-                break;
-            case 'torus':
-                geo = new THREE.TorusGeometry(5, 2, detail * 8 + 8, detail * 6 + 6);
-                break;
-            case 'knot':
-                geo = new THREE.TorusKnotGeometry(4, 1.5, detail * 32 + 32, detail * 8 + 8);
-                break;
-        }
-
-        updateDisplayMode(geo);
-        
-        // Update metrics
-        const vertexCount = geo.attributes.position.count;
-        document.getElementById('metric-vertices').textContent = vertexCount.toLocaleString();
-        document.getElementById('metric-quins').textContent = (vertexCount * 2).toLocaleString();
-        document.getElementById('metric-memory').textContent = ((vertexCount * 48 * 2) / 1024).toFixed(1) + ' KB';
-    };
-
-    window.updateDisplayMode = function(geo) {
-        if (!geo) {
-            const type = document.getElementById('geo-type').value;
-            const detail = parseInt(document.getElementById('geo-detail').value);
-            switch(type) {
-                case 'icosahedron':
-                    geo = new THREE.IcosahedronGeometry(7, detail);
-                    break;
-                case 'cube':
-                    geo = new THREE.BoxGeometry(10, 10, 10, detail + 1, detail + 1, detail + 1);
-                    break;
-                case 'sphere':
-                    geo = new THREE.SphereGeometry(7, detail * 8 + 8, detail * 6 + 6);
-                    break;
-                case 'torus':
-                    geo = new THREE.TorusGeometry(5, 2, detail * 8 + 8, detail * 6 + 6);
-                    break;
-                case 'knot':
-                    geo = new THREE.TorusKnotGeometry(4, 1.5, detail * 32 + 32, detail * 8 + 8);
-                    break;
-            }
-        }
-
-        const mode = document.getElementById('display-mode').value;
-        while (meshGroup.children.length > 0) meshGroup.remove(meshGroup.children[0]);
-
-        switch(mode) {
-            case 'wireframe':
-                const wire = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.4 }));
-                meshGroup.add(wire);
-                break;
-            case 'points':
-                const points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xff266e, size: 0.18 }));
-                meshGroup.add(points);
-                break;
-            case 'solid':
-                const solid = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.3, wireframe: false }));
-                meshGroup.add(solid);
-                break;
-            case 'hybrid':
-                const wire2 = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.4 }));
-                const points2 = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xff266e, size: 0.18 }));
-                meshGroup.add(wire2);
-                meshGroup.add(points2);
-                break;
-        }
-    };
-
-    // Encode to Quins
-    window.encodeToQuins = async function() {
-        if (!wasm) {
-            document.getElementById('encoding-status').textContent = 'WASM not loaded';
-            return;
-        }
-
-        const type = document.getElementById('geo-type').value;
-        const detail = parseInt(document.getElementById('geo-detail').value);
-        const startTime = performance.now();
-
-        try {
-            const result = wasm.spatial_encode(JSON.stringify({ type, detail }));
-            const endTime = performance.now();
-            
-            const parsed = JSON.parse(result);
-            
-            document.getElementById('encoding-status').textContent = `Encoded ${parsed.quin_count} Quins in ${(endTime - startTime).toFixed(2)}ms`;
-            document.getElementById('metric-time').textContent = (endTime - startTime).toFixed(2) + 'ms';
-            
-            // Display Quin dump
-            let dump = `Q42 Spatial Encoding\n`;
-            dump += `Vertices: ${parsed.vertex_count}\n`;
-            dump += `Quins: ${parsed.quin_count}\n`;
-            dump += `Memory: ${parsed.memory_kb} KB\n\n`;
-            dump += `[First 10 Quins]\n`;
-            parsed.quins.slice(0, 10).forEach((quin, i) => {
-                dump += `Quin ${i}:\n`;
-                dump += `  Subject:   0x${quin.subject.toString(16).padStart(16, '0')}\n`;
-                dump += `  Predicate: 0x${quin.predicate.toString(16).padStart(16, '0')}\n`;
-                dump += `  Object:    0x${quin.object.toString(16).padStart(16, '0')}\n`;
-                dump += `  Context:   0x${quin.context.toString(16).padStart(16, '0')}\n`;
-                dump += `  Metadata:  0x${quin.metadata.toString(16).padStart(16, '0')}\n`;
-                dump += `  Parity:    0x${quin.parity.toString(16).padStart(16, '0')}\n\n`;
-            });
-            
-            document.getElementById('quin-dump').textContent = dump;
-        } catch (e) {
-            document.getElementById('encoding-status').textContent = 'Error: ' + e.message;
-        }
-    };
-
-    // Run spatial operation
-    window.runSpatialOp = async function() {
-        if (!wasm) return;
-        
-        const geoA = document.getElementById('geo-a').value;
-        const geoB = document.getElementById('geo-b').value;
-        const op = document.getElementById('spatial-op').value;
-        const crs = document.getElementById('geo-crs').value;
-        
-        const startTime = performance.now();
-        
-        try {
-            const result = wasm.geosparql_operation(JSON.stringify { geoA, geoB, op, crs }));
-            const endTime = performance.now();
-            
-            const parsed = JSON.parse(result);
-            document.getElementById('spatial-result').textContent = JSON.stringify(parsed, null, 2);
-        } catch (e) {
-            document.getElementById('spatial-result').textContent = 'Error: ' + e.message;
-        }
-    };
-
-    // Run native operation
-    window.runNativeOp = async function() {
-        if (!wasm) return;
-        
-        const op = document.getElementById('native-op').value;
-        
-        const startTime = performance.now();
-        
-        try {
-            const result = wasm.spatial_operation(JSON.stringify({ op }));
-            const endTime = performance.now();
-            
-            const parsed = JSON.parse(result);
-            document.getElementById('native-result').textContent = JSON.stringify(parsed, null, 2);
-        } catch (e) {
-            document.getElementById('native-result').textContent = 'Error: ' + e.message;
-        }
-    };
-
-    // Tab switching
-    window.switchTab = function(tabId, btn) {
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('tab-' + tabId).classList.add('active');
-        btn.classList.add('active');
-    };
-
-    // Load WASM
-    async function loadWasm() {
-        try {
-            const module = await import('./playground/qualia_core_db.js');
-            await module.default();
-            wasm = module;
-            
-            // Update UI
-            document.getElementById('loading-overlay').classList.add('hidden');
-            document.getElementById('main-content').style.display = 'block';
-            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
-            document.getElementById('wasm-dot').classList.add('bg-emerald-500');
-            document.getElementById('wasm-text').textContent = 'WASM Ready';
-            
-            // Enable all tabs
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.disabled = false);
-            
-            // Initialize Three.js
-            initThreeJS();
-            generateGeometry();
-            
-            console.log('QualiaDB WASM loaded successfully');
-        } catch (error) {
-            console.error('Failed to load WASM:', error);
-            document.getElementById('loading-overlay').classList.add('hidden');
-            document.getElementById('error-overlay').classList.remove('hidden');
-            document.getElementById('error-message').textContent = error.toString();
-            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
-            document.getElementById('wasm-dot').classList.add('bg-red-500');
-            document.getElementById('wasm-text').textContent = 'WASM Error';
-        }
-    }
-
-    // Initialize
-    loadWasm();
+    bootSpatialPage().catch((err) => {
+        console.error('Spatial demo boot failed:', err);
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.getElementById('error-overlay').classList.remove('hidden');
+        document.getElementById('error-message').textContent = err?.message || String(err);
+    });
 </script>
 </body>
 </html>

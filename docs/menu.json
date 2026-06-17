@@ -85,6 +85,12 @@
       "group": "Sciences"
     },
     {
+      "label": "Spatial / GeoSPARQL",
+      "href": "spatial.html",
+      "icon": "fa-cube",
+      "group": "Sciences"
+    },
+    {
       "label": "Edge LLM",
       "href": "edge-llm.html",
       "icon": "fa-brain",
