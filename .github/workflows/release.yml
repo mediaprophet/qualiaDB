@@ -142,7 +142,7 @@ jobs:
           wasm-pack build crates/qualia-core-db \
             --target web \
             --release \
-            --out-dir crates/qualia-core-db/pkg-qualia \
+            --out-dir pkg-qualia \
             -- --no-default-features --features portal
           mkdir -p docs/pkg/qualia
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.js docs/pkg/qualia/qualia.js
@@ -217,7 +217,7 @@ jobs:
           wasm-pack build crates/qualia-core-db \
             --target web \
             --release \
-            --out-dir docs/playground \
+            --out-dir ../../docs/playground \
             --out-name qualia_core_db \
             --no-typescript \
             -- --no-default-features --features wasm-full
