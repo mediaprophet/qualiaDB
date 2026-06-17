@@ -10,9 +10,9 @@
 *.n3
 !bundled/qapps/**/*.n3
 
-# Princeton WordNet 3.1 full graph (LFS) — canonical + playground mirror
-!docs/data/wordnet/**/*.q42
-!docs/playground/wordnet.q42
+# Princeton WordNet — full graph is a GitHub Release asset (see docs/data/wordnet/README.md)
+docs/data/wordnet/*.q42
+docs/playground/wordnet.q42
 
 # Ontology demo — Schema.org volume served from docs/data (CI + local)
 !docs/data/schemaorg/**/*.q42

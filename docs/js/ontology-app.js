@@ -46,7 +46,7 @@ const UI_PROFILES = {
             { id: 'wildcard', label: 'Wildcard scan', icon: 'amber' },
         ],
         defaultSearch: 'dog',
-        ingestNote: 'powershell scripts/ingest_princeton_wordnet.ps1',
+        ingestNote: 'powershell scripts/fetch_wordnet_release.ps1  (or ingest_princeton_wordnet.ps1 to build)',
     },
     schemaorg: {
         title: 'Schema.org',

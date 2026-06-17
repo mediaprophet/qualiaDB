@@ -90,3 +90,4 @@ Write-Host "  $LocalLib"
 if (-not $SkipPlayground) { Write-Host "  $Playground" }
 Write-Host ''
 Write-Host 'Demos mount via docs/playground/vfs-manifest.json → data/wordnet/princeton.q42'
+Write-Host 'Or download release asset: .\scripts\fetch_wordnet_release.ps1'

@@ -163,4 +163,62 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+# ── Job 4: Princeton WordNet dataset (release asset, not git/LFS) ───────────────
+  build-datasets:
+    name: Datasets (Princeton WordNet)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-datasets-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-datasets-
+
+      - name: Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config curl
+
+      - name: Download Princeton WordNet RDF (optional)
+        id: rdf
+        env:
+          WORDNET_RDF_URL: ${{ secrets.WORDNET_RDF_URL }}
+        run: |
+          mkdir -p .wordnet_build
+          if [[ -n "$WORDNET_RDF_URL" ]]; then
+            echo "Downloading RDF from WORDNET_RDF_URL secret..."
+            curl -fL --progress-bar -o .wordnet_build/wordnet.rdf "$WORDNET_RDF_URL"
+            echo "path=.wordnet_build/wordnet.rdf" >> "$GITHUB_OUTPUT"
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "WORDNET_RDF_URL not set — skipping dataset build."
+            echo "Upload princeton.q42 manually or set the repository secret."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build princeton.q42
+        if: steps.rdf.outputs.ready == 'true'
+        env:
+          QUALIA_PRINCETON_RDF: ${{ steps.rdf.outputs.path }}
+        run: |
+          bash scripts/ingest_princeton_wordnet.sh
+          ls -lh docs/data/wordnet/princeton.q42
+
+      - name: Upload princeton.q42 to release
+        if: steps.rdf.outputs.ready == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: docs/data/wordnet/princeton.q42
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 # Flutter desktop packaging moved to WebizenAI repo — see Local_LIbraries/EXPORTS/qualia-flutter-desktop/
