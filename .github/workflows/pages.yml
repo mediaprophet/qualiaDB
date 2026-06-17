@@ -165,6 +165,13 @@ jobs:
         with:
           node-version: 22
 
+      - name: Build docs Tailwind CSS (replaces Play CDN)
+        run: |
+          cd docs
+          npm ci
+          npm run build:tailwind
+          test -f css/tailwind-built.css
+
       - name: Build Rust documentation
         run: cargo doc --no-deps -p qualia-core-db -p qualia-cli -p qualia-client-core
 

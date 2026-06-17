@@ -1,0 +1,12 @@
+{
+  "name": "qualiadb-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:tailwind": "tailwindcss -i ./css/tailwind-input.css -o ./css/tailwind-built.css --minify"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.8",
+    "tailwindcss": "^4.1.8"
+  }
+}

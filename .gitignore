@@ -1,3 +1,4 @@
+/docs/node_modules
 /target
 /crates/qualia-core-db/target
 /crates/qualia-cli/target
