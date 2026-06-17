@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Qualia Phone Console</title>
+    <link rel="manifest" href="phone-console.webmanifest">
+    <meta name="theme-color" content="#0a0e17">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/qualia-icp-layout.css">
+    <style>
+        body { font-family: Inter, system-ui, sans-serif; background: #0a0e17; color: #e2e8f0; min-height: 100dvh; }
+    </style>
+</head>
+<body class="icp-chrome icp-form-phone p-4" id="phone-root">
+    <header class="flex items-center justify-between mb-4">
+        <h1 class="text-lg font-semibold text-emerald-400">Qualia Console</h1>
+        <span id="link-badge" class="text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-400">Unlinked</span>
+    </header>
+
+    <section id="pair-section" class="mb-4 p-3 rounded-xl border border-slate-700 bg-slate-900/50">
+        <p class="text-xs text-white/60 mb-2">Pair with desktop — scan QR or paste JSON from spatial.html</p>
+        <div class="flex gap-2 mb-2">
+            <button type="button" data-icp-paste-pair class="flex-1 py-2 rounded-lg bg-emerald-600/30 text-emerald-300 text-sm border border-emerald-500/40">Paste pairing</button>
+            <button type="button" data-icp-scan-pair class="flex-1 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm border border-slate-600">Scan QR</button>
+        </div>
+        <video data-icp-scan-video class="w-full max-h-40 rounded-lg bg-black hidden" playsinline muted></video>
+    </section>
+
+    <nav class="icp-interface-bar mb-3" id="interface-bar" aria-label="Interface mode">
+        <button type="button" data-icp-interface="deck" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Deck</button>
+        <button type="button" data-icp-interface="control" class="bg-slate-800 text-slate-300 border border-slate-600">Control</button>
+        <button type="button" data-icp-interface="graph" class="bg-slate-800 text-slate-300 border border-slate-600">Graph</button>
+    </nav>
+
+    <section id="panel-deck" class="icp-mode-deck flex-1">
+        <div id="context-strip" class="text-sm text-white/70 mb-2 min-h-[1.5rem]">Scan QR on desktop to link</div>
+        <div id="icp-deck-pad" class="icp-deck-pad mb-3" aria-label="Swipe pad"></div>
+        <div class="grid grid-cols-3 gap-2 text-center text-sm">
+            <button type="button" class="icp-btn py-3 rounded-lg bg-slate-800" data-icp-btn="back">◀</button>
+            <button type="button" class="icp-btn py-3 rounded-lg bg-emerald-600/30" data-icp-btn="select">⊕</button>
+            <button type="button" class="icp-btn py-3 rounded-lg bg-slate-800" data-icp-btn="next">▶</button>
+        </div>
+        <button type="button" class="icp-btn w-full mt-2 py-2 rounded-lg bg-slate-800 text-sm" data-icp-btn="home">⌖ Home</button>
+    </section>
+
+    <section id="panel-control" class="icp-control-panel hidden">
+        <div id="control-panel-body" class="text-sm text-white/60">Menus and sliders — from desktop ContextFrame.</div>
+    </section>
+
+    <section id="panel-graph" class="icp-graph-lens hidden" style="min-height: 240px;">
+        <canvas id="graph-canvas" class="w-full h-56 rounded-lg bg-black/40"></canvas>
+    </section>
+
+    <footer class="mt-4 text-[10px] text-white/40">
+        <a href="spatial.html" class="text-emerald-400 underline">Open desktop portal</a>
+    </footer>
+
+    <script type="module">
+        import { watchIcpProfile } from './js/qualia-icp-profile.js';
+        import { applyIcpLayoutClasses, shouldShow, ICP_INTERFACE } from './js/qualia-icp-rules.js';
+        import { mountIcpPhone, mountPairingUi } from './js/qualia-icp-phone.js';
+        import { loadPairing } from './js/qualia-icp-session.js';
+
+        const root = document.getElementById('phone-root');
+        watchIcpProfile((profile) => {
+            applyIcpLayoutClasses(root, profile);
+            document.getElementById('icp-deck-pad').style.display =
+                shouldShow(profile, 'swipe_pad') ? 'block' : 'none';
+        }, { paired_remote: !!loadPairing() });
+
+        document.querySelectorAll('[data-icp-interface]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.icpInterface;
+                root.dataset.icpInterface = mode;
+                root.classList.toggle('icp-mode-deck', mode === ICP_INTERFACE.DECK);
+                root.classList.toggle('icp-mode-control', mode === ICP_INTERFACE.CONTROL);
+                root.classList.toggle('icp-mode-graph', mode === ICP_INTERFACE.GRAPH);
+                document.getElementById('panel-deck').classList.toggle('hidden', mode !== ICP_INTERFACE.DECK);
+                document.getElementById('panel-control').classList.toggle('hidden', mode !== ICP_INTERFACE.CONTROL);
+                document.getElementById('panel-graph').classList.toggle('hidden', mode !== ICP_INTERFACE.GRAPH);
+            });
+        });
+
+        const pairSection = document.getElementById('pair-section');
+        const phone = mountIcpPhone({
+            root,
+            linkBadge: document.getElementById('link-badge'),
+            contextStrip: document.getElementById('context-strip'),
+            controlPanel: document.getElementById('control-panel-body'),
+            graphCanvas: document.getElementById('graph-canvas'),
+            deckPad: document.getElementById('icp-deck-pad'),
+            pairSection,
+        });
+
+        mountPairingUi({
+            pairSection,
+            onPair: (payload) => phone.connectRelay(payload),
+        });
+
+        const pairQuery = new URLSearchParams(window.location.search).get('pair');
+        if (pairQuery) {
+            try {
+                const decoded = decodeURIComponent(pairQuery);
+                phone.pairFromText(decoded);
+            } catch {
+                phone.pairFromText(pairQuery);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -8,6 +8,7 @@ use crate::tensor::buffer_export::{
     TensorBufferHeader, TENSOR_HEADER_BYTES, TENSOR_STRIDE,
 };
 use crate::portal_acoustic::{sigma_to_center_frequency_hz, sigma_to_wavelength_nm, ACOUSTIC_UNIFORM_FLOAT_COUNT};
+use crate::portal_control::{PortalControlCommand, CONTROL_RING_CAP, ICP_MAGIC_BIT};
 use crate::portal_spectral::sigma_to_cie_xyz;
 use crate::tensor::Tensor10D;
 
@@ -240,6 +241,15 @@ mod tests {
         let mut sab = [0u8; ACOUSTIC_SAB_BYTES];
         assert!(init_acoustic_sab(&mut sab));
         assert_eq!(ACOUSTIC_SAB_BYTES, 1024);
+    }
+
+    #[test]
+    fn phenomenal_icp_command_layout() {
+        let cmd = PortalControlCommand::navigate_index(9);
+        assert_eq!(std::mem::size_of::<PortalControlCommand>(), 8);
+        assert!((cmd.raw & ICP_MAGIC_BIT) != 0);
+        assert_eq!(cmd.tensor_or_menu_index(), 9);
+        assert!(CONTROL_RING_CAP >= 64);
     }
 
     #[test]

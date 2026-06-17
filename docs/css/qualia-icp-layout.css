@@ -1,0 +1,81 @@
+/* Interface Control Plane — responsive layout tokens */
+
+:root {
+    --icp-touch-min: 44px;
+    --icp-bar-height: 3.25rem;
+}
+
+.icp-chrome {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.icp-interface-bar {
+    display: none;
+    gap: 0.35rem;
+    padding: 0.35rem;
+    min-height: var(--icp-bar-height);
+}
+
+.icp-interface-bar button {
+    min-height: var(--icp-touch-min);
+    min-width: var(--icp-touch-min);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.icp-touch-mode .icp-interface-bar,
+.icp-form-phone .icp-interface-bar,
+@media (max-width: 1023px) {
+    .icp-interface-bar {
+        display: flex;
+        flex-wrap: wrap;
+    }
+}
+
+.icp-deck-pad {
+    display: none;
+    flex: 1;
+    min-height: 12rem;
+    touch-action: none;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    background: rgba(16, 185, 129, 0.06);
+}
+
+.icp-touch-mode .icp-deck-pad,
+.icp-form-phone .icp-deck-pad {
+    display: block;
+}
+
+.icp-control-panel {
+    display: none;
+}
+
+.icp-mode-control .icp-control-panel,
+.icp-form-phone .icp-control-panel {
+    display: block;
+}
+
+.icp-graph-lens {
+    display: none;
+    aspect-ratio: 1;
+    max-height: 40dvh;
+}
+
+.icp-mode-graph .icp-graph-lens {
+    display: block;
+}
+
+.icp-reduce-motion * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+    .icp-chrome {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}

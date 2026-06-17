@@ -192,7 +192,13 @@ pub fn chat_relay_routes(
     vault: Arc<Mutex<crate::key_vault::KeyVault>>,
 ) -> Router {
     let state = ChatState { storage_path, vault };
+    let relay = Router::new()
+        .route("/publish", post(publish_handler))
+        .route("/pull", get(pull_handler))
+        .with_state(state.clone());
     Router::new()
+        .nest("/chat", relay)
+        // Legacy root paths (pre-I2 clients)
         .route("/publish", post(publish_handler))
         .route("/pull", get(pull_handler))
         .with_state(state)

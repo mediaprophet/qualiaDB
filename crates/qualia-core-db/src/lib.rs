@@ -132,6 +132,7 @@ pub mod portal_pga;
 pub mod portal_phenomenal_contract;
 pub mod portal_spectral;
 pub mod portal_acoustic;
+pub mod portal_control;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal_gpu;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]

@@ -4,7 +4,7 @@
 **Created:** 2026-06-17  
 **Last updated:** 2026-06-17 (PR-B5f: CQT bake/link, portal sidecar pin, KemarLite HRTF, test vectors — audio core done; PR-C10 still open)
 **Branch target:** `0.0.17-dev` (qualiaDB)  
-**Companion docs:** [`AUDIO_PROJECT_STATUS.md`](AUDIO_PROJECT_STATUS.md), `10D_INTEGRATION_PLAN.md`, `10D_INTEGRATION_SUMMARY.md`
+**Companion docs:** [`AUDIO_PROJECT_STATUS.md`](AUDIO_PROJECT_STATUS.md), [`phone-console.md`](phone-console.md), `10D_INTEGRATION_PLAN.md`, `10D_INTEGRATION_SUMMARY.md`
 
 ---
 
@@ -413,6 +413,7 @@ Present: `parse_n3logic_wasm`, `validate_shacl_constraint_wasm`, `forward_chain_
 |-------|-------|----------------------|
 | **B3 / B4** | LLM ↔ graph co-optimization — async U1 inject, topology draft, epistemic τ, deontic mask, KV sparsity | B3 scaffold ✅; **B4.1** next |
 | **B5** | U3 `AcousticPlane` — Sonic Tokens, parametric DSP, AudioWorklet | **Complete on Pages** (PR-B5a–f ✅) — see [`AUDIO_PROJECT_STATUS.md`](AUDIO_PROJECT_STATUS.md); PR-C10 desktop host still open |
+| **I** | **Interface Control Plane (ICP)** — phone companion + touch + mouse/keyboard HID | **Planned** — see [`phone-console.md`](phone-console.md); PR-I1–I8; unified `PortalControlCommand` |
 | **C** | Phenomenal viewport (Pages) | PR-C0–C11b ✅; **PR-C10** desktop parity pending |
 
 Tracks B4 and B5 share the U1 tensor SOA and `q` field; neither is gated on external distribution work.
@@ -1162,6 +1163,33 @@ PR-B5f qualiaDB:  CQT bake + sidecar link + portal pin + KemarLite HRTF + test v
 
 ---
 
+### Track I — Interface Control Plane / phone console (qualiaDB)
+
+**Status:** `IN PROGRESS` (2026-06-17). **ICP** normalizes all HID classes (mouse, keyboard, primary touch, phone gyro/mic) into `PortalControlCommand` → single viewport drain. Phone companion PWA is the flagship **remote** client; local `spatial-demo.js` pointer/keyboard path converges on the same opcodes (PR-I1f). Transport: daemon relay first (✅ PR-I2–I4), then LAN WebRTC. **Not** a separate Three.js/Leptos/Ollama stack.
+
+Full spec: [`phone-console.md`](phone-console.md).
+
+```
+PR-I1 qualiaDB:  portal_control.rs — PortalControlCommand codec + drain/apply  ✅
+PR-I1f docs:     qualia-icp-local.js — mouse/keyboard/primary touch → ICP      ✅
+PR-I1g docs:     icp-profile + responsive fallbacks + ContextFrame.icp_hints  ✅
+PR-I2 qualiaDB:  relay message type on chat publish/pull                       ✅
+PR-I3 docs:      phone-console.html + qualia-icp-phone.js — QR pair + relay     ✅
+PR-I4 qualiaDB:  ContextFrame + GraphLensFrame push — menu/graph tap → fly-to   ✅
+PR-I4b docs:     Control Surface + Graph Lens shells + interface bar          ✅
+PR-I5 qualiaDB:  OPFS pairing cache + phone identifier standpoint             ⬜
+PR-I6 CI:        phone-console-verify.mjs (+ optional daemon round-trip)       ✅
+PR-I7 wellfare:  Samsung Health CSV → OPFS vault → Anatomy context push        ⬜
+PR-I3b docs:     Remote Deck — swipe pad + button rail + tilt → desktop         ✅ (swipe/buttons; tilt ⬜)
+PR-I8  docs:     Companion Voice — phone-local TTS (ONNX tiny; not U3 PCM)    ⬜
+```
+
+**Field note (2026-06-17):** Qualia WASM on phone can outperform AC-powered desktop — tier-probe on install, not T0-assumed. Linked mode = **Remote Deck** + optional Companion Voice on phone speaker.
+
+**Depends on:** C11 navigation exports (✅), B5 U3 Sonic Token path (✅). **Parallel with:** PR-C10 desktop host.
+
+---
+
 ### Track C — Phenomenal viewport (qualiaDB portal — Pages path ✅; desktop parity pending)
 
 **qualiaDB portal PR stack (shipped on Pages / remaining):**
@@ -1236,6 +1264,8 @@ PR-C11b both:     phenomenal-checklist CI                               ✅
 | 2026-06-17 | B5 / P-F | U3 AcousticPlane: `sonic_token`, `audio/*`, `portal_acoustic`, SAB 1024 B, AudioWorklet stereo, σ parity CI; P-B1c/P-F1/P-F2/7.4/11.1 checked | Agent |
 | 2026-06-17 | B5f | PR-B5f: `cqt_bake`, `audio_sidecar_link`, portal sidecar pin, KemarLite HRTF, `bake_cqt_sidecar_demo`, test vectors; audio **complete on Pages** — PR-C10 desktop parity still blocking full PHENOMENAL | Agent |
 | 2026-06-17 | docs | `qualia-wasm-portal.md`, `q42-acoustic-plane-draft.md`, ADR 0007, manuals index; tracking synced | Agent |
+| 2026-06-17 | I | `phone-console.md` rewritten — QualiaPortal interactivity loop, daemon relay transport, OPFS; Track I PR-I1–I6 | Agent |
+| 2026-06-17 | ICP | Interface Control Plane — phone + touch + mouse/keyboard; `PortalControlCommand`; local + remote ingress (PR-I1f) | Agent |
 | | | | |
 
 *Update this table and checkboxes when each item completes.*

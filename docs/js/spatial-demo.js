@@ -11,6 +11,8 @@ import {
     mountAcousticPlane, setAcousticEnabled,
 } from './qualia-shell.js';
 import { ensureCrossOriginIsolation, isCrossOriginIsolated } from './qualia-coi.js';
+import { mountLocalIcp } from './qualia-icp-local.js';
+import { mountIcpHost, ensureLinkPhoneUi } from './qualia-icp-host.js';
 
 const TENSOR_HEADER_BYTES = 32;
 const TENSOR_STRIDE = 40;
@@ -148,6 +150,22 @@ async function initQualiaLayer() {
         });
         bindStandpointControls(portal);
         bindPortalNavigation(portal, canvas);
+        mountLocalIcp({
+            portal,
+            canvas,
+            root: document.body,
+            deckPad: document.getElementById('icp-deck-pad'),
+        });
+        const icpMount = document.querySelector('.icp-chrome') || document.getElementById('icp-link-mount');
+        const linkPanel = ensureLinkPhoneUi(icpMount);
+        mountIcpHost({
+            portal,
+            linkPanel,
+            qrCanvas: linkPanel?.querySelector('[data-icp-qr]'),
+            statusEl: linkPanel?.querySelector('[data-icp-status]'),
+            getTensorBuffer: () => getLastDaemonTensorBuffer(),
+            focusLabel: 'Spatial mathematics',
+        });
         onDaemonLinkState(() => updateDaemonBadge('wasm-text', 'wasm-dot', portal));
         const onTensorLoaded = ({ nodes }) => {
             if (nodes > 0) {

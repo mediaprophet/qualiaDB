@@ -19,6 +19,13 @@ use crate::audio::cqt_bake::bake_cqt_sidecar_from_preview;
 use crate::audio::stft_bake::bake_tensor_stft_sidecar;
 use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
 use crate::portal_acoustic::ACOUSTIC_UNIFORM_FLOAT_COUNT;
+use crate::portal_control::{
+    control_pending, pop_control_command, push_control_raw, PortalControlCommand,
+    MENU_ACTION_HOME, MENU_ACTION_SONIFY_TOGGLE, OP_BUTTON_ACTION, OP_COLLAPSE_Q,
+    OP_MENU_ACTION, OP_NAVIGATE_INDEX, OP_SET_CAMERA_DELTA, OP_SET_STANDPOINT_SCALAR,
+    OP_SONIC_TOKEN_FORWARD, OP_SWIPE_GESTURE, OP_TILT_FRAME, STANDPOINT_SCALAR_EPISTEMIC_Q,
+    STANDPOINT_SCALAR_T_SLICE, STANDPOINT_SCALAR_T_WINDOW,
+};
 
 use crate::gpu_context::{ambient_draw_instances, global_vram_ledger, OperationalMode};
 use crate::sonic_token::SonicToken;
@@ -138,6 +145,21 @@ impl QualiaPortal {
 
     pub fn tier(&self) -> u8 {
         self.tier
+    }
+
+    /// Push a packed Interface Control Plane command (`PortalControlCommand` raw `u64`).
+    pub fn push_control_command(&self, raw: u64) -> bool {
+        push_control_raw(raw)
+    }
+
+    /// Pending ICP commands in the SPSC ring.
+    pub fn control_pending(&self) -> u32 {
+        control_pending()
+    }
+
+    /// Drain up to `max` control commands and apply to this portal. Returns count applied.
+    pub fn drain_control_commands(&mut self, max: u32) -> u32 {
+        self.drain_and_apply_control(max)
     }
 
     pub fn operational_mode(&self) -> u8 {
@@ -281,6 +303,7 @@ impl QualiaPortal {
     }
 
     pub fn tick(&mut self, canvas: HtmlCanvasElement, dt_ms: f32) -> Result<(), JsValue> {
+        self.drain_and_apply_control(16);
         self.time += dt_ms as f64 * 0.001;
         self.telemetry.refresh_from_ledger();
         self.tick_acoustic_plane(dt_ms);
@@ -576,6 +599,102 @@ impl QualiaPortal {
         parse_sidecar_header(bytes)
             .map(|h| h.frame_count)
             .unwrap_or(1)
+    }
+
+    fn drain_and_apply_control(&mut self, max: u32) -> u32 {
+        let mut applied = 0u32;
+        for _ in 0..max {
+            let Some(cmd) = pop_control_command() else {
+                break;
+            };
+            if self.apply_control_command(cmd).is_ok() {
+                applied += 1;
+            }
+        }
+        applied
+    }
+
+    fn apply_control_command(&mut self, cmd: PortalControlCommand) -> Result<(), JsValue> {
+        if !cmd.has_icp_magic() {
+            return Err(JsValue::from_str("invalid_icp_magic"));
+        }
+        match cmd.opcode() {
+            OP_SET_CAMERA_DELTA | OP_TILT_FRAME | OP_SWIPE_GESTURE => {
+                let (dy, dp, dz) = cmd.decode_camera_delta();
+                self.camera.yaw += dy;
+                self.camera.pitch += dp;
+                self.camera.zoom = (self.camera.zoom + dz).clamp(0.35, 48.0);
+                self.camera = self.camera.clamped();
+                #[cfg(target_arch = "wasm32")]
+                if let Some(ref mut gpu) = self.gpu {
+                    gpu.set_camera(self.camera.yaw, self.camera.pitch, self.camera.zoom);
+                }
+            }
+            OP_NAVIGATE_INDEX => {
+                let idx = cmd.tensor_or_menu_index() as u32;
+                self.navigate_to_node(idx)?;
+            }
+            OP_COLLAPSE_Q => {
+                let idx = cmd.tensor_or_menu_index() as u32;
+                self.collapse_node_q(idx)?;
+            }
+            OP_SET_STANDPOINT_SCALAR => {
+                let delta = cmd.param_a_i16() as f32 / 1000.0;
+                let mut t_slice = self.standpoint.t_slice;
+                let mut t_window = self.standpoint.t_window;
+                let mut epistemic_q = self.standpoint.epistemic_q;
+                match cmd.channel() {
+                    STANDPOINT_SCALAR_T_SLICE => t_slice = (t_slice + delta).clamp(0.0, 1.0),
+                    STANDPOINT_SCALAR_T_WINDOW => {
+                        t_window = (t_window + delta).clamp(0.01, 1.0)
+                    }
+                    STANDPOINT_SCALAR_EPISTEMIC_Q => {
+                        epistemic_q = (epistemic_q + delta).clamp(0.0, 1.0)
+                    }
+                    _ => {}
+                }
+                self.set_standpoint(
+                    self.standpoint.standpoint_class,
+                    epistemic_q,
+                    t_slice,
+                    t_window,
+                    "",
+                )?;
+            }
+            OP_MENU_ACTION => match cmd.tensor_or_menu_index() {
+                MENU_ACTION_HOME => {
+                    self.camera = CameraState::default();
+                    #[cfg(target_arch = "wasm32")]
+                    if let Some(ref mut gpu) = self.gpu {
+                        gpu.set_camera(self.camera.yaw, self.camera.pitch, self.camera.zoom);
+                    }
+                    let _ = self.set_standpoint(
+                        STANDPOINT_SPECTATOR,
+                        1.0,
+                        self.standpoint.t_slice,
+                        self.standpoint.t_window,
+                        "",
+                    );
+                }
+                MENU_ACTION_SONIFY_TOGGLE => {
+                    self.acoustic_enabled = !self.acoustic_enabled;
+                }
+                _ => {}
+            },
+            OP_SONIC_TOKEN_FORWARD => {
+                let raw = cmd.embedded_sonic_raw();
+                if raw != 0 {
+                    push_sonic_token(SonicToken { raw });
+                }
+            }
+            OP_BUTTON_ACTION => {
+                let _ = self.apply_control_command(PortalControlCommand::menu_action(
+                    cmd.tensor_or_menu_index(),
+                ));
+            }
+            _ => return Err(JsValue::from_str("unknown_icp_opcode")),
+        }
+        Ok(())
     }
 
     fn build_acoustic_uniform(&mut self) -> AcousticUniform {
