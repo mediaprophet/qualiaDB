@@ -29,6 +29,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -159,11 +164,6 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
 
       - name: Build docs Tailwind CSS (replaces Play CDN)
         run: |
