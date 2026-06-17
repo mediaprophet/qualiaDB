@@ -1202,6 +1202,7 @@ const WASM_CAPABILITY_REGISTRY: &[&str] = &[
     "SatSolver",
     "ForwardChaining",
     "OdeDecay",
+    "SciencePlayground",
 ];
 
 #[cfg(target_arch = "wasm32")]

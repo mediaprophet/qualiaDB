@@ -77,6 +77,8 @@ pub mod qubo_compiler;
 pub mod solid_ldp;
 pub mod vault_manifest;
 pub mod wasm_bridge;
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_playground;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod zns_storage;
 pub mod storage_driver;

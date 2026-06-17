@@ -509,11 +509,13 @@ SELECT ?molecule ?energy ?homo ?lumo WHERE {
     let wasm = null;
     let charts = {};
 
-    // Load WASM from playground directory
+    // Load WASM from playground directory (explicit .wasm fetch for GitHub Pages)
     async function loadWasm() {
         try {
             const module = await import('./playground/qualia_core_db.js');
-            await module.default();
+            const wasmResp = await fetch('./playground/qualia_core_db_bg.wasm', { cache: 'no-store' });
+            if (!wasmResp.ok) throw new Error(`WASM fetch failed: ${wasmResp.status}`);
+            await module.default(wasmResp);
             wasm = module;
             
             // Update UI
@@ -573,6 +575,7 @@ SELECT ?molecule ?energy ?homo ?lumo WHERE {
             updateMetrics(iterations, (endTime - startTime).toFixed(2), 0);
         } catch (e) {
             console.error('Thermo error:', e);
+            alert('Thermodynamics error: ' + e.message);
         }
     };
 
@@ -645,6 +648,7 @@ SELECT ?molecule ?energy ?homo ?lumo WHERE {
             updateMetrics(steps * 10, (endTime - startTime).toFixed(2), 0);
         } catch (e) {
             console.error('ODE error:', e);
+            alert('ODE solver error: ' + e.message);
         }
     };
 

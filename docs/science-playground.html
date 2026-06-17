@@ -505,11 +505,13 @@ impl<const N: usize> RungeKutta4Static<N> {
     let wasm = null;
     let charts = {};
 
-    // Load WASM from playground directory
+    // Load WASM from playground directory (explicit .wasm fetch for GitHub Pages)
     async function loadWasm() {
         try {
             const module = await import('./playground/qualia_core_db.js');
-            await module.default();
+            const wasmResp = await fetch('./playground/qualia_core_db_bg.wasm', { cache: 'no-store' });
+            if (!wasmResp.ok) throw new Error(`WASM fetch failed: ${wasmResp.status}`);
+            await module.default(wasmResp);
             wasm = module;
             
             // Update UI
@@ -656,6 +658,7 @@ impl<const N: usize> RungeKutta4Static<N> {
             updateMetrics(steps * 10, (endTime - startTime).toFixed(2), 0);
         } catch (e) {
             console.error('ODE error:', e);
+            alert('ODE solver error: ' + e.message);
         }
     };
 
@@ -735,6 +738,7 @@ impl<const N: usize> RungeKutta4Static<N> {
             updateMetrics(iterations, (endTime - startTime).toFixed(2), 0);
         } catch (e) {
             console.error('Thermo error:', e);
+            alert('Thermodynamics error: ' + e.message);
         }
     };
 
