@@ -3,6 +3,7 @@
  */
 
 import { defaultTelemetry } from './ambient-viz.js';
+import { debugEnv, debugLog, debugTime, debugWarn } from './qualia-debug.js';
 
 let portal = null;
 let portalModule = null;
@@ -141,21 +142,33 @@ function portalPkgUrls() {
 
 export async function loadQualiaPortal(canvas) {
     const { js, wasm } = portalPkgUrls();
+    debugEnv({ portalJs: js, portalWasm: wasm, canvas: canvas?.id ?? null });
+    const t = debugTime('loadQualiaPortal');
     try {
+        debugLog('import portal module', js);
         const mod = await import(js);
+        debugLog('init portal wasm', wasm);
         // wasm-pack embeds qualia_core_db_bg.wasm; Pages publishes qualia_bg.wasm — pass explicitly.
         await mod.default(wasm);
         if (typeof mod.init_panic_hook === 'function') {
             mod.init_panic_hook();
+            debugLog('init_panic_hook ok');
         }
         portalModule = mod;
         portal = new mod.QualiaPortal(canvas);
+        const tier = portal.tier?.() ?? -1;
+        debugLog('QualiaPortal ready', { source: 'qualia-portal', tier });
+        t.end({ source: 'qualia-portal', tier });
         return { portal, mod, source: 'qualia-portal' };
     } catch (e) {
+        debugWarn('portal pkg failed, falling back to playground wasm-full', e);
         console.warn('Qualia portal pkg not found, falling back to qualia_core_db.wasm', e);
+        const fallback = new URL('../playground/qualia_core_db.js', import.meta.url).href;
+        debugLog('import fallback', fallback);
         const mod = await import('../playground/qualia_core_db.js');
         await mod.default();
         portalModule = mod;
+        t.end({ source: 'qualia-core-db', portal: false });
         return { portal: null, mod, source: 'qualia-core-db' };
     }
 }

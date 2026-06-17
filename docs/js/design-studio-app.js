@@ -13,6 +13,7 @@ import {
 } from "./asset-recommendations.js";
 import { defaultTelemetry } from "./ambient-viz.js";
 import { ensureCrossOriginIsolation } from "./qualia-coi.js";
+import { debugEnv, debugError, debugLog, debugTime, debugWarn } from "./qualia-debug.js";
 import { loadQualiaPortal, startPortalLoop } from "./qualia-shell.js";
 
 const STORAGE_KEY = "qualia-design-jobs-v1";
@@ -129,18 +130,24 @@ function bindPortalPick(portal, canvas) {
 }
 
 async function initQualiaPortalLayer() {
+  debugEnv({ page: "design-studio" });
   // COI is optional (SAB acoustic); do not block portal WASM boot on service-worker reload.
-  ensureCrossOriginIsolation({ quiet: true }).catch(() => {});
+  ensureCrossOriginIsolation({ quiet: true })
+    .then((ok) => debugLog("COI ensure", { crossOriginIsolated: ok }))
+    .catch((e) => debugWarn("COI ensure failed", e));
   const canvas = $("design-canvas");
   const wrap = $("design-canvas-wrap");
   if (!canvas) throw new Error("canvas missing");
 
+  const t = debugTime("initQualiaPortalLayer");
   const { portal, mod, source } = await loadQualiaPortal(canvas);
   wasm = mod;
   wasmSource = source;
   qualiaPortal = portal;
+  debugLog("portal load", { source, hasPortal: !!portal });
 
   if (!portal) {
+    debugError("QualiaPortal unavailable after load", { source, wasmSource });
     throw new Error(
       "QualiaPortal unavailable — run scripts/package-qualia-wasm.ps1 or deploy via GitHub Pages CI",
     );
@@ -157,6 +164,7 @@ async function initQualiaPortalLayer() {
   bindPortalPick(portal, canvas);
   portalReady = true;
   updateWasmBadge();
+  t.end({ tier: portal.tier?.(), wasmSource });
 }
 
 // ─── NL → qualia.design ─────────────────────────────────────────────────────
@@ -466,12 +474,15 @@ function renderJobs() {
 }
 
 async function boot() {
+  debugLog("boot start");
   showLoading(true);
   try {
     await initQualiaPortalLayer();
     showLoading(false);
     $("main-content").style.display = "";
+    debugLog("boot complete");
   } catch (e) {
+    debugError("boot failed", e);
     showError(e.message);
     return;
   }

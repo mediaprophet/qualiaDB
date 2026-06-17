@@ -15,6 +15,13 @@
         .error-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.98); display: flex; align-items: center; justify-content: center; z-index: 100; }
         .ds-hidden { display: none !important; }
     </style>
+    <script>
+    (function () {
+        var q = new URLSearchParams(location.search);
+        if (q.get('debug') === '0') return;
+        window.__QUALIA_DEBUG__ = true;
+    })();
+    </script>
     <script src="js/menu-loader.js"></script>
     <script>
     (function () {

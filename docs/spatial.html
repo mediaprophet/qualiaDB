@@ -35,6 +35,13 @@
     </style>
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="css/qualia-icp-layout.css">
+    <script>
+    (function () {
+        var q = new URLSearchParams(location.search);
+        if (q.get('debug') === '0') return;
+        window.__QUALIA_DEBUG__ = true;
+    })();
+    </script>
     <script src="js/menu-loader.js"></script>
     <!-- COOP/COEP for SharedArrayBuffer + U3 zero-copy acoustic plane -->
     <script>

@@ -1,20 +1,28 @@
+import { debugEnv, debugLog, debugWarn } from './qualia-debug.js';
+
 /**
  * Cross-origin isolation for SharedArrayBuffer + AudioWorklet (Phase 7.4).
  * Registers coi-serviceworker.js — page reloads once with COOP/COEP headers.
  */
 export async function ensureCrossOriginIsolation(options = {}) {
     if (typeof window === 'undefined') return false;
-    if (window.crossOriginIsolated) return true;
+    if (window.crossOriginIsolated) {
+        debugLog('COI already active');
+        return true;
+    }
 
     const { coiScript = new URL('./coi-serviceworker.js', import.meta.url).href, quiet = false } = options;
 
     if (!('serviceWorker' in navigator)) {
+        debugWarn('COI: ServiceWorker unavailable');
         if (!quiet) console.warn('COI: ServiceWorker unavailable');
         return false;
     }
 
     // Never force shouldRegister:true — that overrides the one-shot reload guard in coi-serviceworker.js.
     window.coi = { quiet, shouldDeregister: () => false, ...window.coi };
+    debugLog('COI bootstrap', { coiScript, quiet, coi: window.coi });
+    debugEnv();
 
     await new Promise((resolve, reject) => {
         const s = document.createElement('script');
@@ -25,7 +33,9 @@ export async function ensureCrossOriginIsolation(options = {}) {
         document.head.appendChild(s);
     });
 
-    return window.crossOriginIsolated === true;
+    const isolated = window.crossOriginIsolated === true;
+    debugLog('COI ensure finished', { crossOriginIsolated: isolated });
+    return isolated;
 }
 
 export function isCrossOriginIsolated() {

@@ -11,6 +11,7 @@ import {
     mountAcousticPlane, setAcousticEnabled,
 } from './qualia-shell.js';
 import { ensureCrossOriginIsolation, isCrossOriginIsolated } from './qualia-coi.js';
+import { debugEnv, debugError, debugLog, debugTime, debugWarn } from './qualia-debug.js';
 import { mountLocalIcp } from './qualia-icp-local.js';
 import { mountIcpHost, ensureLinkPhoneUi } from './qualia-icp-host.js';
 
@@ -130,9 +131,14 @@ function pulseTelemetry(metric, amount = 0.85) {
 
 async function initQualiaLayer() {
     const canvas = document.getElementById('ambient-canvas');
-    if (!canvas) return;
+    if (!canvas) {
+        debugWarn('initQualiaLayer: #ambient-canvas missing');
+        return;
+    }
 
+    const t = debugTime('initQualiaLayer');
     const { portal, mod, source } = await loadQualiaPortal(canvas);
+    debugLog('initQualiaLayer', { source, hasPortal: !!portal });
     wasm = mod;
     wasmSource = source;
     qualiaPortal = portal;
@@ -179,15 +185,18 @@ async function initQualiaLayer() {
             onRefreshed: onTensorLoaded,
         }).then(() => updateDaemonBadge('wasm-text', 'wasm-dot', portal));
         bindAcousticControls(portal);
+        t.end({ mode: 'portal', tier: portal.tier?.() });
         return;
     }
 
+    debugWarn('initQualiaLayer: canvas2d AmbientViz fallback (no QualiaPortal)');
     ambientViz = new AmbientViz(canvas, {
         telemetry: defaultTelemetry(),
         onResize: () => {},
     });
     ambientViz.start();
     bindTelemetrySliders(document.getElementById('telemetry-sliders'), ambientViz);
+    t.end({ mode: 'ambient-viz-fallback' });
 }
 
 function bindPortalNavigation(portal, canvas) {
@@ -596,14 +605,18 @@ if (typeof window !== 'undefined') {
 }
 
 export async function bootSpatialPage() {
+    debugLog('bootSpatialPage start');
+    debugEnv({ page: 'spatial' });
     initSpatialDemo();
 
     const loader = document.getElementById('loading-overlay');
     const main = document.getElementById('main-content');
     if (loader) loader.style.display = 'none';
     if (main) main.style.display = 'block';
+    debugLog('loader hidden, main content visible');
     await new Promise((r) => requestAnimationFrame(r));
 
+    const bootTimer = debugTime('bootSpatialPage');
     try {
         await initQualiaLayer();
         if (!wasm) {
@@ -614,6 +627,7 @@ export async function bootSpatialPage() {
         }
         await generateGeometry();
 
+        debugLog('bootSpatialPage wasm ready', { wasmSource, hasPortal: !!qualiaPortal });
         if (qualiaPortal) {
             updateDaemonBadge('wasm-text', 'wasm-dot', qualiaPortal);
         } else {
@@ -624,10 +638,13 @@ export async function bootSpatialPage() {
                 ? `Qualia WASM v${ver}`
                 : 'Qualia WASM';
         }
+        bootTimer.end({ wasmSource, hasPortal: !!qualiaPortal });
     } catch (error) {
+        debugError('bootSpatialPage failed', error);
         console.warn('Qualia WASM load failed:', error);
         document.getElementById('wasm-dot').classList.remove('bg-slate-500');
         document.getElementById('wasm-dot').classList.add('bg-amber-500');
         document.getElementById('wasm-text').textContent = 'Viewer OK · Qualia offline';
+        bootTimer.end({ error: String(error?.message || error) });
     }
 }
