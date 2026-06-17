@@ -1215,6 +1215,7 @@ const WASM_CAPABILITY_REGISTRY: &[&str] = &[
     "ForwardChaining",
     "OdeDecay",
     "SciencePlayground",
+    "LlmInference",
 ];
 
 #[cfg(target_arch = "wasm32")]
@@ -1234,29 +1235,6 @@ pub fn get_engine_version() -> String {
 }
 
 // ─── LLM Inference Engine ────────────────────────────────────────────────────
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub async fn infer_wasm(prompt: String) -> Result<String, JsValue> {
-    // Check if the engine is initialized (done via initialize_webgpu_engine in gguf_bridge.rs)
-    let engine_initialized = crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|guard| {
-        guard.borrow().is_some()
-    });
-    if !engine_initialized {
-        return Err(JsValue::from_str("WebGPU Engine not initialized. Call initialize_webgpu_engine first."));
-    }
-
-    // Call the inference logic inside llm_agent
-    // For this WASM build, we will route it through a stripped down completion flow.
-    // However, llm_agent doesn't easily expose a simple async text-to-text out of the box 
-    // without the AgentContext. We'll implement a direct tensor call here or use 
-    // llm_agent if available.
-    
-    // As a mock for the JS integration test, we will echo the prompt since 
-    // llm_agent's infer_local_model expects full AgentRuntime integration.
-    // TODO: Wire up QTensorEngine forward pass for WASM
-    Ok(format!("(QualiaDB WASM LLM Engine Placeholder) Received prompt: {}", prompt))
-}
 
 /// Structured engine metadata for browser UIs and diagnostics.
 #[cfg(target_arch = "wasm32")]
@@ -1279,14 +1257,6 @@ pub fn list_capabilities_wasm() -> Result<JsValue, JsValue> {
         .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub async fn initialize_webgpu_engine(gguf_data: js_sys::Uint8Array) -> Result<(), js_sys::Error> {
-    let vec = gguf_data.to_vec();
-    let arc: std::sync::Arc<[u8]> = vec.into();
-    crate::gguf_bridge::initialize_webgpu_engine(arc).await.map_err(|e| js_sys::Error::new(&e))
-}
 
 // --- Data Format: CSV Parser -----------------------------------------------------
 

@@ -3199,7 +3199,7 @@ if (caps.includes('BlackScholes')) {
         id: 'wasm.infer',
         category: 'WASM API',
         name: 'infer_wasm()',
-        summary: 'Async LLM inference entry-point for the browser WASM build. Requires initialize_webgpu_engine() to be called first with a GGUF model ArrayBuffer. Currently returns a placeholder echo until the WebGPU tensor forward pass is fully wired (the Phase 8 bifurcated compute loop runs only on native targets).',
+        summary: 'Browser LLM inference via Qualia native WebGPU path (gguf_bridge → llm_agent decode). Requires initialize_webgpu_engine() with a GGUF Uint8Array first. Use inferWasmStreaming() for token deltas.',
         params: [
             { name: 'prompt', type: 'string', desc: 'User prompt string' },
         ],

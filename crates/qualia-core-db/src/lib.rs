@@ -140,6 +140,8 @@ pub mod portal_gpu;
 pub mod portal;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal_wasm;
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+pub mod wasm_llm;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod spatial_wasm;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]

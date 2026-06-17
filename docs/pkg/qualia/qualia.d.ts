@@ -167,9 +167,41 @@ export class WebEngine {
     render_to_canvas(): void;
 }
 
+export function align_sequences_wasm(val: any): any;
+
+/**
+ * Black-Scholes European option pricing with full Greeks.
+ */
+export function black_scholes_wasm(val: any): any;
+
+export function check_drug_interactions_wasm(val: any): any;
+
+/**
+ * Compiles a query string (SPARQL WHERE-clause or N-Triples pattern) to a JSON
+ * description of the Webizen VM bytecode program.  Useful for playground inspection
+ * and benchmarking the compilation pipeline without supplying a database.
+ */
+export function compile_query_to_json(query: string): string;
+
+export function compute_framingham_risk_wasm(val: any): any;
+
+export function compute_molecular_descriptors_wasm(val: any): any;
+
+/**
+ * Stateless PID controller step.
+ * Returns { output, new_error, new_integral } for chaining into the next step.
+ */
+export function compute_pid_step_wasm(val: any): any;
+
+export function compute_reaction_metrics_wasm(val: any): any;
+
+export function compute_thermochemistry_wasm(val: any): any;
+
 export function create_canvas(width: number, height: number): HTMLCanvasElement;
 
 export function design_encode_wasm(json: string): any;
+
+export function detect_functional_groups_wasm(val: any): any;
 
 /**
  * Enforces the rights ontology prior to transmission (e.g., checking DID constraints)
@@ -185,13 +217,64 @@ export function enforce_rights_ontology(subject_did: bigint): boolean;
  */
 export function estimate_browser_storage(): Promise<any>;
 
+export function evaluate_lipinski_wasm(val: any): any;
+
+export function execute_ntriples_query(query: string, db_bytes: Uint8Array, max_results: number): string;
+
 export function export_tensor_buffer_wasm(json: string): any;
 
 export function export_tensor_slice_wasm(max_nodes: number): any;
 
+/**
+ * Forward-chaining defeasible inference engine.
+ * Input: `{ facts: ["bird", "penguin"], rules: [{ head: "flies", body: ["bird"], defeaters: ["penguin"] }, ...] }`
+ * Output: `{ inferred: ["swims"] }`
+ */
+export function forward_chain_wasm(val: any): any;
+
 export function geosparql_operation_wasm(json: string): any;
 
+/**
+ * Crate semver baked in at compile time.
+ */
+export function getEngineVersion(): string;
+
+/**
+ * Structured engine metadata for browser UIs and diagnostics.
+ */
+export function get_engine_info(): any;
+
+/**
+ * Returns the qualia-core-db crate version baked in at compile time (matches daemon `/health`).
+ */
+export function get_engine_version(): string;
+
+/**
+ * Stream token deltas to `on_token` (UTF-8 string chunks) while decoding.
+ */
+export function inferWasmStreaming(prompt: string, on_token: Function): Promise<string>;
+
+/**
+ * Streaming inference with optional graph context for provenance hashing.
+ */
+export function inferWasmStreamingWithContext(prompt: string, graph_context: string, on_token: Function): Promise<string>;
+
+/**
+ * Same as `infer_wasm` but accepts optional graph-context bytes for provenance hashing.
+ */
+export function inferWasmWithContext(prompt: string, graph_context: string): Promise<string>;
+
+/**
+ * Run autoregressive inference (non-streaming). Prompt must include any chat template tokens.
+ */
+export function infer_wasm(prompt: string): Promise<string>;
+
 export function init_panic_hook(): void;
+
+/**
+ * Load a GGUF model into the resident browser WebGPU engine.
+ */
+export function initialize_webgpu_engine(gguf_data: Uint8Array): Promise<void>;
 
 /**
  * Intercepts heavy computational opcodes and constructs a WASM offload intent.
@@ -201,10 +284,20 @@ export function intercept_computational_opcode(opcode: number, payload_size: num
 export function intercept_pharmacogenomics_intent(smiles: string): WasmOffloadIntent;
 
 /**
+ * Returns true when a GGUF model has been loaded via `initialize_webgpu_engine`.
+ */
+export function isWebgpuEngineReady(): boolean;
+
+/**
  * Check whether a SuperBlock is cached in the OPFS vault.
  * Returns `true` if the `.qblk` file exists, `false` otherwise.
  */
 export function is_opfs_block_cached(block_index: number): Promise<boolean>;
+
+/**
+ * Capability names available in this WASM build.
+ */
+export function list_capabilities_wasm(): any;
 
 /**
  * Pack raw NQuin field bytes into a fully-structured SuperBlock with correct ECC parity.
@@ -221,7 +314,17 @@ export function pack_quins_into_superblock(seq_id: bigint, owner_did: bigint, ra
 
 export function parse_cbor_ld_wasm(payload: Uint8Array): any;
 
+export function parse_csv_wasm(val: any): any;
+
+export function parse_json_mapping_wasm(val: any): any;
+
 export function parse_json_wasm(payload: string): any;
+
+export function parse_n3logic_wasm(payload: string): any;
+
+export function parse_turtle_wasm(payload: string): any;
+
+export function predict_receptor_binding_wasm(): number;
 
 /**
  * Performs topological pruning and validates meshes prior to physics offloading
@@ -237,7 +340,22 @@ export function prune_and_validate_mesh(mesh_id: bigint): boolean;
  */
 export function read_opfs_block(block_index: number): Promise<any>;
 
+/**
+ * Release resident GGUF weights and tear down the WebGPU engine instance.
+ */
+export function releaseWebgpuEngine(): Promise<void>;
+
+/**
+ * Resolves two conflicting NQuin entries using Last-Writer-Wins semantics.
+ * The Lamport clock is encoded in the metadata field; on ties, higher object wins.
+ */
+export function resolve_lww_wasm(local_val: any, remote_val: any): any;
+
+export function run_semantic_simulation(val: any): any;
+
 export function sample_browser_telemetry_wasm(): any;
+
+export function serialize_csv_wasm(val: any): any;
 
 /**
  * Continuous Mathematical Serialization into Float64Array
@@ -249,7 +367,35 @@ export function serialize_float64_array(data: Float64Array): Float64Array;
  */
 export function serialize_float_array(data: Float32Array): Uint8Array;
 
+export function serialize_json_wasm(val: any): any;
+
+export function serialize_rdf_wasm(val: any): any;
+
+/**
+ * Simulates a GBM price path and returns the full series together with
+ * min_price, max_price, and final_price.
+ */
+export function simulate_gbm_path_wasm(val: any): any;
+
+/**
+ * Solves dy/dt = -k·y via classical RK4, returning t_values, y_values, and final_y.
+ */
+export function solve_ode_exponential_decay_wasm(val: any): any;
+
+/**
+ * Bounded DPLL SAT solver.
+ * Input: `{ clauses: [[1, 2, -3], [-1, 3], ...] }` (signed literal convention).
+ * Output: `{ satisfiable: bool, assignment: { "1": true, "2": false, ... } }`
+ */
+export function solve_sat_wasm(val: any): any;
+
 export function spatial_encode_wasm(json: string): any;
+
+export function validate_fasta_wasm(val: any): any;
+
+export function validate_fhir_observation_wasm(val: any): any;
+
+export function validate_shacl_constraint_wasm(val: any): any;
 
 /**
  * Validate ECC parity for every NQuin in a raw SuperBlock.
@@ -289,13 +435,82 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly align_sequences_wasm: (a: any) => [number, number, number];
+    readonly black_scholes_wasm: (a: any) => [number, number, number];
+    readonly check_drug_interactions_wasm: (a: any) => [number, number, number];
+    readonly compile_query_to_json: (a: number, b: number) => [number, number];
+    readonly compute_framingham_risk_wasm: (a: any) => [number, number, number];
+    readonly compute_molecular_descriptors_wasm: (a: any) => [number, number, number];
+    readonly compute_pid_step_wasm: (a: any) => [number, number, number];
+    readonly compute_reaction_metrics_wasm: (a: any) => [number, number, number];
+    readonly compute_thermochemistry_wasm: (a: any) => [number, number, number];
+    readonly detect_functional_groups_wasm: (a: any) => [number, number, number];
+    readonly evaluate_lipinski_wasm: (a: any) => [number, number, number];
+    readonly execute_ntriples_query: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly forward_chain_wasm: (a: any) => [number, number, number];
+    readonly get_engine_info: () => [number, number, number];
+    readonly get_engine_version: () => [number, number];
+    readonly list_capabilities_wasm: () => [number, number, number];
+    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
+    readonly parse_csv_wasm: (a: any) => [number, number, number];
+    readonly parse_json_mapping_wasm: (a: any) => [number, number, number];
+    readonly parse_json_wasm: (a: number, b: number) => any;
+    readonly parse_n3logic_wasm: (a: number, b: number) => any;
+    readonly parse_turtle_wasm: (a: number, b: number) => any;
+    readonly resolve_lww_wasm: (a: any, b: any) => [number, number, number];
+    readonly run_semantic_simulation: (a: any) => [number, number, number];
+    readonly serialize_csv_wasm: (a: any) => [number, number, number];
+    readonly serialize_json_wasm: (a: any) => [number, number, number];
+    readonly serialize_rdf_wasm: (a: any) => [number, number, number];
+    readonly simulate_gbm_path_wasm: (a: any) => [number, number, number];
+    readonly solve_ode_exponential_decay_wasm: (a: any) => [number, number, number];
+    readonly solve_sat_wasm: (a: any) => [number, number, number];
+    readonly validate_fasta_wasm: (a: any) => [number, number, number];
+    readonly validate_fhir_observation_wasm: (a: any) => [number, number, number];
+    readonly validate_shacl_constraint_wasm: (a: any) => [number, number, number];
+    readonly predict_receptor_binding_wasm: () => number;
+    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
+    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
+    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
+    readonly sample_browser_telemetry_wasm: () => [number, number, number];
+    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
+    readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
+    readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
+    readonly __wbg_get_wasmoffloadintent_priority: (a: number) => number;
+    readonly __wbg_set_wasmoffloadintent_opcode: (a: number, b: number) => void;
+    readonly __wbg_set_wasmoffloadintent_payload_size: (a: number, b: number) => void;
+    readonly __wbg_set_wasmoffloadintent_priority: (a: number, b: number) => void;
+    readonly __wbg_wasmoffloadintent_free: (a: number, b: number) => void;
+    readonly enforce_rights_ontology: (a: bigint) => number;
+    readonly federatednodemanager_discover_capabilities: (a: number) => number;
+    readonly federatednodemanager_new: () => number;
+    readonly federatednodemanager_offload_intent: (a: number, b: number) => [number, number, number, number];
+    readonly getEngineVersion: () => [number, number];
+    readonly inferWasmStreaming: (a: number, b: number, c: any) => any;
+    readonly inferWasmStreamingWithContext: (a: number, b: number, c: number, d: number, e: any) => any;
+    readonly inferWasmWithContext: (a: number, b: number, c: number, d: number) => any;
+    readonly infer_wasm: (a: number, b: number) => any;
+    readonly initialize_webgpu_engine: (a: any) => any;
+    readonly intercept_computational_opcode: (a: number, b: number) => number;
+    readonly intercept_pharmacogenomics_intent: (a: number, b: number) => number;
+    readonly isWebgpuEngineReady: () => number;
+    readonly releaseWebgpuEngine: () => any;
+    readonly serialize_float64_array: (a: number, b: number) => any;
+    readonly serialize_float_array: (a: number, b: number) => any;
+    readonly wasmoffloadintent_new: (a: number, b: number, c: number) => number;
+    readonly wasmoffloadintent_with_string_payload: (a: number, b: number, c: number, d: number) => number;
+    readonly webizen_poll_agreements: () => [number, number];
+    readonly webizen_propose_agreement: (a: any, b: number, c: number, d: number, e: number, f: number) => bigint;
+    readonly webizen_sign_agreement: (a: bigint, b: number, c: number) => void;
+    readonly prune_and_validate_mesh: (a: bigint) => number;
+    readonly __wbg_qualiaportal_free: (a: number, b: number) => void;
+    readonly __wbg_webengine_free: (a: number, b: number) => void;
+    readonly create_canvas: (a: number, b: number) => [number, number, number];
     readonly estimate_browser_storage: () => any;
     readonly is_opfs_block_cached: (a: number) => any;
     readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
-    readonly read_opfs_block: (a: number) => any;
-    readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
-    readonly write_opfs_block: (a: number, b: number, c: number) => any;
-    readonly __wbg_qualiaportal_free: (a: number, b: number) => void;
     readonly qualiaportal_acoustic_enabled: (a: number) => number;
     readonly qualiaportal_acoustic_sab_byte_length: (a: number) => number;
     readonly qualiaportal_acoustic_sidecar_pinned: (a: number) => number;
@@ -342,48 +557,21 @@ export interface InitOutput {
     readonly qualiaportal_tick: (a: number, b: any, c: number) => [number, number];
     readonly qualiaportal_tier: (a: number) => number;
     readonly qualiaportal_upload_tensor_buffer: (a: number, b: number, c: number) => [number, number];
-    readonly qualiaportal_selected_node_index: (a: number) => number;
-    readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
-    readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
-    readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
-    readonly __wbg_get_wasmoffloadintent_priority: (a: number) => number;
-    readonly __wbg_set_wasmoffloadintent_opcode: (a: number, b: number) => void;
-    readonly __wbg_set_wasmoffloadintent_payload_size: (a: number, b: number) => void;
-    readonly __wbg_set_wasmoffloadintent_priority: (a: number, b: number) => void;
-    readonly __wbg_wasmoffloadintent_free: (a: number, b: number) => void;
-    readonly enforce_rights_ontology: (a: bigint) => number;
-    readonly federatednodemanager_discover_capabilities: (a: number) => number;
-    readonly federatednodemanager_new: () => number;
-    readonly federatednodemanager_offload_intent: (a: number, b: number) => [number, number, number, number];
-    readonly intercept_computational_opcode: (a: number, b: number) => number;
-    readonly intercept_pharmacogenomics_intent: (a: number, b: number) => number;
-    readonly serialize_float64_array: (a: number, b: number) => any;
-    readonly serialize_float_array: (a: number, b: number) => any;
-    readonly wasmoffloadintent_new: (a: number, b: number, c: number) => number;
-    readonly wasmoffloadintent_with_string_payload: (a: number, b: number, c: number, d: number) => number;
-    readonly webizen_poll_agreements: () => [number, number];
-    readonly webizen_propose_agreement: (a: any, b: number, c: number, d: number, e: number, f: number) => bigint;
-    readonly webizen_sign_agreement: (a: bigint, b: number, c: number) => void;
-    readonly prune_and_validate_mesh: (a: bigint) => number;
-    readonly __wbg_webengine_free: (a: number, b: number) => void;
-    readonly create_canvas: (a: number, b: number) => [number, number, number];
+    readonly read_opfs_block: (a: number) => any;
+    readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
     readonly webengine_last_parsed: (a: number) => any;
     readonly webengine_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
     readonly webengine_load_q42: (a: number, b: number, c: number) => [number, number, number];
     readonly webengine_mount_qapp: (a: number, b: number, c: number) => [number, number];
     readonly webengine_new: () => [number, number, number];
     readonly webengine_render_to_canvas: (a: number) => [number, number];
+    readonly write_opfs_block: (a: number, b: number, c: number) => any;
+    readonly qualiaportal_selected_node_index: (a: number) => number;
     readonly init_panic_hook: () => void;
-    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
-    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
-    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
-    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
-    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
-    readonly parse_json_wasm: (a: number, b: number) => any;
-    readonly sample_browser_telemetry_wasm: () => [number, number, number];
-    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h710533e233c29f5b: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__hacdbfa2f9b9c388f: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__hacdbfa2f9b9c388f_2: (a: number, b: number, c: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
