@@ -109,10 +109,16 @@
       "group": "LLM"
     },
     {
+      "label": "Modalities",
+      "href": "modalities-showcase.html",
+      "icon": "fa-atom",
+      "highlight": true,
+      "group": "Tools"
+    },
+    {
       "label": "Logic Showcase",
       "href": "logic-showcase.html",
       "icon": "fa-gavel",
-      "highlight": true,
       "group": "Tools"
     },
     {

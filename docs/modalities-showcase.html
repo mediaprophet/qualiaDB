@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modalities Observatory · Qualia-DB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #050508;
+            color: #e2e8f0;
+            min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(244,63,94,0.12), transparent),
+                radial-gradient(ellipse 60% 40% at 100% 50%, rgba(139,92,246,0.08), transparent),
+                radial-gradient(ellipse 50% 30% at 0% 80%, rgba(34,211,238,0.06), transparent);
+        }
+        .glass { background: rgba(15,15,22,0.75); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(24px); }
+        .hero-glow { box-shadow: 0 0 80px rgba(244,63,94,0.15), inset 0 1px 0 rgba(255,255,255,0.06); }
+        .cat-pill {
+            padding: 0.4rem 0.9rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; background: rgba(0,0,0,0.3);
+            white-space: nowrap; transition: all 0.15s;
+        }
+        .cat-pill:hover { color: #fff; border-color: rgba(255,255,255,0.2); }
+        .cat-pill.cat-active { color: #fda4af; border-color: rgba(244,63,94,0.45); background: rgba(244,63,94,0.12); }
+        .mod-card {
+            text-align: left; padding: 0.75rem 0.85rem; border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.35);
+            transition: all 0.15s; cursor: pointer; width: 100%;
+        }
+        .mod-card.mod-active { border-color: rgba(244,63,94,0.55); background: rgba(244,63,94,0.08); box-shadow: 0 0 24px rgba(244,63,94,0.12); }
+        .pipe-step {
+            display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+            padding: 0.5rem 0.65rem; border-radius: 10px; font-size: 0.65rem; font-weight: 600;
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06);
+        }
+        .pipe-step i { font-size: 1rem; }
+        #boot-overlay { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; background:rgba(5,5,8,0.95); }
+        .stat-pill { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; }
+        #mod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.5rem; max-height: 320px; overflow-y: auto; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+    </style>
+    <script src="js/menu-loader.js"></script>
+</head>
+<body>
+    <div id="boot-overlay"><span class="text-rose-300 text-sm font-mono animate-pulse">Booting Modalities Observatory…</span></div>
+
+    <nav class="sticky top-0 z-50 border-b border-white/10 glass">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-6 min-w-0">
+                <a href="index.html" class="flex items-center gap-2 shrink-0">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500 via-purple-500 to-cyan-500 flex items-center justify-center font-bold text-black">Q</div>
+                    <span class="font-semibold hidden sm:inline">Qualia<span class="text-rose-400">DB</span></span>
+                </a>
+                <div id="dynamic-nav" class="text-sm"></div>
+            </div>
+            <span id="engine-badge" class="text-xs px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 shrink-0">…</span>
+        </div>
+    </nav>
+
+    <main class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-10 pb-20">
+        <!-- Hero -->
+        <header class="text-center mb-10 hero-glow glass rounded-3xl px-6 py-10">
+            <p class="text-rose-400 text-xs font-semibold tracking-[0.2em] uppercase mb-3">Qualia Logic Systems</p>
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4 bg-gradient-to-r from-rose-200 via-purple-200 to-cyan-200 bg-clip-text text-transparent">
+                Modalities Observatory
+            </h1>
+            <p class="text-white/60 max-w-3xl mx-auto text-sm sm:text-base leading-relaxed mb-6">
+                Every liberal-arts logic system in QualiaDB — deontic, epistemic, LTL, paraconsistent, ASP, dialectical, linear,
+                description logic, argumentation, Allen intervals, diffusion, neuro-symbolic sieve, CRDT, CogAI, SHACL, N3, and clinical modalities —
+                runnable live in your browser. Same reference semantics as <code class="text-cyan-400 text-xs">docs/tests/suites/modality-*.js</code>.
+            </p>
+            <div class="flex flex-wrap justify-center gap-3 stat-pill">
+                <span class="px-3 py-1.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30"><span id="stat-count">21</span> logic modalities</span>
+                <span class="px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30"><span id="stat-cats">8</span> categories</span>
+                <span class="px-3 py-1.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">48-byte NQuin ABI</span>
+                <span class="px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">90+ SHACL extensions</span>
+            </div>
+        </header>
+
+        <!-- Orchestrator pipeline -->
+        <section class="glass rounded-2xl p-4 mb-8">
+            <div class="text-xs text-white/50 mb-3 font-semibold uppercase tracking-wide">LLM orchestrator gate chain</div>
+            <div id="pipeline" class="flex flex-wrap items-center justify-center gap-1 sm:gap-2"></div>
+        </section>
+
+        <!-- Category filter -->
+        <div id="cat-pills" class="flex flex-wrap gap-2 mb-4 justify-center"></div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+            <!-- Modality picker -->
+            <div class="xl:col-span-2 glass rounded-2xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-white/80">Select modality</h2>
+                    <button type="button" id="btn-run-all" class="text-[10px] px-2 py-1 rounded-lg bg-purple-600/30 text-purple-200 border border-purple-500/40 hover:bg-purple-600/50">Run all</button>
+                </div>
+                <div id="mod-grid"></div>
+                <div id="orchestra-out" class="mt-3 text-xs hidden"></div>
+            </div>
+
+            <!-- Demo stage -->
+            <div class="xl:col-span-3 glass rounded-2xl p-6 flex flex-col min-h-[420px]">
+                <div class="flex flex-wrap items-start gap-3 mb-4">
+                    <div class="flex-1 min-w-0">
+                        <div id="stage-cat" class="text-[10px] text-slate-500 mb-1"></div>
+                        <h2 id="stage-title" class="text-2xl font-bold text-white">—</h2>
+                        <code id="stage-opcode" class="text-xs text-rose-400/80 font-mono">—</code>
+                    </div>
+                    <button type="button" id="btn-run-stage" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold shrink-0">
+                        <i class="fa-solid fa-play mr-1"></i> Run demo
+                    </button>
+                </div>
+                <p id="stage-blurb" class="text-sm text-white/55 mb-4"></p>
+                <div id="stage-viz" class="mb-4 min-h-[80px]"></div>
+                <div id="stage-output" class="flex-1 p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-sm overflow-auto"></div>
+            </div>
+        </div>
+
+        <!-- Links -->
+        <section class="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <a href="playground/index.html" class="glass rounded-2xl p-5 hover:border-cyan-500/30 transition-colors block">
+                <i class="fa-solid fa-play text-cyan-400 mb-2"></i>
+                <div class="font-semibold">Full Playground</div>
+                <p class="text-white/50 text-xs mt-1">Compiler, N3 &amp; SHACL tab, scientific solvers</p>
+            </a>
+            <a href="logic-showcase.html" class="glass rounded-2xl p-5 hover:border-rose-500/30 transition-colors block">
+                <i class="fa-solid fa-gavel text-rose-400 mb-2"></i>
+                <div class="font-semibold">Logic Showcase</div>
+                <p class="text-white/50 text-xs mt-1">Focused N3 + SHACL deep-dive</p>
+            </a>
+            <a href="tests/" class="glass rounded-2xl p-5 hover:border-emerald-500/30 transition-colors block">
+                <i class="fa-solid fa-vial-circle-check text-emerald-400 mb-2"></i>
+                <div class="font-semibold">Test Harness</div>
+                <p class="text-white/50 text-xs mt-1">21 modality suites + WASM regression</p>
+            </a>
+        </section>
+    </main>
+
+    <script type="module" src="js/modalities-showcase-app.js"></script>
+</body>
+</html>
