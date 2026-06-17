@@ -8,7 +8,9 @@ import {
     setPortalStandpoint, connectPortalToDaemon, refreshTensorSliceFromDaemon,
     onDaemonLinkState, updateDaemonBadge, getLastDaemonTensorBuffer,
     getDaemonLinkState, DaemonLinkState,
+    mountAcousticPlane, setAcousticEnabled,
 } from './qualia-shell.js';
+import { ensureCrossOriginIsolation, isCrossOriginIsolated } from './qualia-coi.js';
 
 const TENSOR_HEADER_BYTES = 32;
 const TENSOR_STRIDE = 40;
@@ -158,6 +160,7 @@ async function initQualiaLayer() {
             onLoaded: onTensorLoaded,
             onRefreshed: onTensorLoaded,
         }).then(() => updateDaemonBadge('wasm-text', 'wasm-dot', portal));
+        bindAcousticControls(portal);
         return;
     }
 
@@ -206,6 +209,32 @@ function bindPortalNavigation(portal, canvas) {
             }
         };
         requestAnimationFrame(waitForPick);
+    });
+}
+
+function bindAcousticControls(portal) {
+    const btn = document.getElementById('acoustic-enable-btn');
+    const status = document.getElementById('acoustic-status');
+    if (!btn || !portal) return;
+    let mounted = false;
+    btn.addEventListener('click', async () => {
+        try {
+            await ensureCrossOriginIsolation({ quiet: true });
+            if (!mounted) {
+                await mountAcousticPlane(portal, { useSab: isCrossOriginIsolated() });
+                mounted = true;
+            }
+            setAcousticEnabled(true, portal);
+            portal.set_acoustic_enabled?.(true);
+            const coi = isCrossOriginIsolated() ? 'SAB zero-copy' : 'MessagePort';
+            if (status) {
+                status.textContent = `U3 live · binaural σ parity · ${coi}`;
+            }
+            pulseTelemetry('spectral_shift', 0.65);
+        } catch (e) {
+            console.warn('acoustic', e);
+            if (status) status.textContent = 'AcousticPlane blocked — allow audio + reload for COI';
+        }
     });
 }
 

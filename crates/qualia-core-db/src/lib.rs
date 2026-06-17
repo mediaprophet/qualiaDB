@@ -52,6 +52,8 @@ pub mod shaders;
 pub mod compute_universe;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod topology_draft;
+pub mod sonic_token;
+pub mod audio;
 pub mod tensor;
 pub mod geometric_algebra;
 pub mod rdf_star;
@@ -129,6 +131,7 @@ pub mod portal_navigation;
 pub mod portal_pga;
 pub mod portal_phenomenal_contract;
 pub mod portal_spectral;
+pub mod portal_acoustic;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal_gpu;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]

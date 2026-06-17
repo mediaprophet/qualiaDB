@@ -25,6 +25,21 @@ const WASM_NAV_EXPORTS = [
     'observe_node_at',
 ];
 
+const WASM_ACOUSTIC_EXPORTS = [
+    'set_acoustic_enabled',
+    'acoustic_enabled',
+    'drain_sonic_tokens',
+    'sonic_token_pending',
+    'acoustic_uniform_floats',
+    'acoustic_uniform_float_count',
+    'create_acoustic_sab',
+    'publish_acoustic_sab',
+    'acoustic_sab_byte_length',
+    'bake_stft_sidecar_demo',
+    'bake_cqt_sidecar_demo',
+    'acoustic_sidecar_pinned',
+];
+
 function runStep(name, cmd, args, opts = {}) {
     console.log(`[phenomenal] ${name}…`);
     const result = spawnSync(cmd, args, {
@@ -40,18 +55,18 @@ function runStep(name, cmd, args, opts = {}) {
     console.log(`[phenomenal] OK ${name}`);
 }
 
-function checkWasmApi(dtsPath) {
+function checkWasmApi(dtsPath, exports, label) {
     if (!existsSync(dtsPath)) {
         console.warn(`[phenomenal] SKIP wasm-api (missing ${dtsPath})`);
         return;
     }
     const src = readFileSync(dtsPath, 'utf8');
-    const missing = WASM_NAV_EXPORTS.filter((fn) => !src.includes(fn));
+    const missing = exports.filter((fn) => !src.includes(fn));
     if (missing.length) {
-        console.error(`[phenomenal] FAIL wasm-api missing exports: ${missing.join(', ')}`);
+        console.error(`[phenomenal] FAIL wasm-api ${label} missing: ${missing.join(', ')}`);
         process.exit(1);
     }
-    console.log(`[phenomenal] OK wasm-api (${WASM_NAV_EXPORTS.length} navigation exports)`);
+    console.log(`[phenomenal] OK wasm-api ${label} (${exports.length} exports)`);
 }
 
 const wasmApiArg = process.argv.indexOf('--wasm-api');
@@ -91,5 +106,14 @@ runStep('ambient-draw-step', 'cargo', [
     '--exact',
 ]);
 
-checkWasmApi(wasmApiPath);
+runStep('acoustic-contract', 'cargo', [
+    'test',
+    '-p',
+    'qualia-core-db',
+    'phenomenal_hrtf',
+    '--lib',
+]);
+
+checkWasmApi(wasmApiPath, WASM_NAV_EXPORTS, 'navigation');
+checkWasmApi(wasmApiPath, WASM_ACOUSTIC_EXPORTS, 'acoustic');
 console.log('[phenomenal] all checks passed');

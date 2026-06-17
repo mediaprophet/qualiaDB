@@ -5,7 +5,23 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlCanvasElement};
 
+use crate::audio::acoustic_plane::{
+    acoustic_enabled_for_mode, acoustic_params_from_tensor, apply_binaural_to_uniform,
+    drain_sonic_tokens, push_sonic_token, sonify_tensor_node, AcousticUniform,
+};
+use crate::audio::acoustic_sab::{
+    init_acoustic_sab, push_token_to_sab, write_uniform_to_sab_with_mirror, ACOUSTIC_SAB_BYTES,
+};
+use crate::audio::audio_spectral_sheet::preview_bins_from_tensor;
+use crate::audio::audio_sidecar_link::enrich_preview_from_sidecar;
+use crate::audio::audio_spectral_sheet::parse_sidecar_header;
+use crate::audio::cqt_bake::bake_cqt_sidecar_from_preview;
+use crate::audio::stft_bake::bake_tensor_stft_sidecar;
+use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
+use crate::portal_acoustic::ACOUSTIC_UNIFORM_FLOAT_COUNT;
+
 use crate::gpu_context::{ambient_draw_instances, global_vram_ledger, OperationalMode};
+use crate::sonic_token::SonicToken;
 use crate::portal_spectral::sigma_to_display_rgb;
 use crate::portal_camera::CameraState;
 use crate::portal_navigation::{camera_frame_node, cpu_pick_node_at, CameraFlyTo, Q_COLLAPSED_EPS};
@@ -78,6 +94,11 @@ pub struct QualiaPortal {
     gpu: Option<PortalGpu>,
     #[cfg(target_arch = "wasm32")]
     gpu_init_failed: bool,
+    acoustic_enabled: bool,
+    acoustic_pulse_accum: f32,
+    /// Pinned mmap-ready STFT/CQT sidecar for selected node (cold bake → hot frame read).
+    acoustic_sidecar: Option<Vec<u8>>,
+    acoustic_sidecar_frame: u32,
 }
 
 #[wasm_bindgen]
@@ -106,6 +127,10 @@ impl QualiaPortal {
             gpu: None,
             #[cfg(target_arch = "wasm32")]
             gpu_init_failed: false,
+            acoustic_enabled: true,
+            acoustic_pulse_accum: 0.0,
+            acoustic_sidecar: None,
+            acoustic_sidecar_frame: 0,
         };
         portal.paint_frame(&canvas)?;
         Ok(portal)
@@ -117,6 +142,132 @@ impl QualiaPortal {
 
     pub fn operational_mode(&self) -> u8 {
         global_vram_ledger().mode() as u8
+    }
+
+    /// Enable or mute U3 AcousticPlane (automatically off in Reserve mode).
+    pub fn set_acoustic_enabled(&mut self, enabled: bool) {
+        self.acoustic_enabled = enabled;
+    }
+
+    pub fn acoustic_enabled(&self) -> bool {
+        self.acoustic_enabled
+            && acoustic_enabled_for_mode(global_vram_ledger().mode())
+    }
+
+    /// Drain pending sonic tokens into a JS `BigUint64Array` or `Array` of token raw values.
+    pub fn drain_sonic_tokens(&self, max: u32) -> Result<JsValue, JsValue> {
+        let cap = max.clamp(1, 64) as usize;
+        let mut buf = vec![0u64; cap];
+        let n = drain_sonic_tokens(&mut buf);
+        buf.truncate(n);
+        let arr = Array::new();
+        for raw in buf {
+            arr.push(&JsValue::from_f64(raw as f64));
+        }
+        Ok(arr.into())
+    }
+
+    pub fn sonic_token_pending(&self) -> u32 {
+        crate::audio::acoustic_plane::sonic_token_ring().len() as u32
+    }
+
+    /// Serialized `AcousticUniform` bytes for AudioWorklet `SharedArrayBuffer` handoff.
+    pub fn acoustic_uniform_bytes(&mut self) -> Result<js_sys::Uint8Array, JsValue> {
+        let uniform = self.build_acoustic_uniform();
+        let bytes = bytemuck::bytes_of(&uniform);
+        Ok(js_sys::Uint8Array::from(bytes))
+    }
+
+    /// Flat `f32` uniform for AudioWorklet message port (18 scalars + 64 preview bins).
+    pub fn acoustic_uniform_floats(&mut self) -> Result<js_sys::Float32Array, JsValue> {
+        let u = self.build_acoustic_uniform();
+        Ok(js_sys::Float32Array::from(&acoustic_uniform_to_floats(&u)[..]))
+    }
+
+    pub fn push_sonic_token_raw(&self, raw: u64) -> bool {
+        push_sonic_token(SonicToken { raw })
+    }
+
+    /// SharedArrayBuffer byte length for zero-copy U3 handoff (requires COOP/COEP).
+    pub fn acoustic_sab_byte_length(&self) -> u32 {
+        ACOUSTIC_SAB_BYTES as u32
+    }
+
+    /// Allocate zeroed acoustic SAB with Q3AS header.
+    pub fn create_acoustic_sab(&self) -> Result<js_sys::SharedArrayBuffer, JsValue> {
+        let sab = js_sys::SharedArrayBuffer::new(ACOUSTIC_SAB_BYTES as u32);
+        let view = js_sys::Uint8Array::new(&sab);
+        let mut buf = [0u8; ACOUSTIC_SAB_BYTES];
+        if !init_acoustic_sab(&mut buf) {
+            return Err(JsValue::from_str("acoustic sab init failed"));
+        }
+        view.copy_from(&buf);
+        Ok(sab)
+    }
+
+    /// Publish phenomenal uniform + pending sonic tokens into SAB.
+    pub fn publish_acoustic_sab(&mut self, sab: &js_sys::SharedArrayBuffer) -> Result<(), JsValue> {
+        if sab.byte_length() as usize != ACOUSTIC_SAB_BYTES {
+            return Err(JsValue::from_str("acoustic sab size mismatch"));
+        }
+        let view = js_sys::Uint8Array::new(sab);
+        let mut buf = [0u8; ACOUSTIC_SAB_BYTES];
+        view.copy_to(&mut buf);
+        let uniform = self.build_acoustic_uniform();
+        let floats = acoustic_uniform_to_floats(&uniform);
+        if !write_uniform_to_sab_with_mirror(&mut buf, &uniform, Some(&floats)) {
+            return Err(JsValue::from_str("sab uniform write failed"));
+        }
+        let mut token_buf = [0u64; 16];
+        let n = drain_sonic_tokens(&mut token_buf);
+        for i in 0..n {
+            let _ = push_token_to_sab(&mut buf, SonicToken { raw: token_buf[i] });
+        }
+        view.copy_from(&buf);
+        Ok(())
+    }
+
+    /// Cold-bake STFT sidecar for selected tensor node; pins bytes for hot frame reads.
+    pub fn bake_stft_sidecar_demo(&mut self, frames: u32) -> Result<js_sys::Uint8Array, JsValue> {
+        self.bake_acoustic_sidecar_demo(frames, false)
+    }
+
+    /// Cold-bake CQT sidecar (log-spaced bins) for selected tensor node.
+    pub fn bake_cqt_sidecar_demo(&mut self, frames: u32) -> Result<js_sys::Uint8Array, JsValue> {
+        self.bake_acoustic_sidecar_demo(frames, true)
+    }
+
+    fn bake_acoustic_sidecar_demo(
+        &mut self,
+        frames: u32,
+        use_cqt: bool,
+    ) -> Result<js_sys::Uint8Array, JsValue> {
+        let node = self.selected_node.unwrap_or(0);
+        let tensor = self
+            .last_tensor
+            .as_ref()
+            .ok_or_else(|| JsValue::from_str("no tensor buffer"))?;
+        let t = read_tensor_at(tensor, node as usize).map_err(|e| JsValue::from_str(e))?;
+        let preview = preview_bins_from_tensor(&t);
+        let frame_count = frames.clamp(1, 128);
+        let need = std::mem::size_of::<crate::audio::audio_spectral_sheet::AudioSpectralSidecarHeader>()
+            + SPECTRAL_PREVIEW_BINS * frame_count as usize * 4;
+        let mut buf = vec![0u8; need];
+        if use_cqt {
+            bake_cqt_sidecar_from_preview(&preview, frame_count, 48_000, &mut buf)
+                .map_err(|_| JsValue::from_str("cqt bake failed"))?;
+        } else {
+            bake_tensor_stft_sidecar(&preview, frame_count, &mut buf)
+                .map_err(|_| JsValue::from_str("stft bake failed"))?;
+        }
+        self.acoustic_sidecar = Some(buf.clone());
+        self.acoustic_sidecar_frame = 0;
+        Ok(js_sys::Uint8Array::from(&buf[..]))
+    }
+
+    /// Whether a baked STFT/CQT sidecar is pinned on the portal.
+    pub fn acoustic_sidecar_pinned(&self) -> bool {
+        self.acoustic_sidecar.is_some()
     }
 
     pub fn resize(&mut self, canvas: HtmlCanvasElement, width: u32, height: u32) -> Result<(), JsValue> {
@@ -132,6 +283,7 @@ impl QualiaPortal {
     pub fn tick(&mut self, canvas: HtmlCanvasElement, dt_ms: f32) -> Result<(), JsValue> {
         self.time += dt_ms as f64 * 0.001;
         self.telemetry.refresh_from_ledger();
+        self.tick_acoustic_plane(dt_ms);
         if self.camera_fly.is_active() {
             self.camera = self.camera_fly.advance(self.camera);
             #[cfg(target_arch = "wasm32")]
@@ -417,6 +569,63 @@ impl QualiaPortal {
 
         root.append_child(&panel)?;
         Ok(())
+    }
+
+    #[inline]
+    fn sidecar_frame_count(bytes: &[u8]) -> u32 {
+        parse_sidecar_header(bytes)
+            .map(|h| h.frame_count)
+            .unwrap_or(1)
+    }
+
+    fn build_acoustic_uniform(&mut self) -> AcousticUniform {
+        let enabled = self.acoustic_enabled();
+        let node = self.selected_node.unwrap_or(0);
+        if let Some(ref tensor) = self.last_tensor {
+            if let Ok(t) = read_tensor_at(tensor, node as usize) {
+                let mut u = acoustic_params_from_tensor(&t)
+                    .to_phenomenal_uniform(enabled, &t, self.camera.yaw);
+                if let Some(ref sidecar) = self.acoustic_sidecar {
+                    let frame = self.acoustic_sidecar_frame;
+                    if enrich_preview_from_sidecar(sidecar, frame, &mut u.preview_bins) {
+                        u.stft_frame = frame as f32;
+                    }
+                    self.acoustic_sidecar_frame =
+                        (frame + 1) % Self::sidecar_frame_count(sidecar).max(1);
+                }
+                return u;
+            }
+        }
+        let mut uniform = AcousticUniform::default();
+        uniform.enabled = u32::from(enabled);
+        uniform.alpha = self.telemetry.spectral_shift.max(0.05);
+        uniform.epistemic_q = self.standpoint.epistemic_q;
+        uniform.frequency_hz =
+            crate::portal_acoustic::sigma_to_center_frequency_hz(self.telemetry.spectral_shift);
+        apply_binaural_to_uniform(&mut uniform, self.camera.yaw);
+        uniform
+    }
+
+    /// Phenomenal U3 float uniform count (18 scalars + 64 preview bins).
+    pub fn acoustic_uniform_float_count(&self) -> u32 {
+        ACOUSTIC_UNIFORM_FLOAT_COUNT as u32
+    }
+
+    fn tick_acoustic_plane(&mut self, dt_ms: f32) {
+        if !self.acoustic_enabled() {
+            return;
+        }
+        self.acoustic_pulse_accum += dt_ms;
+        if self.acoustic_pulse_accum < 250.0 {
+            return;
+        }
+        self.acoustic_pulse_accum = 0.0;
+        let node = self.selected_node.unwrap_or(0);
+        if let Some(ref tensor) = self.last_tensor {
+            if let Ok(t) = read_tensor_at(tensor, node as usize) {
+                sonify_tensor_node(node, &t, false);
+            }
+        }
     }
 
     pub(crate) fn paint_frame(&mut self, canvas: &HtmlCanvasElement) -> Result<(), JsValue> {
@@ -763,4 +972,29 @@ fn html_escape(raw: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
+}
+
+#[inline]
+fn acoustic_uniform_to_floats(u: &AcousticUniform) -> [f32; ACOUSTIC_UNIFORM_FLOAT_COUNT] {
+    let mut floats = [0.0_f32; ACOUSTIC_UNIFORM_FLOAT_COUNT];
+    floats[0] = u.alpha;
+    floats[1] = u.mu;
+    floats[2] = u.position[0];
+    floats[3] = u.position[1];
+    floats[4] = u.position[2];
+    floats[5] = u.track_v;
+    floats[6] = u.manifold_w;
+    floats[7] = u.epistemic_q;
+    floats[8] = u.fm_index;
+    floats[9] = u.frequency_hz;
+    floats[10] = u.enabled as f32;
+    floats[11] = u.gain_l;
+    floats[12] = u.gain_r;
+    floats[13] = u.itd_seconds;
+    floats[14] = u.azimuth_rad;
+    floats[15] = u.elevation_rad;
+    floats[16] = u.room_damp;
+    floats[17] = u.stft_frame;
+    floats[18..].copy_from_slice(&u.preview_bins);
+    floats
 }

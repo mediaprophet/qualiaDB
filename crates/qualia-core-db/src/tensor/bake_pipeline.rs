@@ -7,6 +7,64 @@ use crate::{q_hash, NQuin};
 use super::Tensor10D;
 
 pub const PRED_GEO_VERTEX: u64 = q_hash("geo:hasVertex");
+/// Bake-time link to mmap STFT/CQT sidecar (`spectral/audio/{hash}.bin`).
+pub const PRED_HAS_SPECTRAL_SHEET: u64 = q_hash("q42:hasSpectralSheet");
+
+/// Relative sidecar path under storage root — zero-heap (`spectral/audio/{hash:016x}.bin`).
+pub fn audio_sidecar_relpath(content_hash: u64, out: &mut [u8]) -> usize {
+    const PREFIX: &[u8] = b"spectral/audio/";
+    const SUFFIX: &[u8] = b".bin";
+    let hex = format_hash16(content_hash);
+    let need = PREFIX.len() + 16 + SUFFIX.len();
+    if out.len() < need {
+        return 0;
+    }
+    out[..PREFIX.len()].copy_from_slice(PREFIX);
+    out[PREFIX.len()..PREFIX.len() + 16].copy_from_slice(&hex);
+    out[PREFIX.len() + 16..need].copy_from_slice(SUFFIX);
+    need
+}
+
+#[inline]
+fn format_hash16(h: u64) -> [u8; 16] {
+    let mut buf = [b'0'; 16];
+    let nibbles = [
+        ((h >> 60) & 0xf) as u8,
+        ((h >> 56) & 0xf) as u8,
+        ((h >> 52) & 0xf) as u8,
+        ((h >> 48) & 0xf) as u8,
+        ((h >> 44) & 0xf) as u8,
+        ((h >> 40) & 0xf) as u8,
+        ((h >> 36) & 0xf) as u8,
+        ((h >> 32) & 0xf) as u8,
+        ((h >> 28) & 0xf) as u8,
+        ((h >> 24) & 0xf) as u8,
+        ((h >> 20) & 0xf) as u8,
+        ((h >> 16) & 0xf) as u8,
+        ((h >> 12) & 0xf) as u8,
+        ((h >> 8) & 0xf) as u8,
+        ((h >> 4) & 0xf) as u8,
+        (h & 0xf) as u8,
+    ];
+    for (i, n) in nibbles.iter().enumerate() {
+        buf[i] = match *n {
+            0..=9 => b'0' + *n,
+            _ => b'a' + (*n - 10),
+        };
+    }
+    buf
+}
+
+/// σ sheet index from baked NQuin object when `q42:hasSpectralSheet` is present.
+#[inline]
+pub fn sigma_sheet_index_from_nquin(nquin: &NQuin) -> Option<u32> {
+    let pred = nquin.predicate & 0x0FFF_FFFF_FFFF_FFFF;
+    if pred != (PRED_HAS_SPECTRAL_SHEET & 0x0FFF_FFFF_FFFF_FFFF) {
+        return None;
+    }
+    let idx = (nquin.object & 0x0FFF_FFFF_FFFF_FFFF) as u32;
+    Some(idx)
+}
 
 /// Decode `spatial_encode_wasm` packed coordinates from an object field.
 #[inline]
@@ -97,6 +155,24 @@ mod tests {
         assert!((x - 1.25).abs() < 0.002);
         assert!((y + 2.5).abs() < 0.002);
         assert!((z - 3.75).abs() < 0.002);
+    }
+
+    #[test]
+    fn audio_sidecar_path_format() {
+        let mut buf = [0u8; 64];
+        let n = audio_sidecar_relpath(0xabc_def01_2345_6789, &mut buf);
+        assert_eq!(n, b"spectral/audio/".len() + 16 + b".bin".len());
+        let path = std::str::from_utf8(&buf[..n]).unwrap();
+        assert!(path.starts_with("spectral/audio/"));
+        assert!(path.ends_with(".bin"));
+    }
+
+    #[test]
+    fn spectral_sheet_predicate_extracts_index() {
+        let mut q = NQuin::default();
+        q.predicate = PRED_HAS_SPECTRAL_SHEET;
+        q.object = 42;
+        assert_eq!(sigma_sheet_index_from_nquin(&q), Some(42));
     }
 
     #[test]

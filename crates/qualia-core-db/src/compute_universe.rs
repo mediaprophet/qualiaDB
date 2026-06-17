@@ -62,6 +62,12 @@ impl ComputeUniverse {
                     QualiaPrimitive::VramLedgerPin,
                 ]
             }
+            ComputeUniverse::AcousticPlane => {
+                &[
+                    QualiaPrimitive::GraphTensorSubstrate,
+                    QualiaPrimitive::VramLedgerPin,
+                ]
+            }
         }
     }
 
@@ -77,6 +83,7 @@ impl ComputeUniverse {
             }
             ComputeUniverse::Tensor10D => &[Phase8Channel::ContextInject],
             ComputeUniverse::Viewport => &[],
+            ComputeUniverse::AcousticPlane => &[],
         }
     }
 }

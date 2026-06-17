@@ -1,10 +1,10 @@
 # Qualia WASM Portal — Migration Plan
 
-**Status:** `IN PROGRESS` — Pages T2 phenomenal path **validating** (Track C PR-C0–C11b ✅). **Remaining for PHENOMENAL:** P-A full bake, P-B3/B4 desktop GPU policy, P-C9 + PR-C10 desktop parity, P-D3b `network_ripple`, PR-C12 asymmetric compute.  
+**Status:** `IN PROGRESS` — Pages T2 phenomenal path **validating** (Track C PR-C0–C11b ✅). U3 AcousticPlane **complete on Pages** (Track B5 / P-F1–F2 ✅, PR-B5f ✅). **Remaining for PHENOMENAL:** P-A full bake, P-B3/B4 desktop GPU policy, **PR-C10 desktop parity**, P-D3b `network_ripple`, PR-C12 asymmetric compute.  
 **Created:** 2026-06-17  
-**Last updated:** 2026-06-17 (checkbox sync — align Phases 0–11 / Gate B / audit with shipped qualiaDB portal work on `0.0.17-dev`)
+**Last updated:** 2026-06-17 (PR-B5f: CQT bake/link, portal sidecar pin, KemarLite HRTF, test vectors — audio core done; PR-C10 still open)
 **Branch target:** `0.0.17-dev` (qualiaDB)  
-**Companion docs:** `C:\Projects\webizen-browser\AUDIO_PROJECT_STATUS.md`, `10D_INTEGRATION_PLAN.md`, `10D_INTEGRATION_SUMMARY.md`
+**Companion docs:** [`AUDIO_PROJECT_STATUS.md`](AUDIO_PROJECT_STATUS.md), `10D_INTEGRATION_PLAN.md`, `10D_INTEGRATION_SUMMARY.md`
 
 ---
 
@@ -31,7 +31,7 @@ BAKE (cold, heap OK once)  →  RESIDENT (mmap/GPU pin)  →  HOT (zero-heap)
      NQuin ingest                  Tensor10D SOA              visit_*_into
      SHACL compile                 VramLedger pins            tensor_volume.wgsl
      shader asset embed            particle buffer upload     ambient/projector WGSL
-                                                              SPSC rings U0↔U1↔U2
+                                                              SPSC rings U0↔U1↔U2↔U3
 ```
 
 Display never rebuilds a scene graph — it reads the **same resident buffer** uploaded at bake/mount time and animates via ≤48 B telemetry uniforms per frame.
@@ -96,7 +96,7 @@ The unified Qualia WASM project replaces heap-heavy JS patterns with **named pip
 |------|--------|--------|
 | Ingest / N3 / SHACL | `ingest.rs`, `shacl_compiler.rs` | `NQuin` slice |
 | 10D bake | `tensor/bake_pipeline.rs` | `Tensor10D` SOA (`tensors.bin`) |
-| Spectral sidecars | `tensor/spectral.rs` | mmap SPD/STFT |
+| Spectral sidecars | `audio/*` STFT+CQT bake, `audio_sidecar_link.rs`, `q42:hasSpectralSheet` linker *(native `write_sidecar_file`; WASM portal pin)* | mmap SPD/STFT/CQT |
 | Viewport assets | `shaders/viewport/` embedded via `include_str!` | WGSL in WASM binary |
 
 Heap (`Vec`, `String`) permitted here only. Runs once per `.q42` mount or ingest.
@@ -189,7 +189,7 @@ All boxes required for **PHENOMENAL** status:
 - [ ] **P-A1** Ingest pipeline bakes `NQuin` → `Tensor10D` with real q/v/w (not hash placeholders)
 - [ ] **P-A2** `Q42TensorVolume` resident as struct-of-arrays (40 B × N, mmap or GPU upload)
 - [ ] **P-A3** Hot-path queries use only `visit_*_into` / GPU compute — no `Vec` in evaluator loops
-- [ ] **P-A4** High-density spectral sheets (SPD / STFT) linked from σ with mmap sidecars
+- [x] **P-A4** High-density spectral sheets (SPD / STFT/CQT) linked from σ with mmap sidecars *(shipped: `Q4AU` header, STFT+CQT bake, `audio_sidecar_link`, portal pin; optional full KEMAR/PCM ingest trails)*
 - [ ] **P-A5** Gravitational/thermodynamic baking stage refines x,y,z (spec §2.4) at ingest
 - [x] **P-A6** `Tensor10D::from_nquin()` reads baked metadata, not object-hash xyz proxy *(geo vertex packed coords via `bake_pipeline`)*
 
@@ -197,7 +197,7 @@ All boxes required for **PHENOMENAL** status:
 
 - [x] **P-B1** Single `GpuContext` per process (LLM + tensor + render + diffusion) *(shared wgpu device; render path pending)*
 - [x] **P-B1b** `ComputeUniverse` orchestrator — U0/U1/U2 pinned ledger partitions on one device (Track B2)
-- [ ] **P-B1c** `ComputeUniverse::AcousticPlane` (U3) — ledger pin + SPSC consumer; deferred until QApp distribution verified (see `AUDIO_PROJECT_STATUS.md`)
+- [x] **P-B1c** `ComputeUniverse::AcousticPlane` (U3) — ledger pin + SPSC sonic-token consumer; symbolic/parametric only (no LLM PCM); aliases U1 tensor SOA; muted in Reserve — see [`AUDIO_PROJECT_STATUS.md`](AUDIO_PROJECT_STATUS.md)
 - [x] **P-B2** `VramLedger` pre-flight before load/render; `memory_pressure` reflects reality
 - [ ] **P-B3** Real `ThermalGovernor` gates render and non-critical inference
 - [ ] **P-B4** Persistent `WgpuRenderer` (no per-frame `new_offscreen`)
@@ -223,7 +223,7 @@ All boxes required for **PHENOMENAL** status:
 - [x] **P-C6** Live Qualia neighborhood — `GET /tensor/slice` + Lamport SSE `/tensor/events` + `connectPortalToDaemon` + Ed25519 standpoint gate (PR-C9a–C9c.3)
 - [x] **P-C7** Camera IPC (`set_camera`) + temporal `t_slice`/`t_window` discard + Human-Centric `ObserverStandpoint` uniform (`set_standpoint`)
 - [x] **P-C8** Navigation: GPU `R32Uint` picking + `select_node_at` / `navigate_to_node` / `collapse_node_q` (PR-C11)
-- [x] **P-C8b** Phenomenal CI contract — `portal_phenomenal_contract.rs` + `phenomenal-verify.mjs` in Pages workflow (PR-C11b)
+- [x] **P-C8b** Phenomenal CI contract — `portal_phenomenal_contract.rs` + `phenomenal-verify.mjs` in Pages workflow (PR-C11b; extended PR-B5e acoustic exports + σ/HRTF/SAB layout oracles)
 - [ ] **P-C9** Desktop: direct wgpu surface OR 30 FPS PNG with persistent renderer (not both re-initing GPU)
 
 #### C.1 Human-Centric observer contract (qualiaDB portal — 2026-06-17)
@@ -280,14 +280,14 @@ Human-Centric resilience policy for U2 — protects U0 inference the millisecond
 - [x] **P-E2** `spatial.html` encode → tensor buffer → GPU upload end-to-end *(buffer upload + σ projection in portal)*
 - [x] **P-E3** Tier-0 canvas2d fallback with honest badge when WebGPU missing
 - [x] **P-E4** Viewport WGSL in qualiaDB `shaders/viewport/` (`ambient`, `projector`, `bloom`); portal slim build ~272 KB gzip (`--features portal`, `wasm-size-check.mjs`); bloom + eco particle gating live
-- [x] **P-E5** Phenomenal CI — `phenomenal-verify.mjs` (WGSL smoke, binding parity, PGA oracle, VramLedger, WASM nav API) after portal WASM build
+- [x] **P-E5** Phenomenal CI — `phenomenal-verify.mjs` (WGSL smoke, binding parity, PGA oracle, VramLedger, WASM nav + **acoustic** API) after portal WASM build
 
 ### F. Audio / multi-modal (phenomenal+)
 
-- [ ] **P-F1** AudioWorklet spectral synthesis from STFT sheets (σ band)
-- [ ] **P-F2** Visual + auditory share `[α, μ, σ]` truth layer per spec
+- [x] **P-F1** U3 AudioWorklet — spectral-first playback (mmap STFT/CQT sidecars) + Sonic Tokens + parametric DSP; not neural PCM from U0 *(complete: worklet + `cqt_bake.rs` + sidecar link + `bake_cqt_sidecar_demo` + portal frame pin)*
+- [x] **P-F2** Visual + auditory share `[α, μ, σ]` truth layer — U2 `spectral.wgsl` + U3 inverse-STFT/synth from same SOA + sidecar index *(complete: σ parity + KemarLite HRTF default; full measured KEMAR optional)*
 
-**PHENOMENAL declared when:** all of **A, B, C, D, E** complete. **F** is phenomenal+ (may trail).
+**PHENOMENAL declared when:** all of **A, B, C, D, E** complete. **F** is phenomenal+ — **F1/F2 complete on Pages** (2026-06-17). Audio trails: full KEMAR dataset, offline WAV export, PCM ingest (cold path only).
 
 ---
 
@@ -310,7 +310,7 @@ Human-Centric resilience policy for U2 — protects U0 inference the millisecond
 
 | Asset | Role today | Target |
 |-------|------------|--------|
-| `spatial.html` + `js/spatial-demo.js` | Qualia WASM portal T2: PGA 1–3, bloom, CIE σ, daemon slice + SSE sync, Ed25519 gate, GPU pick/nav/collapse | Desktop parity (PR-C10); full bake (P-A); U3 audio (P-F) |
+| `spatial.html` + `js/spatial-demo.js` | Qualia WASM portal T2: PGA 1–3, bloom, CIE σ, daemon slice + SSE sync, Ed25519 gate, GPU pick/nav/collapse, **U3 sonification** (STFT/CQT sidecar pin, KemarLite, COI/SAB) | Desktop parity (PR-C10); full bake (P-A) |
 | `js/ambient-viz.js` | canvas2d telemetry prototype (2400 particles) | wgpu ambient shader; JS kept as Tier-0 fallback only |
 | `playground/qualia_core_db.wasm` | Logic, N3, SHACL, optional WebGPU LLM | **Merged into** `pkg/qualia/qualia_bg.wasm` (single portal) |
 | `playground/anatomy.js` | Three.js anatomy viewer | Phase 4 — same viewport pattern |
@@ -366,7 +366,7 @@ Human-Centric resilience policy for U2 — protects U0 inference the millisecond
 
 - [x] `gpu_context.rs` — shared `wgpu::Device` for LLM + tensor + viewport (native)
 - [x] `VramLedger` — KV cache cap, tensor/viewport slots, `pressure()` → `memory_pressure`
-- [x] `ComputeUniverse` / `UniverseOrchestrator` — U0/U1/U2 pinned partitions (Track B2)
+- [x] `ComputeUniverse` / `UniverseOrchestrator` — U0/U1/U2/U3 pinned partitions (Track B2 + B5; U3 aliases U1 SOA)
 - [x] Operational modes (Full / Eco / Reserve) — bloom + ambient draw throttle live in portal
 - [x] `gguf_bridge` token loop → `llm_heat`; encode/GeoSPARQL → bake/logic pulses
 
@@ -401,20 +401,21 @@ Present: `parse_n3logic_wasm`, `validate_shacl_constraint_wasm`, `forward_chain_
 | `navigate_to_node(index)` | `CameraFlyTo` frames toward node `(x,y,z)` |
 | `collapse_node_q(index)` | Wavefunction collapse — set node `q` → 0, re-upload SOA |
 | `encode_geometry(json)` | `spatial_encode` + tensor upload |
+| `set_acoustic_enabled` / `acoustic_uniform_floats` | U3 mute + 82-float phenomenal uniform (18 scalars + 64 preview bins) |
+| `create_acoustic_sab` / `publish_acoustic_sab` | 1024 B `Q3AS` SharedArrayBuffer zero-copy handoff (COOP/COEP) |
+| `drain_sonic_tokens` / `bake_stft_sidecar_demo` | SPSC Sonic Token drain + cold STFT sidecar bake for worklet grains |
 
 **Scientific engine in single WASM package (2026-06-17):** `wasm_simd` bytecode VM paths, 10D tensor SOA (`export_tensor_buffer_wasm`), SHACL evaluators, deontic logic (`evaluate_deontic_contract`), epistemic/paraconsistent/LTL modalities — all re-exported through the Qualia portal. This unlocks optimization pathways that standard LLM stacks cannot access (see **Track B4**).
 
-### webizen-browser priority sequencing (synced 2026-06-17)
+### Recommended track sequencing (qualiaDB)
 
-Per `AUDIO_PROJECT_STATUS.md` — **do not reorder without explicit direction:**
+| Track | Block | Status / touchpoints |
+|-------|-------|----------------------|
+| **B3 / B4** | LLM ↔ graph co-optimization — async U1 inject, topology draft, epistemic τ, deontic mask, KV sparsity | B3 scaffold ✅; **B4.1** next |
+| **B5** | U3 `AcousticPlane` — Sonic Tokens, parametric DSP, AudioWorklet | **Complete on Pages** (PR-B5a–f ✅) — see [`AUDIO_PROJECT_STATUS.md`](AUDIO_PROJECT_STATUS.md); PR-C10 desktop host still open |
+| **C** | Phenomenal viewport (Pages) | PR-C0–C11b ✅; **PR-C10** desktop parity pending |
 
-| Priority | Block | qualiaDB / portal touchpoints |
-|----------|-------|-------------------------------|
-| **1 (now)** | Human-Centric QApp distribution — `export_qapp_as_wasm_package`, LAN `0.0.0.0`, QR, ontology→DOM | `webizen-web` `mount_qapp`; portal re-exports; COOP/COEP for SharedArrayBuffer |
-| **2 (next)** | U3 `AcousticPlane` — AudioWorklet, Sonic Tokens, binaural DSP | Extend `ComputeUniverse` to U3; SPSC from U0/U1; **Phase 11 / Track B5** |
-| **3 (done on Pages)** | Phenomenal viewport — PGA motors, bloom, ledger eco gating, daemon bridge, navigation, CI | Track C PR-C0–C11b ✅; **next:** PR-C10 desktop parity (`webizen-render` re-export) |
-
-Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened; studio QR + real `.q42` volume export + Tauri resource bundling still pending). Scientific inference optimizations (Track B4) can land in `qualia-core-db` in parallel with distribution work; U3 audio waits on priority 1 verification.
+Tracks B4 and B5 share the U1 tensor SOA and `q` field; neither is gated on external distribution work.
 
 ---
 
@@ -444,6 +445,7 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
 ┌──────────────────────────▼───────────────────────────────────┐
 │  Shell: spatial.html / webizen-desktop (DOM only)              │
 │  QualiaPortal::tick() — ≤48 B telemetry + camera uniform       │
+│  U3 AudioWorklet — SAB/MessagePort uniform + stereo binaural  │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -592,13 +594,13 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
 
 ### 5B — New docs (optional)
 
-- [ ] **5.10** `docs/manuals/qualia-wasm-portal.md` — portal concept, build, deploy, fallback tiers
+- [x] **5.10** `docs/manuals/qualia-wasm-portal.md` — portal concept, build, deploy, fallback tiers, U3 sonification, COI/SAB
 - [x] **5.11** `docs/plans/wasm-viewport-migration-plan.md` — this file; update checkboxes per PR *(2026-06-17 sync)*
 
 ### 5C — Cross-repo doc sync
 
 - [ ] **5.12** Update `webizen-browser/BACKGROUND_VISUALISATION.md` status: “implemented in webizen-render Phase 2”
-- [ ] **5.13** Add pointer in `AGENTS.md` §7 session notes when phases complete
+- [ ] **5.13** Add pointer in `AGENTS.md` §7 session notes when phases complete *(manuals + ADR 0007 + acoustic standard draft shipped 2026-06-17)*
 - [ ] **5.14** Update `Claude.md` §8 known inaccuracies: spatial demo no longer Three.js
 
 **Exit criteria:** No docs page claims Three.js is the spatial engine; API catalog lists viewport exports.
@@ -712,7 +714,7 @@ Priority queue (same physical device):
 
 **Goal:** Multi-modal spectral fidelity and public docs match implemented reality.
 
-- [ ] **11.1** AudioWorklet + `audio_contract.rs` spectral synthesis (P-F1, P-F2)
+- [x] **11.1** AudioWorklet + phenomenal acoustic contract (`portal_phenomenal_contract.rs`, `audio/*`, manuals, ADR 0007, `vectors/acoustic-plane-v0.1.json`) — P-F1/P-F2 complete on Pages
 - [ ] **11.2** `scientific-computing.html` — live blackbody / σ band demo from tensor sheet
 - [ ] **11.3** `docs/manuals/webizen-wasm-viewport.md` — tiers, fallback badges, build guide
 - [ ] **11.4** `zero-heap-compliance.html` — bake vs query vs display table
@@ -727,9 +729,9 @@ Priority queue (same physical device):
 ## Phase 7 — CI, size budget, and release
 
 - [x] **7.1** CI: portal `qualia_bg.wasm` size budget — `wasm-size-check.mjs` (~272 KB gzip, `--features portal`) in `pages.yml`
-- [x] **7.2** CI: `phenomenal-verify.mjs` — WGSL smoke, binding parity, PGA oracle, VramLedger, WASM nav API
+- [x] **7.2** CI: `phenomenal-verify.mjs` — WGSL smoke, binding parity, PGA oracle, VramLedger, WASM nav + acoustic API (`phenomenal_hrtf`, 12 `QualiaPortal` exports incl. `bake_cqt_sidecar_demo`)
 - [ ] **7.3** `scripts/package-flutter-windows.ps1` unaffected; separate `scripts/package-docs-wasm.ps1`
-- [ ] **7.4** GitHub Pages deploy: ensure `application/wasm` MIME + COOP/COEP headers if needed for threads
+- [x] **7.4** GitHub Pages deploy: COOP/COEP for SharedArrayBuffer — `coi-serviceworker.js` + early registration in `spatial.html` head; `qualia-coi.js` on-demand; MessagePort fallback when not `crossOriginIsolated`
 - [ ] **7.5** Release note in `docs/RELEASE_NOTES_*.md`
 
 ---
@@ -783,6 +785,9 @@ requestAnimationFrame(frame);
 | `upload_tensor_buffer(bytes)` | Resident SOA + GPU particle/tensor rebind |
 | `select_node_at` / `poll_selected_node` | GPU picking pass + async 1×1 readback |
 | `navigate_to_node` / `collapse_node_q` | Camera fly-to + epistemic wavefunction collapse |
+| `set_acoustic_enabled` / `acoustic_uniform_floats` | U3 parametric voice + 64-bin preview uniform |
+| `create_acoustic_sab` / `publish_acoustic_sab` | Zero-copy 1024 B acoustic SAB (`Q3AS` header + float mirror @ 512) |
+| `drain_sonic_tokens` / `bake_stft_sidecar_demo` | Sonic Token SPSC drain + STFT sidecar cold bake |
 | `tier()` | 0 CPU / 1 tensor canvas / 2 WebGPU phenomenal |
 
 ---
@@ -796,7 +801,7 @@ requestAnimationFrame(frame);
 | WASM size bloat (Qualia + render) | Feature-gate modalities in `web` build; `wasm-opt -Oz`; split `webizen_web_lite.wasm` if > 8 MB gzip |
 | Cross-repo path dependency | `package-webizen-wasm.ps1` |
 | `wgpu` on wasm32 immature | Native shader tests first; desktop T2 is reference |
-| COOP/COEP on GitHub Pages | Single-threaded wgpu default; threads optional Tier 2 |
+| COOP/COEP on GitHub Pages | `coi-serviceworker.js` injects headers on reload; U3 SAB falls back to MessagePort if isolation unavailable |
 | Double WASM load | Only `qualia_bg.wasm` on spatial page |
 | LLM + render OOM | `VramLedger` pre-flight; Eco degrades viewport before dropping inference |
 | Mock data ships as default | Daemon probe + UI badge `Live` / `Offline` / `CPU fallback` |
@@ -888,7 +893,7 @@ PR-B6  both:      telemetry_hooks ↔ gguf_bridge ↔ ambient shader
 | **U0** `LlmInference` | KV + matmul + weight staging | `LlmKvCache`, `LlmWeightStaging` | `LlmCompute` |
 | **U1** `Tensor10D` | Baked SOA volume, kNN, attention bitmask | `Tensor10D` | `TensorCompute` |
 | **U2** `Viewport` | Projector, ambient, bloom | `Viewport` | `ViewportRender` |
-| **U3** `AcousticPlane` | AudioWorklet DSP, binaural, Sonic Tokens | `AcousticPlane` (planned) | `AudioRealtime` (planned) |
+| **U3** `AcousticPlane` | AudioWorklet DSP, binaural HRTF, Sonic Tokens, STFT grains | `AcousticPlane` (aliases U1 SOA pin) | `AudioRealtime` (browser worklet) |
 
 **Implemented (2026-06-17):** `gpu_context.rs` — `ComputeUniverse`, `VramLedgerSlot`, `VramByteRange`, `QueueLane`, `UniversePartition`, `UniverseOrchestrator` (mode-aware), `can_allocate_in_universe()`, `SharedGpuContext::queue_for_universe()`, per-universe `effective_mode()` (U0 wins under Reserve). `gguf_bridge::ensure_kv_cache` pre-flights U0 pin.
 
@@ -1120,15 +1125,40 @@ Rationale for portal-first ordering:
 
 ---
 
-### Track B5 — U3 AcousticPlane (webizen-browser; after QApp distribution)
+### Track B5 — U3 AcousticPlane (qualiaDB)
 
-**Deferred** until Human-Centric export + LAN QR loop is verified (`AUDIO_PROJECT_STATUS.md` priority 1).
+**Status:** **Complete on Pages** (PR-B5a–f ✅, 2026-06-17). **No LLM waveform generation** — 64-bit Sonic Tokens + 10D parametric streams only. Optional trails: full measured KEMAR bundle, offline WAV export, PCM cold ingest. Desktop host: PR-C10. Milestones in [`AUDIO_PROJECT_STATUS.md`](AUDIO_PROJECT_STATUS.md).
 
 | Universe | Role | Transport |
 |----------|------|-----------|
-| **U3** `AcousticPlane` | WASM AudioWorklet, 64-bit Sonic Tokens, binaural HRTF, parametric DSP | SPSC from U0 (tokens) + U1 (10D coords via `VramLedger` SOA pointer) |
+| **U3** `AcousticPlane` | WASM AudioWorklet, 64-bit Sonic Tokens, analytic binaural HRTF, overlap-add inverse-STFT grains | SPSC from U0 (tokens) + U1 (10D SOA read via shared tensor pin) |
 
-Milestones mirror `AUDIO_PROJECT_STATUS.md` § Pending Implementation. Portal requirement: exported QApp loaders need COOP/COEP headers (Phase 7.4) before SharedArrayBuffer + AudioWorklet path is reliable.
+**Core modules (qualia-core-db):**
+
+| Module | Purpose |
+|--------|---------|
+| `sonic_token.rs` | 64-bit packed Sonic Tokens (16-bit tensor index @ bits 32–47) |
+| `audio/acoustic_plane.rs` | SPSC ring, `AcousticUniform` (328 B / 82 floats), `sonify_tensor_node()` |
+| `audio/dsp_kernel.rs` | Parametric FM + epistemic τ |
+| `audio/hrtf.rs` | KemarLite embedded ITD/ILD (default) + analytic fallback |
+| `audio/cqt_bake.rs` | Log-spaced CQT sidecar bake (`SIDECAR_KIND_CQT`) |
+| `audio/audio_sidecar_link.rs` | Sidecar hash, `q42:hasSpectralSheet` quin, native file write, frame enrich |
+| `audio/stft_bake.rs` | Cold STFT sidecar bake from preview bins |
+| `audio/acoustic_sab.rs` | 1024 B SAB layout (`Q3AS` header, uniform, tokens, float mirror @ 512) |
+| `portal_acoustic.rs` | σ parity: portal spectral λ (400–700 nm) ↔ Hz (1760–110) |
+
+**Browser glue:** `docs/js/qualia-audio-worklet.js`, `qualia-shell.js` (`mountAcousticPlane`), `qualia-coi.js`, `coi-serviceworker.js`, `spatial-demo.js` acoustic button.
+
+```
+PR-B5a qualiaDB:  ComputeUniverse::AcousticPlane + sonic_token ring + portal exports     ✅
+PR-B5b qualiaDB:  σ parity + HRTF + STFT bake + AcousticUniform 82-float contract       ✅
+PR-B5c qualiaDB:  acoustic_sab SharedArrayBuffer + publish_acoustic_sab zero-copy       ✅
+PR-B5d docs:      AudioWorklet stereo binaural + COI bootstrap on spatial.html           ✅
+PR-B5e CI:        phenomenal_hrtf + 10 WASM acoustic exports in phenomenal-verify.mjs   ✅
+PR-B5f qualiaDB:  CQT bake + sidecar link + portal pin + KemarLite HRTF + test vectors  ✅
+```
+
+**COOP/COEP** (Phase 7.4 ✅): service worker injects isolation headers on reload; SAB path active when `crossOriginIsolated`.
 
 ---
 
@@ -1184,7 +1214,7 @@ PR-C11b both:     phenomenal-checklist CI                               ✅
 | 2026-06-17 | B3.1/B8 | `topology_draft.rs`, `verify_topology_draft_batch`, `kv_provenance.rs`, `tensor_volume.wgsl` | Agent |
 | 2026-06-17 | B3 polish | `sentinel_allows_topology_draft`, shared `try_accept_topology_draft`, WASM decode parity, branch `0.0.17-dev` | Agent |
 | 2026-06-17 | B4 | Scientific engine optimizations: epistemic τ, SIMD deontic mask, SHACL KV eviction; mapped to mid-2026 SOTA; portal-first recommendation B4.1 | Agent |
-| 2026-06-17 | sync | webizen `AUDIO_PROJECT_STATUS.md` priority sequencing; U3 AcousticPlane → Track B5; distribution block status | Agent |
+| 2026-06-17 | sync | `AUDIO_PROJECT_STATUS.md` in qualiaDB; U3 AcousticPlane → Track B5; symbolic/parametric audio architecture | Agent |
 | 2026-06-17 | decision | **Unified Qualia WASM in qualiaDB** — full JS/Three.js replacement; pipeline architecture; viewport WGSL migrate from webizen-render; webizen-web deprecated as semantic owner | Agent |
 | 2026-06-17 | C0–C1 | Portal slim build (`--features portal`); `portal_gpu.rs` depth + projector→ambient; binary tensor SOA GPU upload; `CameraUniform` orbit IPC | Agent |
 | 2026-06-17 | C3 | `ObserverStandpoint` 128 B uniform; `set_standpoint`; temporal `t_slice`/`t_window` vertex discard; `ViewportLocal` vs `FabricShared` fabric gate field | Agent |
@@ -1203,6 +1233,9 @@ PR-C11b both:     phenomenal-checklist CI                               ✅
 | 2026-06-17 | C11 | `picking_fragment_main` R32Uint pass; async 1×1 readback; `CameraFlyTo`; wavefunction `collapse_node_q`; `spatial-demo` pointer bind | Agent |
 | 2026-06-17 | C11b | `portal_phenomenal_contract.rs` — WGSL parse, binding parity, stride oracle, PGA `R_q` gate, VramLedger; `phenomenal-verify.mjs` in Pages CI | Agent |
 | 2026-06-17 | plan sync | Checkbox audit — Phases 0–11, Gate B, GPU audit aligned with qualiaDB portal; split P-D3/P-D3b; superseded webizen-web Phase 2/3 notes | Agent |
+| 2026-06-17 | B5 / P-F | U3 AcousticPlane: `sonic_token`, `audio/*`, `portal_acoustic`, SAB 1024 B, AudioWorklet stereo, σ parity CI; P-B1c/P-F1/P-F2/7.4/11.1 checked | Agent |
+| 2026-06-17 | B5f | PR-B5f: `cqt_bake`, `audio_sidecar_link`, portal sidecar pin, KemarLite HRTF, `bake_cqt_sidecar_demo`, test vectors; audio **complete on Pages** — PR-C10 desktop parity still blocking full PHENOMENAL | Agent |
+| 2026-06-17 | docs | `qualia-wasm-portal.md`, `q42-acoustic-plane-draft.md`, ADR 0007, manuals index; tracking synced | Agent |
 | | | | |
 
 *Update this table and checkboxes when each item completes.*
@@ -1295,6 +1328,10 @@ Portal U2 (60 FPS) ──binary RPC + standpoint headers──► :4242 daemon
 ```powershell
 # qualiaDB engine tests
 cargo test -p qualia-core-db --lib
+
+# U3 acoustic contract (SAB, HRTF, σ parity)
+cargo test -p qualia-core-db audio:: portal_phenomenal_contract::tests::phenomenal_hrtf --lib
+node docs\tests\phenomenal-verify.mjs --wasm-api docs\pkg\qualia\qualia.d.ts
 
 # Qualia WASM portal — slim Pages build (hot path only)
 cargo build --release --target wasm32-unknown-unknown --no-default-features --features portal -p qualia-core-db

@@ -7,6 +7,8 @@ use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, PROJECTOR_WGSL};
 use crate::tensor::buffer_export::{
     TensorBufferHeader, TENSOR_HEADER_BYTES, TENSOR_STRIDE,
 };
+use crate::portal_acoustic::{sigma_to_center_frequency_hz, sigma_to_wavelength_nm, ACOUSTIC_UNIFORM_FLOAT_COUNT};
+use crate::portal_spectral::sigma_to_cie_xyz;
 use crate::tensor::Tensor10D;
 
 /// Rust `portal_gpu` projector camera bind group (group 0).
@@ -88,6 +90,11 @@ mod tests {
         CameraUniform, ObserverStandpoint, ParticleInstance, SystemTelemetry,
         STANDPOINT_DID, STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
     };
+    use crate::audio::acoustic_plane::{AcousticUniform, SONIC_RING_CAP};
+    use crate::audio::acoustic_sab::{init_acoustic_sab, ACOUSTIC_SAB_BYTES};
+    use crate::audio::hrtf::binaural_from_position;
+    use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
+    use crate::sonic_token::SonicToken;
     use crate::tensor::buffer_export::tensor_node_count;
 
     const IDENTITY_ROTOR: [f32; 4] = [1.0, 0.0, 0.0, 0.0];
@@ -197,5 +204,54 @@ mod tests {
         assert_eq!(local.mode(), OperationalMode::Eco);
         local.record_render(200);
         assert_eq!(local.mode(), OperationalMode::Reserve);
+    }
+
+    #[test]
+    fn phenomenal_acoustic_uniform_layout() {
+        assert_eq!(std::mem::size_of::<SonicToken>(), 8);
+        assert_eq!(SONIC_RING_CAP, 128);
+        let uniform = AcousticUniform::default();
+        let bytes = bytemuck::bytes_of(&uniform);
+        assert_eq!(bytes.len(), std::mem::size_of::<AcousticUniform>());
+        // 18 scalars (binaural + STFT frame) + 64 preview bins
+        assert_eq!(std::mem::size_of::<AcousticUniform>(), 72 + SPECTRAL_PREVIEW_BINS * 4);
+        assert_eq!(std::mem::size_of::<AcousticUniform>(), 328);
+    }
+
+    #[test]
+    fn phenomenal_sigma_visual_audio_parity() {
+        for i in 0..=10 {
+            let sigma = i as f32 / 10.0;
+            let lambda = sigma_to_wavelength_nm(sigma);
+            assert!(lambda >= 400.0 && lambda <= 700.0);
+            let _xyz = sigma_to_cie_xyz(sigma);
+            let hz = sigma_to_center_frequency_hz(sigma);
+            assert!(hz >= 55.0 && hz <= 8_000.0);
+            let hz2 = sigma_to_center_frequency_hz(sigma + 1.0);
+            assert!((hz - hz2).abs() < 1e-3, "σ fract parity");
+        }
+        assert_eq!(ACOUSTIC_UNIFORM_FLOAT_COUNT, 82);
+    }
+
+    #[test]
+    fn phenomenal_hrtf_and_sab_layout() {
+        let g = binaural_from_position([1.0, 0.0, -1.0], 0.0);
+        assert!(g.gain_r > g.gain_l);
+        let mut sab = [0u8; ACOUSTIC_SAB_BYTES];
+        assert!(init_acoustic_sab(&mut sab));
+        assert_eq!(ACOUSTIC_SAB_BYTES, 1024);
+    }
+
+    #[test]
+    fn phenomenal_u3_aliases_u1_partition() {
+        let orch = UniverseOrchestrator::from_total_budget_full(10_000);
+        let u1 = orch.partition(ComputeUniverse::Tensor10D).ledger_range;
+        let u3 = orch.partition(ComputeUniverse::AcousticPlane).ledger_range;
+        assert_eq!(u1.offset, u3.offset);
+        assert_eq!(u1.size, u3.size);
+        assert_eq!(
+            orch.effective_mode(ComputeUniverse::AcousticPlane, OperationalMode::Reserve),
+            OperationalMode::Reserve
+        );
     }
 }

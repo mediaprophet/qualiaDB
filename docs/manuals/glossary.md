@@ -93,7 +93,12 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 
 - **qualia-flutter** (`crates/qualia-flutter/`): **Shipped desktop app** (Windows, macOS, Linux). FRB bridge to `qualia-client-core`. Qapp Vault is `QappVaultScreen` (nav index 6); qapps launch in `QualiaQappWebView`.
 - **qualia-cli** (`crates/qualia-cli/`): Native CLI for engine operations, benchmarks, ingest, and profiles.
-- **qualia-core-wasm**: Browser/edge WASM build of the engine (playground + Releases artifact).
+- **Qualia WASM portal**: Single `qualia_bg.wasm` (`--features portal`) — engine + viewport + U3 acoustic. Ships as `docs/pkg/qualia/`. Constructor: `QualiaPortal`. Manual: `qualia-wasm-portal.md`.
+- **qualia-core-wasm**: Legacy label for browser WASM builds; playground uses `--features wasm-full`, portal uses `--features portal`.
+- **AcousticPlane (U3)**: Compute universe for symbolic audio — Sonic Tokens, parametric DSP, binaural HRTF, inverse-STFT grains. Aliases U1 tensor SOA ledger pin; muted in Reserve mode.
+- **Sonic Token**: 8-byte packed `u64` event (NoteOn/Off, Parametric) referencing a `tensor_index`. Hot-path transport U0/U1 → U3 SPSC ring.
+- **σ parity**: Phenomenal mapping where the same `fract(σ)` drives visual wavelength (400–700 nm) and auditory center frequency (1760–110 Hz). See `portal_acoustic.rs`.
+- **Q3AS SAB**: 1024-byte `SharedArrayBuffer` layout (`AcousticSabHeader` + uniform + token ring + float mirror) for zero-copy U3 handoff; requires COOP/COEP.
 - **qualia-client** + **qualia-desktop** (`crates/qualia-client/`, `crates/qualia-desktop/`): **Legacy** Tauri/React prototype — not in release CI since v0.0.15.
 - **Loopback qapp asset server** (`qapps_protocol.rs`): Serves `{data_dir}/Qapps/{qapp_name}/` over `http://127.0.0.1:{port}/` (started by Flutter via `startQualiaProtocol()`).
 - **QappPackageManifest** (`qapp_registry.rs`): JSON (`qapp.json`) describing a Qualia qapp — `name`, `version`, `required_shapes` (SHACL shape IRIs the qapp needs from the graph).

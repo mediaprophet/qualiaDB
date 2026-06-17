@@ -61,10 +61,26 @@ pub enum ComputeUniverse {
     Tensor10D = 1,
     /// U2 — projector, ambient, bloom.
     Viewport = 2,
+    /// U3 — AcousticPlane; read-only pin on U1 SOA + sonic token SPSC (no extra ledger slice yet).
+    AcousticPlane = 3,
 }
 
 impl ComputeUniverse {
-    pub const ALL: [Self; 3] = [Self::LlmInference, Self::Tensor10D, Self::Viewport];
+    pub const ALL: [Self; 4] = [
+        Self::LlmInference,
+        Self::Tensor10D,
+        Self::Viewport,
+        Self::AcousticPlane,
+    ];
+
+    /// Physical ledger partition index (U3 aliases U1 until acoustic sidecar pins land).
+    #[inline]
+    pub fn partition_index(self) -> usize {
+        match self {
+            Self::AcousticPlane => Self::Tensor10D as usize,
+            u => u as usize,
+        }
+    }
 
     #[inline]
     pub fn label(self) -> &'static str {
@@ -72,6 +88,7 @@ impl ComputeUniverse {
             Self::LlmInference => "U0 LLM",
             Self::Tensor10D => "U1 Tensor10D",
             Self::Viewport => "U2 Viewport",
+            Self::AcousticPlane => "U3 AcousticPlane",
         }
     }
 
@@ -80,7 +97,7 @@ impl ComputeUniverse {
         match self {
             Self::LlmInference => QueueLane::LlmCompute,
             Self::Tensor10D => QueueLane::TensorCompute,
-            Self::Viewport => QueueLane::ViewportRender,
+            Self::Viewport | Self::AcousticPlane => QueueLane::ViewportRender,
         }
     }
 
@@ -88,7 +105,7 @@ impl ComputeUniverse {
     pub fn ledger_slots(self) -> &'static [VramLedgerSlot] {
         match self {
             Self::LlmInference => &[VramLedgerSlot::LlmKvCache, VramLedgerSlot::LlmWeightStaging],
-            Self::Tensor10D => &[VramLedgerSlot::Tensor10D],
+            Self::Tensor10D | Self::AcousticPlane => &[VramLedgerSlot::Tensor10D],
             Self::Viewport => &[VramLedgerSlot::Viewport],
         }
     }
@@ -226,7 +243,7 @@ impl UniverseOrchestrator {
 
     #[inline]
     pub fn partition(&self, universe: ComputeUniverse) -> &UniversePartition {
-        &self.partitions[universe as usize]
+        &self.partitions[universe.partition_index()]
     }
 
     /// Global mode mapped per universe — LLM (U0) wins under pressure.
@@ -235,13 +252,13 @@ impl UniverseOrchestrator {
         match global {
             OperationalMode::Full => OperationalMode::Full,
             OperationalMode::Eco => match universe {
-                ComputeUniverse::Viewport => OperationalMode::Eco,
+                ComputeUniverse::Viewport | ComputeUniverse::AcousticPlane => OperationalMode::Eco,
                 _ => OperationalMode::Eco,
             },
             OperationalMode::Reserve => match universe {
                 ComputeUniverse::LlmInference => OperationalMode::Full,
                 ComputeUniverse::Tensor10D => OperationalMode::Eco,
-                ComputeUniverse::Viewport => OperationalMode::Reserve,
+                ComputeUniverse::Viewport | ComputeUniverse::AcousticPlane => OperationalMode::Reserve,
             },
         }
     }

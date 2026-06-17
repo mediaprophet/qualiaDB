@@ -35,6 +35,17 @@
     </style>
     <link rel="stylesheet" href="css/site-nav.css">
     <script src="js/menu-loader.js"></script>
+    <!-- COOP/COEP for SharedArrayBuffer + U3 zero-copy acoustic plane -->
+    <script>
+    (function () {
+        if (window.crossOriginIsolated || !('serviceWorker' in navigator)) return;
+        window.coi = { quiet: true, shouldRegister: function () { return true; }, shouldDeregister: function () { return false; } };
+        var s = document.createElement('script');
+        s.src = 'js/coi-serviceworker.js';
+        s.async = false;
+        document.head.appendChild(s);
+    })();
+    </script>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
 
@@ -190,6 +201,11 @@
                     <button onclick="encodeToQuins()" class="spinbtn w-full" id="encode-btn">
                         <i class="fas fa-microchip mr-2"></i>Encode to Quins (WASM)
                     </button>
+
+                    <button type="button" class="spinbtn w-full mt-2" id="acoustic-enable-btn">
+                        <i class="fas fa-volume-up mr-2"></i>Enable U3 Sonification
+                    </button>
+                    <p id="acoustic-status" class="text-[10px] text-white/45 mt-1">AcousticPlane off — click to enable (requires gesture)</p>
                 </div>
                 
                 <div class="mt-6 p-4 bg-black/30 rounded-xl border border-white/10">

@@ -558,6 +558,121 @@ export function daemonBadgeLabel(state, tier = 0) {
     }
 }
 
+let acousticContext = null;
+let acousticNode = null;
+let acousticSab = null;
+let acousticSyncTimer = null;
+
+/**
+ * Mount U3 AcousticPlane — binaural stereo + optional SAB zero-copy (COOP/COEP).
+ */
+export async function mountAcousticPlane(portalInstance = portal, options = {}) {
+    const {
+        workletUrl = new URL('./qualia-audio-worklet.js', import.meta.url).href,
+        syncIntervalMs = 50,
+        autoStart = true,
+        useSab = true,
+    } = options;
+
+    if (!portalInstance) {
+        console.warn('mountAcousticPlane: portal not loaded');
+        return null;
+    }
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+
+    if (!acousticContext) {
+        acousticContext = new AudioCtx({ latencyHint: 'interactive' });
+    }
+    if (acousticContext.state === 'suspended' && autoStart) {
+        await acousticContext.resume();
+    }
+
+    const sabOk = useSab && typeof portalInstance.create_acoustic_sab === 'function' && window.crossOriginIsolated;
+    if (sabOk) {
+        try {
+            acousticSab = portalInstance.create_acoustic_sab();
+        } catch (e) {
+            console.warn('AcousticPlane SAB fallback to MessagePort', e);
+            acousticSab = null;
+        }
+    }
+
+    if (!acousticNode) {
+        await acousticContext.audioWorklet.addModule(workletUrl);
+        acousticNode = new AudioWorkletNode(acousticContext, 'qualia-acoustic', {
+            numberOfOutputs: 1,
+            outputChannelCount: [2],
+            processorOptions: { sab: acousticSab },
+        });
+        acousticNode.connect(acousticContext.destination);
+        if (acousticSab) {
+            acousticNode.port.postMessage({ type: 'sab', buffer: acousticSab });
+        }
+    }
+
+    let sidecarTick = 0;
+    const sync = () => {
+        try {
+            if (acousticSab && typeof portalInstance.publish_acoustic_sab === 'function') {
+                portalInstance.publish_acoustic_sab(acousticSab);
+            } else if (typeof portalInstance.acoustic_uniform_floats === 'function') {
+                const floats = portalInstance.acoustic_uniform_floats();
+                acousticNode.port.postMessage({ type: 'uniform', floats });
+            }
+            // Refresh STFT preview bins every ~2s (sidecar bake is cold-path)
+            if (typeof portalInstance.bake_stft_sidecar_demo === 'function' && (sidecarTick++ % 40) === 0) {
+                const sidecar = portalInstance.bake_stft_sidecar_demo(32);
+                if (sidecar?.length > 32) {
+                    const view = new DataView(sidecar.buffer, sidecar.byteOffset, sidecar.byteLength);
+                    const bins = new Float32Array(64);
+                    const off = 32;
+                    for (let i = 0; i < 64; i++) {
+                        bins[i] = view.getFloat32(off + i * 4, true);
+                    }
+                    acousticNode.port.postMessage({ type: 'sidecar', bins });
+                }
+            }
+            const pending = portalInstance.sonic_token_pending?.() ?? 0;
+            if (pending > 0 && typeof portalInstance.drain_sonic_tokens === 'function') {
+                const raw = portalInstance.drain_sonic_tokens(Math.min(pending, 16));
+                const arr = [];
+                for (let i = 0; i < (raw?.length ?? 0); i++) arr.push(Number(raw[i]));
+                if (arr.length) acousticNode.port.postMessage({ type: 'tokens', raw: arr });
+            }
+        } catch (e) {
+            console.warn('AcousticPlane sync', e);
+        }
+    };
+
+    if (acousticSyncTimer) clearInterval(acousticSyncTimer);
+    sync();
+    acousticSyncTimer = setInterval(sync, syncIntervalMs);
+    return { context: acousticContext, node: acousticNode, sab: acousticSab };
+}
+
+export function unmountAcousticPlane() {
+    if (acousticSyncTimer) {
+        clearInterval(acousticSyncTimer);
+        acousticSyncTimer = null;
+    }
+    if (acousticNode) {
+        acousticNode.disconnect();
+        acousticNode = null;
+    }
+    if (acousticContext) {
+        acousticContext.close().catch(() => {});
+        acousticContext = null;
+    }
+    acousticSab = null;
+}
+
+export function setAcousticEnabled(enabled, portalInstance = portal) {
+    portalInstance?.set_acoustic_enabled?.(enabled);
+    acousticNode?.port.postMessage({ type: 'mute', mute: !enabled });
+}
+
 export function updateDaemonBadge(elementId = 'wasm-text', dotId = 'wasm-dot', portalInstance = portal) {
     const textEl = document.getElementById(elementId);
     const dotEl = document.getElementById(dotId);
