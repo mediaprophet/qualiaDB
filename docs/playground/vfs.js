@@ -130,21 +130,41 @@ export class VFSProvider {
         const entry = this.available.find(d => d.id === datasetId);
         if (!entry) throw new Error(`VFSProvider: unknown dataset "${datasetId}"`);
 
-        const vfs = new VFS(
-            resolveManifestDatasetUrl(entry.url),
-            entry.lexUrl ?? null,
-            entry.compressed ?? false,
-            entry.bidxUrl ?? null,
-        );
-        await vfs.init({
-            loadLex: opts.loadLex ?? true,
-            cacheKey: datasetId,
-            prefetchToOpfs: opts.prefetchToOpfs ?? true,
-        });
+        const candidatePaths = [entry.url, ...(entry.fallbackUrls ?? [])];
+        const seen = new Set();
+        const urls = [];
+        for (const path of candidatePaths) {
+            const url = resolveManifestDatasetUrl(path);
+            if (!seen.has(url)) {
+                seen.add(url);
+                urls.push(url);
+            }
+        }
 
-        this._mounted.set(datasetId, vfs);
-        console.log(`[VFSProvider] Mounted "${datasetId}" → ${entry.url}`);
-        return vfs;
+        let lastErr = null;
+        for (const url of urls) {
+            const vfs = new VFS(
+                url,
+                entry.lexUrl ?? null,
+                entry.compressed ?? false,
+                entry.bidxUrl ?? null,
+            );
+            try {
+                await vfs.init({
+                    loadLex: opts.loadLex ?? true,
+                    cacheKey: datasetId,
+                    prefetchToOpfs: opts.prefetchToOpfs ?? true,
+                });
+                this._mounted.set(datasetId, vfs);
+                console.log(`[VFSProvider] Mounted "${datasetId}" → ${url}`);
+                return vfs;
+            } catch (e) {
+                lastErr = e;
+                console.warn(`[VFSProvider] Mount failed for "${datasetId}" at ${url}:`, e.message);
+            }
+        }
+
+        throw lastErr ?? new Error(`VFSProvider: could not mount "${datasetId}"`);
     }
 
     /**
