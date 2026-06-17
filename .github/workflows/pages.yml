@@ -54,17 +54,41 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked --version 0.13.1 --force
 
-      - name: WASM smoke-check (qualia-core-db)
-        run: cargo check --target wasm32-unknown-unknown -p qualia-core-db
+      - name: WASM smoke-check (portal slim)
+        run: |
+          cargo check --target wasm32-unknown-unknown -p qualia-core-db \
+            --no-default-features --features portal
 
-      - name: Build WASM (qualia-core-db)
+      - name: Build slim Qualia portal WASM (spatial / QApp)
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
         run: |
           wasm-pack build crates/qualia-core-db \
             --target web \
             --release \
-            --out-dir ../../docs/playground \
+            --out-dir crates/qualia-core-db/pkg-qualia \
+            --no-default-features \
+            -- --features portal
+          mkdir -p docs/pkg/qualia
+          cp crates/qualia-core-db/pkg-qualia/qualia_core_db.js docs/pkg/qualia/qualia.js
+          cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm docs/pkg/qualia/qualia_bg.wasm
+          ls -la docs/pkg/qualia/qualia.js docs/pkg/qualia/qualia_bg.wasm
+
+      - name: Phase 7.1 — portal WASM size budget
+        run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm
+
+      - name: Build full WASM (playground / API explorer)
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+        run: |
+          wasm-pack build crates/qualia-core-db \
+            --target web \
+            --release \
+            --out-dir docs/playground \
             --out-name qualia_core_db \
-            --no-typescript
+            --no-default-features \
+            --no-typescript \
+            -- --features wasm-full
           ls -la docs/playground/qualia_core_db.js docs/playground/qualia_core_db_bg.wasm
 
       - name: Prepare Schema.org benchmark artifacts for Pages

@@ -683,7 +683,14 @@ pub fn extrapolate_topology_draft(
     gamma: usize,
     vocab_len: u32,
 ) -> Option<TopologyDraftBatch> {
-    extrapolate_topology_draft_mapped(query, subject_hash, gamma, vocab_len, None)
+    #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+    {
+        extrapolate_topology_draft_mapped(query, subject_hash, gamma, vocab_len, None)
+    }
+    #[cfg(all(target_arch = "wasm32", not(feature = "wasm-llm")))]
+    {
+        extrapolate_topology_draft_mapped(query, subject_hash, gamma, vocab_len)
+    }
 }
 
 pub fn extrapolate_topology_draft_mapped(
@@ -691,6 +698,7 @@ pub fn extrapolate_topology_draft_mapped(
     subject_hash: u64,
     gamma: usize,
     vocab_len: u32,
+    #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
     mapper: Option<&crate::topology_draft::TopologyDraftMapper<'_>>,
 ) -> Option<TopologyDraftBatch> {
     let gamma = gamma.clamp(1, MAX_DRAFT_LEN);
@@ -699,12 +707,23 @@ pub fn extrapolate_topology_draft_mapped(
         return None;
     }
     let mut hits = [0usize; MAX_KNN_HITS];
-    let hit_count = crate::tensor::volume_gpu::try_gpu_tensor_search_into(query, 4.0, &mut hits)
-        .unwrap_or_else(|| {
+    let hit_count = {
+        #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+        {
+            crate::tensor::volume_gpu::try_gpu_tensor_search_into(query, 4.0, &mut hits)
+                .unwrap_or_else(|| {
+                    substrate
+                        .tensor_search_into(query, 4.0, &mut hits)
+                        .unwrap_or(0)
+                })
+        }
+        #[cfg(all(target_arch = "wasm32", not(feature = "wasm-llm")))]
+        {
             substrate
                 .tensor_search_into(query, 4.0, &mut hits)
                 .unwrap_or(0)
-        });
+        }
+    };
     if hit_count == 0 {
         return None;
     }
@@ -713,16 +732,29 @@ pub fn extrapolate_topology_draft_mapped(
     for i in 0..gamma.min(hit_count) {
         concepts[i] = substrate.subject_hash_at(hits[i] as u32) ^ subject_hash;
     }
-    let batch = if let Some(m) = mapper {
-        m.fill_draft_batch(&concepts[..gamma.min(hit_count)], gamma.min(hit_count))
-    } else {
-        let mut batch = TopologyDraftBatch::empty();
-        for i in 0..gamma.min(hit_count) {
-            batch.concept_hashes[i] = concepts[i];
-            batch.draft_ids[i] = (concepts[i] as u32) % vocab_len.max(1);
+    let batch = {
+        #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+        if let Some(m) = mapper {
+            m.fill_draft_batch(&concepts[..gamma.min(hit_count)], gamma.min(hit_count))
+        } else {
+            let mut batch = TopologyDraftBatch::empty();
+            for i in 0..gamma.min(hit_count) {
+                batch.concept_hashes[i] = concepts[i];
+                batch.draft_ids[i] = (concepts[i] as u32) % vocab_len.max(1);
+            }
+            batch.draft_len = gamma.min(hit_count) as u8;
+            batch
         }
-        batch.draft_len = gamma.min(hit_count) as u8;
-        batch
+        #[cfg(all(target_arch = "wasm32", not(feature = "wasm-llm")))]
+        {
+            let mut batch = TopologyDraftBatch::empty();
+            for i in 0..gamma.min(hit_count) {
+                batch.concept_hashes[i] = concepts[i];
+                batch.draft_ids[i] = (concepts[i] as u32) % vocab_len.max(1);
+            }
+            batch.draft_len = gamma.min(hit_count) as u8;
+            batch
+        }
     };
     let _ = topology_draft_ring().try_push(batch);
     Some(batch)

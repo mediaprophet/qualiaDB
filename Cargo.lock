@@ -5885,6 +5885,7 @@ dependencies = [
  "chacha20poly1305",
  "chrono",
  "ciborium",
+ "console_error_panic_hook",
  "core_affinity",
  "criterion 0.8.2",
  "crossbeam-channel",

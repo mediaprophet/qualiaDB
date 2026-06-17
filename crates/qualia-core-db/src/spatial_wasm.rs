@@ -93,7 +93,20 @@ fn vertices_to_tensors(verts: &[[f32; 3]]) -> Vec<Tensor10D> {
         let ny = (*y / 10.0).clamp(-1.0, 1.0);
         let nz = (*z / 10.0).clamp(-1.0, 1.0);
         let sigma = (i as f32 / verts.len() as f32).fract();
-        tensors.push(Tensor10D::ground_truth(0.0, 0.0, nx, ny, nz, 0.0, 1.0, 0.0, sigma));
+        let t_coord = i as f32 / verts.len().max(1) as f32;
+        // Demo manifold fan-out (w) and sandbox spin (q) for Phase 1 PGA validation.
+        let w = (i % 5) as f32;
+        let q = if i % 4 == 0 { 0.0 } else { 0.12 + (i % 6) as f32 * 0.06 };
+        // mu = 2 tags bilateral nodes for Phase 2c T_pull (EnforceBilateralMicroCommons).
+        let mu = if i % 3 == 0 { 2.0 } else { 0.0 };
+        // Phase 3 v-band demo: Euclidean / cyclic / hyperbolic / boundary clique mix.
+        let v = match i % 4 {
+            0 => 0.0,
+            1 => 1.5,
+            2 => 2.5,
+            _ => 3.2,
+        };
+        tensors.push(Tensor10D::new(q, v, w, nx, ny, nz, t_coord, 1.0, mu, sigma));
     }
     tensors
 }
@@ -321,6 +334,31 @@ pub fn sample_browser_telemetry_wasm() -> Result<JsValue, JsValue> {
         operational_mode: global_vram_ledger().mode() as u8,
     };
     serde_wasm_bindgen::to_value(&t).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn export_tensor_slice_wasm(max_nodes: u32) -> Result<JsValue, JsValue> {
+    use crate::tensor::buffer_export::write_tensor_slice_from_resident;
+    use crate::tensor::resident_substrate::{global_resident_substrate, MAX_RESIDENT_NODES};
+
+    let max = max_nodes as usize;
+    if max == 0 || max > MAX_RESIDENT_NODES {
+        return Err(JsValue::from_str("invalid max_nodes"));
+    }
+    let substrate = global_resident_substrate();
+    let count = substrate.node_count() as usize;
+    if count == 0 {
+        return Err(JsValue::from_str("no resident tensor substrate"));
+    }
+    let export_n = count.min(max);
+    let need = crate::tensor::buffer_export::TensorBufferHeader::total_bytes(export_n);
+    let mut buf = vec![0u8; need];
+    write_tensor_slice_from_resident(substrate, export_n, &mut buf)
+        .map_err(|e| JsValue::from_str(e))?;
+    let u8arr = js_sys::Uint8Array::new_with_length(need as u32);
+    u8arr.copy_from(&buf);
+    Ok(u8arr.into())
 }
 
 #[cfg(target_arch = "wasm32")]

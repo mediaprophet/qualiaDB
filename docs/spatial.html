@@ -6,7 +6,6 @@
     <title>Spatial Mathematics & GeoSPARQL - QualiaDB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { font-family: 'Inter', system_ui, sans-serif; }
         .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
@@ -30,7 +29,9 @@
         .spinbtn { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; border-radius: 6px; padding: 0.45rem 1.1rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
         .spinbtn:hover { background: rgba(16, 185, 129, 0.3); }
         .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
-        #canvas-container { border-radius: 16px; overflow: hidden; }
+        #canvas-container { border-radius: 16px; overflow: hidden; position: relative; }
+        #ambient-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; cursor: grab; }
+        .telem-slider::-webkit-slider-thumb { background: #34d399; }
     </style>
     <link rel="stylesheet" href="css/site-nav.css">
     <script src="js/menu-loader.js"></script>
@@ -81,7 +82,7 @@
     <div class="text-center mb-10">
         <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
             <i class="fas fa-cube"></i>
-            <span>WASM-only · GeoSPARQL · 48-byte Quin Encoding</span>
+            <span>WASM · GeoSPARQL · Ambient Telemetry · 10D Tensor</span>
         </div>
         <h1 class="text-5xl font-semibold tracking-tighter mb-3">Spatial Mathematics & GeoSPARQL</h1>
         <p class="text-white/60 max-w-xl mx-auto">Encoding 3D geometries directly into native 48-byte QualiaQuin ledgers with real spatial operations via WASM.</p>
@@ -129,8 +130,10 @@
     <!-- Tab 1: 3D Viewer -->
     <div id="tab-viewer" class="tab-pane active">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- 3D Viewer -->
-            <div class="lg:col-span-2 glass-strong rounded-3xl overflow-hidden" style="height: 520px;" id="canvas-container"></div>
+            <!-- 3D Viewer + ambient telemetry field (Webizen contract, Qualia data) -->
+            <div class="lg:col-span-2 glass-strong rounded-3xl overflow-hidden" style="height: 520px;" id="canvas-container">
+                <canvas id="ambient-canvas"></canvas>
+            </div>
 
             <!-- Controls -->
             <div class="glass-strong rounded-3xl p-6">
@@ -162,6 +165,27 @@
                             <option value="hybrid">Hybrid</option>
                         </select>
                     </div>
+
+                    <div>
+                        <label class="text-sm text-white/60 block mb-2">Observer Standpoint</label>
+                        <select id="standpoint-class" class="input-field mb-2">
+                            <option value="0">Spectator · commons read</option>
+                            <option value="1">Ephemeral session</option>
+                            <option value="2">Verified identifier</option>
+                            <option value="3">Vault · spin collapsed</option>
+                        </select>
+                        <label id="standpoint-epistemic-label" class="text-[10px] text-white/45 block mb-1">Epistemic aperture (identifier)</label>
+                        <input type="range" id="standpoint-epistemic-q" class="w-full mb-2" min="0" max="1" step="0.01" value="1">
+                        <input type="text" id="identifier-did" class="input-field text-xs mb-2" placeholder="did:… (optional identifier IRI)">
+                    </div>
+
+                    <div>
+                        <label class="text-sm text-white/60 block mb-1">Temporal Slice (t)</label>
+                        <p id="t-slice-label" class="text-[10px] text-cyan-300/80 mb-2 font-mono">t = 0.50 · ±1.00</p>
+                        <input type="range" id="t-slice" class="w-full" min="0" max="1" step="0.01" value="0.5">
+                        <label class="text-[10px] text-white/45 block mt-2 mb-1">Window (±)</label>
+                        <input type="range" id="t-window" class="w-full" min="0.02" max="1" step="0.01" value="0.08">
+                    </div>
                     
                     <button onclick="encodeToQuins()" class="spinbtn w-full" id="encode-btn">
                         <i class="fas fa-microchip mr-2"></i>Encode to Quins (WASM)
@@ -172,7 +196,45 @@
                     <div class="text-xs text-white/50 mb-2 font-semibold">Encoding Status</div>
                     <div id="encoding-status" class="text-sm text-emerald-300">Ready to encode</div>
                 </div>
+
+                <div class="mt-6 border-t border-white/10 pt-5">
+                    <h4 class="text-sm font-semibold text-cyan-300 mb-1 flex items-center gap-2">
+                        <i class="fas fa-wave-square"></i> Ambient Telemetry
+                    </h4>
+                    <p class="text-[10px] text-white/45 mb-3 leading-relaxed">
+                        48-byte <code class="text-cyan-400/80">SystemTelemetry</code> uniform (Webizen render). Pulses when you encode or run spatial ops.
+                    </p>
+                    <div id="telemetry-sliders" class="max-h-52 overflow-y-auto pr-1"></div>
+                </div>
             </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-5 mt-6 text-sm text-white/65 leading-relaxed">
+            <h4 class="text-emerald-300 font-semibold mb-2"><i class="fas fa-sitemap mr-2"></i>Qualia vs Webizen — where the line is</h4>
+            <div class="grid md:grid-cols-2 gap-4 text-xs">
+                <div>
+                    <div class="text-emerald-400 font-semibold mb-1">Qualia (engine)</div>
+                    <ul class="list-disc list-inside space-y-1 text-white/55">
+                        <li>48-byte <code>NQuin</code> graph, logic, SPARQL, WASM hot paths</li>
+                        <li>Zero-heap evaluator loops, 42 MB SlgArena ceiling</li>
+                        <li>Produces telemetry <em>sources</em> (memory, queries, LLM tokens)</li>
+                        <li>10D tensor <em>semantics</em> — what each dimension means</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="text-cyan-400 font-semibold mb-1">Webizen (shell + render)</div>
+                    <ul class="list-disc list-inside space-y-1 text-white/55">
+                        <li><code>webizen-web</code> / <code>webizen-render</code> wgpu pipeline for browser &amp; desktop</li>
+                        <li>10D <em>projection</em> — stack-fixed scene nodes, GPU uniforms, canvas layers</li>
+                        <li>Consumes normalized 0–1 floats; shaders animate — CPU stays idle</li>
+                        <li>Heap allowed in UI/DOM; not in Qualia evaluator hot paths</li>
+                    </ul>
+                </div>
+            </div>
+            <p class="text-[11px] text-white/40 mt-3 border-t border-white/10 pt-3">
+                This page uses a canvas2d ambient field (GitHub Pages) that mirrors the Webizen shader contract.
+                Desktop Webizen swaps the same 48-byte struct into wgpu instanced particles + bloom.
+            </p>
         </div>
     </div>
 
@@ -372,7 +434,7 @@ parity:    XOR fold
                     </div>
                     <div class="bg-black/30 p-4 rounded-lg border border-white/10">
                         <div class="text-emerald-300 font-mono text-sm mb-2">v (Topological Variety)</div>
-                        <p class="text-white/60 text-xs">Geometric physics rules: Euclidean, Cyclic, Hyperbolic, or Sovereign Boundary Cliques</p>
+                        <p class="text-white/60 text-xs">Geometric physics rules: Euclidean, Cyclic, Hyperbolic, or Boundary Cliques</p>
                     </div>
                     <div class="bg-black/30 p-4 rounded-lg border border-white/10">
                         <div class="text-emerald-300 font-mono text-sm mb-2">w (Manifold Index)</div>
@@ -388,7 +450,7 @@ parity:    XOR fold
                     </div>
                     <div class="bg-black/30 p-4 rounded-lg border border-white/10">
                         <div class="text-emerald-300 font-mono text-sm mb-2">α (Amplitude)</div>
-                        <p class="text-white/60 text-xs">Dynamic range, confidence weight, or energy density (HDR sovereignty)</p>
+                        <p class="text-white/60 text-xs">Dynamic range, confidence weight, or energy density (HDR dynamic range)</p>
                     </div>
                     <div class="bg-black/30 p-4 rounded-lg border border-white/10">
                         <div class="text-emerald-300 font-mono text-sm mb-2">μ (Modulation)</div>

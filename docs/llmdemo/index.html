@@ -138,12 +138,28 @@
             btnLoadModel.disabled = true;
             spinner.style.display = 'inline';
             progressBar.style.display = 'block';
-            log("Starting download of gemma-3-1b-it-q4_0.gguf from local server (http://localhost:8081)...");
-            
+            const MODEL_URLS = [
+                'http://localhost:8081/gemma-3-1b-it-q4_0.gguf',
+                'https://huggingface.co/google/gemma-3-1b-it-qat-q4_0-gguf/resolve/main/gemma-3-1b-it-q4_0.gguf',
+            ];
+            log("Starting download of gemma-3-1b-it-q4_0.gguf…");
+
             try {
-                // Ensure serve_models.py is running on port 8081
-                const response = await fetch('http://localhost:8081/gemma-3-1b-it-q4_0.gguf');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                let response = null;
+                for (const url of MODEL_URLS) {
+                    log(`Trying ${url}…`);
+                    try {
+                        response = await fetch(url);
+                        if (response.ok) {
+                            log(`Connected to ${url}`);
+                            break;
+                        }
+                        response = null;
+                    } catch {
+                        response = null;
+                    }
+                }
+                if (!response) throw new Error('Could not download model from local server or HuggingFace');
                 
                 const reader = response.body.getReader();
                 const contentLength = +response.headers.get('Content-Length');
@@ -180,7 +196,7 @@
                 
             } catch (e) {
                 log(`Error downloading model: ${e.message}`);
-                log("Make sure serve_models.py is running in the local/ directory!");
+                log("Tip: run serve_models.py on port 8081, or ensure HuggingFace is reachable.");
                 spinner.style.display = 'none';
                 btnLoadModel.disabled = false;
             }

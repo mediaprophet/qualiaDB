@@ -80,6 +80,11 @@ impl KeyVault {
         self.master_key.to_bytes()
     }
 
+    /// Ed25519 verifying key bytes for a context-derived pairwise key.
+    pub fn public_key_bytes_for_context(&self, context_id: &str) -> [u8; 32] {
+        VerifyingKey::from(&self.derive_key(context_id)).to_bytes()
+    }
+
     /// Verifies a payload against a given public key bytes
     pub fn verify_signature(
         public_key_bytes: &[u8; 32],

@@ -16,17 +16,41 @@ pub mod dicom_ingest;
 pub mod ingest;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod local_scheduler;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod llm_agent;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod lora;
 pub mod yaml_ld_q42;
 pub mod extension_manifest;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod extension_bus;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod shacl_compiler;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod modalities;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod neuro_symbolic_sieve;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod profiles;
 pub mod gpu_context;
+pub mod shaders;
 pub mod compute_universe;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod topology_draft;
 pub mod tensor;
 pub mod geometric_algebra;
@@ -79,19 +103,68 @@ pub mod query_engine;
 pub mod qubo_compiler;
 pub mod solid_ldp;
 pub mod vault_manifest;
+#[cfg(all(
+    target_arch = "wasm32",
+    any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full",
+        feature = "wasm-playground"
+    )
+))]
 pub mod wasm_bridge;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "portal", not(any(
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full",
+    feature = "wasm-playground"
+))))]
+pub mod wasm_bridge_core;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod wasm_bridge;
+pub mod portal_telemetry;
+pub mod portal_standpoint;
+pub mod portal_camera;
+pub mod portal_navigation;
+pub mod portal_pga;
+pub mod portal_spectral;
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+pub mod portal_gpu;
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+pub mod portal;
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+pub mod portal_wasm;
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod spatial_wasm;
 #[cfg(target_arch = "wasm32")]
-pub use spatial_wasm::{
-    export_tensor_buffer_wasm, geosparql_operation_wasm, sample_browser_telemetry_wasm,
-    spatial_encode_wasm,
-};
+pub use portal::QualiaPortal;
 #[cfg(target_arch = "wasm32")]
+pub use portal_wasm::{create_canvas, init_panic_hook, WebEngine};
+#[cfg(target_arch = "wasm32")]
+pub use spatial_wasm::{
+    export_tensor_buffer_wasm, export_tensor_slice_wasm, geosparql_operation_wasm,
+    sample_browser_telemetry_wasm, spatial_encode_wasm,
+};
+#[cfg(all(
+    target_arch = "wasm32",
+    any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full",
+        feature = "wasm-playground"
+    )
+))]
 pub use wasm_bridge::{
     parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, parse_turtle_wasm,
 };
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "portal", not(any(
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full",
+    feature = "wasm-playground"
+))))]
+pub use wasm_bridge_core::{parse_cbor_ld_wasm, parse_json_wasm};
+#[cfg(all(target_arch = "wasm32", any(feature = "wasm-playground", feature = "wasm-full")))]
 pub mod wasm_playground;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod zns_storage;
@@ -584,11 +657,19 @@ impl Drop for QualiaSuperBlock {
 
 pub mod agency;
 pub mod cbor_compiler;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod crdt;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon_graph;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod daemon_tensor;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod daemon_query;
 pub mod fuzz_testing;
@@ -596,22 +677,48 @@ pub mod git_bridge;
 pub mod kml_bridge;
 pub mod temporal_graph;
 pub mod provenance;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod epistemic;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod deontic_logic;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ontology_loader;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
 pub mod indexing;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod ingestion;
 pub mod lexicon;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod npu_ffi;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod nym_adapter;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod orchestrator;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod query_compiler;
 pub mod resolver;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod resident_model;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rpc;
@@ -621,7 +728,14 @@ pub mod storage;
 pub mod sync;
 pub mod tee_ffi;
 pub mod telemetry;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod wal;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod webizen;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod webizen_server;
@@ -631,8 +745,11 @@ pub mod webizen_server;
 pub mod daemon_swarm;
 #[cfg(target_os = "windows")]
 pub mod directml_bridge;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod ggml_quants;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod gguf_bridge;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod gguf_sharder;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
@@ -640,10 +757,15 @@ pub mod mcp_server;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub mod metal_bridge;
 pub mod mini_parser;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod ode_solver;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod qpu_ingress;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod quantum_dft;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod resource_catalog;
+#[cfg(any(not(target_arch = "wasm32"), any(feature = "wasm-scientific", feature = "wasm-logic")))]
 pub mod webizen_bytecode;
 
 #[cfg(target_os = "android")]
@@ -947,7 +1069,9 @@ pub mod webizen_sync;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod web_civics;
 
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod domains;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod solvers;
 
 #[cfg(target_os = "linux")]

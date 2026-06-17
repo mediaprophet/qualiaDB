@@ -8,7 +8,9 @@
 use crate::{q_hash, NQuin};
 use std::ops::Index;
 use std::path::Path;
-use std::sync::RwLock;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{OnceLock, RwLock};
+use tokio::sync::broadcast;
 
 /// Bench datasets (Schema.org ~18K quins) must fit for browser/native parity.
 pub const MAX_GRAPH_QUINS: usize = 65_536;
@@ -109,9 +111,36 @@ impl Index<usize> for DaemonGraphStore {
 }
 
 static GRAPH: RwLock<DaemonGraphStore> = RwLock::new(DaemonGraphStore::new());
+static GRAPH_REVISION: AtomicU64 = AtomicU64::new(0);
+static REVISION_TX: OnceLock<broadcast::Sender<u64>> = OnceLock::new();
 
 fn graph_lock() -> &'static RwLock<DaemonGraphStore> {
     &GRAPH
+}
+
+fn revision_tx() -> &'static broadcast::Sender<u64> {
+    REVISION_TX.get_or_init(|| {
+        let (tx, _) = broadcast::channel(64);
+        tx
+    })
+}
+
+/// Monotonic Lamport-style revision counter for daemon graph mutations.
+#[inline]
+pub fn graph_revision() -> u64 {
+    GRAPH_REVISION.load(Ordering::Acquire)
+}
+
+/// Subscribe to graph revision bumps (used by `GET /tensor/events` SSE).
+pub fn subscribe_graph_revisions() -> broadcast::Receiver<u64> {
+    revision_tx().subscribe()
+}
+
+/// Increment revision and notify SSE subscribers (Release ordering).
+pub fn bump_graph_revision() -> u64 {
+    let rev = GRAPH_REVISION.fetch_add(1, Ordering::Release) + 1;
+    let _ = revision_tx().send(rev);
+    rev
 }
 
 #[inline]
@@ -213,6 +242,7 @@ pub fn init_daemon_graph(storage_path: &str) {
         seed_anatomy_health_graph(&mut guard);
         try_load_index_dir(&mut guard, storage_path);
     }
+    bump_graph_revision();
 }
 
 /// Number of Quins currently available to `/query`.
@@ -237,8 +267,12 @@ pub fn extend_with_ontology_quins_slice(quins: &[crate::NQuin]) {
     }
     let lock = graph_lock();
     if let Ok(mut guard) = lock.write() {
+        let before = guard.len();
         for &q in quins {
             let _ = guard.push_unique(q);
+        }
+        if guard.len() > before {
+            bump_graph_revision();
         }
     }
 }
@@ -261,6 +295,7 @@ pub fn replace_graph_from_flat_bytes(bytes: &[u8]) -> Result<usize, &'static str
     let quins: &[NQuin] = bytemuck::cast_slice(bytes);
     guard.clear();
     guard.extend_from_slice(quins);
+    bump_graph_revision();
     Ok(quin_count)
 }
 
@@ -340,6 +375,53 @@ mod tests {
         assert_eq!(guard.len(), 1);
         assert_eq!(guard[0], quin);
         drop(guard);
+        reset_graph_for_test();
+    }
+
+    #[test]
+    #[serial]
+    fn init_daemon_graph_bumps_revision() {
+        reset_graph_for_test();
+        let before = graph_revision();
+        init_daemon_graph("/tmp/qualia-test-graph");
+        assert!(graph_revision() > before);
+        reset_graph_for_test();
+    }
+
+    #[test]
+    #[serial]
+    fn extend_with_ontology_quins_bumps_revision_only_when_added() {
+        reset_graph_for_test();
+        let quin = triple_quin(
+            "http://q.test/s/rev",
+            "http://q.test/p/rev",
+            "http://q.test/o/rev",
+            "did:qualia:test",
+        );
+        let before = graph_revision();
+        extend_with_ontology_quins_slice(&[quin]);
+        assert!(graph_revision() > before);
+
+        let unchanged = graph_revision();
+        extend_with_ontology_quins_slice(&[quin]);
+        assert_eq!(graph_revision(), unchanged);
+        reset_graph_for_test();
+    }
+
+    #[test]
+    #[serial]
+    fn replace_graph_from_flat_bytes_bumps_revision() {
+        reset_graph_for_test();
+        let quin = triple_quin(
+            "http://q.test/s/replace",
+            "http://q.test/p/replace",
+            "http://q.test/o/replace",
+            "did:qualia:test",
+        );
+        let before = graph_revision();
+        let bytes = bytemuck::bytes_of(&quin);
+        replace_graph_from_flat_bytes(bytes).expect("load flat quin");
+        assert!(graph_revision() > before);
         reset_graph_for_test();
     }
 }

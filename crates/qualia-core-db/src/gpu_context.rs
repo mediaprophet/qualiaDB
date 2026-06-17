@@ -271,6 +271,28 @@ pub fn global_universe_orchestrator() -> UniverseOrchestrator {
     universe_orchestrator()
 }
 
+/// U2-effective operational mode from live `VramLedger` pressure.
+#[inline]
+pub fn viewport_operational_mode() -> OperationalMode {
+    let ledger = global_vram_ledger();
+    universe_orchestrator().effective_mode(ComputeUniverse::Viewport, ledger.mode())
+}
+
+/// Zero-heap ambient draw throttle — static SSBO, dynamic `instance_count` (instant step-down).
+#[inline]
+pub fn ambient_draw_instances_for_mode(resident: u32, global: OperationalMode) -> u32 {
+    let cap = universe_orchestrator()
+        .effective_mode(ComputeUniverse::Viewport, global)
+        .max_particles();
+    resident.min(cap)
+}
+
+/// Live ledger hook for per-frame draw throttling (no buffer resize).
+#[inline]
+pub fn ambient_draw_instances(resident: u32) -> u32 {
+    ambient_draw_instances_for_mode(resident, global_vram_ledger().mode())
+}
+
 /// Zero-heap VRAM budget tracker (bytes, atomics).
 #[derive(Debug, Default)]
 pub struct VramLedger {
@@ -714,5 +736,19 @@ mod tests {
         ledger.record_render(2000);
         assert!(ledger.can_allocate_in_universe(&orch, ComputeUniverse::LlmInference, 5000));
         assert!(!ledger.can_allocate_in_universe(&orch, ComputeUniverse::Viewport, 2000));
+    }
+
+    #[test]
+    fn ambient_draw_instant_step_by_mode() {
+        let orch = UniverseOrchestrator::from_total_budget(6 * 1024 * 1024 * 1024, OperationalMode::Full);
+        assert_eq!(orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Full), 50_000);
+        assert_eq!(orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Eco), 8_000);
+        assert_eq!(orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Reserve), 0);
+
+        let resident = 50_000_u32;
+        assert_eq!(ambient_draw_instances_for_mode(resident, OperationalMode::Full), 50_000);
+        assert_eq!(ambient_draw_instances_for_mode(resident, OperationalMode::Eco), 8_000);
+        assert_eq!(ambient_draw_instances_for_mode(resident, OperationalMode::Reserve), 0);
+        assert_eq!(ambient_draw_instances_for_mode(3_000, OperationalMode::Eco), 3_000);
     }
 }

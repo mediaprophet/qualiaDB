@@ -1,4 +1,24 @@
 llms:
+  - id: "gemma-3-1b-it-q4_0"
+    name: "Gemma 3 1B Instruct (Q4_0 GGUF)"
+    provider: "Google"
+    format: "gguf"
+    quantization: "Q4_0"
+    size_mb: 957
+    download:
+      type: "huggingface"
+      repo: "google/gemma-3-1b-it-qat-q4_0-gguf"
+      file: "gemma-3-1b-it-q4_0.gguf"
+    license: "Gemma Terms"
+    recommended_for:
+      - edge
+      - very_low_ram
+      - demos
+    ram_estimate_mb: 1100
+    tags: [general, multilingual, edge, tiny]
+    last_verified: "2026-06-17"
+    notes: "Smallest Gemma 3 instruct model; default for browser and edge demos."
+
   - id: "phi-3-mini-4k-instruct-q4km"
     name: "Phi-3 Mini 4K Instruct (Q4_K_M GGUF)"
     provider: "Microsoft / Unsloth"
