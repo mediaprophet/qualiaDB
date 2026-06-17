@@ -362,12 +362,101 @@ pub fn export_tensor_slice_wasm(max_nodes: u32) -> Result<JsValue, JsValue> {
 }
 
 #[cfg(target_arch = "wasm32")]
+fn tensors_from_encode_json(json: &str) -> Result<Vec<Tensor10D>, JsValue> {
+    if json.contains("\"parts\"") {
+        let doc: crate::design_encode::DesignDocument =
+            serde_json::from_str(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        crate::design_encode::design_to_tensors(&doc)
+            .map_err(|e| JsValue::from_str(&format!("{e:?}")))
+    } else {
+        let req: SpatialEncodeRequest =
+            serde_json::from_str(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let verts = sample_vertices(&req.geo_type, req.detail);
+        Ok(vertices_to_tensors(&verts))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Serialize)]
+struct DesignEncodeWasmResponse {
+    part_count: usize,
+    relation_count: usize,
+    tensor_count: usize,
+    quin_count: usize,
+    design_hash: String,
+    tensor_bytes: usize,
+    quins: Vec<QuinJson>,
+    backend: &'static str,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn design_encode_wasm(json: &str) -> Result<JsValue, JsValue> {
+    let doc: crate::design_encode::DesignDocument =
+        serde_json::from_str(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let tensors = crate::design_encode::design_to_tensors(&doc)
+        .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
+    let quins_raw = crate::design_encode::design_to_quins(&doc)
+        .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
+
+    let design_hash = crate::design_encode::design_context_hash(&doc);
+    let geom_hash = design_hash;
+
+    let mut quins_json = Vec::with_capacity(quins_raw.len());
+    for q in &quins_raw {
+        quins_json.push(QuinJson {
+            subject: hex_u64(q.subject),
+            predicate: hex_u64(q.predicate),
+            object: hex_u64(q.object),
+            context: hex_u64(q.context),
+            metadata: hex_u64(q.metadata),
+            parity: hex_u64(q.parity),
+        });
+    }
+
+    let tensor_bytes = crate::tensor::buffer_export::TensorBufferHeader::total_bytes(tensors.len());
+    let ledger = global_vram_ledger();
+    let fabric = crate::compute_universe::UniverseFabric::current(ledger);
+    if !fabric.can_pin_tensor(ledger, tensor_bytes as u64) {
+        return Err(JsValue::from_str("U1 tensor pin denied (VRAM ledger cap)"));
+    }
+    ledger.record_tensor(tensor_bytes as u64);
+    record_bake_pulse();
+    let loaded = crate::tensor::resident_substrate::global_resident_substrate()
+        .load_from_tensors(&tensors, geom_hash)
+        .unwrap_or(0);
+    crate::tensor::kv_provenance::rebuild_prompt_provenance(loaded, loaded);
+    if let Some(anchor) = tensors.first() {
+        crate::compute_universe::publish_query_tensor(*anchor, geom_hash);
+    }
+    for (i, t) in tensors.iter().take(8).enumerate() {
+        let _ = crate::compute_universe::push_tensor_context(
+            crate::compute_universe::ContextInjectToken {
+                tensor_index: i as u32,
+                subject_hash: geom_hash,
+                distance: (t.x * t.x + t.y * t.y + t.z * t.z).sqrt(),
+                manifold_w: t.w,
+            },
+        );
+    }
+
+    let resp = DesignEncodeWasmResponse {
+        part_count: doc.parts.len(),
+        relation_count: doc.relations.len(),
+        tensor_count: tensors.len(),
+        quin_count: quins_raw.len(),
+        design_hash: hex_u64(design_hash),
+        tensor_bytes,
+        quins: quins_json,
+        backend: "wasm-design",
+    };
+    serde_wasm_bindgen::to_value(&resp).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn export_tensor_buffer_wasm(json: &str) -> Result<JsValue, JsValue> {
-    let req: SpatialEncodeRequest =
-        serde_json::from_str(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
-    let verts = sample_vertices(&req.geo_type, req.detail);
-    let tensors = vertices_to_tensors(&verts);
+    let tensors = tensors_from_encode_json(json)?;
     let need = crate::tensor::buffer_export::TensorBufferHeader::total_bytes(tensors.len());
     let mut buf = vec![0u8; need];
     write_tensor_buffer(&tensors, &mut buf).map_err(|e| JsValue::from_str(e))?;

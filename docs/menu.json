@@ -1,5 +1,5 @@
 {
-  "version": "0.0.16",
+  "version": "0.0.17",
   "brand": {
     "name": "QualiaDB",
     "tagline": "Human-Centric Semantic Engine",
@@ -89,6 +89,13 @@
       "href": "spatial.html",
       "icon": "fa-cube",
       "group": "Sciences"
+    },
+    {
+      "label": "Design Studio",
+      "href": "design-studio.html",
+      "icon": "fa-pen-ruler",
+      "highlight": true,
+      "group": "Tools"
     },
     {
       "label": "Edge LLM",

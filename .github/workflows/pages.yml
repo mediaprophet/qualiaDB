@@ -73,6 +73,8 @@ jobs:
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.js docs/pkg/qualia/qualia.js
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm docs/pkg/qualia/qualia_bg.wasm
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.d.ts docs/pkg/qualia/qualia.d.ts
+          cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.17","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
           ls -la docs/pkg/qualia/qualia.js docs/pkg/qualia/qualia_bg.wasm docs/pkg/qualia/qualia.d.ts
 
       - name: Phase 7.1 — portal WASM size budget

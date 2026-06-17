@@ -9,7 +9,7 @@
  *     from './js/qualia-wasm-runtime.js';
  *
  *   const mod = await initQualiaWasm();
- *   console.log(getEngineVersion(mod)); // "0.0.15"
+ *   console.log(getEngineVersion(mod)); // "0.0.17"
  */
 
 let _mod = null;
@@ -21,11 +21,13 @@ function resolvePaths(opts = {}) {
     if (opts.jsUrl && opts.wasmUrl) {
         return { jsUrl: opts.jsUrl, wasmUrl: opts.wasmUrl };
     }
-    // Default: docs site root (parent of docs/js/)
+    // Default: unified Qualia portal pkg (spatial / design-studio), then playground fallback
     const siteRoot = new URL(opts.base ?? '..', import.meta.url);
-    const jsUrl = opts.jsUrl ?? new URL('playground/qualia_core_db.js', siteRoot).href;
-    const wasmUrl = opts.wasmUrl ?? new URL('playground/qualia_core_db_bg.wasm', siteRoot).href;
-    return { jsUrl, wasmUrl };
+    const portalJs = new URL('pkg/qualia/qualia.js', siteRoot).href;
+    const portalWasm = new URL('pkg/qualia/qualia_bg.wasm', siteRoot).href;
+    const jsUrl = opts.jsUrl ?? portalJs;
+    const wasmUrl = opts.wasmUrl ?? portalWasm;
+    return { jsUrl, wasmUrl, fallbackJs: new URL('playground/qualia_core_db.js', siteRoot).href, fallbackWasm: new URL('playground/qualia_core_db_bg.wasm', siteRoot).href };
 }
 
 /**
@@ -41,20 +43,35 @@ export async function initQualiaWasm(opts = {}) {
     if (_initPromise) return _initPromise;
 
     _initPromise = (async () => {
-        try {
-            const { jsUrl, wasmUrl } = resolvePaths(opts);
+        const paths = resolvePaths(opts);
+        const tryInit = async (jsUrl, wasmUrl) => {
             const module = await import(jsUrl);
             const response = await fetch(wasmUrl);
             if (!response.ok) {
                 throw new Error(`WASM fetch failed: ${response.status} ${wasmUrl}`);
             }
             await module.default({ module_or_path: response });
-            _mod = module;
-            _version = readVersion(module);
-            _info = readInfo(module);
+            return module;
+        };
+        try {
+            _mod = await tryInit(paths.jsUrl, paths.wasmUrl);
         } catch (e) {
-            console.warn('[qualia-wasm-runtime] init failed:', e.message);
-            _mod = { __initError: e };
+            if (paths.fallbackJs && paths.fallbackWasm) {
+                try {
+                    console.warn('[qualia-wasm-runtime] portal pkg failed, trying playground:', e.message);
+                    _mod = await tryInit(paths.fallbackJs, paths.fallbackWasm);
+                } catch (e2) {
+                    console.warn('[qualia-wasm-runtime] init failed:', e2.message);
+                    _mod = { __initError: e2 };
+                }
+            } else {
+                console.warn('[qualia-wasm-runtime] init failed:', e.message);
+                _mod = { __initError: e };
+            }
+        }
+        if (_mod && !_mod.__initError) {
+            _version = readVersion(_mod);
+            _info = readInfo(_mod);
         }
         return _mod;
     })();

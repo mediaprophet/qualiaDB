@@ -55,6 +55,7 @@ pub mod topology_draft;
 pub mod sonic_token;
 pub mod audio;
 pub mod tensor;
+pub mod design_encode;
 pub mod geometric_algebra;
 pub mod rdf_star;
 pub mod webizen_validator;
@@ -147,8 +148,8 @@ pub use portal::QualiaPortal;
 pub use portal_wasm::{create_canvas, init_panic_hook, WebEngine};
 #[cfg(target_arch = "wasm32")]
 pub use spatial_wasm::{
-    export_tensor_buffer_wasm, export_tensor_slice_wasm, geosparql_operation_wasm,
-    sample_browser_telemetry_wasm, spatial_encode_wasm,
+    design_encode_wasm, export_tensor_buffer_wasm, export_tensor_slice_wasm,
+    geosparql_operation_wasm, sample_browser_telemetry_wasm, spatial_encode_wasm,
 };
 #[cfg(all(
     target_arch = "wasm32",

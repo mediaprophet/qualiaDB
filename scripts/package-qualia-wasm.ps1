@@ -47,4 +47,20 @@ foreach ($kv in $map.GetEnumerator()) {
     }
 }
 
-Write-Host "Qualia WASM portal built from qualia-core-db -> $DocsPkg"
+# Publish friendly package.json for GitHub Pages / Jekyll
+$ver = "0.0.17"
+@{
+    name = "qualia-portal"
+    type = "module"
+    version = $ver
+    main = "qualia.js"
+    types = "qualia.d.ts"
+    files = @("qualia.js", "qualia_bg.wasm", "qualia.d.ts", "qualia_bg.wasm.d.ts")
+} | ConvertTo-Json | Set-Content (Join-Path $DocsPkg "package.json") -Encoding UTF8
+
+Write-Host "Qualia WASM portal v$ver built from qualia-core-db -> $DocsPkg"
+
+$sync = Join-Path $PSScriptRoot "sync-portal-design-kit.ps1"
+if (Test-Path $sync) {
+    & $sync
+}

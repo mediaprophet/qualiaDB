@@ -1,6 +1,6 @@
 # Qualia-DB Glossary
 
-_Branch: `0.0.15` | Last updated: 2026-06-18_
+_Branch: `0.0.17` | Last updated: 2026-06-18_
 
 ---
 
@@ -99,7 +99,7 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 - **Sonic Token**: 8-byte packed `u64` event (NoteOn/Off, Parametric) referencing a `tensor_index`. Hot-path transport U0/U1 → U3 SPSC ring.
 - **σ parity**: Phenomenal mapping where the same `fract(σ)` drives visual wavelength (400–700 nm) and auditory center frequency (1760–110 Hz). See `portal_acoustic.rs`.
 - **Q3AS SAB**: 1024-byte `SharedArrayBuffer` layout (`AcousticSabHeader` + uniform + token ring + float mirror) for zero-copy U3 handoff; requires COOP/COEP.
-- **qualia-client** + **qualia-desktop** (`crates/qualia-client/`, `crates/qualia-desktop/`): **Legacy** Tauri/React prototype — not in release CI since v0.0.15.
+- **qualia-client** + **qualia-desktop** (`crates/qualia-client/`, `crates/qualia-desktop/`): **Legacy** Tauri/React prototype — not in release CI since v0.0.17.
 - **Loopback qapp asset server** (`qapps_protocol.rs`): Serves `{data_dir}/Qapps/{qapp_name}/` over `http://127.0.0.1:{port}/` (started by Flutter via `startQualiaProtocol()`).
 - **QappPackageManifest** (`qapp_registry.rs`): JSON (`qapp.json`) describing a Qualia qapp — `name`, `version`, `required_shapes` (SHACL shape IRIs the qapp needs from the graph).
 - **QappTarget**: Where a qapp's files live — `LocalDevDirectory(PathBuf)`, `LocalProxyPort(u16)`, or `IsolatedVault(String)`.

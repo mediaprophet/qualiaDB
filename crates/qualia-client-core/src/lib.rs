@@ -1,3 +1,5 @@
+pub mod activity_signals;
+pub mod asset_recommendations;
 pub mod anatomy_context;
 pub mod api;
 pub mod bundled_ontologies;
@@ -14,6 +16,7 @@ pub mod context_binding;
 pub mod engine;
 pub mod inference_backend;
 pub mod guardianship;
+pub mod local_job_scheduler;
 pub mod model_lifecycle;
 pub mod model_preferences;
 pub mod ontology_router;

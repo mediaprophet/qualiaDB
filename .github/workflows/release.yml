@@ -79,7 +79,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# ── Job 2: WASM smoke-check (fast, catches wasm32 compile errors before full build) ──
+# ── Job 2: WASM smoke-check (portal feature — spatial / design-studio) ────────
   check-wasm:
     name: WASM smoke-check
     runs-on: ubuntu-22.04
@@ -98,13 +98,15 @@ jobs:
             target
           key: wasm-check-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: wasm-check-cargo-
-      - name: WASM smoke-check
-        run: cargo check --target wasm32-unknown-unknown -p qualia-core-db
+      - name: WASM smoke-check (portal slim)
+        run: |
+          cargo check --target wasm32-unknown-unknown -p qualia-core-db \
+            --no-default-features --features portal
 
-# ── Job 3: qualia-core-db WASM ────────────────────────────────────────────────
-  build-wasm:
+# ── Job 3: Qualia Portal WASM (design-studio / spatial / 0.0.17 docs kit) ─────
+  build-portal-wasm:
     needs: check-wasm
-    name: WASM (qualia-core-db)
+    name: WASM (Qualia Portal)
     runs-on: ubuntu-22.04
 
     steps:
@@ -127,32 +129,110 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: wasm-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: wasm-cargo-
+          key: wasm-portal-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: wasm-portal-cargo-
 
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked --version 0.13.1 --force
 
-      - name: Build WASM package
+      - name: Build slim Qualia portal WASM
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
         run: |
           wasm-pack build crates/qualia-core-db \
             --target web \
             --release \
-            --out-dir ../../docs/playground \
-            --out-name qualia_core_db \
-            --no-typescript
+            --out-dir crates/qualia-core-db/pkg-qualia \
+            --no-default-features \
+            -- --features portal
+          mkdir -p docs/pkg/qualia
+          cp crates/qualia-core-db/pkg-qualia/qualia_core_db.js docs/pkg/qualia/qualia.js
+          cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm docs/pkg/qualia/qualia_bg.wasm
+          cp crates/qualia-core-db/pkg-qualia/qualia_core_db.d.ts docs/pkg/qualia/qualia.d.ts
+          cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.17","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
 
-      - name: Package WASM artifacts (GitHub Pages compatible)
+      - name: Portal WASM size budget
+        run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm
+
+      - name: Phenomenal viewport contract checklist
+        run: node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts
+
+      - name: Package Qualia Portal release assets
+        run: |
+          mkdir -p release-assets/qualia-portal
+          cp docs/pkg/qualia/qualia.js release-assets/qualia-portal/
+          cp docs/pkg/qualia/qualia_bg.wasm release-assets/qualia-portal/
+          cp docs/pkg/qualia/qualia.d.ts release-assets/qualia-portal/
+          cp docs/pkg/qualia/package.json release-assets/qualia-portal/
+          tar -czf qualia-portal-wasm.tar.gz -C release-assets qualia-portal
+
+      - name: Upload Qualia Portal WASM to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            qualia-portal-wasm.tar.gz
+            docs/pkg/qualia/qualia.js
+            docs/pkg/qualia/qualia_bg.wasm
+            docs/pkg/qualia/qualia.d.ts
+            docs/pkg/qualia/package.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ── Job 4: Full playground WASM (API explorer / wasm-full) ────────────────────
+  build-playground-wasm:
+    needs: check-wasm
+    name: WASM (playground wasm-full)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: wasm-playground-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: wasm-playground-cargo-
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked --version 0.13.1 --force
+
+      - name: Build full playground WASM
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+        run: |
+          wasm-pack build crates/qualia-core-db \
+            --target web \
+            --release \
+            --out-dir docs/playground \
+            --out-name qualia_core_db \
+            --no-default-features \
+            --no-typescript \
+            -- --features wasm-full
+
+      - name: Package playground release assets
         run: |
           mkdir -p release-assets/qualia-core-wasm
           cp docs/playground/qualia_core_db.js release-assets/qualia-core-wasm/
           cp docs/playground/qualia_core_db_bg.wasm release-assets/qualia-core-wasm/
           tar -czf qualia-core-wasm-pages.tar.gz -C release-assets qualia-core-wasm
+          tar -czf qualia-core-wasm.tar.gz -C docs/playground qualia_core_db.js qualia_core_db_bg.wasm
 
-      - name: Package WASM artifacts (raw wasm-pack pkg)
-        run: tar -czf qualia-core-wasm.tar.gz -C docs/playground qualia_core_db.js qualia_core_db_bg.wasm
-
-      - name: Upload to release
+      - name: Upload playground WASM to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -163,7 +243,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# ── Job 4: Princeton WordNet dataset (release asset, not git/LFS) ───────────────
+# ── Job 5: Princeton WordNet dataset (release asset, not git/LFS) ───────────────
   build-datasets:
     name: Datasets (Princeton WordNet)
     runs-on: ubuntu-22.04
@@ -221,4 +301,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# Flutter desktop packaging moved to WebizenAI repo — see Local_LIbraries/EXPORTS/qualia-flutter-desktop/
+# Desktop tray host: crates/webizen-desktop (Tauri). Package separately when ready.
+# Flutter desktop deprecated — 0.0.17 docs kit uses GitHub Pages + :8080 settings portal.
