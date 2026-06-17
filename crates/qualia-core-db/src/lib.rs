@@ -142,11 +142,11 @@ pub mod portal;
 pub mod portal_wasm;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod spatial_wasm;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub use portal::QualiaPortal;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub use portal_wasm::{create_canvas, init_panic_hook, WebEngine};
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub use spatial_wasm::{
     design_encode_wasm, export_tensor_buffer_wasm, export_tensor_slice_wasm,
     geosparql_operation_wasm, sample_browser_telemetry_wasm, spatial_encode_wasm,

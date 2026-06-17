@@ -108,6 +108,8 @@ jobs:
         run: cargo install wasm-pack --locked --version 0.13.1 --force
 
       - name: Build Qualia WASM for comparative harness
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
         run: |
           rustup target add wasm32-unknown-unknown
           wasm-pack build crates/qualia-core-db \
@@ -115,7 +117,8 @@ jobs:
             --release \
             --out-dir ../../docs/playground \
             --out-name qualia_core_db \
-            --no-typescript
+            --no-typescript \
+            -- --no-default-features --features wasm-full
 
       - name: Run Qualia WASM benchmark (10 k triples)
         run: |
@@ -225,6 +228,8 @@ jobs:
           cd ../wasm_prolog && npm install --prefer-offline
 
       - name: Install wasm-pack and build Qualia WASM
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
         run: |
           cargo install wasm-pack --locked --version 0.13.1 --force
           rustup target add wasm32-unknown-unknown
@@ -233,7 +238,8 @@ jobs:
             --release \
             --out-dir ../../docs/playground \
             --out-name qualia_core_db \
-            --no-typescript
+            --no-typescript \
+            -- --no-default-features --features wasm-full
 
       - name: Install SurrealDB
         run: |
