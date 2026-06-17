@@ -478,8 +478,9 @@ export class VFS {
      *
      * @param {{ loadLex?: boolean, cacheKey?: string, prefetchToOpfs?: boolean }} [opts]
      */
-    async init({ loadLex = true, cacheKey = null, prefetchToOpfs = true } = {}) {
+    async init({ loadLex = true, cacheKey = null, prefetchToOpfs = true, onProgress = null } = {}) {
         if (cacheKey) this._cacheKey = sanitizeCacheKey(cacheKey);
+        onProgress?.('Opening browser storage…', 2);
         try {
             this._opfsRoot = await navigator.storage.getDirectory();
             const datasets = await this._opfsRoot.getDirectoryHandle(OPFS_DATASETS_DIR, { create: true });
@@ -491,16 +492,23 @@ export class VFS {
             this._opfsBlocks = null;
         }
 
-        await this._bootFromHeader();
+        onProgress?.('Fetching dataset header…', 12);
+        await this._bootFromHeader(onProgress);
 
         const sidecars = [];
         if (loadLex && !this._lexLoaded) sidecars.push(this._loadLexicon());
         if (!this._bidxLoaded) sidecars.push(this._loadBidx());
-        if (sidecars.length) await Promise.all(sidecars);
+        if (sidecars.length) {
+            onProgress?.('Loading vocabulary index…', 55);
+            await Promise.all(sidecars);
+        }
 
+        onProgress?.('Dataset index ready', 68);
         await this._refreshOpfsCacheStatus();
         if (prefetchToOpfs && !this._opfsCacheStatus.complete) {
-            this._prefetchVolumeToOpfs();
+            this._prefetchVolumeToOpfs(onProgress);
+        } else {
+            onProgress?.('Dataset ready', 100);
         }
 
         this.resetTelemetry();
@@ -527,10 +535,11 @@ export class VFS {
      * Legacy volumes (no Q42 magic) fall back to fixed-stride BlockOffsetMap
      * plus optional side-car lex/bidx URLs.
      */
-    async _bootFromHeader() {
+    async _bootFromHeader(onProgress = null) {
         let preamble = null;
 
         // Probe: OPFS volume first (offline revisit), then HTTP Range.
+        onProgress?.('Checking local cache…', 18);
         preamble = await this._readOpfsVolumeRange(0, PREAMBLE_PROBE + 1);
         if (preamble?.length && !hasQ42V3Magic(preamble)) {
             console.warn('[VFS] Stale OPFS volume — clearing and re-fetching from network');
@@ -546,6 +555,7 @@ export class VFS {
         }
 
         if (!preamble?.length) {
+            onProgress?.('Downloading dataset header…', 28);
             preamble = await this._fetchVolumeBytes(0, PREAMBLE_PROBE + 1);
             if (preamble?.length) {
                 if (preamble.length > PREAMBLE_PROBE + 1) {
@@ -584,6 +594,7 @@ export class VFS {
         // v3: extend preamble if the probe window was too small.
         const preambleEnd = header.dataOffset;
         if (preamble.length < preambleEnd) {
+            onProgress?.('Downloading dataset index…', 38);
             const cached = await this._readOpfsVolumeRange(0, preambleEnd);
             if (cached?.length >= preambleEnd) {
                 preamble = cached;
@@ -614,6 +625,7 @@ export class VFS {
             header, dirEntries, this._totalBytes || preambleEnd + header.dataLength
         );
 
+        onProgress?.('Parsing dataset index…', 48);
         this._parseLexiconBytes(
             preamble.subarray(header.lexOffset, header.lexOffset + header.lexLength)
         );
@@ -622,6 +634,7 @@ export class VFS {
             header.blockCount
         );
 
+        onProgress?.('Dataset header ready', 62);
         this._opfsCacheStatus.totalBytes = this._totalBytes;
         console.log(
             `[VFS] v3 preamble: lex=${header.lexLength} B, bidx=${header.bidxLength} B,` +
@@ -1139,23 +1152,58 @@ export class VFS {
         }
     }
 
-    async _prefetchVolumeToOpfs() {
+    async _prefetchVolumeToOpfs(onProgress = null) {
         if (!this._opfsVault || this._prefetching) return;
         if (await this._isVolumeFullyCached()) {
             await this._refreshOpfsCacheStatus();
+            onProgress?.('Dataset ready (cached locally)', 100);
             return;
         }
         this._prefetching = true;
         this._opfsCacheStatus.prefetching = true;
         try {
             console.log(`[VFS] Caching ${this._cacheKey} to browser storage (OPFS)…`);
+            onProgress?.('Caching dataset for offline use…', 72);
             const resp = await fetch(this._remoteUrl, { cache: 'no-store' });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const buf = new Uint8Array(await resp.arrayBuffer());
-            await this._writeOpfsVolume(buf);
-            this._totalBytes = buf.byteLength;
+            const total = this._parseContentLength(resp) || this._totalBytes || 0;
+            this._opfsCacheStatus.totalBytes = total;
+
+            const reader = resp.body?.getReader?.();
+            if (!reader) {
+                const buf = new Uint8Array(await resp.arrayBuffer());
+                await this._writeOpfsVolume(buf);
+                this._totalBytes = buf.byteLength;
+                onProgress?.('Dataset cached locally', 100);
+            } else {
+                const chunks = [];
+                let received = 0;
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    received += value.length;
+                    this._opfsCacheStatus.bytesCached = received;
+                    if (total > 0) {
+                        const pct = Math.min(99, Math.round((received / total) * 100));
+                        onProgress?.(`Caching dataset… ${pct}%`, 72 + (pct / 100) * 28);
+                    } else {
+                        const mb = (received / 1024 / 1024).toFixed(1);
+                        onProgress?.(`Caching dataset… ${mb} MB`, null);
+                    }
+                }
+                const buf = new Uint8Array(received);
+                let offset = 0;
+                for (const chunk of chunks) {
+                    buf.set(chunk, offset);
+                    offset += chunk.length;
+                }
+                await this._writeOpfsVolume(buf);
+                this._totalBytes = buf.byteLength;
+                onProgress?.('Dataset cached locally', 100);
+            }
             console.log(
-                `[VFS] OPFS cache complete: ${(buf.byteLength / 1024 / 1024).toFixed(1)} MB` +
+                `[VFS] OPFS cache complete: ${(this._totalBytes / 1024 / 1024).toFixed(1)} MB` +
                 ` (${this._cacheKey})`
             );
         } catch (e) {

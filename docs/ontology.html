@@ -44,14 +44,26 @@
             width: 40px; height: 40px; border: 3px solid rgba(96, 165, 250, 0.2);
             border-top-color: #60a5fa; border-radius: 50%; animation: spin 1s linear infinite;
         }
+        .loading-progress-track {
+            width: 280px; height: 6px; margin: 14px auto 0;
+            background: rgba(96, 165, 250, 0.15); border-radius: 999px; overflow: hidden;
+        }
+        .loading-progress-bar {
+            height: 100%; width: 0%; background: linear-gradient(90deg, #3b82f6, #22d3ee);
+            border-radius: 999px; transition: width 0.25s ease;
+        }
+        .loading-percent { margin-top: 8px; font-size: 12px; color: rgba(148, 163, 184, 0.9); font-variant-numeric: tabular-nums; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes loading-indeterminate { from { width: 18%; margin-left: 0; } to { width: 62%; margin-left: 38%; } }
     </style>
 </head>
 <body class="bg-[#0a0e17] text-slate-200">
     <div id="loading-overlay" class="loading-overlay">
-        <div class="text-center">
+        <div class="text-center px-6">
             <div class="loading-spinner mx-auto mb-3"></div>
             <div id="loading-label" class="text-blue-400 text-sm font-medium">Loading ontology…</div>
+            <div class="loading-progress-track"><div id="loading-progress-bar" class="loading-progress-bar"></div></div>
+            <div id="loading-percent" class="loading-percent">0%</div>
         </div>
     </div>
 
@@ -159,7 +171,7 @@
                 <div id="sparql-examples" class="space-y-3 mb-3"></div>
                 <textarea id="sparql-editor" rows="5"
                     class="w-full bg-zinc-900 border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-emerald-200"
-                    placeholder="SELECT ?s ?p WHERE { ?s ?p &quot;dog&quot; }"></textarea>
+                    placeholder="SELECT ?s ?p WHERE { ?s ?p &quot;qualia&quot; }"></textarea>
                 <button onclick="runSparqlQuery()" class="mt-2 w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-semibold">
                     Execute on mounted .q42
                 </button>

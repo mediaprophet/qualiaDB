@@ -11,7 +11,7 @@ const UI_PROFILES = {
         title: 'Princeton WordNet',
         subtitle: 'Princeton WordNet 3.1 — ~5.56M triples, lemmas and synset relations',
         searchLabel: 'Search Word',
-        searchPlaceholder: 'e.g., dog, happy, run',
+        searchPlaceholder: 'e.g., qualia, happy, run',
         searchButton: 'Lookup Word',
         stat1: 'Lexicon Entries',
         stat2: 'Est. Synsets',
@@ -24,7 +24,7 @@ const UI_PROFILES = {
             { id: 'adjective', label: 'Adjectives', icon: 'fa-palette', color: 'purple' },
             { id: 'adverb', label: 'Adverbs', icon: 'fa-wand-magic-sparkles', color: 'amber' },
         ],
-        quickExamples: ['dog', 'happy', 'run', 'beautiful', 'computer'],
+        quickExamples: ['qualia', 'happy', 'run', 'beautiful', 'computer'],
         graphPlaceholder: 'Enter word to visualize',
         graphToggles: [
             { id: 'show-hypernyms', label: 'Hypernyms', key: 'hypernyms', color: '#3b82f6', default: true },
@@ -45,7 +45,7 @@ const UI_PROFILES = {
             { id: 'hyponyms', label: 'Hyponym pattern', icon: 'emerald' },
             { id: 'wildcard', label: 'Wildcard scan', icon: 'amber' },
         ],
-        defaultSearch: 'dog',
+        defaultSearch: 'qualia',
         ingestNote: 'powershell scripts/fetch_wordnet_release.ps1  (or ingest_princeton_wordnet.ps1 to build)',
     },
     schemaorg: {
@@ -136,7 +136,7 @@ const SPARQL_TEMPLATES = {
     wordnet: {
         lemma: `PREFIX wn: <https://en-wordnet.oed.com/schema/>
 SELECT ?s ?p WHERE {
-  ?s ?p "dog"
+  ?s ?p "qualia"
 }`,
         hypernyms: `PREFIX wn: <https://en-wordnet.oed.com/schema/>
 SELECT ?parent WHERE {
@@ -223,12 +223,24 @@ function setStatus(text, ok = true) {
         : 'text-xs px-3 py-1 rounded-full bg-red-500/15 text-red-300 border border-red-500/25';
 }
 
-function setLoading(show, msg = 'Loading ontology…') {
+function setLoading(show, msg = 'Loading ontology…', pct = null) {
     const overlay = $('loading-overlay');
     if (!overlay) return;
     overlay.style.display = show ? 'flex' : 'none';
     const label = $('loading-label');
     if (label) label.textContent = msg;
+    const bar = $('loading-progress-bar');
+    const pctEl = $('loading-percent');
+    if (bar) {
+        const width = pct == null ? null : Math.max(0, Math.min(100, Math.round(pct)));
+        bar.style.width = width == null ? '30%' : `${width}%`;
+        bar.style.marginLeft = width == null ? '0' : '0';
+        bar.style.animation = width == null ? 'loading-indeterminate 1.2s ease-in-out infinite alternate' : 'none';
+    }
+    if (pctEl) {
+        pctEl.textContent = pct == null ? '…' : `${Math.max(0, Math.min(100, Math.round(pct)))}%`;
+        pctEl.style.display = show ? 'block' : 'none';
+    }
 }
 
 let _opfsWatchTimer = null;
@@ -244,6 +256,17 @@ function watchOpfsCache(vfs) {
         }
         setStatus(`Dataset mounted · WASM ready${formatOpfsCacheLabel(c)}`);
     }, 1500);
+}
+
+function mountProgressReporter(basePct = 0, span = 100) {
+    return (msg, pct) => {
+        if (pct == null) {
+            setLoading(true, msg, null);
+            return;
+        }
+        const mapped = basePct + (pct / 100) * span;
+        setLoading(true, msg, mapped);
+    };
 }
 
 function shortLabel(value) {
@@ -460,9 +483,10 @@ function applyProfileUi() {
 
 async function switchDataset(datasetId) {
     if (!datasetId || datasetId === engine.activeDataset?.id) return;
-    setLoading(true, `Mounting ${datasetId}…`);
+    const report = mountProgressReporter(0, 70);
+    setLoading(true, `Mounting ${datasetId}…`, 0);
     try {
-        const stats = await engine.mountDataset(datasetId);
+        const stats = await engine.mountDataset(datasetId, { onProgress: report });
         const url = new URL(location.href);
         url.searchParams.set('dataset', datasetId);
         history.replaceState({}, '', url);
@@ -478,7 +502,7 @@ async function switchDataset(datasetId) {
         $('graph-term').value = hints.defaultSearch;
         $('category-words').innerHTML = '<div class="text-xs text-white/60 text-center py-4">Select a category to browse samples</div>';
         $('entity-result').classList.add('hidden');
-        await lookupEntity();
+        await lookupEntity(report);
     } catch (e) {
         console.error(e);
         setStatus(e.message || 'Failed to mount dataset', false);
@@ -487,14 +511,18 @@ async function switchDataset(datasetId) {
     }
 }
 
-window.lookupEntity = async function lookupEntity() {
+window.lookupEntity = async function lookupEntity(progressReporter = null) {
     if (!engine.vfs) return;
     const term = $('entity-search').value.trim();
     if (!term) return;
 
-    setLoading(true, `Looking up "${term}"…`);
+    const report = progressReporter ?? ((msg, pct) => setLoading(true, msg ?? `Looking up "${term}"…`, pct));
+    report(`Looking up "${term}"…`, progressReporter ? 72 : 0);
     try {
-        const result = await engine.lookupEntity(term);
+        const result = await engine.lookupEntity(term, (msg, pct) => {
+            const mapped = progressReporter ? 72 + (pct / 100) * 28 : pct;
+            report(msg ?? `Looking up "${term}"…`, mapped);
+        });
         lastLookup = result;
         const resultDiv = $('entity-result');
         const entityLabel = engine.profile === 'wordnet' ? 'lemma' : 'term';
@@ -695,9 +723,10 @@ window.startNtIngest = function startNtIngest() {
 };
 
 async function boot() {
-    setLoading(true);
+    const report = mountProgressReporter(0, 70);
+    setLoading(true, 'Starting ontology engine…', 0);
     try {
-        const stats = await engine.init();
+        const stats = await engine.init(null, { onProgress: report });
         renderDatasetPicker();
         applyProfileUi();
         updateStats(stats);
@@ -708,7 +737,7 @@ async function boot() {
         showSparqlExample(hints.sparqlExamples[0]?.id ?? 'wildcard');
         $('entity-search').value = hints.defaultSearch;
         $('graph-term').value = hints.defaultSearch;
-        await lookupEntity();
+        await lookupEntity(report);
     } catch (e) {
         console.error(e);
         const hint = String(e.message || '').includes('Q42 v3 header')

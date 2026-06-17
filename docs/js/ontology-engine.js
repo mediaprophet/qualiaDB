@@ -123,11 +123,14 @@ export class OntologyEngine {
         return this.docsUrl(path);
     }
 
-    async initWasm() {
+    async initWasm(onProgress = null) {
         if (this.wasmReady) return;
+        onProgress?.('Loading WASM module…', 5);
         const mod = await import(this.playgroundUrl('qualia_core_db.js'));
+        onProgress?.('Fetching WASM binary…', 12);
         const wasmResp = await fetch(this.playgroundUrl('qualia_core_db_bg.wasm'));
         if (!wasmResp.ok) throw new Error(`WASM fetch failed: ${wasmResp.status}`);
+        onProgress?.('Initialising WASM runtime…', 18);
         await mod.default(wasmResp);
         if (typeof mod.execute_ntriples_query !== 'function') {
             throw new Error('execute_ntriples_query missing from WASM build');
@@ -148,12 +151,13 @@ export class OntologyEngine {
         return params.get('dataset') || null;
     }
 
-    async init(datasetId = null) {
-        await this.initWasm();
+    async init(datasetId = null, { onProgress } = {}) {
+        await this.initWasm(onProgress);
+        onProgress?.('Loading dataset manifest…', 22);
         await this.loadManifest();
         const id = datasetId ?? this.datasetFromUrl() ?? this.datasets[0]?.id;
         if (!id) throw new Error('No datasets in vfs-manifest.json');
-        return this.mountDataset(id);
+        return this.mountDataset(id, { onProgress });
     }
 
     _datasetVolumeUrls(entry) {
@@ -163,8 +167,8 @@ export class OntologyEngine {
         return [...new Set(urls)];
     }
 
-    async mountDataset(datasetId) {
-        await this.initWasm();
+    async mountDataset(datasetId, { onProgress } = {}) {
+        await this.initWasm(onProgress);
         if (!this.datasets.length) await this.loadManifest();
 
         const entry = this.datasets.find(d => d.id === datasetId) ?? this.datasets[0];
@@ -178,13 +182,23 @@ export class OntologyEngine {
         let lastErr = null;
         for (const url of volumeUrls) {
             try {
+                onProgress?.(`Mounting ${entry.label ?? datasetId}…`, 28);
                 this.vfs = new VFS(
                     url,
                     entry.lexUrl ? this.resolveManifestUrl(entry.lexUrl) : null,
                     entry.compressed ?? false,
                     entry.bidxUrl ? this.resolveManifestUrl(entry.bidxUrl) : null,
                 );
-                await this.vfs.init({ loadLex: true, cacheKey: datasetId, prefetchToOpfs: true });
+                await this.vfs.init({
+                    loadLex: true,
+                    cacheKey: datasetId,
+                    prefetchToOpfs: true,
+                    onProgress: (msg, pct) => {
+                        if (pct == null) onProgress?.(msg, null);
+                        else onProgress?.(msg, 28 + (pct / 100) * 42);
+                    },
+                });
+                onProgress?.('Dataset mounted', 70);
                 return this.getStats();
             } catch (err) {
                 lastErr = err;
@@ -235,14 +249,14 @@ export class OntologyEngine {
         return t;
     }
 
-    async query(pattern, maxResults = 200) {
+    async query(pattern, maxResults = 200, onProgress = null) {
         if (!this.vfs) throw new Error('Dataset not mounted');
         const normalized = pattern.trim();
         if (!normalized) {
             return { matches: [], vm_cycles: 0, direct_jump_ops: 0, lexicon_lookup_ops: 0 };
         }
         if (this._dbBytes?.length) return this._queryBuffer(normalized, this._dbBytes, maxResults);
-        return this._streamingQuery(normalized, maxResults);
+        return this._streamingQuery(normalized, maxResults, onProgress);
     }
 
     async querySparql(sparql, maxResults = 200) {
@@ -252,19 +266,19 @@ export class OntologyEngine {
         return { ...result, bgp };
     }
 
-    async lookupEntity(term) {
+    async lookupEntity(term, onProgress = null) {
         const raw = term.trim();
         if (!raw) throw new Error('Empty search term');
 
         if (this.profile === 'schemaorg' || this.profile === 'w3c') {
-            return this._lookupVocabulary(raw);
+            return this._lookupVocabulary(raw, onProgress);
         }
-        return this._lookupWordNet(raw);
+        return this._lookupWordNet(raw, onProgress);
     }
 
-    async _lookupWordNet(word) {
+    async _lookupWordNet(word, onProgress = null) {
         const lemma = word.toLowerCase();
-        const hits = await this.query(`?s ?p "${lemma}"`, 64);
+        const hits = await this.query(`?s ?p "${lemma}"`, 64, onProgress);
         if (!hits.matches.length) {
             return { term: lemma, found: false, entities: [], profile: 'wordnet' };
         }
@@ -279,16 +293,16 @@ export class OntologyEngine {
         return { term: lemma, found: true, entities, profile: 'wordnet' };
     }
 
-    async _lookupVocabulary(term) {
+    async _lookupVocabulary(term, onProgress = null) {
         const profile = this.profile;
         const iri = this.normalizeIri(term);
-        let edges = await this.query(`<${iri}> ?p ?o`, 256);
+        let edges = await this.query(`<${iri}> ?p ?o`, 256, onProgress);
 
         if (!edges.matches.length) {
             const short = iri.split(/[/#]/).pop() ?? term;
-            edges = await this.query(`?s ?p "${short}"`, 64);
+            edges = await this.query(`?s ?p "${short}"`, 64, onProgress);
             if (!edges.matches.length) {
-                edges = await this.query(`?s <http://www.w3.org/2000/01/rdf-schema#label> "${short}"`, 64);
+                edges = await this.query(`?s <http://www.w3.org/2000/01/rdf-schema#label> "${short}"`, 64, onProgress);
             }
             if (!edges.matches.length) {
                 return { term, found: false, entities: [], profile };
@@ -423,7 +437,7 @@ export class OntologyEngine {
         return this._jsFallbackQuery(pattern, bytes, maxResults);
     }
 
-    async _streamingQuery(pattern, maxResults) {
+    async _streamingQuery(pattern, maxResults, onProgress = null) {
         const vfs = this.vfs;
         const tokens = pattern.trim().split(/\s+/).filter(t => t !== '.');
         if (tokens.length < 3) {
@@ -440,8 +454,15 @@ export class OntologyEngine {
 
         const matches = [];
         let cycles = 0, dj = 0, lx = 0;
+        const totalBlocks = blockList.length;
+        if (onProgress && totalBlocks > 1) {
+            onProgress('Searching graph…', 0);
+        }
 
         for (let base = 0; base < blockList.length && matches.length < maxResults; base += CONCURRENCY) {
+            if (onProgress && totalBlocks > 1) {
+                onProgress('Searching graph…', Math.min(99, Math.round((base / totalBlocks) * 100)));
+            }
             const slice = blockList.slice(base, base + CONCURRENCY);
             const blocks = await Promise.all(slice.map(bi => vfs.readBlock(bi).catch(() => null)));
 
@@ -470,6 +491,10 @@ export class OntologyEngine {
                     }
                 }
             }
+        }
+
+        if (onProgress && totalBlocks > 1) {
+            onProgress('Search complete', 100);
         }
 
         return { matches, vm_cycles: cycles, direct_jump_ops: dj, lexicon_lookup_ops: lx };
