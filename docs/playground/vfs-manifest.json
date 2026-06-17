@@ -9,6 +9,10 @@
       "icon": "\ud83d\udcda",
       "description": "Princeton WordNet 3.1 RDF \u00b7 5,558,748 triples \u00b7 ~127 MB .q42 (523 MB RDF/XML) \u00b7 scripts/ingest_princeton_wordnet.ps1",
       "url": "data/wordnet/princeton.q42",
+      "fallbackUrls": [
+        "playground/wordnet.q42",
+        "https://mediaprophet.github.io/qualiaDB/data/wordnet/princeton.q42"
+      ],
       "compressed": false,
       "source": "remote",
       "license": "WordNet License",

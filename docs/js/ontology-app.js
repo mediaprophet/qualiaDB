@@ -308,8 +308,29 @@ function updateDatasetInfo(stats) {
             ${estTriples ? `<span class="text-white/40">·</span><span>${estTriples}</span>` : ''}
         </div>
         <p class="text-xs text-white/50 mt-1">${esc(d.description ?? sizeHint)}</p>
-        <p class="text-xs text-white/40 mt-1">${esc(sizeHint)}</p>`;
+        <p class="text-xs text-white/40 mt-1">${esc(sizeHint)}</p>
+        <button type="button" id="clear-opfs-btn"
+            class="mt-2 text-xs px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10">
+            Clear browser dataset cache
+        </button>`;
     el.classList.remove('hidden');
+    $('clear-opfs-btn')?.addEventListener('click', clearDatasetCache);
+}
+
+async function clearDatasetCache() {
+    if (!engine.vfs) return;
+    setLoading(true, 'Clearing browser cache…');
+    try {
+        await engine.vfs.clearOpfsCache();
+        const stats = await engine.mountDataset(engine.activeDataset?.id ?? 'wordnet');
+        updateStats(stats);
+        updateDatasetInfo(stats);
+        setStatus('Cache cleared · dataset remounted');
+    } catch (e) {
+        setStatus(e.message || 'Remount failed after cache clear', false);
+    } finally {
+        setLoading(false);
+    }
 }
 
 function renderDatasetPicker() {
@@ -690,7 +711,10 @@ async function boot() {
         await lookupEntity();
     } catch (e) {
         console.error(e);
-        setStatus(e.message || 'Engine failed to load', false);
+        const hint = String(e.message || '').includes('Q42 v3 header')
+            ? ' — try Ctrl+Shift+R or “Clear browser dataset cache” after the page loads a dataset picker.'
+            : '';
+        setStatus((e.message || 'Engine failed to load') + hint, false);
         $('stat-1').textContent = '!';
     } finally {
         setLoading(false);

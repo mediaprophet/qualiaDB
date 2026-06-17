@@ -73,18 +73,20 @@ jobs:
           bash scripts/prepare_schemaorg_benchmark.sh 30.0 current-https
 
       - name: Fetch Princeton WordNet from GitHub Release
-        continue-on-error: true
         run: |
-          bash scripts/fetch_wordnet_release.sh || {
-            echo "WARN: release download failed — trying ingest or OEWN subset fallback"
-            if [[ -n "${QUALIA_PRINCETON_RDF:-}" && -f "$QUALIA_PRINCETON_RDF" ]]; then
-              bash scripts/ingest_princeton_wordnet.sh
-            else
-              bash scripts/fetch_wordnet.sh --subset 100000 --playground
-            fi
-          }
-          ls -lh docs/data/wordnet/princeton.q42 docs/playground/wordnet.q42 2>/dev/null || \
-            ls -lh docs/playground/wordnet.q42
+          bash scripts/fetch_wordnet_release.sh
+          test -f docs/data/wordnet/princeton.q42
+          test -f docs/playground/wordnet.q42
+          ls -lh docs/data/wordnet/princeton.q42 docs/playground/wordnet.q42
+          # Verify Q42 v3 magic so Pages never ships a stale HTML/404 body
+          python3 - <<'PY'
+          import pathlib, sys
+          p = pathlib.Path("docs/data/wordnet/princeton.q42")
+          magic = p.read_bytes()[:4]
+          if magic != b"Q42\x00":
+              sys.exit(f"invalid Q42 magic in {p}: {magic!r}")
+          print(f"OK: {p.name} magic Q42\\\\0, size {p.stat().st_size:,} B")
+          PY
 
       - name: Build W3C ontology volumes for Ontology Demo
         continue-on-error: true

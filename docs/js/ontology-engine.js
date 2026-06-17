@@ -156,6 +156,13 @@ export class OntologyEngine {
         return this.mountDataset(id);
     }
 
+    _datasetVolumeUrls(entry) {
+        const urls = [entry.url, ...(entry.fallbackUrls ?? [])]
+            .map(u => this.resolveManifestUrl(u))
+            .filter(Boolean);
+        return [...new Set(urls)];
+    }
+
     async mountDataset(datasetId) {
         await this.initWasm();
         if (!this.datasets.length) await this.loadManifest();
@@ -167,14 +174,26 @@ export class OntologyEngine {
         this.datasetLabel = entry.label ?? datasetId;
         this._dbBytes = null;
 
-        this.vfs = new VFS(
-            this.resolveManifestUrl(entry.url),
-            entry.lexUrl ? this.resolveManifestUrl(entry.lexUrl) : null,
-            entry.compressed ?? false,
-            entry.bidxUrl ? this.resolveManifestUrl(entry.bidxUrl) : null,
-        );
-        await this.vfs.init({ loadLex: true, cacheKey: datasetId, prefetchToOpfs: true });
-        return this.getStats();
+        const volumeUrls = this._datasetVolumeUrls(entry);
+        let lastErr = null;
+        for (const url of volumeUrls) {
+            try {
+                this.vfs = new VFS(
+                    url,
+                    entry.lexUrl ? this.resolveManifestUrl(entry.lexUrl) : null,
+                    entry.compressed ?? false,
+                    entry.bidxUrl ? this.resolveManifestUrl(entry.bidxUrl) : null,
+                );
+                await this.vfs.init({ loadLex: true, cacheKey: datasetId, prefetchToOpfs: true });
+                return this.getStats();
+            } catch (err) {
+                lastErr = err;
+                try { await this.vfs?.clearOpfsCache?.(); } catch (_) { /* ignore */ }
+                this.vfs = null;
+                console.warn(`[Ontology] Mount failed for ${url}:`, err.message);
+            }
+        }
+        throw lastErr ?? new Error(`Failed to mount dataset ${datasetId}`);
     }
 
     get profile() {

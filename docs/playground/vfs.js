@@ -182,6 +182,12 @@ const PREAMBLE_PROBE  = 8191;
  * @param {DataView} dv — view over at least 256 bytes at offset 0
  * @returns {object|null}
  */
+function hasQ42V3Magic(bytes) {
+    if (!bytes || bytes.length < HEADER_SIZE) return false;
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, HEADER_SIZE);
+    return parseQ42Header(dv) !== null;
+}
+
 function parseQ42Header(dv) {
     if (dv.byteLength < HEADER_SIZE) return null;
     if (dv.getUint8(0) !== Q42_MAGIC || dv.getUint8(1) !== Q42_MAGIC2 ||
@@ -526,6 +532,11 @@ export class VFS {
 
         // Probe: OPFS volume first (offline revisit), then HTTP Range.
         preamble = await this._readOpfsVolumeRange(0, PREAMBLE_PROBE + 1);
+        if (preamble?.length && !hasQ42V3Magic(preamble)) {
+            console.warn('[VFS] Stale OPFS volume — clearing and re-fetching from network');
+            await this._invalidateOpfsVolume();
+            preamble = null;
+        }
         if (preamble?.length) {
             this._opfsCacheStatus.source = 'opfs';
             try {
@@ -535,25 +546,19 @@ export class VFS {
         }
 
         if (!preamble?.length) {
-            try {
-                const resp = await fetch(this._remoteUrl, {
-                    headers: { Range: `bytes=0-${PREAMBLE_PROBE}` },
-                });
-                if (resp.ok || resp.status === 206) {
-                    this._totalBytes = this._parseContentLength(resp);
-                    preamble = new Uint8Array(await resp.arrayBuffer());
-                    if (resp.status === 200 && preamble.length > PREAMBLE_PROBE + 1) {
-                        await this._writeOpfsVolume(preamble);
-                    } else {
-                        await this._writeOpfsVolumeRange(0, preamble);
-                    }
+            preamble = await this._fetchVolumeBytes(0, PREAMBLE_PROBE + 1);
+            if (preamble?.length) {
+                if (preamble.length > PREAMBLE_PROBE + 1) {
+                    await this._writeOpfsVolume(preamble);
+                } else {
+                    await this._writeOpfsVolumeRange(0, preamble);
                 }
-            } catch (_) { /* offline — try HEAD below */ }
+            }
         }
 
         if (!this._totalBytes) {
             try {
-                const head = await fetch(this._remoteUrl, { method: 'HEAD' });
+                const head = await fetch(this._remoteUrl, { method: 'HEAD', cache: 'no-store' });
                 const cl = head.headers.get('Content-Length');
                 if (cl) this._totalBytes = parseInt(cl, 10);
             } catch (_) { /* fully offline */ }
@@ -561,7 +566,9 @@ export class VFS {
 
         if (!preamble || preamble.length < HEADER_SIZE) {
             throw new Error(
-                '[VFS] Could not read Q42 v3 header — re-ingest with qualia-cli (ingest semantic)'
+                `[VFS] Could not read Q42 v3 header from ${this._remoteUrl} — ` +
+                'the dataset may be missing on the server or cached as a stale 404. ' +
+                'Hard-refresh (Ctrl+Shift+R) or clear site data for this origin, then retry.'
             );
         }
 
@@ -582,12 +589,9 @@ export class VFS {
                 preamble = cached;
             } else {
                 try {
-                    const resp = await fetch(this._remoteUrl, {
-                        headers: { Range: `bytes=0-${preambleEnd - 1}` },
-                    });
-                    if (resp.ok || resp.status === 206) {
-                        this._totalBytes = this._parseContentLength(resp) || this._totalBytes;
-                        preamble = new Uint8Array(await resp.arrayBuffer());
+                    const extended = await this._fetchVolumeBytes(0, preambleEnd);
+                    if (extended?.length >= preambleEnd) {
+                        preamble = extended;
                         await this._writeOpfsVolumeRange(0, preamble);
                     }
                 } catch (e) {
@@ -910,45 +914,93 @@ export class VFS {
         }
 
         const t0 = performance.now();
-        const hi = offset + size - 1;
-        const resp = await fetch(this._remoteUrl, {
-            headers: { Range: `bytes=${offset}-${hi}` }
-        });
-        if (!resp.ok && resp.status !== 206) {
-            throw new Error(`VFS Range fetch failed: HTTP ${resp.status}`);
+        const raw = await this._fetchVolumeBytes(offset, size);
+        if (!raw || raw.length < size) {
+            throw new Error(`VFS byte fetch failed at offset ${offset} (${this._remoteUrl})`);
         }
-        const buf = await resp.arrayBuffer();
         const ms = performance.now() - t0;
         this._telemetry.netRequests++;
         this._telemetry.lastFaultMs = ms;
         this._telemetry.totalFaultMs += ms;
 
-        const raw = new Uint8Array(buf);
-        // HTTP 206 Partial Content → server honored the Range; return as-is.
-        // HTTP 200 → server ignored Range (e.g. Python SimpleHTTPServer).
-        // In that case, slice the correct window so the caller gets the right
-        // 40 KB block.  This is less efficient (full file downloaded) but keeps
-        // the API contract intact.  A warning is emitted on the first occurrence.
-        if (resp.status === 200 && raw.byteLength !== size) {
-            if (!this._rangeWarned) {
-                this._rangeWarned = true;
-                console.warn(
-                    '[VFS] Server returned HTTP 200 for a Range request — ' +
-                    'Range header was ignored.  Demand-paging disabled; ' +
-                    'use a server that supports HTTP 206 (nginx, GitHub Pages, ' +
-                    'express/serve-static) for true block streaming.'
-                );
+        await this._writeOpfsVolumeRange(offset, raw);
+        return raw;
+    }
+
+    /**
+     * Fetch a byte window from the remote volume.
+     * Uses HTTP Range when possible; falls back to a cancellable stream read so
+     * a cached 404 or hosts that mishandle Range still yield a valid preamble.
+     */
+    async _fetchVolumeBytes(offset, length) {
+        if (!length) return null;
+        const hi = offset + length - 1;
+        try {
+            const resp = await fetch(this._remoteUrl, {
+                cache: 'no-store',
+                headers: { Range: `bytes=${offset}-${hi}` },
+            });
+            if (resp.ok || resp.status === 206) {
+                this._totalBytes = this._parseContentLength(resp) || this._totalBytes;
+                const raw = new Uint8Array(await resp.arrayBuffer());
+                if (raw.length >= length) {
+                    if (raw.length >= offset + length) {
+                        return raw.subarray(offset, offset + length);
+                    }
+                    if (!this._rangeWarned) {
+                        this._rangeWarned = true;
+                        console.warn(
+                            '[VFS] Server returned HTTP 200 for a Range request — slicing client-side.'
+                        );
+                    }
+                    return raw.subarray(0, length);
+                }
             }
-            await this._writeOpfsVolume(raw);
-            return raw.subarray(offset, offset + size);
+        } catch (e) {
+            console.warn('[VFS] Range fetch failed, trying stream read:', e.message);
         }
 
-        if (resp.status === 200 && raw.byteLength === size) {
-            await this._writeOpfsVolumeRange(offset, raw);
-        } else {
-            await this._writeOpfsVolumeRange(offset, raw);
+        return this._fetchVolumeBytesStream(offset, length);
+    }
+
+    async _fetchVolumeBytesStream(offset, length) {
+        const resp = await fetch(this._remoteUrl, { cache: 'no-store' });
+        if (!resp.ok) return null;
+        this._totalBytes = this._parseContentLength(resp) || this._totalBytes;
+
+        const reader = resp.body?.getReader?.();
+        if (!reader) {
+            const all = new Uint8Array(await resp.arrayBuffer());
+            return all.length >= offset + length ? all.subarray(offset, offset + length) : null;
         }
-        return raw;
+
+        const out = new Uint8Array(length);
+        let filled = 0;
+        let skipped = 0;
+        try {
+            while (filled < length) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (!value?.length) continue;
+
+                if (skipped + value.length <= offset) {
+                    skipped += value.length;
+                    continue;
+                }
+
+                const startInChunk = Math.max(0, offset - skipped);
+                const take = Math.min(value.length - startInChunk, length - filled);
+                if (take > 0) {
+                    out.set(value.subarray(startInChunk, startInChunk + take), filled);
+                    filled += take;
+                }
+                skipped += value.length;
+            }
+        } finally {
+            try { await reader.cancel(); } catch (_) { /* ignore */ }
+        }
+
+        return filled >= length ? out : null;
     }
 
     // -------------------------------------------------------------------------
@@ -980,6 +1032,36 @@ export class VFS {
         } catch (_) {
             return null;
         }
+    }
+
+    /** Drop a corrupt or outdated OPFS volume so the next boot re-fetches from HTTP. */
+    async _invalidateOpfsVolume() {
+        if (!this._opfsVault) return;
+        for (const name of [OPFS_VOLUME_FILE, OPFS_CACHE_META]) {
+            try {
+                await this._opfsVault.removeEntry(name);
+            } catch (_) { /* not present */ }
+        }
+        if (this._opfsBlocks) {
+            try {
+                // @ts-ignore — removeEntry on directory clears block sidecars
+                for await (const [key] of this._opfsBlocks.entries()) {
+                    await this._opfsBlocks.removeEntry(key);
+                }
+            } catch (_) { /* ignore */ }
+        }
+        this._opfsCacheStatus = {
+            complete: false,
+            bytesCached: 0,
+            totalBytes: 0,
+            prefetching: false,
+            source: 'none',
+        };
+    }
+
+    /** Public: clear browser OPFS cache for this dataset mount. */
+    async clearOpfsCache() {
+        await this._invalidateOpfsVolume();
     }
 
     async _writeOpfsVolume(bytes) {
@@ -1067,7 +1149,7 @@ export class VFS {
         this._opfsCacheStatus.prefetching = true;
         try {
             console.log(`[VFS] Caching ${this._cacheKey} to browser storage (OPFS)…`);
-            const resp = await fetch(this._remoteUrl);
+            const resp = await fetch(this._remoteUrl, { cache: 'no-store' });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             const buf = new Uint8Array(await resp.arrayBuffer());
             await this._writeOpfsVolume(buf);
