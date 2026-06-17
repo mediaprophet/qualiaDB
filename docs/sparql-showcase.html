@@ -14,24 +14,33 @@
         .code-block { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85rem; background: rgba(10, 10, 15, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1rem; white-space: pre-wrap; }
         .input-field { background: rgba(10, 10, 15, 0.65); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: #e2e8f0; padding: 0.5rem 0.75rem; outline: none; transition: border-color 0.2s; width: 100%; }
         .input-field:focus { border-color: rgba(16, 185, 129, 0.5); }
-        .tab-btn { transition: all 0.2s; padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: rgba(226, 232, 240, 0.6); }
+        .tab-btn { transition: all 0.2s; padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: rgba(226, 232, 240, 0.6); white-space: nowrap; flex-shrink: 0; }
         .tab-btn:hover { background: rgba(255, 255, 255, 0.07); color: white; }
         .tab-btn.active { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
-        .result-card { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 1rem; }
-        .metric-value { font-size: 1.5rem; font-weight: 700; color: #34d399; }
+        .tab-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+        .result-card { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 1rem; min-width: 0; }
+        .metric-value { font-size: 1.25rem; font-weight: 700; color: #34d399; }
+        @media (min-width: 640px) { .metric-value { font-size: 1.5rem; } }
         .metric-label { font-size: 0.75rem; color: rgba(226, 232, 240, 0.6); }
-        canvas { max-height: 300px; }
+        .chart-wrap { position: relative; min-height: 260px; }
+        .chart-wrap canvas { max-height: 300px; width: 100% !important; }
         .star-badge { background: linear-gradient(135deg, #f59e0b, #f97316); color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 700; }
+        .spinbtn { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; border-radius: 12px; padding: 0.75rem 1.25rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.15s; width: 100%; }
+        .spinbtn:hover { background: rgba(16, 185, 129, 0.3); }
+        .spinbtn-purple { background: rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.35); color: #c084fc; }
+        .spinbtn-purple:hover { background: rgba(168, 85, 247, 0.3); }
+        .spinbtn-amber { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.35); color: #fbbf24; }
+        .spinbtn-amber:hover { background: rgba(245, 158, 11, 0.3); }
     </style>
     <script src="js/menu-loader.js"></script>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
     <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
-        <div class="max-w-screen-2xl mx-auto px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-8">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-4">
+                <div class="flex items-center gap-4 sm:gap-8 min-w-0">
                     <a href="index.html" class="flex items-center gap-3">
                         <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
                             <span class="text-black font-bold text-xl">Q</span>
@@ -42,47 +51,51 @@
                         <!-- Navigation loaded dynamically by menu-loader.js -->
                     </div>
                 </div>
+                <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
+                   class="hidden sm:flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors shrink-0">
+                    <i class="fab fa-github"></i><span>GitHub</span>
+                </a>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-screen-xl mx-auto px-8 pt-12 pb-16">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-20">
         <!-- Hero -->
-        <div class="text-center mb-12">
+        <div class="text-center mb-10">
             <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
                 <i class="fas fa-database"></i>
                 <span>SPARQL 1.1/1.2 + SPARQL-Star · Zero-Heap</span>
             </div>
-            <h1 class="text-5xl font-semibold tracking-tighter mb-4">SPARQL Engine Showcase</h1>
-            <p class="text-xl text-white/70 max-w-2xl mx-auto">145 passing SPARQL library tests. ~35 KB memory per query. SELECT, PREFIX, FILTER, and RDF-Star unified on <code class="text-emerald-300">POST :4242/query</code> via <code class="text-emerald-300">qualia-cli daemon --dev</code>.</p>
+            <h1 class="text-4xl sm:text-5xl font-semibold tracking-tighter mb-4">SPARQL Engine Showcase</h1>
+            <p class="text-base sm:text-lg text-white/70 max-w-2xl mx-auto leading-relaxed">145 passing SPARQL library tests. ~35 KB memory per query. SELECT, PREFIX, FILTER, and RDF-Star unified on <code class="text-emerald-300">POST :4242/query</code> via <code class="text-emerald-300">qualia-cli daemon --dev</code>.</p>
         </div>
 
         <!-- Feature Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-            <div class="glass-strong p-6 rounded-3xl">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-10">
+            <div class="glass-strong p-6 rounded-3xl flex flex-col h-full">
                 <div class="text-blue-400 text-3xl mb-4"><i class="fas fa-bolt"></i></div>
-                <h3 class="text-xl font-semibold mb-2">Extreme Performance</h3>
-                <p class="text-white/70 text-sm">Over 1.2M ops/s on point lookups. Zero-heap allocation ensures predictable latency.</p>
+                <h3 class="text-lg font-semibold mb-2">Extreme Performance</h3>
+                <p class="text-white/70 text-sm flex-1">Over 1.2M ops/s on point lookups. Zero-heap allocation ensures predictable latency.</p>
             </div>
-            <div class="glass-strong p-6 rounded-3xl">
-                <div class="text-amber-400 text-3xl mb-4"><i class="fas fa-history"></i>
-                <h3 class="text-xl font-semibold mb-2">Temporal Extensions</h3>
-                <p class="text-white/70 text-sm"><code class="text-amber-300">AS OF</code> and <code class="text-amber-300">AT TIME</code> for graph history navigation.</p>
+            <div class="glass-strong p-6 rounded-3xl flex flex-col h-full">
+                <div class="text-amber-400 text-3xl mb-4"><i class="fas fa-history"></i></div>
+                <h3 class="text-lg font-semibold mb-2">Temporal Extensions</h3>
+                <p class="text-white/70 text-sm flex-1"><code class="text-amber-300">AS OF</code> and <code class="text-amber-300">AT TIME</code> for graph history navigation.</p>
             </div>
-            <div class="glass-strong p-6 rounded-3xl">
-                <div class="text-emerald-400 text-3xl mb-4"><i class="fas fa-globe"></i>
-                <h3 class="text-xl font-semibold mb-2">Federation &amp; DID</h3>
-                <p class="text-white/70 text-sm">Secure <code class="text-emerald-300">SERVICE</code> federation with W3C DIDs.</p>
+            <div class="glass-strong p-6 rounded-3xl flex flex-col h-full">
+                <div class="text-emerald-400 text-3xl mb-4"><i class="fas fa-globe"></i></div>
+                <h3 class="text-lg font-semibold mb-2">Federation &amp; DID</h3>
+                <p class="text-white/70 text-sm flex-1">Secure <code class="text-emerald-300">SERVICE</code> federation with W3C DIDs.</p>
             </div>
-            <div class="glass-strong p-6 rounded-3xl">
+            <div class="glass-strong p-6 rounded-3xl flex flex-col h-full">
                 <div class="text-purple-400 text-3xl mb-4"><i class="fas fa-star"></i></div>
-                <h3 class="text-xl font-semibold mb-2">RDF-Star Support</h3>
-                <p class="text-white/70 text-sm">Native <span class="star-badge">SPARQL-Star</span> for quoted triples and edge annotations.</p>
+                <h3 class="text-lg font-semibold mb-2">RDF-Star Support</h3>
+                <p class="text-white/70 text-sm flex-1">Native <span class="star-badge">SPARQL-Star</span> for quoted triples and edge annotations.</p>
             </div>
         </div>
 
         <!-- Tab Navigation -->
-        <div class="flex flex-wrap gap-2 mb-8 justify-center">
+        <div class="tab-scroll flex gap-2 mb-8 pb-1 justify-start sm:justify-center">
             <button class="tab-btn active" data-tab="demo" onclick="switchTab('demo',this)">
                 <i class="fas fa-play mr-1.5"></i>Live Demo
             </button>
@@ -142,7 +155,7 @@
                             </div>
                         </div>
                         
-                        <button onclick="runQuery()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-semibold text-white transition-colors">
+                        <button onclick="runQuery()" class="spinbtn">
                             <i class="fas fa-play mr-2"></i>Execute Query
                         </button>
                     </div>
@@ -155,20 +168,18 @@
                         Query Results
                     </h2>
                     
-                    <div class="mb-4">
-                        <div class="flex gap-4 mb-2">
-                            <div class="result-card">
-                                <div class="metric-value" id="result-count">0</div>
-                                <div class="metric-label">Results</div>
-                            </div>
-                            <div class="result-card">
-                                <div class="metric-value" id="result-time">0ms</div>
-                                <div class="metric-label">Latency</div>
-                            </div>
-                            <div class="result-card">
-                                <div class="metric-value" id="result-ops">0</div>
-                                <div class="metric-label">Operations</div>
-                            </div>
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="result-card text-center">
+                            <div class="metric-value" id="result-count">0</div>
+                            <div class="metric-label">Results</div>
+                        </div>
+                        <div class="result-card text-center">
+                            <div class="metric-value" id="result-time">0ms</div>
+                            <div class="metric-label">Latency</div>
+                        </div>
+                        <div class="result-card text-center">
+                            <div class="metric-value" id="result-ops">0</div>
+                            <div class="metric-label">Operations</div>
                         </div>
                     </div>
                     
@@ -239,7 +250,7 @@ WHERE {
                             </div>
                             
                             <div>
-                                <div class="text text-white/50 mb-2">Access quoted triple components</div>
+                                <div class="text-sm text-white/50 mb-2">Access quoted triple components</div>
                                 <div class="code-block text-purple-200 text-xs">
 SELECT ?s ?p ?o
 WHERE {
@@ -257,7 +268,7 @@ WHERE {
                     <div>
                         <label class="text-sm text-white/60 block mb-2">RDF-Star Query</label>
                         <textarea id="star-query" class="input-field" rows="4" placeholder="SELECT ?triple ?doc WHERE { &lt;&lt; ?triple ?p ?o &gt;&gt; prov:wasDerivedFrom ?doc . }">SELECT ?triple ?doc WHERE { &lt;&lt; ?triple ?p ?o &gt;&gt; prov:wasDerivedFrom ?doc . }</textarea>
-                        <button onclick="runStarQuery()" class="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-2xl font-semibold text-white transition-colors mt-2">
+                        <button onclick="runStarQuery()" class="spinbtn spinbtn-purple mt-2">
                             <i class="fas fa-play mr-2"></i>Execute RDF-Star Query
                         </button>
                     </div>
@@ -315,7 +326,7 @@ WHERE {
                     <div>
                         <label class="text-sm text-white/60 block mb-2">Temporal Query</label>
                         <textarea id="temporal-query" class="input-field" rows="4">SELECT ?agent ?activity WHERE { ?agent prov:wasAssociatedWith ?activity . } AS OF "2026-06-01"^^xsd:dateTime</textarea>
-                        <button onclick="runTemporalQuery()" class="w-full py-3 bg-amber-600 hover:bg-amber-500 rounded-2xl font-semibold text-white transition-colors mt-2">
+                        <button onclick="runTemporalQuery()" class="spinbtn spinbtn-amber mt-2">
                             <i class="fas fa-play mr-2"></i>Execute Temporal Query
                         </button>
                     </div>
@@ -336,7 +347,7 @@ WHERE {
                     GeoSPARQL &amp; Spatial Extensions
                 </h2>
                 
-                <p class="texttext-white/70 mb-6">Spatial queries with geometry operations like <code class="text-emerald-300">sfWithin</code>, <code class="text-emerald-300">sfIntersects</code>, and <code class="text-emerald-300">sfContains</code>.</p>
+                <p class="text-white/70 mb-6">Spatial queries with geometry operations like <code class="text-emerald-300">sfWithin</code>, <code class="text-emerald-300">sfIntersects</code>, and <code class="text-emerald-300">sfContains</code>.</p>
                 
                 <div class="code-block text-emerald-200 text-xs mb-6">
 PREFIX geo: &lt;http://www.opengis.net/ont/geosparql#&gt;
@@ -395,11 +406,15 @@ WHERE {
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="glass-panel p-6 rounded-xl">
                         <h3 class="text-lg font-semibold mb-4 text-cyan-300">Query Latency Distribution</h3>
-                        <canvas id="latencyChart"></canvas>
+                        <div class="chart-wrap">
+                            <canvas id="latencyChart"></canvas>
+                        </div>
                     </div>
                     <div class="glass-panel p-6 rounded-xl">
                         <h3 class="text-lg font-semibold mb-4 text-cyan-300">Throughput by Query Type</h3>
-                        <canvas id="throughputChart"></canvas>
+                        <div class="chart-wrap">
+                            <canvas id="throughputChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -408,12 +423,22 @@ WHERE {
     </div>
 
     <script>
+        let charts = { latency: null, throughput: null };
+        let chartsReady = false;
+
         // Tab switching
         function switchTab(tabId, btn) {
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('tab-' + tabId).classList.add('active');
             btn.classList.add('active');
+            if (tabId === 'telemetry') {
+                if (!chartsReady) initCharts();
+                else {
+                    charts.latency?.resize();
+                    charts.throughput?.resize();
+                }
+            }
         }
 
         // Preset queries
@@ -505,11 +530,34 @@ WHERE {
             }, 100);
         }
 
-        // Initialize charts
+        // Initialize charts when the telemetry tab is first opened (avoids zero-width canvas in hidden tabs)
         function initCharts() {
-            // Latency chart
-            const latencyCtx = document.getElementById('latencyChart').getContext('2d');
-            new Chart(latencyCtx, {
+            if (chartsReady || typeof Chart === 'undefined') return;
+
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { labels: { color: 'rgba(226, 232, 240, 0.8)' } }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'rgba(226,232,240,0.6)' }
+                    },
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: 'rgba(226,232,240,0.6)' }
+                    }
+                }
+            };
+
+            const latencyEl = document.getElementById('latencyChart');
+            const throughputEl = document.getElementById('throughputChart');
+            if (!latencyEl || !throughputEl) return;
+
+            charts.latency = new Chart(latencyEl, {
                 type: 'bar',
                 data: {
                     labels: ['Point Lookup', 'Two-Hop', 'Filter', 'Optional', 'Aggregation'],
@@ -520,24 +568,10 @@ WHERE {
                         borderColor: '#34d399'
                     }]
                 },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: { 
-                            beginAtZero: true,
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: 'rgba(226,232,240,0.6)' }
-                        },
-                        x: { 
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: 'rgba(226,232,240,0.6)' }
-                    }
-                }
+                options: chartOptions
             });
 
-            // Throughput chart
-            const throughputCtx = document.getElementById('throughputChart').getContext('2d');
-            new Chart(throughputCtx, {
+            charts.throughput = new Chart(throughputEl, {
                 type: 'bar',
                 data: {
                     labels: ['Point Lookup', 'Two-Hop', 'Filter', 'Optional', 'Aggregation'],
@@ -548,24 +582,11 @@ WHERE {
                         borderColor: '#3b82f6'
                     }]
                 },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: { 
-                            beginAtZero: true,
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: 'rgba(226,232,240,0.6)' }
-                        },
-                        x: { 
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: 'rgba(226,232,240,0.6)' }
-                        }
-                    }
-                });
-        }
+                options: chartOptions
+            });
 
-        // Initialize on load
-        initCharts();
+            chartsReady = true;
+        }
     </script>
 </body>
 </html>
