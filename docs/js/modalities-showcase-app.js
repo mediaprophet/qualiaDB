@@ -1,7 +1,6 @@
 import wasmInit, * as WasmExports from '../playground/qualia_core_db.js';
-import {
-    CATEGORIES, MODALITIES, runModalityDemo, runAllDemos, esc,
-} from './modality-engine.js';
+import { CATEGORIES, MODALITIES, runModalityDemo, runAllDemos } from './modality-engine.js';
+import { esc } from './logic-demos.js';
 
 let MOD = null;
 let activeId = MODALITIES[0]?.id;
