@@ -17,7 +17,7 @@ if (-not (Get-Command wasm-pack -ErrorAction SilentlyContinue)) {
 Push-Location $CrateDir
 try {
     $env:RUSTFLAGS = "-C target-feature=+simd128"
-    wasm-pack build --target web --out-dir pkg-qualia --release --no-default-features -- --features portal
+    wasm-pack build --target web --out-dir pkg-qualia --release -- --no-default-features --features portal
 } finally {
     Pop-Location
 }

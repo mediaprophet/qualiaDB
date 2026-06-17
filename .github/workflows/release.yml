@@ -143,8 +143,7 @@ jobs:
             --target web \
             --release \
             --out-dir crates/qualia-core-db/pkg-qualia \
-            --no-default-features \
-            -- --features portal
+            -- --no-default-features --features portal
           mkdir -p docs/pkg/qualia
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.js docs/pkg/qualia/qualia.js
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm docs/pkg/qualia/qualia_bg.wasm
@@ -220,9 +219,8 @@ jobs:
             --release \
             --out-dir docs/playground \
             --out-name qualia_core_db \
-            --no-default-features \
             --no-typescript \
-            -- --features wasm-full
+            -- --no-default-features --features wasm-full
 
       - name: Package playground release assets
         run: |
