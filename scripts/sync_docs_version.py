@@ -43,6 +43,9 @@ def should_skip(path: Path) -> bool:
         return True
     if path.suffix == ".q42":
         return True
+    # WordNet VERSION tracks the GitHub Release that ships princeton.q42, not engine semver.
+    if path == DOCS / "data" / "wordnet" / "VERSION":
+        return True
     return False
 
 

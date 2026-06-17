@@ -100,7 +100,7 @@ jobs:
           restore-keys: wasm-check-cargo-
       - name: WASM smoke-check (portal slim)
         run: |
-          cargo check --target wasm32-unknown-unknown -p qualia-core-db \
+          cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features portal
 
 # ── Job 3: Qualia Portal WASM (design-studio / spatial / 0.0.17 docs kit) ─────

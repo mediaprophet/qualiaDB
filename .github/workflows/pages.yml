@@ -56,7 +56,7 @@ jobs:
 
       - name: WASM smoke-check (portal slim)
         run: |
-          cargo check --target wasm32-unknown-unknown -p qualia-core-db \
+          cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features portal
 
       - name: Build slim Qualia portal WASM (spatial / QApp)

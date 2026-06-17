@@ -6,9 +6,9 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 VERSION_FILE="$REPO_ROOT/docs/data/wordnet/VERSION"
-TAG="v0.0.16"
+PREFERRED_TAG="v0.0.16"
 if [[ -f "$VERSION_FILE" ]]; then
-  TAG="v$(tr -d '[:space:]' < "$VERSION_FILE")"
+  PREFERRED_TAG="v$(tr -d '[:space:]' < "$VERSION_FILE")"
 fi
 
 REPO="${QUALIA_GITHUB_REPO:-mediaprophet/qualiaDB}"
@@ -20,17 +20,36 @@ mkdir -p "$OUT_DIR"
 
 echo "=== Fetch Princeton WordNet from GitHub Release ==="
 echo "  Repo : $REPO"
-echo "  Tag  : $TAG"
+echo "  Prefer tag : $PREFERRED_TAG"
 echo "  Out  : $CANONICAL"
 echo ""
 
-URL="https://github.com/${REPO}/releases/download/${TAG}/princeton.q42"
-if curl -fL --progress-bar -o "$CANONICAL" "$URL"; then
-  :
-elif command -v gh &>/dev/null && [[ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]]; then
-  gh release download "$TAG" --repo "$REPO" --pattern 'princeton.q42' --dir "$OUT_DIR" --clobber
-else
-  echo "ERROR: curl download failed and gh is unavailable (set GH_TOKEN for private repos)" >&2
+# Dataset asset is only published when WORDNET_RDF_URL is set at release time.
+# Fall back to older tags that still ship princeton.q42.
+FALLBACK_TAGS=("$PREFERRED_TAG" "v0.0.16" "v0.0.15" "v0.0.14" "v0.0.12")
+DOWNLOADED=false
+for TAG in "${FALLBACK_TAGS[@]}"; do
+  URL="https://github.com/${REPO}/releases/download/${TAG}/princeton.q42"
+  echo "Trying ${TAG}…"
+  if curl -fL --progress-bar -o "$CANONICAL" "$URL"; then
+    echo "Downloaded princeton.q42 from release ${TAG}"
+    DOWNLOADED=true
+    break
+  fi
+done
+
+if [[ "$DOWNLOADED" != "true" ]] && command -v gh &>/dev/null && [[ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]]; then
+  for TAG in "${FALLBACK_TAGS[@]}"; do
+    echo "Trying gh release download ${TAG}…"
+    if gh release download "$TAG" --repo "$REPO" --pattern 'princeton.q42' --dir "$OUT_DIR" --clobber 2>/dev/null; then
+      DOWNLOADED=true
+      break
+    fi
+  done
+fi
+
+if [[ "$DOWNLOADED" != "true" ]]; then
+  echo "ERROR: princeton.q42 not found on releases: ${FALLBACK_TAGS[*]}" >&2
   exit 1
 fi
 

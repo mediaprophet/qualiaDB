@@ -77,6 +77,7 @@ const wasmApiPath =
 
 runStep('wasm32-shader-smoke', 'cargo', [
     'check',
+    '-q',
     '--target',
     'wasm32-unknown-unknown',
     '-p',
