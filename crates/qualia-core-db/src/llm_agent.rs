@@ -356,6 +356,142 @@ fn lora_embedding_forward(
     engine.dispatch_fused_transformer_block(wt, &emb_buf[..actual_n])
 }
 
+fn push_decode_stream_delta(
+    tok: &crate::gguf_sharder::GgufTokenizer,
+    out_ids: &[u32],
+    streamed_len: &mut usize,
+    stream_tx: Option<&std::sync::mpsc::SyncSender<String>>,
+) {
+    let Some(tx) = stream_tx else {
+        return;
+    };
+    let full = tok.decode(out_ids);
+    if full.len() <= *streamed_len {
+        return;
+    }
+    let delta = full[*streamed_len..].to_string();
+    *streamed_len = full.len();
+    let _ = tx.send(delta);
+}
+
+/// Outcome of one topology-draft accept attempt (B3.1d).
+enum TopologyDraftStep {
+    NoDraft,
+    Denied,
+    AcceptedFull,
+    Fallthrough,
+    Stop {
+        sieve_failed: bool,
+        semantic_quin: Option<NQuin>,
+    },
+}
+
+fn drain_tensor_context_inject() {
+    while let Some(inject) = crate::compute_universe::pop_tensor_context() {
+        if let Some(tensor) =
+            crate::tensor::resident_substrate::global_resident_substrate()
+                .tensor_at(inject.tensor_index)
+        {
+            crate::compute_universe::publish_query_tensor(tensor, inject.subject_hash);
+        }
+    }
+}
+
+fn try_accept_topology_draft(
+    engine: &mut crate::gguf_bridge::QTensorEngine,
+    tensor_idx: Option<&crate::gguf_sharder::GgufTensorIndex>,
+    draft_mapper: &crate::topology_draft::TopologyDraftMapper<'_>,
+    ctx: &mut Vec<u32>,
+    emb_dim: usize,
+    emb_buf: &mut [f32],
+    scratch_a: &mut [f32],
+    scratch_b: &mut [f32],
+    out_ids: &mut Vec<u32>,
+    sieve: &mut Option<crate::neuro_symbolic_sieve::NeuroSymbolicSieve>,
+    prov_hash: u64,
+    eos: u32,
+    tok: &crate::gguf_sharder::GgufTokenizer,
+    streamed_len: &mut usize,
+    stream_tx: Option<&std::sync::mpsc::SyncSender<String>>,
+    mut on_token: Option<&mut dyn FnMut(String)>,
+) -> TopologyDraftStep {
+    let idx = match tensor_idx {
+        Some(i) => i,
+        None => return TopologyDraftStep::NoDraft,
+    };
+    let draft = match crate::compute_universe::pop_topology_draft() {
+        Some(d) => d,
+        None => return TopologyDraftStep::NoDraft,
+    };
+
+    let mut mapped = draft;
+    for i in 0..mapped.draft_len as usize {
+        mapped.draft_ids[i] = draft_mapper.concept_to_token_id(mapped.concept_hashes[i]);
+    }
+
+    if !crate::compute_universe::sentinel_allows_topology_draft(&mapped) {
+        return TopologyDraftStep::Denied;
+    }
+
+    let accepted = engine.verify_topology_draft_batch(
+        idx,
+        ctx,
+        &mapped,
+        emb_dim,
+        &mut emb_buf[..emb_dim],
+        scratch_a,
+        scratch_b,
+        TEST_TRANSFORMER_LAYER_CAP,
+        TEST_VOCAB_CHUNK_CAP,
+    );
+    crate::gpu_context::record_draft_acceptance(accepted, mapped.draft_len as u32);
+
+    if accepted == 0 {
+        return TopologyDraftStep::Fallthrough;
+    }
+
+    let mut sieve_failed = false;
+    let mut semantic_quin = None;
+    for i in 0..accepted as usize {
+        let id = mapped.draft_ids[i];
+        out_ids.push(id);
+        if let Some(ref mut s) = sieve {
+            if s.apply_token(id).is_err() {
+                sieve_failed = true;
+                break;
+            }
+            if s.is_complete() {
+                semantic_quin = Some(s.assemble_quin(prov_hash));
+                break;
+            }
+        } else if let Some(tx) = stream_tx {
+            push_decode_stream_delta(tok, out_ids, streamed_len, Some(tx));
+        } else if let Some(ref mut cb) = on_token {
+            let full = tok.decode(out_ids);
+            if full.len() > *streamed_len {
+                let delta = full[*streamed_len..].to_string();
+                *streamed_len = full.len();
+                cb(delta);
+            }
+        }
+        if *ctx.last().unwrap_or(&eos) == eos {
+            break;
+        }
+    }
+
+    if sieve_failed || semantic_quin.is_some() {
+        return TopologyDraftStep::Stop {
+            sieve_failed,
+            semantic_quin,
+        };
+    }
+    if accepted == mapped.draft_len as u32 {
+        TopologyDraftStep::AcceptedFull
+    } else {
+        TopologyDraftStep::Fallthrough
+    }
+}
+
 fn build_sieve(
     tok: &crate::gguf_sharder::GgufTokenizer,
     spec: Option<&crate::neuro_symbolic_sieve::SieveLexSpec>,
@@ -693,6 +829,11 @@ impl LocalLlmAgent {
 
                 // Chunked prefill: populate KV for prompt tokens [0, prompt_len-1).
                 let prompt_len = ctx.len();
+                crate::tensor::kv_provenance::rebuild_prompt_provenance(
+                    prompt_len as u32,
+                    crate::tensor::resident_substrate::global_resident_substrate().node_count(),
+                );
+                let draft_mapper = crate::topology_draft::TopologyDraftMapper::new(&tok);
                 if prompt_len > 1 {
                     if let Some(idx) = tensor_idx.as_ref() {
                         let prefill_tokens = prompt_len - 1;
@@ -746,11 +887,57 @@ impl LocalLlmAgent {
                     DECODE_TOKEN_BUDGET as usize
                 };
 
-                for _ in 0..gen_budget {
+                #[cfg(not(target_arch = "wasm32"))]
+                crate::compute_universe::start_tensor_search_producer();
+                crate::compute_universe::publish_query_tensor(
+                    crate::tensor::Tensor10D::default(),
+                    0,
+                );
+
+                for step in 0..gen_budget {
+                    crate::gpu_context::record_llm_decode_step();
+
+                    let draft_step = try_accept_topology_draft(
+                        &mut engine,
+                        tensor_idx.as_ref(),
+                        &draft_mapper,
+                        &mut ctx,
+                        emb_dim,
+                        &mut emb_buf,
+                        &mut scratch_a,
+                        &mut scratch_b,
+                        &mut out_ids,
+                        &mut sieve,
+                        prov_hash,
+                        eos,
+                        &tok,
+                        &mut streamed_len,
+                        stream_tx_thread.as_ref(),
+                        None,
+                    );
+                    match draft_step {
+                        TopologyDraftStep::AcceptedFull => continue,
+                        TopologyDraftStep::Stop {
+                            sieve_failed: sf,
+                            semantic_quin: sq,
+                        } => {
+                            sieve_failed = sf;
+                            semantic_quin = sq;
+                            break;
+                        }
+                        _ => {}
+                    }
+
+                    drain_tensor_context_inject();
+                    let _attention_mask = crate::compute_universe::attention_route_mask();
                     // Check ControlStream for a DenyRollback injected in the previous step.
-                    let rollback = cc.pop().is_ok();
+                    let mut rollback = cc.pop().is_ok();
+                    if matches!(draft_step, TopologyDraftStep::Denied) {
+                        rollback = true;
+                    }
 
                     let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
+                    crate::compute_universe::publish_decode_hint(cur, step as u32);
 
                     // 1) Embedding lookup → hidden state (stack dequant).
                     let hidden_ok = tensor_idx
@@ -1058,6 +1245,11 @@ impl LocalLlmAgent {
 
                 // Chunked prefill: populate KV for prompt tokens [0, prompt_len-1).
                 let prompt_len = ctx.len();
+                crate::tensor::kv_provenance::rebuild_prompt_provenance(
+                    prompt_len as u32,
+                    crate::tensor::resident_substrate::global_resident_substrate().node_count(),
+                );
+                let draft_mapper = crate::topology_draft::TopologyDraftMapper::new(&tok);
                 if prompt_len > 1 {
                     if let Some(idx) = tensor_idx.as_ref() {
                         let prefill_tokens = prompt_len - 1;
@@ -1111,11 +1303,61 @@ impl LocalLlmAgent {
                     DECODE_TOKEN_BUDGET as usize
                 };
 
-                for _ in 0..gen_budget {
-                    // Check ControlStream for a DenyRollback injected in the previous step.
-                    let rollback_val = rollback; rollback = false; let mut rollback = rollback_val;
+                crate::compute_universe::start_tensor_search_producer();
+                crate::compute_universe::publish_query_tensor(
+                    crate::tensor::Tensor10D::default(),
+                    0,
+                );
+
+                for step in 0..gen_budget {
+                    crate::gpu_context::record_llm_decode_step();
+
+                    let on_token_sink = on_token
+                        .as_mut()
+                        .map(|cb| cb as &mut dyn FnMut(String));
+                    let draft_step = try_accept_topology_draft(
+                        &mut engine,
+                        tensor_idx.as_ref(),
+                        &draft_mapper,
+                        &mut ctx,
+                        emb_dim,
+                        &mut emb_buf,
+                        &mut scratch_a,
+                        &mut scratch_b,
+                        &mut out_ids,
+                        &mut sieve,
+                        prov_hash,
+                        eos,
+                        &tok,
+                        &mut streamed_len,
+                        None,
+                        on_token_sink,
+                    );
+                    match draft_step {
+                        TopologyDraftStep::AcceptedFull => continue,
+                        TopologyDraftStep::Stop {
+                            sieve_failed: sf,
+                            semantic_quin: sq,
+                        } => {
+                            sieve_failed = sf;
+                            semantic_quin = sq;
+                            break;
+                        }
+                        _ => {}
+                    }
+
+                    drain_tensor_context_inject();
+                    let _attention_mask = crate::compute_universe::attention_route_mask();
+
+                    let rollback_val = rollback;
+                    rollback = false;
+                    let mut rollback = rollback_val;
+                    if matches!(draft_step, TopologyDraftStep::Denied) {
+                        rollback = true;
+                    }
 
                     let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
+                    crate::compute_universe::publish_decode_hint(cur, step as u32);
 
                     // 1) Embedding lookup → hidden state (stack dequant).
                     let hidden_ok = tensor_idx

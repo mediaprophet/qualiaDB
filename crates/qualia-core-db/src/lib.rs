@@ -25,6 +25,9 @@ pub mod shacl_compiler;
 pub mod modalities;
 pub mod neuro_symbolic_sieve;
 pub mod profiles;
+pub mod gpu_context;
+pub mod compute_universe;
+pub mod topology_draft;
 pub mod tensor;
 pub mod geometric_algebra;
 pub mod rdf_star;
@@ -77,6 +80,17 @@ pub mod qubo_compiler;
 pub mod solid_ldp;
 pub mod vault_manifest;
 pub mod wasm_bridge;
+#[cfg(target_arch = "wasm32")]
+pub mod spatial_wasm;
+#[cfg(target_arch = "wasm32")]
+pub use spatial_wasm::{
+    export_tensor_buffer_wasm, geosparql_operation_wasm, sample_browser_telemetry_wasm,
+    spatial_encode_wasm,
+};
+#[cfg(target_arch = "wasm32")]
+pub use wasm_bridge::{
+    parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, parse_turtle_wasm,
+};
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_playground;
 #[cfg(not(target_arch = "wasm32"))]

@@ -5789,7 +5789,7 @@ checksum = "e0c5ccf5294c6ccd63a74f1565028353830a9c2f5eb0c682c355c471726a6e3f"
 
 [[package]]
 name = "qualia-cli"
-version = "0.0.15"
+version = "0.0.17"
 dependencies = [
  "atoi 2.0.0",
  "bytemuck",
@@ -5826,7 +5826,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-client-core"
-version = "0.0.15"
+version = "0.0.17"
 dependencies = [
  "base64 0.22.1",
  "bip39",
@@ -5863,7 +5863,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-core-db"
-version = "0.0.15"
+version = "0.0.17"
 dependencies = [
  "aead",
  "aes-gcm",
@@ -5962,7 +5962,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-extensions"
-version = "0.0.15"
+version = "0.0.17"
 dependencies = [
  "approx",
  "async-trait",
@@ -5988,7 +5988,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-mobile-harness"
-version = "0.0.15"
+version = "0.0.17"
 dependencies = [
  "dioxus",
  "futures-util",
@@ -6003,7 +6003,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-solid-bridge"
-version = "0.0.15"
+version = "0.0.17"
 dependencies = [
  "bytes",
  "core_affinity",

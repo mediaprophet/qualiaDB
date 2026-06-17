@@ -1,5 +1,5 @@
 # QualiaDB — Multi-Agent Collaboration Ecosystem
-_Branch: `0.0.12-dev` | Last updated: 2026-06-14_
+_Branch: `0.0.17-dev` | Last updated: 2026-06-17_
 
 This document is the coordination layer for concurrent or sequential AI-agent sessions
 working on the QualiaDB engine. Read it before writing a single line of code.
@@ -773,3 +773,21 @@ cargo test
 1. The preferred graph-analysis entry point is now `analyze_graph_topology_bounded`; treat `analyze_graph_topology` as a cold-path compatibility tool only.
 2. The new `*_into` APIs are the intended zero-heap surface for orchestration code. The legacy `Vec`-returning wrappers remain for migration safety, not as the final architecture.
 3. `HANDOVER.md` was not present in the workspace during this session, so the older handoff step could not be applied there.
+
+---
+
+### 2026-06-17 — Track B3 polish (Compute Universe / 0.0.17)
+
+**Completed:**
+- `sentinel_allows_topology_draft()` — Phase-8 gate on U1→U0 draft batches (0x99 anachronism byte) before `verify_topology_draft_batch`.
+- Shared `try_accept_topology_draft()` + `drain_tensor_context_inject()` in `llm_agent.rs` — native threaded and WASM synchronous decode paths now parity-wired (producer start, context inject drain, speculative accept, decode hints).
+- Workspace version bump to **0.0.17** (`qualia-core-db`, `qualia-cli`, `qualia-client-core`, and sibling crates).
+- Migration plan updated: P-B7 Sentinel gate checked; branch target `0.0.17-dev`.
+
+**Verification:**
+- `cargo test -p qualia-core-db --lib`
+
+**Notes for future agents:**
+1. Draft denial sets `rollback = true` inline on WASM; native path ORs with `ControlStream` `DenyRollback` from the bifurcated Sentinel thread.
+2. α tuning for speculative acceptance ratio is still empirical — see migration plan Appendix F.
+3. `HANDOVER.md` still absent; capability inventory update deferred.

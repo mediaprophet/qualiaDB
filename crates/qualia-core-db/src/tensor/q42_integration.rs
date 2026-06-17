@@ -96,11 +96,7 @@ impl Tensor10D {
 
     /// Extract semantic coordinates from NQuin object field.
     fn extract_semantic_coordinates(nquin: &NQuin) -> (f32, f32, f32) {
-        let hash = nquin.object;
-        let x = (hash & 0xFFFF) as f32 / 65535.0;
-        let y = ((hash >> 16) & 0xFFFF) as f32 / 65535.0;
-        let z = ((hash >> 32) & 0xFFFF) as f32 / 65535.0;
-        (x, y, z)
+        super::bake_pipeline::semantic_xyz_from_nquin(nquin)
     }
 
     /// Extract temporal state from NQuin metadata Lamport clock.

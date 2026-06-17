@@ -18,6 +18,8 @@ struct AttentionParams {
     rope_theta_base: f32,
     num_tokens_in_batch: u32, // 1 during decode; >1 during chunked prefill
     batch_start_token_idx: u32,
+    mask_active: u32, // 0 = dense KV; 1 = graph-guided sparsity (U1 bitmask)
+    mask_word_count: u32,
 }
 
 @group(0) @binding(0) var<storage, read> hidden: array<f32>;
@@ -25,6 +27,7 @@ struct AttentionParams {
 @group(0) @binding(2) var<uniform> params: AttentionParams;
 @group(0) @binding(3) var<storage, read_write> kv_cache: array<f32>;
 @group(0) @binding(4) var<storage, read_write> attn_out: array<f32>;
+@group(0) @binding(5) var<storage, read> kv_mask_words: array<u32>;
 
 const BLOCK_Q6K_BYTES: u32 = 210u;
 const BLOCK_Q6K_ELEMS: u32 = 256u;
@@ -215,6 +218,19 @@ fn v_cache_idx(slot: u32, kv_head: u32, dim: u32) -> u32 {
     return v_base + kv_head * params.head_dim + dim;
 }
 
+fn kv_slot_allowed(logical: u32) -> bool {
+    if params.mask_active == 0u {
+        return true;
+    }
+    let bit = logical;
+    let word = bit / 32u;
+    if word >= params.mask_word_count {
+        return false;
+    }
+    let offset = bit % 32u;
+    return (kv_mask_words[word] & (1u << offset)) != 0u;
+}
+
 fn online_softmax_attention(qh: u32, kv_head: u32) {
     var q: array<f32, MAX_HEAD_DIM>;
     let row_base = qh * params.head_dim;
@@ -240,6 +256,9 @@ fn online_softmax_attention(qh: u32, kv_head: u32) {
     let start = select(0u, seq_len - params.max_context, seq_len > params.max_context);
     let scale = 1.0 / sqrt(f32(params.head_dim));
     for (var logical = start; logical <= params.token_idx; logical = logical + 1u) {
+        if !kv_slot_allowed(logical) {
+            continue;
+        }
         let slot = logical % params.max_context;
         var score = 0.0;
         for (var d = 0u; d < params.head_dim; d = d + 1u) {
