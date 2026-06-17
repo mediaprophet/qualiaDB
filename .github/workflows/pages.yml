@@ -57,22 +57,37 @@ jobs:
           sudo apt-get install -y --no-install-recommends gzip curl
 
       - name: Install wasm-pack
-        run: cargo install wasm-pack --locked --version 0.13.1 --force
+        run: |
+          set -euo pipefail
+          WASM_PACK_VERSION=0.13.1
+          ARCH="$(uname -m)"
+          case "$ARCH" in
+            x86_64) WASM_PACK_ARCH=x86_64-unknown-linux-musl ;;
+            aarch64|arm64) WASM_PACK_ARCH=aarch64-unknown-linux-musl ;;
+            *) echo "unsupported runner arch: $ARCH"; exit 1 ;;
+          esac
+          TARBALL="wasm-pack-v${WASM_PACK_VERSION}-${WASM_PACK_ARCH}.tar.gz"
+          URL="https://github.com/wasm-bindgen/wasm-pack/releases/download/v${WASM_PACK_VERSION}/${TARBALL}"
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "/tmp/${TARBALL}" "$URL"
+          tar -xzf "/tmp/${TARBALL}" -C /tmp
+          install -m 0755 "/tmp/wasm-pack-v${WASM_PACK_VERSION}-${WASM_PACK_ARCH}/wasm-pack" "$HOME/.cargo/bin/wasm-pack"
+          wasm-pack --version
 
-      - name: WASM smoke-check (portal slim)
+      - name: WASM smoke-check (portal + native LLM)
         run: |
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
-            --no-default-features --features portal
+            --no-default-features --features portal,wasm-llm,wasm-logic,wasm-scientific
 
-      - name: Build slim Qualia portal WASM (spatial / QApp)
+      - name: Build Qualia portal WASM (viewport + browser LLM)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
+          PORTAL_FEATURES: "portal,wasm-llm,wasm-logic,wasm-scientific"
         run: |
           wasm-pack build crates/qualia-core-db \
             --target web \
             --release \
             --out-dir pkg-qualia \
-            -- --no-default-features --features portal
+            -- --no-default-features --features "${PORTAL_FEATURES}"
           mkdir -p docs/pkg/qualia
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.js docs/pkg/qualia/qualia.js
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm docs/pkg/qualia/qualia_bg.wasm
@@ -82,6 +97,8 @@ jobs:
           printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.17","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
           ls -la docs/pkg/qualia/qualia.js docs/pkg/qualia/qualia_bg.wasm docs/pkg/qualia/qualia.d.ts
           grep -q 'qualia_bg.wasm' docs/pkg/qualia/qualia.js
+          grep -q 'initialize_webgpu_engine' docs/pkg/qualia/qualia.js
+          grep -q 'inferWasmStreaming' docs/pkg/qualia/qualia.js
 
       - name: Phase 7.1 — portal WASM size budget
         run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm

@@ -25,6 +25,15 @@ const WASM_NAV_EXPORTS = [
     'observe_node_at',
 ];
 
+const WASM_LLM_EXPORTS = [
+    'initialize_webgpu_engine',
+    'inferWasmStreaming',
+    'infer_wasm',
+    'isWebgpuEngineReady',
+    'releaseWebgpuEngine',
+    'getEngineVersion',
+];
+
 const WASM_ACOUSTIC_EXPORTS = [
     'set_acoustic_enabled',
     'acoustic_enabled',
@@ -84,7 +93,7 @@ runStep('wasm32-shader-smoke', 'cargo', [
     'qualia-core-db',
     '--no-default-features',
     '--features',
-    'portal',
+    'portal,wasm-llm,wasm-logic,wasm-scientific',
 ]);
 
 runStep('contract-tests', 'cargo', [
@@ -117,4 +126,5 @@ runStep('acoustic-contract', 'cargo', [
 
 checkWasmApi(wasmApiPath, WASM_NAV_EXPORTS, 'navigation');
 checkWasmApi(wasmApiPath, WASM_ACOUSTIC_EXPORTS, 'acoustic');
+checkWasmApi(wasmApiPath, WASM_LLM_EXPORTS, 'llm');
 console.log('[phenomenal] all checks passed');
