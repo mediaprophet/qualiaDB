@@ -28,12 +28,16 @@ Write-Host "  Tag  : $Tag"
 Write-Host "  Out  : $Canonical"
 Write-Host ""
 
-$gh = Get-Command gh -ErrorAction SilentlyContinue
-if ($gh) {
-    & gh release download $Tag --repo $Repo --pattern 'princeton.q42' --dir $OutDir --clobber
-} else {
-    $url = "https://github.com/$Repo/releases/download/$Tag/princeton.q42"
+$url = "https://github.com/$Repo/releases/download/$Tag/princeton.q42"
+try {
     Invoke-WebRequest -Uri $url -OutFile $Canonical -UseBasicParsing
+} catch {
+    $gh = Get-Command gh -ErrorAction SilentlyContinue
+    if ($gh -and ($env:GH_TOKEN -or $env:GITHUB_TOKEN)) {
+        & gh release download $Tag --repo $Repo --pattern 'princeton.q42' --dir $OutDir --clobber
+    } else {
+        throw $_
+    }
 }
 
 if (-not (Test-Path $Canonical)) {

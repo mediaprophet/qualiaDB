@@ -24,11 +24,14 @@ echo "  Tag  : $TAG"
 echo "  Out  : $CANONICAL"
 echo ""
 
-if command -v gh &>/dev/null; then
+URL="https://github.com/${REPO}/releases/download/${TAG}/princeton.q42"
+if curl -fL --progress-bar -o "$CANONICAL" "$URL"; then
+  :
+elif command -v gh &>/dev/null && [[ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]]; then
   gh release download "$TAG" --repo "$REPO" --pattern 'princeton.q42' --dir "$OUT_DIR" --clobber
 else
-  URL="https://github.com/${REPO}/releases/download/${TAG}/princeton.q42"
-  curl -fL --progress-bar -o "$CANONICAL" "$URL"
+  echo "ERROR: curl download failed and gh is unavailable (set GH_TOKEN for private repos)" >&2
+  exit 1
 fi
 
 if [[ ! -f "$CANONICAL" ]]; then
