@@ -6,9 +6,20 @@
 // and the solver exports are the same functions the native engine ships.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { initQualiaWasm } from '../js/qualia-wasm-runtime.js';
+import wasmInit, * as WasmExports from './qualia_core_db.js';
 
 let MOD = null;
+
+/** Load WASM from this directory (playground/), not via cross-folder dynamic import. */
+async function loadPlaygroundEngine() {
+    const wasmUrl = new URL('qualia_core_db_bg.wasm', import.meta.url);
+    const resp = await fetch(wasmUrl, { cache: 'no-store' });
+    if (!resp.ok) {
+        throw new Error(`WASM fetch failed: ${resp.status} ${wasmUrl.href}`);
+    }
+    await wasmInit({ module_or_path: resp });
+    return WasmExports;
+}
 
 const $  = (id) => document.getElementById(id);
 const el = (tag, cls, html) => {
@@ -309,67 +320,100 @@ function showTab(name) {
 // Boot
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function boot() {
-    MOD = await initQualiaWasm();
+function setEngineBadge(version) {
+    const badge = $('wasm-engine-badge');
+    if (!badge) return;
+    badge.innerHTML = `<span class="dot bg-cyan-400"></span> Engine v${version}`;
+    badge.className = 'status-pill bg-cyan-500/10 text-cyan-300 border border-cyan-500/40';
+}
 
-    const ok = MOD && typeof MOD.compile_query_to_json === 'function';
+function showBootError(message) {
+    const overlay = $('boot-overlay');
+    if (!overlay) return;
+    overlay.querySelector('#boot-text').innerHTML =
+        `<span class="text-rose-400">Engine failed to load.</span><br>` +
+        `<span class="text-slate-500 text-sm">${esc(message)}</span><br>` +
+        `<button type="button" onclick="location.reload()" class="mt-4 px-4 py-2 rounded-xl border border-rose-400/40 text-rose-200 hover:bg-rose-500/10 text-sm">Retry</button>`;
+    const badge = $('wasm-engine-badge');
+    if (badge) {
+        badge.innerHTML = '<span class="dot bg-rose-400"></span> Engine offline';
+        badge.className = 'status-pill bg-rose-500/10 text-rose-300 border border-rose-500/40';
+    }
+}
+
+async function boot() {
     const overlay = $('boot-overlay');
 
-    if (!ok) {
-        overlay.querySelector('#boot-text').innerHTML =
-            `<span class="text-rose-400">Engine failed to load.</span><br><span class="text-slate-500 text-sm">Check the console — the WASM bundle may be missing.</span>`;
+    try {
+        MOD = await loadPlaygroundEngine();
+    } catch (err) {
+        console.error('[playground] WASM init failed:', err);
+        showBootError(err?.message || String(err));
         return;
     }
 
-    // Engine banner
-    let info = {};
-    try { info = MOD.get_engine_info ? MOD.get_engine_info() : {}; } catch (_) {}
-    const version = info.version || (MOD.get_engine_version ? MOD.get_engine_version() : '?');
-    try { ALL_CAPS = MOD.list_capabilities_wasm ? MOD.list_capabilities_wasm() : (info.capabilities || []); } catch (_) { ALL_CAPS = info.capabilities || []; }
+    if (!MOD || typeof MOD.compile_query_to_json !== 'function') {
+        showBootError('qualia_core_db.js loaded but compile_query_to_json is missing.');
+        return;
+    }
 
-    $('banner-version').textContent = `v${version}`;
-    $('banner-caps').textContent = `${ALL_CAPS.length} capabilities`;
-    $('banner-target').textContent = info.target || 'wasm32';
+    try {
+        // Engine banner
+        let info = {};
+        try { info = MOD.get_engine_info ? MOD.get_engine_info() : {}; } catch (_) {}
+        const version = info.version || (MOD.get_engine_version ? MOD.get_engine_version() : '?');
+        try { ALL_CAPS = MOD.list_capabilities_wasm ? MOD.list_capabilities_wasm() : (info.capabilities || []); } catch (_) { ALL_CAPS = info.capabilities || []; }
 
-    renderCaps();
+        $('banner-version').textContent = `v${version}`;
+        $('banner-caps').textContent = `${ALL_CAPS.length} capabilities`;
+        $('banner-target').textContent = info.target || 'wasm32';
+        setEngineBadge(version);
 
-    // Wire compiler
-    $('btn-compile').addEventListener('click', runCompile);
-    $('btn-parse').addEventListener('click', runParse);
-    document.querySelectorAll('[data-preset]').forEach((b) =>
-        b.addEventListener('click', () => {
-            $('editor').value = PRESETS[b.dataset.preset];
-            $('fmt-chip').textContent = b.dataset.preset;
-            runCompile(); runParse();
-        }));
-    $('editor').addEventListener('input', () => { $('fmt-chip').textContent = detectFormat($('editor').value); });
+        renderCaps();
 
-    // Wire solvers
-    const wire = (id, fn) => { const b = $(id); if (b) b.addEventListener('click', fn); };
-    wire('btn-lip', demoLipinski);
-    wire('btn-bs', demoBlackScholes);
-    wire('btn-pid', demoPid);
-    wire('btn-gbm', demoGbm);
-    wire('btn-ode', demoOde);
-    wire('btn-fr', demoFramingham);
-    document.querySelectorAll('[data-smiles]').forEach((b) =>
-        b.addEventListener('click', () => { $('lip-smiles').value = b.dataset.smiles; demoLipinski(); }));
+        // Wire compiler
+        $('btn-compile').addEventListener('click', runCompile);
+        $('btn-parse').addEventListener('click', runParse);
+        document.querySelectorAll('[data-preset]').forEach((b) =>
+            b.addEventListener('click', () => {
+                $('editor').value = PRESETS[b.dataset.preset];
+                $('fmt-chip').textContent = b.dataset.preset;
+                runCompile(); runParse();
+            }));
+        $('editor').addEventListener('input', () => { $('fmt-chip').textContent = detectFormat($('editor').value); });
 
-    // Capabilities search
-    $('caps-search').addEventListener('input', (e) => renderCaps(e.target.value));
+        // Wire solvers
+        const wire = (id, fn) => { const b = $(id); if (b) b.addEventListener('click', fn); };
+        wire('btn-lip', demoLipinski);
+        wire('btn-bs', demoBlackScholes);
+        wire('btn-pid', demoPid);
+        wire('btn-gbm', demoGbm);
+        wire('btn-ode', demoOde);
+        wire('btn-fr', demoFramingham);
+        document.querySelectorAll('[data-smiles]').forEach((b) =>
+            b.addEventListener('click', () => { $('lip-smiles').value = b.dataset.smiles; demoLipinski(); }));
 
-    // Tabs
-    document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+        // Capabilities search
+        $('caps-search').addEventListener('input', (e) => renderCaps(e.target.value));
 
-    // Initial run so the page is alive on load
-    $('editor').value = PRESETS.turtle;
-    $('fmt-chip').textContent = 'turtle';
-    runCompile(); runParse();
-    demoBlackScholes(); demoFramingham(); demoLipinski();
+        // Tabs
+        document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
-    // Reveal
-    overlay.style.opacity = '0';
-    setTimeout(() => overlay.remove(), 400);
+        // Initial run so the page is alive on load
+        $('editor').value = PRESETS.turtle;
+        $('fmt-chip').textContent = 'turtle';
+        runCompile(); runParse();
+        demoBlackScholes(); demoFramingham(); demoLipinski();
+
+        // Reveal
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 400);
+        }
+    } catch (err) {
+        console.error('[playground] boot failed after WASM load:', err);
+        showBootError(err?.message || String(err));
+    }
 }
 
 boot();

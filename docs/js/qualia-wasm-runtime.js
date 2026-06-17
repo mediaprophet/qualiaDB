@@ -48,7 +48,7 @@ export async function initQualiaWasm(opts = {}) {
             if (!response.ok) {
                 throw new Error(`WASM fetch failed: ${response.status} ${wasmUrl}`);
             }
-            await module.default(response);
+            await module.default({ module_or_path: response });
             _mod = module;
             _version = readVersion(module);
             _info = readInfo(module);
