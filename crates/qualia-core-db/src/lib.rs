@@ -127,6 +127,7 @@ pub mod portal_standpoint;
 pub mod portal_camera;
 pub mod portal_navigation;
 pub mod portal_pga;
+pub mod portal_phenomenal_contract;
 pub mod portal_spectral;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal_gpu;

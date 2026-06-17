@@ -82,7 +82,7 @@ fn vertex_main(
     let morph = mix(chaos, order, telemetry.baking_crystallization);
 
     let heat_jitter = sin(t * 20.0 + pos.x * 10.0) * telemetry.llm_heat * 0.1;
-    let quantum_flicker = sin(t * 7.0 + instance_index as f32 * 0.05) * telemetry.quantum_activity * 0.08;
+    let quantum_flicker = sin(t * 7.0 + f32(instance_index) * 0.05) * telemetry.quantum_activity * 0.08;
     let temporal_wave = sin(t * 1.5 + length(pos) * 2.0) * telemetry.temporal_pulse * 0.12;
 
     let animated_pos = pos + vec3<f32>(
@@ -121,7 +121,7 @@ fn vertex_main(
     let linear_spectral = sigma_to_linear_rgb(sigma);
     let ripple_energy = vec3<f32>(0.02, 0.08, 0.08) * telemetry.network_ripple;
     let heat_energy = vec3<f32>(0.12, 0.10, 0.08) * telemetry.llm_heat;
-    let flash = step(0.9, sin(t * 10.0 + instance_index as f32 * 0.1)) * telemetry.logic_flashes;
+    let flash = step(0.9, sin(t * 10.0 + f32(instance_index) * 0.1)) * telemetry.logic_flashes;
     let flash_energy = vec3<f32>(0.18, 0.16, 0.12) * flash;
     let density_gain = 0.35 + telemetry.epistemic_density * 0.25;
 

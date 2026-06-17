@@ -79,6 +79,7 @@ const T_PULL_GAIN: f32 = 0.12;
 const CLUSTER_COUNT: u32 = 8u;
 const T_RADIAL_GAIN: f32 = 0.06;
 const ANCHOR_RING_RADIUS: f32 = 0.35;
+const T_SCALE: f32 = 2.0;
 
 // σ → linear sRGB via spectral.wgsl (prepended by mod.rs)
 
@@ -192,7 +193,6 @@ fn sandwich_point(m: Motor, p: vec3<f32>) -> vec3<f32> {
     let p_q = vec4<f32>(0.0, p.x, p.y, p.z);
     let p_rot = quat_mul(quat_mul(qr, p_q), qr_conj);
     let t_q = quat_mul(qd, qr_conj);
-    const T_SCALE: f32 = 2.0;
     return vec3<f32>(
         p_rot.y + T_SCALE * t_q.y,
         p_rot.z + T_SCALE * t_q.z,

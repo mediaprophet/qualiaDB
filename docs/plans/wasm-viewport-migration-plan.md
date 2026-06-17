@@ -707,7 +707,7 @@ Priority queue (same physical device):
 - [ ] **11.2** `scientific-computing.html` — live blackbody / σ band demo from tensor sheet
 - [ ] **11.3** `docs/manuals/webizen-wasm-viewport.md` — tiers, fallback badges, build guide
 - [ ] **11.4** `zero-heap-compliance.html` — bake vs query vs display table
-- [ ] **11.5** CI: `phenomenal-checklist.mjs` asserts P-* flags from smoke tests
+- [x] **11.5** CI: `phenomenal-verify.mjs` — WGSL compile/bindings, PGA oracle, VramLedger, WASM nav API
 - [ ] **11.6** Remove `ambient-viz.js` from default bundle (Tier-0 lazy-load only)
 - [ ] **11.7** Delete `scene.rs` duplicate contract in webizen-render
 
@@ -1144,7 +1144,7 @@ PR-C9c.3 qualiaDB: `crypto.subtle` client sign + Auth Failed fallback + dev pair
 PR-C12 qualiaDB: Asymmetric compute routing (daemon Live → U0/U1 offload)               ⬜
 PR-C10 webizen:   desktop Dioxus parity (shared shaders)                ⬜
 PR-C11 qualiaDB:  GPU R32Uint picking + `select_node_at` / `navigate_to_node` / collapse  ✅
-PR-C11b both:     phenomenal-checklist CI                               ⬜
+PR-C11b both:     phenomenal-checklist CI                               ✅
 ```
 
 **webizen-desktop (still pending):** PNG 2D compositor path; projector/epistemic/bloom pipelines not wired to shared `GpuContext`.

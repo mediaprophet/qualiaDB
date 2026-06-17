@@ -217,6 +217,7 @@ serde-wasm-bindgen = "0.6.5"
 io-uring = "0.7.12"
 
 [dev-dependencies]
+naga = { version = "0.19", features = ["wgsl-in"] }
 criterion = "0.8.2"
 dhat = "0.3.3"
 proptest = "1.11.0"

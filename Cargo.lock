@@ -5917,6 +5917,7 @@ dependencies = [
  "lz4_flex",
  "memmap2",
  "minicbor 0.20.0",
+ "naga",
  "num_cpus",
  "pbkdf2",
  "pollster",
