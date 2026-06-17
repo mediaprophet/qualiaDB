@@ -1,9 +1,20 @@
 theme: jekyll-theme-slate
 title: Qualia-DB
 description: The Zero-Allocation, 5-Vector Heterogeneous Graph Engine for Personal Devices.
+baseurl: "/qualiaDB"
+
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: qualia
 
 # Pass binary dataset and WASM artefacts through unchanged.
 include:
+  - menu.json
+  - css/*.css
+  - _layouts
   - "*.q42"
   - "*.lex"
   - "*.wasm"

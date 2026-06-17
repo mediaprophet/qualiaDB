@@ -6,19 +6,24 @@
     <title>QualiaDB Manuals</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/site-nav.css">
     <script src="../js/menu-loader.js"></script>
 </head>
 <body class="bg-zinc-950 text-zinc-200 min-h-screen">
     <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
         <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
-            <div class="flex items-center justify-between h-16 gap-4">
+            <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
                 <a href="../index.html" class="flex items-center gap-3 shrink-0">
                     <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
                         <span class="text-black font-bold text-xl">Q</span>
                     </div>
                     <div class="hidden sm:block"><span class="font-semibold text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
                 </a>
-                <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+                <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                   class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors shrink-0">
+                    <i class="fab fa-github"></i><span>GitHub</span>
+                </a>
             </div>
         </div>
     </nav>
