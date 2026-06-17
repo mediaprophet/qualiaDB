@@ -2,7 +2,7 @@
 
 Build, test, benchmark, and contribute to QualiaDB / Webizen.
 
-_Branch: `0.0.15` | Last updated: 2026-06-18_
+_Branch: `0.0.17-dev` | Last updated: 2026-06-17_
 
 ---
 
@@ -39,12 +39,26 @@ dx serve --platform desktop
 
 ### WASM browser module
 
-```bash
-cd crates/qualia-core-db
-wasm-pack build --target no-modules --out-dir ../../docs/playground
+**Portal slim** (spatial demo, GitHub Pages — viewport + U3 acoustic):
+
+```powershell
+$env:RUSTFLAGS = "-C target-feature=+simd128"
+wasm-pack build crates/qualia-core-db `
+  --target web --release --out-dir crates/qualia-core-db/pkg-qualia `
+  --no-default-features -- --features portal
+# Copy → docs/pkg/qualia/ (see scripts/package-qualia-wasm.ps1)
 ```
 
-For embedding in an external web project, use `--target web` instead.
+**Full playground** (logic evaluators, API explorer):
+
+```bash
+wasm-pack build crates/qualia-core-db \
+  --target web --release --out-dir docs/playground \
+  --out-name qualia_core_db --no-default-features --no-typescript \
+  -- --features wasm-full
+```
+
+Manual: [`qualia-wasm-portal.md`](qualia-wasm-portal.md). Verify: `node docs/tests/phenomenal-verify.mjs`.
 
 
 ### Feature Flags
@@ -83,8 +97,8 @@ GitHub Actions (`.github/workflows/release.yml`) builds on tag push:
 - Flutter desktop bundles — `.dmg` (macOS), AppImage + `.deb` (Linux), `.exe` + `.msi` (Windows)
 
 ```bash
-git tag v0.0.15
-git push origin v0.0.15
+git tag v0.0.17
+git push origin v0.0.17
 ```
 
 ### Cross-compiling the CLI locally (Windows → Linux)
@@ -302,7 +316,7 @@ Supported input formats for `qualia ingest`:
 
 ---
 
-## Known Build Issues (v0.0.15-dev)
+## Known Build Issues (v0.0.17-dev)
 
 All crates compile cleanly except where noted:
 
@@ -328,7 +342,7 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 
 ## Releases & Versioning
 
-- **Current branch:** `0.0.15-dev`
+- **Current branch:** `0.0.17-dev`
 - **Release config:** `release.toml` (cargo-release)
 - **Release notes:** [CHANGELOG.md](../../CHANGELOG.md)
 - **CI:** `.github/workflows/release.yml` — builds on tag push (Windows, macOS, Linux)
@@ -336,8 +350,8 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 To cut a release:
 
 ```bash
-git tag v0.0.15
-git push origin v0.0.15
+git tag v0.0.17
+git push origin v0.0.17
 ```
 
 ADRs (Architectural Decision Records): [`docs/manuals/adr/`](adr/)

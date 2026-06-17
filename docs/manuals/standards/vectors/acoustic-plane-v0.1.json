@@ -1,0 +1,60 @@
+{
+  "version": "0.1",
+  "date": "2026-06-17",
+  "description": "Qualia U3 AcousticPlane conformance vectors (internal draft)",
+  "sonic_token": {
+    "pack_example": {
+      "delta_time": 3,
+      "event_type": 0,
+      "channel": 2,
+      "note": 60,
+      "velocity": 100,
+      "tensor_index": 42,
+      "flags": 83,
+      "raw_hex": "0x5300000000003e64032c"
+    },
+    "note_on_example": {
+      "tensor_index": 7,
+      "note": 60,
+      "velocity": 100,
+      "flags_low_byte": 83
+    }
+  },
+  "sigma_parity": [
+    { "sigma": 0.0, "lambda_nm": 400.0, "frequency_hz": 1760.0 },
+    { "sigma": 0.5, "lambda_nm": 550.0, "frequency_hz": 935.0 },
+    { "sigma": 0.99, "lambda_nm": 697.0, "frequency_hz": 123.1 },
+    { "sigma": 1.42, "lambda_nm": 526.0, "frequency_hz": 935.0, "note": "fract parity with 0.42" }
+  ],
+  "acoustic_uniform": {
+    "size_bytes": 328,
+    "float_count": 82,
+    "scalar_count": 18,
+    "preview_bins": 64
+  },
+  "acoustic_sab": {
+    "magic_hex": "0x51334153",
+    "total_bytes": 1024,
+    "header_bytes": 32,
+    "uniform_offset": 32,
+    "token_offset": 384,
+    "float_mirror_offset": 512
+  },
+  "sidecar_header": {
+    "magic_hex": "0x51344155",
+    "size_bytes": 20,
+    "kind_stft": 0,
+    "kind_cqt": 1,
+    "default_bins": 64,
+    "default_sample_rate": 48000
+  },
+  "sidecar_path": {
+    "example_hash": "0xabcdef0123456789",
+    "relpath": "spectral/audio/abcdef0123456789.bin"
+  },
+  "hrtf_profile": {
+    "default": "KemarLite",
+    "kemar_lite_azimuth_samples": 8,
+    "analytic_fallback": true
+  }
+}

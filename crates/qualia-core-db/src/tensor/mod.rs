@@ -13,6 +13,11 @@ pub mod quantum;
 pub mod hardware_tier;
 pub mod gsr;
 pub mod q42_integration;
+pub mod buffer_export;
+pub mod bake_pipeline;
+pub mod resident_substrate;
+pub mod kv_provenance;
+pub mod volume_gpu;
 
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};

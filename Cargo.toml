@@ -5,8 +5,14 @@ members = [
     "crates/qualia-solid-bridge",
     "crates/qualia-client-core",
     "crates/qualia-extensions",
-    "crates/webizen-component-harvester", "crates/qualia-mobile-harness",
+    "crates/webizen-component-harvester",
+    "crates/qualia-mobile-harness",
     "crates/wellfare-core",
+    "crates/webizen-runtime",
+    "crates/webizen-render",
+    "crates/webizen-studio",
+    "crates/webizen-desktop",
+    "crates/webizen-web",
 ]
 resolver = "2"
 

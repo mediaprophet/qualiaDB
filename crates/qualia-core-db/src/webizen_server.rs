@@ -1,5 +1,5 @@
 use axum::{
-    body::Body,
+    body::{Body, Bytes},
     extract::{Query, State, WebSocketUpgrade, ws::{Message, WebSocket}},
     http::{header, StatusCode, HeaderMap, HeaderName, HeaderValue, Method},
     response::{IntoResponse, Response},
@@ -8,6 +8,7 @@ use axum::{
 };
 use core_affinity::CoreId;
 use futures_util::{SinkExt, StreamExt};
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::net::SocketAddr;
@@ -159,6 +160,8 @@ pub fn spawn_loopback_server(
                         "http://127.0.0.1:8788".parse().unwrap(),
                         "http://localhost:5173".parse().unwrap(),
                         "http://127.0.0.1:5173".parse().unwrap(),
+                        "http://localhost:4173".parse().unwrap(),
+                        "http://127.0.0.1:4173".parse().unwrap(),
                         OFFICIAL_WEB_HUB_ORIGIN.parse().unwrap(),
                     ]
                 } else {
@@ -175,9 +178,20 @@ pub fn spawn_loopback_server(
                             header::CONTENT_TYPE,
                             header::ACCEPT,
                             HeaderName::from_static("x-qualia-token"),
-                            HeaderName::from_static("access-control-request-private-network")
+                            HeaderName::from_static("x-qualia-standpoint-class"),
+                            HeaderName::from_static("x-qualia-t-slice"),
+                            HeaderName::from_static("x-qualia-t-window"),
+                            HeaderName::from_static("x-qualia-session-nonce"),
+                            HeaderName::from_static("x-qualia-identifier-did"),
+                            HeaderName::from_static("x-qualia-signature"),
+                            HeaderName::from_static("x-qualia-lane"),
+                            HeaderName::from_static("access-control-request-private-network"),
                         ])
-                        .expose_headers(vec![HeaderName::from_static("x-qualia-compute-cost")])
+                        .expose_headers(vec![
+                            HeaderName::from_static("x-qualia-compute-cost"),
+                            HeaderName::from_static("x-qualia-tensor-nodes"),
+                            HeaderName::from_static("x-qualia-tensor-bytes"),
+                        ])
                 };
 
                 let csp_layer = SetResponseHeaderLayer::overriding(
@@ -199,6 +213,18 @@ pub fn spawn_loopback_server(
                     
                     // REST
                     .route("/health", get(health_handler).options(preflight_handler))
+                    .route(
+                        "/tensor/slice",
+                        get(tensor_slice_handler).options(preflight_handler),
+                    )
+                    .route(
+                        "/tensor/events",
+                        get(tensor_events_handler).options(preflight_handler),
+                    )
+                    .route(
+                        "/tensor/dev-signing-key",
+                        get(tensor_dev_signing_key_handler).options(preflight_handler),
+                    )
                     .route("/query", post(query_handler).options(preflight_handler))
                     .route("/cache", post(cache_handler))
                     .route("/proxy/fetch", get(proxy_fetch_handler).options(preflight_handler))
@@ -250,6 +276,262 @@ async fn preflight_handler() -> impl IntoResponse {
     (StatusCode::OK, Json(json!({ "status": "ok" })))
 }
 
+#[derive(Deserialize)]
+struct TensorSliceQuery {
+    max_nodes: Option<u32>,
+    t_slice: Option<f32>,
+    t_window: Option<f32>,
+    lane: Option<String>,
+}
+
+fn header_parse_f32(headers: &HeaderMap, name: &str) -> Option<f32> {
+    headers
+        .get(name)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok())
+}
+
+fn header_parse_u32(headers: &HeaderMap, name: &str) -> Option<u32> {
+    headers
+        .get(name)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok())
+}
+
+fn header_str(headers: &HeaderMap, name: &str) -> Option<String> {
+    headers
+        .get(name)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string())
+}
+
+async fn tensor_slice_handler(
+    State(state): State<Arc<WebizenState>>,
+    Query(q): Query<TensorSliceQuery>,
+    headers: HeaderMap,
+) -> Response {
+    use crate::daemon_tensor::{
+        build_tensor_slice_bytes, verify_tensor_slice_signature, TensorSliceAuthError,
+        TensorSliceError, TensorSliceLane, TensorSliceRequest, DEFAULT_SLICE_MAX_NODES,
+    };
+    use crate::portal_telemetry::STANDPOINT_DID;
+    use crate::tensor::buffer_export::tensor_node_count;
+
+    let max_nodes = header_parse_u32(&headers, "x-qualia-max-nodes")
+        .or(q.max_nodes)
+        .map(|n| n as usize)
+        .unwrap_or(DEFAULT_SLICE_MAX_NODES);
+
+    let t_slice = header_parse_f32(&headers, "x-qualia-t-slice")
+        .or(q.t_slice)
+        .unwrap_or(0.5);
+
+    let t_window = header_parse_f32(&headers, "x-qualia-t-window")
+        .or(q.t_window)
+        .unwrap_or(1.0);
+
+    let standpoint_class = header_parse_u32(&headers, "x-qualia-standpoint-class").unwrap_or(0);
+
+    let identifier_did = header_str(&headers, "x-qualia-identifier-did").unwrap_or_default();
+    let session_nonce = header_str(&headers, "x-qualia-session-nonce").unwrap_or_default();
+    let signature_hex = header_str(&headers, "x-qualia-signature").unwrap_or_default();
+
+    let mut lane = if standpoint_class >= STANDPOINT_DID {
+        TensorSliceLane::Identifier
+    } else {
+        TensorSliceLane::Commons
+    };
+
+    if standpoint_class >= STANDPOINT_DID {
+        let vault = match state.vault.lock() {
+            Ok(guard) => guard,
+            Err(_) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": "vault_unavailable" })),
+                )
+                    .into_response();
+            }
+        };
+        if let Err(auth_err) = verify_tensor_slice_signature(
+            &vault,
+            &identifier_did,
+            &session_nonce,
+            standpoint_class,
+            t_slice,
+            t_window,
+            &signature_hex,
+        ) {
+            let code = match auth_err {
+                TensorSliceAuthError::InvalidSignature => "invalid_signature",
+                TensorSliceAuthError::InvalidSignatureEncoding => "invalid_signature_encoding",
+                TensorSliceAuthError::SignatureRequired => "signature_required",
+                TensorSliceAuthError::IdentifierDidRequired => "identifier_did_required",
+                TensorSliceAuthError::SessionNonceRequired => "session_nonce_required",
+            };
+            return (
+                StatusCode::FORBIDDEN,
+                Json(json!({
+                    "error": "tensor_slice_auth_failed",
+                    "code": code,
+                })),
+            )
+                .into_response();
+        }
+        drop(vault);
+    } else {
+        lane = headers
+            .get("x-qualia-lane")
+            .and_then(|v| v.to_str().ok())
+            .or(q.lane.as_deref())
+            .map(TensorSliceLane::from_header)
+            .unwrap_or(TensorSliceLane::Commons);
+    }
+
+    let req = TensorSliceRequest {
+        max_nodes,
+        t_slice,
+        t_window,
+        lane,
+        standpoint_class,
+    };
+
+    let guard = crate::daemon_graph::graph_read_guard();
+    match build_tensor_slice_bytes(guard.as_slice(), &req) {
+        Ok(bytes) => {
+            let node_count = tensor_node_count(&bytes).unwrap_or(0);
+            Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, "application/octet-stream")
+                .header("X-Qualia-Tensor-Nodes", node_count.to_string())
+                .header("X-Qualia-Tensor-Bytes", bytes.len().to_string())
+                .header(
+                    "X-Qualia-Tensor-Lane",
+                    match lane {
+                        TensorSliceLane::Commons => "commons",
+                        TensorSliceLane::Identifier => "identifier",
+                    },
+                )
+                .body(Body::from(bytes))
+                .unwrap()
+        }
+        Err(TensorSliceError::EmptyGraph) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": "empty_graph",
+                "message": "graph empty or no nodes match temporal window"
+            })),
+        )
+            .into_response(),
+        Err(TensorSliceError::BufferTooSmall) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "tensor_buffer_error" })),
+        )
+            .into_response(),
+    }
+}
+
+/// Dev-only: export KeyVault-derived Ed25519 seed for `identifier_did` (localhost pairing).
+async fn tensor_dev_signing_key_handler(
+    State(state): State<Arc<WebizenState>>,
+    Query(qs): Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    if !state.dev {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({ "error": "dev_only" })),
+        )
+            .into_response();
+    }
+    let identifier_did = qs.get("identifier_did").cloned().unwrap_or_default();
+    if identifier_did.trim().is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "identifier_did_required" })),
+        )
+            .into_response();
+    }
+    let vault = match state.vault.lock() {
+        Ok(guard) => guard,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "vault_unavailable" })),
+            )
+                .into_response();
+        }
+    };
+    let sk = vault.derive_key(&identifier_did);
+    let pk = vault.public_key_bytes_for_context(&identifier_did);
+    (
+        StatusCode::OK,
+        Json(json!({
+            "identifier_did": identifier_did,
+            "signing_key_hex": hex::encode(sk.to_bytes()),
+            "public_key_hex": hex::encode(pk),
+            "warning": "dev_only — never expose signing keys outside localhost pairing"
+        })),
+    )
+        .into_response()
+}
+
+/// SSE stream of Lamport graph revisions for live viewport sync (`PR-C9c.1`).
+async fn tensor_events_handler() -> Response {
+    use std::convert::Infallible;
+    use std::time::Duration;
+
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+    let initial = crate::daemon_graph::graph_revision();
+
+    tokio::spawn(async move {
+        let _ = tx.send(format!("data: {{\"revision\":{initial}}}\n\n"));
+        let mut last = initial;
+        let mut sub = crate::daemon_graph::subscribe_graph_revisions();
+        let mut keepalive = tokio::time::interval(Duration::from_secs(15));
+        keepalive.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
+        loop {
+            if tx.is_closed() {
+                break;
+            }
+            tokio::select! {
+                result = sub.recv() => {
+                    match result {
+                        Ok(rev) => {
+                            if rev > last {
+                                last = rev;
+                                let _ = tx.send(format!("data: {{\"revision\":{rev}}}\n\n"));
+                            }
+                        }
+                        Err(broadcast::error::RecvError::Lagged(_)) => {
+                            let current = crate::daemon_graph::graph_revision();
+                            if current > last {
+                                last = current;
+                                let _ = tx.send(format!("data: {{\"revision\":{current}}}\n\n"));
+                            }
+                        }
+                        Err(broadcast::error::RecvError::Closed) => break,
+                    }
+                }
+                _ = keepalive.tick() => {
+                    let _ = tx.send(": keepalive\n\n".to_string());
+                }
+            }
+        }
+    });
+
+    let body_stream = UnboundedReceiverStream::new(rx)
+        .map(|chunk| Ok::<Bytes, Infallible>(Bytes::from(chunk)));
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/event-stream")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .header(header::CONNECTION, "keep-alive")
+        .body(Body::from_stream(body_stream))
+        .unwrap()
+}
+
 async fn health_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResponse {
     (StatusCode::OK, Json(json!({
         "status": "active",
@@ -257,6 +539,7 @@ async fn health_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResp
         "version": crate::ENGINE_VERSION,
         "dev_mode": state.dev,
         "graph_quin_count": crate::daemon_graph::graph_quin_count(),
+        "graph_revision": crate::daemon_graph::graph_revision(),
         "webtorrent": crate::webtorrent_seeder::telemetry(),
         // mock execution environment
         "execution_environment": { "runner": "qualia-core-db daemon", "topology": { "mode": "single_cell" } }

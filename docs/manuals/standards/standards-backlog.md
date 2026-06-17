@@ -53,6 +53,20 @@ Required before standardization:
 
 ## Priority 1: standards candidates
 
+### 0. Q42 phenomenal multi-modal σ (visual + acoustic) — **internal draft shipped 2026-06-17**
+
+- Scope: shared `Tensor10D.σ` projection to CIE (U2) and Hz (U3); Sonic Token 64-bit layout; `AcousticUniform` 328 B; `Q3AS` SAB 1024 B; `Q4AU` STFT sidecar header.
+- First doc: [`q42-acoustic-plane-draft.md`](q42-acoustic-plane-draft.md) (v0.1 internal)
+- Extension: [`q42-10d-tensor-standard.md`](q42-10d-tensor-standard.md) §1.3 phenomenal σ
+- ADR: [`../adr/0007-u3-acoustic-plane-symbolic-audio.md`](../adr/0007-u3-acoustic-plane-symbolic-audio.md)
+- Exit criteria before external submission:
+  - [x] σ parity oracle in CI (`phenomenal_sigma_visual_audio_parity`)
+  - [x] binary layout tests (`audio::`, `phenomenal_hrtf`)
+  - [x] CQT mmap ingest + filename convention frozen (`cqt_bake.rs`, `audio_sidecar_link.rs`, `spectral/audio/{hash:016x}.bin`)
+  - [x] KEMAR HRTF asset format — KemarLite embedded 8-azimuth profile (v0.1 default; full measured bundle optional)
+  - [x] test vectors file (`vectors/acoustic-plane-v0.1.json`)
+  - [ ] full measured KEMAR asset bundle (KemarLite embedded profile shipped as v0.1 default)
+
 ## Qualia Protocol Ecosystem
 
 Use `Qualia Protocol Ecosystem` as the umbrella label for this family of work.

@@ -6,6 +6,45 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.17] — 2026-06-17
+
+### Added — U3 AcousticPlane (symbolic audio on Pages)
+
+- **Universe U3 (`AcousticPlane`)**: Sonic Token SPSC ring, parametric DSP kernel, and `AcousticUniform` (328 B / 82 floats) wired through `QualiaPortal` WASM exports — no PCM from U0.
+- **Spectral-first playback**: Cold STFT bake (`stft_bake.rs`) and **CQT bake** (`cqt_bake.rs`) with `Q4AU` sidecar header (`SIDECAR_KIND_STFT` / `SIDECAR_KIND_CQT`); `audio_sidecar_link.rs` hashes frames, emits `q42:hasSpectralSheet` quins, and writes `spectral/audio/{hash:016x}.bin` (native) or pins frames in-portal (WASM).
+- **Binaural HRTF**: Analytic fallback plus **KemarLite** embedded 8-azimuth ITD/ILD profile (v0.1 default); camera yaw rotates pan in `hrtf.rs`.
+- **σ phenomenal parity** (`portal_acoustic.rs`): shared `Tensor10D.σ` projects to CIE λ (400–700 nm) on U2 and Hz (1760–110) on U3.
+- **Zero-copy browser handoff**: 1024 B `Q3AS` SharedArrayBuffer (`acoustic_sab.rs`) with COOP/COEP bootstrap (`qualia-coi.js`, `coi-serviceworker.js`); **AudioWorklet** stereo grains with overlap-add (`qualia-audio-worklet.js`, `qualia-shell.js` `mountAcousticPlane`).
+- **Portal exports**: `set_acoustic_enabled`, `acoustic_uniform_floats`, `create_acoustic_sab`, `publish_acoustic_sab`, `drain_sonic_tokens`, `bake_stft_sidecar_demo`, `bake_cqt_sidecar_demo`, `acoustic_sidecar_pinned`.
+- **CI**: 28 `audio::` unit tests; `phenomenal_hrtf` + `phenomenal_sigma_visual_audio_parity`; `phenomenal-verify.mjs` acoustic API oracles in Pages workflow.
+
+### Added — Compute Universe / Phase 8 parity (Track B3)
+
+- **`sentinel_allows_topology_draft()`**: Phase-8 gate on U1→U0 draft batches (0x99 anachronism byte) before `verify_topology_draft_batch`.
+- **Shared decode path**: `try_accept_topology_draft()` + `drain_tensor_context_inject()` in `llm_agent.rs` — native threaded and WASM synchronous decode paths now parity-wired (producer start, context inject drain, speculative accept, decode hints).
+
+### Added — Documentation
+
+- **Manual**: [`docs/manuals/qualia-wasm-portal.md`](docs/manuals/qualia-wasm-portal.md) — WASM portal T2 phenomenal path.
+- **Standard draft**: [`docs/manuals/standards/q42-acoustic-plane-draft.md`](docs/manuals/standards/q42-acoustic-plane-draft.md) (v0.1 internal).
+- **ADR**: [`docs/manuals/adr/0007-u3-acoustic-plane-symbolic-audio.md`](docs/manuals/adr/0007-u3-acoustic-plane-symbolic-audio.md).
+- **Test vectors**: [`docs/manuals/standards/vectors/acoustic-plane-v0.1.json`](docs/manuals/standards/vectors/acoustic-plane-v0.1.json).
+- **Tracking**: [`docs/plans/AUDIO_PROJECT_STATUS.md`](docs/plans/AUDIO_PROJECT_STATUS.md); migration plan Track B5 / P-F1–F2 marked complete on Pages.
+
+### Fixed
+
+- **SAB header parse**: Read 28-byte `Pod` layout, not 32-byte slot — fixes `pod_read_unaligned` `SizeMismatch` on publish.
+- **HRTF test**: Corrected `yaw_rotates_pan` assertion logic.
+- **`bake_stft_sidecar_demo`**: Return `Uint8Array::from(&buf[..])` for WASM byte handoff.
+- **`AcousticUniform` contract**: Size oracle updated to 328 B in phenomenal contract tests.
+
+### Changed
+
+- Workspace version bump to **0.0.17** (`qualia-core-db`, `qualia-cli`, `qualia-client-core`, sibling crates).
+- `publish_acoustic_sab` / `build_acoustic_uniform` now take `&mut self` for rotating sidecar frame playback.
+
+---
+
 ## [0.0.13] - 2026-06-16
 
 ### Added — 10D Volumetric Tensor System with Zero-Heap Guarantees

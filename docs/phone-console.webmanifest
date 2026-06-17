@@ -1,0 +1,10 @@
+{
+  "name": "Qualia Phone Console",
+  "short_name": "Qualia Console",
+  "description": "Interface Control Plane companion for Qualia WASM portal",
+  "start_url": "/phone-console.html",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "orientation": "any"
+}

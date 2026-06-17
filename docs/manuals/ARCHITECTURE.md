@@ -1,7 +1,7 @@
 # Qualia-DB Architecture
 
 > The 3-Core Triad, Webizen VM, Rights Ontology, and the Principal-Agent Ecosystem.
-> _Branch: `0.0.15` | Last updated: 2026-06-18_
+> _Branch: `0.0.17-dev` | Last updated: 2026-06-17_
 
 Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favour of a specialised 3-Core Triad built with ruthless mechanical sympathy (512 MB RAM floor). Raw multi-modal data (audio, camera feeds) would immediately breach this floor, so the ecosystem forces an **Orchestration Sieve**: the Primary Agent must coordinate deterministic tools (OpenCV, Audio DSP) to strip noise, extract contours, and build optimised files *before* handing them to the local LLM or the database.
 
@@ -29,7 +29,11 @@ The 10D tensor system [q, v, w, x, y, z, t, α, μ, σ] provides absolute mechan
 - **w (Manifold Index)**: Multi-head attention for knowledge universe bifurcation (Medical, Legal, Personal, etc.)
 - **x, y, z (Semantic Topology)**: 3D spatial coordinates for semantic clustering
 - **t (Temporal State)**: Provenance ledger for immutable historical queries
-- **α, μ, σ (Spectral-Logical Payload)**: EM spectrum foundation (Amplitude, Modulation, Spectral Signature)
+- **α, μ, σ (Spectral-Logical Payload)**: EM spectrum foundation (Amplitude, Modulation, Spectral Signature). In the **Qualia WASM portal**, σ projects to both vision (CIE XYZ, U2) and hearing (Hz, U3) from the same `fract(σ)` — see [`standards/q42-10d-tensor-standard.md`](standards/q42-10d-tensor-standard.md) §1.3 and [`qualia-wasm-portal.md`](qualia-wasm-portal.md).
+
+### 2.6. Qualia WASM portal & U3 AcousticPlane
+
+Browser and edge embeds ship as one module (`docs/pkg/qualia/qualia_bg.wasm`): engine + wgpu viewport + **U3 symbolic audio**. JavaScript is glue only (`QualiaPortal::tick`). Audio is **spectral-first**: STFT sidecars + 64-bit Sonic Tokens + parametric DSP — never LLM PCM. Operator manual: [`qualia-wasm-portal.md`](qualia-wasm-portal.md). ADR: [`adr/0007-u3-acoustic-plane-symbolic-audio.md`](adr/0007-u3-acoustic-plane-symbolic-audio.md).
 
 **Hardware-Tier Dispatching:**
 - **Tier 0 (Edge)**: SIMD-only execution (ARM NEON/x86 AVX2), aggressive quantization, <5W power

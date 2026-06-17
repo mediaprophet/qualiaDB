@@ -30,6 +30,7 @@ include:
   - "data/**/*.lex"
   - "data/**/*.bidx"
   - "js/*.js"
+  - "resources/*.json"
   - "tests/**/*.js"
 
 # Exclude large local-only WordNet sidecars (unified v2 .q42 embeds lex+bidx).

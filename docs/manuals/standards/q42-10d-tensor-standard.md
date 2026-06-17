@@ -1,9 +1,9 @@
 # Q42 10D Volumetric Tensor Standard
 
-**Version:** 1.0  
-**Date:** 2026-06-16  
+**Version:** 1.1  
+**Date:** 2026-06-17  
 **Status:** Draft Standard  
-**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.15
+**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.17-dev
 
 ## Abstract
 
@@ -68,7 +68,25 @@ pub struct Tensor10D {
 
 - **α (Amplitude):** Linear floating-point intensity, energy density, trust/consensus weight
 - **μ (Modulation):** Encodes phase, frequency modulation, or bit-packed metadata for DIDs and cryptographic provenance
-- **σ (Spectral Signature):** Represents chromatic, timbral, or multi-band spectral profile
+- **σ (Spectral Signature):** Represents chromatic, timbral, or multi-band spectral profile. In the **phenomenal portal**, σ is the shared truth index for both vision (U2) and hearing (U3) — see §1.3.
+
+### 1.3 Phenomenal multi-modal σ projection (U2 + U3)
+
+The Qualia WASM portal projects the same `σ` field into **two last-mile modalities** without duplicating storage:
+
+| Modality | Universe | Projection | Reference |
+|----------|----------|------------|-----------|
+| **Visual** | U2 Viewport | λ_nm = 400 + fract(σ)×300 → CIE 1931 XYZ → linear sRGB | `portal_spectral.rs`, `spectral.wgsl` |
+| **Auditory** | U3 AcousticPlane | same λ_nm → f_hz = lerp(1760, 110, t) where t = (λ_nm−400)/300 | `portal_acoustic.rs` |
+
+Where `fract(σ) = σ - floor(σ)`. Integer wraps on σ must not change either projection.
+
+**High-density sheets:** Full SPD (vision) and STFT/CQT (audio) live in **mmap sidecars** linked at bake time — not inlined in the 40-byte `Tensor10D` stride. Each node carries a 64-bin **preview** derived from σ for hot-path parametric synthesis (`SPECTRAL_PREVIEW_BINS = 64`). Normative audio layouts: [`q42-acoustic-plane-draft.md`](q42-acoustic-plane-draft.md).
+
+**α and μ in audio:**
+
+- **α** — linear gain staging (preserves dynamic-range sovereignty; clipping only at DAC under device policy).
+- **μ** — phase / provenance modulation; drives FM index with epistemic **q** in U3 parametric voices.
 
 ## 2. Hardware Capability Tiers
 

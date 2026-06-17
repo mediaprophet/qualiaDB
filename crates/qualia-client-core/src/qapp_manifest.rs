@@ -404,6 +404,8 @@ mod tests {
                 required_ontologies: vec!["q42:anatomy".to_string(), "snomed:core".to_string()],
                 optional_remote_endpoints: vec![],
                 max_sensitivity_clearance: "0x00".to_string(),
+                required_pinn_models: vec![],
+                supports_ternary_quantization: false,
             },
         };
         let cap = compile_capability_record(&manifest).unwrap();

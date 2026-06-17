@@ -183,13 +183,13 @@
                     <div class="text-white/50 font-semibold mb-2">Handshake (server → client)</div>
                     <div class="code-block text-cyan-300">← { "type": "HANDSHAKE_SUCCESS",
      "payload": { "mode": "NATIVE",
-                  "version": "0.0.12" } }</div>
+                  "version": "0.0.17" } }</div>
                 </div>
                 <div>
                     <div class="text-white/50 font-semibold mb-2">Start inference (client → server)</div>
                     <div class="code-block text-amber-300">→ { "type": "llm_infer",
      "id": 1,
-     "model": "phi-3-mini-4k-instruct-q4km",
+     "model": "gemma-3-1b-it-q4_0",
      "prompt": "Explain NQuin layout",
      "max_tokens": 256,
      "temperature": 0.7 }</div>
@@ -220,7 +220,7 @@
                     <div class="text-white/50 font-semibold mb-2">Status query (client → server)</div>
                     <div class="code-block text-blue-300">→ { "type": "llm_status" }
 ← { "type": "llm_status_reply",
-     "loaded_model": "phi-3-mini…",
+     "loaded_model": "gemma-3-1b…",
      "lifecycle": "Resident",
      "rss_mb": 2841,
      "thermal": "Normal" }</div>
@@ -252,12 +252,12 @@ qualia-cli llm list --vault-path C:\llmmodels</div>
                     </div>
                     <div>
                         <div class="text-white/50 font-semibold mb-1">Download a model</div>
-                        <div class="code-block text-emerald-300">qualia-cli resources download phi-3-mini-4k-instruct-q4km
+                        <div class="code-block text-emerald-300">qualia-cli resources download gemma-3-1b-it-q4_0
 qualia-cli resources download qwen2.5-1.5b-instruct-q4km</div>
                     </div>
                     <div>
                         <div class="text-white/50 font-semibold mb-1">Load into memory</div>
-                        <div class="code-block text-amber-300">qualia-cli llm load phi-3-mini-4k-instruct-q4km
+                        <div class="code-block text-amber-300">qualia-cli llm load gemma-3-1b-it-q4_0
 # Maps GGUF via memmap2 → wgpu DirectML pipeline
 # Prints profile_id + resident bytes</div>
                     </div>
@@ -277,7 +277,7 @@ qualia-cli llm eval "Explain NQuin" --orchestrated
                     </div>
                     <div>
                         <div class="text-white/50 font-semibold mb-1">Evict (free GPU/RAM)</div>
-                        <div class="code-block text-red-300">qualia-cli llm evict phi-3-mini-4k-instruct-q4km</div>
+                        <div class="code-block text-red-300">qualia-cli llm evict gemma-3-1b-it-q4_0</div>
                     </div>
                 </div>
             </div>
@@ -353,6 +353,7 @@ AgentBackend variants:
 <script>
 // ─── Model catalog (from resources/llms.yaml) ──────────────────────
 const MODELS = [
+    { id:'gemma-3-1b-it-q4_0',        name:'Gemma 3 1B Instruct',     provider:'Google',          sizeMb:957,   ramMb:1100,  quant:'Q4_0',  modality:'text',       tags:['multilingual','edge','tiny'], icon:'💎', ctx:8192 },
     { id:'smolvlm2-500m-video-q8',    name:'SmolVLM2 500M Video',     provider:'HuggingFaceTB',   sizeMb:420,   ramMb:1200,  quant:'Q8_0',  modality:'multimodal', tags:['vision','edge','tiny'],    icon:'🔬', ctx:8192 },
     { id:'qwen2.5-1.5b-instruct-q4km',name:'Qwen2.5 1.5B',            provider:'Alibaba',         sizeMb:1100,  ramMb:1400,  quant:'Q4_K_M',modality:'text',       tags:['coding','edge','tiny'],    icon:'💬', ctx:32768 },
     { id:'gemma-2-2b-it-q4km',        name:'Gemma 2 2B Instruct',     provider:'Google',          sizeMb:1600,  ramMb:1900,  quant:'Q4_K_M',modality:'text',       tags:['multilingual','edge'],     icon:'💎', ctx:8192 },
@@ -373,7 +374,7 @@ const TAG_COLORS = {
     balanced:'bg-lime-500/15 text-lime-400',
 };
 
-let selectedModel = MODELS[4]; // Default: Phi-3 mini
+let selectedModel = MODELS[0]; // Default: Gemma 3 1B Q4_0
 let demoMode = true;
 let ws = null;
 let generating = false;
@@ -713,7 +714,7 @@ appendMessage('assistant', '').innerHTML =
     `<div class="text-white/60 text-sm">
         <div class="font-semibold text-white/80 mb-2">Welcome to the Edge LLM Hub</div>
         <p class="mb-2">Select a model from the catalog, then ask anything. <strong>Demo mode</strong> simulates the Phase 8 streaming protocol so you can see the UX without a running daemon.</p>
-        <p class="text-xs text-white/40">To run actual inference: <code class="text-cyan-300">qualia-cli llm load phi-3-mini-4k-instruct-q4km</code> then toggle to <strong>Live mode</strong>.</p>
+        <p class="text-xs text-white/40">To run actual inference: <code class="text-cyan-300">qualia-cli llm load gemma-3-1b-it-q4_0</code> then toggle to <strong>Live mode</strong>.</p>
     </div>`;
 </script>
 

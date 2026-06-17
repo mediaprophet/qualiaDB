@@ -107,7 +107,12 @@ struct AttentionGpuParams {
     rope_theta_base: f32,
     num_tokens_in_batch: u32,
     batch_start_token_idx: u32,
+    mask_active: u32,
+    mask_word_count: u32,
 }
+
+/// KV attention bitmask words uploaded to `fused_attention.wgsl` binding 5.
+pub const KV_ATTENTION_MASK_WORDS: usize = crate::compute_universe::KV_ATTENTION_MASK_WORDS;
 
 #[inline]
 fn ggml_gpu_quant_supported(ggml_type: u32) -> bool {
@@ -314,8 +319,11 @@ fn stack_gemm_quant(
 }
 
 pub struct QTensorEngine {
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
+    /// Browser WASM keeps a private device; native reuses `gpu_context::shared_gpu()`.
+    #[cfg(target_arch = "wasm32")]
+    device: wgpu::Device,
+    #[cfg(target_arch = "wasm32")]
+    queue: wgpu::Queue,
     pub pipeline: wgpu::ComputePipeline,
     /// Legacy f32×f32 mock block for offset-0 `QTensor` fallback (no mmap).
     mock_pipeline: wgpu::ComputePipeline,
@@ -350,50 +358,77 @@ pub struct QTensorEngine {
     kv_cache_cpu: Option<Box<[f32]>>,
     attention_pipeline: wgpu::ComputePipeline,
     attention_params_buf: Option<wgpu::Buffer>,
+    attention_mask_buf: Option<wgpu::Buffer>,
 }
 
 impl QTensorEngine {
-    pub async fn try_new() -> Result<Self, String> {
-        log::info!("LLM_LOAD|engine-init|0.10|Initializing native GGUF runtime");
-        let instance = wgpu::Instance::default();
-
-        let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::HighPerformance,
-                ..Default::default()
-            })
-            .await
-            .ok_or_else(|| "Failed to find wgpu adapter".to_string())?;
-        let adapter_info = adapter.get_info();
-        log::info!(
-            "LLM_LOAD|gpu-adapter|0.20|Using {:?} adapter {}",
-            adapter_info.backend,
-            adapter_info.name
-        );
-        #[cfg(target_os = "windows")]
-        if let Ok(memory) = crate::directml_bridge::probe_best_adapter_memory() {
-            let free_local = memory.available_local_bytes();
-            let total_local = memory
-                .local_budget_bytes
-                .max(memory.dedicated_vram_bytes)
-                .max(free_local);
-            log::info!(
-                "LLM_LOAD|vram-check|0.16|VRAM free {:.1}/{:.1} GiB on {} (usage {:.1} GiB, shared free {:.1} GiB)",
-                bytes_to_gib(free_local),
-                bytes_to_gib(total_local),
-                memory.adapter_desc,
-                bytes_to_gib(memory.local_usage_bytes),
-                bytes_to_gib(memory.available_shared_bytes()),
-            );
+    #[inline]
+    fn gpu_device(&self) -> &wgpu::Device {
+        #[cfg(target_arch = "wasm32")]
+        {
+            return &self.device;
         }
-        #[cfg(not(target_os = "windows"))]
-        log::info!(
-            "LLM_LOAD|vram-check|0.16|Dedicated VRAM telemetry unavailable on this backend"
-        );
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            &crate::gpu_context::shared_gpu().device
+        }
+    }
 
-        let (device, queue) = adapter.request_device(&wgpu::DeviceDescriptor::default(), None)
-            .await
-            .map_err(|e| e.to_string())?;
-        log::info!("LLM_LOAD|gpu-device|0.35|Native compute device ready");
+    #[inline]
+    fn gpu_queue(&self) -> &wgpu::Queue {
+        #[cfg(target_arch = "wasm32")]
+        {
+            return &self.queue;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            &crate::gpu_context::shared_gpu().queue
+        }
+    }
+
+    /// Shared process-wide wgpu device (LLM + render coexistence).
+    #[inline]
+    pub fn device(&self) -> &wgpu::Device {
+        self.gpu_device()
+    }
+
+    /// Shared process-wide wgpu queue.
+    #[inline]
+    pub fn queue(&self) -> &wgpu::Queue {
+        self.gpu_queue()
+    }
+
+    pub async fn try_new() -> Result<Self, String> {
+        #[cfg(not(target_arch = "wasm32"))]
+        log::info!("LLM_LOAD|engine-init|0.10|Initializing native GGUF runtime (shared GpuContext)");
+        #[cfg(target_arch = "wasm32")]
+        log::info!("LLM_LOAD|engine-init|0.10|Initializing WASM GGUF runtime");
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let shared = crate::gpu_context::shared_gpu();
+        #[cfg(not(target_arch = "wasm32"))]
+        let device = &shared.device;
+        #[cfg(not(target_arch = "wasm32"))]
+        let queue = &shared.queue;
+        #[cfg(not(target_arch = "wasm32"))]
+        log::info!("LLM_LOAD|gpu-device|0.35|Reusing process-wide wgpu device");
+
+        #[cfg(target_arch = "wasm32")]
+        let (wasm_device, wasm_queue) = {
+            let instance = wgpu::Instance::default();
+            let adapter = instance
+                .request_adapter(&wgpu::RequestAdapterOptions::default())
+                .await
+                .ok_or_else(|| "Failed to find wgpu adapter".to_string())?;
+            adapter
+                .request_device(&wgpu::DeviceDescriptor::default(), None)
+                .await
+                .map_err(|e| e.to_string())?
+        };
+        #[cfg(target_arch = "wasm32")]
+        let device = &wasm_device;
+        #[cfg(target_arch = "wasm32")]
+        let queue = &wasm_queue;
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Transformer Shader"),
@@ -478,8 +513,10 @@ impl QTensorEngine {
         }
 
         Ok(Self {
-            device,
-            queue,
+            #[cfg(target_arch = "wasm32")]
+            device: wasm_device,
+            #[cfg(target_arch = "wasm32")]
+            queue: wasm_queue,
             pipeline,
             mock_pipeline,
             embedding_pipeline,
@@ -502,6 +539,7 @@ impl QTensorEngine {
             kv_cache_gpu: None,
             kv_cache_cpu: None,
             attention_params_buf: None,
+            attention_mask_buf: None,
         })
     }
 
@@ -520,22 +558,45 @@ impl QTensorEngine {
             None => return,
         };
         let bytes = (layout.total_f32_elems * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
-        let gpu = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let ledger = crate::gpu_context::global_vram_ledger();
+        let orch = crate::gpu_context::universe_orchestrator();
+        if !ledger.can_allocate_in_universe(
+            &orch,
+            crate::gpu_context::ComputeUniverse::LlmInference,
+            bytes,
+        ) {
+            log::warn!(
+                "LLM_LOAD|kv-cache|denied|U0 budget {:.1} MiB used, need {:.1} MiB (mode {:?})",
+                ledger.universe_used_bytes(crate::gpu_context::ComputeUniverse::LlmInference) as f64
+                    / (1024.0 * 1024.0),
+                bytes as f64 / (1024.0 * 1024.0),
+                orch.active_mode,
+            );
+            return;
+        }
+        let gpu = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("StaticKvCacheArena"),
             size: bytes.max(4),
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let cpu = vec![0f32; layout.total_f32_elems].into_boxed_slice();
-        self.attention_params_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+        self.attention_params_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("AttentionParams"),
             size: std::mem::size_of::<AttentionGpuParams>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
+        self.attention_mask_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("AttentionKvMask"),
+            size: (KV_ATTENTION_MASK_WORDS * std::mem::size_of::<u32>()) as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        }));
         self.kv_layout = Some(layout);
         self.kv_cache_gpu = Some(gpu);
         self.kv_cache_cpu = Some(cpu);
+        ledger.record_kv_cache(bytes);
         log::info!(
             "LLM_LOAD|kv-cache|0.86|Reserved {:.1} MiB KV cache (GPU + CPU mirror, context {})",
             bytes as f64 / (1024.0 * 1024.0),
@@ -551,20 +612,18 @@ impl QTensorEngine {
 
     /// Zero the static KV arena at the start of a new decode context (zero heap in decode).
     pub fn reset_kv_cache(&mut self) {
-        if let (Some(layout), Some(cpu)) = (self.kv_layout.as_ref(), self.kv_cache_cpu.as_mut()) {
-            for v in cpu.iter_mut().take(layout.total_f32_elems) {
+        let Some(layout) = self.kv_layout.as_ref() else {
+            return;
+        };
+        let n = layout.total_f32_elems;
+        if let Some(cpu) = self.kv_cache_cpu.as_mut() {
+            for v in cpu.iter_mut().take(n) {
                 unsafe { core::ptr::write_volatile(v, 0.0) };
             }
-            if let Some(gpu) = self.kv_cache_gpu.as_ref() {
-                let bytes =
-                    (layout.total_f32_elems * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
-                self.queue.write_buffer(
-                    gpu,
-                    0,
-                    bytemuck::cast_slice(&cpu[..layout.total_f32_elems]),
-                );
-                let _ = bytes;
-            }
+        }
+        if let (Some(cpu), Some(gpu)) = (self.kv_cache_cpu.as_ref(), self.kv_cache_gpu.as_ref()) {
+            self.gpu_queue()
+                .write_buffer(gpu, 0, bytemuck::cast_slice(&cpu[..n]));
         }
     }
 
@@ -579,31 +638,31 @@ impl QTensorEngine {
         let w_bytes = max_weight_bytes.max(4) as wgpu::BufferAddress;
         let in_bytes = (need_input * 4) as wgpu::BufferAddress;
         let out_bytes = (max_out_dim as usize * 4).max(4) as wgpu::BufferAddress;
-        self.gemm_input_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+        self.gemm_input_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmInput"),
             size: in_bytes,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
-        self.gemm_weight_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+        self.gemm_weight_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmWeight"),
             size: w_bytes,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
-        self.gemm_output_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+        self.gemm_output_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmOutput"),
             size: out_bytes,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         }));
-        self.gemm_params_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+        self.gemm_params_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmParams"),
             size: std::mem::size_of::<GemmGpuParams>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
-        self.gemm_output_staging = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+        self.gemm_output_staging = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmStaging"),
             size: out_bytes,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
@@ -829,14 +888,14 @@ impl QTensorEngine {
 
         // WGSL storage uses u32 words; pad mmap slice to 4-byte alignment.
         let word_bytes = raw_embd.len().div_ceil(4) * 4;
-        let embd_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let embd_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("QuantizedEmbeddingBytes"),
             size: word_bytes.max(4) as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         if raw_embd.len() == word_bytes {
-            self.queue.write_buffer(&embd_buf, 0, raw_embd);
+            self.gpu_queue().write_buffer(&embd_buf, 0, raw_embd);
         } else {
             const MAX_EMB_ROW_PAD: usize = 8192;
             if word_bytes > MAX_EMB_ROW_PAD {
@@ -844,20 +903,20 @@ impl QTensorEngine {
             }
             let mut padded = [0u8; MAX_EMB_ROW_PAD];
             padded[..raw_embd.len()].copy_from_slice(raw_embd);
-            self.queue.write_buffer(&embd_buf, 0, &padded[..word_bytes]);
+            self.gpu_queue().write_buffer(&embd_buf, 0, &padded[..word_bytes]);
         }
 
-        let params_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let params_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("EmbeddingParams"),
             size: std::mem::size_of::<EmbeddingGpuParams>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.queue
+        self.gpu_queue()
             .write_buffer(&params_buf, 0, bytemuck::bytes_of(&params));
 
         let weights_size = (weights_elems * 4).max(4) as wgpu::BufferAddress;
-        let weights_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let weights_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("EmbeddingWeights"),
             size: weights_size,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
@@ -867,12 +926,12 @@ impl QTensorEngine {
             let offset = (self.tensor_data_offset + weight_tensor.byte_offset) as usize;
             let end = (offset + weights_elems * 4).min(mmap.len());
             if end > offset {
-                self.queue.write_buffer(&weights_buf, 0, &mmap[offset..end]);
+                self.gpu_queue().write_buffer(&weights_buf, 0, &mmap[offset..end]);
             }
         }
 
         let output_size = (n_output as usize * 4).max(4) as wgpu::BufferAddress;
-        let output_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let output_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("EmbeddingOutput"),
             size: output_size,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
@@ -880,7 +939,7 @@ impl QTensorEngine {
         });
 
         let bind_layout = self.embedding_pipeline.get_bind_group_layout(0);
-        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("QuantizedEmbeddingBindGroup"),
             layout: &bind_layout,
             entries: &[
@@ -904,7 +963,7 @@ impl QTensorEngine {
         });
 
         let mut encoder = self
-            .device
+            .device()
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("QuantizedEmbeddingEncoder"),
             });
@@ -918,21 +977,21 @@ impl QTensorEngine {
             cpass.dispatch_workgroups((n_output + 63) / 64, 1, 1);
         }
 
-        let staging_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let staging_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("EmbeddingStaging"),
             size: output_size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, output_size);
-        self.queue.submit(Some(encoder.finish()));
+        self.gpu_queue().submit(Some(encoder.finish()));
 
         let buffer_slice = staging_buf.slice(..);
         let (sender, receiver) = futures_channel::oneshot::channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| {
             let _ = sender.send(v);
         });
-        self.device.poll(wgpu::Maintain::Wait);
+        self.gpu_device().poll(wgpu::Maintain::Wait);
 
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -1014,17 +1073,17 @@ impl QTensorEngine {
         // ── wgpu / WGSL fallback (all platforms — Vulkan on Linux/NVIDIA,
         //    Metal on macOS when mmap not loaded, D3D12 on Windows fallback) ──
         let input_bytes = bytemuck::cast_slice(input_activations);
-        let input_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let input_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("Input"),
             size: input_bytes.len().max(4) as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.queue.write_buffer(&input_buf, 0, input_bytes);
+        self.gpu_queue().write_buffer(&input_buf, 0, input_bytes);
 
         // Upload real weights from mmap when available, else use a zero buffer.
         let weights_size = (rows * cols * 4) as wgpu::BufferAddress;
-        let weights_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let weights_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("Weights"),
             size: weights_size.max(4),
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
@@ -1035,12 +1094,12 @@ impl QTensorEngine {
             let end = (offset + rows * cols * 4).min(mmap.len());
             if end > offset {
                 let f32_bytes = &mmap[offset..end];
-                self.queue.write_buffer(&weights_buf, 0, f32_bytes);
+                self.gpu_queue().write_buffer(&weights_buf, 0, f32_bytes);
             }
         }
 
         let output_size = (rows * 4).max(4) as wgpu::BufferAddress;
-        let output_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let output_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("Output"),
             size: output_size,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
@@ -1055,16 +1114,16 @@ impl QTensorEngine {
             weight_row_elems: cols as u32,
             weight_byte_len: (rows * cols * 4) as u32,
         };
-        let params_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let params_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("TransformerParams"),
             size: std::mem::size_of::<GemmGpuParams>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.queue.write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
+        self.gpu_queue().write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
 
         let bind_group_layout = self.pipeline.get_bind_group_layout(0);
-        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &bind_group_layout,
             entries: &[
@@ -1088,7 +1147,7 @@ impl QTensorEngine {
         });
 
         let mut encoder = self
-            .device
+            .device()
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -1100,19 +1159,19 @@ impl QTensorEngine {
             cpass.dispatch_workgroups((rows as u32 + 63) / 64, 1, 1);
         }
 
-        let staging_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let staging_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("Staging"),
             size: output_size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, output_size);
-        self.queue.submit(Some(encoder.finish()));
+        self.gpu_queue().submit(Some(encoder.finish()));
 
         let buffer_slice = staging_buf.slice(..);
         let (sender, receiver) = futures_channel::oneshot::channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
-        self.device.poll(wgpu::Maintain::Wait);
+        self.gpu_device().poll(wgpu::Maintain::Wait);
 
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -1137,7 +1196,7 @@ impl QTensorEngine {
         } else {
             &raw[..max_bytes]
         };
-        self.queue.write_buffer(weight_buf, 0, upload);
+        self.gpu_queue().write_buffer(weight_buf, 0, upload);
     }
 
     /// Quantized GEMM from a pre-sliced weight byte range (chunk-local row indices).
@@ -1174,14 +1233,14 @@ impl QTensorEngine {
             let params_buf = self.gemm_params_buf.as_ref().unwrap();
             let staging = self.gemm_output_staging.as_ref().unwrap();
 
-            self.queue
+            self.gpu_queue()
                 .write_buffer(input_buf, 0, bytemuck::cast_slice(&input[..n_in]));
             self.write_weight_words(raw, self.max_tensor_bytes);
-            self.queue
+            self.gpu_queue()
                 .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
             let bind_layout = self.pipeline.get_bind_group_layout(0);
-            let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("LayerGemmBindGroup"),
                 layout: &bind_layout,
                 entries: &[
@@ -1205,7 +1264,7 @@ impl QTensorEngine {
             });
 
             let mut encoder = self
-                .device
+                .device()
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("LayerGemmEncoder"),
                 });
@@ -1220,14 +1279,14 @@ impl QTensorEngine {
             }
             let out_bytes = (n_out * 4) as wgpu::BufferAddress;
             encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
-            self.queue.submit(Some(encoder.finish()));
+            self.gpu_queue().submit(Some(encoder.finish()));
 
             let slice = staging.slice(..out_bytes);
             let (tx, rx) = futures_channel::oneshot::channel();
             slice.map_async(wgpu::MapMode::Read, move |r| {
                 let _ = tx.send(r);
             });
-            self.device.poll(wgpu::Maintain::Wait);
+            self.gpu_device().poll(wgpu::Maintain::Wait);
             #[cfg(not(target_arch = "wasm32"))]
             if let Ok(handle) = tokio::runtime::Handle::try_current() {
                 if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
@@ -1357,6 +1416,8 @@ impl QTensorEngine {
         proj_kind: u32,
         num_tokens_in_batch: u32,
         batch_start_token_idx: u32,
+        mask_active: u32,
+        mask_word_count: u32,
     ) -> AttentionGpuParams {
         AttentionGpuParams {
             n_embd: h.n_embd,
@@ -1376,7 +1437,23 @@ impl QTensorEngine {
             rope_theta_base: 10_000.0,
             num_tokens_in_batch,
             batch_start_token_idx,
+            mask_active,
+            mask_word_count,
         }
+    }
+
+    #[inline]
+    fn attention_kv_mask_for_dispatch(
+        layout: &KvCacheLayout,
+        token_idx: u32,
+        proj_kind: u32,
+    ) -> ([u32; KV_ATTENTION_MASK_WORDS], u32, u32) {
+        if proj_kind != 0 {
+            return ([0u32; KV_ATTENTION_MASK_WORDS], 0, 0);
+        }
+        let (words, active) =
+            crate::compute_universe::attention_kv_mask_u32(token_idx, layout.max_context);
+        (words, active, KV_ATTENTION_MASK_WORDS as u32)
     }
 
     /// Single fused-attention dispatch: K write, V write, or Q+online-softmax.
@@ -1407,10 +1484,13 @@ impl QTensorEngine {
             || self.gemm_input_buf.is_none()
             || self.kv_cache_gpu.is_none()
             || self.attention_params_buf.is_none()
+            || self.attention_mask_buf.is_none()
         {
             return false;
         }
 
+        let (mask_words, mask_active, mask_word_count) =
+            Self::attention_kv_mask_for_dispatch(layout, token_idx, proj_kind);
         let params = Self::attention_gpu_params(
             h,
             layout,
@@ -1421,19 +1501,24 @@ impl QTensorEngine {
             proj_kind,
             num_tokens_in_batch.max(1),
             batch_start_token_idx,
+            mask_active,
+            mask_word_count,
         );
         let input_buf = self.gemm_input_buf.as_ref().unwrap();
         let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
         let output_buf = self.gemm_output_buf.as_ref().unwrap();
         let params_buf = self.attention_params_buf.as_ref().unwrap();
+        let mask_buf = self.attention_mask_buf.as_ref().unwrap();
         let kv_buf = self.kv_cache_gpu.as_ref().unwrap();
         let staging = self.gemm_output_staging.as_ref().unwrap();
 
-        self.queue
+        self.gpu_queue()
             .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..hidden_elems]));
         self.write_weight_words(raw_weights, self.max_tensor_bytes);
-        self.queue
+        self.gpu_queue()
             .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
+        self.gpu_queue()
+            .write_buffer(mask_buf, 0, bytemuck::cast_slice(&mask_words));
 
         // Bind one layer slice of the KV arena (full arena exceeds 128 MiB wgpu binding cap).
         let layer_f32s = layout.layer_stride as usize;
@@ -1447,7 +1532,7 @@ impl QTensorEngine {
         };
 
         let bind_layout = self.attention_pipeline.get_bind_group_layout(0);
-        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("FusedAttentionBindGroup"),
             layout: &bind_layout,
             entries: &[
@@ -1471,11 +1556,15 @@ impl QTensorEngine {
                     binding: 4,
                     resource: output_buf.as_entire_binding(),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: mask_buf.as_entire_binding(),
+                },
             ],
         });
 
         let mut encoder = self
-            .device
+            .device()
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("FusedAttentionEncoder"),
             });
@@ -1494,7 +1583,7 @@ impl QTensorEngine {
             let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
             encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
         }
-        self.queue.submit(Some(encoder.finish()));
+        self.gpu_queue().submit(Some(encoder.finish()));
 
         if readback_elems == 0 {
             return true;
@@ -1506,7 +1595,7 @@ impl QTensorEngine {
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        self.device.poll(wgpu::Maintain::Wait);
+        self.gpu_device().poll(wgpu::Maintain::Wait);
         #[cfg(not(target_arch = "wasm32"))]
             if let Ok(handle) = tokio::runtime::Handle::try_current() {
             if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
@@ -2033,6 +2122,73 @@ impl QTensorEngine {
         ran
     }
 
+    /// Topological speculative verify — accept longest draft prefix (B3.1d).
+    pub fn verify_topology_draft_batch(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        ctx: &mut Vec<u32>,
+        draft: &crate::compute_universe::TopologyDraftBatch,
+        emb_dim: usize,
+        emb_buf: &mut [f32],
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+        max_layers: u32,
+        max_vocab_chunks: u32,
+    ) -> u32 {
+        let mmap = match self.gguf_mmap.clone() {
+            Some(m) => m,
+            None => return 0,
+        };
+        let gamma = draft.draft_len as usize;
+        if gamma == 0 || ctx.is_empty() {
+            return 0;
+        }
+        let mut accepted = 0u32;
+        for i in 0..gamma {
+            let cur = *ctx.last().unwrap();
+            let token_idx = ctx.len().saturating_sub(1) as u32;
+            let hidden_ok = index.dequantize_token_embedding_into(
+                mmap.as_ref(),
+                cur,
+                &mut emb_buf[..emb_dim],
+            );
+            if hidden_ok == 0 {
+                break;
+            }
+            let _ = self.dispatch_transformer_forward(
+                index,
+                &mut emb_buf[..emb_dim],
+                emb_dim,
+                scratch_a,
+                scratch_b,
+                token_idx,
+                max_layers,
+            );
+            let pred = if let Some(argmax) = self.dispatch_output_argmax_chunked(
+                index,
+                &emb_buf[..emb_dim],
+                emb_dim,
+                scratch_a,
+                max_vocab_chunks,
+                None,
+            ) {
+                if argmax.max_logit > f32::NEG_INFINITY {
+                    argmax.best_token_id
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            };
+            if pred != draft.draft_ids[i] {
+                break;
+            }
+            ctx.push(pred);
+            accepted += 1;
+        }
+        accepted
+    }
+
     /// Final logits via chunked projection into `logits_out` (fills min(vocab, buf) rows).
     pub fn dispatch_output_logits_into(
         &self,
@@ -2143,14 +2299,14 @@ impl QTensorEngine {
             let params_buf = self.gemm_params_buf.as_ref().unwrap();
             let staging = self.gemm_output_staging.as_ref().unwrap();
 
-            self.queue
+            self.gpu_queue()
                 .write_buffer(input_buf, 0, bytemuck::cast_slice(&input[..n_in]));
             self.write_weight_words(raw, self.max_tensor_bytes);
-            self.queue
+            self.gpu_queue()
                 .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
             let bind_layout = self.pipeline.get_bind_group_layout(0);
-            let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("LayerGemmBindGroup"),
                 layout: &bind_layout,
                 entries: &[
@@ -2174,7 +2330,7 @@ impl QTensorEngine {
             });
 
             let mut encoder = self
-                .device
+                .device()
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("LayerGemmEncoder"),
                 });
@@ -2189,7 +2345,7 @@ impl QTensorEngine {
             }
             let out_bytes = (n_out * 4) as wgpu::BufferAddress;
             encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
-            self.queue.submit(Some(encoder.finish()));
+            self.gpu_queue().submit(Some(encoder.finish()));
 
             let slice = staging.slice(..out_bytes);
             let (tx, rx) = futures_channel::oneshot::channel();
@@ -2260,10 +2416,13 @@ impl QTensorEngine {
             || self.gemm_input_buf.is_none()
             || self.kv_cache_gpu.is_none()
             || self.attention_params_buf.is_none()
+            || self.attention_mask_buf.is_none()
         {
             return false;
         }
 
+        let (mask_words, mask_active, mask_word_count) =
+            Self::attention_kv_mask_for_dispatch(layout, token_idx, proj_kind);
         let params = Self::attention_gpu_params(
             h,
             layout,
@@ -2274,19 +2433,24 @@ impl QTensorEngine {
             proj_kind,
             num_tokens_in_batch.max(1),
             batch_start_token_idx,
+            mask_active,
+            mask_word_count,
         );
         let input_buf = self.gemm_input_buf.as_ref().unwrap();
         let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
         let output_buf = self.gemm_output_buf.as_ref().unwrap();
         let params_buf = self.attention_params_buf.as_ref().unwrap();
+        let mask_buf = self.attention_mask_buf.as_ref().unwrap();
         let kv_buf = self.kv_cache_gpu.as_ref().unwrap();
         let staging = self.gemm_output_staging.as_ref().unwrap();
 
-        self.queue
+        self.gpu_queue()
             .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..hidden_elems]));
         self.write_weight_words(raw_weights, self.max_tensor_bytes);
-        self.queue
+        self.gpu_queue()
             .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
+        self.gpu_queue()
+            .write_buffer(mask_buf, 0, bytemuck::cast_slice(&mask_words));
 
         // Bind one layer slice of the KV arena (full arena exceeds 128 MiB wgpu binding cap).
         let layer_f32s = layout.layer_stride as usize;
@@ -2300,7 +2464,7 @@ impl QTensorEngine {
         };
 
         let bind_layout = self.attention_pipeline.get_bind_group_layout(0);
-        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("FusedAttentionBindGroup"),
             layout: &bind_layout,
             entries: &[
@@ -2324,11 +2488,15 @@ impl QTensorEngine {
                     binding: 4,
                     resource: output_buf.as_entire_binding(),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: mask_buf.as_entire_binding(),
+                },
             ],
         });
 
         let mut encoder = self
-            .device
+            .device()
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("FusedAttentionEncoder"),
             });
@@ -2347,7 +2515,7 @@ impl QTensorEngine {
             let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
             encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
         }
-        self.queue.submit(Some(encoder.finish()));
+        self.gpu_queue().submit(Some(encoder.finish()));
 
         if readback_elems == 0 {
             return true;
@@ -2598,17 +2766,17 @@ impl QTensorEngine {
         // ── wgpu / WGSL fallback (all platforms — Vulkan on Linux/NVIDIA,
         //    Metal on macOS when mmap not loaded, D3D12 on Windows fallback) ──
         let input_bytes = bytemuck::cast_slice(input_activations);
-        let input_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let input_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("Input"),
             size: input_bytes.len().max(4) as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.queue.write_buffer(&input_buf, 0, input_bytes);
+        self.gpu_queue().write_buffer(&input_buf, 0, input_bytes);
 
         // Upload real weights from mmap when available, else use a zero buffer.
         let weights_size = (rows * cols * 4) as wgpu::BufferAddress;
-        let weights_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let weights_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("Weights"),
             size: weights_size.max(4),
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
@@ -2619,12 +2787,12 @@ impl QTensorEngine {
             let end = (offset + rows * cols * 4).min(mmap.len());
             if end > offset {
                 let f32_bytes = &mmap[offset..end];
-                self.queue.write_buffer(&weights_buf, 0, f32_bytes);
+                self.gpu_queue().write_buffer(&weights_buf, 0, f32_bytes);
             }
         }
 
         let output_size = (rows * 4).max(4) as wgpu::BufferAddress;
-        let output_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let output_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("Output"),
             size: output_size,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
@@ -2639,16 +2807,16 @@ impl QTensorEngine {
             weight_row_elems: cols as u32,
             weight_byte_len: (rows * cols * 4) as u32,
         };
-        let params_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let params_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("TransformerParams"),
             size: std::mem::size_of::<GemmGpuParams>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.queue.write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
+        self.gpu_queue().write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
 
         let bind_group_layout = self.pipeline.get_bind_group_layout(0);
-        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &bind_group_layout,
             entries: &[
@@ -2672,7 +2840,7 @@ impl QTensorEngine {
         });
 
         let mut encoder = self
-            .device
+            .device()
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -2684,14 +2852,14 @@ impl QTensorEngine {
             cpass.dispatch_workgroups((rows as u32 + 63) / 64, 1, 1);
         }
 
-        let staging_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let staging_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("Staging"),
             size: output_size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, output_size);
-        self.queue.submit(Some(encoder.finish()));
+        self.gpu_queue().submit(Some(encoder.finish()));
 
         let buffer_slice = staging_buf.slice(..);
         let (sender, receiver) = futures_channel::oneshot::channel();

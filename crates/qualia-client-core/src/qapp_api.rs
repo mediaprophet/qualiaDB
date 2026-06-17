@@ -201,6 +201,8 @@ mod tests {
                 ],
                 optional_remote_endpoints: vec![],
                 max_sensitivity_clearance: "0x00".to_string(),
+                required_pinn_models: vec![],
+                supports_ternary_quantization: false,
             },
         };
         compile_and_register_qapp(manifest).unwrap()
