@@ -48,6 +48,7 @@ class Expectation {
 
     toBeNull()      { this._pass(this._actual === null,      `Expected null, got ${fmt(this._actual)}`); }
     toBeUndefined() { this._pass(this._actual === undefined, `Expected undefined, got ${fmt(this._actual)}`); }
+    toBeDefined()   { this._pass(this._actual !== undefined, `Expected defined value, got undefined`); }
 
     toBeGreaterThan(n)        { this._pass(this._actual >  n, `Expected ${fmt(this._actual)} > ${n}`); }
     toBeLessThan(n)           { this._pass(this._actual <  n, `Expected ${fmt(this._actual)} < ${n}`); }

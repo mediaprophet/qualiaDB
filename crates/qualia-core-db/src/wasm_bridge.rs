@@ -981,7 +981,18 @@ pub fn solve_sat_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         solver.add_clause(clause).map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
     }
 
-    let state = solver.solve().map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+    let state = match solver.solve() {
+        Ok(s) => s,
+        Err(crate::solvers::SolversError::Unsatisfiable) => {
+            #[derive(Serialize)]
+            struct SatOut { satisfiable: bool, assignment: HashMap<String, bool> }
+            return Ok(serde_wasm_bindgen::to_value(&SatOut {
+                satisfiable: false,
+                assignment: HashMap::new(),
+            })?);
+        }
+        Err(e) => return Err(JsValue::from_str(&format!("{:?}", e))),
+    };
 
     // Collect variable assignments (variable 0 = JS literal 1)
     let mut assignment = HashMap::new();
@@ -1027,8 +1038,9 @@ pub fn forward_chain_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     // Build atom → u8 index map
+    // Variable index 0 is reserved as antecedent terminator in ForwardChainingDefeasible.
     let mut atom_map: HashMap<String, u8> = HashMap::new();
-    let mut next_idx: u8 = 0;
+    let mut next_idx: u8 = 1;
     let mut get_idx = |s: &str, map: &mut HashMap<String, u8>, nxt: &mut u8| -> u8 {
         if let Some(&i) = map.get(s) { return i; }
         let i = *nxt;
