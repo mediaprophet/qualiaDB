@@ -87,6 +87,39 @@
             </div>
         </div>
 
+        <!-- N3Logic & SHACL -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-16 glass-strong p-8 rounded-3xl">
+            <div>
+                <h2 class="text-3xl font-semibold mb-4 text-rose-400">N3Logic &amp; SHACL Governance</h2>
+                <p class="text-white/80 leading-relaxed mb-4">
+                    Qualia compiles Notation3 rules (<code class="text-rose-300">=&gt;</code> strict,
+                    <code class="text-amber-300">~&gt;</code> defeasible, <code class="text-rose-300">^&gt;</code> defeater,
+                    <code class="text-cyan-300">-o</code> linear) and SHACL shapes into Webizen <code>SlgOpcode</code> bytecode.
+                    Deontic, epistemic, CogAI, and specialized-library extensions validate configuration and agent conduct before LLM inference runs.
+                </p>
+                <ul class="space-y-3 text-white/70 text-sm mb-4">
+                    <li><i class="fas fa-check text-rose-500 mr-2"></i> <code>n3_parser.rs</code> → defeasible norm Quins with DEFEATER_BIT</li>
+                    <li><i class="fas fa-check text-rose-500 mr-2"></i> <code>shacl_compiler.rs</code> → CheckNodeShape, deontic/epistemic eval</li>
+                    <li><i class="fas fa-check text-rose-500 mr-2"></i> Orchestrator pre/post-flight gates on every LLM call</li>
+                </ul>
+                <a href="logic-showcase.html" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600/20 border border-rose-500/40 text-rose-200 hover:bg-rose-600/30 text-sm font-semibold">
+                    <i class="fa-solid fa-gavel"></i> Logic &amp; SHACL Showcase
+                </a>
+                <a href="playground/index.html" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/15 text-slate-300 hover:bg-white/5 text-sm font-semibold ml-2">
+                    <i class="fa-solid fa-play"></i> Playground
+                </a>
+            </div>
+            <div class="bg-black/50 p-6 rounded-2xl border border-white/10 font-mono text-xs text-rose-200">
+                @prefix q42: &lt;https://qualia.network/q42#&gt; .<br><br>
+                { ?g q42:hasRole q42:Guardian } ~&gt;<br>
+                &nbsp;&nbsp;{ ?g q42:may q42:viewRecord } .<br><br>
+                { ?g q42:revoked q42:Consent } ^&gt;<br>
+                &nbsp;&nbsp;{ ?g q42:may q42:viewRecord } .<br><br>
+                // SHACL: DeonticNotExpired + EpistemicKnowledge<br>
+                // → NativeDeonticEval / NativeEpistemicEval in VM
+            </div>
+        </div>
+
         <!-- Agent Fiduciary & LoRA -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="glass-strong p-6 rounded-3xl">
@@ -101,8 +134,8 @@
             </div>
             <div class="glass-strong p-6 rounded-3xl">
                 <div class="text-amber-400 text-3xl mb-4"><i class="fas fa-vial"></i></div>
-                <h3 class="text-xl font-semibold mb-2">Domain Extensibility</h3>
-                <p class="text-white/70 text-sm">SHACL constraint engines loaded for specific sciences: organic chemistry (SMILES/InChI), biomedical, and structural biology.</p>
+                <h3 class="text-xl font-semibold mb-2">SHACL Domain Extensions</h3>
+                <p class="text-white/70 text-sm">90+ Qualia SHACL constraints across chemistry, clinical, finance, crypto, and CogAI — compiled to real VM opcodes, not stubs.</p>
             </div>
         </div>
     </div>

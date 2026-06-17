@@ -7,6 +7,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import wasmInit, * as WasmExports from './qualia_core_db.js';
+import {
+    N3_PRESETS, N3_RULE_ARROWS, SHACL_QUALIA_EXTENSIONS,
+    detectN3Rules, parseN3Triples, validateShaclConstraint, runForwardChain,
+    FORWARD_CHAIN_PRESETS, esc as logicEsc,
+} from '../js/logic-demos.js';
 
 let MOD = null;
 
@@ -46,11 +51,7 @@ const PRESETS = {
   ?person foaf:age ?age .
   FILTER(?age > 18)
 }`,
-    n3: `@prefix foaf: <http://xmlns.com/foaf/0.1/> .
-@prefix : <http://qualia.db/> .
-
-{ ?x a foaf:Person } => { ?x a :Mortal } .
-:socrates a foaf:Person .`,
+    n3: N3_PRESETS.strict,
     turtle: `@prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix : <http://qualia.db/> .
 
@@ -146,6 +147,97 @@ function runParse() {
 const trunc = (s, n = 42) => { s = String(s); return s.length > n ? esc(s.slice(0, n)) + '…' : esc(s); };
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const escAttr = (s) => esc(s).replace(/"/g, '&quot;');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// N3 & SHACL tab
+// ─────────────────────────────────────────────────────────────────────────────
+
+const EXT_COLOR = {
+    rose: 'text-rose-300', purple: 'text-purple-300', amber: 'text-amber-300',
+    cyan: 'text-cyan-300', emerald: 'text-emerald-300',
+};
+
+function renderShaclExtensions() {
+    const grid = $('shacl-ext-grid');
+    if (!grid) return;
+    grid.innerHTML = SHACL_QUALIA_EXTENSIONS.map((g) => `
+        <div class="p-2.5 rounded-xl bg-white/[0.03] border border-white/10">
+            <div class="font-semibold ${EXT_COLOR[g.color] || 'text-slate-300'} mb-1"><i class="fa-solid ${g.icon} mr-1"></i>${logicEsc(g.group)}</div>
+            ${g.items.slice(0, 3).map((it) =>
+                `<div class="text-slate-400 truncate" title="${logicEsc(it.desc)}">· ${logicEsc(it.name)}</div>`
+            ).join('')}
+        </div>`).join('');
+}
+
+function runN3Parse() {
+    const text = $('n3-editor')?.value?.trim();
+    const out = $('n3-rules-out');
+    if (!text || !out) return;
+
+    const rules = detectN3Rules(text);
+    const triples = parseN3Triples(MOD, text);
+
+    const ruleColor = { emerald: 'text-emerald-300', amber: 'text-amber-300', rose: 'text-rose-300', cyan: 'text-cyan-300' };
+    const ruleLines = rules.length
+        ? rules.map((r, i) => {
+            const meta = N3_RULE_ARROWS.find((a) => a.arrow === r.arrow);
+            const colCls = ruleColor[meta?.color] ?? 'text-slate-300';
+            return `<span class="text-slate-600">${String(i + 1).padStart(2, '0')}</span>  ` +
+                `<span class="${colCls} font-semibold">${logicEsc(r.type)}</span> ` +
+                `<span class="text-slate-500">${logicEsc(r.arrow)}</span>  ` +
+                `<span class="text-slate-400">${logicEsc(r.premise)}</span> → <span class="text-slate-300">${logicEsc(r.conclusion)}</span>`;
+        }).join('\n')
+        : '<span class="text-slate-500">No rule arrows detected — add { premise } => { conclusion } blocks.</span>';
+
+    const tripleLines = triples.length
+        ? `\n\n<span class="text-cyan-400">; ${triples.length} static triple(s) from parse_n3logic_wasm</span>\n` +
+          triples.map((t) =>
+              `<span class="text-cyan-300">${logicEsc(t.subject)}</span> ` +
+              `<span class="text-emerald-300">${logicEsc(t.predicate)}</span> ` +
+              `<span class="text-amber-300">${logicEsc(t.object)}</span>`
+          ).join('\n')
+        : '\n\n<span class="text-slate-500">; no static triples parsed</span>';
+
+    out.innerHTML = `<span class="text-rose-300">; N3 rule surface</span>\n${ruleLines}${tripleLines}`;
+}
+
+function runN3ForwardChain() {
+    const out = $('n3-rules-out');
+    if (!out) return;
+    const preset = FORWARD_CHAIN_PRESETS.penguin;
+    try {
+        const { value: r, ms } = timed(() => runForwardChain(MOD, preset));
+        const inferred = (r.inferred || []).map((x) => logicEsc(x)).join(', ') || '(none)';
+        out.innerHTML =
+            `<span class="text-amber-300">; forward_chain_wasm — ${logicEsc(preset.label)}</span>\n` +
+            `facts: ${preset.facts.map(logicEsc).join(', ')}\n` +
+            `inferred: <span class="text-emerald-300">${inferred}</span>\n` +
+            `<span class="text-slate-500">; ${fmtMs(ms)} · defeasible "flies" defeated by penguin</span>`;
+    } catch (e) {
+        out.innerHTML = `<span class="text-rose-400">forward_chain_wasm error: ${logicEsc(e.message || e)}</span>`;
+    }
+}
+
+function runShaclDemo() {
+    const box = $('shacl-out');
+    if (!box) return;
+    const constraint_type = $('shacl-type').value;
+    const value = +$('shacl-bound').value;
+    const target_value = +$('shacl-target').value;
+    try {
+        const { value: r, ms } = timed(() => validateShaclConstraint(MOD, constraint_type, value, target_value));
+        const pass = r.passes;
+        solverResult('shacl-out',
+            `<div class="flex items-center gap-2 mb-1">
+               <span class="badge ${pass ? 'badge-ok' : 'badge-no'}">${pass ? 'PASS' : 'VIOLATION'}</span>
+               <span class="font-mono text-slate-300">${logicEsc(r.constraint_type)}</span>
+               <span class="solver-ms ml-auto"></span>
+             </div>
+             <div class="text-xs text-slate-400 font-mono">bound ${r.value} · target ${r.target_value}</div>`, ms);
+    } catch (e) {
+        solverResult('shacl-out', `<span class="text-rose-400">${logicEsc(e.message || e)}</span>`);
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Solvers tab
@@ -381,6 +473,22 @@ async function boot() {
                 runCompile(); runParse();
             }));
         $('editor').addEventListener('input', () => { $('fmt-chip').textContent = detectFormat($('editor').value); });
+
+        // Wire N3 & SHACL
+        if ($('n3-editor')) {
+            $('n3-editor').value = N3_PRESETS.strict;
+            renderShaclExtensions();
+            $('btn-n3-parse')?.addEventListener('click', runN3Parse);
+            $('btn-n3-chain')?.addEventListener('click', runN3ForwardChain);
+            $('btn-shacl')?.addEventListener('click', runShaclDemo);
+            document.querySelectorAll('[data-n3-preset]').forEach((b) =>
+                b.addEventListener('click', () => {
+                    $('n3-editor').value = N3_PRESETS[b.dataset.n3Preset] ?? N3_PRESETS.strict;
+                    runN3Parse();
+                }));
+            runN3Parse();
+            runShaclDemo();
+        }
 
         // Wire solvers
         const wire = (id, fn) => { const b = $(id); if (b) b.addEventListener('click', fn); };

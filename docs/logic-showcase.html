@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB | N3Logic &amp; SHACL Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass-strong { background: rgba(255,255,255,0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.12); }
+        .glass-panel { background: rgba(17,23,31,0.82); border: 1px solid rgba(148,163,184,0.14); backdrop-filter: blur(28px); }
+        .code-block { font-family: 'JetBrains Mono','Fira Code',monospace; font-size: 0.8rem; background: rgba(10,10,15,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; white-space: pre-wrap; }
+        .tab-btn { transition: all 0.2s; padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: rgba(226,232,240,0.6); white-space: nowrap; }
+        .tab-btn:hover { background: rgba(255,255,255,0.07); color: white; }
+        .tab-btn.active { background: rgba(244,63,94,0.15); color: #fb7185; border: 1px solid rgba(244,63,94,0.3); }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .arrow-chip { font-family: monospace; font-size: 11px; padding: 2px 8px; border-radius: 6px; }
+        textarea.mono { font-family: 'JetBrains Mono',monospace; font-size: 12px; line-height: 1.6; }
+        #boot-overlay { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:rgba(9,9,11,0.92); }
+    </style>
+    <script src="js/menu-loader.js"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <div id="boot-overlay"><div class="text-rose-300 text-sm font-mono animate-pulse">Loading WASM logic engine…</div></div>
+
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-4">
+                <div class="flex items-center gap-4 sm:gap-8 min-w-0">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-rose-500 to-purple-500 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-rose-400 text-xl">DB</span></div>
+                    </a>
+                    <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+                </div>
+                <span id="engine-badge" class="text-xs px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">WASM …</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-20">
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-rose-500/10 text-rose-400 text-sm mb-4">
+                <i class="fa-solid fa-gavel"></i>
+                <span>N3Logic · SHACL · Deontic · Epistemic</span>
+            </div>
+            <h1 class="text-4xl sm:text-5xl font-semibold tracking-tighter mb-4">Logic &amp; Shape Showcase</h1>
+            <p class="text-base sm:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
+                Notation3 rules (<code class="text-rose-300">=&gt;</code> <code class="text-amber-300">~&gt;</code> <code class="text-rose-300">^&gt;</code> <code class="text-cyan-300">-o</code>),
+                SHACL constraint compilation, and Qualia extensions for deontic contracts, epistemic claims, and CogAI chunks —
+                live in your browser via <code class="text-purple-300">qualia_core_db_bg.wasm</code>.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
+            <div class="glass-strong p-6 rounded-3xl">
+                <div class="text-rose-400 text-3xl mb-3"><i class="fa-solid fa-code-branch"></i></div>
+                <h3 class="font-semibold mb-2">N3Logic Arrows</h3>
+                <p class="text-white/70 text-sm">Strict, defeasible, defeater, and linear rule types parsed by <span class="font-mono text-xs">n3_parser.rs</span> and compiled to Webizen norms.</p>
+            </div>
+            <div class="glass-strong p-6 rounded-3xl">
+                <div class="text-purple-400 text-3xl mb-3"><i class="fa-solid fa-shield-halved"></i></div>
+                <h3 class="font-semibold mb-2">SHACL → SlgOpcode</h3>
+                <p class="text-white/70 text-sm"><span class="font-mono text-xs">shacl_compiler.rs</span> emits <span class="font-mono text-xs">CheckNodeShape</span>, datatype checks, and Qualia extension opcodes executed in the Webizen VM.</p>
+            </div>
+            <div class="glass-strong p-6 rounded-3xl">
+                <div class="text-amber-400 text-3xl mb-3"><i class="fa-solid fa-scale-balanced"></i></div>
+                <h3 class="font-semibold mb-2">Deontic Contracts</h3>
+                <p class="text-white/70 text-sm">Obligate / permit / forbid norms with DEFEATER_BIT and temporal expiry — guardianship and NDA shapes in <span class="font-mono text-xs">deontic_logic.rs</span>.</p>
+            </div>
+            <div class="glass-strong p-6 rounded-3xl">
+                <div class="text-cyan-400 text-3xl mb-3"><i class="fa-solid fa-brain"></i></div>
+                <h3 class="font-semibold mb-2">Epistemic &amp; CogAI</h3>
+                <p class="text-white/70 text-sm">Knowledge, belief, and common-knowledge opcodes plus ACT-R chunk retrieval shapes for neuro-symbolic governance.</p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mb-8 justify-center">
+            <button class="tab-btn active" data-tab="n3" onclick="switchTab('n3',this)"><i class="fa-solid fa-code mr-1.5"></i>N3Logic</button>
+            <button class="tab-btn" data-tab="shacl" onclick="switchTab('shacl',this)"><i class="fa-solid fa-shield mr-1.5"></i>SHACL</button>
+            <button class="tab-btn" data-tab="extensions" onclick="switchTab('extensions',this)"><i class="fa-solid fa-puzzle-piece mr-1.5"></i>Extensions</button>
+        </div>
+
+        <!-- N3 tab -->
+        <div id="tab-n3" class="tab-pane active">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-strong rounded-3xl p-6">
+                    <h3 class="font-semibold text-rose-300 mb-3">Rule editor</h3>
+                    <div class="flex flex-wrap gap-2 mb-3" id="n3-chips"></div>
+                    <textarea id="showcase-n3" rows="14" class="mono w-full bg-zinc-900 border border-white/15 rounded-xl px-4 py-3 text-emerald-100" spellcheck="false"></textarea>
+                    <div class="flex gap-2 mt-3 flex-wrap">
+                        <button id="btn-showcase-n3" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold">Parse &amp; analyze</button>
+                        <button id="btn-showcase-chain" class="px-4 py-2 rounded-xl border border-amber-400/40 text-amber-200 hover:bg-amber-500/10 text-sm">Run forward chain</button>
+                        <a href="playground/index.html" class="px-4 py-2 rounded-xl border border-white/15 text-slate-300 hover:bg-white/5 text-sm">Open full playground →</a>
+                    </div>
+                </div>
+                <div class="glass-strong rounded-3xl p-6">
+                    <h3 class="font-semibold text-amber-300 mb-3">Analysis output</h3>
+                    <pre id="showcase-n3-out" class="code-block text-slate-300 min-h-[320px]">; awaiting N3 input…</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- SHACL tab -->
+        <div id="tab-shacl" class="tab-pane">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-strong rounded-3xl p-6">
+                    <h3 class="font-semibold text-purple-300 mb-3">Constraint validator</h3>
+                    <p class="text-sm text-white/60 mb-4">WASM path exercises <span class="font-mono">ShaclCompiler::compile</span> + numeric evaluation for standard SHACL facets.</p>
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <label class="text-xs text-white/50">Constraint<select id="showcase-shacl-type" class="mt-1 w-full bg-zinc-900 border border-white/15 rounded-lg px-3 py-2 text-sm"></select></label>
+                        <label class="text-xs text-white/50">Bound<input id="showcase-shacl-bound" type="number" value="18" class="mt-1 w-full bg-zinc-900 border border-white/15 rounded-lg px-3 py-2 text-sm"></label>
+                        <label class="text-xs text-white/50 col-span-2">Target value<input id="showcase-shacl-target" type="number" value="21" class="mt-1 w-full bg-zinc-900 border border-white/15 rounded-lg px-3 py-2 text-sm"></label>
+                    </div>
+                    <button id="btn-showcase-shacl" class="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 font-semibold text-sm">Validate</button>
+                    <div id="showcase-shacl-out" class="mt-4 code-block text-sm hidden"></div>
+                </div>
+                <div class="glass-strong rounded-3xl p-6">
+                    <h3 class="font-semibold text-emerald-300 mb-3">Example shape (Turtle)</h3>
+                    <pre class="code-block text-emerald-200 text-xs">@prefix sh: &lt;http://www.w3.org/ns/shacl#&gt; .
+@prefix q42: &lt;https://qualia.network/q42#&gt; .
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+
+q42:AdultShape a sh:NodeShape ;
+  sh:targetClass q42:Person ;
+  sh:property [
+    sh:path q42:age ;
+    sh:datatype xsd:integer ;
+    sh:minInclusive 18 ;
+    sh:maxInclusive 120 ;
+  ] ;
+  sh:property [
+    sh:path q42:obligated ;
+    sh:minCount 1 ;
+    sh:severity sh:Violation ;
+  ] .</pre>
+                    <p class="text-xs text-white/50 mt-3">Full shape enforcement runs on the native daemon after ingest. Browser WASM validates individual constraint facets.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Extensions tab -->
+        <div id="tab-extensions" class="tab-pane">
+            <div id="extensions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div class="glass-strong rounded-3xl p-6 mt-6 text-sm text-white/60">
+                <p class="mb-2"><strong class="text-white">Documentation:</strong>
+                    <a href="shacl-coverage-summary.md" class="text-cyan-400 hover:underline">SHACL coverage summary</a> ·
+                    <a href="shacl-client-extensions.md" class="text-cyan-400 hover:underline">Client extensions</a> ·
+                    <a href="specialized-libraries-shacl-extensions.md" class="text-cyan-400 hover:underline">Library shapes</a> ·
+                    <a href="manuals/query-engine/qualia-shacl-extensions.html" class="text-cyan-400 hover:underline">Extension vocabulary</a> ·
+                    <a href="tests/?suite=wasm-shacl" class="text-cyan-400 hover:underline">WASM test suite</a>
+                </p>
+                <p>Native daemon: <code class="text-emerald-300">qualia-cli daemon --dev</code> → shape validation on ingested graphs via <code class="text-emerald-300">POST :4242/query</code> and orchestrator pre/post-flight gates.</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/logic-showcase-app.js"></script>
+    <script>
+        function switchTab(id, btn) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + id)?.classList.add('active');
+            if (btn) btn.classList.add('active');
+        }
+        window.switchTab = switchTab;
+    </script>
+</body>
+</html>

@@ -141,7 +141,7 @@
             <h1 class="text-3xl md:text-4xl font-semibold tracking-tight mb-3">Qualia Playground</h1>
             <p class="text-slate-400 max-w-2xl mx-auto text-[15px]">
                 Every panel below runs the real <span class="text-cyan-300 font-mono text-sm">qualia-core-db</span> engine —
-                compiled from Rust to WebAssembly, executing entirely in your browser. No server, no mocks.
+                N3Logic, SHACL validation, Webizen bytecode, and scientific solvers — all in WASM. No server, no mocks.
             </p>
             <div class="flex flex-wrap items-center justify-center gap-2.5 mt-5 text-xs">
                 <span class="status-pill bg-cyan-500/10 text-cyan-300 border border-cyan-500/30"><span class="dot bg-cyan-400"></span><span id="banner-version">v…</span></span>
@@ -154,6 +154,7 @@
         <!-- Tabs -->
         <div class="flex items-center justify-center gap-2 mb-6">
             <button class="tab-btn tab-active" data-tab="compiler"><i class="fa-solid fa-code mr-1.5"></i>Compiler</button>
+            <button class="tab-btn" data-tab="logic"><i class="fa-solid fa-gavel mr-1.5"></i>N3 &amp; SHACL</button>
             <button class="tab-btn" data-tab="solvers"><i class="fa-solid fa-flask mr-1.5"></i>Live Solvers</button>
             <button class="tab-btn" data-tab="capabilities"><i class="fa-solid fa-layer-group mr-1.5"></i>Capabilities</button>
         </div>
@@ -202,6 +203,61 @@
                         <span id="parse-latency" class="status-pill bg-slate-800/70 text-slate-400 border border-slate-600">—</span>
                     </div>
                     <div id="quin-output" class="code-out p-2 h-56 text-slate-200" style="white-space:normal"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── N3 & SHACL panel ────────────────────────────────────────────── -->
+        <section data-panel="logic" class="hidden grid grid-cols-1 xl:grid-cols-2 gap-5">
+            <div class="glass-panel p-5 flex flex-col gap-3">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <h2 class="text-lg font-semibold text-rose-300">N3Logic Rules</h2>
+                    <span class="text-[11px] uppercase tracking-wide text-slate-500">=> ~> ^> -o</span>
+                    <div class="ml-auto flex gap-1.5 flex-wrap">
+                        <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-n3-preset="strict">Strict</button>
+                        <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-n3-preset="defeasible">Defeasible</button>
+                        <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-n3-preset="defeater">Defeater</button>
+                        <button class="status-pill border border-slate-600 text-slate-300 hover:bg-white/5" data-n3-preset="deontic">Deontic</button>
+                    </div>
+                </div>
+                <textarea id="n3-editor" rows="12" class="w-full text-slate-100 px-4 py-3" spellcheck="false"></textarea>
+                <div class="flex gap-2.5 flex-wrap">
+                    <button id="btn-n3-parse" class="px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/40 text-sm font-semibold">
+                        <i class="fa-solid fa-diagram-project mr-1.5"></i>Parse N3
+                    </button>
+                    <button id="btn-n3-chain" class="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 text-sm font-semibold">
+                        <i class="fa-solid fa-forward mr-1.5"></i>Forward Chain
+                    </button>
+                </div>
+                <div id="n3-rules-out" class="code-out p-3 min-h-[120px] text-slate-300 text-xs">; detected rules appear here…</div>
+            </div>
+            <div class="flex flex-col gap-5">
+                <div class="glass-panel p-5 flex flex-col gap-3">
+                    <h2 class="text-base font-semibold text-purple-300">SHACL Constraint Validator</h2>
+                    <p class="text-xs text-slate-500">Live <span class="font-mono text-purple-300">validate_shacl_constraint_wasm</span> — compiles shape via <span class="font-mono">ShaclCompiler</span> and evaluates numeric bounds.</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="field"><label>Constraint</label>
+                            <select id="shacl-type">
+                                <option value="minInclusive">sh:minInclusive</option>
+                                <option value="maxInclusive">sh:maxInclusive</option>
+                                <option value="minExclusive">sh:minExclusive</option>
+                                <option value="maxExclusive">sh:maxExclusive</option>
+                                <option value="minCount">sh:minCount</option>
+                                <option value="maxCount">sh:maxCount</option>
+                                <option value="minLength">sh:minLength</option>
+                                <option value="maxLength">sh:maxLength</option>
+                            </select>
+                        </div>
+                        <div class="field"><label>Bound value</label><input id="shacl-bound" type="number" value="18"></div>
+                        <div class="field col-span-2"><label>Target value (under test)</label><input id="shacl-target" type="number" value="21"></div>
+                    </div>
+                    <button id="btn-shacl" class="run-btn" style="margin-top:0">Validate constraint</button>
+                    <div id="shacl-out" class="solver-out hidden"></div>
+                </div>
+                <div class="glass-panel p-5">
+                    <h2 class="text-base font-semibold text-cyan-300 mb-3">Qualia SHACL Extensions</h2>
+                    <div id="shacl-ext-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+                    <p class="text-[11px] text-slate-500 mt-3">Deontic, epistemic, CogAI, and library shapes compile to <span class="font-mono">SlgOpcode</span> in the native daemon. See <a href="../logic-showcase.html" class="text-cyan-400 hover:underline">Logic Showcase</a>.</p>
                 </div>
             </div>
         </section>

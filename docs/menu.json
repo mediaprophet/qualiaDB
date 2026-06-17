@@ -109,6 +109,13 @@
       "group": "LLM"
     },
     {
+      "label": "Logic Showcase",
+      "href": "logic-showcase.html",
+      "icon": "fa-gavel",
+      "highlight": true,
+      "group": "Tools"
+    },
+    {
       "label": "Playground",
       "href": "playground/index.html",
       "icon": "fa-play",
