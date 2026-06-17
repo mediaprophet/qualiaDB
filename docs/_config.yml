@@ -30,6 +30,9 @@ include:
   - "data/**/*.lex"
   - "data/**/*.bidx"
   - "js/*.js"
+  - "pkg/**/*.js"
+  - "pkg/**/*.wasm"
+  - "pkg/**/package.json"
   - "resources/*.json"
   - "tests/**/*.js"
 

@@ -140,16 +140,17 @@ async function initQualiaPortalLayer() {
   if (!canvas) throw new Error("canvas missing");
 
   const t = debugTime("initQualiaPortalLayer");
-  const { portal, mod, source } = await loadQualiaPortal(canvas);
+  const { portal, mod, source, portalError } = await loadQualiaPortal(canvas);
   wasm = mod;
   wasmSource = source;
   qualiaPortal = portal;
-  debugLog("portal load", { source, hasPortal: !!portal });
+  debugLog("portal load", { source, hasPortal: !!portal, portalError: portalError?.message });
 
   if (!portal) {
-    debugError("QualiaPortal unavailable after load", { source, wasmSource });
+    debugError("QualiaPortal unavailable after load", { source, wasmSource, portalError });
+    const detail = portalError?.message ? ` (${portalError.message})` : "";
     throw new Error(
-      "QualiaPortal unavailable — run scripts/package-qualia-wasm.ps1 or deploy via GitHub Pages CI",
+      `QualiaPortal unavailable — run scripts/package-qualia-wasm.ps1 or deploy via GitHub Pages CI${detail}`,
     );
   }
 
@@ -477,9 +478,12 @@ async function boot() {
   debugLog("boot start");
   showLoading(true);
   try {
+    // QualiaPortal needs a laid-out canvas (WebGPU surface); hidden main-content is 0×0.
+    const main = $("main-content");
+    if (main) main.style.display = "";
+    await new Promise((r) => requestAnimationFrame(r));
     await initQualiaPortalLayer();
     showLoading(false);
-    $("main-content").style.display = "";
     debugLog("boot complete");
   } catch (e) {
     debugError("boot failed", e);

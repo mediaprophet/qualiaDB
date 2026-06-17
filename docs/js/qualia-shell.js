@@ -144,12 +144,16 @@ export async function loadQualiaPortal(canvas) {
     const { js, wasm } = portalPkgUrls();
     debugEnv({ portalJs: js, portalWasm: wasm, canvas: canvas?.id ?? null });
     const t = debugTime('loadQualiaPortal');
+    let portalError = null;
     try {
         debugLog('import portal module', js);
         const mod = await import(js);
         debugLog('init portal wasm', wasm);
-        // wasm-pack embeds qualia_core_db_bg.wasm; Pages publishes qualia_bg.wasm — pass explicitly.
-        await mod.default(wasm);
+        const wasmResp = await fetch(wasm, { cache: 'no-store' });
+        if (!wasmResp.ok) {
+            throw new Error(`portal WASM fetch HTTP ${wasmResp.status} ${wasm}`);
+        }
+        await mod.default({ module_or_path: wasmResp });
         if (typeof mod.init_panic_hook === 'function') {
             mod.init_panic_hook();
             debugLog('init_panic_hook ok');
@@ -159,17 +163,23 @@ export async function loadQualiaPortal(canvas) {
         const tier = portal.tier?.() ?? -1;
         debugLog('QualiaPortal ready', { source: 'qualia-portal', tier });
         t.end({ source: 'qualia-portal', tier });
-        return { portal, mod, source: 'qualia-portal' };
+        return { portal, mod, source: 'qualia-portal', portalError: null };
     } catch (e) {
+        portalError = e;
         debugWarn('portal pkg failed, falling back to playground wasm-full', e);
         console.warn('Qualia portal pkg not found, falling back to qualia_core_db.wasm', e);
         const fallback = new URL('../playground/qualia_core_db.js', import.meta.url).href;
         debugLog('import fallback', fallback);
-        const mod = await import('../playground/qualia_core_db.js');
-        await mod.default();
+        const mod = await import(fallback);
+        const fallbackWasm = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url).href;
+        const fbResp = await fetch(fallbackWasm, { cache: 'no-store' });
+        if (!fbResp.ok) {
+            throw new Error(`fallback WASM fetch HTTP ${fbResp.status}`);
+        }
+        await mod.default({ module_or_path: fbResp });
         portalModule = mod;
         t.end({ source: 'qualia-core-db', portal: false });
-        return { portal: null, mod, source: 'qualia-core-db' };
+        return { portal: null, mod, source: 'qualia-core-db', portalError };
     }
 }
 
