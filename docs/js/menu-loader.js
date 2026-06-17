@@ -4,7 +4,21 @@
 function docsRootFromScript() {
     const script = document.querySelector('script[src*="menu-loader.js"]');
     if (!script) return '';
-    return script.getAttribute('src').replace(/js\/menu-loader\.js.*$/, '') || '';
+    const src = script.getAttribute('src') || '';
+    if (src.startsWith('http') || src.startsWith('/')) {
+        return src.replace(/js\/menu-loader\.js.*$/, '');
+    }
+    return src.replace(/js\/menu-loader\.js.*$/, '') || '';
+}
+
+function ensureSiteNavCss() {
+    const root = docsRootFromScript();
+    if (!root || document.querySelector('link[data-site-nav]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = root + 'css/site-nav.css';
+    link.setAttribute('data-site-nav', '1');
+    document.head.appendChild(link);
 }
 
 function resolveHref(href) {
@@ -29,14 +43,15 @@ function pageMatchesHref(href) {
     try {
         const targetUrl = new URL(target, window.location.href);
         if (targetUrl.pathname === window.location.pathname) return true;
-        // Directory entries (trailing slash)
         if (href.endsWith('/') && window.location.pathname.startsWith(targetUrl.pathname)) return true;
     } catch (_) { /* ignore */ }
-    const leaf = href.split('/').pop() || href;
-    return window.location.pathname.endsWith('/' + leaf) || window.location.pathname.endsWith(leaf);
+    const leaf = (href.split('/').pop() || href).split('?')[0];
+    const path = window.location.pathname;
+    return path.endsWith('/' + leaf) || path.endsWith(leaf);
 }
 
 async function loadMenu() {
+    ensureSiteNavCss();
     const root = docsRootFromScript();
     try {
         const response = await fetch(root + 'menu.json');
@@ -58,7 +73,7 @@ function renderMenu(menu) {
     const navBar = navHost.closest('nav');
     if (navBar) navBar.classList.add('relative', 'z-50');
 
-    navHost.className = 'relative flex items-center text-sm flex-1 justify-end md:justify-start md:flex-none md:gap-2';
+    navHost.className = 'relative flex items-center gap-2 text-sm shrink-0 min-w-0 max-w-full';
 
     const grouped = {};
     for (const item of menu.navigation) {
@@ -67,11 +82,11 @@ function renderMenu(menu) {
     }
 
     let html = `
-        <button type="button" id="mobile-menu-btn" aria-label="Open menu"
-            class="md:hidden text-slate-300 hover:text-white p-2 rounded-lg border border-white/10">
+        <button type="button" id="mobile-menu-btn" aria-label="Open site menu"
+            class="lg:hidden shrink-0 text-slate-300 hover:text-white p-2 rounded-lg border border-white/10">
             <i class="fa-solid fa-bars text-lg"></i>
         </button>
-        <div id="desktop-nav" class="hidden md:flex items-center gap-4 lg:gap-6 text-sm">
+        <div id="desktop-nav" class="hidden lg:flex flex-nowrap items-center gap-3 xl:gap-5 text-sm overflow-x-auto max-w-full">
     `;
 
     for (const [groupName, items] of Object.entries(grouped)) {
@@ -80,17 +95,15 @@ function renderMenu(menu) {
             const active = pageMatchesHref(item.href) ? 'nav-active font-medium text-white' : '';
             const tone = item.highlight ? 'text-cyan-400 hover:text-cyan-300' : 'text-slate-300 hover:text-white';
             const icon = item.icon ? `<i class="${normalizeIcon(item.icon)} mr-1"></i>` : '';
-            html += `<a href="${resolveHref(item.href)}" class="${tone} ${active} transition-colors inline-flex items-center whitespace-nowrap">${icon}${item.label}</a>`;
+            html += `<a href="${resolveHref(item.href)}" class="${tone} ${active} transition-colors inline-flex items-center whitespace-nowrap px-1">${icon}${item.label}</a>`;
         } else {
             html += `
-                <div class="relative group">
-                    <button type="button" class="text-slate-300 hover:text-white transition-colors inline-flex items-center gap-1 whitespace-nowrap">
+                <div class="nav-group relative group shrink-0">
+                    <button type="button" class="text-slate-300 hover:text-white transition-colors inline-flex items-center gap-1 whitespace-nowrap px-1">
                         ${groupName}
                         <i class="fa-solid fa-chevron-down text-[10px]"></i>
                     </button>
-                    <div class="absolute left-0 mt-2 min-w-[12rem] bg-slate-900/98 border border-slate-700 rounded-xl shadow-xl
-                                opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100
-                                group-focus-within:visible transition-all duration-150 z-[60]">
+                    <div class="nav-dropdown">
                         <div class="py-2">
                             ${items.map(item => {
                                 const active = pageMatchesHref(item.href) ? 'nav-active font-medium text-white' : '';
@@ -105,19 +118,16 @@ function renderMenu(menu) {
     }
 
     html += `</div>`;
-
     navHost.innerHTML = html;
 
-    // Full-width mobile drawer attached to nav bar
     let mobileNav = document.getElementById('mobile-nav');
     if (!mobileNav) {
         mobileNav = document.createElement('div');
         mobileNav.id = 'mobile-nav';
-        const anchor = navBar?.querySelector(':scope > div') || navBar;
-        (anchor || document.body).appendChild(mobileNav);
+        (navBar || document.body).appendChild(mobileNav);
     }
 
-    mobileNav.className = 'hidden md:hidden absolute left-0 right-0 top-full z-[60] bg-slate-950/98 border-t border-slate-700 shadow-2xl max-h-[70vh] overflow-y-auto';
+    mobileNav.className = 'hidden lg:hidden absolute left-0 right-0 top-full z-[70] bg-slate-950/98 border-t border-slate-700 shadow-2xl max-h-[75vh] overflow-y-auto';
     mobileNav.innerHTML = `<div class="py-3 px-4 space-y-1 max-w-screen-2xl mx-auto">${
         Object.entries(grouped).map(([groupName, items]) => {
             if (items.length === 1) {

@@ -12,34 +12,33 @@
         .feature-card { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s; }
         .feature-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); }
     </style>
+    <link rel="stylesheet" href="css/site-nav.css">
     <script src="js/menu-loader.js"></script></head>
 <body class="bg-zinc-950 text-zinc-200">
     <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
         <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
-            <div class="flex items-center justify-between h-16 gap-4">
-                <div class="flex items-center gap-4 sm:gap-8 min-w-0 flex-1">
-                    <a href="index.html" class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
-                            <span class="text-black font-bold text-xl">Q</span>
-                        </div>
-                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
-                    </a>
-                    <div id="dynamic-nav" class="relative flex items-center text-sm">
-                        <!-- Navigation loaded dynamically by menu-loader.js -->
+            <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+                <a href="index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
                     </div>
+                    <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2">
+                    <!-- Navigation loaded dynamically by menu-loader.js -->
                 </div>
-                <div class="flex items-center gap-4">
-                    <div id="wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+                    <div id="wasm-badge" class="hidden xl:flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
                         <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
                         <span id="wasm-text">WASM…</span>
                     </div>
-                    <div id="daemon-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                    <div id="daemon-badge" class="hidden xl:flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
                         <div class="w-2 h-2 rounded-full bg-slate-500" id="daemon-dot"></div>
                         <span id="daemon-text">Checking...</span>
                     </div>
                     <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
-                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
-                        <i class="fab fa-github"></i><span>GitHub</span>
+                       class="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span class="hidden sm:inline">GitHub</span>
                     </a>
                 </div>
             </div>

@@ -1,0 +1,75 @@
+/* QualiaDB site navigation — works with menu-loader.js on all pages */
+
+#dynamic-nav {
+    min-width: 0;
+    max-width: 100%;
+}
+
+#desktop-nav {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+#desktop-nav::-webkit-scrollbar {
+    height: 4px;
+}
+
+#desktop-nav .nav-group {
+    position: relative;
+}
+
+#desktop-nav .nav-group > button {
+    color: #cbd5e1;
+    white-space: nowrap;
+}
+
+#desktop-nav .nav-group > button:hover,
+#desktop-nav .nav-group:focus-within > button {
+    color: #fff;
+}
+
+#desktop-nav .nav-dropdown {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 0.35rem);
+    min-width: 12rem;
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(51, 65, 85, 0.9);
+    border-radius: 0.75rem;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    z-index: 70;
+}
+
+#desktop-nav .nav-group:hover .nav-dropdown,
+#desktop-nav .nav-group:focus-within .nav-dropdown {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+#desktop-nav a,
+#mobile-nav a {
+    text-decoration: none;
+}
+
+#desktop-nav a.nav-active,
+#mobile-nav a.nav-active {
+    color: #fff !important;
+    font-weight: 600;
+}
+
+#mobile-menu-btn {
+    flex-shrink: 0;
+}
+
+#mobile-nav {
+    width: 100%;
+}
+
+.nav-active {
+    color: #fff;
+}
