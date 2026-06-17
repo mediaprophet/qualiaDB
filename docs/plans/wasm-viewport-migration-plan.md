@@ -1,8 +1,8 @@
 # Qualia WASM Portal — Migration Plan
 
-**Status:** `IN PROGRESS` — Qualia WASM portal T2 phenomenal path live on Pages; PGA Phases 1–3 + Kawase bloom + `VramLedger` eco particle gating wired  
+**Status:** `IN PROGRESS` — Pages T2 phenomenal path **validating** (Track C PR-C0–C11b ✅). **Remaining for PHENOMENAL:** P-A full bake, P-B3/B4 desktop GPU policy, P-C9 + PR-C10 desktop parity, P-D3b `network_ripple`, PR-C12 asymmetric compute.  
 **Created:** 2026-06-17  
-**Last updated:** 2026-06-17 (Track C — Phase 2b/2c/3 PGA, PR-C8 Kawase bloom, eco-tier draw throttle)
+**Last updated:** 2026-06-17 (checkbox sync — align Phases 0–11 / Gate B / audit with shipped qualiaDB portal work on `0.0.17-dev`)
 **Branch target:** `0.0.17-dev` (qualiaDB)  
 **Companion docs:** `C:\Projects\webizen-browser\AUDIO_PROJECT_STATUS.md`, `10D_INTEGRATION_PLAN.md`, `10D_INTEGRATION_SUMMARY.md`
 
@@ -78,7 +78,7 @@ The browser/desktop WASM package is **Qualia**, not “webizen-web” in user-fa
 - [x] **N-1** `wasm-pack` out-dir publishes as `docs/pkg/qualia/` (not `webizen_web/`)
 - [x] **N-2** Rust `#[wasm_bindgen(js_name = QualiaPortal)]` (crate `qualia-wasm`)
 - [x] **N-3** `docs/js/qualia-shell.js` replaces `viewport-shell.js`
-- [ ] **N-4** Pages badge: `Qualia WASM` + tier (`T2 · Live`, etc.)
+- [x] **N-4** Pages badge: `Qualia WASM` + tier (`T2 · Live`, etc.) — `daemonBadgeLabel()` in `qualia-shell.js` + `#wasm-badge` on `spatial.html`
 - [ ] **N-5** API catalog entries under `qualia.*` namespace
 - [x] **N-6** Build portal from qualiaDB (`cargo` + `package-qualia-wasm.ps1` → `docs/pkg/qualia/`); retire `webizen-web` semantic ownership *(desktop host still links interim paths)*
 
@@ -220,9 +220,10 @@ All boxes required for **PHENOMENAL** status:
 - [x] **P-C5** `ambient.wgsl` live in single pass (projector → ambient, depth early-Z)
 - [x] **P-C5b** T2 Kawase dual-filter bloom (`bloom.wgsl`) — HDR scene pass with additive `(One, One)` blend; `v ≥ 3` boundary cliques push past threshold organically
 - [x] **P-C5c** `VramLedger` viewport load-shedding — bloom gated `Full` only; ambient draw throttle 50k / 8k / 0 via `ambient_draw_instances()` (instant step-down, zero realloc)
-- [x] **P-C6** Live Qualia neighborhood — `GET /tensor/slice` binary SOA + portal `connectPortalToDaemon` *(identifier signature vault filter → PR-C9.3)*
+- [x] **P-C6** Live Qualia neighborhood — `GET /tensor/slice` + Lamport SSE `/tensor/events` + `connectPortalToDaemon` + Ed25519 standpoint gate (PR-C9a–C9c.3)
 - [x] **P-C7** Camera IPC (`set_camera`) + temporal `t_slice`/`t_window` discard + Human-Centric `ObserverStandpoint` uniform (`set_standpoint`)
-- [x] **P-C8** Navigation: GPU `R32Uint` picking + `select_node_at` / `navigate_to_node` / `collapse_node_q`
+- [x] **P-C8** Navigation: GPU `R32Uint` picking + `select_node_at` / `navigate_to_node` / `collapse_node_q` (PR-C11)
+- [x] **P-C8b** Phenomenal CI contract — `portal_phenomenal_contract.rs` + `phenomenal-verify.mjs` in Pages workflow (PR-C11b)
 - [ ] **P-C9** Desktop: direct wgpu surface OR 30 FPS PNG with persistent renderer (not both re-initing GPU)
 
 #### C.1 Human-Centric observer contract (qualiaDB portal — 2026-06-17)
@@ -269,7 +270,8 @@ Human-Centric resilience policy for U2 — protects U0 inference the millisecond
 
 - [x] **P-D1** `gguf_bridge` token loop → `llm_heat`
 - [x] **P-D2** Encode/bake → `baking_crystallization`; query resolve → `logic_flashes`
-- [ ] **P-D3** VRAM ledger → `memory_pressure`; mesh I/O → `network_ripple`
+- [x] **P-D3** VRAM ledger → `memory_pressure` — `sample_ambient_telemetry()` / `refresh_from_ledger()` each `tick`
+- [ ] **P-D3b** Mesh I/O → `network_ripple` — `record_network_ripple()` exists; daemon/mesh call sites unwired
 - [x] **P-D4** UI shows tier badge + operational mode (Full / Eco / Reserve)
 
 ### E. WASM / Pages parity
@@ -278,6 +280,7 @@ Human-Centric resilience policy for U2 — protects U0 inference the millisecond
 - [x] **P-E2** `spatial.html` encode → tensor buffer → GPU upload end-to-end *(buffer upload + σ projection in portal)*
 - [x] **P-E3** Tier-0 canvas2d fallback with honest badge when WebGPU missing
 - [x] **P-E4** Viewport WGSL in qualiaDB `shaders/viewport/` (`ambient`, `projector`, `bloom`); portal slim build ~272 KB gzip (`--features portal`, `wasm-size-check.mjs`); bloom + eco particle gating live
+- [x] **P-E5** Phenomenal CI — `phenomenal-verify.mjs` (WGSL smoke, binding parity, PGA oracle, VramLedger, WASM nav API) after portal WASM build
 
 ### F. Audio / multi-modal (phenomenal+)
 
@@ -307,7 +310,7 @@ Human-Centric resilience policy for U2 — protects U0 inference the millisecond
 
 | Asset | Role today | Target |
 |-------|------------|--------|
-| `spatial.html` + `js/spatial-demo.js` | Qualia WASM portal T2: projector + ambient + bloom + CIE σ + PGA Phases 1–3 | Phenomenal polish (daemon slice, navigation) |
+| `spatial.html` + `js/spatial-demo.js` | Qualia WASM portal T2: PGA 1–3, bloom, CIE σ, daemon slice + SSE sync, Ed25519 gate, GPU pick/nav/collapse | Desktop parity (PR-C10); full bake (P-A); U3 audio (P-F) |
 | `js/ambient-viz.js` | canvas2d telemetry prototype (2400 particles) | wgpu ambient shader; JS kept as Tier-0 fallback only |
 | `playground/qualia_core_db.wasm` | Logic, N3, SHACL, optional WebGPU LLM | **Merged into** `pkg/qualia/qualia_bg.wasm` (single portal) |
 | `playground/anatomy.js` | Three.js anatomy viewer | Phase 4 — same viewport pattern |
@@ -341,7 +344,7 @@ Human-Centric resilience policy for U2 — protects U0 inference the millisecond
 | `tensor_buffer.rs` | Zero-copy 10D binary views | **qualiaDB portal:** `buffer_export.rs` + GPU upload live. **desktop:** not connected |
 | `motor_encoder.rs` | 64-byte PGA `Motor` layout | Superseded in-portal by WGSL `Motor { r, d }` vec4 layout |
 | `toggle_render_loop` | 30 FPS Qualia fetch daemon | **Not registered** in Tauri invoke handler |
-| `navigate_to_node` / `select_node_at` | Hit-testing + navigation | Commands exist, UI unwired |
+| `navigate_to_node` / `select_node_at` | Hit-testing + navigation | **qualiaDB portal:** live (`portal_navigation.rs`, `spatial-demo.js`). **webizen-desktop:** commands exist, UI unwired |
 | Live Qualia scene | `fetch_local_neighborhood` | Falls back to `mock_qualia_projection()` |
 | 10D tensor on nodes | `scene_to_contract.rs` | Always `Tensor10DProjection::default()` |
 | Camera orbit/zoom | `WgpuRenderer` CPU math | UI handlers local-only; render uses `Camera::default()` |
@@ -359,17 +362,25 @@ Human-Centric resilience policy for U2 — protects U0 inference the millisecond
 | `WgpuDiffusionBackend` (`webizen-runtime`) | Third independent wgpu device | Dead 3D fields (`depth_texture`, etc.) |
 | LLM inference thread | `QTensorEngine::new()` per chat turn | No engine pool despite resident mmap |
 
-**What does not exist yet:**
+**qualiaDB portal + native engine (✅ on `0.0.17-dev`):**
 
-- [ ] Global `GpuContext` / shared `wgpu::Device` across inference + render + diffusion
-- [ ] VRAM ledger (unify DXGI probe, KV cache 448 MiB cap, render target sizes)
+- [x] `gpu_context.rs` — shared `wgpu::Device` for LLM + tensor + viewport (native)
+- [x] `VramLedger` — KV cache cap, tensor/viewport slots, `pressure()` → `memory_pressure`
+- [x] `ComputeUniverse` / `UniverseOrchestrator` — U0/U1/U2 pinned partitions (Track B2)
+- [x] Operational modes (Full / Eco / Reserve) — bloom + ambient draw throttle live in portal
+- [x] `gguf_bridge` token loop → `llm_heat`; encode/GeoSPARQL → bake/logic pulses
+
+**Still open (desktop `webizen-browser` host + cross-process gaps):**
+
+- [ ] `webizen-render` / `WgpuDiffusionBackend` adopt shared `GpuContext` (still per-PNG `new_offscreen`)
 - [ ] Real `ThermalGovernor` (production uses `NullThermalGovernor` → always `Cool`)
 - [ ] Render back-pressure when `ModelLifecycle::Active` or VRAM pressure high
-- [ ] `telemetry_hooks` fed from `gguf_bridge` token loop → `render_scene_png_with_time_and_telemetry`
+- [ ] `telemetry_hooks` fed from qualia token loop → desktop `render_scene_png_with_time_and_telemetry`
 - [ ] Persistent `WgpuRenderer` across frames (not per-PNG re-init)
-- [ ] `hardware_tier.rs` GPU detection (stubs return `false` → always Tier 0)
+- [ ] `hardware_tier.rs::has_gpu()` real adapter probe (stub returns `false` today)
+- [ ] `record_network_ripple()` wired from daemon mesh / torrent I/O (P-D3b)
 
-**Design docs ahead of code:** operational modes (Full / Eco / Reserve), `q42-10d-volumetric-tensor-spec.md` §3 telemetry-aware dispatch, `BACKGROUND_VISUALISATION.md` `render_scene_ambient()` — mostly unimplemented.
+**Design docs ahead of desktop code:** `BACKGROUND_VISUALISATION.md` live path still targets webizen-render re-export (PR-C10), not qualiaDB portal.
 
 ### qualia-core-db WASM exports (today)
 
@@ -385,6 +396,10 @@ Present: `parse_n3logic_wasm`, `validate_shacl_constraint_wasm`, `forward_chain_
 | `set_standpoint(class, epistemic_q, t_slice, t_window, identifier_did)` | Human-Centric observer contract |
 | `set_telemetry(&[f32])` | 48 B `SystemTelemetry` override |
 | `upload_tensor_buffer(&[u8])` | SOA pin + GPU rebind |
+| `select_node_at(x, y, w, h)` | Queue GPU `R32Uint` pick at canvas pixel |
+| `poll_selected_node()` | Tensor SOA index after next `tick`, or `-1` pending |
+| `navigate_to_node(index)` | `CameraFlyTo` frames toward node `(x,y,z)` |
+| `collapse_node_q(index)` | Wavefunction collapse — set node `q` → 0, re-upload SOA |
 | `encode_geometry(json)` | `spatial_encode` + tensor upload |
 
 **Scientific engine in single WASM package (2026-06-17):** `wasm_simd` bytecode VM paths, 10D tensor SOA (`export_tensor_buffer_wasm`), SHACL evaluators, deontic logic (`evaluate_deontic_contract`), epistemic/paraconsistent/LTL modalities — all re-exported through the Qualia portal. This unlocks optimization pathways that standard LLM stacks cannot access (see **Track B4**).
@@ -397,7 +412,7 @@ Per `AUDIO_PROJECT_STATUS.md` — **do not reorder without explicit direction:**
 |----------|-------|-------------------------------|
 | **1 (now)** | Human-Centric QApp distribution — `export_qapp_as_wasm_package`, LAN `0.0.0.0`, QR, ontology→DOM | `webizen-web` `mount_qapp`; portal re-exports; COOP/COEP for SharedArrayBuffer |
 | **2 (next)** | U3 `AcousticPlane` — AudioWorklet, Sonic Tokens, binaural DSP | Extend `ComputeUniverse` to U3; SPSC from U0/U1; **Phase 11 / Track B5** |
-| **3 (active)** | Phenomenal viewport — PGA motors, bloom, ledger eco gating | Track C PR-C0–C8b ✅; C8c (CIE σ) + C9–C11 next (`portal_gpu.rs`, `shaders/viewport/`) |
+| **3 (done on Pages)** | Phenomenal viewport — PGA motors, bloom, ledger eco gating, daemon bridge, navigation, CI | Track C PR-C0–C11b ✅; **next:** PR-C10 desktop parity (`webizen-render` re-export) |
 
 Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened; studio QR + real `.q42` volume export + Tauri resource bundling still pending). Scientific inference optimizations (Track B4) can land in `qualia-core-db` in parallel with distribution work; U3 audio waits on priority 1 verification.
 
@@ -443,12 +458,12 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
 **Goal:** Repos can build and publish the combined WASM artifact.
 
 - [ ] **0.1** Add this plan to PR template / AGENTS.md handoff pointer (`docs/plans/wasm-viewport-migration-plan.md`)
-- [ ] **0.2** Document wasm-pack build command in plan appendix (see below)
-- [ ] **0.3** Add `docs/pkg/` gitignore exception or CI step to copy `webizen-web/pkg/*` into `docs/pkg/`
-- [ ] **0.4** Verify `qualia-core-db` builds for `wasm32-unknown-unknown` with required features
+- [x] **0.2** Document wasm-pack build command in plan appendix (see below) — **Appendix A**
+- [x] **0.3** CI copies portal WASM → `docs/pkg/qualia/` — `.github/workflows/pages.yml` *(qualiaDB-native path; `webizen-web` superseded)*
+- [x] **0.4** Verify `qualia-core-db` builds for `wasm32-unknown-unknown` with required features — Pages CI `cargo check --features portal`
 - [ ] **0.5** Smoke-test Pages locally: `npx serve docs` + WASM MIME types
 
-**Exit criteria:** `wasm-pack build` succeeds in `webizen-web`; qualiaDB `cargo check -p qualia-core-db` passes.
+**Exit criteria:** `wasm-pack build` + `cargo check -p qualia-core-db --target wasm32-unknown-unknown --features portal` pass in CI.
 
 ---
 
@@ -458,19 +473,16 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
 
 **Repo: webizen-browser (`webizen-render`)**
 
-- [ ] **1.1** Confirm `SystemTelemetry` is 48 bytes / `Pod` — document field order in plan appendix ✅ (already in `telemetry.rs`)
-- [ ] **1.2** Export `Tensor10DProjection`, `RenderScene`, `SceneNode` as `#[repr(C)]` stable layouts for WASM FFI
-- [ ] **1.3** Add `scene_contract::tensor_buffer_header()` — magic, version, node_count, stride for binary uploads
+- [x] **1.1** Confirm `SystemTelemetry` is 48 bytes / `Pod` — **Appendix B** + `portal_telemetry.rs`
+- [ ] **1.2** Export `Tensor10DProjection`, `RenderScene`, `SceneNode` as `#[repr(C)]` stable layouts for WASM FFI *(webizen-render desktop parity — PR-C10)*
+- [x] **1.3** Binary tensor header — `TensorBufferHeader` (32 B) in `tensor/buffer_export.rs` *(replaces `scene_contract::tensor_buffer_header`)*
 - [ ] **1.4** Add unit test: desktop renderer + WASM deserialize same `RenderScene` bytes
 
 **Repo: qualiaDB (`qualia-core-db`)**
 
-- [ ] **1.5** Add `tensor/mod.rs` → `export_tensor_slice_wasm(out: &mut [u8]) -> usize` (bounded, zero-heap)
-- [ ] **1.6** Add `spatial_wasm.rs` module with JSON-in/JSON-out wrappers (cold path only) for:
-  - `spatial_encode_wasm`
-  - `geosparql_operation_wasm`
-  - `spatial_bbox_wasm` / `spatial_convex_hull_wasm` (delegate to existing native ops when available)
-- [ ] **1.7** Add `sample_browser_telemetry_wasm() -> JsValue` — maps SlgArena pressure + last op timing → 0–1 floats
+- [x] **1.5** `export_tensor_slice_wasm` / `export_tensor_buffer_wasm` — bounded, zero-heap (`tensor/buffer_export.rs`)
+- [x] **1.6** `spatial_wasm.rs` — `spatial_encode_wasm`, `geosparql_operation_wasm`, `sample_browser_telemetry_wasm`
+- [x] **1.7** `sample_browser_telemetry_wasm()` — `VramLedger.pressure()` + decay pulses → 0–1 floats
 
 **Exit criteria:** Contract structs have stable sizes; round-trip test desktop ↔ bytes ↔ WASM parse.
 
@@ -480,23 +492,18 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
 
 **Goal:** Same WGSL shaders run in browser WebGPU.
 
+> **Pages path superseded (2026-06-17):** Shaders and `QualiaPortal` live in **qualiaDB** (`portal_gpu.rs`, `shaders/viewport/`). Remaining unchecked items apply to **webizen-render desktop re-export (PR-C10)** only.
+
 **Repo: webizen-browser**
 
-- [ ] **2.1** Add `webizen-render` feature flag `web` (enables wgpu on `wasm32`)
-- [ ] **2.2** Un-gate `WgpuRenderer` surface path for `wasm32` (canvas → `wgpu::Surface`)
-- [ ] **2.3** Port ambient particle shader from `BACKGROUND_VISUALISATION.md`:
-  - static instanced position buffer (upload once)
-  - `SystemTelemetry` uniform @ group(0) binding(1)
-  - time uniform
-  - optional bloom pass (Tier 1+ browsers)
-- [ ] **2.4** Port spectral vertex color: `sigma` → CIE XYZ → sRGB in WGSL (reuse `PROJECTOR_WGSL` / epistemic shader)
-- [ ] **2.5** Implement tier dispatch in `Viewport::new()`:
-  - WebGPU present + `adapter.limits` OK → Tier 1/2 wgpu path
-  - WebGPU missing → `ViewportError::WebGpuUnavailable` → shell loads `ambient-viz.js` (display only)
-  - Insufficient VRAM → Tier 1 reduced preset (see Appendix E)
-- [ ] **2.6** Bench: 30 FPS cap, ≤48 B telemetry upload per frame, zero `Vec` in `tick()` hot path
+- [ ] **2.1** Add `webizen-render` feature flag `web` (enables wgpu on `wasm32`) — *PR-C10*
+- [ ] **2.2** Un-gate `WgpuRenderer` surface path for `wasm32` (canvas → `wgpu::Surface`) — *PR-C10*
+- [x] **2.3** Ambient particle shader — `ambient.wgsl` in qualiaDB portal *(50k instanced SSBO, telemetry @1, bloom T2)*
+- [x] **2.4** Spectral vertex color — `spectral.wgsl` σ → CIE XYZ → linear sRGB in qualiaDB portal
+- [x] **2.5** Tier dispatch — `QualiaPortal::new()` T0 canvas2d / T1 tensor / T2 WebGPU + `ambient-viz.js` fallback
+- [x] **2.6** Portal `tick()` — ≤48 B telemetry via `refresh_from_ledger()`; zero `Vec` in hot path
 
-**Exit criteria:** `webizen-render` example renders instanced particles in browser via `wgpu` on Chrome/Edge; desktop path unchanged.
+**Exit criteria:** Pages: qualiaDB portal renders on Chrome/Edge ✅. Desktop: `webizen-render` re-export still pending (PR-C10).
 
 ---
 
@@ -504,10 +511,12 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
 
 **Goal:** One published artifact — **`qualia.js` + `qualia_bg.wasm`** — Semantic Subjectivity Bifurcation Portal.
 
-**Repo: webizen-browser (`webizen-web` crate → publish as Qualia)**
+> **Build owner:** qualiaDB (`qualia-core-db --features portal`). `webizen-web` items below are **superseded** unless noted for desktop host linking.
 
-- [ ] **3.1** Add dependency: `webizen-render = { path = "../webizen-render", features = ["web"] }`
-- [ ] **3.2** Replace canvas2d stub with `QualiaPortal` (wasm-bindgen name; Rust struct may be `QualiaPortal` or `PortalEngine`):
+**Repo: webizen-browser (`webizen-web` crate → publish as Qualia)** — *superseded for Pages*
+
+- [ ] **3.1** Add dependency: `webizen-render = { path = "../webizen-render", features = ["web"] }` — *desktop PR-C10 only*
+- [x] **3.2** `QualiaPortal` in `portal.rs` / `qualia-shell.js` *(was planned in `webizen-web`; shipped in qualiaDB)*:
   ```rust
   #[wasm_bindgen(js_name = QualiaPortal)]
   pub struct QualiaPortal { /* qualia engine handle + wgpu viewport */ }
@@ -524,18 +533,18 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
       pub fn tier(&self) -> u8; // 0–2 for UI badge
   }
   ```
-- [ ] **3.3** Re-export all former `qualia_core_db` WASM symbols from same module (portal = single import)
-- [ ] **3.4** `wasm-pack build --target web --out-dir pkg-qualia`; post-step rename to `qualia.js` / `qualia_bg.wasm`
-- [ ] **3.5** Copy → `qualiaDB/docs/pkg/qualia/` in CI
-- [ ] **3.6** Naming tasks **N-1** through **N-6** (see Product naming)
+- [x] **3.3** WASM symbols re-exported through portal module (`wasm_bridge.rs`, `spatial_wasm.rs`, `portal.rs`)
+- [x] **3.4** `wasm-pack build` in Pages CI → rename to `qualia.js` / `qualia_bg.wasm`
+- [x] **3.5** Copy → `qualiaDB/docs/pkg/qualia/` in CI (`.github/workflows/pages.yml`)
+- [x] **3.6** Naming tasks **N-1** through **N-6** (see Product naming)
 
 **Repo: qualiaDB**
 
-- [ ] **3.7** Add `scripts/package-qualia-wasm.ps1` (replaces `package-webizen-wasm.ps1`)
-- [ ] **3.8** Add `docs/js/qualia-shell.js` — `import init, { QualiaPortal } from '../pkg/qualia/qualia.js'`
-- [ ] **3.9** Retire duplicate `playground/qualia_core_db.js` load on pages that mount the portal
+- [x] **3.7** `scripts/package-qualia-wasm.ps1`
+- [x] **3.8** `docs/js/qualia-shell.js` — `import init, { QualiaPortal } from '../pkg/qualia/qualia.js'`
+- [ ] **3.9** Retire duplicate `playground/qualia_core_db.js` on portal pages — spatial uses `pkg/qualia/`; `qualia-shell.js` still lazy-imports playground for `wasm-full` evaluators
 
-**Exit criteria:** `docs/spatial.html` loads **only** `pkg/qualia/`; badge reads `Qualia WASM · T1`.
+**Exit criteria:** `docs/spatial.html` loads `pkg/qualia/` for viewport ✅; badge reads `Qualia WASM · T{n}` ✅.
 
 ---
 
@@ -547,7 +556,7 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
 
 - [x] **4.1** Remove `<script three.js>` from `spatial.html`
 - [x] **4.2** Replace `spatial-demo.js` Three.js path with `qualia-shell.js` + `QualiaPortal` API
-- [ ] **4.3** Wire geometry controls → `spatial_encode_wasm` → `upload_scene` (GPU buffer, not JS mesh)
+- [x] **4.3** Wire geometry controls → `encode_geometry` → `upload_tensor_buffer` (GPU SOA, not JS mesh)
 - [ ] **4.4** Wire GeoSPARQL tab → `geosparql_operation_wasm` (remove JS polygon fallback; WASM required on all tiers)
 - [ ] **4.5** Wire Spatial Ops tab → WASM bbox/hull/triangulate
 - [x] **4.6** Telemetry sliders → `set_telemetry(Float32Array)`; encode/spatial ops → pulse via WASM
@@ -584,7 +593,7 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
 ### 5B — New docs (optional)
 
 - [ ] **5.10** `docs/manuals/qualia-wasm-portal.md` — portal concept, build, deploy, fallback tiers
-- [ ] **5.11** `docs/plans/wasm-viewport-migration-plan.md` — this file; update checkboxes per PR
+- [x] **5.11** `docs/plans/wasm-viewport-migration-plan.md` — this file; update checkboxes per PR *(2026-06-17 sync)*
 
 ### 5C — Cross-repo doc sync
 
@@ -600,9 +609,9 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
 
 **Goal:** Demo telemetry reflects real WASM work, not sliders only.
 
-- [ ] **6.1** Map encode timing → `baking_crystallization`
-- [ ] **6.2** Map GeoSPARQL/op queue → `logic_flashes`
-- [ ] **6.3** Map WASM memory / mount progress → `memory_pressure`
+- [x] **6.1** Map encode timing → `baking_crystallization` — `record_bake_pulse()` on `spatial_encode_wasm` / `encode_geometry`
+- [x] **6.2** Map GeoSPARQL/op queue → `logic_flashes` — `record_logic_flash()` in `geosparql_operation_wasm`
+- [x] **6.3** Map VRAM pressure → `memory_pressure` — `VramLedger.pressure()` via `refresh_from_ledger()` each `tick`
 - [ ] **6.4** (Desktop) Port `telemetry_hooks.rs` mapping to `sample_browser_telemetry_wasm` subset
 - [x] **6.5** Lamport revision SSE (`GET /tensor/events`) → debounced tensor slice refresh in `qualia-shell.js` *(telemetry uniform opt-in → future)*
 
@@ -618,12 +627,12 @@ Distribution plumbing is **in progress** (`export_qapp_as_wasm_package` hardened
 
 **Repo: qualiaDB (`qualia-core-db` + `qualia-client-core`)**
 
-- [ ] **8.1** Add `gpu_context.rs` — process-wide `GpuContext { device, queue, adapter_info, vram_ledger }`
-- [ ] **8.2** Refactor `QTensorEngine::try_new()` to accept `&GpuContext` (or `Arc<GpuContext>`) instead of creating a new instance
-- [ ] **8.3** Implement `VramLedger` — track: GGUF staging, KV cache (448 MiB cap), render targets, diffusion buffers; expose `pressure: f32` for `SystemTelemetry.memory_pressure`
+- [x] **8.1** `gpu_context.rs` — process-wide `SharedGpuContext` + `global_vram_ledger()` *(qualiaDB native)*
+- [x] **8.2** `QTensorEngine` adopts `gpu_context::shared_gpu()` device/queue *(native; WASM keeps private device)*
+- [x] **8.3** `VramLedger` — KV cache cap, tensor/viewport slots; `pressure()` → `memory_pressure` *(portal path live)*
 - [ ] **8.4** Wire real `ThermalGovernor` (Windows DXGI / sysinfo thermal stub → trait impl); replace `NullThermalGovernor` in `model_lifecycle.rs`
 - [ ] **8.5** `orchestrate_inference()` + render daemon: on `ThermalStatus::Critical`, pause render loop and block non-critical intents
-- [ ] **8.6** Persist one `QTensorEngine` per process (or small pool) — stop `QTensorEngine::new()` per chat thread when resident mmap exists
+- [x] **8.6** Resident mmap reuse — `QTensorEngine::adopt_resident_mmap`; engine init inside LLM thread avoids per-turn device churn
 - [ ] **8.7** Export `sample_gpu_telemetry()` for Webizen `telemetry_hooks`
 
 **Repo: webizen-browser**
@@ -661,13 +670,13 @@ Priority queue (same physical device):
 - [x] **9.2** q-state LOD — collapsed vs sandbox in `projector.wgsl` fragment *(dedicated `epistemic.wgsl` pass optional)*
 - [x] **9.3** Tensor SOA → `wgpu::Buffer` instanced upload (40 B stride, 32 B header skip) — `portal_gpu.rs`
 - [ ] **9.4** `scene_to_contract.rs` reads baked volume, not `Tensor10DProjection::default()`
-- [ ] **9.5** Live `fetch_local_neighborhood` via daemon `:4242`; mock only when daemon offline (badge)
+- [x] **9.5** Live daemon neighborhood on Pages — `connectPortalToDaemon` + `GET /tensor/slice` + SSE `/tensor/events` *(desktop `fetch_local_neighborhood` mock fallback still open)*
 - [x] **9.6** IPC camera + temporal slice + `ObserverStandpoint` from UI shell → GPU uniforms each frame *(Pages `spatial.html`; Dioxus desktop parity pending)*
 - [ ] **9.7** Register `toggle_render_loop`, `navigate_to_node`, `select_node_at`; wire `RenderPreview`
 - [x] **9.8** Kawase bloom post-pass (T2 Full only; `VramLedger` auto-disables Eco/Reserve)
 - [ ] **9.9** Tauri wgpu child surface (Tier 2 default); PNG protocol Tier 1 fallback with persistent renderer
 - [x] **9.10** Operational modes wired in portal render loop: bloom + ambient draw throttle via `gpu_context::OperationalMode` *(UI badge live; desktop Dioxus parity pending)*
-- [ ] **9.11** Hit-testing against GPU depth or CPU projected bounds (zero-heap `&mut [u32]` pick buffer)
+- [x] **9.11** GPU `R32Uint` picking + CPU fallback — `select_node_at` / `poll_selected_node` (PR-C11; same as **P-C8**)
 
 **Exit criteria:** P-C1 through P-C9 satisfied on desktop T2 hardware.
 
@@ -681,19 +690,19 @@ Priority queue (same physical device):
 
 **Repo: qualiaDB (`qualia-core-db`)**
 
-- [ ] **10.1** `tensor/bake_pipeline.rs` — ingest stages: NQuin scan → embed xyz → assign q,v,w → spectral link → physics relaxation (spec §2.4)
-- [ ] **10.2** Replace `from_nquin` hash-proxy xyz with baked coordinates from pipeline output
+- [ ] **10.1** `tensor/bake_pipeline.rs` — full ingest: spectral link + physics relaxation (spec §2.4) *(partial: `bake_quin_to_tensor` + geo vertex path live)*
+- [ ] **10.2** Replace hash-proxy xyz everywhere — geo vertex baked ✅ (**P-A6**); legacy hash spread still fallback for non-geo Quins
 - [ ] **10.3** Emit mmap-ready SOA: `tensors.bin` + `index.bin` + optional `spectral/` sidecars
 - [ ] **10.4** Harden hot path: audit call sites; ban `tensor_search()` → `Vec` from evaluators (grep CI rule)
 - [ ] **10.5** `hardware_tier.rs` — real `has_gpu()` (DXGI / wgpu adapter probe); wire `ExecutionStrategy::GPUVRAM`
-- [ ] **10.6** `tensor_volume.wgsl` + `tensor_query_dispatch()` — GPU kNN / radius filter / w-manifold mask
-- [ ] **10.7** `GpuContext` maps tensor SOA to `wgpu::Buffer` with persist flag; ledger accounts bytes
-- [ ] **10.8** Daemon `:4242` endpoint `GET /tensor/slice` or binary WS for viewport upload (zero JSON in hot path)
+- [x] **10.6** `tensor_volume.wgsl` + `volume_gpu.rs` — GPU kNN mirror of `visit_tensor_search_into` (**P-B6**)
+- [x] **10.7** Tensor SOA → `wgpu::Buffer` + ledger pin — `PortalGpu::upload_tensor_buffer` / `VramLedger` tensor slot
+- [x] **10.8** Daemon `GET /tensor/slice` — `daemon_tensor.rs` binary SOA (**P-C6**)
 
 **Repo: webizen-browser**
 
-- [ ] **10.9** Viewport consumes binary tensor header from Phase 1.3 — no JSON scene round-trip
-- [ ] **10.10** Render path reads tensor buffer directly; `RenderScene` becomes a view, not a duplicate copy
+- [x] **10.9** qualiaDB portal consumes `TensorBufferHeader` binary — no JSON scene round-trip *(desktop `webizen-render` pending PR-C10)*
+- [x] **10.10** qualiaDB portal reads resident tensor SOA directly — `PortalGpu` instanced draw *(desktop `RenderScene` duplicate copy still open)*
 
 **Exit criteria:** P-A1 through P-A6 and P-B6 satisfied; graph kNN query runs on GPU without Rust heap allocation.
 
@@ -717,8 +726,8 @@ Priority queue (same physical device):
 
 ## Phase 7 — CI, size budget, and release
 
-- [ ] **7.1** CI job: `wasm-pack build` + assert `webizen_web_bg.wasm` < **8 MB** gzip budget (adjust after first build)
-- [ ] **7.2** CI job: `docs/tests/` suite includes viewport boot smoke (headless Playwright or wasm bind test)
+- [x] **7.1** CI: portal `qualia_bg.wasm` size budget — `wasm-size-check.mjs` (~272 KB gzip, `--features portal`) in `pages.yml`
+- [x] **7.2** CI: `phenomenal-verify.mjs` — WGSL smoke, binding parity, PGA oracle, VramLedger, WASM nav API
 - [ ] **7.3** `scripts/package-flutter-windows.ps1` unaffected; separate `scripts/package-docs-wasm.ps1`
 - [ ] **7.4** GitHub Pages deploy: ensure `application/wasm` MIME + COOP/COEP headers if needed for threads
 - [ ] **7.5** Release note in `docs/RELEASE_NOTES_*.md`
@@ -772,6 +781,8 @@ requestAnimationFrame(frame);
 | `set_standpoint(class, epistemic_q, t_slice, t_window, identifier_did)` | Human-Centric observer contract → 128 B `ObserverStandpoint` |
 | `standpoint_class()` / `epistemic_q()` / `t_slice()` / `t_window()` | UI readback |
 | `upload_tensor_buffer(bytes)` | Resident SOA + GPU particle/tensor rebind |
+| `select_node_at` / `poll_selected_node` | GPU picking pass + async 1×1 readback |
+| `navigate_to_node` / `collapse_node_q` | Camera fly-to + epistemic wavefunction collapse |
 | `tier()` | 0 CPU / 1 tensor canvas / 2 WebGPU phenomenal |
 
 ---
@@ -796,21 +807,23 @@ requestAnimationFrame(frame);
 
 ### Minimum ship (Track A — not yet phenomenal)
 
-- [ ] `spatial.html` — zero Three.js CDN requests
-- [ ] WebGPU T1: ≥24 FPS ambient on mid-range laptop
-- [ ] Encode → WASM → GPU buffer without JS vertex loops
-- [ ] GeoSPARQL `"backend": "wasm"` on all tiers
-- [ ] Tier-0 badge visible when WebGPU missing
+- [x] `spatial.html` — zero Three.js CDN requests
+- [ ] WebGPU T1: ≥24 FPS ambient on mid-range laptop *(manual bench; not CI-gated)*
+- [x] Encode → WASM → GPU buffer without JS vertex loops — `encode_geometry` → `upload_tensor_buffer`
+- [ ] GeoSPARQL `"backend": "wasm"` on all tiers — WASM primary; JS polygon fallback when evaluators unavailable
+- [x] Tier-0 badge visible when WebGPU missing — `T0 · CPU fallback` / `ambient-viz.js` path
 
 ### Phenomenal ship (Tracks B + C — required for PHENOMENAL status)
 
 - [ ] All **P-A** through **P-E** boxes checked (see Phenomenal acceptance criteria)
 - [ ] LLM + 30 FPS viewport concurrent without OOM (T2, 6 GB+ VRAM test rig)
 - [ ] `llm_heat` animates ambient field during live inference without slider
-- [ ] Live daemon neighborhood — zero mock nodes when `:4242` healthy
+- [x] Live daemon neighborhood — `connectPortalToDaemon` + SSE revision sync when `:4242` healthy *(Pages path; desktop mock fallback still open)*
+- [x] Phenomenal CI contract — `node docs/tests/phenomenal-verify.mjs` passes after portal WASM build
 - [ ] `tensor_volume.wgsl` kNN matches `visit_tensor_search_into` on test fixture (±ε)
 - [x] Eco mode: bloom off, particles reduced (8k draw cap), queries still correct *(portal WebGPU path; desktop parity pending)*
-- [ ] `cargo test -p qualia-core-db --lib` + `cargo test -p webizen-render` pass
+- [x] `cargo test -p qualia-core-db --lib` pass *(CI / local)*
+- [ ] `cargo test -p webizen-render` pass *(desktop parity — PR-C10)*
 
 ---
 
@@ -1119,9 +1132,9 @@ Milestones mirror `AUDIO_PROJECT_STATUS.md` § Pending Implementation. Portal re
 
 ---
 
-### Track C — Phenomenal viewport (qualiaDB portal — IN PROGRESS)
+### Track C — Phenomenal viewport (qualiaDB portal — Pages path ✅; desktop parity pending)
 
-**qualiaDB portal PR stack (shipped / next):**
+**qualiaDB portal PR stack (shipped on Pages / remaining):**
 
 ```
 PR-C0  qualiaDB:  portal slim WASM (~272 KB gzip) + feature gates          ✅
@@ -1149,7 +1162,7 @@ PR-C11b both:     phenomenal-checklist CI                               ✅
 
 **webizen-desktop (still pending):** PNG 2D compositor path; projector/epistemic/bloom pipelines not wired to shared `GpuContext`.
 
-**Recommended order:** (B4.1 parallel) → C9 (daemon neighborhood) → C10 → C11. Desktop phenomenal can trail Pages portal by one sprint if shader contracts stay shared.
+**Recommended order:** (B4.1 parallel) → **C10** (desktop Dioxus parity — golden master frozen by C11b) → **C12** (asymmetric compute offload). C9/C11/C11b complete on Pages.
 
 **Throughput priority fork:** If inference tokens/sec is the bottleneck before phenomenal viewport, interleave **B2.4 → B10 → B17 → B15 → B16** ahead of Track C.
 
@@ -1188,6 +1201,8 @@ PR-C11b both:     phenomenal-checklist CI                               ✅
 | 2026-06-17 | C9c.2–3 | Canonical `{nonce\|class\|t_slice\|t_window}` Ed25519 gate; commons vs vault lane filter; `crypto.subtle` sign; 403 → Auth Failed → Spectator reset | Agent |
 | 2026-06-17 | C12 design | Asymmetric U0/U1/U2 delegation matrix; AVX-2/512 CPU + headless native `wgpu`; binary RPC + standpoint gate; sub-phase breakdown | Agent |
 | 2026-06-17 | C11 | `picking_fragment_main` R32Uint pass; async 1×1 readback; `CameraFlyTo`; wavefunction `collapse_node_q`; `spatial-demo` pointer bind | Agent |
+| 2026-06-17 | C11b | `portal_phenomenal_contract.rs` — WGSL parse, binding parity, stride oracle, PGA `R_q` gate, VramLedger; `phenomenal-verify.mjs` in Pages CI | Agent |
+| 2026-06-17 | plan sync | Checkbox audit — Phases 0–11, Gate B, GPU audit aligned with qualiaDB portal; split P-D3/P-D3b; superseded webizen-web Phase 2/3 notes | Agent |
 | | | | |
 
 *Update this table and checkboxes when each item completes.*
@@ -1196,7 +1211,7 @@ PR-C11b both:     phenomenal-checklist CI                               ✅
 
 ## PR-C12 — Asymmetric compute routing (design; post-C9c)
 
-**Prerequisite:** PR-C9c network bridge + Ed25519 standpoint gate (✅). C12 does **not** block PR-C10/C11.
+**Prerequisite:** PR-C9c network bridge + Ed25519 standpoint gate (✅); PR-C11/C11b navigation + CI golden master (✅). C12 does **not** block PR-C10.
 
 Crossing `:4242` breaks out of the browser sandbox onto bare metal. The portal becomes a **high-performance terminal**; the native daemon becomes the **compute backplane**.
 
@@ -1271,7 +1286,7 @@ Portal U2 (60 FPS) ──binary RPC + standpoint headers──► :4242 daemon
 | **C12.4** | Standpoint-gated compute auth (reuse `daemon_tensor` canonical sign) | `daemon_tensor.rs`, `webizen_server.rs` |
 | **C12.5** | WASM trap + shell bridge (`[u8;64]` ABI export) | `portal_wasm.rs`, `qualia-shell.js` |
 
-**Recommended sequencing:** C10 (desktop WGSL parity) → C11 (CI checklist) in parallel with **C12.1–C12.2** as first Track B4 offload gate. Full U0 LLM stream offload = **B3/B4** dependency chain.
+**Recommended sequencing:** C10 (desktop WGSL parity) in parallel with **C12.1–C12.2** as first Track B4 offload gate. C11/C11b complete — browser contract is the golden master for desktop re-export. Full U0 LLM stream offload = **B3/B4** dependency chain.
 
 ---
 
@@ -1343,20 +1358,20 @@ Source: `crates/qualia-core-db/src/portal_telemetry.rs` (portal); legacy mirror 
 
 ### Gate B — GPU back-plane + 10D VRAM
 
-**Status:** **Required before PHENOMENAL** — start here.
+**Status:** **qualiaDB native path largely complete** — desktop `webizen-render` adoption + full bake still block PHENOMENAL.
 
-- [ ] `GpuContext` + `VramLedger`
-- [ ] `tensor/bake_pipeline.rs`
-- [ ] `tensor_volume.wgsl`
-- [ ] Real `hardware_tier` GPU detection
+- [x] `GpuContext` + `VramLedger` — `gpu_context.rs` (qualiaDB native + portal)
+- [ ] `tensor/bake_pipeline.rs` — full P-A ingest (partial geo vertex bake live)
+- [x] `tensor_volume.wgsl` — `volume_gpu.rs` + U1 dispatch (**P-B6**)
+- [ ] Real `hardware_tier` GPU detection — `has_gpu()` stub returns `false`
 
-**First session:** PR-B1 → PR-B3 → PR-B4.
+**Next sessions:** PR-C10 desktop shader parity → full bake (P-A) → `hardware_tier` probe.
 
 ### Gate C — PHENOMENAL declared
 
-**Status:** Not ready — P-C6 (daemon), P-C8 (navigation), full bake (P-A), and desktop parity remain open. **Pages T2 portal path is validating** (tensor upload, standpoint, PGA Phases 1–3, Kawase bloom, ledger eco gating).
+**Status:** **Pages path near-complete** — P-C6–C8b, P-D3 (`memory_pressure`), P-E*, and phenomenal CI satisfied on `0.0.17-dev`. **Still blocking PHENOMENAL:** P-A full bake pipeline, P-C9 desktop persistent renderer, PR-C10 `webizen-render` shader parity, P-B3 thermal governor, P-B4 persistent `WgpuRenderer`, P-D3b `network_ripple` wiring.
 
-**Next sessions:** PR-C9 (daemon neighborhood) → PR-C10 (desktop parity) → PR-C11 (navigation + CI).
+**Next sessions:** PR-C10 (desktop Dioxus parity) → PR-C12.1–C12.2 (asymmetric compute scaffold). Optional parallel: **B4.1** epistemic τ.
 
 ### Strategic recommendation
 
@@ -1389,7 +1404,7 @@ Implement `Viewport::tier()` returning enum; shell reads it for badge + control 
 | Concern | qualiaDB | webizen-browser |
 |---------|----------|-----------------|
 | `Tensor10D`, bake, query | `crates/qualia-core-db/src/tensor/` | — |
-| Human-Centric portal (wasm32) | `portal.rs`, `portal_gpu.rs`, `portal_pga.rs`, `portal_telemetry.rs`, `portal_standpoint.rs`, `portal_camera.rs`, `spatial_wasm.rs` | — |
+| Human-Centric portal (wasm32) | `portal.rs`, `portal_gpu.rs`, `portal_pga.rs`, `portal_navigation.rs`, `portal_phenomenal_contract.rs`, `portal_telemetry.rs`, `portal_standpoint.rs`, `portal_camera.rs`, `spatial_wasm.rs`, `daemon_tensor.rs` | — |
 | `GpuContext`, `VramLedger`, compute universes | `gpu_context.rs`, `compute_universe.rs` | consume via FFI/Tauri |
 | U1→U0 rings, attention mask, topo drafts | `compute_universe.rs` | — |
 | **Compute** WGSL (U0/U1) | `shaders/fused_*.wgsl`, `tensor_volume.wgsl` | — |
