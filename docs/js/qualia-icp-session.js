@@ -90,6 +90,15 @@ export function savePairing(payload) {
     } catch {
         // ignore
     }
+    import('./qualia-icp-vault.js')
+        .then((m) => m.savePairingOpfs(payload))
+        .catch(() => {});
+}
+
+export async function savePairingAsync(payload) {
+    savePairing(payload);
+    const { savePairingOpfs } = await import('./qualia-icp-vault.js');
+    await savePairingOpfs(payload);
 }
 
 export function loadPairing() {
@@ -102,6 +111,9 @@ export function loadPairing() {
 export function clearPairing() {
     sessionStorage.removeItem(PAIRING_STORAGE_KEY);
     localStorage.removeItem(PAIRING_STORAGE_KEY);
+    import('./qualia-icp-vault.js')
+        .then((m) => m.clearPairingOpfs())
+        .catch(() => {});
 }
 
 export function pairingToJson(payload) {

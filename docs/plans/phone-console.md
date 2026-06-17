@@ -4,7 +4,7 @@ _Also: **Phone Console** (primary remote client). Filename retained for searchab
 
 **Date:** 2026-06-17  
 **Branch:** `0.0.17-dev`  
-**Status:** `IN PROGRESS` — **PR-I1–I4 shipped** (2026-06-17); vault/health/voice (I5–I8) next
+**Status:** `IN PROGRESS` — **PR-I1–I5 shipped** (2026-06-17); health ingest + voice (I6–I8) next
 **Companion:** [`wasm-viewport-migration-plan.md`](wasm-viewport-migration-plan.md) Track I, [`qualia-wasm-portal.md`](../manuals/qualia-wasm-portal.md), [`AUDIO_PROJECT_STATUS.md`](AUDIO_PROJECT_STATUS.md)
 
 ---
@@ -911,6 +911,7 @@ Manual matrix:
 | 2026-06-17 | **App rules** — `IcpDeviceProfile`, responsive breakpoints, capability fallback ladder, `shouldShow` UI gates, `icp_hints` (PR-I1g) |
 | 2026-06-17 | **Implemented** — `portal_control.rs`, `push_control_command`/`drain` in `tick`, `qualia-icp-*` JS, `phone-console.html`, WASM rebuild, `phone-console-verify.mjs` |
 | 2026-06-17 | **PR-I2–I4** — `/chat` relay nest, `qualia-icp-relay/session/host/phone/context`, LAN `defaultRelayBase`, QR/paste pair, Control menus/sliders + Graph Lens tap → desktop fly-to |
+| 2026-06-17 | **PR-I5** — `qualia-icp-vault.js` OPFS pairing cache + vault manifest, IndexedDB folder handle, phone identifier/vault `set_standpoint` promotion |
 
 ---
 

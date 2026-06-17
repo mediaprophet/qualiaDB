@@ -1,11 +1,11 @@
 /**
- * Phone ICP client — pairing, relay publish, context/graph consumption.
+ * Phone ICP client — pairing, relay publish, context/graph consumption, vault.
  */
 
 import { createIcpRelay, ICP_ROLE, parseEnvelopeContent } from './qualia-icp-relay.js';
 import {
     loadPairing,
-    savePairing,
+    savePairingAsync,
     parsePairingPayload,
     clearPairing,
     startBarcodePairing,
@@ -22,16 +22,23 @@ import {
     ICP_OP,
     pushControl,
 } from './qualia-icp-local.js';
+import {
+    getVaultStatus,
+    initVault,
+    pickVaultFolder,
+} from './qualia-icp-vault.js';
+import { loadQualiaPortal } from './qualia-shell.js';
 
 const MENU_HOME = 1;
 
 /**
  * @param {object} opts
  * @param {HTMLElement} opts.root
- * @param {object} [opts.portal] optional local WASM portal
+ * @param {object} [opts.portal]
  * @param {HTMLElement} [opts.linkBadge]
  * @param {HTMLElement} [opts.contextStrip]
  * @param {HTMLElement} [opts.controlPanel]
+ * @param {HTMLElement} [opts.vaultPanel]
  * @param {HTMLCanvasElement} [opts.graphCanvas]
  * @param {HTMLElement} [opts.deckPad]
  * @param {HTMLElement} [opts.pairSection]
@@ -39,10 +46,11 @@ const MENU_HOME = 1;
 export function mountIcpPhone(opts) {
     const {
         root,
-        portal,
+        portal: portalIn,
         linkBadge,
         contextStrip,
         controlPanel,
+        vaultPanel,
         graphCanvas,
         deckPad,
         pairSection,
@@ -51,20 +59,91 @@ export function mountIcpPhone(opts) {
     let pairing = loadPairing();
     let relay = null;
     let linked = false;
+    let vaultReady = false;
     let navIndex = 0;
     let graphLens = null;
+    let portal = portalIn;
+    let wasmMod = null;
     const cleanups = [];
 
-    function setBadge(state) {
-        if (linkBadge) {
-            linkBadge.textContent = state;
-            linkBadge.className = `text-xs px-2 py-1 rounded-full ${
-                linked ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-400'
-            }`;
-        }
+    function updateBadge() {
+        if (!linkBadge) return;
+        let label = 'Unlinked';
+        if (vaultReady) label = 'Vault ready';
+        else if (linked) label = 'Linked';
+        linkBadge.textContent = label;
+        linkBadge.className = `text-xs px-2 py-1 rounded-full ${
+            vaultReady || linked ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-400'
+        }`;
         if (pairSection) {
             pairSection.classList.toggle('hidden', linked);
         }
+    }
+
+    async function refreshVaultUi() {
+        if (!vaultPanel) return;
+        const status = await getVaultStatus();
+        vaultReady = status.ready;
+        updateBadge();
+        const q = status.quota;
+        const quotaLine = q
+            ? `Storage: ${Math.round(q.usage / 1024 / 1024)} / ${Math.round(q.quota / 1024 / 1024)} MB`
+            : 'Storage: OPFS probe unavailable';
+        vaultPanel.innerHTML = `
+            <p class="text-xs text-white/60 mb-2">${status.ready ? 'Sovereign vault active' : 'Initialize on-device OPFS vault'}</p>
+            <p class="text-[10px] text-white/45 mb-3 font-mono">${quotaLine}</p>
+            ${status.manifest ? `<p class="text-[10px] text-emerald-400/80 mb-2">${status.manifest.identifier_did}</p>` : ''}
+            <button type="button" data-icp-vault-init class="w-full py-2 mb-2 rounded-lg bg-emerald-600/30 text-emerald-300 text-sm border border-emerald-500/40">
+                ${status.ready ? 'Refresh vault' : 'Init vault (identifier)'}
+            </button>
+            <button type="button" data-icp-vault-promote class="w-full py-2 mb-2 rounded-lg bg-slate-800 text-slate-300 text-sm border border-slate-600" ${status.ready ? '' : 'disabled'}>
+                Promote to vault standpoint
+            </button>
+            ${status.folder_picker_supported ? `
+            <button type="button" data-icp-vault-folder class="w-full py-2 rounded-lg bg-slate-800 text-slate-300 text-sm border border-slate-600">
+                Link local folder
+            </button>` : ''}
+        `;
+        vaultPanel.querySelector('[data-icp-vault-init]')?.addEventListener('click', () => initVaultFlow(false));
+        vaultPanel.querySelector('[data-icp-vault-promote]')?.addEventListener('click', () => initVaultFlow(true));
+        vaultPanel.querySelector('[data-icp-vault-folder]')?.addEventListener('click', () => pickVaultFolder().then(refreshVaultUi).catch(console.warn));
+    }
+
+    async function ensurePortal() {
+        if (portal) return portal;
+        let canvas = document.getElementById('icp-vault-canvas');
+        if (!canvas) {
+            canvas = document.createElement('canvas');
+            canvas.id = 'icp-vault-canvas';
+            canvas.width = 1;
+            canvas.height = 1;
+            canvas.className = 'sr-only';
+            canvas.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(canvas);
+        }
+        const loaded = await loadQualiaPortal(canvas);
+        portal = loaded.portal;
+        wasmMod = loaded.mod;
+        return portal;
+    }
+
+    async function initVaultFlow(promoteVault) {
+        try {
+            await ensurePortal();
+            await initVault({ portal, wasmMod, promoteVault });
+            vaultReady = true;
+            updateBadge();
+            await refreshVaultUi();
+        } catch (e) {
+            console.warn('[icp-vault]', e);
+        }
+    }
+
+    async function publishCommand(raw) {
+        if (portal) pushControl(portal, raw);
+        if (!relay) return false;
+        await relay.publish(ICP_ROLE.COMMAND, { raw: raw.toString() });
+        return true;
     }
 
     const controlHandlers = {
@@ -80,16 +159,9 @@ export function mountIcpPhone(opts) {
         },
     };
 
-    async function publishCommand(raw) {
-        if (portal) pushControl(portal, raw);
-        if (!relay) return false;
-        await relay.publish(ICP_ROLE.COMMAND, { raw: raw.toString() });
-        return true;
-    }
-
     function connectRelay(payload) {
         pairing = payload;
-        savePairing(payload);
+        savePairingAsync(payload).catch(() => {});
         if (relay) relay.stopPolling();
         relay = createIcpRelay({
             base: payload.relay,
@@ -105,7 +177,7 @@ export function mountIcpPhone(opts) {
                 case ICP_ROLE.HELLO:
                 case ICP_ROLE.CONTEXT:
                     linked = true;
-                    setBadge('Linked');
+                    updateBadge();
                     applyContextFrameToUi(content, { contextStrip, controlPanel }, controlHandlers);
                     break;
                 case ICP_ROLE.GRAPH:
@@ -124,18 +196,16 @@ export function mountIcpPhone(opts) {
         cleanups.push(unsub);
         relay.startPolling(400);
         relay.publish(ICP_ROLE.HELLO, { role: 'phone', session_id: payload.session_id })
-            .then(() => setBadge('Linked'))
-            .catch(() => setBadge('Relay error'));
+            .then(() => { linked = true; updateBadge(); })
+            .catch(() => updateBadge());
     }
 
     if (pairing?.session_id) {
         connectRelay(pairing);
-        setBadge('Linked');
-    } else {
-        setBadge('Unlinked');
     }
+    updateBadge();
+    refreshVaultUi().catch(() => {});
 
-    // Deck pad swipe
     if (deckPad) {
         let lastX = 0;
         let lastY = 0;
@@ -157,7 +227,6 @@ export function mountIcpPhone(opts) {
         });
     }
 
-    // Deck buttons
     root.querySelectorAll('[data-icp-btn]').forEach((btn) => {
         const handler = () => {
             const action = btn.dataset.icpBtn;
@@ -201,6 +270,7 @@ export function mountIcpPhone(opts) {
 
     return {
         connectRelay,
+        refreshVaultUi,
         pairFromText(text) {
             const payload = parsePairingPayload(text);
             if (!payload) return false;
@@ -212,7 +282,7 @@ export function mountIcpPhone(opts) {
             linked = false;
             relay?.stopPolling();
             relay = null;
-            setBadge('Unlinked');
+            updateBadge();
         },
         destroy() {
             relay?.stopPolling();
@@ -223,9 +293,6 @@ export function mountIcpPhone(opts) {
 
 /**
  * Wire pairing UI (paste + optional camera).
- * @param {object} opts
- * @param {HTMLElement} opts.pairSection
- * @param {(payload: object) => void} opts.onPair
  */
 export async function mountPairingUi(opts) {
     const { pairSection, onPair } = opts;

@@ -45,6 +45,7 @@
     </section>
 
     <section id="panel-control" class="icp-control-panel hidden">
+        <div id="vault-panel" class="mb-4 p-3 rounded-xl border border-slate-700 bg-slate-900/40"></div>
         <div id="control-panel-body" class="text-sm text-white/60">Menus and sliders — from desktop ContextFrame.</div>
     </section>
 
@@ -61,6 +62,11 @@
         import { applyIcpLayoutClasses, shouldShow, ICP_INTERFACE } from './js/qualia-icp-rules.js';
         import { mountIcpPhone, mountPairingUi } from './js/qualia-icp-phone.js';
         import { loadPairing } from './js/qualia-icp-session.js';
+        import { hydratePairingFromOpfs } from './js/qualia-icp-vault.js';
+        import { ensureCrossOriginIsolation } from './js/qualia-coi.js';
+
+        await ensureCrossOriginIsolation();
+        await hydratePairingFromOpfs();
 
         const root = document.getElementById('phone-root');
         watchIcpProfile((profile) => {
@@ -88,6 +94,7 @@
             linkBadge: document.getElementById('link-badge'),
             contextStrip: document.getElementById('context-strip'),
             controlPanel: document.getElementById('control-panel-body'),
+            vaultPanel: document.getElementById('vault-panel'),
             graphCanvas: document.getElementById('graph-canvas'),
             deckPad: document.getElementById('icp-deck-pad'),
             pairSection,

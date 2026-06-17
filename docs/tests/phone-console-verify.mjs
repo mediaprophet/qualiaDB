@@ -27,6 +27,7 @@ const required = [
     'js/qualia-icp-context.js',
     'js/qualia-icp-host.js',
     'js/qualia-icp-phone.js',
+    'js/qualia-icp-vault.js',
     'css/qualia-icp-layout.css',
     'phone-console.html',
     'phone-console.webmanifest',
@@ -111,6 +112,21 @@ try {
     else fail('defaultRelayBase malformed');
 } catch (e) {
     fail(`defaultRelayBase: ${e.message}`);
+}
+
+try {
+    const {
+        deviceDidFromHash,
+        STANDPOINT_IDENTIFIER,
+        STANDPOINT_VAULT,
+    } = await import(new URL('../js/qualia-icp-vault.js', import.meta.url));
+    const did = deviceDidFromHash('abc123');
+    if (did.startsWith('did:icp:device:')) ok('device DID format');
+    else fail('device DID format');
+    if (STANDPOINT_IDENTIFIER === 2 && STANDPOINT_VAULT === 3) ok('standpoint class constants');
+    else fail('standpoint class constants');
+} catch (e) {
+    fail(`qualia-icp-vault import: ${e.message}`);
 }
 
 console.log('\nphone-console-verify: optional daemon round-trip');
