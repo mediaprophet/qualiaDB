@@ -13,7 +13,8 @@ export async function ensureCrossOriginIsolation(options = {}) {
         return false;
     }
 
-    window.coi = window.coi || { quiet, shouldRegister: () => true, shouldDeregister: () => false };
+    // Never force shouldRegister:true — that overrides the one-shot reload guard in coi-serviceworker.js.
+    window.coi = { quiet, shouldDeregister: () => false, ...window.coi };
 
     await new Promise((resolve, reject) => {
         const s = document.createElement('script');

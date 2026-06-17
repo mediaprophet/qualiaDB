@@ -129,7 +129,8 @@ function bindPortalPick(portal, canvas) {
 }
 
 async function initQualiaPortalLayer() {
-  await ensureCrossOriginIsolation({ quiet: true });
+  // COI is optional (SAB acoustic); do not block portal WASM boot on service-worker reload.
+  ensureCrossOriginIsolation({ quiet: true }).catch(() => {});
   const canvas = $("design-canvas");
   const wrap = $("design-canvas-wrap");
   if (!canvas) throw new Error("canvas missing");

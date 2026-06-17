@@ -40,7 +40,8 @@
     <script>
     (function () {
         if (window.crossOriginIsolated || !('serviceWorker' in navigator)) return;
-        window.coi = { quiet: true, shouldRegister: function () { return true; }, shouldDeregister: function () { return false; } };
+        // Do not override shouldRegister — coi-serviceworker reloads once then stops.
+        window.coi = { quiet: true, shouldDeregister: function () { return false; } };
         var s = document.createElement('script');
         s.src = 'js/coi-serviceworker.js';
         s.async = false;
@@ -579,14 +580,22 @@ LIMIT 100
 </div>
 
 <script type="module">
-    import { bootSpatialPage } from './js/spatial-demo.js';
-
-    bootSpatialPage().catch((err) => {
+    function showSpatialBootError(err) {
         console.error('Spatial demo boot failed:', err);
-        document.getElementById('loading-overlay').style.display = 'none';
-        document.getElementById('error-overlay').classList.remove('hidden');
-        document.getElementById('error-message').textContent = err?.message || String(err);
-    });
+        const loader = document.getElementById('loading-overlay');
+        if (loader) loader.style.display = 'none';
+        const overlay = document.getElementById('error-overlay');
+        if (overlay) overlay.classList.remove('hidden');
+        const msg = document.getElementById('error-message');
+        if (msg) msg.textContent = err?.message || String(err);
+    }
+
+    try {
+        const { bootSpatialPage } = await import('./js/spatial-demo.js');
+        await bootSpatialPage();
+    } catch (err) {
+        showSpatialBootError(err);
+    }
 </script>
 </body>
 </html>

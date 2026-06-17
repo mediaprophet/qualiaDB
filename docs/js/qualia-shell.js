@@ -130,11 +130,21 @@ async function signTensorSliceRequest({
     return bytesToHex(sig);
 }
 
+/** Published portal artefact names (CI copies wasm-pack output → qualia.js + qualia_bg.wasm). */
+function portalPkgUrls() {
+    const base = new URL('../pkg/qualia/', import.meta.url);
+    return {
+        js: new URL('qualia.js', base).href,
+        wasm: new URL('qualia_bg.wasm', base).href,
+    };
+}
+
 export async function loadQualiaPortal(canvas) {
+    const { js, wasm } = portalPkgUrls();
     try {
-        const url = new URL('../pkg/qualia/qualia.js', import.meta.url);
-        const mod = await import(url.href);
-        await mod.default();
+        const mod = await import(js);
+        // wasm-pack embeds qualia_core_db_bg.wasm; Pages publishes qualia_bg.wasm — pass explicitly.
+        await mod.default(wasm);
         if (typeof mod.init_panic_hook === 'function') {
             mod.init_panic_hook();
         }

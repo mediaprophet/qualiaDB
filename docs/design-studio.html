@@ -19,7 +19,7 @@
     <script>
     (function () {
         if (window.crossOriginIsolated || !('serviceWorker' in navigator)) return;
-        window.coi = { quiet: true, shouldRegister: function () { return true; }, shouldDeregister: function () { return false; } };
+        window.coi = { quiet: true, shouldDeregister: function () { return false; } };
         var s = document.createElement('script');
         s.src = 'js/coi-serviceworker.js';
         s.async = false;

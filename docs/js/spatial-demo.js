@@ -598,8 +598,10 @@ if (typeof window !== 'undefined') {
 export async function bootSpatialPage() {
     initSpatialDemo();
 
-    document.getElementById('loading-overlay').style.display = 'none';
-    document.getElementById('main-content').style.display = 'block';
+    const loader = document.getElementById('loading-overlay');
+    const main = document.getElementById('main-content');
+    if (loader) loader.style.display = 'none';
+    if (main) main.style.display = 'block';
     await new Promise((r) => requestAnimationFrame(r));
 
     try {

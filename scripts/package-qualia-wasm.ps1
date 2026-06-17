@@ -47,6 +47,12 @@ foreach ($kv in $map.GetEnumerator()) {
     }
 }
 
+$qualiaJs = Join-Path $DocsPkg "qualia.js"
+if (Test-Path $qualiaJs) {
+    (Get-Content $qualiaJs -Raw) -replace 'qualia_core_db_bg\.wasm', 'qualia_bg.wasm' | Set-Content $qualiaJs -NoNewline
+    Write-Host "Patched qualia.js wasm import -> qualia_bg.wasm"
+}
+
 # Publish friendly package.json for GitHub Pages / Jekyll
 $ver = "0.0.17"
 @{
