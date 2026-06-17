@@ -5,6 +5,7 @@
 import { AmbientViz, bindTelemetrySliders, defaultTelemetry } from './ambient-viz.js';
 import {
     loadQualiaPortal, startPortalLoop, stopPortalLoop, getPortal, getPortalModule,
+    ensureCanvasBackingStore,
     setPortalStandpoint, connectPortalToDaemon, refreshTensorSliceFromDaemon,
     onDaemonLinkState, updateDaemonBadge, getLastDaemonTensorBuffer,
     getDaemonLinkState, DaemonLinkState,
@@ -137,6 +138,7 @@ async function initQualiaLayer() {
     }
 
     const t = debugTime('initQualiaLayer');
+    ensureCanvasBackingStore(canvas);
     const { portal, mod, source } = await loadQualiaPortal(canvas);
     debugLog('initQualiaLayer', { source, hasPortal: !!portal });
     wasm = mod;
@@ -624,7 +626,10 @@ export async function bootSpatialPage() {
         await initQualiaLayer();
         if (!wasm) {
             const module = await import('../playground/qualia_core_db.js');
-            await module.default();
+            const wasmUrl = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url);
+            const wasmResp = await fetch(wasmUrl, { cache: 'no-store' });
+            if (!wasmResp.ok) throw new Error(`playground WASM HTTP ${wasmResp.status}`);
+            await module.default({ module_or_path: wasmResp });
             wasm = module;
             wasmSource = 'qualia-core-db';
         }

@@ -12,3 +12,9 @@ if grep -q "qualia_core_db_bg.wasm" "$JS"; then
 else
   echo "patch-portal-wasm-js: $JS already references qualia_bg.wasm"
 fi
+# wasm-pack may emit a virtual "./qualia_core_db_bg.js" import map key — harmless (in-bundle).
+# Ensure default init never points at the wrong filename after rename.
+if grep -q "qualia_core_db\.js" "$JS"; then
+  sed -i 's/qualia_core_db\.js/qualia.js/g' "$JS"
+  echo "patch-portal-wasm-js: patched glue self-import → qualia.js"
+fi

@@ -14,7 +14,7 @@ import {
 import { defaultTelemetry } from "./ambient-viz.js";
 import { ensureCrossOriginIsolation } from "./qualia-coi.js";
 import { debugEnv, debugError, debugLog, debugTime, debugWarn } from "./qualia-debug.js";
-import { loadQualiaPortal, startPortalLoop } from "./qualia-shell.js";
+import { loadQualiaPortal, startPortalLoop, ensureCanvasBackingStore } from "./qualia-shell.js";
 
 const STORAGE_KEY = "qualia-design-jobs-v1";
 const DESIGN_TYPE = "qualia.design";
@@ -138,6 +138,7 @@ async function initQualiaPortalLayer() {
   const canvas = $("design-canvas");
   const wrap = $("design-canvas-wrap");
   if (!canvas) throw new Error("canvas missing");
+  ensureCanvasBackingStore(canvas, wrap?.clientWidth || 640, wrap?.clientHeight || 420);
 
   const t = debugTime("initQualiaPortalLayer");
   const { portal, mod, source, portalError } = await loadQualiaPortal(canvas);

@@ -752,7 +752,10 @@ impl QualiaPortal {
 
         #[cfg(target_arch = "wasm32")]
         {
-            if self.gpu.is_none() && !self.gpu_init_failed && has_webgpu() {
+            // PortalGpu::try_new uses pollster::block_on; in browser WASM that traps as
+            // "unreachable" (not a catchable Err). Use the canvas2d path until async GPU init lands.
+            let wasm_sync_gpu_ok = false;
+            if self.gpu.is_none() && !self.gpu_init_failed && has_webgpu() && wasm_sync_gpu_ok {
                 let cap = particle_cap_for_mode(mode, 2);
                 match PortalGpu::try_new(canvas, cap) {
                     Ok(mut gpu) => {

@@ -1,4 +1,4 @@
-import wasmInit, * as WasmExports from '../playground/qualia_core_db.js';
+import { initQualiaWasm } from './qualia-wasm-runtime.js';
 import { CATEGORIES, MODALITIES, runModalityDemo, runAllDemos } from './modality-engine.js';
 import { esc } from './logic-demos.js';
 
@@ -29,11 +29,12 @@ const HUE_BTN = {
 };
 
 async function loadWasm() {
-    const url = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url);
-    const resp = await fetch(url, { cache: 'no-store' });
-    if (!resp.ok) throw new Error(`WASM ${resp.status}`);
-    await wasmInit({ module_or_path: resp });
-    return WasmExports;
+    const mod = await initQualiaWasm({
+        jsUrl: new URL('../playground/qualia_core_db.js', import.meta.url).href,
+        wasmUrl: new URL('../playground/qualia_core_db_bg.wasm', import.meta.url).href,
+    });
+    if (mod?.__initError) throw mod.__initError;
+    return mod;
 }
 
 function filteredModalities() {
@@ -138,6 +139,11 @@ function renderStage() {
     const cat = CATEGORIES.find(c => c.id === m.category);
     $('stage-cat').innerHTML = cat ? `<i class="fa-solid ${cat.icon} mr-1"></i>${esc(cat.label)}` : '';
 
+    if (!MOD) {
+        $('stage-output').innerHTML = '<span class="text-rose-400">WASM engine not loaded — refresh the page.</span>';
+        return;
+    }
+
     const result = runModalityDemo(m.id, MOD);
     const out = $('stage-output');
     const viz = $('stage-viz');
@@ -190,6 +196,7 @@ function renderPipeline() {
 }
 
 function runOrchestra() {
+    if (!MOD) return;
     const results = runAllDemos(MOD);
     const ok = results.filter(r => !r.error && r.pass !== false).length;
     $('orchestra-out').innerHTML = `
@@ -218,7 +225,7 @@ async function boot() {
             $('orchestra-out')?.classList.remove('hidden');
             runOrchestra();
         });
-        $('btn-run-stage')?.addEventListener('click', renderStage);
+        $('btn-run-stage')?.addEventListener('click', () => renderStage());
         $('boot-overlay')?.remove();
     } catch (e) {
         console.error(e);

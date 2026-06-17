@@ -131,6 +131,22 @@ async function signTensorSliceRequest({
     return bytesToHex(sig);
 }
 
+/** Set canvas backing store from layout box (CSS 100% does not set width/height attributes). */
+export function ensureCanvasBackingStore(canvas, minW = 640, minH = 360) {
+    if (!canvas) return { w: minW, h: minH };
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(Math.round(rect.width) || minW, 1);
+    const cssH = Math.max(Math.round(rect.height) || minH, 1);
+    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const w = Math.round(cssW * dpr);
+    const h = Math.round(cssH * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+    }
+    return { w, h };
+}
+
 /** Published portal artefact names (CI copies wasm-pack output → qualia.js + qualia_bg.wasm). */
 function portalPkgUrls() {
     const base = new URL('../pkg/qualia/', import.meta.url);
@@ -159,6 +175,7 @@ export async function loadQualiaPortal(canvas) {
             debugLog('init_panic_hook ok');
         }
         portalModule = mod;
+        ensureCanvasBackingStore(canvas);
         portal = new mod.QualiaPortal(canvas);
         const tier = portal.tier?.() ?? -1;
         debugLog('QualiaPortal ready', { source: 'qualia-portal', tier });
@@ -168,18 +185,24 @@ export async function loadQualiaPortal(canvas) {
         portalError = e;
         debugWarn('portal pkg failed, falling back to playground wasm-full', e);
         console.warn('Qualia portal pkg not found, falling back to qualia_core_db.wasm', e);
-        const fallback = new URL('../playground/qualia_core_db.js', import.meta.url).href;
-        debugLog('import fallback', fallback);
-        const mod = await import(fallback);
-        const fallbackWasm = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url).href;
-        const fbResp = await fetch(fallbackWasm, { cache: 'no-store' });
-        if (!fbResp.ok) {
-            throw new Error(`fallback WASM fetch HTTP ${fbResp.status}`);
+        try {
+            const fallback = new URL('../playground/qualia_core_db.js', import.meta.url).href;
+            debugLog('import fallback', fallback);
+            const mod = await import(fallback);
+            const fallbackWasm = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url).href;
+            const fbResp = await fetch(fallbackWasm, { cache: 'no-store' });
+            if (!fbResp.ok) {
+                throw new Error(`fallback WASM fetch HTTP ${fbResp.status}`);
+            }
+            await mod.default({ module_or_path: fbResp });
+            portalModule = mod;
+            t.end({ source: 'qualia-core-db', portal: false });
+            return { portal: null, mod, source: 'qualia-core-db', portalError };
+        } catch (fallbackErr) {
+            portalError = portalError ?? fallbackErr;
+            debugError('portal and playground wasm both failed', { portalError, fallbackErr });
+            throw fallbackErr;
         }
-        await mod.default({ module_or_path: fbResp });
-        portalModule = mod;
-        t.end({ source: 'qualia-core-db', portal: false });
-        return { portal: null, mod, source: 'qualia-core-db', portalError };
     }
 }
 

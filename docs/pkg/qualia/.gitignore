@@ -1,0 +1,6 @@
+# Ignore stale wasm-pack scratch; CI and package-qualia-wasm.ps1 publish qualia.js + qualia_bg.wasm.
+qualia_core_db.js
+qualia_core_db_bg.wasm
+qualia_wasm.js
+qualia_wasm_bg.wasm
+*.tmp
