@@ -13,6 +13,8 @@ $docsReleaseDir = Join-Path $repoRoot (Join-Path "docs/data/schemaorg" $Release)
 $baseName = "schemaorg-$Variant"
 $ntPath = Join-Path $releaseDir "$baseName.nt"
 $q42Path = Join-Path $releaseDir "$baseName.q42"
+$q42LexPath = Join-Path $releaseDir "$baseName.q42.lex"
+$q42BidxPath = Join-Path $releaseDir "$baseName.q42.bidx"
 $rawUrl = "https://raw.githubusercontent.com/schemaorg/schemaorg/main/data/releases/$Release/$baseName.nt"
 
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
@@ -47,6 +49,12 @@ if (Test-Path $q42Path) {
 Write-Host "Syncing benchmark artifacts into docs/data for GitHub Pages and local site testing..." -ForegroundColor Yellow
 Copy-Item -Force $ntPath $docsReleaseDir
 Copy-Item -Force $q42Path $docsReleaseDir
+if (Test-Path $q42LexPath) {
+    Copy-Item -Force $q42LexPath $docsReleaseDir
+}
+if (Test-Path $q42BidxPath) {
+    Copy-Item -Force $q42BidxPath $docsReleaseDir
+}
 
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Green

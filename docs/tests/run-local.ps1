@@ -15,13 +15,17 @@ Set-Location $Root
 Write-Host "=== QualiaDB test runner (0.0.17-dev) ===" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "[1/2] Logic suites (199 tests expected)..." -ForegroundColor Yellow
+Write-Host "[0/3] Suite registry coverage..." -ForegroundColor Yellow
+node docs/tests/verify-coverage.mjs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "[1/3] Logic suites..." -ForegroundColor Yellow
 node docs/tests/run-headless.mjs --mode logic
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if (-not $SkipWasm) {
     Write-Host ""
-    Write-Host "[2/2] WASM suites (352 tests expected)..." -ForegroundColor Yellow
+    Write-Host "[2/3] WASM suites..." -ForegroundColor Yellow
     node docs/tests/run-headless.mjs --mode wasm
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }

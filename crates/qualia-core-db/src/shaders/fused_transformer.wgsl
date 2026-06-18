@@ -7,6 +7,9 @@ struct GemmParams {
     weight_ggml_type: u32,
     weight_row_elems: u32,
     weight_byte_len: u32,
+    n_batch: u32,         // M in M×K×N; 1 = legacy vector×matrix
+    in_row_stride: u32,   // floats between input rows; 0 → n_in
+    out_row_stride: u32,  // floats between output rows; 0 → n_out
 }
 
 @group(0) @binding(0) var<storage, read> input: array<f32>;
@@ -238,13 +241,22 @@ fn dequant_weight(row: u32, col: u32) -> f32 {
 
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let m = global_id.y;
+    let batch = max(params.n_batch, 1u);
+    if m >= batch {
+        return;
+    }
     let i = global_id.x;
     if i >= params.n_out {
         return;
     }
+    let in_stride = select(params.n_in, params.in_row_stride, params.in_row_stride > 0u);
+    let out_stride = select(params.n_out, params.out_row_stride, params.out_row_stride > 0u);
+    let in_base = m * in_stride;
+    let out_base = m * out_stride;
     var sum = 0.0;
     for (var j = 0u; j < params.n_in; j = j + 1u) {
-        sum = sum + dequant_weight(i, j) * input[j];
+        sum = sum + dequant_weight(i, j) * input[in_base + j];
     }
-    output[i] = sum;
+    output[out_base + i] = sum;
 }

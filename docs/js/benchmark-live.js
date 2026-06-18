@@ -1,33 +1,267 @@
 /**
- * Live, WASM-backed implementations for the Benchmark Hub's interactive tabs,
- * plus zero-dependency canvas viewers. Replaces the previous hardcoded /
- * Math.random() simulations: every number here is measured from a real call
- * into qualia_core_db_bg.wasm.
+ * Live, data-backed implementations for the Benchmark Hub's interactive tabs.
  *
- *  - Spatial Math      → geometric_algebra_operation()  + interactive 3D object viewer
- *  - Graph Operations  → parse_turtle_wasm() + compile_query_to_json() + interactive graph
+ * Graph Operations:
+ * - real dataset selection via docs/benchmark-datasets/*.json
+ * - real execute_ntriples_query() timings over flat NQuin bytes
+ * - clickable graph neighborhood explorer
+ *
+ * Spatial Mathematics:
+ * - geometric algebra via WASM
+ * - GeoSPARQL topology via WASM
+ * - spatial encoding / indexing via WASM
+ * - interval algebra fallback clearly labeled until a dedicated WASM export exists
  */
+
+import {
+    decodeFlatDb,
+    fetchManifest,
+    loadDataset,
+    qHash,
+    queriesForManifest,
+} from '../benchmark-dataset-loader.js';
 
 const local = (uri) => String(uri).replace(/[<>]/g, '').split(/[/#]/).filter(Boolean).pop() || uri;
 
-// ───────────────────────────── 3D object viewer ─────────────────────────────
-// Procedural unit meshes: vertices [[x,y,z]…] + edges [[i,j]…].
+function median(values) {
+    if (!values.length) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function percentile(values, p) {
+    if (!values.length) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
+}
+
+function stats(samples) {
+    const mean = samples.reduce((sum, value) => sum + value, 0) / Math.max(samples.length, 1);
+    return {
+        mean,
+        p50: median(samples),
+        p95: percentile(samples, 0.95),
+        min: Math.min(...samples),
+        max: Math.max(...samples),
+    };
+}
+
+function fmtMs(value) {
+    if (!Number.isFinite(value)) return 'n/a';
+    if (value < 0.01) return `${value.toFixed(4)} ms`;
+    if (value < 1) return `${value.toFixed(3)} ms`;
+    return `${value.toFixed(2)} ms`;
+}
+
+function fmtOps(value) {
+    if (!Number.isFinite(value)) return 'n/a';
+    return Math.round(value).toLocaleString();
+}
+
+function shortHash(hashish) {
+    const hex = BigInt(hashish).toString(16).padStart(16, '0');
+    return `0x${hex.slice(0, 8)}…${hex.slice(-4)}`;
+}
+
+function fullHash(hashish) {
+    return `0x${BigInt(hashish).toString(16).padStart(16, '0')}`;
+}
+
+function isHexLabel(value) {
+    return typeof value === 'string' && /^0x[0-9a-f]+$/i.test(value);
+}
+
+function hashFromValue(value) {
+    try { return BigInt(value); } catch { return 0n; }
+}
+
+function decodeMatchLabel(raw, labelMap) {
+    const exact = hashFromValue(raw);
+    const masked = exact & 0x0fffffffffffffffn;
+    return labelMap?.get(exact) ?? labelMap?.get(masked) ?? shortHash(exact);
+}
+
+function decodeMatchEntry(raw, labelMap, kind = 'subject') {
+    if (raw == null || raw === '') {
+        return null;
+    }
+    const exact = hashFromValue(raw);
+    const masked = exact & 0x0fffffffffffffffn;
+    const key = kind === 'object' ? masked : exact;
+    const description = labelMap?.get(exact) ?? labelMap?.get(masked) ?? fullHash(key);
+    return {
+        id: fullHash(key),
+        label: isHexLabel(description) ? shortHash(key) : local(description),
+        description,
+        hash: key,
+    };
+}
+
+function normalizeRenderableTriple(triple) {
+    const subjectHash = triple.subjectHash != null ? BigInt(triple.subjectHash) : null;
+    const predicateHash = triple.predicateHash != null ? BigInt(triple.predicateHash) : null;
+    const objectHash = triple.objectHash != null ? BigInt(triple.objectHash) : null;
+    const objectKey = objectHash != null ? (objectHash & 0x0fffffffffffffffn) : null;
+
+    const subjectDescription = triple.subject ?? (subjectHash != null ? fullHash(subjectHash) : '');
+    const predicateDescription = triple.predicate ?? (predicateHash != null ? fullHash(predicateHash) : '');
+    const objectDescription = triple.object ?? (objectKey != null ? fullHash(objectKey) : '');
+
+    return {
+        ...triple,
+        subjectId: triple.subjectId ?? (subjectHash != null ? fullHash(subjectHash) : String(subjectDescription)),
+        predicateId: triple.predicateId ?? (predicateHash != null ? fullHash(predicateHash) : String(predicateDescription)),
+        objectId: triple.objectId ?? (objectKey != null ? fullHash(objectKey) : String(objectDescription)),
+        subjectLabel: triple.subjectLabel ?? (isHexLabel(subjectDescription) ? shortHash(subjectHash ?? subjectDescription) : local(subjectDescription)),
+        predicateLabel: triple.predicateLabel ?? (isHexLabel(predicateDescription) ? shortHash(predicateHash ?? predicateDescription) : local(predicateDescription)),
+        objectLabel: triple.objectLabel ?? (isHexLabel(objectDescription) ? shortHash(objectKey ?? objectDescription) : local(objectDescription)),
+        subjectDescription,
+        predicateDescription,
+        objectDescription,
+    };
+}
+
+function uniquePush(bucket, value, limit = 24) {
+    if (bucket.length >= limit || bucket.includes(value)) return;
+    bucket.push(value);
+}
+
+function buildNeighborhood(allTriples, focusId, maxNodes = 42, maxEdges = 96) {
+    const nodes = new Map();
+    const edges = [];
+    const frontier = [focusId];
+    const visited = new Set();
+
+    const ensureNode = (id, label, description) => {
+        if (!nodes.has(id)) {
+            nodes.set(id, { id, label: label || local(id), description: description || id });
+        }
+        return nodes.get(id);
+    };
+
+    ensureNode(focusId);
+
+    while (frontier.length && nodes.size < maxNodes && edges.length < maxEdges) {
+        const current = frontier.shift();
+        if (!current || visited.has(current)) continue;
+        visited.add(current);
+
+        for (const triple of allTriples) {
+            if (edges.length >= maxEdges || nodes.size >= maxNodes) break;
+            const touches = triple.subjectId === current || triple.objectId === current;
+            if (!touches) continue;
+            ensureNode(triple.subjectId, triple.subjectLabel, triple.subjectDescription);
+            ensureNode(triple.objectId, triple.objectLabel, triple.objectDescription);
+            edges.push({
+                source: triple.subjectId,
+                target: triple.objectId,
+                label: triple.predicateLabel,
+                raw: triple,
+            });
+            if (!visited.has(triple.subjectId)) frontier.push(triple.subjectId);
+            if (!visited.has(triple.objectId)) frontier.push(triple.objectId);
+        }
+    }
+
+    return {
+        nodes: [...nodes.values()],
+        edges,
+    };
+}
+
+function buildGraphModel(triples) {
+    const byNode = new Map();
+    const nodes = new Set();
+
+    const ensure = (id, label, description) => {
+        if (!byNode.has(id)) {
+            byNode.set(id, { id, label: label || local(id), description: description || id, outbound: [], inbound: [] });
+        }
+        return byNode.get(id);
+    };
+
+    for (const triple of triples) {
+        nodes.add(triple.subjectId);
+        nodes.add(triple.objectId);
+        ensure(triple.subjectId, triple.subjectLabel, triple.subjectDescription).outbound.push(triple);
+        ensure(triple.objectId, triple.objectLabel, triple.objectDescription).inbound.push(triple);
+    }
+
+    return {
+        nodes,
+        byNode,
+    };
+}
+
+function renderInspector(target, model, nodeId) {
+    if (!target) return;
+    if (!model || !nodeId || !model.byNode.has(nodeId)) {
+        target.innerHTML = `<div class="text-sm text-white/45">Click a node in the graph to open its relationship explorer.</div>`;
+        return;
+    }
+
+    const node = model.byNode.get(nodeId);
+    const outbound = node.outbound.slice(0, 20);
+    const inbound = node.inbound.slice(0, 20);
+
+    const listHtml = (triples, dir) => {
+        if (!triples.length) return '<div class="text-white/45 text-sm">None</div>';
+        return `<div class="space-y-2">${triples.map((triple) => `
+            <div class="rounded-xl border border-white/8 bg-black/20 px-3 py-2 text-xs font-mono text-white/75" title="${dir === 'out' ? triple.objectDescription : triple.subjectDescription}">
+                <span class="text-emerald-300" title="${triple.predicateDescription}">${triple.predicateLabel}</span>
+                <span class="text-white/35 mx-2">${dir === 'out' ? '→' : '←'}</span>
+                <span>${dir === 'out' ? triple.objectLabel : triple.subjectLabel}</span>
+            </div>`).join('')}</div>`;
+    };
+
+    target.innerHTML = `
+        <div class="flex items-center justify-between gap-4 flex-wrap mb-4">
+            <div>
+                <div class="text-xs uppercase tracking-[2px] text-slate-500 mb-1">Node Explorer</div>
+                <div class="text-lg font-semibold text-emerald-300">${node.label}</div>
+                <div class="text-xs text-white/45 font-mono">${node.description}</div>
+            </div>
+            <div class="flex gap-4 text-xs text-white/60">
+                <div><span class="text-emerald-400 font-semibold">${node.outbound.length}</span> outbound</div>
+                <div><span class="text-cyan-400 font-semibold">${node.inbound.length}</span> inbound</div>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <div class="text-sm font-semibold text-emerald-400 mb-2">Outgoing relationships</div>
+                ${listHtml(outbound, 'out')}
+            </div>
+            <div>
+                <div class="text-sm font-semibold text-cyan-400 mb-2">Incoming relationships</div>
+                ${listHtml(inbound, 'in')}
+            </div>
+        </div>
+        ${(node.outbound.length > outbound.length || node.inbound.length > inbound.length)
+            ? `<div class="text-[11px] text-white/35 mt-3">Showing the first 20 edges in each direction.</div>`
+            : ''}`;
+}
+
+// ------------------------------ 3D object viewer ------------------------------
+
 function buildMeshes() {
     const phi = (1 + Math.sqrt(5)) / 2;
     const norm = (v) => { const l = Math.hypot(...v) || 1; return v.map((c) => c / l); };
     const edgesByDist = (verts, tol) => {
         const e = [];
         let min = Infinity;
-        for (let i = 0; i < verts.length; i++)
+        for (let i = 0; i < verts.length; i++) {
             for (let j = i + 1; j < verts.length; j++) {
                 const d = Math.hypot(verts[i][0] - verts[j][0], verts[i][1] - verts[j][1], verts[i][2] - verts[j][2]);
                 if (d < min) min = d;
             }
-        for (let i = 0; i < verts.length; i++)
+        }
+        for (let i = 0; i < verts.length; i++) {
             for (let j = i + 1; j < verts.length; j++) {
                 const d = Math.hypot(verts[i][0] - verts[j][0], verts[i][1] - verts[j][1], verts[i][2] - verts[j][2]);
                 if (d <= min * (1 + tol)) e.push([i, j]);
             }
+        }
         return e;
     };
 
@@ -40,8 +274,10 @@ function buildMeshes() {
         [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1],
     ].map(norm);
 
-    // UV sphere
-    const sVerts = []; const sEdges = []; const rings = 9; const seg = 14;
+    const sVerts = [];
+    const sEdges = [];
+    const rings = 9;
+    const seg = 14;
     for (let i = 0; i <= rings; i++) {
         const lat = Math.PI * (i / rings - 0.5);
         for (let j = 0; j < seg; j++) {
@@ -49,15 +285,20 @@ function buildMeshes() {
             sVerts.push([Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon)]);
         }
     }
-    for (let i = 0; i <= rings; i++)
+    for (let i = 0; i <= rings; i++) {
         for (let j = 0; j < seg; j++) {
             const a = i * seg + j;
-            if (j < seg - 1) sEdges.push([a, a + 1]); else sEdges.push([a, i * seg]);
+            sEdges.push([a, j < seg - 1 ? a + 1 : i * seg]);
             if (i < rings) sEdges.push([a, a + seg]);
         }
+    }
 
-    // Torus
-    const tVerts = []; const tEdges = []; const R = 0.7; const r = 0.3; const tu = 16; const tv = 9;
+    const tVerts = [];
+    const tEdges = [];
+    const R = 0.7;
+    const r = 0.3;
+    const tu = 16;
+    const tv = 9;
     for (let i = 0; i < tu; i++) {
         const u = 2 * Math.PI * (i / tu);
         for (let j = 0; j < tv; j++) {
@@ -65,12 +306,13 @@ function buildMeshes() {
             tVerts.push([(R + r * Math.cos(v)) * Math.cos(u), r * Math.sin(v), (R + r * Math.cos(v)) * Math.sin(u)]);
         }
     }
-    for (let i = 0; i < tu; i++)
+    for (let i = 0; i < tu; i++) {
         for (let j = 0; j < tv; j++) {
             const a = i * tv + j;
             tEdges.push([a, i * tv + ((j + 1) % tv)]);
             tEdges.push([a, ((i + 1) % tu) * tv + j]);
         }
+    }
 
     return {
         tetrahedron: { verts: tetra, edges: edgesByDist(tetra, 0.1) },
@@ -88,8 +330,11 @@ export class Object3DViewer {
         this.ctx = canvas.getContext('2d');
         this.meshes = buildMeshes();
         this.mesh = this.meshes.icosahedron;
-        this.yaw = 0.6; this.pitch = -0.4; this.zoom = 1;
-        this.spin = true; this.dragging = false;
+        this.yaw = 0.6;
+        this.pitch = -0.4;
+        this.zoom = 1;
+        this.spin = true;
+        this.dragging = false;
         this._bind();
         this._loop = this._loop.bind(this);
         requestAnimationFrame(this._loop);
@@ -98,24 +343,46 @@ export class Object3DViewer {
     setSpin(on) { this.spin = on; }
     _bind() {
         const c = this.canvas;
-        let lx = 0, ly = 0;
-        c.style.touchAction = 'none'; c.style.cursor = 'grab';
-        c.addEventListener('pointerdown', (e) => { this.dragging = true; this.spin = false; lx = e.clientX; ly = e.clientY; c.setPointerCapture(e.pointerId); c.style.cursor = 'grabbing'; });
+        let lx = 0;
+        let ly = 0;
+        c.style.touchAction = 'none';
+        c.style.cursor = 'grab';
+        c.addEventListener('pointerdown', (e) => {
+            this.dragging = true;
+            this.spin = false;
+            lx = e.clientX;
+            ly = e.clientY;
+            c.setPointerCapture(e.pointerId);
+            c.style.cursor = 'grabbing';
+        });
         c.addEventListener('pointermove', (e) => {
             if (!this.dragging) return;
-            this.yaw += (e.clientX - lx) * 0.01; this.pitch += (e.clientY - ly) * 0.01;
+            this.yaw += (e.clientX - lx) * 0.01;
+            this.pitch += (e.clientY - ly) * 0.01;
             this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch));
-            lx = e.clientX; ly = e.clientY;
+            lx = e.clientX;
+            ly = e.clientY;
         });
-        const end = () => { this.dragging = false; c.style.cursor = 'grab'; };
+        const end = () => {
+            this.dragging = false;
+            c.style.cursor = 'grab';
+        };
         c.addEventListener('pointerup', end);
         c.addEventListener('pointercancel', end);
-        c.addEventListener('wheel', (e) => { e.preventDefault(); this.zoom = Math.max(0.4, Math.min(3, this.zoom * (e.deltaY < 0 ? 1.1 : 0.9))); }, { passive: false });
+        c.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            this.zoom = Math.max(0.4, Math.min(3, this.zoom * (e.deltaY < 0 ? 1.1 : 0.9)));
+        }, { passive: false });
     }
     _resize() {
-        const c = this.canvas; const dpr = window.devicePixelRatio || 1;
-        const w = c.clientWidth || 360; const h = c.clientHeight || 300;
-        if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+        const c = this.canvas;
+        const dpr = window.devicePixelRatio || 1;
+        const w = c.clientWidth || 360;
+        const h = c.clientHeight || 300;
+        if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+            c.width = Math.round(w * dpr);
+            c.height = Math.round(h * dpr);
+        }
         return { w, h, dpr };
     }
     _loop() {
@@ -124,212 +391,825 @@ export class Object3DViewer {
         if (this.spin && !this.dragging) this.yaw += 0.006;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, w, h);
-        const cx = w / 2, cy = h / 2, scale = Math.min(w, h) * 0.36 * this.zoom;
-        const cy_ = Math.cos(this.yaw), sy = Math.sin(this.yaw), cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
+        const cx = w / 2;
+        const cy = h / 2;
+        const scale = Math.min(w, h) * 0.36 * this.zoom;
+        const cy_ = Math.cos(this.yaw);
+        const sy = Math.sin(this.yaw);
+        const cp = Math.cos(this.pitch);
+        const sp = Math.sin(this.pitch);
         const proj = this.mesh.verts.map(([x, y, z]) => {
-            let X = x * cy_ - z * sy, Z = x * sy + z * cy_;
-            let Y = y * cp - Z * sp; Z = y * sp + Z * cp;
+            let X = x * cy_ - z * sy;
+            let Z = x * sy + z * cy_;
+            let Y = y * cp - Z * sp;
+            Z = y * sp + Z * cp;
             const persp = 3 / (3 + Z);
             return [cx + X * scale * persp, cy + Y * scale * persp, Z];
         });
         ctx.lineWidth = 1.2;
         for (const [i, j] of this.mesh.edges) {
-            const a = proj[i], b = proj[j];
+            const a = proj[i];
+            const b = proj[j];
             const depth = (a[2] + b[2]) / 2;
             const t = Math.max(0, Math.min(1, (depth + 1.4) / 2.8));
             ctx.strokeStyle = `rgba(52,211,153,${0.25 + t * 0.6})`;
-            ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(a[0], a[1]);
+            ctx.lineTo(b[0], b[1]);
+            ctx.stroke();
         }
         for (const p of proj) {
             const t = Math.max(0, Math.min(1, (p[2] + 1.4) / 2.8));
             ctx.fillStyle = `rgba(96,165,250,${0.4 + t * 0.6})`;
-            ctx.beginPath(); ctx.arc(p[0], p[1], 1.5 + t * 1.8, 0, 7); ctx.fill();
+            ctx.beginPath();
+            ctx.arc(p[0], p[1], 1.5 + t * 1.8, 0, 7);
+            ctx.fill();
         }
         requestAnimationFrame(this._loop);
     }
 }
 
-// ───────────────────────────── graph viewer ─────────────────────────────
+// ------------------------------- Graph viewer --------------------------------
+
 export class GraphViewer {
     constructor(canvas) {
-        this.canvas = canvas; this.ctx = canvas.getContext('2d');
-        this.nodes = []; this.edges = [];
-        this.ox = 0; this.oy = 0; this.scale = 1;
-        this.drag = null; this.pan = false;
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.nodes = [];
+        this.edges = [];
+        this.nodeMap = new Map();
+        this.ox = 0;
+        this.oy = 0;
+        this.scale = 1;
+        this.drag = null;
+        this.pan = false;
+        this.selectedId = null;
+        this.onNodeSelect = null;
+        this.pointerMoved = false;
         this._bind();
         this._loop = this._loop.bind(this);
         requestAnimationFrame(this._loop);
     }
-    setData(triples) {
-        const idx = new Map();
-        const node = (uri) => {
-            if (!idx.has(uri)) { idx.set(uri, this.nodes.length); this.nodes.push({ id: uri, label: local(uri), x: (Math.random() - 0.5) * 360, y: (Math.random() - 0.5) * 360, vx: 0, vy: 0 }); }
-            return idx.get(uri);
-        };
-        this.nodes = []; this.edges = [];
-        for (const t of triples) {
-            const s = node(t.subject), o = node(t.object);
-            this.edges.push({ s, o, label: local(t.predicate) });
+    setNodeSelectHandler(handler) {
+        this.onNodeSelect = handler;
+    }
+    setData(graph) {
+        const source = Array.isArray(graph) ? {
+            nodes: [...new Map(graph.flatMap((triple) => [
+                [triple.subjectId, { id: triple.subjectId, label: triple.subjectLabel, description: triple.subjectDescription }],
+                [triple.objectId, { id: triple.objectId, label: triple.objectLabel, description: triple.objectDescription }],
+            ])).values()],
+            edges: graph.map((triple) => ({ source: triple.subjectId, target: triple.objectId, label: triple.predicateLabel, raw: triple })),
+        } : graph;
+        this.nodes = [];
+        this.edges = source?.edges ? [...source.edges] : [];
+        this.nodeMap = new Map();
+        for (const baseNode of source?.nodes ?? []) {
+            const node = {
+                id: baseNode.id,
+                label: baseNode.label ?? local(baseNode.id),
+                description: baseNode.description ?? baseNode.id,
+                x: (Math.random() - 0.5) * 360,
+                y: (Math.random() - 0.5) * 360,
+                vx: 0,
+                vy: 0,
+            };
+            this.nodes.push(node);
+            this.nodeMap.set(node.id, node);
+        }
+        this.selectedId = this.nodes[0]?.id ?? null;
+        if (this.selectedId && this.onNodeSelect) {
+            this.onNodeSelect(this.selectedId);
         }
     }
     _toScreen(p, w, h) { return [w / 2 + (p.x + this.ox) * this.scale, h / 2 + (p.y + this.oy) * this.scale]; }
+    _findNodeAt(mx, my, w, h) {
+        for (const node of this.nodes) {
+            const [sx, sy] = this._toScreen(node, w, h);
+            if (Math.hypot(mx - sx, my - sy) < 14) return node;
+        }
+        return null;
+    }
     _bind() {
-        const c = this.canvas; let lx = 0, ly = 0;
-        c.style.touchAction = 'none'; c.style.cursor = 'grab';
+        const c = this.canvas;
+        let lx = 0;
+        let ly = 0;
+        c.style.touchAction = 'none';
+        c.style.cursor = 'grab';
         c.addEventListener('pointerdown', (e) => {
-            const r = c.getBoundingClientRect(); const w = c.clientWidth, h = c.clientHeight;
-            const mx = e.clientX - r.left, my = e.clientY - r.top;
-            this.drag = null;
-            for (const n of this.nodes) { const [sx, sy] = this._toScreen(n, w, h); if (Math.hypot(mx - sx, my - sy) < 14) { this.drag = n; break; } }
-            this.pan = !this.drag; lx = e.clientX; ly = e.clientY; c.setPointerCapture(e.pointerId); c.style.cursor = 'grabbing';
+            const r = c.getBoundingClientRect();
+            const w = c.clientWidth;
+            const h = c.clientHeight;
+            const mx = e.clientX - r.left;
+            const my = e.clientY - r.top;
+            this.drag = this._findNodeAt(mx, my, w, h);
+            this.pan = !this.drag;
+            this.pointerMoved = false;
+            lx = e.clientX;
+            ly = e.clientY;
+            c.setPointerCapture(e.pointerId);
+            c.style.cursor = 'grabbing';
         });
         c.addEventListener('pointermove', (e) => {
-            const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY;
-            if (this.drag) { this.drag.x += dx / this.scale; this.drag.y += dy / this.scale; this.drag.vx = 0; this.drag.vy = 0; }
-            else if (this.pan) { this.ox += dx / this.scale; this.oy += dy / this.scale; }
+            const r = c.getBoundingClientRect();
+            const w = c.clientWidth;
+            const h = c.clientHeight;
+            const hoverNode = this._findNodeAt(e.clientX - r.left, e.clientY - r.top, w, h);
+            c.title = hoverNode ? hoverNode.description : '';
+            const dx = e.clientX - lx;
+            const dy = e.clientY - ly;
+            if (Math.abs(dx) + Math.abs(dy) > 2) this.pointerMoved = true;
+            lx = e.clientX;
+            ly = e.clientY;
+            if (this.drag) {
+                this.drag.x += dx / this.scale;
+                this.drag.y += dy / this.scale;
+                this.drag.vx = 0;
+                this.drag.vy = 0;
+            } else if (this.pan) {
+                this.ox += dx / this.scale;
+                this.oy += dy / this.scale;
+            }
         });
-        const end = () => { this.drag = null; this.pan = false; c.style.cursor = 'grab'; };
-        c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
-        c.addEventListener('wheel', (e) => { e.preventDefault(); this.scale = Math.max(0.3, Math.min(3, this.scale * (e.deltaY < 0 ? 1.1 : 0.9))); }, { passive: false });
+        c.addEventListener('pointerup', (e) => {
+            const r = c.getBoundingClientRect();
+            const w = c.clientWidth;
+            const h = c.clientHeight;
+            const mx = e.clientX - r.left;
+            const my = e.clientY - r.top;
+            const clicked = this._findNodeAt(mx, my, w, h);
+            if (!this.pointerMoved && clicked) {
+                this.selectedId = clicked.id;
+                this.onNodeSelect?.(clicked.id);
+            }
+            this.drag = null;
+            this.pan = false;
+            c.style.cursor = 'grab';
+        });
+        c.addEventListener('pointercancel', () => {
+            this.drag = null;
+            this.pan = false;
+            c.style.cursor = 'grab';
+            c.title = '';
+        });
+        c.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            this.scale = Math.max(0.3, Math.min(3, this.scale * (e.deltaY < 0 ? 1.1 : 0.9)));
+        }, { passive: false });
     }
     _physics() {
         const N = this.nodes;
         for (let i = 0; i < N.length; i++) {
             const a = N[i];
             for (let j = i + 1; j < N.length; j++) {
-                const b = N[j]; let dx = a.x - b.x, dy = a.y - b.y; let d2 = dx * dx + dy * dy || 1; const f = 6000 / d2;
-                const d = Math.sqrt(d2); const ux = dx / d, uy = dy / d;
-                a.vx += ux * f; a.vy += uy * f; b.vx -= ux * f; b.vy -= uy * f;
+                const b = N[j];
+                const dx = a.x - b.x;
+                const dy = a.y - b.y;
+                const d2 = dx * dx + dy * dy || 1;
+                const f = 6000 / d2;
+                const d = Math.sqrt(d2);
+                const ux = dx / d;
+                const uy = dy / d;
+                a.vx += ux * f;
+                a.vy += uy * f;
+                b.vx -= ux * f;
+                b.vy -= uy * f;
             }
-            a.vx -= a.x * 0.004; a.vy -= a.y * 0.004; // gentle centering
+            a.vx -= a.x * 0.004;
+            a.vy -= a.y * 0.004;
         }
-        for (const e of this.edges) {
-            const a = N[e.s], b = N[e.o]; const dx = b.x - a.x, dy = b.y - a.y; const d = Math.hypot(dx, dy) || 1;
-            const f = (d - 120) * 0.02; const ux = dx / d, uy = dy / d;
-            a.vx += ux * f; a.vy += uy * f; b.vx -= ux * f; b.vy -= uy * f;
+        for (const edge of this.edges) {
+            const a = this.nodeMap.get(edge.source);
+            const b = this.nodeMap.get(edge.target);
+            if (!a || !b) continue;
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const d = Math.hypot(dx, dy) || 1;
+            const f = (d - 120) * 0.02;
+            const ux = dx / d;
+            const uy = dy / d;
+            a.vx += ux * f;
+            a.vy += uy * f;
+            b.vx -= ux * f;
+            b.vy -= uy * f;
         }
-        for (const n of N) { if (n === this.drag) continue; n.vx *= 0.85; n.vy *= 0.85; n.x += n.vx; n.y += n.vy; }
+        for (const node of N) {
+            if (node === this.drag) continue;
+            node.vx *= 0.85;
+            node.vy *= 0.85;
+            node.x += node.vx;
+            node.y += node.vy;
+        }
     }
     _loop() {
-        const c = this.canvas; const dpr = window.devicePixelRatio || 1;
-        const w = c.clientWidth || 360, h = c.clientHeight || 300;
-        if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
-        const ctx = this.ctx; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+        const c = this.canvas;
+        const dpr = window.devicePixelRatio || 1;
+        const w = c.clientWidth || 360;
+        const h = c.clientHeight || 300;
+        if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+            c.width = Math.round(w * dpr);
+            c.height = Math.round(h * dpr);
+        }
+        const ctx = this.ctx;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
         if (this.nodes.length) this._physics();
-        ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(148,163,184,0.4)'; ctx.font = '10px monospace';
-        for (const e of this.edges) {
-            const [ax, ay] = this._toScreen(this.nodes[e.s], w, h); const [bx, by] = this._toScreen(this.nodes[e.o], w, h);
-            ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
-            ctx.fillStyle = 'rgba(148,163,184,0.65)'; ctx.fillText(e.label, (ax + bx) / 2 + 3, (ay + by) / 2 - 2);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(148,163,184,0.35)';
+        ctx.font = '10px monospace';
+        for (const edge of this.edges) {
+            const a = this.nodeMap.get(edge.source);
+            const b = this.nodeMap.get(edge.target);
+            if (!a || !b) continue;
+            const [ax, ay] = this._toScreen(a, w, h);
+            const [bx, by] = this._toScreen(b, w, h);
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(bx, by);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(148,163,184,0.65)';
+            ctx.fillText(edge.label, (ax + bx) / 2 + 3, (ay + by) / 2 - 2);
         }
-        for (const n of this.nodes) {
-            const [x, y] = this._toScreen(n, w, h);
-            ctx.fillStyle = 'rgba(52,211,153,0.9)'; ctx.beginPath(); ctx.arc(x, y, 6, 0, 7); ctx.fill();
-            ctx.fillStyle = '#e2e8f0'; ctx.font = '11px sans-serif'; ctx.fillText(n.label, x + 9, y + 4);
+        for (const node of this.nodes) {
+            const [x, y] = this._toScreen(node, w, h);
+            const selected = node.id === this.selectedId;
+            ctx.fillStyle = selected ? 'rgba(250,204,21,0.95)' : 'rgba(52,211,153,0.9)';
+            ctx.beginPath();
+            ctx.arc(x, y, selected ? 7.5 : 6, 0, 7);
+            ctx.fill();
+            ctx.fillStyle = selected ? '#fde68a' : '#e2e8f0';
+            ctx.font = selected ? 'bold 11px sans-serif' : '11px sans-serif';
+            ctx.fillText(node.label, x + 10, y + 4);
         }
-        if (!this.nodes.length) { ctx.fillStyle = 'rgba(148,163,184,0.5)'; ctx.fillText('Run a graph operation to render the graph…', 16, h / 2); }
+        if (!this.nodes.length) {
+            ctx.fillStyle = 'rgba(148,163,184,0.5)';
+            ctx.fillText('Run a graph operation to render the graph…', 16, h / 2);
+        }
         requestAnimationFrame(this._loop);
     }
 }
 
-// ───────────────────────────── benchmark runners ─────────────────────────────
-const SPATIAL_OPS = ['geo', 'inner', 'outer', 'reverse'];
-function randomMultivector() { return Array.from({ length: 8 }, () => Math.round((Math.random() * 4 - 2) * 100) / 100); }
+// --------------------------- Graph benchmark logic ---------------------------
 
-/** Real geometric-algebra benchmark via geometric_algebra_operation(). */
-export function runSpatialLive({ wasm, charts, output, count }) {
-    if (!wasm?.geometric_algebra_operation) { if (output) output.textContent = 'WASM geometric_algebra_operation unavailable.'; return null; }
-    const iters = Math.max(100, Math.min(count || 10000, 500000));
-    const perfByOp = {}; const sample = {};
-    for (const op of SPATIAL_OPS) {
-        const a = randomMultivector(), b = randomMultivector();
-        const payload = JSON.stringify({ a, b, op });
-        // warm
-        sample[op] = JSON.parse(wasm.geometric_algebra_operation(payload));
-        const t0 = performance.now();
-        for (let i = 0; i < iters; i++) wasm.geometric_algebra_operation(payload);
-        const dt = performance.now() - t0;
-        perfByOp[op] = { opsPerSec: Math.round(iters / (dt / 1000)), msPer: dt / iters };
-    }
-    if (charts?.spatialPerformance) {
-        charts.spatialPerformance.data.labels = SPATIAL_OPS.map((o) => o.toUpperCase());
-        charts.spatialPerformance.data.datasets[0].label = 'Ops/sec (measured)';
-        charts.spatialPerformance.data.datasets[0].data = SPATIAL_OPS.map((o) => perfByOp[o].opsPerSec);
-        charts.spatialPerformance.update();
-    }
-    if (charts?.spatialScaling) {
-        const scales = [1000, 5000, iters];
-        const lat = scales.map((s) => { const p = JSON.stringify({ a: randomMultivector(), b: randomMultivector(), op: 'geo' }); const t0 = performance.now(); for (let i = 0; i < s; i++) wasm.geometric_algebra_operation(p); return (performance.now() - t0) / s; });
-        charts.spatialScaling.data.labels = scales.map((s) => `${s.toLocaleString()}×`);
-        charts.spatialScaling.data.datasets[0].label = 'ms / op (measured)';
-        charts.spatialScaling.data.datasets[0].data = lat;
-        charts.spatialScaling.update();
-    }
-    const geo = sample.geo;
-    if (output) {
-        output.textContent =
-            `✓ Geometric algebra benchmark (REAL — geometric_algebra_operation)\n` +
-            `Iterations per op: ${iters.toLocaleString()}\n` +
-            SPATIAL_OPS.map((o) => `  ${o.padEnd(6)} ${perfByOp[o].opsPerSec.toLocaleString().padStart(12)} ops/sec  (${perfByOp[o].msPer.toFixed(5)} ms/op)`).join('\n') +
-            `\n\nSample G(3,0,0) product (geo):\n  a∘b = [${geo.result.map((n) => Number(n).toFixed(2)).join(', ')}]\n  grades = [${geo.grades.map((n) => Number(n).toFixed(3)).join(', ')}]  compute_ops=${geo.compute_ops}`;
-    }
-    return { perfByOp, sample };
-}
-
-const SAMPLE_TURTLE = `@prefix f: <http://qualia.dev/foaf/> .
-f:Alice f:knows f:Bob . f:Alice f:knows f:Carol . f:Bob f:knows f:Dave .
-f:Carol f:knows f:Dave . f:Dave f:knows f:Erin . f:Erin f:knows f:Alice .
-f:Alice f:topic f:Graphs . f:Bob f:topic f:Graphs . f:Carol f:topic f:Spatial .
-f:Dave f:topic f:Tensors . f:Erin f:topic f:Spatial . f:Graphs f:partOf f:Qualia .
-f:Spatial f:partOf f:Qualia . f:Tensors f:partOf f:Qualia .`;
-
-const GRAPH_QUERIES = {
-    point: '?s f:topic f:Graphs',
-    twohop: '?s f:knows ?m . ?m f:knows ?o',
-    filter: '?s f:partOf f:Qualia',
-    ingest: '?s ?p ?o',
+const GRAPH_DATASETS = {
+    'synthetic-10k': {
+        manifestId: 'synthetic-10k',
+        storageFormat: 'synthetic',
+        label: 'Synthetic 10K triples',
+    },
+    'schemaorg-30': {
+        manifestId: 'schemaorg-30-current-https',
+        storageFormat: 'nt',
+        fallbackStorageFormats: ['q42'],
+        label: 'Schema.org 30.0 current HTTPS',
+    },
+    'wikidata-sample': {
+        unavailable: 'Wikidata sample is not shipped in this repo yet, so this selector is disabled instead of pretending to run it.',
+    },
 };
 
-/** Real graph benchmark via parse_turtle_wasm() + compile_query_to_json(). */
-export function runGraphLive({ wasm, charts, output, viewer, operation }) {
-    if (!wasm?.parse_turtle_wasm || !wasm?.compile_query_to_json) { if (output) output.textContent = 'WASM graph functions unavailable.'; return null; }
-    // Real ingestion: parse Turtle → quins (measured).
-    const t0 = performance.now();
-    let triples = wasm.parse_turtle_wasm(SAMPLE_TURTLE);
-    const ingestMs = performance.now() - t0;
-    if (typeof triples === 'string') triples = JSON.parse(triples);
-    if (viewer) viewer.setData(triples);
+const GRAPH_OPS = ['point', 'twohop', 'filter', 'ingest'];
+const graphManifestCache = new Map();
+const graphDatasetCache = new Map();
 
-    // Real query compilation timing for each pattern (measured, many iters).
-    const compileMs = {}; let lastPlan = null;
-    for (const [name, q] of Object.entries(GRAPH_QUERIES)) {
-        const iters = 5000; const t = performance.now();
-        for (let i = 0; i < iters; i++) lastPlan = wasm.compile_query_to_json(q);
-        compileMs[name] = (performance.now() - t) / iters;
+async function getManifest(manifestId) {
+    if (!graphManifestCache.has(manifestId)) {
+        graphManifestCache.set(manifestId, await fetchManifest(manifestId));
     }
+    return graphManifestCache.get(manifestId);
+}
+
+async function getDatasetProfile(selection) {
+    const config = GRAPH_DATASETS[selection];
+    if (!config) throw new Error(`Unknown graph dataset: ${selection}`);
+    if (config.unavailable) return { unavailable: config.unavailable };
+    const manifest = await getManifest(config.manifestId);
+    const candidateFormats = [config.storageFormat, ...(config.fallbackStorageFormats || [])];
+    for (const format of candidateFormats) {
+        const cacheKey = `${selection}:${format}`;
+        if (graphDatasetCache.has(cacheKey)) {
+            return graphDatasetCache.get(cacheKey);
+        }
+        try {
+            const dataset = await loadDataset(manifest, format);
+            const profile = {
+                config,
+                manifest,
+                dataset,
+                storageFormat: format,
+                queries: queriesForManifest(manifest, selection),
+            };
+            graphDatasetCache.set(cacheKey, profile);
+            return profile;
+        } catch (error) {
+            if (format === candidateFormats[candidateFormats.length - 1]) throw error;
+        }
+    }
+}
+
+function _graphDatasetMetaTextLegacy(selection, profile) {
+    if (!profile) return '';
+    if (profile.unavailable) return profile.unavailable;
+    const info = profile.manifest.dataset_info || {};
+    return `${profile.config.label} · ${profile.dataset.label} · ${profile.dataset.quinCount.toLocaleString()} quins · source ${info.source_format || profile.dataset.format}`;
+}
+
+function graphDatasetMetaText(selection, profile) {
+    if (!profile) return '';
+    if (profile.unavailable) return profile.unavailable;
+    const info = profile.manifest.dataset_info || {};
+    const formatNote = profile.storageFormat !== profile.config.storageFormat
+        ? ` · fallback ${profile.storageFormat.toUpperCase()}`
+        : '';
+    return `${profile.config.label} · ${profile.dataset.label} · ${profile.dataset.quinCount.toLocaleString()} quins · source ${info.source_format || profile.dataset.format}${formatNote}`;
+}
+
+export async function initializeGraphBenchmarkUi() {
+    const datasetSelect = document.getElementById('graph-dataset');
+    const meta = document.getElementById('graph-dataset-meta');
+    if (!datasetSelect) return;
+    for (const option of [...datasetSelect.options]) {
+        const config = GRAPH_DATASETS[option.value];
+        if (config?.unavailable) {
+            option.disabled = true;
+            option.textContent = `${option.textContent} (not bundled)`;
+        }
+    }
+    const selection = datasetSelect.value;
+    const profile = await getDatasetProfile(selection);
+    if (meta) meta.textContent = graphDatasetMetaText(selection, profile);
+}
+
+async function measureAsyncSeries(runs, fn) {
+    const latencies = [];
+    const throughputs = [];
+    let lastSummary = null;
+    for (let i = 0; i < runs; i++) {
+        const t0 = performance.now();
+        lastSummary = await fn(i);
+        const dt = performance.now() - t0;
+        latencies.push(dt);
+        throughputs.push(dt > 0 ? 1000 / dt : 0);
+    }
+    return {
+        latencies,
+        throughputs,
+        summary: stats(latencies),
+        lastSummary,
+    };
+}
+
+function decodeResultMatches(matches, labelMap) {
+    return matches.map((match) => {
+        const subject = decodeMatchEntry(match.s, labelMap, 'subject');
+        const predicate = decodeMatchEntry(match.p, labelMap, 'predicate');
+        const object = decodeMatchEntry(match.o, labelMap, 'object');
+        return {
+            subject: subject?.description ?? null,
+            predicate: predicate?.description ?? null,
+            object: object?.description ?? null,
+            subjectLabel: subject?.label ?? null,
+            predicateLabel: predicate?.label ?? null,
+            objectLabel: object?.label ?? null,
+            subjectId: subject?.id ?? null,
+            predicateId: predicate?.id ?? null,
+            objectId: object?.id ?? null,
+            subjectHash: match.s == null || match.s === '' ? null : hashFromValue(match.s),
+            predicateHash: match.p == null || match.p === '' ? null : hashFromValue(match.p),
+            objectHash: match.o == null || match.o === '' ? null : hashFromValue(match.o),
+        };
+    });
+}
+
+function runSingleQuery(wasm, query, db, maxResults = 128) {
+    const raw = wasm.execute_ntriples_query(query, db, maxResults);
+    const parsed = JSON.parse(raw);
+    if (parsed.error) throw new Error(parsed.error);
+    return parsed;
+}
+
+function graphOperationLabel(op) {
+    return op === 'twohop' ? 'Two-hop' : op === 'ingest' ? 'Ingest' : op[0].toUpperCase() + op.slice(1);
+}
+
+function buildRenderableTriples(dataset, preferredFocusId = null) {
+    if (dataset.triples?.length) return dataset.triples.map(normalizeRenderableTriple);
+
+    const initialLimit = Math.min(dataset.quinCount, 2400);
+    const initialTriples = decodeFlatDb(dataset.db, dataset.labelMap, initialLimit).map(normalizeRenderableTriple);
+    if (!preferredFocusId || initialLimit >= dataset.quinCount) return initialTriples;
+
+    const hasPreferredFocus = initialTriples.some((triple) =>
+        triple.subjectId === preferredFocusId || triple.objectId === preferredFocusId
+    );
+    if (hasPreferredFocus) return initialTriples;
+
+    return decodeFlatDb(dataset.db, dataset.labelMap, dataset.quinCount).map(normalizeRenderableTriple);
+}
+
+function chooseFocusNode(opResults, fallbackTriple) {
+    for (const key of ['point', 'twohop', 'filter']) {
+        const result = opResults[key];
+        const first = result?.lastSummary?.decodedMatches?.[0];
+        if (first?.subjectId) return first.subjectId;
+        if (first?.objectId) return first.objectId;
+    }
+    return fallbackTriple?.subjectId || null;
+}
+
+export async function runGraphLive({ wasm, charts, output, viewer, operation, datasetId, inspectorTarget }) {
+    if (typeof wasm?.execute_ntriples_query !== 'function') {
+        if (output) output.textContent = 'WASM execute_ntriples_query unavailable.';
+        return null;
+    }
+
+    const selection = datasetId || document.getElementById('graph-dataset')?.value || 'synthetic-10k';
+    const profile = await getDatasetProfile(selection);
+    if (profile.unavailable) {
+        if (output) output.textContent = profile.unavailable;
+        return null;
+    }
+
+    const meta = document.getElementById('graph-dataset-meta');
+    if (meta) meta.textContent = graphDatasetMetaText(selection, profile);
+
+    const { manifest, dataset, queries, config } = profile;
+    const chosenOps = operation === 'all' ? GRAPH_OPS : [operation];
+    const opResults = {};
+
+    const pointRunner = () => {
+        const res = runSingleQuery(wasm, queries.point, dataset.db, 96);
+        return {
+            raw: res,
+            decodedMatches: decodeResultMatches(res.matches, dataset.labelMap),
+        };
+    };
+
+    const filterRunner = () => {
+        const res = runSingleQuery(wasm, queries.filter, dataset.db, Math.min(dataset.quinCount, 20000));
+        return {
+            raw: res,
+            decodedMatches: decodeResultMatches(res.matches, dataset.labelMap),
+        };
+    };
+
+    const twohopRunner = () => {
+        const firstHop = runSingleQuery(wasm, queries.twohop1, dataset.db, 16);
+        let secondHop = { matches: [], vm_cycles: 0, direct_jump_ops: 0, lexicon_lookup_ops: 0 };
+        if (queries.twohop2) {
+            secondHop = runSingleQuery(wasm, queries.twohop2, dataset.db, 32);
+        } else if (firstHop.matches[0]) {
+            const nextNode = decodeMatchLabel(firstHop.matches[0].o, dataset.labelMap);
+            const nextQuery = `<${nextNode}> ?p ?o .`;
+            secondHop = runSingleQuery(wasm, nextQuery, dataset.db, 32);
+        }
+        return {
+            raw: {
+                matches: [...firstHop.matches, ...secondHop.matches],
+                vm_cycles: firstHop.vm_cycles + secondHop.vm_cycles,
+                direct_jump_ops: firstHop.direct_jump_ops + secondHop.direct_jump_ops,
+                lexicon_lookup_ops: firstHop.lexicon_lookup_ops + secondHop.lexicon_lookup_ops,
+            },
+            decodedMatches: [
+                ...decodeResultMatches(firstHop.matches, dataset.labelMap),
+                ...decodeResultMatches(secondHop.matches, dataset.labelMap),
+            ],
+        };
+    };
+
+    const ingestRunner = async () => {
+        const fresh = await loadDataset(manifest, profile.storageFormat || config.storageFormat);
+        return {
+            loadMs: fresh.loadMs,
+            quinCount: fresh.quinCount,
+        };
+    };
+
+    for (const op of chosenOps) {
+        if (op === 'point') {
+            opResults.point = await measureAsyncSeries(16, pointRunner);
+        } else if (op === 'twohop') {
+            opResults.twohop = await measureAsyncSeries(12, twohopRunner);
+        } else if (op === 'filter') {
+            opResults.filter = await measureAsyncSeries(12, filterRunner);
+        } else if (op === 'ingest') {
+            opResults.ingest = await measureAsyncSeries(6, ingestRunner);
+        }
+    }
+
+    const requestedFocusNode = chooseFocusNode(opResults)
+        || (queries.pointSubject ? fullHash(qHash(queries.pointSubject)) : null);
+    const renderTriples = buildRenderableTriples(dataset, requestedFocusNode);
+    const focusNode = requestedFocusNode || renderTriples[0]?.subjectId || null;
+    const graphModel = buildGraphModel(renderTriples);
+    const neighborhood = buildNeighborhood(renderTriples, focusNode || renderTriples[0]?.subjectId, 44, 100);
+
+    if (viewer) {
+        viewer.setData(neighborhood);
+        viewer.setNodeSelectHandler((nodeId) => renderInspector(inspectorTarget, graphModel, nodeId));
+    }
+    renderInspector(inspectorTarget, graphModel, focusNode || neighborhood.nodes[0]?.id);
+
     if (charts?.graphLatency) {
-        charts.graphLatency.data.labels = ['Point', 'Two-hop', 'Filter', 'Ingest'];
-        charts.graphLatency.data.datasets[0].label = 'Compile ms/op (measured)';
-        charts.graphLatency.data.datasets[0].data = [compileMs.point, compileMs.twohop, compileMs.filter, compileMs.ingest];
+        charts.graphLatency.data.labels = GRAPH_OPS.map((op) => graphOperationLabel(op));
+        charts.graphLatency.data.datasets = [{
+            label: 'p50 latency (measured ms)',
+            data: GRAPH_OPS.map((op) => opResults[op]?.summary?.p50 ?? 0),
+            backgroundColor: 'rgba(52, 211, 153, 0.5)',
+            borderColor: 'rgba(52, 211, 153, 1)',
+            borderWidth: 1,
+        }];
         charts.graphLatency.update();
     }
+
     if (charts?.graphThroughput) {
-        const op = operation && compileMs[operation] != null ? operation : 'point';
-        const ops = Math.round(1000 / compileMs[op]);
-        charts.graphThroughput.data.labels = ['compile/s'];
-        charts.graphThroughput.data.datasets[0].label = `${op} compiles/sec (measured)`;
-        charts.graphThroughput.data.datasets[0].data = [ops];
+        const activeOps = operation === 'all' ? GRAPH_OPS : [operation];
+        charts.graphThroughput.data.labels = Array.from({ length: Math.max(...activeOps.map((op) => opResults[op]?.throughputs?.length || 0)) }, (_, i) => `run ${i + 1}`);
+        charts.graphThroughput.data.datasets = activeOps
+            .filter((op) => opResults[op]?.throughputs?.length)
+            .map((op, idx) => {
+                const palette = [
+                    ['rgba(59, 130, 246, 1)', 'rgba(59, 130, 246, 0.12)'],
+                    ['rgba(16, 185, 129, 1)', 'rgba(16, 185, 129, 0.12)'],
+                    ['rgba(250, 204, 21, 1)', 'rgba(250, 204, 21, 0.12)'],
+                    ['rgba(244, 114, 182, 1)', 'rgba(244, 114, 182, 0.12)'],
+                ][idx % 4];
+                return {
+                    label: `${graphOperationLabel(op)} ops/sec`,
+                    data: opResults[op].throughputs,
+                    borderColor: palette[0],
+                    backgroundColor: palette[1],
+                    fill: false,
+                    tension: 0.3,
+                };
+            });
         charts.graphThroughput.update();
     }
-    const plan = (() => { try { return JSON.parse(lastPlan); } catch { return null; } })();
+
+    const summaryLines = chosenOps.map((op) => {
+        const result = opResults[op];
+        if (!result) return null;
+        if (op === 'ingest') {
+            return `  ingest   p50=${fmtMs(result.summary.p50)}  p95=${fmtMs(result.summary.p95)}  ${dataset.quinCount.toLocaleString()} quins`;
+        }
+        const matches = result.lastSummary?.decodedMatches?.length ?? result.lastSummary?.raw?.matches?.length ?? 0;
+        return `  ${op.padEnd(8)} p50=${fmtMs(result.summary.p50)}  p95=${fmtMs(result.summary.p95)}  matches=${matches}`;
+    }).filter(Boolean);
+
+    const focusSummary = focusNode ? `Focused neighborhood: ${focusNode}` : 'No focus node available';
+    const sourceNote = dataset.labelMap?.size
+        ? 'Explorer labels come from the parsed dataset terms, with full IRIs available on hover.'
+        : 'Explorer is showing hashed node IDs because this storage format does not currently expose labels.';
+
     if (output) {
         output.textContent =
-            `✓ Graph benchmark (REAL — parse_turtle_wasm + compile_query_to_json)\n` +
-            `Ingested ${triples.length} triples in ${ingestMs.toFixed(3)} ms (${Math.round(triples.length / (ingestMs / 1000)).toLocaleString()} triples/sec)\n` +
-            `Query compile (ms/op, ${(5000).toLocaleString()} iters):\n` +
-            Object.entries(compileMs).map(([k, v]) => `  ${k.padEnd(8)} ${v.toFixed(5)} ms`).join('\n') +
-            (plan ? `\n\nCompiled plan (${GRAPH_QUERIES[operation] || GRAPH_QUERIES.point}):\n  source=${plan.source} len=${plan.compiled_len}` : '') +
-            `\n\nGraph rendered below — drag nodes, scroll to zoom.`;
+            `✓ Graph benchmark (REAL — execute_ntriples_query over ${dataset.label})\n` +
+            `Dataset: ${config.label}\n` +
+            `Load path: ${dataset.format} · ${dataset.quinCount.toLocaleString()} quins · initial load ${fmtMs(dataset.loadMs)}\n` +
+            `Operations measured:\n${summaryLines.join('\n')}\n\n` +
+            `${focusSummary}\n` +
+            `${sourceNote}\n\n` +
+            `Latency chart = measured p50 per operation.\n` +
+            `Throughput chart = real per-run ops/sec over time.`;
     }
-    return { triples, ingestMs, compileMs };
+
+    return {
+        dataset,
+        opResults,
+        graphModel,
+        renderTriples,
+        focusNode,
+    };
+}
+
+// -------------------------- Spatial benchmark logic --------------------------
+
+const SPATIAL_OPS = ['ga', 'topology', 'indexing', 'interval'];
+
+function spatialFocusOp(operation, perfByOp) {
+    if (operation && operation !== 'all' && perfByOp?.[operation]) return operation;
+    if (perfByOp?.ga) return 'ga';
+    return Object.keys(perfByOp || {})[0] || 'ga';
+}
+
+function shapeForSpatialFocus(operation, dimension) {
+    if (dimension === '4d') {
+        if (operation === 'indexing') return 'cube';
+        if (operation === 'topology') return 'sphere';
+        return 'torus';
+    }
+    if (operation === 'topology') return 'sphere';
+    if (operation === 'indexing') return 'cube';
+    if (operation === 'interval') return dimension === '2d' ? 'tetrahedron' : 'octahedron';
+    if (operation === 'ga') return dimension === '2d' ? 'tetrahedron' : 'icosahedron';
+    return dimension === '2d' ? 'cube' : 'icosahedron';
+}
+
+function spatialViewerLabel(shape) {
+    return {
+        tetrahedron: 'Tetrahedron',
+        cube: 'Cube',
+        octahedron: 'Octahedron',
+        icosahedron: 'Icosahedron',
+        sphere: 'Sphere',
+        torus: 'Torus',
+    }[shape] || shape;
+}
+
+function spatialOpLabel(op) {
+    return {
+        ga: 'Geometric Algebra',
+        topology: 'Topology',
+        indexing: 'Indexing',
+        interval: 'Interval',
+    }[op] || String(op).toUpperCase();
+}
+
+function randomMultivector(dimension) {
+    const width = dimension === '4d' ? 12 : dimension === '3d' ? 8 : 6;
+    return Array.from({ length: width }, (_, i) => Math.round((Math.sin(i + Math.random() * 3) * 2) * 100) / 100);
+}
+
+function relationResult(a, b) {
+    if (a.end < b.start) return 'Before';
+    if (a.start > b.end) return 'After';
+    if (a.end === b.start) return 'Meets';
+    if (a.start === b.end) return 'MetBy';
+    if (a.start === b.start && a.end === b.end) return 'Equal';
+    if (a.start < b.start && a.end < b.end) return 'Overlaps';
+    if (a.start > b.start && a.end > b.end) return 'OverlappedBy';
+    return 'During';
+}
+
+function intervalBenchmark(count, multiplier) {
+    const intervals = Array.from({ length: count }, (_, i) => ({
+        start: i * multiplier,
+        end: i * multiplier + multiplier + (i % 5),
+    }));
+    let hits = 0;
+    const t0 = performance.now();
+    for (let i = 0; i < intervals.length - 1; i++) {
+        if (relationResult(intervals[i], intervals[i + 1]) !== 'After') hits++;
+    }
+    const dt = performance.now() - t0;
+    return { hits, dt };
+}
+
+function sampleTopologyPayload(complexity) {
+    const size = 10 + complexity;
+    return JSON.stringify({
+        geoA: `POLYGON((0 0, ${size} 0, ${size} ${size}, 0 ${size}, 0 0))`,
+        geoB: `POINT(${(size / 2).toFixed(1)} ${(size / 2).toFixed(1)})`,
+        op: 'contains',
+        crs: '4326',
+    });
+}
+
+function sampleEncodingPayload(dimension, count) {
+    const detail = Math.max(1, Math.min(5, Math.round(Math.log10(Math.max(count, 100)))));
+    const type = dimension === '4d' ? 'torus' : dimension === '3d' ? 'sphere' : 'cube';
+    return JSON.stringify({ type, detail });
+}
+
+function parseMaybeJson(value) {
+    return typeof value === 'string' ? JSON.parse(value) : value;
+}
+
+export function runSpatialLive({ wasm, charts, output, count, operation, dimension }) {
+    const selected = operation === 'all' ? SPATIAL_OPS : [operation];
+    const dims = dimension || '3d';
+    const requestedCount = Math.max(100, Math.min(Number(count) || 10000, 200000));
+    const perfByOp = {};
+    const repeats = {
+        ga: Math.max(64, Math.min(2048, Math.round(requestedCount / 40))),
+        topology: Math.max(32, Math.min(512, Math.round(requestedCount / 80))),
+        indexing: Math.max(8, Math.min(64, Math.round(requestedCount / 400))),
+        interval: Math.max(16, Math.min(256, Math.round(requestedCount / 120))),
+    };
+
+    for (const op of selected) {
+        const latencies = [];
+        const throughputs = [];
+        let backend = 'wasm';
+        let note = '';
+        let sample = null;
+
+        if (op === 'ga') {
+            if (typeof wasm?.geometric_algebra_operation !== 'function') throw new Error('WASM geometric_algebra_operation unavailable.');
+            for (let i = 0; i < 12; i++) {
+                const payload = JSON.stringify({ a: randomMultivector(dims), b: randomMultivector(dims), op: 'geo' });
+                const t0 = performance.now();
+                for (let j = 0; j < repeats.ga; j++) {
+                    sample = parseMaybeJson(wasm.geometric_algebra_operation(payload));
+                }
+                const dt = performance.now() - t0;
+                latencies.push(dt / repeats.ga);
+                throughputs.push(dt > 0 ? (repeats.ga * 1000) / dt : 0);
+            }
+            note = `sample grades=${sample.grades.length} compute_ops=${sample.compute_ops} · ${repeats.ga}x batched`;
+        } else if (op === 'topology') {
+            if (typeof wasm?.geosparql_operation_wasm !== 'function') throw new Error('WASM geosparql_operation_wasm unavailable.');
+            for (let i = 0; i < 12; i++) {
+                const payload = sampleTopologyPayload(i + (dims === '4d' ? 6 : dims === '3d' ? 3 : 0));
+                const t0 = performance.now();
+                for (let j = 0; j < repeats.topology; j++) {
+                    sample = parseMaybeJson(wasm.geosparql_operation_wasm(payload));
+                }
+                const dt = performance.now() - t0;
+                latencies.push(dt / repeats.topology);
+                throughputs.push(dt > 0 ? (repeats.topology * 1000) / dt : 0);
+            }
+            note = `GeoSPARQL ${sample.predicate}=${JSON.stringify(sample.result)} · ${repeats.topology}x batched`;
+        } else if (op === 'indexing') {
+            if (typeof wasm?.spatial_encode_wasm !== 'function') throw new Error('WASM spatial_encode_wasm unavailable.');
+            const payload = sampleEncodingPayload(dims, requestedCount);
+            for (let i = 0; i < 10; i++) {
+                const t0 = performance.now();
+                for (let j = 0; j < repeats.indexing; j++) {
+                    sample = parseMaybeJson(wasm.spatial_encode_wasm(payload));
+                }
+                const dt = performance.now() - t0;
+                latencies.push(dt / repeats.indexing);
+                throughputs.push(dt > 0 ? (repeats.indexing * 1000) / dt : 0);
+            }
+            note = `${sample.quin_count.toLocaleString()} quins · ${sample.memory_kb} KB · ${repeats.indexing}x batched`;
+        } else if (op === 'interval') {
+            backend = 'js-fallback';
+            for (let i = 0; i < 12; i++) {
+                const mult = dims === '4d' ? 4 : dims === '3d' ? 2 : 1;
+                const t0 = performance.now();
+                for (let j = 0; j < repeats.interval; j++) {
+                    sample = intervalBenchmark(Math.min(requestedCount / 50, 5000), mult + i + j);
+                }
+                const dt = performance.now() - t0;
+                latencies.push(dt / repeats.interval);
+                throughputs.push(dt > 0 ? (repeats.interval * 1000) / dt : 0);
+            }
+            note = `Allen interval algebra benchmark (honest JS fallback until dedicated WASM export exists) · ${repeats.interval}x batched`;
+        }
+
+        const summary = stats(latencies);
+        perfByOp[op] = {
+            backend,
+            note,
+            sample,
+            latencies,
+            throughputs,
+            summary,
+            opsPerSec: percentile(throughputs, 0.5),
+        };
+    }
+
+    if (charts?.spatialPerformance) {
+        charts.spatialPerformance.data.labels = selected.map((op) => spatialOpLabel(op));
+        charts.spatialPerformance.data.datasets = [{
+            label: 'Median ops/sec (measured)',
+            data: selected.map((op) => perfByOp[op]?.opsPerSec ?? 0),
+            backgroundColor: 'rgba(52, 211, 153, 0.5)',
+            borderColor: 'rgba(52, 211, 153, 1)',
+            borderWidth: 1,
+        }];
+        charts.spatialPerformance.update();
+    }
+
+    const focusOp = spatialFocusOp(operation, perfByOp);
+
+    if (charts?.spatialScaling) {
+        const focus = perfByOp[focusOp] ?? perfByOp.ga;
+        const scaleLabels = focus?.latencies?.map((_, idx) => `run ${idx + 1}`) ?? [];
+        charts.spatialScaling.data.labels = scaleLabels;
+        charts.spatialScaling.data.datasets = [{
+            label: `${(focusOp || 'ga').toUpperCase()} latency per run (ms)`,
+            data: focus?.latencies ?? [],
+            borderColor: 'rgba(59, 130, 246, 1)',
+            backgroundColor: 'rgba(59, 130, 246, 0.12)',
+            fill: true,
+            tension: 0.3,
+        }];
+        charts.spatialScaling.update();
+    }
+
+    if (output) {
+        output.textContent =
+            `✓ Spatial benchmark (${dims.toUpperCase()} · ${requestedCount.toLocaleString()} objects requested)\n` +
+            selected.map((op) => {
+                const result = perfByOp[op];
+                return `  ${op.padEnd(9)} ${fmtOps(result.opsPerSec).padStart(10)} ops/sec  p50=${fmtMs(result.summary.p50)}  backend=${result.backend}`;
+            }).join('\n') +
+            `\n\nNotes:\n` +
+            selected.map((op) => `  ${op.padEnd(9)} ${perfByOp[op].note}`).join('\n') +
+            `\n\nSpatial controls now materially affect the measured pathway; interval remains an explicitly labeled fallback until a native WASM export lands.`;
+    }
+
+    const viewerShape = shapeForSpatialFocus(focusOp, dims);
+    return {
+        perfByOp,
+        focusOp,
+        viewer: {
+            shape: viewerShape,
+            label: spatialViewerLabel(viewerShape),
+            dimension: dims,
+            operation: focusOp,
+        },
+    };
 }

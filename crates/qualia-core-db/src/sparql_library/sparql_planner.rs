@@ -111,6 +111,14 @@ pub enum PhysicalOperatorType {
         timestamp_ms: u64,
         mode: TemporalMode,
     },
+    /// RDF-Star annotation triple scan.
+    StarTripleScan {
+        inner_subject: u64,
+        inner_predicate: u64,
+        inner_object: u64,
+        outer_predicate: u64,
+        outer_object: u64,
+    },
 }
 
 pub type OperatorId = u16;
@@ -300,19 +308,32 @@ impl QueryPlanner {
         
         match pattern {
             Pattern::Triple { subject, predicate, object } => {
-                // Determine which scan to use based on what's bound
-                // For now, use simple heuristic: if subject is a constant, use subject scan
-                // If subject is variable, use triple scan
-                let op = if *subject < 0x8000_0000_0000_0000 { // Likely a hash (not a did:q42 pointer)
-                    PhysicalOperatorType::SubjectScan { subject: *subject }
-                } else {
+                plan.add_operator(
                     PhysicalOperatorType::TripleScan {
                         subject: *subject,
                         predicate: *predicate,
                         object: *object,
-                    }
-                };
-                plan.add_operator(op, 0)
+                    },
+                    0,
+                )
+            }
+            Pattern::StarTriple {
+                inner_subject,
+                inner_predicate,
+                inner_object,
+                outer_predicate,
+                outer_object,
+            } => {
+                plan.add_operator(
+                    PhysicalOperatorType::StarTripleScan {
+                        inner_subject: *inner_subject,
+                        inner_predicate: *inner_predicate,
+                        inner_object: *inner_object,
+                        outer_predicate: *outer_predicate,
+                        outer_object: *outer_object,
+                    },
+                    0,
+                )
             }
             Pattern::Optional { inner } => {
                 let inner_op = Self::plan_pattern(*inner, ctx, plan)?;

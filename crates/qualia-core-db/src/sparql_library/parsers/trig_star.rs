@@ -218,11 +218,11 @@ enum ParseResult {
     },
 }
 
-/// Parse Trig-Star stream and emit Quins
-pub fn parse_trig_star_stream<R: std::io::Read>(
+/// Parse Trig-Star into any [`QuinSink`].
+pub fn parse_trig_star_into<R: std::io::Read, S: crate::sparql_library::quin_sink::QuinSink>(
     reader: R,
     context_hash: u64,
-    sorter: &mut crate::external_sort::ExternalSorter,
+    sink: &mut S,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     use std::io::BufRead;
     
@@ -238,7 +238,7 @@ pub fn parse_trig_star_stream<R: std::io::Read>(
                 parser.set_current_graph(graph_hash);
             }
             ParseResult::RegularTriple { subject, predicate, object, graph_hash } => {
-                sorter.push(NQuin {
+                sink.push(NQuin {
                     subject,
                     predicate,
                     object,
@@ -249,7 +249,7 @@ pub fn parse_trig_star_stream<R: std::io::Read>(
                 count += 1;
             }
             ParseResult::EmbeddedTriple { virtual_id, components, outer_predicate, outer_object, graph_hash } => {
-                sorter.push(NQuin {
+                sink.push(NQuin {
                     subject: virtual_id,
                     predicate: outer_predicate,
                     object: outer_object,
@@ -259,7 +259,7 @@ pub fn parse_trig_star_stream<R: std::io::Read>(
                 })?;
                 count += 1;
                 
-                sorter.push(NQuin {
+                sink.push(NQuin {
                     subject: components[0],
                     predicate: components[1],
                     object: components[2],
@@ -273,6 +273,14 @@ pub fn parse_trig_star_stream<R: std::io::Read>(
     }
 
     Ok(count)
+}
+
+pub fn parse_trig_star_stream<R: std::io::Read>(
+    reader: R,
+    context_hash: u64,
+    sorter: &mut crate::external_sort::ExternalSorter,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    parse_trig_star_into(reader, context_hash, sorter)
 }
 
 #[cfg(test)]

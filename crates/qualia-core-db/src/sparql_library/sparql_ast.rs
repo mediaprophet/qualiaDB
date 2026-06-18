@@ -174,6 +174,14 @@ pub enum Pattern {
         timestamp_ms: u64,
         mode: TemporalMode,
     },
+    /// RDF-Star quoted triple `<< s p o >> outerP outerO`.
+    StarTriple {
+        inner_subject: u64,
+        inner_predicate: u64,
+        inner_object: u64,
+        outer_predicate: u64,
+        outer_object: u64,
+    },
 }
 
 /// Property path (SPARQL 1.1)

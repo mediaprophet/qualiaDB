@@ -1,3 +1,7 @@
+use crate::modalities::epistemic::{self, EpistemicStatus, OP_KNOWS, OP_BELIEVES, OP_COMMON_KNOWLEDGE};
+use crate::modalities::logic::deontic::{
+    evaluate_deontic_contract, DeonticStatus, DeonticVerdict, OP_FORBID, OP_OBLIGATE, OP_PERMIT,
+};
 use crate::{q_hash, NQuin};
 
 /// Identifies the SHACL DataType for a node shape
@@ -94,28 +98,154 @@ pub fn validate_shacl_property(
                                 break;
                             }
                         }
-                        if !found { return false; }
+                        if !found {
+                            return false;
+                        }
                     }
-                    _ => {} // Other constraints checked elsewhere
+                    ShaclConstraint::DeonticObligate => {
+                        if !deontic_quin_matches(quins, quin, OP_OBLIGATE, DeonticStatus::Active) {
+                            return false;
+                        }
+                    }
+                    ShaclConstraint::DeonticPermit => {
+                        if !deontic_quin_matches(quins, quin, OP_PERMIT, DeonticStatus::Active) {
+                            return false;
+                        }
+                    }
+                    ShaclConstraint::DeonticForbid => {
+                        if deontic_quin_matches(quins, quin, OP_FORBID, DeonticStatus::Active) {
+                            return false;
+                        }
+                    }
+                    ShaclConstraint::DeonticNotExpired { now_unix } => {
+                        if !deontic_not_expired(quin, *now_unix) {
+                            return false;
+                        }
+                    }
+                    ShaclConstraint::EpistemicKnowledge { min_certainty } => {
+                        if !epistemic_quin_matches(
+                            quins,
+                            quin,
+                            OP_KNOWS,
+                            *min_certainty,
+                            EpistemicStatus::Active,
+                        ) {
+                            return false;
+                        }
+                    }
+                    ShaclConstraint::EpistemicBelief { min_certainty } => {
+                        if !epistemic_quin_matches(
+                            quins,
+                            quin,
+                            OP_BELIEVES,
+                            *min_certainty,
+                            EpistemicStatus::Active,
+                        ) {
+                            return false;
+                        }
+                    }
+                    ShaclConstraint::CommonKnowledge => {
+                        if !epistemic_quin_matches(
+                            quins,
+                            quin,
+                            OP_COMMON_KNOWLEDGE,
+                            0,
+                            EpistemicStatus::Active,
+                        ) {
+                            return false;
+                        }
+                    }
+                    ShaclConstraint::MinCount(_) | ShaclConstraint::MaxCount(_) => {}
                 }
             }
         }
     }
-    
+
     // Check cardinality counts
     for constraint in constraints {
         match constraint {
             ShaclConstraint::MinCount(min) => {
-                if matching_count < *min { return false; }
+                if matching_count < *min {
+                    return false;
+                }
             }
             ShaclConstraint::MaxCount(max) => {
-                if matching_count > *max { return false; }
+                if matching_count > *max {
+                    return false;
+                }
+            }
+            ShaclConstraint::DeonticObligate
+            | ShaclConstraint::DeonticPermit
+            | ShaclConstraint::DeonticForbid
+            | ShaclConstraint::DeonticNotExpired { .. }
+            | ShaclConstraint::EpistemicKnowledge { .. }
+            | ShaclConstraint::EpistemicBelief { .. }
+            | ShaclConstraint::CommonKnowledge => {
+                if matching_count == 0 {
+                    return false;
+                }
             }
             _ => {}
         }
     }
 
     true
+}
+
+fn deontic_not_expired(quin: &NQuin, now_unix: u32) -> bool {
+    let expiry = (quin.metadata & 0xFFFF_FFFF) as u32;
+    expiry == 0 || now_unix <= expiry
+}
+
+fn deontic_quin_matches(
+    quins: &[NQuin],
+    focus: &NQuin,
+    expected_opcode: u8,
+    required_status: DeonticStatus,
+) -> bool {
+    let mut verdicts = [DeonticVerdict::default(); 32];
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as u32)
+        .unwrap_or(0);
+    let count = evaluate_deontic_contract(quins, now, &mut verdicts).unwrap_or(0);
+    for verdict in &verdicts[..count] {
+        if verdict.norm.subject == focus.subject
+            && verdict.norm.predicate == focus.predicate
+            && verdict.norm.object == focus.object
+            && (verdict.norm.predicate & 0xFF) as u8 == expected_opcode
+            && verdict.status == required_status
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn epistemic_quin_matches(
+    quins: &[NQuin],
+    focus: &NQuin,
+    expected_opcode: u8,
+    min_certainty: u8,
+    required_status: EpistemicStatus,
+) -> bool {
+    let mut verdicts = [epistemic::EpistemicVerdict {
+        claim: NQuin::default(),
+        status: EpistemicStatus::Skipped,
+        certainty: 0,
+    }; 32];
+    let count = epistemic::evaluate_epistemic_frame(quins, focus.subject, focus.context, &mut verdicts)
+        .unwrap_or(0);
+    for verdict in &verdicts[..count] {
+        if verdict.claim.object == focus.object
+            && (verdict.claim.predicate & 0xFF) as u8 == expected_opcode
+            && verdict.status == required_status
+            && verdict.certainty >= min_certainty
+        {
+            return true;
+        }
+    }
+    false
 }
 
 #[cfg(test)]
@@ -149,6 +279,45 @@ mod tests {
     }
 
     #[test]
+    #[test]
+    fn test_shacl_deontic_obligate() {
+        let subj = q_hash("did:q42:party1");
+        let prop = q_hash("q42:mustSign");
+        let obj = q_hash("contract:nda");
+        let mut norm = crate::modalities::logic::deontic::compile_norm_quin(
+            subj,
+            OP_OBLIGATE,
+            prop,
+            obj,
+            q_hash("ctx:nda"),
+            u32::MAX,
+            false,
+        );
+        norm.parity = norm.subject ^ norm.predicate ^ norm.object ^ norm.context;
+
+        let constraints = [ShaclConstraint::DeonticObligate];
+        assert!(validate_shacl_property(&[norm], subj, norm.predicate, &constraints));
+    }
+
+    #[test]
+    fn test_shacl_epistemic_knowledge() {
+        let agent = q_hash("agent_a");
+        let claim_obj = q_hash("claim:p");
+        let mut knows = NQuin {
+            subject: agent,
+            predicate: (200u64 << 8) | OP_KNOWS as u64,
+            object: claim_obj,
+            context: q_hash("world_w"),
+            metadata: 0,
+            parity: 0,
+        };
+        knows.parity = knows.subject ^ knows.predicate ^ knows.object ^ knows.context;
+
+        let prop = knows.predicate;
+        let constraints = [ShaclConstraint::EpistemicKnowledge { min_certainty: 128 }];
+        assert!(validate_shacl_property(&[knows], agent, prop, &constraints));
+    }
+
     fn test_shacl_cardinality() {
         let subj = q_hash("did:q42:user1");
         let prop = q_hash("schema:email");

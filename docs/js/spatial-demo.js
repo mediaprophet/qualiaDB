@@ -583,11 +583,20 @@ export async function runNativeOp() {
     pulseTelemetry('memory_pressure', 0.35);
 }
 
-export function switchTab(tabId, btn) {
+function activateSpatialTabFromHash() {
+    const tabId = window.location.hash.slice(1);
+    if (!tabId || !document.getElementById(`tab-${tabId}`)) return;
+    switchTab(tabId, null, { silent: true });
+}
+
+export function switchTab(tabId, btn, opts = {}) {
     document.querySelectorAll('.tab-pane').forEach((p) => p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
     document.getElementById(`tab-${tabId}`)?.classList.add('active');
-    btn?.classList.add('active');
+    (btn || document.getElementById(`tab-${tabId}-btn`))?.classList.add('active');
+    if (!opts.silent && window.location.hash.slice(1) !== tabId) {
+        history.replaceState(null, '', `#${tabId}`);
+    }
     if (tabId === 'viewer') {
         requestAnimationFrame(() => {
             const canvas = document.getElementById('ambient-canvas');
@@ -607,6 +616,7 @@ if (typeof window !== 'undefined') {
     window.runSpatialOp = runSpatialOp;
     window.runNativeOp = runNativeOp;
     window.switchTab = switchTab;
+    window.addEventListener('hashchange', activateSpatialTabFromHash);
 }
 
 export async function bootSpatialPage() {
@@ -642,6 +652,7 @@ export async function bootSpatialPage() {
             wasmSource = 'qualia-core-db';
         }
         await generateGeometry();
+        activateSpatialTabFromHash();
 
         debugLog('bootSpatialPage wasm ready', { wasmSource, hasPortal: !!qualiaPortal });
         if (qualiaPortal) {

@@ -246,7 +246,7 @@ pub async fn start_local_daemon(
     port: u16,
     vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>,
 ) {
-    start_local_daemon_with_options(port, false, vault).await;
+    start_local_daemon_with_options(port, false, vault, false).await;
 }
 
 /// Starts the native loopback daemon with WebSocket and REST handoff routes.
@@ -256,6 +256,7 @@ pub async fn start_local_daemon_with_options(
     port: u16,
     dev: bool,
     vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>,
+    empty_graph: bool,
 ) -> mpsc::Sender<String> {
     let storage_path = std::env::var("QUALIA_STORAGE_PATH").unwrap_or_else(|_| {
         std::env::var("HOME")
@@ -281,8 +282,18 @@ pub async fn start_local_daemon_with_options(
         );
         std::process::exit(1);
     }
-    crate::daemon_graph::init_daemon_graph(&storage_path);
-    crate::ontology_loader::load_startup_ontologies();
+    let graph_opts = if empty_graph {
+        crate::daemon_graph::InitGraphOptions {
+            seed_defaults: false,
+            load_index: false,
+        }
+    } else {
+        crate::daemon_graph::InitGraphOptions::default()
+    };
+    crate::daemon_graph::init_daemon_graph_with_options(&storage_path, graph_opts);
+    if !empty_graph {
+        crate::ontology_loader::load_startup_ontologies();
+    }
 
     let security = DaemonSecurity {
         dev,

@@ -238,10 +238,10 @@ enum ParseResult {
 /// Stream all triples (and embedded-triple quins) from an N3/N3-Star reader
 /// into an [`ExternalSorter`]. Rules and formulae are skipped — only asserted
 /// triples and embedded-triple assertions are stored as NQuins.
-pub fn parse_n3_star_stream<R: std::io::Read>(
+pub fn parse_n3_star_into<R: std::io::Read, S: crate::sparql_library::quin_sink::QuinSink>(
     reader: R,
     context_hash: u64,
-    sorter: &mut crate::external_sort::ExternalSorter,
+    sink: &mut S,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     use std::io::BufRead;
 
@@ -254,7 +254,7 @@ pub fn parse_n3_star_stream<R: std::io::Read>(
         match parser.parse_line(&line)? {
             ParseResult::Comment | ParseResult::Formula | ParseResult::Rule { .. } => continue,
             ParseResult::RegularTriple { subject, predicate, object, .. } => {
-                sorter.push(NQuin {
+                sink.push(NQuin {
                     subject,
                     predicate,
                     object,
@@ -266,7 +266,7 @@ pub fn parse_n3_star_stream<R: std::io::Read>(
             }
             ParseResult::EmbeddedTriple { virtual_id, components, outer_predicate, outer_object, .. } => {
                 // Materialise the embedded (quoted) triple itself.
-                sorter.push(NQuin {
+                sink.push(NQuin {
                     subject: virtual_id,
                     predicate: components[1],
                     object: components[2],
@@ -275,7 +275,7 @@ pub fn parse_n3_star_stream<R: std::io::Read>(
                     parity: virtual_id ^ components[1] ^ components[2] ^ context_hash,
                 })?;
                 // Materialise the outer assertion about the quoted triple.
-                sorter.push(NQuin {
+                sink.push(NQuin {
                     subject: components[0],
                     predicate: outer_predicate,
                     object: outer_object,
@@ -289,6 +289,14 @@ pub fn parse_n3_star_stream<R: std::io::Read>(
     }
 
     Ok(count)
+}
+
+pub fn parse_n3_star_stream<R: std::io::Read>(
+    reader: R,
+    context_hash: u64,
+    sorter: &mut crate::external_sort::ExternalSorter,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    parse_n3_star_into(reader, context_hash, sorter)
 }
 
 #[cfg(test)]

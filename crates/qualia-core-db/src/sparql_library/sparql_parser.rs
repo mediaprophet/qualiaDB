@@ -4,31 +4,74 @@
 //! Uses byte string slicing and no heap allocation.
 
 use crate::sparql_ast::*;
+use std::collections::HashMap;
 
 /// Parse a SPARQL SELECT query string into an AST
 pub fn parse_sparql(query: &str) -> Result<(SparqlQuery, SparqlQueryContext), String> {
     let mut ctx = SparqlQueryContext::new();
-    let query = query.trim();
+    let (query, prefixes) = strip_prefix_declarations(query.trim());
+    let query = query.as_str();
     
     // Check for SELECT query
     if query.starts_with("SELECT") {
-        let select_query = parse_select_query(query, &mut ctx)?;
+        let select_query = parse_select_query(query, &mut ctx, &prefixes)?;
         return Ok((SparqlQuery::Select(select_query), ctx));
     } else if query.starts_with("ASK") {
-        let ask_query = parse_ask_query(query, &mut ctx)?;
+        let ask_query = parse_ask_query(query, &mut ctx, &prefixes)?;
         return Ok((SparqlQuery::Ask(ask_query), ctx));
     } else if query.starts_with("CONSTRUCT") {
-        let construct_query = parse_construct_query(query, &mut ctx)?;
+        let construct_query = parse_construct_query(query, &mut ctx, &prefixes)?;
         return Ok((SparqlQuery::Construct(construct_query), ctx));
     } else if query.starts_with("DESCRIBE") {
-        let describe_query = parse_describe_query(query, &mut ctx)?;
+        let describe_query = parse_describe_query(query, &mut ctx, &prefixes)?;
         return Ok((SparqlQuery::Describe(describe_query), ctx));
     } else {
         Err("Unsupported query form".to_string())
     }
 }
 
-fn parse_select_query(query: &str, ctx: &mut SparqlQueryContext) -> Result<SelectQuery, String> {
+fn strip_prefix_declarations(query: &str) -> (String, HashMap<String, String>) {
+    let mut prefixes = HashMap::new();
+    let mut body = String::new();
+    for line in query.lines() {
+        let trimmed = line.trim();
+        let upper = trimmed.to_ascii_uppercase();
+        if upper.starts_with("PREFIX") {
+            if let Some((prefix, iri)) = parse_prefix_line(trimmed) {
+                prefixes.insert(prefix, iri);
+            }
+            continue;
+        }
+        if !body.is_empty() {
+            body.push(' ');
+        }
+        body.push_str(trimmed);
+    }
+    if body.is_empty() {
+        (query.to_string(), prefixes)
+    } else {
+        (body, prefixes)
+    }
+}
+
+fn parse_prefix_line(line: &str) -> Option<(String, String)> {
+    let rest = line.trim_start_matches("PREFIX").trim_start_matches("prefix").trim();
+    let colon = rest.find(':')?;
+    let prefix = rest[..colon].trim().trim_start_matches("PREFIX").to_string();
+    let after = rest[colon + 1..].trim();
+    let iri = if after.starts_with('<') {
+        after.trim_start_matches('<').trim_end_matches('>').to_string()
+    } else {
+        after.trim_matches('"').to_string()
+    };
+    Some((prefix, iri))
+}
+
+fn parse_select_query(
+    query: &str,
+    ctx: &mut SparqlQueryContext,
+    prefixes: &HashMap<String, String>,
+) -> Result<SelectQuery, String> {
     let mut query_struct = SelectQuery::default();
     
     // Parse SELECT clause
@@ -50,7 +93,7 @@ fn parse_select_query(query: &str, ctx: &mut SparqlQueryContext) -> Result<Selec
     // Parse WHERE clause - find WHERE in the original query
     let where_start = query.find("WHERE").ok_or("WHERE clause not found")?;
     let where_clause = &query[where_start..];
-    let pattern_id = parse_where_clause(where_clause, ctx)?;
+    let pattern_id = parse_where_clause(where_clause, ctx, prefixes)?;
     query_struct.root_pattern = pattern_id;
 
     // Parse AS OF / AT TIME temporal modifier (Phase 4).
@@ -92,23 +135,31 @@ fn parse_select_query(query: &str, ctx: &mut SparqlQueryContext) -> Result<Selec
     Ok(query_struct)
 }
 
-fn parse_ask_query(query: &str, ctx: &mut SparqlQueryContext) -> Result<AskQuery, String> {
+fn parse_ask_query(
+    query: &str,
+    ctx: &mut SparqlQueryContext,
+    prefixes: &HashMap<String, String>,
+) -> Result<AskQuery, String> {
     let after_ask = query.trim_start_matches("ASK").trim();
     let where_start = after_ask.find("WHERE").ok_or("WHERE clause not found")?;
     let where_clause = &after_ask[where_start..];
-    let pattern_id = parse_where_clause(where_clause, ctx)?;
+    let pattern_id = parse_where_clause(where_clause, ctx, prefixes)?;
     
     Ok(AskQuery {
         root_pattern: pattern_id,
     })
 }
 
-fn parse_construct_query(query: &str, ctx: &mut SparqlQueryContext) -> Result<ConstructQuery, String> {
+fn parse_construct_query(
+    query: &str,
+    ctx: &mut SparqlQueryContext,
+    prefixes: &HashMap<String, String>,
+) -> Result<ConstructQuery, String> {
     let after_construct = query.trim_start_matches("CONSTRUCT").trim();
     // Simplified - just parse WHERE for now
     let where_start = after_construct.find("WHERE").ok_or("WHERE clause not found")?;
     let where_clause = &after_construct[where_start..];
-    let pattern_id = parse_where_clause(where_clause, ctx)?;
+    let pattern_id = parse_where_clause(where_clause, ctx, prefixes)?;
     
     Ok(ConstructQuery {
         template_pattern: 0, // TODO: Parse template
@@ -123,13 +174,17 @@ fn parse_construct_query(query: &str, ctx: &mut SparqlQueryContext) -> Result<Co
     })
 }
 
-fn parse_describe_query(query: &str, ctx: &mut SparqlQueryContext) -> Result<DescribeQuery, String> {
+fn parse_describe_query(
+    query: &str,
+    ctx: &mut SparqlQueryContext,
+    prefixes: &HashMap<String, String>,
+) -> Result<DescribeQuery, String> {
     let after_describe = query.trim_start_matches("DESCRIBE").trim();
     // Simplified - just parse WHERE for now
     let where_start = after_describe.find("WHERE");
     let root_pattern = if let Some(start) = where_start {
         let where_clause = &after_describe[start + 5..];
-        Some(parse_where_clause(where_clause, ctx)?)
+        Some(parse_where_clause(where_clause, ctx, prefixes)?)
     } else {
         None
     };
@@ -158,65 +213,157 @@ fn parse_distinct(input: &str) -> ((bool, bool), &str) {
 fn parse_variables(input: &str) -> Result<Vec<&str>, String> {
     let input = input.trim();
     if input == "*" {
-        return Ok(vec![]); // Wildcard means all variables
+        return Ok(vec![]);
     }
-    
-    // Split by whitespace, filter out empty strings and WHERE keyword
-    let vars: Vec<&str> = input.split_whitespace()
-        .filter(|s| !s.is_empty() && *s != "WHERE")
+    let select_clause = if let Some(pos) = input.to_ascii_uppercase().find("WHERE") {
+        &input[..pos]
+    } else {
+        input
+    };
+    let vars: Vec<&str> = select_clause
+        .split_whitespace()
+        .filter(|s| !s.is_empty() && s.starts_with('?'))
         .collect();
-    
     Ok(vars)
 }
 
-fn parse_where_clause(input: &str, ctx: &mut SparqlQueryContext) -> Result<PatternId, String> {
-    let inner = input.trim_start_matches("WHERE").trim().trim_start_matches("{").trim();
-    let inner = inner.trim_end_matches("}").trim();
-    
-    parse_triple_patterns(inner, ctx)
+fn parse_where_clause(
+    input: &str,
+    ctx: &mut SparqlQueryContext,
+    prefixes: &HashMap<String, String>,
+) -> Result<PatternId, String> {
+    let inner = input.trim_start_matches("WHERE").trim().trim_start_matches('{').trim();
+    let inner = inner.trim_end_matches('}').trim();
+    parse_triple_patterns(inner, ctx, prefixes)
 }
 
-fn parse_triple_patterns(input: &str, ctx: &mut SparqlQueryContext) -> Result<PatternId, String> {
-    let mut pattern_id = 0u16;
-    
-    // Split by period to get individual triple patterns
-    for triple_str in input.split('.') {
+fn parse_triple_patterns(
+    input: &str,
+    ctx: &mut SparqlQueryContext,
+    prefixes: &HashMap<String, String>,
+) -> Result<PatternId, String> {
+    let start_idx = ctx.pattern_count as u16;
+    let mut count = 0u16;
+    let mut last_id = 0u16;
+
+    for triple_str in split_triple_patterns(input) {
         let triple_str = triple_str.trim();
         if triple_str.is_empty() {
             continue;
         }
-        
-        // Parse triple: subject predicate object
-        let parts: Vec<&str> = triple_str.split_whitespace().collect();
-        if parts.len() >= 3 {
-            let subject = parse_term(parts[0], ctx)?;
-            let predicate = parse_term(parts[1], ctx)?;
-            let object = parse_term(parts[2], ctx)?;
-            
-            let pattern = Pattern::Triple {
+        last_id = if triple_str.starts_with("<<") {
+            parse_star_triple_pattern(triple_str, ctx, prefixes)?
+        } else {
+            let parts: Vec<&str> = triple_str.split_whitespace().collect();
+            if parts.len() < 3 {
+                continue;
+            }
+            let subject = parse_term(parts[0], ctx, prefixes)?;
+            let predicate = parse_term(parts[1], ctx, prefixes)?;
+            let object = parse_term(parts[2], ctx, prefixes)?;
+            ctx.alloc_pattern(Pattern::Triple {
                 subject,
                 predicate,
                 object,
-            };
-            
-            pattern_id = ctx.alloc_pattern(pattern)?;
-        }
+            })?
+        };
+        count += 1;
     }
-    
-    Ok(pattern_id)
+
+    if count == 0 {
+        return Err("No triple patterns found".to_string());
+    }
+    if count == 1 {
+        return Ok(last_id);
+    }
+    ctx.alloc_pattern(Pattern::Group {
+        start_idx,
+        len: count,
+    })
 }
 
-fn parse_term(term: &str, ctx: &mut SparqlQueryContext) -> Result<u64, String> {
+fn split_triple_patterns(input: &str) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut current = String::new();
+    let mut in_embedded = 0u8;
+    for ch in input.chars() {
+        match ch {
+            '<' if current.ends_with('<') => {
+                in_embedded = in_embedded.saturating_add(1);
+                current.push(ch);
+            }
+            '>' => {
+                current.push(ch);
+                if in_embedded > 0 {
+                    in_embedded = in_embedded.saturating_sub(1);
+                }
+            }
+            '.' if in_embedded == 0 => {
+                if !current.trim().is_empty() {
+                    parts.push(current.trim().to_string());
+                }
+                current.clear();
+            }
+            _ => current.push(ch),
+        }
+    }
+    if !current.trim().is_empty() {
+        parts.push(current.trim().to_string());
+    }
+    parts
+}
+
+fn parse_star_triple_pattern(
+    input: &str,
+    ctx: &mut SparqlQueryContext,
+    prefixes: &HashMap<String, String>,
+) -> Result<PatternId, String> {
+    let start = input.find("<<").ok_or("Malformed RDF-Star pattern")?;
+    let end = input.find(">>").ok_or("Malformed RDF-Star pattern")?;
+    let inner = input[start + 2..end].trim();
+    let outer = input[end + 2..].trim();
+    let inner_parts: Vec<&str> = inner.split_whitespace().collect();
+    if inner_parts.len() < 3 {
+        return Err("Malformed RDF-Star inner triple".to_string());
+    }
+    let outer_parts: Vec<&str> = outer.split_whitespace().collect();
+    if outer_parts.len() < 2 {
+        return Err("Malformed RDF-Star outer triple".to_string());
+    }
+    let inner_subject = parse_term(inner_parts[0], ctx, prefixes)?;
+    let inner_predicate = parse_term(inner_parts[1], ctx, prefixes)?;
+    let inner_object = parse_term(inner_parts[2], ctx, prefixes)?;
+    let outer_predicate = parse_term(outer_parts[0], ctx, prefixes)?;
+    let outer_object = parse_term(outer_parts[1], ctx, prefixes)?;
+    ctx.alloc_pattern(Pattern::StarTriple {
+        inner_subject,
+        inner_predicate,
+        inner_object,
+        outer_predicate,
+        outer_object,
+    })
+}
+
+fn parse_term(
+    term: &str,
+    ctx: &mut SparqlQueryContext,
+    prefixes: &HashMap<String, String>,
+) -> Result<u64, String> {
     let term = term.trim();
-    
-    if term.starts_with('?') {
-        // Variable
+
+    if term.starts_with('?') || term.starts_with('$') {
         let var_id = ctx.register_variable(term)?;
         Ok(var_id as u64)
     } else if term.starts_with('<') {
-        // IRI
-        let iri = term.trim_start_matches("<").trim_end_matches(">");
+        let iri = term.trim_start_matches('<').trim_end_matches('>');
         Ok(crate::lexicon::generate_60bit_token(iri.as_bytes()))
+    } else if let Some((prefix, local)) = term.split_once(':') {
+        if let Some(base) = prefixes.get(prefix) {
+            let iri = format!("{base}{local}");
+            Ok(crate::lexicon::generate_60bit_token(iri.as_bytes()))
+        } else {
+            Ok(crate::lexicon::generate_60bit_token(term.as_bytes()))
+        }
     } else if term.starts_with('"') {
         // Literal string
         let lit = term.trim_start_matches("\"").trim_end_matches("\"");
@@ -405,5 +552,16 @@ mod tests {
     #[test]
     fn test_temporal_literal_integer_passthrough() {
         assert_eq!(super::parse_temporal_literal("42000"), 42_000);
+    }
+
+    #[test]
+    fn test_parse_prefix_and_star() {
+        let query = r#"
+            PREFIX ex: <http://example.org/>
+            SELECT ?s WHERE { << ?s ex:knows ex:bob >> ex:certainty ?c }
+        "#;
+        let (q, ctx) = parse_sparql(query).expect("parse");
+        assert!(matches!(q, SparqlQuery::Select(_)));
+        assert!(ctx.pattern_count > 0);
     }
 }

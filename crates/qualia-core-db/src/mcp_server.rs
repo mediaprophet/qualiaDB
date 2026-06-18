@@ -3,6 +3,13 @@
 // We still need access to standard library for I/O and String during init phase
 extern crate std;
 
+#[path = "mcp_tool_impls.rs"]
+mod mcp_tool_impls;
+#[path = "mcp_stub_impls.rs"]
+mod mcp_stub_impls;
+#[path = "mcp_format_impls.rs"]
+mod mcp_format_impls;
+
 use crate::wal::append_mutation;
 use crate::NQuin;
 use core::ptr::write_volatile;
@@ -78,16 +85,97 @@ fn extract_raw_json_string<'a>(payload: &'a [u8], key: &[u8]) -> Option<&'a [u8]
     None
 }
 
-fn tool_not_ready() -> Result<String, McpSystemError> {
-    Err(McpSystemError::ToolNotReady)
-}
-
 fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
     &[
         McpToolDescriptor {
             name: "query_graph",
             description: "Run guarded graph traversal against the in-memory daemon graph.",
             input_schema: r#"{"type":"object","properties":{"sanctuary_override":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "query_sparql",
+            description: "Execute an N-Triples pattern query against the in-process daemon graph.",
+            input_schema: r#"{"type":"object","required":["query"],"properties":{"query":{"type":"string"},"limit":{"type":"integer"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "get_graph_stats",
+            description: "Return quin count and capacity for the resident daemon graph.",
+            input_schema: r#"{"type":"object","properties":{}}"#,
+        },
+        McpToolDescriptor {
+            name: "list_ontologies",
+            description: "List startup ontology catalog entries and on-disk presence.",
+            input_schema: r#"{"type":"object","properties":{}}"#,
+        },
+        McpToolDescriptor {
+            name: "llm_infer",
+            description: "Run local GGUF inference with caller prompt and optional model_path.",
+            input_schema: r#"{"type":"object","required":["prompt"],"properties":{"prompt":{"type":"string"},"model_path":{"type":"string"},"graph_context":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "llm_chat",
+            description: "Multi-turn chat completion via the local GGUF inference stack.",
+            input_schema: r#"{"type":"object","required":["messages"],"properties":{"messages":{"type":"array"},"model_path":{"type":"string"},"graph_context":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "list_models",
+            description: "Discover GGUF models under storage and any resident mounted model.",
+            input_schema: r#"{"type":"object","properties":{}}"#,
+        },
+        McpToolDescriptor {
+            name: "qpu_optimize",
+            description: "Formulate a QUBO/circuit job from a problem description and classical solve.",
+            input_schema: r#"{"type":"object","required":["problem"],"properties":{"problem":{"type":"object"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "qpu_dft",
+            description: "Bounded Thomas-Fermi DFT ground-state energy from quins or grid resolution.",
+            input_schema: r#"{"type":"object","properties":{"grid_resolution":{"type":"integer"},"quins":{"type":"array"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "qpu_status",
+            description: "Return QPU bridge connection and job-queue status.",
+            input_schema: r#"{"type":"object","properties":{}}"#,
+        },
+        McpToolDescriptor {
+            name: "get_wallet_status",
+            description: "Inspect queued ILP micropayments from pending_payments.ndjson.",
+            input_schema: r#"{"type":"object","properties":{}}"#,
+        },
+        McpToolDescriptor {
+            name: "get_did_info",
+            description: "Parse a did:q42 identifier into its topological pointer hash.",
+            input_schema: r#"{"type":"object","required":["did"],"properties":{"did":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "ingest_ontology",
+            description: "Parse TTL/N3/q42 ontology file and extend the daemon graph.",
+            input_schema: r#"{"type":"object","required":["path"],"properties":{"path":{"type":"string"},"context_hash":{"type":"integer"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "validate_shacl",
+            description: "Validate quins for a target subject/property against SHACL constraints.",
+            input_schema: r#"{"type":"object","required":["quins","target_subject","target_property","constraints"],"properties":{"quins":{"type":"array"},"target_subject":{"type":"integer"},"target_property":{"type":"integer"},"constraints":{"type":"array"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "list_qapps",
+            description: "List installed qapps from storage Qapps directory.",
+            input_schema: r#"{"type":"object","properties":{}}"#,
+        },
+        McpToolDescriptor {
+            name: "get_qapp_manifest",
+            description: "Load qapp.json manifest for an installed or bundled qapp.",
+            input_schema: r#"{"type":"object","required":["qapp_name"],"properties":{"qapp_name":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "inspect_qapp_readiness",
+            description: "Check manifest, entrypoints, and ontology readiness for a qapp.",
+            input_schema: r#"{"type":"object","required":["qapp_name"],"properties":{"qapp_name":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "list_qapp_updates",
+            description: "Compare installed qapp versions against bundled update offers.",
+            input_schema: r#"{"type":"object","properties":{}}"#,
         },
         McpToolDescriptor {
             name: "get_system_status",
@@ -106,98 +194,108 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
         },
         McpToolDescriptor {
             name: "evaluate_modality",
-            description: "Run a lightweight modality-specific evaluator for diagnostics.",
-            input_schema: r#"{"type":"object","properties":{"modality":{"type":"string"}}}"#,
+            description: "Evaluate logic modalities: ltl, asp, deontic, epistemic, dl, paraconsistent, probabilistic.",
+            input_schema: r#"{"type":"object","required":["modality"],"properties":{"modality":{"type":"string"},"quins":{"type":"array"},"trace":{"type":"array"},"formula":{"type":"object"},"now_unix":{"type":"integer"},"agent_did_hash":{"type":"integer"},"world_hash":{"type":"integer"}}}"#,
         },
         McpToolDescriptor {
             name: "matrix_operation",
-            description: "Run a matrix multiply, transpose, or solve diagnostic.",
-            input_schema: r#"{"type":"object","properties":{"op":{"type":"string"}}}"#,
+            description: "Linear algebra: multiply, transpose, solve, or inverse with caller-supplied matrices.",
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["multiply","transpose","solve","inverse"]},"left":{"type":"object","properties":{"id":{"type":"string"},"rows":{"type":"integer"},"cols":{"type":"integer"},"data":{"type":"array","items":{"type":"number"}}}},"right":{"type":"object"},"matrices":{"type":"array"},"result_id":{"type":"string"}}}"#,
         },
         McpToolDescriptor {
             name: "ode_solve",
-            description: "Solve a small ordinary differential equation diagnostic problem.",
-            input_schema: r#"{"type":"object","properties":{"method":{"type":"string"}}}"#,
+            description: "Run a configurable CFD or molecular-dynamics simulation step.",
+            input_schema: r#"{"type":"object","properties":{"type":{"type":"string","enum":["cfd","distributed","molecular_dynamics"]},"nx":{"type":"integer"},"ny":{"type":"integer"},"dx":{"type":"number"},"time_step":{"type":"number"},"total_time":{"type":"number"},"num_threads":{"type":"integer"}}}"#,
         },
         McpToolDescriptor {
             name: "chemical_analysis",
-            description: "Run a chemistry analysis diagnostic against the specialized library.",
-            input_schema: r#"{"type":"object","properties":{"analysis":{"type":"string"}}}"#,
+            description: "Predict molecular properties from SMILES or formula via ChemistryModelingLibrary.",
+            input_schema: r#"{"type":"object","properties":{"smiles":{"type":"string"},"formula":{"type":"string"},"molecular_weight":{"type":"number"},"prop":{"type":"string"},"properties":{"type":"array","items":{"type":"string"}}}}"#,
         },
         McpToolDescriptor {
             name: "statistical_analysis",
-            description: "Run a statistics diagnostic against the specialized library.",
-            input_schema: r#"{"type":"object","properties":{"test":{"type":"string"}}}"#,
+            description: "Descriptive statistics on caller-supplied tabular data.",
+            input_schema: r#"{"type":"object","required":["rows"],"properties":{"stat":{"type":"string","enum":["mean","variance","correlation"]},"rows":{"type":"array"},"columns":{"type":"array","items":{"type":"string"}},"column":{"type":"string"},"column_y":{"type":"string"},"method":{"type":"string"}}}"#,
         },
         McpToolDescriptor {
             name: "ml_inference",
-            description: "Run a local ML inference diagnostic against the specialized library.",
-            input_schema: r#"{"type":"object","properties":{"model":{"type":"string"}}}"#,
+            description: "Load a model by id and run inference on caller-supplied input bytes.",
+            input_schema: r#"{"type":"object","properties":{"model_id":{"type":"string"},"model_path":{"type":"string"},"input_data":{"type":"array","items":{"type":"integer"}},"input_hex":{"type":"string"},"batch_size":{"type":"integer"},"temperature":{"type":"number"},"max_tokens":{"type":"integer"}}}"#,
         },
         McpToolDescriptor {
             name: "financial_model",
-            description: "Compute an option price or portfolio risk diagnostic.",
-            input_schema: r#"{"type":"object","properties":{"op":{"type":"string"}}}"#,
+            description: "Black-Scholes option pricing or portfolio risk with caller parameters.",
+            input_schema: r#"{"type":"object","properties":{"op":{"type":"string","enum":["option","risk"]},"underlying_price":{"type":"number"},"strike":{"type":"number"},"volatility":{"type":"number"},"assets":{"type":"array"},"cash_balance":{"type":"number"}}}"#,
         },
         McpToolDescriptor {
             name: "medical_score",
-            description: "Run a clinical scoring or analysis diagnostic.",
-            input_schema: r#"{"type":"object","properties":{"score":{"type":"string"}}}"#,
+            description: "Clinical analysis for a caller-supplied patient record.",
+            input_schema: r#"{"type":"object","properties":{"patient_id":{"type":"string"},"score":{"type":"string","enum":["diagnosis","treatment","prognosis","prevention"]},"patient":{"type":"object"}}}"#,
         },
         McpToolDescriptor {
             name: "engineering_analysis_op",
-            description: "Run a structural, thermal, or dynamic analysis diagnostic.",
-            input_schema: r#"{"type":"object","properties":{"analysis":{"type":"string"}}}"#,
+            description: "Structural, thermal, or dynamic FEA with caller model geometry and loads.",
+            input_schema: r#"{"type":"object","properties":{"analysis":{"type":"string","enum":["structural","thermal","dynamic"]},"model":{"type":"object"},"dimensions":{"type":"array"},"youngs_modulus":{"type":"number"}}}"#,
         },
         McpToolDescriptor {
             name: "bioinformatics_align",
-            description: "Run a nucleotide or protein alignment diagnostic.",
-            input_schema: r#"{"type":"object","properties":{"mode":{"type":"string"}}}"#,
+            description: "Pairwise nucleotide or protein alignment on caller query/target sequences.",
+            input_schema: r#"{"type":"object","required":["query","target"],"properties":{"query":{"type":"string"},"target":{"type":"string"},"mode":{"type":"string","enum":["dna","protein"]}}}"#,
         },
         McpToolDescriptor {
             name: "chemical_descriptors",
-            description: "Compute molecular descriptors from a SMILES string.",
-            input_schema: r#"{"type":"object","properties":{"smiles":{"type":"string"}}}"#,
+            description: "Compute Lipinski/Veber descriptors from a SMILES string.",
+            input_schema: r#"{"type":"object","required":["smiles"],"properties":{"smiles":{"type":"string"}}}"#,
         },
         McpToolDescriptor {
             name: "clinical_risk",
-            description: "Compute a deterministic clinical risk score.",
-            input_schema: r#"{"type":"object","properties":{"score":{"type":"string"}}}"#,
+            description: "Clinical risk scores: framingham, cha2ds2_vasc, sofa, egfr.",
+            input_schema: r#"{"type":"object","properties":{"score":{"type":"string","enum":["framingham","cha2ds2","cha2ds2_vasc","sofa","egfr","renal"]},"age":{"type":"integer"},"input":{"type":"object"}}}"#,
         },
         McpToolDescriptor {
             name: "parse_csv",
-            description: "Parse CSV data into Quins using the zero-heap CSV parser.",
-            input_schema: r#"{"type":"object","properties":{"file_path":{"type":"string"}}}"#,
+            description: "Stream CSV into Quins via zero-heap parser. Requires field_mappings; accepts csv_data or file_path.",
+            input_schema: r#"{"type":"object","required":["field_mappings"],"properties":{"csv_data":{"type":"string"},"file_path":{"type":"string"},"field_mappings":{"type":"array","items":{"type":"object","required":["source_key"],"properties":{"source_key":{"type":"string"},"predicate":{"type":"string"},"predicate_hash":{"type":"integer"},"datatype":{"type":"string","enum":["integer","float","datetime","string"]}}}},"base_class_hash":{"type":"integer"},"context_hash":{"type":"integer"},"ingest_to_graph":{"type":"boolean"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "parse_rdf",
+            description: "Parse RDF/RDF-Star (nt, turtle, nquads, trig, n3, jsonld, cbor) into quins via zero-heap streaming parsers.",
+            input_schema: r#"{"type":"object","required":["format"],"properties":{"format":{"type":"string"},"rdf_data":{"type":"string"},"file_path":{"type":"string"},"context_hash":{"type":"integer"},"ingest_to_graph":{"type":"boolean"}}}"#,
         },
         McpToolDescriptor {
             name: "parse_json",
-            description: "Parse JSON data into Quins using the zero-heap JSON parser.",
-            input_schema: r#"{"type":"object","properties":{"file_path":{"type":"string"}}}"#,
+            description: "Stream JSON objects into Quins via zero-heap parser. Requires field_mappings; accepts json_data or file_path.",
+            input_schema: r#"{"type":"object","required":["field_mappings"],"properties":{"json_data":{"type":"string"},"file_path":{"type":"string"},"field_mappings":{"type":"array","items":{"type":"object","required":["source_key"],"properties":{"source_key":{"type":"string"},"predicate":{"type":"string"},"predicate_hash":{"type":"integer"},"datatype":{"type":"string","enum":["integer","float","datetime","string"]}}}},"base_class_hash":{"type":"integer"},"context_hash":{"type":"integer"},"ingest_to_graph":{"type":"boolean"}}}"#,
         },
         McpToolDescriptor {
             name: "serialize_csv",
-            description: "Serialize Quins to CSV format.",
-            input_schema: r#"{"type":"object","properties":{"file_path":{"type":"string"}}}"#,
+            description: "Serialize quins or daemon graph slice to CSV. Returns inline csv_data or writes file_path when output=file.",
+            input_schema: r#"{"type":"object","required":["headers","predicate_hashes"],"properties":{"quins":{"type":"array"},"use_graph":{"type":"boolean"},"context_hash":{"type":"integer"},"headers":{"type":"array","items":{"type":"string"}},"predicate_hashes":{"type":"array","items":{"type":"integer"}},"datatypes":{"type":"array","items":{"type":"string"}},"output":{"type":"string","enum":["inline","file"]},"file_path":{"type":"string"}}}"#,
         },
         McpToolDescriptor {
             name: "serialize_json",
-            description: "Serialize Quins to JSON format.",
-            input_schema: r#"{"type":"object","properties":{"file_path":{"type":"string"}}}"#,
+            description: "Serialize quins or daemon graph slice to JSON array. Returns inline json_data or writes file_path when output=file.",
+            input_schema: r#"{"type":"object","required":["field_names","predicate_hashes"],"properties":{"quins":{"type":"array"},"use_graph":{"type":"boolean"},"context_hash":{"type":"integer"},"field_names":{"type":"array","items":{"type":"string"}},"predicate_hashes":{"type":"array","items":{"type":"integer"}},"datatypes":{"type":"array","items":{"type":"string"}},"output":{"type":"string","enum":["inline","file"]},"file_path":{"type":"string"}}}"#,
         },
         McpToolDescriptor {
             name: "serialize_rdf",
-            description: "Serialize Quins to RDF format (NTriples, Turtle, N-Quads, TriG, N3, JSON-LD).",
-            input_schema: r#"{"type":"object","properties":{"file_path":{"type":"string"},"format":{"type":"string"}}}"#,
+            description: "Serialize quins or graph slice to RDF/RDF-Star via resolver-backed zero-heap dispatch.",
+            input_schema: r#"{"type":"object","properties":{"quins":{"type":"array"},"use_graph":{"type":"boolean"},"context_hash":{"type":"integer"},"format":{"type":"string"},"rdf_star":{"type":"boolean"},"star":{"type":"boolean"},"output":{"type":"string","enum":["inline","file"]},"file_path":{"type":"string"}}}"#,
         },
         McpToolDescriptor {
             name: "symbolic_logic_infer",
-            description: "Run a symbolic logic diagnostic over the native engine.",
-            input_schema: r#"{"type":"object","properties":{"mode":{"type":"string"}}}"#,
+            description: "Defeasible forward-chaining or bounded SAT with caller facts, rules, and clauses.",
+            input_schema: r#"{"type":"object","properties":{"solver":{"type":"string","enum":["defeasible","sat"]},"facts":{"type":"array"},"rules":{"type":"array"},"clauses":{"type":"array"},"max_iterations":{"type":"integer"}}}"#,
         },
         McpToolDescriptor {
             name: "geometric_algebra_op",
-            description: "Run a geometric algebra diagnostic against the native engine.",
-            input_schema: r#"{"type":"object","properties":{"op":{"type":"string"}}}"#,
+            description: "3D vector cross product, dot product, or angle between caller vectors.",
+            input_schema: r#"{"type":"object","required":["a","b"],"properties":{"op":{"type":"string","enum":["cross","angle","dot"]},"a":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3},"b":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}}}"#,
+        },
+        McpToolDescriptor {
+            name: "run_docs_tests",
+            description: "Run docs/tests headless suites (logic, wasm, native, or both). Native/both require daemon on localhost:4242.",
+            input_schema: r#"{"type":"object","properties":{"mode":{"type":"string","enum":["logic","wasm","native","both"]}}}"#,
         },
     ]
 }
@@ -335,10 +433,13 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
 
         // ── Data Format Tools ──────────────────────────────────────────────────────
         b"parse_csv" => execute_parse_csv(payload.arguments_raw, intent_frame),
+        b"parse_rdf" => execute_parse_rdf(payload.arguments_raw, intent_frame),
         b"parse_json" => execute_parse_json(payload.arguments_raw, intent_frame),
         b"serialize_csv" => execute_serialize_csv(payload.arguments_raw, intent_frame),
         b"serialize_json" => execute_serialize_json(payload.arguments_raw, intent_frame),
         b"serialize_rdf" => execute_serialize_rdf(payload.arguments_raw, intent_frame),
+
+        b"run_docs_tests" => execute_run_docs_tests(payload.arguments_raw, intent_frame),
 
         _ => Err(McpSystemError::ToolNotFound),
     }
@@ -347,10 +448,10 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
 // ── Graph Engine Implementations ───────────────────────────────────────────
 
 unsafe fn execute_sparql_query(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::query_sparql(args)
 }
 
 unsafe fn execute_bare_metal_graph_traversal(
@@ -374,424 +475,153 @@ unsafe fn execute_bare_metal_graph_traversal(
 }
 
 unsafe fn execute_graph_stats(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::get_graph_stats(args)
 }
 
 unsafe fn execute_list_ontologies(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::list_ontologies(args)
 }
 
 // ── LLM Implementations ─────────────────────────────────────────────────────
 
 unsafe fn execute_llm_infer(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::llm_infer(args)
 }
 
 unsafe fn execute_llm_chat(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::llm_chat(args)
 }
 
 unsafe fn execute_list_models(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::list_models(args)
 }
 
 // ── QPU Implementations ─────────────────────────────────────────────────────
 
 unsafe fn execute_qpu_optimize(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::qpu_optimize(args)
 }
 
 unsafe fn execute_qpu_dft(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::qpu_dft(args)
 }
 
 unsafe fn execute_qpu_status(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::qpu_status(args)
 }
 
 // ── Scientific Computing Implementations ─────────────────────────────────
 
-/// matrix_operation — 2×2 matrix multiply/transpose/solve via LinearAlgebraLibrary.
-/// JSON args: { "op": "multiply"|"transpose"|"solve" }
 unsafe fn execute_matrix_operation(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::specialized_libs::linear_algebra::{DataType, LinearAlgebraLibrary};
-    let op = extract_raw_json_string(args, b"\"op\"").unwrap_or(b"multiply");
-    let mut lib = LinearAlgebraLibrary::new();
-    lib.initialize()
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    lib.create_matrix(
-        "A".to_string(),
-        2,
-        2,
-        DataType::Float64,
-        vec![1.0, 2.0, 3.0, 4.0],
-    )
-    .map_err(|_| McpSystemError::InvalidParameters)?;
-    match op {
-        b"transpose" => {
-            let r = lib
-                .matrix_transpose("A", "AT")
-                .map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(format!(
-                "{}x{} result[0]={}",
-                r.result.rows, r.result.cols, r.result.data[0]
-            ))
-        }
-        b"solve" => {
-            lib.create_matrix("B".to_string(), 2, 1, DataType::Float64, vec![5.0, 11.0])
-                .map_err(|_| McpSystemError::InvalidParameters)?;
-            let r = lib
-                .solve_linear_system("A", "B", "X")
-                .map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(format!("solution[0]={:.4}", r.result.data[0]))
-        }
-        _ => {
-            lib.create_matrix(
-                "B".to_string(),
-                2,
-                2,
-                DataType::Float64,
-                vec![5.0, 6.0, 7.0, 8.0],
-            )
-            .map_err(|_| McpSystemError::InvalidParameters)?;
-            let r = lib
-                .matrix_multiply("A", "B", "C", 1.0, 0.0)
-                .map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(format!(
-                "{}x{} result[0]={}",
-                r.result.rows, r.result.cols, r.result.data[0]
-            ))
-        }
-    }
+    mcp_tool_impls::matrix_operation(args)
 }
 
-/// ode_solve — CFD simulation step via PhysicsSimulationLibrary (Burgers equation).
-/// JSON args: { "type": "cfd"|"distributed" }
 unsafe fn execute_ode_solve(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::specialized_libs::physics_simulation::{
-        CommunicationPattern, DomainDecomposition, DomainType, LoadBalancing, NumericalMethod,
-        ParallelConfig, PhysicsSimulationLibrary, SimulationConfig, SimulationType,
-        SpatialResolution,
-    };
-    let sim_type = extract_raw_json_string(args, b"\"type\"").unwrap_or(b"cfd");
-    let mut lib = PhysicsSimulationLibrary::new();
-    lib.initialize()
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    let config = SimulationConfig {
-        simulation_id: "mcp_sim".to_string(),
-        simulation_type: if sim_type == b"distributed" {
-            SimulationType::MolecularDynamics
-        } else {
-            SimulationType::CFD
-        },
-        domain_type: DomainType::TwoDimensional,
-        time_step: 0.001,
-        total_time: 0.01,
-        spatial_resolution: SpatialResolution {
-            nx: 10,
-            ny: Some(10),
-            nz: None,
-            dx: 0.1,
-            dy: Some(0.1),
-            dz: None,
-        },
-        numerical_method: NumericalMethod::FiniteVolume,
-        parallel_config: ParallelConfig {
-            num_threads: 1,
-            num_processes: 1,
-            domain_decomposition: DomainDecomposition::TwoDimensional,
-            load_balancing: LoadBalancing::Dynamic,
-            communication_pattern: CommunicationPattern::Hybrid,
-        },
-    };
-    let mut sim = lib
-        .create_simulation(config)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    let r = lib
-        .run_cfd_simulation(&mut sim)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    Ok(format!(
-        "fields={} converged={} iters={}",
-        r.result.len(),
-        r.convergence_info.converged,
-        r.convergence_info.iterations
-    ))
+    mcp_tool_impls::ode_solve(args)
 }
 
-/// chemical_analysis — property prediction via ChemistryModelingLibrary.
-/// JSON args: { "prop": "boiling_point"|"reaction" }
 unsafe fn execute_chemical_analysis(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::specialized_libs::chemistry_modeling::{
-        ChemistryModelingLibrary, Molecule, PropertyType,
-    };
-    let _prop = extract_raw_json_string(args, b"\"prop\"").unwrap_or(b"boiling_point");
-    let mut lib = ChemistryModelingLibrary::new();
-    lib.initialize()
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    let molecule = Molecule::new();
-    let r = lib
-        .predict_properties(molecule, vec![PropertyType::BoilingPoint])
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    let bp = r
-        .result
-        .properties
-        .get("BoilingPoint")
-        .copied()
-        .unwrap_or(0.0);
-    Ok(format!(
-        "boiling_point={:.2} confidence_interval_lo={:.2}",
-        bp,
-        r.result
-            .confidence_intervals
-            .get("BoilingPoint")
-            .map(|ci| ci.0)
-            .unwrap_or(0.0)
-    ))
+    mcp_tool_impls::chemical_analysis(args)
 }
 
-/// statistical_analysis — descriptive stats via StatisticalComputingLibrary.
-/// JSON args: { "stat": "mean"|"variance"|"correlation" }
 unsafe fn execute_statistical_analysis(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::specialized_libs::statistical_computing::{
-        CorrelationMethod, DataType, DataValue, PrivacyLevel, StatisticalComputingLibrary,
-    };
-    let stat = extract_raw_json_string(args, b"\"stat\"").unwrap_or(b"mean");
-    let mut lib = StatisticalComputingLibrary::new();
-    lib.initialize()
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    let data = vec![
-        vec![DataValue::Float(1.0), DataValue::Float(2.0)],
-        vec![DataValue::Float(2.0), DataValue::Float(4.0)],
-        vec![DataValue::Float(3.0), DataValue::Float(6.0)],
-        vec![DataValue::Float(4.0), DataValue::Float(8.0)],
-        vec![DataValue::Float(5.0), DataValue::Float(10.0)],
-    ];
-    lib.create_dataset(
-        "ds".to_string(),
-        data,
-        vec!["x".to_string(), "y".to_string()],
-        vec![DataType::Float64, DataType::Float64],
-        PrivacyLevel::Public,
-    )
-    .map_err(|_| McpSystemError::InvalidParameters)?;
-    match stat {
-        b"variance" => {
-            let r = lib
-                .variance("ds", "x", true, false)
-                .map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(format!("variance={:.4}", r.result))
-        }
-        b"correlation" => {
-            let r = lib
-                .correlation("ds", "x", "y", CorrelationMethod::Pearson, false)
-                .map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(format!("pearson_r={:.4}", r.result))
-        }
-        _ => {
-            let r = lib
-                .mean("ds", "x", false)
-                .map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(format!("mean={:.4}", r.result))
-        }
-    }
+    mcp_tool_impls::statistical_analysis(args)
 }
 
-/// ml_inference — load + run inference via MachineLearningLibrary.
-/// JSON args: { "model": "neural_net"|"decision_tree" }
 unsafe fn execute_ml_inference(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::specialized_libs::machine_learning::{
-        InferenceParameters, MachineLearningLibrary, Precision,
-    };
-    let _model = extract_raw_json_string(args, b"\"model\"").unwrap_or(b"neural_net");
-    let mut lib = MachineLearningLibrary::new();
-    lib.initialize()
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    lib.load_model("test_model".to_string(), "/dev/null")
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    let params = InferenceParameters {
-        batch_size: 1,
-        sequence_length: 64,
-        temperature: Some(0.7),
-        top_k: Some(1),
-        top_p: Some(1.0),
-        max_tokens: Some(10),
-        precision: Precision::FP32,
-    };
-    let r = lib
-        .run_inference("test_model", &[0u8; 64], params)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    Ok(format!(
-        "result_id={} confidence={:.4}",
-        r.result.result_id, r.result.confidence
-    ))
+    mcp_tool_impls::ml_inference(args)
 }
 
-/// financial_model — Black-Scholes option price or portfolio risk via FinancialModelingLibrary.
-/// JSON args: { "op": "option"|"risk" }
 unsafe fn execute_financial_model(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::specialized_libs::financial_modeling::{
-        FinancialModelingLibrary, OptionParameters, Portfolio,
-    };
-    let op = extract_raw_json_string(args, b"\"op\"").unwrap_or(b"option");
-    let mut lib = FinancialModelingLibrary::new();
-    lib.initialize()
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    match op {
-        b"risk" => {
-            lib.create_portfolio(Portfolio::new())
-                .map_err(|_| McpSystemError::InvalidParameters)?;
-            let r = lib
-                .calculate_portfolio_risk("portfolio_1")
-                .map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(format!(
-                "var95={:.4} sharpe={:.4}",
-                r.result.var_95, r.result.sharpe_ratio
-            ))
-        }
-        _ => {
-            let r = lib
-                .price_option(OptionParameters::new())
-                .map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(format!(
-                "price={:.4} delta={:.4}",
-                r.result.price, r.result.delta
-            ))
-        }
-    }
+    mcp_tool_impls::financial_model(args)
 }
 
-/// medical_score — clinical analysis via MedicalComputingLibrary.
-/// JSON args: { "score": "diagnosis"|"vitals"|"labs" }
 unsafe fn execute_medical_score(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::specialized_libs::medical_computing::{ClinicalDataType, MedicalComputingLibrary};
-    let score = extract_raw_json_string(args, b"\"score\"").unwrap_or(b"diagnosis");
-    let mut lib = MedicalComputingLibrary::new();
-    lib.initialize()
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    let data_type = match score {
-        b"treatment" => ClinicalDataType::Treatment,
-        b"prognosis" => ClinicalDataType::Prognosis,
-        _ => ClinicalDataType::Diagnosis,
-    };
-    let r = lib
-        .analyze_clinical_data("patient_1", data_type)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    let recommendation = r
-        .result
-        .recommendations
-        .first()
-        .map(|s| s.as_str())
-        .unwrap_or("none");
-    Ok(format!(
-        "analysis_id={} confidence={:.4} recommendation={}",
-        r.result.analysis_id, r.result.confidence_score, recommendation
-    ))
+    mcp_tool_impls::medical_score(args)
 }
 
-/// engineering_analysis_op — structural / thermal FEA via EngineeringAnalysisLibrary.
-/// JSON args: { "analysis": "structural"|"thermal"|"dynamic" }
 unsafe fn execute_engineering_analysis(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::specialized_libs::engineering_analysis::{
-        AnalysisType, EngineeringAnalysisLibrary, EngineeringModel,
-    };
-    let analysis = extract_raw_json_string(args, b"\"analysis\"").unwrap_or(b"structural");
-    let mut lib = EngineeringAnalysisLibrary::new();
-    lib.initialize()
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    let model = EngineeringModel::new();
-    let analysis_type = match analysis {
-        b"thermal" => AnalysisType::Thermal,
-        b"dynamic" => AnalysisType::LinearDynamic,
-        _ => AnalysisType::LinearStatic,
-    };
-    let r = lib
-        .perform_structural_analysis(model, analysis_type)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    let max_stress = r.result.stress_field.first().copied().unwrap_or(0.0);
-    Ok(format!(
-        "safety_factor={:.4} max_stress={:.4}",
-        r.result.safety_factor, max_stress
-    ))
+    mcp_tool_impls::engineering_analysis(args)
 }
 
 // ── Identity & Wallet Implementations ─────────────────────────────────────
 
 unsafe fn execute_wallet_status(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::get_wallet_status(args)
 }
 
 unsafe fn execute_did_info(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::get_did_info(args)
 }
 
 // ── Ontology Implementations ────────────────────────────────────────────────
 
 unsafe fn execute_ingest_ontology(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::ingest_ontology(args)
 }
 
 unsafe fn execute_shacl_validation(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::validate_shacl(args)
 }
 
 // ── Testing & Debugging Implementations ─────────────────────────────────────
@@ -827,10 +657,10 @@ unsafe fn execute_paraconsistent_injection(
 }
 
 unsafe fn execute_list_qapps(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::list_qapps(args)
 }
 
 unsafe fn execute_get_qapp_manifest(
@@ -841,7 +671,8 @@ unsafe fn execute_get_qapp_manifest(
     if qapp_name.is_empty() {
         return Err(McpSystemError::InvalidParameters);
     }
-    tool_not_ready()
+    let name = std::str::from_utf8(qapp_name).map_err(|_| McpSystemError::InvalidParameters)?;
+    mcp_stub_impls::get_qapp_manifest(name)
 }
 
 unsafe fn execute_inspect_qapp_readiness(
@@ -852,14 +683,15 @@ unsafe fn execute_inspect_qapp_readiness(
     if qapp_name.is_empty() {
         return Err(McpSystemError::InvalidParameters);
     }
-    tool_not_ready()
+    let name = std::str::from_utf8(qapp_name).map_err(|_| McpSystemError::InvalidParameters)?;
+    mcp_stub_impls::inspect_qapp_readiness(name)
 }
 
 unsafe fn execute_list_qapp_updates(
-    _args: &[u8],
+    args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    tool_not_ready()
+    mcp_stub_impls::list_qapp_updates(args)
 }
 
 unsafe fn execute_describe_qapp_surface_schema(
@@ -896,411 +728,188 @@ unsafe fn execute_system_status(
     .to_string())
 }
 
+unsafe fn execute_run_docs_tests(
+    args: &[u8],
+    _intent: &McpIntentFrame,
+) -> Result<String, McpSystemError> {
+    let mode = extract_raw_json_string(args, b"\"mode\"").unwrap_or(b"logic");
+    let mode_str = core::str::from_utf8(mode).unwrap_or("logic");
+    if !matches!(mode_str, "logic" | "wasm" | "native" | "both") {
+        return Err(McpSystemError::InvalidParameters);
+    }
+
+    if matches!(mode_str, "native" | "both") && !daemon_health_ok(4242) {
+        return Ok(json!({
+            "ok": false,
+            "mode": mode_str,
+            "error": "daemon_unreachable",
+            "hint": "Start the graph daemon with `qualia-cli service start` or `qualia-cli daemon start --dev`"
+        })
+        .to_string());
+    }
+
+    let root = resolve_repo_root();
+    let script = root.join("docs/tests/run-headless.mjs");
+    if !script.exists() {
+        return Ok(json!({
+            "ok": false,
+            "mode": mode_str,
+            "error": "runner_missing",
+            "path": script.display().to_string()
+        })
+        .to_string());
+    }
+
+    let output = std::process::Command::new("node")
+        .arg(script.as_os_str())
+        .arg("--mode")
+        .arg(mode_str)
+        .current_dir(&root)
+        .output()
+        .map_err(|_| McpSystemError::ToolNotReady)?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    Ok(json!({
+        "ok": output.status.success(),
+        "mode": mode_str,
+        "exitCode": output.status.code(),
+        "stdout": stdout,
+        "stderr": stderr
+    })
+    .to_string())
+}
+
+fn daemon_health_ok(port: u16) -> bool {
+    use std::io::{Read, Write};
+    use std::net::{SocketAddr, TcpStream};
+    use std::time::Duration;
+
+    let addr: SocketAddr = format!("127.0.0.1:{port}").parse().unwrap_or_else(|_| {
+        SocketAddr::from(([127, 0, 0, 1], port))
+    });
+    let mut stream = match TcpStream::connect_timeout(&addr, Duration::from_secs(2)) {
+        Ok(stream) => stream,
+        Err(_) => return false,
+    };
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
+    let request = format!(
+        "GET /health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"
+    );
+    if stream.write_all(request.as_bytes()).is_err() {
+        return false;
+    }
+    let mut buf = [0u8; 512];
+    match stream.read(&mut buf) {
+        Ok(0) => false,
+        Ok(n) => {
+            let response = core::str::from_utf8(&buf[..n]).unwrap_or("");
+            response.contains("200 OK") || response.contains("engine_version")
+        }
+        Err(_) => false,
+    }
+}
+
+fn resolve_repo_root() -> std::path::PathBuf {
+    if let Ok(root) = std::env::var("QUALIA_REPO_ROOT") {
+        return std::path::PathBuf::from(root);
+    }
+    let mut dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    for _ in 0..8 {
+        if dir.join("docs/tests/run-headless.mjs").exists() {
+            return dir;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    dir
+}
+
 // ── Extended Logic & Science Tool Implementations ─────────────────────────
 
-/// evaluate_modality — route to any of the 15 Webizen VM logic evaluators.
-/// JSON args: { "modality": "ltl"|"asp"|"dl"|"probabilistic"|..., ... }
 unsafe fn execute_evaluate_modality(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    // Dispatch based on "modality" string — reuse existing modality APIs
-    let modality = extract_raw_json_string(args, b"\"modality\"").unwrap_or(b"unknown");
-    match modality {
-        b"ltl" => {
-            use crate::modalities::temporal_ltl::{evaluate_ltl_trace, LtlFormula};
-            let ok = evaluate_ltl_trace(&[], &LtlFormula::Globally(0));
-            Ok(if ok { "1".to_string() } else { "0".to_string() })
-        }
-        b"asp" => {
-            use crate::modalities::asp::enumerate_stable_models;
-            let base = crate::NQuin {
-                subject: 0,
-                predicate: 0,
-                object: 0,
-                context: 0,
-                metadata: 0,
-                parity: 0,
-            };
-            let mut worlds = [0u64; 8];
-            Ok(enumerate_stable_models(&base, &[], &mut worlds).to_string())
-        }
-        b"probabilistic" => {
-            use crate::modalities::probabilistic::evaluate_threshold;
-            Ok(if evaluate_threshold(0.5f32, 0.4f32) {
-                "1".to_string()
-            } else {
-                "0".to_string()
-            })
-        }
-        b"argumentation" => {
-            use crate::modalities::argumentation::ArgumentationFramework;
-            let fw = ArgumentationFramework::new();
-            Ok(fw.grounded_extension().len().to_string())
-        }
-        _ => Ok("0".to_string()),
-    }
+    mcp_tool_impls::evaluate_modality(args)
 }
 
-/// bioinformatics_align — pairwise nucleotide or protein alignment.
-/// JSON args: { "query": "...", "target": "...", "mode": "dna"|"protein" }
 unsafe fn execute_bioinformatics_align(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::domains::biological::bioinformatics::{align_nucleotide, align_protein};
-    let mode = extract_raw_json_string(args, b"\"mode\"").unwrap_or(b"dna");
-    let demo_q = b"ATCGATCG";
-    let demo_t = b"ATCGATCC";
-    let result = if mode == b"protein" {
-        align_protein(demo_q, demo_t)
-    } else {
-        align_nucleotide(demo_q, demo_t)
-    };
-    Ok((result.score as usize).to_string())
+    mcp_tool_impls::bioinformatics_align(args)
 }
 
-/// chemical_descriptors — compute molecular descriptors from a SMILES string.
-/// JSON args: { "smiles": "..." }
 unsafe fn execute_chemical_descriptors(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::domains::chemical::organic_chemistry::{compute_descriptors, parse_smiles};
-    let smiles_bytes = extract_raw_json_string(args, b"\"smiles\"").unwrap_or(b"C");
-    let smiles = core::str::from_utf8(smiles_bytes).unwrap_or("C");
-    let mol = parse_smiles(smiles);
-    let desc = compute_descriptors(&mol);
-    // Return molecular weight (rounded) as a usize proxy
-    Ok((desc.molecular_weight as usize).to_string())
+    mcp_tool_impls::chemical_descriptors(args)
 }
 
-/// clinical_risk — compute one of several clinical risk scores.
-/// JSON args: { "score": "framingham"|"sofa"|"egfr"|"cha2ds2" }
 unsafe fn execute_clinical_risk(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::clinical_engine::{framingham_10yr_risk, FraminghamInput};
-    let score_type = extract_raw_json_string(args, b"\"score\"").unwrap_or(b"framingham");
-    match score_type {
-        b"framingham" => {
-            let input = FraminghamInput {
-                age: 55,
-                sex_male: true,
-                total_cholesterol_mmol: 5.5,
-                hdl_cholesterol_mmol: 1.2,
-                systolic_bp: 130.0,
-                bp_treated: false,
-                current_smoker: false,
-                diabetic: false,
-            };
-            let r = framingham_10yr_risk(&input);
-            Ok(((r.risk_10yr * 1000.0) as usize).to_string())
-        }
-        _ => Ok("0".to_string()),
-    }
+    mcp_tool_impls::clinical_risk(args)
 }
 
-/// parse_csv — Parse CSV data into Quins using the zero-heap CSV parser.
-/// JSON args: { "file_path": "path/to/data.csv" }
 unsafe fn execute_parse_csv(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::sparql_library::parsers::csv_parser::{CsvMappingProfile, CsvColumnMapping, CsvDatatype, parse_csv_to_quins};
-    use std::fs::File;
-    
-    let file_path = extract_raw_json_string(args, b"\"file_path\"")
-        .ok_or(McpSystemError::InvalidParameters)?;
-    
-    let file_path_str = std::str::from_utf8(file_path)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    let file = File::open(file_path_str)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    let mut profile = CsvMappingProfile {
-        base_class_hash: 0,
-        fields: vec![],
-    };
-    
-    let mut quin_count = 0;
-    parse_csv_to_quins(file, &mut profile, |_quin| {
-        quin_count += 1;
-    }).map_err(|_| McpSystemError::ParseError)?;
-    
-    Ok(format!("Parsed {} Quins from CSV", quin_count))
+    mcp_format_impls::parse_csv(args)
 }
 
-/// parse_json — Parse JSON data into Quins using the zero-heap JSON parser.
-/// JSON args: { "file_path": "path/to/data.json" }
+unsafe fn execute_parse_rdf(
+    args: &[u8],
+    _intent: &McpIntentFrame,
+) -> Result<String, McpSystemError> {
+    mcp_format_impls::parse_rdf(args)
+}
+
 unsafe fn execute_parse_json(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::sparql_library::parsers::json_parser::{JsonMappingProfile, JsonFieldMapping, JsonDatatype, parse_json_to_quins};
-    use std::fs::File;
-    
-    let file_path = extract_raw_json_string(args, b"\"file_path\"")
-        .ok_or(McpSystemError::InvalidParameters)?;
-    
-    let file_path_str = std::str::from_utf8(file_path)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    let file = File::open(file_path_str)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    let profile = JsonMappingProfile {
-        base_class_hash: 0,
-        fields: vec![],
-    };
-    
-    let mut quin_count = 0;
-    parse_json_to_quins(file, &profile, |_quin| {
-        quin_count += 1;
-    }).map_err(|_| McpSystemError::ParseError)?;
-    
-    Ok(format!("Parsed {} Quins from JSON", quin_count))
+    mcp_format_impls::parse_json(args)
 }
 
-/// serialize_csv — Serialize Quins to CSV format.
-/// JSON args: { "file_path": "path/to/output.csv" }
 unsafe fn execute_serialize_csv(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::sparql_library::serialisers::csv_serializer::{CsvSerializationProfile, serialize_quins_to_csv};
-    use std::fs::File;
-    use std::io::BufWriter;
-    
-    let file_path = extract_raw_json_string(args, b"\"file_path\"")
-        .ok_or(McpSystemError::InvalidParameters)?;
-    
-    let file_path_str = std::str::from_utf8(file_path)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    let file = File::create(file_path_str)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    let mut writer = BufWriter::new(file);
-    let profile = CsvSerializationProfile {
-        headers: vec![],
-        predicate_hashes: vec![],
-        datatypes: vec![],
-    };
-    
-    serialize_quins_to_csv(&mut writer, &[], &profile)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    Ok("Serialized Quins to CSV".to_string())
+    mcp_format_impls::serialize_csv(args)
 }
 
-/// serialize_json — Serialize Quins to JSON format.
-/// JSON args: { "file_path": "path/to/output.json" }
 unsafe fn execute_serialize_json(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::sparql_library::serialisers::json_serializer::{JsonSerializationProfile, serialize_quins_to_json};
-    use std::fs::File;
-    use std::io::BufWriter;
-    
-    let file_path = extract_raw_json_string(args, b"\"file_path\"")
-        .ok_or(McpSystemError::InvalidParameters)?;
-    
-    let file_path_str = std::str::from_utf8(file_path)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    let file = File::create(file_path_str)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    let mut writer = BufWriter::new(file);
-    let profile = JsonSerializationProfile {
-        field_names: vec![],
-        predicate_hashes: vec![],
-        datatypes: vec![],
-    };
-    
-    serialize_quins_to_json(&mut writer, &[], &profile)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    Ok("Serialized Quins to JSON".to_string())
+    mcp_format_impls::serialize_json(args)
 }
 
-/// serialize_rdf — Serialize Quins to RDF format.
-/// JSON args: { "file_path": "path/to/output.rdf", "format": "nt"|"turtle"|"nquads"|"trig"|"n3"|"jsonld" }
 unsafe fn execute_serialize_rdf(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::sparql_library::serialisers::rdf_serializers::{serialize_to_ntriples, serialize_to_turtle, serialize_to_nquads, serialize_to_trig, serialize_to_n3, serialize_to_jsonld};
-    use std::fs::File;
-    use std::io::BufWriter;
-    
-    let file_path = extract_raw_json_string(args, b"\"file_path\"")
-        .ok_or(McpSystemError::InvalidParameters)?;
-    
-    let format = extract_raw_json_string(args, b"\"format\"")
-        .unwrap_or(b"nt");
-    
-    let file_path_str = std::str::from_utf8(file_path)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    let file = File::create(file_path_str)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    let mut writer = BufWriter::new(file);
-    
-    match format {
-        b"nt" => serialize_to_ntriples(&mut writer, &[]),
-        b"turtle" => serialize_to_turtle(&mut writer, &[]),
-        b"nquads" => serialize_to_nquads(&mut writer, &[]),
-        b"trig" => serialize_to_trig(&mut writer, &[]),
-        b"n3" => serialize_to_n3(&mut writer, &[]),
-        b"jsonld" => serialize_to_jsonld(&mut writer, &[]),
-        _ => return Err(McpSystemError::InvalidParameters),
-    }.map_err(|_| McpSystemError::InvalidParameters)?;
-    
-    Ok("Serialized Quins to RDF".to_string())
+    mcp_format_impls::serialize_rdf(args)
 }
 
-/// symbolic_logic_infer — defeasible forward-chaining or bounded SAT.
-/// JSON args: { "solver": "defeasible"|"sat" }
 unsafe fn execute_symbolic_logic_infer(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::solvers::symbolic_logic::{
-        BoundedSatSolver, Clause, DefeasibleRule, Fact, ForwardChainingDefeasible, Literal,
-        RuleType,
-    };
-    use crate::solvers::SolverConfig;
-    let solver = extract_raw_json_string(args, b"\"solver\"").unwrap_or(b"defeasible");
-    let cfg = SolverConfig {
-        max_iterations: 100,
-        tolerance: 1e-6,
-        step_size: 0.01,
-        verbose: false,
-    };
-    match solver {
-        b"sat" => {
-            let mut s = BoundedSatSolver::new(cfg);
-            let c1 = Clause {
-                id: 1,
-                num_literals: 2,
-                learned: false,
-                activity: 1.0,
-                literals: [
-                    Literal {
-                        variable: 1,
-                        negated: false,
-                    },
-                    Literal {
-                        variable: 2,
-                        negated: true,
-                    },
-                    Literal {
-                        variable: 0,
-                        negated: false,
-                    },
-                    Literal {
-                        variable: 0,
-                        negated: false,
-                    },
-                    Literal {
-                        variable: 0,
-                        negated: false,
-                    },
-                ],
-            };
-            let _ = s.add_clause(c1);
-            match s.solve() {
-                Ok(st) => Ok(if st.satisfiable == Some(true) {
-                    "1".to_string()
-                } else {
-                    "0".to_string()
-                }),
-                Err(_) => Ok("0".to_string()),
-            }
-        }
-        _ => {
-            let mut s = ForwardChainingDefeasible::new(cfg);
-            let f = Fact {
-                id: 1,
-                literal: Literal {
-                    variable: 1,
-                    negated: false,
-                },
-                supporting_rules: [0; 3],
-                defeated: false,
-                confidence: 1.0,
-            };
-            let _ = s.add_fact(f);
-            let rule = DefeasibleRule {
-                id: 1,
-                rule_type: RuleType::Defeasible,
-                priority: 500,
-                active: true,
-                fire_count: 0,
-                antecedents: [
-                    Literal {
-                        variable: 1,
-                        negated: false,
-                    },
-                    Literal {
-                        variable: 0,
-                        negated: false,
-                    },
-                    Literal {
-                        variable: 0,
-                        negated: false,
-                    },
-                    Literal {
-                        variable: 0,
-                        negated: false,
-                    },
-                    Literal {
-                        variable: 0,
-                        negated: false,
-                    },
-                ],
-                consequent: Literal {
-                    variable: 2,
-                    negated: false,
-                },
-            };
-            let _ = s.add_rule(rule);
-            match s.infer() {
-                Ok(st) => Ok((st.num_facts as usize).to_string()),
-                Err(_) => Ok("0".to_string()),
-            }
-        }
-    }
+    mcp_tool_impls::symbolic_logic_infer(args)
 }
 
-/// geometric_algebra_op — cross product or angle between two 3D vectors.
-/// JSON args: { "op": "cross"|"angle" }
 unsafe fn execute_geometric_algebra_op(
     args: &[u8],
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
-    use crate::geometric_algebra::utils::{angle_between_vectors, cross_product};
-    let op = extract_raw_json_string(args, b"\"op\"").unwrap_or(b"cross");
-    let a = [1.0f32, 0.0, 0.0];
-    let b = [0.0f32, 1.0, 0.0];
-    match op {
-        b"angle" => {
-            let angle = angle_between_vectors(&a, &b);
-            // Return angle * 1000 as usize proxy (π/2 ≈ 1570)
-            Ok(((angle * 1000.0) as usize).to_string())
-        }
-        _ => {
-            let c = cross_product(&a, &b);
-            // Return sum of abs components * 1000
-            Ok((((c[0].abs() + c[1].abs() + c[2].abs()) * 1000.0) as usize).to_string())
-        }
-    }
+    mcp_tool_impls::geometric_algebra_op(args)
 }
 
 /// Explicitly purges memory registers to prevent data harvesting
@@ -1599,7 +1208,88 @@ mod tests {
         let json: Value = serde_json::from_str(&reply).expect("valid json");
         let tools = json["result"]["tools"].as_array().expect("tool array");
         assert!(tools.iter().any(|tool| tool["name"] == "get_system_status"));
+        assert!(tools.iter().any(|tool| tool["name"] == "run_docs_tests"));
         assert!(tools.iter().all(|tool| tool.get("inputSchema").is_some()));
+    }
+
+    #[test]
+    fn parse_rdf_tool_call_returns_quins() {
+        let reply = handle_jsonrpc_message(
+            r#"{"jsonrpc":"2.0","id":"rdf","method":"tools/call","params":{"name":"parse_rdf","arguments":{"format":"nt","rdf_data":"<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .\n"}}}"#,
+            false,
+            false,
+        )
+        .expect("reply");
+        let json: Value = serde_json::from_str(&reply).expect("valid json");
+        let text = json["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text payload");
+        let payload: Value = serde_json::from_str(text).expect("embedded json");
+        assert_eq!(payload["quinCount"], 1);
+    }
+
+    #[test]
+    fn parse_csv_tool_call_returns_quins() {
+        let reply = handle_jsonrpc_message(
+            r#"{"jsonrpc":"2.0","id":"csv","method":"tools/call","params":{"name":"parse_csv","arguments":{"csv_data":"v,n\n1,2\n","field_mappings":[{"source_key":"v","predicate":"ex:v","datatype":"integer"}]}}}"#,
+            false,
+            false,
+        )
+        .expect("reply");
+        let json: Value = serde_json::from_str(&reply).expect("valid json");
+        let text = json["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text payload");
+        let payload: Value = serde_json::from_str(text).expect("embedded json");
+        assert_eq!(payload["quinCount"], 1);
+    }
+
+    #[test]
+    fn get_graph_stats_tool_call_returns_json_payload() {
+        let reply = handle_jsonrpc_message(
+            r#"{"jsonrpc":"2.0","id":"graph","method":"tools/call","params":{"name":"get_graph_stats","arguments":{}}}"#,
+            false,
+            false,
+        )
+        .expect("reply");
+        let json: Value = serde_json::from_str(&reply).expect("valid json");
+        let text = json["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text payload");
+        let payload: Value = serde_json::from_str(text).expect("embedded json");
+        assert!(payload.get("quinCount").is_some());
+    }
+
+    #[test]
+    fn get_did_info_tool_call_parses_q42() {
+        let reply = handle_jsonrpc_message(
+            r#"{"jsonrpc":"2.0","id":"did","method":"tools/call","params":{"name":"get_did_info","arguments":{"did":"did:q42:z6MkpTHR8VNs"}}}"#,
+            false,
+            false,
+        )
+        .expect("reply");
+        let json: Value = serde_json::from_str(&reply).expect("valid json");
+        let text = json["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text payload");
+        let payload: Value = serde_json::from_str(text).expect("embedded json");
+        assert_eq!(payload["msbSet"], true);
+    }
+
+    #[test]
+    fn tools_list_includes_newly_public_stubs() {
+        let reply = handle_jsonrpc_message(
+            r#"{"jsonrpc":"2.0","id":"tools","method":"tools/list"}"#,
+            true,
+            true,
+        )
+        .expect("reply");
+        let json: Value = serde_json::from_str(&reply).expect("valid json");
+        let tools = json["result"]["tools"].as_array().expect("tool array");
+        assert!(tools.iter().any(|tool| tool["name"] == "query_sparql"));
+        assert!(tools.iter().any(|tool| tool["name"] == "parse_rdf"));
+        assert!(tools.iter().any(|tool| tool["name"] == "list_qapps"));
+        assert_eq!(tools.len(), stable_mcp_tools().len());
     }
 
     #[test]

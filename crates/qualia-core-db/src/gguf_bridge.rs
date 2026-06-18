@@ -84,6 +84,9 @@ struct GemmGpuParams {
     weight_ggml_type: u32,
     weight_row_elems: u32,
     weight_byte_len: u32,
+    n_batch: u32,
+    in_row_stride: u32,
+    out_row_stride: u32,
 }
 
 /// Uniform block passed to `fused_attention.wgsl`.
@@ -110,6 +113,9 @@ struct AttentionGpuParams {
     batch_start_token_idx: u32,
     mask_active: u32,
     mask_word_count: u32,
+    out_stride_elems: u32,
+    /// WGSL uniform struct size must be a multiple of 16 bytes.
+    _pad: [u32; 3],
 }
 
 /// KV attention bitmask words uploaded to `fused_attention.wgsl` binding 5.
@@ -123,11 +129,245 @@ struct ElemGpuParams {
     batch: u32,
     op: u32,
     eps: f32,
+    a_row_stride: u32,
+    b_row_stride: u32,
+    out_row_stride: u32,
+    a_slot: u32,
+    b_slot: u32,
+    out_slot: u32,
+    _pad: u32,
 }
 
 const ELEM_OP_RMS_NORM: u32 = 0;
 const ELEM_OP_SILU_MUL: u32 = 1;
 const ELEM_OP_ADD_RESIDUAL: u32 = 2;
+
+/// MC8 Part 3s: WebGPU dynamic uniform offsets must be multiples of 256 bytes.
+#[cfg(target_arch = "wasm32")]
+const MC8_UNIFORM_ALIGN: usize = 256;
+#[cfg(target_arch = "wasm32")]
+const MC8_MAX_GEMM_UNIFORM_SLOTS: usize = 8;
+#[cfg(target_arch = "wasm32")]
+const MC8_MAX_ELEM_UNIFORM_SLOTS: usize = 8;
+#[cfg(target_arch = "wasm32")]
+const MC8_MAX_ATTN_UNIFORM_SLOTS: usize = 8;
+#[cfg(target_arch = "wasm32")]
+const MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS: usize = 8;
+/// MC8 Part 3v: layers encoded into one submit batch (KV flush still per-layer).
+#[cfg(target_arch = "wasm32")]
+const MC8_LAYERS_PER_ENCODER: u32 = 4;
+/// Uniform slots reserved per layer within a chunk (must cover K/V/Q + tail).
+#[cfg(target_arch = "wasm32")]
+const MC8_ATTN_SLOTS_PER_LAYER: usize = 4;
+#[cfg(target_arch = "wasm32")]
+const MC8_ELEM_SLOTS_PER_LAYER: usize = 6;
+#[cfg(target_arch = "wasm32")]
+const MC8_GEMM_SLOTS_PER_LAYER: usize = 5;
+#[cfg(target_arch = "wasm32")]
+const MC8_MAX_ATTN_UNIFORM_CHUNK_SLOTS: usize =
+    MC8_ATTN_SLOTS_PER_LAYER * MC8_LAYERS_PER_ENCODER as usize;
+#[cfg(target_arch = "wasm32")]
+const MC8_MAX_ELEM_UNIFORM_CHUNK_SLOTS: usize =
+    MC8_ELEM_SLOTS_PER_LAYER * MC8_LAYERS_PER_ENCODER as usize;
+#[cfg(target_arch = "wasm32")]
+const MC8_MAX_GEMM_UNIFORM_CHUNK_SLOTS: usize =
+    MC8_GEMM_SLOTS_PER_LAYER * MC8_LAYERS_PER_ENCODER as usize;
+
+/// Part 3v: absolute uniform slot cursors within one encoder chunk.
+#[cfg(target_arch = "wasm32")]
+struct Mc8ChunkUniformCursors {
+    attn: usize,
+    elem: usize,
+    gemm: usize,
+}
+
+/// MC8 Part 3t: disjoint weight staging — eliminates `write_buffer` races within one layer submit.
+#[cfg(target_arch = "wasm32")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Mc8WeightRole {
+    AttnK,
+    AttnV,
+    AttnQ,
+    OProj,
+    Gate,
+    Up,
+    Down,
+}
+
+/// One buffer per GEMM role so mid-layer weight uploads never clobber in-flight dispatches.
+#[cfg(target_arch = "wasm32")]
+struct Mc8WeightArenaBufs {
+    qkv_k: wgpu::Buffer,
+    qkv_v: wgpu::Buffer,
+    qkv_q: wgpu::Buffer,
+    o_proj: wgpu::Buffer,
+    gate: wgpu::Buffer,
+    up: wgpu::Buffer,
+    down: wgpu::Buffer,
+}
+
+/// Part 3u: dynamic offsets for one full prefill layer (staged before encoder dispatches).
+#[cfg(target_arch = "wasm32")]
+struct Mc8PrefillLayerUniforms {
+    k_off: u32,
+    v_off: u32,
+    q_off: u32,
+    attn_norm_elem_off: Option<u32>,
+    off_o: Option<u32>,
+    off_attn_res: u32,
+    off_ffn_norm: Option<u32>,
+    off_gate: u32,
+    off_up: u32,
+    off_silu: u32,
+    off_down: u32,
+    off_ffn_res: u32,
+}
+
+/// Strided work-buffer geometry shared by layer dispatches.
+#[cfg(target_arch = "wasm32")]
+struct Mc8PrefillLayerGeom {
+    row_stride: usize,
+    row_stride_u32: u32,
+    batch_in_bytes: wgpu::BufferAddress,
+    work_span_bytes: wgpu::BufferAddress,
+    emb_bytes: wgpu::BufferAddress,
+    n_embd_bytes: wgpu::BufferAddress,
+    slot_o: wgpu::BufferAddress,
+    slot_gate: wgpu::BufferAddress,
+    slot_up: wgpu::BufferAddress,
+    slot_save: wgpu::BufferAddress,
+    slot_scratch_half: wgpu::BufferAddress,
+    slot_o_f: u32,
+    slot_save_f: u32,
+    slot_gate_f: u32,
+    slot_up_f: u32,
+    slot_scratch_half_f: u32,
+}
+
+/// Stack arena for batched uniform uploads (one `write_buffer` per layer section).
+#[cfg(target_arch = "wasm32")]
+struct Mc8UniformArena {
+    bytes: [u8; MC8_MAX_GEMM_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
+    slots: usize,
+}
+
+/// Part 3u: larger elem arena for full-layer super-staging.
+#[cfg(target_arch = "wasm32")]
+struct Mc8ElemUniformArena {
+    bytes: [u8; MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS * MC8_UNIFORM_ALIGN],
+    slots: usize,
+}
+
+#[cfg(target_arch = "wasm32")]
+struct Mc8AttnUniformArena {
+    bytes: [u8; MC8_MAX_ATTN_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
+    slots: usize,
+}
+
+#[cfg(target_arch = "wasm32")]
+impl Mc8ElemUniformArena {
+    fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
+        debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
+        debug_assert!(self.slots < MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS);
+        let byte_off = self.slots * MC8_UNIFORM_ALIGN;
+        self.slots += 1;
+        self.bytes[byte_off..byte_off + std::mem::size_of::<T>()]
+            .copy_from_slice(bytemuck::bytes_of(value));
+        byte_off as u32
+    }
+
+    fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
+        if self.slots == 0 {
+            return;
+        }
+        queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
+    }
+
+    fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
+        if self.slots == 0 {
+            return;
+        }
+        let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
+        queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl Mc8AttnUniformArena {
+    fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
+        debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
+        debug_assert!(self.slots < MC8_MAX_ATTN_UNIFORM_SLOTS);
+        let byte_off = self.slots * MC8_UNIFORM_ALIGN;
+        self.slots += 1;
+        self.bytes[byte_off..byte_off + std::mem::size_of::<T>()]
+            .copy_from_slice(bytemuck::bytes_of(value));
+        byte_off as u32
+    }
+
+    fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
+        if self.slots == 0 {
+            return;
+        }
+        queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
+    }
+
+    fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
+        if self.slots == 0 {
+            return;
+        }
+        let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
+        queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl Mc8UniformArena {
+    fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
+        debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
+        debug_assert!(self.slots < MC8_MAX_GEMM_UNIFORM_SLOTS);
+        let byte_off = self.slots * MC8_UNIFORM_ALIGN;
+        self.slots += 1;
+        let dst = &mut self.bytes[byte_off..byte_off + std::mem::size_of::<T>()];
+        dst.copy_from_slice(bytemuck::bytes_of(value));
+        byte_off as u32
+    }
+
+    fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
+        if self.slots == 0 {
+            return;
+        }
+        queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
+    }
+
+    fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
+        if self.slots == 0 {
+            return;
+        }
+        let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
+        queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl Mc8ChunkUniformCursors {
+    fn reset(&mut self) {
+        self.attn = 0;
+        self.elem = 0;
+        self.gemm = 0;
+    }
+
+    fn attn_base_byte(&self) -> u32 {
+        (self.attn * MC8_UNIFORM_ALIGN) as u32
+    }
+
+    fn elem_base_byte(&self) -> u32 {
+        (self.elem * MC8_UNIFORM_ALIGN) as u32
+    }
+
+    fn gemm_base_byte(&self) -> u32 {
+        (self.gemm * MC8_UNIFORM_ALIGN) as u32
+    }
+}
 
 /// MC8: accumulates compute passes; submit + map_async only at pipeline boundary.
 #[cfg(target_arch = "wasm32")]
@@ -203,6 +443,385 @@ impl QTensorEngine {
         self.gpu_queue().submit(Some(finished.finish()));
     }
 
+    fn mc8_weight_role_buf(&self, role: Mc8WeightRole) -> &wgpu::Buffer {
+        let arena = self.mc8_weight_arena.as_ref().expect("mc8 weight arena");
+        match role {
+            Mc8WeightRole::AttnK => &arena.qkv_k,
+            Mc8WeightRole::AttnV => &arena.qkv_v,
+            Mc8WeightRole::AttnQ => &arena.qkv_q,
+            Mc8WeightRole::OProj => &arena.o_proj,
+            Mc8WeightRole::Gate => &arena.gate,
+            Mc8WeightRole::Up => &arena.up,
+            Mc8WeightRole::Down => &arena.down,
+        }
+    }
+
+    fn write_weight_role(&self, role: Mc8WeightRole, raw: &[u8], max_bytes: usize) {
+        let weight_buf = self.mc8_weight_role_buf(role);
+        let upload = if raw.len() <= max_bytes {
+            raw
+        } else {
+            &raw[..max_bytes]
+        };
+        self.gpu_queue().write_buffer(weight_buf, 0, upload);
+    }
+
+    fn mc8_dynamic_uniform_binding(buf: &wgpu::Buffer) -> wgpu::BindingResource<'_> {
+        wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+            buffer: buf,
+            offset: 0,
+            size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+        })
+    }
+
+    fn mc8_gemm_params(
+        info: &GgufTensorInfo,
+        raw_len: usize,
+        n_in: usize,
+        n_out: usize,
+        n_batch: u32,
+        in_row_stride: u32,
+        out_row_stride: u32,
+    ) -> GemmGpuParams {
+        GemmGpuParams {
+            n_in: n_in as u32,
+            n_out: n_out as u32,
+            weight_ggml_type: info.ggml_type,
+            weight_row_elems: info.dims[0] as u32,
+            weight_byte_len: raw_len as u32,
+            n_batch: n_batch.max(1),
+            in_row_stride,
+            out_row_stride,
+        }
+    }
+
+    fn mc8_upload_attn_param(&self, params: &AttentionGpuParams) -> u32 {
+        let mut arena = Mc8UniformArena {
+            bytes: [0u8; MC8_MAX_GEMM_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
+            slots: 0,
+        };
+        let off = arena.push(params);
+        arena.upload(
+            self.gpu_queue(),
+            self.attention_params_buf.as_ref().expect("attn params buf"),
+        );
+        off
+    }
+
+    fn mc8_elem_params(
+        op: u32,
+        n: u32,
+        batch: u32,
+        a_row_stride: u32,
+        b_row_stride: u32,
+        out_row_stride: u32,
+        a_slot: u32,
+        b_slot: u32,
+        out_slot: u32,
+    ) -> ElemGpuParams {
+        ElemGpuParams {
+            n,
+            batch: batch.max(1),
+            op,
+            eps: RMS_NORM_EPS,
+            a_row_stride,
+            b_row_stride,
+            out_row_stride,
+            a_slot,
+            b_slot,
+            out_slot,
+            _pad: 0,
+        }
+    }
+
+    fn mc8_buf_slice(
+        buf: &wgpu::Buffer,
+        byte_off: wgpu::BufferAddress,
+        byte_len: wgpu::BufferAddress,
+    ) -> wgpu::BindingResource<'_> {
+        wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+            buffer: buf,
+            offset: byte_off,
+            size: std::num::NonZeroU64::new(byte_len.max(4)),
+        })
+    }
+
+    fn mc8_prefill_row_off(t: u32, row_stride_floats: usize) -> wgpu::BufferAddress {
+        (t as usize * row_stride_floats * 4) as wgpu::BufferAddress
+    }
+
+    fn mc8_emb_off(t: u32, n_embd: usize) -> wgpu::BufferAddress {
+        (t as usize * n_embd * 4) as wgpu::BufferAddress
+    }
+
+    fn encode_elem_offset(
+        &self,
+        pipeline: &mut WasmGpuPipeline,
+        op: u32,
+        n: u32,
+        batch: u32,
+        a: &wgpu::Buffer,
+        a_off: wgpu::BufferAddress,
+        a_bytes: wgpu::BufferAddress,
+        b: &wgpu::Buffer,
+        b_off: wgpu::BufferAddress,
+        b_bytes: wgpu::BufferAddress,
+        out: &wgpu::Buffer,
+        out_off: wgpu::BufferAddress,
+        out_bytes: wgpu::BufferAddress,
+        a_row_stride: u32,
+        b_row_stride: u32,
+        out_row_stride: u32,
+        a_slot: u32,
+        b_slot: u32,
+        out_slot: u32,
+        elem_dyn_offset: u32,
+    ) {
+        let b_dispatch = batch.max(1);
+        let (pipe, wg_x, wg_y) = match op {
+            ELEM_OP_RMS_NORM => (&self.elem_rms_norm_pipeline, 1u32, b_dispatch),
+            ELEM_OP_SILU_MUL => (&self.elem_silu_mul_pipeline, (n + 63) / 64, b_dispatch),
+            ELEM_OP_ADD_RESIDUAL => (&self.elem_add_residual_pipeline, (n + 63) / 64, b_dispatch),
+            _ => return,
+        };
+        let params_buf = self.elem_params_buf.as_ref().unwrap();
+        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("ElemBindOff"),
+            layout: &self.mc8_elem_bind_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: Self::mc8_buf_slice(a, a_off, a_bytes),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: Self::mc8_buf_slice(b, b_off, b_bytes),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: Self::mc8_buf_slice(out, out_off, out_bytes),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                },
+            ],
+        });
+        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: None,
+            timestamp_writes: None,
+        });
+        cpass.set_pipeline(pipe);
+        cpass.set_bind_group(0, &bind, &[elem_dyn_offset]);
+        cpass.dispatch_workgroups(wg_x, wg_y, 1);
+    }
+
+    fn encode_gemm_bufs_offset(
+        &self,
+        pipeline: &mut WasmGpuPipeline,
+        info: &GgufTensorInfo,
+        raw: &[u8],
+        n_in: usize,
+        n_out: usize,
+        input: &wgpu::Buffer,
+        in_off: wgpu::BufferAddress,
+        in_bytes: wgpu::BufferAddress,
+        output: &wgpu::Buffer,
+        out_off: wgpu::BufferAddress,
+        out_bytes: wgpu::BufferAddress,
+        n_batch: u32,
+        in_row_stride: u32,
+        out_row_stride: u32,
+        gemm_dyn_offset: u32,
+        weight_role: Mc8WeightRole,
+    ) -> bool {
+        if !ggml_gpu_attention_shader_supported(info.ggml_type)
+            || n_in > self.gemm_max_input_floats as usize
+            || n_out > self.gemm_max_out_dim as usize
+            || raw.len() > self.max_tensor_bytes
+        {
+            return false;
+        }
+        let batch = n_batch.max(1);
+        self.write_weight_role(weight_role, raw, self.max_tensor_bytes);
+        let params_buf = self.gemm_params_buf.as_ref().unwrap();
+        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("MC8GemmBindOff"),
+            layout: &self.mc8_gemm_bind_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: Self::mc8_buf_slice(input, in_off, in_bytes),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: self.mc8_weight_role_buf(weight_role).as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: Self::mc8_buf_slice(output, out_off, out_bytes),
+                },
+            ],
+        });
+        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: None,
+            timestamp_writes: None,
+        });
+        cpass.set_pipeline(&self.pipeline);
+        cpass.set_bind_group(0, &bind, &[gemm_dyn_offset]);
+        cpass.dispatch_workgroups((n_out as u32 + 63) / 64, batch, 1);
+        true
+    }
+
+    fn encode_residual_add_offset(
+        &self,
+        pipeline: &mut WasmGpuPipeline,
+        base: &wgpu::Buffer,
+        base_off: wgpu::BufferAddress,
+        delta: &wgpu::Buffer,
+        delta_off: wgpu::BufferAddress,
+        dst: &wgpu::Buffer,
+        dst_off: wgpu::BufferAddress,
+        scratch: &wgpu::Buffer,
+        scratch_off: wgpu::BufferAddress,
+        dim: u32,
+    ) {
+        let bytes = (dim as usize * 4) as wgpu::BufferAddress;
+        self.encode_elem_offset(
+            pipeline,
+            ELEM_OP_ADD_RESIDUAL,
+            dim,
+            1,
+            base,
+            base_off,
+            bytes,
+            delta,
+            delta_off,
+            bytes,
+            scratch,
+            scratch_off,
+            bytes,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0, // elem_dyn_offset — caller must pre-upload arena
+        );
+        pipeline.encoder.copy_buffer_to_buffer(scratch, scratch_off, dst, dst_off, bytes);
+    }
+
+    fn encode_attention_pass_gpu_offset(
+        &self,
+        pipeline: &mut WasmGpuPipeline,
+        input: &wgpu::Buffer,
+        in_off: wgpu::BufferAddress,
+        in_bytes: wgpu::BufferAddress,
+        output: &wgpu::Buffer,
+        out_off: wgpu::BufferAddress,
+        out_bytes: wgpu::BufferAddress,
+        n_embd: usize,
+        num_tokens_in_batch: u32,
+        batch_start_token_idx: u32,
+        layout: &KvCacheLayout,
+        layer: u32,
+        token_idx: u32,
+        h: &crate::gguf_sharder::GgufHyperparams,
+        info: &GgufTensorInfo,
+        raw_weights: &[u8],
+        proj_kind: u32,
+        n_workgroups: u32,
+    ) -> bool {
+        if !ggml_gpu_attention_shader_supported(info.ggml_type)
+            || self.kv_cache_gpu.is_none()
+            || self.attention_params_buf.is_none()
+        {
+            return false;
+        }
+        let (mask_words, mask_active, mask_word_count) =
+            Self::attention_kv_mask_for_dispatch(layout, token_idx, proj_kind);
+        let params = Self::attention_gpu_params(
+            h,
+            layout,
+            layer,
+            token_idx,
+            info,
+            raw_weights.len(),
+            proj_kind,
+            num_tokens_in_batch.max(1),
+            batch_start_token_idx,
+            mask_active,
+            mask_word_count,
+            0,
+        );
+        self.write_weight_words(raw_weights, self.max_tensor_bytes);
+        self.gpu_queue()
+            .write_buffer(self.attention_params_buf.as_ref().unwrap(), 0, bytemuck::bytes_of(&params));
+        self.gpu_queue().write_buffer(
+            self.attention_mask_buf.as_ref().unwrap(),
+            0,
+            bytemuck::cast_slice(&mask_words),
+        );
+        let layer_f32s = layout.layer_stride as usize;
+        let layer_bytes = (layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+        let layer_offset =
+            (layer as usize * layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+        let kv_binding = wgpu::BufferBinding {
+            buffer: self.kv_cache_gpu.as_ref().unwrap(),
+            offset: layer_offset,
+            size: std::num::NonZeroU64::new(layer_bytes.max(4)),
+        };
+        let bind_layout = self.attention_pipeline.get_bind_group_layout(0);
+        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("MC8AttnBindOff"),
+            layout: &bind_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: Self::mc8_buf_slice(input, in_off, in_bytes),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: self.gemm_weight_buf.as_ref().unwrap().as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: self.attention_params_buf.as_ref().unwrap().as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::Buffer(kv_binding),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: Self::mc8_buf_slice(output, out_off, out_bytes),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: self.attention_mask_buf.as_ref().unwrap().as_entire_binding(),
+                },
+            ],
+        });
+        let (wg_x, wg_y) = if proj_kind == 0 && num_tokens_in_batch > 1 {
+            (h.n_head, num_tokens_in_batch)
+        } else {
+            (n_workgroups.max(1), 1)
+        };
+        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: None,
+            timestamp_writes: None,
+        });
+        cpass.set_pipeline(&self.attention_pipeline);
+        cpass.set_bind_group(0, &bind, &[]);
+        cpass.dispatch_workgroups(wg_x, wg_y, 1);
+        true
+    }
+
     fn mc8_buffers_ready(&self) -> bool {
         self.gemm_input_buf.is_some()
             && self.gemm_output_buf.is_some()
@@ -210,6 +829,10 @@ impl QTensorEngine {
             && self.gemm_ffn_buf.is_some()
             && self.elem_params_buf.is_some()
             && self.norm_weight_buf.is_some()
+            && self.prefill_scratch_buf.is_some()
+            && self.prefill_work_buf_a.is_some()
+            && self.prefill_work_buf_b.is_some()
+            && self.mc8_weight_arena.is_some()
     }
 
     fn encode_elem(
@@ -222,24 +845,36 @@ impl QTensorEngine {
         b: &wgpu::Buffer,
         out: &wgpu::Buffer,
     ) {
+        let b_dispatch = batch.max(1);
         let params = ElemGpuParams {
             n,
-            batch,
+            batch: b_dispatch,
             op,
             eps: RMS_NORM_EPS,
+            a_row_stride: 0,
+            b_row_stride: 0,
+            out_row_stride: 0,
+            a_slot: 0,
+            b_slot: 0,
+            out_slot: 0,
+            _pad: 0,
         };
-        self.gpu_queue()
-            .write_buffer(self.elem_params_buf.as_ref().unwrap(), 0, bytemuck::bytes_of(&params));
+        let mut arena = Mc8UniformArena {
+            bytes: [0u8; MC8_MAX_GEMM_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
+            slots: 0,
+        };
+        let elem_dyn_offset = arena.push(&params);
+        let params_buf = self.elem_params_buf.as_ref().unwrap();
+        arena.upload(self.gpu_queue(), params_buf);
         let (pipe, wg_x, wg_y) = match op {
-            ELEM_OP_RMS_NORM => (&self.elem_rms_norm_pipeline, batch.max(1), 1u32),
-            ELEM_OP_SILU_MUL => (&self.elem_silu_mul_pipeline, (n + 63) / 64, batch.max(1)),
-            ELEM_OP_ADD_RESIDUAL => (&self.elem_add_residual_pipeline, (n + 63) / 64, batch.max(1)),
+            ELEM_OP_RMS_NORM => (&self.elem_rms_norm_pipeline, 1u32, b_dispatch),
+            ELEM_OP_SILU_MUL => (&self.elem_silu_mul_pipeline, (n + 63) / 64, b_dispatch),
+            ELEM_OP_ADD_RESIDUAL => (&self.elem_add_residual_pipeline, (n + 63) / 64, b_dispatch),
             _ => return,
         };
-        let layout = pipe.get_bind_group_layout(0);
         let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("ElemBind"),
-            layout: &layout,
+            layout: &self.mc8_elem_bind_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -255,7 +890,7 @@ impl QTensorEngine {
                 },
                 wgpu::BindGroupEntry {
                     binding: 3,
-                    resource: self.elem_params_buf.as_ref().unwrap().as_entire_binding(),
+                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
                 },
             ],
         });
@@ -264,7 +899,7 @@ impl QTensorEngine {
             timestamp_writes: None,
         });
         cpass.set_pipeline(pipe);
-        cpass.set_bind_group(0, &bind, &[]);
+        cpass.set_bind_group(0, &bind, &[elem_dyn_offset]);
         cpass.dispatch_workgroups(wg_x, wg_y, 1);
     }
 
@@ -312,20 +947,18 @@ impl QTensorEngine {
         {
             return false;
         }
-        let params = GemmGpuParams {
-            n_in: n_in as u32,
-            n_out: n_out as u32,
-            weight_ggml_type: info.ggml_type,
-            weight_row_elems: info.dims[0] as u32,
-            weight_byte_len: raw.len() as u32,
+        let params = Self::mc8_gemm_params(info, raw.len(), n_in, n_out, 1, 0, 0);
+        let mut arena = Mc8UniformArena {
+            bytes: [0u8; MC8_MAX_GEMM_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
+            slots: 0,
         };
+        let gemm_dyn_offset = arena.push(&params);
+        let params_buf = self.gemm_params_buf.as_ref().unwrap();
+        arena.upload(self.gpu_queue(), params_buf);
         self.write_weight_words(raw, self.max_tensor_bytes);
-        self.gpu_queue()
-            .write_buffer(self.gemm_params_buf.as_ref().unwrap(), 0, bytemuck::bytes_of(&params));
-        let bind_layout = self.pipeline.get_bind_group_layout(0);
         let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("MC8GemmBind"),
-            layout: &bind_layout,
+            layout: &self.mc8_gemm_bind_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -337,7 +970,7 @@ impl QTensorEngine {
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
-                    resource: self.gemm_params_buf.as_ref().unwrap().as_entire_binding(),
+                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
                 },
                 wgpu::BindGroupEntry {
                     binding: 3,
@@ -350,7 +983,7 @@ impl QTensorEngine {
             timestamp_writes: None,
         });
         cpass.set_pipeline(&self.pipeline);
-        cpass.set_bind_group(0, &bind, &[]);
+        cpass.set_bind_group(0, &bind, &[gemm_dyn_offset]);
         cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
         true
     }
@@ -371,6 +1004,8 @@ impl QTensorEngine {
         raw_weights: &[u8],
         proj_kind: u32,
         n_workgroups: u32,
+        attn_dyn_offset: u32,
+        weight_role: Mc8WeightRole,
     ) -> bool {
         if !ggml_gpu_attention_shader_supported(info.ggml_type)
             || self.kv_cache_gpu.is_none()
@@ -380,27 +1015,14 @@ impl QTensorEngine {
         }
         let (mask_words, mask_active, mask_word_count) =
             Self::attention_kv_mask_for_dispatch(layout, token_idx, proj_kind);
-        let params = Self::attention_gpu_params(
-            h,
-            layout,
-            layer,
-            token_idx,
-            info,
-            raw_weights.len(),
-            proj_kind,
-            num_tokens_in_batch.max(1),
-            batch_start_token_idx,
-            mask_active,
-            mask_word_count,
-        );
-        self.write_weight_words(raw_weights, self.max_tensor_bytes);
-        self.gpu_queue()
-            .write_buffer(self.attention_params_buf.as_ref().unwrap(), 0, bytemuck::bytes_of(&params));
-        self.gpu_queue().write_buffer(
-            self.attention_mask_buf.as_ref().unwrap(),
-            0,
-            bytemuck::cast_slice(&mask_words),
-        );
+        self.write_weight_role(weight_role, raw_weights, self.max_tensor_bytes);
+        if mask_active != 0 {
+            self.gpu_queue().write_buffer(
+                self.attention_mask_buf.as_ref().unwrap(),
+                0,
+                bytemuck::cast_slice(&mask_words),
+            );
+        }
         let layer_f32s = layout.layer_stride as usize;
         let layer_bytes = (layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
         let layer_offset =
@@ -410,10 +1032,10 @@ impl QTensorEngine {
             offset: layer_offset,
             size: std::num::NonZeroU64::new(layer_bytes.max(4)),
         };
-        let bind_layout = self.attention_pipeline.get_bind_group_layout(0);
+        let params_buf = self.attention_params_buf.as_ref().unwrap();
         let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("MC8AttnBind"),
-            layout: &bind_layout,
+            layout: &self.mc8_attn_bind_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -421,11 +1043,11 @@ impl QTensorEngine {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: self.gemm_weight_buf.as_ref().unwrap().as_entire_binding(),
+                    resource: self.mc8_weight_role_buf(weight_role).as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
-                    resource: self.attention_params_buf.as_ref().unwrap().as_entire_binding(),
+                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
                 },
                 wgpu::BindGroupEntry {
                     binding: 3,
@@ -441,13 +1063,102 @@ impl QTensorEngine {
                 },
             ],
         });
+        let (wg_x, wg_y) = if proj_kind == 0 && num_tokens_in_batch > 1 {
+            (h.n_head, num_tokens_in_batch)
+        } else {
+            (n_workgroups.max(1), 1)
+        };
         let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: None,
             timestamp_writes: None,
         });
         cpass.set_pipeline(&self.attention_pipeline);
-        cpass.set_bind_group(0, &bind, &[]);
-        cpass.dispatch_workgroups(n_workgroups.max(1), 1, 1);
+        cpass.set_bind_group(0, &bind, &[attn_dyn_offset]);
+        cpass.dispatch_workgroups(wg_x, wg_y, 1);
+        true
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn mc8_prefill_row_stride(n_embd: usize, n_ffn_est: usize, gemm_max_out_dim: u32) -> usize {
+        (n_embd + 2 * n_ffn_est + n_embd)
+            .max(gemm_max_out_dim as usize * 2)
+            .max(n_embd)
+    }
+
+    /// MC8 Part 3o/3t: batched Q-SDPA — caller pre-uploads `attn_dyn_offset` in shared attn arena.
+    #[cfg(target_arch = "wasm32")]
+    fn encode_attention_batched_q_prefill(
+        &self,
+        pipeline: &mut WasmGpuPipeline,
+        input: &wgpu::Buffer,
+        in_off: wgpu::BufferAddress,
+        in_bytes: wgpu::BufferAddress,
+        output: &wgpu::Buffer,
+        out_off: wgpu::BufferAddress,
+        out_bytes: wgpu::BufferAddress,
+        n_embd: usize,
+        n_tokens: u32,
+        layout: &KvCacheLayout,
+        layer: u32,
+        h: &crate::gguf_sharder::GgufHyperparams,
+        raw_weights: &[u8],
+        attn_dyn_offset: u32,
+    ) -> bool {
+        if self.kv_cache_gpu.is_none()
+            || self.attention_params_buf.is_none()
+            || self.attention_mask_buf.is_none()
+            || n_tokens == 0
+        {
+            return false;
+        }
+        self.write_weight_role(Mc8WeightRole::AttnQ, raw_weights, self.max_tensor_bytes);
+        let params_buf = self.attention_params_buf.as_ref().unwrap();
+        let layer_f32s = layout.layer_stride as usize;
+        let layer_bytes = (layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+        let layer_offset =
+            (layer as usize * layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+        let kv_binding = wgpu::BufferBinding {
+            buffer: self.kv_cache_gpu.as_ref().unwrap(),
+            offset: layer_offset,
+            size: std::num::NonZeroU64::new(layer_bytes.max(4)),
+        };
+        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("MC8AttnBatchedQ"),
+            layout: &self.mc8_attn_bind_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: Self::mc8_buf_slice(input, in_off, in_bytes),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: self.mc8_weight_role_buf(Mc8WeightRole::AttnQ).as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::Buffer(kv_binding),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: Self::mc8_buf_slice(output, out_off, out_bytes),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: self.attention_mask_buf.as_ref().unwrap().as_entire_binding(),
+                },
+            ],
+        });
+        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: None,
+            timestamp_writes: None,
+        });
+        cpass.set_pipeline(&self.attention_pipeline);
+        cpass.set_bind_group(0, &bind, &[attn_dyn_offset]);
+        cpass.dispatch_workgroups(h.n_head, n_tokens, 1);
         true
     }
 
@@ -659,6 +1370,8 @@ const MAX_HIDDEN_DIM: usize = 4096;
 const RMS_NORM_EPS: f32 = 1e-5;
 /// Prompt tokens per prefill GPU batch (stack + staging footprint = `emb_dim ×` this).
 pub const PREFILL_CHUNK_SIZE: usize = 64;
+/// Per-token KV masks uploaded for batched Q-SDPA (`PREFILL_CHUNK_SIZE × mask words`).
+const MAX_ATTN_MASK_UPLOAD_WORDS: usize = PREFILL_CHUNK_SIZE * KV_ATTENTION_MASK_WORDS;
 /// Max stacked embedding floats in a prefill chunk (`MAX_STACK_GEMM_IN × 64`).
 pub const MAX_PREFILL_BATCH_FLOATS: usize = MAX_STACK_GEMM_IN * PREFILL_CHUNK_SIZE;
 /// `llm_agent` stack chunk buffer (Gemma 2560 × 64).
@@ -1222,6 +1935,12 @@ pub struct QTensorEngine {
     /// Reused layer staging buffers (one layer in VRAM at a time).
     gemm_input_buf: Option<wgpu::Buffer>,
     gemm_weight_buf: Option<wgpu::Buffer>,
+    /// MC8 Part 3t: disjoint per-role weight arena (prefill single-submit).
+    #[cfg(target_arch = "wasm32")]
+    mc8_weight_arena: Option<Mc8WeightArenaBufs>,
+    /// Legacy decode-path ping-pong (decode tail not on weight arena yet).
+    #[cfg(target_arch = "wasm32")]
+    gemm_weight_buf_b: Option<wgpu::Buffer>,
     gemm_output_buf: Option<wgpu::Buffer>,
     gemm_params_buf: Option<wgpu::Buffer>,
     gemm_output_staging: Option<wgpu::Buffer>,
@@ -1232,6 +1951,11 @@ pub struct QTensorEngine {
     /// Batched prefill RMS output (same span as `gemm_input_buf`; avoids in-place on batch_buf).
     #[cfg(target_arch = "wasm32")]
     prefill_scratch_buf: Option<wgpu::Buffer>,
+    /// Strided prefill ping-pong rows (`PREFILL_CHUNK_SIZE × row_stride` floats each).
+    #[cfg(target_arch = "wasm32")]
+    prefill_work_buf_a: Option<wgpu::Buffer>,
+    #[cfg(target_arch = "wasm32")]
+    prefill_work_buf_b: Option<wgpu::Buffer>,
     gemm_max_out_dim: u32,
     gemm_max_input_floats: usize,
     /// Static KV ring-buffer (allocated once at `load_gguf`).
@@ -1248,6 +1972,13 @@ pub struct QTensorEngine {
     elem_add_residual_pipeline: wgpu::ComputePipeline,
     elem_params_buf: Option<wgpu::Buffer>,
     norm_weight_buf: Option<wgpu::Buffer>,
+    /// MC8 Part 3s: dynamic-offset bind group layouts (uniform race elimination).
+    #[cfg(target_arch = "wasm32")]
+    mc8_gemm_bind_layout: wgpu::BindGroupLayout,
+    #[cfg(target_arch = "wasm32")]
+    mc8_elem_bind_layout: wgpu::BindGroupLayout,
+    #[cfg(target_arch = "wasm32")]
+    mc8_attn_bind_layout: wgpu::BindGroupLayout,
 }
 
 impl QTensorEngine {
@@ -1324,6 +2055,67 @@ impl QTensorEngine {
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/fused_transformer.wgsl").into()),
         });
 
+        #[cfg(target_arch = "wasm32")]
+        let mc8_gemm_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("MC8GemmBGL"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: true,
+                        min_binding_size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+        });
+        #[cfg(target_arch = "wasm32")]
+        let mc8_gemm_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("MC8GemmPL"),
+            bind_group_layouts: &[&mc8_gemm_bind_layout],
+            push_constant_ranges: &[],
+        });
+
+        #[cfg(target_arch = "wasm32")]
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Fused Transformer Pipeline"),
+            layout: Some(&mc8_gemm_pipeline_layout),
+            module: &shader,
+            entry_point: "main",
+        });
+        #[cfg(not(target_arch = "wasm32"))]
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Fused Transformer Pipeline"),
             layout: None,
@@ -1361,6 +2153,86 @@ impl QTensorEngine {
             label: Some("Fused Attention Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/fused_attention.wgsl").into()),
         });
+        #[cfg(target_arch = "wasm32")]
+        let mc8_attn_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("MC8AttnBGL"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: true,
+                        min_binding_size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 4,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 5,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+        });
+        #[cfg(target_arch = "wasm32")]
+        let mc8_attn_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("MC8AttnPL"),
+            bind_group_layouts: &[&mc8_attn_bind_layout],
+            push_constant_ranges: &[],
+        });
+        #[cfg(target_arch = "wasm32")]
+        let attention_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Fused Attention Pipeline"),
+            layout: Some(&mc8_attn_pipeline_layout),
+            module: &attn_shader,
+            entry_point: "main",
+        });
+        #[cfg(not(target_arch = "wasm32"))]
         let attention_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Fused Attention Pipeline"),
             layout: None,
@@ -1372,6 +2244,83 @@ impl QTensorEngine {
             label: Some("Wasm Elementwise Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/wasm_elementwise.wgsl").into()),
         });
+        #[cfg(target_arch = "wasm32")]
+        let mc8_elem_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("MC8ElemBGL"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: true,
+                        min_binding_size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+                    },
+                    count: None,
+                },
+            ],
+        });
+        #[cfg(target_arch = "wasm32")]
+        let mc8_elem_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("MC8ElemPL"),
+            bind_group_layouts: &[&mc8_elem_bind_layout],
+            push_constant_ranges: &[],
+        });
+        #[cfg(target_arch = "wasm32")]
+        let elem_rms_norm_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("ElemRmsNorm"),
+                layout: Some(&mc8_elem_pipeline_layout),
+                module: &elem_shader,
+                entry_point: "rms_norm_batch",
+            });
+        #[cfg(target_arch = "wasm32")]
+        let elem_silu_mul_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("ElemSiluMul"),
+                layout: Some(&mc8_elem_pipeline_layout),
+                module: &elem_shader,
+                entry_point: "silu_mul_main",
+            });
+        #[cfg(target_arch = "wasm32")]
+        let elem_add_residual_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("ElemAddResidual"),
+                layout: Some(&mc8_elem_pipeline_layout),
+                module: &elem_shader,
+                entry_point: "add_residual_main",
+            });
+        #[cfg(not(target_arch = "wasm32"))]
         let elem_rms_norm_pipeline =
             device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                 label: Some("ElemRmsNorm"),
@@ -1379,6 +2328,7 @@ impl QTensorEngine {
                 module: &elem_shader,
                 entry_point: "rms_norm_batch",
             });
+        #[cfg(not(target_arch = "wasm32"))]
         let elem_silu_mul_pipeline =
             device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                 label: Some("ElemSiluMul"),
@@ -1386,6 +2336,7 @@ impl QTensorEngine {
                 module: &elem_shader,
                 entry_point: "silu_mul_main",
             });
+        #[cfg(not(target_arch = "wasm32"))]
         let elem_add_residual_pipeline =
             device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                 label: Some("ElemAddResidual"),
@@ -1445,6 +2396,10 @@ impl QTensorEngine {
             max_tensor_bytes: 0,
             gemm_input_buf: None,
             gemm_weight_buf: None,
+            #[cfg(target_arch = "wasm32")]
+            mc8_weight_arena: None,
+            #[cfg(target_arch = "wasm32")]
+            gemm_weight_buf_b: None,
             gemm_output_buf: None,
             gemm_params_buf: None,
             gemm_output_staging: None,
@@ -1452,6 +2407,10 @@ impl QTensorEngine {
             gemm_ffn_buf: None,
             #[cfg(target_arch = "wasm32")]
             prefill_scratch_buf: None,
+            #[cfg(target_arch = "wasm32")]
+            prefill_work_buf_a: None,
+            #[cfg(target_arch = "wasm32")]
+            prefill_work_buf_b: None,
             gemm_max_out_dim: MAX_STACK_GEMM_OUT as u32,
             gemm_max_input_floats: 0,
             kv_layout: None,
@@ -1464,6 +2423,12 @@ impl QTensorEngine {
             elem_add_residual_pipeline,
             elem_params_buf: None,
             norm_weight_buf: None,
+            #[cfg(target_arch = "wasm32")]
+            mc8_gemm_bind_layout,
+            #[cfg(target_arch = "wasm32")]
+            mc8_elem_bind_layout,
+            #[cfg(target_arch = "wasm32")]
+            mc8_attn_bind_layout,
         })
     }
 
@@ -1517,15 +2482,26 @@ impl QTensorEngine {
             mapped_at_creation: false,
         });
         let cpu = vec![0f32; layout.total_f32_elems].into_boxed_slice();
+        let attn_params_bytes = {
+            #[cfg(target_arch = "wasm32")]
+            {
+                (MC8_MAX_ATTN_UNIFORM_CHUNK_SLOTS * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                std::mem::size_of::<AttentionGpuParams>() as wgpu::BufferAddress
+            }
+        };
         self.attention_params_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("AttentionParams"),
-            size: std::mem::size_of::<AttentionGpuParams>() as wgpu::BufferAddress,
+            size: attn_params_bytes.max(4),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
+        let mask_bytes = (MAX_ATTN_MASK_UPLOAD_WORDS * std::mem::size_of::<u32>()).max(4);
         self.attention_mask_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("AttentionKvMask"),
-            size: (KV_ATTENTION_MASK_WORDS * std::mem::size_of::<u32>()) as wgpu::BufferAddress,
+            label: Some("AttentionKvMaskBatch"),
+            size: mask_bytes as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
@@ -1570,9 +2546,27 @@ impl QTensorEngine {
 
     fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
         let need_input = MAX_STACK_GEMM_IN.max(MAX_PREFILL_BATCH_FLOATS);
+        let prefill_bufs_ready = {
+            #[cfg(target_arch = "wasm32")]
+            {
+                self.prefill_scratch_buf.is_some()
+                    && self.prefill_work_buf_a.is_some()
+                    && self.prefill_work_buf_b.is_some()
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                true
+            }
+        };
+        #[cfg(target_arch = "wasm32")]
+        let weight_arena_ready = self.mc8_weight_arena.is_some();
+        #[cfg(not(target_arch = "wasm32"))]
+        let weight_arena_ready = true;
         if self.gemm_weight_buf.is_some()
             && max_weight_bytes <= self.max_tensor_bytes
             && self.gemm_max_input_floats >= need_input
+            && prefill_bufs_ready
+            && weight_arena_ready
         {
             return;
         }
@@ -1593,6 +2587,36 @@ impl QTensorEngine {
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
+        #[cfg(target_arch = "wasm32")]
+        {
+            let weight_usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
+            let mk = |label: &str| {
+                self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(label),
+                    size: w_bytes,
+                    usage: weight_usage,
+                    mapped_at_creation: false,
+                })
+            };
+            let qkv_k = mk("MC8WeightAttnK");
+            let qkv_v = mk("MC8WeightAttnV");
+            let qkv_q = mk("MC8WeightAttnQ");
+            let o_proj = mk("MC8WeightOProj");
+            let gate = mk("MC8WeightGate");
+            let up = mk("MC8WeightUp");
+            let down = mk("MC8WeightDown");
+            let weight_b = mk("LayerGemmWeightB");
+            self.mc8_weight_arena = Some(Mc8WeightArenaBufs {
+                qkv_k,
+                qkv_v,
+                qkv_q,
+                o_proj,
+                gate,
+                up,
+                down,
+            });
+            self.gemm_weight_buf_b = Some(weight_b);
+        }
         self.gemm_output_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmOutput"),
             size: out_bytes,
@@ -1601,9 +2625,19 @@ impl QTensorEngine {
                 | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
+        let gemm_params_bytes = {
+            #[cfg(target_arch = "wasm32")]
+            {
+                (MC8_MAX_GEMM_UNIFORM_CHUNK_SLOTS * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                std::mem::size_of::<GemmGpuParams>() as wgpu::BufferAddress
+            }
+        };
         self.gemm_params_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmParams"),
-            size: std::mem::size_of::<GemmGpuParams>() as wgpu::BufferAddress,
+            size: gemm_params_bytes.max(4),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
@@ -1643,10 +2677,39 @@ impl QTensorEngine {
                     | wgpu::BufferUsages::COPY_SRC,
                 mapped_at_creation: false,
             }));
+            // Per-token row: norm + gate + up + save (see encode_prefill_q_ffn_tail_fused).
+            let work_row_floats = (MAX_HIDDEN_DIM + 2 * max_out_dim as usize + MAX_HIDDEN_DIM).max(4);
+            let work_bytes =
+                (PREFILL_CHUNK_SIZE * work_row_floats * 4).max(4) as wgpu::BufferAddress;
+            let work_usage = wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC;
+            self.prefill_work_buf_a = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                label: Some("PrefillBatchWorkA"),
+                size: work_bytes,
+                usage: work_usage,
+                mapped_at_creation: false,
+            }));
+            self.prefill_work_buf_b = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                label: Some("PrefillBatchWorkB"),
+                size: work_bytes,
+                usage: work_usage,
+                mapped_at_creation: false,
+            }));
         }
+        let elem_params_bytes = {
+            #[cfg(target_arch = "wasm32")]
+            {
+                (MC8_MAX_ELEM_UNIFORM_CHUNK_SLOTS * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                std::mem::size_of::<ElemGpuParams>() as wgpu::BufferAddress
+            }
+        };
         self.elem_params_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("ElemParams"),
-            size: std::mem::size_of::<ElemGpuParams>() as wgpu::BufferAddress,
+            size: elem_params_bytes.max(4),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
@@ -2105,6 +3168,9 @@ impl QTensorEngine {
             weight_ggml_type: if tensor.is_quantized_q4_k { 12 } else { 14 },
             weight_row_elems: cols as u32,
             weight_byte_len: (rows * cols * 4) as u32,
+            n_batch: 1,
+            in_row_stride: 0,
+            out_row_stride: 0,
         };
         let params_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("TransformerParams"),
@@ -2218,6 +3284,9 @@ impl QTensorEngine {
                 weight_ggml_type: info.ggml_type,
                 weight_row_elems: info.dims[0] as u32,
                 weight_byte_len: raw.len() as u32,
+                n_batch: 1,
+                in_row_stride: 0,
+                out_row_stride: 0,
             };
             let input_buf = self.gemm_input_buf.as_ref().unwrap();
             let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
@@ -2682,6 +3751,7 @@ impl QTensorEngine {
         batch_start_token_idx: u32,
         mask_active: u32,
         mask_word_count: u32,
+        out_stride_elems: u32,
     ) -> AttentionGpuParams {
         AttentionGpuParams {
             n_embd: h.n_embd,
@@ -2704,6 +3774,8 @@ impl QTensorEngine {
             batch_start_token_idx,
             mask_active,
             mask_word_count,
+            out_stride_elems,
+            _pad: [0; 3],
         }
     }
 
@@ -2801,6 +3873,7 @@ impl QTensorEngine {
             batch_start_token_idx,
             mask_active,
             mask_word_count,
+            0,
         );
         let input_buf = self.gemm_input_buf.as_ref().unwrap();
         let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
@@ -2827,6 +3900,11 @@ impl QTensorEngine {
             buffer: kv_buf,
             offset: layer_offset,
             size: std::num::NonZeroU64::new(layer_bytes.max(4)),
+        };
+        let (wg_x, wg_y) = if proj_kind == 0 && num_tokens_in_batch > 1 {
+            (h.n_head, num_tokens_in_batch)
+        } else {
+            (n_workgroups.max(1), 1)
         };
 
         let bind_layout = self.attention_pipeline.get_bind_group_layout(0);
@@ -2873,7 +3951,7 @@ impl QTensorEngine {
             });
             cpass.set_pipeline(&self.attention_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
-            cpass.dispatch_workgroups(n_workgroups.max(1), 1, 1);
+            cpass.dispatch_workgroups(wg_x, wg_y, 1);
         }
 
         let readback_elems = readback_out.as_ref().map(|o| o.len()).unwrap_or(0);
@@ -3860,742 +4938,9 @@ impl QTensorEngine {
         .await
     }
 
-    /// MC8 pt3e: Layer-0 Q/K/Attn_Out CPU vs GPU diff @ decode (after Q SDPA, before o_proj).
-    #[cfg(target_arch = "wasm32")]
-    async fn mc8_log_l0_attention_diff(
-        &self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        hidden_cpu: &[f32],
-        emb_dim: usize,
-        token_idx: u32,
-    ) {
-        let layout = match self.kv_layout.as_ref() {
-            Some(l) => l,
-            None => return,
-        };
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return,
-        };
-        let h = &index.hyperparams;
-        let n_embd = h.n_embd as usize;
-        if emb_dim < n_embd || hidden_cpu.len() < n_embd {
-            return;
-        }
-        let tensors = index.get_layer_tensors(0);
-        let head_dim = h.head_dim() as usize;
-        let n_head = h.n_head as usize;
-        let n_kv = h.effective_n_kv_head() as usize;
-        let q_heads_per_kv = h.q_heads_per_kv() as usize;
-        if head_dim == 0 || n_head == 0 || n_kv == 0 {
-            return;
-        }
-        let scale = 1.0f32 / (head_dim as f32).sqrt();
-        let slot = layout.ring_slot(token_idx);
-
-        let (mask_words, mask_active, _) =
-            Self::attention_kv_mask_for_dispatch(layout, token_idx, 0);
-        wlog(&format!(
-            "[MC8 L0 diff] token_idx={token_idx} mask_active={mask_active} mask_word0=0x{:08X}",
-            mask_words[0]
-        ));
-
-        let mut norm_w = [0f32; MAX_HIDDEN_DIM];
-        let mut norm_cpu = [0f32; MAX_HIDDEN_DIM];
-        let mut proj = [0f32; MAX_STACK_GEMM_OUT];
-        let normed = prepare_pre_norm_input(
-            &hidden_cpu[..n_embd],
-            n_embd,
-            tensors.attn_norm.as_ref(),
-            Some(mmap),
-            index.tensor_data_start,
-            &mut norm_cpu,
-            &mut norm_w,
-        );
-        wlog(&format!(
-            "[MC8 L0 diff] attn_norm.weight[0]={:.6}",
-            norm_w[0]
-        ));
-
-        let aux_buf = self.gemm_aux_buf.as_ref().unwrap();
-        let mut norm_gpu = [0f32; MAX_HIDDEN_DIM];
-        let norm_bytes = (n_embd * 4) as wgpu::BufferAddress;
-        if self
-            .pipeline_read_gpu_bytes_at(aux_buf, 0, bytemuck::cast_slice_mut(
-                &mut norm_gpu[..n_embd],
-            ))
-            .await
-        {
-            probe_log_diff("attn_rmsnorm", normed, &norm_gpu[..n_embd], n_embd);
-        }
-
-        let q_info = match tensors.attn_q.as_ref() {
-            Some(i) => i,
-            None => return,
-        };
-        let k_info = match tensors.attn_k.as_ref() {
-            Some(i) => i,
-            None => return,
-        };
-        let q_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
-            Ok(s) => s,
-            Err(_) => return,
-        };
-        let k_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
-            Ok(s) => s,
-            Err(_) => return,
-        };
-        let (q_in, q_out) = Self::matmul_dims(q_info);
-        let (k_in, k_out) = Self::matmul_dims(k_info);
-        if !stack_gemm_quant(k_raw, k_info, normed, &mut proj[..k_out], k_in, k_out) {
-            return;
-        }
-        rope_inplace(
-            &mut proj[..k_out],
-            n_kv,
-            head_dim,
-            token_idx,
-            h.effective_rope_freq_base(),
-            h.effective_rope_scale(),
-        );
-        let mut k_cpu = [0f32; 128];
-        let k_n = head_dim.min(k_cpu.len());
-        k_cpu[..k_n].copy_from_slice(&proj[..k_n]);
-
-        let mut k_gpu = [0f32; 128];
-        match self
-            .pipeline_read_kv_head(layout, 0, slot, 0, head_dim, true, &mut k_gpu)
-            .await
-        {
-            true => probe_log_diff("K_rope_slot_cur", &k_cpu[..k_n], &k_gpu[..k_n], k_n),
-            false => wlog("[MC8 L0 diff] K_rope_slot_cur: KV readback FAILED"),
-        }
-
-        if !stack_gemm_quant(q_raw, q_info, normed, &mut proj[..q_out], q_in, q_out) {
-            return;
-        }
-        rope_inplace(
-            &mut proj[..q_out],
-            n_head,
-            head_dim,
-            token_idx,
-            h.effective_rope_freq_base(),
-            h.effective_rope_scale(),
-        );
-        let mut q_cpu = [0f32; 128];
-        let q_n = head_dim.min(q_cpu.len());
-        q_cpu[..q_n].copy_from_slice(&proj[..q_n]);
-        wlog(&format!(
-            "[MC8 L0 diff] Q_rope_h0 cpu[0]={:.6} cpu[1]={:.6}",
-            q_cpu[0], q_cpu[1]
-        ));
-
-        let mut att_scores = [0f32; MAX_CONTEXT_WINDOW as usize];
-        let pos_usize = token_idx as usize;
-        if pos_usize >= MAX_CONTEXT_WINDOW as usize {
-            return;
-        }
-        let mut k_slot = [0f32; 128];
-        let mut v_slot = [0f32; 128];
-        let mut max_score = f32::NEG_INFINITY;
-        for past_pos in 0..=token_idx {
-            let past_slot = layout.ring_slot(past_pos);
-            if !self
-                .pipeline_read_kv_head(layout, 0, past_slot, 0, head_dim, true, &mut k_slot)
-                .await
-            {
-                return;
-            }
-            let mut dot = 0.0f32;
-            for d in 0..head_dim {
-                dot += q_cpu[d] * k_slot[d];
-            }
-            let score = dot * scale;
-            att_scores[past_pos as usize] = score;
-            max_score = max_score.max(score);
-        }
-        let mut sum_exp = 0.0f32;
-        for past_pos in 0..=token_idx {
-            let exp_val = (att_scores[past_pos as usize] - max_score).exp();
-            att_scores[past_pos as usize] = exp_val;
-            sum_exp += exp_val;
-        }
-        let mut attn_cpu = [0f32; 128];
-        if sum_exp > 0.0 {
-            for past_pos in 0..=token_idx {
-                let prob = att_scores[past_pos as usize] / sum_exp;
-                let past_slot = layout.ring_slot(past_pos);
-                if !self
-                    .pipeline_read_kv_head(layout, 0, past_slot, 0, head_dim, false, &mut v_slot)
-                    .await
-                {
-                    return;
-                }
-                for d in 0..head_dim {
-                    attn_cpu[d] += v_slot[d] * prob;
-                }
-            }
-        }
-        wlog(&format!(
-            "[MC8 L0 diff] SDPA_h0 cpu sum_exp={sum_exp:.6} attn[0]={:.6}",
-            attn_cpu[0]
-        ));
-
-        let ffn_buf = self.gemm_ffn_buf.as_ref().unwrap();
-        let q_dim = n_head * head_dim;
-        let mut attn_gpu = [0f32; 1024];
-        let attn_bytes = (q_dim * 4) as wgpu::BufferAddress;
-        if attn_bytes as usize <= attn_gpu.len() * 4
-            && self
-                .pipeline_read_gpu_bytes_at(
-                    ffn_buf,
-                    0,
-                    bytemuck::cast_slice_mut(&mut attn_gpu[..q_dim]),
-                )
-                .await
-        {
-            probe_log_diff("Attn_Out_h0", &attn_cpu[..q_n], &attn_gpu[..q_n], q_n);
-            let k_err = probe_max_abs_diff(&k_cpu[..k_n], &k_gpu[..k_n], k_n);
-            let attn_err = probe_max_abs_diff(&attn_cpu[..q_n], &attn_gpu[..q_n], q_n);
-            let mut first_diverge = "none";
-            if probe_max_abs_diff(normed, &norm_gpu[..n_embd], 8) > 0.01 {
-                first_diverge = "attn_rmsnorm";
-            } else if k_err > 0.01 {
-                first_diverge = "K_rope";
-            } else if attn_err > 0.01 {
-                first_diverge = "Attn_Out_SDPA";
-            }
-            wlog(&format!(
-                "[MC8 L0 diff] err_budget K={k_err:.6} Attn_Out={attn_err:.6}"
-            ));
-            wlog(&format!(
-                "[MC8 L0 diff] first_divergence(0.01)={first_diverge}"
-            ));
-        }
-        let _ = q_heads_per_kv;
-    }
-
-    /// MC8 pt3f: o_proj / post-attn residual / ffn_norm CPU vs GPU @ L0 decode.
-    #[cfg(target_arch = "wasm32")]
-    async fn mc8_log_l0_midlayer_diff(
-        &self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        hidden_cpu: &[f32],
-        emb_dim: usize,
-        token_idx: u32,
-        phase: u8, // 0=o_proj 1=post_attn_residual 2=ffn_norm
-        token_hidden: &wgpu::Buffer,
-        work_buf: &wgpu::Buffer,
-        aux_buf: &wgpu::Buffer,
-    ) {
-        let layout = match self.kv_layout.as_ref() {
-            Some(l) => l,
-            None => return,
-        };
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return,
-        };
-        let h = &index.hyperparams;
-        let n_embd = h.n_embd as usize;
-        if emb_dim < n_embd || hidden_cpu.len() < n_embd {
-            return;
-        }
-        let tensors = index.get_layer_tensors(0);
-        let mut attn_out = [0f32; MAX_HIDDEN_DIM];
-        let q_dim = match mc8_cpu_l0_attn_out(
-            self,
-            index,
-            mmap,
-            layout,
-            hidden_cpu,
-            n_embd,
-            token_idx,
-            &mut attn_out,
-        )
-        .await
-        {
-            Some(d) => d,
-            None => {
-                wlog("[MC8 L0 mid] CPU attn_out build FAILED");
-                return;
-            }
-        };
-        let out_info = match tensors.attn_output.as_ref() {
-            Some(i) => i,
-            None => return,
-        };
-        let o_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, out_info) {
-            Ok(s) => s,
-            Err(_) => return,
-        };
-        let (o_in, o_out) = Self::matmul_dims(out_info);
-        if o_in > q_dim || o_out < n_embd {
-            return;
-        }
-        let mut o_proj_cpu = [0f32; MAX_HIDDEN_DIM];
-        if !stack_gemm_quant(
-            o_raw,
-            out_info,
-            &attn_out[..q_dim],
-            &mut o_proj_cpu[..n_embd],
-            o_in,
-            n_embd,
-        ) {
-            wlog("[MC8 L0 mid] CPU o_proj FAILED");
-            return;
-        }
-        let mut post_attn_cpu = [0f32; MAX_HIDDEN_DIM];
-        for i in 0..n_embd {
-            post_attn_cpu[i] = hidden_cpu[i] + o_proj_cpu[i];
-        }
-        let mut ffn_norm_w = [0f32; MAX_HIDDEN_DIM];
-        let mut ffn_norm_cpu = [0f32; MAX_HIDDEN_DIM];
-        let ffn_normed = prepare_pre_norm_input(
-            &post_attn_cpu[..n_embd],
-            n_embd,
-            tensors.ffn_norm.as_ref(),
-            Some(mmap),
-            index.tensor_data_start,
-            &mut ffn_norm_cpu,
-            &mut ffn_norm_w,
-        );
-
-        let n_probe = n_embd.min(8);
-        let mut gpu_scratch = [0f32; MAX_HIDDEN_DIM];
-
-        if phase == 0 {
-            wlog("[MC8 L0 mid] phase=o_proj (pre-attn-residual)");
-            let mut pristine_err = f32::MAX;
-            let mut o_err = f32::MAX;
-            let mut pristine_gpu = [0f32; MAX_HIDDEN_DIM];
-            if self
-                .pipeline_read_gpu_bytes_at(
-                    token_hidden,
-                    0,
-                    bytemuck::cast_slice_mut(&mut pristine_gpu[..n_embd]),
-                )
-                .await
-            {
-                probe_log_mid_diff(
-                    "pristine_hidden_pre_residual",
-                    &hidden_cpu[..n_embd],
-                    &pristine_gpu[..n_embd],
-                    n_probe,
-                );
-                pristine_err =
-                    probe_max_abs_diff(&hidden_cpu[..n_embd], &pristine_gpu[..n_embd], n_embd);
-            }
-            if self
-                .pipeline_read_gpu_bytes_at(
-                    work_buf,
-                    0,
-                    bytemuck::cast_slice_mut(&mut gpu_scratch[..n_embd]),
-                )
-                .await
-            {
-                probe_log_mid_diff("o_proj", &o_proj_cpu[..n_embd], &gpu_scratch[..n_embd], n_probe);
-                o_err = probe_max_abs_diff(&o_proj_cpu[..n_embd], &gpu_scratch[..n_embd], n_embd);
-            } else {
-                wlog("[MC8 L0 mid] o_proj: work_buf readback FAILED");
-            }
-            let mut first = "none";
-            if pristine_err <= 0.01 && o_err <= 0.01 {
-                first = "none";
-            } else if pristine_err > 0.01 {
-                first = "pristine_hidden";
-            } else if o_err > 0.01 {
-                first = "o_proj";
-            }
-            wlog(&format!(
-                "[MC8 L0 mid] err_budget pristine={pristine_err:.6} o_proj={o_err:.6}"
-            ));
-            wlog(&format!("[MC8 L0 mid] first_divergence(0.01)={first}"));
-        } else if phase == 1 {
-            wlog("[MC8 L0 mid] phase=post_attn_residual");
-            if self
-                .pipeline_read_gpu_bytes_at(
-                    token_hidden,
-                    0,
-                    bytemuck::cast_slice_mut(&mut gpu_scratch[..n_embd]),
-                )
-                .await
-            {
-                probe_log_mid_diff(
-                    "post_attn_residual",
-                    &post_attn_cpu[..n_embd],
-                    &gpu_scratch[..n_embd],
-                    n_probe,
-                );
-                let residual_err = probe_max_abs_diff(
-                    &post_attn_cpu[..n_embd],
-                    &gpu_scratch[..n_embd],
-                    n_embd,
-                );
-                let mut first = "none";
-                if residual_err > 0.01 {
-                    first = "post_attn_residual";
-                }
-                wlog(&format!(
-                    "[MC8 L0 mid] post_attn h[0] cpu={:.6} gpu={:.6}",
-                    post_attn_cpu[0], gpu_scratch[0]
-                ));
-                wlog(&format!(
-                    "[MC8 L0 mid] err_budget post_attn_residual={residual_err:.6}"
-                ));
-                wlog(&format!("[MC8 L0 mid] first_divergence(0.01)={first}"));
-            } else {
-                wlog("[MC8 L0 mid] post_attn_residual: token_hidden readback FAILED");
-            }
-        } else if phase == 2 {
-            wlog(&format!(
-                "[MC8 L0 mid] phase=ffn_norm ffn_norm.weight[0]={:.6}",
-                ffn_norm_w[0]
-            ));
-            if self
-                .pipeline_read_gpu_bytes_at(
-                    aux_buf,
-                    0,
-                    bytemuck::cast_slice_mut(&mut gpu_scratch[..n_embd]),
-                )
-                .await
-            {
-                probe_log_mid_diff("ffn_norm", ffn_normed, &gpu_scratch[..n_embd], n_probe);
-                let mut first = "none";
-                if probe_max_abs_diff(ffn_normed, &gpu_scratch[..n_embd], n_probe) > 0.01 {
-                    first = "ffn_norm";
-                }
-                wlog(&format!("[MC8 L0 mid] first_divergence(0.01)={first}"));
-            } else {
-                wlog("[MC8 L0 mid] ffn_norm: aux_buf readback FAILED");
-            }
-        }
-        let _ = token_idx;
-    }
-
-    /// MC8 pt3g: gate / up / SwiGLU / down / FFN-residual CPU vs GPU @ L0 decode.
-    #[cfg(target_arch = "wasm32")]
-    async fn mc8_log_l0_ffn_chain_diff(
-        &self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        hidden_cpu: &[f32],
-        emb_dim: usize,
-        token_idx: u32,
-        phase: u8, // 0=gate 1=up 2=swiglu 3=down 4=ffn_residual
-        base_save: &wgpu::Buffer,
-        work_buf: &wgpu::Buffer,
-        ffn_buf: &wgpu::Buffer,
-        aux_buf: &wgpu::Buffer,
-        token_hidden: &wgpu::Buffer,
-    ) {
-        let layout = match self.kv_layout.as_ref() {
-            Some(l) => l,
-            None => return,
-        };
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return,
-        };
-        let n_embd = index.hyperparams.n_embd as usize;
-        if emb_dim < n_embd || hidden_cpu.len() < n_embd {
-            return;
-        }
-        let mut post_attn = [0f32; MAX_HIDDEN_DIM];
-        let mut ffn_input = [0f32; MAX_HIDDEN_DIM];
-        let mut gate_cpu = [0f32; MAX_STACK_GEMM_OUT];
-        let mut up_cpu = [0f32; MAX_STACK_GEMM_OUT];
-        let mut swiglu_cpu = [0f32; MAX_STACK_GEMM_OUT];
-        let mut down_cpu = [0f32; MAX_HIDDEN_DIM];
-        let n_ffn = match mc8_cpu_l0_ffn_stages(
-            self,
-            index,
-            mmap,
-            layout,
-            hidden_cpu,
-            n_embd,
-            token_idx,
-            &mut post_attn,
-            &mut ffn_input,
-            &mut gate_cpu,
-            &mut up_cpu,
-            &mut swiglu_cpu,
-            &mut down_cpu,
-        )
-        .await
-        {
-            Some(n) => n,
-            None => {
-                wlog("[MC8 L0 ffn] CPU FFN chain build FAILED");
-                return;
-            }
-        };
-        let mut ffn_residual_cpu = [0f32; MAX_HIDDEN_DIM];
-        for i in 0..n_embd {
-            ffn_residual_cpu[i] = post_attn[i] + down_cpu[i];
-        }
-        let mut gpu_scratch = [0f32; MAX_STACK_GEMM_OUT];
-        let n_probe = 8usize;
-
-        if phase == 0 {
-            wlog("[MC8 L0 ffn] audit: gate→work_buf up→ffn_buf disjoint; mc8_flush after gate+up before silu_mul");
-            let mut base_gpu = [0f32; MAX_HIDDEN_DIM];
-            if self
-                .pipeline_read_gpu_bytes_at(
-                    base_save,
-                    0,
-                    bytemuck::cast_slice_mut(&mut base_gpu[..n_embd]),
-                )
-                .await
-            {
-                probe_log_ffn_diff(
-                    "base_save_post_attn",
-                    &post_attn[..n_embd],
-                    &base_gpu[..n_embd],
-                    n_probe,
-                );
-            }
-        }
-
-        let (label, cpu_slice, gpu_buf, n_cmp) = match phase {
-            0 => ("gate_out", &gate_cpu[..n_ffn], work_buf, n_ffn),
-            1 => ("up_out", &up_cpu[..n_ffn], ffn_buf, n_ffn),
-            2 => ("swiglu_out", &swiglu_cpu[..n_ffn], aux_buf, n_ffn),
-            3 => ("down_out", &down_cpu[..n_embd], work_buf, n_embd),
-            4 => (
-                "ffn_residual",
-                &ffn_residual_cpu[..n_embd],
-                token_hidden,
-                n_embd,
-            ),
-            _ => return,
-        };
-        wlog(&format!("[MC8 L0 ffn] phase={label}"));
-        if n_cmp > gpu_scratch.len() {
-            return;
-        }
-        if self
-            .pipeline_read_gpu_bytes_at(
-                gpu_buf,
-                0,
-                bytemuck::cast_slice_mut(&mut gpu_scratch[..n_cmp]),
-            )
-            .await
-        {
-            probe_log_ffn_diff(label, cpu_slice, &gpu_scratch[..n_cmp], n_probe);
-            let err = probe_max_abs_diff(cpu_slice, &gpu_scratch[..n_cmp], n_cmp);
-            let mut first = "none";
-            if err > 0.01 {
-                first = label;
-            }
-            wlog(&format!("[MC8 L0 ffn] err_budget {label}={err:.6}"));
-            wlog(&format!("[MC8 L0 ffn] first_divergence(0.01)={first}"));
-        } else {
-            wlog(&format!("[MC8 L0 ffn] {label}: GPU readback FAILED"));
-        }
-    }
-
-    /// MC8 pt3h: pure CPU prefill KV vs GPU batched prefill (breaks replay trap).
-    #[cfg(target_arch = "wasm32")]
-    pub async fn mc8_log_prefill_reconciliation(
-        &mut self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        prefill_token_ids: &[u32],
-        emb_dim: usize,
-        probe_token_pos: u32,
-        gpu_l1_hidden: Option<&[f32]>,
-        scratch_a: &mut [f32],
-        scratch_b: &mut [f32],
-        max_layers: u32,
-    ) {
-        let layout = match self.kv_layout {
-            Some(l) => l,
-            None => return,
-        };
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return,
-        };
-        let n_embd = index.hyperparams.n_embd as usize;
-        let head_dim = index.hyperparams.head_dim() as usize;
-        if emb_dim < n_embd || prefill_token_ids.is_empty() || head_dim == 0 {
-            return;
-        }
-        let probe_pos = probe_token_pos.min(prefill_token_ids.len() as u32 - 1);
-        wlog(&format!(
-            "[MC8 prefill] reconcile n_prefill={} probe_pos={probe_pos} probe_id={}",
-            prefill_token_ids.len(),
-            prefill_token_ids[probe_pos as usize]
-        ));
-
-        let mut k_gpu = [0f32; 128];
-        let mut v_gpu = [0f32; 128];
-        let k_n = head_dim.min(k_gpu.len());
-        let slot = layout.ring_slot(probe_pos);
-        let gpu_k_ok = self
-            .pipeline_read_kv_head(&layout, 0, slot, 0, head_dim, true, &mut k_gpu)
-            .await;
-        let gpu_v_ok = self
-            .pipeline_read_kv_head(&layout, 0, slot, 0, head_dim, false, &mut v_gpu)
-            .await;
-        if gpu_k_ok {
-            wlog(&format!(
-                "[MC8 prefill] gpu_K_L0 pos={probe_pos} k[0]={:.6}",
-                k_gpu[0]
-            ));
-        }
-        if !gpu_k_ok || !gpu_v_ok {
-            wlog("[MC8 prefill] GPU KV readback FAILED");
-            return;
-        }
-
-        let mut batch = [0f32; MAX_PREFILL_BATCH_FLOATS];
-        let n_prefill = prefill_token_ids.len();
-        let batch_elems = n_prefill * n_embd;
-        if batch_elems > batch.len() {
-            wlog("[MC8 prefill] batch stack OOB");
-            return;
-        }
-        for (t, &tid) in prefill_token_ids.iter().enumerate() {
-            let got = index.dequantize_token_embedding_into(
-                mmap,
-                tid,
-                &mut batch[t * n_embd..(t + 1) * n_embd],
-            );
-            if got == 0 {
-                wlog(&format!("[MC8 prefill] embed dequant failed id={tid}"));
-                return;
-            }
-        }
-
-        // L1 input: hidden entering layer 1 during prefill (token 1 after layer 0).
-        if n_prefill >= 2 {
-            let l1_tok = 1usize;
-            let mut cpu_l0_batch = [0f32; MAX_PREFILL_BATCH_FLOATS];
-            cpu_l0_batch[..batch_elems].copy_from_slice(&batch[..batch_elems]);
-            if self.dispatch_prefill_layer_batch(
-                index,
-                0,
-                &mut cpu_l0_batch[..batch_elems],
-                emb_dim,
-                n_prefill as u32,
-                0,
-                scratch_a,
-                scratch_b,
-            ) {
-                let cpu_h0 = cpu_l0_batch[l1_tok * n_embd];
-                wlog(&format!(
-                    "[MC8 prefill] L1_input_cpu token=1 h[0]={cpu_h0:.6}"
-                ));
-                if let Some(gpu_h) = gpu_l1_hidden {
-                    if gpu_h.len() >= n_embd {
-                        probe_log_prefill_diff(
-                            "L1_input_hidden",
-                            &cpu_l0_batch[l1_tok * n_embd..l1_tok * n_embd + n_embd],
-                            &gpu_h[..n_embd],
-                            8,
-                        );
-                        let h_err = probe_max_abs_diff(
-                            &cpu_l0_batch[l1_tok * n_embd..l1_tok * n_embd + n_embd],
-                            &gpu_h[..n_embd],
-                            n_embd,
-                        );
-                        wlog(&format!("[MC8 prefill] L1_input err={h_err:.6}"));
-                    }
-                }
-            }
-        }
-
-        // Pure CPU prefill into kv_cache_cpu (GPU KV untouched — breaks replay trap).
-        let mut cpu_batch = [0f32; MAX_PREFILL_BATCH_FLOATS];
-        cpu_batch[..batch_elems].copy_from_slice(&batch[..batch_elems]);
-        if !self.dispatch_prefill_chunk(
-            index,
-            &mut cpu_batch[..batch_elems],
-            emb_dim,
-            n_prefill as u32,
-            0,
-            scratch_a,
-            scratch_b,
-            max_layers,
-        ) {
-            wlog("[MC8 prefill] CPU prefill replay FAILED");
-            return;
-        }
-        let kv_cpu = match self.kv_cache_cpu.as_ref() {
-            Some(b) => b.as_ref(),
-            None => return,
-        };
-        let mut k_cpu = [0f32; 128];
-        let mut v_cpu = [0f32; 128];
-        if !read_kv_cpu_head(&layout, kv_cpu, 0, probe_pos, 0, head_dim, true, &mut k_cpu)
-            || !read_kv_cpu_head(&layout, kv_cpu, 0, probe_pos, 0, head_dim, false, &mut v_cpu)
-        {
-            wlog("[MC8 prefill] CPU KV read FAILED");
-            return;
-        }
-        probe_log_prefill_diff("K_L0_pure_cpu_vs_gpu", &k_cpu[..k_n], &k_gpu[..k_n], k_n);
-        probe_log_prefill_diff("V_L0_pure_cpu_vs_gpu", &v_cpu[..k_n], &v_gpu[..k_n], k_n);
-        let k_err = probe_max_abs_diff(&k_cpu[..k_n], &k_gpu[..k_n], k_n);
-        let v_err = probe_max_abs_diff(&v_cpu[..k_n], &v_gpu[..k_n], k_n);
-        let mut first = "none";
-        if k_err > 0.01 {
-            first = "K_L0_prefill";
-        } else if v_err > 0.01 {
-            first = "V_L0_prefill";
-        }
-        wlog(&format!(
-            "[MC8 prefill] err_budget K={k_err:.6} V={v_err:.6}"
-        ));
-        wlog(&format!("[MC8 prefill] first_divergence(0.01)={first}"));
-    }
-
-    /// MC8 pt3h: raw token embedding @ decode step 1 (before any layer).
-    #[cfg(target_arch = "wasm32")]
-    pub async fn mc8_log_decode_embedding_probe(
-        &self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        token_id: u32,
-        token_idx: u32,
-        emb_cpu: &[f32],
-        emb_dim: usize,
-    ) {
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return,
-        };
-        let n_embd = index.hyperparams.n_embd as usize;
-        if emb_dim < n_embd || emb_cpu.len() < n_embd {
-            return;
-        }
-        let mut emb_check = [0f32; MAX_HIDDEN_DIM];
-        let got = index.dequantize_token_embedding_into(mmap, token_id, &mut emb_check[..n_embd]);
-        wlog(&format!(
-            "[MC8 prefill] decode_step1 token_id={token_id} token_idx={token_idx} dequant_ok={}",
-            got > 0
-        ));
-        if got > 0 {
-            probe_log_prefill_diff(
-                "token_embd_step1",
-                &emb_check[..n_embd],
-                &emb_cpu[..n_embd],
-                8,
-            );
-            let emb_err = probe_max_abs_diff(&emb_check[..n_embd], &emb_cpu[..n_embd], n_embd);
-            let mut first = "none";
-            if emb_err > 0.01 {
-                first = "token_embd";
-            }
-            wlog(&format!(
-                "[MC8 prefill] decode_step1 token_embd h[0]={:.6} err={emb_err:.6} first_divergence={first}",
-                emb_cpu[0]
-            ));
-        }
-        let _ = token_idx;
-    }
-
     /// MC8: Q + o_proj + FFN tail (K/V already written for this token).
     #[cfg(target_arch = "wasm32")]
-    async fn encode_attn_ffn_tail_gpu(
+    fn encode_attn_ffn_tail_gpu(
         &self,
         pipeline: &mut WasmGpuPipeline,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -4605,8 +4950,7 @@ impl QTensorEngine {
         tensors: &crate::gguf_sharder::LayerTensors,
         token_hidden: &wgpu::Buffer,
         attn_input: Option<&wgpu::Buffer>,
-        l0_vector_probe: bool,
-        hidden_cpu: Option<&[f32]>,
+        work_aliases_hidden: bool,
     ) -> bool {
         let mmap = match self.gguf_mmap.as_deref() {
             Some(m) => m,
@@ -4649,7 +4993,32 @@ impl QTensorEngine {
             token_hidden
         };
         let ffn_buf = self.gemm_ffn_buf.as_ref().unwrap();
+        let emb_bytes = (emb_dim * 4) as wgpu::BufferAddress;
         let q_dim = (h.n_head * h.head_dim()) as usize;
+        let (mask_words, mask_active, mask_word_count) =
+            Self::attention_kv_mask_for_dispatch(&layout, token_idx, 0);
+        let q_params = Self::attention_gpu_params(
+            &h,
+            &layout,
+            layer,
+            token_idx,
+            q_info,
+            q_raw.len(),
+            0,
+            1,
+            token_idx,
+            mask_active,
+            mask_word_count,
+            0,
+        );
+        let q_off = self.mc8_upload_attn_param(&q_params);
+        if mask_active != 0 {
+            self.gpu_queue().write_buffer(
+                self.attention_mask_buf.as_ref().unwrap(),
+                0,
+                bytemuck::cast_slice(&mask_words),
+            );
+        }
         if !self.encode_attention_pass_gpu(
             pipeline,
             q_in_buf,
@@ -4665,16 +5034,12 @@ impl QTensorEngine {
             q_raw,
             0,
             h.n_head,
+            q_off,
+            Mc8WeightRole::AttnQ,
         ) {
             return false;
         }
         self.mc8_flush(pipeline);
-        if l0_vector_probe && layer == 0 {
-            if let Some(hc) = hidden_cpu {
-                self.mc8_log_l0_attention_diff(index, hc, emb_dim, token_idx)
-                    .await;
-            }
-        }
         if let Some(out_info) = tensors.attn_output.as_ref() {
             let (o_in, o_out) = Self::matmul_dims(out_info);
             let o_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, out_info)
@@ -4682,6 +5047,10 @@ impl QTensorEngine {
                 Ok(s) => s,
                 Err(_) => return false,
             };
+            if work_aliases_hidden {
+                pipeline.encoder.copy_buffer_to_buffer(token_hidden, 0, aux_buf, 0, emb_bytes);
+                self.mc8_flush(pipeline);
+            }
             if o_in > q_dim
                 || !self.encode_gemm_bufs(
                     pipeline,
@@ -4696,63 +5065,31 @@ impl QTensorEngine {
                 return false;
             }
             self.mc8_flush(pipeline);
-            if l0_vector_probe && layer == 0 {
-                if let Some(hc) = hidden_cpu {
-                    self.mc8_log_l0_midlayer_diff(
-                        index,
-                        hc,
-                        emb_dim,
-                        token_idx,
-                        0,
-                        token_hidden,
-                        work_buf,
-                        aux_buf,
-                    )
-                    .await;
-                }
-            }
-            let attn_res_scratch = self
-                .prefill_scratch_buf
-                .as_ref()
-                .unwrap_or(self.gemm_aux_buf.as_ref().unwrap());
+            let attn_residual_base: &wgpu::Buffer = if work_aliases_hidden {
+                aux_buf
+            } else {
+                token_hidden
+            };
+            // Never use `prefill_scratch_buf` here — it holds batched attn RMSNorm rows.
             self.encode_residual_add_gpu(
                 pipeline,
-                token_hidden,
+                attn_residual_base,
                 work_buf,
                 token_hidden,
-                attn_res_scratch,
+                ffn_buf,
                 emb_dim as u32,
             );
         } else {
-            let attn_res_scratch = self
-                .prefill_scratch_buf
-                .as_ref()
-                .unwrap_or(self.gemm_aux_buf.as_ref().unwrap());
             self.encode_residual_add_gpu(
                 pipeline,
                 token_hidden,
                 ffn_buf,
                 token_hidden,
-                attn_res_scratch,
+                aux_buf,
                 emb_dim as u32,
             );
         }
         self.mc8_flush(pipeline);
-        if l0_vector_probe && layer == 0 {
-            if let Some(hc) = hidden_cpu {
-                self.mc8_log_l0_midlayer_diff(
-                    index,
-                    hc,
-                    emb_dim,
-                    token_idx,
-                    1,
-                    token_hidden,
-                    work_buf,
-                    aux_buf,
-                )
-                .await;
-            }
-        }
         let gate_info = match tensors.ffn_gate.as_ref() {
             Some(i) => i,
             None => return false,
@@ -4785,7 +5122,6 @@ impl QTensorEngine {
                 Ok(s) => s,
                 Err(_) => return false,
             };
-        let emb_bytes = (emb_dim * 4) as wgpu::BufferAddress;
         let base_save = match self.prefill_scratch_buf.as_ref() {
             Some(b) => b,
             None => return false,
@@ -4809,63 +5145,14 @@ impl QTensorEngine {
             pipeline.encoder.copy_buffer_to_buffer(token_hidden, 0, aux_buf, 0, emb_bytes);
         }
         self.mc8_flush(pipeline);
-        if l0_vector_probe && layer == 0 {
-            if let Some(hc) = hidden_cpu {
-                self.mc8_log_l0_midlayer_diff(
-                    index,
-                    hc,
-                    emb_dim,
-                    token_idx,
-                    2,
-                    token_hidden,
-                    work_buf,
-                    aux_buf,
-                )
-                .await;
-            }
-        }
         if !self.encode_gemm_bufs(pipeline, gate_info, gate_raw, gate_in, n_ffn, aux_buf, work_buf) {
             return false;
         }
         self.mc8_flush(pipeline);
-        if l0_vector_probe && layer == 0 {
-            if let Some(hc) = hidden_cpu {
-                self.mc8_log_l0_ffn_chain_diff(
-                    index,
-                    hc,
-                    emb_dim,
-                    token_idx,
-                    0,
-                    base_save,
-                    work_buf,
-                    ffn_buf,
-                    aux_buf,
-                    token_hidden,
-                )
-                .await;
-            }
-        }
         if !self.encode_gemm_bufs(pipeline, up_info, up_raw, up_in, n_ffn, aux_buf, ffn_buf) {
             return false;
         }
         self.mc8_flush(pipeline);
-        if l0_vector_probe && layer == 0 {
-            if let Some(hc) = hidden_cpu {
-                self.mc8_log_l0_ffn_chain_diff(
-                    index,
-                    hc,
-                    emb_dim,
-                    token_idx,
-                    1,
-                    base_save,
-                    work_buf,
-                    ffn_buf,
-                    aux_buf,
-                    token_hidden,
-                )
-                .await;
-            }
-        }
         self.encode_elem(
             pipeline,
             ELEM_OP_SILU_MUL,
@@ -4876,44 +5163,10 @@ impl QTensorEngine {
             aux_buf,
         );
         self.mc8_flush(pipeline);
-        if l0_vector_probe && layer == 0 {
-            if let Some(hc) = hidden_cpu {
-                self.mc8_log_l0_ffn_chain_diff(
-                    index,
-                    hc,
-                    emb_dim,
-                    token_idx,
-                    2,
-                    base_save,
-                    work_buf,
-                    ffn_buf,
-                    aux_buf,
-                    token_hidden,
-                )
-                .await;
-            }
-        }
         if !self.encode_gemm_bufs(pipeline, down_info, down_raw, dn_in, dn_out, aux_buf, work_buf) {
             return false;
         }
         self.mc8_flush(pipeline);
-        if l0_vector_probe && layer == 0 {
-            if let Some(hc) = hidden_cpu {
-                self.mc8_log_l0_ffn_chain_diff(
-                    index,
-                    hc,
-                    emb_dim,
-                    token_idx,
-                    3,
-                    base_save,
-                    work_buf,
-                    ffn_buf,
-                    aux_buf,
-                    token_hidden,
-                )
-                .await;
-            }
-        }
         // FFN residual: down output is in work_buf; pre-FFN skip is in base_save.
         // Use aux_buf as scratch (SiLU output consumed; down GEMM flushed above).
         self.encode_residual_add_gpu(
@@ -4925,37 +5178,18 @@ impl QTensorEngine {
             emb_dim as u32,
         );
         self.mc8_flush(pipeline);
-        if l0_vector_probe && layer == 0 {
-            if let Some(hc) = hidden_cpu {
-                self.mc8_log_l0_ffn_chain_diff(
-                    index,
-                    hc,
-                    emb_dim,
-                    token_idx,
-                    4,
-                    base_save,
-                    work_buf,
-                    ffn_buf,
-                    aux_buf,
-                    token_hidden,
-                )
-                .await;
-            }
-        }
         true
     }
 
     /// MC8: encode one decode layer entirely on GPU (no map_async).
     #[cfg(target_arch = "wasm32")]
-    async fn encode_transformer_layer_gpu(
+    fn encode_transformer_layer_gpu(
         &self,
         pipeline: &mut WasmGpuPipeline,
         index: &crate::gguf_sharder::GgufTensorIndex,
         layer: u32,
         token_idx: u32,
         emb_dim: usize,
-        l0_vector_probe: bool,
-        hidden_cpu: Option<&[f32]>,
     ) -> bool {
         let tensors = index.get_layer_tensors(layer);
         let layout = match self.kv_layout {
@@ -5012,6 +5246,44 @@ impl QTensorEngine {
         };
 
         let n_kv = h.effective_n_kv_head();
+        let mut attn_arena = Mc8UniformArena {
+            bytes: [0u8; MC8_MAX_GEMM_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
+            slots: 0,
+        };
+        let k_params = Self::attention_gpu_params(
+            &h,
+            &layout,
+            layer,
+            token_idx,
+            k_info,
+            k_raw.len(),
+            1,
+            1,
+            token_idx,
+            0,
+            0,
+            0,
+        );
+        let v_params = Self::attention_gpu_params(
+            &h,
+            &layout,
+            layer,
+            token_idx,
+            v_info,
+            v_raw.len(),
+            2,
+            1,
+            token_idx,
+            0,
+            0,
+            0,
+        );
+        let k_off = attn_arena.push(&k_params);
+        let v_off = attn_arena.push(&v_params);
+        attn_arena.upload(
+            self.gpu_queue(),
+            self.attention_params_buf.as_ref().unwrap(),
+        );
         if !self.encode_attention_pass_gpu(
             pipeline,
             attn_input,
@@ -5027,11 +5299,11 @@ impl QTensorEngine {
             k_raw,
             1,
             n_kv,
+            k_off,
+            Mc8WeightRole::AttnK,
         ) {
             return false;
         }
-        // K/V share gemm_weight_buf; flush so V's write_buffer cannot clobber K weights pre-dispatch.
-        self.mc8_flush(pipeline);
         if !self.encode_attention_pass_gpu(
             pipeline,
             attn_input,
@@ -5047,6 +5319,8 @@ impl QTensorEngine {
             v_raw,
             2,
             n_kv,
+            v_off,
+            Mc8WeightRole::AttnV,
         ) {
             return false;
         }
@@ -5060,10 +5334,8 @@ impl QTensorEngine {
             &tensors,
             hidden_buf,
             Some(attn_input),
-            l0_vector_probe,
-            hidden_cpu,
+            false,
         )
-        .await
     }
 
     /// MC8: fused GPU forward — one upload, per-layer encode, single readback.
@@ -5077,8 +5349,6 @@ impl QTensorEngine {
         _scratch_b: &mut [f32],
         token_idx: u32,
         max_layers: u32,
-        l0_probe_step1: bool,
-        decode_emb_probe: bool,
     ) -> u32 {
         let n_layer = index.hyperparams.n_layer;
         if n_layer == 0 || !self.mc8_buffers_ready() {
@@ -5095,72 +5365,23 @@ impl QTensorEngine {
             0,
             bytemuck::cast_slice(&hidden[..emb_dim]),
         );
-        if decode_emb_probe {
-            let n_embd = index.hyperparams.n_embd as usize;
-            let mut gpu_emb = [0f32; MAX_HIDDEN_DIM];
-            if n_embd <= emb_dim
-                && n_embd <= gpu_emb.len()
-                && self
-                    .pipeline_read_gpu_bytes_at(
-                        hidden_buf,
-                        0,
-                        bytemuck::cast_slice_mut(&mut gpu_emb[..n_embd]),
-                    )
-                    .await
-            {
-                probe_log_prefill_diff(
-                    "token_embd_gpu_upload",
-                    &hidden[..n_embd],
-                    &gpu_emb[..n_embd],
-                    8,
-                );
-            }
-        }
         let mut pipeline = WasmGpuPipeline::begin(self);
         let mut ran = 0u32;
         for layer in 0..limit {
-            let probe_l0 = l0_probe_step1 && layer == 0;
-            let hidden_snap = if probe_l0 {
-                Some(&hidden[..emb_dim])
-            } else {
-                None
-            };
-            if !self
-                .encode_transformer_layer_gpu(
-                    &mut pipeline,
-                    index,
-                    layer,
-                    token_idx,
-                    emb_dim,
-                    probe_l0,
-                    hidden_snap,
-                )
-                .await
-            {
+            if !self.encode_transformer_layer_gpu(
+                &mut pipeline,
+                index,
+                layer,
+                token_idx,
+                emb_dim,
+            ) {
                 break;
             }
             ran += 1;
             self.mc8_flush(&mut pipeline);
-            if l0_probe_step1 && layer <= 3 {
-                let mut probe = [0f32; MAX_HIDDEN_DIM];
-                if self.pipeline_read_hidden(emb_dim, &mut probe).await {
-                    wlog(&format!(
-                        "[MC8] depth bisect step1 L{} h[0]={:.6} (target ~1.09)",
-                        layer,
-                        probe[0]
-                    ));
-                }
-            }
         }
         if ran > 0 && !self.pipeline_read_hidden(emb_dim, hidden).await {
             return 0;
-        }
-        if l0_probe_step1 && ran > 0 {
-            wlog(&format!(
-                "[MC8] depth bisect step1 post-L{} h[0]={:.6}",
-                ran.saturating_sub(1),
-                hidden[0]
-            ));
         }
         ran
     }
@@ -5335,6 +5556,9 @@ impl QTensorEngine {
                 weight_ggml_type: info.ggml_type,
                 weight_row_elems: info.dims[0] as u32,
                 weight_byte_len: raw.len() as u32,
+                n_batch: 1,
+                in_row_stride: 0,
+                out_row_stride: 0,
             };
             let input_buf = self.gemm_input_buf.as_ref().unwrap();
             let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
@@ -5642,6 +5866,7 @@ impl QTensorEngine {
             batch_start_token_idx,
             mask_active,
             mask_word_count,
+            0,
         );
         let input_buf = self.gemm_input_buf.as_ref().unwrap();
         let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
@@ -5668,6 +5893,11 @@ impl QTensorEngine {
             buffer: kv_buf,
             offset: layer_offset,
             size: std::num::NonZeroU64::new(layer_bytes.max(4)),
+        };
+        let (wg_x, wg_y) = if proj_kind == 0 && num_tokens_in_batch > 1 {
+            (h.n_head, num_tokens_in_batch)
+        } else {
+            (n_workgroups.max(1), 1)
         };
 
         let bind_layout = self.attention_pipeline.get_bind_group_layout(0);
@@ -5714,7 +5944,7 @@ impl QTensorEngine {
             });
             cpass.set_pipeline(&self.attention_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
-            cpass.dispatch_workgroups(n_workgroups.max(1), 1, 1);
+            cpass.dispatch_workgroups(wg_x, wg_y, 1);
         }
 
         let readback_elems = readback_out.as_ref().map(|o| o.len()).unwrap_or(0);
@@ -5884,6 +6114,645 @@ impl QTensorEngine {
         false
     }
 
+    /// Part 3u: stage K/V/Q + tail uniforms in three single `write_buffer` calls (pre-encoder).
+    #[cfg(target_arch = "wasm32")]
+    fn mc8_stage_prefill_layer_super_arena(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        layer: u32,
+        tensors: &crate::gguf_sharder::LayerTensors,
+        batch_start_token_idx: u32,
+        n_tokens: u32,
+        emb_dim: usize,
+        used_attn_norm: bool,
+        k_info: &GgufTensorInfo,
+        k_raw: &[u8],
+        v_info: &GgufTensorInfo,
+        v_raw: &[u8],
+        cursors: &mut Mc8ChunkUniformCursors,
+    ) -> Option<(Mc8PrefillLayerUniforms, Mc8PrefillLayerGeom)> {
+        let mmap = self.gguf_mmap.as_deref()?;
+        let layout = self.kv_layout?;
+        let h = index.hyperparams;
+        let n_embd = h.n_embd as usize;
+        let q_info = tensors.attn_q.as_ref()?;
+        let gate_info = tensors.ffn_gate.as_ref()?;
+        let up_info = tensors.ffn_up.as_ref()?;
+        let down_info = tensors.ffn_down.as_ref()?;
+        let q_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info).ok()?;
+        let n_ffn_est = Self::matmul_dims(gate_info).1;
+        let row_stride = Self::mc8_prefill_row_stride(n_embd, n_ffn_est, self.gemm_max_out_dim);
+        let emb_bytes = (emb_dim * 4) as wgpu::BufferAddress;
+        let n_embd_bytes = (n_embd * 4) as wgpu::BufferAddress;
+        let q_dim = (h.n_head * h.head_dim()) as usize;
+        let q_bytes = (q_dim * 4) as wgpu::BufferAddress;
+        let slot_o = q_bytes;
+        let slot_scratch_half = ((row_stride / 2) * 4) as wgpu::BufferAddress;
+        let (_, n_ffn) = Self::matmul_dims(gate_info);
+        let slot_gate = n_embd_bytes;
+        let slot_up = slot_gate + (n_ffn * 4) as wgpu::BufferAddress;
+        let slot_save = slot_up + (n_ffn * 4) as wgpu::BufferAddress;
+        let row_stride_u32 = row_stride as u32;
+        let batch_in_bytes = (n_embd * n_tokens as usize * 4) as wgpu::BufferAddress;
+        let work_span_bytes =
+            (n_tokens as usize * row_stride * 4).max(q_bytes as usize) as wgpu::BufferAddress;
+        let geom = Mc8PrefillLayerGeom {
+            row_stride,
+            row_stride_u32,
+            batch_in_bytes,
+            work_span_bytes,
+            emb_bytes,
+            n_embd_bytes,
+            slot_o,
+            slot_gate,
+            slot_up,
+            slot_save,
+            slot_scratch_half,
+            slot_o_f: (slot_o / 4) as u32,
+            slot_save_f: (slot_save / 4) as u32,
+            slot_gate_f: (slot_gate / 4) as u32,
+            slot_up_f: (slot_up / 4) as u32,
+            slot_scratch_half_f: (slot_scratch_half / 4) as u32,
+        };
+        let (gate_in, _) = Self::matmul_dims(gate_info);
+        let (up_in, up_out) = Self::matmul_dims(up_info);
+        let (dn_in, dn_out) = Self::matmul_dims(down_info);
+        if gate_in > n_embd || up_in != gate_in || up_out != n_ffn || dn_in != n_ffn || dn_out < n_embd {
+            return None;
+        }
+        let out_info = tensors.attn_output.as_ref();
+        let (o_in, o_out) = out_info.map(Self::matmul_dims).unwrap_or((q_dim, n_embd));
+        if out_info.is_some() && o_in > q_dim {
+            return None;
+        }
+        let o_raw = out_info
+            .and_then(|i| crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, i).ok());
+        let gate_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, gate_info).ok()?;
+        let up_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info).ok()?;
+        let down_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, down_info).ok()?;
+
+        let attn_base_byte = cursors.attn_base_byte();
+        let elem_base_byte = cursors.elem_base_byte();
+        let gemm_base_byte = cursors.gemm_base_byte();
+        let mut attn_arena = Mc8AttnUniformArena {
+            bytes: [0u8; MC8_MAX_ATTN_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
+            slots: 0,
+        };
+        let k_off = attn_base_byte
+            + attn_arena.push(&Self::attention_gpu_params(
+            &h,
+            &layout,
+            layer,
+            batch_start_token_idx,
+            k_info,
+            k_raw.len(),
+            1,
+            n_tokens,
+            batch_start_token_idx,
+            0,
+            0,
+            0,
+        ));
+        let v_off = attn_base_byte
+            + attn_arena.push(&Self::attention_gpu_params(
+            &h,
+            &layout,
+            layer,
+            batch_start_token_idx,
+            v_info,
+            v_raw.len(),
+            2,
+            n_tokens,
+            batch_start_token_idx,
+            0,
+            0,
+            0,
+        ));
+        let q_off = attn_base_byte
+            + attn_arena.push(&Self::attention_gpu_params(
+            &h,
+            &layout,
+            layer,
+            batch_start_token_idx,
+            q_info,
+            q_raw.len(),
+            0,
+            n_tokens,
+            batch_start_token_idx,
+            0,
+            KV_ATTENTION_MASK_WORDS as u32,
+            row_stride_u32,
+        ));
+
+        let mut elem_arena = Mc8ElemUniformArena {
+            bytes: [0u8; MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS * MC8_UNIFORM_ALIGN],
+            slots: 0,
+        };
+        let attn_norm_elem_off = if used_attn_norm {
+            Some(elem_base_byte + elem_arena.push(&Self::mc8_elem_params(
+                ELEM_OP_RMS_NORM,
+                n_embd as u32,
+                n_tokens,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            )))
+        } else {
+            None
+        };
+        let off_attn_res = elem_base_byte
+            + elem_arena.push(&Self::mc8_elem_params(
+            ELEM_OP_ADD_RESIDUAL,
+            emb_dim as u32,
+            n_tokens,
+            row_stride_u32,
+            row_stride_u32,
+            0,
+            geom.slot_save_f,
+            if out_info.is_some() { geom.slot_o_f } else { 0 },
+            0,
+        ));
+        let off_ffn_norm = tensors.ffn_norm.as_ref().map(|_| {
+            elem_base_byte + elem_arena.push(&Self::mc8_elem_params(
+                ELEM_OP_RMS_NORM,
+                n_embd as u32,
+                n_tokens,
+                0,
+                0,
+                row_stride_u32,
+                0,
+                0,
+                0,
+            ))
+        });
+        let off_silu = elem_base_byte
+            + elem_arena.push(&Self::mc8_elem_params(
+            ELEM_OP_SILU_MUL,
+            n_ffn as u32,
+            n_tokens,
+            row_stride_u32,
+            row_stride_u32,
+            row_stride_u32,
+            geom.slot_gate_f,
+            geom.slot_up_f,
+            geom.slot_scratch_half_f,
+        ));
+        let off_ffn_res = elem_base_byte
+            + elem_arena.push(&Self::mc8_elem_params(
+            ELEM_OP_ADD_RESIDUAL,
+            emb_dim as u32,
+            n_tokens,
+            row_stride_u32,
+            row_stride_u32,
+            0,
+            geom.slot_save_f,
+            0,
+            0,
+        ));
+
+        let mut gemm_arena = Mc8UniformArena {
+            bytes: [0u8; MC8_MAX_GEMM_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
+            slots: 0,
+        };
+        let off_o = out_info.map(|i| {
+            gemm_base_byte
+                + gemm_arena.push(&Self::mc8_gemm_params(
+                    i,
+                    o_raw.as_ref().map(|r| r.len()).unwrap_or(0),
+                    o_in,
+                    o_out,
+                    n_tokens,
+                    row_stride_u32,
+                    row_stride_u32,
+                ))
+        });
+        let off_gate = gemm_base_byte
+            + gemm_arena.push(&Self::mc8_gemm_params(
+                gate_info,
+                gate_raw.len(),
+                gate_in,
+                n_ffn,
+                n_tokens,
+                row_stride_u32,
+                row_stride_u32,
+            ));
+        let off_up = gemm_base_byte
+            + gemm_arena.push(&Self::mc8_gemm_params(
+                up_info,
+                up_raw.len(),
+                up_in,
+                n_ffn,
+                n_tokens,
+                row_stride_u32,
+                row_stride_u32,
+            ));
+        let off_down = gemm_base_byte
+            + gemm_arena.push(&Self::mc8_gemm_params(
+                down_info,
+                down_raw.len(),
+                dn_in,
+                dn_out,
+                n_tokens,
+                row_stride_u32,
+                row_stride_u32,
+            ));
+
+        let attn_buf = self.attention_params_buf.as_ref()?;
+        let elem_buf = self.elem_params_buf.as_ref()?;
+        let gemm_buf = self.gemm_params_buf.as_ref()?;
+        let queue = self.gpu_queue();
+        attn_arena.upload_at(queue, attn_buf, cursors.attn);
+        cursors.attn += attn_arena.slots;
+        elem_arena.upload_at(queue, elem_buf, cursors.elem);
+        cursors.elem += elem_arena.slots;
+        gemm_arena.upload_at(queue, gemm_buf, cursors.gemm);
+        cursors.gemm += gemm_arena.slots;
+
+        Some((
+            Mc8PrefillLayerUniforms {
+                k_off,
+                v_off,
+                q_off,
+                attn_norm_elem_off,
+                off_o,
+                off_attn_res,
+                off_ffn_norm,
+                off_gate,
+                off_up,
+                off_silu,
+                off_down,
+                off_ffn_res,
+            },
+            geom,
+        ))
+    }
+
+    /// MC8 Part 3m/3u: batched Q+FFN tail — uniforms pre-staged in super-arena.
+    #[cfg(target_arch = "wasm32")]
+    fn encode_prefill_q_ffn_tail_fused(
+        &self,
+        pipeline: &mut WasmGpuPipeline,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        layer: u32,
+        tensors: &crate::gguf_sharder::LayerTensors,
+        batch_buf: &wgpu::Buffer,
+        attn_src: &wgpu::Buffer,
+        work_a: &wgpu::Buffer,
+        work_b: &wgpu::Buffer,
+        n_tokens: u32,
+        batch_start_token_idx: u32,
+        emb_dim: usize,
+        used_attn_norm: bool,
+        uniforms: &Mc8PrefillLayerUniforms,
+        geom: &Mc8PrefillLayerGeom,
+    ) -> bool {
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return false,
+        };
+        let h = index.hyperparams;
+        let n_embd = h.n_embd as usize;
+        let layout = match self.kv_layout {
+            Some(l) => l,
+            None => return false,
+        };
+        let norm_buf = self.norm_weight_buf.as_ref().unwrap();
+        let q_info = match tensors.attn_q.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let q_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        let row_stride = geom.row_stride;
+        let row_stride_u32 = geom.row_stride_u32;
+        let emb_bytes = geom.emb_bytes;
+        let n_embd_bytes = geom.n_embd_bytes;
+        let slot_o = geom.slot_o;
+        let slot_gate = geom.slot_gate;
+        let slot_up = geom.slot_up;
+        let slot_save = geom.slot_save;
+        let slot_scratch_half = geom.slot_scratch_half;
+        let work_span_bytes = geom.work_span_bytes;
+        let batch_in_bytes = geom.batch_in_bytes;
+        let slot_o_f = geom.slot_o_f;
+        let slot_save_f = geom.slot_save_f;
+        let slot_gate_f = geom.slot_gate_f;
+        let slot_up_f = geom.slot_up_f;
+        let slot_scratch_half_f = geom.slot_scratch_half_f;
+        let off_attn_res = uniforms.off_attn_res;
+        let off_ffn_norm = uniforms.off_ffn_norm;
+        let off_gate = uniforms.off_gate;
+        let off_up = uniforms.off_up;
+        let off_silu = uniforms.off_silu;
+        let off_down = uniforms.off_down;
+        let off_ffn_res = uniforms.off_ffn_res;
+        let off_o = uniforms.off_o;
+
+        let gate_info = match tensors.ffn_gate.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let up_info = match tensors.ffn_up.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let down_info = match tensors.ffn_down.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let (_, n_ffn) = Self::matmul_dims(gate_info);
+        let q_dim = (h.n_head * h.head_dim()) as usize;
+        let (gate_in, _) = Self::matmul_dims(gate_info);
+        let (up_in, up_out) = Self::matmul_dims(up_info);
+        let (dn_in, dn_out) = Self::matmul_dims(down_info);
+        if gate_in > n_embd || up_in != gate_in || up_out != n_ffn || dn_in != n_ffn || dn_out < n_embd {
+            return false;
+        }
+        let out_info = tensors.attn_output.as_ref();
+        let (o_in, o_out) = out_info.map(Self::matmul_dims).unwrap_or((q_dim, n_embd));
+        if out_info.is_some() && o_in > q_dim {
+            return false;
+        }
+        let o_raw = out_info.and_then(|out_info| {
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, out_info).ok()
+        });
+        let gate_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, gate_info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        let up_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        let down_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, down_info) {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
+
+        // Part 3u: Q SDPA — attn params pre-staged at uniforms.q_off.
+        let q_in = if used_attn_norm { attn_src } else { batch_buf };
+        if !self.encode_attention_batched_q_prefill(
+            pipeline,
+            q_in,
+            0,
+            batch_in_bytes,
+            work_a,
+            0,
+            work_span_bytes,
+            n_embd,
+            n_tokens,
+            &layout,
+            layer,
+            &h,
+            q_raw,
+            uniforms.q_off,
+        ) {
+            return false;
+        }
+
+        // Snapshot pristine hidden (MC8 pt3i `work_aliases_hidden`) before o_proj overwrites paths.
+        for t in 0..n_tokens {
+            let emb_off = Self::mc8_emb_off(t, n_embd);
+            let row_off = Self::mc8_prefill_row_off(t, row_stride);
+            pipeline.encoder.copy_buffer_to_buffer(
+                batch_buf,
+                emb_off,
+                work_a,
+                row_off + slot_save,
+                emb_bytes,
+            );
+        }
+
+        // Part 3s — attention block: o_proj + attn residual (dynamic uniform offsets).
+        if let (Some(out_info), Some(o_raw)) = (out_info, o_raw) {
+            if !self.encode_gemm_bufs_offset(
+                pipeline,
+                out_info,
+                o_raw,
+                o_in,
+                o_out,
+                work_a,
+                0,
+                work_span_bytes,
+                work_b,
+                slot_o,
+                work_span_bytes,
+                n_tokens,
+                row_stride_u32,
+                row_stride_u32,
+                off_o.unwrap(),
+                Mc8WeightRole::OProj,
+            ) {
+                return false;
+            }
+            self.encode_elem_offset(
+                pipeline,
+                ELEM_OP_ADD_RESIDUAL,
+                emb_dim as u32,
+                n_tokens,
+                work_a,
+                0,
+                work_span_bytes,
+                work_b,
+                0,
+                work_span_bytes,
+                batch_buf,
+                0,
+                batch_in_bytes,
+                row_stride_u32,
+                row_stride_u32,
+                0,
+                slot_save_f,
+                slot_o_f,
+                0,
+                off_attn_res,
+            );
+        } else {
+            self.encode_elem_offset(
+                pipeline,
+                ELEM_OP_ADD_RESIDUAL,
+                emb_dim as u32,
+                n_tokens,
+                work_a,
+                0,
+                work_span_bytes,
+                work_a,
+                0,
+                work_span_bytes,
+                batch_buf,
+                0,
+                batch_in_bytes,
+                row_stride_u32,
+                row_stride_u32,
+                0,
+                slot_save_f,
+                0,
+                0,
+                off_attn_res,
+            );
+        }
+
+        // Refresh post-attn hidden for FFN residual (overwrites pristine snapshot in slot_save).
+        for t in 0..n_tokens {
+            let emb_off = Self::mc8_emb_off(t, n_embd);
+            let row_off = Self::mc8_prefill_row_off(t, row_stride);
+            pipeline.encoder.copy_buffer_to_buffer(
+                batch_buf,
+                emb_off,
+                work_a,
+                row_off + slot_save,
+                emb_bytes,
+            );
+        }
+
+        // Part 3s — FFN block: norm + gate/up (one submit via dynamic offsets + weight ping-pong).
+        if let Some(norm) = tensors.ffn_norm.as_ref() {
+            if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
+                return false;
+            }
+            self.encode_elem_offset(
+                pipeline,
+                ELEM_OP_RMS_NORM,
+                n_embd as u32,
+                n_tokens,
+                batch_buf,
+                0,
+                batch_in_bytes,
+                norm_buf,
+                0,
+                n_embd_bytes,
+                work_b,
+                0,
+                work_span_bytes,
+                0,
+                0,
+                row_stride_u32,
+                0,
+                0,
+                0,
+                off_ffn_norm.unwrap(),
+            );
+        } else {
+            for t in 0..n_tokens {
+                let emb_off = Self::mc8_emb_off(t, n_embd);
+                let row_off = Self::mc8_prefill_row_off(t, row_stride);
+                pipeline.encoder.copy_buffer_to_buffer(batch_buf, emb_off, work_b, row_off, emb_bytes);
+            }
+        }
+        if !self.encode_gemm_bufs_offset(
+            pipeline,
+            gate_info,
+            gate_raw,
+            gate_in,
+            n_ffn,
+            work_b,
+            0,
+            work_span_bytes,
+            work_a,
+            slot_gate,
+            work_span_bytes,
+            n_tokens,
+            row_stride_u32,
+            row_stride_u32,
+            off_gate,
+            Mc8WeightRole::Gate,
+        ) {
+            return false;
+        }
+        if !self.encode_gemm_bufs_offset(
+            pipeline,
+            up_info,
+            up_raw,
+            up_in,
+            n_ffn,
+            work_b,
+            0,
+            work_span_bytes,
+            work_a,
+            slot_up,
+            work_span_bytes,
+            n_tokens,
+            row_stride_u32,
+            row_stride_u32,
+            off_up,
+            Mc8WeightRole::Up,
+        ) {
+            return false;
+        }
+
+        self.encode_elem_offset(
+            pipeline,
+            ELEM_OP_SILU_MUL,
+            n_ffn as u32,
+            n_tokens,
+            work_a,
+            0,
+            work_span_bytes,
+            work_a,
+            0,
+            work_span_bytes,
+            work_b,
+            0,
+            work_span_bytes,
+            row_stride_u32,
+            row_stride_u32,
+            row_stride_u32,
+            slot_gate_f,
+            slot_up_f,
+            slot_scratch_half_f,
+            off_silu,
+        );
+        if !self.encode_gemm_bufs_offset(
+            pipeline,
+            down_info,
+            down_raw,
+            dn_in,
+            dn_out,
+            work_b,
+            slot_scratch_half,
+            work_span_bytes,
+            work_a,
+            0,
+            work_span_bytes,
+            n_tokens,
+            row_stride_u32,
+            row_stride_u32,
+            off_down,
+            Mc8WeightRole::Down,
+        ) {
+            return false;
+        }
+        self.encode_elem_offset(
+            pipeline,
+            ELEM_OP_ADD_RESIDUAL,
+            emb_dim as u32,
+            n_tokens,
+            work_a,
+            0,
+            work_span_bytes,
+            work_a,
+            0,
+            work_span_bytes,
+            batch_buf,
+            0,
+            batch_in_bytes,
+            row_stride_u32,
+            row_stride_u32,
+            0,
+            slot_save_f,
+            0,
+            0,
+            off_ffn_res,
+        );
+        true
+    }
+
     #[cfg(target_arch = "wasm32")]
     async fn dispatch_prefill_chunk_async_mc8_gpu(
         &mut self,
@@ -5917,7 +6786,6 @@ impl QTensorEngine {
         }
         let batch_buf = self.gemm_input_buf.as_ref().unwrap();
         let token_buf = self.gemm_output_buf.as_ref().unwrap();
-        let aux_buf = self.gemm_aux_buf.as_ref().unwrap();
         let norm_buf = self.norm_weight_buf.as_ref().unwrap();
         if batch_elems > self.gemm_max_input_floats {
             return false;
@@ -5957,30 +6825,69 @@ impl QTensorEngine {
             };
             let h = index.hyperparams;
             let n_kv = h.effective_n_kv_head();
-            let mut pipeline = WasmGpuPipeline::begin(self);
             let used_attn_norm = tensors.attn_norm.is_some();
-            let attn_src = if let Some(norm) = tensors.attn_norm.as_ref() {
-                if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
-                    return false;
+            let mut layer_uniform_cursors = Mc8ChunkUniformCursors {
+                attn: 0,
+                elem: 0,
+                gemm: 0,
+            };
+            let (uniforms, geom) = match self.mc8_stage_prefill_layer_super_arena(
+                index,
+                layer,
+                &tensors,
+                batch_start_token_idx,
+                n_tokens,
+                emb_dim,
+                used_attn_norm,
+                k_info,
+                &k_raw,
+                v_info,
+                &v_raw,
+                &mut layer_uniform_cursors,
+            ) {
+                Some(v) => v,
+                None => return false,
+            };
+            let mut enc = WasmGpuPipeline::begin(self);
+            let attn_src = if used_attn_norm {
+                if let Some(norm) = tensors.attn_norm.as_ref() {
+                    if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
+                        return false;
+                    }
                 }
-                self.encode_elem(
-                    &mut pipeline,
-                    ELEM_OP_RMS_NORM,
-                    n_embd as u32,
-                    n_tokens,
-                    batch_buf,
-                    norm_buf,
-                    prefill_scratch,
-                );
-                self.mc8_flush(&mut pipeline);
+                if let Some(off) = uniforms.attn_norm_elem_off {
+                    self.encode_elem_offset(
+                        &mut enc,
+                        ELEM_OP_RMS_NORM,
+                        n_embd as u32,
+                        n_tokens,
+                        batch_buf,
+                        0,
+                        geom.batch_in_bytes,
+                        norm_buf,
+                        0,
+                        geom.n_embd_bytes,
+                        prefill_scratch,
+                        0,
+                        geom.batch_in_bytes,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        off,
+                    );
+                }
                 prefill_scratch
             } else {
                 batch_buf
             };
             let n_kv_wg = n_tokens.saturating_mul(n_kv);
+            let kv_in = attn_src;
             if !self.encode_attention_pass_gpu(
-                &mut pipeline,
-                attn_src,
+                &mut enc,
+                kv_in,
                 token_buf,
                 n_embd,
                 n_tokens,
@@ -5993,13 +6900,14 @@ impl QTensorEngine {
                 k_raw,
                 1,
                 n_kv_wg,
+                uniforms.k_off,
+                Mc8WeightRole::AttnK,
             ) {
                 return false;
             }
-            self.mc8_flush(&mut pipeline);
             if !self.encode_attention_pass_gpu(
-                &mut pipeline,
-                attn_src,
+                &mut enc,
+                kv_in,
                 token_buf,
                 n_embd,
                 n_tokens,
@@ -6012,38 +6920,61 @@ impl QTensorEngine {
                 v_raw,
                 2,
                 n_kv_wg,
+                uniforms.v_off,
+                Mc8WeightRole::AttnV,
             ) {
                 return false;
             }
-            self.mc8_flush(&mut pipeline);
-            let token_bytes = (n_embd * 4) as wgpu::BufferAddress;
-            for t in 0..n_tokens {
-                let abs = batch_start_token_idx + t;
-                let off = (t as usize * n_embd * 4) as wgpu::BufferAddress;
-                pipeline.encoder.copy_buffer_to_buffer(
+            // Part 3u: KV cache writes must be queue-visible before Q-SDPA reads (backend empirical).
+            self.mc8_flush(&mut enc);
+            const MC8_FUSED_PREFILL_TAIL: bool = true;
+            let use_fused_tail = MC8_FUSED_PREFILL_TAIL
+                && self.prefill_work_buf_a.is_some()
+                && self.prefill_work_buf_b.is_some();
+            if use_fused_tail {
+                let work_a = self.prefill_work_buf_a.as_ref().unwrap();
+                let work_b = self.prefill_work_buf_b.as_ref().unwrap();
+                if !self.encode_prefill_q_ffn_tail_fused(
+                    &mut enc,
+                    index,
+                    layer,
+                    &tensors,
                     batch_buf,
-                    off,
-                    token_buf,
-                    0,
-                    token_bytes,
-                );
-                // Hand off the same RMSNorm row K/V used (prefill_scratch[t]) — skip redundant per-token norm.
-                let attn_in = if used_attn_norm {
-                    pipeline.encoder.copy_buffer_to_buffer(
-                        prefill_scratch,
-                        off,
-                        aux_buf,
-                        0,
-                        token_bytes,
-                    );
-                    self.mc8_flush(&mut pipeline);
-                    Some(aux_buf)
-                } else {
-                    None
-                };
-                if !self
-                    .encode_attn_ffn_tail_gpu(
-                        &mut pipeline,
+                    attn_src,
+                    work_a,
+                    work_b,
+                    n_tokens,
+                    batch_start_token_idx,
+                    emb_dim,
+                    used_attn_norm,
+                    &uniforms,
+                    &geom,
+                ) {
+                    return false;
+                }
+            } else {
+                let token_buf = self.gemm_output_buf.as_ref().unwrap();
+                let aux_buf = self.gemm_aux_buf.as_ref().unwrap();
+                let token_bytes = (n_embd * 4) as wgpu::BufferAddress;
+                for t in 0..n_tokens {
+                    let abs = batch_start_token_idx + t;
+                    let off = Self::mc8_emb_off(t, n_embd);
+                    enc.encoder.copy_buffer_to_buffer(batch_buf, off, token_buf, 0, token_bytes);
+                    let attn_in = if used_attn_norm {
+                        enc.encoder.copy_buffer_to_buffer(
+                            prefill_scratch,
+                            off,
+                            aux_buf,
+                            0,
+                            token_bytes,
+                        );
+                        self.mc8_flush(&mut enc);
+                        Some(aux_buf)
+                    } else {
+                        None
+                    };
+                    if !self.encode_attn_ffn_tail_gpu(
+                        &mut enc,
                         index,
                         layer,
                         abs,
@@ -6051,46 +6982,18 @@ impl QTensorEngine {
                         &tensors,
                         token_buf,
                         attn_in,
-                        false,
-                        None,
-                    )
-                    .await
-                {
-                    return false;
-                }
-                self.mc8_flush(&mut pipeline);
-                pipeline.encoder.copy_buffer_to_buffer(
-                    token_buf,
-                    0,
-                    batch_buf,
-                    off,
-                    token_bytes,
-                );
-            }
-            self.gpu_queue().submit(Some(pipeline.finish()));
-            if layer == 0 && n_tokens >= 2 {
-                if let Some(out) = l1_hidden_out.as_deref_mut() {
-                    if out.len() >= n_embd {
-                        let l1_off = (n_embd * 4) as wgpu::BufferAddress;
-                        let mut tmp = [0f32; MAX_HIDDEN_DIM];
-                        if self
-                            .pipeline_read_gpu_bytes_at(
-                                batch_buf,
-                                l1_off,
-                                bytemuck::cast_slice_mut(&mut tmp[..n_embd]),
-                            )
-                            .await
-                        {
-                            out[..n_embd].copy_from_slice(&tmp[..n_embd]);
-                            wlog(&format!(
-                                "[MC8 prefill] L1_input_gpu token=1 h[0]={:.6}",
-                                out[0]
-                            ));
-                        }
-                        l1_hidden_out = None;
+                        true,
+                    ) {
+                        return false;
                     }
+                    self.mc8_flush(&mut enc);
+                    enc.encoder.copy_buffer_to_buffer(token_buf, 0, batch_buf, off, token_bytes);
+                    self.mc8_flush(&mut enc);
                 }
             }
+            // Part 3u: one submit per layer (KV flush + layer-end flush = 2 submits/layer).
+            self.mc8_flush(&mut enc);
+            let _ = l1_hidden_out.take();
         }
         wlog(&format!(
             "[MC8] GPU prefill OK layers={limit} n_tokens={n_tokens} start={batch_start_token_idx}"
@@ -6198,6 +7101,9 @@ impl QTensorEngine {
             weight_ggml_type: if tensor.is_quantized_q4_k { 12 } else { 14 },
             weight_row_elems: cols as u32,
             weight_byte_len: (rows * cols * 4) as u32,
+            n_batch: 1,
+            in_row_stride: 0,
+            out_row_stride: 0,
         };
         let params_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("TransformerParams"),
@@ -6279,7 +7185,8 @@ impl QTensorEngine {
         max_chunks: u32,
         sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
     ) -> Option<StreamingArgmaxResult> {
-        self.dispatch_output_argmax_chunked(
+        // Part 3l: per-chunk async GPU vocab GEMM + streaming CPU argmax (no WGSL argmax shader).
+        self.dispatch_output_argmax_chunked_async_mc8_fused(
             index,
             hidden,
             emb_dim,
@@ -6287,10 +7194,16 @@ impl QTensorEngine {
             max_chunks,
             sieve_mask,
         )
+        .await
     }
 
     #[cfg(target_arch = "wasm32")]
-    #[allow(dead_code)]
+    /// Per-chunk `dispatch_gemm_raw_into_async` + streaming CPU argmax.
+    ///
+    /// There is no WGSL argmax reduction shader. The Endgame "fused" batched encoder
+    /// (`encode_gemm_bufs` loop + single staging readback) produced garbled tokens because
+    /// `queue.write_buffer` weight uploads race across chunks in one submit scope (pt3c
+    /// analogue). Per-chunk submit/readback matches the proven sync path semantics.
     async fn dispatch_output_argmax_chunked_async_mc8_fused(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -6315,16 +7228,8 @@ impl QTensorEngine {
         } else {
             (max_chunks as usize).min(full_chunks)
         };
-        let hidden_buf = self.gemm_input_buf.as_ref().unwrap();
-        let work_buf = self.gemm_output_buf.as_ref().unwrap();
-        let staging = self.gemm_output_staging.as_ref().unwrap();
-        self.gpu_queue().write_buffer(
-            hidden_buf,
-            0,
-            bytemuck::cast_slice(&hidden[..n_in]),
-        );
-        let mut pipeline = WasmGpuPipeline::begin(self);
-        let mut total_rows = 0usize;
+        let mut best_token_id = 0u32;
+        let mut max_logit = f32::NEG_INFINITY;
         for chunk_idx in 0..n_chunks {
             let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
             let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
@@ -6336,62 +7241,32 @@ impl QTensorEngine {
                 chunk_rows,
             )
             .ok()?;
-            if !self.encode_gemm_bufs(
-                &mut pipeline,
-                info,
-                raw,
-                n_in,
-                chunk_rows,
-                hidden_buf,
-                work_buf,
-            ) {
+            if !self
+                .dispatch_gemm_raw_into_async(
+                    info,
+                    raw,
+                    &hidden[..n_in],
+                    &mut chunk_logits[..chunk_rows],
+                    n_in,
+                    chunk_rows,
+                )
+                .await
+            {
                 return None;
             }
-            let dst_off = (total_rows * 4) as wgpu::BufferAddress;
-            let chunk_bytes = (chunk_rows * 4) as wgpu::BufferAddress;
-            pipeline.encoder.copy_buffer_to_buffer(
-                work_buf,
-                0,
-                staging,
-                dst_off,
-                chunk_bytes,
-            );
-            total_rows += chunk_rows;
-        }
-        self.gpu_queue().submit(Some(pipeline.finish()));
-        let out_bytes = (total_rows * 4) as wgpu::BufferAddress;
-        let slice = staging.slice(..out_bytes);
-        if !await_wgpu_map(slice).await {
-            let _ = staging.unmap();
-            return None;
-        }
-        let data = slice.get_mapped_range();
-        let logits: &[f32] = bytemuck::cast_slice(&data);
-        let copy_n = total_rows.min(chunk_logits.len());
-        chunk_logits[..copy_n].copy_from_slice(&logits[..copy_n]);
-        let mut best_token_id = 0u32;
-        let mut max_logit = f32::NEG_INFINITY;
-        let mut offset = 0usize;
-        for chunk_idx in 0..n_chunks {
-            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
-            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
-            let rows = &logits[offset..offset + chunk_rows];
             update_streaming_argmax_sieved(
-                rows,
+                &chunk_logits[..chunk_rows],
                 chunk_rows,
                 chunk_idx,
                 sieve_mask,
                 &mut best_token_id,
                 &mut max_logit,
             );
-            offset += chunk_rows;
+            scrub_f32_volatile(&mut chunk_logits[..chunk_rows], chunk_rows);
         }
-        drop(data);
-        staging.unmap();
         if max_logit == f32::NEG_INFINITY {
             return None;
         }
-        scrub_f32_volatile(&mut chunk_logits[..copy_n], copy_n);
         Some(StreamingArgmaxResult {
             best_token_id,
             max_logit,

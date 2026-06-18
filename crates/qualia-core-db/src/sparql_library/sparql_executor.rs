@@ -2,11 +2,38 @@
 //!
 //! Executes query plans against NQuin arrays using zero-allocation patterns.
 
+use crate::lexicon::generate_embedded_triple_id;
+use crate::rdf_star::is_virtual_id;
 use crate::sparql_ast::*;
 use crate::sparql_planner::*;
 use crate::sparql_filter::ExpressionEvaluator;
 use crate::sparql_aggregates::{AggregationContext, GroupKey, AggregateFunction};
 use crate::NQuin;
+
+#[inline]
+fn term_is_var(term: u64, ctx: &SparqlQueryContext) -> Option<VariableId> {
+    let id = term as usize;
+    if id < ctx.variable_count {
+        Some(term as VariableId)
+    } else {
+        None
+    }
+}
+
+#[inline]
+fn bind_var(row: &mut BindingRow, term: u64, value: u64, ctx: &SparqlQueryContext) -> bool {
+    if let Some(var) = term_is_var(term, ctx) {
+        match row.get(var) {
+            Some(bound) if bound != value => false,
+            _ => {
+                row.set(var, value);
+                true
+            }
+        }
+    } else {
+        term == value
+    }
+}
 
 /// Query executor
 pub struct QueryExecutor<'a> {
@@ -138,6 +165,22 @@ impl<'a> QueryExecutor<'a> {
             PhysicalOperatorType::AsOf { input, timestamp_ms, mode } => {
                 self.execute_as_of(input, timestamp_ms, mode, plan, ctx, row, results)
             }
+            PhysicalOperatorType::StarTripleScan {
+                inner_subject,
+                inner_predicate,
+                inner_object,
+                outer_predicate,
+                outer_object,
+            } => self.execute_star_triple_scan(
+                inner_subject,
+                inner_predicate,
+                inner_object,
+                outer_predicate,
+                outer_object,
+                ctx,
+                row,
+                results,
+            ),
         }
     }
 
@@ -211,15 +254,92 @@ impl<'a> QueryExecutor<'a> {
         results: &mut Vec<BindingRow>,
     ) -> Result<bool, String> {
         for quin in self.quins {
-            if quin.subject == subject && quin.predicate == predicate && quin.object == object {
-                let mut new_row = BindingRow::new();
-                new_row.slots[0] = Some(quin.subject);
-                new_row.slots[1] = Some(quin.predicate);
-                new_row.slots[2] = Some(quin.object);
-                results.push(new_row);
+            let mut candidate = *row;
+            if !bind_var(&mut candidate, subject, quin.subject, ctx) {
+                continue;
+            }
+            if !bind_var(&mut candidate, predicate, quin.predicate, ctx) {
+                continue;
+            }
+            if !bind_var(&mut candidate, object, quin.object, ctx) {
+                continue;
+            }
+            results.push(candidate);
+        }
+        Ok(!results.is_empty())
+    }
+
+    fn execute_star_triple_scan(
+        &self,
+        inner_subject: u64,
+        inner_predicate: u64,
+        inner_object: u64,
+        outer_predicate: u64,
+        outer_object: u64,
+        ctx: &SparqlQueryContext,
+        row: &mut BindingRow,
+        results: &mut Vec<BindingRow>,
+    ) -> Result<bool, String> {
+        for quin in self.quins {
+            if !is_virtual_id(quin.subject) {
+                continue;
+            }
+            let mut candidate = *row;
+            if !bind_var(&mut candidate, outer_predicate, quin.predicate, ctx) {
+                continue;
+            }
+            if !bind_var(&mut candidate, outer_object, quin.object, ctx) {
+                continue;
+            }
+
+            if let (Some(s), Some(p), Some(o)) = (
+                term_is_var(inner_subject, ctx),
+                term_is_var(inner_predicate, ctx),
+                term_is_var(inner_object, ctx),
+            ) {
+                if let Some(components) = self.lookup_star_components(quin.subject) {
+                    candidate.set(s, components[0]);
+                    candidate.set(p, components[1]);
+                    candidate.set(o, components[2]);
+                    results.push(candidate);
+                }
+            } else {
+                let expected_vid = generate_embedded_triple_id(
+                    if term_is_var(inner_subject, ctx).is_some() {
+                        0
+                    } else {
+                        inner_subject
+                    },
+                    if term_is_var(inner_predicate, ctx).is_some() {
+                        0
+                    } else {
+                        inner_predicate
+                    },
+                    if term_is_var(inner_object, ctx).is_some() {
+                        0
+                    } else {
+                        inner_object
+                    },
+                );
+                if quin.subject == expected_vid
+                    && bind_var(&mut candidate, outer_predicate, quin.predicate, ctx)
+                    && bind_var(&mut candidate, outer_object, quin.object, ctx)
+                {
+                    results.push(candidate);
+                }
             }
         }
         Ok(!results.is_empty())
+    }
+
+    fn lookup_star_components(&self, virtual_id: u64) -> Option<[u64; 3]> {
+        for quin in self.quins {
+            let candidate = generate_embedded_triple_id(quin.subject, quin.predicate, quin.object);
+            if candidate == virtual_id {
+                return Some([quin.subject, quin.predicate, quin.object]);
+            }
+        }
+        None
     }
 
     fn execute_hash_join(

@@ -201,14 +201,14 @@ enum ParseResult {
     },
 }
 
-/// Parse N-Quads-Star stream and emit Quins
-pub fn parse_nquads_star_stream<R: std::io::Read>(
+/// Parse N-Quads-Star into any [`QuinSink`].
+pub fn parse_nquads_star_into<R: std::io::Read, S: crate::sparql_library::quin_sink::QuinSink>(
     reader: R,
     context_hash: u64,
-    sorter: &mut crate::external_sort::ExternalSorter,
+    sink: &mut S,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     use std::io::BufRead;
-    
+
     let parser = NQuadsStarParser::new(context_hash);
     let mut count = 0;
     let buf_reader = BufReader::new(reader);
@@ -218,7 +218,7 @@ pub fn parse_nquads_star_stream<R: std::io::Read>(
         match parser.parse_line(&line)? {
             ParseResult::Comment => continue,
             ParseResult::RegularQuad { subject, predicate, object, graph, .. } => {
-                sorter.push(NQuin {
+                sink.push(NQuin {
                     subject,
                     predicate,
                     object,
@@ -228,9 +228,15 @@ pub fn parse_nquads_star_stream<R: std::io::Read>(
                 })?;
                 count += 1;
             }
-            ParseResult::EmbeddedQuad { virtual_id, components, outer_predicate, outer_object, outer_graph, .. } => {
-                // Emit the outer quad with the Virtual ID as the subject
-                sorter.push(NQuin {
+            ParseResult::EmbeddedQuad {
+                virtual_id,
+                components,
+                outer_predicate,
+                outer_object,
+                outer_graph,
+                ..
+            } => {
+                sink.push(NQuin {
                     subject: virtual_id,
                     predicate: outer_predicate,
                     object: outer_object,
@@ -239,9 +245,8 @@ pub fn parse_nquads_star_stream<R: std::io::Read>(
                     parity: 0,
                 })?;
                 count += 1;
-                
-                // Also emit the embedded triple components for indexing
-                sorter.push(NQuin {
+
+                sink.push(NQuin {
                     subject: components[0],
                     predicate: components[1],
                     object: components[2],
@@ -255,6 +260,15 @@ pub fn parse_nquads_star_stream<R: std::io::Read>(
     }
 
     Ok(count)
+}
+
+/// Parse N-Quads-Star stream via external sort.
+pub fn parse_nquads_star_stream<R: std::io::Read>(
+    reader: R,
+    context_hash: u64,
+    sorter: &mut crate::external_sort::ExternalSorter,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    parse_nquads_star_into(reader, context_hash, sorter)
 }
 
 #[cfg(test)]

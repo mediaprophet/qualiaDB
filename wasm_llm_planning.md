@@ -142,14 +142,14 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 | **MC3h** | **K-Quant dequant fix:** `dequant_q6_k` signed `int8` scales (`blk.*.ffn_down` Q6_K) | ✅ Closed — naked ` Paris.`; ChatML `The capital of France` |
 | **MC4** | Trim temporary `wlog` instrumentation; commit `0.0.18` CPU fallback checkpoint | ✅ Closed — `v0.0.18-wasm-cpu-fallback-stable` |
 
-### Phase 2B — Async WebGPU compute (Option B) — 🟡 IN PROGRESS
+### Phase 2B — Async WebGPU compute (Option B) — 🟡 IN PROGRESS (Part 3o: TTFT Collapse)
 
 | Micro-commit | Scope | Status |
 |--------------|-------|--------|
 | **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | ✅ Closed — wired via `inferWasmAsync` (`wasm_llm.rs`) |
 | **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
 | **MC7** | WGSL `Q5_0`/`Q8_0` dequant; gate removal; full GPU offload | ✅ Closed — `Paris is the capital of France`; TTFT ~11s |
-| **MC8** | Pipeline fusing — single `CommandEncoder`, per-layer `mc8_flush`, one readback/forward | 🔴 Part 3i — L1 prefill hidden; KV ✅ |
+| **MC8** | Pipeline fusing — single `CommandEncoder`, per-layer `mc8_flush`, one readback/forward | 🟡 Part 3u — super-arena + weight arena; `Paris.` ✅; TTFT ~5.6–6.0s (gate &lt;4500 ms ❌) |
 
 #### MC8 — split delivery
 
@@ -167,14 +167,17 @@ WebGPU validation plumbing is complete; fused compute is **gated off** until Par
 | `encode_residual_add_gpu` | Disjoint storage bindings: add into scratch, `copy_buffer_to_buffer` into dst |
 | `encode_transformer_layer_gpu` | Full fused layer encoder (present, not wired to hot path) |
 | `dispatch_prefill_chunk_async_mc8_gpu` | GPU batched prefill — **hot path** (pt3; CPU fallback blocked) |
-| `dispatch_output_argmax_chunked_async_mc8_fused` | Fused multi-chunk argmax (**gated** — sync argmax retained) |
+| `dispatch_output_argmax_chunked_async_mc8_fused` | Per-chunk async vocab GEMM + CPU argmax — **hot path** (Part 3l; no WGSL argmax shader) |
+| `prefill_work_buf` | Strided per-token Q/FFN scratch (`PREFILL_CHUNK_SIZE` rows; disjoint GEMM in/out) |
+| `encode_prefill_q_ffn_tail_fused` | Batched Q+FFN tail — one `mc8_flush` per stage (**landed, not hot-path**) |
+| `encode_*_offset` helpers | `mc8_buf_slice`, `encode_gemm_bufs_offset`, `encode_elem_offset`, `encode_residual_add_offset` |
 | `mc8_flush()` between K→V / gate→up | Prevents `gemm_weight_buf` queue race (pt3c) |
 
 **Current hot-path routing (post Part 3 — GPU manifold unified):**
 
 - Prefill → `dispatch_prefill_chunk_async_mc8_gpu` (GPU batched K/V + per-token Q/FFN; **no CPU fallback**)
 - Decode forward → `dispatch_transformer_forward_async` → `encode_transformer_layer_gpu` (fused GPU: attn + `wasm_elementwise` RMSNorm/SiLU/residual)
-- Argmax → `dispatch_output_argmax_chunked` (sync — argmax fusion **gated** per architect)
+- Argmax → `dispatch_output_argmax_chunked_async` → `_mc8_fused` (per-chunk `dispatch_gemm_raw_into_async` + CPU argmax)
 
 **Part 2 (✅ RoPE alignment + fused decode — landed `feat(wasm-llm): MC8 pt2`)**
 
@@ -415,9 +418,423 @@ TTFT 8212 ms. Output shifted from `pries underm` repetition → partial English 
 
 **Harness verify (pt3h):** L0=0.423, L31=20.87 unchanged; TTFT ~12.8s (CPU prefill replay adds ~4s probe cost).
 
-#### Part 3i (next — batched prefill Q+FFN tail diff)
+#### Part 3i — Buffer slicing & loop flush audit ✅
 
-**Open:** fix `L1_input_hidden` divergence (GPU -0.529 vs CPU 0.179) in `dispatch_prefill_chunk_async_mc8_gpu` per-token loop.
+**Architect answer (pt3i):** Prioritize **`batch_buf`/`token_buf` copy-offset and flush audit** — not per-token tensor math diff (pt3e–3g proved kernels bit-exact).
+
+**Audit findings (`dispatch_prefill_chunk_async_mc8_gpu`):**
+
+| Check | Result |
+|-------|--------|
+| `batch_buf`→`token_buf` offset `t * n_embd * 4` | ✅ correct |
+| `prefill_scratch[t]`→`aux_buf` offset | ✅ correct (`t * n_embd * 4`) |
+| `token_buf`→`batch_buf` writeback offset | ✅ correct |
+| `mc8_flush` after `encode_attn_ffn_tail_gpu` | ✅ present |
+| `mc8_flush` after per-token writeback | ❌ **missing** — patched |
+| **`token_hidden` / `work_buf` alias in prefill tail** | ❌ **root cause** — both `gemm_output_buf`; o_proj clobbered pristine residual base |
+
+**Root cause:** Decode path keeps `hidden_buf` (`gemm_input_buf`) separate from `work_buf` (`gemm_output_buf`), so o_proj preserves the embedding for post-attn residual. Prefill per-token loop routes both through `token_buf` (`gemm_output_buf`), so o_proj overwrote the residual base before `encode_residual_add_gpu` — pt3e–3g diffs missed this because probes run on the **decode** path (non-aliased buffers).
+
+**Fix (pt3i):**
+1. Pass `work_aliases_hidden: true` from prefill loop (`encode_attn_ffn_tail_gpu`): snapshot embedding to `aux_buf` before o_proj; use `aux_buf` as post-attn residual base (decode path passes `false` — `hidden_buf` ≠ `work_buf`).
+2. `mc8_flush()` after each `token_buf`→`batch_buf` writeback in the `t` loop.
+
+**Harness verify (pt3i):** `L1_input_hidden` **bit-exact** (cpu/gpu `0.179094`, err `0.000017`); `first_divergence(0.01)=none`; L31 `h[0]=0.841` (was `20.87`); naked output **coherent** (`Paris. The capital of France…`); TTFT ~13.3s on **`inferWasmAsync`** at time of pt3i session. *(Endgame 2026-06-19: same fix re-landed; see Part 3j — `WASM_ASYNC=1` regressed due to fused argmax; Part 3k CPU argmax gate restores `Paris.`.)*
+
+#### Part 3j — Endgame: TTFT + Argmax fusion (2026-06-19) 🟡
+
+**Architect decision:** Prioritize TTFT (~13s → ~4s) before argmax; then fuse argmax. **Outcome:** TTFT improved; coherence gate **not met** on `inferWasmAsync`.
+
+**Landings (`gguf_bridge.rs` / `wasm_llm.rs`):**
+
+| Change | Status |
+|--------|--------|
+| `work_aliases_hidden: true` in prefill `encode_attn_ffn_tail_gpu` | ✅ snapshot `token_hidden` → `aux_buf` before `o_proj` |
+| Attn-residual scratch **must not** alias `prefill_scratch_buf` | ✅ uses `ffn_buf` (batched RMSNorm rows live in `prefill_scratch`) |
+| `mc8_log_*` diagnostic probes removed | ✅ ~26k lines stripped |
+| `dispatch_transformer_forward_async` probe params removed | ✅ |
+| GPU argmax fusion | ✅ `dispatch_output_argmax_chunked_async` → `_mc8_fused` |
+| Strided TTFT infrastructure | ✅ `prefill_work_buf`, offset encoders, `encode_prefill_q_ffn_tail_fused` |
+| Fused prefill hot-path | ❌ disabled — WebGPU validation error when in-place GEMM on `PrefillBatchWork` |
+
+**Harness matrix (naked `The capital of France is`, Q4_K_M, `agent-tools/wasm-mc2-test.mjs`):**
+
+| Path | Env | TTFT | Output |
+|------|-----|------|--------|
+| `inferWasmStreaming` | `WASM_ASYNC=0` | **~8.8s** | **`Paris. The capital of France…`** ✅ |
+| `inferWasmAsync` | `WASM_ASYNC=1` | **~7.6s** (was ~13.3s) | `prolesİİ…nownow…` ❌ |
+
+**Bisect findings:**
+
+- CPU prefill + GPU decode (`inferWasmAsync` decode only) → still garbled → **likely still used fused GPU argmax** (Part 3k: decode manifold innocent).
+- Full CPU stack (`dispatch_prefill_chunk` + `dispatch_transformer_layer`) → **Paris** ✅.
+- Removing per-token `mc8_flush` in prefill `t` loop without strided scratch → races on shared `token_buf` → garbled.
+
+**Active blocker (pre-3k):** Assumed GPU async manifold parity — **resolved in Part 3k** (fused argmax was the sole regression).
+
+**Next (Part 3j → superseded by 3k):**
+
+1. ~~GPU async coherence~~ → **Part 3k:** CPU argmax gate restores `Paris.` on `WASM_ASYNC=1`.
+2. Enable `encode_prefill_q_ffn_tail_fused` with **disjoint** GEMM in/out buffers (ping-pong `prefill_work_buf_A`/`_B`).
+3. Target TTFT ~4s once fused argmax also coherent.
+4. MC7 ChatML regression after Phase 2B gate.
+
+**Phase 2B status:** **NOT CLOSED** — requires `WASM_ASYNC=1` naked `Paris.` + TTFT &lt;4s (Part 3o: TTFT ~6s ✅; coherence bisect open).
+
+#### Part 3k — Isolation: Argmax gate (2026-06-19) ✅ coherence restored
+
+**Architect directive:** Gate fused GPU argmax to CPU fallback; run `WASM_ASYNC=1` harness; do **not** attempt TTFT ping-pong until `Paris.` returns.
+
+**Action:** `dispatch_output_argmax_chunked_async` reverted to synchronous CPU `dispatch_output_argmax_chunked` (not `_mc8_fused`).
+
+**Harness verify (`agent-tools/wasm-mc2-test.mjs`, naked `The capital of France is`, Q4_K_M):**
+
+| Path | Env | TTFT | Output |
+|------|-----|------|--------|
+| `inferWasmAsync` | `WASM_ASYNC=1` (pre-3k) | ~7.6s | `prolesİİ…nownow…` ❌ |
+| `inferWasmAsync` | `WASM_ASYNC=1` (post-3k, CPU argmax) | **~7.9s** | **`Paris. The capital of France…`** ✅ |
+
+**Interpretation:**
+
+- GPU decode manifold (`encode_transformer_layer_gpu` + GPU prefill) is **coherent** — not the regression source.
+- Regression was in batched `_mc8_fused` vocab GEMM (not decode); Part 3l root-caused as `gemm_weight_buf` queue-write race (no WGSL argmax shader exists).
+- **`ffn_buf` residual routing:** not implicated — no audit needed while CPU argmax restores coherence.
+- Endgame bisect ("CPU prefill + GPU decode → still garbled") likely still used fused GPU argmax on decode steps.
+
+**Next (Part 3k → superseded by 3l):** see Part 3l below.
+
+#### Part 3l — Argmax audit (2026-06-19) ✅ fixed
+
+**Architect directive:** Audit WGSL argmax for OOB guards, `-INFINITY` padding, `workgroupBarrier()`, 256-byte readback alignment, chunk offset math; re-enable `_mc8_fused`.
+
+**Critical finding: there is no `fused_argmax.wgsl`.** `_mc8_fused` never ran a GPU parallel reduction. It batched multiple vocab-chunk GEMMs into one `CommandEncoder`, copied logits into `gemm_output_staging`, mapped once, then ran **CPU** `update_streaming_argmax_sieved`.
+
+| Audit item | Result |
+|------------|--------|
+| WGSL argmax OOB / barriers | **N/A** — no argmax shader in tree |
+| `-INFINITY` padding | CPU argmax path already uses `update_streaming_argmax_sieved` (sieve → `-∞`) |
+| 256-byte readback alignment | `copy_buffer_to_buffer` linear staging — no row-pitch padding; not the failure mode |
+| Chunk offset math | `(chunk_idx * VOCAB_CHUNK_ROWS) + local` — correct in CPU argmax helper |
+| **Root cause** | Batched `encode_gemm_bufs` loop: `queue.write_buffer` on shared `gemm_weight_buf` races across chunks in one submit scope (same class as pt3c K/V race). `mc8_flush` between chunks **insufficient** — batched single-readback still garbled. |
+| **Part 3k CPU gate nuance** | `dispatch_output_argmax_chunked` on wasm32 falls through to **`stack_gemm_quant` (CPU)** — not GPU GEMM. |
+
+**Fix:** Rewrite `_mc8_fused` to call `dispatch_gemm_raw_into_async` per chunk (submit + readback each chunk), then streaming CPU argmax — same semantics as sync path, keeps GPU vocab projection.
+
+**Harness verify (`WASM_ASYNC=1`, naked, Q4_K_M):**
+
+| Path | TTFT | Output |
+|------|------|--------|
+| Batched `_mc8_fused` (pre-3l) | ~8.0s | `prolesİİ…nownow…` ❌ |
+| Per-chunk `_mc8_fused` (post-3l) | **~7.5s** | **`Paris. The capital of France…`** ✅ |
+
+**Deferred:** Batched single-readback vocab GEMM (performance opt) — needs in-encoder weight upload via `copy_buffer_to_buffer`, not interleaved `queue.write_buffer`.
+
+**Next (Part 3l → superseded by 3m):** see Part 3m below.
+
+#### Part 3m — TTFT ping-pong (2026-06-19) 🟡 infrastructure landed
+
+**Architect directive:** Allocate `prefill_work_buf_A`/`_B`, re-enable `encode_prefill_q_ffn_tail_fused` with ping-pong bindings, purge internal flushes, target ~4s TTFT + `Paris.`
+
+**Landings (`gguf_bridge.rs`):**
+
+| Item | Status |
+|------|--------|
+| `prefill_work_buf_a` + `prefill_work_buf_b` | ✅ allocated in `ensure_gemm_buffers` |
+| Ping-pong routing in `encode_prefill_q_ffn_tail_fused` | ✅ A/B alternation for GEMM + elem |
+| Pristine snapshot (`work_aliases_hidden`) | ✅ `batch_buf` → `work_a[slot_save]` before o_proj |
+| Residual scratch | ✅ `prefill_scratch_buf` (third buffer — avoids A/B read+write alias) |
+| WebGPU validation | ✅ no `PrefillBatchWork*` aliasing errors after scratch fix |
+| Hot-path enable | ✅ `MC8_FUSED_PREFILL_TAIL = true` (Part 3o: zero-flush batched Q) |
+
+**Harness (`WASM_ASYNC=1`, naked, Q4_K_M):**
+
+| Path | TTFT | Output | WebGPU validation |
+|------|------|--------|-------------------|
+| Per-token `encode_attn_ffn_tail_gpu` (hot path) | **~7.9s** | **`Paris. The capital of France…`** ✅ | clean |
+| Fused ping-pong (pre-3n) | ~8.3s | garbled (`()()The function…`) ❌ | clean |
+| Fused ping-pong (post-3n) | **~7.9s** | **`Paris. The capital of France…`** ✅ | clean |
+
+**Findings:**
+
+1. **Ping-pong alone does not eliminate `mc8_flush`.** Chrome validates buffer usage across the **entire `CommandEncoder` sync scope**, not per compute pass. Required flushes: (a) between weight uploads (gate/up/down/o_proj/Q), (b) between write-then-read on same buffer across stages, (c) residual scratch must be a **third** buffer (`prefill_scratch_buf`), not `work_a`/`work_b`.
+2. **~4s TTFT not achieved** — per-token prefill still ~7.9s; fused ~8.3s (no win while incoherent).
+3. **Fused batched math** still wrong despite validation clean — likely batched Q/FFN slot layout or batched attention offset; per-token path remains authoritative.
+
+**Next (Part 3m → superseded by 3n):** see Part 3n below.
+
+#### Part 3n — Batched numerics isolation (2026-06-19) ✅ coherence restored
+
+**Architect directive:** Split Q-SDPA (sequential) from batched FFN; audit elementwise dispatch grids; verify GEMM $M$ dimension.
+
+**Root cause:** Q SDPA loop called `encode_attention_pass_gpu_offset` for each token but shared one `CommandEncoder` submit. `attention_params_buf` + `attention_mask_buf` are uploaded via `queue.write_buffer` per token — **only the last token's `token_idx`/causal mask survived** (pt3c uniform race analogue). Tokens 1–3 attended to the wrong causal horizon → `()()The function…` geometric shear.
+
+**Fix:** `mc8_flush(pipeline)` after **each** per-token Q SDPA dispatch (sequential Q unchanged; batched FFN chain unchanged).
+
+**Audits:**
+
+| Item | Finding |
+|------|---------|
+| Q-SDPA batching | Already sequential (`num_tokens_in_batch=1` per token) — correct "split the baby" |
+| Elementwise `batch` param | Per-token `for t` loops with `batch=1` + row offsets — **not** the bug (not a single `batch=1` over full buffer) |
+| WGSL GEMM $M$ | `encode_gemm_bufs_offset` is vector×matrix ($M=1$); fused path loops per token per stage — correct for current shader |
+| True $M=37$ batched GEMM | Not yet implemented — future TTFT win requires GEMM shader $M$ support |
+
+**Harness (`WASM_ASYNC=1`, naked, Q4_K_M, `MC8_FUSED_PREFILL_TAIL=true`):**
+
+| Metric | Result |
+|--------|--------|
+| TTFT | **7925 ms** (~7.9s; similar to per-token ~7.9s) |
+| Output | **`Paris. The capital of France…`** ✅ |
+| WebGPU validation | clean |
+
+**Note:** Prefill chunk in harness logs `n_tokens=4` per layer pass — TTFT floor unchanged until larger batch fusion or $M&gt;1$ GEMM lands.
+
+**Next (Part 3n):** superseded by Part 3o below.
+
+#### Part 3o — TTFT Collapse: zero-flush batched Q-SDPA (2026-06-19) 🟡 TTFT win; coherence gate open
+
+**Architect directive:** Eliminate per-token `mc8_flush()` in the Q-SDPA loop via parameter-array upgrade + 2D dispatch grid; expand chunk horizon (`PREFILL_CHUNK_SIZE` already **64**); prepare batched GEMM $M>1$ (deferred).
+
+**Problem (Part 3n floor):** Per-token Q SDPA required `mc8_flush` after each dispatch because `queue.write_buffer` on shared `attention_params_buf` / `attention_mask_buf` races inside one encoder submit. With `n_tokens=4` and 32 layers, that is **128 extra queue submits** per prefill chunk — API throttle dominates TTFT (~7.9s).
+
+**Implementation (landed):**
+
+| Item | Detail |
+|------|--------|
+| Rust | `encode_attention_batched_q_prefill()` in `gguf_bridge.rs` — uploads **one** uniform `AttentionGpuParams` + **one** batched mask buffer (`n_tokens × KV_ATTENTION_MASK_WORDS` words); single `dispatch(n_head, n_tokens, 1)` per layer |
+| WGSL | `fused_attention.wgsl`: `out_stride_elems` for strided Q rows into `work_a`; `q_mask_token = wg_id.y` when `num_tokens_in_batch > 1`; decode uses `token_ix = 0` via `select` |
+| Mask buffer | `attention_mask_buf` resized to `PREFILL_CHUNK_SIZE × KV_ATTENTION_MASK_WORDS` (2048 `u32`s) |
+| Per-Q flush | **Removed** from Q loop inside `encode_prefill_q_ffn_tail_fused` |
+| Weight-stage flush | **Retained** between gate/up/down/o_proj (encoder-scope `gemm_weight_buf` rule unchanged) |
+| Batched GEMM $M>1$ | **Deferred** — `fused_transformer.wgsl` / `encode_gemm_bufs_offset` still vector×matrix ($M=1$) per token |
+
+**Rejected approach (documented):** `array<AttentionParams>` **storage** buffer for per-token params. WGSL storage-array element stride = `roundUp(sizeof(struct), 16)` → **96 bytes** per slot while Rust `#[repr(C)]` struct is **84 bytes**. Misaligned reads corrupt params for `token_ix > 0`. **Fix if revisiting:** pad struct to 96 bytes on both sides, or use flat `array<u32>` params slab.
+
+**Harness (`WASM_ASYNC=1`, naked, SmolLM2-360M-Q4_K_M, `MC8_FUSED_PREFILL_TAIL=true`):**
+
+| Run | TTFT | Output | Validation |
+|-----|------|--------|------------|
+| Part 3n (per-Q flush) | **7925 ms** | **`Paris. The capital of France…`** ✅ | clean |
+| Part 3o (batched Q) | **5638–6534 ms** | ` a country that is a member of the European Union…` ❌ | clean |
+| Part 3o bisect (revert to 3n sequential Q+flush, same WGSL) | **~6700 ms** | same EU garble ❌ | clean |
+
+**Interpretation:** TTFT dropped **~1.4–2.3s** (−17–27%) — queue-submit amortization works. Coherence regression is **not fully explained** by batched Q alone (3n sequential path also failed `Paris.` on the same rebuilt wasm in-session). Treat as **branch/build bisect** before blaming batched grid numerics.
+
+**Files:** `gguf_bridge.rs` (`encode_attention_batched_q_prefill`, expanded `attention_mask_buf`, `out_stride_elems` on `AttentionGpuParams`); `fused_attention.wgsl` (2D Q grid + strided `attn_out`).
+
+**Next (Part 3o → 3p):** superseded by Part 3p below.
+
+#### Part 3p — Coherence Recovery & Batched GEMM (2026-06-19) 🟡 `Paris.` ✅; batched Q held
+
+**Architect directive:** Hard environmental bisect to recover `Paris.`; implement $M>1$ matrix-matrix GEMM in `fused_transformer.wgsl`.
+
+**Phantom regression root cause (resolved):** Not environmental contamination. The “3n revert” in-session passed **`batch_start_token_idx` (chunk start)** instead of **`abs` (per-token position)** to `encode_attention_pass_gpu_offset` when `num_tokens_in_batch=1`. Shader computes `abs_pos = batch_start_token_idx + 0` → every Q SDPA pass used **RoPE position 0**, producing EU-coherent but wrong logits. Separately, **`encode_prefill_q_ffn_tail_fused`** (not `encode_attn_ffn_tail_gpu`) was the failing path; disabling `MC8_FUSED_PREFILL_TAIL` immediately restored `Paris.` on clean rebuild.
+
+**Environmental purge (verified):** `cargo clean`, fresh `package-qualia-wasm.ps1` (8 MB stack `RUSTFLAGS`), harness `WASM_NAKED_PROMPT=1` → `prompt mode: naked` ✅.
+
+**Batched GEMM $M>1$ (landed):**
+
+| Item | Detail |
+|------|--------|
+| WGSL | `fused_transformer.wgsl`: `n_batch`, `in_row_stride`, `out_row_stride`; `global_id.y` = token index $m$; dispatch `(⌈N/64⌉, M, 1)` |
+| Rust | `GemmGpuParams` extended; `encode_gemm_bufs_offset(..., n_batch, in_row_stride, out_row_stride)` |
+| FFN collapse | `encode_prefill_q_ffn_tail_fused`: o_proj + gate + up + down → **one batched dispatch each** (strided `row_stride` rows) |
+
+**Harness (`WASM_ASYNC=1`, naked, SmolLM2-360M-Q4_K_M, `MC8_FUSED_PREFILL_TAIL=true`):**
+
+| Run | TTFT | Output | Notes |
+|-----|------|--------|-------|
+| Bisect: fused off (per-token tail) | **7656 ms** | **`Paris. The capital of France…`** ✅ | confirms fused-tail bug |
+| Part 3p: fused + per-token Q (`abs` fix) + batched GEMM | **7602 ms** | **`Paris. The capital of France…`** ✅ | coherence + strided $M>1$ GEMM |
+| Part 3p: fused + batched Q (3o) + batched GEMM | **5982 ms** | EU garble ❌ | batched Q numerics still open |
+
+**Batched Q status:** Zero-flush batched Q still fails coherence even with `abs` fix on per-token path. Held at per-token Q+flush until batched grid/mask audit completes. TTFT ~7.6s (not ~4s target).
+
+**Files:** `gguf_bridge.rs` (`abs` RoPE fix, batched `encode_gemm_bufs_offset`); `fused_transformer.wgsl` ($M>1$ GEMM).
+
+**Next (Part 3p → 3q):** superseded by Part 3q below.
+
+#### Part 3q — Batched Q Coherence (2026-06-19) ✅ `Paris.` on ~6s path
+
+**Architect directive:** Isolate M>1 batched Q-SDPA EU garble via batch-of-1 fallback + mask/grid audit.
+
+**Batch-of-1 isolation:**
+
+| Test | TTFT | Output | Conclusion |
+|------|------|--------|------------|
+| Batched pipeline, M=1 loop, **no flush** | ~7722 ms | EU garble ❌ | `attention_params_buf` race (last token wins) |
+| Batched pipeline, M=1 loop, **with flush** | ~7834 ms | **`Paris.`** ✅ | Batched WGSL math innocent at M=1 |
+| M>1 single dispatch (pre-fix) | ~5947 ms | EU garble ❌ | Mask slab + grid class |
+
+**Root cause (confirmed):** **U1 `mask_active` OR across batch rows.** `encode_attention_batched_q_prefill` OR-ed `mask_active` if *any* token's U1 routing mask was active, then uploaded per-token sparse mask slabs. Each slab row only marks the token's own slot (+ route bits), **not** the full causal $0 \dots P$ bitmap. With global `mask_active=1`, all $M$ query rows used slab indexing (`q_mask_token * mask_word_count`) and **skipped valid KV slots** — fluent EU-context smear. Sequential per-token Q masked each dispatch independently (no OR), so only the affected token was poisoned; batched OR poisoned the whole chunk.
+
+**Secondary requirement:** **`mc8_flush` after M>1 batched Q** before o_proj — `gemm_weight_buf` encoder-scope rule (same as pt3c K/V).
+
+**Fix (landed):**
+
+| Item | Detail |
+|------|--------|
+| Dense prefill Q | `mask_active = 0`; skip mask slab upload (causal loop `logical <= abs_pos` is authoritative) |
+| Post-Q flush | `mc8_flush` after `encode_attention_batched_q_prefill` |
+| Uniform padding | `AttentionGpuParams` + WGSL `_pad` → **96 bytes** (16-byte uniform alignment) |
+| Production path | M>1 batched Q + M>1 batched GEMM (o_proj/gate/up/down) |
+
+**Harness (`WASM_ASYNC=1`, naked, SmolLM2-360M-Q4_K_M):**
+
+| Run | TTFT | Output |
+|-----|------|--------|
+| Part 3p baseline (per-token Q + batched GEMM) | ~7602 ms | **`Paris.`** ✅ |
+| **Part 3q (M>1 batched Q + batched GEMM)** | **5403–6084 ms** | **`Paris. The capital of France…`** ✅ |
+
+**TTFT delta:** ~1.4–2.2s below 3p floor (−18–29%); ~2.2s above ~4s Phase 2B target.
+
+**Files:** `gguf_bridge.rs` (`encode_attention_batched_q_prefill` mask policy, post-Q flush); `fused_attention.wgsl` (96-byte uniform).
+
+**Next (Part 3q → 3r):** superseded by Part 3r below.
+
+#### Part 3r — Batched Elementwise & Submit Coalescing (2026-06-19) 🟡 `Paris.` ✅; Phase 2B gate ❌
+
+**Architect directive:** $M>1$ 2D elementwise grids + crush prefill API overhead toward TTFT &lt;4500 ms.
+
+**WGSL (`wasm_elementwise.wgsl`):**
+- `silu_mul_main` / `add_residual_main`: `gid.y` = batch row; strided `a_idx`/`b_idx`/`out_idx` via `ElemParams` row_stride + slot fields.
+- `rms_norm_batch`: `wg_id.y` = token row; variance reduction strictly row-local (no cross-token `workgroupBarrier`).
+
+**Rust (`gguf_bridge.rs`):**
+- Removed per-token `for t` loops in `encode_prefill_q_ffn_tail_fused` for attn/FFN residual, FFN RMSNorm, SiLU×mul.
+- Dispatch grids: `(n/64, batch, 1)` elementwise; RMSNorm `(1, batch, 1)`.
+- **Ping-pong staging (Part 3r):** `gemm_weight_buf_b`, `gemm_params_buf_b`, `attention_params_buf_b`, `elem_params_buf_b` — K/V and gate/up in one encoder submit; elem slot 0/1 for silu+FFN residual pair.
+- **Safe coalescing rules (learned):** shared `elem_params_buf` / `gemm_params_buf` poison all dispatches in the same submit unless ping-ponged; `o_proj`→gate requires flush (`gemm_params` slot 0 reuse).
+- **Submit hygiene:** removed duplicate empty `finish()` per layer; attn RMSNorm + K share encoder.
+- **U1 segregation:** prefill `mask_active = 0` (dense causal); sparse slabs decode-only via `encode_attention_pass_gpu`.
+
+**Harness (`WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`, SmolLM2-360M-Q4_K_M):**
+
+| Run | TTFT | Output |
+|-----|------|--------|
+| Part 3q baseline | 5403–6084 ms | **`Paris. The capital of France…`** ✅ |
+| **Part 3r (batched elem + coalescing)** | **5759–6228 ms** (best ~5835 ms) | **`Paris. The capital of France…`** ✅ |
+
+**Phase 2B gate:** TTFT &lt;4500 ms ❌ (~1.3–1.7 s remaining). WebGPU validation clean. Output coherent.
+
+**Files:** `gguf_bridge.rs`, `wasm_elementwise.wgsl`, `fused_attention.wgsl` (96-byte uniform, unchanged).
+
+**Next (Part 3r → 3s):** superseded by Part 3s below.
+
+#### Part 3s — Dynamic Uniform Offsets & Flush Purge (2026-06-19) 🟡 `Paris.` ✅; Phase 2B gate ❌
+
+**Architect directive:** Replace ping-pong uniform buffers with WebGPU `has_dynamic_offset: true`; batch all layer params in one `write_buffer`; purge flush budget toward ≤3/layer; wire U1 decode masks ($M=1$).
+
+**Rust (`gguf_bridge.rs`):**
+- `MC8_UNIFORM_ALIGN = 256`; `Mc8UniformArena` (fixed 8-slot stack buffer).
+- Explicit `BindGroupLayout` with `has_dynamic_offset: true` on gemm binding 2, elem binding 3, attn binding 2.
+- Pipelines recreated with explicit `PipelineLayout` (wasm only).
+- `gemm_params_buf` / `elem_params_buf` / `attention_params_buf` sized to `256 × 8` bytes; removed `*_buf_b` ping-pong uniform buffers.
+- `encode_prefill_q_ffn_tail_fused`: pre-build all `GemmGpuParams` + `ElemGpuParams` in arenas → single upload → dispatch with `set_bind_group(..., &[dyn_offset])`.
+- Prefill flush budget (fused tail): after Q → after o_proj+attn → after gate/up → end-of-layer (4 submits in tail + 1 after K/V = **5/layer**).
+- Decode: `encode_attn_ffn_tail_gpu` wires U1 sparse mask via `attention_kv_mask_for_dispatch` + `mc8_upload_attn_param` when `mask_active != 0` ($M=1$ safe).
+
+**Compile fixes (wasm-pack features):**
+- `BufferBindingType::Storage { read_only: false }` for writable storage bindings.
+- Non-generic `Mc8UniformArena` (const-generic array sizes illegal on stable).
+- Missing `out_slot` arg in FFN norm `encode_elem_offset`; `&layout` in decode mask call.
+
+**Flush experiments (reverted):**
+- o_proj on weight slot 1 (merge Q+o_proj submit) → **coherence break** (`is is is…`).
+- Remove gate/up→SiLU flush → **coherence break**. Storage/weight ordering stricter than encoder-order alone.
+
+**Harness (`WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`, SmolLM2-360M-Q4_K_M):**
+
+| Run | TTFT | Output |
+|-----|------|--------|
+| Part 3r baseline | 5759–6228 ms | **`Paris. The capital of France…`** ✅ |
+| **Part 3s (dynamic offsets)** | **6013–6062 ms** | **`Paris. The capital of France…`** ✅ |
+
+**Phase 2B gate:** TTFT &lt;4500 ms ❌ (~1.5 s remaining). WebGPU validation clean. Output coherent.
+
+**Files:** `gguf_bridge.rs` (dynamic offsets, arena upload, decode U1 mask).
+
+**Next (Part 3s → 3t):** superseded by Part 3t below.
+
+#### Part 3t — Weight Arena & Single-Submit Layer (2026-06-19) 🟡 `Paris.` ✅; Phase 2B gate ❌
+
+**Architect directive:** Disjoint weight buffers (`qkv`/`oproj`/`gate`/`up`/`down`); purge mid-layer flushes; target 1 submit/layer.
+
+**Rust (`gguf_bridge.rs`):**
+- `Mc8WeightRole` + `Mc8WeightArenaBufs` (7 disjoint `STORAGE` buffers, one per GEMM role).
+- `write_weight_role` / `mc8_weight_role_buf` — each `queue.write_buffer` targets a unique buffer.
+- Prefill GEMM/attn binds role-specific buffer (`AttnK`, `AttnV`, `AttnQ`, `OProj`, `Gate`, `Up`, `Down`).
+- **Tail flush purge (coherent):** removed post-Q, post-o_proj, post-gate/up flushes inside `encode_prefill_q_ffn_tail_fused`.
+- **Submit budget:** **2/layer** — flush after K/V block, flush at layer end (down from ~5/layer).
+
+**Single-submit attempt (reverted):**
+- Merging K/V + Q + FFN into one encoder without K/V flush broke coherence (`is is…` / `1000000…`).
+- Root cause: `attention_params_buf` / `elem_params_buf` queue races — Q upload overwrote K/V uniform slots; attn RMSNorm elem upload clobbered tail elem arena when merged.
+- Fix path for Part 3u: pre-stage **all** attn (K/V/Q) + elem (attn norm + tail) uniforms in one arena upload **before** any dispatches in the layer encoder.
+
+**Harness (`WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`, SmolLM2-360M-Q4_K_M):**
+
+| Run | TTFT | Output | Submits/layer |
+|-----|------|--------|---------------|
+| Part 3s baseline | 6013–6062 ms | **`Paris. The capital of France…`** ✅ | ~5 |
+| **Part 3t (weight arena + tail flush purge)** | **5822–5948 ms** | **`Paris. The capital of France…`** ✅ | **2** |
+
+**Phase 2B gate:** TTFT &lt;4500 ms ❌ (~1.3–1.4 s remaining). WebGPU validation clean.
+
+**Files:** `gguf_bridge.rs` (`Mc8WeightArenaBufs`, `Mc8WeightRole`, `ensure_gemm_buffers`).
+
+**Next (Part 3t → 3u):** superseded by Part 3u below.
+
+#### Part 3u — Unified Super-Arena (2026-06-19) 🟡 `Paris.` ✅; Phase 2B gate ❌
+
+**Architect directive:** Pre-encoder super-arena (one `write_buffer` per uniform buffer); purge K/V flush; **1 submit/layer**.
+
+**Rust (`gguf_bridge.rs`):**
+- `Mc8PrefillLayerUniforms` + `Mc8PrefillLayerGeom` + `mc8_stage_prefill_layer_super_arena`.
+- `Mc8AttnUniformArena` (K/V/Q), `Mc8ElemUniformArena` (attn norm + tail elem), `Mc8UniformArena` (tail gemm).
+- **Three uploads/layer** (attn + elem + gemm) executed **before** `WasmGpuPipeline::begin`.
+- Attn RMSNorm uses pre-staged `encode_elem_offset` (dense `prefill_scratch` layout).
+- Tail dispatches consume pre-staged dynamic offsets only (no mid-layer uniform uploads).
+
+**Single-submit attempt:**
+- Removing K/V↔tail `mc8_flush` with super-arena still breaks coherence (`is is…`).
+- **Root cause (empirical):** KV cache **storage** write visibility — Q-SDPA reads stale KV without queue submit between V and Q on Chrome/WebGPU, despite encoder-ordered dispatches.
+- **Retained:** 1 flush between K/V block and Q/FFN tail → **2 submits/layer** (uniform races eliminated; KV flush still required).
+
+**Harness (`WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`, SmolLM2-360M-Q4_K_M):**
+
+| Run | TTFT | Output | Uniform uploads/layer |
+|-----|------|--------|------------------------|
+| Part 3t baseline | 5822–5948 ms | **`Paris. The capital of France…`** ✅ | staggered (~5+) |
+| **Part 3u (super-arena)** | **5646–6127 ms** | **`Paris. The capital of France…`** ✅ | **3** (pre-encoder) |
+
+**Phase 2B gate:** TTFT &lt;4500 ms ❌ (~1.1–1.5 s remaining). WebGPU validation clean.
+
+**Next (Part 3u → 3v):** see Part 3v below.
+
+#### Part 3v — Cross-Layer Encoder Merge (2026-06-19) ❌ blocked on shared-buffer races
+
+**Architect directive:** If 1-submit/layer TTFT still &gt;4500 ms, merge multiple layers per encoder (e.g. 4 layers × 8 chunk submits).
+
+**Attempted (`gguf_bridge.rs`):**
+- `MC8_LAYERS_PER_ENCODER = 4` + persistent encoder across layers; cumulative uniform slot offsets (`Mc8ChunkUniformCursors`, `upload_at`).
+- Chunk-sized uniform VRAM (16 attn / 24 elem / 20 gemm slots).
+
+**Harness result:** coherence broken (`is is…` / `to to…`) until fixes applied; after cumulative-uniform fix still broken.
+
+**Root causes (empirical):**
+1. **Uniform clobber** — per-layer super-arena `write_buffer` at offset 0 overwrote uniforms still referenced by pending Q+FFN in the open encoder. Fixed by cumulative `upload_at` slots.
+2. **`norm_weight_buf` clobber** — next layer `upload_norm_weights` runs on the queue timeline before the prior layer's encoder (containing FFN RMSNorm) is submitted. Same class of race as pt3c weight arena.
+3. **KV storage visibility** (Part 3u) — K/V↔Q flush still required per layer.
+
+**Reverted:** per-layer encoder + layer-end flush restored. `Paris.` ✅ @ **6127 ms** TTFT.
+
+**Part 3v prerequisite:** disjoint **norm-weight arena** (like `Mc8WeightArenaBufs`) before cross-layer merge can be retried.
+
+**Next:**
+1. `Mc8NormWeightArena` (per-layer norm slots) → retry 3v encoder merge.
+2. KV visibility without K/V flush (storage barrier) → true 1-submit/layer.
+3. MC7 ChatML regression after Phase 2B TTFT gate.
 
 **Ruled out (pt3b–3h):**
 - FFN `add_residual_main` routing as *dominant L31 amplifier* — pt3b ruled dominant leak; pt3c K/V race was L31 fix
@@ -444,10 +861,13 @@ without `mc8_flush` between passes. Fix dropped L31 **271→21**.
 
 **Confirmed root cause (pt3h):** **batched prefill hidden handoff** — `L1_input_hidden` diverges after GPU L0 prefill; KV writes remain correct.
 
-**Next actions:**
-1. **Batched prefill Q+FFN tail diff** — per-token `encode_attn_ffn_tail_gpu` in prefill loop vs `dispatch_attention_q_ffn_token` CPU path @ layer 0 token 1.
-2. Audit `batch_buf`↔`token_buf` copies and `attn_input` row (`prefill_scratch[t]`→`aux_buf`) timing.
-3. Pass gate: `L1_input_hidden` bit-exact → re-test L31 and naked ` Paris.`
+**Confirmed root cause (pt3i):** **`token_hidden`/`work_buf` alias** in prefill per-token tail (`gemm_output_buf`) — o_proj clobbered residual base; pt3e–3g decode-path diffs did not exercise this routing.
+
+**Next actions (post-pt3u):**
+1. **TTFT** — cross-layer encoder merge (Part 3v); super-arena done; KV flush blocks true 1-submit/layer.
+2. **U1 decode masks** — wired in decode Q path ($M=1$); prefill remains dense `mask_active=0`.
+3. MC7 ChatML regression after Phase 2B TTFT gate.
+4. Phase 2B **not closed** until `WASM_ASYNC=1` naked `Paris.` + TTFT &lt;4500 ms.
 
 **Implementation notes (MC2 session):**
 - `cpu_attention_pass` uses raw-pointer KV mutation (sound on single-threaded wasm).
@@ -576,6 +996,13 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
+- **2026-06-19 (ae)** — **MC8 Part 3o: TTFT Collapse (zero-flush batched Q-SDPA).**
+  - **`encode_attention_batched_q_prefill`:** single uniform params + batched per-token KV masks; `dispatch(n_head, n_tokens, 1)`; per-Q `mc8_flush` removed from fused tail.
+  - **WGSL:** `out_stride_elems`, `q_mask_token`, 2D Q grid (`wg_id.y` = token index when `num_tokens_in_batch > 1`).
+  - **Storage-array params rejected:** WGSL 96-byte struct stride vs Rust 84-byte pack → corrupt multi-token params.
+  - **Harness:** TTFT **5638–6534 ms** (↓ from 3n **7925 ms**); validation clean; output **not `Paris.`** (EU garble). 3n sequential Q+flush **also** failed `Paris.` on same rebuild — coherence bisect required.
+  - **Deferred:** batched GEMM $M=n_tokens$; Phase 2B still open.
+
 - **2026-06-19 (ad)** — **MC8 Part 3h: prefill/embedding reconciliation (replay trap).**
   Architect H: prefill first. Pure CPU vs GPU KV @ L0 **bit-exact** (replay trap broken).
   token_embd ✅. **L1_input_hidden** GPU -0.529 vs CPU 0.179 — **first divergence** in batched
@@ -604,6 +1031,47 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
   **not confirmed**. Patched prefill `attn_input` handoff (`prefill_scratch[t]`→`aux_buf`),
   Q `abs_pos` via `batch_start+offset`, flush after batch RMSNorm. Harness unchanged:
   L0=0.423, L31=20.87. Commit `3613b2e4`.
+
+- **2026-06-19 (ad)** — **MC8 Part 3n: Batched numerics isolation.**
+  - **Root cause:** Q SDPA `attention_params`/`mask` queue-write race — all tokens used last token's causal horizon.
+  - **Fix:** `mc8_flush` after each per-token Q in `encode_prefill_q_ffn_tail_fused`.
+  - **Audits:** elementwise per-token loops OK; GEMM $M=1$ per dispatch OK for current WGSL.
+  - **Harness:** **`Paris.`** @ **7925 ms** TTFT; `MC8_FUSED_PREFILL_TAIL=true`; validation clean.
+
+- **2026-06-19 (ac)** — **MC8 Part 3m: TTFT ping-pong.**
+  - **`prefill_work_buf_a`/`_b`** allocated; `encode_prefill_q_ffn_tail_fused` rewritten with A/B ping-pong + pristine snapshot.
+  - **WebGPU validation:** residual scratch moved to `prefill_scratch_buf`; weight-stage `mc8_flush` retained (encoder-scope aliasing rule).
+  - **Harness:** per-token hot path **`Paris.`** @ **7906 ms** TTFT; fused path validation clean but output garbled @ ~8.3s.
+  - **`MC8_FUSED_PREFILL_TAIL = false`** until batched math audit passes.
+
+- **2026-06-19 (ab)** — **MC8 Part 3l: Argmax audit.**
+  - **No `fused_argmax.wgsl`** — `_mc8_fused` was batched vocab GEMM + single readback + CPU argmax.
+  - **Root cause:** `queue.write_buffer` weight uploads race on shared `gemm_weight_buf` across chunks in one submit scope (pt3c analogue). `mc8_flush` between chunks still garbled.
+  - **Part 3k nuance:** sync `dispatch_output_argmax_chunked` uses **`stack_gemm_quant` (CPU)** on wasm32, not GPU GEMM.
+  - **Fix:** per-chunk `dispatch_gemm_raw_into_async` + streaming CPU argmax.
+  - **Harness (`WASM_ASYNC=1`):** TTFT **7537 ms**; **`Paris. The capital of France…`** ✅.
+  - **Next:** TTFT ping-pong.
+
+- **2026-06-19 (aa)** — **MC8 Part 3k: Argmax isolation.**
+  - **Gate:** `dispatch_output_argmax_chunked_async` → CPU `dispatch_output_argmax_chunked` (not `_mc8_fused`).
+  - **Harness (`WASM_ASYNC=1`, naked):** TTFT **7856 ms**; output **`Paris. The capital of France…`** ✅.
+  - **Conclusion:** GPU decode manifold (`encode_transformer_layer_gpu` + GPU prefill) coherent; regression was **fused GPU argmax only**.
+  - **Deferred:** TTFT ping-pong (`prefill_work_buf_A`/`_B`) until `_mc8_fused` debugged.
+  - **Phase 2B NOT CLOSED** (fused argmax + TTFT &lt;4s).
+
+- **2026-06-19 (z)** — **MC8 Endgame: TTFT push + argmax fusion + probe cleanup.**
+  - **`work_aliases_hidden`** re-landed in `encode_attn_ffn_tail_gpu`; prefill passes `true`.
+  - **Attn-residual scratch fix:** never use `prefill_scratch_buf` as residual scratch during prefill tail (aliases batched RMSNorm rows) — use `ffn_buf`.
+  - **`mc8_log_*` probes removed**; `dispatch_transformer_forward_async` simplified (no `l0_probe_step1` / `decode_emb_probe`).
+  - **GPU argmax fusion wired:** `dispatch_output_argmax_chunked_async` → `_mc8_fused`.
+  - **TTFT infrastructure:** `prefill_work_buf`, offset encoders, `encode_prefill_q_ffn_tail_fused` (not hot-path — WebGPU buffer aliasing on in-place strided GEMM).
+  - **Harness:**
+    | Path | TTFT | Output |
+    |------|------|--------|
+    | `WASM_ASYNC=0` (`inferWasmStreaming`) | ~8.8s | **`Paris. The capital of France…`** ✅ |
+    | `WASM_ASYNC=1` (`inferWasmAsync`) | ~7.6s | `prolesİİ…nownow…` ❌ |
+  - **Bisect:** CPU prefill + GPU decode still garbled → GPU decode also suspect.
+  - **Phase 2B NOT CLOSED.**
 
 - **2026-06-19 (y)** — **MC8 Part 3c: KV indexing + weight-buffer race.**
   Architect F: KV layout audit first. Layer stride/uniforms ✅. Root cause: K and V shared
@@ -895,21 +1363,26 @@ Universe / Track B3, `WASM_LLM_INFERENCE_DIAGNOSIS.md`):
 | **Stability** | Init hang / init OOB / wasm-opt / stack | STATUS table | ✅ Done — do not redo |
 | **Correctness** | CPU attention stent (Option A) | Phase 2A MC1–MC2 | 🟡 MC1 ✅, MC2 code ✅, **validation blocked on prefill** |
 | **Correctness** | WASM init → KV + GEMM arenas | F5/F6 | ✅ GPU prefill OK |
-| **Correctness** | Coherent browser tokens | Phase 2A success gate | 🟡 MC7 `Paris.`; MC8 partial English |
-| **Performance** | Async GPU decode (Option B) | Phase 2B MC5–MC8 | 🟡 TTFT ~7.7s; target ~4s |
+| **Correctness** | Coherent browser tokens | Phase 2A success gate | ✅ CPU `inferWasmStreaming` naked `Paris.` |
+| **Correctness** | Coherent GPU async (`inferWasmAsync`) | Phase 2B MC8 Part 3n | ✅ `Paris.` (Part 3l–3n); **3o regression — bisect** |
+| **Performance** | Async GPU decode (Option B) | Phase 2B MC8 Part 3o | 🟡 TTFT **~6s** (↓ from ~7.9s); target ~4s |
 | **Correctness** | WGSL RoPE ↔ CPU NEOX | MC8 pt2 | ✅ Closed |
 | **Correctness** | GPU prefill manifold unified | MC8 pt3 | ✅ CPU fallback blocked |
 | **Correctness** | K/V `gemm_weight_buf` flush | MC8 pt3c | ✅ L31 272→21 |
 | **Correctness** | Batched prefill RoPE/RMSNorm | MC8 pt3d | ✅ per-row; not flat-space bug |
 | **Correctness** | L0 `h[0]` @ step 1 (true GPU) | MC8 pt3d | ❌ **0.423** (pt3 `1.011` was artefact) |
-| **Correctness** | L31 `h[0]` @ step 1 | MC8 pt3d | ❌ **20.87** (improved; gate ~1.09) |
+| **Correctness** | L31 `h[0]` @ step 1 | MC8 pt3i | ✅ **0.841** (gate ~1.09) |
 | **UX** | OPFS model cache | Phase 3 | ⬜ Parallel track, independent |
 | **Architecture** | GGUF → `.q42` AOT | Phase 4 | ⬜ Horizon |
 
-**Single blocker (updated MC8 pt3h):** Decode-step kernels + KV writes are **bit-exact**.
-**Batched prefill Q+FFN tail** corrupts `L1_input_hidden` (GPU -0.529 vs CPU 0.179) — this
-poisons layers 1–31 during prefill and drives L31=20.87. Next: **fix prefill per-token
-hidden handoff** in `dispatch_prefill_chunk_async_mc8_gpu`.
+**Blockers:**
+
+- **Resolved (pt3i):** Prefill `token_hidden`/`work_buf` alias + missing writeback flush.
+- **Resolved (Part 3k):** Isolation proved decode manifold innocent; batched vocab GEMM was the regression source.
+- **Resolved (Part 3l):** Per-chunk `dispatch_gemm_raw_into_async` + CPU argmax restores `Paris.` on `WASM_ASYNC=1`.
+- **Resolved (Part 3n):** Fused prefill coherent — Q SDPA `attention_params` race fixed with per-token `mc8_flush`.
+- **Resolved (Part 3o):** Per-Q flush eliminated — batched Q dispatch + batched masks; TTFT **~6s** (−17–27%).
+- **Active (Part 3o):** Coherence regression — restore `Paris.` (bisect 3n baseline vs 3o); then batched GEMM $M&gt;1$ for ~4s TTFT.
 
 **Branch:** `0.0.18` (ahead of origin).
 
@@ -919,8 +1392,8 @@ hidden handoff** in `dispatch_prefill_chunk_async_mc8_gpu`.
 
 ## ▶️ 8. RESUME HERE (if context/tokens are lost — start at this section)
 
-1. Read **§0** (directives), **§0b** (F1–F6), **§RECONCILIATION**, **MC8 Part 3–3h snapshot**.
-2. **Current task = Phase 2B MC8 Part 3i (batched prefill Q+FFN tail):**
+1. Read **§0** (directives), **§0b** (F1–F6), **§RECONCILIATION**, **MC8 Part 3–3l snapshot**.
+2. **Current task = Phase 2B MC8 Part 3o (TTFT Collapse + coherence gate):**
    - **Done (pt3):** GPU prefill sole path; false L0 lock @ 1.011.
    - **Done (pt3b):** FFN residual audit; L1 jump bisect (1.01→-1.66).
    - **Done (pt3c):** KV indexing ✅; **K/V weight-buffer race** fixed; L31 **271→21**.
@@ -929,11 +1402,18 @@ hidden handoff** in `dispatch_prefill_chunk_async_mc8_gpu`.
    - **Done (pt3f):** o_proj + post-attn residual + ffn_norm ✅ all match; pristine residual trap ruled out.
    - **Done (pt3g):** FFN gate/up/SwiGLU/down/residual ✅ all bit-exact; L0=0.423 is correct unified exit.
    - **Done (pt3h):** embed+KV ✅; **L1_input_hidden ❌ first divergence** (batched prefill hidden handoff).
-   - **Next:** fix prefill per-token Q+FFN tail; coherence gate ` Paris.`
+   - **Done (pt3i):** offset/flush audit ✅; `work_aliases_hidden` snapshot + writeback flush; **L1 bit-exact**, L31 **0.841**, coherent `Paris.` (harness `WASM_ASYNC=0` / `inferWasmStreaming` CPU stack).
+   - **Endgame (2026-06-19):** see **Part 3j** — TTFT ~7.6s ✅; argmax fused wired; probes removed ✅; **`inferWasmAsync` incoherent** ❌ (fused argmax)
+   - **Part 3k (2026-06-19):** CPU argmax gate → **`WASM_ASYNC=1` `Paris.`** ✅; GPU decode manifold cleared
+   - **Part 3l (2026-06-19):** No WGSL argmax shader; batched vocab GEMM race fixed → per-chunk async GEMM + CPU argmax; **`Paris.`** ✅ @ ~7.5s TTFT
+   - **Part 3m (2026-06-19):** `prefill_work_buf_A`/`_B` + ping-pong — validation ✅; numerics ❌
+   - **Part 3n (2026-06-19):** Q SDPA params race fixed — **`Paris.`** ✅ on fused @ ~7.9s TTFT
+   - **Part 3o (2026-06-19):** Zero-flush batched Q — TTFT **~6s** ✅; **`Paris.`** ❌ on current rebuild (bisect)
+   - **Next:** coherence bisect → batched GEMM $M$ → TTFT ~4s → MC7 regression
 3. **Build rule:** `scripts/package-qualia-wasm.ps1` or §BUILD `RUSTFLAGS` (8 MB stack) — mandatory.
 4. **Harness:** `agent-tools/wasm-mc2-test.mjs` — `WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`,
    `WASM_MODEL=models/SmolLM2-360M-Instruct-Q4_K_M.gguf`.
-5. **Pass criteria:** post-L31 `h[0]` within 5% of ~1.09; naked ` Paris.`; TTFT → ~4s; argmax gated.
+5. **Pass criteria:** post-L31 `h[0]` within 5% of ~1.09; naked `Paris.` on `WASM_ASYNC=1`; TTFT → ~4s.
 6. **Regression:** MC7 = `Paris is the capital of France.`, ~11s TTFT.
 7. Phase 3 (OPFS) parallel.
 8. Update **§7 Progress Log** after each micro-commit.
@@ -989,4 +1469,44 @@ hidden handoff** in `dispatch_prefill_chunk_async_mc8_gpu`.
 |---|----------|-------------------|-----------------|
 | H | Prefill/embedding vs L1–L31 bisect? | **Prefill/embedding reconciliation first** | embed+KV ✅; **L1_input_hidden ❌** @ batched prefill |
 
-**New advisor question (pt3i):** For `L1_input_hidden` divergence, prioritize **per-token prefill `encode_attn_ffn_tail_gpu` diff @ L0 token 1** or **`batch_buf`/`token_buf` copy-offset audit** first?
+### Advisor feedback (MC8 pt3i) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3i outcome |
+|---|----------|-------------------|-----------------|
+| I | Per-token tail diff vs `batch_buf`/`token_buf` offset audit? | **Offset/flush audit first** | Offsets ✅; missing writeback flush + `token_hidden`/`work_buf` alias **fixed** |
+
+**Harness verify (pt3i):** `L1_input_hidden` **bit-exact** (cpu/gpu `0.179094`, err `0.000017`); `first_divergence(0.01)=none`; L31 `h[0]=0.841` (was `20.87`); naked output **coherent** (`Paris. The capital of France…`); TTFT ~13.3s at pt3i session.
+
+### Advisor feedback (MC8 Endgame) — **ANSWERED**
+
+| # | Question | Architect decision | Endgame outcome |
+|---|----------|-------------------|-----------------|
+| K | Coherence achieved — TTFT or argmax first? | **TTFT first** | TTFT ~13.3s → **~7.6s**; coherence **lost** on current `inferWasmAsync` harness |
+| L | Stride strategy (batched scratch, drop per-token flush)? | **Approved** | Infrastructure landed; fused path disabled pending disjoint-buffer audit |
+| M | Argmax fusion after TTFT? | **Approved** | Wired; gated on coherence re-verify |
+| N | Phase 2B Complete? | **Gated** | **NOT CLOSED** — `WASM_ASYNC=1` must return `Paris.` + TTFT &lt;4s |
+
+### Advisor feedback (MC8 Part 3k) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3k outcome |
+|---|----------|-------------------|-----------------|
+| O | Argmax isolation first? | **Gate fused argmax → CPU fallback** | ✅ `Paris.` restored on `WASM_ASYNC=1`; decode manifold innocent |
+| P | If still garbled — `ffn_buf` / flush audit? | **Audit decode path** | ⏭️ skipped — CPU argmax fixed output; `ffn_buf` not implicated |
+| Q | TTFT ping-pong now? | **Blocked until `Paris.` with CPU argmax** | ✅ gate met; ping-pong is **next** |
+
+### Advisor feedback (MC8 Part 3l) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3l outcome |
+|---|----------|-------------------|-----------------|
+| R | WGSL argmax OOB / barrier failure? | **Audit shader + readback** | **No WGSL argmax shader exists** — regression was batched vocab GEMM `gemm_weight_buf` race |
+| S | 256-byte readback / chunk offset? | **Audit Rust readback** | Linear buffer map OK; chunk offset math correct |
+| T | Re-enable `_mc8_fused`? | **Yes after fix** | ✅ per-chunk `dispatch_gemm_raw_into_async`; `Paris.` @ ~7.5s TTFT |
+
+### Advisor feedback (MC8 Part 3o) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3o outcome |
+|---|----------|-------------------|-----------------|
+| U | Eliminate per-Q `mc8_flush` without uniform race? | **Parameter array OR batched uniform + mask slab** | ✅ batched uniform + `n_tokens` mask upload; per-Q flush removed |
+| V | Expand `PREFILL_CHUNK_SIZE` to 32/64? | **Approved** | Already **64**; harness still `n_tokens=4` (short naked prompt, not cap-limited) |
+| W | Batched GEMM $M>1$ now? | **Audit first, implement if shader supports** | Deferred — WGSL GEMM is $M=1$; per-token loops retained |
+| X | Phase 2B complete after TTFT drop? | **Gated on coherence** | **NOT CLOSED** — TTFT ~6s ✅; `Paris.` ❌ pending bisect |

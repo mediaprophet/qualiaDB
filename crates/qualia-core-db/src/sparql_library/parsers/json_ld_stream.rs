@@ -7,10 +7,10 @@ fn hash_str(s: &str) -> u64 {
     hash_token(s)
 }
 
-pub fn parse_json_ld_stream<R: Read>(
+pub fn parse_json_ld_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink>(
     mut reader: R,
     context_hash: u64,
-    sorter: &mut crate::external_sort::ExternalSorter,
+    sink: &mut S,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     let mut count = 0;
 
@@ -56,7 +56,7 @@ pub fn parse_json_ld_stream<R: Read>(
                         if let Some((prev_sub, prev_key)) = stack.pop() {
                             if prev_key != 0 && prev_sub != 0 {
                                 // We just finished an object that was a value to a property
-                                sorter.push(NQuin {
+                                sink.push(NQuin {
                                     subject: prev_sub,
                                     predicate: prev_key,
                                     object: current_subject,
@@ -102,7 +102,7 @@ pub fn parse_json_ld_stream<R: Read>(
                     } else if ch == ',' || ch == '}' {
                         // The string was a value
                         if current_key != 0 && current_subject != 0 {
-                            sorter.push(NQuin {
+                            sink.push(NQuin {
                                 subject: current_subject,
                                 predicate: current_key,
                                 object: hash_str(&current_string),
@@ -115,7 +115,7 @@ pub fn parse_json_ld_stream<R: Read>(
                         if ch == '}' {
                             if let Some((prev_sub, prev_key)) = stack.pop() {
                                 if prev_key != 0 && prev_sub != 0 {
-                                    sorter.push(NQuin {
+                                    sink.push(NQuin {
                                         subject: prev_sub,
                                         predicate: prev_key,
                                         object: current_subject,
@@ -168,10 +168,10 @@ pub fn parse_json_ld_stream<R: Read>(
 /// 
 /// NOTE: This function is currently rejected by the strict binary gatekeeper.
 /// Use the gatekeeper_bypass parameter only for testing or with explicit approval.
-pub fn parse_json_ld_star_stream<R: Read>(
+pub fn parse_json_ld_star_stream<R: Read, S: crate::sparql_library::quin_sink::QuinSink>(
     mut reader: R,
     context_hash: u64,
-    sorter: &mut crate::external_sort::ExternalSorter,
+    sink: &mut S,
     gatekeeper_bypass: bool,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     if !gatekeeper_bypass {
@@ -206,7 +206,7 @@ pub fn parse_json_ld_star_stream<R: Read>(
                     } else if ch == '}' {
                         // Emit embedded triple assertions if any
                         for (virtual_id, pred) in &embedded_triples {
-                            sorter.push(NQuin {
+                            sink.push(NQuin {
                                 subject: current_subject,
                                 predicate: *pred,
                                 object: *virtual_id,
@@ -243,7 +243,7 @@ pub fn parse_json_ld_star_stream<R: Read>(
                         if current_key == 0 {
                             current_subject = hash;
                         } else {
-                            sorter.push(NQuin {
+                            sink.push(NQuin {
                                 subject: current_subject,
                                 predicate: current_key,
                                 object: hash,
@@ -301,6 +301,23 @@ pub fn parse_json_ld_star_stream<R: Read>(
     }
 
     Ok(count)
+}
+
+pub fn parse_json_ld_stream<R: Read>(
+    reader: R,
+    context_hash: u64,
+    sorter: &mut crate::external_sort::ExternalSorter,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    parse_json_ld_into(reader, context_hash, sorter)
+}
+
+pub fn parse_json_ld_star_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink>(
+    reader: R,
+    context_hash: u64,
+    sink: &mut S,
+    gatekeeper_bypass: bool,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    parse_json_ld_star_stream(reader, context_hash, sink, gatekeeper_bypass)
 }
 
 #[derive(PartialEq)]

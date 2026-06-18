@@ -115,10 +115,10 @@ pub fn parse_cbor_ld_stream(
     Ok(count)
 }
 
-fn parse_cbor_object(
+fn parse_cbor_object<S: crate::sparql_library::quin_sink::QuinSink>(
     decoder: &mut Decoder,
     context_hash: u64,
-    sorter: &mut crate::external_sort::ExternalSorter,
+    sink: &mut S,
     count: &mut u64,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Read the map
@@ -208,7 +208,7 @@ fn parse_cbor_object(
             metadata: 0b10 << 61,
             parity: 0,
         };
-        sorter.push(quin)?;
+        sink.push(quin)?;
         *count += 1;
     }
 
@@ -216,29 +216,48 @@ fn parse_cbor_object(
 }
 
 /// Parse CBOR-LD with RDF-Star support via @annotation
+pub fn parse_cbor_ld_into<R: std::io::Read, S: crate::sparql_library::quin_sink::QuinSink>(
+    mut reader: R,
+    context_hash: u64,
+    sink: &mut S,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    reader.read_to_end(&mut bytes)?;
+    parse_cbor_ld_star_sink(&bytes, context_hash, sink)
+}
+
 pub fn parse_cbor_ld_star_stream(
     bytes: &[u8],
     context_hash: u64,
     sorter: &mut crate::external_sort::ExternalSorter,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    parse_cbor_ld_star_sink(bytes, context_hash, sorter)
+}
+
+pub fn parse_cbor_ld_star_sink<S: crate::sparql_library::quin_sink::QuinSink>(
+    bytes: &[u8],
+    context_hash: u64,
+    sink: &mut S,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     let mut decoder = Decoder::new(bytes);
     let mut count = 0;
 
     if let Ok(Some(len)) = decoder.array() {
         for _ in 0..len {
-            parse_cbor_object_star(&mut decoder, context_hash, sorter, &mut count)?;
+            parse_cbor_object_star(&mut decoder, context_hash, sink, &mut count)?;
         }
     } else {
-        parse_cbor_object_star(&mut decoder, context_hash, sorter, &mut count)?;
+        parse_cbor_object_star(&mut decoder, context_hash, sink, &mut count)?;
     }
 
     Ok(count)
 }
 
-fn parse_cbor_object_star(
+fn parse_cbor_object_star<S: crate::sparql_library::quin_sink::QuinSink>(
     decoder: &mut Decoder,
     context_hash: u64,
-    sorter: &mut crate::external_sort::ExternalSorter,
+    sink: &mut S,
     count: &mut u64,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let map_len = decoder.map()?;
@@ -287,7 +306,7 @@ fn parse_cbor_object_star(
                         metadata: 0b10 << 61,
                         parity: 0,
                     };
-                    sorter.push(quin)?;
+                    sink.push(quin)?;
                     *count += 1;
                 }
                 embedded_triples.clear();
@@ -301,7 +320,7 @@ fn parse_cbor_object_star(
                 metadata: 0b10 << 61,
                 parity: 0,
             };
-            sorter.push(quin)?;
+            sink.push(quin)?;
             *count += 1;
         }
 

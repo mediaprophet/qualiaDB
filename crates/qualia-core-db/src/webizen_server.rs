@@ -55,6 +55,19 @@ enum OutputFormat {
     RawQ42,
 }
 
+const SUPPORTED_QUERY_FORMATS: &str = "application/ld+json, application/n-triples";
+
+fn not_acceptable_format_response() -> (StatusCode, Json<serde_json::Value>) {
+    (
+        StatusCode::NOT_ACCEPTABLE,
+        Json(json!({
+            "code": "not_acceptable",
+            "status": "error",
+            "message": format!("Supported formats: {SUPPORTED_QUERY_FORMATS}")
+        })),
+    )
+}
+
 fn negotiate_format(
     payload_format: Option<&str>,
     accept: Option<&str>,
@@ -677,7 +690,12 @@ async fn bridge_handler(ws: WebSocketUpgrade, State(state): State<Arc<WebizenSta
                                 let q = frame.get("query").and_then(|v| v.as_str()).unwrap_or("");
                                 let graph = crate::daemon_graph::graph_read_guard();
                                 match daemon_query::execute_ntriples_metrics(q, graph.as_slice()) {
-                                    Ok(stats) => json!({ "type": "result", "id": id, "match_count": stats.match_count }),
+                                    Ok(stats) => json!({
+                                        "type": "result",
+                                        "id": id,
+                                        "match_count": stats.match_count,
+                                        "vm_cycles": stats.vm_cycles
+                                    }),
                                     Err(err) => ws_query_error_json(id, err),
                                 }
                             }
@@ -738,14 +756,15 @@ async fn query_handler(
     }
 
     let output_format = match negotiate_format(request.format.as_deref(), accept) {
-        Ok(f) => f, Err(_) => return (StatusCode::NOT_ACCEPTABLE, Json(json!({"error": "not acceptable format"}))).into_response()
+        Ok(f) => f,
+        Err(_) => return not_acceptable_format_response().into_response(),
     };
     if matches!(output_format, OutputFormat::RawQ42) { return (StatusCode::NOT_IMPLEMENTED, Json(json!({"error": "raw q42 not implemented - use export tools"}))).into_response(); }
 
     if request.query.trim().is_empty() { return (StatusCode::BAD_REQUEST, Json(json!({"error": "empty query"}))).into_response(); }
 
     let graph_guard = crate::daemon_graph::graph_read_guard();
-    let (stats, final_results) = match daemon_query::execute_ntriples_pattern_on_graph(&request.query, graph_guard.as_slice()) {
+    let (stats, final_results) = match daemon_query::execute_query_on_graph(&request.query, graph_guard.as_slice()) {
         Ok(pair) => pair,
         Err(_) => return (StatusCode::BAD_REQUEST, Json(json!({"error": "query execution failed"}))).into_response()
     };
@@ -870,6 +889,16 @@ mod tests {
         assert_eq!((compiled.routing_mask >> 61) & 0x03, 0x02); // EnforceBilateralMicroCommons
         assert_ne!((compiled.routing_mask >> 50) & 0x01, 0); // MASK_COMMERCIAL_BILLABLE_GATE set
         assert_eq!(compiled.is_permissive_commons, false);
+    }
+
+    #[test]
+    fn not_acceptable_payload_matches_native_test_contract() {
+        let (_, Json(body)) = not_acceptable_format_response();
+        assert_eq!(body["code"], "not_acceptable");
+        assert_eq!(body["status"], "error");
+        let message = body["message"].as_str().expect("message");
+        assert!(message.contains("application/ld+json"));
+        assert!(message.contains("application/n-triples"));
     }
 
     #[tokio::test]

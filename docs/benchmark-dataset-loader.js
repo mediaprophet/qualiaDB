@@ -12,6 +12,34 @@ const BLOCK_SIZE = 40960;
 const HEADER_SIZE = 160;
 const QUINS_PER_BLOCK = 850;
 const QUIN_SIZE = 48;
+const Q42_MAGIC = [0x51, 0x34, 0x32, 0x00];
+const Q42_VOLUME_HEADER_SIZE = 256;
+const Q42_LEX_MAGIC = 'Q42LEX\0\0';
+const INDEX_ENTRY_SIZE = 16;
+
+function readBigUint64Safe(view, offset) {
+    if (offset + 8 > view.byteLength) return 0n;
+    return view.getBigUint64(offset, true);
+}
+
+function tokenLabel(token) {
+    if (token.startsWith('<') && token.endsWith('>')) return token.slice(1, -1);
+    if (token.startsWith('"')) {
+        const bytes = new TextEncoder().encode(token);
+        let i = 1;
+        while (i < bytes.length) {
+            if (bytes[i] === 0x5c) { i += 2; continue; }
+            if (bytes[i] === 0x22) break;
+            i += 1;
+        }
+        return token.slice(1, i);
+    }
+    return token;
+}
+
+function formatHash(value) {
+    return `0x${value.toString(16).padStart(16, '0')}`;
+}
 
 export function qHash(s) {
     let hash = FNV_OFFSET;
@@ -43,8 +71,8 @@ export function generateSyntheticNT(n) {
     const lines = [];
     for (let i = 0; i < n; i++) {
         const p = i % 5;
-        const o = (i * 13) % n;
-        lines.push(`<http://q.test/s/${i}> <http://q.test/p/${p}> <http://q.test/o/${o}> .`);
+        const o = (i * 13 + 3) % n;
+        lines.push(`<http://q.test/s/${i}> <http://q.test/p/${p}> <http://q.test/s/${o}> .`);
     }
     return lines.join('\n');
 }
@@ -55,12 +83,17 @@ function encodeQuin(subject, predicate, object) {
     dv.setBigUint64(0, subject, true);
     dv.setBigUint64(8, predicate, true);
     dv.setBigUint64(16, object, true);
+    dv.setBigUint64(24, 0n, true);
+    dv.setBigUint64(32, 0n, true);
+    dv.setBigUint64(40, subject ^ predicate ^ object, true);
     return buf;
 }
 
 export function parseNTToFlatDb(text) {
     const quins = [];
     const index = new Map();
+    const triples = [];
+    const labelMap = new Map();
     for (const line of text.split('\n')) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) continue;
@@ -69,7 +102,21 @@ export function parseNTToFlatDb(text) {
         const s = hashToken(parts[0]);
         const p = hashToken(parts[1]);
         const o = hashToken(parts[2]) & OBJECT_HASH_MASK;
+        const subject = tokenLabel(parts[0]);
+        const predicate = tokenLabel(parts[1]);
+        const object = tokenLabel(parts[2]);
         quins.push(encodeQuin(s, p, o));
+        triples.push({
+            subject,
+            predicate,
+            object,
+            subjectHash: s,
+            predicateHash: p,
+            objectHash: o,
+        });
+        if (!labelMap.has(s)) labelMap.set(s, subject);
+        if (!labelMap.has(p)) labelMap.set(p, predicate);
+        if (!labelMap.has(o)) labelMap.set(o, object);
         let bucket = index.get(s);
         if (!bucket) {
             bucket = [];
@@ -83,7 +130,7 @@ export function parseNTToFlatDb(text) {
         db.set(q, off);
         off += 48;
     }
-    return { db, index, quinCount: quins.length };
+    return { db, index, quinCount: quins.length, triples, labelMap };
 }
 
 function quinCount(quins) {
@@ -94,26 +141,137 @@ function quinCountToBytes(count) {
     return count * 48;
 }
 
+function flattenSuperblockBytes(blocks) {
+    const totalQuins = blocks.reduce((sum, block) => sum + block.count, 0);
+    const db = new Uint8Array(totalQuins * QUIN_SIZE);
+    let outOffset = 0;
+    for (const block of blocks) {
+        for (let i = 0; i < block.count; i++) {
+            const start = i * QUIN_SIZE;
+            db.set(block.ledger.subarray(start, start + QUIN_SIZE), outOffset);
+            outOffset += QUIN_SIZE;
+        }
+    }
+    return { db, quinCount: totalQuins };
+}
+
+function parseLexiconBytes(bytes) {
+    if (!bytes || bytes.byteLength < 32) return null;
+    const magic = String.fromCharCode(...bytes.subarray(0, 8));
+    if (magic !== Q42_LEX_MAGIC) return null;
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const entryCount = Number(readBigUint64Safe(view, 8));
+    const stringsOffset = Number(readBigUint64Safe(view, 16));
+    if (stringsOffset > bytes.byteLength) return null;
+    const labels = new Map();
+    for (let i = 0; i < entryCount; i++) {
+        const off = 32 + i * INDEX_ENTRY_SIZE;
+        if (off + INDEX_ENTRY_SIZE > bytes.byteLength) break;
+        const hash = view.getBigUint64(off, true);
+        const rel = Number(view.getBigUint64(off + 8, true));
+        const start = stringsOffset + rel;
+        if (start + 2 > bytes.byteLength) continue;
+        const tag = bytes[start];
+        const tagged = tag === 0x01 && start + 3 <= bytes.byteLength;
+        const lenLe = tagged
+            ? (bytes[start + 1] | (bytes[start + 2] << 8))
+            : (bytes[start] | (bytes[start + 1] << 8));
+        const lenBe = tagged
+            ? ((bytes[start + 1] << 8) | bytes[start + 2])
+            : ((bytes[start] << 8) | bytes[start + 1]);
+        const textStart = tagged ? start + 3 : start + 2;
+        const useBigEndian =
+            ((lenLe === 0 || lenLe > 2048 || textStart + lenLe > bytes.byteLength) && lenBe > 0 && lenBe <= 2048 && textStart + lenBe <= bytes.byteLength);
+        const len = useBigEndian ? lenBe : lenLe;
+        const textEnd = textStart + len;
+        if (textEnd > bytes.byteLength) continue;
+        const text = new TextDecoder().decode(bytes.subarray(textStart, textEnd));
+        labels.set(hash, text);
+        labels.set(hash & OBJECT_HASH_MASK, text);
+    }
+    return labels;
+}
+
+async function fetchOptionalLexicon(manifest, lexUrl) {
+    if (!lexUrl) return null;
+    try {
+        const assetUrl = new URL(lexUrl, manifest._manifestUrl || window.location.href).toString();
+        const res = await fetch(assetUrl);
+        if (!res.ok) return null;
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        return parseLexiconBytes(bytes);
+    } catch {
+        return null;
+    }
+}
+
+function isUnifiedQ42Volume(buffer) {
+    const bytes = new Uint8Array(buffer, 0, Math.min(4, buffer.byteLength));
+    return bytes.length === 4 && Q42_MAGIC.every((b, i) => bytes[i] === b);
+}
+
+function parseUnifiedQ42Volume(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const view = new DataView(buffer);
+    if (bytes.byteLength < Q42_VOLUME_HEADER_SIZE) {
+        throw new Error('Q42 volume too small for header');
+    }
+
+    const blockDirOffset = Number(readBigUint64Safe(view, 40));
+    const dataOffset = Number(readBigUint64Safe(view, 56));
+    const blockCount = Number(readBigUint64Safe(view, 72));
+    const lexOffset = Number(readBigUint64Safe(view, 8));
+    const lexLength = Number(readBigUint64Safe(view, 16));
+    const blocks = [];
+
+    for (let i = 0; i < blockCount; i++) {
+        const dirOffset = blockDirOffset + i * 16;
+        if (dirOffset + 16 > bytes.byteLength) break;
+        const relOffset = Number(readBigUint64Safe(view, dirOffset));
+        const compLen = view.getUint32(dirOffset + 8, true);
+        const payloadStart = dataOffset + relOffset;
+        const payloadEnd = payloadStart + compLen;
+        if (compLen === 0 || payloadEnd > bytes.byteLength) continue;
+        const payload = bytes.subarray(payloadStart, payloadEnd);
+        const superblock = decompressLz4FlexBlock(payload);
+        if (superblock.byteLength < BLOCK_SIZE) continue;
+        const blockView = new DataView(superblock.buffer, superblock.byteOffset, superblock.byteLength);
+        const active = Number(blockView.getBigUint64(16, true));
+        const count = Math.min(active, QUINS_PER_BLOCK);
+        blocks.push({
+            count,
+            ledger: superblock.subarray(HEADER_SIZE, HEADER_SIZE + QUINS_PER_BLOCK * QUIN_SIZE),
+        });
+    }
+
+    const lexBytes = (lexOffset > 0 && lexLength > 0 && lexOffset + lexLength <= bytes.byteLength)
+        ? bytes.subarray(lexOffset, lexOffset + lexLength)
+        : null;
+    const labelMap = parseLexiconBytes(lexBytes);
+    return {
+        ...flattenSuperblockBytes(blocks),
+        labelMap,
+    };
+}
+
 export function parseSuperblockQ42(buffer) {
     const view = new DataView(buffer);
-    const chunks = [];
+    const blocks = [];
     let offset = 0;
     while (offset + BLOCK_SIZE <= buffer.byteLength) {
         const active = Number(view.getBigUint64(offset + 16, true));
         offset += HEADER_SIZE;
         const count = Math.min(active, QUINS_PER_BLOCK);
-        for (let i = 0; i < count; i++) {
-            chunks.push(new Uint8Array(buffer, offset + i * QUIN_SIZE, QUIN_SIZE));
-        }
+        blocks.push({
+            count,
+            ledger: new Uint8Array(buffer, offset, QUINS_PER_BLOCK * QUIN_SIZE),
+        });
         offset += QUINS_PER_BLOCK * QUIN_SIZE;
     }
-    const db = new Uint8Array(chunks.length * QUIN_SIZE);
-    let off = 0;
-    for (const c of chunks) {
-        db.set(c, off);
-        off += QUIN_SIZE;
-    }
-    return { db, quinCount: chunks.length };
+    return {
+        ...flattenSuperblockBytes(blocks),
+        labelMap: null,
+    };
 }
 
 /** lz4_flex block: u32 LE uncompressed size + LZ4 block bytes */
@@ -251,19 +409,45 @@ export async function loadDataset(manifest, storageFormat) {
 
     const buffer = await res.arrayBuffer();
     const parsed = storageFormat === 'q42'
-        ? parseSuperblockQ42(buffer)
+        ? (isUnifiedQ42Volume(buffer) ? parseUnifiedQ42Volume(buffer) : parseSuperblockQ42(buffer))
         : parseCq42(buffer);
+    const sidecarLexPath = manifest.paths?.q42_lex || (storageFormat === 'q42' ? `${url}.lex` : null);
+    const labelMap = parsed.labelMap?.size ? parsed.labelMap : await fetchOptionalLexicon(manifest, sidecarLexPath);
     const index = buildSubjectIndex(parsed.db);
     return {
         db: parsed.db,
         index,
         quinCount: parsed.quinCount,
+        triples: null,
+        labelMap: labelMap || null,
         format: storageFormat === 'q42' ? 'q42-superblock' : 'cq42-lz4',
         loadMs: performance.now() - started,
         label: storageFormat === 'q42'
             ? `.q42 SuperBlocks (${parsed.quinCount.toLocaleString()} quins)`
             : `.c.q42 LZ4 (${parsed.quinCount.toLocaleString()} quins)`,
     };
+}
+
+export function decodeFlatDb(db, labelMap = null, maxQuins = Infinity) {
+    const triples = [];
+    const view = new DataView(db.buffer, db.byteOffset, db.byteLength);
+    const total = Math.min(Math.floor(db.byteLength / QUIN_SIZE), maxQuins);
+    for (let i = 0; i < total; i++) {
+        const off = i * QUIN_SIZE;
+        const subjectHash = view.getBigUint64(off, true);
+        const predicateHash = view.getBigUint64(off + 8, true);
+        const objectHash = view.getBigUint64(off + 16, true);
+        const objectKey = objectHash & OBJECT_HASH_MASK;
+        triples.push({
+            subjectHash,
+            predicateHash,
+            objectHash,
+            subject: labelMap?.get(subjectHash) ?? formatHash(subjectHash),
+            predicate: labelMap?.get(predicateHash) ?? formatHash(predicateHash),
+            object: labelMap?.get(objectHash) ?? labelMap?.get(objectKey) ?? formatHash(objectHash),
+        });
+    }
+    return triples;
 }
 
 export function queriesForManifest(manifest, suite) {
@@ -276,7 +460,7 @@ export function queriesForManifest(manifest, suite) {
         const m = String(twohopStart).match(/\/s\/(\d+)$/);
         const i = m ? Number(m[1]) : 0;
         const n = manifest.synthetic_n || manifest.n_triples || 10000;
-        twohopSecond = `http://q.test/o/${(i * 13) % n}`;
+        twohopSecond = `http://q.test/s/${(i * 13 + 3) % n}`;
     }
     return {
         point: `<${pointSubject}> ?p ?o .`,

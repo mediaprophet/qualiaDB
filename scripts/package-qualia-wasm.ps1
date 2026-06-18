@@ -36,26 +36,27 @@ if (-not (Test-Path $src)) {
 New-Item -ItemType Directory -Force -Path $DocsPkg | Out-Null
 Copy-Item -Path (Join-Path $src "*") -Destination $DocsPkg -Recurse -Force
 
-$map = @{
-    "qualia_core_db.js"          = "qualia.js"
-    "qualia_core_db_bg.wasm"     = "qualia_bg.wasm"
-    "qualia_core_db.d.ts"          = "qualia.d.ts"
-    "qualia_core_db_bg.wasm.d.ts"  = "qualia_bg.wasm.d.ts"
-    "qualia_wasm.js"               = "qualia.js"
-    "qualia_wasm_bg.wasm"          = "qualia_bg.wasm"
-    "qualia_wasm.d.ts"             = "qualia.d.ts"
-    "qualia_wasm_bg.wasm.d.ts"     = "qualia_bg.wasm.d.ts"
+# Publish canonical qualia.* names from qualia_core_db build only (never legacy qualia_wasm_*).
+$coreAliases = @{
+    "qualia_core_db.js"           = "qualia.js"
+    "qualia_core_db.d.ts"         = "qualia.d.ts"
+    "qualia_core_db_bg.wasm"      = "qualia_bg.wasm"
+    "qualia_core_db_bg.wasm.d.ts" = "qualia_bg.wasm.d.ts"
 }
-foreach ($kv in $map.GetEnumerator()) {
+foreach ($kv in $coreAliases.GetEnumerator()) {
     $from = Join-Path $DocsPkg $kv.Key
-    if (Test-Path $from) {
-        Copy-Item $from (Join-Path $DocsPkg $kv.Value) -Force
+    if (-not (Test-Path $from)) {
+        Write-Error "Missing wasm-pack artifact: $($kv.Key)"
     }
+    Copy-Item $from (Join-Path $DocsPkg $kv.Value) -Force
 }
 
 $qualiaJs = Join-Path $DocsPkg "qualia.js"
 if (Test-Path $qualiaJs) {
-    (Get-Content $qualiaJs -Raw) -replace 'qualia_core_db_bg\.wasm', 'qualia_bg.wasm' | Set-Content $qualiaJs -NoNewline
+    $js = Get-Content $qualiaJs -Raw
+    $js = $js -replace 'qualia_core_db_bg\.wasm', 'qualia_bg.wasm'
+    $js = $js -replace 'qualia_wasm_bg\.wasm', 'qualia_bg.wasm'
+    Set-Content $qualiaJs $js -NoNewline
     Write-Host "Patched qualia.js wasm import -> qualia_bg.wasm"
 }
 

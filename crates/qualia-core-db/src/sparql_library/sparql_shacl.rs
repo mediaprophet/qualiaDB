@@ -217,34 +217,52 @@ impl<'a> ShaclValidator<'a> {
         Ok(count <= max_count)
     }
 
-    fn check_datatype(&self, _node: u64, _datatype_iri: u64) -> Result<bool, String> {
-        // Simplified: always true
-        Ok(true)
+    fn check_datatype(&self, node: u64, datatype_iri: u64) -> Result<bool, String> {
+        let expected_tag = datatype_iri_to_tag(datatype_iri);
+        for quin in self.quins {
+            if quin.subject != node {
+                continue;
+            }
+            if quin.object >> 63 != 0 {
+                return Ok(false);
+            }
+            let tag = ((quin.object >> 60) & 0b111) as u8;
+            return Ok(tag == expected_tag);
+        }
+        Ok(false)
     }
 
-    fn check_pattern(&self, _node: u64, _pattern_regex: u64) -> Result<bool, String> {
-        // Simplified: always true
-        Ok(true)
+    fn check_pattern(&self, node: u64, pattern_regex: u64) -> Result<bool, String> {
+        for quin in self.quins {
+            if quin.subject == node {
+                let payload = quin.object & 0x0FFF_FFFF_FFFF_FFFF;
+                if payload == pattern_regex {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
     }
 
     fn validate_sparql_constraint(&self, node: u64, query: &SparqlQuery) -> Result<bool, String> {
-        // Parse and execute SPARQL query with $this bound to node
-        let (_sparql_query, mut ctx) = sparql_parser::parse_sparql("")?;
-        
-        // Bind $this to node
-        let this_var = ctx.register_variable("$this")?;
-        
-        // Create binding row with $this bound
-        let mut row = BindingRow::new();
-        row.set(this_var, node);
-        
-        // Plan and execute query
+        let mut ctx = SparqlQueryContext::new();
+        let _this_var = ctx.register_variable("$this")?;
         let plan = QueryPlanner::plan(query, &ctx)?;
         let executor = QueryExecutor::new(self.quins);
-        let results = executor.execute(&plan, &ctx)?;
-        
-        // If query returns results, constraint passes
-        Ok(!results.is_empty())
+        let focused = self
+            .quins
+            .iter()
+            .any(|q| q.subject == node || q.object == node);
+        if !focused {
+            return Ok(false);
+        }
+        match query {
+            SparqlQuery::Ask(_) => executor.execute_ask(&plan, &ctx),
+            _ => {
+                let results = executor.execute(&plan, &ctx)?;
+                Ok(!results.is_empty())
+            }
+        }
     }
 
     fn count_outgoing_triples(&self, node: u64) -> u64 {
@@ -300,6 +318,21 @@ impl<'a> ShaclValidator<'a> {
 impl<'a> Default for ShaclValidator<'a> {
     fn default() -> Self {
         Self::new(&[])
+    }
+}
+
+fn datatype_iri_to_tag(datatype_iri: u64) -> u8 {
+    if datatype_iri == crate::q_hash("xsd:string") {
+        0
+    } else if datatype_iri == crate::q_hash("xsd:integer") {
+        1
+    } else if datatype_iri == crate::q_hash("xsd:decimal") || datatype_iri == crate::q_hash("xsd:double")
+    {
+        2
+    } else if datatype_iri == crate::q_hash("xsd:boolean") {
+        3
+    } else {
+        0
     }
 }
 

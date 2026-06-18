@@ -93,6 +93,19 @@ pub fn resident_model_id() -> Option<u64> {
         .and_then(|g| g.as_ref().map(|s| s.model_id))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub fn resident_gguf_path() -> Option<String> {
+    slot()
+        .lock()
+        .ok()
+        .and_then(|g| g.as_ref().map(|s| s.gguf_path.clone()))
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn resident_gguf_path() -> Option<String> {
+    None
+}
+
 #[cfg(target_arch = "wasm32")]
 pub fn resident_mmap_for_path(_path: &str) -> Option<()> {
     None

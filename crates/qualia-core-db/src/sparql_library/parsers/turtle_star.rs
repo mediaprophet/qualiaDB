@@ -303,10 +303,10 @@ impl RdfStarParser for TurtleStarParser {
 /// 
 /// TODO: This should be refactored to use the RdfStarParser trait properly
 /// and integrate with the lexicon writing layer for 24-byte embedded triple storage.
-pub fn parse_turtle_star_stream<R: Read>(
+pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink>(
     reader: R,
     context_hash: u64,
-    sorter: &mut crate::external_sort::ExternalSorter,
+    sink: &mut S,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     let mut parser = TurtleStarParser::new(context_hash);
     let mut count = 0;
@@ -327,7 +327,7 @@ pub fn parse_turtle_star_stream<R: Read>(
             // Parse embedded triple using stack-based parser
             if let Ok((virtual_id, components)) = parser.parse_embedded_triple(bytes) {
                 // Emit the embedded triple as a Quin
-                sorter.push(NQuin {
+                sink.push(NQuin {
                     subject: components[0],
                     predicate: components[1],
                     object: components[2],
@@ -344,7 +344,7 @@ pub fn parse_turtle_star_stream<R: Read>(
         } else {
             // Parse regular triple
             if let Ok((subject, predicate, object)) = parser.parse_triple(bytes) {
-                sorter.push(NQuin {
+                sink.push(NQuin {
                     subject,
                     predicate,
                     object,
@@ -358,6 +358,14 @@ pub fn parse_turtle_star_stream<R: Read>(
     }
 
     Ok(count)
+}
+
+pub fn parse_turtle_star_stream<R: Read>(
+    reader: R,
+    context_hash: u64,
+    sorter: &mut crate::external_sort::ExternalSorter,
+) -> Result<u64, Box<dyn std::error::Error>> {
+    parse_turtle_star_into(reader, context_hash, sorter)
 }
 
 #[cfg(test)]

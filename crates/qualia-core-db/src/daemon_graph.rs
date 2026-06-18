@@ -234,13 +234,40 @@ fn try_load_index_dir(store: &mut DaemonGraphStore, storage_path: &str) {
     }
 }
 
+/// Controls which resident graph layers are seeded at daemon boot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InitGraphOptions {
+    /// Seed the built-in anatomy/health demo triples.
+    pub seed_defaults: bool,
+    /// Load `.q42` volumes from `{storage_path}/Index`.
+    pub load_index: bool,
+}
+
+impl Default for InitGraphOptions {
+    fn default() -> Self {
+        Self {
+            seed_defaults: true,
+            load_index: true,
+        }
+    }
+}
+
 /// Initialise or refresh the daemon graph from storage path.
 pub fn init_daemon_graph(storage_path: &str) {
+    init_daemon_graph_with_options(storage_path, InitGraphOptions::default());
+}
+
+/// Initialise or refresh the daemon graph with explicit seeding policy.
+pub fn init_daemon_graph_with_options(storage_path: &str, opts: InitGraphOptions) {
     let lock = graph_lock();
     if let Ok(mut guard) = lock.write() {
         guard.clear();
-        seed_anatomy_health_graph(&mut guard);
-        try_load_index_dir(&mut guard, storage_path);
+        if opts.seed_defaults {
+            seed_anatomy_health_graph(&mut guard);
+        }
+        if opts.load_index {
+            try_load_index_dir(&mut guard, storage_path);
+        }
     }
     bump_graph_revision();
 }

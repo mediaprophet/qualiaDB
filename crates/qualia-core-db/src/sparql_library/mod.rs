@@ -15,6 +15,8 @@ pub mod sparql_did;
 #[cfg(test)]
 pub mod sparql_tests;
 pub mod external_sort;
+pub mod quin_sink;
+pub mod rdf_formats;
 pub mod parsers;
 pub mod serialisers;
 
@@ -26,3 +28,4 @@ pub use parsers::json_parser::*;
 pub use serialisers::csv_serializer::*;
 pub use serialisers::json_serializer::*;
 pub use serialisers::rdf_serializers::*;
+pub use rdf_formats::{parse_rdf, serialize_rdf, QuinCollector, QuinSink, RdfFormat, RdfParseError, RdfSerializeError, RdfStarMode, MAX_RDF_QUINS};

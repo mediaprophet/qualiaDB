@@ -64,6 +64,16 @@ const STARTUP_ONTOLOGIES: &[(&str, u64)] = &[
     ("commonwealth_charter_annotated.ttl",    COMMONWEALTH_CHARTER_ANNOTATED_GRAPH),
 ];
 
+/// Startup ontology catalog: `(filename, named_graph_context_hash)`.
+pub fn startup_ontology_catalog() -> &'static [(&'static str, u64)] {
+    STARTUP_ONTOLOGIES
+}
+
+/// Resolved ontologies directory, if present on disk.
+pub fn ontology_dir_path() -> Option<std::path::PathBuf> {
+    find_ontology_dir()
+}
+
 /// Discover the ontologies directory.
 fn find_ontology_dir() -> Option<std::path::PathBuf> {
     // 1. Environment variable override.

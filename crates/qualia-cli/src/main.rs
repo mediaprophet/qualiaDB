@@ -12,7 +12,9 @@ pub mod evaluate;
 pub mod ingest;
 mod llm_lifecycle;
 mod llm_testing;
+pub mod daemon;
 pub mod mcp;
+mod service;
 pub mod qpu;
 pub mod query;
 pub mod resources;
@@ -104,31 +106,22 @@ pub enum Commands {
         /// The output path for the .q42 file
         out_path: PathBuf,
     },
-    /// Starts the Native Loopback RPC Server
+    /// Native Loopback RPC Server (foreground: `daemon --dev`; background: `daemon start --dev`)
     Daemon {
-        /// Run in Development Mode (allows localhost origin and skips strict JWT pairing)
-        #[arg(long)]
-        dev: bool,
-        /// Local daemon port for the native bridge
-        #[arg(long, default_value = "4242")]
-        port: u16,
-        /// Network Connectivity Profile (offline, metered, unmetered)
-        #[arg(long, default_value = "unmetered")]
-        net_mode: String,
-        /// Energy Circumstance Profile (strict, opportunistic, unlimited)
-        #[arg(long, default_value = "unlimited")]
-        energy_mode: String,
-        /// Fractal Sharding parallelism: number of 512MB cells to spin up
-        #[arg(long, default_value = "1")]
-        workers: u16,
-        /// Enable Sleep-Cycle Swarm AI Compute
-        #[arg(long)]
-        compute_swarm: bool,
+        #[command(subcommand)]
+        action: Option<daemon::DaemonAction>,
+        #[command(flatten)]
+        opts: daemon::DaemonOpts,
     },
     /// Run the MCP server directly, including stdio and background service modes
     Mcp {
         #[command(subcommand)]
         action: mcp::McpAction,
+    },
+    /// Start/stop the local dev stack: graph daemon (4242) + MCP surface (4244)
+    Service {
+        #[command(subcommand)]
+        action: service::ServiceAction,
     },
     /// Webizen Mode: Integrates did-method-git and human agency
     Webizen {
@@ -1567,87 +1560,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             file.sync_all()?;
             println!("Dumped 3 mocked Quins (144 bytes) to .q42 successfully.");
         }
-        Commands::Daemon {
-            dev,
-            port,
-            net_mode,
-            energy_mode,
-            workers,
-            compute_swarm,
-        } => {
-            let is_dev = *dev;
-            println!(
-                "Starting Qualia Native Loopback Server on 127.0.0.1:{}",
-                port
-            );
-
-            println!("============================================================");
-            println!("🚀 Qualia-DB Zero-Allocation Native Local Daemon Booting...");
-            println!("============================================================");
-            println!("📡 Network Mode: {}", net_mode.to_uppercase());
-            println!("🔋 Energy Mode: {}", energy_mode.to_uppercase());
-            println!("🧮 Fractal Shards: {} independent 512MB cells", workers);
-            if *compute_swarm {
-                println!("🧠 Sleep-Cycle Swarm: ENABLED (Waiting for idle state...)");
-            }
-
-            // Spawn async update checker
-            tokio::spawn(async {
-                if let Ok(client) = reqwest::Client::builder()
-                    .user_agent("qualia-cli-update-checker")
-                    .build()
-                {
-                    if let Ok(res) = client
-                        .get("https://crates.io/api/v1/crates/qualia-cli")
-                        .send()
-                        .await
-                    {
-                        if let Ok(json) = res.json::<serde_json::Value>().await {
-                            if let Some(version) = json["crate"]["max_version"].as_str() {
-                                let current_version = env!("CARGO_PKG_VERSION");
-                                if version != current_version {
-                                    println!("\n========================================");
-                                    println!(
-                                        "🚀 A new version of qualia-cli (v{}) is available!",
-                                        version
-                                    );
-                                    println!("   You are currently running v{}", current_version);
-                                    println!(
-                                        "   Run `cargo install qualia-cli --force` to update."
-                                    );
-                                    println!("========================================\n");
-                                }
-                            }
-                        }
-                    }
-                }
+        Commands::Daemon { action, opts } => {
+            let resolved = action.clone().unwrap_or(daemon::DaemonAction::Serve {
+                service_child: false,
             });
-
-            if is_dev {
-                println!("WARNING: Running in DEV MODE. Trusting localhost origins.");
-            } else {
-                println!("Strict Origin Enforcement enabled: Trusting only mediaprophet.github.io");
-            }
-
-            let storage_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());
-            let vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&storage_dir)
-                .expect("Failed to load KeyVault");
-            let vault_arc = std::sync::Arc::new(std::sync::Mutex::new(vault));
-            qualia_core_db::daemon::configure_daemon_topology(
-                qualia_core_db::daemon::DaemonTopology {
-                    worker_cells_configured: *workers,
-                    compute_swarm_enabled: *compute_swarm,
-                },
-            );
-            qualia_core_db::daemon::start_local_daemon_with_options(*port, is_dev, vault_arc).await;
-            println!("[Qualia Daemon] All subsystems active. Press Ctrl-C to shut down.");
-            tokio::signal::ctrl_c()
-                .await
-                .expect("Failed to install Ctrl-C handler");
-            println!("[Qualia Daemon] Shutdown signal received. Goodbye.");
+            daemon::handle(&resolved, opts).await;
         }
         Commands::Mcp { action } => {
             mcp::handle(action, cli.enable_qpu).await;
+        }
+        Commands::Service { action } => {
+            service::handle(action, cli.enable_qpu).await;
         }
         Commands::ExportSolid { input, output } => {
             println!("============================================================");

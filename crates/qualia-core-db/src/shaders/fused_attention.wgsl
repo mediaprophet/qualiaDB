@@ -21,11 +21,16 @@ struct AttentionParams {
     batch_start_token_idx: u32,
     mask_active: u32, // 0 = dense KV; 1 = graph-guided sparsity (U1 bitmask)
     mask_word_count: u32,
+    out_stride_elems: u32, // batched Q row stride (floats); 0 = contiguous in binding
+    _pad0: u32,
+    _pad1: u32,
+    _pad2: u32,
 }
 
 @group(0) @binding(0) var<storage, read> hidden: array<f32>;
 @group(0) @binding(1) var<storage, read> weight_words: array<u32>;
 @group(0) @binding(2) var<uniform> params: AttentionParams;
+var<private> q_mask_token: u32;
 @group(0) @binding(3) var<storage, read_write> kv_cache: array<f32>;
 @group(0) @binding(4) var<storage, read_write> attn_out: array<f32>;
 @group(0) @binding(5) var<storage, read> kv_mask_words: array<u32>;
@@ -299,7 +304,8 @@ fn kv_slot_allowed(logical: u32) -> bool {
         return false;
     }
     let offset = bit % 32u;
-    return (kv_mask_words[word] & (1u << offset)) != 0u;
+    let mask_base = select(0u, q_mask_token * params.mask_word_count, params.num_tokens_in_batch > 1u);
+    return (kv_mask_words[mask_base + word] & (1u << offset)) != 0u;
 }
 
 // Q+attn: abs position must be per batch row (decode: batch=1 → batch_start + 0).
@@ -346,8 +352,9 @@ fn online_softmax_attention(qh: u32, kv_head: u32, token_in_batch: u32) {
     }
 
     let inv = select(0.0, 1.0 / l_sum, l_sum > 0.0);
+    let out_base = params.out_stride_elems * token_in_batch;
     for (var d = 0u; d < params.head_dim; d = d + 1u) {
-        attn_out[row_base + d] = out_acc[d] * inv;
+        attn_out[out_base + row_base + d] = out_acc[d] * inv;
     }
 }
 
@@ -375,6 +382,7 @@ fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: 
 @compute @workgroup_size(1)
 fn main(@builtin(workgroup_id) wg_id: vec3<u32>) {
     if params.proj_kind == 1u || params.proj_kind == 2u {
+        q_mask_token = 0u;
         let pair = wg_id.x;
         let token_in_batch = pair / params.n_kv_head;
         let kv_head = pair % params.n_kv_head;
@@ -386,12 +394,16 @@ fn main(@builtin(workgroup_id) wg_id: vec3<u32>) {
         return;
     }
     if params.proj_kind == 0u {
-        // Decode: one token (wg per head). Batched Q prefill would map token_in_batch from wg_id.y.
+        q_mask_token = wg_id.y;
         let qh = wg_id.x;
         if qh >= params.n_head {
             return;
         }
         let kv_head = qh / params.q_heads_per_kv;
-        online_softmax_attention(qh, kv_head, 0u);
+        let token_ix = select(0u, wg_id.y, params.num_tokens_in_batch > 1u);
+        if token_ix >= params.num_tokens_in_batch {
+            return;
+        }
+        online_softmax_attention(qh, kv_head, token_ix);
     }
 }

@@ -6,16 +6,10 @@ use std::io::Write;
 
 use crate::NQuin;
 
-/// Serialize Quins to N-Triples format
+/// Serialize Quins to N-Triples format (zero-heap via resolver).
 pub fn serialize_to_ntriples<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<(), String> {
-    for quin in quins {
-        writeln!(writer, "<{}> <{}> <{}> .", 
-            format_hash(quin.subject),
-            format_hash(quin.predicate),
-            format_hash(quin.object)
-        ).map_err(|e| format!("Failed to write N-Triples: {}", e))?;
-    }
-    Ok(())
+    crate::resolver::format_ntriples_to(quins, writer)
+        .map_err(|e| format!("Failed to write N-Triples: {e}"))
 }
 
 /// Serialize Quins to Turtle format
@@ -43,17 +37,10 @@ pub fn serialize_to_turtle<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<
     Ok(())
 }
 
-/// Serialize Quins to N-Quads format
+/// Serialize Quins to N-Quads format (zero-heap via resolver).
 pub fn serialize_to_nquads<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<(), String> {
-    for quin in quins {
-        writeln!(writer, "<{}> <{}> <{}> <{}> .", 
-            format_hash(quin.subject),
-            format_hash(quin.predicate),
-            format_hash(quin.object),
-            format_hash(quin.context)
-        ).map_err(|e| format!("Failed to write N-Quads: {}", e))?;
-    }
-    Ok(())
+    crate::resolver::format_nquads_to(quins, writer)
+        .map_err(|e| format!("Failed to write N-Quads: {e}"))
 }
 
 /// Serialize Quins to TriG format

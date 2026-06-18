@@ -111,7 +111,6 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
 
         let prompt_len = ctx.len();
         let prefill_tokens = prompt_len.saturating_sub(1);
-        let mut gpu_l1_hidden = [0f32; 8192];
         if prefill_tokens > 0 {
             if let Some(idx) = tensor_idx.as_ref() {
                 let chunk_cap = (PREFILL_CHUNK_STACK_FLOATS / emb_dim)
@@ -132,12 +131,6 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
                             &mut prefill_chunk[t * emb_dim..(t + 1) * emb_dim],
                         );
                     }
-                    let is_last = pos + n >= prefill_tokens;
-                    let l1_capture = if is_last && n >= 2 {
-                        Some(&mut gpu_l1_hidden[..emb_dim])
-                    } else {
-                        None
-                    };
                     if !engine
                         .dispatch_prefill_chunk_async(
                             idx,
@@ -148,7 +141,7 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
                             &mut scratch_a,
                             &mut scratch_b,
                             WASM_LAYER_CAP,
-                            l1_capture,
+                            None,
                         )
                         .await
                     {
@@ -159,24 +152,6 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
                     }
                     pos += n;
                 }
-                let probe_pos = 5u32.min(prefill_tokens as u32 - 1);
-                let prefill_ids: Vec<u32> = ctx[..prefill_tokens].to_vec();
-                engine
-                    .mc8_log_prefill_reconciliation(
-                        idx,
-                        &prefill_ids,
-                        emb_dim,
-                        probe_pos,
-                        if prefill_tokens >= 2 {
-                            Some(&gpu_l1_hidden[..emb_dim])
-                        } else {
-                            None
-                        },
-                        &mut scratch_a,
-                        &mut scratch_b,
-                        WASM_LAYER_CAP,
-                    )
-                    .await;
             }
         }
 
@@ -201,17 +176,6 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
 
             let (top_i, _top_v) = if let Some(idx) = tensor_idx.as_ref() {
                 let token_idx = ctx.len().saturating_sub(1) as u32;
-                if step == 1 {
-                    engine
-                        .mc8_log_decode_embedding_probe(
-                            idx,
-                            cur,
-                            token_idx,
-                            &emb_buf[..emb_dim],
-                            emb_dim,
-                        )
-                        .await;
-                }
                 let _layers = engine
                     .dispatch_transformer_forward_async(
                         idx,
@@ -221,8 +185,6 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
                         &mut scratch_b,
                         token_idx,
                         WASM_LAYER_CAP,
-                        step == 1,
-                        step == 1,
                     )
                     .await;
                 let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);

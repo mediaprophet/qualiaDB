@@ -11,7 +11,7 @@ use sysinfo::{Pid, Signal, System};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader as TokioBufReader};
 use tokio::net::{TcpListener, TcpStream as TokioTcpStream};
 
-const DEFAULT_MCP_BIND: &str = "127.0.0.1:4244";
+pub const DEFAULT_MCP_BIND: &str = "127.0.0.1:4244";
 const PID_FILE_NAME: &str = "mcp-service.json";
 const LOG_FILE_NAME: &str = "mcp-service.log";
 const ERR_LOG_FILE_NAME: &str = "mcp-service.err.log";
@@ -94,12 +94,12 @@ pub async fn handle(action: &McpAction, qpu_enabled: bool) {
             }
         }
         McpAction::Start { bind, force } => {
-            if let Err(err) = start_service(bind, qpu_enabled, *force) {
+            if let Err(err) = start_background(bind, qpu_enabled, *force) {
                 eprintln!("Failed to start MCP service: {err}");
             }
         }
         McpAction::Stop => {
-            if let Err(err) = stop_service() {
+            if let Err(err) = stop_background() {
                 eprintln!("Failed to stop MCP service: {err}");
             }
         }
@@ -157,7 +157,7 @@ async fn handle_tcp_client(stream: TokioTcpStream, qpu_enabled: bool) {
     }
 }
 
-fn start_service(bind: &str, qpu_enabled: bool, force: bool) -> Result<(), String> {
+pub fn start_background(bind: &str, qpu_enabled: bool, force: bool) -> Result<(), String> {
     ensure_runtime_dir()?;
 
     if let Some(record) = read_service_record()? {
@@ -222,55 +222,42 @@ fn spawn_detached_service(bind: &str, qpu_enabled: bool) -> Result<Option<u32>, 
 #[cfg(windows)]
 fn spawn_detached_service_windows(bind: &str, qpu_enabled: bool) -> Result<Option<u32>, String> {
     let current_exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let mut command = Command::new(current_exe);
-    if qpu_enabled {
-        command.arg("--enable-qpu");
-    }
+    let log = log_file_path();
+    let err = err_log_file_path();
+    let batch = runtime_dir().join("mcp-start.cmd");
+    let line = if qpu_enabled {
+        format!(
+            "@echo off\r\n\"{}\" --enable-qpu mcp serve --transport tcp --bind {bind} --service-child 1>> \"{}\" 2>> \"{}\"\r\n",
+            current_exe.display(),
+            log.display(),
+            err.display()
+        )
+    } else {
+        format!(
+            "@echo off\r\n\"{}\" mcp serve --transport tcp --bind {bind} --service-child 1>> \"{}\" 2>> \"{}\"\r\n",
+            current_exe.display(),
+            log.display(),
+            err.display()
+        )
+    };
+    fs::write(&batch, line).map_err(|e| format!("write {}: {e}", batch.display()))?;
+
+    let mut command = Command::new("cmd");
     command
-        .arg("mcp")
-        .arg("serve")
-        .arg("--transport")
-        .arg("tcp")
-        .arg("--bind")
-        .arg(bind)
-        .arg("--service-child")
+        .arg("/C")
+        .arg("start")
+        .arg("/B")
+        .arg("")
+        .arg(&batch)
         .stdin(Stdio::null());
 
-    let stdout_log = fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_file_path())
-        .map_err(|e| e.to_string())?;
-    let stderr_log = fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(err_log_file_path())
-        .map_err(|e| e.to_string())?;
-    command.stdout(Stdio::from(stdout_log));
-    command.stderr(Stdio::from(stderr_log));
-
     use std::os::windows::process::CommandExt;
-    const DETACHED_PROCESS: u32 = 0x00000008;
-    const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
-    const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x01000000;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
-    let creation_flag_attempts = [
-        DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB | CREATE_NO_WINDOW,
-        DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW,
-        CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW,
-    ];
+    const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
+    command.creation_flags(CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP);
 
-    let mut last_error = None;
-    for creation_flags in creation_flag_attempts {
-        command.creation_flags(creation_flags);
-        match command.spawn() {
-            Ok(child) => return Ok(Some(child.id())),
-            Err(err) => last_error = Some(err),
-        }
-    }
-
-    let err = last_error.unwrap_or_else(|| std::io::Error::other("unknown spawn failure"));
-    Err(format!("spawn failed: {err}"))
+    let child = command.spawn().map_err(|e| format!("spawn failed: {e}"))?;
+    Ok(Some(child.id()))
 }
 
 #[cfg(not(windows))]
@@ -294,7 +281,7 @@ fn spawn_detached_service_portable(bind: &str, qpu_enabled: bool) -> Result<Opti
     Ok(Some(child.id()))
 }
 
-fn stop_service() -> Result<(), String> {
+pub fn stop_background() -> Result<(), String> {
     let Some(record) = read_service_record()? else {
         println!("MCP service is not running.");
         return Ok(());
@@ -337,7 +324,7 @@ fn stop_service() -> Result<(), String> {
     Ok(())
 }
 
-fn print_status() -> Result<(), String> {
+pub fn print_status() -> Result<(), String> {
     let Some(record) = read_service_record()? else {
         println!("stopped");
         return Ok(());
@@ -365,7 +352,7 @@ fn print_status() -> Result<(), String> {
     Ok(())
 }
 
-fn print_doctor() -> Result<(), String> {
+pub fn print_doctor() -> Result<(), String> {
     println!("MCP doctor");
     println!("  foreground stdio : qualia-cli mcp serve");
     println!(

@@ -207,6 +207,7 @@
                 <div>
                     <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Operation Type</label>
                     <select id="graph-operation" class="input-field">
+                        <option value="all">All operations</option>
                         <option value="point">Point Lookup</option>
                         <option value="twohop">Two-Hop Traversal</option>
                         <option value="filter">Predicate Filter</option>
@@ -214,6 +215,8 @@
                     </select>
                 </div>
             </div>
+
+            <div id="graph-dataset-meta" class="text-xs text-white/50 mb-4">Loading dataset profile…</div>
 
             <div class="flex gap-3 mb-6">
                 <button onclick="runGraphBenchmark()" id="btn-graph-run" class="spinbtn">
@@ -229,6 +232,11 @@
             <div class="glass-panel rounded-2xl p-4 mb-4">
                 <h4 class="text-sm font-semibold mb-3 text-emerald-400"><i class="fas fa-circle-nodes mr-1"></i>Live graph (parsed by <code>parse_turtle_wasm</code>) — drag nodes · scroll to zoom</h4>
                 <canvas id="graph-viz-canvas" style="width:100%;height:340px;max-height:340px;display:block"></canvas>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-4 mb-4">
+                <h4 class="text-sm font-semibold mb-3 text-emerald-400"><i class="fas fa-binoculars mr-1"></i>Relationship Explorer</h4>
+                <div id="graph-node-viewer" class="text-sm text-white/45">Click a node in the graph to open its relationship explorer.</div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -320,6 +328,7 @@
                 <div>
                     <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Spatial Operation</label>
                     <select id="spatial-operation" class="input-field">
+                        <option value="all">All available ops</option>
                         <option value="ga">Geometric Algebra</option>
                         <option value="interval">Allen Interval Algebra</option>
                         <option value="topology">Topological Relations</option>
@@ -592,7 +601,7 @@ LIMIT 100</textarea>
 
 <script type="module">
     import { fetchJson, renderPlatformSuite } from './js/benchmark-shared.js';
-    import { Object3DViewer, GraphViewer, runSpatialLive, runGraphLive } from './js/benchmark-live.js';
+    import { Object3DViewer, GraphViewer, runSpatialLive, runGraphLive, initializeGraphBenchmarkUi } from './js/benchmark-live.js';
 
     // ── Live (real-WASM) Spatial & Graph tabs + interactive viewers ──
     let obj3d = null, graphViz = null;
@@ -602,20 +611,33 @@ LIMIT 100</textarea>
     }
     ensureViewers();
     const shapeSel = document.getElementById('spatial-shape');
+    function syncSpatialViewer(viewerState) {
+        ensureViewers();
+        if (!viewerState?.shape) return;
+        if (shapeSel) {
+            shapeSel.value = viewerState.shape;
+            shapeSel.title = `Linked to ${String(viewerState.operation || '').toUpperCase()} (${String(viewerState.dimension || '').toUpperCase()}) output`;
+        }
+        obj3d?.setMesh(viewerState.shape);
+    }
     shapeSel?.addEventListener('change', () => { ensureViewers(); obj3d?.setMesh(shapeSel.value); });
 
     window.runSpatialBenchmark = function () {
         ensureViewers();
         const btn = document.getElementById('btn-spatial-run'); if (btn) btn.disabled = true;
-        const output = document.getElementById('spatial-output'); output.textContent = 'Running real geometric-algebra benchmark…';
+        const output = document.getElementById('spatial-output'); output.textContent = 'Running live spatial benchmark…';
         setTimeout(() => {
             try {
                 const count = parseInt(document.getElementById('spatial-count').value, 10) || 10000;
-                const r = runSpatialLive({ wasm: window.qualiaWasm, charts: window.benchCharts, output, count });
+                const operation = document.getElementById('spatial-operation').value;
+                const dimension = document.getElementById('spatial-dim').value;
+                const r = runSpatialLive({ wasm: window.qualiaWasm, charts: window.benchCharts, output, count, operation, dimension });
                 if (r && window.updateMetrics) {
                     const best = Math.max(...Object.values(r.perfByOp).map((p) => p.opsPerSec));
-                    window.updateMetrics(best, r.perfByOp.geo.msPer, 0, 35);
+                    const focus = r.perfByOp[r.focusOp] || r.perfByOp.ga || Object.values(r.perfByOp)[0];
+                    window.updateMetrics(best, focus?.summary?.p50?.toFixed?.(3) ?? 0, 0, 35);
                 }
+                syncSpatialViewer(r?.viewer);
             } catch (e) { output.textContent = 'Error: ' + (e?.message || e); }
             if (btn) btn.disabled = false;
         }, 30);
@@ -623,29 +645,84 @@ LIMIT 100</textarea>
     window.resetSpatialBenchmark = function () {
         document.getElementById('spatial-output').textContent = 'Ready to run spatial benchmark...';
         const ch = window.benchCharts;
-        if (ch?.spatialPerformance) { ch.spatialPerformance.data.datasets[0].data = [0, 0, 0, 0]; ch.spatialPerformance.update(); }
-        if (ch?.spatialScaling) { ch.spatialScaling.data.datasets[0].data = [0, 0, 0]; ch.spatialScaling.update(); }
+        if (ch?.spatialPerformance) {
+            ch.spatialPerformance.data.labels = [];
+            ch.spatialPerformance.data.datasets = [{
+                label: 'Median ops/sec (measured)',
+                data: [],
+                backgroundColor: 'rgba(52, 211, 153, 0.5)',
+                borderColor: 'rgba(52, 211, 153, 1)',
+                borderWidth: 1
+            }];
+            ch.spatialPerformance.update();
+        }
+        if (ch?.spatialScaling) {
+            ch.spatialScaling.data.labels = [];
+            ch.spatialScaling.data.datasets = [{
+                label: 'Latency per run (ms)',
+                data: [],
+                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                fill: true,
+                tension: 0.3
+            }];
+            ch.spatialScaling.update();
+        }
+        if (shapeSel) shapeSel.title = '';
         window.updateMetrics?.(0, 0, 0, 0);
     };
-    window.runGraphBenchmark = function () {
+    window.runGraphBenchmark = async function () {
         ensureViewers();
         const btn = document.getElementById('btn-graph-run'); if (btn) btn.disabled = true;
         const output = document.getElementById('graph-output'); output.textContent = 'Running real graph benchmark…';
-        setTimeout(() => {
-            try {
-                const operation = document.getElementById('graph-operation').value;
-                const r = runGraphLive({ wasm: window.qualiaWasm, charts: window.benchCharts, output, viewer: graphViz, operation });
-                if (r && window.updateMetrics) window.updateMetrics(Math.round(r.triples.length / (r.ingestMs / 1000)), r.compileMs[operation] || r.compileMs.point, 0, 42);
-            } catch (e) { output.textContent = 'Error: ' + (e?.message || e); }
-            if (btn) btn.disabled = false;
-        }, 30);
+        try {
+            const operation = document.getElementById('graph-operation').value;
+            const datasetId = document.getElementById('graph-dataset').value;
+            const inspectorTarget = document.getElementById('graph-node-viewer');
+            const r = await runGraphLive({
+                wasm: window.qualiaWasm,
+                charts: window.benchCharts,
+                output,
+                viewer: graphViz,
+                operation,
+                datasetId,
+                inspectorTarget,
+            });
+            if (r && window.updateMetrics) {
+                const active = operation === 'all' ? (r.opResults.point || r.opResults.filter || r.opResults.twohop || r.opResults.ingest) : r.opResults[operation];
+                const best = Math.max(...Object.values(r.opResults).map((entry) => Math.max(...(entry.throughputs || [0]))), 0);
+                window.updateMetrics(best, active?.summary?.p50?.toFixed?.(3) ?? 0, 0, 42);
+            }
+        } catch (e) {
+            output.textContent = 'Error: ' + (e?.message || e);
+        }
+        if (btn) btn.disabled = false;
     };
     window.resetGraphBenchmark = function () {
         document.getElementById('graph-output').textContent = 'Ready to run benchmark...';
+        const explorer = document.getElementById('graph-node-viewer');
+        if (explorer) explorer.innerHTML = 'Click a node in the graph to open its relationship explorer.';
         const ch = window.benchCharts;
         if (ch?.graphLatency) { ch.graphLatency.data.datasets[0].data = [0, 0, 0, 0]; ch.graphLatency.update(); }
-        if (ch?.graphThroughput) { ch.graphThroughput.data.labels = []; ch.graphThroughput.data.datasets[0].data = []; ch.graphThroughput.update(); }
+        if (ch?.graphThroughput) {
+            ch.graphThroughput.data.labels = [];
+            ch.graphThroughput.data.datasets = [{
+                label: 'Ops/sec',
+                data: [],
+                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true,
+                tension: 0.4
+            }];
+            ch.graphThroughput.update();
+        }
         window.updateMetrics?.(0, 0, 0, 0);
+    };
+    window.updateGraphDataset = function () {
+        initializeGraphBenchmarkUi().catch((err) => {
+            const meta = document.getElementById('graph-dataset-meta');
+            if (meta) meta.textContent = `Dataset metadata unavailable: ${err.message}`;
+        });
     };
 
     async function loadCiSuite() {
@@ -682,6 +759,7 @@ LIMIT 100</textarea>
             mainContent.style.display = 'block';
             window.qualiaWasm = module;
             initializeCharts();
+            initializeGraphBenchmarkUi().catch(console.warn);
             loadCiSuite();
         } catch (err) {
             console.error('WASM initialization error:', err);
@@ -690,6 +768,7 @@ LIMIT 100</textarea>
             loadingOverlay.style.display = 'none';
             errorOverlay.classList.remove('hidden');
             errorMessage.textContent = err?.message || String(err);
+            initializeGraphBenchmarkUi().catch(console.warn);
             loadCiSuite();
         }
     }
@@ -837,10 +916,10 @@ LIMIT 100</textarea>
         charts.spatialPerformance = new Chart(document.getElementById('spatial-performance-chart'), {
             type: 'bar',
             data: {
-                labels: ['GA', 'Interval', 'Topology', 'Indexing'],
+                labels: [],
                 datasets: [{
-                    label: 'Ops/sec',
-                    data: [0, 0, 0, 0],
+                    label: 'Median ops/sec (measured)',
+                    data: [],
                     backgroundColor: 'rgba(52, 211, 153, 0.5)',
                     borderColor: 'rgba(52, 211, 153, 1)',
                     borderWidth: 1
@@ -852,10 +931,10 @@ LIMIT 100</textarea>
         charts.spatialScaling = new Chart(document.getElementById('spatial-scaling-chart'), {
             type: 'line',
             data: {
-                labels: ['2D', '3D', '4D'],
+                labels: [],
                 datasets: [{
-                    label: 'Latency (ms)',
-                    data: [0, 0, 0],
+                    label: 'Latency per run (ms)',
+                    data: [],
                     borderColor: 'rgba(59, 130, 246, 1)',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     fill: true,

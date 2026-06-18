@@ -39,6 +39,12 @@ const EXPECTED_WASM_EXPORTS = [
     'load_resource_catalog_wasm',
     'catalog_summary_wasm',
     'search_resource_catalog_wasm',
+    'parse_csv_wasm',
+    'parse_json_mapping_wasm',
+    'parse_rdf_wasm',
+    'serialize_csv_wasm',
+    'serialize_json_wasm',
+    'serialize_rdf_wasm',
 ];
 
 function summarizeCoverage(mod) {

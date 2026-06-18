@@ -168,7 +168,7 @@ pub fn resolve_hash(hash: u64) -> Option<&'static [u8]> {
 /// This correctly handles terms like `q_hash("knows")` whose FNV-1a output
 /// naturally has bit 63 set.
 #[inline]
-fn write_iri_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
+pub(crate) fn write_iri_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
     // 1. Lexicon lookup — exact value, no bit-stripping.
     if let Some(uri) = LEXICON.resolve(val) {
         out.write_all(b"<")?;
@@ -192,7 +192,7 @@ fn write_iri_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
 /// 3. Bits 60-62 match a known inline tag → typed literal
 /// 4. Fallback → hex placeholder
 #[inline]
-fn write_object_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
+pub(crate) fn write_object_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
     // 1. Lexicon first — a known IRI hash wins over any bit-pattern check.
     if let Some(uri) = LEXICON.resolve(val) {
         out.write_all(b"<")?;
@@ -262,16 +262,58 @@ fn write_object_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
 /// inline-typed literals.
 pub fn format_ntriples_to<W: io::Write>(quins: &[NQuin], out: &mut W) -> io::Result<()> {
     for q in quins {
-        // Subject: the nested-Quin bit (bit 63) doubles as the did:q42 flag;
-        // pass the raw value so `write_iri_term` can render it correctly.
+        write_ntriple_line(q, out)?;
+    }
+    Ok(())
+}
+
+/// N-Quads lines with graph context (zero-heap).
+pub fn format_nquads_to<W: io::Write>(quins: &[NQuin], out: &mut W) -> io::Result<()> {
+    for q in quins {
         write_iri_term(q.subject, out)?;
         out.write_all(b" ")?;
         write_iri_term(q.predicate, out)?;
         out.write_all(b" ")?;
         write_object_term(q.object, out)?;
+        out.write_all(b" ")?;
+        write_iri_term(q.context, out)?;
         out.write_all(b" .\n")?;
     }
     Ok(())
+}
+
+/// RDF-Star N-Triples line (`<<<...>>>` subject when virtual id).
+pub fn format_ntriples_star_to<W: io::Write>(quins: &[NQuin], out: &mut W) -> io::Result<()> {
+    for q in quins {
+        write_ntriples_star_line(q, out)?;
+    }
+    Ok(())
+}
+
+#[inline]
+fn write_ntriple_line<W: io::Write>(q: &NQuin, out: &mut W) -> io::Result<()> {
+    write_iri_term(q.subject, out)?;
+    out.write_all(b" ")?;
+    write_iri_term(q.predicate, out)?;
+    out.write_all(b" ")?;
+    write_object_term(q.object, out)?;
+    out.write_all(b" .\n")
+}
+
+#[inline]
+fn write_ntriples_star_line<W: io::Write>(q: &NQuin, out: &mut W) -> io::Result<()> {
+    if crate::rdf_star::is_virtual_id(q.subject) {
+        out.write_all(b"<<<")?;
+        write_iri_term(q.subject, out)?;
+        out.write_all(b">>> ")?;
+    } else {
+        write_iri_term(q.subject, out)?;
+        out.write_all(b" ")?;
+    }
+    write_iri_term(q.predicate, out)?;
+    out.write_all(b" ")?;
+    write_object_term(q.object, out)?;
+    out.write_all(b" .\n")
 }
 
 // ---------------------------------------------------------------------------

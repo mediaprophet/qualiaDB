@@ -237,6 +237,12 @@ pub enum SlgOpcode {
     CheckNodeShape(u64),
     /// Negation: passes only if the referenced shape would FAIL.
     CheckNotShape(u64),
+    /// OR-branch: records a passing `rdf:type` match without failing the frame.
+    SoftCheckNodeShape(u64),
+    /// Fails unless at least one preceding `SoftCheckNodeShape` matched.
+    RequireAnyShape,
+    /// Validates inline literal tag on `object_reg` (0=IRI, 1=int, 2=decimal, 3=bool).
+    CheckObjectDatatype(u8),
 
     // ── Native: physics ───────────────────────────────────────────────────────
     NativeThermodynamics,
@@ -412,6 +418,27 @@ fn current_unix32() -> u32 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as u32)
         .unwrap_or(0)
+}
+
+#[inline]
+fn rdf_type_hash() -> u64 {
+    crate::lexicon::generate_60bit_token(b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
+}
+
+/// Returns true when `node` has `rdf:type` = `class_hash` in the arena.
+fn node_has_class(arena: &SlgArena, node: u64, class_hash: u64) -> bool {
+    if node == 0 || class_hash == 0 {
+        return false;
+    }
+    let rdf_type = rdf_type_hash();
+    let mut scratch = [NQuin::default(); 256];
+    let count = arena.collect_active_quins(&mut scratch);
+    for q in &scratch[..count] {
+        if q.subject == node && q.predicate == rdf_type && q.object == class_hash {
+            return true;
+        }
+    }
+    false
 }
 
 fn unify_frame(arena: &SlgArena, frame: &mut VmFrame) -> bool {
@@ -672,11 +699,7 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::CheckPattern(pattern_hash) => {
                 if frame.object_reg != pattern_hash {
-                    vm_log!(
-                        "[Webizen] CheckPattern: hash mismatch {:016x} vs {:016x}",
-                        frame.object_reg,
-                        pattern_hash
-                    );
+                    return None;
                 }
             }
             SlgOpcode::CheckHasValue(expected) => {
@@ -685,16 +708,33 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::CheckNodeShape(shape_id) => {
-                vm_log!(
-                    "[Webizen] CheckNodeShape: delegating to shape {:016x}",
-                    shape_id
-                );
+                if !node_has_class(arena, frame.subject_reg, shape_id) {
+                    return None;
+                }
             }
             SlgOpcode::CheckNotShape(shape_id) => {
-                vm_log!(
-                    "[Webizen] CheckNotShape: verifying shape {:016x} fails as expected",
-                    shape_id
-                );
+                if node_has_class(arena, frame.subject_reg, shape_id) {
+                    return None;
+                }
+            }
+            SlgOpcode::SoftCheckNodeShape(shape_id) => {
+                if node_has_class(arena, frame.subject_reg, shape_id) {
+                    frame.context_reg |= 1;
+                }
+            }
+            SlgOpcode::RequireAnyShape => {
+                if frame.context_reg & 1 == 0 {
+                    return None;
+                }
+            }
+            SlgOpcode::CheckObjectDatatype(expected_tag) => {
+                if frame.object_reg >> 63 != 0 {
+                    return None;
+                }
+                let tag = ((frame.object_reg >> 60) & 0b111) as u8;
+                if tag != expected_tag {
+                    return None;
+                }
             }
             // ── Biosciences ───────────────────────────────────────────────
             SlgOpcode::NativeNucleotideAlign => {

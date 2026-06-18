@@ -4,59 +4,7 @@
 import { TestRunner } from './test-runner.js';
 import { loadWasm, getWasmCoverage, getWasmVersion } from './wasm-loader.js';
 import { NativeClient, detectModes } from './native-client.js';
-
-// Suite imports
-
-// Pure JS logic (all modes)
-import { register as regPrimitives }     from './suites/primitives.js';
-import { register as regEpistemic }      from './suites/modality-epistemic.js';
-import { register as regLtl }            from './suites/modality-ltl.js';
-import { register as regParaconsistent } from './suites/modality-paraconsistent.js';
-import { register as regLinear }         from './suites/modality-linear.js';
-import { register as regDialectical }    from './suites/modality-dialectical.js';
-import { register as regSpatioTemporal } from './suites/modality-spatio-temporal.js';
-import { register as regDl }             from './suites/modality-dl.js';
-import { register as regAsp }            from './suites/modality-asp.js';
-import { register as regProbabilistic }  from './suites/modality-probabilistic.js';
-import { register as regCogAi }          from './suites/modality-cogai.js';
-import { register as regAgency }         from './suites/modality-agency.js';
-import { register as regComorbidity }    from './suites/modality-comorbidity.js';
-import { register as regDicom }            from './suites/modality-dicom.js';
-import { register as regDeontic }        from './suites/modality-deontic.js';
-import { register as regControlTheory }  from './suites/modality-control-theory.js';
-import { register as regCrdt }           from './suites/modality-crdt.js';
-import { register as regNeuroSymbolic }  from './suites/modality-neuro-symbolic.js';
-import { register as regArgumentation }  from './suites/modality-argumentation.js';
-import { register as regGraphTheory }    from './suites/modality-graph-theory.js';
-import { register as regIntervalReason } from './suites/modality-interval-reasoning.js';
-import { register as regDiffusion }      from './suites/modality-diffusion.js';
-import { register as regOntology }       from './suites/ontology-alignment.js';
-
-// WASM-backed (wasm + both)
-import { register as regQueryEngine }    from './suites/wasm-query-engine.js';
-import { register as regBioinformatics } from './suites/wasm-bioinformatics.js';
-import { register as regClinical }       from './suites/wasm-clinical.js';
-import { register as regChemistry }      from './suites/wasm-chemistry.js';
-import { register as regEconomics }      from './suites/wasm-economics.js';
-import { register as regShacl }          from './suites/wasm-shacl.js';
-import { register as regGovernance }     from './suites/wasm-governance.js';
-import { register as regWasmIngest }     from './suites/wasm-ingest.js';
-import { register as regDataFormats }    from './suites/wasm-data-formats.js';
-import { register as regProfiles }       from './suites/wasm-profiles.js';
-import { register as regResources }      from './suites/wasm-resources.js';
-import { register as regRdfStar }        from './suites/wasm-rdf-star.js';
-import { register as regSolvers }        from './suites/wasm-solvers.js';
-import { register as regFinanceExtras }  from './suites/wasm-finance-extras.js';
-
-// Native-only (native + both)
-import { register as regNativeDaemon }   from './suites/native-daemon.js';
-import { register as regNativeQuery }    from './suites/native-query.js';
-import { register as regNativeLive }     from './suites/native-live.js';
-import { register as regNativeChat }     from './suites/native-chat.js';
-import { register as regNativeTorrent }  from './suites/native-torrent.js';
-
-// Both-mode comparison (both only)
-import { register as regComparison }     from './suites/native-comparison.js';
+import { registerSuites } from './suite-registry.js';
 
 // App state
 
@@ -138,61 +86,7 @@ function updateModeUI() {
 
 function buildRunner(mode) {
     const r = new TestRunner();
-    const c = { ...ctx, mode };
-
-    regPrimitives(r, c);
-    regEpistemic(r, c);
-    regLtl(r, c);
-    regParaconsistent(r, c);
-    regLinear(r, c);
-    regDialectical(r, c);
-    regSpatioTemporal(r, c);
-    regDl(r, c);
-    regAsp(r, c);
-    regProbabilistic(r, c);
-    regCogAi(r, c);
-    regAgency(r, c);
-    regComorbidity(r, c);
-    regDicom(r, c);
-    regDeontic(r, c);
-    regControlTheory(r, c);
-    regCrdt(r, c);
-    regNeuroSymbolic(r, c);
-    regArgumentation(r, c);
-    regGraphTheory(r, c);
-    regIntervalReason(r, c);
-    regDiffusion(r, c);
-    regOntology(r, c);
-
-    if (mode === 'wasm' || mode === 'both') {
-        regQueryEngine(r, c);
-        regBioinformatics(r, c);
-        regClinical(r, c);
-        regChemistry(r, c);
-        regEconomics(r, c);
-        regShacl(r, c);
-        regGovernance(r, c);
-        regWasmIngest(r, c);
-        regDataFormats(r, c);
-        regProfiles(r, c);
-        regResources(r, c);
-        regRdfStar(r, c);
-        regSolvers(r, c);
-        regFinanceExtras(r, c);
-    }
-
-    if (mode === 'native' || mode === 'both') {
-        regNativeDaemon(r, c);
-        regNativeQuery(r, c);
-        regNativeLive(r, c);
-        regNativeChat(r, c);
-        regNativeTorrent(r, c);
-    }
-
-    if (mode === 'both') {
-        regComparison(r, c);
-    }
-
+    registerSuites(r, { ...ctx, mode }, mode);
     return r;
 }
 
@@ -260,6 +154,7 @@ function suiteModule(name, path = []) {
         ['Modality: Graph Theory', 'modality-graph-theory.js'],
         ['Modality: Interval Reasoning', 'modality-interval-reasoning.js'],
         ['Modality: Diffusion', 'modality-diffusion.js'],
+        ['RDF: Format Dispatch', 'rdf-formats-dispatch.js'],
         ['Ontology:', 'ontology-alignment.js'],
         ['WASM: Query Engine', 'wasm-query-engine.js'],
         ['WASM: Bioinformatics', 'wasm-bioinformatics.js'],
