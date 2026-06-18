@@ -105,6 +105,7 @@ struct AttentionGpuParams {
     weight_byte_len: u32,
     proj_kind: u32,
     rope_theta_base: f32,
+    rope_scale: f32,
     num_tokens_in_batch: u32,
     batch_start_token_idx: u32,
     mask_active: u32,
@@ -764,7 +765,7 @@ pub(crate) fn wlog(_s: &str) {}
 
 /// In-place NEOX-style RoPE over `n_heads` consecutive `head_dim` blocks of `vec`.
 /// Rotates split-half pairs `(i, i + head_dim/2)` — required for Llama/SmolLM2 GGUF weights.
-/// (`fused_attention.wgsl` uses consecutive-pair style; native GPU path may permute separately.)
+/// (`fused_attention.wgsl` mirrors this NEOX split-half layout since MC8 Part 2.)
 #[cfg(target_arch = "wasm32")]
 fn rope_inplace(
     vec: &mut [f32],
@@ -2330,7 +2331,8 @@ impl QTensorEngine {
             weight_row_elems: info.dims[0] as u32,
             weight_byte_len: raw_len as u32,
             proj_kind,
-            rope_theta_base: 10_000.0,
+            rope_theta_base: h.effective_rope_freq_base(),
+            rope_scale: h.effective_rope_scale(),
             num_tokens_in_batch,
             batch_start_token_idx,
             mask_active,
@@ -3802,7 +3804,7 @@ impl QTensorEngine {
         )
     }
 
-    /// MC8: single encoder + single map_async readback for full forward pass.
+    /// MC8: fused GPU forward — one upload, per-layer encode, single readback.
     #[cfg(target_arch = "wasm32")]
     pub async fn dispatch_transformer_forward_async(
         &mut self,
@@ -3823,22 +3825,29 @@ impl QTensorEngine {
         } else {
             max_layers.min(n_layer)
         };
+        let hidden_buf = self.gemm_input_buf.as_ref().unwrap();
+        self.gpu_queue().write_buffer(
+            hidden_buf,
+            0,
+            bytemuck::cast_slice(&hidden[..emb_dim]),
+        );
+        let mut pipeline = WasmGpuPipeline::begin(self);
         let mut ran = 0u32;
         for layer in 0..limit {
-            if self
-                .dispatch_transformer_layer_async(
-                    index,
-                    layer,
-                    token_idx,
-                    hidden,
-                    emb_dim,
-                    _scratch_a,
-                    _scratch_b,
-                )
-                .await
-            {
-                ran += 1;
+            if !self.encode_transformer_layer_gpu(
+                &mut pipeline,
+                index,
+                layer,
+                token_idx,
+                emb_dim,
+            ) {
+                break;
             }
+            ran += 1;
+            self.mc8_flush(&mut pipeline);
+        }
+        if ran > 0 && !self.pipeline_read_hidden(emb_dim, hidden).await {
+            return 0;
         }
         ran
     }
@@ -4554,6 +4563,7 @@ impl QTensorEngine {
         )
     }
 
+    #[cfg(target_arch = "wasm32")]
     #[allow(dead_code)]
     async fn dispatch_prefill_chunk_async_mc8_gpu(
         &mut self,
@@ -4906,6 +4916,7 @@ impl QTensorEngine {
         )
     }
 
+    #[cfg(target_arch = "wasm32")]
     #[allow(dead_code)]
     async fn dispatch_output_argmax_chunked_async_mc8_fused(
         &self,

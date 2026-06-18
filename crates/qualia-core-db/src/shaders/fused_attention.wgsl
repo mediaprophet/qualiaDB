@@ -16,6 +16,7 @@ struct AttentionParams {
     weight_byte_len: u32,
     proj_kind: u32, // 0=Q+attn 1=K 2=V
     rope_theta_base: f32,
+    rope_scale: f32,
     num_tokens_in_batch: u32, // 1 during decode; >1 during chunked prefill
     batch_start_token_idx: u32,
     mask_active: u32, // 0 = dense KV; 1 = graph-guided sparsity (U1 bitmask)
@@ -258,12 +259,22 @@ fn gemm_row(row: u32, token_in_batch: u32) -> f32 {
     return sum;
 }
 
-fn rotate_rope_pair(x0: f32, x1: f32, pos: u32, pair_idx: u32) -> vec2<f32> {
-    let theta = pow(params.rope_theta_base, -2.0 * f32(pair_idx) / f32(params.head_dim));
-    let angle = f32(pos) * theta;
-    let c = cos(angle);
-    let s = sin(angle);
-    return vec2<f32>(x0 * c - x1 * s, x0 * s + x1 * c);
+// NEOX split-half RoPE: rotate (i, i + head_dim/2) — matches CPU rope_inplace / SmolLM2.
+fn apply_rope_neox(vec: ptr<function, array<f32, MAX_HEAD_DIM>>, abs_pos: u32) {
+    let half_dim = params.head_dim / 2u;
+    let scale = select(1.0, params.rope_scale, params.rope_scale > 0.0);
+    let pos = f32(abs_pos) / scale;
+    for (var i = 0u; i < half_dim; i = i + 1u) {
+        let theta = pos * pow(params.rope_theta_base, -2.0 * f32(i) / f32(params.head_dim));
+        let cos_t = cos(theta);
+        let sin_t = sin(theta);
+        let idx_0 = i;
+        let idx_1 = i + half_dim;
+        let v0 = (*vec)[idx_0];
+        let v1 = (*vec)[idx_1];
+        (*vec)[idx_0] = v0 * cos_t - v1 * sin_t;
+        (*vec)[idx_1] = v0 * sin_t + v1 * cos_t;
+    }
 }
 
 // Layer-local indices: bind group maps one layer slice of the static arena.
@@ -298,12 +309,7 @@ fn online_softmax_attention(qh: u32, kv_head: u32) {
     for (var d = 0u; d < params.head_dim; d = d + 1u) {
         q[d] = gemm_row(row_base + d, token_in_batch);
     }
-    let pairs = params.head_dim / 2u;
-    for (var p = 0u; p < pairs; p = p + 1u) {
-        let rot = rotate_rope_pair(q[p * 2u], q[p * 2u + 1u], params.token_idx, p);
-        q[p * 2u] = rot.x;
-        q[p * 2u + 1u] = rot.y;
-    }
+    apply_rope_neox(&q, params.token_idx);
 
     var m_max = NEG_INF;
     var l_sum = 0.0;
@@ -348,12 +354,7 @@ fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: 
         vec[d] = gemm_row(row_base + d, token_in_batch);
     }
     if apply_rope_k {
-        let pairs = params.head_dim / 2u;
-        for (var p = 0u; p < pairs; p = p + 1u) {
-            let rot = rotate_rope_pair(vec[p * 2u], vec[p * 2u + 1u], abs_pos, p);
-            vec[p * 2u] = rot.x;
-            vec[p * 2u + 1u] = rot.y;
-        }
+        apply_rope_neox(&vec, abs_pos);
     }
     let slot = abs_pos % params.max_context;
     for (var d = 0u; d < params.head_dim; d = d + 1u) {
