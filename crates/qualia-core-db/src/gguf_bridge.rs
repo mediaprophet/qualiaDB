@@ -972,6 +972,49 @@ async fn mc8_cpu_l0_ffn_stages(
     Some(n_ffn)
 }
 
+/// Read one KV head from the CPU mirror arena.
+#[cfg(target_arch = "wasm32")]
+fn read_kv_cpu_head(
+    layout: &KvCacheLayout,
+    kv: &[f32],
+    layer: u32,
+    token_pos: u32,
+    kv_h: u32,
+    head_dim: usize,
+    k_not_v: bool,
+    out: &mut [f32],
+) -> bool {
+    if head_dim == 0 || head_dim > out.len() {
+        return false;
+    }
+    let slot = layout.ring_slot(token_pos);
+    for d in 0..head_dim {
+        let idx = if k_not_v {
+            layout.k_index(layer, slot, kv_h, d as u32)
+        } else {
+            layout.v_index(layer, slot, kv_h, d as u32)
+        };
+        if idx >= kv.len() {
+            return false;
+        }
+        out[d] = kv[idx];
+    }
+    true
+}
+
+#[cfg(target_arch = "wasm32")]
+fn probe_log_prefill_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
+    let n = n.min(8).min(cpu.len()).min(gpu.len());
+    if n == 0 {
+        return;
+    }
+    let err = probe_max_abs_diff(cpu, gpu, n);
+    wlog(&format!(
+        "[MC8 prefill] {phase}: cpu[0]={:.6} gpu[0]={:.6} max_abs_err={:.6}",
+        cpu[0], gpu[0], err
+    ));
+}
+
 /// MC8 pt3f: CPU SDPA @ L0 → full `q_dim` Attn_Out (async KV readback).
 #[cfg(target_arch = "wasm32")]
 async fn mc8_cpu_l0_attn_out(
@@ -4351,6 +4394,205 @@ impl QTensorEngine {
         }
     }
 
+    /// MC8 pt3h: pure CPU prefill KV vs GPU batched prefill (breaks replay trap).
+    #[cfg(target_arch = "wasm32")]
+    pub async fn mc8_log_prefill_reconciliation(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        prefill_token_ids: &[u32],
+        emb_dim: usize,
+        probe_token_pos: u32,
+        gpu_l1_hidden: Option<&[f32]>,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+        max_layers: u32,
+    ) {
+        let layout = match self.kv_layout {
+            Some(l) => l,
+            None => return,
+        };
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return,
+        };
+        let n_embd = index.hyperparams.n_embd as usize;
+        let head_dim = index.hyperparams.head_dim() as usize;
+        if emb_dim < n_embd || prefill_token_ids.is_empty() || head_dim == 0 {
+            return;
+        }
+        let probe_pos = probe_token_pos.min(prefill_token_ids.len() as u32 - 1);
+        wlog(&format!(
+            "[MC8 prefill] reconcile n_prefill={} probe_pos={probe_pos} probe_id={}",
+            prefill_token_ids.len(),
+            prefill_token_ids[probe_pos as usize]
+        ));
+
+        let mut k_gpu = [0f32; 128];
+        let mut v_gpu = [0f32; 128];
+        let k_n = head_dim.min(k_gpu.len());
+        let slot = layout.ring_slot(probe_pos);
+        let gpu_k_ok = self
+            .pipeline_read_kv_head(&layout, 0, slot, 0, head_dim, true, &mut k_gpu)
+            .await;
+        let gpu_v_ok = self
+            .pipeline_read_kv_head(&layout, 0, slot, 0, head_dim, false, &mut v_gpu)
+            .await;
+        if gpu_k_ok {
+            wlog(&format!(
+                "[MC8 prefill] gpu_K_L0 pos={probe_pos} k[0]={:.6}",
+                k_gpu[0]
+            ));
+        }
+        if !gpu_k_ok || !gpu_v_ok {
+            wlog("[MC8 prefill] GPU KV readback FAILED");
+            return;
+        }
+
+        let mut batch = [0f32; MAX_PREFILL_BATCH_FLOATS];
+        let n_prefill = prefill_token_ids.len();
+        let batch_elems = n_prefill * n_embd;
+        if batch_elems > batch.len() {
+            wlog("[MC8 prefill] batch stack OOB");
+            return;
+        }
+        for (t, &tid) in prefill_token_ids.iter().enumerate() {
+            let got = index.dequantize_token_embedding_into(
+                mmap,
+                tid,
+                &mut batch[t * n_embd..(t + 1) * n_embd],
+            );
+            if got == 0 {
+                wlog(&format!("[MC8 prefill] embed dequant failed id={tid}"));
+                return;
+            }
+        }
+
+        // L1 input: hidden entering layer 1 during prefill (token 1 after layer 0).
+        if n_prefill >= 2 {
+            let l1_tok = 1usize;
+            let mut cpu_l0_batch = [0f32; MAX_PREFILL_BATCH_FLOATS];
+            cpu_l0_batch[..batch_elems].copy_from_slice(&batch[..batch_elems]);
+            if self.dispatch_prefill_layer_batch(
+                index,
+                0,
+                &mut cpu_l0_batch[..batch_elems],
+                emb_dim,
+                n_prefill as u32,
+                0,
+                scratch_a,
+                scratch_b,
+            ) {
+                let cpu_h0 = cpu_l0_batch[l1_tok * n_embd];
+                wlog(&format!(
+                    "[MC8 prefill] L1_input_cpu token=1 h[0]={cpu_h0:.6}"
+                ));
+                if let Some(gpu_h) = gpu_l1_hidden {
+                    if gpu_h.len() >= n_embd {
+                        probe_log_prefill_diff(
+                            "L1_input_hidden",
+                            &cpu_l0_batch[l1_tok * n_embd..l1_tok * n_embd + n_embd],
+                            &gpu_h[..n_embd],
+                            8,
+                        );
+                        let h_err = probe_max_abs_diff(
+                            &cpu_l0_batch[l1_tok * n_embd..l1_tok * n_embd + n_embd],
+                            &gpu_h[..n_embd],
+                            n_embd,
+                        );
+                        wlog(&format!("[MC8 prefill] L1_input err={h_err:.6}"));
+                    }
+                }
+            }
+        }
+
+        // Pure CPU prefill into kv_cache_cpu (GPU KV untouched — breaks replay trap).
+        let mut cpu_batch = [0f32; MAX_PREFILL_BATCH_FLOATS];
+        cpu_batch[..batch_elems].copy_from_slice(&batch[..batch_elems]);
+        if !self.dispatch_prefill_chunk(
+            index,
+            &mut cpu_batch[..batch_elems],
+            emb_dim,
+            n_prefill as u32,
+            0,
+            scratch_a,
+            scratch_b,
+            max_layers,
+        ) {
+            wlog("[MC8 prefill] CPU prefill replay FAILED");
+            return;
+        }
+        let kv_cpu = match self.kv_cache_cpu.as_ref() {
+            Some(b) => b.as_ref(),
+            None => return,
+        };
+        let mut k_cpu = [0f32; 128];
+        let mut v_cpu = [0f32; 128];
+        if !read_kv_cpu_head(&layout, kv_cpu, 0, probe_pos, 0, head_dim, true, &mut k_cpu)
+            || !read_kv_cpu_head(&layout, kv_cpu, 0, probe_pos, 0, head_dim, false, &mut v_cpu)
+        {
+            wlog("[MC8 prefill] CPU KV read FAILED");
+            return;
+        }
+        probe_log_prefill_diff("K_L0_pure_cpu_vs_gpu", &k_cpu[..k_n], &k_gpu[..k_n], k_n);
+        probe_log_prefill_diff("V_L0_pure_cpu_vs_gpu", &v_cpu[..k_n], &v_gpu[..k_n], k_n);
+        let k_err = probe_max_abs_diff(&k_cpu[..k_n], &k_gpu[..k_n], k_n);
+        let v_err = probe_max_abs_diff(&v_cpu[..k_n], &v_gpu[..k_n], k_n);
+        let mut first = "none";
+        if k_err > 0.01 {
+            first = "K_L0_prefill";
+        } else if v_err > 0.01 {
+            first = "V_L0_prefill";
+        }
+        wlog(&format!(
+            "[MC8 prefill] err_budget K={k_err:.6} V={v_err:.6}"
+        ));
+        wlog(&format!("[MC8 prefill] first_divergence(0.01)={first}"));
+    }
+
+    /// MC8 pt3h: raw token embedding @ decode step 1 (before any layer).
+    #[cfg(target_arch = "wasm32")]
+    pub async fn mc8_log_decode_embedding_probe(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        token_id: u32,
+        token_idx: u32,
+        emb_cpu: &[f32],
+        emb_dim: usize,
+    ) {
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return,
+        };
+        let n_embd = index.hyperparams.n_embd as usize;
+        if emb_dim < n_embd || emb_cpu.len() < n_embd {
+            return;
+        }
+        let mut emb_check = [0f32; MAX_HIDDEN_DIM];
+        let got = index.dequantize_token_embedding_into(mmap, token_id, &mut emb_check[..n_embd]);
+        wlog(&format!(
+            "[MC8 prefill] decode_step1 token_id={token_id} token_idx={token_idx} dequant_ok={}",
+            got > 0
+        ));
+        if got > 0 {
+            probe_log_prefill_diff(
+                "token_embd_step1",
+                &emb_check[..n_embd],
+                &emb_cpu[..n_embd],
+                8,
+            );
+            let emb_err = probe_max_abs_diff(&emb_check[..n_embd], &emb_cpu[..n_embd], n_embd);
+            let mut first = "none";
+            if emb_err > 0.01 {
+                first = "token_embd";
+            }
+            wlog(&format!(
+                "[MC8 prefill] decode_step1 token_embd h[0]={:.6} err={emb_err:.6} first_divergence={first}",
+                emb_cpu[0]
+            ));
+        }
+        let _ = token_idx;
+    }
+
     /// MC8: Q + o_proj + FFN tail (K/V already written for this token).
     #[cfg(target_arch = "wasm32")]
     async fn encode_attn_ffn_tail_gpu(
@@ -4836,6 +5078,7 @@ impl QTensorEngine {
         token_idx: u32,
         max_layers: u32,
         l0_probe_step1: bool,
+        decode_emb_probe: bool,
     ) -> u32 {
         let n_layer = index.hyperparams.n_layer;
         if n_layer == 0 || !self.mc8_buffers_ready() {
@@ -4852,6 +5095,27 @@ impl QTensorEngine {
             0,
             bytemuck::cast_slice(&hidden[..emb_dim]),
         );
+        if decode_emb_probe {
+            let n_embd = index.hyperparams.n_embd as usize;
+            let mut gpu_emb = [0f32; MAX_HIDDEN_DIM];
+            if n_embd <= emb_dim
+                && n_embd <= gpu_emb.len()
+                && self
+                    .pipeline_read_gpu_bytes_at(
+                        hidden_buf,
+                        0,
+                        bytemuck::cast_slice_mut(&mut gpu_emb[..n_embd]),
+                    )
+                    .await
+            {
+                probe_log_prefill_diff(
+                    "token_embd_gpu_upload",
+                    &hidden[..n_embd],
+                    &gpu_emb[..n_embd],
+                    8,
+                );
+            }
+        }
         let mut pipeline = WasmGpuPipeline::begin(self);
         let mut ran = 0u32;
         for layer in 0..limit {
@@ -5598,6 +5862,7 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
         max_layers: u32,
+        l1_hidden_out: Option<&mut [f32]>,
     ) -> bool {
         if self
             .dispatch_prefill_chunk_async_mc8_gpu(
@@ -5609,6 +5874,7 @@ impl QTensorEngine {
                 scratch_a,
                 scratch_b,
                 max_layers,
+                l1_hidden_out,
             )
             .await
         {
@@ -5629,6 +5895,7 @@ impl QTensorEngine {
         _scratch_a: &mut [f32],
         _scratch_b: &mut [f32],
         max_layers: u32,
+        mut l1_hidden_out: Option<&mut [f32]>,
     ) -> bool {
         let n_layer = index.hyperparams.n_layer;
         if n_layer == 0 || n_tokens == 0 || !self.mc8_buffers_ready() {
@@ -5801,6 +6068,29 @@ impl QTensorEngine {
                 );
             }
             self.gpu_queue().submit(Some(pipeline.finish()));
+            if layer == 0 && n_tokens >= 2 {
+                if let Some(out) = l1_hidden_out.as_deref_mut() {
+                    if out.len() >= n_embd {
+                        let l1_off = (n_embd * 4) as wgpu::BufferAddress;
+                        let mut tmp = [0f32; MAX_HIDDEN_DIM];
+                        if self
+                            .pipeline_read_gpu_bytes_at(
+                                batch_buf,
+                                l1_off,
+                                bytemuck::cast_slice_mut(&mut tmp[..n_embd]),
+                            )
+                            .await
+                        {
+                            out[..n_embd].copy_from_slice(&tmp[..n_embd]);
+                            wlog(&format!(
+                                "[MC8 prefill] L1_input_gpu token=1 h[0]={:.6}",
+                                out[0]
+                            ));
+                        }
+                        l1_hidden_out = None;
+                    }
+                }
+            }
         }
         wlog(&format!(
             "[MC8] GPU prefill OK layers={limit} n_tokens={n_tokens} start={batch_start_token_idx}"

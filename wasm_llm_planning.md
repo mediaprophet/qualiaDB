@@ -149,7 +149,7 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 | **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | ✅ Closed — wired via `inferWasmAsync` (`wasm_llm.rs`) |
 | **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
 | **MC7** | WGSL `Q5_0`/`Q8_0` dequant; gate removal; full GPU offload | ✅ Closed — `Paris is the capital of France`; TTFT ~11s |
-| **MC8** | Pipeline fusing — single `CommandEncoder`, per-layer `mc8_flush`, one readback/forward | 🟡 Part 3h — L0 ✅ bit-exact; L31=20.87; MC7 ref mismatch |
+| **MC8** | Pipeline fusing — single `CommandEncoder`, per-layer `mc8_flush`, one readback/forward | 🔴 Part 3i — L1 prefill hidden; KV ✅ |
 
 #### MC8 — split delivery
 
@@ -212,7 +212,7 @@ Probe read `h[0]` after layer-0 post-FFN via `pipeline_read_hidden`. Target from
 
 **Build trap (discovered Part 2):** wasm-pack **without** `-zstack-size=8388608` causes immediate `memory access out of bounds` at inference start (1 ms trap). Always build via `scripts/package-qualia-wasm.ps1` or explicit `RUSTFLAGS` in §BUILD/DEPLOY/TEST. Rebuilt binaries without 8 MB stack are **not** comparable to committed artifacts.
 
-**Part 3–3g (✅ L0 full layer bit-exact; 🟡 MC7 ~1.09 reference mismatch + L31 ~20.87)**
+**Part 3–3h (✅ KV+embed locked; 🔴 L1 prefill hidden divergence)**
 
 **Current harness snapshot (naked SmolLM2-360M Q4_K_M, `inferWasmAsync`, decode step 1):**
 
@@ -395,11 +395,31 @@ TTFT 8212 ms. Output shifted from `pries underm` repetition → partial English 
 
 **Harness verify (pt3g):** L0=0.423, L1=0.098, L31=20.87, TTFT ~8.2s — geometry unchanged; L0 pipeline internally consistent.
 
-#### Part 3h (next — manifold reconciliation + L31 gap)
+#### Part 3h — prefill / embedding input reconciliation (2026-06-19)
 
-**Open:** post-L31 `h[0]=20.87` vs coherence gate; MC7 ~1.09 L0 reference vs MC8 unified L0=0.423.
+**Architect answer H:** **Prefill/embedding reconciliation first** — not L1–L31 bisect. Break the replay trap: compare pure CPU prefill KV vs GPU batched prefill KV (not CPU replay on GPU KV).
 
-**Ruled out (pt3b–3g): entire L0 GPU forward path**
+**Probes (`mc8_log_prefill_reconciliation`, `mc8_log_decode_embedding_probe`):**
+
+| Input | CPU `h[0]` | GPU `h[0]` | max_abs_err | Verdict |
+|-------|------------|------------|-------------|---------|
+| `token_embd` @ decode step 1 | 0.005753 | 0.005753 | 0.000000 | ✅ embedding lookup correct |
+| `token_embd_gpu_upload` | 0.005753 | 0.005753 | 0.000000 | ✅ upload path correct |
+| `K_L0` @ prefill pos 3 (pure CPU vs GPU) | -0.208442 | -0.208442 | 0.000000 | ✅ **replay trap broken** — KV not poisoned |
+| `V_L0` @ prefill pos 3 | 0.002047 | 0.002047 | 0.000000 | ✅ bit-exact |
+| `L1_input_hidden` token 1 after L0 prefill | **0.179094** | **-0.529114** | **15.363** | ❌ **FIRST DIVERGENCE** |
+
+**`first_divergence(0.01)=L1_input_hidden`** (KV and embedding: none).
+
+**Interpretation:** Batched K/V writes and token embeddings are **correct**. The poison is in the **GPU prefill per-token Q+FFN tail** after batched K/V — the hidden state entering **layer 1** for token 1 is wrong on GPU while CPU sequential prefill produces `0.179`. This corrupts layers 1–31 for all prefill tokens during the batched pass, explaining L31=20.87 despite bit-exact decode-step L0 kernels. Suspects: batched prefill `encode_attn_ffn_tail_gpu` sequencing, `attn_input` row handoff, or per-token `batch_buf`/`token_buf` copy offsets in `dispatch_prefill_chunk_async_mc8_gpu`.
+
+**Harness verify (pt3h):** L0=0.423, L31=20.87 unchanged; TTFT ~12.8s (CPU prefill replay adds ~4s probe cost).
+
+#### Part 3i (next — batched prefill Q+FFN tail diff)
+
+**Open:** fix `L1_input_hidden` divergence (GPU -0.529 vs CPU 0.179) in `dispatch_prefill_chunk_async_mc8_gpu` per-token loop.
+
+**Ruled out (pt3b–3h):**
 - FFN `add_residual_main` routing as *dominant L31 amplifier* — pt3b ruled dominant leak; pt3c K/V race was L31 fix
 - KV layer stride / uniform `layer_idx` — structurally correct
 - Batched K/V flat-RoPE — already per `wg_id`
@@ -415,14 +435,19 @@ TTFT 8212 ms. Output shifted from `pries underm` repetition → partial English 
 - **L0 FFN gate/up/SwiGLU/down/residual** — pt3g all bit-exact; `ffn_residual=0.423` locked
 - **L0 `base_save` timing trap** — pt3g captures post-attn, not ffn_norm output
 - **gate→up buffer alias / missing flush before SiLU** — pt3g audit clean
+- **token_embd lookup / upload** — pt3h bit-exact
+- **pure CPU vs GPU prefill KV (replay trap)** — pt3h K/V bit-exact @ L0
+- **decode-step L0 kernels** — pt3e–3g all bit-exact (replay on GPU KV was red herring for KV itself)
 
 **Confirmed root cause (pt3c):** `gemm_weight_buf` queue race — K dispatch ran with V weights
 without `mc8_flush` between passes. Fix dropped L31 **271→21**.
 
+**Confirmed root cause (pt3h):** **batched prefill hidden handoff** — `L1_input_hidden` diverges after GPU L0 prefill; KV writes remain correct.
+
 **Next actions:**
-1. **Manifold reconciliation:** diff L0 **input hidden** and **prefill exit state** vs MC7 CPU path — why MC7 ~1.09 vs MC8 0.423 at same nominal checkpoint.
-2. **L31 depth audit:** with L0 proven correct, bisect layers 1–31 for amplification (0.423 → 20.87).
-3. Pass gate: coherent naked output → ` Paris.`; argmax fusion stays gated.
+1. **Batched prefill Q+FFN tail diff** — per-token `encode_attn_ffn_tail_gpu` in prefill loop vs `dispatch_attention_q_ffn_token` CPU path @ layer 0 token 1.
+2. Audit `batch_buf`↔`token_buf` copies and `attn_input` row (`prefill_scratch[t]`→`aux_buf`) timing.
+3. Pass gate: `L1_input_hidden` bit-exact → re-test L31 and naked ` Paris.`
 
 **Implementation notes (MC2 session):**
 - `cpu_attention_pass` uses raw-pointer KV mutation (sound on single-threaded wasm).
@@ -550,6 +575,11 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 ---
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
+
+- **2026-06-19 (ad)** — **MC8 Part 3h: prefill/embedding reconciliation (replay trap).**
+  Architect H: prefill first. Pure CPU vs GPU KV @ L0 **bit-exact** (replay trap broken).
+  token_embd ✅. **L1_input_hidden** GPU -0.529 vs CPU 0.179 — **first divergence** in batched
+  prefill Q+FFN tail, not KV or embedding.
 
 - **2026-06-19 (ac)** — **MC8 Part 3g: FFN chain diff (gate/up/SwiGLU/down/residual).**
   Architect J: flush audit then diff. Audit: gate→work_buf/up→ffn_buf disjoint, flush before
@@ -876,11 +906,10 @@ Universe / Track B3, `WASM_LLM_INFERENCE_DIAGNOSIS.md`):
 | **UX** | OPFS model cache | Phase 3 | ⬜ Parallel track, independent |
 | **Architecture** | GGUF → `.q42` AOT | Phase 4 | ⬜ Horizon |
 
-**Single blocker for broader "WASM LLM works" claim (updated MC8 pt3g):** **Entire L0 GPU
-forward is bit-exact** (attn + FFN). `h[0]=0.423` is the correct unified-manifold L0 exit,
-not a GPU leak. Blockers: **post-L31 ~20.87** depth amplification and **MC7 ~1.09 reference
-mismatch** (cross-manifold, not within-layer tensor fault). Next: **prefill/input manifold
-reconciliation** + **L1–L31 depth bisect**.
+**Single blocker (updated MC8 pt3h):** Decode-step kernels + KV writes are **bit-exact**.
+**Batched prefill Q+FFN tail** corrupts `L1_input_hidden` (GPU -0.529 vs CPU 0.179) — this
+poisons layers 1–31 during prefill and drives L31=20.87. Next: **fix prefill per-token
+hidden handoff** in `dispatch_prefill_chunk_async_mc8_gpu`.
 
 **Branch:** `0.0.18` (ahead of origin).
 
@@ -890,8 +919,8 @@ reconciliation** + **L1–L31 depth bisect**.
 
 ## ▶️ 8. RESUME HERE (if context/tokens are lost — start at this section)
 
-1. Read **§0** (directives), **§0b** (F1–F6), **§RECONCILIATION**, **MC8 Part 3–3g snapshot**.
-2. **Current task = Phase 2B MC8 Part 3h (manifold reconciliation + L31 depth):**
+1. Read **§0** (directives), **§0b** (F1–F6), **§RECONCILIATION**, **MC8 Part 3–3h snapshot**.
+2. **Current task = Phase 2B MC8 Part 3i (batched prefill Q+FFN tail):**
    - **Done (pt3):** GPU prefill sole path; false L0 lock @ 1.011.
    - **Done (pt3b):** FFN residual audit; L1 jump bisect (1.01→-1.66).
    - **Done (pt3c):** KV indexing ✅; **K/V weight-buffer race** fixed; L31 **271→21**.
@@ -899,7 +928,8 @@ reconciliation** + **L1–L31 depth bisect**.
    - **Done (pt3e):** L0 Q/K/Attn_Out diff ✅ all match; KV `COPY_SRC` probe fix; causal mask ruled out.
    - **Done (pt3f):** o_proj + post-attn residual + ffn_norm ✅ all match; pristine residual trap ruled out.
    - **Done (pt3g):** FFN gate/up/SwiGLU/down/residual ✅ all bit-exact; L0=0.423 is correct unified exit.
-   - **Next:** MC7 vs MC8 input/prefill reconciliation; L1–L31 depth bisect; coherence gate ` Paris.`
+   - **Done (pt3h):** embed+KV ✅; **L1_input_hidden ❌ first divergence** (batched prefill hidden handoff).
+   - **Next:** fix prefill per-token Q+FFN tail; coherence gate ` Paris.`
 3. **Build rule:** `scripts/package-qualia-wasm.ps1` or §BUILD `RUSTFLAGS` (8 MB stack) — mandatory.
 4. **Harness:** `agent-tools/wasm-mc2-test.mjs` — `WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`,
    `WASM_MODEL=models/SmolLM2-360M-Instruct-Q4_K_M.gguf`.
@@ -953,4 +983,10 @@ reconciliation** + **L1–L31 depth bisect**.
 |---|----------|-------------------|-----------------|
 | J | gate/up flush audit vs SiLU/down diff first? | **Audit flush/aliases first, then diff** | Audit ✅; gate/up/swiglu/down/ffn_residual **all bit-exact**; `first_divergence=none` |
 
-**New advisor question (pt3h):** With L0 fully locked at `h[0]=0.423`, should Part 3h prioritize **prefill/embedding input reconciliation vs MC7** or **L1–L31 per-layer depth bisect** to close the 20.87 gap?
+### Advisor feedback (MC8 pt3h) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3h outcome |
+|---|----------|-------------------|-----------------|
+| H | Prefill/embedding vs L1–L31 bisect? | **Prefill/embedding reconciliation first** | embed+KV ✅; **L1_input_hidden ❌** @ batched prefill |
+
+**New advisor question (pt3i):** For `L1_input_hidden` divergence, prioritize **per-token prefill `encode_attn_ffn_tail_gpu` diff @ L0 token 1** or **`batch_buf`/`token_buf` copy-offset audit** first?
