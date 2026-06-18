@@ -232,10 +232,37 @@ Probe read `h[0]` after layer-0 post-FFN via `pipeline_read_hidden`. Target from
 
 **Diagnosis:** Manifold unification fixed the step-1 layer-0 variance gate. Incoherence is now a **depth accumulation fault** — layers 1–31 amplify hidden state (~1.01 → ~272). Suspects: per-layer GPU attention over unified KV, `wasm_elementwise.wgsl` residual routing, or missing `mc8_flush` between GEMM/elem at depth > 0.
 
-#### Part 3b (next — depth bisect)
+#### Part 3b — depth bisect + FFN/residual routing audit (2026-06-19)
 
-1. **Layer bisect:** log `h[0]` + L1 norm after layers 4, 8, 16, 31 @ decode step 1; compare CPU `dispatch_transformer_forward` on same embedding.
-2. **Elementwise audit (P2):** verify `add_residual_main` adds **FFN down-projection** (`work_buf`) to `base_save`, not SiLU output; confirm `mc8_flush` before every elem read of GEMM output.
+**Architect answer E:** audit **FFN elementwise chain first** (attention softmax bounds KV drift; unnormalized FFN + residual compounds).
+
+**Code changes (`gguf_bridge.rs`):**
+- `encode_residual_add_gpu` — explicit `scratch` buffer (no longer aliases `gemm_ffn_buf`).
+- Attn residual scratch → `prefill_scratch_buf` / `gemm_aux_buf`; FFN `base_save` → `prefill_scratch_buf` only.
+- Extra `mc8_flush()` after `base_save` copy, FFN RMSNorm, final FFN residual add.
+- FFN residual scratch → `aux_buf` (post-`ffn_down`, post-flush).
+- Depth bisect probe logs `h[0]` @ layers 0–3 + post-L31 on decode step 1.
+
+**Elementwise audit:**
+- `wasm_elementwise.wgsl::add_residual_main` confirmed: `buf_out[i] = buf_a[i] + buf_b[i]` (assignment, not `+=`).
+
+**Harness (`inferWasmAsync`, naked SmolLM2-360M, step 1):**
+
+| Layer | `h[0]` | vs ~1.09 target |
+|-------|--------|-----------------|
+| L0 | **1.011** | ✅ (~7%) |
+| L1 | **-1.662** | ❌ **~2.5× magnitude flip** |
+| L2 | **-7.337** | ❌ amplifying |
+| L3 | **-0.595** | ❌ oscillating (not monotonic creep) |
+| L31 | **271.7** | ❌ unchanged from pt3 |
+
+TTFT **7533 ms**; output still `pries underm` repetition.
+
+**Diagnosis:** L0 lock proves RoPE, `AttentionGpuParams`, and single-layer elemwise are sound. The **L1 jump** (1.01 → -1.66 in one layer) indicates **cross-layer buffer pollution or layer-1 block fault**, not slow FFN bias creep. FFN scratch isolation + flush barriers **did not move** post-L31 variance — leak is elsewhere.
+
+**Next (Part 3c):**
+1. **CPU vs GPU per-layer diff** on decode step 1 @ L0/L1 (same embedding) — localize first divergent op.
+2. **Attention KV read path** — `encode_transformer_layer_gpu` writes K/V then `encode_attn_ffn_tail_gpu` runs Q+attn; audit KV layout indexing for `layer > 0` and prefill→decode handoff.
 3. **Argmax:** remain sync until post-L31 `h[0]` stable.
 
 **Implementation notes (MC2 session):**
@@ -646,7 +673,8 @@ Universe / Track B3, `WASM_LLM_INFERENCE_DIAGNOSIS.md`):
 | **Correctness** | WGSL RoPE ↔ CPU NEOX | MC8 pt2 | ✅ Closed |
 | **Correctness** | GPU prefill manifold unified | MC8 pt3 | ✅ CPU fallback blocked |
 | **Correctness** | L0 post-FFN GPU @ L0 (step 1) | MC8 pt3 | ✅ `h[0]=1.011` |
-| **Correctness** | L0 post-FFN GPU @ L31 (step 1) | MC8 pt3b | ❌ `h[0]=271.7` blow-up |
+| **Correctness** | L0 post-FFN GPU @ L31 (step 1) | MC8 pt3b | ❌ `h[0]=271.7` blow-up (FFN audit unchanged) |
+| **Correctness** | Depth bisect L0–L3 (step 1) | MC8 pt3b | L0=1.01 ✅; L1=-1.66 ❌ jump at L1 |
 | **UX** | OPFS model cache | Phase 3 | ⬜ Parallel track, independent |
 | **Architecture** | GGUF → `.q42` AOT | Phase 4 | ⬜ Horizon |
 
@@ -663,10 +691,11 @@ runs without WebGPU errors and beats MC7 TTFT, but **output coherence regressed*
 ## ▶️ 8. RESUME HERE (if context/tokens are lost — start at this section)
 
 1. Read **§0** (directives), **§0b** (F1–F6), **§6** (decisions), **§RECONCILIATION**, **MC8 §Part 2/3**.
-2. **Current task = Phase 2B MC8 Part 3b (depth blow-up after L0 lock):**
+2. **Current task = Phase 2B MC8 Part 3c (L1 jump — not FFN residual):**
    - **Done (pt3):** GPU prefill manifold unified; L0@L0 step1 = **1.011** (gate met).
-   - **Open:** L0@L31 step1 = **271.7**; output still garbled despite layer-0 parity.
-   - **Next:** layer bisect (4/8/16/31); CPU vs GPU per-layer diff; elementwise residual audit.
+   - **Done (pt3b):** FFN/residual routing audit + depth bisect L0–L3; `add_residual_main` OK; extra flushes; scratch isolation — **post-L31 still 271.7**.
+   - **Bisect:** L0=1.011 → L1=-1.662 → L2=-7.337 → L3=-0.595 → L31=271.7. **L1 jump** ⇒ cross-layer / KV / layer-block fault, not FFN creep.
+   - **Next:** CPU vs GPU per-layer diff @ L0/L1; attention KV read path + prefill→decode handoff.
 3. **Build rule:** must use 8 MB stack `RUSTFLAGS` (§BUILD/DEPLOY/TEST) — omitting → instant OOB trap.
 4. **Harness:** `agent-tools/wasm-mc2-test.mjs` with `WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`,
    `WASM_MODEL=models/SmolLM2-360M-Instruct-Q4_K_M.gguf`.
@@ -684,4 +713,10 @@ runs without WebGPU errors and beats MC7 TTFT, but **output coherence regressed*
 | C | Elementwise vs prefill first? | **Prefill GPU K/V first** | ✅ done; elementwise audit deferred to pt3b (depth blow-up) |
 | D | Argmax fusion? | **Gated** | ✅ sync argmax retained |
 
-**New advisor question (pt3b):** L0 locks at layer 0 but `h[0]` explodes to ~272 by layer 31. Should bisect prioritize **attention KV read path** or **FFN elementwise chain** first?
+### Advisor feedback (MC8 pt3b) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3b outcome |
+|---|----------|-------------------|-----------------|
+| E | Bisect attention KV vs FFN first? | **FFN elementwise chain first** | FFN audit + flushes applied; L31 unchanged; **L1 jump** implicates cross-layer/KV next |
+
+**New advisor question (pt3c):** L1 jumps 1.01 → -1.66 after FFN routing fix. Prioritize **CPU vs GPU per-layer diff** or **KV cache layout / layer indexing audit** first?

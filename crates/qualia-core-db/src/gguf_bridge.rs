@@ -269,15 +269,17 @@ impl QTensorEngine {
     }
 
     /// Residual add with disjoint storage bindings (WebGPU forbids aliasing read + read_write).
+    /// `scratch` must not alias `base` or `delta` (MC8 pt3b: never reuse `gemm_ffn_buf` here —
+    /// it holds SwiGLU up / Q proj and aliases `base_save` fallback).
     fn encode_residual_add_gpu(
         &self,
         pipeline: &mut WasmGpuPipeline,
         base: &wgpu::Buffer,
         delta: &wgpu::Buffer,
         dst: &wgpu::Buffer,
+        scratch: &wgpu::Buffer,
         dim: u32,
     ) {
-        let scratch = self.gemm_ffn_buf.as_ref().unwrap();
         self.encode_elem(
             pipeline,
             ELEM_OP_ADD_RESIDUAL,
@@ -3588,19 +3590,29 @@ impl QTensorEngine {
                 return false;
             }
             self.mc8_flush(pipeline);
+            let attn_res_scratch = self
+                .prefill_scratch_buf
+                .as_ref()
+                .unwrap_or(self.gemm_aux_buf.as_ref().unwrap());
             self.encode_residual_add_gpu(
                 pipeline,
                 token_hidden,
                 work_buf,
                 token_hidden,
+                attn_res_scratch,
                 emb_dim as u32,
             );
         } else {
+            let attn_res_scratch = self
+                .prefill_scratch_buf
+                .as_ref()
+                .unwrap_or(self.gemm_aux_buf.as_ref().unwrap());
             self.encode_residual_add_gpu(
                 pipeline,
                 token_hidden,
                 ffn_buf,
                 token_hidden,
+                attn_res_scratch,
                 emb_dim as u32,
             );
         }
@@ -3638,12 +3650,12 @@ impl QTensorEngine {
                 Err(_) => return false,
             };
         let emb_bytes = (emb_dim * 4) as wgpu::BufferAddress;
-        let base_save = self
-            .prefill_scratch_buf
-            .as_ref()
-            .or(self.gemm_ffn_buf.as_ref())
-            .unwrap();
+        let base_save = match self.prefill_scratch_buf.as_ref() {
+            Some(b) => b,
+            None => return false,
+        };
         pipeline.encoder.copy_buffer_to_buffer(token_hidden, 0, base_save, 0, emb_bytes);
+        self.mc8_flush(pipeline);
         if let Some(norm) = tensors.ffn_norm.as_ref() {
             if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
                 return false;
@@ -3660,6 +3672,7 @@ impl QTensorEngine {
         } else {
             pipeline.encoder.copy_buffer_to_buffer(token_hidden, 0, aux_buf, 0, emb_bytes);
         }
+        self.mc8_flush(pipeline);
         if !self.encode_gemm_bufs(pipeline, gate_info, gate_raw, gate_in, n_ffn, aux_buf, work_buf) {
             return false;
         }
@@ -3681,13 +3694,17 @@ impl QTensorEngine {
             return false;
         }
         self.mc8_flush(pipeline);
+        // FFN residual: down output is in work_buf; pre-FFN skip is in base_save.
+        // Use aux_buf as scratch (SiLU output consumed; down GEMM flushed above).
         self.encode_residual_add_gpu(
             pipeline,
             base_save,
             work_buf,
             token_hidden,
+            aux_buf,
             emb_dim as u32,
         );
+        self.mc8_flush(pipeline);
         true
     }
 
@@ -3846,11 +3863,12 @@ impl QTensorEngine {
             }
             ran += 1;
             self.mc8_flush(&mut pipeline);
-            if l0_probe_step1 && layer == 0 {
+            if l0_probe_step1 && layer <= 3 {
                 let mut probe = [0f32; MAX_HIDDEN_DIM];
                 if self.pipeline_read_hidden(emb_dim, &mut probe).await {
                     wlog(&format!(
-                        "[MC8] L0 step1 probe h[0]={:.6} (target ~1.09)",
+                        "[MC8] depth bisect step1 L{} h[0]={:.6} (target ~1.09)",
+                        layer,
                         probe[0]
                     ));
                 }
@@ -3861,7 +3879,7 @@ impl QTensorEngine {
         }
         if l0_probe_step1 && ran > 0 {
             wlog(&format!(
-                "[MC8] L0 step1 post-L{} h[0]={:.6} (target ~1.09)",
+                "[MC8] depth bisect step1 post-L{} h[0]={:.6}",
                 ran.saturating_sub(1),
                 hidden[0]
             ));
