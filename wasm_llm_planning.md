@@ -149,7 +149,7 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 | **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | ✅ Closed — wired via `inferWasmAsync` (`wasm_llm.rs`) |
 | **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
 | **MC7** | WGSL `Q5_0`/`Q8_0` dequant; gate removal; full GPU offload | ✅ Closed — `Paris is the capital of France`; TTFT ~11s |
-| **MC8** | Pipeline fusing — single `CommandEncoder`, per-layer `mc8_flush`, one readback/forward | 🟡 Part 3e — L31=20.87 (was 272); coherence not yet MC7 |
+| **MC8** | Pipeline fusing — single `CommandEncoder`, per-layer `mc8_flush`, one readback/forward | 🟡 Part 3f — L0 attn ✅; post-FFN 0.423; L31=20.87 |
 
 #### MC8 — split delivery
 
@@ -212,7 +212,7 @@ Probe read `h[0]` after layer-0 post-FFN via `pipeline_read_hidden`. Target from
 
 **Build trap (discovered Part 2):** wasm-pack **without** `-zstack-size=8388608` causes immediate `memory access out of bounds` at inference start (1 ms trap). Always build via `scripts/package-qualia-wasm.ps1` or explicit `RUSTFLAGS` in §BUILD/DEPLOY/TEST. Rebuilt binaries without 8 MB stack are **not** comparable to committed artifacts.
 
-**Part 3–3d (✅ manifold unified + depth bisect; 🟡 Part 3e — L31 gap to ~1.09)**
+**Part 3–3e (✅ L0 attention parity locked; 🟡 L0 post-FFN gap + L31 ~20.87)**
 
 **Current harness snapshot (naked SmolLM2-360M Q4_K_M, `inferWasmAsync`, decode step 1):**
 
@@ -323,23 +323,48 @@ TTFT 8212 ms. Output shifted from `pries underm` repetition → partial English 
 
 **Harness verify (pt3d, same as pt3c):** L0=0.423, L1=0.098, L2=-0.736, L3=-1.080, L31=20.87 — **unchanged** (confirms batched K/V RoPE was already correct; `attn_input` handoff is parity hygiene, not the L31 gap).
 
-#### Part 3e (next — Q/K diff @ L1 + remaining L31 gap)
+#### Part 3e — L0 targeted diff: Q/K/Attn_Out @ layer 0 (2026-06-19)
 
-**Open:** post-L31 `h[0]=20.87` vs CPU ~1.09 (~19×); L0 true geometry **0.423** vs ~1.09.
+**Architect answer H:** **Neither L1 nor prefill causal window first** — prioritize **Q/K/V/SDPA diff @ layer 0**. L0 `h[0]` drops to **0.423** (vs CPU ~1.09) before L1; the L31 explosion is downstream amplification of that collapse.
 
-**Ruled out (pt3b–3d):**
-- FFN `add_residual_main` routing (`+=` trap, scratch aliasing) — not the dominant leak
+**Probe (`mc8_log_l0_attention_diff`):** decode step 1, `token_idx=5`, layer 0, after Q SDPA (before `o_proj`).
+
+| Tensor | CPU `h[0]` | GPU `h[0]` | max_abs_err | Verdict |
+|--------|------------|------------|-------------|---------|
+| `attn_rmsnorm` | 0.000452 | 0.000452 | 0.000000 | ✅ match — `attn_norm.weight` routing correct (not `ffn_norm`) |
+| `K_rope` (slot cur) | -0.712626 | -0.712626 | 0.000000 | ✅ match — K GEMM + RoPE + KV write correct |
+| `Q_rope` h0 | 0.751404 | — | — | CPU only (Q lives inside shader pre-SDPA) |
+| `Attn_Out` h0 (SDPA) | -0.002785 | -0.002785 | 0.000000 | ✅ match — `online_softmax_attention` + causal window OK |
+| `mask_active` | — | 0 | — | dense path (6 tokens); **not** a causal-mask failure |
+
+**`first_divergence(0.01)=none`** for attention tensors.
+
+**Probe artefact (fixed):** initial run reported `K_rope` divergence (`gpu[0]=0.000452` = stale staging buffer) because `StaticKvCacheArena` lacked `BufferUsage::COPY_SRC`. WebGPU validation failed on `pipeline_read_kv_head`; readback returned prior `attn_rmsnorm` bytes. Fix: add `COPY_SRC` to KV arena creation.
+
+**Interpretation:** L0 attention stack (RMSNorm → K/V write → Q GEMM/RoPE → online softmax) is **bit-exact vs CPU** on decode step 1. The **0.423 vs ~1.09** depth-bisect gap is **not** inside SDPA or causal masking — it accumulates **after** `Attn_Out`, in **`o_proj`**, **attn residual add**, or **FFN tail** (post-L0 full layer still reads `h[0]=0.423`).
+
+**Harness verify (pt3e, same build):** L0=0.423, L1=0.098, L31=20.87, TTFT ~7.6s, partial English output — depth bisect unchanged (attention was already correct; post-attn path still leaks variance).
+
+#### Part 3f (next — L0 post-attn diff + remaining L31 gap)
+
+**Open:** post-L31 `h[0]=20.87` vs CPU ~1.09 (~19×); L0 post-FFN `h[0]=0.423` vs ~1.09 despite perfect Attn_Out.
+
+**Ruled out (pt3b–3e):**
+- FFN `add_residual_main` routing as *dominant L31 amplifier* — pt3b ruled dominant leak; pt3c K/V race was L31 fix
 - KV layer stride / uniform `layer_idx` — structurally correct
-- Batched K/V flat-RoPE (`token_idx` scalar for whole batch) — already per `wg_id`
+- Batched K/V flat-RoPE — already per `wg_id`
 - Batch RMSNorm cross-row variance — per-row via `wg_id.x`
-- Prefill `attn_input` handoff — parity fix; harness unchanged
+- Prefill `attn_input` handoff — parity hygiene only
+- **L0 causal mask / softmax flattening** — pt3e Attn_Out bit-exact
+- **L0 `attn_norm` weight swap** — pt3e RMSNorm bit-exact
+- **L0 K write / RoPE failure** — pt3e K_rope bit-exact (after COPY_SRC fix)
 
 **Confirmed root cause (pt3c):** `gemm_weight_buf` queue race — K dispatch ran with V weights
 without `mc8_flush` between passes. Fix dropped L31 **271→21**.
 
 **Next actions:**
-1. **Q/K targeted diff @ L1** decode step 1 — compare GPU vs `cpu_attention_pass` on same hidden.
-2. Audit prefill causal Q sequencing (per-token `abs` attention window vs batched K/V write order).
+1. **L0 post-attn diff @ decode step 1** — `o_proj` output, post-attn residual, `ffn_norm`, gate/up/SiLU/down, post-FFN residual vs CPU.
+2. Re-audit `encode_attn_ffn_tail_gpu` weight-buffer sequencing (o_proj shares `gemm_weight_buf` with gate/up).
 3. Pass gate: post-L31 `h[0]` within 5% of ~1.09 → naked ` Paris.`; argmax fusion stays gated.
 
 **Implementation notes (MC2 session):**
@@ -468,6 +493,12 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 ---
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
+
+- **2026-06-19 (aa)** — **MC8 Part 3e: L0 Q/K/Attn_Out targeted diff.**
+  Architect H: L0 not L1. Probe @ decode step 1 layer 0: attn_rmsnorm/K_rope/Attn_Out
+  **bit-exact** vs CPU; `mask_active=0`; causal softmax ruled out. False K divergence was
+  probe artefact (`StaticKvCacheArena` missing `COPY_SRC`). L0 post-FFN `h[0]=0.423` unchanged —
+  gap is **post-SDPA** (o_proj / residual / FFN). Harness: L31=20.87, TTFT ~7.6s.
 
 - **2026-06-19 (z)** — **MC8 Part 3d: batched prefill audit.**
   Architect G: prefill audit before Q/K diff. WGSL K/V already uses
@@ -777,10 +808,11 @@ Universe / Track B3, `WASM_LLM_INFERENCE_DIAGNOSIS.md`):
 | **UX** | OPFS model cache | Phase 3 | ⬜ Parallel track, independent |
 | **Architecture** | GGUF → `.q42` AOT | Phase 4 | ⬜ Horizon |
 
-**Single blocker for broader "WASM LLM works" claim (updated MC8 pt3d):** GPU manifold is
-unified (prefill + decode on WebGPU), K/V weight race fixed (L31 ↓13×), batched prefill
-geometry audited — but **post-L31 hidden variance remains ~19× above CPU** and output is
-not yet `Paris.`. Next: **Q/K diff @ L1** to localize remaining KV or hidden-state drift.
+**Single blocker for broader "WASM LLM works" claim (updated MC8 pt3e):** GPU manifold is
+unified (prefill + decode on WebGPU), K/V weight race fixed (L31 ↓13×), **L0 attention
+(Q/K/SDPA) bit-exact vs CPU** — but **L0 post-FFN `h[0]=0.423` vs ~1.09** and **post-L31
+~20.87** remain. Next: **L0 post-attn / o_proj / FFN diff** to localize variance collapse
+after SDPA.
 
 **Branch:** `0.0.18` (ahead of origin).
 
@@ -790,13 +822,14 @@ not yet `Paris.`. Next: **Q/K diff @ L1** to localize remaining KV or hidden-sta
 
 ## ▶️ 8. RESUME HERE (if context/tokens are lost — start at this section)
 
-1. Read **§0** (directives), **§0b** (F1–F6), **§RECONCILIATION**, **MC8 Part 3–3d snapshot**.
-2. **Current task = Phase 2B MC8 Part 3e (Q/K diff @ L1):**
+1. Read **§0** (directives), **§0b** (F1–F6), **§RECONCILIATION**, **MC8 Part 3–3e snapshot**.
+2. **Current task = Phase 2B MC8 Part 3f (L0 post-attn / FFN diff):**
    - **Done (pt3):** GPU prefill sole path; false L0 lock @ 1.011.
    - **Done (pt3b):** FFN residual audit; L1 jump bisect (1.01→-1.66).
    - **Done (pt3c):** KV indexing ✅; **K/V weight-buffer race** fixed; L31 **271→21**.
    - **Done (pt3d):** batched prefill RoPE/RMSNorm ✅; `attn_input` handoff; harness stable @ L31=20.87.
-   - **Next:** Q/K targeted diff @ L1 decode step 1; close L31 gap to ~1.09; coherence gate ` Paris.`
+   - **Done (pt3e):** L0 Q/K/Attn_Out diff ✅ all match; KV `COPY_SRC` probe fix; causal mask ruled out.
+   - **Next:** o_proj + residual + FFN tensor diff @ L0 step 1; close L31 gap to ~1.09; coherence gate ` Paris.`
 3. **Build rule:** `scripts/package-qualia-wasm.ps1` or §BUILD `RUSTFLAGS` (8 MB stack) — mandatory.
 4. **Harness:** `agent-tools/wasm-mc2-test.mjs` — `WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`,
    `WASM_MODEL=models/SmolLM2-360M-Instruct-Q4_K_M.gguf`.
@@ -832,4 +865,10 @@ not yet `Paris.`. Next: **Q/K diff @ L1** to localize remaining KV or hidden-sta
 |---|----------|-------------------|-----------------|
 | G | Q/K diff vs prefill `token_idx` audit? | **Prefill batched-attn audit first** | K/V RoPE already per `wg_id`; RMSNorm per-row ✅; `attn_input` handoff + Q `abs_pos` patched |
 
-**New advisor question (pt3e):** With L31=20.87 after K/V flush, should Part 3e prioritize **GPU vs CPU Q/K tensor diff @ L1** or **prefill per-token causal attention window audit** (batched K/V write vs sequential Q+FFN loop)?
+### Advisor feedback (MC8 pt3e) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3e outcome |
+|---|----------|-------------------|-----------------|
+| H | Q/K diff @ L1 vs prefill causal audit? | **L0 Q/K/V/SDPA diff first** — divergence starts at L0 (0.423), not L1 | attn_rmsnorm/K/Attn_Out **bit-exact**; mask OK; gap is **post-SDPA** (o_proj/FFN) |
+
+**New advisor question (pt3f):** With L0 attention locked but post-FFN `h[0]=0.423`, should Part 3f prioritize **`o_proj` + attn-residual diff** or **`ffn_norm`/gate/up/down chain diff** first?

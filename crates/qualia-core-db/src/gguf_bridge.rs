@@ -513,6 +513,76 @@ impl QTensorEngine {
         staging.unmap();
         true
     }
+
+    async fn pipeline_read_gpu_bytes_at(
+        &self,
+        src: &wgpu::Buffer,
+        byte_offset: wgpu::BufferAddress,
+        out: &mut [u8],
+    ) -> bool {
+        if out.is_empty() {
+            return false;
+        }
+        let staging = self.gemm_output_staging.as_ref().unwrap();
+        let nbytes = out.len() as wgpu::BufferAddress;
+        if nbytes > staging.size() {
+            return false;
+        }
+        let mut encoder = self.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("MC8ProbeReadback"),
+        });
+        encoder.copy_buffer_to_buffer(src, byte_offset, staging, 0, nbytes);
+        self.gpu_queue().submit(Some(encoder.finish()));
+        let slice = staging.slice(..nbytes);
+        if !await_wgpu_map(slice).await {
+            let _ = staging.unmap();
+            return false;
+        }
+        let data = slice.get_mapped_range();
+        out.copy_from_slice(&data);
+        drop(data);
+        staging.unmap();
+        true
+    }
+
+    async fn pipeline_read_kv_head(
+        &self,
+        layout: &KvCacheLayout,
+        layer: u32,
+        slot: u32,
+        kv_h: u32,
+        head_dim: usize,
+        k_not_v: bool,
+        out: &mut [f32],
+    ) -> bool {
+        if head_dim == 0 || head_dim > out.len() {
+            return false;
+        }
+        let kv = match self.kv_cache_gpu.as_ref() {
+            Some(b) => b,
+            None => return false,
+        };
+        let idx = if k_not_v {
+            layout.k_index(layer, slot, kv_h, 0)
+        } else {
+            layout.v_index(layer, slot, kv_h, 0)
+        };
+        let byte_off = (idx * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+        let mut bytes = [0u8; 512];
+        let nbytes = head_dim * std::mem::size_of::<f32>();
+        if nbytes > bytes.len() {
+            return false;
+        }
+        if !self
+            .pipeline_read_gpu_bytes_at(kv, byte_off, &mut bytes[..nbytes])
+            .await
+        {
+            return false;
+        }
+        let floats: &[f32] = bytemuck::cast_slice(&bytes[..nbytes]);
+        out[..head_dim].copy_from_slice(floats);
+        true
+    }
 }
 
 /// Hard context ceiling — sized to keep KV arena under the 512MB RAM floor (Gemma 42L).
@@ -753,6 +823,30 @@ fn prepare_pre_norm_input<'a>(
         }
     }
     &hidden[..n_embd]
+}
+
+/// MC8 pt3e: max abs error over the first `n` elements.
+#[cfg(target_arch = "wasm32")]
+fn probe_max_abs_diff(a: &[f32], b: &[f32], n: usize) -> f32 {
+    let n = n.min(a.len()).min(b.len());
+    let mut m = 0.0f32;
+    for i in 0..n {
+        m = m.max((a[i] - b[i]).abs());
+    }
+    m
+}
+
+#[cfg(target_arch = "wasm32")]
+fn probe_log_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
+    let n = n.min(8).min(cpu.len()).min(gpu.len());
+    if n == 0 {
+        return;
+    }
+    let err = probe_max_abs_diff(cpu, gpu, n);
+    wlog(&format!(
+        "[MC8 L0 diff] {phase}: cpu[0]={:.6} gpu[0]={:.6} max_abs_err={:.6}",
+        cpu[0], gpu[0], err
+    ));
 }
 
 // --- PHASE 1 WASM OOB DIAGNOSTIC INSTRUMENTATION (remove once the trap is fixed) ---
@@ -1148,7 +1242,10 @@ impl QTensorEngine {
         let gpu = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("StaticKvCacheArena"),
             size: bytes.max(4),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            // COPY_SRC: MC8 pt3e L0 probe reads K/V slots via pipeline_read_kv_head.
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
         let cpu = vec![0f32; layout.total_f32_elems].into_boxed_slice();
@@ -3495,9 +3592,224 @@ impl QTensorEngine {
         .await
     }
 
+    /// MC8 pt3e: Layer-0 Q/K/Attn_Out CPU vs GPU diff @ decode (after Q SDPA, before o_proj).
+    #[cfg(target_arch = "wasm32")]
+    async fn mc8_log_l0_attention_diff(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden_cpu: &[f32],
+        emb_dim: usize,
+        token_idx: u32,
+    ) {
+        let layout = match self.kv_layout.as_ref() {
+            Some(l) => l,
+            None => return,
+        };
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return,
+        };
+        let h = &index.hyperparams;
+        let n_embd = h.n_embd as usize;
+        if emb_dim < n_embd || hidden_cpu.len() < n_embd {
+            return;
+        }
+        let tensors = index.get_layer_tensors(0);
+        let head_dim = h.head_dim() as usize;
+        let n_head = h.n_head as usize;
+        let n_kv = h.effective_n_kv_head() as usize;
+        let q_heads_per_kv = h.q_heads_per_kv() as usize;
+        if head_dim == 0 || n_head == 0 || n_kv == 0 {
+            return;
+        }
+        let scale = 1.0f32 / (head_dim as f32).sqrt();
+        let slot = layout.ring_slot(token_idx);
+
+        let (mask_words, mask_active, _) =
+            Self::attention_kv_mask_for_dispatch(layout, token_idx, 0);
+        wlog(&format!(
+            "[MC8 L0 diff] token_idx={token_idx} mask_active={mask_active} mask_word0=0x{:08X}",
+            mask_words[0]
+        ));
+
+        let mut norm_w = [0f32; MAX_HIDDEN_DIM];
+        let mut norm_cpu = [0f32; MAX_HIDDEN_DIM];
+        let mut proj = [0f32; MAX_STACK_GEMM_OUT];
+        let normed = prepare_pre_norm_input(
+            &hidden_cpu[..n_embd],
+            n_embd,
+            tensors.attn_norm.as_ref(),
+            Some(mmap),
+            index.tensor_data_start,
+            &mut norm_cpu,
+            &mut norm_w,
+        );
+        wlog(&format!(
+            "[MC8 L0 diff] attn_norm.weight[0]={:.6}",
+            norm_w[0]
+        ));
+
+        let aux_buf = self.gemm_aux_buf.as_ref().unwrap();
+        let mut norm_gpu = [0f32; MAX_HIDDEN_DIM];
+        let norm_bytes = (n_embd * 4) as wgpu::BufferAddress;
+        if self
+            .pipeline_read_gpu_bytes_at(aux_buf, 0, bytemuck::cast_slice_mut(
+                &mut norm_gpu[..n_embd],
+            ))
+            .await
+        {
+            probe_log_diff("attn_rmsnorm", normed, &norm_gpu[..n_embd], n_embd);
+        }
+
+        let q_info = match tensors.attn_q.as_ref() {
+            Some(i) => i,
+            None => return,
+        };
+        let k_info = match tensors.attn_k.as_ref() {
+            Some(i) => i,
+            None => return,
+        };
+        let q_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        let k_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        let (q_in, q_out) = Self::matmul_dims(q_info);
+        let (k_in, k_out) = Self::matmul_dims(k_info);
+        if !stack_gemm_quant(k_raw, k_info, normed, &mut proj[..k_out], k_in, k_out) {
+            return;
+        }
+        rope_inplace(
+            &mut proj[..k_out],
+            n_kv,
+            head_dim,
+            token_idx,
+            h.effective_rope_freq_base(),
+            h.effective_rope_scale(),
+        );
+        let mut k_cpu = [0f32; 128];
+        let k_n = head_dim.min(k_cpu.len());
+        k_cpu[..k_n].copy_from_slice(&proj[..k_n]);
+
+        let mut k_gpu = [0f32; 128];
+        match self
+            .pipeline_read_kv_head(layout, 0, slot, 0, head_dim, true, &mut k_gpu)
+            .await
+        {
+            true => probe_log_diff("K_rope_slot_cur", &k_cpu[..k_n], &k_gpu[..k_n], k_n),
+            false => wlog("[MC8 L0 diff] K_rope_slot_cur: KV readback FAILED"),
+        }
+
+        if !stack_gemm_quant(q_raw, q_info, normed, &mut proj[..q_out], q_in, q_out) {
+            return;
+        }
+        rope_inplace(
+            &mut proj[..q_out],
+            n_head,
+            head_dim,
+            token_idx,
+            h.effective_rope_freq_base(),
+            h.effective_rope_scale(),
+        );
+        let mut q_cpu = [0f32; 128];
+        let q_n = head_dim.min(q_cpu.len());
+        q_cpu[..q_n].copy_from_slice(&proj[..q_n]);
+        wlog(&format!(
+            "[MC8 L0 diff] Q_rope_h0 cpu[0]={:.6} cpu[1]={:.6}",
+            q_cpu[0], q_cpu[1]
+        ));
+
+        let mut att_scores = [0f32; MAX_CONTEXT_WINDOW as usize];
+        let pos_usize = token_idx as usize;
+        if pos_usize >= MAX_CONTEXT_WINDOW as usize {
+            return;
+        }
+        let mut k_slot = [0f32; 128];
+        let mut v_slot = [0f32; 128];
+        let mut max_score = f32::NEG_INFINITY;
+        for past_pos in 0..=token_idx {
+            let past_slot = layout.ring_slot(past_pos);
+            if !self
+                .pipeline_read_kv_head(layout, 0, past_slot, 0, head_dim, true, &mut k_slot)
+                .await
+            {
+                return;
+            }
+            let mut dot = 0.0f32;
+            for d in 0..head_dim {
+                dot += q_cpu[d] * k_slot[d];
+            }
+            let score = dot * scale;
+            att_scores[past_pos as usize] = score;
+            max_score = max_score.max(score);
+        }
+        let mut sum_exp = 0.0f32;
+        for past_pos in 0..=token_idx {
+            let exp_val = (att_scores[past_pos as usize] - max_score).exp();
+            att_scores[past_pos as usize] = exp_val;
+            sum_exp += exp_val;
+        }
+        let mut attn_cpu = [0f32; 128];
+        if sum_exp > 0.0 {
+            for past_pos in 0..=token_idx {
+                let prob = att_scores[past_pos as usize] / sum_exp;
+                let past_slot = layout.ring_slot(past_pos);
+                if !self
+                    .pipeline_read_kv_head(layout, 0, past_slot, 0, head_dim, false, &mut v_slot)
+                    .await
+                {
+                    return;
+                }
+                for d in 0..head_dim {
+                    attn_cpu[d] += v_slot[d] * prob;
+                }
+            }
+        }
+        wlog(&format!(
+            "[MC8 L0 diff] SDPA_h0 cpu sum_exp={sum_exp:.6} attn[0]={:.6}",
+            attn_cpu[0]
+        ));
+
+        let ffn_buf = self.gemm_ffn_buf.as_ref().unwrap();
+        let q_dim = n_head * head_dim;
+        let mut attn_gpu = [0f32; 1024];
+        let attn_bytes = (q_dim * 4) as wgpu::BufferAddress;
+        if attn_bytes as usize <= attn_gpu.len() * 4
+            && self
+                .pipeline_read_gpu_bytes_at(
+                    ffn_buf,
+                    0,
+                    bytemuck::cast_slice_mut(&mut attn_gpu[..q_dim]),
+                )
+                .await
+        {
+            probe_log_diff("Attn_Out_h0", &attn_cpu[..q_n], &attn_gpu[..q_n], q_n);
+            let k_err = probe_max_abs_diff(&k_cpu[..k_n], &k_gpu[..k_n], k_n);
+            let attn_err = probe_max_abs_diff(&attn_cpu[..q_n], &attn_gpu[..q_n], q_n);
+            let mut first_diverge = "none";
+            if probe_max_abs_diff(normed, &norm_gpu[..n_embd], 8) > 0.01 {
+                first_diverge = "attn_rmsnorm";
+            } else if k_err > 0.01 {
+                first_diverge = "K_rope";
+            } else if attn_err > 0.01 {
+                first_diverge = "Attn_Out_SDPA";
+            }
+            wlog(&format!(
+                "[MC8 L0 diff] err_budget K={k_err:.6} Attn_Out={attn_err:.6}"
+            ));
+            wlog(&format!(
+                "[MC8 L0 diff] first_divergence(0.01)={first_diverge}"
+            ));
+        }
+        let _ = q_heads_per_kv;
+    }
+
     /// MC8: Q + o_proj + FFN tail (K/V already written for this token).
     #[cfg(target_arch = "wasm32")]
-    fn encode_attn_ffn_tail_gpu(
+    async fn encode_attn_ffn_tail_gpu(
         &self,
         pipeline: &mut WasmGpuPipeline,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -3507,6 +3819,8 @@ impl QTensorEngine {
         tensors: &crate::gguf_sharder::LayerTensors,
         token_hidden: &wgpu::Buffer,
         attn_input: Option<&wgpu::Buffer>,
+        l0_vector_probe: bool,
+        hidden_cpu: Option<&[f32]>,
     ) -> bool {
         let mmap = match self.gguf_mmap.as_deref() {
             Some(m) => m,
@@ -3569,6 +3883,12 @@ impl QTensorEngine {
             return false;
         }
         self.mc8_flush(pipeline);
+        if l0_vector_probe && layer == 0 {
+            if let Some(hc) = hidden_cpu {
+                self.mc8_log_l0_attention_diff(index, hc, emb_dim, token_idx)
+                    .await;
+            }
+        }
         if let Some(out_info) = tensors.attn_output.as_ref() {
             let (o_in, o_out) = Self::matmul_dims(out_info);
             let o_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, out_info)
@@ -3711,13 +4031,15 @@ impl QTensorEngine {
 
     /// MC8: encode one decode layer entirely on GPU (no map_async).
     #[cfg(target_arch = "wasm32")]
-    fn encode_transformer_layer_gpu(
+    async fn encode_transformer_layer_gpu(
         &self,
         pipeline: &mut WasmGpuPipeline,
         index: &crate::gguf_sharder::GgufTensorIndex,
         layer: u32,
         token_idx: u32,
         emb_dim: usize,
+        l0_vector_probe: bool,
+        hidden_cpu: Option<&[f32]>,
     ) -> bool {
         let tensors = index.get_layer_tensors(layer);
         let layout = match self.kv_layout {
@@ -3822,7 +4144,10 @@ impl QTensorEngine {
             &tensors,
             hidden_buf,
             Some(attn_input),
+            l0_vector_probe,
+            hidden_cpu,
         )
+        .await
     }
 
     /// MC8: fused GPU forward — one upload, per-layer encode, single readback.
@@ -3856,13 +4181,24 @@ impl QTensorEngine {
         let mut pipeline = WasmGpuPipeline::begin(self);
         let mut ran = 0u32;
         for layer in 0..limit {
-            if !self.encode_transformer_layer_gpu(
-                &mut pipeline,
-                index,
-                layer,
-                token_idx,
-                emb_dim,
-            ) {
+            let probe_l0 = l0_probe_step1 && layer == 0;
+            let hidden_snap = if probe_l0 {
+                Some(&hidden[..emb_dim])
+            } else {
+                None
+            };
+            if !self
+                .encode_transformer_layer_gpu(
+                    &mut pipeline,
+                    index,
+                    layer,
+                    token_idx,
+                    emb_dim,
+                    probe_l0,
+                    hidden_snap,
+                )
+                .await
+            {
                 break;
             }
             ran += 1;
@@ -4764,16 +5100,21 @@ impl QTensorEngine {
                 } else {
                     None
                 };
-                if !self.encode_attn_ffn_tail_gpu(
-                    &mut pipeline,
-                    index,
-                    layer,
-                    abs,
-                    emb_dim,
-                    &tensors,
-                    token_buf,
-                    attn_in,
-                ) {
+                if !self
+                    .encode_attn_ffn_tail_gpu(
+                        &mut pipeline,
+                        index,
+                        layer,
+                        abs,
+                        emb_dim,
+                        &tensors,
+                        token_buf,
+                        attn_in,
+                        false,
+                        None,
+                    )
+                    .await
+                {
                     return false;
                 }
                 self.mc8_flush(&mut pipeline);
