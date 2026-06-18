@@ -89,17 +89,40 @@ pub struct GgufTensorInfo {
     pub byte_offset: u64,
 }
 
+/// Default RoPE base for Llama 3 / SmolLM2 when GGUF omits `llama.rope.freq_base`.
+pub const DEFAULT_ROPE_FREQ_BASE: f32 = 100_000.0;
+
 /// Architecture hyper-parameters parsed from the GGUF KV section.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct GgufHyperparams {
     pub n_layer: u32,
     pub n_embd: u32,
     pub n_head: u32,
     /// Grouped-query KV heads; `0` means MHA (`n_kv_head == n_head`).
     pub n_kv_head: u32,
+    /// `llama.rope.freq_base` (FLOAT32 in GGUF); `0` → [`DEFAULT_ROPE_FREQ_BASE`].
+    pub rope_freq_base: f32,
+    /// Linear RoPE scale from `llama.rope.scale_linear` / `llama.rope.scaling.factor`; `0` → `1.0`.
+    pub rope_scale: f32,
 }
 
 impl GgufHyperparams {
+    pub fn effective_rope_freq_base(&self) -> f32 {
+        if self.rope_freq_base > 0.0 && self.rope_freq_base.is_finite() {
+            self.rope_freq_base
+        } else {
+            DEFAULT_ROPE_FREQ_BASE
+        }
+    }
+
+    /// Effective position divisor for RoPE (`scaled_pos = pos / scale`).
+    pub fn effective_rope_scale(&self) -> f32 {
+        if self.rope_scale > 0.0 && self.rope_scale.is_finite() {
+            self.rope_scale
+        } else {
+            1.0
+        }
+    }
     pub fn head_dim(&self) -> u32 {
         if self.n_head == 0 {
             0
@@ -129,10 +152,12 @@ impl GgufHyperparams {
 /// Per-layer transformer weight metadata (all `Option` — absent tensors skipped).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct LayerTensors {
+    pub attn_norm: Option<GgufTensorInfo>,
     pub attn_q: Option<GgufTensorInfo>,
     pub attn_k: Option<GgufTensorInfo>,
     pub attn_v: Option<GgufTensorInfo>,
     pub attn_output: Option<GgufTensorInfo>,
+    pub ffn_norm: Option<GgufTensorInfo>,
     pub ffn_gate: Option<GgufTensorInfo>,
     pub ffn_up: Option<GgufTensorInfo>,
     pub ffn_down: Option<GgufTensorInfo>,
@@ -148,6 +173,8 @@ pub struct GgufTensorIndex {
     token_embd: Option<GgufTensorInfo>,
     /// Cached `output.weight` for final vocabulary projection.
     output_weight: Option<GgufTensorInfo>,
+    /// Cached `output_norm.weight` — final RMSNorm before vocab projection (Llama/SmolLM).
+    output_norm: Option<GgufTensorInfo>,
     pub hyperparams: GgufHyperparams,
     /// Largest tensor payload in the file (informational).
     pub max_tensor_bytes: usize,
@@ -218,6 +245,7 @@ impl GgufTensorIndex {
             tensor_data_start: 0,
             token_embd: None,
             output_weight: None,
+            output_norm: None,
             hyperparams: GgufHyperparams::default(),
             max_tensor_bytes: 0,
             max_layer_tensor_bytes: 0,
@@ -231,6 +259,52 @@ impl GgufTensorIndex {
         pos: &mut usize,
     ) -> GgufHyperparams {
         let mut patch = GgufHyperparams::default();
+        if key.ends_with("rope.freq_base") {
+            match vtype {
+                6 if *pos + 4 <= mmap.len() => {
+                    let bits =
+                        u32::from_le_bytes(mmap[*pos..*pos + 4].try_into().unwrap_or([0; 4]));
+                    *pos += 4;
+                    patch.rope_freq_base = f32::from_bits(bits);
+                }
+                12 if *pos + 8 <= mmap.len() => {
+                    let bits =
+                        u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().unwrap_or([0; 8]));
+                    *pos += 8;
+                    patch.rope_freq_base = f64::from_bits(bits) as f32;
+                }
+                _ => {
+                    let _ = gguf_skip_value(mmap, pos, vtype);
+                }
+            }
+            return patch;
+        }
+        if key.ends_with("rope.scale_linear") || key.ends_with("rope.scaling.factor") {
+            match vtype {
+                6 if *pos + 4 <= mmap.len() => {
+                    let bits =
+                        u32::from_le_bytes(mmap[*pos..*pos + 4].try_into().unwrap_or([0; 4]));
+                    *pos += 4;
+                    patch.rope_scale = f32::from_bits(bits);
+                }
+                12 if *pos + 8 <= mmap.len() => {
+                    let bits =
+                        u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().unwrap_or([0; 8]));
+                    *pos += 8;
+                    patch.rope_scale = f64::from_bits(bits) as f32;
+                }
+                4 if *pos + 4 <= mmap.len() => {
+                    patch.rope_scale =
+                        u32::from_le_bytes(mmap[*pos..*pos + 4].try_into().unwrap_or([0; 4]))
+                            as f32;
+                    *pos += 4;
+                }
+                _ => {
+                    let _ = gguf_skip_value(mmap, pos, vtype);
+                }
+            }
+            return patch;
+        }
         if vtype != 4 {
             let _ = gguf_skip_value(mmap, pos, vtype);
             return patch;
@@ -290,6 +364,12 @@ impl GgufTensorIndex {
             }
             if patch.n_kv_head != 0 {
                 hyperparams.n_kv_head = patch.n_kv_head;
+            }
+            if patch.rope_freq_base > 0.0 {
+                hyperparams.rope_freq_base = patch.rope_freq_base;
+            }
+            if patch.rope_scale > 0.0 {
+                hyperparams.rope_scale = patch.rope_scale;
             }
         }
 
@@ -356,6 +436,7 @@ impl GgufTensorIndex {
         let tensor_data_start = ((pos as u64 + 31) & !31) as u64;
         let emb_hash = gguf_name_hash(b"token_embd.weight");
         let out_hash = gguf_name_hash(b"output.weight");
+        let out_norm_hash = gguf_name_hash(b"output_norm.weight");
         let token_embd = entries
             .iter()
             .find(|(h, _)| *h == emb_hash)
@@ -363,6 +444,10 @@ impl GgufTensorIndex {
         let output_weight = entries
             .iter()
             .find(|(h, _)| *h == out_hash)
+            .map(|(_, i)| *i);
+        let output_norm = entries
+            .iter()
+            .find(|(h, _)| *h == out_norm_hash)
             .map(|(_, i)| *i);
         if hyperparams.n_embd == 0 {
             hyperparams.n_embd = token_embd.map(|t| t.dims[0] as u32).unwrap_or(0);
@@ -372,6 +457,7 @@ impl GgufTensorIndex {
             tensor_data_start,
             token_embd,
             output_weight,
+            output_norm,
             hyperparams,
             max_tensor_bytes,
             max_layer_tensor_bytes,
@@ -398,18 +484,29 @@ impl GgufTensorIndex {
     /// Retrieve attention + FFN tensor metadata for one transformer block.
     pub fn get_layer_tensors(&self, layer_idx: u32) -> LayerTensors {
         LayerTensors {
+            attn_norm: self.find_layer_tensor(layer_idx, b"attn_norm.weight"),
             attn_q: self.find_layer_tensor(layer_idx, b"attn_q.weight"),
             attn_k: self.find_layer_tensor(layer_idx, b"attn_k.weight"),
             attn_v: self.find_layer_tensor(layer_idx, b"attn_v.weight"),
             attn_output: self.find_layer_tensor(layer_idx, b"attn_output.weight"),
+            ffn_norm: self.find_layer_tensor(layer_idx, b"ffn_norm.weight"),
             ffn_gate: self.find_layer_tensor(layer_idx, b"ffn_gate.weight"),
             ffn_up: self.find_layer_tensor(layer_idx, b"ffn_up.weight"),
             ffn_down: self.find_layer_tensor(layer_idx, b"ffn_down.weight"),
         }
     }
 
+    pub fn output_norm_info(&self) -> Option<&GgufTensorInfo> {
+        self.output_norm.as_ref()
+    }
+
     pub fn output_weight_info(&self) -> Option<&GgufTensorInfo> {
         self.output_weight.as_ref()
+    }
+
+    /// True when `output.weight` is absent and logits use tied `token_embd.weight`.
+    pub fn output_weights_tied(&self) -> bool {
+        self.output_weight.is_none() && self.token_embd.is_some()
     }
 
     /// Output projection weights: `output.weight` when present, else tied `token_embd.weight`.
@@ -417,6 +514,18 @@ impl GgufTensorIndex {
         self.output_weight
             .as_ref()
             .or_else(|| self.token_embd.as_ref())
+    }
+
+    /// Diagnostic: byte offset + dims for tied-weight validation (MC3g).
+    pub fn weight_tie_probe(&self) -> (bool, u64, u64, [u64; 4], [u64; 4]) {
+        let tied = self.output_weights_tied();
+        let emb = self.token_embd.as_ref();
+        let out = self.output_weight.as_ref();
+        let emb_off = emb.map(|t| t.byte_offset).unwrap_or(0);
+        let out_off = out.map(|t| t.byte_offset).unwrap_or(emb_off);
+        let emb_dims = emb.map(|t| t.dims).unwrap_or([0; 4]);
+        let out_dims = out.map(|t| t.dims).unwrap_or(emb_dims);
+        (tied, emb_off, out_off, emb_dims, out_dims)
     }
 
     /// Cached `token_embd.weight` tensor metadata.
@@ -618,6 +727,35 @@ impl GGufSharder {
 
 // ─── GgufTokenizer ───────────────────────────────────────────────────────────
 
+use std::collections::HashMap;
+use std::sync::OnceLock;
+
+/// GPT-2 `bytes_to_unicode` table — maps raw bytes to BPE merge symbols.
+fn gpt2_byte_to_unicode(byte: u8) -> char {
+    static TABLE: OnceLock<[char; 256]> = OnceLock::new();
+    TABLE.get_or_init(|| {
+        let mut bs: Vec<u32> = (b'!'..=b'~')
+            .chain(b'\xA1'..=b'\xAC')
+            .chain(b'\xAE'..=b'\xFF')
+            .map(|b| b as u32)
+            .collect();
+        let mut cs = bs.clone();
+        let mut n = 0u32;
+        for b in 0u32..256 {
+            if !bs.contains(&b) {
+                bs.push(b);
+                cs.push(256 + n);
+                n += 1;
+            }
+        }
+        let mut out = ['\0'; 256];
+        for (b, c) in bs.into_iter().zip(cs) {
+            out[b as usize] = char::from_u32(c).unwrap_or('\u{FFFD}');
+        }
+        out
+    })[byte as usize]
+}
+
 /// Vocabulary and BOS/EOS metadata extracted from a GGUF KV section.
 /// Used by `infer_local_model()` to encode prompts and decode output token IDs.
 pub struct GgufTokenizer {
@@ -625,7 +763,17 @@ pub struct GgufTokenizer {
     pub vocab: Vec<String>,
     pub bos_token_id: u32,
     pub eos_token_id: u32,
-    /// (token_string, token_id) sorted by descending byte length for greedy longest-match.
+    /// `tokenizer.ggml.add_bos_token` — prepend BOS before prompt tokens when true.
+    pub add_bos_token: bool,
+    /// `tokenizer.ggml.pre` — e.g. `smollm`, `gpt2`; drives pretokenization.
+    pub pre_type: String,
+    /// BPE merge ranks: `(left_symbol, right_symbol)` in ascending rank order.
+    merge_pairs: Vec<(String, String)>,
+    /// Fast vocab lookup for BPE tail + legacy greedy path.
+    token_to_id_map: HashMap<String, u32>,
+    /// Special tokens (`<|…|>`, etc.) sorted longest-first for atomic matching.
+    special_tokens: Vec<(String, u32)>,
+    /// (token_string, token_id) sorted by descending byte length — legacy greedy fallback.
     token_to_id: Vec<(String, u32)>,
 }
 
@@ -648,10 +796,17 @@ impl Default for GgufTokenizer {
             .map(|(i, s)| (s.clone(), i as u32))
             .collect();
         t2id.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+        let token_to_id_map: HashMap<String, u32> =
+            t2id.iter().map(|(s, id)| (s.clone(), *id)).collect();
         Self {
             vocab,
             bos_token_id: 1,
             eos_token_id: 2,
+            add_bos_token: true,
+            pre_type: String::new(),
+            merge_pairs: Vec::new(),
+            token_to_id_map,
+            special_tokens: Vec::new(),
             token_to_id: t2id,
         }
     }
@@ -675,8 +830,11 @@ impl GgufTokenizer {
         let kv_count = u64::from_le_bytes(mmap[16..24].try_into().ok()?);
         let mut pos = 24usize;
         let mut vocab: Option<Vec<String>> = None;
+        let mut merges_raw: Option<Vec<String>> = None;
         let mut bos_id: Option<u32> = None;
         let mut eos_id: Option<u32> = None;
+        let mut add_bos: Option<bool> = None;
+        let mut pre_type: Option<String> = None;
 
         for _ in 0..kv_count {
             if pos + 8 > mmap.len() {
@@ -698,20 +856,26 @@ impl GgufTokenizer {
                 "tokenizer.ggml.tokens" => {
                     vocab = Self::read_string_array(mmap, &mut pos, vtype);
                 }
+                "tokenizer.ggml.merges" => {
+                    merges_raw = Self::read_string_array(mmap, &mut pos, vtype);
+                }
                 "tokenizer.ggml.bos_token_id" => {
                     bos_id = Self::read_u32_val(mmap, &mut pos, vtype);
                 }
                 "tokenizer.ggml.eos_token_id" => {
                     eos_id = Self::read_u32_val(mmap, &mut pos, vtype);
                 }
+                "tokenizer.ggml.add_bos_token" => {
+                    add_bos = Self::read_bool_val(mmap, &mut pos, vtype);
+                }
+                "tokenizer.ggml.pre" => {
+                    pre_type = Self::read_string_val(mmap, &mut pos, vtype);
+                }
                 _ => {
                     if Self::skip_value(mmap, &mut pos, vtype).is_none() {
                         break;
                     }
                 }
-            }
-            if vocab.is_some() && bos_id.is_some() && eos_id.is_some() {
-                break;
             }
         }
 
@@ -724,16 +888,76 @@ impl GgufTokenizer {
             .map(|(i, s)| (s.clone(), i as u32))
             .collect();
         t2id.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+        let token_to_id_map: HashMap<String, u32> =
+            t2id.iter().map(|(s, id)| (s.clone(), *id)).collect();
+        let mut special_tokens: Vec<(String, u32)> = v
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| s.starts_with('<') && s.ends_with('>'))
+            .map(|(i, s)| (s.clone(), i as u32))
+            .collect();
+        special_tokens.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+        let merge_pairs = Self::parse_merge_pairs(merges_raw.as_deref());
         Some(Self {
             vocab: v,
             bos_token_id: bos,
             eos_token_id: eos,
+            add_bos_token: add_bos.unwrap_or(true),
+            pre_type: pre_type.unwrap_or_default(),
+            merge_pairs,
+            token_to_id_map,
+            special_tokens,
             token_to_id: t2id,
         })
     }
 
+    /// Tokenize `text`, prepending [`bos_token_id`] when [`add_bos_token`] is set and absent.
+    pub fn encode_prompt(&self, text: &str) -> Vec<u32> {
+        let mut ids = self.encode(text);
+        if self.add_bos_token && ids.first().copied() != Some(self.bos_token_id) {
+            let mut with_bos = Vec::with_capacity(ids.len().saturating_add(1));
+            with_bos.push(self.bos_token_id);
+            with_bos.append(&mut ids);
+            with_bos
+        } else {
+            ids
+        }
+    }
+
+    /// Format token IDs for diagnostic logging (MC3f).
+    pub fn format_ids_for_log(ids: &[u32]) -> String {
+        let mut s = String::from("[");
+        for (i, &id) in ids.iter().enumerate() {
+            if i > 0 {
+                s.push_str(", ");
+            }
+            if i >= 64 {
+                s.push_str("…");
+                break;
+            }
+            s.push_str(&id.to_string());
+        }
+        s.push(']');
+        s
+    }
+
     /// Greedy longest-match tokenisation; falls back to single-byte encoding.
     pub fn encode(&self, text: &str) -> Vec<u32> {
+        if self.uses_bpe() {
+            return self.encode_bpe(text);
+        }
+        self.encode_greedy(text)
+    }
+
+    fn uses_bpe(&self) -> bool {
+        !self.merge_pairs.is_empty()
+            || matches!(
+                self.pre_type.as_str(),
+                "smollm" | "gpt2" | "mpt" | "olmo" | "jais" | "llama3"
+            )
+    }
+
+    fn encode_greedy(&self, text: &str) -> Vec<u32> {
         let mut ids = Vec::new();
         let mut remaining = text;
         while !remaining.is_empty() {
@@ -756,8 +980,140 @@ impl GgufTokenizer {
         ids
     }
 
+    /// BPE encode with special-token atomicity + smollm/gpt2 pretokenization.
+    fn encode_bpe(&self, text: &str) -> Vec<u32> {
+        let mut ids = Vec::new();
+        let mut remaining = text;
+        while !remaining.is_empty() {
+            let mut matched_special = false;
+            for (tok, id) in &self.special_tokens {
+                if remaining.starts_with(tok.as_str()) {
+                    ids.push(*id);
+                    remaining = &remaining[tok.len()..];
+                    matched_special = true;
+                    break;
+                }
+            }
+            if matched_special {
+                continue;
+            }
+            let mut next_special = remaining.len();
+            for (tok, _) in &self.special_tokens {
+                if let Some(pos) = remaining.find(tok.as_str()) {
+                    next_special = next_special.min(pos);
+                }
+            }
+            let segment = &remaining[..next_special];
+            if !segment.is_empty() {
+                for piece in self.pretokenize(segment) {
+                    ids.extend(self.bpe_piece(&piece));
+                }
+            }
+            remaining = &remaining[next_special..];
+        }
+        ids
+    }
+
+    /// llama.cpp `LLAMA_VOCAB_PRE_TYPE_SMOLLM` regex split (cold path — heap OK).
+    fn pretokenize(&self, text: &str) -> Vec<String> {
+        static SMOLLM_RE: OnceLock<regex::Regex> = OnceLock::new();
+        let re = SMOLLM_RE.get_or_init(|| {
+            regex::Regex::new(
+                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+",
+            )
+            .expect("smollm pretoken regex")
+        });
+        re.find_iter(text)
+            .map(|m| m.as_str().to_string())
+            .collect()
+    }
+
+    fn bpe_piece(&self, piece: &str) -> Vec<u32> {
+        if piece.is_empty() {
+            return Vec::new();
+        }
+        if let Some(&id) = self.token_to_id_map.get(piece) {
+            return vec![id];
+        }
+        let mut word: String = piece.bytes().map(gpt2_byte_to_unicode).collect();
+        if let Some(&id) = self.token_to_id_map.get(word.as_str()) {
+            return vec![id];
+        }
+        let mut symbols: Vec<String> = word.chars().map(|c| c.to_string()).collect();
+        if symbols.is_empty() {
+            return Vec::new();
+        }
+        loop {
+            let mut best_rank: Option<usize> = None;
+            let mut best_idx = 0usize;
+            for i in 0..symbols.len().saturating_sub(1) {
+                if let Some(rank) = self.merge_rank_str(&symbols[i], &symbols[i + 1]) {
+                    if best_rank.is_none() || rank < best_rank.unwrap() {
+                        best_rank = Some(rank);
+                        best_idx = i;
+                    }
+                }
+            }
+            let Some(_rank) = best_rank else { break };
+            let merged = format!("{}{}", symbols[best_idx], symbols[best_idx + 1]);
+            symbols[best_idx] = merged;
+            symbols.remove(best_idx + 1);
+        }
+        let mut ids = Vec::with_capacity(symbols.len());
+        for sym in symbols {
+            if let Some(&id) = self.token_to_id_map.get(sym.as_str()) {
+                ids.push(id);
+            } else {
+                for ch in sym.chars() {
+                    let s = ch.to_string();
+                    if let Some(&id) = self.token_to_id_map.get(s.as_str()) {
+                        ids.push(id);
+                    }
+                }
+            }
+        }
+        ids
+    }
+
+    fn merge_rank_str(&self, left: &str, right: &str) -> Option<usize> {
+        self.merge_pairs
+            .iter()
+            .position(|(l, r)| l == left && r == right)
+    }
+
+    fn parse_merge_pairs(merges: Option<&[String]>) -> Vec<(String, String)> {
+        let Some(merges) = merges else {
+            return Vec::new();
+        };
+        let mut pairs = Vec::with_capacity(merges.len());
+        for merge in merges {
+            if let Some((a, b)) = merge.split_once(' ') {
+                pairs.push((a.to_string(), b.to_string()));
+            }
+        }
+        pairs
+    }
+
+    /// Append one vocabulary token to `out` with BPE / SentencePiece space normalization.
+    fn append_decoded_token(out: &mut String, s: &str) {
+        if let Some(rest) = s.strip_prefix('\u{2581}') {
+            out.push(' ');
+            out.push_str(rest);
+        } else if let Some(rest) = s.strip_prefix('\u{0120}') {
+            // GPT-2 / Llama / SmolLM BPE space marker (Ġ).
+            out.push(' ');
+            out.push_str(rest);
+        } else if s.len() == 6 && s.starts_with("<0x") && s.ends_with('>') {
+            if let Ok(b) = u8::from_str_radix(&s[3..5], 16) {
+                out.push(b as char);
+            }
+        } else {
+            out.push_str(s);
+        }
+    }
+
     /// Map token IDs → strings, joining without separator.
-    /// Converts SentencePiece `▁` (U+2581) → space and `<0x##>` → raw byte.
+    /// Converts SentencePiece `▁` and GPT-2 BPE `Ġ` → space; `<0x##>` → raw byte.
     pub fn decode(&self, ids: &[u32]) -> String {
         let mut out = String::new();
         for &id in ids {
@@ -766,22 +1122,18 @@ impl GgufTokenizer {
                 .get(id as usize)
                 .map(|s| s.as_str())
                 .unwrap_or("");
-            if s.starts_with('\u{2581}') {
-                out.push(' ');
-                out.push_str(&s['\u{2581}'.len_utf8()..]);
-            } else if s.len() == 6 && s.starts_with("<0x") && s.ends_with('>') {
-                if let Ok(b) = u8::from_str_radix(&s[3..5], 16) {
-                    out.push(b as char);
-                }
-            } else {
-                out.push_str(s);
-            }
+            Self::append_decoded_token(&mut out, s);
         }
         out
     }
 
     pub fn vocab_len(&self) -> u32 {
         self.vocab.len() as u32
+    }
+
+    /// Number of BPE merges loaded from GGUF (diagnostic).
+    pub fn merge_count(&self) -> usize {
+        self.merge_pairs.len()
     }
 
     // ── internal KV parsers ──────────────────────────────────────────────────
@@ -828,6 +1180,41 @@ impl GgufTokenizer {
             let v = u32::from_le_bytes(mmap[*pos..*pos + 4].try_into().ok()?);
             *pos += 4;
             Some(v)
+        } else {
+            Self::skip_value(mmap, pos, vtype)?;
+            None
+        }
+    }
+
+    fn read_string_val(mmap: &[u8], pos: &mut usize, vtype: u32) -> Option<String> {
+        if vtype == 8 {
+            if *pos + 8 > mmap.len() {
+                return None;
+            }
+            let slen = u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().ok()?) as usize;
+            *pos += 8;
+            if *pos + slen > mmap.len() {
+                return None;
+            }
+            let s = std::str::from_utf8(&mmap[*pos..*pos + slen])
+                .unwrap_or("")
+                .to_string();
+            *pos += slen;
+            Some(s)
+        } else {
+            Self::skip_value(mmap, pos, vtype)?;
+            None
+        }
+    }
+
+    fn read_bool_val(mmap: &[u8], pos: &mut usize, vtype: u32) -> Option<bool> {
+        if vtype == 7 {
+            if *pos + 1 > mmap.len() {
+                return None;
+            }
+            let b = mmap[*pos];
+            *pos += 1;
+            Some(b != 0)
         } else {
             Self::skip_value(mmap, pos, vtype)?;
             None
@@ -935,6 +1322,126 @@ mod tests {
             quin.extract_byte_offset(),
             0x00000ABC,
             "Pointer byte offset extracted incorrectly"
+        );
+    }
+
+    #[test]
+    fn encode_prompt_prepends_bos_when_enabled() {
+        let mut tok = GgufTokenizer::default();
+        tok.add_bos_token = true;
+        tok.bos_token_id = 42;
+        let ids = tok.encode_prompt("hi");
+        assert_eq!(ids.first(), Some(&42));
+        assert!(ids.len() >= 2);
+    }
+
+    #[test]
+    fn encode_prompt_skips_duplicate_bos() {
+        let mut tok = GgufTokenizer::default();
+        tok.add_bos_token = true;
+        tok.bos_token_id = 0;
+        tok.token_to_id = vec![("<|endoftext|>".into(), 0), ("a".into(), 10)];
+        tok.vocab = vec!["<|endoftext|>".into(), "a".into()];
+        let ids = tok.encode_prompt("<|endoftext|>a");
+        assert_eq!(ids, vec![0, 10]);
+    }
+
+    #[test]
+    fn decode_maps_bpe_space_marker_to_ascii_space() {
+        let mut tok = GgufTokenizer::default();
+        tok.vocab = vec![
+            "The".into(),
+            "\u{0120}capital".into(),
+            "\u{2581}of".into(),
+        ];
+        assert_eq!(tok.decode(&[0, 1, 2]), "The capital of");
+    }
+
+    #[test]
+    fn hyperparams_default_rope_freq_base_is_100k() {
+        let h = GgufHyperparams::default();
+        assert_eq!(h.effective_rope_freq_base(), DEFAULT_ROPE_FREQ_BASE);
+    }
+
+    #[test]
+    fn smollm_gguf_output_weight_tie_probe() {
+        use memmap2::MmapOptions;
+        use std::fs::File;
+        for (label, path) in [
+            (
+                "Q4_K_M",
+                "C:/projects/qualiaDB/docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf",
+            ),
+            (
+                "Q8_0",
+                "C:/projects/qualiaDB/docs/models/smollm2-360m-instruct-q8_0.gguf",
+            ),
+        ] {
+            if !std::path::Path::new(path).exists() {
+                println!("[skip] {label} not at {path}");
+                continue;
+            }
+            let f = File::open(path).unwrap();
+            let mmap = unsafe { MmapOptions::new().map(&f).unwrap() };
+            let idx = GgufTensorIndex::from_gguf(&mmap);
+            let (tied, emb_off, out_off, emb_dims, out_dims) = idx.weight_tie_probe();
+            assert!(idx.token_embd_info().is_some(), "{label}: missing token_embd");
+            assert!(idx.logits_projection_info().is_some(), "{label}: no logits projection");
+            println!(
+                "[{label}] tied={tied} emb_off={emb_off:#x} dims={emb_dims:?} out_off={out_off:#x} out_dims={out_dims:?}"
+            );
+            if tied {
+                assert_eq!(emb_off, out_off, "{label}: tied offsets must match");
+                assert_eq!(emb_dims, out_dims, "{label}: tied dims must match");
+            }
+        }
+    }
+
+    #[test]
+    fn smollm_tokenizer_audit_vs_hf_reference() {
+        use memmap2::MmapOptions;
+        use std::fs::File;
+        let path = "C:/projects/qualiaDB/docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf";
+        if !std::path::Path::new(path).exists() {
+            return;
+        }
+        let f = File::open(path).unwrap();
+        let mmap = unsafe { MmapOptions::new().map(&f).unwrap() };
+        let tok = GgufTokenizer::from_gguf(&mmap);
+        let chatml = "<|im_start|>user\nWhat is the capital of France? Answer in one short sentence.<|im_end|>\n<|im_start|>assistant\n";
+        let naked = "The capital of France is";
+        let chat_ids = tok.encode(chatml);
+        let naked_ids = tok.encode(naked);
+        println!(
+            "[audit] bos={} eos={} add_bos={} pre={:?}",
+            tok.bos_token_id, tok.eos_token_id, tok.add_bos_token, tok.pre_type
+        );
+        println!("[audit] chatml len={} ids={:?}", chat_ids.len(), chat_ids);
+        println!("[audit] naked len={} ids={:?}", naked_ids.len(), naked_ids);
+        const HF_CHATML: &[u32] = &[
+            1, 4093, 198, 1780, 314, 260, 3575, 282, 4649, 47, 19842, 281, 582, 1890, 6330, 30,
+            2, 198, 1, 520, 9531, 198,
+        ];
+        const HF_NAKED: &[u32] = &[504, 3575, 282, 4649, 314];
+        assert_eq!(chat_ids, HF_CHATML, "ChatML must not shred <|im_start|> specials");
+        assert_eq!(naked_ids, HF_NAKED, "naked English prompt must match HF BPE");
+    }
+
+    #[test]
+    fn smollm_gguf_parses_rope_freq_base_when_present() {
+        use memmap2::MmapOptions;
+        use std::fs::File;
+        let path = "C:/projects/qualiaDB/docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf";
+        if !std::path::Path::new(path).exists() {
+            return;
+        }
+        let f = File::open(path).unwrap();
+        let mmap = unsafe { MmapOptions::new().map(&f).unwrap() };
+        let idx = GgufTensorIndex::from_gguf(&mmap);
+        assert!(
+            (idx.hyperparams.rope_freq_base - 100_000.0).abs() < 1.0,
+            "expected llama.rope.freq_base=100000, got {}",
+            idx.hyperparams.rope_freq_base
         );
     }
 

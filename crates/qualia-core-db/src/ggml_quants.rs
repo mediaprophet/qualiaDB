@@ -10,6 +10,7 @@ use crate::gguf_sharder::GgufTensorInfo;
 pub const GGML_TYPE_F32: u32 = 0;
 pub const GGML_TYPE_F16: u32 = 1;
 pub const GGML_TYPE_Q4_0: u32 = 2;
+pub const GGML_TYPE_Q5_0: u32 = 6;
 pub const GGML_TYPE_Q8_0: u32 = 8;
 pub const GGML_TYPE_Q4_K: u32 = 12;
 pub const GGML_TYPE_Q6_K: u32 = 14;
@@ -40,6 +41,10 @@ pub fn ggml_block_layout(ggml_type: u32) -> Option<GgmlBlockLayout> {
         GGML_TYPE_Q4_0 => Some(GgmlBlockLayout {
             block_elems: 32,
             block_bytes: 18,
+        }),
+        GGML_TYPE_Q5_0 => Some(GgmlBlockLayout {
+            block_elems: 32,
+            block_bytes: 22,
         }),
         GGML_TYPE_Q8_0 => Some(GgmlBlockLayout {
             block_elems: 32,
@@ -211,6 +216,7 @@ pub fn dequantize_row_into(
         GGML_TYPE_F32 => dequant_f32(raw, n_elems, out),
         GGML_TYPE_F16 => dequant_f16(raw, n_elems, out),
         GGML_TYPE_Q4_0 => dequant_q4_0(raw, n_elems, out),
+        GGML_TYPE_Q5_0 => dequant_q5_0(raw, n_elems, out),
         GGML_TYPE_Q8_0 => dequant_q8_0(raw, n_elems, out),
         GGML_TYPE_Q4_K => dequant_q4_k(raw, n_elems, out),
         GGML_TYPE_Q6_K => dequant_q6_k(raw, n_elems, out),
@@ -263,6 +269,43 @@ fn dequant_q4_0(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
             let hi = b * BLOCK_ELEMS + j + half;
             if hi < n_elems {
                 out[hi] = x1 as f32 * scale;
+            }
+        }
+    }
+    Ok(n_elems)
+}
+
+/// `dequantize_row_q5_0` from ggml-quants.c — 5-bit weights, 32 elems per 22-byte block.
+fn dequant_q5_0(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
+    const BLOCK_ELEMS: usize = 32;
+    const BLOCK_BYTES: usize = 22;
+    let n_blocks = n_elems.div_ceil(BLOCK_ELEMS);
+    if raw.len() < n_blocks * BLOCK_BYTES {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+    for b in 0..n_blocks {
+        let bs = b * BLOCK_BYTES;
+        let d = half::f16::from_le_bytes([raw[bs], raw[bs + 1]]).to_f32();
+        let qh = u32::from_le_bytes([
+            raw[bs + 2],
+            raw[bs + 3],
+            raw[bs + 4],
+            raw[bs + 5],
+        ]);
+        let qs = &raw[bs + 6..bs + 22];
+        let half = BLOCK_ELEMS / 2;
+        for j in 0..half {
+            let xh_0 = ((qh >> j) << 4) & 0x10;
+            let xh_1 = (qh >> (j + 12)) & 0x10;
+            let x0 = ((qs[j] & 0x0F) as u32 | xh_0) as i32 - 16;
+            let x1 = ((qs[j] >> 4) as u32 | xh_1) as i32 - 16;
+            let lo = b * BLOCK_ELEMS + j;
+            if lo < n_elems {
+                out[lo] = x0 as f32 * d;
+            }
+            let hi = lo + half;
+            if hi < n_elems {
+                out[hi] = x1 as f32 * d;
             }
         }
     }
@@ -353,25 +396,29 @@ fn dequant_q4_k(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
 }
 
 fn dequant_q6_k_block(block: &[u8; 210], out: &mut [f32]) {
-    let d = half::f16::from_le_bytes([block[208], block[209]]).to_f32();
+    let blk = bytemuck::from_bytes::<BlockQ6K>(block);
+    let d = half::f16::from_bits(blk.d).to_f32();
     let mut ql_off = 0usize;
-    let mut qh_off = 128usize;
-    let mut sc_off = 192usize;
+    let mut qh_off = 0usize;
+    let mut sc_off = 0usize;
     let mut y_off = 0usize;
 
     for _ in 0..2 {
         for l in 0..32 {
             let is = l / 16;
-            let q1 = ((block[ql_off + l] & 0xF) | (((block[qh_off + l] >> 0) & 3) << 4)) as i8 - 32;
-            let q2 =
-                ((block[ql_off + l + 32] & 0xF) | (((block[qh_off + l] >> 2) & 3) << 4)) as i8 - 32;
-            let q3 = ((block[ql_off + l] >> 4) | (((block[qh_off + l] >> 4) & 3) << 4)) as i8 - 32;
-            let q4 =
-                ((block[ql_off + l + 32] >> 4) | (((block[qh_off + l] >> 6) & 3) << 4)) as i8 - 32;
-            out[y_off + l] = d * block[sc_off + is] as f32 * q1 as f32;
-            out[y_off + l + 32] = d * block[sc_off + is + 2] as f32 * q2 as f32;
-            out[y_off + l + 64] = d * block[sc_off + is + 4] as f32 * q3 as f32;
-            out[y_off + l + 96] = d * block[sc_off + is + 6] as f32 * q4 as f32;
+            let q1 = ((blk.ql[ql_off + l] & 0xF) | (((blk.qh[qh_off + l] >> 0) & 3) << 4)) as i8 - 32;
+            let q2 = ((blk.ql[ql_off + l + 32] & 0xF)
+                | (((blk.qh[qh_off + l] >> 2) & 3) << 4)) as i8
+                - 32;
+            let q3 = ((blk.ql[ql_off + l] >> 4) | (((blk.qh[qh_off + l] >> 4) & 3) << 4)) as i8 - 32;
+            let q4 = ((blk.ql[ql_off + l + 32] >> 4)
+                | (((blk.qh[qh_off + l] >> 6) & 3) << 4)) as i8
+                - 32;
+            let sc = &blk.scales[sc_off..sc_off + 8];
+            out[y_off + l] = d * sc[is] as f32 * q1 as f32;
+            out[y_off + l + 32] = d * sc[is + 2] as f32 * q2 as f32;
+            out[y_off + l + 64] = d * sc[is + 4] as f32 * q3 as f32;
+            out[y_off + l + 96] = d * sc[is + 6] as f32 * q4 as f32;
         }
         y_off += 128;
         ql_off += 64;
@@ -413,6 +460,83 @@ mod tests {
     }
 
     #[test]
+    fn q5_0_row_bytes_stride() {
+        // SmolLM2 attn_k row: hidden_dim=960 → (960/32)*22 = 660
+        assert_eq!(ggml_row_bytes(GGML_TYPE_Q5_0, 960), Some(660));
+    }
+
+    #[test]
+    fn q5_0_dequant_matches_gguf_smollm2_row0() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf");
+        if !path.exists() {
+            return;
+        }
+        let mmap = std::fs::read(&path).expect("read gguf");
+        let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        let info = index
+            .get_layer_tensors(0)
+            .attn_k
+            .expect("blk.0.attn_k");
+        let raw =
+            fetch_tensor_bytes(&mmap, index.tensor_data_start, &info).expect("fetch attn_k");
+        let row_bytes = ggml_row_bytes(GGML_TYPE_Q5_0, info.dims[0] as usize).unwrap();
+        assert_eq!(row_bytes, 660);
+        let mut out = [0f32; 960];
+        dequantize_row_into(&raw[..row_bytes], GGML_TYPE_Q5_0, 960, &mut out).unwrap();
+        // Reference: gguf-py dequantize_row_q5_0 on blk.0.attn_k.weight row 0
+        let expected = [
+            -0.0f32, -0.02502441, -0.10009766, -0.07507324, -0.05004883, -0.3503418, -0.0,
+            0.05004883, -0.07507324, 0.1751709,
+        ];
+        for (i, &exp) in expected.iter().enumerate() {
+            assert!(
+                (out[i] - exp).abs() < 1e-5,
+                "elem {i}: got {} expected {}",
+                out[i],
+                exp
+            );
+        }
+    }
+
+    #[test]
+    fn smollm_q4km_tensor_types_and_q4k_row0() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf");
+        if !path.exists() {
+            return;
+        }
+        let mmap = std::fs::read(&path).expect("read gguf");
+        let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        let emb = index.token_embd_info().expect("token_embd");
+        println!("token_embd type={} dims={:?}", emb.ggml_type, emb.dims);
+        let lt = index.get_layer_tensors(0);
+        for (name, info) in [
+            ("attn_q", lt.attn_q),
+            ("attn_k", lt.attn_k),
+            ("attn_v", lt.attn_v),
+            ("ffn_gate", lt.ffn_gate),
+            ("ffn_down", lt.ffn_down),
+        ] {
+            if let Some(i) = info {
+                println!("{name} type={} dims={:?}", i.ggml_type, i.dims);
+            }
+        }
+        // token 504 = "The" in naked prompt
+        let mut out = [0f32; 960];
+        let n = index.dequantize_token_embedding_into(&mmap, 504, &mut out);
+        assert_eq!(n, 960);
+        println!(
+            "token504 first10: {:?}",
+            &out[..10]
+                .iter()
+                .map(|v| format!("{v:.6}"))
+                .collect::<Vec<_>>()
+        );
+        assert!(out.iter().any(|&v| v.is_finite() && v != 0.0));
+    }
+
+    #[test]
     fn q4_k_row_bytes_stride() {
         // hidden_dim=2560 → (2560/256)*144 = 1440
         assert_eq!(ggml_row_bytes(GGML_TYPE_Q4_K, 2560), Some(1440));
@@ -422,6 +546,49 @@ mod tests {
     fn q6_k_row_bytes_stride() {
         // Gemma 4B token_embd: hidden_dim=2560 → (2560/256)*210 = 2100
         assert_eq!(ggml_row_bytes(GGML_TYPE_Q6_K, 2560), Some(2100));
+    }
+
+    #[test]
+    fn q6_k_dequant_matches_gguf_smollm2_ffn_down_row0() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf");
+        if !path.exists() {
+            return;
+        }
+        let mmap = std::fs::read(&path).expect("read gguf");
+        let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        let info = index
+            .get_layer_tensors(0)
+            .ffn_down
+            .expect("blk.0.ffn_down");
+        assert_eq!(info.ggml_type, GGML_TYPE_Q6_K);
+        let raw = fetch_tensor_bytes(&mmap, index.tensor_data_start, &info).expect("fetch ffn_down");
+        let row_bytes = ggml_row_bytes(GGML_TYPE_Q6_K, info.dims[0] as usize).unwrap();
+        assert_eq!(row_bytes, 2100);
+        let mut out = [0f32; 2560];
+        dequantize_row_into(&raw[..row_bytes], GGML_TYPE_Q6_K, 2560, &mut out).unwrap();
+        // Reference: llama.cpp dequantize_row_q6_K (signed int8 scales) on row 0
+        let expected = [
+            -0.11712998f32,
+            -0.16535997,
+            -0.0,
+            0.15157998,
+            -0.08956999,
+            -0.02067,
+            0.04133999,
+            0.03445,
+            0.17913999,
+            0.22047997,
+        ];
+        for (i, &exp) in expected.iter().enumerate() {
+            assert!(
+                (out[i] - exp).abs() < 1e-5,
+                "elem {i}: got {} expected {}",
+                out[i],
+                exp
+            );
+        }
+        assert!(out.iter().any(|&v| v.is_finite() && v != 0.0));
     }
 
     #[test]

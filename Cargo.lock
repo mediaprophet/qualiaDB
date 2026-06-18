@@ -5863,7 +5863,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-core-db"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "aead",
  "aes-gcm",
@@ -5928,6 +5928,7 @@ dependencies = [
  "rand_distr",
  "rayon",
  "rcgen 0.14.8",
+ "regex",
  "reqwest 0.13.4",
  "rio_api",
  "rio_turtle",

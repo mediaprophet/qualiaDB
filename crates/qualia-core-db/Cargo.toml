@@ -102,6 +102,7 @@ fips204 = { version = "0.4", default-features = false, features = ["ml-dsa-65", 
 fips203 = { version = "0.4", default-features = false, features = ["ml-kem-512", "ml-kem-768", "ml-kem-1024", "default-rng"] }
 fips205 = { version = "0.4", default-features = false, features = ["slh_dsa_sha2_256s", "default-rng"] }
 quick-xml = "0.31"
+regex = "1"
 crossbeam-channel = "0.5"
 core_affinity = "0.8"
 num_cpus = "1.16"
@@ -161,6 +162,7 @@ web-sys = { version = "0.3", features = [
     "HtmlCanvasElement",
     "CanvasRenderingContext2d",
     "CanvasGradient",
+    "console",
 ] }
 getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
 getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }

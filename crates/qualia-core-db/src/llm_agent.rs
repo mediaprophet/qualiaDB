@@ -33,7 +33,10 @@ pub const MAX_OUTPUT_TOKENS: u32 = 2048;
 /// Token budget for the autoregressive loop (`MAX_OUTPUT_TOKENS` in release).
 #[cfg(test)]
 const DECODE_TOKEN_BUDGET: u32 = 16;
-#[cfg(not(test))]
+/// MC2b harness iteration: CPU SDPA decode is very slow in wasm; trim budget until Option B.
+#[cfg(all(not(test), target_arch = "wasm32"))]
+const DECODE_TOKEN_BUDGET: u32 = 32;
+#[cfg(all(not(test), not(target_arch = "wasm32")))]
 const DECODE_TOKEN_BUDGET: u32 = MAX_OUTPUT_TOKENS;
 
 /// Layer cap for transformer forward during unit tests (full depth in release).
@@ -801,10 +804,7 @@ impl LocalLlmAgent {
                     .as_ref()
                     .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
 
-                let mut ctx = tok.encode(&prompt_owned);
-                if ctx.is_empty() {
-                    ctx.push(tok.bos_token_id);
-                }
+                let mut ctx = tok.encode_prompt(&prompt_owned);
                 let eos = tok.eos_token_id;
                 let vlen = tok.vocab_len().max(1);
 
@@ -857,7 +857,7 @@ impl LocalLlmAgent {
                                     );
                                 }
                             }
-                            let _ = engine.dispatch_prefill_chunk(
+                            if !engine.dispatch_prefill_chunk(
                                 idx,
                                 &mut prefill_chunk[..batch_elems],
                                 emb_dim,
@@ -866,7 +866,11 @@ impl LocalLlmAgent {
                                 &mut scratch_a,
                                 &mut scratch_b,
                                 TEST_TRANSFORMER_LAYER_CAP,
-                            );
+                            ) {
+                                crate::gguf_bridge::wlog(&format!(
+                                    "[llm] PREFILL chunk FAILED pos={pos} n={n}"
+                                ));
+                            }
                             pos += n;
                         }
                     }
@@ -973,6 +977,8 @@ impl LocalLlmAgent {
                                 token_idx,
                                 TEST_TRANSFORMER_LAYER_CAP,
                             );
+                            #[cfg(target_arch = "wasm32")]
+                            let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
                             let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
                             if let Some(argmax) = engine.dispatch_output_argmax_chunked(
                                 idx,
@@ -1217,10 +1223,7 @@ impl LocalLlmAgent {
                     .as_ref()
                     .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
 
-                let mut ctx = tok.encode(&prompt_owned);
-                if ctx.is_empty() {
-                    ctx.push(tok.bos_token_id);
-                }
+                let mut ctx = tok.encode_prompt(&prompt_owned);
                 let eos = tok.eos_token_id;
                 let vlen = tok.vocab_len().max(1);
 
@@ -1273,7 +1276,7 @@ impl LocalLlmAgent {
                                     );
                                 }
                             }
-                            let _ = engine.dispatch_prefill_chunk(
+                            if !engine.dispatch_prefill_chunk(
                                 idx,
                                 &mut prefill_chunk[..batch_elems],
                                 emb_dim,
@@ -1282,7 +1285,11 @@ impl LocalLlmAgent {
                                 &mut scratch_a,
                                 &mut scratch_b,
                                 TEST_TRANSFORMER_LAYER_CAP,
-                            );
+                            ) {
+                                crate::gguf_bridge::wlog(&format!(
+                                    "[llm] PREFILL chunk FAILED pos={pos} n={n}"
+                                ));
+                            }
                             pos += n;
                         }
                     }
@@ -1393,6 +1400,8 @@ impl LocalLlmAgent {
                                 token_idx,
                                 TEST_TRANSFORMER_LAYER_CAP,
                             );
+                            #[cfg(target_arch = "wasm32")]
+                            let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
                             let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
                             if let Some(argmax) = engine.dispatch_output_argmax_chunked(
                                 idx,

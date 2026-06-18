@@ -116,8 +116,25 @@ pub const KV_ATTENTION_MASK_WORDS: usize = crate::compute_universe::KV_ATTENTION
 
 #[inline]
 fn ggml_gpu_quant_supported(ggml_type: u32) -> bool {
-    ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K
-        || ggml_type == crate::ggml_quants::GGML_TYPE_Q6_K
+    #[cfg(target_arch = "wasm32")]
+    {
+        // WASM CPU fallback dequantizes all stack_gemm-supported types.
+        matches!(
+            ggml_type,
+            crate::ggml_quants::GGML_TYPE_F32
+                | crate::ggml_quants::GGML_TYPE_F16
+                | crate::ggml_quants::GGML_TYPE_Q4_0
+                | crate::ggml_quants::GGML_TYPE_Q5_0
+                | crate::ggml_quants::GGML_TYPE_Q8_0
+                | crate::ggml_quants::GGML_TYPE_Q4_K
+                | crate::ggml_quants::GGML_TYPE_Q6_K
+        )
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K
+            || ggml_type == crate::ggml_quants::GGML_TYPE_Q6_K
+    }
 }
 
 /// Hard context ceiling — sized to keep KV arena under the 512MB RAM floor (Gemma 42L).
@@ -188,6 +205,10 @@ impl KvCacheLayout {
 const MAX_STACK_GEMM_DIM: usize = 10240;
 const MAX_STACK_GEMM_OUT: usize = MAX_STACK_GEMM_DIM;
 const MAX_STACK_GEMM_IN: usize = MAX_STACK_GEMM_DIM;
+/// Stack scratch for pre-norm hidden (SmolLM2 n_embd=960; cap supports Gemma-class models).
+const MAX_HIDDEN_DIM: usize = 4096;
+/// RMSNorm epsilon when GGUF KV does not expose `rms_norm_eps` (Llama/SmolLM default).
+const RMS_NORM_EPS: f32 = 1e-5;
 /// Prompt tokens per prefill GPU batch (stack + staging footprint = `emb_dim ×` this).
 pub const PREFILL_CHUNK_SIZE: usize = 64;
 /// Max stacked embedding floats in a prefill chunk (`MAX_STACK_GEMM_IN × 64`).
@@ -283,10 +304,121 @@ fn relu_inplace(buf: &mut [f32], n: usize) {
     }
 }
 
+/// SiLU (Swish): x * sigmoid(x) = x / (1 + e^{-x}). Llama/SmolLM2 SwiGLU gate activation.
+#[inline]
+#[cfg(target_arch = "wasm32")]
+fn silu_inplace(x: &mut [f32], n: usize) {
+    for v in x.iter_mut().take(n) {
+        *v = *v / (1.0 + (-*v).exp());
+    }
+}
+
 #[inline]
 fn add_residual_inplace(dst: &mut [f32], src: &[f32], n: usize) {
     for i in 0..n.min(dst.len()).min(src.len()) {
         dst[i] += src[i];
+    }
+}
+
+#[inline]
+fn rms_norm_inplace(x: &mut [f32], weight: &[f32], eps: f32) {
+    let n = x.len().min(weight.len());
+    if n == 0 {
+        return;
+    }
+    let mut ss = 0.0f32;
+    for i in 0..n {
+        ss += x[i] * x[i];
+    }
+    ss /= n as f32;
+    let inv_rms = 1.0 / (ss + eps).sqrt();
+    for i in 0..n {
+        x[i] = x[i] * inv_rms * weight[i];
+    }
+}
+
+/// Dequantize a 1-D norm weight row (`attn_norm` / `ffn_norm` / `output_norm`) into `out`.
+fn dequant_norm_row_into(
+    mmap: &[u8],
+    tensor_data_start: u64,
+    info: &GgufTensorInfo,
+    out: &mut [f32],
+) -> usize {
+    let n = info.dims[0] as usize;
+    if n == 0 || n > out.len() {
+        return 0;
+    }
+    let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, tensor_data_start, info) {
+        Ok(s) => s,
+        Err(_) => return 0,
+    };
+    crate::ggml_quants::dequantize_row_into(raw, info.ggml_type, n, &mut out[..n]).unwrap_or(0)
+}
+
+/// Pre-norm: copy `hidden` into `h_norm`, apply RMSNorm with `norm_info` weights; return slice to use.
+#[cfg(target_arch = "wasm32")]
+fn prepare_pre_norm_input<'a>(
+    hidden: &'a [f32],
+    emb_dim: usize,
+    norm_info: Option<&GgufTensorInfo>,
+    mmap: Option<&[u8]>,
+    tensor_data_start: u64,
+    h_norm: &'a mut [f32],
+    norm_w: &mut [f32],
+) -> &'a [f32] {
+    let n_embd = emb_dim.min(hidden.len()).min(h_norm.len());
+    if let (Some(mmap), Some(info)) = (mmap, norm_info) {
+        if dequant_norm_row_into(mmap, tensor_data_start, info, norm_w) >= n_embd {
+            h_norm[..n_embd].copy_from_slice(&hidden[..n_embd]);
+            rms_norm_inplace(&mut h_norm[..n_embd], &norm_w[..n_embd], RMS_NORM_EPS);
+            return &h_norm[..n_embd];
+        }
+    }
+    &hidden[..n_embd]
+}
+
+// --- PHASE 1 WASM OOB DIAGNOSTIC INSTRUMENTATION (remove once the trap is fixed) ---
+#[cfg(target_arch = "wasm32")]
+#[inline]
+pub(crate) fn wlog(s: &str) {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(s));
+}
+#[cfg(not(target_arch = "wasm32"))]
+#[inline]
+pub(crate) fn wlog(_s: &str) {}
+
+/// In-place NEOX-style RoPE over `n_heads` consecutive `head_dim` blocks of `vec`.
+/// Rotates split-half pairs `(i, i + head_dim/2)` — required for Llama/SmolLM2 GGUF weights.
+/// (`fused_attention.wgsl` uses consecutive-pair style; native GPU path may permute separately.)
+#[cfg(target_arch = "wasm32")]
+fn rope_inplace(
+    vec: &mut [f32],
+    n_heads: usize,
+    head_dim: usize,
+    pos: u32,
+    base: f32,
+    scale: f32,
+) {
+    let half = head_dim / 2;
+    if half == 0 {
+        return;
+    }
+    let scale = if scale > 0.0 && scale.is_finite() { scale } else { 1.0 };
+    let scaled_pos = pos as f32 / scale;
+    for head in 0..n_heads {
+        let off = head * head_dim;
+        if off + head_dim > vec.len() {
+            return;
+        }
+        for i in 0..half {
+            // NEOX: pair dimension i with i + half (not i + 1).
+            let theta = scaled_pos * base.powf(-2.0 * i as f32 / head_dim as f32);
+            let (s, c) = theta.sin_cos();
+            let x0 = vec[off + i];
+            let x1 = vec[off + i + half];
+            vec[off + i] = x0 * c - x1 * s;
+            vec[off + i + half] = x0 * s + x1 * c;
+        }
     }
 }
 
@@ -299,7 +431,11 @@ fn stack_gemm_quant(
     n_in: usize,
     n_out: usize,
 ) -> bool {
-    if n_in > input.len() || n_out > out.len() {
+    if n_in > input.len() || n_out > out.len() || n_in > MAX_STACK_GEMM_IN {
+        wlog(&format!(
+            "[stack_gemm] GUARD tripped n_in={n_in} n_out={n_out} input={} out={} MAX_IN={MAX_STACK_GEMM_IN}",
+            input.len(), out.len()
+        ));
         return false;
     }
     let mut row = [0f32; MAX_STACK_GEMM_IN];
@@ -555,24 +691,33 @@ impl QTensorEngine {
     fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
         let layout = match KvCacheLayout::from_hyperparams(h) {
             Some(l) => l,
-            None => return,
+            None => {
+                #[cfg(target_arch = "wasm32")]
+                wlog("[kv_cache] FAILED from_hyperparams (zero dims or exceeds KV_CACHE_MAX_BYTES)");
+                return;
+            }
         };
         let bytes = (layout.total_f32_elems * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
-        let ledger = crate::gpu_context::global_vram_ledger();
-        let orch = crate::gpu_context::universe_orchestrator();
-        if !ledger.can_allocate_in_universe(
-            &orch,
-            crate::gpu_context::ComputeUniverse::LlmInference,
-            bytes,
-        ) {
-            log::warn!(
-                "LLM_LOAD|kv-cache|denied|U0 budget {:.1} MiB used, need {:.1} MiB (mode {:?})",
-                ledger.universe_used_bytes(crate::gpu_context::ComputeUniverse::LlmInference) as f64
-                    / (1024.0 * 1024.0),
-                bytes as f64 / (1024.0 * 1024.0),
-                orch.active_mode,
-            );
-            return;
+        // Native: honour U0 VRAM ledger pins. WASM: always allocate CPU mirror + wgpu storage
+        // (ledger models host adapter VRAM; browser WebGPU has separate limits).
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let ledger = crate::gpu_context::global_vram_ledger();
+            let orch = crate::gpu_context::universe_orchestrator();
+            if !ledger.can_allocate_in_universe(
+                &orch,
+                crate::gpu_context::ComputeUniverse::LlmInference,
+                bytes,
+            ) {
+                log::warn!(
+                    "LLM_LOAD|kv-cache|denied|U0 budget {:.1} MiB used, need {:.1} MiB (mode {:?})",
+                    ledger.universe_used_bytes(crate::gpu_context::ComputeUniverse::LlmInference) as f64
+                        / (1024.0 * 1024.0),
+                    bytes as f64 / (1024.0 * 1024.0),
+                    orch.active_mode,
+                );
+                return;
+            }
         }
         let gpu = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("StaticKvCacheArena"),
@@ -596,12 +741,17 @@ impl QTensorEngine {
         self.kv_layout = Some(layout);
         self.kv_cache_gpu = Some(gpu);
         self.kv_cache_cpu = Some(cpu);
-        ledger.record_kv_cache(bytes);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let ledger = crate::gpu_context::global_vram_ledger();
+            ledger.record_kv_cache(bytes);
+        }
         log::info!(
             "LLM_LOAD|kv-cache|0.86|Reserved {:.1} MiB KV cache (GPU + CPU mirror, context {})",
             bytes as f64 / (1024.0 * 1024.0),
             layout.max_context,
         );
+        #[cfg(not(target_arch = "wasm32"))]
         eprintln!(
             "[gguf_bridge] KV arena {} f32 ({:.1} MiB), context={}",
             layout.total_f32_elems,
@@ -835,6 +985,9 @@ impl QTensorEngine {
             .min(MAX_WGPU_WEIGHT_STAGING);
         self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         self.ensure_kv_cache(&index.hyperparams);
+        if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
+            return Err("KV cache allocation failed (layout or CPU mirror missing)".to_string());
+        }
         self.gguf_mmap = Some(mmap);
         let kv_cache_bytes = self.kv_cache_bytes();
         Ok(GgufLoadReport {
@@ -1314,6 +1467,10 @@ impl QTensorEngine {
         n_in: usize,
         n_out: usize,
     ) -> bool {
+        if n_in > input.len() || n_out > out.len() {
+            wlog(&format!("[gemm_into] GUARD n_in={n_in} n_out={n_out} input={} out={}", input.len(), out.len()));
+            return false;
+        }
         let mmap = match self.gguf_mmap.as_deref() {
             Some(m) => m,
             None => return false,
@@ -1376,6 +1533,9 @@ impl QTensorEngine {
             ) {
                 return None;
             }
+            #[cfg(target_arch = "wasm32")]
+            if chunk_idx == 0 {
+            }
             update_streaming_argmax_sieved(
                 &chunk_logits[..chunk_rows],
                 chunk_rows,
@@ -1394,6 +1554,271 @@ impl QTensorEngine {
             best_token_id,
             max_logit,
         })
+    }
+
+    /// Final `output_norm` RMSNorm in-place before vocabulary projection (Pre-Norm LLM tail).
+    #[cfg(target_arch = "wasm32")]
+    pub fn apply_output_norm_inplace(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+    ) -> bool {
+        let info = match index.output_norm_info() {
+            Some(i) => i,
+            None => return true,
+        };
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return false,
+        };
+        let n_embd = index.hyperparams.n_embd as usize;
+        let n = emb_dim.min(n_embd).min(hidden.len());
+        let mut norm_w = [0f32; MAX_HIDDEN_DIM];
+        if dequant_norm_row_into(mmap, index.tensor_data_start, info, &mut norm_w) < n {
+            return false;
+        }
+        rms_norm_inplace(&mut hidden[..n], &norm_w[..n], RMS_NORM_EPS);
+        true
+    }
+
+    /// Pre-norm FFN: RMSNorm(hidden) → SwiGLU (wasm) or ReLU-gated (native) → residual add.
+    fn dispatch_ffn_block_pre_norm(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        tensors: &crate::gguf_sharder::LayerTensors,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+    ) -> bool {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let mut norm_w_ffn = [0f32; MAX_HIDDEN_DIM];
+            let mut h_norm_ffn = [0f32; MAX_HIDDEN_DIM];
+            let ffn_input = prepare_pre_norm_input(
+                &hidden[..emb_dim],
+                emb_dim,
+                tensors.ffn_norm.as_ref(),
+                self.gguf_mmap.as_deref(),
+                index.tensor_data_start,
+                &mut h_norm_ffn,
+                &mut norm_w_ffn,
+            );
+            let gate_info = match tensors.ffn_gate.as_ref() {
+                Some(i) => i,
+                None => return false,
+            };
+            let up_info = match tensors.ffn_up.as_ref() {
+                Some(i) => i,
+                None => return false,
+            };
+            let down_info = match tensors.ffn_down.as_ref() {
+                Some(i) => i,
+                None => return false,
+            };
+            let (gate_in, n_ffn) = Self::matmul_dims(gate_info);
+            let (up_in, up_out) = Self::matmul_dims(up_info);
+            let (dn_in, dn_out) = Self::matmul_dims(down_info);
+            if gate_in > emb_dim
+                || up_in != gate_in
+                || up_out != n_ffn
+                || dn_in != n_ffn
+                || n_ffn > MAX_STACK_GEMM_DIM
+                || dn_out > scratch_a.len()
+            {
+                return false;
+            }
+            let mut gate_buf = [0f32; MAX_STACK_GEMM_DIM];
+            let mut up_buf = [0f32; MAX_STACK_GEMM_DIM];
+            if !self.dispatch_gemm_into(
+                index,
+                gate_info,
+                &ffn_input[..gate_in],
+                &mut gate_buf[..n_ffn],
+                gate_in,
+                n_ffn,
+            ) {
+                return false;
+            }
+            if !self.dispatch_gemm_into(
+                index,
+                up_info,
+                &ffn_input[..up_in],
+                &mut up_buf[..n_ffn],
+                up_in,
+                n_ffn,
+            ) {
+                return false;
+            }
+            silu_inplace(&mut gate_buf[..n_ffn], n_ffn);
+            for i in 0..n_ffn {
+                gate_buf[i] *= up_buf[i];
+            }
+            if !self.dispatch_gemm_into(
+                index,
+                down_info,
+                &gate_buf[..dn_in],
+                scratch_a,
+                dn_in,
+                dn_out,
+            ) {
+                return false;
+            }
+            add_residual_inplace(
+                &mut hidden[..emb_dim],
+                &scratch_a[..dn_out],
+                emb_dim.min(dn_out),
+            );
+            return true;
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let ffn_input = &hidden[..emb_dim];
+            if let Some(info) = tensors.ffn_gate.as_ref() {
+                let (n_in, n_out) = Self::matmul_dims(info);
+                if n_in <= emb_dim
+                    && self.dispatch_gemm_into(index, info, &ffn_input[..n_in], scratch_a, n_in, n_out)
+                {
+                    relu_inplace(&mut scratch_a[..n_out], n_out);
+                    if let Some(up) = tensors.ffn_up.as_ref() {
+                        let (up_in, up_out) = Self::matmul_dims(up);
+                        if up_in <= n_out
+                            && self.dispatch_gemm_into(
+                                index,
+                                up,
+                                &scratch_a[..up_in],
+                                scratch_b,
+                                up_in,
+                                up_out,
+                            )
+                        {
+                            if let Some(down) = tensors.ffn_down.as_ref() {
+                                let (dn_in, dn_out) = Self::matmul_dims(down);
+                                if dn_in <= up_out
+                                    && self.dispatch_gemm_into(
+                                        index,
+                                        down,
+                                        &scratch_b[..dn_in],
+                                        scratch_a,
+                                        dn_in,
+                                        dn_out,
+                                    )
+                                {
+                                    add_residual_inplace(
+                                        &mut hidden[..emb_dim],
+                                        &scratch_a[..dn_out],
+                                        emb_dim.min(dn_out),
+                                    );
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            false
+        }
+    }
+
+    /// Phase 2B: SwiGLU FFN block with async GEMM readback (`map_async` + `await`).
+    #[cfg(target_arch = "wasm32")]
+    async fn dispatch_ffn_block_pre_norm_async(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        tensors: &crate::gguf_sharder::LayerTensors,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+    ) -> bool {
+        let mut norm_w_ffn = [0f32; MAX_HIDDEN_DIM];
+        let mut h_norm_ffn = [0f32; MAX_HIDDEN_DIM];
+        let ffn_input = prepare_pre_norm_input(
+            &hidden[..emb_dim],
+            emb_dim,
+            tensors.ffn_norm.as_ref(),
+            self.gguf_mmap.as_deref(),
+            index.tensor_data_start,
+            &mut h_norm_ffn,
+            &mut norm_w_ffn,
+        );
+        let gate_info = match tensors.ffn_gate.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let up_info = match tensors.ffn_up.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let down_info = match tensors.ffn_down.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let (gate_in, n_ffn) = Self::matmul_dims(gate_info);
+        let (up_in, up_out) = Self::matmul_dims(up_info);
+        let (dn_in, dn_out) = Self::matmul_dims(down_info);
+        if gate_in > emb_dim
+            || up_in != gate_in
+            || up_out != n_ffn
+            || dn_in != n_ffn
+            || n_ffn > MAX_STACK_GEMM_DIM
+            || dn_out > scratch_a.len()
+        {
+            return false;
+        }
+        let mut gate_buf = [0f32; MAX_STACK_GEMM_DIM];
+        let mut up_buf = [0f32; MAX_STACK_GEMM_DIM];
+        if !self
+            .dispatch_gemm_into_async(
+                index,
+                gate_info,
+                &ffn_input[..gate_in],
+                &mut gate_buf[..n_ffn],
+                gate_in,
+                n_ffn,
+            )
+            .await
+        {
+            return false;
+        }
+        if !self
+            .dispatch_gemm_into_async(
+                index,
+                up_info,
+                &ffn_input[..up_in],
+                &mut up_buf[..n_ffn],
+                up_in,
+                n_ffn,
+            )
+            .await
+        {
+            return false;
+        }
+        silu_inplace(&mut gate_buf[..n_ffn], n_ffn);
+        for i in 0..n_ffn {
+            gate_buf[i] *= up_buf[i];
+        }
+        if !self
+            .dispatch_gemm_into_async(
+                index,
+                down_info,
+                &gate_buf[..dn_in],
+                scratch_a,
+                dn_in,
+                dn_out,
+            )
+            .await
+        {
+            return false;
+        }
+        add_residual_inplace(
+            &mut hidden[..emb_dim],
+            &scratch_a[..dn_out],
+            emb_dim.min(dn_out),
+        );
+        true
     }
 
     fn matmul_dims(info: &GgufTensorInfo) -> (usize, usize) {
@@ -1471,9 +1896,11 @@ impl QTensorEngine {
         raw_weights: &[u8],
         proj_kind: u32,
         n_workgroups: u32,
-        readback_out: Option<&mut [f32]>,
+        norm_weight: Option<&[f32]>,
+        mut readback_out: Option<&mut [f32]>,
     ) -> bool {
         if !ggml_gpu_quant_supported(info.ggml_type) {
+            wlog(&format!("[attn_pass] GUARD unsupported quant kind={proj_kind}"));
             return false;
         }
         let batch = num_tokens_in_batch.max(1) as usize;
@@ -1486,9 +1913,40 @@ impl QTensorEngine {
             || self.attention_params_buf.is_none()
             || self.attention_mask_buf.is_none()
         {
+            wlog(&format!(
+                "[attn_pass] GUARD buffers kind={proj_kind} hidden_elems={hidden_elems} hidden={} gemm_in={} raw_w={} max_w={} gemm_in_buf={} kv_gpu={} params={} mask={}",
+                hidden.len(),
+                self.gemm_max_input_floats,
+                raw_weights.len(),
+                self.max_tensor_bytes,
+                self.gemm_input_buf.is_some(),
+                self.kv_cache_gpu.is_some(),
+                self.attention_params_buf.is_some(),
+                self.attention_mask_buf.is_some(),
+            ));
             return false;
         }
 
+        // WASM: the browser cannot read GPU results synchronously, so run the CPU
+        // attention kernel (Phase 2A) instead of the dead GPU dispatch + map_async path.
+        #[cfg(target_arch = "wasm32")]
+        return self.cpu_attention_pass(
+            hidden,
+            n_embd,
+            num_tokens_in_batch,
+            batch_start_token_idx,
+            layout,
+            layer,
+            h,
+            info,
+            raw_weights,
+            proj_kind,
+            norm_weight,
+            readback_out,
+        );
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
         let (mask_words, mask_active, mask_word_count) =
             Self::attention_kv_mask_for_dispatch(layout, token_idx, proj_kind);
         let params = Self::attention_gpu_params(
@@ -1611,6 +2069,205 @@ impl QTensorEngine {
         }
         let _ = staging.unmap();
         false
+        }
+    }
+
+    /// WASM CPU attention fallback (Phase 2A). Projects one Q/K/V tensor for a batch of
+    /// tokens, applies RoPE (Q/K), writes K/V into `kv_cache_cpu`, and runs SDPA for Q.
+    /// `proj_kind`: 0=Q, 1=K, 2=V.
+    #[cfg(target_arch = "wasm32")]
+    fn cpu_attention_pass(
+        &self,
+        hidden: &[f32],
+        n_embd: usize,
+        num_tokens_in_batch: u32,
+        batch_start_token_idx: u32,
+        layout: &KvCacheLayout,
+        layer: u32,
+        h: &crate::gguf_sharder::GgufHyperparams,
+        info: &GgufTensorInfo,
+        raw_weights: &[u8],
+        proj_kind: u32,
+        norm_weight: Option<&[f32]>,
+        mut readback_out: Option<&mut [f32]>,
+    ) -> bool {
+        let head_dim = h.head_dim() as usize;
+        let n_head = h.n_head as usize;
+        let n_kv = h.effective_n_kv_head() as usize;
+        if head_dim == 0 || n_head == 0 || n_kv == 0 {
+            return false;
+        }
+        let (n_in, out_dim) = Self::matmul_dims(info);
+        if out_dim == 0 || out_dim > MAX_STACK_GEMM_OUT || head_dim > out_dim {
+            wlog(&format!("[cpu_attn] bad dims out_dim={out_dim} head_dim={head_dim}"));
+            return false;
+        }
+        let proj_heads = out_dim / head_dim;
+        let q_dim = n_head * head_dim;
+        let q_heads_per_kv = h.q_heads_per_kv() as usize;
+        let scale = 1.0f32 / (head_dim as f32).sqrt();
+        let base_freq = h.effective_rope_freq_base();
+        let rope_scale = h.effective_rope_scale();
+
+        // SAFETY: single-threaded wasm; `kv_cache_cpu` is disjoint from `hidden`,
+        // `raw_weights`, the local `proj` scratch, and `readback_out`.
+        let (kv_ptr, kv_len) = match self.kv_cache_cpu.as_ref() {
+            Some(b) => (b.as_ptr() as *mut f32, b.len()),
+            None => return false,
+        };
+
+        let mut proj = [0f32; MAX_STACK_GEMM_OUT];
+        let mut norm_tok = [0f32; MAX_HIDDEN_DIM];
+        for t in 0..num_tokens_in_batch as usize {
+            let pos = batch_start_token_idx + t as u32;
+            let slot = layout.ring_slot(pos);
+            let tok_start = t * n_embd;
+            if tok_start + n_embd > hidden.len() {
+                wlog(&format!("[cpu_attn] hidden OOB t={t} need={}", tok_start + n_embd));
+                return false;
+            }
+            let htok = &hidden[tok_start..tok_start + n_embd];
+            let gemm_in: &[f32] = if let Some(w) = norm_weight {
+                if w.len() < n_embd {
+                    return false;
+                }
+                norm_tok[..n_embd].copy_from_slice(htok);
+                rms_norm_inplace(&mut norm_tok[..n_embd], &w[..n_embd], RMS_NORM_EPS);
+                &norm_tok[..n_embd]
+            } else {
+                htok
+            };
+            if !stack_gemm_quant(raw_weights, info, gemm_in, &mut proj[..out_dim], n_in, out_dim) {
+                wlog(&format!("[cpu_attn] proj failed kind={proj_kind} n_in={n_in} out_dim={out_dim} hidden={n_embd}"));
+                return false;
+            }
+
+            match proj_kind {
+                1 => {
+                    rope_inplace(
+                        &mut proj[..out_dim],
+                        proj_heads,
+                        head_dim,
+                        pos,
+                        base_freq,
+                        rope_scale,
+                    );
+                    let kv = unsafe { core::slice::from_raw_parts_mut(kv_ptr, kv_len) };
+                    for kvh in 0..n_kv {
+                        for d in 0..head_dim {
+                            let idx = layout.k_index(layer, slot, kvh as u32, d as u32);
+                            if idx >= kv.len() {
+                                wlog(&format!("[cpu_attn] K idx OOB idx={idx} len={}", kv.len()));
+                                return false;
+                            }
+                            kv[idx] = proj[kvh * head_dim + d];
+                        }
+                    }
+                }
+                2 => {
+                    let kv = unsafe { core::slice::from_raw_parts_mut(kv_ptr, kv_len) };
+                    for kvh in 0..n_kv {
+                        for d in 0..head_dim {
+                            let idx = layout.v_index(layer, slot, kvh as u32, d as u32);
+                            if idx >= kv.len() {
+                                wlog(&format!("[cpu_attn] V idx OOB idx={idx} len={}", kv.len()));
+                                return false;
+                            }
+                            kv[idx] = proj[kvh * head_dim + d];
+                        }
+                    }
+                }
+                0 => {
+                    let mut att_scores = [0f32; MAX_CONTEXT_WINDOW as usize];
+                    rope_inplace(
+                        &mut proj[..out_dim],
+                        proj_heads,
+                        head_dim,
+                        pos,
+                        base_freq,
+                        rope_scale,
+                    );
+                    let out_buf = match readback_out.as_mut() {
+                        Some(out) => {
+                            let out_off = t * q_dim;
+                            if out_off + q_dim > out.len() {
+                                wlog(&format!(
+                                    "[cpu_attn] Q out OOB off={out_off} q_dim={q_dim} len={}",
+                                    out.len()
+                                ));
+                                return false;
+                            }
+                            &mut out[out_off..out_off + q_dim]
+                        }
+                        None => return false,
+                    };
+                    out_buf.fill(0.0);
+                    let pos_usize = pos as usize;
+                    if pos_usize >= MAX_CONTEXT_WINDOW as usize {
+                        wlog(&format!("[cpu_attn] pos OOB pos={pos}"));
+                        return false;
+                    }
+                    let kv = unsafe { core::slice::from_raw_parts(kv_ptr, kv_len) };
+                    for q_h in 0..n_head {
+                        let kv_h = q_h / q_heads_per_kv;
+                        let q_head_slice = &proj[q_h * head_dim..(q_h + 1) * head_dim];
+                        let out_head_slice = &mut out_buf[q_h * head_dim..(q_h + 1) * head_dim];
+                        let mut max_score = f32::NEG_INFINITY;
+                        for past_pos in 0..=pos {
+                            let past_slot = layout.ring_slot(past_pos);
+                            let mut dot = 0.0f32;
+                            for d in 0..head_dim {
+                                let k_idx =
+                                    layout.k_index(layer, past_slot, kv_h as u32, d as u32);
+                                if k_idx >= kv.len() {
+                                    wlog(&format!(
+                                        "[cpu_attn] SDPA K idx OOB idx={k_idx} len={}",
+                                        kv.len()
+                                    ));
+                                    return false;
+                                }
+                                dot += q_head_slice[d] * kv[k_idx];
+                            }
+                            let score = dot * scale;
+                            att_scores[past_pos as usize] = score;
+                            if score > max_score {
+                                max_score = score;
+                            }
+                        }
+                        let mut sum_exp = 0.0f32;
+                        for past_pos in 0..=pos {
+                            let exp_val = (att_scores[past_pos as usize] - max_score).exp();
+                            att_scores[past_pos as usize] = exp_val;
+                            sum_exp += exp_val;
+                        }
+                        if sum_exp == 0.0 {
+                            wlog(&format!(
+                                "[MC3] softmax sum_exp=0 layer={layer} pos={pos} q_h={q_h} max_score={max_score}"
+                            ));
+                            return false;
+                        }
+                        for past_pos in 0..=pos {
+                            let prob = att_scores[past_pos as usize] / sum_exp;
+                            let past_slot = layout.ring_slot(past_pos);
+                            for d in 0..head_dim {
+                                let v_idx =
+                                    layout.v_index(layer, past_slot, kv_h as u32, d as u32);
+                                if v_idx >= kv.len() {
+                                    wlog(&format!(
+                                        "[cpu_attn] SDPA V idx OOB idx={v_idx} len={}",
+                                        kv.len()
+                                    ));
+                                    return false;
+                                }
+                                out_head_slice[d] += kv[v_idx] * prob;
+                            }
+                        }
+                    }
+                }
+                _ => return false,
+            }
+        }
+        true
     }
 
     /// GPU-fused Q/K/V projections, RoPE, ring-buffer KV write, and GQA online-softmax.
@@ -1656,8 +2313,25 @@ impl QTensorEngine {
             crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &q_info).ok()?;
         let n_embd = h.n_embd as usize;
 
+        #[cfg(target_arch = "wasm32")]
+        let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
+        #[cfg(target_arch = "wasm32")]
+        let mut h_norm_attn = [0f32; MAX_HIDDEN_DIM];
+        #[cfg(target_arch = "wasm32")]
+        let hidden_input = prepare_pre_norm_input(
+            &hidden[..emb_dim],
+            emb_dim,
+            tensors.attn_norm.as_ref(),
+            Some(mmap),
+            index.tensor_data_start,
+            &mut h_norm_attn,
+            &mut norm_w_attn,
+        );
+        #[cfg(not(target_arch = "wasm32"))]
+        let hidden_input = &hidden[..emb_dim];
+
         if !self.dispatch_attention_pass(
-            hidden,
+            hidden_input,
             n_embd,
             1,
             token_idx,
@@ -1670,11 +2344,12 @@ impl QTensorEngine {
             1,
             n_kv as u32,
             None,
+            None,
         ) {
             return None;
         }
         if !self.dispatch_attention_pass(
-            hidden,
+            hidden_input,
             n_embd,
             1,
             token_idx,
@@ -1687,11 +2362,12 @@ impl QTensorEngine {
             2,
             n_kv as u32,
             None,
+            None,
         ) {
             return None;
         }
         if !self.dispatch_attention_pass(
-            hidden,
+            hidden_input,
             n_embd,
             1,
             token_idx,
@@ -1703,6 +2379,7 @@ impl QTensorEngine {
             q_raw,
             0,
             n_head as u32,
+            None,
             Some(&mut scratch_b[..q_dim]),
         ) {
             return None;
@@ -1765,8 +2442,24 @@ impl QTensorEngine {
                 Err(_) => return false,
             };
         let n_embd = h.n_embd as usize;
-        if !self.dispatch_attention_pass(
+        #[cfg(target_arch = "wasm32")]
+        let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
+        #[cfg(target_arch = "wasm32")]
+        let mut h_norm_attn = [0f32; MAX_HIDDEN_DIM];
+        #[cfg(target_arch = "wasm32")]
+        let hidden_input = prepare_pre_norm_input(
             &hidden[..emb_dim],
+            emb_dim,
+            tensors.attn_norm.as_ref(),
+            Some(mmap),
+            index.tensor_data_start,
+            &mut h_norm_attn,
+            &mut norm_w_attn,
+        );
+        #[cfg(not(target_arch = "wasm32"))]
+        let hidden_input = &hidden[..emb_dim];
+        if !self.dispatch_attention_pass(
+            hidden_input,
             n_embd,
             1,
             token_idx,
@@ -1778,6 +2471,7 @@ impl QTensorEngine {
             q_raw,
             0,
             n_head as u32,
+            None,
             Some(&mut scratch_b[..q_dim]),
         ) {
             return false;
@@ -1810,49 +2504,7 @@ impl QTensorEngine {
         if !attn_ok {
             return false;
         }
-        if let Some(info) = tensors.ffn_gate.as_ref() {
-            let (n_in, n_out) = Self::matmul_dims(info);
-            if n_in <= emb_dim
-                && self.dispatch_gemm_into(index, info, &hidden[..n_in], scratch_a, n_in, n_out)
-            {
-                relu_inplace(&mut scratch_a[..n_out], n_out);
-                if let Some(up) = tensors.ffn_up.as_ref() {
-                    let (up_in, up_out) = Self::matmul_dims(up);
-                    if up_in <= n_out
-                        && self.dispatch_gemm_into(
-                            index,
-                            up,
-                            &scratch_a[..up_in],
-                            scratch_b,
-                            up_in,
-                            up_out,
-                        )
-                    {
-                        if let Some(down) = tensors.ffn_down.as_ref() {
-                            let (dn_in, dn_out) = Self::matmul_dims(down);
-                            if dn_in <= up_out
-                                && self.dispatch_gemm_into(
-                                    index,
-                                    down,
-                                    &scratch_b[..dn_in],
-                                    scratch_a,
-                                    dn_in,
-                                    dn_out,
-                                )
-                            {
-                                add_residual_inplace(
-                                    &mut hidden[..emb_dim],
-                                    &scratch_a[..dn_out],
-                                    emb_dim.min(dn_out),
-                                );
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        true
+        self.dispatch_ffn_block_pre_norm(index, hidden, emb_dim, &tensors, scratch_a, scratch_b)
     }
 
     /// One transformer layer for a batched prefill chunk: batched K/V then per-token Q+FFN.
@@ -1868,22 +2520,33 @@ impl QTensorEngine {
         scratch_b: &mut [f32],
     ) -> bool {
         if n_tokens == 0 {
+            wlog("[prefill_layer] FAILED n_tokens=0");
             return false;
         }
         let layout = match self.kv_layout {
             Some(l) => l,
-            None => return false,
+            None => {
+                wlog("[prefill_layer] FAILED kv_layout is None");
+                return false;
+            }
         };
         let tensors = index.get_layer_tensors(layer);
         let k_info = match tensors.attn_k.as_ref() {
             Some(i) => i,
-            None => return false,
+            None => {
+                wlog(&format!("[prefill_layer] FAILED missing attn_k layer={layer}"));
+                return false;
+            }
         };
         let v_info = match tensors.attn_v.as_ref() {
             Some(i) => i,
-            None => return false,
+            None => {
+                wlog(&format!("[prefill_layer] FAILED missing attn_v layer={layer}"));
+                return false;
+            }
         };
         if tensors.attn_q.is_none() {
+            wlog(&format!("[prefill_layer] FAILED missing attn_q layer={layer}"));
             return false;
         }
         let h = index.hyperparams;
@@ -1891,23 +2554,49 @@ impl QTensorEngine {
         let n_embd = h.n_embd as usize;
         let batch_elems = n_embd * n_tokens as usize;
         if batch_elems > batch_hidden.len() {
+            wlog(&format!(
+                "[prefill_layer] FAILED batch_elems OOB elems={batch_elems} hidden={}",
+                batch_hidden.len()
+            ));
             return false;
         }
         let mmap = match self.gguf_mmap.as_deref() {
             Some(m) => m,
-            None => return false,
+            None => {
+                wlog("[prefill_layer] FAILED gguf_mmap is None");
+                return false;
+            }
         };
         let k_raw =
             match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
                 Ok(s) => s,
-                Err(_) => return false,
+                Err(e) => {
+                    wlog(&format!("[prefill_layer] FAILED fetch attn_k bytes: {e:?}"));
+                    return false;
+                }
             };
         let v_raw =
             match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info) {
                 Ok(s) => s,
-                Err(_) => return false,
+                Err(e) => {
+                    wlog(&format!("[prefill_layer] FAILED fetch attn_v bytes: {e:?}"));
+                    return false;
+                }
             };
         let n_kv_wg = n_tokens.saturating_mul(n_kv);
+        #[cfg(target_arch = "wasm32")]
+        let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
+        #[cfg(target_arch = "wasm32")]
+        let norm_weight_attn: Option<&[f32]> = tensors.attn_norm.as_ref().and_then(|info| {
+            let n = dequant_norm_row_into(mmap, index.tensor_data_start, info, &mut norm_w_attn);
+            if n >= n_embd {
+                Some(&norm_w_attn[..n_embd])
+            } else {
+                None
+            }
+        });
+        #[cfg(not(target_arch = "wasm32"))]
+        let norm_weight_attn: Option<&[f32]> = None;
         if !self.dispatch_attention_pass(
             &batch_hidden[..batch_elems],
             n_embd,
@@ -1921,8 +2610,10 @@ impl QTensorEngine {
             k_raw,
             1,
             n_kv_wg,
+            norm_weight_attn,
             None,
         ) {
+            wlog(&format!("[prefill_layer] K pass FAILED layer={layer}"));
             return false;
         }
         if !self.dispatch_attention_pass(
@@ -1938,8 +2629,10 @@ impl QTensorEngine {
             v_raw,
             2,
             n_kv_wg,
+            norm_weight_attn,
             None,
         ) {
+            wlog(&format!("[prefill_layer] V pass FAILED layer={layer}"));
             return false;
         }
         for t in 0..n_tokens {
@@ -1955,6 +2648,176 @@ impl QTensorEngine {
                 scratch_a,
                 scratch_b,
             ) {
+                wlog(&format!("[prefill_layer] q_ffn FAILED layer={layer} t={t} abs={abs}"));
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Phase 2B: batched prefill layer via async GPU attention (K/V GPU; Q+FFN per token).
+    #[cfg(target_arch = "wasm32")]
+    async fn dispatch_prefill_layer_batch_async(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        layer: u32,
+        batch_hidden: &mut [f32],
+        emb_dim: usize,
+        n_tokens: u32,
+        batch_start_token_idx: u32,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+    ) -> bool {
+        if n_tokens == 0 {
+            wlog("[prefill_layer] FAILED n_tokens=0");
+            return false;
+        }
+        let layout = match self.kv_layout {
+            Some(l) => l,
+            None => {
+                wlog("[prefill_layer] FAILED kv_layout is None");
+                return false;
+            }
+        };
+        let tensors = index.get_layer_tensors(layer);
+        let k_info = match tensors.attn_k.as_ref() {
+            Some(i) => i,
+            None => {
+                wlog(&format!("[prefill_layer] FAILED missing attn_k layer={layer}"));
+                return false;
+            }
+        };
+        let v_info = match tensors.attn_v.as_ref() {
+            Some(i) => i,
+            None => {
+                wlog(&format!("[prefill_layer] FAILED missing attn_v layer={layer}"));
+                return false;
+            }
+        };
+        if tensors.attn_q.is_none() {
+            wlog(&format!("[prefill_layer] FAILED missing attn_q layer={layer}"));
+            return false;
+        }
+        let h = index.hyperparams;
+        let n_kv = h.effective_n_kv_head();
+        let n_embd = h.n_embd as usize;
+        let batch_elems = n_embd * n_tokens as usize;
+        if batch_elems > batch_hidden.len() {
+            wlog(&format!(
+                "[prefill_layer] FAILED batch_elems OOB elems={batch_elems} hidden={}",
+                batch_hidden.len()
+            ));
+            return false;
+        }
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => {
+                wlog("[prefill_layer] FAILED gguf_mmap is None");
+                return false;
+            }
+        };
+        let k_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
+                Ok(s) => s,
+                Err(e) => {
+                    wlog(&format!("[prefill_layer] FAILED fetch attn_k bytes: {e:?}"));
+                    return false;
+                }
+            };
+        let v_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info) {
+                Ok(s) => s,
+                Err(e) => {
+                    wlog(&format!("[prefill_layer] FAILED fetch attn_v bytes: {e:?}"));
+                    return false;
+                }
+            };
+        let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
+        let mut norm_scratch = [0f32; PREFILL_CHUNK_STACK_FLOATS];
+        let attn_input: &mut [f32] = if let Some(norm_info) = tensors.attn_norm.as_ref() {
+            let n = dequant_norm_row_into(
+                mmap,
+                index.tensor_data_start,
+                norm_info,
+                &mut norm_w_attn,
+            );
+            if n >= n_embd {
+                for t in 0..n_tokens as usize {
+                    let off = t * n_embd;
+                    norm_scratch[off..off + n_embd].copy_from_slice(&batch_hidden[off..off + n_embd]);
+                    rms_norm_inplace(
+                        &mut norm_scratch[off..off + n_embd],
+                        &norm_w_attn[..n_embd],
+                        RMS_NORM_EPS,
+                    );
+                }
+                &mut norm_scratch[..batch_elems]
+            } else {
+                batch_hidden
+            }
+        } else {
+            batch_hidden
+        };
+        let n_kv_wg = n_tokens.saturating_mul(n_kv);
+        if !self
+            .dispatch_attention_pass_async(
+                attn_input,
+                n_embd,
+                n_tokens,
+                batch_start_token_idx,
+                &layout,
+                layer,
+                batch_start_token_idx,
+                &h,
+                k_info,
+                k_raw,
+                1,
+                n_kv_wg,
+                None,
+            )
+            .await
+        {
+            wlog(&format!("[prefill_layer] K pass FAILED layer={layer}"));
+            return false;
+        }
+        if !self
+            .dispatch_attention_pass_async(
+                attn_input,
+                n_embd,
+                n_tokens,
+                batch_start_token_idx,
+                &layout,
+                layer,
+                batch_start_token_idx,
+                &h,
+                v_info,
+                v_raw,
+                2,
+                n_kv_wg,
+                None,
+            )
+            .await
+        {
+            wlog(&format!("[prefill_layer] V pass FAILED layer={layer}"));
+            return false;
+        }
+        for t in 0..n_tokens {
+            let abs = batch_start_token_idx + t;
+            let off = t as usize * emb_dim;
+            if !self
+                .dispatch_attention_q_ffn_token_async(
+                    index,
+                    layer,
+                    abs,
+                    &mut batch_hidden[off..off + emb_dim],
+                    emb_dim,
+                    &tensors,
+                    scratch_a,
+                    scratch_b,
+                )
+                .await
+            {
+                wlog(&format!("[prefill_layer] q_ffn FAILED layer={layer} t={t} abs={abs}"));
                 return false;
             }
         }
@@ -2045,49 +2908,14 @@ impl QTensorEngine {
             return false;
         }
 
-        if let Some(info) = tensors.ffn_gate {
-            let (n_in, n_out) = Self::matmul_dims(&info);
-            if n_in <= emb_dim
-                && self.dispatch_gemm_into(index, &info, &hidden[..n_in], scratch_a, n_in, n_out)
-            {
-                relu_inplace(&mut scratch_a[..n_out], n_out);
-                if let Some(up) = tensors.ffn_up {
-                    let (up_in, up_out) = Self::matmul_dims(&up);
-                    if up_in <= n_out
-                        && self.dispatch_gemm_into(
-                            index,
-                            &up,
-                            &scratch_a[..up_in],
-                            scratch_b,
-                            up_in,
-                            up_out,
-                        )
-                    {
-                        if let Some(down) = tensors.ffn_down {
-                            let (dn_in, dn_out) = Self::matmul_dims(&down);
-                            if dn_in <= up_out
-                                && self.dispatch_gemm_into(
-                                    index,
-                                    &down,
-                                    &scratch_b[..dn_in],
-                                    scratch_a,
-                                    dn_in,
-                                    dn_out,
-                                )
-                            {
-                                add_residual_inplace(
-                                    &mut hidden[..emb_dim],
-                                    &scratch_a[..dn_out],
-                                    emb_dim.min(dn_out),
-                                );
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        false
+        self.dispatch_ffn_block_pre_norm(
+            index,
+            hidden,
+            emb_dim,
+            &tensors,
+            scratch_a,
+            scratch_b,
+        )
     }
 
     /// Sequential layer-by-layer forward (one tensor payload in VRAM at a time).
@@ -2116,6 +2944,117 @@ impl QTensorEngine {
             if self.dispatch_transformer_layer(
                 index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
             ) {
+                ran += 1;
+            }
+        }
+        ran
+    }
+
+    /// Phase 2B: async single-layer forward (GPU `map_async`; CPU path unchanged in sync API).
+    #[cfg(target_arch = "wasm32")]
+    pub async fn dispatch_transformer_layer_async(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        layer: u32,
+        token_idx: u32,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+    ) -> bool {
+        let tensors = index.get_layer_tensors(layer);
+        let mut attn_ok = false;
+
+        if tensors.attn_q.is_some() && tensors.attn_k.is_some() && tensors.attn_v.is_some() {
+            if let Some(n) = self
+                .dispatch_attention_layer_async(
+                    index,
+                    layer,
+                    token_idx,
+                    &hidden[..emb_dim],
+                    emb_dim,
+                    &tensors,
+                    scratch_a,
+                    scratch_b,
+                )
+                .await
+            {
+                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n], n);
+                attn_ok = true;
+            }
+        } else if let Some(info) = tensors.attn_output {
+            let (n_in, n_out) = Self::matmul_dims(&info);
+            if n_in <= emb_dim
+                && self
+                    .dispatch_gemm_into_async(
+                        index,
+                        &info,
+                        &hidden[..n_in],
+                        scratch_a,
+                        n_in,
+                        n_out,
+                    )
+                    .await
+            {
+                add_residual_inplace(
+                    &mut hidden[..emb_dim],
+                    &scratch_a[..n_out],
+                    emb_dim.min(n_out),
+                );
+                attn_ok = true;
+            }
+        }
+
+        if !attn_ok && tensors.attn_output.is_none() && tensors.ffn_gate.is_none() {
+            return false;
+        }
+
+        self.dispatch_ffn_block_pre_norm_async(
+            index,
+            hidden,
+            emb_dim,
+            &tensors,
+            scratch_a,
+            scratch_b,
+        )
+        .await
+    }
+
+    /// Phase 2B: layer-by-layer async forward for wasm WebGPU decode.
+    #[cfg(target_arch = "wasm32")]
+    pub async fn dispatch_transformer_forward_async(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+        token_idx: u32,
+        max_layers: u32,
+    ) -> u32 {
+        let n_layer = index.hyperparams.n_layer;
+        if n_layer == 0 {
+            return 0;
+        }
+        let limit = if max_layers == 0 {
+            n_layer
+        } else {
+            max_layers.min(n_layer)
+        };
+        let mut ran = 0u32;
+        for layer in 0..limit {
+            if self
+                .dispatch_transformer_layer_async(
+                    index,
+                    layer,
+                    token_idx,
+                    hidden,
+                    emb_dim,
+                    scratch_a,
+                    scratch_b,
+                )
+                .await
+            {
                 ran += 1;
             }
         }
@@ -2377,6 +3316,14 @@ impl QTensorEngine {
         n_in: usize,
         n_out: usize,
     ) -> bool {
+        if n_in > input.len() || n_out > out.len() {
+            wlog(&format!(
+                "[gemm_into_async] GUARD n_in={n_in} n_out={n_out} input={} out={}",
+                input.len(),
+                out.len()
+            ));
+            return false;
+        }
         let mmap = match self.gguf_mmap.as_deref() {
             Some(m) => m,
             None => return false,
@@ -2388,6 +3335,144 @@ impl QTensorEngine {
         };
         self.dispatch_gemm_raw_into_async(info, raw, input, out, n_in, n_out).await
     }
+#[cfg(target_arch = "wasm32")]
+    async fn dispatch_attention_layer_async(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        layer: u32,
+        token_idx: u32,
+        hidden: &[f32],
+        emb_dim: usize,
+        tensors: &crate::gguf_sharder::LayerTensors,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+    ) -> Option<usize> {
+        let layout = self.kv_layout?;
+        let q_info = tensors.attn_q.as_ref()?;
+        let k_info = tensors.attn_k.as_ref()?;
+        let v_info = tensors.attn_v.as_ref()?;
+        let h = index.hyperparams;
+        let n_head = h.n_head as usize;
+        let n_kv = h.effective_n_kv_head() as usize;
+        let head_dim = h.head_dim() as usize;
+        if head_dim == 0 || n_head == 0 || n_kv == 0 {
+            return None;
+        }
+        let q_dim = n_head * head_dim;
+        if q_dim > scratch_a.len() || q_dim > scratch_b.len() || emb_dim < h.n_embd as usize {
+            return None;
+        }
+        if !ggml_gpu_quant_supported(q_info.ggml_type)
+            || !ggml_gpu_quant_supported(k_info.ggml_type)
+            || !ggml_gpu_quant_supported(v_info.ggml_type)
+        {
+            return None;
+        }
+
+        let mmap = self.gguf_mmap.as_deref()?;
+        let k_raw =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info).ok()?;
+        let v_raw =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info).ok()?;
+        let q_raw =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info).ok()?;
+        let n_embd = h.n_embd as usize;
+
+        let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
+        let mut h_norm_attn = [0f32; MAX_HIDDEN_DIM];
+        let hidden_input = prepare_pre_norm_input(
+            &hidden[..emb_dim],
+            emb_dim,
+            tensors.attn_norm.as_ref(),
+            Some(mmap),
+            index.tensor_data_start,
+            &mut h_norm_attn,
+            &mut norm_w_attn,
+        );
+
+        if !self
+            .dispatch_attention_pass_async(
+                hidden_input,
+                n_embd,
+                1,
+                token_idx,
+                &layout,
+                layer,
+                token_idx,
+                &h,
+                k_info,
+                k_raw,
+                1,
+                n_kv as u32,
+                None,
+            )
+            .await
+        {
+            return None;
+        }
+        if !self
+            .dispatch_attention_pass_async(
+                hidden_input,
+                n_embd,
+                1,
+                token_idx,
+                &layout,
+                layer,
+                token_idx,
+                &h,
+                v_info,
+                v_raw,
+                2,
+                n_kv as u32,
+                None,
+            )
+            .await
+        {
+            return None;
+        }
+        if !self
+            .dispatch_attention_pass_async(
+                hidden_input,
+                n_embd,
+                1,
+                token_idx,
+                &layout,
+                layer,
+                token_idx,
+                &h,
+                q_info,
+                q_raw,
+                0,
+                n_head as u32,
+                Some(&mut scratch_b[..q_dim]),
+            )
+            .await
+        {
+            return None;
+        }
+
+        if let Some(out_info) = tensors.attn_output {
+            let (o_in, o_out) = Self::matmul_dims(&out_info);
+            if o_in <= q_dim
+                && self
+                    .dispatch_gemm_into_async(
+                        index,
+                        &out_info,
+                        &scratch_b[..o_in],
+                        &mut scratch_a[..o_out],
+                        o_in,
+                        o_out,
+                    )
+                    .await
+            {
+                return Some(o_out.min(emb_dim));
+            }
+        }
+        let n = q_dim.min(emb_dim);
+        scratch_a[..n].copy_from_slice(&scratch_b[..n]);
+        Some(n)
+    }
+
 #[cfg(target_arch = "wasm32")]
     async fn dispatch_attention_pass_async(
         &self,
@@ -2406,6 +3491,7 @@ impl QTensorEngine {
         readback_out: Option<&mut [f32]>,
     ) -> bool {
         if !ggml_gpu_quant_supported(info.ggml_type) {
+            wlog(&format!("[attn_pass_async] GUARD unsupported quant kind={proj_kind}"));
             return false;
         }
         let batch = num_tokens_in_batch.max(1) as usize;
@@ -2418,6 +3504,13 @@ impl QTensorEngine {
             || self.attention_params_buf.is_none()
             || self.attention_mask_buf.is_none()
         {
+            wlog(&format!(
+                "[attn_pass_async] GUARD buffers kind={proj_kind} hidden_elems={hidden_elems} hidden={} gemm_in={} raw_w={} max_w={}",
+                hidden.len(),
+                self.gemm_max_input_floats,
+                raw_weights.len(),
+                self.max_tensor_bytes,
+            ));
             return false;
         }
 
@@ -2579,35 +3672,51 @@ impl QTensorEngine {
                 Err(_) => return false,
             };
         let n_embd = h.n_embd as usize;
-        if !self.dispatch_attention_pass_async(
+        let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
+        let mut h_norm_attn = [0f32; MAX_HIDDEN_DIM];
+        let hidden_input = prepare_pre_norm_input(
             &hidden[..emb_dim],
-            n_embd,
-            1,
-            token_idx,
-            &layout,
-            layer,
-            token_idx,
-            &h,
-            q_info,
-            q_raw,
-            0,
-            n_head as u32,
-            Some(&mut scratch_b[..q_dim]),
-        ).await {
+            emb_dim,
+            tensors.attn_norm.as_ref(),
+            Some(mmap),
+            index.tensor_data_start,
+            &mut h_norm_attn,
+            &mut norm_w_attn,
+        );
+        if !self
+            .dispatch_attention_pass_async(
+                hidden_input,
+                n_embd,
+                1,
+                token_idx,
+                &layout,
+                layer,
+                token_idx,
+                &h,
+                q_info,
+                q_raw,
+                0,
+                n_head as u32,
+                Some(&mut scratch_b[..q_dim]),
+            )
+            .await
+        {
             return false;
         }
         let mut attn_ok = false;
         if let Some(out_info) = tensors.attn_output.as_ref() {
             let (o_in, o_out) = Self::matmul_dims(out_info);
             if o_in <= q_dim
-                && self.dispatch_gemm_into_async(
-                    index,
-                    out_info,
-                    &scratch_b[..o_in],
-                    &mut scratch_a[..o_out],
-                    o_in,
-                    o_out,
-                ).await
+                && self
+                    .dispatch_gemm_into_async(
+                        index,
+                        out_info,
+                        &scratch_b[..o_in],
+                        &mut scratch_a[..o_out],
+                        o_in,
+                        o_out,
+                    )
+                    .await
             {
                 add_residual_inplace(
                     &mut hidden[..emb_dim],
@@ -2624,49 +3733,15 @@ impl QTensorEngine {
         if !attn_ok {
             return false;
         }
-        if let Some(info) = tensors.ffn_gate.as_ref() {
-            let (n_in, n_out) = Self::matmul_dims(info);
-            if n_in <= emb_dim
-                && self.dispatch_gemm_into_async(index, info, &hidden[..n_in], scratch_a, n_in, n_out).await
-            {
-                relu_inplace(&mut scratch_a[..n_out], n_out);
-                if let Some(up) = tensors.ffn_up.as_ref() {
-                    let (up_in, up_out) = Self::matmul_dims(up);
-                    if up_in <= n_out
-                        && self.dispatch_gemm_into_async(
-                            index,
-                            up,
-                            &scratch_a[..up_in],
-                            scratch_b,
-                            up_in,
-                            up_out,
-                        ).await
-                    {
-                        if let Some(down) = tensors.ffn_down.as_ref() {
-                            let (dn_in, dn_out) = Self::matmul_dims(down);
-                            if dn_in <= up_out
-                                && self.dispatch_gemm_into_async(
-                                    index,
-                                    down,
-                                    &scratch_b[..dn_in],
-                                    scratch_a,
-                                    dn_in,
-                                    dn_out,
-                                ).await
-                            {
-                                add_residual_inplace(
-                                    &mut hidden[..emb_dim],
-                                    &scratch_a[..dn_out],
-                                    emb_dim.min(dn_out),
-                                );
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        true
+        self.dispatch_ffn_block_pre_norm_async(
+            index,
+            hidden,
+            emb_dim,
+            tensors,
+            scratch_a,
+            scratch_b,
+        )
+        .await
     }
 #[cfg(target_arch = "wasm32")]
     pub async fn dispatch_prefill_chunk_async(
@@ -2690,16 +3765,19 @@ impl QTensorEngine {
             max_layers.min(n_layer)
         };
         for layer in 0..limit {
-            if !self.dispatch_prefill_layer_batch(
-                index,
-                layer,
-                batch_hidden,
-                emb_dim,
-                n_tokens,
-                batch_start_token_idx,
-                scratch_a,
-                scratch_b,
-            ) {
+            if !self
+                .dispatch_prefill_layer_batch_async(
+                    index,
+                    layer,
+                    batch_hidden,
+                    emb_dim,
+                    n_tokens,
+                    batch_start_token_idx,
+                    scratch_a,
+                    scratch_b,
+                )
+                .await
+            {
                 return false;
             }
         }
@@ -2965,7 +4043,8 @@ pub async fn initialize_webgpu_engine(gguf_data: std::sync::Arc<[u8]>) -> Result
     // `.expect()` panic that aborts the wasm module and leaves the init promise
     // pending forever (the "stuck on Initialising…" hang).
     let mut engine = QTensorEngine::try_new().await?;
-    engine.gguf_mmap = Some(gguf_data);
+    // Parse GGUF metadata and reserve GEMM + KV arenas (required for wasm CPU attention).
+    engine.adopt_resident_mmap(gguf_data)?;
     WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
     Ok(())
 }

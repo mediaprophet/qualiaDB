@@ -41,6 +41,7 @@
     <option value="models/gemma-3-1b-it-q4_0.gguf" data-tmpl="gemma3">Gemma-3-1B Q4_0 (gemma3)</option>
   </select>
   <label><input type="checkbox" id="cache" checked> Cache in browser</label>
+  <label><input type="checkbox" id="naked"> Naked prompt (no ChatML)</label>
   <button id="load" class="primary">Load model</button>
   <button id="clearcache">Clear cache</button>
   <span class="stat" id="loadstat"></span>
@@ -152,7 +153,9 @@ $('run').onclick = async () => {
   if (!loaded) return;
   $('run').disabled = true;
   const tmpl = $('model').selectedOptions[0].dataset.tmpl;
-  const prompt = buildPrompt(tmpl, $('prompt').value.trim());
+  const raw = $('prompt').value.trim();
+  const prompt = $('naked').checked ? raw : buildPrompt(tmpl, raw);
+  log('prompt mode: ' + ($('naked').checked ? 'naked' : tmpl), 'dim');
   $('out').textContent = ''; $('out').className = '';
   let n = 0, first = null; const t0 = performance.now();
   log('inferWasmStreaming…');
