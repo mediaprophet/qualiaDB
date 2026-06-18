@@ -260,10 +260,31 @@ TTFT **7533 ms**; output still `pries underm` repetition.
 
 **Diagnosis:** L0 lock proves RoPE, `AttentionGpuParams`, and single-layer elemwise are sound. The **L1 jump** (1.01 → -1.66 in one layer) indicates **cross-layer buffer pollution or layer-1 block fault**, not slow FFN bias creep. FFN scratch isolation + flush barriers **did not move** post-L31 variance — leak is elsewhere.
 
-**Next (Part 3c):**
-1. **CPU vs GPU per-layer diff** on decode step 1 @ L0/L1 (same embedding) — localize first divergent op.
-2. **Attention KV read path** — `encode_transformer_layer_gpu` writes K/V then `encode_attn_ffn_tail_gpu` runs Q+attn; audit KV layout indexing for `layer > 0` and prefill→decode handoff.
-3. **Argmax:** remain sync until post-L31 `h[0]` stable.
+#### Part 3c — KV layer indexing audit (2026-06-19)
+
+**Architect answer F:** audit **KV cache layout & layer indexing first** (not full CPU/GPU tensor diff).
+
+**Audit findings:**
+- **Rust uniform loop:** `encode_attention_pass_gpu` rebuilds `AttentionGpuParams` with `layer_idx: layer` and `layer_offset = layer * layer_stride` per dispatch — ✅ correct.
+- **WGSL index math:** `k_cache_idx` / `v_cache_idx` are layer-local (bind group maps one layer slice); matches CPU `k_index`/`v_index` relative to layer base — ✅ structurally sound.
+- **Hidden ping-pong:** L0 probe @ 1.011 proves `gemm_input_buf` carries L0 output into L1 — ✅ not reading raw embedding.
+- **Root cause (weight-buffer race):** K and V passes (and gate/up FFN) shared `gemm_weight_buf` in one command encoder **without** `mc8_flush` between them. WebGPU applies all `write_buffer` uploads before the encoder runs, so the **K dispatch executed with V weights** — corrupting KV cache for every layer. L0 `h[0]` stayed ~1.09 via residual dominance; L1+ attention over multi-token KV exploded.
+
+**Fix (pt3c):** `mc8_flush()` between K→V attention passes (`encode_transformer_layer_gpu`, `dispatch_prefill_chunk_async_mc8_gpu`) and between gate→up FFN GEMMs (`encode_attn_ffn_tail_gpu`).
+
+**Harness verify (post K/V + gate/up flush fix):**
+
+| Layer | pt3b `h[0]` | pt3c `h[0]` |
+|-------|-------------|-------------|
+| L0 | 1.011 | 0.423 |
+| L1 | -1.662 | 0.098 |
+| L2 | -7.337 | -0.736 |
+| L3 | -0.595 | -1.080 |
+| L31 | **271.7** | **20.87** |
+
+TTFT 8212 ms. Output shifted from `pries underm` repetition → partial English (`starlings soar…`) but still incoherent vs MC7 `Paris.`
+
+**Interpretation:** L31 variance dropped **13×** (272→21) — confirms K/V `gemm_weight_buf` + uniform race was the dominant depth amplifier. L0 no longer accidentally matches ~1.09 (residual-dominated wrong-K regime); geometry not yet at CPU parity. **Next:** Q/K targeted diff @ L1 if L31 still >5% band after another pass; audit prefill `attn_input=None` vs batch RMSNorm path.
 
 **Implementation notes (MC2 session):**
 - `cpu_attention_pass` uses raw-pointer KV mutation (sound on single-threaded wasm).
@@ -691,11 +712,11 @@ runs without WebGPU errors and beats MC7 TTFT, but **output coherence regressed*
 ## ▶️ 8. RESUME HERE (if context/tokens are lost — start at this section)
 
 1. Read **§0** (directives), **§0b** (F1–F6), **§6** (decisions), **§RECONCILIATION**, **MC8 §Part 2/3**.
-2. **Current task = Phase 2B MC8 Part 3c (L1 jump — not FFN residual):**
-   - **Done (pt3):** GPU prefill manifold unified; L0@L0 step1 = **1.011** (gate met).
-   - **Done (pt3b):** FFN/residual routing audit + depth bisect L0–L3; `add_residual_main` OK; extra flushes; scratch isolation — **post-L31 still 271.7**.
-   - **Bisect:** L0=1.011 → L1=-1.662 → L2=-7.337 → L3=-0.595 → L31=271.7. **L1 jump** ⇒ cross-layer / KV / layer-block fault, not FFN creep.
-   - **Next:** CPU vs GPU per-layer diff @ L0/L1; attention KV read path + prefill→decode handoff.
+2. **Current task = Phase 2B MC8 Part 3c verify (K/V weight-buffer race fix):**
+   - **Done (pt3b bisect):** L0=1.011 → L1=-1.662 → L2=-7.337 → L3=-0.595 → L31=271.7.
+   - **Done (pt3c audit):** KV layer indexing/uniforms ✅; **K/V shared weight buf without flush** — patched.
+   - **Verify:** L31 **271→21** ✅ major; L0 **1.01→0.42** (wrong-K artefact gone); output partially English, not `Paris.` yet.
+   - **Next:** Q/K diff @ L1; prefill `attn_input` handoff; chase remaining ~20× L31 gap to ~1.09.
 3. **Build rule:** must use 8 MB stack `RUSTFLAGS` (§BUILD/DEPLOY/TEST) — omitting → instant OOB trap.
 4. **Harness:** `agent-tools/wasm-mc2-test.mjs` with `WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`,
    `WASM_MODEL=models/SmolLM2-360M-Instruct-Q4_K_M.gguf`.
@@ -719,4 +740,10 @@ runs without WebGPU errors and beats MC7 TTFT, but **output coherence regressed*
 |---|----------|-------------------|-----------------|
 | E | Bisect attention KV vs FFN first? | **FFN elementwise chain first** | FFN audit + flushes applied; L31 unchanged; **L1 jump** implicates cross-layer/KV next |
 
-**New advisor question (pt3c):** L1 jumps 1.01 → -1.66 after FFN routing fix. Prioritize **CPU vs GPU per-layer diff** or **KV cache layout / layer indexing audit** first?
+### Advisor feedback (MC8 pt3c) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3c outcome |
+|---|----------|-------------------|-----------------|
+| F | CPU/GPU diff vs KV indexing first? | **KV layout & layer indexing audit first** | Indexing ✅; found K/V weight-buffer race; flush fix landed |
+
+**New advisor question (pt3c verify):** If post-L31 `h[0]` still blows up after K/V flush fix, should next step be **Q/K targeted diff @ L1** or **prefill batched-attn token_idx audit**?

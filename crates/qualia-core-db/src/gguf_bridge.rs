@@ -3676,6 +3676,7 @@ impl QTensorEngine {
         if !self.encode_gemm_bufs(pipeline, gate_info, gate_raw, gate_in, n_ffn, aux_buf, work_buf) {
             return false;
         }
+        self.mc8_flush(pipeline);
         if !self.encode_gemm_bufs(pipeline, up_info, up_raw, up_in, n_ffn, aux_buf, ffn_buf) {
             return false;
         }
@@ -3790,6 +3791,8 @@ impl QTensorEngine {
         ) {
             return false;
         }
+        // K/V share gemm_weight_buf; flush so V's write_buffer cannot clobber K weights pre-dispatch.
+        self.mc8_flush(pipeline);
         if !self.encode_attention_pass_gpu(
             pipeline,
             attn_input,
@@ -4709,7 +4712,11 @@ impl QTensorEngine {
                 k_raw,
                 1,
                 n_kv_wg,
-            ) || !self.encode_attention_pass_gpu(
+            ) {
+                return false;
+            }
+            self.mc8_flush(&mut pipeline);
+            if !self.encode_attention_pass_gpu(
                 &mut pipeline,
                 attn_src,
                 token_buf,
