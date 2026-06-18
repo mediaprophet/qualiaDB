@@ -61,9 +61,11 @@
 
 <script type="module">
 import init, {
-  initialize_webgpu_engine, inferWasmStreaming, isWebgpuEngineReady,
+  initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
   releaseWebgpuEngine, getEngineVersion, init_panic_hook,
 } from './pkg/qualia/qualia.js';
+
+const USE_ASYNC_GPU = new URLSearchParams(location.search).get('async') !== '0';
 
 const CACHE_NAME = 'qualia-gguf-v1';
 const $ = id => document.getElementById(id);
@@ -158,9 +160,10 @@ $('run').onclick = async () => {
   log('prompt mode: ' + ($('naked').checked ? 'naked' : tmpl), 'dim');
   $('out').textContent = ''; $('out').className = '';
   let n = 0, first = null; const t0 = performance.now();
-  log('inferWasmStreaming…');
+  const inferFn = USE_ASYNC_GPU ? inferWasmAsync : inferWasmStreaming;
+  log((USE_ASYNC_GPU ? 'inferWasmAsync' : 'inferWasmStreaming') + '…');
   try {
-    const full = await inferWasmStreaming(prompt, (piece) => {
+    const full = await inferFn(prompt, (piece) => {
       if (first === null) { first = Math.round(performance.now() - t0); log('first token @ ' + first + ' ms', 'ok'); }
       n++; $('out').textContent += piece;
       $('genstat').textContent = `${n} tok, ${first} ms TTFT`;

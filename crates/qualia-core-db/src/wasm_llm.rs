@@ -3,10 +3,18 @@
 use js_sys::Function;
 use wasm_bindgen::prelude::*;
 
-use crate::llm_agent::LocalLlmAgent;
+use crate::gguf_sharder::GgufTokenizer;
+use crate::gguf_bridge::{PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS, VOCAB_CHUNK_ROWS};
 
 const BROWSER_AGENT_DID: &str = "did:q42:browser-llm-demo";
 const BROWSER_MODEL_TAG: &str = "wasm-resident.gguf";
+
+/// Autoregressive decode budget for browser harness (CPU path uses same cap).
+const WASM_DECODE_TOKEN_BUDGET: usize = 32;
+/// `0` = all transformer layers.
+const WASM_LAYER_CAP: u32 = 0;
+/// `0` = full vocabulary argmax sweep.
+const WASM_VOCAB_CHUNK_CAP: u32 = 0;
 
 /// Crate semver baked in at compile time.
 #[wasm_bindgen(js_name = getEngineVersion)]
@@ -18,6 +26,18 @@ fn engine_ready() -> bool {
     crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| g.borrow().is_some())
 }
 
+fn restore_engine(engine: crate::gguf_bridge::QTensorEngine) {
+    crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
+}
+
+fn take_engine() -> Result<crate::gguf_bridge::QTensorEngine, String> {
+    crate::gguf_bridge::WASM_ENGINE_INSTANCE
+        .with(|g| g.borrow_mut().take())
+        .ok_or_else(|| {
+            "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into()
+        })
+}
+
 fn run_inference(
     prompt: &str,
     graph_context: &str,
@@ -27,7 +47,7 @@ fn run_inference(
             "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into(),
         );
     }
-    let agent = LocalLlmAgent::new(BROWSER_AGENT_DID, BROWSER_MODEL_TAG);
+    let agent = crate::llm_agent::LocalLlmAgent::new(BROWSER_AGENT_DID, BROWSER_MODEL_TAG);
     let (text, _, _, _) =
         agent.infer_local_model_streaming(prompt, graph_context, None::<fn(String)>);
     Ok(text)
@@ -43,13 +63,185 @@ fn run_inference_streaming(
             "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into(),
         );
     }
-    let agent = LocalLlmAgent::new(BROWSER_AGENT_DID, BROWSER_MODEL_TAG);
+    let agent = crate::llm_agent::LocalLlmAgent::new(BROWSER_AGENT_DID, BROWSER_MODEL_TAG);
     let on_token = move |piece: String| {
         let _ = on_token.call1(&JsValue::UNDEFINED, &JsValue::from_str(&piece));
     };
     let (text, _, _, _) =
         agent.infer_local_model_streaming(prompt, graph_context, Some(on_token));
     Ok(text)
+}
+
+/// Phase 2B: fully async prefill + decode via `_async` dispatchers (`map_async` + `.await`).
+async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String, String> {
+    let mut engine = take_engine()?;
+    let prompt_owned = prompt.to_string();
+
+    let result: Result<String, String> = async {
+        let tok = engine
+            .gguf_mmap
+            .as_ref()
+            .map(|m| GgufTokenizer::from_gguf(m))
+            .unwrap_or_default();
+
+        let tensor_idx = engine
+            .gguf_mmap
+            .as_ref()
+            .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
+
+        let mut ctx = tok.encode_prompt(&prompt_owned);
+        let eos = tok.eos_token_id;
+        let vlen = tok.vocab_len().max(1);
+
+        let emb_dim = tensor_idx
+            .as_ref()
+            .map(|idx| idx.emb_dim())
+            .filter(|&d| d > 0)
+            .unwrap_or(4096)
+            .min(8192);
+
+        const MAX_FFN_DIM: usize = 10240;
+        let mut emb_buf = [0f32; 8192];
+        let mut scratch_a = [0f32; MAX_FFN_DIM];
+        let mut scratch_b = [0f32; MAX_FFN_DIM];
+        let mut prefill_chunk = [0f32; PREFILL_CHUNK_STACK_FLOATS];
+        let mut chunk_logits = [0f32; VOCAB_CHUNK_ROWS];
+
+        engine.reset_kv_cache();
+
+        let prompt_len = ctx.len();
+        if prompt_len > 1 {
+            if let Some(idx) = tensor_idx.as_ref() {
+                let prefill_tokens = prompt_len - 1;
+                let chunk_cap = (PREFILL_CHUNK_STACK_FLOATS / emb_dim)
+                    .min(PREFILL_CHUNK_SIZE)
+                    .max(1);
+                let mut pos = 0usize;
+                while pos < prefill_tokens {
+                    let n = (prefill_tokens - pos).min(chunk_cap);
+                    let batch_elems = n * emb_dim;
+                    let mmap = match engine.gguf_mmap.as_deref() {
+                        Some(m) => m,
+                        None => break,
+                    };
+                    for t in 0..n {
+                        let _ = idx.dequantize_token_embedding_into(
+                            mmap,
+                            ctx[pos + t],
+                            &mut prefill_chunk[t * emb_dim..(t + 1) * emb_dim],
+                        );
+                    }
+                    if !engine
+                        .dispatch_prefill_chunk_async(
+                            idx,
+                            &mut prefill_chunk[..batch_elems],
+                            emb_dim,
+                            n as u32,
+                            pos as u32,
+                            &mut scratch_a,
+                            &mut scratch_b,
+                            WASM_LAYER_CAP,
+                        )
+                        .await
+                    {
+                        crate::gguf_bridge::wlog(&format!(
+                            "[llm_async] PREFILL chunk FAILED pos={pos} n={n}"
+                        ));
+                        return Err("prefill chunk failed".into());
+                    }
+                    pos += n;
+                }
+            }
+        }
+
+        let mut out_ids: Vec<u32> = Vec::new();
+        let mut streamed_len = 0usize;
+
+        for step in 0..WASM_DECODE_TOKEN_BUDGET {
+            let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
+
+            let hidden_ok = tensor_idx
+                .as_ref()
+                .and_then(|idx| {
+                    engine.gguf_mmap.as_deref().map(|m| {
+                        idx.dequantize_token_embedding_into(m, cur, &mut emb_buf[..emb_dim])
+                    })
+                })
+                .unwrap_or(0);
+
+            if hidden_ok == 0 {
+                return Err("embedding dequant failed".into());
+            }
+
+            let (top_i, _top_v) = if let Some(idx) = tensor_idx.as_ref() {
+                let token_idx = ctx.len().saturating_sub(1) as u32;
+                let _layers = engine
+                    .dispatch_transformer_forward_async(
+                        idx,
+                        &mut emb_buf[..emb_dim],
+                        emb_dim,
+                        &mut scratch_a,
+                        &mut scratch_b,
+                        token_idx,
+                        WASM_LAYER_CAP,
+                    )
+                    .await;
+                let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
+                if let Some(argmax) = engine
+                    .dispatch_output_argmax_chunked_async(
+                        idx,
+                        &emb_buf[..emb_dim],
+                        emb_dim,
+                        &mut chunk_logits,
+                        WASM_VOCAB_CHUNK_CAP,
+                        None,
+                    )
+                    .await
+                {
+                    if argmax.max_logit > f32::NEG_INFINITY {
+                        (argmax.best_token_id as usize, argmax.max_logit)
+                    } else {
+                        (0usize, f32::NEG_INFINITY)
+                    }
+                } else {
+                    emb_buf[..emb_dim].iter().enumerate().fold(
+                        (0usize, f32::NEG_INFINITY),
+                        |(bi, bv), (i, &v)| {
+                            if v > bv {
+                                (i, v)
+                            } else {
+                                (bi, bv)
+                            }
+                        },
+                    )
+                }
+            } else {
+                (0usize, 0.0)
+            };
+
+            let next = (top_i as u32) % vlen;
+            out_ids.push(next);
+            ctx.push(next);
+
+            let full = tok.decode(&out_ids);
+            if full.len() > streamed_len {
+                let delta = full[streamed_len..].to_string();
+                streamed_len = full.len();
+                let _ = on_token.call1(&JsValue::UNDEFINED, &JsValue::from_str(&delta));
+            }
+
+            if next == eos {
+                break;
+            }
+            let _ = step;
+        }
+
+        Ok(tok.decode(&out_ids))
+    }
+    .await;
+
+    restore_engine(engine);
+    result
 }
 
 /// Returns true when a GGUF model has been loaded via `initialize_webgpu_engine`.
@@ -106,4 +298,13 @@ pub async fn infer_wasm_streaming_with_context(
     on_token: Function,
 ) -> Result<String, JsValue> {
     run_inference_streaming(&prompt, &graph_context, on_token).map_err(|e| JsValue::from_str(&e))
+}
+
+/// Phase 2B: async WebGPU decode — yields to the browser event loop on every `map_async`.
+/// Returns a JS `Promise`; use `await inferWasmAsync(...)` from module code.
+#[wasm_bindgen(js_name = inferWasmAsync)]
+pub async fn infer_wasm_async(prompt: String, on_token: Function) -> Result<String, JsValue> {
+    run_inference_async(&prompt, on_token)
+        .await
+        .map_err(|e| JsValue::from_str(&e))
 }

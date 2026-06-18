@@ -137,6 +137,27 @@ fn ggml_gpu_quant_supported(ggml_type: u32) -> bool {
     }
 }
 
+/// Weight types implemented in `fused_attention.wgsl` / `fused_transformer.wgsl` dequant.
+#[inline]
+fn ggml_gpu_attention_shader_supported(ggml_type: u32) -> bool {
+    matches!(
+        ggml_type,
+        crate::ggml_quants::GGML_TYPE_Q4_0
+            | crate::ggml_quants::GGML_TYPE_Q4_K
+            | crate::ggml_quants::GGML_TYPE_Q6_K
+    )
+}
+
+/// Await `map_async` without `poll(Wait)` — yields to the browser event loop (MC6).
+#[cfg(target_arch = "wasm32")]
+async fn await_wgpu_map(slice: wgpu::BufferSlice<'_>) -> bool {
+    let (tx, rx) = futures_channel::oneshot::channel();
+    slice.map_async(wgpu::MapMode::Read, move |r| {
+        let _ = tx.send(r);
+    });
+    matches!(rx.await, Ok(Ok(())))
+}
+
 /// Hard context ceiling — sized to keep KV arena under the 512MB RAM floor (Gemma 42L).
 pub const MAX_CONTEXT_WINDOW: u32 = 1024;
 /// Maximum bytes for the static KV arena (load-time allocation only).
@@ -3219,7 +3240,7 @@ impl QTensorEngine {
         }
 
         let weight_bytes = raw.len();
-        if ggml_gpu_quant_supported(info.ggml_type)
+        if ggml_gpu_attention_shader_supported(info.ggml_type)
             && n_in <= MAX_STACK_GEMM_IN
             && n_out <= self.gemm_max_out_dim as usize
             && weight_bytes <= self.max_tensor_bytes
@@ -3287,20 +3308,14 @@ impl QTensorEngine {
             self.gpu_queue().submit(Some(encoder.finish()));
 
             let slice = staging.slice(..out_bytes);
-            let (tx, rx) = futures_channel::oneshot::channel();
-            slice.map_async(wgpu::MapMode::Read, move |r| {
-                let _ = tx.send(r);
-            });
-            
-            if rx.await.ok().map(|m| m.is_ok()).unwrap_or(false) {
-                    let data = slice.get_mapped_range();
-                    let floats: &[f32] = bytemuck::cast_slice(&data);
-                    out[..n_out].copy_from_slice(&floats[..n_out]);
-                    drop(data);
-                    staging.unmap();
-                    return true;
-                }
-            
+            if await_wgpu_map(slice).await {
+                let data = slice.get_mapped_range();
+                let floats: &[f32] = bytemuck::cast_slice(&data);
+                out[..n_out].copy_from_slice(&floats[..n_out]);
+                drop(data);
+                staging.unmap();
+                return true;
+            }
             let _ = staging.unmap();
         }
 
@@ -3494,6 +3509,22 @@ impl QTensorEngine {
             wlog(&format!("[attn_pass_async] GUARD unsupported quant kind={proj_kind}"));
             return false;
         }
+        if !ggml_gpu_attention_shader_supported(info.ggml_type) {
+            return self.cpu_attention_pass(
+                hidden,
+                n_embd,
+                num_tokens_in_batch,
+                batch_start_token_idx,
+                layout,
+                layer,
+                h,
+                info,
+                raw_weights,
+                proj_kind,
+                None,
+                readback_out,
+            );
+        }
         let batch = num_tokens_in_batch.max(1) as usize;
         let hidden_elems = n_embd.checked_mul(batch).unwrap_or(0);
         if hidden_elems > hidden.len()
@@ -3616,22 +3647,16 @@ impl QTensorEngine {
 
         let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
         let slice = staging.slice(..out_bytes);
-        let (tx, rx) = futures_channel::oneshot::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| {
-            let _ = tx.send(r);
-        });
-        
-        if rx.await.ok().map(|m| m.is_ok()).unwrap_or(false) {
-                let data = slice.get_mapped_range();
-                let floats: &[f32] = bytemuck::cast_slice(&data);
-                if let Some(out) = readback_out {
-                    out[..readback_elems].copy_from_slice(&floats[..readback_elems]);
-                }
-                drop(data);
-                staging.unmap();
-                return true;
+        if await_wgpu_map(slice).await {
+            let data = slice.get_mapped_range();
+            let floats: &[f32] = bytemuck::cast_slice(&data);
+            if let Some(out) = readback_out {
+                out[..readback_elems].copy_from_slice(&floats[..readback_elems]);
             }
-        
+            drop(data);
+            staging.unmap();
+            return true;
+        }
         let _ = staging.unmap();
         false
     }

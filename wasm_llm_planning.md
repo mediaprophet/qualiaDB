@@ -143,7 +143,7 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 | Micro-commit | Scope | Status |
 |--------------|-------|--------|
 | **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | 🟡 Landed — not wired to `infer_wasm_streaming` yet |
-| **MC6** | JS `Promise` bridge: `inferWasmStreaming` awaits per decode step | ⬜ |
+| **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
 | **MC7** | Retire CPU stent from hot path once GPU path validates capital-of-France | ⬜ |
 
 **Implementation notes (MC2 session):**
@@ -548,10 +548,10 @@ requires `[MC2] SDPA L1` non-zero + TTFT **seconds** (not <600 ms).
 ## ▶️ 8. RESUME HERE (if context/tokens are lost — start at this section)
 
 1. Read **§0** (directives), **§0b** (F1–F6), **§6** (decisions), **§RECONCILIATION**.
-2. **Current task = Phase 2B MC6 (wire async GPU decode):**
-   - MC4 closed: `v0.0.18-wasm-cpu-fallback-stable` tag; CPU path proven.
-   - Async plumbing in `gguf_bridge.rs` ready; wire `dispatch_transformer_forward_async`
-     into `infer_wasm_streaming` and make `inferWasmStreaming` await each step.
+2. **Current task = Phase 2B MC7 (WGSL Q5_0/Q8_0 + full GPU offload):**
+   - MC6 closed: `inferWasmAsync` wired; async loop yields on `map_async`.
+   - SmolLM2 still uses CPU fallback for Q5_0/Q8_0 attn+GEMM (shader gap).
+   - Next: extend `fused_attention.wgsl` / `fused_transformer.wgsl` for Q5_0/Q8_0 → ms TTFT.
 3. **MC2b–MC3d (closed):** see §7 entries (l)–(p).
 4. **MC2b reference (closed):**
    - **Done:** NEOX RoPE; `adopt_resident_mmap`; KV ledger bypass; **Q5_0 dequant** (type 6).
