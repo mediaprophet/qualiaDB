@@ -16,7 +16,13 @@ if (-not (Get-Command wasm-pack -ErrorAction SilentlyContinue)) {
 
 Push-Location $CrateDir
 try {
-    $env:RUSTFLAGS = "-C target-feature=+simd128"
+    # +simd128 for SIMD kernels. The LLM inference call tree uses large zero-copy
+    # stack buffers (prefill_chunk ~640 KB + MAX_STACK_GEMM scratch in the dispatch
+    # kernels) sized for native's 8 MB stack; wasm's default 1 MB stack overflows
+    # and traps "memory access out of bounds" mid-inference. Give wasm an 8 MB
+    # stack to match, and keep memory growable to the wasm32 4 GB ceiling so the
+    # multi-hundred-MB GGUF copy in initialize_webgpu_engine can still grow.
+    $env:RUSTFLAGS = "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
     wasm-pack build --target web --out-dir pkg-qualia --release -- --no-default-features --features portal,wasm-llm,wasm-logic,wasm-scientific
 } finally {
     Pop-Location
@@ -54,7 +60,7 @@ if (Test-Path $qualiaJs) {
 }
 
 # Publish friendly package.json for GitHub Pages / Jekyll
-$ver = "0.0.17"
+$ver = "0.0.18"
 @{
     name = "qualia-portal"
     type = "module"

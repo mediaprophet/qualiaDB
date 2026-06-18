@@ -6,6 +6,8 @@
     <title>QualiaDB WebGPU LLM Inference</title>
     <!-- Enable Cross-Origin Isolation for SharedArrayBuffer -->
     <script src="coi-serviceworker.js"></script>
+    <!-- Strip removed WebGPU device limits so wgpu 0.19 requestDevice succeeds on current Chrome -->
+    <script src="../js/webgpu-limits-shim.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

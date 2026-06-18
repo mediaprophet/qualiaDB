@@ -2960,7 +2960,11 @@ thread_local! {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn initialize_webgpu_engine(gguf_data: std::sync::Arc<[u8]>) -> Result<(), String> {
-    let mut engine = QTensorEngine::new_async().await;
+    // Use `try_new()` (not `new_async()`) so a missing/incompatible WebGPU adapter
+    // surfaces as a rejected promise the JS layer can display, rather than an
+    // `.expect()` panic that aborts the wasm module and leaves the init promise
+    // pending forever (the "stuck on Initialising…" hang).
+    let mut engine = QTensorEngine::try_new().await?;
     engine.gguf_mmap = Some(gguf_data);
     WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
     Ok(())

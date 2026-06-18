@@ -131,3 +131,7 @@ legacy/
 ingest_raw.wal.tmp
 yago-tests/ 
 reports/
+
+# Local test GGUF models (not deployed)
+docs/models/
+models/

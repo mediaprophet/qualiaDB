@@ -1,6 +1,6 @@
 [package]
 name = "qualia-core-db"
-version = "0.0.17"
+version = "0.0.18"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
@@ -226,7 +226,10 @@ serial_test = "3"
 pollster = "0.4.0"
 
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = ["-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
+# wasm-opt -Oz was rewriting large `vec![0; n]` fills into bulk-memory ops that
+# trapped ("memory access out of bounds") on the first real GGUF copy in
+# initialize_webgpu_engine. Disabled until a safe opt set is confirmed.
+wasm-opt = false
 
 [[bench]]
 name = "qualia_benchmark"

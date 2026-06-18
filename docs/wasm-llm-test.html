@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qualia WASM LLM — Test Harness</title>
+<!-- COI for SharedArrayBuffer (multi-thread wasm) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/coi-serviceworker/0.1.7/coi-serviceworker.min.js"></script>
+<!-- Strip removed WebGPU device limits so wgpu 0.19 requestDevice succeeds on current Chrome -->
+<script src="js/webgpu-limits-shim.js"></script>
+<style>
+  body { font-family: ui-monospace, 'JetBrains Mono', monospace; background:#0b0e14; color:#cdd6f4; margin:0; padding:24px; }
+  h1 { font-size:16px; color:#89b4fa; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0; }
+  select, button, input { background:#181825; color:#cdd6f4; border:1px solid #313244; border-radius:6px; padding:6px 10px; font:inherit; }
+  button { cursor:pointer; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button.primary { background:#89b4fa; color:#11111b; border-color:#89b4fa; font-weight:600; }
+  #log { background:#11111b; border:1px solid #313244; border-radius:8px; padding:12px; height:300px; overflow:auto; white-space:pre-wrap; font-size:12px; line-height:1.5; }
+  #out { background:#11111b; border:1px solid #313244; border-radius:8px; padding:12px; min-height:80px; white-space:pre-wrap; font-size:13px; color:#a6e3a1; margin-top:8px; }
+  .ok { color:#a6e3a1; } .err { color:#f38ba8; } .warn { color:#f9e2af; } .dim { color:#6c7086; }
+  label { display:flex; gap:6px; align-items:center; font-size:13px; }
+  .stat { font-size:12px; color:#94e2d5; }
+  textarea { width:100%; box-sizing:border-box; background:#181825; color:#cdd6f4; border:1px solid #313244; border-radius:6px; padding:8px; font:inherit; }
+</style>
+</head>
+<body>
+<h1>Qualia WASM LLM — Test Harness</h1>
+<p class="dim">Drives <code>initialize_webgpu_engine</code> / <code>inferWasmStreaming</code> from <code>pkg/qualia/qualia.js</code>. Models served from <code>/models/</code> (gitignored). Caching uses the Cache Storage API so a model is downloaded once.</p>
+
+<div class="row">
+  <span class="stat" id="engine-ver">engine: …</span>
+  <span class="stat" id="coi">COI: …</span>
+  <span class="stat" id="gpu">WebGPU: …</span>
+</div>
+
+<div class="row">
+  <select id="model">
+    <option value="models/SmolLM2-360M-Instruct-Q4_K_M.gguf" data-tmpl="chatml" selected>SmolLM2-360M Q4_K_M (chatml)</option>
+    <option value="models/smollm2-360m-instruct-q8_0.gguf" data-tmpl="chatml">SmolLM2-360M Q8_0 (chatml)</option>
+    <option value="models/gemma-3-1b-it-q4_0.gguf" data-tmpl="gemma3">Gemma-3-1B Q4_0 (gemma3)</option>
+  </select>
+  <label><input type="checkbox" id="cache" checked> Cache in browser</label>
+  <button id="load" class="primary">Load model</button>
+  <button id="clearcache">Clear cache</button>
+  <span class="stat" id="loadstat"></span>
+</div>
+
+<div class="row" style="width:100%">
+  <textarea id="prompt" rows="2">What is the capital of France? Answer in one short sentence.</textarea>
+</div>
+<div class="row">
+  <button id="run" disabled>Run inference</button>
+  <span class="stat" id="genstat"></span>
+</div>
+
+<div id="out" class="dim">— model output appears here —</div>
+<h1 style="margin-top:16px">Log</h1>
+<div id="log"></div>
+
+<script type="module">
+import init, {
+  initialize_webgpu_engine, inferWasmStreaming, isWebgpuEngineReady,
+  releaseWebgpuEngine, getEngineVersion, init_panic_hook,
+} from './pkg/qualia/qualia.js';
+
+const CACHE_NAME = 'qualia-gguf-v1';
+const $ = id => document.getElementById(id);
+const logEl = $('log');
+function log(msg, cls='') { const t = new Date().toISOString().slice(11,23); logEl.innerHTML += `<span class="${cls}">[${t}] ${msg}</span>\n`; logEl.scrollTop = logEl.scrollHeight; }
+
+let loaded = false;
+
+(async function boot() {
+  // capture wasm panics / traps into the log
+  window.addEventListener('error', e => log('WINDOW ERROR: ' + (e.message || e), 'err'));
+  window.addEventListener('unhandledrejection', e => log('UNHANDLED REJECTION: ' + String(e.reason?.message ?? e.reason), 'err'));
+  $('coi').textContent = 'COI: ' + self.crossOriginIsolated;
+  try {
+    const a = navigator.gpu && await navigator.gpu.requestAdapter();
+    $('gpu').textContent = 'WebGPU: ' + (a ? 'adapter ok' : 'NONE');
+  } catch (e) { $('gpu').textContent = 'WebGPU: err ' + e; }
+  try {
+    await init();
+    try { init_panic_hook(); log('panic hook installed', 'dim'); } catch {}
+    $('engine-ver').textContent = 'engine: v' + (getEngineVersion?.() ?? '?');
+    log('WASM module initialised', 'ok');
+  } catch (e) { log('WASM init FAILED: ' + (e?.message ?? e), 'err'); }
+})();
+
+async function getModelBytes(url, useCache) {
+  const t0 = performance.now();
+  if (useCache) {
+    const cache = await caches.open(CACHE_NAME);
+    let res = await cache.match(url);
+    if (res) {
+      const buf = new Uint8Array(await res.arrayBuffer());
+      log(`cache HIT ${url} (${(buf.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-t0)} ms)`, 'ok');
+      return buf;
+    }
+    log(`cache MISS ${url} — fetching…`, 'warn');
+    const fres = await fetch(url);
+    if (!fres.ok) throw new Error(`fetch ${fres.status}`);
+    const buf = new Uint8Array(await fres.arrayBuffer());
+    // Best-effort cache — a failure here (large-entry limits, COI SW, quota)
+    // must NOT block model loading.
+    try {
+      await cache.put(url, new Response(buf, { headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(buf.length) } }));
+      log(`fetched + cached (${(buf.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-t0)} ms)`, 'ok');
+    } catch (e) {
+      log(`fetched (cache.put failed: ${e?.message ?? e}) ${(buf.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-t0)} ms`, 'warn');
+    }
+    return buf;
+  }
+  const fres = await fetch(url);
+  if (!fres.ok) throw new Error(`fetch ${fres.status}`);
+  const buf = new Uint8Array(await fres.arrayBuffer());
+  log(`fetched (no cache) ${(buf.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-t0)} ms`, 'ok');
+  return buf;
+}
+
+$('load').onclick = async () => {
+  $('load').disabled = true; $('run').disabled = true; loaded = false;
+  const opt = $('model').selectedOptions[0];
+  const url = opt.value;
+  $('loadstat').textContent = 'loading…';
+  try {
+    if (isWebgpuEngineReady()) { await releaseWebgpuEngine(); log('released previous engine', 'dim'); }
+    const bytes = await getModelBytes(url, $('cache').checked);
+    const t0 = performance.now();
+    log('initialize_webgpu_engine…');
+    await initialize_webgpu_engine(bytes);
+    const ready = isWebgpuEngineReady();
+    log(`engine ready=${ready} (init ${Math.round(performance.now()-t0)} ms)`, ready ? 'ok' : 'err');
+    loaded = ready;
+    $('run').disabled = !ready;
+    $('loadstat').textContent = ready ? 'loaded ✓' : 'init failed';
+  } catch (e) {
+    log('LOAD ERROR: ' + (e?.message ?? e), 'err');
+    $('loadstat').textContent = 'error';
+  } finally { $('load').disabled = false; }
+};
+
+$('clearcache').onclick = async () => { await caches.delete(CACHE_NAME); log('cache cleared', 'warn'); };
+
+function buildPrompt(tmpl, user) {
+  if (tmpl === 'gemma3') return `<start_of_turn>user\n${user}<end_of_turn>\n<start_of_turn>model\n`;
+  return `<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n`;
+}
+
+$('run').onclick = async () => {
+  if (!loaded) return;
+  $('run').disabled = true;
+  const tmpl = $('model').selectedOptions[0].dataset.tmpl;
+  const prompt = buildPrompt(tmpl, $('prompt').value.trim());
+  $('out').textContent = ''; $('out').className = '';
+  let n = 0, first = null; const t0 = performance.now();
+  log('inferWasmStreaming…');
+  try {
+    const full = await inferWasmStreaming(prompt, (piece) => {
+      if (first === null) { first = Math.round(performance.now() - t0); log('first token @ ' + first + ' ms', 'ok'); }
+      n++; $('out').textContent += piece;
+      $('genstat').textContent = `${n} tok, ${first} ms TTFT`;
+    });
+    const ms = Math.round(performance.now() - t0);
+    if (!$('out').textContent && full) $('out').textContent = full;
+    log(`DONE: ${n} tokens in ${ms} ms (${(n/(ms/1000)).toFixed(1)} tok/s)`, 'ok');
+  } catch (e) {
+    log('INFER ERROR: ' + (e?.message ?? e), 'err');
+    $('out').className = 'err';
+  } finally { $('run').disabled = false; }
+};
+</script>
+</body>
+</html>
