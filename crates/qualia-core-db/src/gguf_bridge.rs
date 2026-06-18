@@ -143,6 +143,8 @@ fn ggml_gpu_attention_shader_supported(ggml_type: u32) -> bool {
     matches!(
         ggml_type,
         crate::ggml_quants::GGML_TYPE_Q4_0
+            | crate::ggml_quants::GGML_TYPE_Q5_0
+            | crate::ggml_quants::GGML_TYPE_Q8_0
             | crate::ggml_quants::GGML_TYPE_Q4_K
             | crate::ggml_quants::GGML_TYPE_Q6_K
     )

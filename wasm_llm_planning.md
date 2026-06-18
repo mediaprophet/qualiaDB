@@ -144,7 +144,7 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 |--------------|-------|--------|
 | **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | 🟡 Landed — not wired to `infer_wasm_streaming` yet |
 | **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
-| **MC7** | Retire CPU stent from hot path once GPU path validates capital-of-France | ⬜ |
+| **MC7** | WGSL `Q5_0`/`Q8_0` dequant; gate removal; full GPU offload | ✅ Closed — `Paris is the capital of France`; TTFT ~11s |
 
 **Implementation notes (MC2 session):**
 - `cpu_attention_pass` uses raw-pointer KV mutation (sound on single-threaded wasm).
