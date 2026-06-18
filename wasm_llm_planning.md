@@ -145,6 +145,45 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 | **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | 🟡 Landed — not wired to `infer_wasm_streaming` yet |
 | **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
 | **MC7** | WGSL `Q5_0`/`Q8_0` dequant; gate removal; full GPU offload | ✅ Closed — `Paris is the capital of France`; TTFT ~11s |
+| **MC8** | Pipeline fusing — single `CommandEncoder`, one `map_async` per forward/argmax | 🟡 In flight (Part 1 Complete) |
+
+#### MC8 — split delivery
+
+**Part 1 (✅ infrastructure — committed `chore(wasm-llm): MC8 pt1`)**
+
+WebGPU validation plumbing is complete; fused compute is **gated off** until Part 2 numerical audit passes.
+
+| Component | Detail |
+|-----------|--------|
+| `wasm_elementwise.wgsl` | GPU RMSNorm (`rms_norm_batch`), SiLU×mul (`silu_mul_main`), residual add (`add_residual_main`) |
+| `add_residual_main` bind fix | Uses `buf_a + buf_b` (not `buf_out + buf_b`) so binding 0 is not stripped by WGSL dead-code elimination |
+| `gemm_ffn_buf` | Dedicated SwiGLU up-projection scratch — eliminates in-place gate/up GEMM on same buffer |
+| `prefill_scratch_buf` | Batch-sized RMS output — avoids in-place `batch_buf` read+write in prefill encoder |
+| `mc8_flush()` | Submits encoder between GEMM writes and elementwise reads (WebGPU sync-scope rule) |
+| `encode_residual_add_gpu` | Disjoint storage bindings: add into scratch, `copy_buffer_to_buffer` into dst |
+| `encode_transformer_layer_gpu` | Full fused layer encoder (present, not wired to hot path) |
+| `dispatch_prefill_chunk_async_mc8_gpu` | GPU batched prefill (dead_code — delegates to CPU) |
+| `dispatch_output_argmax_chunked_async_mc8_fused` | Fused multi-chunk argmax (dead_code — delegates to sync) |
+
+**Current hot-path routing (stable):**
+
+- Prefill → `dispatch_prefill_chunk` (CPU batch)
+- Decode forward → `dispatch_transformer_layer_async` (MC7 per-layer GPU + CPU elementwise)
+- Argmax → `dispatch_output_argmax_chunked` (sync, per-chunk `map_async`)
+
+**Harness (Part 1):** zero WebGPU validation errors when fused path is exercised manually; fused decode runs ~8s TTFT but output is numerically degenerate.
+
+**Part 2 (🟡 active blocker — numerical correctness)**
+
+Fused `encode_transformer_layer_gpu` executes without WebGPU errors but produces garbage/repetition. WGSL math audit suspects (priority order):
+
+1. **RoPE pair layout (P0):** CPU `rope_inplace` uses **NEOX split-half** `(i, i + head_dim/2)`; `fused_attention.wgsl` `rotate_rope_pair` uses **consecutive** `(p*2, p*2+1)`. Documented divergence since MC2.
+2. **RoPE freq base (P0):** CPU uses `h.effective_rope_freq_base()` (100k for SmolLM2); `attention_gpu_params` hardcodes `rope_theta_base: 10_000.0`.
+3. **RoPE scale (P1):** CPU applies `scaled_pos = pos / rope_scale`; WGSL uses raw `pos` — no `rope_scale` uniform.
+4. **RMSNorm / SiLU (P2):** Formulas match CPU (`ss/n`, `1/sqrt(ss+eps)`, `x/(1+e^-x)`, `gate*up`). Residual routing in `encode_attn_ffn_tail_gpu` uses `base_save` + `mc8_flush` — verify with L0 variance probe (~1.09 per MC3c).
+5. **Attention scale (OK):** Both apply `1/sqrt(head_dim)` to dot products.
+
+**Part 2 probe (recommended):** run L0 post-FFN on CPU vs one fused GPU layer; compare `h[0]` variance — target ~1.09 (MC3c).
 
 **Implementation notes (MC2 session):**
 - `cpu_attention_pass` uses raw-pointer KV mutation (sound on single-threaded wasm).
