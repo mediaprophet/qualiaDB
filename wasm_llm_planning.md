@@ -1,6 +1,6 @@
 # Qualia WASM LLM Inference — Planning & Agent Task Specification
 
-**Date:** 2026-06-18 · **Owner:** Qualia · **Companion doc:** [`WASM_LLM_INFERENCE_DIAGNOSIS.md`](WASM_LLM_INFERENCE_DIAGNOSIS.md)
+**Date:** 2026-06-19 · **Owner:** Qualia · **Companion doc:** [`WASM_LLM_INFERENCE_DIAGNOSIS.md`](WASM_LLM_INFERENCE_DIAGNOSIS.md)
 
 This is the authoritative plan for getting Qualia's **own** WASM GGUF + WebGPU LLM pipeline
 running in the browser (no wllama / no external LLM libs). It merges the user's task
@@ -57,8 +57,9 @@ short-circuit to CPU **before** touching GPU buffers (see Phase 2).
 `dispatch_attention_pass_async`, `dispatch_transformer_layer_async`,
 `dispatch_transformer_forward_async`, `dispatch_prefill_chunk_async`, and
 `dispatch_output_argmax_chunked_async` all exist and are wired to `inferWasmAsync`
-(`wasm_llm.rs`). **Remaining gap:** prefill K/V still CPU-only; fused GPU prefill
-(`dispatch_prefill_chunk_async_mc8_gpu`) is dead_code until numerically validated.
+(`wasm_llm.rs`). **MC8 pt3:** GPU prefill is the sole path
+(`dispatch_prefill_chunk_async_mc8_gpu`; CPU fallback blocked). Argmax remains sync
+(architect-gated).
 
 **F5 — WASM init skipped KV/GEMM arena setup.** *(Discovered MC2 session; fix landed,
 validation pending.)* `initialize_webgpu_engine` (wasm, `gguf_bridge.rs:3242`) previously
@@ -68,14 +69,12 @@ is the sole path that invokes `ensure_kv_cache()` + `ensure_gemm_buffers()`. Wit
 prefill K/V never run → decode proceeds with an empty KV mirror → F1 garbage output even
 after SDPA lands. **Fix:** init now calls `engine.adopt_resident_mmap(gguf_data)?`.
 
-**F6 — Prefill failure was silently ignored.** `llm_agent.rs` used `let _ =
-dispatch_prefill_chunk(...)` (return value discarded). A failed prefill looked like
-"inference works" (2048 tok, ~8 tok/s) but TTFT stayed **<600 ms** — impossibly fast for
-real CPU attention across 32 layers × 37 prompt tokens. **Fix landed:** log
-`[llm] PREFILL chunk FAILED pos=… n=…` on failure. **Still open:** layer-0 prefill fails
-even after F5 fix (`[llm] PREFILL chunk FAILED pos=0 n=37` in harness console); root cause
-is the next debug target (`[attn_pass] GUARD …` / `[prefill_layer] K|V pass FAILED` logs
-added in `dispatch_attention_pass` / `dispatch_prefill_layer_batch`).
+**F6 — Prefill failure was silently ignored.** *(Resolved MC8 pt3.)* `llm_agent.rs` used
+`let _ = dispatch_prefill_chunk(...)` (return value discarded). **Fix landed:** log
+`[llm] PREFILL chunk FAILED pos=… n=…` on failure + F5 `adopt_resident_mmap`. **MC8 pt3:**
+GPU prefill succeeds (`[MC8] GPU prefill OK layers=32 n_tokens=4 start=0` in harness).
+Remaining coherence gap is **depth accumulation / KV correctness**, not prefill dispatch
+failure.
 
 ---
 
@@ -91,7 +90,10 @@ added in `dispatch_attention_pass` / `dispatch_prefill_layer_batch`).
 | Phase 1 OOB | Trap resolved; defensive guards in `dispatch_gemm_into` + `stack_gemm_quant` kept permanently. |
 | Phase 2A MC1 | `cpu_attention_pass` K/V + RoPE + KV writes; Q stubbed; KV index math OOB-safe. |
 | Phase 2A MC2 (code) | SDPA + softmax + V-sum in `cpu_attention_pass` proj_kind=0; not yet validated end-to-end. |
-| WASM init arenas | `initialize_webgpu_engine` → `adopt_resident_mmap` (F5 fix); prefill still fails (F6). |
+| WASM init arenas | `initialize_webgpu_engine` → `adopt_resident_mmap` (F5 fix). |
+| GPU prefill (MC8 pt3) | `dispatch_prefill_chunk_async_mc8_gpu` — sole path; logs `GPU prefill OK`. |
+| K/V weight-buffer flush (MC8 pt3c) | `mc8_flush` between K→V and gate→up; L31 272→21. |
+| Prefill attn_input handoff (MC8 pt3d) | `prefill_scratch[t]` → `aux_buf` for Q; Q `abs_pos` explicit. |
 
 ---
 
@@ -147,7 +149,7 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 | **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | ✅ Closed — wired via `inferWasmAsync` (`wasm_llm.rs`) |
 | **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
 | **MC7** | WGSL `Q5_0`/`Q8_0` dequant; gate removal; full GPU offload | ✅ Closed — `Paris is the capital of France`; TTFT ~11s |
-| **MC8** | Pipeline fusing — single `CommandEncoder`, one `map_async` per forward/argmax | 🟡 Part 3 in flight — L0@L0 locked; L31 blow-up open |
+| **MC8** | Pipeline fusing — single `CommandEncoder`, per-layer `mc8_flush`, one readback/forward | 🟡 Part 3e — L31=20.87 (was 272); coherence not yet MC7 |
 
 #### MC8 — split delivery
 
@@ -164,8 +166,9 @@ WebGPU validation plumbing is complete; fused compute is **gated off** until Par
 | `mc8_flush()` | Submits encoder between GEMM writes and elementwise reads (WebGPU sync-scope rule) |
 | `encode_residual_add_gpu` | Disjoint storage bindings: add into scratch, `copy_buffer_to_buffer` into dst |
 | `encode_transformer_layer_gpu` | Full fused layer encoder (present, not wired to hot path) |
-| `dispatch_prefill_chunk_async_mc8_gpu` | GPU batched prefill (dead_code — delegates to CPU) |
-| `dispatch_output_argmax_chunked_async_mc8_fused` | Fused multi-chunk argmax (dead_code — delegates to sync) |
+| `dispatch_prefill_chunk_async_mc8_gpu` | GPU batched prefill — **hot path** (pt3; CPU fallback blocked) |
+| `dispatch_output_argmax_chunked_async_mc8_fused` | Fused multi-chunk argmax (**gated** — sync argmax retained) |
+| `mc8_flush()` between K→V / gate→up | Prevents `gemm_weight_buf` queue race (pt3c) |
 
 **Current hot-path routing (post Part 3 — GPU manifold unified):**
 
@@ -209,7 +212,18 @@ Probe read `h[0]` after layer-0 post-FFN via `pipeline_read_hidden`. Target from
 
 **Build trap (discovered Part 2):** wasm-pack **without** `-zstack-size=8388608` causes immediate `memory access out of bounds` at inference start (1 ms trap). Always build via `scripts/package-qualia-wasm.ps1` or explicit `RUSTFLAGS` in §BUILD/DEPLOY/TEST. Rebuilt binaries without 8 MB stack are **not** comparable to committed artifacts.
 
-**Part 3 (🟡 active — manifold unification + depth blow-up)**
+**Part 3–3d (✅ manifold unified + depth bisect; 🟡 Part 3e — L31 gap to ~1.09)**
+
+**Current harness snapshot (naked SmolLM2-360M Q4_K_M, `inferWasmAsync`, decode step 1):**
+
+| Metric | MC7 reference | MC8 current (pt3d) |
+|--------|---------------|-------------------|
+| TTFT | ~11 s | **~7.7–8.2 s** |
+| Output | `Paris is the capital of France.` | partial English, repetitive (`starlings soar…`) |
+| L0 `h[0]` | ~1.09 (CPU) | **0.423** (true GPU; pt3 `1.011` was false positive) |
+| L1 `h[0]` | — | 0.098 |
+| L31 `h[0]` | ~1.09 band | **20.87** (↓ from 271.7 after pt3c flush fix) |
+| WebGPU errors | 0 | 0 |
 
 #### Architect answers (§8 feedback — 2026-06-18)
 
@@ -225,8 +239,8 @@ Probe read `h[0]` after layer-0 post-FFN via `pipeline_read_hidden`. Target from
 | Checkpoint | `h[0]` | Status |
 |------------|--------|--------|
 | GPU prefill | `[MC8] GPU prefill OK layers=32 n_tokens=4` | ✅ |
-| L0 @ layer 0 (step 1) | **1.011** | ✅ (~7% from ~1.09 target) |
-| L0 @ layer 31 (step 1, post-full forward) | **271.7** | ❌ **depth blow-up** |
+| L0 @ layer 0 (step 1) | **1.011** | ⚠️ false positive (wrong-K residual mask; true L0=**0.423** post-pt3c) |
+| L0 @ layer 31 (step 1, post-full forward) | **271.7** | ❌ depth blow-up (→ **20.87** post-pt3c) |
 | TTFT | **7942 ms** | ✅ (↓ from ~9s pt2) |
 | Output | `pries underm` repetition | ❌ |
 
@@ -309,7 +323,24 @@ TTFT 8212 ms. Output shifted from `pries underm` repetition → partial English 
 
 **Harness verify (pt3d, same as pt3c):** L0=0.423, L1=0.098, L2=-0.736, L3=-1.080, L31=20.87 — **unchanged** (confirms batched K/V RoPE was already correct; `attn_input` handoff is parity hygiene, not the L31 gap).
 
-**Next:** Q/K targeted diff @ L1 decode step 1, or audit prefill causal Q loop (per-token `abs` vs batched K/V ordering).
+#### Part 3e (next — Q/K diff @ L1 + remaining L31 gap)
+
+**Open:** post-L31 `h[0]=20.87` vs CPU ~1.09 (~19×); L0 true geometry **0.423** vs ~1.09.
+
+**Ruled out (pt3b–3d):**
+- FFN `add_residual_main` routing (`+=` trap, scratch aliasing) — not the dominant leak
+- KV layer stride / uniform `layer_idx` — structurally correct
+- Batched K/V flat-RoPE (`token_idx` scalar for whole batch) — already per `wg_id`
+- Batch RMSNorm cross-row variance — per-row via `wg_id.x`
+- Prefill `attn_input` handoff — parity fix; harness unchanged
+
+**Confirmed root cause (pt3c):** `gemm_weight_buf` queue race — K dispatch ran with V weights
+without `mc8_flush` between passes. Fix dropped L31 **271→21**.
+
+**Next actions:**
+1. **Q/K targeted diff @ L1** decode step 1 — compare GPU vs `cpu_attention_pass` on same hidden.
+2. Audit prefill causal Q sequencing (per-token `abs` attention window vs batched K/V write order).
+3. Pass gate: post-L31 `h[0]` within 5% of ~1.09 → naked ` Paris.`; argmax fusion stays gated.
 
 **Implementation notes (MC2 session):**
 - `cpu_attention_pass` uses raw-pointer KV mutation (sound on single-threaded wasm).
@@ -384,7 +415,10 @@ weights re-encoded as Quins. Confirm the intended `.q42` weight representation b
 | argmax | `dispatch_output_argmax_chunked` `:1331` |
 | async variants | `dispatch_gemm_into_async`, `dispatch_transformer_forward_async`, `dispatch_prefill_chunk_async`, `dispatch_output_argmax_chunked_async` |
 | MC8 fused layer | `encode_transformer_layer_gpu`, `encode_attn_ffn_tail_gpu`, `wasm_elementwise.wgsl` |
-| MC8 RoPE (WGSL) | `fused_attention.wgsl::apply_rope_neox`; `AttentionGpuParams.rope_theta_base` + `rope_scale` |
+| MC8 GPU prefill | `dispatch_prefill_chunk_async_mc8_gpu` `gguf_bridge.rs` (~4608) |
+| MC8 depth bisect | `dispatch_transformer_forward_async` `l0_probe_step1` → layers 0–3 + post-L31 |
+| MC8 RoPE (WGSL) | `fused_attention.wgsl::apply_rope_neox`; K/V `abs_pos=batch_start+token_in_batch` |
+| MC8 flush rule | `mc8_flush()` between K→V, gate→up, and before elem reads of GEMM output |
 | constants | `MAX_STACK_GEMM_DIM=10240` `:188`; `PREFILL_CHUNK_STACK_FLOATS=2560*64` `:196`; `MAX_PREFILL_BATCH_FLOATS=10240*64` `:194` |
 | KV cache | struct fields `gguf_bridge.rs:354-358` (`kv_layout`, `kv_cache_gpu`, `kv_cache_cpu: Box<[f32]>`) |
 
@@ -434,6 +468,24 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 ---
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
+
+- **2026-06-19 (z)** — **MC8 Part 3d: batched prefill audit.**
+  Architect G: prefill audit before Q/K diff. WGSL K/V already uses
+  `abs_pos = batch_start_token_idx + token_in_batch`; RMSNorm per-row ✅; flat-RoPE hypothesis
+  **not confirmed**. Patched prefill `attn_input` handoff (`prefill_scratch[t]`→`aux_buf`),
+  Q `abs_pos` via `batch_start+offset`, flush after batch RMSNorm. Harness unchanged:
+  L0=0.423, L31=20.87. Commit `3613b2e4`.
+
+- **2026-06-19 (y)** — **MC8 Part 3c: KV indexing + weight-buffer race.**
+  Architect F: KV layout audit first. Layer stride/uniforms ✅. Root cause: K and V shared
+  `gemm_weight_buf` without `mc8_flush` — K ran with V weights. Fix: flush K→V, gate→up.
+  L31 **271.7→20.87**; L0 **1.011→0.423** (false positive gone). Output → partial English.
+  Commit `64194425`.
+
+- **2026-06-19 (x)** — **MC8 Part 3b: depth bisect + FFN residual audit.**
+  Architect E: FFN chain first. `add_residual_main` OK; scratch isolation + extra flushes.
+  Bisect: L0=1.011, L1=-1.662, L31=271.7 (unchanged). L1 jump → cross-layer fault, not FFN creep.
+  Commit `ba357389`.
 
 - **2026-06-18 (w)** — **MC8 Part 3: GPU prefill manifold unification + L0 step-1 lock.**
   - Wired `dispatch_prefill_chunk_async` → `dispatch_prefill_chunk_async_mc8_gpu` (CPU fallback blocked).
@@ -713,48 +765,52 @@ Universe / Track B3, `WASM_LLM_INFERENCE_DIAGNOSIS.md`):
 | **Stability** | OOB trap | Phase 1 | ✅ Done — guards permanent |
 | **Stability** | Init hang / init OOB / wasm-opt / stack | STATUS table | ✅ Done — do not redo |
 | **Correctness** | CPU attention stent (Option A) | Phase 2A MC1–MC2 | 🟡 MC1 ✅, MC2 code ✅, **validation blocked on prefill** |
-| **Correctness** | WASM init → KV + GEMM arenas | F5 | 🟡 Fix landed; prefill still fails (F6) |
-| **Correctness** | Coherent browser tokens | Phase 2A success gate | 🟡 MC7 coherent on CPU elem; MC8 fused garbled |
-| **Performance** | Async GPU decode (Option B) | Phase 2B MC5–MC8 | 🟡 Fused decode ~9s TTFT; target ~4s |
+| **Correctness** | WASM init → KV + GEMM arenas | F5/F6 | ✅ GPU prefill OK |
+| **Correctness** | Coherent browser tokens | Phase 2A success gate | 🟡 MC7 `Paris.`; MC8 partial English |
+| **Performance** | Async GPU decode (Option B) | Phase 2B MC5–MC8 | 🟡 TTFT ~7.7s; target ~4s |
 | **Correctness** | WGSL RoPE ↔ CPU NEOX | MC8 pt2 | ✅ Closed |
 | **Correctness** | GPU prefill manifold unified | MC8 pt3 | ✅ CPU fallback blocked |
-| **Correctness** | L0 post-FFN GPU @ L0 (step 1) | MC8 pt3 | ✅ `h[0]=1.011` |
-| **Correctness** | L0 post-FFN GPU @ L31 (step 1) | MC8 pt3b | ❌ `h[0]=271.7` blow-up (FFN audit unchanged) |
-| **Correctness** | Depth bisect L0–L3 (step 1) | MC8 pt3b | L0=1.01 ✅; L1=-1.66 ❌ jump at L1 |
+| **Correctness** | K/V `gemm_weight_buf` flush | MC8 pt3c | ✅ L31 272→21 |
+| **Correctness** | Batched prefill RoPE/RMSNorm | MC8 pt3d | ✅ per-row; not flat-space bug |
+| **Correctness** | L0 `h[0]` @ step 1 (true GPU) | MC8 pt3d | ❌ **0.423** (pt3 `1.011` was artefact) |
+| **Correctness** | L31 `h[0]` @ step 1 | MC8 pt3d | ❌ **20.87** (improved; gate ~1.09) |
 | **UX** | OPFS model cache | Phase 3 | ⬜ Parallel track, independent |
 | **Architecture** | GGUF → `.q42` AOT | Phase 4 | ⬜ Horizon |
 
-**Single blocker for broader "WASM LLM works" claim (updated MC8 pt2):** fused GPU decode
-runs without WebGPU errors and beats MC7 TTFT, but **output coherence regressed** vs MC7
-(`Paris is the capital of France` → garbled repetition). Advisors should prioritize:
-**(1)** CPU/GPU L0 parity on decode step 1, **(2)** CPU-prefill vs GPU-decode KV/RoPE split,
-**(3)** elementwise residual routing before argmax fusion.
+**Single blocker for broader "WASM LLM works" claim (updated MC8 pt3d):** GPU manifold is
+unified (prefill + decode on WebGPU), K/V weight race fixed (L31 ↓13×), batched prefill
+geometry audited — but **post-L31 hidden variance remains ~19× above CPU** and output is
+not yet `Paris.`. Next: **Q/K diff @ L1** to localize remaining KV or hidden-state drift.
 
-**Branch:** `0.0.18` (ahead of origin). MC8 pt1 `60ba2451`, MC8 pt2 `4f506932`.
+**Branch:** `0.0.18` (ahead of origin).
+
+**MC8 commits:** pt1 `60ba2451` · pt2 `4f506932` · pt3 `de499715` · pt3b `ba357389` · pt3c `64194425` · pt3d `3613b2e4`
 
 ---
 
 ## ▶️ 8. RESUME HERE (if context/tokens are lost — start at this section)
 
-1. Read **§0** (directives), **§0b** (F1–F6), **§6** (decisions), **§RECONCILIATION**, **MC8 §Part 2/3**.
-2. **Current task = Phase 2B MC8 Part 3d verify (prefill attn_input handoff):**
-   - **Done (pt3c):** K/V+gate/up weight-buffer flush; L31 271→21.
-   - **Done (pt3d):** batched K/V RoPE audit ✅ (already per `wg_id`); RMSNorm per-row ✅; `attn_input` handoff + Q `abs_pos` patched; harness **unchanged** (L31=20.87).
-   - **Next:** Q/K diff @ L1; prefill causal Q sequencing audit.
-3. **Build rule:** must use 8 MB stack `RUSTFLAGS` (§BUILD/DEPLOY/TEST) — omitting → instant OOB trap.
-4. **Harness:** `agent-tools/wasm-mc2-test.mjs` with `WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`,
+1. Read **§0** (directives), **§0b** (F1–F6), **§RECONCILIATION**, **MC8 Part 3–3d snapshot**.
+2. **Current task = Phase 2B MC8 Part 3e (Q/K diff @ L1):**
+   - **Done (pt3):** GPU prefill sole path; false L0 lock @ 1.011.
+   - **Done (pt3b):** FFN residual audit; L1 jump bisect (1.01→-1.66).
+   - **Done (pt3c):** KV indexing ✅; **K/V weight-buffer race** fixed; L31 **271→21**.
+   - **Done (pt3d):** batched prefill RoPE/RMSNorm ✅; `attn_input` handoff; harness stable @ L31=20.87.
+   - **Next:** Q/K targeted diff @ L1 decode step 1; close L31 gap to ~1.09; coherence gate ` Paris.`
+3. **Build rule:** `scripts/package-qualia-wasm.ps1` or §BUILD `RUSTFLAGS` (8 MB stack) — mandatory.
+4. **Harness:** `agent-tools/wasm-mc2-test.mjs` — `WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`,
    `WASM_MODEL=models/SmolLM2-360M-Instruct-Q4_K_M.gguf`.
-5. **Pass criteria (Part 3b):** post-L31 `h[0]` within 5% of CPU (~1.09 band); then naked ` Paris.`; TTFT trending toward ~4s.
-6. **Regression reference:** MC7 (`3d39868c`) = coherent output, ~11s TTFT, CPU elementwise + GPU attention.
-7. Phase 3 (OPFS) can run in parallel.
-8. Keep **§7 Progress Log** updated as you go.
+5. **Pass criteria:** post-L31 `h[0]` within 5% of ~1.09; naked ` Paris.`; TTFT → ~4s; argmax gated.
+6. **Regression:** MC7 = `Paris is the capital of France.`, ~11s TTFT.
+7. Phase 3 (OPFS) parallel.
+8. Update **§7 Progress Log** after each micro-commit.
 
 ### Advisor feedback (MC8 pt2 → pt3) — **ANSWERED**
 
 | # | Question | Architect decision | Part 3 outcome |
 |---|----------|-------------------|----------------|
 | A | CPU prefill + GPU decode split? | **Mandate full GPU prefill** | ✅ `dispatch_prefill_chunk_async_mc8_gpu` wired; CPU fallback blocked |
-| B | L0 gate on decode step 1? | **Yes — step 1 only** | ✅ `h[0]=1.011` @ L0; step 0 not probed |
+| B | L0 gate on decode step 1? | **Yes — step 1 only** | ⚠️ pt3 `1.011` was artefact; true L0=**0.423** post-pt3c |
 | C | Elementwise vs prefill first? | **Prefill GPU K/V first** | ✅ done; elementwise audit deferred to pt3b (depth blow-up) |
 | D | Argmax fusion? | **Gated** | ✅ sync argmax retained |
 
@@ -775,3 +831,5 @@ runs without WebGPU errors and beats MC7 TTFT, but **output coherence regressed*
 | # | Question | Architect decision | Part 3d outcome |
 |---|----------|-------------------|-----------------|
 | G | Q/K diff vs prefill `token_idx` audit? | **Prefill batched-attn audit first** | K/V RoPE already per `wg_id`; RMSNorm per-row ✅; `attn_input` handoff + Q `abs_pos` patched |
+
+**New advisor question (pt3e):** With L31=20.87 after K/V flush, should Part 3e prioritize **GPU vs CPU Q/K tensor diff @ L1** or **prefill per-token causal attention window audit** (batched K/V write vs sequential Q+FFN loop)?
