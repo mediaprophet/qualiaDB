@@ -3,3 +3,19 @@
 @source "../**/*.html";
 @source "../**/*.js";
 @source "../_layouts/**/*.html";
+
+/*
+ * Tailwind v4 emits utilities into `@layer utilities`. Pages define their
+ * overlay components in an *unlayered* inline <style> (e.g.
+ * `.error-overlay { display: flex }`), and unlayered rules always beat
+ * layered ones — so the `.hidden` utility could no longer hide a fixed
+ * overlay, leaving "WASM Engine Required" stuck on screen even after a clean
+ * WASM boot. These unlayered, higher-specificity rules restore the toggle
+ * without making `.hidden` `!important` (which would break responsive
+ * `hidden sm:flex` nav patterns). See docs/css/design-studio.html `.ds-hidden`
+ * for the prior single-page workaround this generalises.
+ */
+.error-overlay.hidden,
+.loading-overlay.hidden {
+  display: none;
+}

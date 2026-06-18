@@ -24,10 +24,25 @@ export async function ensureCrossOriginIsolation(options = {}) {
     debugLog('COI bootstrap', { coiScript, quiet, coi: window.coi });
     debugEnv();
 
+    // Idempotency: coi-serviceworker.js declares `let coepCredentialless` at
+    // classic-script top level, so evaluating it twice in one document throws
+    // "Identifier 'coepCredentialless' has already been declared". A page can
+    // reach here after an inline <head> bootstrap (spatial/design-studio) or a
+    // second ensureCrossOriginIsolation() call has already injected it — so skip
+    // re-injection if the script is already present.
+    const existing = document.querySelector(
+        'script[data-coi-loader], script[src*="coi-serviceworker.js"]',
+    );
+    if (existing) {
+        debugLog('COI script already injected, skipping');
+        return window.crossOriginIsolated === true;
+    }
+
     await new Promise((resolve, reject) => {
         const s = document.createElement('script');
         s.src = coiScript;
         s.async = false;
+        s.dataset.coiLoader = '1';
         s.onload = resolve;
         s.onerror = () => reject(new Error('coi-serviceworker load failed'));
         document.head.appendChild(s);

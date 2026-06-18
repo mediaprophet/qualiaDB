@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scientific Computing Demo - QualiaDB</title>
     <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
@@ -28,6 +29,8 @@
         .loading-spinner { width: 48px; height: 48px; border: 3px solid rgba(52, 211, 153, 0.2); border-top-color: #34d399; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .error-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.98); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        /* Tailwind v4 puts `.hidden` in @layer utilities, which loses to these unlayered rules; keep the toggle working without making `.hidden` !important (that breaks responsive nav). */
+        .error-overlay.hidden, .loading-overlay.hidden { display: none; }
         .spinbtn { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; border-radius: 6px; padding: 0.45rem 1.1rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
         .spinbtn:hover { background: rgba(16, 185, 129, 0.3); }
         .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }

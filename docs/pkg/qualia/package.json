@@ -1,13 +1,18 @@
-﻿{
-    "version":  "0.0.17",
-    "name":  "qualia-portal",
-    "types":  "qualia.d.ts",
-    "files":  [
-                  "qualia.js",
-                  "qualia_bg.wasm",
-                  "qualia.d.ts",
-                  "qualia_bg.wasm.d.ts"
-              ],
-    "type":  "module",
-    "main":  "qualia.js"
+{
+  "name": "qualia-core-db",
+  "type": "module",
+  "collaborators": [
+    "Timothy Charles Holborn <timothy.holborn@gmail.com>"
+  ],
+  "version": "0.0.17",
+  "files": [
+    "qualia_core_db_bg.wasm",
+    "qualia_core_db.js",
+    "qualia_core_db.d.ts"
+  ],
+  "main": "qualia_core_db.js",
+  "types": "qualia_core_db.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
 }

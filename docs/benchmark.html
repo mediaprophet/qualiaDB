@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Qualia-DB • Benchmark Hub v0.0.17</title>
     <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
@@ -30,6 +31,8 @@
         .loading-spinner { width: 48px; height: 48px; border: 3px solid rgba(52, 211, 153, 0.2); border-top-color: #34d399; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .error-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.98); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        /* Tailwind v4 puts `.hidden` in @layer utilities, which loses to these unlayered rules; keep the toggle working without making `.hidden` !important (that breaks responsive nav). */
+        .error-overlay.hidden, .loading-overlay.hidden { display: none; }
         .spinbtn { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; border-radius: 6px; padding: 0.45rem 1.1rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
         .spinbtn:hover { background: rgba(16, 185, 129, 0.3); }
         .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -189,7 +192,7 @@
             </h3>
             <p class="text-white/60 text-sm mb-4">Core semantic graph operations — point lookup, two-hop traversal, predicate filtering, and ingestion performance.</p>
             <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">
-                <i class="fas fa-info-circle mr-1"></i> Interactive demo — uses simulated timings unless your local daemon is online. For audited numbers use the <strong>CI Platform Suite</strong> tab or <a href="comparative_benchmarks.html" class="underline">comparative benchmarks</a>.
+                <i class="fas fa-info-circle mr-1"></i> Live demo — graph parsed and queries compiled in-browser via <code>parse_turtle_wasm</code> + <code>compile_query_to_json</code> (timings measured here). For multi-engine graph comparisons use the <strong>CI Platform Suite</strong> tab or <a href="comparative_benchmarks.html" class="underline">comparative benchmarks</a>.
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -222,6 +225,11 @@
             </div>
 
             <div class="code-block text-sm mb-4" id="graph-output">Ready to run benchmark...</div>
+
+            <div class="glass-panel rounded-2xl p-4 mb-4">
+                <h4 class="text-sm font-semibold mb-3 text-emerald-400"><i class="fas fa-circle-nodes mr-1"></i>Live graph (parsed by <code>parse_turtle_wasm</code>) — drag nodes · scroll to zoom</h4>
+                <canvas id="graph-viz-canvas" style="width:100%;height:340px;max-height:340px;display:block"></canvas>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="glass-panel rounded-2xl p-4">
@@ -342,6 +350,21 @@
             </div>
 
             <div class="code-block text-sm mb-4" id="spatial-output">Ready to run spatial benchmark...</div>
+
+            <div class="glass-panel rounded-2xl p-4 mb-4">
+                <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                    <h4 class="text-sm font-semibold text-emerald-400"><i class="fas fa-cube mr-1"></i>Interactive 3D object — drag to rotate · scroll to zoom</h4>
+                    <select id="spatial-shape" class="input-field" style="width:auto">
+                        <option value="icosahedron">Icosahedron</option>
+                        <option value="tetrahedron">Tetrahedron</option>
+                        <option value="cube">Cube</option>
+                        <option value="octahedron">Octahedron</option>
+                        <option value="sphere">Sphere</option>
+                        <option value="torus">Torus</option>
+                    </select>
+                </div>
+                <canvas id="spatial-3d-canvas" style="width:100%;height:320px;max-height:340px;display:block"></canvas>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="glass-panel rounded-2xl p-4">
@@ -569,6 +592,61 @@ LIMIT 100</textarea>
 
 <script type="module">
     import { fetchJson, renderPlatformSuite } from './js/benchmark-shared.js';
+    import { Object3DViewer, GraphViewer, runSpatialLive, runGraphLive } from './js/benchmark-live.js';
+
+    // ── Live (real-WASM) Spatial & Graph tabs + interactive viewers ──
+    let obj3d = null, graphViz = null;
+    function ensureViewers() {
+        if (!obj3d) { const c = document.getElementById('spatial-3d-canvas'); if (c) obj3d = new Object3DViewer(c); }
+        if (!graphViz) { const c = document.getElementById('graph-viz-canvas'); if (c) graphViz = new GraphViewer(c); }
+    }
+    ensureViewers();
+    const shapeSel = document.getElementById('spatial-shape');
+    shapeSel?.addEventListener('change', () => { ensureViewers(); obj3d?.setMesh(shapeSel.value); });
+
+    window.runSpatialBenchmark = function () {
+        ensureViewers();
+        const btn = document.getElementById('btn-spatial-run'); if (btn) btn.disabled = true;
+        const output = document.getElementById('spatial-output'); output.textContent = 'Running real geometric-algebra benchmark…';
+        setTimeout(() => {
+            try {
+                const count = parseInt(document.getElementById('spatial-count').value, 10) || 10000;
+                const r = runSpatialLive({ wasm: window.qualiaWasm, charts: window.benchCharts, output, count });
+                if (r && window.updateMetrics) {
+                    const best = Math.max(...Object.values(r.perfByOp).map((p) => p.opsPerSec));
+                    window.updateMetrics(best, r.perfByOp.geo.msPer, 0, 35);
+                }
+            } catch (e) { output.textContent = 'Error: ' + (e?.message || e); }
+            if (btn) btn.disabled = false;
+        }, 30);
+    };
+    window.resetSpatialBenchmark = function () {
+        document.getElementById('spatial-output').textContent = 'Ready to run spatial benchmark...';
+        const ch = window.benchCharts;
+        if (ch?.spatialPerformance) { ch.spatialPerformance.data.datasets[0].data = [0, 0, 0, 0]; ch.spatialPerformance.update(); }
+        if (ch?.spatialScaling) { ch.spatialScaling.data.datasets[0].data = [0, 0, 0]; ch.spatialScaling.update(); }
+        window.updateMetrics?.(0, 0, 0, 0);
+    };
+    window.runGraphBenchmark = function () {
+        ensureViewers();
+        const btn = document.getElementById('btn-graph-run'); if (btn) btn.disabled = true;
+        const output = document.getElementById('graph-output'); output.textContent = 'Running real graph benchmark…';
+        setTimeout(() => {
+            try {
+                const operation = document.getElementById('graph-operation').value;
+                const r = runGraphLive({ wasm: window.qualiaWasm, charts: window.benchCharts, output, viewer: graphViz, operation });
+                if (r && window.updateMetrics) window.updateMetrics(Math.round(r.triples.length / (r.ingestMs / 1000)), r.compileMs[operation] || r.compileMs.point, 0, 42);
+            } catch (e) { output.textContent = 'Error: ' + (e?.message || e); }
+            if (btn) btn.disabled = false;
+        }, 30);
+    };
+    window.resetGraphBenchmark = function () {
+        document.getElementById('graph-output').textContent = 'Ready to run benchmark...';
+        const ch = window.benchCharts;
+        if (ch?.graphLatency) { ch.graphLatency.data.datasets[0].data = [0, 0, 0, 0]; ch.graphLatency.update(); }
+        if (ch?.graphThroughput) { ch.graphThroughput.data.labels = []; ch.graphThroughput.data.datasets[0].data = []; ch.graphThroughput.update(); }
+        window.updateMetrics?.(0, 0, 0, 0);
+    };
 
     async function loadCiSuite() {
         const root = document.getElementById('ci-suite-root');
@@ -642,15 +720,33 @@ LIMIT 100</textarea>
     checkDaemon();
 
     // Tab switching
-    function switchTab(tabId, btn) {
+    function switchTab(tabId, btn, opts) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('tab-' + tabId).classList.add('active');
+        const button = btn || document.getElementById('tab-' + tabId + '-btn');
+        button?.classList.add('active');
+        document.getElementById('tab-' + tabId)?.classList.add('active');
+        // Deep-linkable tabs: reflect the active test in the URL fragment.
+        if (!opts?.silent && location.hash.slice(1) !== tabId) {
+            history.replaceState(null, '', '#' + tabId);
+        }
+        window.dispatchEvent(new CustomEvent('benchtab', { detail: { tabId } }));
     }
+    window.switchTab = switchTab;
+
+    // Activate the tab named in the URL fragment on load (e.g. #spatial), and
+    // keep tabs in sync when the user navigates history / edits the hash.
+    function activateTabFromHash() {
+        const id = location.hash.slice(1);
+        if (id && document.getElementById('tab-' + id)) switchTab(id, null, { silent: true });
+    }
+    window.addEventListener('hashchange', activateTabFromHash);
+    window.addEventListener('DOMContentLoaded', activateTabFromHash);
+    activateTabFromHash();
 
     // Chart instances
     let charts = {};
+    window.benchCharts = charts; // exposed so the ES-module live runners can update charts
 
     // Initialize all charts
     function initializeCharts() {
@@ -875,60 +971,9 @@ LIMIT 100</textarea>
     }
 
     // Graph benchmark
-    function runGraphBenchmark() {
-        const btn = document.getElementById('btn-graph-run');
-        const output = document.getElementById('graph-output');
-        btn.disabled = true;
-        output.textContent = 'Running graph benchmark...';
-
-        setTimeout(() => {
-            const dataset = document.getElementById('graph-dataset').value;
-            const operation = document.getElementById('graph-operation').value;
-
-            // Simulated results
-            const results = {
-                point: { latency: 0.12, throughput: 8500000 },
-                twohop: { latency: 0.45, throughput: 2200000 },
-                filter: { latency: 0.28, throughput: 3500000 },
-                ingest: { latency: 1.2, throughput: 850000 }
-            };
-
-            const result = results[operation];
-            updateMetrics(result.throughput, result.latency, 0, 42);
-
-            // Update charts
-            charts.graphLatency.data.datasets[0].data = [
-                results.point.latency,
-                results.twohop.latency,
-                results.filter.latency,
-                results.ingest.latency
-            ];
-            charts.graphLatency.update();
-
-            const throughputData = [];
-            const labels = [];
-            for (let i = 0; i < 10; i++) {
-                labels.push(i + 's');
-                throughputData.push(result.throughput * (0.9 + Math.random() * 0.2));
-            }
-            charts.graphThroughput.data.labels = labels;
-            charts.graphThroughput.data.datasets[0].data = throughputData;
-            charts.graphThroughput.update();
-
-            output.textContent = `✓ ${operation.toUpperCase()} benchmark complete\nDataset: ${dataset}\nLatency: ${result.latency}ms\nThroughput: ${result.throughput.toLocaleString()} ops/sec\nHeap allocations: 0\nMemory: 42MB`;
-            btn.disabled = false;
-        }, 1500);
-    }
-
-    function resetGraphBenchmark() {
-        document.getElementById('graph-output').textContent = 'Ready to run benchmark...';
-        charts.graphLatency.data.datasets[0].data = [0, 0, 0, 0];
-        charts.graphLatency.update();
-        charts.graphThroughput.data.labels = [];
-        charts.graphThroughput.data.datasets[0].data = [];
-        charts.graphThroughput.update();
-        updateMetrics(0, 0, 0, 0);
-    }
+    // runGraphBenchmark / resetGraphBenchmark are now REAL (parse_turtle_wasm +
+    // compile_query_to_json) and defined in the module script above via
+    // js/benchmark-live.js. The previous simulated (Math.random) versions were removed.
 
     // Scientific benchmark
     function runSciBenchmark() {
@@ -988,60 +1033,9 @@ LIMIT 100</textarea>
         updateMetrics(0, 0, 0, 0);
     }
 
-    // Spatial benchmark
-    function runSpatialBenchmark() {
-        const btn = document.getElementById('btn-spatial-run');
-        const output = document.getElementById('spatial-output');
-        btn.disabled = true;
-        output.textContent = 'Running spatial benchmark...';
-
-        setTimeout(() => {
-            const operation = document.getElementById('spatial-operation').value;
-            const dim = document.getElementById('spatial-dim').value;
-            const count = parseInt(document.getElementById('spatial-count').value);
-
-            // Simulated results
-            const results = {
-                ga: { ops: 7800000, latency: 0.13 },
-                interval: { ops: 9200000, latency: 0.11 },
-                topology: { ops: 6500000, latency: 0.15 },
-                indexing: { ops: 11000000, latency: 0.09 }
-            };
-
-            const result = results[operation];
-            const adjustedOps = Math.floor(result.ops * (count / 10000));
-            updateMetrics(adjustedOps, result.latency, 0, 35);
-
-            // Update charts
-            charts.spatialPerformance.data.datasets[0].data = [
-                results.ga.ops,
-                results.interval.ops,
-                results.topology.ops,
-                results.indexing.ops
-            ];
-            charts.spatialPerformance.update();
-
-            const dimMultiplier = dim === '2d' ? 1.0 : dim === '3d' ? 1.5 : 2.2;
-            charts.spatialScaling.data.datasets[0].data = [
-                result.latency,
-                result.latency * 1.5,
-                result.latency * 2.2
-            ];
-            charts.spatialScaling.update();
-
-            output.textContent = `✓ ${operation.toUpperCase()} benchmark complete\nDimension: ${dim.toUpperCase()}\nObjects: ${count.toLocaleString()}\nOps/sec: ${adjustedOps.toLocaleString()}\nLatency: ${result.latency}ms\nHeap allocations: 0`;
-            btn.disabled = false;
-        }, 1800);
-    }
-
-    function resetSpatialBenchmark() {
-        document.getElementById('spatial-output').textContent = 'Ready to run spatial benchmark...';
-        charts.spatialPerformance.data.datasets[0].data = [0, 0, 0, 0];
-        charts.spatialPerformance.update();
-        charts.spatialScaling.data.datasets[0].data = [0, 0, 0];
-        charts.spatialScaling.update();
-        updateMetrics(0, 0, 0, 0);
-    }
+    // Spatial benchmark — runSpatialBenchmark / resetSpatialBenchmark are now REAL
+    // (geometric_algebra_operation) and defined in the module script above via
+    // js/benchmark-live.js. The previous simulated (hardcoded) versions were removed.
 
     // Tensor benchmark
     function runTensorBenchmark() {

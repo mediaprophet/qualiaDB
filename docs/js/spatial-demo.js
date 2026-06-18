@@ -619,7 +619,15 @@ export async function bootSpatialPage() {
     if (loader) loader.style.display = 'none';
     if (main) main.style.display = 'block';
     debugLog('loader hidden, main content visible');
-    await new Promise((r) => requestAnimationFrame(r));
+    // requestAnimationFrame is paused while a tab is hidden/backgrounded, which
+    // would stall boot indefinitely. Race it against a short timeout so a page
+    // opened in a background tab still finishes initialising.
+    await new Promise((resolve) => {
+        let settled = false;
+        const done = () => { if (!settled) { settled = true; resolve(); } };
+        requestAnimationFrame(done);
+        setTimeout(done, 200);
+    });
 
     const bootTimer = debugTime('bootSpatialPage');
     try {

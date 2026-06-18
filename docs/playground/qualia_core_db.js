@@ -1017,6 +1017,23 @@ export function geosparql_operation_wasm(json) {
 }
 
 /**
+ * Crate semver baked in at compile time.
+ * @returns {string}
+ */
+export function getEngineVersion() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.getEngineVersion();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
  * Structured engine metadata for browser UIs and diagnostics.
  * @returns {any}
  */
@@ -1046,6 +1063,51 @@ export function get_engine_version() {
 }
 
 /**
+ * Stream token deltas to `on_token` (UTF-8 string chunks) while decoding.
+ * @param {string} prompt
+ * @param {Function} on_token
+ * @returns {Promise<string>}
+ */
+export function inferWasmStreaming(prompt, on_token) {
+    const ptr0 = passStringToWasm0(prompt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.inferWasmStreaming(ptr0, len0, on_token);
+    return ret;
+}
+
+/**
+ * Streaming inference with optional graph context for provenance hashing.
+ * @param {string} prompt
+ * @param {string} graph_context
+ * @param {Function} on_token
+ * @returns {Promise<string>}
+ */
+export function inferWasmStreamingWithContext(prompt, graph_context, on_token) {
+    const ptr0 = passStringToWasm0(prompt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(graph_context, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.inferWasmStreamingWithContext(ptr0, len0, ptr1, len1, on_token);
+    return ret;
+}
+
+/**
+ * Same as `infer_wasm` but accepts optional graph-context bytes for provenance hashing.
+ * @param {string} prompt
+ * @param {string} graph_context
+ * @returns {Promise<string>}
+ */
+export function inferWasmWithContext(prompt, graph_context) {
+    const ptr0 = passStringToWasm0(prompt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(graph_context, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.inferWasmWithContext(ptr0, len0, ptr1, len1);
+    return ret;
+}
+
+/**
+ * Run autoregressive inference (non-streaming). Prompt must include any chat template tokens.
  * @param {string} prompt
  * @returns {Promise<string>}
  */
@@ -1061,6 +1123,7 @@ export function init_panic_hook() {
 }
 
 /**
+ * Load a GGUF model into the resident browser WebGPU engine.
  * @param {Uint8Array} gguf_data
  * @returns {Promise<void>}
  */
@@ -1089,6 +1152,15 @@ export function intercept_pharmacogenomics_intent(smiles) {
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.intercept_pharmacogenomics_intent(ptr0, len0);
     return WasmOffloadIntent.__wrap(ret);
+}
+
+/**
+ * Returns true when a GGUF model has been loaded via `initialize_webgpu_engine`.
+ * @returns {boolean}
+ */
+export function isWebgpuEngineReady() {
+    const ret = wasm.isWebgpuEngineReady();
+    return ret !== 0;
 }
 
 /**
@@ -1286,6 +1358,15 @@ export function prune_and_validate_mesh(mesh_id) {
  */
 export function read_opfs_block(block_index) {
     const ret = wasm.read_opfs_block(block_index);
+    return ret;
+}
+
+/**
+ * Release resident GGUF weights and tear down the WebGPU engine instance.
+ * @returns {Promise<void>}
+ */
+export function releaseWebgpuEngine() {
+    const ret = wasm.releaseWebgpuEngine();
     return ret;
 }
 
@@ -2494,6 +2575,9 @@ function __wbg_get_imports() {
             const ret = Promise.resolve(arg0);
             return ret;
         },
+        __wbg_send_d3ba4386db8a6937: function() { return handleError(function (arg0, arg1, arg2) {
+            arg0.send(getStringFromWasm0(arg1, arg2));
+        }, arguments); },
         __wbg_setAttribute_8bccfbabf2a83682: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             arg0.setAttribute(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
         }, arguments); },
@@ -2698,17 +2782,17 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 393, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 434, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hacdbfa2f9b9c388f);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 526, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 568, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 393, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 434, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hacdbfa2f9b9c388f_2);
             return ret;
         },

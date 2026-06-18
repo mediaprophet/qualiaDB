@@ -140,6 +140,13 @@ jobs:
           print(f"OK: {p.name} magic Q42\\\\0, size {p.stat().st_size:,} B")
           PY
 
+      # Ontology volume builds are intentionally SOFT (continue-on-error): each
+      # runs `cargo run --release -p qualia-cli ingest`, a heavy compile that
+      # must never block a docs deploy, and the Ontology Demo degrades gracefully
+      # to its hard-gated Princeton WordNet dataset when a volume is absent. The
+      # "Verify ontology volumes" step below surfaces any missing group as a
+      # ::warning:: so soft failures are visible rather than silent. (Decision:
+      # WASM_PAGES_AUDIT §4.3.)
       - name: Build W3C ontology volumes for Ontology Demo
         continue-on-error: true
         run: |
@@ -177,6 +184,23 @@ jobs:
           bash scripts/prepare_fibo_ontologies.sh
           ls -lh docs/data/fibo/*.q42 | head
 
+      - name: Verify ontology volumes (non-fatal summary)
+        # Makes the soft ontology builds above visible: warns (does not fail) for
+        # any group that produced no .q42 volumes. See WASM_PAGES_AUDIT §4.3.
+        if: always()
+        run: |
+          missing=0
+          for grp in w3c w3c-archives purl geonames dublincore fibo; do
+            n=$(ls docs/data/$grp/*.q42 2>/dev/null | wc -l)
+            if [ "$n" -gt 0 ]; then
+              echo "ontology volumes: $grp = $n .q42 file(s)"
+            else
+              echo "::warning title=Ontology volume missing::no .q42 volumes built for '$grp'; Ontology Demo falls back to WordNet"
+              missing=$((missing + 1))
+            fi
+          done
+          echo "ontology volume groups missing: $missing of 6"
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:
@@ -200,6 +224,12 @@ jobs:
         with:
           source: ./docs
           destination: ./_site
+
+      - name: Cache-bust hashed assets (?v= on tailwind-built.css)
+        # Stamps a content hash onto the unversioned stylesheet link so returning
+        # visitors never get a stale tailwind-built.css after a deploy. Runs on
+        # the built _site so the committed source HTML stays diff-clean.
+        run: node docs/scripts/stamp-asset-versions.mjs _site
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

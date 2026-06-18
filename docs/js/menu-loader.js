@@ -24,8 +24,12 @@ function docsRootFromScript() {
 }
 
 function ensureSiteNavCss() {
+    // An empty root is valid — it means "page-relative" (top-level pages served
+    // outside /qualiaDB/). The previous `!root` guard skipped injection there,
+    // leaving every page without a hardcoded <link> with unstyled, spilled-open
+    // dropdowns. Only bail if a site-nav stylesheet is already present.
+    if (document.querySelector('link[data-site-nav], link[href$="css/site-nav.css"]')) return;
     const root = docsRootFromScript();
-    if (!root || document.querySelector('link[data-site-nav]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = root + 'css/site-nav.css';
