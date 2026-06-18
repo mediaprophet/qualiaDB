@@ -5,11 +5,13 @@
 // `tailwind-built.css` (this is exactly what caused the "WASM Engine Required"
 // overlay to stay stuck after a clean rebuild — see WASM_PAGES_AUDIT §1/§4.2).
 //
-// Intended to run at BUILD time against the published output tree (e.g. `_site`)
-// so the committed source HTML stays diff-clean. Idempotent: re-running replaces
-// any existing `?v=` it added.
+// Intended to run at CI build time against the Jekyll source tree (`docs/`) *before*
+// `jekyll-build-pages` copies it to `_site`. Post-processing `_site` fails in
+// GitHub Actions because that action emits read-only artifacts (EACCES). Stamping
+// `docs/` keeps committed HTML diff-clean while the deployed copy carries `?v=`.
+// Idempotent: re-running replaces any existing `?v=` it added.
 //
-//   node docs/scripts/stamp-asset-versions.mjs <target-dir>
+//   node docs/scripts/stamp-asset-versions.mjs docs
 //
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';

@@ -219,17 +219,18 @@ jobs:
       - name: Stage Rust docs into Jekyll source
         run: cp -r target/doc docs/rustdoc
 
+      - name: Cache-bust hashed assets (?v= on tailwind-built.css)
+        # Stamp deploy-only ?v= query strings on the Jekyll *source* tree after
+        # tailwind-built.css exists. actions/jekyll-build-pages emits a read-only
+        # _site (EACCES on writeFileSync), so we must not post-process _site.
+        # Committed docs/*.html stay diff-clean; only the CI workspace is stamped.
+        run: node docs/scripts/stamp-asset-versions.mjs docs
+
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
           source: ./docs
           destination: ./_site
-
-      - name: Cache-bust hashed assets (?v= on tailwind-built.css)
-        # Stamps a content hash onto the unversioned stylesheet link so returning
-        # visitors never get a stale tailwind-built.css after a deploy. Runs on
-        # the built _site so the committed source HTML stays diff-clean.
-        run: node docs/scripts/stamp-asset-versions.mjs _site
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
